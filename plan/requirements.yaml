@@ -3911,7 +3911,7 @@
 - id: REQ-CHART-105
   area: CHART
   kind: definition
-  statement: "The curved slices off the shape sphere, the momentum sphere at fixed L_z and K and the mass sphere (√m₀, √m₁, √m₂), must be defined in chart_reference §3.3's form, each with its frame, its seed rule and its seam."
+  statement: "The curved slices off the shape sphere, the momentum sphere at fixed L_z and K and the mass sphere (√m₀, √m₁, √m₂), must be defined in chart_reference §3.3's form, each with its frame, its seed rule and its seam; on the mass sphere the map runs on the sphere, a pixel with any component ≤ 0 is the domain's end, blank, out of the count and the total, mᵢ = nᵢ² is read only inside, and the rule at an edge or corner is the mass simplex's, validation layer 2's narrowed simplex, buffered mᵢ ≥ ε_m."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 5.2 Curved slices off the shape sphere
@@ -3932,7 +3932,7 @@
     section: 5.2 Curved slices off the shape sphere
   verify:
     method: unit test
-    detail: "cargo test -p kernel exp_map_targets: on the momentum sphere L_z and K hold at every pixel; on the mass sphere Σm = 1 and every m > 0; the shape target bit-for-bit today's; control: a frame not orthonormal fails"
+    detail: "cargo test -p kernel exp_map_targets: on the momentum sphere L_z and K hold at every pixel; on a wide mass chart every unblanked pixel has all components positive and √mᵢ = nᵢ, each outside pixel is blank and uncounted, and no two unblanked pixels give one mass set; the shape target bit-for-bit today's; controls: a frame not orthonormal fails, squaring with the mask removed fails"
   rulings:
   - R-82
   milestone: M8
@@ -3964,7 +3964,7 @@
     section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
   verify:
     method: review checklist
-    detail: "dd_decoder §3.7 carries the form; REQ-CHART-102's hold_lz tests it at ‖δv‖/‖v‖ from 1e-1 to 1e-7 at f32, control: one projection fails the fixture"
+    detail: "dd_decoder §3.7 carries the form, approved by the physics reviewer; the test is REQ-CHART-102's hold_lz at M8, at ‖δv‖/‖v‖ from 1e-1 to 1e-7 at f32, control: one projection fails the fixture"
   rulings:
   - R-25
   - R-72
@@ -3985,7 +3985,7 @@
     section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
   verify:
     method: review checklist
-    detail: "dd_decoder §3.7 and §2 carry the order; REQ-CHART-102's hold_outcomes tests the six in order on exact fixtures, control: outcomes 2 and 3 swapped"
+    detail: "dd_decoder §3.7 and §2 carry the order, approved by the physics reviewer; the test is REQ-CHART-102's hold_outcomes at M8, the six in order on exact fixtures, control: outcomes 2 and 3 swapped"
   rulings:
   - R-25
   - R-72
@@ -4006,7 +4006,7 @@
     section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
   verify:
     method: review checklist
-    detail: "inverse_encode_contract Part 6 carries it; REQ-CHART-102's hold_encode tests step 4 on the held decode, control: step 4 on the unheld decode lands on a wrong pixel"
+    detail: "inverse_encode_contract Part 6 carries it, approved by the physics reviewer; the test is REQ-CHART-102's hold_encode at M8, step 4 on the held decode, control: step 4 on the unheld decode lands on a wrong pixel"
   rulings:
   - R-72
   milestone: M4

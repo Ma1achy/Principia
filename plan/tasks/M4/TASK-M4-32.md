@@ -31,7 +31,7 @@ Port principia_chart_composition.md into the contracts, as the rulings on RQ-712
 - `docs/gui/principia_render_gui_spec.md` § G7 and `docs/design/principia_lines.md` § 4.1, as ruled.
 
 ## Acceptance tests
-- `python3 plan/check_plan.py` — dd_decoder §3.7 and §2 carry both-held's computed form and its outcomes in order, and inverse_encode_contract Part 6 the held decode (REQ-CHART-108, REQ-CHART-109, REQ-CHART-110).
+- Physics reviewer: dd_decoder §3.7 and §2 carry both-held's computed form and its outcomes in order, and inverse_encode_contract Part 6 the held decode (REQ-CHART-108, REQ-CHART-109, REQ-CHART-110).
 - Physics reviewer: each section written and approved, each ruling carried as ruled (REQ-CHART-094).
 - Physics reviewer: region D's section, each formula checked against `principia_dd_validation_orbits.md` § 1.6 and the import's rescale (REQ-CHART-095).
 - `python3 plan/check_plan.py` — green.

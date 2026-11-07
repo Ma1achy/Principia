@@ -21,7 +21,7 @@ Define (R-72) and build the two other 2-spheres in the state, under § 3.3's exp
 
 ## Acceptance tests
 - Physics reviewer: the section, its frames and seams (REQ-CHART-105).
-- `cargo test -p kernel exp_map_targets` — L_z and K hold on the momentum sphere, Σm = 1 on the mass sphere, the shape target bitwise; control: a bad frame (REQ-CHART-106).
+- `cargo test -p kernel exp_map_targets` — L_z and K hold on the momentum sphere; on a wide mass chart every unblanked pixel has all components positive and √mᵢ = nᵢ, each outside pixel blank and uncounted, no two unblanked pixels giving one mass set; the shape target bitwise; controls: a bad frame, squaring with the mask removed (REQ-CHART-106).
 
 ## Notes
 - Waits on its rulings item: RQ-720. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
