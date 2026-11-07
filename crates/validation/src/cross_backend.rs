@@ -4,7 +4,7 @@
 //! cross-backend-branches` runs it.
 //!
 //! **A measurement** (R-649), on tier (a), the GPU explorer. It has no outside number, it blocks nothing, and no
-//! tolerance or threshold enters it. Only the control records assert ([`CrossBackendGate`]). [`record`] asserts nothing,
+//! tolerance or threshold enters it. Only the control records assert ([`CrossBackendGate`]). `--record` asserts nothing,
 //! and a record under [`compare`] has no `"expected"` and can't fail the gate at any rate.
 //!
 //! **Domain** (pitfalls §10): fixed inputs through two stages. The GPU runs no march yet, so a clean table says nothing

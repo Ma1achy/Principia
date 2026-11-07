@@ -194,7 +194,7 @@ fn select<T: Copy>(c: bool, t: T, f: T) -> T {
 const ZERO_EXPONENT: i32 = i16::MIN as i32;
 
 /// A number `m·2^e` with its exponent carried as an integer: `|m|` in `[1, 2)`, or `m = 0` with `e` the
-/// [`ZERO_EXPONENT`]. The arithmetic of `C`'s branch inputs (the module's note), so that no float it rounds lies outside
+/// `ZERO_EXPONENT`. The arithmetic of `C`'s branch inputs (the module's note), so that no float it rounds lies outside
 /// `[2^−83, 4)` in magnitude but 0 (f32; `[2^−112, 4)` at f64), and none is subnormal on any backend, whatever the
 /// state's scale or its terms' spread.
 #[derive(Clone, Copy)]
