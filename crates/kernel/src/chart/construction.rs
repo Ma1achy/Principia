@@ -57,6 +57,8 @@
 //! held `L_z`, a chart's mode and `Φ_θ,L_z`'s warp are held beside the chart by the wrappers [`RestStart`], [`HeldLz`] and
 //! [`HeldK`], which are the registered chart with its hidden coordinates, not charts of their own (their name, and every
 //! entry at the held values' rest, is the chart's).
+//!
+//! [`infeasible`]: crate::decode::invariant::infeasible
 
 use spirv_std::num_traits::Float;
 
@@ -864,7 +866,7 @@ where
     }
 
     /// No system at `(L_z(b), K + d)`: no construction at the chart's own precision, or
-    /// [`BurrauThetaLz::refused_at`] at f64.
+    /// `BurrauThetaLz::refused_at` at f64.
     fn refusal(&self, a: f64, b: f64, shift: &Shift<f64>) -> Option<Constraint> {
         refused_own(self.by_value(narrow::<f64, P>(b), &shift.at_precision())).or_else(|| {
             let (lz, k) = self.by_value(b, shift);
@@ -1070,7 +1072,7 @@ where
         }
     }
 
-    /// Warped, where `t₀ + d < 0` at `R`: the coordinate [`HeldK::warped_k`] clamps at `t = 0` (R-709).
+    /// Warped, where `t₀ + d < 0` at `R`: the coordinate `HeldK::warped_k` clamps at `t = 0` (R-709).
     fn held_at_floor<R>(&self, shift: &Shift<R>) -> bool
     where
         R: LinkReal + PayloadReal + From<P>,
