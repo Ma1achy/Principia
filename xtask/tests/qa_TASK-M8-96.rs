@@ -278,12 +278,18 @@ fn check_text_input(text: &str) -> Result<(), String> {
             "cross-application paste",
         )?;
         for row in &t.rows {
+            // A human cell may read pending, and its row's prompt may then be empty; once the human's result is
+            // entered, the row is held to the same form as every other row.
             let human_cell = safari
+                && (row[0].contains("IME composition")
+                    || row[0].contains("paste from another application"))
+                && row.iter().any(|c| c == "pending (the human's)");
+            let human_row = safari
                 && (row[0].contains("IME composition")
                     || row[0].contains("paste from another application"));
             for (i, cell) in row.iter().enumerate().skip(1) {
                 let pending = cell.contains("pending") || cell.contains("by hand");
-                if pending && !(human_cell && cell == "pending (the human's)") {
+                if pending && !(human_row && cell == "pending (the human's)") {
                     return Err(format!(
                         "a pending or by-hand cell that a script can drive: `{}` reads `{cell}`",
                         row[0]
@@ -317,6 +323,41 @@ negative_control!(
     check_text_input(&edited(
         "| Non-ASCII, \"é ß Ω 日本\" | works | works |",
         "| Non-ASCII, \"é ß Ω 日本\" | pending (the human's) | works |"
+    ))
+    .unwrap()
+);
+
+/// Safari's IME composition and cross-application paste cells, now entered, are held to the full form: each layout
+/// cell and the permission prompt filled, so a result blanked out of the record fails.
+#[test]
+fn qa_m8_96_safari_human_cells_entered_in_full() {
+    check_text_input(&section()).unwrap();
+}
+
+negative_control!(
+    qa_m8_96_safari_human_cells_entered_in_full,
+    "Safari's entered IME composition worker cell blanked",
+    expected = "has an empty cell",
+    check_text_input(&edited(
+        "(by System Events key events, below) | works: the IME composes on the hidden input; the text in progress is not drawn in the field, and the IME's candidate window opens at the page's top-left corner, where that 1 px input sits; \"日本\" committed and read back |",
+        "(by System Events key events, below) |  |"
+    ))
+    .unwrap()
+);
+
+/// The same for the cross-application paste row's permission prompt.
+#[test]
+fn qa_m8_96_safari_paste_prompt_entered() {
+    check_text_input(&section()).unwrap();
+}
+
+negative_control!(
+    qa_m8_96_safari_paste_prompt_entered,
+    "Safari's entered cross-application paste prompt blanked",
+    expected = "has an empty cell",
+    check_text_input(&edited(
+        "| works: read back \"café — test 123\" | none: no paste callout or prompt in the screenshot after Cmd+V |",
+        "| works: read back \"café — test 123\" | |"
     ))
     .unwrap()
 );
