@@ -1452,8 +1452,8 @@ negative_control!(
 
 fn check_os_build(want: bool) {
     assert_eq!(
-        os_build().is_some_and(|b| b.starts_with("macOS ") && b.ends_with(')')),
-        want,
+        os_build().map(|b| b.starts_with("macOS ") && b.ends_with(')')),
+        want.then_some(true),
         "the machine's OS build is not as this platform gives it"
     );
 }
