@@ -278,7 +278,20 @@ pub fn infeasible<R: ExactSign>(i: R, k: R, l: R) -> bool {
 /// or `k` has no finite double (the module's note). The one predicate of the decode and of every chart's refusal.
 #[inline]
 pub fn no_construction<R: ExactSign>(k: R, l: R) -> bool {
-    infeasible(R::one(), k, l) | (k.binade().e >= R::doubling_limit())
+    construction_short(&feasibility_input(R::one(), k, l), doubling_input(k))
+}
+
+/// The no-finite-`2K*` half of [`no_construction`]'s input: `k`'s binade `e`, an integer read from its bits.
+#[inline]
+pub fn doubling_input<R: ExactSign>(k: R) -> i32 {
+    k.binade().e
+}
+
+/// [`no_construction`]'s decision on its input: the feasibility test's ([`feasibility_short`]), or `K*`'s binade `e`
+/// at or past [`ExactSign::doubling_limit`].
+#[inline]
+pub fn construction_short<R: ExactSign>(f: &Feasibility<R>, e: i32) -> bool {
+    feasibility_short(f) | (e >= R::doubling_limit())
 }
 
 /// The label of an infeasible pixel, `DEGENERATE(INVARIANT_INFEASIBLE)`, as `(state, detail)` of payload §2's

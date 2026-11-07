@@ -7,7 +7,8 @@
 //!
 //! **No parity-only physics.** Each branch's input and decision is a function its production site calls too
 //! (`crate::canon`'s [`skip_input`](canon::skip_input) and [`mirror_input`](canon::mirror_input), `mass::m01_input`,
-//! `invariant::feasibility_input`, `invariant::alpha_sign`, `burrau::seed_input`, the descriptor's poles). The CPU's
+//! `invariant::feasibility_input` and `invariant::doubling_input`, decided by `invariant::construction_short` as
+//! `no_construction` decides them, `invariant::alpha_sign`, `burrau::seed_input`, the descriptor's poles). The CPU's
 //! f32 record calls these same `write_*` functions, and the arbiter evaluates a branch input through them, at f32, at
 //! given operands, so there is no second copy of any form.
 //!
@@ -40,7 +41,8 @@ use crate::chart::{
     InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeSphere,
 };
 use crate::decode::invariant::{
-    alpha_sign, feasibility_input, feasibility_short, seed_of_sign, seed_word,
+    alpha_sign, construction_short, doubling_input, feasibility_input, seed_of_sign, seed_word,
+    ExactSign,
 };
 use crate::decode::{descriptor, energy_norm, mass, Ic};
 use crate::stage::decode::ic_words;
@@ -73,7 +75,8 @@ type M01Operands = [u32; 2];
 type M01Bits = [WideWords; 2];
 /// `INVARIANT_INFEASIBLE`'s operands: `K*`, `L_z`.
 type FeasibilityOperands = [u32; 2];
-/// `INVARIANT_INFEASIBLE`'s input: the sign flags, `E` and the columns' sum.
+/// `INVARIANT_INFEASIBLE`'s input: the sign flags as one word's bits (`flat` 1, `negative` 2, `moving` 4), `E` and the
+/// columns' sum; then the no-finite-`2K*` comparison's two sides, `K*`'s binade `e` and the doubling limit.
 type FeasibilityBits = [u32; 5];
 /// One operand.
 type OneOperand = [u32; 1];
@@ -323,19 +326,21 @@ pub fn write_m01(out: &mut [u32], at: usize, m0: f32, m1: f32) {
     put_wide(out, at + 6, sides[1]);
 }
 
-/// Writes `INVARIANT_INFEASIBLE`'s slot from word `at` of `out` on the targets `K*`, `L_z`, at the canonical `I = 1`.
+/// Writes `INVARIANT_INFEASIBLE`'s slot from word `at` of `out` on the targets `K*`, `L_z`, at the canonical `I = 1`: the
+/// decode's own decision, `no_construction`'s, on both halves of its input.
 #[inline]
 pub fn write_feasibility(out: &mut [u32], at: usize, k: f32, lz: f32) {
     let f = feasibility_input(1.0, k, lz);
+    let e = doubling_input(k);
     out[at] = 1;
-    out[at + 1] = word(feasibility_short(&f));
+    out[at + 1] = word(construction_short(&f, e));
     out[at + 2] = k.to_bits();
     out[at + 3] = lz.to_bits();
-    out[at + 4] = word(f.flat);
-    out[at + 5] = word(f.negative);
-    out[at + 6] = word(f.moving);
-    out[at + 7] = f.e as u32;
-    out[at + 8] = f.columns.to_bits();
+    out[at + 4] = word(f.flat) + (word(f.negative) << 1) + (word(f.moving) << 2);
+    out[at + 5] = f.e as u32;
+    out[at + 6] = f.columns.to_bits();
+    out[at + 7] = e as u32;
+    out[at + 8] = <f32 as ExactSign>::doubling_limit() as u32;
 }
 
 /// Writes the slot of the seed on `z_α` from word `at` of `out`.

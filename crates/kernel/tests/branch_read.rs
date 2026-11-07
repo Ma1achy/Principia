@@ -19,7 +19,8 @@ use kernel::decode::descriptor::{
     collision_pole, cross_dot, cross_zero, dot_negative, dot_zero, ratio_pole, virial_pole,
 };
 use kernel::decode::invariant::{
-    alpha_sign, feasibility_input, feasibility_short, seed_of_sign, seed_word,
+    alpha_sign, construction_short, doubling_input, feasibility_input, feasibility_short,
+    no_construction, seed_of_sign, seed_word, Feasibility,
 };
 use kernel::decode::mass::{m01_input, m01_tiny};
 use kernel::decode::{energy_norm, Ic};
@@ -236,32 +237,58 @@ fn check_m01(m0: f32, m1: f32) {
     assert_eq!(got, e, "M01_TINY's slot");
 }
 
-#[test]
-fn branch_read_slots_of_the_decode_branches() {
-    check_m01(0.25, 0.5);
-    check_m01(0.0, 0.0);
-    for (k, lz) in [
+/// `(K*, L_z)` on both sides of each half of the decode's decision: the feasibility test's edge, each sign flag alone
+/// and together, and `K*` below, at and past `2^127`, the first binade whose double has no finite f32, of each sign,
+/// with `±∞` and NaN.
+fn feasibility_pairs() -> Vec<(f32, f32)> {
+    let mut v = vec![
         (1.0, 1.0),
         (1.0, 2.0),
         (0.0, 0.0),
         (0.0, 0.5),
         (-0.5, 1.0),
+        (-0.5, 0.0),
+        (-0.0, 0.0),
         (0.125, 0.5),
-    ] {
+    ];
+    let below = f32::from_bits(0x7eff_ffff);
+    let edge = f32::from_bits(0x7f00_0000);
+    for k in [below, edge, f32::MAX, f32::INFINITY, f32::NAN] {
+        for lz in [0.0, 1.0] {
+            v.push((k, lz));
+            v.push((-k, lz));
+        }
+    }
+    v
+}
+
+#[test]
+fn branch_read_slots_of_the_decode_branches() {
+    check_m01(0.25, 0.5);
+    check_m01(0.0, 0.0);
+    for (k, lz) in feasibility_pairs() {
         let got = check_written(9, |o, at| read::write_feasibility(o, at, k, lz));
         let f = feasibility_input(1.0, k, lz);
+        let flags = [f.flat, f.negative, f.moving]
+            .iter()
+            .enumerate()
+            .map(|(i, &c)| word(c) << i)
+            .sum::<u32>();
         let e = vec![
             1,
-            word(feasibility_short(&f)),
+            word(no_construction(k, lz)),
             k.to_bits(),
             lz.to_bits(),
-            word(f.flat),
-            word(f.negative),
-            word(f.moving),
+            flags,
             f.e as u32,
             f.columns.to_bits(),
+            doubling_input(k) as u32,
+            127,
         ];
-        assert_eq!(got, e, "INVARIANT_INFEASIBLE's slot");
+        assert_eq!(
+            got, e,
+            "INVARIANT_INFEASIBLE's slot at K* = {k:e}, L_z = {lz}"
+        );
     }
     for z in [1.0, -1.0, 0.0, -0.0] {
         let got = check_written(5, |o, at| read::write_alpha_seed(o, at, z));
@@ -709,6 +736,56 @@ negative_control!(
         feasibility_short(&feasibility_input(1.0f32, 0.5, 1.0)),
         "2·k = l² read short"
     )
+);
+
+/// The decode's decision ([`no_construction`]) on its input, through `decide`, on either side of each half: `K*`'s
+/// binade `e` read from its bits below, at and past `2^127`, the first f32 binade whose double has no finite float, and
+/// a `K*` that fails both halves at once.
+fn check_construction(decide: impl Fn(&Feasibility<f32>, i32) -> bool) {
+    let below = f32::from_bits(0x7eff_ffff);
+    let edge = f32::from_bits(0x7f00_0000);
+    assert_eq!(doubling_input(1.0f32), 0);
+    assert_eq!(doubling_input(below), 126);
+    assert_eq!(doubling_input(edge), 127);
+    assert_eq!(doubling_input(-f32::MAX), 127);
+    assert_eq!(doubling_input(f32::INFINITY), 128);
+    assert_eq!(doubling_input(f32::NAN), 128);
+    let feasible = feasibility_input(1.0f32, 1.0, 1.0);
+    let short = feasibility_input(1.0f32, -1.0, 1.0);
+    assert!(
+        !decide(&feasible, 0),
+        "a feasible K* of binade 0 read short"
+    );
+    assert!(
+        !decide(&feasible, 126),
+        "a feasible K* below 2^127 read short"
+    );
+    assert!(decide(&feasible, 127), "K* at 2^127 has a construction");
+    assert!(decide(&feasible, 128), "K* = ±∞ or NaN has a construction");
+    assert!(decide(&short, 0), "an infeasible K* has a construction");
+    assert!(
+        decide(&short, 127),
+        "a K* short on both halves has a construction"
+    );
+}
+
+#[test]
+fn branch_read_construction_at_its_boundary() {
+    check_construction(construction_short::<f32>);
+    let feasible = feasibility_input(1.0f64, 1.0, 1.0);
+    assert!(!construction_short(&feasible, 1022));
+    assert!(construction_short(&feasible, 1023));
+    assert!(!no_construction(f32::from_bits(0x7eff_ffff), 0.0));
+    assert!(no_construction(f32::from_bits(0x7f00_0000), 0.0));
+    assert!(no_construction(-f32::MAX, 1.0));
+    assert!(no_construction(f32::NAN, 0.0));
+}
+
+negative_control!(
+    branch_read_construction_at_its_boundary,
+    "the no-finite-2K* half taken past 2^127, not at it",
+    expected = "K* at 2^127 has a construction",
+    check_construction(|f, e| feasibility_short(f) | (e > 127))
 );
 
 fn check_wide(x: f32, moved: f32) {

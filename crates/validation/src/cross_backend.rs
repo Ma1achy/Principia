@@ -293,7 +293,7 @@ pub const LIST: [Listed; 19] = [
         "INVARIANT_INFEASIBLE",
         read::FEASIBILITY_AT,
         read::FEASIBILITY_SHAPE,
-        "decode/invariant.rs: exact 2·K* < L_z², bit reads and columns",
+        "decode/invariant.rs: exact 2·K* < L_z², bit reads and columns, or K* with no finite 2K*, a bit read",
         Emits::Tag(4),
         Arbiter::Feasibility,
     ),
