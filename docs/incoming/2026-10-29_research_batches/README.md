@@ -230,6 +230,7 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
 - The Fig. 11 triple-collision point (0.2794981, 0.5759310) is Li 2021's GT-36 (= TSM point 8) to 1.06e-6, about 7
   units of the 7th decimal. The "y-axis point nearly at y = 0.18169" is Li 2021's isosceles IT-1, y =
   0.18169092589591662, to its 5 digits.
+- *4 Nov 2026 (R-702, closing RQ-640):* Paper I's normalisation is read by TASK-M9-43, and the page is re-read before use (R-680). T2000-1 compares positions only until then.
 - **Units are not stated:** "m1 = m2 = m3" (p. 157), with neither the mass value, G nor a time unit. Positions are
   scale-free in equal-mass free fall, so the x, y columns compare like for like. The time columns do not: no
   Tanikawa 2000 triple-collision point coincides with a Li 2021 orbit (closest 1.1e-2, `tanikawa_2000/vs_li2021.txt`),
@@ -437,9 +438,13 @@ Ref. data and Status cells with:
 and its Chart cell's "after the D11 mirror remap" stays as it is unless the owner confirms § 5.1's finding that, for
 TSM 2019 and these papers, D11 is D with no mirror of positions.
 
+*4 Nov 2026 (R-702, closing RQ-650):* confirmed: the porter read Tanikawa & Mikkola 2021, p. 2, eq. (2), which is Anosova's region, so the Chart cell's "after the D11 mirror remap" goes.
+
 ### 10.5 REVIEW_QUEUE.md: four new entries, appended after the last open entry
 
 ```
+*4 Nov 2026 (R-702):* the drafts below are ruled; `docs/archive/review_queue/M0.md` holds each with its ruling. Broucke 2006 stays context (RQ-641 (b)). MO14-1 compares fractions, 26/306,346 against ours over 306,402, the 56 a stated difference (RQ-642 (a)).
+
 ## RQ-640: Tanikawa 2000's time unit, for the time columns of its eight tables (proposed T2000-1) *(the owner's request of 29 Oct 2026, "Tanikawa 2000 Collision orbits II (8 tables)"; `docs/incoming/2026-10-29_research_batches/README.md` § 5.6; context: none built)*
 
 *Queued 29 Oct 2026 by the agent ingesting the owner's 29 Oct research batches.*
@@ -510,6 +515,8 @@ publishers, outside the repo.*
   t1–t4 at the starts where they fall inside 200; (c) leave the past-cap parts blocked by the horizon, as MO14-1's
   long-time part is.
 - **Applied meanwhile:** (c). The rows state the conversion and which parts the cap blocks; no new cap is chosen.
+- *5 Nov 2026 (R-800, on RQ-643):* option (b) now: these rows compare only what the cap reaches and the source states.
+  Option (a) is revisited at M9 if the cost measurement allows; no new cap is chosen.
 ```
 
 ## 11. Files

@@ -2,8 +2,8 @@
 //! §0.7, §5.2; TASK-M2-24), over the chart registry (`kernel::chart::REGISTRY`), at f32 and f64:
 //! - `degenerate_totality_closed_set`: `DEGENERATE`'s cause set is closed, five reasons, each with dd_decoder §2's
 //!   `decode_failed` detail code, none of them 0 (REQ-DEC-008, REQ-DEC-038).
-//! - `degenerate_totality_registry`: the charts this file visits are the registry's, and the registry names every
-//!   `Chart` impl in `kernel/src/chart` (REQ-DEC-008).
+//! - `degenerate_totality_registry`: the charts this file visits are the registry's, and every `Chart` impl in
+//!   `kernel/src/chart` is visited, the physical-quantity mixed-axis charts under the registry's `Mixed` (REQ-DEC-008).
 //! - `degenerate_totality_every_chart`: fuzzed `(u, v)` on every chart, `η_E` off and on where the chart allows it, past
 //!   `[0,1]²` where the chart's own `validate` takes the point: every pixel carries a label, the reason its emitted
 //!   values call for (`M01_TINY` from the masses, the construction's from its targets, `η_E`'s from `V₀`, `E*`, `s` and
@@ -22,8 +22,14 @@ use std::fmt::Debug;
 use std::path::Path;
 
 use kernel::chart::burrau::{Burrau, EuclidPlane};
-use kernel::chart::invariant::{InvariantChart, WarpReal};
-use kernel::chart::mixed::{Alpha, Beta, PLambdaY, PRhoX, ZBeta, ZMu1, ZMu2, ZQ0, ZQ3};
+use kernel::chart::energy::{invariant_rule, Mapped, Mapping, Quantity};
+use kernel::chart::invariant::{l_max, InvariantChart, WarpReal};
+use kernel::chart::mixed::{
+    Alpha, Beta, PLambdaY, PRhoX, Quantity as Coordinate, ZBeta, ZMu1, ZMu2, ZQ0, ZQ3,
+};
+use kernel::chart::physical::{
+    AxisE, AxisK, AxisLz, AxisVirial, EnergyAxis, MixedEnergy, MixedMassRatio,
+};
 use kernel::chart::{
     BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, Float, InvariantLE, InvariantLK, Latent,
     MassSimplex, Mixed, ShapeMap, ShapeSphere, ValidationResult, REGISTRY,
@@ -111,6 +117,72 @@ impl Totality for MassSimplex<f32> {}
 impl<H: kernel::chart::mixed::Quantity, V: kernel::chart::mixed::Quantity> Totality
     for Mixed<H, V, f32>
 {
+}
+
+impl<A: Coordinate, S: Selection> Totality for MixedMassRatio<A, S, f32> {}
+
+/// The visits hold `L_z = 0` on a `t` axis, where the exact test is `K*`'s sign, which is `scale(t)`'s on `K`, a warped
+/// `E` (`K* = K(t)`) and the virial ratio (`K* = Q(t)·|U|/2`, `U < 0`); on an `L_z` axis the targets are the held `K` and
+/// `scale(t)·L_max(K)`, as the chart's rule forms them (`kernel::chart::energy::Rule`).
+impl<A: Coordinate, V: EnergyAxis, S: Selection> Totality for MixedEnergy<A, V, S, f32> {
+    fn construction<R: Q>(&self, _u: R, v: R) -> Option<Degenerate> {
+        let lz_axis = V::QUANTITY == Quantity::Lz;
+        assert!(
+            lz_axis || self.held == 0.0,
+            "a visit holds L_z ≠ 0 on a t axis"
+        );
+        assert!(
+            !(V::QUANTITY == Quantity::E && self.mapping == Mapping::Linear),
+            "a visit's linear E reads K* = E − U"
+        );
+        let (x, held) = (self.scale(v), of::<R>(self.held));
+        if lz_axis {
+            short(held, x * l_max(held))
+        } else {
+            short(x, held)
+        }
+    }
+}
+
+/// A mapped invariant chart's targets at `(s, t)`, as its rule forms them; the visits leave a linear `E` out, whose
+/// `K* = E − U` reads the pixel's potential.
+fn mapped_invariant<R: Q>(
+    inv: &kernel::chart::invariant::Invariant<f32>,
+    mapping: [Mapping; 2],
+    energy: bool,
+    s: R,
+    t: R,
+) -> Option<Degenerate> {
+    assert!(
+        !(energy && mapping[1] == Mapping::Linear),
+        "a visit's linear E reads K* = E − U"
+    );
+    let rule = invariant_rule(inv, mapping, energy, R::zero(), s, t);
+    let k = rule.k_star(R::zero());
+    short(k, rule.lz_at(k))
+}
+
+impl Totality for Mapped<InvariantLE<f32>, Defaults> {
+    fn construction<R: Q>(&self, u: R, v: R) -> Option<Degenerate> {
+        mapped_invariant(self.chart.invariant(), self.mapping, true, u, v)
+    }
+}
+
+impl Totality for Mapped<InvariantLK<f32>, Defaults> {
+    fn construction<R: Q>(&self, u: R, v: R) -> Option<Degenerate> {
+        mapped_invariant(self.chart.invariant(), self.mapping, false, u, v)
+    }
+}
+
+/// The linear `K = K_max·v` at `L_z = 0`; warped, the chart's own.
+impl Totality for Mapped<Burrau<f32>, Defaults> {
+    fn construction<R: Q>(&self, u: R, v: R) -> Option<Degenerate> {
+        if self.mapping[1] == Mapping::Linear {
+            short(of::<R>(self.chart.k_max) * v, R::zero())
+        } else {
+            self.chart.construction(u, v)
+        }
+    }
 }
 
 impl Totality for Burrau<f32> {
@@ -289,6 +361,112 @@ fn every_chart(v: &mut impl Visit) {
         &Mixed::<ZMu2, ZBeta, f32>::new(controls(&mut rng), wide, wide),
         Links::Defaults,
     );
+    physical(v, &mut rng);
+    mapped(v, &mut rng);
+}
+
+/// The energy charts under a linear mapping (`kernel::chart::energy::Mapped`; TASK-M2-37), each its own chart's name.
+fn mapped(v: &mut impl Visit, rng: &mut SplitMix) {
+    v.chart(
+        &Mapped::<_, Defaults>::new(
+            InvariantLK(invariant(rng)),
+            [Mapping::Linear, Mapping::Linear],
+        ),
+        Links::Defaults,
+    );
+    v.chart(
+        &Mapped::<_, Defaults>::new(
+            InvariantLE(invariant(rng)),
+            [Mapping::Linear, Mapping::Warped],
+        ),
+        Links::Defaults,
+    );
+    v.chart(
+        &Mapped::<_, Defaults>::new(
+            Burrau {
+                nu_range: [0.05, 0.95],
+                k_max: K_MAX.number() as f32,
+                gamma_k: GAMMA_K.number() as f32,
+            },
+            [Mapping::Warped, Mapping::Linear],
+        ),
+        Links::Defaults,
+    );
+}
+
+/// The mixed-axis charts with a physical-quantity axis (`kernel::chart::physical`; TASK-M2-37), registered as `Mixed`:
+/// each energy-type axis and the virial ratio warped, `K` linear, and the mass ratio warped and linear.
+fn physical(v: &mut impl Visit, rng: &mut SplitMix) {
+    let (k_max, gamma_k) = (K_MAX.number() as f32, GAMMA_K.number() as f32);
+    let wide = [-2.0, 2.0];
+    v.chart(
+        &MixedEnergy::<ZMu1, AxisK, Defaults, f32>::new(
+            controls(rng),
+            wide,
+            k_max,
+            gamma_k,
+            0.0,
+            Mapping::Warped,
+        ),
+        Links::Defaults,
+    );
+    v.chart(
+        &MixedEnergy::<Alpha, AxisK, Defaults, f32>::new(
+            controls(rng),
+            [0.1, 1.4],
+            k_max,
+            gamma_k,
+            0.0,
+            Mapping::Linear,
+        ),
+        Links::Defaults,
+    );
+    v.chart(
+        &MixedEnergy::<ZMu1, AxisE, Defaults, f32>::new(
+            controls(rng),
+            wide,
+            k_max,
+            gamma_k,
+            0.0,
+            Mapping::Warped,
+        ),
+        Links::Defaults,
+    );
+    v.chart(
+        &MixedEnergy::<Alpha, AxisLz, Defaults, f32>::new(
+            controls(rng),
+            [0.1, 1.4],
+            k_max,
+            gamma_k,
+            k_max,
+            Mapping::Warped,
+        ),
+        Links::Defaults,
+    );
+    v.chart(
+        &MixedEnergy::<ZMu1, AxisVirial, Defaults, f32>::new(
+            controls(rng),
+            wide,
+            2.0,
+            gamma_k,
+            0.0,
+            Mapping::Warped,
+        ),
+        Links::Defaults,
+    );
+    for mapping in [Mapping::Warped, Mapping::Linear] {
+        let frozen = controls(rng).map(f64::from);
+        let chart = MixedMassRatio::<ZBeta, Defaults, f64>::new(
+            frozen,
+            wide.map(f64::from),
+            [0.05, 20.0],
+            [0, 1],
+            mapping,
+            &kernel::generated::links::LinkParams::DEFAULT,
+        )
+        .expect("a realised range");
+        v.chart(&chart.with_params(|x| x as f32), Links::Defaults);
+    }
 }
 
 /// `n` fuzzed `(u, v)` on `[lo, hi]²`, then the corners and the edge midpoints of `[0,1]²`.
@@ -401,16 +579,23 @@ negative_control!(
 
 // ── degenerate_totality_registry ────────────────────────────────────────────────────────────────────────────────
 
-/// Collects the names of the charts visited.
-struct Names(BTreeSet<String>);
+/// Collects the names of the charts visited, and their types' names.
+struct Names {
+    names: BTreeSet<String>,
+    types: BTreeSet<String>,
+}
 
 impl Visit for Names {
     fn chart<C: Totality>(&mut self, chart: &C, _links: Links) {
-        self.0.insert(chart.name().to_owned());
+        self.names.insert(chart.name().to_owned());
+        let path = std::any::type_name::<C>();
+        let bare = path.split('<').next().unwrap_or(path);
+        self.types
+            .insert(bare.rsplit("::").next().unwrap_or(bare).to_owned());
     }
 }
 
-/// Every `impl … Chart for <Name>` in `kernel/src/chart`, but `Tilted`: a registered chart under its tilt params, its
+/// Every `impl … Chart for <Name>` in `kernel/src/chart`, a macro's included, but `Tilted`: a registered chart under its tilt params, its
 /// name the chart's and its decode the chart's at the tilted point (R-473 J5; `kernel::chart::tilt`), not a chart of
 /// its own.
 fn impls() -> BTreeSet<String> {
@@ -418,7 +603,7 @@ fn impls() -> BTreeSet<String> {
     let mut out = BTreeSet::new();
     for e in std::fs::read_dir(&dir).expect("kernel/src/chart") {
         let text = std::fs::read_to_string(e.expect("an entry").path()).expect("a chart source");
-        for line in text.lines().filter(|l| l.starts_with("impl")) {
+        for line in text.lines().filter(|l| l.trim_start().starts_with("impl")) {
             if let Some(rest) = line.split(" Chart for ").nth(1) {
                 let name: String = rest.chars().take_while(|c| c.is_alphanumeric()).collect();
                 if name != "Tilted" {
@@ -430,22 +615,34 @@ fn impls() -> BTreeSet<String> {
     out
 }
 
-fn check_registry(visited: BTreeSet<String>) {
+/// Every `Chart` impl is visited, and the names the visits carry are the registry: a type whose chart is registered
+/// under another's name, as the physical-quantity mixed-axis charts are `Mixed`, is visited all the same.
+fn check_registry(names: Names) {
     let registry: BTreeSet<String> = REGISTRY.iter().map(|s| s.to_string()).collect();
     assert_eq!(
         registry.len(),
         REGISTRY.len(),
         "a chart is registered twice"
     );
-    assert_eq!(impls(), registry, "the registry is not every Chart impl");
-    assert_eq!(visited, registry, "the charts visited are not the registry");
+    assert_eq!(impls(), names.types, "a Chart impl is not visited");
+    assert_eq!(
+        names.names, registry,
+        "the charts visited are not the registry"
+    );
+}
+
+fn visited() -> Names {
+    let mut names = Names {
+        names: BTreeSet::new(),
+        types: BTreeSet::new(),
+    };
+    every_chart(&mut names);
+    names
 }
 
 #[test]
 fn degenerate_totality_registry() {
-    let mut names = Names(BTreeSet::new());
-    every_chart(&mut names);
-    check_registry(names.0);
+    check_registry(visited());
 }
 
 negative_control!(
@@ -453,10 +650,9 @@ negative_control!(
     "a visit that skips the shape sphere must fail",
     expected = "the charts visited are not the registry",
     {
-        let mut names = Names(BTreeSet::new());
-        every_chart(&mut names);
-        names.0.remove("ShapeSphere");
-        check_registry(names.0);
+        let mut names = visited();
+        names.names.remove("ShapeSphere");
+        check_registry(names);
     }
 );
 

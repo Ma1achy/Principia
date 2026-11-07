@@ -1,6 +1,6 @@
 //! Dispatch's refusals (integrator_contract Part 5, "Exact step-index timing invariant"; dd_simstate_payload §2,
-//! `times`, and §8; R-86, R-502, R-610): what a [`SimUniforms`] must satisfy before anything is dispatched under it, each
-//! refusal a typed [`DispatchError`] with its reason. [`validate`] checks, in order:
+//! `times`, and §8; R-86, R-502, R-610, R-668): what a [`SimUniforms`] must satisfy before anything is dispatched under
+//! it, each refusal a typed [`DispatchError`] with its reason. [`validate`] checks, in order:
 //!
 //! - **The horizon's range**, `T_horizon ∈ [0.4, 200]` (R-610): `T` finite; at least one escape window, the carried
 //!   `escape_window` (0.4, provisional, R-29), since below it the escape arm cannot fire, the floor following the
@@ -31,6 +31,10 @@
 //! - **The softening length**, `epsilon = 0`: no force law takes `epsilon`, and the corpus does not define softened
 //!   gravity (dd_generation_root §3.7, "Open"; RQ-627), so a run with any other `epsilon`, NaN and ±∞ included, would
 //!   come back Newtonian under the `softened` tag. It is refused until the force law is built.
+//! - **The units**, `g = 1` and then `m_total = 1`: the kernel runs only at `G = 1` and `M = 1` (Part 5; R-668), so a
+//!   run with any other value, NaN and ±∞ included, would be a `G = 1`, `M = 1` run keyed under the value carried. A
+//!   source in another `G` or total mass is converted at the import boundary (`validation::import`), never carried
+//!   here.
 //!
 //! A sim key that passes is a [`Validated`], the one way to the kernel's `WrapperUniforms`; [`dispatch`] launches only
 //! a validated one, so a refused sim key dispatches nothing.
@@ -39,7 +43,7 @@ use core::fmt;
 
 use kernel::driver::nsub_table::{thresholds, NsubTableError};
 use kernel::driver::wrapper::WrapperUniforms;
-use ledger::constants::{HORIZON_STEPS_MAX, T_HORIZON_MAX};
+use ledger::constants::{G, HORIZON_STEPS_MAX, M_TOTAL, T_HORIZON_MAX};
 
 use crate::contract::sim_uniforms::{horizon_steps, SimUniforms};
 
@@ -114,6 +118,16 @@ pub enum DispatchError {
     Softening {
         /// The `epsilon` carried.
         epsilon: f64,
+    },
+    /// `g` is not 1: the kernel runs only at `G = 1` (R-668).
+    GravitationalConstant {
+        /// The `g` carried.
+        g: f64,
+    },
+    /// `m_total` is not 1: the kernel runs only at `M = 1` (R-668).
+    TotalMass {
+        /// The `m_total` carried.
+        m_total: f64,
     },
     /// The carried threshold table is not the host generator's for the carried `r_sub`, `gamma_sub` and `N_max`.
     StaleThresholds,
@@ -192,6 +206,16 @@ impl fmt::Display for DispatchError {
                 f,
                 "epsilon {epsilon} is refused: softened gravity is not built, no force law takes epsilon \
                  (RQ-627); only epsilon = 0 is dispatched"
+            ),
+            Self::GravitationalConstant { g } => write!(
+                f,
+                "g {g} is refused: the kernel runs only at G = 1; a source in another G is converted at the import \
+                 boundary (R-668)"
+            ),
+            Self::TotalMass { m_total } => write!(
+                f,
+                "m_total {m_total} is refused: the kernel runs only at M = 1; a source in another total mass is \
+                 converted at the import boundary (R-668)"
             ),
             Self::StaleThresholds => write!(
                 f,
@@ -296,7 +320,7 @@ fn finite_positive(x: f64) -> bool {
     x.is_finite() && x > 0.0
 }
 
-/// The carried lengths and thresholds, and the softening length (the module's note).
+/// The carried lengths and thresholds, the softening length and the units (the module's note).
 fn check_carried(u: &SimUniforms) -> Result<(), DispatchError> {
     if !finite_not_negative(u.r_coll) {
         return Err(DispatchError::CollisionRadius { r_coll: u.r_coll });
@@ -316,6 +340,13 @@ fn check_carried(u: &SimUniforms) -> Result<(), DispatchError> {
     // NaN != 0, so NaN is refused here too.
     if u.epsilon != 0.0 {
         return Err(DispatchError::Softening { epsilon: u.epsilon });
+    }
+    // NaN != 1, so NaN is refused here too.
+    if u.g != G.number() {
+        return Err(DispatchError::GravitationalConstant { g: u.g });
+    }
+    if u.m_total != M_TOTAL.number() {
+        return Err(DispatchError::TotalMass { m_total: u.m_total });
     }
     Ok(())
 }

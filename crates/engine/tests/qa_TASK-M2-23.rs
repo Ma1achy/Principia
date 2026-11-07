@@ -81,6 +81,7 @@ fn sim(plane: Plane) -> SimConfig {
     SimConfig {
         chart: Chart {
             window: engine::contract::sim_config::Window::SQUARE,
+            mapping: Default::default(),
         },
         plane,
         slice: Slice {

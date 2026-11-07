@@ -199,6 +199,8 @@ r₀  = r₀₁ − (m₁/M₀₁) ρ      r₁ = r₀₁ + (m₀/M₀₁) ρ
 
 (Identities: `r₁ − r₀ = ρ`; inner CoM `= r₀₁`; total CoM `= M₀₁ r₀₁ + m₂ r₂ = 0`; `r₂ − r₀₁ = (M₀₁+m₂)λ = λ` since ΣM = 1.)
 
+*4 Nov 2026 (R-696, RQ-687 (b)):* at f32, the shape sphere's exponential sinc (`crates/kernel/src/chart/shape_sphere.rs`:162) never reads the backend's `sin` near 0; f64's bits do not move (REQ-DEC-053). Whether the kernel takes its own `sin` and `cos` at f32 is deferred to M4, with RQ-629.
+
 ### 3.3 Canonicalise
 
 Only needed when the input did **not** come through the canonical frame (physical-frame charts, encode):
@@ -409,6 +411,10 @@ comparison on $\infty$.
 **Under softening (R-670, RQ-656 (6)(iii), 2 Nov 2026).** A view refuses `ε ≠ 0` with any `Some(E*)`, `Some(0)`
 included, as a forbidding chart refuses it below: `η_E` never runs on a softened decode, so a pixel's IC does not depend
 on `ε`, and `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` keep their meaning.
+
+*5 Nov 2026 (R-791, closing RQ-693 (b)):* the $(L_z, E)$ chart forbids `Some(E*)`, so that refusal doesn't reach it.
+It runs at `ε ≠ 0`, and its $U$ is then §3.6's Newtonian $V_0$, not the softened form, so a pixel's IC doesn't depend on
+`ε` there either (`principia_chart_reference.md` §2.1).
 
 **Where it is allowed.** Only on charts that decode arbitrary momenta without enforcing an energy: the
 free-Jacobi-momentum chart and the latent chart. **It must be disabled** on the invariant-momentum charts

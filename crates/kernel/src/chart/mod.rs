@@ -17,7 +17,12 @@
 //! (`shape_sphere`), [`Burrau`] and the [`EuclidPlane`] (`burrau`) with the acute-angle charts [`BurrauThetaK`],
 //! [`BurrauThetaLz`] and [`BurrauThetaDeltaM`] (`burrau_acute`), [`InvariantLE`] / [`InvariantLK`] (`invariant`) and
 //! [`MassSimplex`] (`mass_simplex`), each a `Φ` beside it; and the mixed-axis charts, [`Mixed`] (`mixed`), whose two
-//! axes are any two quantities, the other six frozen.
+//! axes are any two quantities, the other six frozen, with [`MixedEnergy`] and [`MixedMassRatio`] (`physical`), whose
+//! vertical axis is a physical quantity.
+//!
+//! **Physical-quantity axes** ([`mod@energy`]; R-471, R-506, R-508): warped by default, as every chart above maps them,
+//! a linear mapping an option per axis ([`Mapping`], [`Mapped`]), the warp evaluated per pixel; `PE`, which chart_reference
+//! §2.1 gives no warp, refused ([`energy::written`]).
 //!
 //! **Tilt and slice** ([`mod@tilt`]; R-473, R-474, R-507): the rotation `R(τ₁, τ₂)` from the stored angles and the map,
 //! the latent chart's basis edit, and [`Tilted`], a curved chart under its tilt, on the charts that hold their blocks by
@@ -59,10 +64,12 @@
 
 pub mod burrau;
 pub mod burrau_acute;
+pub mod energy;
 pub mod invariant;
 pub mod latent;
 pub mod mass_simplex;
 pub mod mixed;
+pub mod physical;
 pub mod shape_sphere;
 pub mod tilt;
 
@@ -74,10 +81,12 @@ pub use spirv_std::num_traits::Float;
 
 pub use burrau::{Burrau, EuclidPlane};
 pub use burrau_acute::{BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz};
+pub use energy::{Mapped, Mapping};
 pub use invariant::{InvariantLE, InvariantLK};
 pub use latent::Latent;
 pub use mass_simplex::MassSimplex;
 pub use mixed::Mixed;
+pub use physical::{MixedEnergy, MixedMassRatio};
 pub use shape_sphere::{ShapeMap, ShapeSphere};
 pub use tilt::{Tilt, TiltMap, TiltSpec, Tilted};
 
@@ -87,7 +96,9 @@ use crate::payload::PayloadReal;
 use spirv_std::num_traits::FloatConst;
 
 /// The chart registry: every chart of this crate, by its [`Chart::name`], in chart_reference §5.1's order (the module's
-/// note), so that a test iterating every chart reads the set from one place (TASK-M2-24's `decode_totality`).
+/// note), so that a test iterating every chart reads the set from one place (TASK-M2-24's `decode_totality`). The
+/// mixed-axis charts with a physical-quantity axis ([`MixedEnergy`], [`MixedMassRatio`]) are `Mixed`, by their name,
+/// and an energy chart under a mapping ([`Mapped`]) is its own chart's.
 pub const REGISTRY: [&str; 11] = [
     "Latent",
     "ShapeSphere",
