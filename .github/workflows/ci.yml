@@ -61,9 +61,12 @@
 # a head, branch protection counts only the latest run's check suite (R-678), so another label's run would supersede the
 # suite holding the required checks. `ci-full.yml` re-runs the head's run when `merge-ready` goes on, a new attempt of
 # the same run, in the same suite, on the same merge commit, and the `changes` job of that attempt, reading the live
-# label, says full (`.github/scripts/ci_tier.sh`). On a quick run `changes` passes on `docs_only` true, which R-677 reads
-# "runs no full CI", and `gpu` false, so every full-only job skips exactly as on a docs head, and `quick` true, on which
-# `ci-workspace` and the gates skip too; `ci-quick` runs that tier's `ci-workspace` tests itself.
+# label, says full (`.github/scripts/ci_tier.sh`). The full tier adds to the quick tier (the owner, 7 Nov 2026): a quick
+# run still going is waited for, never cancelled, and the full attempt skips `ci-checks`' fmt, clippy and build, the
+# quick tier's own commands, when an earlier attempt's `ci-quick` passed them on the same merge commit; every job and
+# gate still runs and reports. On a quick run `changes` passes on `docs_only` true, which R-677 reads "runs no full CI",
+# and `gpu` false, so every full-only job skips exactly as on a docs head, and `quick` true, on which `ci-workspace` and
+# the gates skip too; `ci-quick` runs that tier's `ci-workspace` tests itself.
 # A quick run reports no required check that only the full tier reports (`ci`, `xtask-ci` and the three GPU gates), so a
 # skip cannot pass one: each gate is named by a one-value matrix, `${{ matrix.check }}`, and a job skipped at job level
 # never expands its `name:`. A name that is wholly an expression reports that expression, `matrix.check` (run
@@ -135,12 +138,16 @@ jobs:
   # gates read it. Then the code tier of this run (R-684; `.github/scripts/ci_tier.sh decide`): `quick`, true on a code
   # pull-request head that is not merge-ready, with `packages`, the `-p` arguments of its tests, `doc_packages`, those
   # with a library, and `workspace_tests`, whether those include the `ci-workspace` profile's; `docs_only` and `gpu`, the
-  # classifier's, or true and false on a quick run, which runs no full CI; and `report`, whether `ci-status` closes the
-  # commit statuses this job opened.
-  # `pull-requests: read` for the live label, `statuses: write` for those statuses.
+  # classifier's, or true and false on a quick run, which runs no full CI; `quick_passed`, on a full attempt of a pull
+  # request, whether an earlier attempt of this run passed the quick tier on this merge commit (the full tier adds to
+  # the quick tier: below, at `ci-checks`); and `report`, whether `ci-status` closes the commit statuses this job
+  # opened.
+  # `pull-requests: read` for the live label, `statuses: write` for those statuses, `actions: read` for the jobs of this
+  # run's earlier attempts.
   changes:
     runs-on: ubuntu-24.04
     permissions:
+      actions: read
       contents: read
       pull-requests: read
       statuses: write
@@ -154,6 +161,7 @@ jobs:
       packages: ${{ steps.tier.outputs.packages }}
       doc_packages: ${{ steps.tier.outputs.doc_packages }}
       workspace_tests: ${{ steps.tier.outputs.workspace_tests }}
+      quick_passed: ${{ steps.tier.outputs.quick_passed }}
       report: ${{ steps.tier.outputs.report }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -601,9 +609,18 @@ jobs:
       # keep R-374's line tables (`.github/actions/cargo-ci-config`).
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
+      # fmt, clippy and the build are the quick tier's own commands, over the workspace, so on a full attempt after a
+      # quick attempt that passed them on this merge commit (`quick_passed`) they are not run again: the full tier adds
+      # to the quick tier (the owner, 7 Nov 2026). The docs and the crate-graph check, which quick does not run, always
+      # run.
+      - name: The quick tier passed fmt, clippy and the build
+        if: needs.changes.outputs.quick_passed == 'true'
+        run: echo "::notice::an earlier attempt of this run passed the quick tier on this merge commit; fmt, clippy and the build are not run again"
       - name: cargo fmt --all --check
+        if: needs.changes.outputs.quick_passed != 'true'
         run: cargo fmt --all --check
       - name: cargo clippy --workspace --all-targets -- -D warnings
+        if: needs.changes.outputs.quick_passed != 'true'
         run: cargo clippy --workspace --all-targets -- -D warnings
       # The workspace's own docs, every rustdoc warning an error (R-387): a broken or private intra-doc link, an
       # unclosed HTML tag. `--no-deps`: only the workspace's crates are documented, the dependencies only checked, so
@@ -614,6 +631,7 @@ jobs:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --workspace --no-deps
       - name: cargo build --workspace
+        if: needs.changes.outputs.quick_passed != 'true'
         run: cargo build --workspace
       - name: cargo xtask deps
         run: cargo xtask deps

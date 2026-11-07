@@ -4,17 +4,25 @@
 # data head runs neither.
 #
 #   .github/scripts/ci_tier.sh decide        In `ci.yml`'s `changes` job, after `scripts/ci_changes.sh detect`: this run's
-#                                            tier, written to $GITHUB_OUTPUT. On a code head each full-only required
-#                                            check is posted pending.
+#                                            tier, written to $GITHUB_OUTPUT, and on a full attempt whether an earlier
+#                                            attempt passed the quick tier. On a code head each full-only required check
+#                                            is posted pending.
 #   .github/scripts/ci_tier.sh report        In `ci.yml`'s `ci-status` job: each full-only check's status, from its gate.
 #   .github/scripts/ci_tier.sh merge-ready   In `ci-full.yml`: `merge-ready` put on starts the head's full tier, without
-#                                            a push; taken off, it cancels a full attempt still going.
+#                                            a push, once its quick run has ended, never cancelling it; taken off, it
+#                                            cancels a full attempt still going.
 #
 # How a head goes from quick to full. A label change must not start a run of `ci.yml`: of each workflow's runs on a head
 # branch protection counts only the latest run's check suite (R-678), so another label's run would supersede the suite
 # holding the head's required checks. So `ci.yml` runs on no label change. `ci-full.yml` re-runs the head's `pull_request`
 # run instead, as `reviews.yml` re-runs its own (R-276): a new attempt of the same run, in the same check suite, on the
 # same merge commit. The new attempt finds the label on and is full.
+#
+# The full tier adds to the quick tier (the owner, 7 Nov 2026: "The full tier should compose / add on to the quick
+# tier"). A quick run still going when the label goes on is waited for, never cancelled, and the full attempt skips what
+# the quick tier passed on that merge commit: `decide`'s `quick_passed`, an earlier attempt of this run whose `ci-quick`
+# job passed, on which `ci-checks` skips fmt, clippy and the build, the same commands. Only what can be shown counts: an
+# attempt whose jobs cannot be read is no pass.
 #
 # Pending, never skipped-as-success. On a quick run no job bears a required name, so a skip cannot pass one: a gate
 # skipped at job level reports `matrix.check` (run 41972273540; `ci.yml`, the gates' comment), and until the full tier
@@ -27,6 +35,9 @@ set -euo pipefail
 # The required checks only the full tier reports. `pr-check`, `reviews-complete` and `mutants-check` report on every
 # head (R-678).
 FULL_ONLY="ci xtask-ci gpu-kernel gpu-metal gpu-lavapipe"
+
+# The quick tier's job as the jobs API names it: `ci.yml`'s job `ci-quick` calling `ci-quick.yml`'s job `ci-quick`.
+QUICK_JOB="ci-quick / ci-quick"
 
 here=$(dirname "${BASH_SOURCE[0]}")
 
@@ -95,19 +106,40 @@ quick_packages() {
   doc_packages=${doc_packages# }
 }
 
+# Whether an earlier attempt of this run passed the quick tier, on this attempt's merge commit (a re-run keeps its
+# commit): sets `quick_passed`, some earlier attempt's `ci-quick` job concluded `success`. Only what is shown counts:
+# an attempt whose jobs cannot be read is no pass.
+quick_evidence() {
+  local attempt="${GITHUB_RUN_ATTEMPT:-1}" n names
+  quick_passed=false
+  for ((n = 1; n < attempt; n++)); do
+    names=$(gh api "repos/$GH_REPO/actions/runs/${GITHUB_RUN_ID:?}/attempts/$n/jobs?per_page=100" \
+      --jq '.jobs[] | select(.conclusion == "success") | .name') || continue
+    if grep -qxF "$QUICK_JOB" <<< "$names"; then
+      quick_passed=true
+      echo "attempt $n of this run passed the quick tier on this merge commit"
+      return 0
+    fi
+  done
+}
+
 decide() {
   local tier="${TIER:?TIER is not set}" pull_request=false quick=false
   if [ "${GITHUB_EVENT_NAME:-}" = pull_request ]; then pull_request=true; fi
   packages=""
   doc_packages=""
   workspace_tests=false
+  quick_passed=false
   if [ "$tier" = code ]; then
     if ! full_tier; then quick=true; fi
   fi
   if [ "$quick" = true ]; then
     quick_packages
+  elif [ "$tier" = code ] && [ "$pull_request" = true ]; then
+    quick_evidence
   fi
   output quick "$quick"
+  output quick_passed "$quick_passed"
   output packages "$packages"
   output doc_packages "$doc_packages"
   output workspace_tests "$workspace_tests"
@@ -167,26 +199,26 @@ already_passed() {
   done
 }
 
-# Waits for run $1 to end. A cancelled run still runs its `always()` gates, which can queue behind the concurrent-job
-# cap, so after CI_TIER_POLLS polls it is force-cancelled; if it has still not ended after as many again, this fails.
-cancel_and_wait() {
-  local id=$1 polls="${CI_TIER_POLLS:-12}" i run status
-  gh api --method POST "repos/$GH_REPO/actions/runs/$id/cancel" > /dev/null || true
-  for ((i = 1; i <= 2 * polls; i++)); do
+# Waits for the head's latest run to end, never cancelling it: the full tier adds to what it passes. Polls every
+# CI_TIER_WAIT_SECONDS (30, or CI_TIER_POLL_SECONDS where set), at most CI_TIER_WAIT_POLLS times (700: 350 minutes,
+# under the job's 360); prints the ended run, or fails, named, when it has not ended.
+wait_for_end() {
+  local polls="${CI_TIER_WAIT_POLLS:-700}" i run status
+  for ((i = 1; i <= polls; i++)); do
+    sleep "${CI_TIER_WAIT_SECONDS:-${CI_TIER_POLL_SECONDS:-30}}"
     run=$(latest_run)
     status=$(cut -d' ' -f2 <<< "$run")
-    if [ "$status" = completed ]; then return 0; fi
-    if [ "$i" = "$polls" ]; then
-      gh api --method POST "repos/$GH_REPO/actions/runs/$id/force-cancel" > /dev/null || true
+    if [ "$status" = completed ]; then
+      echo "$run"
+      return 0
     fi
-    sleep "${CI_TIER_POLL_SECONDS:-5}"
   done
-  echo "::error::ci_tier: run $id did not end after it was cancelled"
+  echo "::error::ci_tier: the run on $HEAD_SHA had not ended after $polls polls; the full tier did not start" >&2
   return 1
 }
 
 label_on() {
-  local polls="${CI_TIER_POLLS:-12}" i run="" id status live
+  local polls="${CI_TIER_POLLS:-12}" i run="" id status live labels round
   for ((i = 1; i <= polls; i++)); do
     run=$(latest_run)
     if [ -n "$run" ]; then break; fi
@@ -197,21 +229,44 @@ label_on() {
     return 1
   fi
   read -r id status _ <<< "$run"
-  if [ "$status" = completed ] && already_passed "$id"; then
-    echo "run $id already passed every full-only check on $HEAD_SHA: nothing to re-run"
-    return 0
-  fi
-  if [ "$status" != completed ]; then
-    cancel_and_wait "$id"
-  fi
-  # The head again, now, after any wait: a push has its own run, and re-running the old head's would cancel it.
-  live=$(gh api "repos/$GH_REPO/pulls/$PR" --jq .head.sha)
-  if [ "$live" != "$HEAD_SHA" ]; then
-    echo "$HEAD_SHA is no longer the head ($live): nothing to re-run"
-    return 0
-  fi
-  echo "re-running run $id on $HEAD_SHA: the new attempt finds merge-ready on and runs the full tier"
-  gh api --method POST "repos/$GH_REPO/actions/runs/$id/rerun" > /dev/null
+  # A second round only when the re-run is refused because the run started again meanwhile (`retry.yml`'s re-run of a
+  # runner fault): that attempt is waited for too.
+  for round in 1 2; do
+    if [ "$status" != completed ]; then
+      echo "run $id on $HEAD_SHA is $status: waiting for it to end, not cancelling it"
+      run=$(wait_for_end) || return 1
+      read -r id status _ <<< "$run"
+    fi
+    if already_passed "$id"; then
+      echo "run $id already passed every full-only check on $HEAD_SHA: nothing to re-run"
+      return 0
+    fi
+    # The head again, now, after any wait: a push has its own run, and re-running the old head's would cancel it.
+    live=$(gh api "repos/$GH_REPO/pulls/$PR" --jq .head.sha)
+    if [ "$live" != "$HEAD_SHA" ]; then
+      echo "$HEAD_SHA is no longer the head ($live): nothing to re-run"
+      return 0
+    fi
+    # And the label: a push's `merge-ready-off` takes it off with a workflow's token, which starts no run of this one.
+    labels=$(live_labels) || {
+      echo "::error::ci_tier: could not read pull request $PR's labels"
+      return 1
+    }
+    if ! grep -qxF merge-ready <<< "$labels"; then
+      echo "merge-ready is no longer on pull request $PR: nothing to re-run"
+      return 0
+    fi
+    echo "re-running run $id on $HEAD_SHA: the new attempt finds merge-ready on and runs the full tier"
+    if gh api --method POST "repos/$GH_REPO/actions/runs/$id/rerun" > /dev/null; then
+      return 0
+    fi
+    run=$(latest_run)
+    read -r id status _ <<< "$run"
+    if [ "$status" = completed ] || [ "$round" = 2 ]; then
+      echo "::error::ci_tier: run $id on $HEAD_SHA could not be re-run"
+      return 1
+    fi
+  done
 }
 
 label_off() {

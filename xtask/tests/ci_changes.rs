@@ -81,7 +81,8 @@
 //!   added, label removed, docs, plan-data"): `ci_changes_every_required_check_reports_on_every_path` walks those
 //!   paths. On a quick run no job reports a full-only required check, each gate skipping as `matrix.check` (run
 //!   41972273540), never a required one, and `ci_changes_no_skipped_job_reports_a_required_name` holds that; the re-run the label starts
-//!   reports each, passing. `ci_changes_each_head_asks_for_its_jobs` counts what each head asks of the runners.
+//!   reports each, passing, and so does that re-run when it carries the quick tier's pass (the label put on while the
+//!   quick run goes, or after it: the owner, 7 Nov 2026, "The full tier should compose / add on to the quick tier"). `ci_changes_each_head_asks_for_its_jobs` counts what each head asks of the runners.
 //!   `xtask/tests/ci_quick_tier.rs` tests what takes a head from one tier to the other.
 //! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test
 //!   on its fixtures, runs every step after its classification on a change to the gate's configuration
@@ -2505,6 +2506,7 @@ fn check_skips(yml: &str) {
         "quick",
         "packages",
         "workspace_tests",
+        "quick_passed",
         "report",
     ] {
         assert_eq!(
@@ -3373,6 +3375,16 @@ fn tier_verdict(v: &Verdict, quick: bool) -> [(&'static str, String); 8] {
     ]
 }
 
+/// The verdict of a full attempt on a code head after an earlier attempt of the same run passed the quick tier (the
+/// owner, 7 Nov 2026: "The full tier should compose / add on to the quick tier"): `tier_verdict`'s full verdict, with
+/// `quick_passed` as `.github/scripts/ci_tier.sh decide` writes it then.
+#[cfg(unix)]
+fn composed_verdict(v: &Verdict) -> Vec<(&'static str, String)> {
+    let mut verdict = tier_verdict(v, false).to_vec();
+    verdict.push(("quick_passed", "true".to_owned()));
+    verdict
+}
+
 /// What each head asks of the runners from `ci.yml`, which is the owner's measure of the quick tier (4 Nov 2026: "The
 /// quick tier from the CI series is the structural fix"): every other workflow's jobs on a push are the same on each.
 #[cfg(unix)]
@@ -3967,6 +3979,18 @@ fn check_every_path_reports(workflows: &[(String, String)], setup: &str) {
                         path.what,
                         v.tier
                     );
+                    // The label put on while the head's quick run is going, or after it passed: the full attempt
+                    // carries that pass (owner, 7 Nov 2026), and every check still reports under its name and passes.
+                    if v.tier == "code" {
+                        let composed = ci_run(ci_yml, &composed_verdict(&v));
+                        assert!(
+                            composed.iter().any(|(n, pass)| n == check && *pass),
+                            "ci_changes: `{check}` does not pass on the full tier that adds to the quick tier, of {} \
+                             (tier {})",
+                            path.what,
+                            v.tier
+                        );
+                    }
                 }
                 continue;
             }
@@ -4090,6 +4114,26 @@ mod the_full_tier_passes {
                 "ci.yml",
                 "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
                 "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.quick == 'true'\n",
+            ),
+            &read("plan/HUMAN_SETUP.md"),
+        )
+    );
+}
+
+/// `ci-checks` skipped at job level on the quick tier's pass, rather than its three steps: the gate `ci` then reads a
+/// skip on a code head, and fails, so the composed full tier never passes it.
+#[cfg(unix)]
+mod the_composed_tier_passes {
+    use super::*;
+    negative_control!(
+        ci_changes_every_required_check_reports_on_every_path,
+        "ci.yml skipping the whole of `ci-checks` when the quick tier passed",
+        expected = "`ci` does not pass on the full tier that adds to the quick tier, of label added: merge-ready, code",
+        check_every_path_reports(
+            &workflows_edited(
+                "ci.yml",
+                "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
+                "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_passed != 'true'\n",
             ),
             &read("plan/HUMAN_SETUP.md"),
         )
