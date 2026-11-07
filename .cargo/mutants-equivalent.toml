@@ -148,7 +148,7 @@ mutant = "crates/kernel/src/burrau.rs:74:7: replace > with >= in primitive"
 justification = "m == n makes m ^ n = 0, so the parity test (m ^ n) & 1 == 1 already refuses every pair the > excludes"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/burrau.rs:106:29: replace | with ^ in seed"
+mutant = "crates/kernel/src/chart/burrau.rs:116:29: replace | with ^ in seed"
 justification = "s < 1 and s == 1 cannot both hold, so the two operands of | are never both true, and their ^ is their |"
 
 [[equivalent]]
@@ -204,11 +204,11 @@ mutant = "crates/kernel/src/decode/invariant.rs:471:53: replace > with >= in fin
 justification = "held + held is even and doubling_limit is odd (127 at f32, 1023 at f64), so they are never equal and > and >= agree on every input"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/construction.rs:957:9: replace <impl Chart for HeldK<P>>::forbids_energy_normalisation -> bool with true"
+mutant = "crates/kernel/src/chart/construction.rs:959:9: replace <impl Chart for HeldK<P>>::forbids_energy_normalisation -> bool with true"
 justification = "HeldK's chart is the concrete BurrauThetaLz, whose forbids_energy_normalisation is the constant true, so the delegation is true for every HeldK and no test can tell them apart"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/construction.rs:965:9: replace <impl Chart for HeldK<P>>::requires_per_pixel_mass -> bool with true"
+mutant = "crates/kernel/src/chart/construction.rs:967:9: replace <impl Chart for HeldK<P>>::requires_per_pixel_mass -> bool with true"
 justification = "HeldK's chart is the concrete BurrauThetaLz, whose requires_per_pixel_mass is the constant true, so the delegation is true for every HeldK and no test can tell them apart"
 
 [[equivalent]]
@@ -232,7 +232,7 @@ mutant = "crates/kernel/src/driver/substep.rs:117:10: replace < with <= in least
 justification = "where b == a both arms return floats with equal bits: a pair's d² is a sum of squares each +0 or positive (square never returns -0), and a NaN compares false under both"
 
 [[equivalent]]
-mutant = "crates/engine/src/lookup.rs:637:34: replace > with >= in moves_within_params"
+mutant = "crates/engine/src/lookup.rs:639:34: replace > with >= in moves_within_params"
 justification = "they differ only at len == 0: a = cos α/√μ_ρ is never 0 (no finite f64 has cos 0, and |cos α| >= 6.1e-17 cannot underflow over a finite √μ_ρ), and b == 0 (α = ±0, or underflow) is within any band pole >= 0 of its finite bound b.r >= 0, so the α = 0 pole branch is taken, which never reads beta_round (inverse_encode_contract § Chart-aware validation, R/b only off the pole; R-591)"
 
 [[equivalent]]
