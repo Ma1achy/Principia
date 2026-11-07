@@ -34,7 +34,7 @@ jobs:
           exit $LASTEXITCODE
 
       - name: Sandbox proof, through the service
-        if: inputs.test == 'proof'
+        if: inputs.test == 'proof' || inputs.test == 'probe'
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\setup\03-sandbox-proof.ps1 -Job
           exit $LASTEXITCODE
@@ -43,13 +43,19 @@ jobs:
         if: inputs.test == 'probe'
         run: |
           # The owner's monitor spec: a test connection to a host not on the allowlist. Sends no data; 11 minutes so
-          # a 10-minute sample catches it. No GPU, secrets or checkout.
+          # a 10-minute sample catches it. The proof step runs in the same job. No GPU, secrets or checkout.
+          # The server hangs up an idle connection in under 15 seconds, so short ones run in a loop for 11 minutes.
           $null = Resolve-DnsName example.com
-          $c = New-Object Net.Sockets.TcpClient
-          $c.Connect('example.com', 443)
-          "connected: $($c.Connected)"
-          Start-Sleep -Seconds 660
-          $c.Close()
+          $end = (Get-Date).AddSeconds(660)
+          $n = 0
+          while ((Get-Date) -lt $end) {
+            $c = New-Object Net.Sockets.TcpClient
+            $c.Connect('example.com', 443)
+            $n++
+            Start-Sleep -Seconds 10
+            $c.Close()
+          }
+          "connections: $n"
           exit 0
 
       - name: Start a process that tries to outlive the job
