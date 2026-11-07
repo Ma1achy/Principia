@@ -1590,7 +1590,7 @@ principle stands. The IC axis is any registered axis, of any kind. `validate` re
 | Paper time | § 8.6 | Time is `gauge`. If the IC axis moves `ℓ`, a row isn't one paper time, up to 1.68× across D at equal masses (§ 8.6): the axis reads canonical time, labelled `paper scale differs` |
 
 **Cache keys (physics note 3, C1).** The mode is on the sim key, through its new arm, so no old key moves. `T` is the march's top and stays on the key; the window is a view, off it,
-`t_hi ≤ T`, so changing `t_lo`, `t_hi` or the warp is **navigation**, re-addressing. **Raising `T` amends the caching contract:** its table says of `T`, "**All sim buffers** (signature
+`t_hi ≤ T`, so changing `t_lo`, `t_hi` or the warp is **navigation**, off the key: re-addressing below each column's front and, past a column's front, a march with `T` unchanged, which moves no key (§ 18.3). **Raising `T` amends the caching contract:** its table says of `T`, "**All sim buffers** (signature
 change; the march re-boots from `t = 0`)", so a continuation needs a carved exception. The physics is fine: below the line no step reads `T`, and only `bounded` at the top row belongs to it.
 The exception holds for regularised occupants always and for unregularised ones while `dt_macro` is unchanged, up to R-610's cap, `T ≤ 200`. RQ-727 names it. A column's state at a row is independent of `rows`, so a cache of
 columns is shareable across row sets, at a later version. The bitwise test: **`time_column_matches_playhead`** at the same `T`.
@@ -1634,9 +1634,9 @@ Those are hot bytes. With symbolic features active each stored row also keeps it
 
 So for Heggie × RK4 "dense" output on its own grid fits inside `payload_mem` unless `Δ_sync` is calibrated small: **the size conflict is the unregularised occupants', and the word conflict with the note is everyone's.**
 
-**The design, recommended in RQ-727:** each column's store spans `[t_lo, f]`, `f ≤ T` its own march front, by distinct boundaries, at most `K`, default **`K = H`** (V26), the option closest to the note; `T` is the stored top and
+**The design, recommended in RQ-727:** each column's store spans `[t_lo, f]`, `f ≤ T` its own march front, by distinct boundaries, at most `K`, default **`K = H`** (V26), the option closest to the note. The stored set doesn't depend on the front or on the order of visits: it is every `b`-th boundary from `t_lo`, `b = ⌈B_T/K⌉`, `B_T` the boundaries in `[t_lo, T]`, cut at `f`. So columns store the same boundaries below their fronts, a march in two stages stores what one does, and the count stays at most `K` when `f` reaches `T`. A row whose boundary isn't stored takes the finer window's re-integration, as below. `T` is the stored top and
 the label says so, so the march never passes the axis's horizon. A new column's front is `t_hi` (§ 18.4). `K = 2H` over the same span is a labelled extra under the tier's budget and the "are you sure?" system. The window moves inside `[t_lo, T]`: below a column's front it
-re-reads what is stored, and past that front it marches the column on from there, the same bitwise continuation as raising `T` (§ 18.2), storing as it goes: the order's "extending the window to later t integrates further per column". So a column pays only for the part it reaches, and § 18.5's cost stands. A finer window re-integrates from `t = 0`, progressively, saying so ("refining · 72%"), as scrub-back does under R-66, **until the row spacing reaches one
+re-reads what is stored, and past that front it marches the column on from there, storing as it goes: the order's "extending the window to later t integrates further per column". With `T` unchanged this is the same run, so no exception and no 65.535 line applies, and the build doesn't gate it on § 18.2's exception. So a column pays only for the part it reaches, and § 18.5's cost stands. A finer window re-integrates from `t = 0`, progressively, saying so ("refining · 72%"), as scrub-back does under R-66, **until the row spacing reaches one
 boundary, where it stops: there is nothing finer.** Going above `T` raises it, § 18.2's continuation. So the order's "re-reads stored trajectories" holds only for stored boundaries. A Result (R-572) with the rows as
 "stored times" is the sanctioned way to keep more: disk, streamed, budgeted.
 
@@ -1677,7 +1677,7 @@ Each with a control (R-176), TASK-M8-113 unless named.
 |---|---|---|
 | `time_column_matches_playhead` | a column at row `t` equals a normal render of that IC at playhead `t` under the same `T`, bitwise, on `r`, `p`, accumulators, `total_substeps`, the state word and the free-group word, a column whose later crossing cancels symbols included; an unregularised arm and a regularised arm | unregularised: a row re-integrated at another `T` past 65.535. Regularised: a row read one boundary off. The word: a row reading a prefix of the final word |
 | `time_zoom_floor` | the window stops at one boundary, per occupant, with the UI's reason; rows are integer indices | a float row time, which lands one low on 731 `k` |
-| `time_extend_continues` | raising `T` continues bitwise from the front where the exception holds, else a new run, labelled; a window moved past a column's front, `T` unchanged, continues it bitwise, a column made by an IC pan included | the signature re-boot taken |
+| `time_extend_continues` | raising `T` continues bitwise from the front where the exception holds, else a new run, labelled; a window moved past a column's front, `T` unchanged, continues it bitwise, a column made by an IC pan included; a column marched to `t_hi` and then on to `T` stores the same boundaries, with the same bits, as one march to `T`, and neighbouring columns with different fronts store the same boundaries below them | the signature re-boot taken; a spacing taken from `[t_lo, f]` |
 | `time_rows_on_boundaries` | every row reads the latest boundary at or before it; log rows stack on one boundary | a row stopped between boundaries |
 | `time_terminal_holds` | rows past termination hold the terminal state | marching past it |
 | `time_jitter_ic_only` | copies differ in `u` only | a `t` offset |
@@ -1685,7 +1685,7 @@ Each with a control (R-176), TASK-M8-113 unless named.
 | `time_window_frozen` | one window over all rows | `per_frame` |
 | `time_morph_rules` | time to time needs equal windows; time to IC-only is a cut, `TimeToIcCut` | a dissolve offered |
 | `time_anchor` | a lock reads `(IC, t)` bitwise across navigation | `t` on the sim key |
-| `time_memory_budget` | the store is `min(H, B)` per column up to `K`, each row with its word when symbolic features are active; it honours the tier's budget | no ceiling |
+| `time_memory_budget` | the store is `min(H, B)` per column up to `K`, each row with its word when symbolic features are active; at most `K` with `f = T`, after any order of window moves; it honours the tier's budget | no ceiling |
 
 ---
 
