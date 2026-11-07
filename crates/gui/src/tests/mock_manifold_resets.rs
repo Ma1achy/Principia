@@ -347,14 +347,23 @@ fn mock_manifold_resets_in_any_order_compose_to_home() {
 
 #[test]
 fn mock_manifold_resets_read_the_preset_never_literal_zero() {
-    for p in SCRIPT_PRESETS {
+    let not_zero = |p: usize, home: mv::PresetHome| {
         let (a, b) = PRESETS[p];
-        let home = PRESET_HOMES[p];
         let (u, v) = home.centre(a, b);
         assert!(u != 0.0 || v != 0.0, "preset {p}: a centre off (0, 0)");
         let masses = [home.base[MU1], home.base[MU1 + 1]];
         assert!(masses.iter().all(|m| *m != 0.0), "preset {p}: masses");
+    };
+    for p in SCRIPT_PRESETS {
+        not_zero(p, PRESET_HOMES[p]);
     }
+    rejects("a preset of literal zero", || {
+        let zero = mv::PresetHome {
+            base: [0.0; LATENT_DIM],
+            ..PRESET_HOMES[0]
+        };
+        not_zero(0, zero)
+    });
     assert_ne!(
         PRESET_HOMES[0], PRESET_HOMES[1],
         "a second preset of other home values"
@@ -412,12 +421,15 @@ fn mock_manifold_resets_preset_choice_keeps_sigma_at_the_slider_ends() {
         let after = rig.0.snapshot();
         let read = View::read(&after.sim);
         assert_eq!(read.preset, Some(from + 1), "the next preset");
-        assert_eq!(read.scale, view.scale, "σ kept from zoom {zoom}");
-        assert_eq!(
-            after.history.undo_depth,
-            depth + 1,
-            "one edit from zoom {zoom}"
-        );
+        let kept = |scale: f64, now: u32| {
+            assert_eq!(scale, view.scale, "σ kept from zoom {zoom}");
+            assert_eq!(now, depth + 1, "one edit from zoom {zoom}");
+        };
+        kept(read.scale, after.history.undo_depth);
+        rejects("a choice that moved σ", || {
+            kept(read.scale * 2.0, after.history.undo_depth)
+        });
+        rejects("a choice of two edits", || kept(read.scale, depth + 2));
     }
 }
 
@@ -456,25 +468,32 @@ fn mock_manifold_resets_zoom_row_reads_the_window() {
 
 #[test]
 fn mock_manifold_resets_at_tolerance_boundary() {
-    assert!(at(HOME_TOLERANCE, 0.0), "at 10⁻¹² is home");
-    assert!(at(-HOME_TOLERANCE, 0.0), "either side");
-    assert!(!at(2.0 * HOME_TOLERANCE, 0.0), "past it is not");
-    assert!(!at(f64::NAN, 0.0), "no value is no home");
+    let home = |value: f64| assert!(at(value, 0.0), "{value} is home");
+    home(HOME_TOLERANCE);
+    home(-HOME_TOLERANCE);
+    rejects("a value past the tolerance", || home(2.0 * HOME_TOLERANCE));
+    rejects("no value", || home(f64::NAN));
 }
 
 #[test]
 fn mock_manifold_resets_scopes_keep_the_order() {
     let rig = at_preset(0);
     let tree = rig.0.keyboard.tree(rig.0.view.mode);
+    let last_is = |scope: &'static str, section: Section| {
+        let children = tree.children(Some(scope));
+        assert_eq!(children.last(), Some(&section.scope()), "last of {scope}");
+    };
     for (scope, section) in [
         (mv::NAVIGATE, Section::Navigate),
         (mv::SLICE_CENTRE, Section::SliceCentre),
         (mv::TILT, Section::Tilt),
     ] {
-        let children = tree.children(Some(scope));
-        assert_eq!(children.last(), Some(&section.scope()), "last of {scope}");
+        last_is(scope, section);
         assert_eq!(Section::of(section.scope()), Some(section));
     }
+    rejects("another section's reset last", || {
+        last_is(mv::NAVIGATE, Section::Tilt)
+    });
     assert_eq!(Section::of(mv::TAU1), None);
 }
 
@@ -507,6 +526,9 @@ fn mock_manifold_resets_tooltips_name_the_commands() {
         let mut home = at_preset(0);
         let texts = tooltip_over(&mut home, place.rect.center());
         assert!(texts.iter().any(|t| t == ALREADY_HOME), "{texts:?}");
+        rejects("a dimmed reset read as live", || {
+            assert!(texts.iter().any(|t| t == section.tooltip()), "{texts:?}")
+        });
     }
 }
 
@@ -527,6 +549,9 @@ fn mock_manifold_resets_enter_acts_as_the_click() {
             at_reset,
             "the focus stays"
         );
+        rejects("an Enter that did nothing", || {
+            check_reset(section, &before, &before, &Values::home(0))
+        });
     }
 }
 
@@ -670,7 +695,9 @@ fn mock_reset_undo_home_during_a_held_drag_is_its_own_entry() {
     );
     let [down, up] = crate::capture::key(Key::Home, NONE);
     let _ = h.frame(app, down);
-    assert_eq!(app.snapshot().history.undo_depth, held + 1, "its own entry");
+    let own_entry = |now: u32| assert_eq!(now, held + 1, "its own entry");
+    own_entry(app.snapshot().history.undo_depth);
+    rejects("a Home folded into the held entry", || own_entry(held));
     let _ = h.frame(app, up);
     let _ = h.frame(app, vec![button(rail, false)]);
 }
@@ -784,7 +811,11 @@ fn mock_reset_dimming_at_the_tolerance() {
     z0[q0] = HOME_TOLERANCE;
     assert_eq!(run(&mut rig, z0, window), [false; 3], "at 10⁻¹²");
     z0[q0] = past;
-    assert_eq!(run(&mut rig, z0, window), [true, false, false], "past it");
+    let on = run(&mut rig, z0, window);
+    assert_eq!(on, [true, false, false], "past it");
+    rejects("past the tolerance read as home", || {
+        assert_eq!(on, [false; 3])
+    });
     let mut z0 = base;
     z0[a] += past;
     assert_eq!(run(&mut rig, z0, window), [false, false, true], "z₀ on e_a");
@@ -837,6 +868,15 @@ fn mock_reset_dimming_with_no_preset() {
     assert_eq!(rig.0.snapshot().history.undo_depth, depth);
     let at = at_preset(0);
     assert_eq!(dimmed_because(&at.0.snapshot().sim), ALREADY_HOME);
+    // Controls: on a preset, off home, Home does something, and the reason at home is no "no preset".
+    let mut moved = at_preset(0);
+    move_all(&mut moved);
+    rejects("a chart with a preset to go home to", || {
+        assert!(reset::home(&moved.0.snapshot().sim).is_empty())
+    });
+    rejects("a reason read off a preset", || {
+        assert_eq!(dimmed_because(&at.0.snapshot().sim), NO_PRESET)
+    });
 }
 
 /// The compass's target plane and readout in the frame after `run`, and the mode it left.
