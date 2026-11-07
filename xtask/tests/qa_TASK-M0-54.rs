@@ -145,12 +145,14 @@ mod a_result_left_unread {
                 "RESULTS: ${{ join(needs.*.result, ' ') }}\n",
                 "          DOCS_ONLY: ${{ needs.ci-workspace.outputs.docs_only }}\n",
                 "        run: for r in $RESULTS; do [ \"$r\" = success ] || { [ \"$r\" = skipped ] && ",
+                "[ \"$COVERED\" = true ] && COVERED=spent; } || { [ \"$r\" = skipped ] && ",
                 "[ \"$DOCS_ONLY\" = true ]; } || { echo \"a job ci gathers",
             ),
             concat!(
                 "RESULTS: ${{ needs.ci.result }}\n",
                 "          DOCS_ONLY: ${{ needs.ci-workspace.outputs.docs_only }}\n",
                 "        run: for r in $RESULTS; do [ \"$r\" = success ] || { [ \"$r\" = skipped ] && ",
+                "[ \"$COVERED\" = true ] && COVERED=spent; } || { [ \"$r\" = skipped ] && ",
                 "[ \"$DOCS_ONLY\" = true ]; } || { echo \"a job ci gathers",
             ),
         ))
@@ -178,7 +180,7 @@ struct Walk {
 }
 
 impl Walk {
-    /// One term of an expression: a quoted literal, `always()`, or an output of a job.
+    /// One term of an expression: a quoted literal, `always()`, an output of a job, or the result of one.
     fn term(&self, t: &str) -> String {
         let t = t.trim();
         if t == "always()" {
@@ -195,6 +197,7 @@ impl Walk {
                 .and_then(|o| o.get(*key))
                 .cloned()
                 .unwrap_or_default(),
+            ["needs", job, "result"] => self.results.get(*job).cloned().unwrap_or_default(),
             _ => panic!("qa_m0_54: the walk does not know the term `{t}`"),
         }
     }
@@ -407,6 +410,29 @@ fn check_endings(yml: &str) {
             let what = format!("`ci-release-archive` ended {bad}");
             let endings: &[Ending] = &[("ci-release-archive", &[bad])];
             assert_ends(&jobs, &head, &what, endings, ("skipped", "failure"));
+            // The shards skipped because their archive did not build, with no quick tier's pass to stand for them.
+            let what = format!("`ci-archive` ended {bad}");
+            let endings: &[Ending] = &[("ci-archive", &[bad])];
+            assert_ends(&jobs, &head, &what, endings, ("success", "failure"));
+        }
+        // The full attempt that adds to the quick tier (the owner, 7 Nov 2026): `changes` saying an earlier attempt of
+        // this run passed `ci-quick`, over every crate or some. Each ending above ends the same way there.
+        for covers in ["true", "false"] {
+            let mut composed = head.clone();
+            composed.insert("quick_passed".to_owned(), "true".to_owned());
+            composed.insert("quick_covers_ci".to_owned(), covers.to_owned());
+            let on = format!("the quick tier's pass, covers {covers}");
+            assert_ends(&jobs, &composed, &on, &[], ("success", "success"));
+            for (shard, ends) in [(1, ["failure", "success"]), (2, ["success", "failure"])] {
+                let what = format!("{on}, `ci-release` shard {shard} failed");
+                let endings: &[Ending] = &[("ci-release", &ends)];
+                assert_ends(&jobs, &composed, &what, endings, ("failure", "failure"));
+            }
+            for bad in ["failure", "cancelled"] {
+                let what = format!("{on}, `ci-release-archive` ended {bad}");
+                let endings: &[Ending] = &[("ci-release-archive", &[bad])];
+                assert_ends(&jobs, &composed, &what, endings, ("skipped", "failure"));
+            }
         }
     }
     for paths in DOCS_OR_DATA_HEADS {
@@ -436,6 +462,32 @@ fn check_endings(yml: &str) {
 #[test]
 fn qa_m0_54_each_release_ending_on_each_head() {
     check_endings(&workflow());
+}
+
+mod a_bare_skip_passed {
+    use super::*;
+    negative_control!(
+        qa_m0_54_each_release_ending_on_each_head,
+        "ci.yml's gate `ci` passing the shards' skip without the quick tier's proof",
+        expected = "with `ci-archive` ended failure",
+        check_endings(&edited(
+            "COVERED: ${{ needs.ci.result == 'skipped' && needs.changes.outputs.quick_covers_ci == 'true' }}",
+            "COVERED: ${{ needs.ci.result == 'skipped' }}",
+        ))
+    );
+}
+
+mod the_shards_skipped_on_some_crates {
+    use super::*;
+    negative_control!(
+        qa_m0_54_each_release_ending_on_each_head,
+        "ci.yml skipping `ci-archive`, and with it the shards, on a quick tier of some crates",
+        expected = "with the quick tier's pass, covers false",
+        check_endings(&edited(
+            "    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'\n    runs-on: ubuntu-24.04\n    outputs:\n      bytes:",
+            "    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_passed != 'true'\n    runs-on: ubuntu-24.04\n    outputs:\n      bytes:",
+        ))
+    );
 }
 
 /// The gate's script up to the end of its skip rule, each control's edit target.

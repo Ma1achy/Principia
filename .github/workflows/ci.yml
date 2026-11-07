@@ -62,9 +62,10 @@
 # suite holding the required checks. `ci-full.yml` re-runs the head's run when `merge-ready` goes on, a new attempt of
 # the same run, in the same suite, on the same merge commit, and the `changes` job of that attempt, reading the live
 # label, says full (`.github/scripts/ci_tier.sh`). The full tier adds to the quick tier (the owner, 7 Nov 2026): a quick
-# run still going is waited for, never cancelled, and the full attempt skips `ci-checks`' fmt, clippy and build, the
-# quick tier's own commands, when an earlier attempt's `ci-quick` passed them on the same merge commit; every job and
-# gate still runs and reports. On a quick run `changes` passes on `docs_only` true, which R-677 reads "runs no full CI",
+# run still going is waited for, never cancelled, and the full attempt skips what an earlier attempt's `ci-quick` passed
+# on the same merge commit: `ci-checks`' fmt, clippy and build, and, when quick tested every crate, `ci-archive`, the
+# `ci` shards and `ci-workspace`'s tests and doctests; every gate still runs and reports, `ci` passing the shards' skip
+# only on that proof. On a quick run `changes` passes on `docs_only` true, which R-677 reads "runs no full CI",
 # and `gpu` false, so every full-only job skips exactly as on a docs head, and `quick` true, on which `ci-workspace` and
 # the gates skip too; `ci-quick` runs that tier's `ci-workspace` tests itself.
 # A quick run reports no required check that only the full tier reports (`ci`, `xtask-ci` and the three GPU gates), so a
@@ -138,10 +139,11 @@ jobs:
   # gates read it. Then the code tier of this run (R-684; `.github/scripts/ci_tier.sh decide`): `quick`, true on a code
   # pull-request head that is not merge-ready, with `packages`, the `-p` arguments of its tests, `doc_packages`, those
   # with a library, and `workspace_tests`, whether those include the `ci-workspace` profile's; `docs_only` and `gpu`, the
-  # classifier's, or true and false on a quick run, which runs no full CI; `quick_passed`, on a full attempt of a pull
-  # request, whether an earlier attempt of this run passed the quick tier on this merge commit (the full tier adds to
-  # the quick tier: below, at `ci-checks`); and `report`, whether `ci-status` closes the commit statuses this job
-  # opened.
+  # classifier's, or true and false on a quick run, which runs no full CI; `quick_passed` and `quick_covers_ci`, on a
+  # full attempt of a pull request, whether an earlier attempt of this run passed the quick tier on this merge commit,
+  # and whether that tier tested every crate (the full tier adds to the quick tier: below, at `ci-checks`,
+  # `ci-archive`, `ci-workspace` and the gate `ci`); and `report`, whether `ci-status` closes the commit statuses this
+  # job opened.
   # `pull-requests: read` for the live label, `statuses: write` for those statuses, `actions: read` for the jobs of this
   # run's earlier attempts.
   changes:
@@ -162,6 +164,7 @@ jobs:
       doc_packages: ${{ steps.tier.outputs.doc_packages }}
       workspace_tests: ${{ steps.tier.outputs.workspace_tests }}
       quick_passed: ${{ steps.tier.outputs.quick_passed }}
+      quick_covers_ci: ${{ steps.tier.outputs.quick_covers_ci }}
       report: ${{ steps.tier.outputs.report }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -206,9 +209,13 @@ jobs:
   # the workflow artifact `nextest-ci`. NEXTEST_PROFILE names the `ci` profile the shards run under
   # (`.config/nextest.toml`).
   # Skipped on a data or docs pull request (R-656, R-677), and with it the `ci` shards, which need its archive.
+  # Skipped too, with the shards, on a full attempt whose earlier quick attempt tested every crate on this merge commit
+  # (`quick_covers_ci`): the full tier adds to the quick tier (the owner, 7 Nov 2026), and the shards' tests and shard
+  # 1's doctests are those `ci-quick` passed, under the same `ci` profile. The gate `ci` passes that skip only on that
+  # proof. A quick tier of some crates covers none of them: the shards run whole.
   ci-archive:
     needs: changes
-    if: needs.changes.outputs.docs_only != 'true'
+    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'
     runs-on: ubuntu-24.04
     outputs:
       bytes: ${{ steps.size.outputs.bytes }}
@@ -479,8 +486,11 @@ jobs:
         run: printf '[profile.dev.package."*"]\ndebug = false\n[profile.test.package."*"]\ndebug = false\n' >> "${CARGO_HOME:-$HOME/.cargo}/config.toml"
       # Under the disk sampler (`.github/scripts/disk_sampler.sh`), as the `ci` shards' run is: a measurement, read by
       # no gate; the step's log notes the job's lowest free, and the next step its free space at the end.
+      # This step, validation's below and xtask's doctests skip on a full attempt whose earlier quick attempt tested
+      # every crate on this merge commit (`quick_covers_ci`): `ci-quick` ran the `ci-workspace` profile and every
+      # library's doctests over them (the owner, 7 Nov 2026). The controls' step runs whatever, building what it lists.
       - name: cargo nextest run -p xtask
-        if: needs.changes.outputs.docs_only != 'true'
+        if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'
         env:
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask
@@ -488,7 +498,7 @@ jobs:
       # Validation's `qa_TASK-M0-24`: it runs `cargo xtask controls --list`, whose build the step above has made, and from
       # the shards' archive it rebuilt that in its shard (`.config/nextest.toml`'s `ci-workspace` profile).
       - name: cargo nextest run -p validation --test qa_TASK-M0-24
-        if: needs.changes.outputs.docs_only != 'true'
+        if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'
         env:
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p validation --test qa_TASK-M0-24
@@ -508,7 +518,7 @@ jobs:
         if: needs.changes.outputs.docs_only != 'true'
         run: df -h /
       - name: cargo test -p xtask --doc
-        if: needs.changes.outputs.docs_only != 'true'
+        if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'
         run: cargo test -p xtask --doc
       # The cheap checks, on a data or docs pull request only (R-656, R-662, R-677).
       - name: python3 plan/check_plan.py
@@ -672,6 +682,10 @@ jobs:
   # one-value matrix: skipped at job level, GitHub reports it as `matrix.check` (run 41972273540), never under a required
   # name, so a skip here cannot read as a pass. It needs `changes` for that `if:`; `quick` reads empty if the
   # classification failed, and the gate runs and fails.
+  # On a full attempt the full tier adds to the quick tier (the owner, 7 Nov 2026): COVERED, the shards skipped on
+  # `quick_covers_ci`, `changes`' proof that an earlier attempt of this run passed `ci-quick` over every crate on this
+  # merge commit, passes that one skip, once, and no other: a skip of `ci-checks`, `ci-workspace` or `ci-release`, or
+  # of the shards without that proof, still turns it red.
   ci-gate:
     name: ${{ matrix.check }}
     needs: [ci, ci-checks, ci-workspace, ci-release, changes]
@@ -683,9 +697,10 @@ jobs:
     steps:
       - name: every job it gathers passed
         env:
+          COVERED: ${{ needs.ci.result == 'skipped' && needs.changes.outputs.quick_covers_ci == 'true' }}
           RESULTS: ${{ join(needs.*.result, ' ') }}
           DOCS_ONLY: ${{ needs.ci-workspace.outputs.docs_only }}
-        run: for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$DOCS_ONLY" = true ]; } || { echo "a job ci gathers ended $r"; exit 1; }; done
+        run: for r in $RESULTS; do [ "$r" = success ] || { [ "$r" = skipped ] && [ "$COVERED" = true ] && COVERED=spent; } || { [ "$r" = skipped ] && [ "$DOCS_ONLY" = true ]; } || { echo "a job ci gathers ended $r"; exit 1; }; done
 
   # The native tests at the release profile, on every push (R-547, REQ-TOOL-189): the pinned nightly miscompiled plain
   # Rust above opt-level 0 in rustc's MIR GVN pass (RQ-299), which the other jobs, building the tests at opt-level 0,

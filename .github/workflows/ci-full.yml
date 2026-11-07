@@ -12,7 +12,7 @@
 #
 # The full tier adds to the quick tier (the owner, 7 Nov 2026: "The full tier should compose / add on to the quick
 # tier"): a quick run still going is waited for, never cancelled, and the re-run starts when it ends; the full attempt
-# then skips what that quick attempt passed (`ci_tier.sh decide`, `quick_passed`).
+# then skips what that quick attempt passed (`ci_tier.sh decide`, `quick_passed` and `quick_covers_ci`).
 #
 # Any other label's run skips its one job at job level, and asks for no runner, in a group of its own, so it cancels
 # nothing (below).

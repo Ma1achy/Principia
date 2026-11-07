@@ -4,8 +4,8 @@
 # data head runs neither.
 #
 #   .github/scripts/ci_tier.sh decide        In `ci.yml`'s `changes` job, after `scripts/ci_changes.sh detect`: this run's
-#                                            tier, written to $GITHUB_OUTPUT, and on a full attempt whether an earlier
-#                                            attempt passed the quick tier. On a code head each full-only required check
+#                                            tier, written to $GITHUB_OUTPUT, and on a full attempt what an earlier
+#                                            attempt's quick tier passed. On a code head each full-only required check
 #                                            is posted pending.
 #   .github/scripts/ci_tier.sh report        In `ci.yml`'s `ci-status` job: each full-only check's status, from its gate.
 #   .github/scripts/ci_tier.sh merge-ready   In `ci-full.yml`: `merge-ready` put on starts the head's full tier, without
@@ -21,8 +21,11 @@
 # The full tier adds to the quick tier (the owner, 7 Nov 2026: "The full tier should compose / add on to the quick
 # tier"). A quick run still going when the label goes on is waited for, never cancelled, and the full attempt skips what
 # the quick tier passed on that merge commit: `decide`'s `quick_passed`, an earlier attempt of this run whose `ci-quick`
-# job passed, on which `ci-checks` skips fmt, clippy and the build, the same commands. Only what can be shown counts: an
-# attempt whose jobs cannot be read is no pass.
+# job passed, on which `ci-checks` skips fmt, clippy and the build, the same commands; and `quick_covers_ci`, that
+# attempt having tested every crate, on which `ci-archive` and the `ci` shards skip, and `ci-workspace` skips the tests
+# and doctests quick ran, the same tests under the same nextest profiles. Only what can be shown counts: an attempt
+# whose jobs cannot be read is no pass, and changed paths that cannot be read, or none, cover no crate. A quick tier of
+# some crates covers no test: the shards then run whole.
 #
 # Pending, never skipped-as-success. On a quick run no job bears a required name, so a skip cannot pass one: a gate
 # skipped at job level reports `matrix.check` (run 41972273540; `ci.yml`, the gates' comment), and until the full tier
@@ -106,21 +109,35 @@ quick_packages() {
   doc_packages=${doc_packages# }
 }
 
-# Whether an earlier attempt of this run passed the quick tier, on this attempt's merge commit (a re-run keeps its
-# commit): sets `quick_passed`, some earlier attempt's `ci-quick` job concluded `success`. Only what is shown counts:
-# an attempt whose jobs cannot be read is no pass.
+# What an earlier attempt of this run passed of the quick tier, on this attempt's merge commit (a re-run keeps its
+# commit): sets `quick_passed`, some earlier attempt's `ci-quick` job concluded `success`, and `quick_covers_ci`, that
+# job tested every crate, its tests and doctests then those of the `ci` shards and `ci-workspace`. Only what is shown
+# counts: an attempt whose jobs cannot be read is no pass, and changed paths that cannot be read, or none, cover no
+# crate, where `quick_packages` fails towards every test, so never more than the quick tier ran.
 quick_evidence() {
-  local attempt="${GITHUB_RUN_ATTEMPT:-1}" n names
+  local attempt="${GITHUB_RUN_ATTEMPT:-1}" n names paths crates every
+  local changes="${CI_CHANGES:-$here/../../scripts/ci_changes.sh}" script="$here/ci_quick_crates.py"
+  local workspace="${CI_ROOT:-.}"
   quick_passed=false
+  quick_covers_ci=false
   for ((n = 1; n < attempt; n++)); do
     names=$(gh api "repos/$GH_REPO/actions/runs/${GITHUB_RUN_ID:?}/attempts/$n/jobs?per_page=100" \
       --jq '.jobs[] | select(.conclusion == "success") | .name') || continue
     if grep -qxF "$QUICK_JOB" <<< "$names"; then
       quick_passed=true
       echo "attempt $n of this run passed the quick tier on this merge commit"
-      return 0
+      break
     fi
   done
+  if [ "$quick_passed" = false ]; then return 0; fi
+  paths=$("$changes" paths) || return 0
+  if [ -z "$paths" ]; then return 0; fi
+  crates=$(python3 -I "$script" --root "$workspace" <<< "$paths") || return 0
+  every=$(python3 -I "$script" --root "$workspace" < /dev/null) || return 0
+  if [ -n "$crates" ] && [ "$crates" = "$every" ]; then
+    quick_covers_ci=true
+    echo "it tested every crate: the ci shards' and ci-workspace's tests"
+  fi
 }
 
 decide() {
@@ -130,6 +147,7 @@ decide() {
   doc_packages=""
   workspace_tests=false
   quick_passed=false
+  quick_covers_ci=false
   if [ "$tier" = code ]; then
     if ! full_tier; then quick=true; fi
   fi
@@ -140,6 +158,7 @@ decide() {
   fi
   output quick "$quick"
   output quick_passed "$quick_passed"
+  output quick_covers_ci "$quick_covers_ci"
   output packages "$packages"
   output doc_packages "$doc_packages"
   output workspace_tests "$workspace_tests"

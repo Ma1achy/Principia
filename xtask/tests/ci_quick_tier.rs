@@ -16,16 +16,18 @@
 //!   attempt and live label; a first-attempt push quick whatever the label; the outputs the jobs skip on; each full-only
 //!   check posted pending on a code pull-request head only.
 //! - `ci_tier_report_*`: each full-only check's status follows its gate, a skip or a cancellation staying pending.
-//! - `ci_tier_decide_carries_*`: on a full attempt, whether an earlier attempt of the run passed the quick tier
-//!   (`quick_passed`), from those attempts' jobs; nothing that cannot be read counts.
+//! - `ci_tier_decide_carries_*`: on a full attempt, what an earlier attempt of the run passed of the quick tier
+//!   (`quick_passed`), and whether it tested every crate (`quick_covers_ci`), from those attempts' jobs; nothing that
+//!   cannot be read counts.
 //! - `ci_tier_merge_ready_*`: `merge-ready` going on re-runs the head's run without a push, once it has ended, waiting
 //!   for a quick run still going and never cancelling it (the owner, 7 Nov 2026: "The full tier should compose / add
 //!   on to the quick tier"), and not when every full-only check has passed, the head has moved or the label has come
 //!   off; going off cancels only a full attempt.
 //! - `ci_full_workflow_*`: `ci-full.yml` takes the label events, `ci.yml` none, so no label's run supersedes the check
 //!   suite holding the required checks (R-678), and only `merge-ready` asks for a runner, for as long as its wait.
-//! - `ci_full_attempt_*`: the steps a full attempt leaves to the quick tier's pass are its own commands, fmt, clippy
-//!   and the build, and no other step, job or gate reads that pass.
+//! - `ci_full_attempt_*`: what a full attempt leaves to the quick tier's pass is its own commands: fmt, clippy and the
+//!   build; and, when it tested every crate, `ci-archive` and the shards, and `ci-workspace`'s tests and doctests; the
+//!   gate `ci` passes the shards' skip only on that proof, and no other step, job or gate reads it.
 //! - `ci_workflows_cancel_superseded_runs_never_on_main`: every workflow a pull request's push runs, but the two R-656
 //!   exempts, keeps one group per pull request with `cancel-in-progress`, off on `main`.
 //!
@@ -1128,16 +1130,18 @@ negative_control!(
 /// The quick tier's job as the jobs API names it, a job of `ci.yml` calling `ci-quick.yml`'s.
 const QUICK_JOB: &str = "ci-quick / ci-quick";
 
-/// A run of `decide` on a code head whose earlier attempts' passed jobs are `attempts` (`GH_ATTEMPT_<n>`), and
-/// whether it must say an earlier attempt passed the quick tier.
+/// A run of `decide` on a code head whose earlier attempts' passed jobs are `attempts` (`GH_ATTEMPT_<n>`), and what
+/// it must say the quick tier passed and covered.
 struct Composed {
     what: &'static str,
     event: &'static str,
     action: &'static str,
     attempt: &'static str,
     labels: &'static str,
+    paths: Option<&'static [&'static str]>,
     attempts: &'static [(&'static str, &'static str)],
     passed: bool,
+    covers: bool,
     /// The attempts whose jobs it reads.
     reads: &'static [&'static str],
 }
@@ -1146,8 +1150,10 @@ struct Composed {
 const fn full(
     what: &'static str,
     attempt: &'static str,
+    paths: Option<&'static [&'static str]>,
     attempts: &'static [(&'static str, &'static str)],
     passed: bool,
+    covers: bool,
     reads: &'static [&'static str],
 ) -> Composed {
     Composed {
@@ -1156,8 +1162,10 @@ const fn full(
         action: "synchronize",
         attempt,
         labels: "merge-ready",
+        paths,
         attempts,
         passed,
+        covers,
         reads,
     }
 }
@@ -1166,23 +1174,38 @@ const QUICK_PASSED: &[(&str, &str)] = &[("GH_ATTEMPT_1", "changes\nci-quick / ci
 
 const COMPOSED: &[Composed] = &[
     full(
-        "a full attempt after a quick attempt that passed",
+        "a full attempt after a quick attempt that tested every crate",
         "2",
+        KERNEL,
         QUICK_PASSED,
         true,
+        true,
+        &["1"],
+    ),
+    full(
+        "a full attempt after a quick attempt that tested some crates",
+        "2",
+        GUI,
+        QUICK_PASSED,
+        true,
+        false,
         &["1"],
     ),
     full(
         "a full attempt after a quick attempt that failed",
         "2",
+        KERNEL,
         &[("GH_ATTEMPT_1", "changes")],
+        false,
         false,
         &["1"],
     ),
     full(
         "a full attempt after a job named like the quick tier's",
         "2",
+        KERNEL,
         &[("GH_ATTEMPT_1", "changes\nci-quick / ci-quick (old)")],
+        false,
         false,
         &["1"],
     ),
@@ -1190,7 +1213,9 @@ const COMPOSED: &[Composed] = &[
     full(
         "a third attempt, the quick tier passed in the first",
         "3",
+        KERNEL,
         QUICK_PASSED,
+        true,
         true,
         &["1"],
     ),
@@ -1198,7 +1223,9 @@ const COMPOSED: &[Composed] = &[
     full(
         "a third attempt, the quick tier passed in the second",
         "3",
+        KERNEL,
         &[("GH_ATTEMPT_1", "changes"), ("GH_ATTEMPT_2", QUICK_JOB)],
+        true,
         true,
         &["1", "2"],
     ),
@@ -1206,14 +1233,37 @@ const COMPOSED: &[Composed] = &[
     full(
         "a second attempt whose own jobs list the quick tier",
         "2",
+        KERNEL,
         &[("GH_ATTEMPT_2", QUICK_JOB)],
+        false,
+        false,
+        &["1"],
+    ),
+    // Paths that cannot be read, or none: the quick tier may have run fewer crates than everything; cover none.
+    full(
+        "a full attempt whose paths cannot be read",
+        "2",
+        None,
+        QUICK_PASSED,
+        true,
+        false,
+        &["1"],
+    ),
+    full(
+        "a full attempt whose paths are none",
+        "2",
+        Some(&[]),
+        QUICK_PASSED,
+        true,
         false,
         &["1"],
     ),
     full(
         "a first attempt on the label",
         "1",
+        KERNEL,
         QUICK_PASSED,
+        false,
         false,
         &[],
     ),
@@ -1224,8 +1274,10 @@ const COMPOSED: &[Composed] = &[
         action: "synchronize",
         attempt: "2",
         labels: "",
+        paths: KERNEL,
         attempts: QUICK_PASSED,
         passed: false,
+        covers: false,
         reads: &[],
     },
     Composed {
@@ -1234,8 +1286,10 @@ const COMPOSED: &[Composed] = &[
         action: "",
         attempt: "2",
         labels: "",
+        paths: KERNEL,
         attempts: QUICK_PASSED,
         passed: false,
+        covers: false,
         reads: &[],
     },
 ];
@@ -1253,16 +1307,16 @@ fn check_composed(script: &str) {
             ("GH_LABELS", c.labels),
         ];
         env.extend_from_slice(c.attempts);
-        let got = tier(script, "decide", &env, KERNEL, &[]);
+        let got = tier(script, "decide", &env, c.paths, &[]);
         assert!(
             got.ok(),
             "ci_quick_tier: decide on {what} failed: {}",
             got.out
         );
         assert_eq!(
-            got.output("quick_passed"),
-            c.passed.to_string(),
-            "ci_quick_tier: decide on {what}: quick_passed: {}",
+            (got.output("quick_passed"), got.output("quick_covers_ci")),
+            (c.passed.to_string().as_str(), c.covers.to_string().as_str()),
+            "ci_quick_tier: decide on {what}: (quick_passed, quick_covers_ci): {}",
             got.out
         );
         let read: Vec<String> = got
@@ -1297,7 +1351,9 @@ fn check_composed(script: &str) {
         &[],
     );
     assert!(
-        got.ok() && got.output("quick_passed") == "false",
+        got.ok()
+            && got.output("quick_passed") == "false"
+            && got.output("quick_covers_ci") == "false",
         "ci_quick_tier: decide with the attempts' jobs unread: {}",
         got.out
     );
@@ -1313,7 +1369,7 @@ mod any_job_a_pass {
     negative_control!(
         ci_tier_decide_carries_what_the_quick_tier_passed,
         "decide reading any passed job of an earlier attempt as the quick tier's",
-        expected = "ci_quick_tier: decide on a full attempt after a quick attempt that failed: quick_passed",
+        expected = "ci_quick_tier: decide on a full attempt after a quick attempt that failed: (quick_passed",
         check_composed(&edited(
             TIER,
             "    if grep -qxF \"$QUICK_JOB\" <<< \"$names\"; then\n",
@@ -1365,6 +1421,45 @@ mod this_attempt_too {
     );
 }
 
+mod some_crates_as_every_crate {
+    use super::*;
+    negative_control!(
+        ci_tier_decide_carries_what_the_quick_tier_passed,
+        "decide covering the shards on a quick tier of some crates",
+        expected =
+            "ci_quick_tier: decide on a full attempt after a quick attempt that tested some crates",
+        check_composed(&edited(
+            TIER,
+            "  if [ -n \"$crates\" ] && [ \"$crates\" = \"$every\" ]; then\n",
+            "  if [ -n \"$crates\" ]; then\n"
+        ))
+    );
+}
+
+mod no_paths_as_every_crate {
+    use super::*;
+    negative_control!(
+        ci_tier_decide_carries_what_the_quick_tier_passed,
+        "decide covering the shards when the change names no path, which the crates script reads as every crate",
+        expected = "ci_quick_tier: decide on a full attempt whose paths are none",
+        check_composed(&edited(TIER, "  if [ -z \"$paths\" ]; then return 0; fi\n", ""))
+    );
+}
+
+mod unread_paths_as_every_crate {
+    use super::*;
+    negative_control!(
+        ci_tier_decide_carries_what_the_quick_tier_passed,
+        "decide covering the shards when the paths cannot be read, as the quick tier's own fallback would",
+        expected = "ci_quick_tier: decide on a full attempt whose paths cannot be read",
+        check_composed(&edited(
+            TIER,
+            "  paths=$(\"$changes\" paths) || return 0\n  if [ -z \"$paths\" ]; then return 0; fi\n",
+            "  paths=$(\"$changes\" paths) || paths=\"\"\n"
+        ))
+    );
+}
+
 mod unread_jobs_a_pass {
     use super::*;
     negative_control!(
@@ -1382,7 +1477,7 @@ mod unread_jobs_a_pass {
 negative_control!(
     ci_tier_decide_carries_what_the_quick_tier_passed,
     "decide carrying a quick pass into a quick attempt",
-    expected = "ci_quick_tier: decide on a quick retry: quick_passed",
+    expected = "ci_quick_tier: decide on a quick retry: (quick_passed",
     check_composed(&edited(
         TIER,
         "  elif [ \"$tier\" = code ] && [ \"$pull_request\" = true ]; then\n    quick_evidence\n",
@@ -2209,10 +2304,18 @@ negative_control!(
 
 /// The skip a step of `ci-checks` takes on a full attempt after the quick tier passed (`quick_passed`).
 const PASSED_SKIP: &str = "needs.changes.outputs.quick_passed != 'true'";
+/// The skip `ci-archive`, and the steps of `ci-workspace` that quick ran, take when that quick tier tested every crate
+/// (`quick_covers_ci`), beside the classifier's own.
+const COVERS_SKIP: &str =
+    "needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'";
+/// The gate `ci`'s proof that the shards' skip is the quick tier's: they were skipped, and `changes` found that cover.
+const COVERED: &str =
+    "${{ needs.ci.result == 'skipped' && needs.changes.outputs.quick_covers_ci == 'true' }}";
 /// The steps the full tier leaves to the quick tier (the owner, 7 Nov 2026: "The full tier should compose / add on to
-/// the quick tier"): each job, the start of the step's `run:`, and the condition it runs on. Each repeats a command of
-/// `ci-quick.yml`, over the workspace: fmt, clippy and the build.
-const LEFT_TO_QUICK: [(&str, &str, &str); 3] = [
+/// the quick tier"): each job, the step's whole `run:`, and the condition it runs on. Each is a command `ci-quick.yml`
+/// ran over the workspace: fmt, clippy and the build; and, over every crate, the `ci-workspace` profile's tests and the
+/// libraries' doctests. `ci-archive` and the shards, the `ci` profile's tests, skip at job level (below).
+const LEFT_TO_QUICK: [(&str, &str, &str); 6] = [
     ("ci-checks", "cargo fmt --all --check", PASSED_SKIP),
     (
         "ci-checks",
@@ -2220,8 +2323,15 @@ const LEFT_TO_QUICK: [(&str, &str, &str); 3] = [
         PASSED_SKIP,
     ),
     ("ci-checks", "cargo build --workspace", PASSED_SKIP),
+    ("ci-workspace", "cargo nextest run -p xtask", COVERS_SKIP),
+    (
+        "ci-workspace",
+        "cargo nextest run -p validation --test qa_TASK-M0-24",
+        COVERS_SKIP,
+    ),
+    ("ci-workspace", "cargo test -p xtask --doc", COVERS_SKIP),
 ];
-const COMPOSE_KEY: &str = "quick_passed";
+const COMPOSE_KEYS: [&str; 2] = ["quick_passed", "quick_covers_ci"];
 
 /// A step's `run:`, or else its `uses:`.
 fn step_text(step: &Value) -> &str {
@@ -2229,42 +2339,66 @@ fn step_text(step: &Value) -> &str {
         .map_or_else(|| str_of(&step["uses"]), str_of)
 }
 
+/// Whether `text` names either of the outputs that carry the quick tier's pass.
+fn names_compose(text: &str) -> bool {
+    COMPOSE_KEYS.iter().any(|k| text.contains(k))
+}
+
 fn check_composed_steps(files: &[(String, String)]) {
     let parsed = parse(files);
     let ci = &parsed["ci.yml"];
     let jobs = ci["jobs"].as_object().expect("jobs");
     let changes = &jobs["changes"];
-    assert_eq!(
-        str_of(&changes["outputs"][COMPOSE_KEY]),
-        "${{ steps.tier.outputs.quick_passed }}",
-        "ci_quick_tier: `changes` does not pass on `{COMPOSE_KEY}`"
-    );
+    for key in COMPOSE_KEYS {
+        assert_eq!(
+            str_of(&changes["outputs"][key]),
+            format!("${{{{ steps.tier.outputs.{key} }}}}"),
+            "ci_quick_tier: `changes` does not pass on `{key}`"
+        );
+    }
     assert_eq!(
         str_of(&changes["permissions"]["actions"]),
         "read",
         "ci_quick_tier: `changes` cannot read its run's earlier attempts"
     );
+    // `ci-archive`, and with it the shards (`needs: ci-archive`), skip on the cover alone.
+    assert_eq!(
+        str_of(&jobs["ci-archive"]["if"]),
+        COVERS_SKIP,
+        "ci_quick_tier: `ci-archive` skips on `{}`, not `{COVERS_SKIP}`",
+        str_of(&jobs["ci-archive"]["if"])
+    );
+    // The gate `ci` passes that skip only on its proof.
+    let gate_env = &jobs["ci-gate"]["steps"][0]["env"];
+    assert_eq!(
+        str_of(&gate_env["COVERED"]),
+        COVERED,
+        "ci_quick_tier: the gate `ci`'s COVERED is not the shards' skip on the quick tier's cover"
+    );
     let mut found = [0_usize; LEFT_TO_QUICK.len()];
     for (id, job) in jobs {
-        // Nothing but the steps reads the quick tier's pass: no job-level `if:`, no gate, no other job's output.
+        // Nothing else reads the quick tier's pass: no other job-level `if:`, gate or output.
         let mut rest = job.clone();
         if let Some(o) = rest.as_object_mut() {
             o.remove("steps");
             if id == "changes" {
                 o.remove("outputs");
             }
+            if id == "ci-archive" {
+                o.remove("if");
+            }
         }
         assert!(
-            !rest.to_string().contains(COMPOSE_KEY),
+            !names_compose(&rest.to_string()),
             "ci_quick_tier: `{id}` reads the quick tier's pass outside its steps"
         );
         for step in job["steps"].as_array().map_or(&[][..], Vec::as_slice) {
-            let text = step_text(step).trim_start();
+            let text = step_text(step).trim();
             let cond = str_of(&step["if"]);
-            let at = LEFT_TO_QUICK
+            if let Some(at) = LEFT_TO_QUICK
                 .iter()
-                .position(|(j, start, _)| j == id && text.starts_with(start));
-            if let Some(at) = at {
+                .position(|(j, run, _)| j == id && text == *run)
+            {
                 found[at] += 1;
                 let want = LEFT_TO_QUICK[at].2;
                 assert_eq!(
@@ -2273,8 +2407,8 @@ fn check_composed_steps(files: &[(String, String)]) {
                 );
                 continue;
             }
-            // A notice that says so, on the opposite condition, and no other step.
-            if text.starts_with("echo \"::notice::") && cond.contains(COMPOSE_KEY) {
+            // A notice that says so, on the opposite condition.
+            if text.starts_with("echo \"::notice::") && names_compose(cond) {
                 assert!(
                     LEFT_TO_QUICK
                         .iter()
@@ -2283,17 +2417,26 @@ fn check_composed_steps(files: &[(String, String)]) {
                 );
                 continue;
             }
+            // The gate `ci`'s step, whose COVERED is checked above, and no other of its fields.
+            if id == "ci-gate" {
+                let mut other = step.clone();
+                if let Some(env) = other["env"].as_object_mut() {
+                    env.remove("COVERED");
+                }
+                assert!(
+                    !names_compose(&other.to_string()),
+                    "ci_quick_tier: the gate `ci` reads the quick tier's pass beside COVERED"
+                );
+                continue;
+            }
             assert!(
-                !step.to_string().contains(COMPOSE_KEY),
+                !names_compose(&step.to_string()),
                 "ci_quick_tier: a step the quick tier does not cover skips on its pass: {id}'s `{text}` (`{cond}`)"
             );
         }
     }
-    for (n, (job, start, _)) in found.iter().zip(LEFT_TO_QUICK) {
-        assert_eq!(
-            *n, 1,
-            "ci_quick_tier: {job} has {n} steps starting `{start}`, not one"
-        );
+    for (n, (job, run, _)) in found.iter().zip(LEFT_TO_QUICK) {
+        assert_eq!(*n, 1, "ci_quick_tier: {job} has {n} steps `{run}`, not one");
     }
 }
 
@@ -2316,17 +2459,58 @@ mod the_docs_still_run {
     );
 }
 
-mod no_gate_reads_it {
+mod the_controls_still_run {
     use super::*;
     negative_control!(
         ci_full_attempt_leaves_to_the_quick_tier_only_its_own_steps,
-        "the gate `ci` passing a skip on the quick tier's pass",
-        expected =
-            "ci_quick_tier: a step the quick tier does not cover skips on its pass: ci-gate's",
+        "ci-workspace skipping the controls, which quick does not run, on the quick tier's cover",
+        expected = "ci_quick_tier: a step the quick tier does not cover skips on its pass: ci-workspace's `cargo nextest run -p xtask --features controls",
         check_composed_steps(&with_edit(
             "ci.yml",
-            "          DOCS_ONLY: ${{ needs.ci-workspace.outputs.docs_only }}\n",
-            "          DOCS_ONLY: ${{ needs.changes.outputs.quick_passed }}\n"
+            "      - name: cargo nextest run --features controls (the default-feature listing's controls)\n        if: needs.changes.outputs.docs_only != 'true'\n",
+            "      - name: cargo nextest run --features controls (the default-feature listing's controls)\n        if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'\n"
+        ))
+    );
+}
+
+mod the_archive_on_every_crate {
+    use super::*;
+    negative_control!(
+        ci_full_attempt_leaves_to_the_quick_tier_only_its_own_steps,
+        "ci-archive, and the shards, skipped after a quick tier of some crates",
+        expected = "ci_quick_tier: `ci-archive` skips on",
+        check_composed_steps(&with_edit(
+            "ci.yml",
+            "    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_covers_ci != 'true'\n    runs-on: ubuntu-24.04\n    outputs:\n      bytes:",
+            "    if: needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.quick_passed != 'true'\n    runs-on: ubuntu-24.04\n    outputs:\n      bytes:"
+        ))
+    );
+}
+
+mod the_gate_needs_the_skip {
+    use super::*;
+    negative_control!(
+        ci_full_attempt_leaves_to_the_quick_tier_only_its_own_steps,
+        "the gate `ci` passing a skip on the cover whatever the shards ended in",
+        expected = "ci_quick_tier: the gate `ci`'s COVERED is not",
+        check_composed_steps(&with_edit(
+            "ci.yml",
+            "          COVERED: ${{ needs.ci.result == 'skipped' && needs.changes.outputs.quick_covers_ci == 'true' }}\n",
+            "          COVERED: ${{ needs.changes.outputs.quick_covers_ci == 'true' }}\n"
+        ))
+    );
+}
+
+mod no_other_gate_reads_it {
+    use super::*;
+    negative_control!(
+        ci_full_attempt_leaves_to_the_quick_tier_only_its_own_steps,
+        "the gate `xtask-ci` passing a skip on the quick tier's cover",
+        expected = "ci_quick_tier: a step the quick tier does not cover skips on its pass: xtask-ci-gate's",
+        check_composed_steps(&with_edit(
+            "ci.yml",
+            "          DOCS_ONLY: ${{ needs.changes.result == 'success' && needs.changes.outputs.docs_only == 'true' }}\n        run: for r in $RESULTS; do [ \"$r\" = success ] || { [ \"$r\" = skipped ] && [ \"$DOCS_ONLY\" = true ]; } || { echo \"a job xtask-ci",
+            "          DOCS_ONLY: ${{ needs.changes.result == 'success' && needs.changes.outputs.quick_covers_ci == 'true' }}\n        run: for r in $RESULTS; do [ \"$r\" = success ] || { [ \"$r\" = skipped ] && [ \"$DOCS_ONLY\" = true ]; } || { echo \"a job xtask-ci"
         ))
     );
 }
