@@ -5355,8 +5355,8 @@ request, whatever else could proceed).*
 *Still in force: item 1, no size gate; each decision recorded in the PR, holding no merge, and a veto fixed in a
 follow-up PR; items 4 and 5, filing in `REVIEW_QUEUE.md`, carrying on and the batched summary, R-681's stop added to
 "stop only when nothing at all can proceed". What item 2 decides is now a two-way door, where it is no one-way door; item
-3's list stays the owner's, as one-way doors asked through `/rulings-report` only, and a calibration value's ask is no
-longer "batched at milestone gates"; when unsure, a door is one-way, not, as item 6 had it, decided (R-812).*
+3's list stays the owner's, as one-way doors asked through `/rulings-report` only, calibration values still "batched
+at milestone gates"; when unsure, a door is one-way, not, as item 6 had it, decided (R-812).*
 *2 Oct 2026 · applied in CLAUDE.md, `plan/OPERATIONS.md`, `plan/WORKFLOW.md` and `plan/CURRENT_RULES.md`, and the
 forward lines of the rulings it names*
 
@@ -31631,16 +31631,16 @@ is folded in below in its own short phrases, the three points the confirmation n
 - **The gloss.** "Every R/RQ/REQ/TASK number in reports carries a plain-English gloss (R-693)."
 
 *What it amends:* **R-369.** Item 2's list is decided as two-way doors, where it is no one-way door. Item 3's list stays
-the owner's, as one-way doors asked through `/rulings-report` only, in place of its "(batched at milestone gates)" as
-the way a calibration value is asked. Item 6's "If it isn't on that list, decide it yourself" gives way, when unsure, to
+the owner's, as one-way doors asked through `/rulings-report` only. That settles how a question is asked, not when, so
+a calibration value's "(batched at milestone gates)" stands. Item 6's "If it isn't on that list, decide it yourself" gives way, when unsure, to
 "treat it as one-way". What the amendment doesn't touch stands: no size gate, each decision recorded in the PR and
 holding no merge, a veto fixed in a follow-up PR, filing in `REVIEW_QUEUE.md` and carrying on, the batched summary,
 "applied per R-369" as the mark of a decision, and R-681's stop.
 
 *Applied, and left open:* the text's "Apply now", the re-sort of the open queue, is the orchestrator's work from 7 Nov
 2026, not this port's. Where this text meets earlier text the later ruling is applied, and the pull request that ported
-it lists each such point as flagged, with both quotes: among them R-369's gate batching, R-376's 8 shards against
-the rider's "shard counts", and R-681's and R-682's word to the owner on a stuck check. It changes no requirement, so
+it lists each such point as flagged, with both quotes: among them R-376's 8 shards against the rider's "shard counts",
+and R-681's and R-682's word to the owner on a stuck check. It changes no requirement, so
 REQ-VAL-149 reads as it did.
 
 R-812 is in the "process" group of `plan/rule_groups.yaml`.

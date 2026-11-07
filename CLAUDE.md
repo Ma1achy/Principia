@@ -151,7 +151,7 @@ Read this first; each rule points at its source.
 - One-way doors: ask through `/rulings-report` only, never as a blocking prompt, and keep working on everything else.
   They are anything that changes what the instrument claims or computes (physics definitions, physics where the choice
   changes results and the docs genuinely don't settle it, defaults, tolerances, CPU or GPU bits, corpus-invalidating
-  changes); calibration values, which R-369 batched at milestone gates; passing a milestone gate; dropping or deferring
+  changes); calibration values (batched at milestone gates); passing a milestone gate; dropping or deferring
   a requirement; amending or reinterpreting the owner's rulings' words; licences, publishing, contacting anyone outside,
   spending money; deleting data or history; admin bypass (R-682); anything outside the repo or irreversible (repo settings, branch protection, deleting outside the build directories, force-pushing); and
   scope and taste: new features, UI look, what the product is.
