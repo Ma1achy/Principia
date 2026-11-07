@@ -64,10 +64,11 @@
 
 use spirv_std::num_traits::{Float, FloatConst};
 
+use super::burrau_acute::decoded_sanity;
 use super::shape_sphere::{PixelCount, ShapeMap, ShapeSphere};
 use super::{Chart, ChartDecode, ChartOut, Constraint, SystemImage, ValidationResult};
 use crate::decode::{self, Decoded};
-use crate::generated::links::{LinkParams, LinkReal, Selection};
+use crate::generated::links::{Defaults, LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
 
 /// `|τ|` at the dead zone of Lean each axis, in degrees: the register's `tilt_right_angle` (R-474 R8).
@@ -692,9 +693,11 @@ pub trait Tiltable: Hidden {
         None
     }
 
-    /// What [`Tiltable::refusal`] finds at the chart's own precision, `(a, b)` and `shift` that precision's placement of
-    /// the pixel: [`Tilted`] places it there, since the f64 placement narrowed misses the rounding inside it. None on a
-    /// latent control.
+    /// What the chart's layer 2 and [`Tiltable::refusal`] find at the chart's own precision, `(a, b)` and `shift` that
+    /// precision's placement of the pixel, read there, the rounding inside the chart's own map included: [`Tilted`] places
+    /// it there, since the f64 placement narrowed misses the rounding inside it, and adds the chart's check on the
+    /// placed values and layer 3 on the decode at that precision. None on a chart with no physical hidden coordinate,
+    /// whose layer 2 only [`Tilted`]'s check on the placed values reads.
     fn refusal_own(
         &self,
         _a: Self::Param,
@@ -756,16 +759,42 @@ impl<C: Tiltable<Param = P>, P: Copy> Tilted<C, P> {
     }
 }
 
-impl<C: Tiltable<Param = P>, P: Float> Tilted<C, P> {
-    /// The pixel at `(u, v)` placed at the chart's own precision, and what the chart refuses there
-    /// ([`Tiltable::refusal_own`]); none untilted.
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Tilted<C, P>
+where
+    f64: From<P>,
+{
+    /// The pixel at `(u, v)` placed at the chart's own precision: what the chart refuses there
+    /// ([`Tiltable::refusal_own`]), then layer 3 on the decode there; none untilted. The links' selection and parameters
+    /// write the momentum controls alone, and layer 3's masses and configuration don't read them, so the defaults serve.
     fn refused_own(&self, u: f64, v: f64) -> Option<Constraint> {
         let ([a, b], shift) = self.at::<P>(narrow(u), narrow(v));
-        shift.and_then(|s| self.chart.refusal_own(a, b, &s))
+        shift.and_then(|s| {
+            self.chart.refusal_own(a, b, &s).or_else(|| {
+                let d = self
+                    .chart
+                    .decode_shifted::<Defaults, P>(a, b, &s, &LinkParams::DEFAULT);
+                decoded_sanity(&d)
+            })
+        })
+    }
+
+    /// The check on the pixel placed at the chart's own precision, each placed value exact at f64: the chart's own
+    /// ([`Tiltable::validate_shifted`]), where its layer 2 acts, then [`Tilted::refused_own`].
+    fn validate_own(&self, u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult {
+        let ([a, b], shift) = self.at::<P>(narrow(u), narrow(v));
+        let wide = shift.map_or(Shift::none(), |s| s.at_precision());
+        let (a, b) = (f64::from(a), f64::from(b));
+        match (
+            self.chart.validate_shifted(a, b, &wide, p),
+            self.refused_own(u, v),
+        ) {
+            (ValidationResult::Valid, Some(failed)) => ValidationResult::Reject { failed },
+            (rest, _) => rest,
+        }
     }
 }
 
-impl<C: Tiltable<Param = P>, P: Float> Chart for Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Chart for Tilted<C, P>
 where
     f64: From<P>,
 {
@@ -808,9 +837,11 @@ where
         match self.at(u, v) {
             (_, None) => self.chart.validate_params(u, v, p),
             ([a, b], Some(shift)) => match self.chart.validate_shifted(a, b, &shift, p) {
-                ValidationResult::Valid => match self.refused_own(u, v) {
-                    Some(failed) => ValidationResult::Reject { failed },
-                    None => ValidationResult::Valid,
+                ValidationResult::Valid => match self.validate_own(u, v, p) {
+                    ValidationResult::Valid => ValidationResult::Valid,
+                    ValidationResult::Project { failed, .. }
+                    | ValidationResult::Clamp { failed, .. }
+                    | ValidationResult::Reject { failed } => ValidationResult::Reject { failed },
                 },
                 ValidationResult::Project { failed, .. }
                 | ValidationResult::Clamp { failed, .. }
@@ -848,7 +879,7 @@ where
     }
 }
 
-impl<C: Tiltable<Param = P>, P: Float> Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Tilted<C, P>
 where
     f64: From<P>,
 {
@@ -873,7 +904,7 @@ where
     }
 }
 
-impl<C: Tiltable<Param = P>, P: Float> ChartDecode for Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> ChartDecode for Tilted<C, P>
 where
     f64: From<P>,
 {

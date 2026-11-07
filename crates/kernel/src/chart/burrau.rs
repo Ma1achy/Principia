@@ -261,11 +261,11 @@ pub(super) fn unread<F: Float>() -> ChartOut<F> {
     }
 }
 
-/// The layer-3 check on the f64 decode `d` (the module's note): `None` where it is sane, a decode with no construction
+/// The layer-3 check on the decode `d`, at f64 or at a view's own precision (the module's note): `None` where it is sane, a decode with no construction
 /// not, its finite momenta no system (chart_reference §4.5). The masses are positive at
 /// every `ν ∈ (0, 1)`, so only the positions and the momenta are read.
-pub(super) fn sanity(d: &Decoded<f64>) -> Option<Constraint> {
-    let finite = |v: &[[f64; 2]; 3]| v.iter().flatten().all(|x| x.is_finite());
+pub(super) fn sanity<R: LinkReal + PayloadReal>(d: &Decoded<R>) -> Option<Constraint> {
+    let finite = |v: &[[R; 2]; 3]| v.iter().flatten().all(|x| x.is_finite());
     if !finite(&d.ic.r) {
         Some(Constraint::ComAtOrigin)
     } else if !finite(&d.ic.p) || d.degenerate == Some(Degenerate::InvariantInfeasible) {
@@ -296,8 +296,8 @@ pub(super) fn refuse(
 
 /// Layer 2's `ν ∈ (0, 1)`.
 #[inline]
-fn in_family(nu: f64) -> bool {
-    nu > 0.0 && nu < 1.0
+pub(super) fn in_family<F: Float>(nu: F) -> bool {
+    nu > F::zero() && nu < F::one()
 }
 
 /// The leg swap's fixed point `ν = √2 − 1`, the isosceles triangle (`a = b`): `θ(ν) = π/4`.

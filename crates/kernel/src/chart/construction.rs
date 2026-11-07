@@ -47,8 +47,11 @@
 //! decode, and every refusal also runs at the chart's own precision `P`: a target that has no construction only there
 //! is refused by `validate`, not just tagged by the decode at `P`, as [`super::physical`]'s `floor_held`, and a
 //! `ν₀ + d` that rounds onto an end of `(0, 1)` only there is refused too, the decode's triangle a collision. A view
-//! runs that check on its own placement at `P` ([`Tiltable::refusal_own`]), the f64 placement narrowed missing the
-//! rounding inside it; a chart called directly has only the f64 shift, and narrows it.
+//! runs both: the narrowed check, inside [`Tiltable::refusal`] and [`Tiltable::validate_shifted`] at the f64 placement,
+//! and the check on its own placement at `P`, the f64 placement narrowed missing the rounding inside it. That one reads
+//! every placed coordinate: the chart's check on the placed values, [`Tiltable::refusal_own`]'s shape, axis and held
+//! pair read at `P`, and layer 3 on the decode at `P`, so a shape that reaches an excluded endpoint only there, a zero
+//! mass, is refused. A chart called directly has only the f64 shift, and runs the narrowed check alone.
 //!
 //! **The held values.** The registered charts' own parameters stay as they are; a rest start's momentum controls, the
 //! held `L_z`, a chart's mode and `Φ_θ,L_z`'s warp are held beside the chart by the wrappers [`RestStart`], [`HeldLz`] and
@@ -193,8 +196,14 @@ pub trait RestChart: Chart + Copy {
         None
     }
 
-    /// [`RestChart::refusal`] at the chart's own precision, `shift` that precision's placement.
-    fn refusal_own(&self, _shift: &Shift<Self::Param>) -> Option<Constraint> {
+    /// [`RestChart::refusal`] and the chart's own shape axis at the chart's own precision, `(a, b)` and `shift` that
+    /// precision's placement.
+    fn refusal_own(
+        &self,
+        _a: Self::Param,
+        _b: Self::Param,
+        _shift: &Shift<Self::Param>,
+    ) -> Option<Constraint> {
         None
     }
 
@@ -229,14 +238,15 @@ where
     }
 
     /// `ν₀ + d` outside `(0, 1)`, at f64 or at the chart's own precision: a side zero or negative.
-    fn refusal(&self, _a: f64, _b: f64, shift: &Shift<f64>) -> Option<Constraint> {
+    fn refusal(&self, a: f64, b: f64, shift: &Shift<f64>) -> Option<Constraint> {
         let wide = shifted(f64::from(self.nu0), NU0, shift);
         outside_unit(wide)
             .then_some(Constraint::BurrauNu)
-            .or_else(|| RestChart::refusal_own(self, &shift.at_precision()))
+            .or_else(|| RestChart::refusal_own(self, narrow(a), narrow(b), &shift.at_precision()))
     }
 
-    fn refusal_own(&self, shift: &Shift<P>) -> Option<Constraint> {
+    /// `ν₀ + d`, the placed shape; the placed masses are the check's on the placed values, and layer 3's.
+    fn refusal_own(&self, _a: P, _b: P, shift: &Shift<P>) -> Option<Constraint> {
         outside_unit(shifted(self.nu0, NU0, shift)).then_some(Constraint::BurrauNu)
     }
 
@@ -260,10 +270,15 @@ where
     }
 }
 
-impl<P: Copy> RestChart for EuclidPlane<P>
+impl<P: Float> RestChart for EuclidPlane<P>
 where
     f64: From<P>,
 {
+    /// `ν(b)` outside the family.
+    fn refusal_own(&self, _a: P, b: P, _shift: &Shift<P>) -> Option<Constraint> {
+        (!burrau::in_family(self.nu(b))).then_some(Constraint::BurrauNu)
+    }
+
     /// The Burrau system at `ν(v)`.
     #[inline]
     fn decode_moving<S, R>(
@@ -282,10 +297,15 @@ where
     }
 }
 
-impl<P: Copy> RestChart for BurrauThetaDeltaM<P>
+impl<P: Float> RestChart for BurrauThetaDeltaM<P>
 where
     f64: From<P>,
 {
+    /// `θ(a)` outside the fold; the blended masses are layer 3's on the decode.
+    fn refusal_own(&self, a: P, _b: P, _shift: &Shift<P>) -> Option<Constraint> {
+        (!burrau_acute::in_fold(self.theta(a))).then_some(Constraint::BurrauTheta)
+    }
+
     /// The triangle at `ν(θ(u))` with the blended masses.
     #[inline]
     fn decode_moving<S, R>(
@@ -458,8 +478,8 @@ impl<C: RestChart<Param = P>, P: Copy> Tiltable for RestStart<C, P> {
         self.chart.refusal(a, b, shift)
     }
 
-    fn refusal_own(&self, _a: P, _b: P, shift: &Shift<P>) -> Option<Constraint> {
-        self.chart.refusal_own(shift)
+    fn refusal_own(&self, a: P, b: P, shift: &Shift<P>) -> Option<Constraint> {
+        self.chart.refusal_own(a, b, shift)
     }
 }
 
@@ -552,13 +572,16 @@ pub trait LzChart: Chart + Copy {
     /// The chart's check without layer 3: its horizontal axis, finiteness and `K ≥ 0`.
     fn check_axes(&self, u: f64, v: f64) -> ValidationResult;
 
+    /// What of the axes `(a, b)`, at the chart's own precision, leaves the chart's domain: the shape, or `K < 0`.
+    fn refused_axes(&self, a: Self::Param, b: Self::Param) -> Option<Constraint>;
+
     /// `D ∘ Φ` at the horizontal `u` with the construction at `(L_z, K*) = (lz, k)`.
     fn decode_lz<R>(&self, u: R, lz: R, k: R) -> Decoded<R>
     where
         R: LinkReal + PayloadReal + From<Self::Param>;
 }
 
-impl<P: Copy> LzChart for Burrau<P>
+impl<P: Float> LzChart for Burrau<P>
 where
     f64: From<P>,
 {
@@ -574,6 +597,14 @@ where
 
     fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
         self.check_axes(u, v)
+    }
+
+    /// `ν(a)` outside the family, or `b < 0`.
+    fn refused_axes(&self, a: P, b: P) -> Option<Constraint> {
+        if !burrau::in_family(self.nu(a)) {
+            return Some(Constraint::BurrauNu);
+        }
+        (b < P::zero()).then_some(Constraint::KNonNegative)
     }
 
     #[inline]
@@ -585,7 +616,7 @@ where
     }
 }
 
-impl<P: Copy> LzChart for BurrauThetaK<P>
+impl<P: Float> LzChart for BurrauThetaK<P>
 where
     f64: From<P>,
 {
@@ -601,6 +632,14 @@ where
 
     fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
         self.check_axes(u, v)
+    }
+
+    /// `θ(a)` outside the fold, or `b < 0`.
+    fn refused_axes(&self, a: P, b: P) -> Option<Constraint> {
+        if !burrau_acute::in_fold(self.theta(a)) {
+            return Some(Constraint::BurrauTheta);
+        }
+        (b < P::zero()).then_some(Constraint::KNonNegative)
     }
 
     #[inline]
@@ -762,9 +801,12 @@ where
         self.refused_at(a, b, shifted(f64::from(self.lz), HELD_LZ, shift), own)
     }
 
-    fn refusal_own(&self, _a: P, b: P, shift: &Shift<P>) -> Option<Constraint> {
+    /// The placed axes, then the held pair; the placed configuration and masses are layer 3's on the decode at `P`.
+    fn refusal_own(&self, a: P, b: P, shift: &Shift<P>) -> Option<Constraint> {
         let own = shifted(self.lz, HELD_LZ, shift);
-        refused_own((own, self.row(b, own)))
+        self.chart
+            .refused_axes(a, b)
+            .or_else(|| refused_own((own, self.row(b, own))))
     }
 }
 
@@ -830,8 +872,11 @@ where
         })
     }
 
-    fn refusal_own(&self, _a: P, b: P, shift: &Shift<P>) -> Option<Constraint> {
-        refused_own(self.by_value(b, shift))
+    /// The placed `θ`, then the targets.
+    fn refusal_own(&self, a: P, b: P, shift: &Shift<P>) -> Option<Constraint> {
+        (!burrau_acute::in_fold(self.theta(a)))
+            .then_some(Constraint::BurrauTheta)
+            .or_else(|| refused_own(self.by_value(b, shift)))
     }
 }
 
@@ -1014,10 +1059,12 @@ where
         }
     }
 
-    /// Warped, the pixel's targets; linear, the bare chart's.
+    /// Warped, the placed `θ`, then the pixel's targets; linear, the bare chart's.
     fn refusal_own(&self, a: P, b: P, shift: &Shift<P>) -> Option<Constraint> {
         if self.mapping == Mapping::Warped {
-            refused_own(self.warped(b, shift))
+            (!burrau_acute::in_fold(self.chart.theta(a)))
+                .then_some(Constraint::BurrauTheta)
+                .or_else(|| refused_own(self.warped(b, shift)))
         } else {
             self.chart.refusal_own(a, b, shift)
         }

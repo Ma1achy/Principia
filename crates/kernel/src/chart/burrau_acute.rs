@@ -53,6 +53,7 @@ use super::burrau::{
     self, embed, lerp, refuse, sanity, select, system_config, system_masses, unread, BurrauBlocks,
 };
 use super::invariant::{self, WarpReal};
+use super::tilt::narrow;
 use super::{
     AxisMeta, BlockTouch, Chart, ChartDecode, ChartLabel, ChartOut, Constraint, SystemImage,
     ValidationResult,
@@ -87,8 +88,8 @@ fn theta_at<F: Float + From<P>, P: Copy>(theta_range: [P; 2], u: F) -> F {
 
 /// Layer 2's `θ ∈ (0, π/4]`.
 #[inline]
-fn in_fold(theta: f64) -> bool {
-    theta > 0.0 && theta <= core::f64::consts::FRAC_PI_4
+pub(super) fn in_fold<F: Float>(theta: F) -> bool {
+    theta > F::zero() && theta <= narrow(core::f64::consts::FRAC_PI_4)
 }
 
 /// The axis metadata of `θ`: it writes the configuration and the masses, through `ν`.
@@ -123,9 +124,9 @@ fn fold_label(name: &str) -> ChartLabel<'_> {
     burrau::label(name, SystemImage::Bijective)
 }
 
-/// Layer 3 on the f64 decode `d` (the module's note): the decoded masses positive, then [`sanity`].
-pub(super) fn decoded_sanity(d: &Decoded<f64>) -> Option<Constraint> {
-    if d.ic.m.iter().all(|&m| m > 0.0) {
+/// Layer 3 on the decode `d`, at f64 or at a view's own precision (the module's note): the decoded masses positive, then [`sanity`].
+pub(super) fn decoded_sanity<R: LinkReal + PayloadReal>(d: &Decoded<R>) -> Option<Constraint> {
+    if d.ic.m.iter().all(|&m| m > R::zero()) {
         sanity(d)
     } else {
         Some(Constraint::DecodedMassPositive)

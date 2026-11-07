@@ -3898,6 +3898,142 @@ negative_control!(
     }
 );
 
+/// A pixel whose placed shape reaches an excluded endpoint only at f32: `HeldLz<Burrau<f32>, f32>` under a 30° Sheet into
+/// the held `L_z`, where f64 places `a = 1.4999999641`, `ν` inside the family, and f32 places `a = 1.5`, `ν = 1`, a zero
+/// mass in the decode. The view refuses it, weight 0. `wide` reads the check at the f64 placement (the control). `u` is
+/// the f32 that widens to 1.654700517654419, as Codex's report gives it.
+fn check_placed_shape(wide: bool) {
+    let chart = HeldLz::new(Burrau::<f32> {
+        nu_range: [0.25, 0.75],
+        k_max: 1.0,
+        gamma_k: 1.0,
+    });
+    let tilt = Tilt::new(
+        &spec(30.0, 0.0, TiltMap::Sheet, HELD_LZ, HELD_LZ),
+        [0.5, 0.5],
+        [1.0, 1.0],
+    );
+    let view = Tilted::new(chart, tilt_at!(f32, tilt)).expect("a hidden target");
+    let (u, v) = (1.6547005_f32, 0.5_f32);
+    let ([a, _], _) = view.tilt().place(u, v);
+    assert_eq!(a, 1.5, "the f32 placement's a");
+    let (ab, shift) = view.tilt().place(f64::from(u), f64::from(v));
+    assert!(ab[0] < 1.5, "the f64 placement's a");
+    let d = view.decode::<Defaults, f32>(u, v);
+    assert!(d.ic.m.iter().any(|&m| m <= 0.0), "the f32 decode's masses");
+    let (wu, wv) = (f64::from(u), f64::from(v));
+    let got = if wide {
+        chart.refusal(ab[0], ab[1], &shift)
+    } else {
+        match view.validate(wu, wv) {
+            ValidationResult::Reject { failed } => Some(failed),
+            _ => None,
+        }
+    };
+    assert_eq!(
+        got,
+        Some(Constraint::BurrauNu),
+        "a shape at an excluded endpoint at f32 is read as a system"
+    );
+    assert_eq!(view.weight(wu, wv), 0.0);
+    assert_eq!(view.validate(0.5, 0.5), ValidationResult::Valid);
+    assert!(view.weight(0.5, 0.5) > 0.0);
+}
+
+#[test]
+fn tilt_every_chart_construction_placed_shape() {
+    check_placed_shape(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_placed_shape,
+    "the check at the f64 placement finds the shape inside the family, so it must fail",
+    expected = "a shape at an excluded endpoint at f32 is read as a system",
+    {
+        check_placed_shape(true);
+    }
+);
+
+/// Each chart's `refusal_own` reads every placed coordinate at f32: the shape at both ends of the domain, the top of the
+/// fold included, the vertical axis below 0 on the held-`L_z` charts, and a placed point inside still a system. `blind`
+/// reads a check of the held pair alone (the control).
+fn check_own_axes(blind: bool) {
+    let refused = |got: Option<Constraint>| if blind { None } else { got };
+    let fold = std::f32::consts::FRAC_PI_4;
+    let none = Shift::<f32>::none();
+    let nu = Some(Constraint::BurrauNu);
+    let theta = Some(Constraint::BurrauTheta);
+    let below = Some(Constraint::KNonNegative);
+    let family = HeldLz::new(Burrau::<f32> {
+        nu_range: [0.25, 0.75],
+        k_max: 1.0,
+        gamma_k: 1.0,
+    });
+    assert_eq!(
+        refused(family.refusal_own(1.5, 0.5, &none)),
+        nu,
+        "a placed shape outside the domain is read as a system"
+    );
+    assert_eq!(family.refusal_own(-0.5, 0.5, &none), nu);
+    assert_eq!(family.refusal_own(0.5, -1.0e-6, &none), below);
+    assert_eq!(family.refusal_own(0.5, 0.0, &none), None);
+    assert_eq!(family.refusal_own(1.25, 0.5, &none), None);
+    let strip = HeldLz::new(BurrauThetaK::<f32> {
+        theta_range: [0.2, fold],
+        k_max: 1.0,
+        gamma_k: 1.0,
+    });
+    assert_eq!(strip.refusal_own(-1.0, 0.5, &none), theta);
+    assert_eq!(strip.refusal_own(1.5, 0.5, &none), theta);
+    assert_eq!(strip.refusal_own(0.5, -1.0e-6, &none), below);
+    assert_eq!(strip.refusal_own(1.0, 0.5, &none), None);
+    let lz = BurrauThetaLz::<f32> {
+        theta_range: [0.2, fold],
+        k: 1.0,
+        lz_fraction: 1.0,
+    };
+    let warped = HeldK::new(lz, 1.0, 1.5);
+    let by_value = HeldK {
+        mapping: Mapping::Linear,
+        ..warped
+    };
+    for c in [warped, by_value] {
+        assert_eq!(c.refusal_own(-1.0, 0.5, &none), theta);
+        assert_eq!(c.refusal_own(1.5, 0.5, &none), theta);
+        assert_eq!(c.refusal_own(1.0, 0.5, &none), None);
+    }
+    assert_eq!(lz.refusal_own(-1.0, 0.5, &none), theta);
+    assert_eq!(lz.refusal_own(1.0, 0.5, &none), None);
+    let plane = RestStart::new(EuclidPlane::<f32> {
+        m_range: [1.0, 32.0],
+        nu_range: [0.25, 0.75],
+    });
+    assert_eq!(plane.refusal_own(0.5, 1.5, &none), nu);
+    assert_eq!(plane.refusal_own(0.5, -0.5, &none), nu);
+    assert_eq!(plane.refusal_own(0.5, 1.25, &none), None);
+    let delta = RestStart::new(BurrauThetaDeltaM::<f32> {
+        theta_range: [0.2, fold],
+        m_target: [1.0 / 3.0; 3],
+    });
+    assert_eq!(delta.refusal_own(-1.0, 0.5, &none), theta);
+    assert_eq!(delta.refusal_own(1.5, 0.5, &none), theta);
+    assert_eq!(delta.refusal_own(1.0, 0.5, &none), None);
+}
+
+#[test]
+fn tilt_every_chart_construction_own_axes() {
+    check_own_axes(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_own_axes,
+    "a check of the held pair alone reads no placed shape, so it must fail",
+    expected = "a placed shape outside the domain is read as a system",
+    {
+        check_own_axes(true);
+    }
+);
+
 /// Each of the six's hidden coordinates, `hidden(k)` over `0..12`, and a tilt into any other refused; `admit` admits
 /// it as untilted (the control).
 fn check_construction_targets(admit: bool) {
@@ -4537,6 +4673,10 @@ impl LzChart for Allowing {
 
     fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
         self.0.check_axes(u, v)
+    }
+
+    fn refused_axes(&self, a: f64, b: f64) -> Option<Constraint> {
+        self.0.refused_axes(a, b)
     }
 
     fn decode_lz<R>(&self, u: R, lz: R, k: R) -> Decoded<R>
