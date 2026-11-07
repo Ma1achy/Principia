@@ -62,10 +62,20 @@ for _ in range(20000):
     x3=(A*A-B*B)/2; e3=math.sqrt(max(A*A-(x3+.5)**2,0))
     wR=max(wR,abs(x3-xi),abs(e3-eta)/(1+eta)) if eta>1e-3 else wR
 print('worst: stereographic',wS,'angle inverse, gamma > 1e-6',wA,'ratio inverse, eta > 1e-3',wR)
-# 7 Nov (physics review 5809670196, sweep): the ratio inverse takes the same root as the focal one, so eta > 1e-3 is its band
-wc=0
-for _ in range(100000):
-    xi,eta=random.uniform(-2,2),10**random.uniform(-6,-2)
-    A=math.hypot(xi+.5,eta); B=math.hypot(xi-.5,eta); x3=(A*A-B*B)/2; e3=math.sqrt(max(A*A-(x3+.5)**2,0))
-    wc=max(wc,abs(e3-eta)*eta)
-print('ratio inverse near eta = 0: worst error times eta',wc)
+# 7 Nov (physics reviews 5809670196 and 5809751370, Z3): draws at the cuts, both on xi in [-2, 2], the loop's range, and on D. Each metric is the loop's.
+def ratio(x,y):
+    A=math.hypot(x+.5,y); B=math.hypot(x-.5,y); x3=(A*A-B*B)/2; e3=math.sqrt(max(A*A-(x3+.5)**2,0))
+    return max(abs(x3-x),abs(e3-y)/(1+y))
+def angle(x,y):
+    g0=math.atan2(y,x+.5); g1=math.atan2(y,.5-x)
+    if not(g0>1e-6 and g1>1e-6): return 0
+    e2=1/(1/math.tan(g0)+1/math.tan(g1)); x2=-.5+e2/math.tan(g0)
+    return max(abs(e2-y)/(1+y),abs(x2-x)/(1+abs(x)))
+for lo in (1e-1,1e-2,1e-3,1e-4,1e-5,1e-6):
+    o=[]
+    for f in (ratio,angle):
+        wa=wd=0
+        for _ in range(100000):
+            y=lo*(1+.2*random.random()); wa=max(wa,f(random.uniform(-2,2),y)); wd=max(wd,f(random.uniform(0,.5),y))
+        o+=[wa,wd]
+    print('eta near %.0e: ratio inverse xi in [-2,2] %.1e, on D %.1e; angle inverse xi in [-2,2] %.1e, on D %.1e'%(lo,*o))

@@ -174,7 +174,7 @@ meanwhile nothing built here scores those targets.
 ### 3.1 The primitives of 6 Nov
 
 The owner's order of 6 Nov, part C. Each identity `prim_check.py` names is checked to 2·10⁻¹³ over 20,000 random states, masses Dirichlet(3, 3, 3)
-(`docs/incoming/2026-11-06_chart_composition/checks/prim_check.py`), except the polar row's 2 × 2 solve: 8.5·10⁻¹⁴ at `|det| > 10⁻³`, and about 2·10⁻¹⁶/`|det|` below it, the determinant vanishing at a collinear state. `√chazy_qk[2]` is checked to 5.7·10⁻¹⁴ on the root, which is 2.9·10⁻¹¹ absolute and 3.9·10⁻¹³ relative on `q`, at `M = 1`, and `K_shape = I|ṅ|²/8` to 2.6·10⁻⁷, a finite difference (`docs/incoming/2026-11-06_chart_composition/checks/sweep.py`). **Lowering: all CPU batch, labelled `CPU batch: not baked`**,
+(`docs/incoming/2026-11-06_chart_composition/checks/prim_check.py`), except the polar row's 2 × 2 solve, whose determinant vanishes at a collinear state: 8.5·10⁻¹⁴ at `|det| > 10⁻³` on that draw, where the radial ratios stay small. Its error is `0.3 eps·r̂/|det|`, `r̂` the largest of 1 and the two ratios, and `r̂` grows as a gap nears `π`: on a draw there, 3.3·10⁻¹² from `|det| = 10⁻³`, 3.1·10⁻⁸ from `10⁻⁵`. `√chazy_qk[2]` is checked to 5.7·10⁻¹⁴ on the root, which is 2.9·10⁻¹¹ absolute and 3.9·10⁻¹³ relative on `q`, at `M = 1`, and `K_shape = I|ṅ|²/8` to 2.6·10⁻⁷, a finite difference (`docs/incoming/2026-11-06_chart_composition/checks/sweep.py`). **Lowering: all CPU batch, labelled `CPU batch: not baked`**,
 since the cap's slots are taken (§ 11); only `SuvakovPlane` is baked, by its own ruling. Each closed row is a case of
 `prim_round_trip` (§ 12), which tests `forward(inverse(x)) = x`, with a sign flipped as its control.
 
@@ -251,7 +251,7 @@ committed. Identities: `docs/incoming/2026-11-06_chart_composition/checks/a5_che
 | velocity angle `Ψ`, a body's velocity against its binary's line | `Ψ = ∠p_λ` at `t = 0` for the labelled pair, `ρ̃` on `+x`. The paper reads it at minimum `I`. `INC/2026-10-27_papers/TARGETS.md` § AAOS 1994b | closed | periodic, **angle-like** | `‖p_λ‖` | `∠p_λ`: `SameQuantity` | Q-2 reads it at min `I`: a result | **alias** at `t = 0`; the paper's `Ψ` is a result, rejected as an axis |
 | isosceles vertex angle, a 1-D family | `γ₂ = 2 atan(1/(2η))` on `ξ = 0`. `INC/2026-10-28_external_sources/tanikawa_umehara_abe_1995/`, Tanikawa, Umehara & Abe 1995 | closed | bounded, **angle-like** | `ξ = 0`, geometric at any mass | `η` on that line | TUA-1, proposed | **axis** of a 1-D chart (§ 10.1); `η` warped. In D, 60° to 180° only; below 60° is the arc or past the mask |
 | homology radius `R_H` | shortest over longest side. `PP/manwadkar_trani_leigh_2020_MNRAS_497_3694_arXiv2004.05475.pdf` | **none** over the sphere: `min/max` (§ 3); in D, closed | bounded | azimuth | in D, side ratio `r₁₂/r₀₁`: `SameQuantity` | none named | **alias** of `r₁₂/r₀₁` inside D; overlay elsewhere |
-| focal coordinates `Z`, `σ` | `Z = |r₁ − r₂|/(r₁ + r₂)`, `σ = (r₁ + r₂)/r₁₂`, foci `A₁`, `A₂`. `TARGETS.md` Q-2, Q-4 | closed on the pair: `τ = ±Zσ`, `ξ = στ/2`, `η = ½√((σ² − 1)(1 − τ²))`, to 8·10⁻¹⁴ over D at `η ≥ 10⁻³`, and about 8·10⁻¹⁷/`η` below it: `σ = 1` is `η = 0`, where the root's error goes as `1/η` (7.4·10⁻¹⁴ near `η = 10⁻³`, 6.6·10⁻¹¹ near `10⁻⁶`, `a5_check.py`); `ξ ≥ 0` in D fixes the sign | bounded | | another shape pair | Q-4's null; Q-2 reads `Z` at min `I`: a result | **axis**, a pair map. `σ = 1` is the segment `A₁A₂`, one-to-one in `ξ = Z/2`, a fold of the map, not ray-degenerate; `η` loses digits there, so f32's round trip takes a band. In D `σ ≤ 2` and the domain isn't a product |
+| focal coordinates `Z`, `σ` | `Z = |r₁ − r₂|/(r₁ + r₂)`, `σ = (r₁ + r₂)/r₁₂`, foci `A₁`, `A₂`. `TARGETS.md` Q-2, Q-4 | closed on the pair: `τ = ±Zσ`, `ξ = στ/2`, `η = ½√((σ² − 1)(1 − τ²))`, on `(ξ, η)` to 8·10⁻¹⁴ over D at `η ≥ 10⁻³`, and about 8·10⁻¹⁷/`η` below it: `σ = 1` is `η = 0`, where the root's error goes as `1/η` (7.4·10⁻¹⁴ near `η = 10⁻³`, 6.6·10⁻¹¹ near `10⁻⁶`, `a5_check.py`); `ξ ≥ 0` in D fixes the sign | bounded | | another shape pair | Q-4's null; Q-2 reads `Z` at min `I`: a result | **axis**, a pair map. `σ = 1` is the segment `A₁A₂`, one-to-one in `ξ = Z/2`, a fold of the map, not ray-degenerate; `η` loses digits there, so f32's round trip takes a band. In D `σ ≤ 2` and the domain isn't a product |
 | Routh `γ = Σ m_i m_j/M²` | threshold `1/27`. Source record: `INC/2026-11-02_library_triage/triage-81-153.csv` (Nauenberg 2002, row 104) | closed with one mass ratio held, a two-root branch | bounded | that ratio | other mass axes | none named | **axis** of mass; not unique alone |
 | elliptic Lagrange `(e, γ)` | equilateral shape, homographic motion of eccentricity `e` | closed. A periapsis start is `h = 0`, rigid rotation, `Q = 2k = 1 + e`, apoapsis `1 − e`; the choice stays a **definition requirement** | bounded | shape | any shape axis | none named | **preset**, on CPU batch, once defined. One shape, so not R-669's plane: RQ-718 names it |
 | binding ratio `b = q/(1 + q)` | `q = K/U` of a pair, dd_chazy § 3.1 | **not unique**; for pair 0, 1 at a frozen shape, closed through `K_ρ` | bounded | shape | `K_ρ`: `SameQuantity` at a frozen shape | none named | **overlay**; alias of `K_ρ` warped under that held set |
@@ -402,17 +402,17 @@ rounding-sized, not 0, and `η` multiplies it. So `K_δ` is computed from `δv` 
 
 ```
 δv ← v − (L₀/I)·J r
-s  ← largest component of |δv|                       s = 0 is exact, an outcome below
+s  ← largest component of |δv|                       s = 0 is exact, an outcome below; if so, stop here
 δ̂  ← δv/s      δ̂ ← δ̂ − (⟨Jr, δ̂⟩_m/I)·J r            the second projection
-K̂  ← ½‖δ̂‖²_m
+K̂  ← ½‖δ̂‖²_m                                         K̂ = 0 is exact too: the projection left no direction
 v  ← (L*/I)·J r + √((K* − L*²/2I)/K̂)·δ̂
 ```
 
 The reviewer's f32 figures, worst `|ΔL_z|`, one pass against two: `‖δv‖/‖v‖ = 10⁻¹`: 2.9·10⁻⁶ against 1.8·10⁻⁷; `10⁻³`:
-3.2·10⁻⁴ against 1.9·10⁻⁷; `10⁻⁵`: 2.8·10⁻² against 1.4·10⁻⁷; `10⁻⁷`: 1.3 against 4.2·10⁻⁷. A near-rigid pixel stays
-ill-conditioned in direction, as `η_E` is near rest: f32 and f64 can differ there by `O(1)` in `δ̂` with no tag (0.49 median, 1.15 worst at `10⁻⁷`). The tag
-is the exact test `s = 0`, not `‖δv‖²_m ≤ ε_w‖v‖²_m`, which would make a branch tag depend on rounding, against the
-comparison-only rule.
+3.2·10⁻⁴ against 1.9·10⁻⁷; `10⁻⁵`: 2.8·10⁻² against 1.4·10⁻⁷; `10⁻⁷`: 1.3 against 4.2·10⁻⁷. An exactly rigid start goes further, and it is the common case: over 200,000 rigid draws, of those applied, worst `|ΔL_z|` 2.1·10⁻⁴ at f32, about 1.6·10⁻⁴ of `a`, and 2.7·10⁻¹³ at f64 (`hold.py`), since a residual of rounding size, after cancelling, has an orthogonality error of its own size. So 4.2·10⁻⁷ doesn't set REQ-CHART-102's tolerance; the rigid row does. A near-rigid pixel stays
+ill-conditioned in direction, as `η_E` is near rest: f32 and f64 can differ there by `O(1)` in `δ̂` with no tag (0.49 median, 1.15 worst at `10⁻⁷`). The tags
+are the exact tests `s = 0` and `K̂ = 0`, not `‖δv‖²_m ≤ ε_w‖v‖²_m`, which would make a branch tag depend on a tolerance, against the
+comparison-only rule. Both compare a computed value with zero, so a rigid `v` reads outcome 5 or outcome 6 by its rounding, and the two floats can differ; outcome 6 is then the no-tag case above.
 
 **The outcomes, in this order** (REQ-CHART-109). dd_decoder §3.7's list doesn't cover them, and §2's cause set is closed:
 
@@ -421,9 +421,9 @@ comparison-only rule.
 | 1 | the collision pole | `ENERGY_UNSCALABLE` |
 | 2 | `E* < U` | `ENERGY_INFEASIBLE` |
 | 3 | `2K* < L*²`, by the existing exact `infeasible` routine, never `E* < U + L*²/2I`, which rounds at the decision | **new**: `ENERGY_INFEASIBLE`, widened, since this stage raises it. §2's table and REQ-DEC-041 need the words, and §3.7's "every `E* ≥ 0` is feasible" is false with `L*` held |
-| 4 | `s = 0` at `2K* = L*²`: a rest or exactly rigid `v` on the floor | no tag, and **the rotation still applies**: a rest pixel with `L* ≠ 0` becomes `(L*/I)·Jr`. §3.7's "momenta untouched" can't be copied |
-| 5 | `s = 0` above the floor | `ENERGY_UNSCALABLE`. No seed: §3.7 tags the rest start and doesn't seed it, and `d_E`'s seed fallback is a tangent, not a state |
-| 6 | otherwise | apply; the floor with `s ≠ 0` gives `η = 0`, the rigid rotation |
+| 4 | `s = 0` or `K̂ = 0`, at `2K* = L*²`: a rest or rigid `v` on the floor | no tag, and **the rotation still applies**: a rest pixel with `L* ≠ 0` becomes `(L*/I)·Jr`. §3.7's "momenta untouched" can't be copied |
+| 5 | `s = 0` or `K̂ = 0`, above the floor | `ENERGY_UNSCALABLE`. No seed: §3.7 tags the rest start and doesn't seed it, and `d_E`'s seed fallback is a tangent, not a state |
+| 6 | otherwise | apply; the floor with `K̂ ≠ 0` gives `η = 0`, the rigid rotation |
 
 A tagged pixel keeps its momenta as decoded, with neither hold applied (§2.2's `a = 0` is the construction's, not this
 step's). A non-finite `L*` is refused as a non-finite `E*` is, with `physical.rs`'s treatment of an `L_z²` that has no
@@ -664,7 +664,7 @@ the projection from `n = (−1, 0, 0)`, §3.1's collision of bodies 0 and 1. So 
 sphere, and the figure's Tier 1 circles are circles because of it. At equal masses D's apex is the pole `L⁺`, and the
 collinear row `η = 0` is the equator. Frames of other papers map onto this plane by § 8.8's ratio: affine for most, a Möbius map for Breen's (§ 20). Checked numerically at random
 masses, 0.05 to 1 before normalising, over `ξ ∈ [−2, 2]`, `η ∈ [0, 2]`, against the identity in `λ`, to 5.6·10⁻¹⁵ (`docs/incoming/2026-11-06_chart_composition/checks/regiond_check.py`; a tested function
-in TASK-M4-34). The same script's inverses in `(ξ, η)`: from the interior angles to 2.4·10⁻¹³ relative, at `η` and both angles above 10⁻⁶; from the side ratios to 5.9·10⁻¹³ at `η > 10⁻³`, about 2·10⁻¹⁵/`η` below it, the focal row's root (§ 3.2). That check took `λ = (ξ, η)` as given, so it could not see `d`: the offset comes from dd_decoder §3.2, not from it.
+in TASK-M4-34). The same script's inverses in `(ξ, η)`, drawn near each `η` over that range and on D: from the side ratios, the focal row's root (§ 3.2), 2·10⁻¹² at `η ≥ 10⁻³` and about 2·10⁻¹⁵/`η` below it, or 10⁻¹³ and about 10⁻¹⁶/`η` on D; from the interior angles, with both above 10⁻⁶, about 4·10⁻¹⁶/`η` (4.1·10⁻¹¹ near `η = 10⁻⁵`), and flat on D, 2.7·10⁻¹⁶ at every `η` drawn, down to 10⁻⁶. That check took `λ = (ξ, η)` as given, so it could not see `d`: the offset comes from dd_decoder §3.2, not from it.
 
 ### 8.3 The pairs it carries
 
@@ -1038,15 +1038,15 @@ Each with a control (R-176), named here and owned by a task.
 | `numerical_branch_seam` | a numerical pair reports its rule, per-pixel branch and seam; the rule is a pure function: the same pixel in two orders gives one bit pattern | a rule reading a neighbour fails; the area-perimeter pair with no rule | TASK-M8-102 |
 | `region_d_plane` | every Table 1 row's marked pixel decodes to the import's state; eq. 8's edges; eq. 3 momenta at `√ℓ`; `I = 1` | body 0 and 1 swapped; `q` not scaled by `√ℓ` | TASK-M4-34 |
 | `stereographic_identity` | § 8.2's line at random masses, against a state built from `A₁, A₂, A₃` by dd_decoder §3.2 | `μ_ρ/μ_λ` inverted; `d` dropped | TASK-M4-34 |
-| `hold_lz` | `L_z = L*` to tolerance on every chart allowing it, a near-rigid fixture included (`‖δv‖/‖v‖` from 10⁻¹ to 10⁻⁷ at f32); `Σp = 0`; both held: `E*` too; off: bitwise | `η_E` applied alone with both on fails `L_z`; one projection fails the near-rigid fixture | TASK-M8-118 |
-| `hold_outcomes` | § 5.3's six outcomes in order, each on an exact fixture; a tagged pixel's momenta unchanged; a rest pixel on the floor becomes `(L*/I)·Jr` | the order swapped at 2 and 3 | TASK-M8-118 |
+| `hold_lz` | `L_z = L*` to tolerance on every chart allowing it, a near-rigid fixture included (`‖δv‖/‖v‖` from 10⁻¹ to 10⁻⁷ at f32), and an exactly rigid start, whose § 5.3 row sets the tolerance; `Σp = 0`; both held: `E*` too; off: bitwise | `η_E` applied alone with both on fails `L_z`; one projection fails the near-rigid fixture | TASK-M8-118 |
+| `hold_outcomes` | § 5.3's six outcomes in order, each on an exact fixture; a tagged pixel's momenta unchanged; a rest pixel on the floor becomes `(L*/I)·Jr`; at f32, above the floor and on it, the state the second projection leaves at `K̂ = 0`: masses `(0.25, 0.25, 0.5)`, positions `(∓√2, 0)`, `(0, 0)`, `v = 0.005·Jr` | the order swapped at 2 and 3; the `K̂ = 0` test removed gives NaN | TASK-M8-118 |
 | `hold_rank` | a momentum plane containing `Jr`, one through rest under hold `E` alone, and one through rest and one through a rigid rotation with both held, each report `ray-degenerate`; a generic plane doesn't | the label removed; a plane through a rigid rotation under hold `E` alone reporting rank loss | TASK-M8-118 |
 | `hold_encode` | Part 6 step 4 reads the held decode; a state off `{L_z = L*}` gets the stated outcome | step 4 on the unheld decode lands on a wrong pixel | TASK-M8-118 |
 | `baked_cap` | baked pairs in `stage::decode` at or under the ledger's constant | one entry over | TASK-M4-33 |
 | `excluded_primitives` | no row with an inverse names a binary phase, eccentricity, impact parameter or fixed `k` (R-669) | one added | TASK-M4-33 |
 | `region_d_native` | § 8.8's table: read-back within tolerance **and** the paper's three separations in the paper's own frame against the decoded state, eq. 4's energy on AA rows | `d` dropped on both sides; bodies 0, 1 swapped at unequal masses; `η` mirrored | TASK-M8-110 |
 | `preset_paper_coords` | § 20's table: the same oracle per frame; offsets below the working float at f64 only, neighbours distinct | the same three; a sub-resolution row at f32 | TASK-M8-112 |
-| `prim_round_trip` | each closed row of §§ 3.1 and 3.2, `forward(inverse(x)) = x`, f64 and f32; Saari's split sums and is orthogonal; `K_shape = I|ṅ|²/8`; `I₁I₂ = n_w²/4`; `h`'s step keeps `L_z`; the aliases equal; a row with a stated scaling takes its tolerance from it, `1/η` for § 3.2's focal row, `1/|det|` for § 3.1's polar row, so a fixed tolerance holds only in that row's band; Tanikawa–Mikkola's mass-weighted `L_com = 0` at random masses after `C`, from an independent `Σ m r × v` | a sign flipped in an inverse; `R` from the centroid, −0.0025 at § 3.2's point; an unweighted sum | TASK-M8-109, TASK-M8-111 |
+| `prim_round_trip` | each closed row of §§ 3.1 and 3.2, `forward(inverse(x)) = x` on the axis, f64 and f32, to a flat tolerance in eps: focal 1 eps on `(Z, σ)` at f64, 0.5 to 1 eps at f32, down to `η` near 10⁻⁴; polar one ulp of the angle, 4 eps absolute, at either float, from `|det|` 10⁻¹ down to 10⁻⁵. A separate clause, `inverse(forward(x)) = x`, takes the row's scaling, in eps: `0.35 eps/η` for § 3.2's focal row, `0.3 eps·r̂/|det|` for § 3.1's polar row. Saari's split sums and is orthogonal; `K_shape = I|ṅ|²/8`; `I₁I₂ = n_w²/4`; `h`'s step keeps `L_z`; the aliases equal; Tanikawa–Mikkola's mass-weighted `L_com = 0` at random masses after `C`, from an independent `Σ m r × v` | a sign flipped in an inverse; `R` from the centroid, −0.0025 at § 3.2's point; an unweighted sum | TASK-M8-109, TASK-M8-111 |
 | `prim_rejected` | each row of "Rejected as axes" has no axis; `L²E` and Hill's distance label `ε ≠ 0`; Hill's distance blank at `E ≥ 0`; pair table rows 19 and 20 refused, rows 17 and 18 refused only under a hold, `(L_z, E)`, `(K_ρ, K_λ)`, `(L_ρ, L_z)` accepted | one accepted; `(L_z, E)` refused | TASK-M8-109 |
 | Golden | `cargo xtask golden decode-preset`: region D through the DECODE preset, TASK-M4-06's acceptance, unchanged | as that task's | TASK-M4-06 |
 
@@ -1091,6 +1091,7 @@ Each states its criterion, written first, then the result. Any may be vetoed; ea
 | V31 | `Ctrl + / −` zooms time | a proposed binding, for the gui reviewer to check against §G3 | `Ctrl` | § 19 |
 | V32 | `√chazy_qk[2]` is the third body's speed row | the corpus's own ratio | as such | § 3.1 |
 | V33 | Presets use § 8.8's ratio, no per-paper function | one source | ratio | § 20 |
+| V34 | Each principal angle of the plane geodesic is `atan2(‖w‖, A·B)`, not `arccos` | an implementation choice that changes no result; applied per R-369 | `atan2` | § 17.7 |
 
 ---
 
@@ -1291,7 +1292,7 @@ Part 3's own rule, with a fifth bitwise test, `path_keyframe_bitwise`. Part 3 sa
 `a + (b − a) ≠ b` on 23% of random f64 pairs, and any reprojection, alignment or retiming in the path is rounding on top.
 `u` is exact at its ends and REQ-TOOL-197's curves have `s(0) = 0`, `s(1) = 1`; a retiming table is pinned at both (§ 17.9).
 So alignment can't be applied to B's own frame: it fades to the identity at `s = 1` (§ 17.10). The price is a step between
-`s = 1 − ε` and `s = 1` of rounding size, inside the declared tolerance, not a seam.
+`s = 1 − ε` and `s = 1`, of rounding size with § 17.7's `atan2` (with `arccos` at near planes, about 7·10⁻⁸ in the basis), inside the declared tolerance, not a seam.
 
 ### 17.5 A frame: valid, reproducible, recorded
 
@@ -1330,7 +1331,7 @@ order's "valid chart" is the sense of § 17.5.
 ### 17.7 Plane to plane
 
 A linear blend squashes: planes swapped give area 0 at `s = ½`; orthogonal planes 0.5; random planes 0.513 median, 0.149 worst.
-Between random planes the geodesic keeps the frame orthonormal to 1.3·10⁻¹⁵ and reaches B's plane to 2.2·10⁻¹⁵. Between planes `δ` apart, `arccos` loses half its digits: it reaches B's plane to 1.1·10⁻⁹ at `δ = 10⁻⁶`, about 10⁻¹⁵/`δ`, and to 8·10⁻⁸ at worst below `δ = 10⁻⁷`, and orthonormality falls to 1.5·10⁻¹¹ at `δ = 10⁻¹²` (`morph_check.py`). Export contract Part 3 and
+Between random planes the geodesic keeps the frame orthonormal to 1.3·10⁻¹⁵ and reaches B's plane to 2.2·10⁻¹⁵. Each principal angle is `atan2(‖w‖, A·B)`, with `w = B − A(A·B)` on each principal pair, not `arccos` of its cosine, and that keeps those figures at every separation: between planes `δ` apart, about 2·10⁻¹⁵ on both down to `δ = 10⁻¹³`, reach 1.4·10⁻¹⁴ at `10⁻¹⁴` (`morph_check.py`, 2,000 pairs at each `δ`). `arccos` is why: it loses half its digits near 1, reaching B's plane only to 1.9·10⁻⁹ at `δ = 10⁻⁶`, about 10⁻¹⁵/`δ`, and to 7.3·10⁻⁸ at worst below `δ = 10⁻⁷`, with orthonormality down to 1.4·10⁻⁹ at `δ = 10⁻¹⁴`. Export contract Part 3 and
 REQ-TOOL-075 already rule it; nothing builds it yet. Three things the existing words leave open:
 
 - **In-plane rotation.** The geodesic reaches B's plane, not B's `(q₁, q₂)`. R-92 counts in-plane orientation. The remaining
@@ -1535,7 +1536,7 @@ Each with a control (R-176). `path_lock_centre` is TASK-M8-117's, `blend_entry_c
 | `path_save_view_bitwise` | a saved chart, tilted and untilted, reopens to one digest through a path | none blended: saved chart's `R` dropped |
 | `path_lock_centre` | a probe at `(½, ½)` reads one set of words on every frame, ends included, affine and nonlinear, `δ = 0` and `δ ≠ 0`; snap-back bit for bit; the area factor at the centre stays within 0.5 of the ends' on swapped and orthogonal planes; `anchor not in B` labelled, unbased | the select removed; offsets blended linearly |
 | `path_keyframe_bitwise` | a segment easing `z₀`, zoom, basis and slice together equals Part 3's frames bit for bit | one field through `Line` |
-| `path_small_step` | gauge-invariant `‖ΔIC‖ ≤ L·ds` away from declared seams, `L` from the arm, with a declared band at `n = (−1, 0, 0)`, where the canonical frame turns (`|dr/ds|` 17 to 577, gauge; P8); fixtures: a rest end, the feasibility boundary, a seed flip; a step at a seam is declared | a frame with an undeclared seam |
+| `path_small_step` | gauge-invariant `‖ΔIC‖ ≤ L·ds` away from declared seams, `L` from the arm, with a declared band at `n = (−1, 0, 0)`, where the canonical frame turns (`|dr/ds|` 17 to 577, gauge; P8); fixtures: a rest end, the feasibility boundary, a seed flip, planes `δ = 10⁻¹⁰` apart (§ 17.7); a step at a seam is declared | a frame with an undeclared seam; `arccos` for `atan2` on the near-plane fixture |
 | `path_record_round_trip` | `(A, B, path, s)` round-trips bitwise and re-renders one image at one lowering; absent, old bytes | `s` written at f32 |
 | `path_gram_flags` | sphere to plane flags a degenerate frame; a linear pair-map blend flags folds; the bend doesn't; a vortex flags on the upper arm | the flag removed |
 | `path_retime` | speed spread at most 1.25 on the saturated fixture; `g` pinned at both ends | the table off |

@@ -145,12 +145,23 @@ for _ in range(60000):
     tot+=1;ny=slerp(na,nb,.5);qy=.5*(qs[0]+qs[1]);r,p=state(m,ny,qy);I,K,U,L=inv(m,r,p)
     if Es<U: blank+=1
 print(" feasible at both ends %d, infeasible at s=.5 %d"%(tot,blank))
-# 7 Nov (physics review 5809670196, sweep): T5's figures are random planes in eight dimensions, far apart. Planes near each other,
-# where arccos loses half its digits and the guard in geo can fire.
+# 7 Nov (physics reviews 5809670196 and 5809751370, Z1): T5's figures are random planes in eight dimensions, far apart. Planes delta
+# apart, each principal angle by arccos of its cosine and by atan2(|w|, A.B) from the same w. Probe: review's y.py.
+def geo2(QA,QB,t,mode):
+    U,c,Vt=np.linalg.svd(QA.T@QB);c=np.clip(c,-1,1);A=QA@U;B=QB@Vt.T
+    W=np.zeros_like(A);th=np.zeros(2)
+    for k in range(2):
+        w=B[:,k]-A[:,k]*(A[:,k]@B[:,k]);nw=np.linalg.norm(w)
+        W[:,k]=w/nw if nw>1e-14 else 0
+        th[k]=np.arccos(c[k]) if mode=='arccos' else np.arctan2(nw,A[:,k]@B[:,k])
+    return A*np.cos(t*th)+W*np.sin(t*th)
 rng=np.random.default_rng(8)
-for dl in (1e-2,1e-4,1e-6,1e-7,1e-8,1e-9,1e-10,1e-12):
-    wo=wr=0
-    for _ in range(2000):
-        a=np.linalg.qr(rng.normal(size=(8,2)))[0]; b=np.linalg.qr(a+dl*rng.normal(size=(8,2)))[0]
-        G=geo(a,b,.37)[0]; wo=max(wo,abs(G.T@G-np.eye(2)).max()); Ge=geo(a,b,1.)[0]; wr=max(wr,np.linalg.norm(Ge@Ge.T-b@b.T))
-    print(" planes %.0e apart: geodesic orthonormal to %.1e, reaches plane to %.1e"%(dl,wo,wr))
+for dl in (1e-2,1e-4,1e-6,1e-7,1e-8,1e-9,1e-10,1e-12,1e-13,1e-14):
+    o={}
+    for mode in ('arccos','atan2'):
+        wo=wr=0
+        for _ in range(2000):
+            a=np.linalg.qr(rng.normal(size=(8,2)))[0]; b=np.linalg.qr(a+dl*rng.normal(size=(8,2)))[0]
+            G=geo2(a,b,.37,mode); wo=max(wo,abs(G.T@G-np.eye(2)).max()); Ge=geo2(a,b,1.,mode); wr=max(wr,np.linalg.norm(Ge@Ge.T-b@b.T))
+        o[mode]=(wo,wr)
+    print(" planes %.0e apart: arccos orthonormal %.1e reach %.1e | atan2 orthonormal %.1e reach %.1e"%(dl,*o['arccos'],*o['atan2']))

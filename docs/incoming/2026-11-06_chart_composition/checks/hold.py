@@ -117,3 +117,39 @@ def dirgap(frac,N=4000):
         g.append(np.sqrt(ip(a-b,a-b,m)))
     return np.median(g),np.max(g)
 for f in (1e-2,1e-5,1e-7): print('direction gap f32 vs f64 at',f,'med, max %.2e %.2e'%dirgap(f))
+# 5 the outcomes after the second projection, added 7 Nov (Codex's finding on PR #422; physics review 5809751370, Z4). Probe: review's khat.py.
+def J2(a,T): return np.stack([-a[...,1],a[...,0]],-1).astype(T)
+def ipT(m,a,b): return (m[:,None]*a*b).sum()
+def outcome(m,r,v,Ls,a2,T,khat_test=True):
+    """section 5.3's computed form, I = 1; a2 = 2K* - L*^2. Returns the outcome number, and the state when one is applied."""
+    m=m.astype(T);r=r.astype(T);v=v.astype(T);Jr=J2(r,T);I=ipT(m,r,r);L0=ipT(m,Jr,v);dv=v-(L0/I)*Jr
+    s=np.abs(dv).max(); Ls=T(Ls); a2=T(a2)
+    if s==0: return (5 if a2>0 else 4),(Ls/I)*Jr if a2==0 else v
+    d=dv/s; d=d-(ipT(m,Jr,d)/I)*Jr; Kh=T(.5)*ipT(m,d,d)
+    if khat_test and Kh==0: return (5 if a2>0 else 4),(Ls/I)*Jr if a2==0 else v
+    with np.errstate(all='ignore'): return 6,(Ls/I)*Jr+np.sqrt(T(.5)*a2/Kh)*d
+m5=np.array([.25,.25,.5]); r5=np.array([[-2**.5,0],[2**.5,0],[0,0]])
+for T in (np.float32,np.float64):
+    v5=T(.005)*J2(r5.astype(T),T)
+    for name,a2 in (('above the floor',.01),('on the floor',0.)):
+        o,x=outcome(m5,r5,v5.astype(float),.1,a2,T); oc,xc=outcome(m5,r5,v5.astype(float),.1,a2,T,khat_test=False)
+        print("Codex's state,",T.__name__,name,': outcome',o,'finite',bool(np.isfinite(x).all()),'| K-hat test removed: outcome',oc,'finite',bool(np.isfinite(xc).all()))
+rng5=np.random.default_rng(3)
+def rigid_state():
+    mm=rng5.dirichlet([3,3,3]);a=rng5.uniform(0,np.pi/2);b=rng5.uniform(-3.1,3.1);M=mm[0]+mm[1];mr=mm[0]*mm[1]/M;ml=mm[2]*M
+    rho=np.array([np.cos(a),0])/np.sqrt(mr);lam=np.sin(a)*np.array([np.cos(b),np.sin(b)])/np.sqrt(ml);r01=-mm[2]*lam
+    return mm,np.array([r01-mm[1]/M*rho,r01+mm[0]/M*rho,M*lam])
+for T in (np.float32,np.float64):
+    cnt={4:0,5:0,6:0}; wL=0; wa=0
+    for _ in range(200000):
+        mm,rr=rigid_state(); c=10**rng5.uniform(-4,1); vv=c*J2(rr,T); a2=10**rng5.uniform(-2,1); Ls=rng5.uniform(-1,1)
+        o,x=outcome(mm,rr,vv.astype(float),Ls,a2,T); cnt[o]+=1
+        if o==6: e=abs(float(ipT(mm.astype(T),J2(rr.astype(T),T),x))-float(T(Ls))); wL=max(wL,e); wa=max(wa,e/np.sqrt(a2))
+    print('exactly rigid start,',T.__name__,': outcomes',cnt,'worst |dL_z| of those applied',wL,'worst |dL_z|/a',wa)
+# against a, the sphere's radius, at fixed L* = 0.1, as the probe drew it
+for a2 in (1e-4,1e-2,1.):
+    wa=0; n=0
+    for _ in range(100000):
+        mm,rr=rigid_state(); c=10**rng5.uniform(-3,0); o,x=outcome(mm,rr,(c*J2(rr,np.float32)).astype(float),.1,a2,np.float32)
+        if o==6: n+=1; wa=max(wa,abs(float(ipT(mm.astype(np.float32),J2(rr.astype(np.float32),np.float32),x))-float(np.float32(.1)))/np.sqrt(a2))
+    print('exactly rigid start, float32, a^2',a2,': applied',n,'worst |dL_z|/a',wa)

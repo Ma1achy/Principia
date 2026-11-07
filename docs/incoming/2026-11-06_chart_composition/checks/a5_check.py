@@ -121,3 +121,16 @@ for i in range(100000):
     s=back_sphere(*to_state(x,y,m)); w64=max(w64,abs(s[0]-x),abs(s[1]-y))
     s=back_sphere(*to_state(x,y,m,np.float32)); w32=max(w32,abs(float(s[0])-x),abs(float(s[1])-y))
 print("sphere form, masses log-uniform to 1e-3: worst f64 %.1e f32 %.1e"%(w64,w32))
+# 7 Nov (physics review 5809751370, Z2): both sides of the focal row's round trip, each float. The 1/eta is inverse(forward)'s, on (xi, eta);
+# forward(inverse) on the axis, (Z, sigma), is flat.
+rng=np.random.default_rng(1)
+for T,nm in ((np.float64,'f64'),(np.float32,'f32')):
+    e=float(np.finfo(T).eps)
+    for lo in (1e-1,1e-2,1e-3,1e-4):
+        N=200000; x=rng.uniform(0,.5,N).astype(T); y=(lo*(1+.2*rng.random(N))).astype(T)
+        r1,r2=np.hypot(x+T(.5),y),np.hypot(x-T(.5),y); s=r1+r2; Z=(r1-r2)/s
+        tt=Z*s; xi=s*tt/T(2); et=T(.5)*np.sqrt(np.maximum((s*s-1)*(1-tt*tt),0))
+        ei=np.abs(et.astype(float)-y.astype(float)).max()
+        r1b,r2b=np.hypot(xi+T(.5),et),np.hypot(xi-T(.5),et); sb=r1b+r2b; Zb=(r1b-r2b)/sb
+        ef=max(np.abs((sb-s).astype(float)).max(),np.abs((Zb-Z).astype(float)).max())
+        print("focal %s eta near %.0e: inverse(forward) on (xi,eta) %.1e, times eta/eps %.2f; forward(inverse) on (Z,sigma) %.2f eps"%(nm,lo,ei,ei*lo/e,ef/e))
