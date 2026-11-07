@@ -305,6 +305,19 @@ jobs:
           tool: cargo-nextest@0.9.146
       - name: cargo xtask build-kernel
         run: cargo xtask build-kernel
+      # R-686 (TASK-M4-27): the kernel cross-backend check's lavapipe and CPU f32 records. `--record` asserts nothing, so
+      # this step can't fail on a rate (R-649).
+      - name: cross-backend records
+        run: |
+          mkdir -p target/cross-backend
+          cargo xtask gate cross-backend-branches --record target/cross-backend/lavapipe.json
+          cargo xtask gate cross-backend-branches --record target/cross-backend/cpu-f32.json --cpu-f32
+      - name: upload the cross-backend records
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cross-backend-records
+          path: target/cross-backend/
+          retention-days: 90
       - name: cargo nextest run -p validation -p xtask -p engine
         env:
           NEXTEST_PROFILE: gpu-kernel

@@ -198,6 +198,20 @@ pub struct Inverse<R> {
     pub beta: R,
 }
 
+/// [`inverse`]'s `p = I·n₁/2`, a `−0` taken as `+0`, and `q = I·n₂/2`.
+#[inline]
+pub fn inverse_pq<R: Real + Float>(n: [R; 3], inertia: R) -> [R; 2] {
+    let two = R::one() + R::one();
+    let p = inertia * n[1] / two;
+    [select(p == R::zero(), R::zero(), p), inertia * n[2] / two]
+}
+
+/// [`inverse`]'s pole, R-437's `p = q = 0`.
+#[inline]
+pub fn inverse_pole<R: Real + Float>(p: R, q: R) -> bool {
+    (p == R::zero()) & (q == R::zero())
+}
+
 /// The closed-form inverse of chart_reference §3.2 at the point `n` (a unit vector), the moment of inertia `inertia`
 /// and the fibre phase `phase`, the smaller of `a` and `b` through `n₁² + n₂²` (the module's notes; R-437 at the
 /// poles). `β`'s `atan2(q, p)` is [`crate::arctan`]'s (RQ-628); `α`'s is `Float`'s.
@@ -211,14 +225,8 @@ pub fn inverse<R: Real + Float>(n: [R; 3], inertia: R, phase: R) -> Inverse<R> {
     let upper = n[0] >= R::zero();
     let a = select(upper, large, small);
     let b = select(upper, small, large);
-    let p = inertia * n[1] / two;
-    let p = select(p == R::zero(), R::zero(), p);
-    let q = inertia * n[2] / two;
-    let beta = select(
-        (p == R::zero()) & (q == R::zero()),
-        R::zero(),
-        Real::arctan2(q, p),
-    );
+    let [p, q] = inverse_pq(n, inertia);
+    let beta = select(inverse_pole(p, q), R::zero(), Real::arctan2(q, p));
     let psi = phase + beta;
     let (root_a, root_b) = (Float::sqrt(a), Float::sqrt(b));
     Inverse {

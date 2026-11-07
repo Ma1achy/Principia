@@ -84,7 +84,25 @@ fn closest<R: LinkReal>(d: [R; 3]) -> R {
 fn potential_of<R: LinkReal + IeeeBits>(m: [R; 3], d: [R; 3], d_min: R) -> R {
     let [m0, m1, m2] = m;
     let sum = -(m0 * m1 / d[0] + m0 * m2 / d[1] + m1 * m2 / d[2]);
-    sum.or_neg_inf(d_min == R::zero())
+    sum.or_neg_inf(collision_pole(d_min))
+}
+
+/// `V₀`'s pole: the closest pair separation is 0 (R-436).
+#[inline]
+pub fn collision_pole<R: LinkReal>(d_min: R) -> bool {
+    d_min == R::zero()
+}
+
+/// `virial_ratio`'s pole: `V₀` is non-finite, tested on its bits (R-436).
+#[inline]
+pub fn virial_pole<R: LinkReal + IeeeBits>(v: R) -> bool {
+    v.non_finite_bits()
+}
+
+/// `rho_ratio`'s pole: `‖λ̃‖ = 0` (R-436).
+#[inline]
+pub fn ratio_pole<R: LinkReal>(lambda_mag: R) -> bool {
+    lambda_mag == R::zero()
 }
 
 /// The potential energy `V₀ = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖`, `G = 1`: `−∞`'s bits wherever a pair separation is 0, selected,
@@ -98,13 +116,13 @@ pub fn potential<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> R {
 /// `virial_ratio = 2K₀/|V₀|` of `k = K₀` and `v = V₀`: 0 where `V₀` is non-finite, tested on its bits (R-436).
 #[inline]
 pub fn virial<R: LinkReal + IeeeBits>(k: R, v: R) -> R {
-    select(v.non_finite_bits(), R::zero(), (k + k) / Float::abs(v))
+    select(virial_pole(v), R::zero(), (k + k) / Float::abs(v))
 }
 
 /// `rho_ratio = ‖ρ̃‖/‖λ̃‖` of `rho_mag` and `lambda_mag`: `+∞`'s bits where `‖λ̃‖ = 0`, selected, not divided (R-436).
 #[inline]
 pub fn ratio<R: LinkReal + IeeeBits>(rho_mag: R, lambda_mag: R) -> R {
-    (rho_mag / lambda_mag).or_pos_inf(lambda_mag == R::zero())
+    (rho_mag / lambda_mag).or_pos_inf(ratio_pole(lambda_mag))
 }
 
 /// The derived `E₀ = K_0 + V_0`, formed at `Real` width from the stored fields (R-86; dd_generation_root §3.6).
@@ -140,16 +158,34 @@ fn select<R: Copy>(c: bool, t: R, f: R) -> R {
 pub fn angle<R: LinkReal>(cross: R, dot: R) -> R {
     let zero = R::zero();
     let pi = pi_image::<R>();
-    let along = select(dot == zero, zero, dot);
+    let along = select(dot_zero(dot), zero, dot);
     let off_axis = Float::min(Float::atan2(cross, along), pi);
     let off_axis = select(off_axis <= -pi, pi, off_axis);
-    let on_axis = select(dot < zero, pi, zero);
-    select(cross == zero, on_axis, off_axis)
+    let on_axis = select(dot_negative(dot), pi, zero);
+    select(cross_zero(cross), on_axis, off_axis)
+}
+
+/// [`angle`]'s axis: `ρ × λ = 0` (R-437).
+#[inline]
+pub fn cross_zero<R: LinkReal>(cross: R) -> bool {
+    cross == R::zero()
+}
+
+/// [`angle`]'s zero `dot`, the operand a select takes as `+0` before `atan2`, and half the pole (R-437).
+#[inline]
+pub fn dot_zero<R: LinkReal>(dot: R) -> bool {
+    dot == R::zero()
+}
+
+/// [`angle`]'s side of the axis: `ρ · λ < 0`, the image of π.
+#[inline]
+pub fn dot_negative<R: LinkReal>(dot: R) -> bool {
+    dot < R::zero()
 }
 
 /// `ρ̃ × λ̃` and `ρ̃ · λ̃` of `rho` and `lambda`: `rho_angle`'s operands ([`angle`]).
 #[inline]
-fn cross_dot<R: LinkReal>(rho: [R; 2], lambda: [R; 2]) -> (R, R) {
+pub fn cross_dot<R: LinkReal>(rho: [R; 2], lambda: [R; 2]) -> (R, R) {
     (
         rho[0] * lambda[1] - rho[1] * lambda[0],
         rho[0] * lambda[0] + rho[1] * lambda[1],
