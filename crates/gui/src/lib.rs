@@ -68,6 +68,7 @@ mod tests {
     mod mock_engine;
     mod mock_figure_navigation;
     mod mock_geometry;
+    mod mock_home;
     mod mock_hover;
     mod mock_invalid_hook;
     mod mock_keyboard;
@@ -75,12 +76,14 @@ mod tests {
     mod mock_keyboard_nav_state;
     mod mock_keyboard_stain;
     mod mock_keyboard_windows;
+    mod mock_lattice;
     mod mock_layout_reframe;
     mod mock_layout_remembered;
     mod mock_layout_splitters;
     mod mock_legend_keys;
     mod mock_live_drag;
     mod mock_lock_badge;
+    mod mock_manifold_resets;
     mod mock_manifold_sections;
     mod mock_manifold_view;
     mod mock_reachability;

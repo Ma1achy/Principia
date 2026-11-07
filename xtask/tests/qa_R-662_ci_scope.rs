@@ -15,6 +15,10 @@
 //! .claude/ (commands, agents, settings) is docs tier." `cheap`, the model below, gains it, and the near neighbours a
 //! prefix would catch join the unknown paths (R-790's exception to R-290).
 //!
+//! R-692 (4 Nov 2026) makes five paths of `crates/gui/` GPU paths, what `gpu-metal`'s `lattice_` step reads, and names
+//! this file as what answers to it: `ruling` gains `r692_gpu_path`, and every other path of `crates/gui/` stays off the
+//! GPU suites (R-692's exception to R-290).
+//!
 //! - `qa_r662_every_tracked_path_classifies_as_the_ruling_says`: every path `git ls-files` lists, against this file's
 //!   own reading of the ruling's lists (`ruling`).
 //! - `qa_r662_unknown_paths_run_everything`: paths the ruling names nowhere, alone and beside a cheap path.
@@ -142,11 +146,28 @@ fn cheap(path: &str) -> bool {
     listed && !data_code_loads(path) && !tier_b(path)
 }
 
-/// The verdict the ruling gives one path: `(docs_only, gpu, tier)`. R-656 keeps `crates/gui/` and `crates/prin/` off
-/// the GPU suites, and R-662 keeps the data code loads on them; R-677's tier (b) runs neither full CI nor a GPU suite.
+/// R-692's five GPU paths of `crates/gui/`: `crates/gui/src/mock/*.wgsl`, `crates/gui/src/mock/canvas.rs`,
+/// `crates/gui/src/tests/mock_lattice.rs`, `crates/gui/src/tests/lattice_controls.wgsl` and `crates/gui/Cargo.toml`.
+fn r692_gpu_path(path: &str) -> bool {
+    path.strip_prefix("crates/gui/src/mock/")
+        .is_some_and(|file| file.ends_with(".wgsl"))
+        || [
+            "crates/gui/src/mock/canvas.rs",
+            "crates/gui/src/tests/mock_lattice.rs",
+            "crates/gui/src/tests/lattice_controls.wgsl",
+            "crates/gui/Cargo.toml",
+        ]
+        .contains(&path)
+}
+
+/// The verdict the ruling gives one path: `(docs_only, gpu, tier)`. R-656 keeps `crates/prin/` and, but for R-692's five
+/// paths, `crates/gui/` off the GPU suites, and R-662 keeps the data code loads on them; R-677's tier (b) runs neither
+/// full CI nor a GPU suite.
 fn ruling(path: &str) -> (bool, bool, String) {
     let docs_only = cheap(path) || tier_b(path);
-    let no_gpu = docs_only || path.starts_with("crates/gui/") || path.starts_with("crates/prin/");
+    let no_gpu = docs_only
+        || (path.starts_with("crates/gui/") && !r692_gpu_path(path))
+        || path.starts_with("crates/prin/");
     let tier = if cheap(path) {
         "docs"
     } else if tier_b(path) {
@@ -188,6 +209,18 @@ fn check_tracked(script: &str, paths: &[String]) {
         (
             "crates/gui/",
             paths.iter().any(|p| p.starts_with("crates/gui/")),
+        ),
+        (
+            "each of R-692's GPU paths",
+            [
+                "crates/gui/src/mock/noise.wgsl",
+                "crates/gui/src/mock/canvas.rs",
+                "crates/gui/src/tests/mock_lattice.rs",
+                "crates/gui/src/tests/lattice_controls.wgsl",
+                "crates/gui/Cargo.toml",
+            ]
+            .iter()
+            .all(|p| r692_gpu_path(p) && paths.iter().any(|q| q == p)),
         ),
         ("xtask/", paths.iter().any(|p| p.starts_with("xtask/"))),
         (

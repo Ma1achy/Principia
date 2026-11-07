@@ -129,21 +129,39 @@ Read this first; each rule points at its source.
 - Where a ruling contradicts the corpus or itself, flag it and record what was applied (as with R-171, R-173, R-186's
   placement note); ask only if the contradiction changes what gets built.
 
-## When to ask the human (`decisions.md` § R-369)
-- Ask the human only for: physics, where the choice changes results and the docs genuinely don't settle it;
-  calibration values (batched at milestone gates); passing a milestone gate; dropping or deferring a requirement;
-  anything outside the repo or irreversible (repo settings, branch protection, deleting outside the build
-  directories, force-pushing). Before asking anything, check it against this list; if it isn't on it, decide it.
-- Decide and continue: the orchestrator and the reviewers decide everything else (process, CI and CI timing, tooling,
-  tests, naming, sizes, mechanical consequences of rulings, exceptions to the qa-file rules where a ruling forces the
-  change, routine design choices). Record each decision in the PR as "applied per R-369: <what>", with no "veto?".
-  It doesn't hold a merge: merge when the reviews pass and CI is green, and list the decisions in the next summary. If
-  the human vetoes one later, fix it in a follow-up PR.
+## When to ask the human (`decisions.md` § R-369, as § R-812 amends it)
+- The owner's rule (R-812, applying from 7 Nov 2026): "Two-way doors swing freely. Walk through them and show me after.
+  Stop at one-way doors. If my answer would be a rubber stamp, don't ask. If running something could answer the
+  question, run it instead. Save questions for taste and product calls only I can make. If your honest answer is no
+  (don't build it, it isn't worth it, I'm wrong), say so. Once I open a one-way door it stays open for that work; come
+  back only if it turns out different: more at stake, a check failing, something I didn't know."
+- Two-way doors, reversible without loss: the orchestrator and the reviewers decide them. They are record corrections,
+  wording, stale entries and closing ruled or moot RQs with history; test-only fixes, flaky controls and CI tooling
+  within ruled bounds; CI and build tooling (caching, linkers, test profiles, shard counts), decided by measurement and
+  reported with numbers; choosing among options where a measurement settles it; task scoping, splitting and re-scoping
+  to match built code; implementation choices that change no result; and, where no one-way door, R-369's list (process,
+  CI and CI timing, tooling, tests, naming, sizes, mechanical consequences of rulings, exceptions to the qa-file rules
+  where a ruling forces the change, routine design choices).
+- A measurement decides only against a criterion written before running: decide, report the numbers, and never adjust
+  the criterion after seeing results (R-649).
+- Record each decision in the PR as "applied per R-369: <what>", with no "veto?". It doesn't hold a merge: merge when
+  the reviews pass and CI is green, and list the decisions in the next summary, in the veto list of the next
+  `/rulings-report`, and with their numbers in the morning report as "decided, open to veto". If the human vetoes one
+  later, fix it in a follow-up PR.
+- One-way doors: ask through `/rulings-report` only, never as a blocking prompt, and keep working on everything else.
+  They are anything that changes what the instrument claims or computes (physics definitions, physics where the choice
+  changes results and the docs genuinely don't settle it, defaults, tolerances, CPU or GPU bits, corpus-invalidating
+  changes); calibration values (batched at milestone gates); passing a milestone gate; dropping or deferring
+  a requirement; amending or reinterpreting the owner's rulings' words; licences, publishing, contacting anyone outside,
+  spending money; deleting data or history; admin bypass (R-682); anything outside the repo or irreversible (repo settings, branch protection, deleting outside the build directories, force-pushing); and
+  scope and taste: new features, UI look, what the product is.
+- Correcting the record is two-way; changing what a ruling or requirement says is one-way. When unsure which door it is,
+  treat it as one-way, and put a recommendation and a measurable alternative in the report.
 - Size has no budget gate: big because the task is big merges normally; big because of sloppy or bloated work is
   fixed or split. The reviewers judge it. Never ask about size.
-- A question on the list goes in `REVIEW_QUEUE.md`, and work carries on elsewhere; stop only if nothing at all can
-  proceed. Don't stop just to report: report at natural points (a stop, a gate, or when the human asks) as one batched
-  summary of what was decided, merged and still open.
+- A one-way question goes in `REVIEW_QUEUE.md`, which `/rulings-report` is written from, and work carries on elsewhere;
+  stop only if nothing at all can proceed. Don't stop just to report: report at natural points (a stop, a gate, or when
+  the human asks) as one batched summary of what was decided, merged and still open.
 - The owner's standing rule (R-693): "every R-, RQ-, REQ- or TASK- number shown to the owner comes with a plain-English
   gloss."
 

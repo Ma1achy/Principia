@@ -50,8 +50,9 @@
 #   lint (`no-atlas-params.yml`, the atlas guard, runs on every pull request).
 # A data or docs change (`docs_only`, its name R-656's) skips `ci-archive` and the `ci` shards, `ci-checks`,
 # `web-skeleton`, `ci-release-archive` and its shards, and `xtask-ci`'s shards; it and a code change to no GPU-path
-# file (only `crates/gui/` and `crates/prin/` beside data and docs) skip the GPU suites' jobs, `gpu-kernel`,
-# `gpu-metal` and `gpu-lavapipe`.
+# file (only `crates/prin/` and `crates/gui/` beside data and docs, but for the five paths of `crates/gui/` that
+# `gpu-metal`'s `lattice_` step reads, R-692, `scripts/ci_changes.sh`'s `is_not_gpu`) skip the GPU suites' jobs,
+# `gpu-kernel`, `gpu-metal` and `gpu-lavapipe`.
 # Where a code head runs, CI's two code tiers (R-684). R-677's classifier applies first, so a data or docs head runs
 # neither. A code pull request's head runs the quick tier: one job, `ci-quick`, running fmt, clippy, the build, and the
 # tests of the changed crates and their reverse dependencies (`.github/scripts/ci_quick_crates.py`). It runs full CI, the
@@ -643,18 +644,19 @@ jobs:
       - name: cargo rustc -p gui (wasm32, the web feature)
         run: cargo rustc -p gui --lib --locked --target wasm32-unknown-unknown --features web --crate-type cdylib
 
-  # The required check `ci` (R-266): every `ci` shard, `ci-checks` and `ci-workspace` passed. It runs whatever they
-  # ended in (`always()`), so a failed or cancelled job turns it red rather than skipping it. R-656: a skipped job
-  # passes only on a data or docs pull request (R-677), which `ci-workspace`, having run its checks, passes on
-  # (DOCS_ONLY); if the classification failed, `ci-workspace` was skipped and passes nothing on, so the skips turn it
-  # red.
+  # The required check `ci` (R-266): every `ci` shard, `ci-checks`, `ci-workspace` and every `ci-release` shard (R-809)
+  # passed. It runs whatever they ended in (`always()`), so a failed or cancelled job turns it red rather than skipping
+  # it. R-656: a skipped job passes only on a data or docs pull request (R-677), which `ci-workspace`, having run its
+  # checks, passes on (DOCS_ONLY); if the classification failed, `ci-workspace` was skipped and passes nothing on, so
+  # the skips turn it red. A failed `ci-release-archive`, which runs only on a code head, skips `ci-release`, and on a
+  # code head that skip turns it red too (R-809).
   # On a quick run this gate and the four below skip (R-684), so that run asks for none of them, and each is named by a
   # one-value matrix: skipped at job level, GitHub reports it as `matrix.check` (run 41972273540), never under a required
   # name, so a skip here cannot read as a pass. It needs `changes` for that `if:`; `quick` reads empty if the
   # classification failed, and the gate runs and fails.
   ci-gate:
     name: ${{ matrix.check }}
-    needs: [ci, ci-checks, ci-workspace, changes]
+    needs: [ci, ci-checks, ci-workspace, ci-release, changes]
     if: always() && needs.changes.outputs.quick != 'true'
     strategy:
       matrix:
@@ -674,11 +676,11 @@ jobs:
   # sets RUSTFLAGS; `ci-release` runs it as 2 shards (`--partition hash:<k>/2`), so each job stays within ~10.5 min
   # (R-325; REQ-SYS-078 allows one archive job per build profile, applied per R-369). Under the `ci` profile
   # (`.config/nextest.toml`): every native test but those that need the built kernel, which `gpu-kernel` runs, and
-  # those that run cargo on the workspace's own target directory, which `ci-workspace` runs. Not gathered by the
-  # required check `ci`, as `gpu-kernel` is not (applied per R-369). The archive job frees the runner's disk as
-  # `ci-checks` does.
-  # Skipped on a data or docs pull request (R-656, R-677), and with it `ci-release`, which needs its archive; neither is
-  # gathered by a required check.
+  # those that run cargo on the workspace's own target directory, which `ci-workspace` runs. The required check `ci`
+  # gathers `ci-release`, and through it this archive job, whose failure skips the shards (R-809). The archive job frees
+  # the runner's disk as `ci-checks` does.
+  # Skipped on a data or docs pull request (R-656, R-677), and with it `ci-release`, which needs its archive; that skip
+  # is the only one of `ci-release` that `ci-gate` passes.
   ci-release-archive:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
@@ -735,7 +737,7 @@ jobs:
   # no build or test compile of its own but shard 1's doctests at the same profile (R-231). `--no-fail-fast`: every
   # test that fails at the release profile is shown, not only the first. The GPU harness self-tests among them run on
   # lavapipe, as in `ci`. Its heavy steps run under the disk sampler (`.github/scripts/disk_sampler.sh`), as the `ci`
-  # shards' do: a measurement, read by no gate.
+  # shards' do: a measurement, read by no gate. The job's own result is gathered by the required check `ci` (R-809).
   ci-release:
     needs: ci-release-archive
     runs-on: ubuntu-24.04
@@ -1198,6 +1200,12 @@ jobs:
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
       - name: cargo test -p validation --features controls codegen_selftest --doc
         run: cargo test -p validation --features controls codegen_selftest --doc
+      # The mock noise's shared lattice corners on Metal, its controls included (REQ-GUI-412; R-685's "on every backend",
+      # R-692); the `ci` shards run them on lavapipe. They claim nothing of the real kernel (ADR-0001 § "Must not claim").
+      - name: cargo nextest run -p gui lattice_
+        run: cargo nextest run -p gui lattice_ --no-capture
+      - name: cargo test -p gui lattice_ --doc
+        run: cargo test -p gui lattice_ --doc
       # Every golden suite on Metal (R-186's first Metal check, TASK-M0-06), each case against its one reference
       # across backends, or its Metal one where it keeps one per backend (R-269, R-287, R-296; TASK-M0-43).
       - name: cargo xtask golden --all

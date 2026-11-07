@@ -302,7 +302,8 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
   not the chart's: no chart edit changes them (R-478, W1), but for one: loading a chart preset or a saved chart that
   pins links applies its pinned links with it, with a notice (§G7's presets; R-516). *Was:* "no chart edit changes
   them (R-478, W1)." (stale value, replaced by R-516).
-- **Navigate:** centre `(u, v)`; zoom (log₂). With the depth readout, the precision warning and the lock row (the next
+- **Navigate:** centre `(u, v)`; zoom (log₂, relative to the preset's window, the `log₂(σ_h / σ)` of "Resets and Home"
+  below, R-466). With the depth readout, the precision warning and the lock row (the next
   two bullets) that is all it holds, with the reset beside its heading (R-466): no grid of `z₀` values, which repeated
   the Slice centre sliders (R-457). Its **reset** returns the centre `(u, v)` to the chart preset's centre and the zoom
   to the preset's window, which the zoom row reads as × 1.00 (R-466).
@@ -353,7 +354,20 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
 **Resets and Home (R-466).** "Reset" means the active chart preset's own values, never literal zero: the masses `z_μ1`,
 `z_μ2` are slice coordinates, and zeroing them would change the physical system. Each reset reads its target from the
 preset's definition, which carries, with its pair of axes, a base point, a centre `(u, v)` and a window (the scale at
-which the zoom reads × 1.00), defined here and in §G7 by TASK-M6-45 (R-72, REQ-GUI-224); no value is hardcoded. The
+which the zoom reads × 1.00), defined here and in §G7 by TASK-M6-45 (R-72, REQ-GUI-224); no value is hardcoded.
+**The three values (REQ-GUI-224):** a preset's **base point** `b` is a value for each of the eight latent coordinates;
+its **centre** `(u, v)` is the base point's two coordinates on the preset's axes, `u = b·e_a`, `v = b·e_b`, so the two
+can never disagree (the definition R-466 allows); its **window** is a scale `σ_h > 0`. The preset's **home view** is
+`z₀ = b`, `q₁ = σ_h e_a`, `q₂ = σ_h e_b`. These formulae hold for a preset whose axes are two of the eight latent
+coordinate axes at one scale, as all six of the mock's are (§G7). What the three values are for any other chart a
+preset can hold (an oblique or unequal-scale pair, an axis of another kind, a curved chart) and for a view saved
+tilted is not yet defined: RQ-711, for TASK-M8-18. R-798's equilateral-point preset is the exception, its map and
+window being TASK-M9-45's (R-798). The zoom row reads `log₂(σ_h / σ)` and its magnification `σ_h / σ`, so it
+reads 0 and × 1.00 at the window whatever `σ_h` is; with no active preset there is no window, and the row reads
+`−log₂ σ` and `1 / σ`, `σ_h = 1` (applied per R-369). The depth readout stays absolute, `−log₂ σ` (§G2's depth readout):
+it counts the chart's own scale, which a preset's window does not change. On the mock's presets, choosing one keeps
+`σ` (applied per R-369), so the row then reads against the new preset's window; R-798's preset, which choosing centres
+and puts at rest, lands on its own window (TASK-M9-45). The values of each preset are §G7's. The
 active preset is the one Chart names, tilted or not; with a basis edited out of every preset's frame there is none, and
 the resets and Home are dimmed. All three sections are read in the active preset's coordinates, its axes `e_a`, `e_b`
 and the six dimensions off them, tilted or not (applied per R-369, R-466 K2): Slice centre's values are `z₀`'s six
@@ -439,7 +453,9 @@ its Screen preset the dev default; this line is its Ends only preset, offered.)*
 points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7), the corner of
 the shown rect below the header strip (R-523, the decoder badge below; gui review G3 of PR #265): a click on it is
 Home, never a click on the figure (it pins nothing and starts no pan); it is dimmed while all three sections are home,
-and it hides with the layer (F3, present mode). **At launch and after Home** (applied per R-369, gui review
+and it hides with the layer (F3, present mode). It is the figure's control, not a window's: where the console or an
+open window reaches its rect it is not drawn, and a click there is the window's (applied per R-369, R-461; review of
+PR #429). **At launch and after Home** (applied per R-369, gui review
 5595357065's note on PR #265; accepted by R-559), the chart's unit square [0,1]² spans the shown rect's shorter side, centred in it, at
 one scale in both directions, and the extended field is drawn around it (R-537); a resize then keeps that scale and
 shows more or less of the field (Layout, below). The orbit's path is drawn from the cursor's IC:
@@ -1403,7 +1419,22 @@ drawn on the edge when it has left (board 6)".
   primitive triple, and the neighbourhood swept, e.g. mass × momentum).
 - **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete. Each preset also carries the values
   the resets and Home read (§G2, R-466): a base point, a centre `(u, v)` and a window, defined by TASK-M6-45 (R-72,
-  REQ-GUI-224); a saved preset stores them with its axes.
+  REQ-GUI-224); a saved preset stores them with its axes. Save of a chart within §G2's formulae, `q₁ = σ e_a`,
+  `q₂ = σ e_b` on two latent coordinate axes, stores its `z₀` as the base point, so the centre its coordinates on the
+  axes, and its scale `σ` as the window, and that saved view is the preset's home view; any other chart's three values
+  are not yet defined (§G2, RQ-711). Duplicate copies the three. On the mock the presets are these, placeholder content (R-390), the real
+  engine's being REQ-GUI-082's; at the decoder's default links, with `μ_max` in range and η_E off, each base point
+  decodes to a system (chart_decoder_contract Part 4, R-570, R-597, R-598), the masses being `softmax(0, μ₁, μ₂)` with
+  `μₖ = μ_max · tanh(z_μk)` and `M₀₁` above `ε_M01` (dd_decoder §3.1):
+
+  | Preset | Base point `(z_α, z_β, z_q0, z_q1, z_q2, z_q3, z_μ1, z_μ2)` | Centre `(u, v)` | Window `σ_h` |
+  |---|---|---|---|
+  | `z_α × z_β` | `(0.180, 0.410, 0, −0.227, 0, 0.312, 0.333, 0.333)`, 01_main.png's | `(0.180, 0.410)` | 1 |
+  | `z_q0 × z_q1` | `(0.250, 0.500, 0.125, −0.250, 0.0625, 0.375, 0.250, −0.125)` | `(0.125, −0.250)` | 0.5 |
+  | `z_q2 × z_q3` | 01_main.png's | `(0, 0.312)` | 1 |
+  | `z_μ1 × z_μ2` | 01_main.png's | `(0.333, 0.333)` | 1 |
+  | `z_α × z_μ1` | 01_main.png's | `(0.180, 0.333)` | 1 |
+  | `z_q3 × z_μ1` | 01_main.png's | `(0.312, 0.333)` | 1 |
 - **A preset may pin links (R-516).** Pinning is optional and off by default. **Pin the active links** is a toggle beside
   each entry in the preset selector (the builder's presets and the Saved group, §G2's Chart section) and beside each
   preset in this window's preset list (R-516 K2), reached from the keyboard as the entry's last control (§G3). A preset,
