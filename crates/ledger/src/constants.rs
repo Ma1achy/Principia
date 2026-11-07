@@ -633,8 +633,8 @@ pub const TAU_I: ConstantBuilder = proposed(
 /// REQ-DEC-054's proposal (R-71), provisional until the M2 gate (R-427): 1/4. A form with no cut would be the kernel's
 /// own `sin`, RQ-687's option (a), deferred to M4 (R-696), so the form has one. Its lower limit: WGSL bounds `sin` only
 /// by an absolute `2⁻¹¹`, so a conforming backend may return 0 up to `r = 2⁻¹¹`, and from `c` up its `k` is off by at
-/// most `2⁻¹¹/c` relative, `2⁻⁹` here. Its upper limit: four terms keep the truncation, `r⁸/9!`, at 7·10⁻⁴ f32 eps at
-/// 1/4 and 0.18 at 1/2; a larger cut moves more of the map's f32 bits for no gain the card's failure asks for. The
+/// most `2⁻¹¹/c` relative, `2⁻⁹` here. Its upper limit: four terms keep the truncation, `r⁸/9!`, at 3.6·10⁻⁴ f32 eps
+/// at 1/4 and 0.094 at 1/2; a larger cut moves more of the map's f32 bits for no gain the card's failure asks for. The
 /// evidence, `kernel/tests/exponential_sinc.rs`'s exhaustive sweep against the f64 `sin r/r`, every f32 in `(0, 4)` on
 /// the CPU, Apple's libm: at most 0.262 f32 eps below the cut, 0.982 from it up.
 pub const SINC_CUT: ConstantBuilder = proposed(
