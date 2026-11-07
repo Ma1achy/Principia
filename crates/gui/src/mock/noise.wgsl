@@ -1,7 +1,10 @@
 // The mock engine's stand-in for the figure (R-390): smooth procedural noise, fractal value noise over the figure's
 // rect, coloured from black through magenta and gold to cyan. Placeholder content, obvious as such; nothing from
-// workbench/. It draws one full-viewport triangle and evaluates a fake field of the latent space at each pixel's IC
-// through the mock's chart, z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂ (chart_decoder_contract Part 3), `t` Y-up: so a pan
+// workbench/. The noise reads its corners by integer lattice coordinates through an integer hash and an exact
+// conversion (R-689), so a corner two cells share is the same bits in both; the float path before `floor` and after the
+// corners is float as ever, and this says nothing of the real kernel (ADR-0001 § "Must not claim"). It draws one
+// full-viewport triangle and evaluates a fake field of the latent space at each pixel's IC through the mock's chart,
+// z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂ (chart_decoder_contract Part 3), `t` Y-up: so a pan
 // shifts the picture and a zoom scales it about the centre, and a slice or a tilt changes it. `chart` carries z₀, q₁
 // and q₂ projected on three directions: z_α, z_β and a fixed mix of the six hidden ones. Its output is gamma-space, as
 // egui-wgpu's own output is on the targets it chooses. `fs_stain` draws the Stain editor's preview of the same
@@ -45,21 +48,50 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VsOut {
     return out;
 }
 
-fn hash(p: vec2<f32>) -> f32 {
-    let q = fract(p * vec2<f32>(127.1, 311.7));
-    let r = q + dot(q, q.yx + vec2<f32>(19.19, 47.13));
-    return fract(r.x * r.y);
+// The PCG hash of `v`, `dbg_pcg` (`crates/render/shaders/wgsl/lib/present.wgsl`:103), copied: the prelude the mock
+// includes doesn't hold it.
+fn pcg(v: u32) -> u32 {
+    let state = v * 747796405u + 2891336453u;
+    let word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    return (word >> 22u) ^ word;
+}
+
+// The hash of the lattice point `c`. `vec2<u32>(c)` reinterprets the bits: a cast of `floor` straight to u32 would
+// saturate the negative half-plane to 0.
+fn lattice_hash(c: vec2<i32>) -> u32 {
+    let u = vec2<u32>(c);
+    return pcg(u.y ^ pcg(u.x));
+}
+
+// The noise at the lattice point `c`, in [0, 1). The top 24 bits convert to f32 exactly and the multiply by 2⁻²⁴ is
+// exact, so no rewrite of this step can change a bit.
+fn corner(c: vec2<i32>) -> f32 {
+    return f32(lattice_hash(c) >> 8u) * 0x1p-24f;
+}
+
+// The corners of cell `c`, `c`, `c + (1, 0)`, `c + (0, 1)` and `c + (1, 1)`: integer additions, so a corner two cells
+// share is one input and one value in both.
+fn cell_corners(c: vec2<i32>) -> vec4<f32> {
+    return vec4<f32>(
+        corner(c),
+        corner(c + vec2<i32>(1, 0)),
+        corner(c + vec2<i32>(0, 1)),
+        corner(c + vec2<i32>(1, 1)),
+    );
 }
 
 fn value_noise(p: vec2<f32>) -> f32 {
-    let i = floor(p);
-    let f = fract(p);
+    let whole = floor(p);
+    let f = p - whole;
+    let c = vec2<i32>(whole);
     let u = f * f * (3.0 - 2.0 * f);
-    let a = hash(i);
-    let b = hash(i + vec2<f32>(1.0, 0.0));
-    let c = hash(i + vec2<f32>(0.0, 1.0));
-    let d = hash(i + vec2<f32>(1.0, 1.0));
-    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+    let k = cell_corners(c);
+    return mix(mix(k.x, k.y, u.x), mix(k.z, k.w, u.x), u.y);
+}
+
+// The point of the octave after the one at `q`.
+fn next_octave(q: vec2<f32>) -> vec2<f32> {
+    return q * 2.03 + vec2<f32>(17.0, 9.0);
 }
 
 fn fbm(p: vec2<f32>) -> f32 {
@@ -68,7 +100,7 @@ fn fbm(p: vec2<f32>) -> f32 {
     var q = p;
     for (var octave = 0; octave < 5; octave++) {
         sum += amplitude * value_noise(q);
-        q = q * 2.03 + vec2<f32>(17.0, 9.0);
+        q = next_octave(q);
         amplitude *= 0.5;
     }
     return sum;
@@ -85,14 +117,27 @@ fn stand_in(uv: vec2<f32>, shift: vec2<f32>) -> StandIn {
     return stand_in_at(vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0), shift);
 }
 
-// The stand-in's field at the field point `xy` = (2s − 1, 2t − 1), `t` Y-up, its noise shifted by `shift`: any point
-// of the plane, the chart affine past `[0, 1]²`.
-fn stand_in_at(xy: vec2<f32>, shift: vec2<f32>) -> StandIn {
+// Where the stand-in's fbms start at the field point `xy` = (2s − 1, 2t − 1), `t` Y-up, its noise shifted by `shift`:
+// the field's point `p`, and the points of `warp.x` (`x`) and `warp.y` (`y`). Any point of the plane, the chart affine
+// past `[0, 1]²`.
+struct WarpPoints {
+    p: vec2<f32>,
+    x: vec2<f32>,
+    y: vec2<f32>,
+};
+
+fn warp_points(xy: vec2<f32>, shift: vec2<f32>) -> WarpPoints {
     let z = chart.origin.xyz + xy.x * chart.q1.xyz + xy.y * chart.q2.xyz;
     let p = (z.xy + vec2<f32>(1.0, 1.0)) * vec2<f32>(3.0, 2.5) + shift;
     let phase = vec2<f32>(1.7, -1.1) * z.z;
-    let warp = vec2<f32>(fbm(p + vec2<f32>(3.1, 1.7) + phase), fbm(p + vec2<f32>(8.3, 2.8) - phase));
-    let n = fbm(p + 2.5 * warp);
+    return WarpPoints(p, p + vec2<f32>(3.1, 1.7) + phase, p + vec2<f32>(8.3, 2.8) - phase);
+}
+
+// The stand-in's field at the field point `xy`.
+fn stand_in_at(xy: vec2<f32>, shift: vec2<f32>) -> StandIn {
+    let points = warp_points(xy, shift);
+    let warp = vec2<f32>(fbm(points.x), fbm(points.y));
+    let n = fbm(points.p + 2.5 * warp);
     return StandIn(n, fract(n * 4.0), warp);
 }
 

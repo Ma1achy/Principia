@@ -224,12 +224,14 @@ fn check_one_toggle(b: &Before, now: &Before) {
 }
 
 /// The keys from launch to View › Debug view: Tab to the top bar, Enter, → to View, Enter (the menu open on its
-/// first entry, F3 hide), ↓ to F3 fills by (R-468 E4), ↓ to Debug view; Enter then acts as its click (§G3).
-const TO_ENTRY: [Key; 6] = [
+/// first entry, Home, R-466 K8; changed by TASK-M6-45's qa commit, K15), ↓ to F3 hide, ↓ to F3 fills by (R-468 E4), ↓ to
+/// Debug view; Enter then acts as its click (§G3).
+const TO_ENTRY: [Key; 7] = [
     Key::Tab,
     Key::Enter,
     Key::ArrowRight,
     Key::Enter,
+    Key::ArrowDown,
     Key::ArrowDown,
     Key::ArrowDown,
 ];
