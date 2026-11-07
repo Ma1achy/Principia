@@ -898,7 +898,8 @@ d = (m₁ − m₀)/(2 M₀₁)                        0 at equal masses
 The plane stays the literal one, `A₃`'s position, so the geometric axes of § 8.3 keep their meaning at every mass.
 
 That is all of it: no `atan2`, no pole at `(0, 0)`, the canonical frame by construction, `C` a no-op, the mirror not
-taken at `η = 0` (the deadband, R-82). The lowering appendix's "physical (m, r, p) construction → canonicalise entry" is
+taken at `η = 0` (the deadband, R-82); past `η = 0` the decode takes the signed `C`, `canonicalise_signed`, so `η < 0`
+stays its own system (§ 8.4, RQ-736). The lowering appendix's "physical (m, r, p) construction → canonicalise entry" is
 this, and `ShapeSphere`'s explicit-configuration path carries it.
 
 **It is the shape sphere, stereographically.** With §3.1's `n = (u, v, w)`:
