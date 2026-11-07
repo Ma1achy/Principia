@@ -3954,6 +3954,62 @@ negative_control!(
     }
 );
 
+/// The view's check on the values placed at the chart's own precision, exact at f64, counts on its own: at f32 the top of
+/// the fold widens past the f64 `π/4`, so at this pixel the f64 placement is inside the fold, `refusal_own` and layer 3
+/// find nothing at f32, and only that check refuses the placed `θ`. The weight reads refusals, so it stays the tilt's
+/// (`Tilted::weight`'s rule). `wide` reads the f64 placement alone.
+fn check_placed_values(wide: bool) {
+    let chart = HeldLz::new(BurrauThetaK::<f32> {
+        theta_range: [0.2, std::f32::consts::FRAC_PI_4],
+        k_max: 1.0,
+        gamma_k: 1.5,
+    });
+    let tilt = Tilt::new(
+        &spec(62.0, 0.0, TiltMap::Sheet, HELD_LZ, HELD_LZ),
+        [0.5, 0.5],
+        [1.0, 1.0],
+    );
+    let view = Tilted::new(chart, tilt_at!(f32, tilt)).expect("a hidden target");
+    let (u, v) = (1.5650271_f32, 0.5_f32);
+    let (wu, wv) = (f64::from(u), f64::from(v));
+    let p = LinkParams::DEFAULT;
+    let ([a, b], own) = view.tilt().place(u, v);
+    assert_eq!(a, 1.0, "the f32 placement's top of the strip");
+    assert_eq!(
+        chart.refusal_own(a, b, &own),
+        None,
+        "inside the fold at f32"
+    );
+    let decoded = view.decode_params::<Defaults, f32>(u, v, &LinkParams::<f32>::DEFAULT);
+    assert!(is_system(&decoded), "layer 3 at f32 finds a system");
+    let ([wa, wb], shift) = view.tilt().place(wu, wv);
+    let placed = chart.validate_shifted(wa, wb, &shift, &p);
+    assert_eq!(placed, ValidationResult::Valid, "inside the fold at f64");
+    let got = if wide { placed } else { view.validate(wu, wv) };
+    assert_eq!(
+        got,
+        ValidationResult::Reject {
+            failed: Constraint::BurrauTheta
+        },
+        "a placed θ past the fold at f64 is read as a system"
+    );
+    assert!(view.weight(wu, wv) > 0.0);
+}
+
+#[test]
+fn tilt_every_chart_construction_placed_values() {
+    check_placed_values(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_placed_values,
+    "the check at the f64 placement alone finds the placed θ inside the fold, so it must fail",
+    expected = "a placed θ past the fold at f64 is read as a system",
+    {
+        check_placed_values(true);
+    }
+);
+
 /// Each chart's `refusal_own` reads every placed coordinate at f32: the shape at both ends of the domain, the top of the
 /// fold included, the vertical axis below 0 on the held-`L_z` charts, and a placed point inside still a system. `blind`
 /// reads a check of the held pair alone (the control).
@@ -4033,6 +4089,175 @@ negative_control!(
         check_own_axes(true);
     }
 );
+
+/// Whether `d` is a system: positive masses, finite positions and momenta, a construction.
+fn is_system<R: Float + PayloadReal>(d: &Decoded<R>) -> bool {
+    d.ic.m.iter().all(|&m| m > R::zero())
+        && d.ic.r.iter().flatten().all(|x| x.is_finite())
+        && d.ic.p.iter().flatten().all(|x| x.is_finite())
+        && d.degenerate != Some(Degenerate::InvariantInfeasible)
+}
+
+/// Over a grid of pixels in the square, those whose chart check passes at `p` and whose decode at `p` is a system, that
+/// answer `accepted` refused; and those it accepts that are none. Returns `(checked, refused, missed)`.
+fn own_parameters<C: Tiltable<Param = f64>>(
+    view: &Tilted<C, f64>,
+    p: &LinkParams<f64>,
+    n: u32,
+    accepted: impl Fn(f64, f64) -> bool,
+) -> (u32, u32, u32) {
+    let (mut checked, mut refused, mut missed) = (0, 0, 0);
+    for j in 0..=n {
+        for i in 0..=n {
+            let (u, v) = (f64::from(i) / f64::from(n), f64::from(j) / f64::from(n));
+            let ([a, b], shift) = view.at::<f64>(u, v);
+            let shift = shift.expect("tilted");
+            let inside = (0.0..=1.0).contains(&a) && (0.0..=1.0).contains(&b);
+            if !inside || view.chart().validate_shifted(a, b, &shift, p) != ValidationResult::Valid
+            {
+                continue;
+            }
+            let system = is_system(&view.decode_params::<Defaults, f64>(u, v, p));
+            let taken = accepted(u, v);
+            checked += 1;
+            refused += u32::from(system && !taken);
+            missed += u32::from(taken && !system);
+        }
+    }
+    (checked, refused, missed)
+}
+
+/// Whether the pixel's decode at the defaults is a system: layer 3's reading before it took the view's `p` (the control).
+fn at_defaults<C: Tiltable<Param = f64>>(view: &Tilted<C, f64>, u: f64, v: f64) -> bool {
+    is_system(&view.decode_params::<Defaults, f64>(u, v, &LinkParams::DEFAULT))
+}
+
+/// The sheet tilt `tau` into `x` about `[0.5, 0.5]`.
+fn own_sheet(tau: f64, x: u32, span: f64) -> Tilt<f64> {
+    Tilt::new(
+        &spec(tau, 0.0, TiltMap::Sheet, x, x),
+        [0.5, 0.5],
+        [span, span],
+    )
+}
+
+/// Layer 3 reads the system `p` asks about: a linear energy axis' `K*` and the masses move with `mu_max`, and no pixel
+/// that is a system at `p` is refused. `default` is the control.
+fn check_own_mu_max(default: bool) {
+    let refused = "a system at its own μ_max is refused";
+    let line = Mapped::<_, Defaults>::new(
+        InvariantLE(Invariant::<f64> {
+            z_cfg: [0.3, -0.5],
+            z_mass: [0.7, -0.4],
+            k_max: 2.0,
+            gamma_k: 1.5,
+        }),
+        [Mapping::Linear; 2],
+    );
+    let p = LinkParams {
+        mu_max: 1.0,
+        q_max: 2.0,
+    };
+    let view = Tilted::new(line, own_sheet(30.0, 0, 2.0)).expect("a hidden target");
+    let (checked, count, missed) = own_parameters(&view, &p, 128, |u, v| {
+        if default {
+            at_defaults(&view, u, v)
+        } else {
+            view.validate_params(u, v, &p) == ValidationResult::Valid
+        }
+    });
+    assert!(checked > 10_000 && missed == 0, "{checked}, {missed}");
+    assert_eq!(count, 0, "{refused}: linear, μ_max 1");
+    assert_eq!(
+        view.validate_params(0.6640625, 0.078125, &p),
+        ValidationResult::Valid
+    );
+}
+
+/// The same at the largest case found: warped `L_z`, linear `E`, a 45° Sheet into `z[6]`, span 6, `μ_max = 8`.
+fn check_own_mu_max_large(default: bool) {
+    let top = Mapped::<_, Defaults>::new(
+        InvariantLE(Invariant::<f64> {
+            z_cfg: [0.3, -0.2],
+            z_mass: [0.1, 0.4],
+            k_max: 1.0,
+            gamma_k: 1.5,
+        }),
+        [Mapping::Warped, Mapping::Linear],
+    );
+    let p = LinkParams {
+        mu_max: 8.0,
+        q_max: 2.0,
+    };
+    let view = Tilted::new(top, own_sheet(45.0, 6, 6.0)).expect("a hidden target");
+    let (checked, count, missed) = own_parameters(&view, &p, 200, |u, v| {
+        if default {
+            at_defaults(&view, u, v)
+        } else {
+            view.validate_params(u, v, &p) == ValidationResult::Valid
+        }
+    });
+    assert!(checked > 10_000 && missed == 0, "{checked}, {missed}");
+    assert_eq!(count, 0, "a system at μ_max 8 is refused");
+}
+
+/// A mixed chart's domain moves with `q_max`: a momentum axis past the default's `[−2, 2]` is a system at `q_max = 4`,
+/// and the check on the placed values reads it. Its decode at the defaults stays a system there (the links are total), so
+/// the control asks the view at the defaults, the domain's own reading, not layer 3.
+fn check_own_q_max(default: bool) {
+    let wide = Mixed::<Alpha, PRhoX, f64>::new(Z0, [0.05, 1.5], [-3.5, 3.5]);
+    let p = LinkParams {
+        mu_max: 5.0,
+        q_max: 4.0,
+    };
+    let view = Tilted::new(wide, own_sheet(30.0, 6, 1.0)).expect("a hidden target");
+    let asked = if default { LinkParams::DEFAULT } else { p };
+    let (checked, count, missed) = own_parameters(&view, &p, 128, |u, v| {
+        view.validate_params(u, v, &asked) == ValidationResult::Valid
+    });
+    assert!(checked > 5_000 && missed == 0, "{checked}, {missed}");
+    assert_eq!(count, 0, "a system at q_max 4 is refused");
+}
+
+#[test]
+fn tilt_every_chart_construction_own_parameters() {
+    check_own_mu_max(false);
+    check_own_mu_max_large(false);
+    check_own_q_max(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_own_parameters,
+    "layer 3 at the defaults reads another system, its K* moved with mu_max, so it must fail",
+    expected = "a system at its own μ_max is refused",
+    {
+        check_own_mu_max(true);
+    }
+);
+
+mod own_mu_max_large {
+    use super::*;
+    negative_control!(
+        tilt_every_chart_construction_own_parameters,
+        "the largest case at the defaults refuses systems, so it must fail",
+        expected = "a system at μ_max 8 is refused",
+        {
+            check_own_mu_max_large(true);
+        }
+    );
+}
+
+mod own_q_max {
+    use super::*;
+    negative_control!(
+        tilt_every_chart_construction_own_parameters,
+        "the view asked at the defaults reads a smaller domain, so it must fail",
+        expected = "a system at q_max 4 is refused",
+        {
+            check_own_q_max(true);
+        }
+    );
+}
 
 /// Each of the six's hidden coordinates, `hidden(k)` over `0..12`, and a tilt into any other refused; `admit` admits
 /// it as untilted (the control).

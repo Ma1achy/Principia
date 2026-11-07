@@ -553,6 +553,16 @@ pub struct Shift<R> {
     pub two: bool,
 }
 
+/// The link parameters at the float `F`, each rounded as [`narrow`] does; a field added to the registry fails the build
+/// here until it is listed.
+#[inline]
+fn params_at<F: Float>(p: &LinkParams<f64>) -> LinkParams<F> {
+    LinkParams {
+        mu_max: narrow(p.mu_max),
+        q_max: narrow(p.q_max),
+    }
+}
+
 /// `x` at the float `F`, rounded, `±∞` past its range, NaN kept: a cast between floats takes every value.
 #[inline]
 pub(super) fn narrow<R: Float, F: Float>(x: R) -> F {
@@ -763,33 +773,39 @@ impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Tilted<C, P>
 where
     f64: From<P>,
 {
-    /// The pixel at `(u, v)` placed at the chart's own precision: what the chart refuses there
-    /// ([`Tiltable::refusal_own`]), then layer 3 on the decode there; none untilted. The links' selection and parameters
-    /// write the momentum controls alone, and layer 3's masses and configuration don't read them, so the defaults serve.
+    /// What the chart refuses of the pixel at `(u, v)` placed at the chart's own precision ([`Tiltable::refusal_own`]);
+    /// none untilted. It reads no link, so it needs no parameters.
     fn refused_own(&self, u: f64, v: f64) -> Option<Constraint> {
         let ([a, b], shift) = self.at::<P>(narrow(u), narrow(v));
-        shift.and_then(|s| {
-            self.chart.refusal_own(a, b, &s).or_else(|| {
-                let d = self
-                    .chart
-                    .decode_shifted::<Defaults, P>(a, b, &s, &LinkParams::DEFAULT);
-                decoded_sanity(&d)
-            })
-        })
+        shift.and_then(|s| self.chart.refusal_own(a, b, &s))
     }
 
     /// The check on the pixel placed at the chart's own precision, each placed value exact at f64: the chart's own
-    /// ([`Tiltable::validate_shifted`]), where its layer 2 acts, then [`Tilted::refused_own`].
+    /// ([`Tiltable::validate_shifted`]), where its layer 2 acts, then [`Tilted::refused_own`], then layer 3 on the decode
+    /// there at `p` narrowed to `P`. `p` moves the masses and, on a linear energy axis, `K*`, so this is the system `p`
+    /// asks about. [`Chart::validate_params`] has no selection to pass: `Mapped`, `MixedEnergy` and `MixedMassRatio` read
+    /// the one they carry, and the Burrau family's constructions none, but on a bare latent or mixed chart `S` picks the
+    /// mass and configuration links, so layer 3 here is the decode under [`Defaults`], not under the caller's selection.
     fn validate_own(&self, u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult {
         let ([a, b], shift) = self.at::<P>(narrow(u), narrow(v));
-        let wide = shift.map_or(Shift::none(), |s| s.at_precision());
-        let (a, b) = (f64::from(a), f64::from(b));
-        match (
-            self.chart.validate_shifted(a, b, &wide, p),
-            self.refused_own(u, v),
-        ) {
-            (ValidationResult::Valid, Some(failed)) => ValidationResult::Reject { failed },
-            (rest, _) => rest,
+        let Some(own) = shift else {
+            return ValidationResult::Valid;
+        };
+        let rest = self
+            .chart
+            .validate_shifted(f64::from(a), f64::from(b), &own.at_precision(), p);
+        if rest != ValidationResult::Valid {
+            return rest;
+        }
+        let refused = self.refused_own(u, v).or_else(|| {
+            let d = self
+                .chart
+                .decode_shifted::<Defaults, P>(a, b, &own, &params_at(p));
+            decoded_sanity(&d)
+        });
+        match refused {
+            Some(failed) => ValidationResult::Reject { failed },
+            None => ValidationResult::Valid,
         }
     }
 }
@@ -883,8 +899,13 @@ impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Tilted<C, P>
 where
     f64: From<P>,
 {
-    /// The area weight of the pixel at `(u, v)`: the tilt's ([`TiltSpec::area_weight`]), or 0 where the chart refuses
-    /// the cell at its hidden offsets, no system ([`Tiltable::refusal`]; R-633).
+    /// The area weight of the pixel at `(u, v)`: the tilt's ([`TiltSpec::area_weight`]), or 0 where a refusal leaves the
+    /// cell no system: [`Tiltable::refusal`] at f64, or [`Tiltable::refusal_own`] on the placement at the chart's own
+    /// precision (R-633). The rule: weight reads refusals, which read no link, and no more. It takes no [`LinkParams`], no
+    /// non-test caller exists to give them, and it must not read a default it wasn't given, so layer 3 on the decode and
+    /// the chart's own axis check stay [`Chart::validate_params`]'s. So at a domain end [`Chart::validate_params`] can
+    /// reject a pixel whose weight stays the tilt's, where the end is only the chart's check's, as at `Φ_θ,K`'s `θ` past the
+    /// fold at f64; a shape [`Tiltable::refusal_own`] reads is 0 in both.
     pub fn weight(&self, u: f64, v: f64) -> f64 {
         let ([a, b], shift) = self.at(u, v);
         let wide = self.chart.refusal(a, b, &shift.unwrap_or(Shift::none()));
