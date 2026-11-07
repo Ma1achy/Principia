@@ -332,18 +332,21 @@ const READS_BACK: f64 = 1e-18;
 /// kept axis's is `cos 90° ≈ 6e-17`, and it is what still names the axis, [`View::basis`] leaving every other component
 /// exactly 0. `None` where the basis has any other number of axes off the targets, or no plane on the two.
 ///
-/// A positive determinant (`σ² cos τ₁ cos τ₂` whatever `γ`) is `(i, j)`. A negative one may be `(j, i)`. That is a pair
+/// A positive determinant (`σ² cos τ₁ cos τ₂` whatever `γ`) is `(i, j)`, unless a target is on the wrong vector for that
+/// pair, `misplaced` (R-705): then it is no tilt of it, and `None`. A negative one may be `(j, i)`. That is a pair
 /// picked the other way round, kept to the ends of its range (R-459 G3), only where that order reads the basis back: a
 /// typed component's sign says nothing of H and V. A mirrored basis neither order reads back is outside the map's image,
 /// so some reading of it loses something: `(j, i)` only if it keeps more of the tilt, the components on the targets, and
 /// else `(i, j)`. Only that last case reads alike on both sides of a component passing through 0. Where the swap is
 /// taken, axes, angles and scale jump there: the swap keeps the tilt on the target it can hold, as with `X = z_q3`,
-/// `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, which below 0 reads `(z_β, z_α)`, `σ = 1`, and from 0 up
-/// `(z_α, z_β)`, `σ = ε`. `read` is [`View::framed`]'s reading on an order.
+/// `Y = z_μ1`, `q₁ = ε e_α + 0.8 e_μ1`, `q₂ = e_β`, which below 0 reads `(z_β, z_α)` and from 0 up, `Y` then on the
+/// wrong vector for `(z_α, z_β)` (R-705), its dominant axes `(z_μ1, z_β)`. `read` is [`View::framed`]'s reading on an
+/// order.
 fn tilted_axes(
     q1: &Latent,
     q2: &Latent,
     frame: &SliceFrame,
+    misplaced: impl Fn(usize, usize) -> bool,
     read: impl Fn(usize, usize) -> View,
 ) -> Option<(usize, usize)> {
     let on_target =
@@ -355,7 +358,7 @@ fn tilted_axes(
     }
     let turn = q1[i] * q2[j] - q1[j] * q2[i];
     if turn > 0.0 {
-        return Some((i, j));
+        return (!misplaced(i, j)).then_some((i, j));
     }
     if turn == 0.0 {
         return None;
@@ -374,6 +377,20 @@ fn tilted_axes(
     } else {
         (i, j)
     })
+}
+
+/// The rotation `γ` of `q1`, `q2` as the axes `(a, b)` read it, and the two turned back by it: `(γ, σ u₁, σ u₂)` for a
+/// basis [`View::basis`] gives, whose `σ u₁` is on `e_a` and `e_X` alone and `σ u₂` on `e_b` and `e_Y` alone.
+fn turned_back(a: usize, b: usize, q1: &Latent, q2: &Latent) -> (f64, Latent, Latent) {
+    let gamma = if q1[a].hypot(q2[a]) >= q1[b].hypot(q2[b]) {
+        (-q2[a]).atan2(q1[a])
+    } else {
+        q1[b].atan2(q2[b])
+    };
+    let (sin_g, cos_g) = gamma.sin_cos();
+    let u1 = add(&q1.map(|v| v * cos_g), -sin_g, q2);
+    let u2 = add(&q2.map(|v| v * cos_g), sin_g, q1);
+    (gamma, u1, u2)
 }
 
 /// The chart, as the panel reads it in a preset's frame and the slice frame's hidden dimensions.
@@ -426,6 +443,11 @@ impl View {
     /// on them, however small a component, before any preset is allowed its rounding: otherwise a pair picked with H or
     /// V loses that axis at the tilt's ends (R-459 G3). Only a basis no exact reading holds is a preset's with stray
     /// components at the floating point's noise, and failing that its dominant axes' frame.
+    ///
+    /// With `X ≠ Y` a preset, or a pair with a positive determinant, also needs each target on its own vector: `Y` on `q₁`
+    /// or `X` on `q₂` is no tilt of the plane, as typed and still once turned back by `γ`, a turned view having both as
+    /// typed (R-705). Past the floating point's noise such a basis reads in its dominant axes' frame. A mirrored basis
+    /// keeps `tilted_axes`'s reading: it is outside the map's image whichever way it reads (R-459 G3).
     pub fn framed(plane: &Plane, frame: Option<&SliceFrame>) -> Self {
         let (q1, q2) = (&plane.q1, &plane.q2);
         let total = dot(q1, q1) + dot(q2, q2);
@@ -448,6 +470,15 @@ impl View {
                 .filter(|i| ![a, b, x, y].contains(i))
                 .all(|i| q1[i] == 0.0 && q2[i] == 0.0)
         };
+        // `Y` on `q₁` or `X` on `q₂`, past the noise, as typed and turned back. With one target there is no wrong vector:
+        // both tilt into it.
+        let misplaced = |a: usize, b: usize| -> bool {
+            let [_, x, y] = hidden(a, b);
+            let (_, u1, u2) = turned_back(a, b, q1, q2);
+            let typed = q1[y] * q1[y] + q2[x] * q2[x];
+            let turned = u1[y] * u1[y] + u2[x] * u2[x];
+            x != y && typed.min(turned) > READS_BACK * total
+        };
         if let Some((a, b)) = axis_pair(q1, q2) {
             let preset = PRESETS.iter().position(|&p| p == (a, b));
             return Self::in_frame(preset, a, b, hidden(a, b), q1, q2);
@@ -465,7 +496,7 @@ impl View {
         // A preset's pair the other way round, `q₁` on its `e_b` and `q₂` on its `e_a`, is no turn of the preset, whose
         // determinant on its axes is `σ² cos τ₁ cos τ₂ ≥ 0`: it is the axes H and V picked so (R-459 G3).
         let turn = |a: usize, b: usize| q1[a] * q2[b] - q1[b] * q2[a];
-        let exactly = |a: usize, b: usize| turn(a, b) >= 0.0 && holds(a, b);
+        let exactly = |a: usize, b: usize| turn(a, b) >= 0.0 && holds(a, b) && !misplaced(a, b);
         let within_noise = |a: usize, b: usize| {
             let off: f64 = {
                 let [_, x, y] = hidden(a, b);
@@ -474,7 +505,9 @@ impl View {
                     .map(|i| q1[i] * q1[i] + q2[i] * q2[i])
                     .sum()
             };
-            turn(a, b) >= -1e-12 * total && off <= 1e-18 * total.max(f64::MIN_POSITIVE)
+            turn(a, b) >= -1e-12 * total
+                && off <= 1e-18 * total.max(f64::MIN_POSITIVE)
+                && !misplaced(a, b)
         };
         let preset_where = |test: &dyn Fn(usize, usize) -> bool| {
             PRESETS.iter().position(|&(a, b)| fits(a, b) && test(a, b))
@@ -482,7 +515,7 @@ impl View {
         let (found, (a, b)) = if let Some(p) = preset_where(&exactly) {
             (Some(p), PRESETS[p])
         } else if let Some(pair) = frame.and_then(|f| {
-            tilted_axes(q1, q2, f, |a, b| {
+            tilted_axes(q1, q2, f, misplaced, |a, b| {
                 Self::in_frame(None, a, b, hidden(a, b), q1, q2)
             })
         }) {
@@ -498,7 +531,9 @@ impl View {
         Self::in_frame(found, a, b, hidden(a, b), q1, q2)
     }
 
-    /// The scale, tilts and rotation of `q1`, `q2` on the axes `(a, b)`, the normal `d` and the targets `x`, `y`.
+    /// The scale, tilts and rotation of `q1`, `q2` on the axes `(a, b)`, the normal `d` and the targets `x`, `y`. `σ` is
+    /// read whole: what `σ u₁` holds off `e_a` and `e_X`, which [`View::basis`] leaves 0, counts in it (R-705), `e_b` aside,
+    /// as a basis sheared on its own axes reads as it did.
     fn in_frame(
         preset: Option<usize>,
         a: usize,
@@ -509,14 +544,13 @@ impl View {
     ) -> Self {
         let cos1 = q1[a].hypot(q2[a]);
         let cos2 = q1[b].hypot(q2[b]);
-        let gamma = if cos1 >= cos2 {
-            (-q2[a]).atan2(q1[a])
-        } else {
-            q1[b].atan2(q2[b])
-        };
-        let (sin_g, cos_g) = gamma.sin_cos();
-        let sin1 = cos_g * q1[x] - sin_g * q2[x];
-        let sin2 = sin_g * q1[y] + cos_g * q2[y];
+        let (gamma, u1, u2) = turned_back(a, b, q1, q2);
+        let (sin1, sin2) = (u1[x], u2[y]);
+        let stray = (0..LATENT_DIM)
+            .filter(|i| ![a, b, x].contains(i))
+            .map(|i| u1[i] * u1[i])
+            .sum::<f64>()
+            .sqrt();
         // `+ 0.0` reads a −0 angle as 0, as the readouts show it.
         Self {
             preset,
@@ -525,7 +559,7 @@ impl View {
             d,
             x,
             y,
-            scale: cos1.hypot(sin1),
+            scale: cos1.hypot(sin1).hypot(stray),
             tau1: sin1.atan2(cos1) + 0.0,
             tau2: sin2.atan2(cos2) + 0.0,
             gamma: gamma + 0.0,
@@ -985,11 +1019,7 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
             None,
             scratch,
         ),
-        ZOOM => out.edit(
-            basis_edit(view.with_zoom(view.zoom() + octaves).basis()),
-            None,
-            scratch,
-        ),
+        ZOOM => out.edit(navigate::zoom_by(plane, octaves), None, scratch),
         TAU1 | TAU2 | GAMMA => {
             let mut angles = tilt::Angles::of(&view);
             angles.turn(id, degrees);

@@ -1205,7 +1205,8 @@ fn check_reads_basis(read: &View, q1: &Latent, q2: &Latent) {
 /// 0.5 · 2 = −0.5`, so it is mirrored, while `1 / 0.5 − 0.5 · 2` and `1 · 0.5 − 0.5 / 2` are both positive. Reading back
 /// in neither order, it swaps because that keeps more of the tilt, and the swap's reading is worked by hand from
 /// `View::in_frame`: on `(z_β, z_α)`, `γ = atan2(1, 2)`, so `sin γ = 1/√5`, `cos γ = 2/√5`; `σ cos τ₁ = √0.5`,
-/// `σ sin τ₁ = −0.3/√5`; `tan τ₂ = (0.8/√5) / √5 = 0.16`.
+/// `σ sin τ₁ = −0.3/√5`; `tan τ₂ = (0.8/√5) / √5 = 0.16`; and `σ` read whole (R-705), counting the `1.6/√5` that
+/// `z_μ1` leaves on `σ u₁`, `2/√5 · 0.8`.
 #[test]
 fn mock_cube_axis_buttons_a_mirrored_basis_is_told_by_its_determinant() {
     let read = read_of(
@@ -1215,11 +1216,12 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_told_by_its_determinant() {
     let check = |read: &View| {
         let root5 = 5.0_f64.sqrt();
         let (cos1, sin1) = (0.5_f64.sqrt(), -0.3 / root5);
+        let stray = 1.6 / root5;
         assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA), "{read:?}");
         assert_eq!(read.preset, None, "{read:?}");
         for (got, want, what) in [
             (read.gamma, 1.0_f64.atan2(2.0), "γ"),
-            (read.scale, cos1.hypot(sin1), "σ"),
+            (read.scale, cos1.hypot(sin1).hypot(stray), "σ"),
             (read.tau1, sin1.atan2(cos1), "τ₁"),
             (read.tau2, 0.8_f64.atan2(5.0), "τ₂"),
         ] {
