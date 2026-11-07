@@ -43,14 +43,14 @@ Of these: 236 calibration, 192 definition, 1709 obligation. Retired (kept for th
 
 ## Sections
 
-1813 sections in 62 files: 1425 yield at least one requirement; 388 yield none and are listed below with the reason.
+1814 sections in 62 files: 1425 yield at least one requirement; 389 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 271 |
+| informative only | 272 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -233,6 +233,7 @@ Of these: 236 calibration, 192 definition, 1709 obligation. Retired (kept for th
 | R-808 — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)* | informative only | the owner's word on the rulings reference check; tooling; changes no requirement |
 | R-810 — A warped mass-ratio axis's range is searched at half the round-trip tolerance, `ε_μ/2`, and `principia_chart_reference.md` § 2.1 says so, with the measured reason *(closes RQ-707)* | informative only | docs only: the margin stays as built, and chart_reference § 2.1 names it |
 | R-811 — The census's drift reference is R-33's convergence reference, not the inspector's RK45, and the proposal's § 3.2 clause says why *(closes RQ-619)* | informative only | the census has no requirement yet; the proposal carries it |
+| R-812 — Two-way doors are decided and shown afterwards, by measurement where one can settle it, CI and build tooling among them; one-way doors are asked through `/rulings-report` only while work carries on; when unsure, a door is one-way *(amends R-369)* | informative only | the owner's ruling on two-way and one-way doors, its CI and build tooling rider and their confirmation, applying from 7 Nov 2026: what can be undone is decided and shown afterwards, by measurement where one can settle it; what can't is asked through /rulings-report only, while work carries on; when unsure, a door is one-way; correcting the record is two-way, changing what a ruling or requirement says is one-way; amends R-369; CLAUDE.md, the rulings report, plan/OPERATIONS.md and plan/WORKFLOW.md follow; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

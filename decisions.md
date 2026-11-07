@@ -1836,7 +1836,7 @@ changes it at the M0 gate.
 ## R-204 — When to ask the human
 *Amended by R-264 (its "exceeding budgets"); amended by R-369.*
 *Still in force: don't ask what follows from an existing ruling or the docs: apply it and record it. What to ask the
-human is R-369's list (physics where the choice changes results and the docs don't settle it, calibration values,
+human is R-369's list, as R-812 amends it (physics where the choice changes results and the docs don't settle it, calibration values,
 passing a milestone gate, dropping or deferring a requirement, anything outside the repo or irreversible); size is
 never asked (R-264, R-369). A choice applied without asking is recorded in the PR and listed in the next summary, and
 no longer holds a merge (R-369).*
@@ -5351,7 +5351,12 @@ Changes no requirement.
 ## R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*
 *Refined by R-681 (3 Nov 2026: while `main` is red or a required check is stuck, agents open and update no other pull
 request, whatever else could proceed).*
-*Still in force: all of it, R-681's stop added to "stop only when nothing at all can proceed".*
+*Amended by R-812 (7 Nov 2026: two-way and one-way doors).*
+*Still in force: item 1, no size gate; each decision recorded in the PR, holding no merge, and a veto fixed in a
+follow-up PR; items 4 and 5, filing in `REVIEW_QUEUE.md`, carrying on and the batched summary, R-681's stop added to
+"stop only when nothing at all can proceed". What item 2 decides is now a two-way door, where it is no one-way door; item
+3's list stays the owner's, as one-way doors asked through `/rulings-report` only, calibration values still "batched
+at milestone gates"; when unsure, a door is one-way, not, as item 6 had it, decided (R-812).*
 *2 Oct 2026 · applied in CLAUDE.md, `plan/OPERATIONS.md`, `plan/WORKFLOW.md` and `plan/CURRENT_RULES.md`, and the
 forward lines of the rulings it names*
 
@@ -6376,7 +6381,9 @@ Adds REQ-INT-086; REQ-INT-001's verify detail and rulings change, and it carries
 well as the slider touched).*
 *Extended by R-627 (27 Oct 2026; M8's GUI tasks join the track on the mock engine, each followed by a small task wiring
 it to the real engine; a v1 web skeleton on the mock, deployed to GitHub Pages by hand only).*
-*Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and
+*Amended in part by R-812 (7 Nov 2026: a silence on look, as "scope and taste", is a one-way door, asked through
+`/rulings-report`; a silence on feel or behaviour is still decided under R-369, as a two-way door).*
+*Still in force: all of it, as its text reads, except a silence on look (R-812); that TASK-M6-24 is reviewed by physics as well as code, qa and
 gui, for REQ-GUI-176 and REQ-GUI-177 only; and that ORDER item 3's compass switches between slicing and tilting by its
 Tilt and Slice buttons as well as by activity, in a fixed view with no orbit (R-409).*
 *6 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` §1 and `docs/gui/principia_render_gui_spec.md`'s
@@ -30429,6 +30436,9 @@ report, and "Don't start other work while I'm away") were the day's instructions
 R-681 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-682 — Admin bypass on `main` is the owner's alone: agents never use it, by `gh pr merge --admin` or any API merge that skips a required check; merge scripts merge only when every required check has passed; a stuck check goes to the owner, who decides whether to bypass *(amends R-266)*
+*Amended in part by R-812 (7 Nov 2026: the owner is still told in one message what is stuck, and whether to bypass, a
+one-way door, is asked through `/rulings-report` only).*
+*Still in force: all of it, the bypass asked as R-812 says.*
 *3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/HUMAN_SETUP.md` § 2 (a dated note),
 `plan/OPERATIONS.md` § "Merging" (step 3), R-266's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`;
 changes no requirement*
@@ -31569,3 +31579,73 @@ The owner's words (6 Nov 2026), verbatim:
 *What it amends:* **R-799**, for what it left open.
 
 R-811 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-812 — Two-way doors are decided and shown afterwards, by measurement where one can settle it, CI and build tooling among them; one-way doors are asked through `/rulings-report` only while work carries on; when unsure, a door is one-way *(amends R-369)*
+*7 Nov 2026 · the owner's ruling received that day, its rider and their confirmation; applied in `CLAUDE.md` § "When to
+ask the human", `.claude/commands/rulings-report.md` § 2 and § 4, `plan/OPERATIONS.md` § "Merging", § "Reviewers",
+§ "Autonomy (R-369)", § "The GUI track (R-390)" and § "Asking the human", `plan/WORKFLOW.md` § "Task files",
+§ "Human checkpoints: the milestone gates" and § "Escalation", the forward and "Still in force" lines of R-204, R-369,
+R-390 and R-682, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
+
+The owner's ruling, received 7 Nov 2026, verbatim (the date in its first line is the text's own, and stands):
+
+> Owner ruling (amends R-369), 4 Nov 2026. Quote this to any subagent handed the work.
+>
+> "Two-way doors swing freely. Walk through them and show me after. Stop at one-way doors. If my answer would be a rubber stamp, don't ask. If running something could answer the question, run it instead. Save questions for taste and product calls only I can make. If your honest answer is no (don't build it, it isn't worth it, I'm wrong), say so. Once I open a one-way door it stays open for that work; come back only if it turns out different: more at stake, a check failing, something I didn't know."
+>
+> Two-way (decide, record in the veto list of the next /rulings-report, never hold a merge):
+> - record corrections, wording, stale entries, closing ruled/moot RQs with history
+> - test-only fixes, flaky controls, CI tooling within ruled bounds
+> - choosing among options where a measurement settles it: write the criterion BEFORE running, run it, decide, report the numbers. Never adjust the criterion after seeing results (R-649).
+> - task scoping, splitting, re-scoping to match built code; implementation choices that change no result
+>
+> One-way (ask, via /rulings-report only, never a blocking prompt; keep working on everything else):
+> - anything that changes what the instrument claims or computes: physics definitions, defaults, tolerances, CPU or GPU bits, corpus-invalidating changes
+> - amending or reinterpreting my rulings' words
+> - licences, publishing, contacting anyone outside, spending money
+> - deleting data or history; admin bypass (R-682)
+> - scope and taste: new features, UI look, what the product is
+>
+> When unsure which door it is, treat it as one-way but put a recommendation and a measurable alternative in the report.
+>
+> Apply now: re-sort the open queue under this rule. Decide every two-way item yourself (measure where needed), and report back only the one-way items, in /rulings-report format.
+
+The owner's rider, 7 Nov 2026, straight after, verbatim:
+
+> Also apply it from now on to CI and build tooling (caching, linkers, test profiles, shard counts):
+> two-way, decided by measurement, reported with numbers.
+
+The owner's confirmation, 7 Nov 2026, answering the two readings, verbatim:
+
+> Both readings confirmed: applies from 7 Nov; correcting the record is two-way, changing what a
+> ruling or requirement says is one-way. Port the two 7 Nov texts as ONE amendment to R-369, with the
+> 4 Nov text verbatim as its core and the other's points folded in where they add something (the
+> morning-report veto list, reversible without loss, the gloss rule), so there aren't two
+> overlapping versions on the record.
+
+*What it decides:* the quotes above are the rule, one amendment of R-369. A second text of the owner's, of 7 Nov 2026,
+is folded in below in its own short phrases, the three points the confirmation names, so the record holds one version.
+
+- **The two confirmed readings.** It applies from 7 Nov 2026. Correcting the record is two-way; changing what a ruling
+  or requirement says is one-way.
+- **CI and build tooling** (caching, linkers, test profiles, shard counts) are two-way, decided by measurement and
+  reported with numbers.
+- **The morning report.** A two-way decision is listed with its numbers "in the morning report as "decided, open to
+  veto"", as well as in the veto list of the next `/rulings-report`.
+- **Reversible without loss.** "Reverting on my veto must be possible without loss."
+- **The gloss.** "Every R/RQ/REQ/TASK number in reports carries a plain-English gloss (R-693)."
+
+*What it amends:* **R-369.** Item 2's list is decided as two-way doors, where it is no one-way door. Item 3's list stays
+the owner's, as one-way doors asked through `/rulings-report` only. That settles how a question is asked, not when, so
+a calibration value's "(batched at milestone gates)" stands. Item 6's "If it isn't on that list, decide it yourself" gives way, when unsure, to
+"treat it as one-way". What the amendment doesn't touch stands: no size gate, each decision recorded in the PR and
+holding no merge, a veto fixed in a follow-up PR, filing in `REVIEW_QUEUE.md` and carrying on, the batched summary,
+"applied per R-369" as the mark of a decision, and R-681's stop.
+
+*Applied, and left open:* the text's "Apply now", the re-sort of the open queue, is the orchestrator's work from 7 Nov
+2026, not this port's. Where this text meets earlier text the later ruling is applied, and the pull request that ported
+it lists each such point as flagged, with both quotes: among them R-376's 8 shards against the rider's "shard counts",
+R-390's silences on look, and R-681's and R-682's word to the owner on a stuck check. It changes no requirement, so
+REQ-VAL-149 reads as it did.
+
+R-812 is in the "process" group of `plan/rule_groups.yaml`.

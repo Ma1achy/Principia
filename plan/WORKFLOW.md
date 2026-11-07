@@ -60,7 +60,7 @@ Each task is `plan/tasks/<milestone>/<TASK-id>.md`, listed in `plan/tasks.yaml`;
 - **Every live requirement is closed by exactly one task, and every task closes at least one.** A task's milestone
   is never later than the milestones of the requirements it closes.
 - **Calibration requirements** (R-71) are closed by the task that needs the value. Its deliverable is the proposal
-  with evidence, and the human confirms the value at the milestone gate.
+  with evidence, and the human confirms the value at the milestone gate, asked through `/rulings-report` (R-812).
 - **Definition requirements** (R-72) are closed by the task that needs the definition. Its deliverable is the doc
   change, reviewed by the physics reviewer.
 - **The header fields** are Milestone, Closes, Depends on, Needs (earlier milestones), Reviewers, Pitfalls and Size.
@@ -196,8 +196,9 @@ A milestone exits only at a human checkpoint. Before it:
   never a function in its place (R-427; dd_generation_root §3.8), and the gate report lists those entries;
 - every **definition** requirement (`kind: definition`, R-72) has its doc change merged with the physics reviewer's
   approval.
-The human reviews the gate report and either passes the milestone or rules on what blocks it. No work in the next
-milestone merges before the gate passes (tasks may be prepared on branches), except by R-415's test: a task may merge
+The human reviews the gate report and either passes the milestone or rules on what blocks it; the question reaches them
+through `/rulings-report`, the gate report its evidence, and work outside the gate carries on (R-812). No work in the
+next milestone merges before the gate passes (tasks may be prepared on branches), except by R-415's test: a task may merge
 before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate
 calibrates or could change; the PR records the test as applied (`plan/OPERATIONS.md` § "Autonomy (R-369)").
 R-390's GUI track (TASK-M6-24 to TASK-M6-29, with TASK-M6-30 and TASK-M6-31 from R-406 and R-409, and TASK-M6-32 to
@@ -231,7 +232,9 @@ Nothing is chosen by the implementer or a reviewer where the corpus doesn't deci
   then the code.
 An entry's form, which the plan check holds it to: a heading `## RQ-n: <question>`, and in its body a
 `- **File, section:**` field and a `- **Applied meanwhile:**` field (`none`, if nothing is).
-The task stays open, blocked, until the human rules. Work continues on other tasks.
+The task stays open, blocked, until the human rules. Work continues on other tasks. An open entry reaches the human
+through `/rulings-report`, never as a blocking prompt; an entry that is a two-way door isn't
+held for them, and the orchestrator and the reviewers decide it and report it (R-812).
 
 ## No deferral
 

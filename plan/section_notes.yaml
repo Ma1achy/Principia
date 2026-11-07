@@ -1656,3 +1656,7 @@
   section: "20. Paper frames as presets (order part E)"
   reason: informative only
   note: "carried in the requirement's verify line"
+- file: decisions.md
+  section: "R-812 — Two-way doors are decided and shown afterwards, by measurement where one can settle it, CI and build tooling among them; one-way doors are asked through `/rulings-report` only while work carries on; when unsure, a door is one-way *(amends R-369)*"
+  reason: informative only
+  note: "the owner's ruling on two-way and one-way doors, its CI and build tooling rider and their confirmation, applying from 7 Nov 2026: what can be undone is decided and shown afterwards, by measurement where one can settle it; what can't is asked through /rulings-report only, while work carries on; when unsure, a door is one-way; correcting the record is two-way, changing what a ruling or requirement says is one-way; amends R-369; CLAUDE.md, the rulings report, plan/OPERATIONS.md and plan/WORKFLOW.md follow; changes no requirement"
