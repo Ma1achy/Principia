@@ -51,9 +51,10 @@ Put each open RQ in exactly one group. Print the groups under these headings, sp
 6. `## Record corrections`: a wording, citation or record to correct, with no effect on what is built.
 7. `## Ruled-or-moot (to close)`: the entry carries a ruling (flag `ruled`), or what it asks is overtaken: say by what.
 
-A two-way door isn't put to the owner (R-812, the rule that what can be undone is decided and shown afterwards): decide
-it first, closing a ruled or moot entry with its history, and it goes in § 4's veto list, so these groups hold the
-one-way doors, an entry in doubt among them with a recommendation and a measurable alternative.
+A two-way door isn't put to the owner (R-812, the rule that what can be undone is decided and shown afterwards): it is
+decided in a record PR before this report, ruled and moot entries closed there with their history, and it goes in § 4's
+veto list. So an open entry reaching this report is a one-way door, or says in its item why it is still open, and it
+stays an item of its group; one in doubt has a recommendation and a measurable alternative.
 
 A group with no item says "None." Test an entry against group 7 first, then 1 to 6 in order; it goes in the first that
 fits. An RQ open only on an unmerged branch is not an item, as `/rulings-apply` couldn't read it: list it under
