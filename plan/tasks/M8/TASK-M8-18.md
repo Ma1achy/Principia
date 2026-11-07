@@ -52,3 +52,4 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - R-478 W3, R-480 P3 (20 Oct 2026): the read-only links and the warp previews are TASK-M8-52's, after this task.
 - R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-06 by TASK-M8-89 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37".
 - R-627, physics review 5664187570 (F2, applied per R-369): TASK-M8-87 is named in Depends on, since it now builds the area-statistics classifier (REQ-CHART-056) forbidden_fraction uses. *Was:* "- **Depends on:** TASK-M8-89, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37".
+- Chart composition (6 Nov 2026): TASK-M8-103 extends these panels; nothing here changes.

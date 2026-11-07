@@ -1,7 +1,7 @@
 # TASK-M8-58 — The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-GUI-341, REQ-CHART-084, REQ-GUI-350, REQ-GUI-354, REQ-GUI-355, REQ-GUI-356
+- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-GUI-341, REQ-CHART-084, REQ-GUI-350, REQ-GUI-354, REQ-GUI-355, REQ-GUI-356, REQ-CHART-134
 - **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -41,6 +41,7 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - `cargo test -p render trace_syzygy` — REQ-GUI-273's verify (R-538 T3, T4).
 - `cargo test -p render trace_edge_pins` — REQ-GUI-274's verify (R-538 T5; R-569, the hover and the kept trace alike).
 - `cargo test -p render trace_repeats` — REQ-GUI-275's verify (R-538 T6, T7, T12).
+- `cargo test -p kernel trajectory_polar_unfolded` — the figure-eight, run by the kernel: `φ = acos(n_w)` from the signed `n̂` at every macro-step lies on both sides of 90°, crosses it at every syzygy, and the sign of `n_w` matches the triangle's signed area from the positions (R-544, the owner's second rider to RQ-736); mutation control: the polar angle folded, `min(φ, π − φ)` (REQ-CHART-134).
 - `cargo test -p render trace_through_syzygy` — REQ-GUI-341's verify (R-544 item 8): the figure-eight run through a collinear configuration draws its trace across `φ = π/2` at the signed `n̂`, with no kink and its step within REQ-GUI-283's multiple of the median; control: a trace folded to `|n₂|`, which bounces at the equator, fails (REQ-GUI-341).
 - `cargo test -p render trace_not_a_system` — REQ-GUI-276's verify (R-538 T8, T9, T10).
 - `cargo test -p kernel compute_ic_guards` — REQ-INT-096's verify (R-538 T11).
