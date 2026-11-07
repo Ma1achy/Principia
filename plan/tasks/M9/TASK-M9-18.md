@@ -2,8 +2,8 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-262, REQ-VAL-263, REQ-VAL-264, REQ-VAL-265, REQ-VAL-266, REQ-VAL-267
-- **Depends on:** TASK-M9-11, TASK-M9-17, TASK-M4-34
-- **Needs (earlier milestones):** REQ-CHART-100
+- **Depends on:** TASK-M9-11, TASK-M9-17
+- **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-2, PIT-3
 - **Size:** ~350 lines
@@ -42,4 +42,3 @@ The replication suite's targets Q-1, Q-2, Q-3 run as engine tests (`principia_dd
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
 - *30 Oct 2026 (R-649, R-650):* moved to M9, external replication, and renumbered: formerly TASK-M3-58 (milestone M3). Its targets are measurements, never gates: each is scored in M9, or early as a peek (information only, `docs/verification/peek_log.md`), and its outcome is PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a failure that blocks; like-for-like is checked first, and nothing is tuned, loosened or special-cased to pass (`docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"). The tier each target binds (§ "12.2 Tiers"; a calibration takes its target's): Q-1 (REQ-VAL-262): tier (a); Q-2 (REQ-VAL-264): tier (a); Q-3 (REQ-VAL-266): tier (a). *Was:* "The tier each binds is § '12.2 Tiers''s: (b); (a) statistically or qualitatively." (corrected 30 Oct 2026 to the owner's confirmation of the tier reading, R-649). Its calibrations are confirmed by the human with the M9 report (REQ-VAL-340), *was:* "at the M3 gate".
 - *2 Nov 2026 (R-671, closing RQ-669):* this task has no GPU run, so each of its (a) targets keeps its tier and reads "not scored yet: needs a GPU run" in M9's report, and the statistic its acceptance names, computed from the task's f64 runs, is recorded beside it at (b), its outcome and instrument stated. The tier is not relabelled; BZ-1C measures whether f32's statistics agree.
-- Chart composition: region D's samples read TASK-M4-34's domain; no earlier need was listed.

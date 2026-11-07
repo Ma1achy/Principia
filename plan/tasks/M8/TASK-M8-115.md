@@ -22,5 +22,5 @@ Every bullet of the GUI table, with its mock-up.
 - `cargo test -p gui time_mode` — each bullet and its control (REQ-GUI-422).
 
 ## Notes
-- Waits on RQ-727. The time-zoom binding is checked against G3's table.
+- The time-zoom binding is checked against G3's table.
 - Waits on its rulings item: RQ-727. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

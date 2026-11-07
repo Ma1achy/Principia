@@ -274,9 +274,9 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
   a Windows run posts them (the builder is TASK-M4-27's). That row is what carries the outstanding run after its task closes; it blocks nothing (R-649).
 
 <!-- gate:M4 -->
-**Exit gate — 128 requirements** (and every earlier gate still green):
+**Exit gate — 125 requirements** (and every earlier gate still green):
 
-- CHART (18): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-094…103, REQ-CHART-108…111, REQ-CHART-125
+- CHART (15): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-094…101, REQ-CHART-108…110, REQ-CHART-125
 - INT (18): REQ-INT-057…071, REQ-INT-083, REQ-INT-112…113
 - EVT (1): REQ-EVT-021
 - PAY (2): REQ-PAY-074, REQ-PAY-085
@@ -444,10 +444,10 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both are recorded".
 
 <!-- gate:M8 -->
-**Exit gate — 494 requirements** (and every earlier gate still green):
+**Exit gate — 497 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
-- CHART (28): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088, REQ-CHART-104…107, REQ-CHART-112…124
+- CHART (31): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088, REQ-CHART-102…107, REQ-CHART-111…124
 - INT (3): REQ-INT-093, REQ-INT-096, REQ-INT-107
 - GEN (1): REQ-GEN-023
 - SCHED (5): REQ-SCHED-073, REQ-SCHED-101…102, REQ-SCHED-104…105

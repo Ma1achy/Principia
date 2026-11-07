@@ -2,8 +2,8 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-295, REQ-VAL-296, REQ-VAL-297, REQ-VAL-298
-- **Depends on:** TASK-M3-25, TASK-M3-34, TASK-M4-34
-- **Needs (earlier milestones):** REQ-CHART-100
+- **Depends on:** TASK-M3-25, TASK-M3-34
+- **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-2, PIT-3
 - **Size:** ~300 lines
@@ -56,4 +56,3 @@ The replication suite's targets GG-1, BR-1 run as engine tests (`principia_dd_re
 - *1 Nov 2026 (physics review 5730823192 of PR #375, M2; applied per R-369):* GG-1 is a mixed target, scored on two tiers (`principia_dd_replication.md` § 12.2), so each part records its own outcome and TASK-M9-37 reads them part by part; a GPU miss on the (b) part is expected, not a defect, and a single outcome would hide which instrument agreed. *Was (acceptance):* "the outcome recorded with its tier: PASS where the comparison above holds, otherwise EXPLAINED DIVERGENCE …".
 - *1 Nov 2026 (R-669, RQ-620):* GG-1's per-point panel: a reproduction per point against the Fig. 1 panel at its own ε (ε = 10⁻⁶ the left, ε = 10⁻⁷⁰ the right); our lifetimes per point against the ε = 10⁻⁷⁰ panel, and by KS against the ε = 10⁻⁶ panel; the reliability mask (the points where the two panels agree within one LUT step) reported beside them. The wait on RQ-620 ends.
 - *2 Nov 2026 (R-671, closing RQ-669):* the (a) part of this mixed target reads "not scored yet: needs a GPU run", with the f64 statistic recorded beside it at (b), its instrument stated; the (b) part is unaffected.
-- Chart composition: GG-1's grid is on TASK-M4-34's plane; BR-1 stays a point import.

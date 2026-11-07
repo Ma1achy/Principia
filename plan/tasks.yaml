@@ -1232,7 +1232,7 @@
 - id: TASK-M4-06
   milestone: M4
   title: "The baked compute variants: chart × link × occupant × FTLE, with copy_index a uniform"
-  depends_on: [TASK-M4-05, TASK-M2-25, TASK-M2-28, TASK-M3-14, TASK-M0-44, TASK-M4-34]
+  depends_on: [TASK-M4-05, TASK-M2-25, TASK-M2-28, TASK-M3-14, TASK-M0-44]
   needs: [REQ-CHART-001, REQ-CHART-002, REQ-CHART-013, REQ-CHART-017, REQ-CHART-028, REQ-CHART-029, REQ-CHART-031, REQ-DEC-007, REQ-INT-005, REQ-PAY-026, REQ-INT-035, REQ-INT-043, REQ-RENDER-027, REQ-SYS-074]
   requirements: [REQ-CHART-037, REQ-SYS-024, REQ-INT-065, REQ-INT-069, REQ-RENDER-031, REQ-RENDER-082, REQ-INT-083]
   reviewers: [code, qa, physics, perf]
@@ -1421,22 +1421,6 @@
   needs: []
   requirements: [REQ-CHART-100, REQ-CHART-101]
   reviewers: [code, qa, physics, perf]
-  pitfalls: []
-- id: TASK-M4-35
-  milestone: M4
-  title: "Hold L_z on any chart, beside energy normalisation"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52]
-  needs: []
-  requirements: [REQ-CHART-102, REQ-CHART-111]
-  reviewers: [code, qa, physics]
-  pitfalls: []
-- id: TASK-M4-36
-  milestone: M4
-  title: "The virial pair: its axis kind, descriptor and entry"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37]
-  needs: []
-  requirements: [REQ-CHART-103]
-  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M4-37
   milestone: M4
@@ -3652,7 +3636,7 @@
 - id: TASK-M8-103
   milestone: M8
   title: "The Chart builder's composition panels"
-  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-34, TASK-M4-35, TASK-M8-100, TASK-M8-102]
+  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-34, TASK-M8-118, TASK-M8-100, TASK-M8-102]
   needs: []
   requirements: [REQ-GUI-419]
   reviewers: [code, qa, physics, gui]
@@ -3767,6 +3751,22 @@
   depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23]
   needs: []
   requirements: [REQ-CHART-115]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M8-118
+  milestone: M8
+  title: "Hold L_z on any chart, beside energy normalisation"
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52]
+  needs: []
+  requirements: [REQ-CHART-102, REQ-CHART-111]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M8-119
+  milestone: M8
+  title: "The virial pair: its axis kind, descriptor and entry"
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37]
+  needs: []
+  requirements: [REQ-CHART-103]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M9-01
@@ -3908,8 +3908,8 @@
 - id: TASK-M9-18
   milestone: M9
   title: "Aarseth et al. 1994b: triple approaches and parameter distributions over region D, circle R and the Pythagorean escapers (Q-1 to Q-3)"
-  depends_on: [TASK-M9-11, TASK-M9-17, TASK-M4-34]
-  needs: [REQ-CHART-100]
+  depends_on: [TASK-M9-11, TASK-M9-17]
+  needs: []
   requirements: [REQ-VAL-262, REQ-VAL-263, REQ-VAL-264, REQ-VAL-265, REQ-VAL-266, REQ-VAL-267]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2, PIT-3]
@@ -3924,24 +3924,24 @@
 - id: TASK-M9-20
   milestone: M9
   title: "Lehto et al. 2008 at a small grid: local homogeneity, reversibility and the step-halving controls (L-3, L-4, L-5)"
-  depends_on: [TASK-M3-34, TASK-M3-08, TASK-M4-34]
-  needs: [REQ-CHART-100]
+  depends_on: [TASK-M3-34, TASK-M3-08]
+  needs: []
   requirements: [REQ-VAL-281, REQ-VAL-282, REQ-VAL-283, REQ-VAL-284, REQ-VAL-285]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2, PIT-3]
 - id: TASK-M9-21
   milestone: M9
   title: "Region-D statistics: the lifetime tail and lifetime against Lyapunov time (V-9, MT-1)"
-  depends_on: [TASK-M3-34, TASK-M3-14, TASK-M4-34]
-  needs: [REQ-CHART-100]
+  depends_on: [TASK-M3-34, TASK-M3-14]
+  needs: []
   requirements: [REQ-VAL-286, REQ-VAL-287, REQ-VAL-288, REQ-VAL-289]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2, PIT-3]
 - id: TASK-M9-22
   milestone: M9
   title: "Converged-code references: Boekholt et al. 2020's lifetime grid and Breen et al. 2020's Brutus runs (GG-1, BR-1)"
-  depends_on: [TASK-M3-25, TASK-M3-34, TASK-M4-34]
-  needs: [REQ-CHART-100]
+  depends_on: [TASK-M3-25, TASK-M3-34]
+  needs: []
   requirements: [REQ-VAL-295, REQ-VAL-296, REQ-VAL-297, REQ-VAL-298]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2, PIT-3]
@@ -3972,8 +3972,8 @@
 - id: TASK-M9-26
   milestone: M9
   title: "Lehto's lifetime map at full resolution, and the shield's mirror symmetry (L-1, V-8 (a))"
-  depends_on: [TASK-M9-20, TASK-M4-17, TASK-M4-34]
-  needs: [REQ-CHART-100]
+  depends_on: [TASK-M9-20, TASK-M4-17]
+  needs: []
   requirements: [REQ-VAL-290, REQ-VAL-291, REQ-VAL-292]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
@@ -3988,8 +3988,8 @@
 - id: TASK-M9-28
   milestone: M9
   title: "Symbol-sequence maps: Tanikawa & Mikkola's free-fall and non-zero-L maps, and Valtonen et al.'s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7)"
-  depends_on: [TASK-M4-17, TASK-M3-16, TASK-M4-34]
-  needs: [REQ-CHART-100]
+  depends_on: [TASK-M4-17, TASK-M3-16]
+  needs: []
   requirements: [REQ-VAL-325, REQ-VAL-326, REQ-VAL-327, REQ-VAL-328, REQ-VAL-342]  # R-594, R-629 (27 Oct 2026); R-669: REQ-VAL-342
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
@@ -4012,8 +4012,8 @@
 - id: TASK-M9-31
   milestone: M9
   title: "Deep zooms of the shield: Lehto's 3.125×10⁻⁶ zoom and Valtonen et al.'s three windows (L-2, V-8 (b))"
-  depends_on: [TASK-M9-26, TASK-M6-08, TASK-M4-34]
-  needs: [REQ-CHART-100]
+  depends_on: [TASK-M9-26, TASK-M6-08]
+  needs: []
   requirements: [REQ-VAL-293, REQ-VAL-294]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]

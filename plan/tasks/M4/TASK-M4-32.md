@@ -37,5 +37,5 @@ Port principia_chart_composition.md into the contracts, as the rulings on RQ-712
 - `python3 plan/check_plan.py` — green.
 
 ## Notes
-- Waits on RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719. The virial kind's answer (RQ-717) lands in this task if it is ruled by then, else in TASK-M4-36.
+- The virial kind's answer (RQ-717) lands in this task if it is ruled by then, else in TASK-M8-119.
 - Waits on its rulings item: RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

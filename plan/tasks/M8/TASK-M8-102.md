@@ -24,5 +24,5 @@ The third lowering: an unbaked or numerical pair fills the integrator's IC buffe
 - `cargo test -p engine numerical_branch_seam` — the rule, branch and seam; two orders, one bit pattern; round trip on every sample; controls: a rule reading a neighbour, a pair with no rule (REQ-CHART-107).
 
 ## Notes
-- Waits on RQ-719. Shares R-669's Path B batch where that exists.
+- Shares R-669's Path B batch where that exists.
 - Waits on its rulings item: RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

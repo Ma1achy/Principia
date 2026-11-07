@@ -22,5 +22,5 @@ Each paper's frame as a preset over the registry, tested against its coordinates
 - `cargo test -p engine preset_paper_coords` — each row and its control (REQ-CHART-122).
 
 ## Notes
-- Waits on RQ-729 and RQ-650. The M9 tasks take these presets.
-- Waits on its rulings item: RQ-729, RQ-650. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- RQ-650 is outside TASK-M4-37's gate, so nothing in Depends on holds it: D₁₁'s preset doesn't start until RQ-650 is ruled, by this note. If RQ-729 rules for the presets, TASK-M9-20, -22 and -28 take them, by edges TASK-M4-37 applies then; until it does, those tasks' own functions stand.
+- Waits on its rulings item: RQ-729. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

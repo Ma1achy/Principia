@@ -21,7 +21,7 @@ Stored rows under the budget, and the GPU column measured.
 
 ## Acceptance tests
 - `cargo test -p engine time_memory_budget` (REQ-PERF-118).
-- `cargo xtask bench time_column` — waits for the human's Mac and the Windows runner (REQ-PERF-118).
+- `cargo xtask bench time_column` — waits for the human's Mac (R-186), which closes it; the Windows runner's arm is a separate labelled measurement that closes nothing (R-711) (REQ-PERF-118).
 
 ## Notes
 - The column entry counts in the cap's C2. The re-measure runs on the default occupant, at Δ_sync's row spacing; REQ-INT-080's value bears on this mode.

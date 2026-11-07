@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-419
-- **Depends on:** TASK-M4-37, TASK-M8-18, TASK-M4-34, TASK-M4-35, TASK-M8-100, TASK-M8-102
+- **Depends on:** TASK-M4-37, TASK-M8-18, TASK-M4-34, TASK-M8-118, TASK-M8-100, TASK-M8-102
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none

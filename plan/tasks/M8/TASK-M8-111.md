@@ -23,5 +23,5 @@ Each row of the full order's table, as its verdict says, on CPU batch.
 - `cargo test -p engine prim_round_trip` and `cargo test -p engine prim_rejected` — the rows of section 3.2 (REQ-CHART-120).
 
 ## Notes
-- Waits on RQ-723, RQ-725, RQ-726 and RQ-730. Nothing here scores a target; R-668 and R-669 stand.
+- Nothing here scores a target; R-668 and R-669 stand.
 - Waits on its rulings item: RQ-723, RQ-725, RQ-726, RQ-730. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

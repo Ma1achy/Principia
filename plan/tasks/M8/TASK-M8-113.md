@@ -26,5 +26,5 @@ The mode, column marching and row reads, on CPU batch first.
 - `cargo test -p engine time_column_matches_playhead time_rows_on_boundaries time_zoom_floor time_extend_continues time_terminal_holds time_jitter_ic_only time_two_axes_refused time_window_frozen time_morph_rules time_anchor` — each and its control (REQ-CHART-123).
 
 ## Notes
-- Waits on RQ-727, whose ruling amends the caching contract's T row and the temporal note.
+- RQ-727's ruling amends the caching contract's T row and the temporal note.
 - Waits on its rulings item: RQ-727. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

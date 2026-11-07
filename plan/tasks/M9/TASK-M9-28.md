@@ -2,8 +2,8 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-325, REQ-VAL-326, REQ-VAL-327, REQ-VAL-328, REQ-VAL-342
-- **Depends on:** TASK-M4-17, TASK-M3-16, TASK-M4-34
-- **Needs (earlier milestones):** REQ-CHART-100
+- **Depends on:** TASK-M4-17, TASK-M3-16
+- **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
 - **Size:** ~350 lines
@@ -42,4 +42,3 @@ The replication suite's targets TS-1, TS-2, V-1/V-3/V-7 run as engine tests (`pr
 - *30 Oct 2026 (R-649, R-650):* moved to M9, external replication, and renumbered: formerly TASK-M4-24 (milestone M4). Its targets are measurements, never gates: each is scored in M9, or early as a peek (information only, `docs/verification/peek_log.md`), and its outcome is PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a failure that blocks; like-for-like is checked first, and nothing is tuned, loosened or special-cased to pass (`docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"). The tier each target binds (§ "12.2 Tiers"; a calibration takes its target's): TS-1 (REQ-VAL-325): tier (a); TS-2 (REQ-VAL-326): tier (a); V-1 / V-3 / V-7 (REQ-VAL-327): tier (a). *Was:* "The tier each binds is § '12.2 Tiers''s: (b); (a) statistically or qualitatively." (corrected 30 Oct 2026 to the owner's confirmation of the tier reading, R-649). Its calibrations are confirmed by the human with the M9 report (REQ-VAL-340), *was:* "at the M4 gate". A wait on a ruling or data below holds this task's scoring, never a milestone.
 - *1 Nov 2026 (R-669, RQ-595 (b)):* the symbol field only. TS-1 runs on it; V-7 runs once Chernin et al.'s definitions are in hand, and reads "not scored" with that reason until then; TS-2 reads "not scored: no fixed-k velocity chart". The wait on RQ-595 ends; "once RQ-595 is ruled" in the acceptance reads as the field (REQ-VAL-342), and TS-2's "on the chart RQ-595 rules" as no chart. The B list's note stands: RQ-632's crossing classifier may reduce the work.
 - *4 Nov 2026 (R-702, RQ-650 (a)):* this task's control "the map without the mirror remap must be mirrored" applies only to a map that takes the remap; for a map in Anosova's region, the control is our map with bodies 2 and 3 exchanged, each pixel started at (−x, y), its symbols not swapped back, and drawn at the pixel's own (x, y): regions 2 and 3 trade places, and it must fail to match (physics review 5802604301 of PR #425, T1; *was:* "a mirrored map that must fail to match").
-- Chart composition: the plane is TASK-M4-34's; the D11 remap stays this task's; R-669's no fixed-k velocity chart stands.

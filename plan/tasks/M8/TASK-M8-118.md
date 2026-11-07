@@ -1,6 +1,6 @@
-# TASK-M4-35 — Hold L_z on any chart, beside energy normalisation
+# TASK-M8-118 — Hold L_z on any chart, beside energy normalisation
 
-- **Milestone:** M4
+- **Milestone:** M8
 - **Closes:** REQ-CHART-102, REQ-CHART-111
 - **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52
 - **Needs (earlier milestones):** none
@@ -27,6 +27,6 @@ The new constraint, the twin of `η_E`: a uniform, off by default and bitwise to
 - `cargo test -p kernel hold_rank` — both rank-loss cases report ray-degenerate, a generic plane doesn't; control: the label removed (REQ-CHART-111).
 
 ## Notes
-- Waits on RQ-715, and on RQ-722 for the rest charts. RQ-715 closes only the held-L_z half of RQ-701.
+- RQ-722 is for the rest charts. RQ-715 closes only the held-L_z half of RQ-701.
 - Free charts take no tilt target on L*; a chart holding L_z by construction moves by value (R-720).
 - Waits on its rulings item: RQ-715, RQ-722. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

@@ -20,7 +20,7 @@ Under a lock a path is a based homotopy: the anchor's IC words fixed at the cent
 - The offset form and the centre's select in each lowering.
 
 ## Acceptance tests
-- `cargo test -p engine path_lock_centre` — one set of words at the probe on every frame, δ = 0 and δ ≠ 0, snap-back bit for bit; control: the select removed (REQ-CHART-115).
+- `cargo test -p engine path_lock_centre` — one set of words at the probe on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0, snap-back bit for bit, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, `anchor not in B` labelled and unbased; controls: the select removed, offsets blended linearly (REQ-CHART-115).
 
 ## Notes
 - The linearised decoder's per-frame tangent plane (design § 17.8) needs REQ-DEC-033 first.

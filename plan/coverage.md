@@ -34,11 +34,11 @@ Of these: 236 calibration, 192 definition, 1709 obligation. Retired (kept for th
 | M1 | 108 |
 | M2 | 222 |
 | M3 | 234 |
-| M4 | 128 |
+| M4 | 125 |
 | M5 | 183 |
 | M6 | 228 |
 | M7 | 262 |
-| M8 | 494 |
+| M8 | 497 |
 | M9 | 155 |
 
 ## Sections

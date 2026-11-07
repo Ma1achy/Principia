@@ -20,7 +20,7 @@ A path between two baked ends runs live like a tilt: coarse in motion, refining 
 
 ## Acceptance tests
 - `cargo test -p engine blend_entry_counted` — stage_blend the only morph entry; control: a baked (A, B) entry (REQ-PERF-117).
-- `cargo xtask bench path_cover` — one coarse cover against the design's target; benchmark: waits for the human's Mac and the Windows runner (REQ-PERF-117).
+- `cargo xtask bench path_cover` — one coarse cover against the design's target; benchmark: waits for the human's Mac (R-186), which closes it; the Windows runner's arm is a separate labelled measurement that closes nothing (R-711) (REQ-PERF-117).
 
 ## Notes
 - The whole frame, integration included, is measured here for the first time: the design measured only a stand-in for the chart side.
