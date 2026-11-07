@@ -30,8 +30,8 @@ Every arm of the path type, with tilt and zoom calling their own code, a frame r
 
 ## Acceptance tests
 - Physics reviewer: the metric on the blended state in the chart reference (REQ-CHART-124).
-- `cargo test -p engine path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip` — each against the direct operation (REQ-CHART-113).
-- `cargo test -p engine path_gram_flags path_blank_ends path_hold_table path_small_step path_links_cut` — each row and its control, path_small_step's fixture of planes δ = 10⁻¹⁰ apart with `arccos` as its control (REQ-CHART-114).
+- `cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip` — each against the direct operation (REQ-CHART-113).
+- `cargo test -p engine -- path_gram_flags path_blank_ends path_hold_table path_small_step path_links_cut` — each row and its control, path_small_step's fixture of planes δ = 10⁻¹⁰ apart with `arccos` as its control (REQ-CHART-114).
 - `cargo test -p engine path_retime` — spread at most 1.25, pinned ends; control: the table off (REQ-CHART-116).
 
 ## Notes

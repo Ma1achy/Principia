@@ -3754,8 +3754,8 @@
   - file: docs/design/principia_chart_composition.md
     section: 3. The primitive registry
   verify:
+    detail: "cargo test -p engine -- size_only_refused excluded_primitives: I, R and ℓ refused by name; every registered row sampled on decodes, one constant there and not declared size-only failing; control: a row constant on decodes declared free fails; a row with an inverse naming a binary phase fails, a forward-only overlay row naming one passes; a combination of a closed and a numerical part reports numerical"
     method: unit test
-    detail: "cargo test -p engine size_only_refused and excluded_primitives: I, R and ℓ refused by name; every registered row sampled on decodes, one constant there and not declared size-only failing; control: a row constant on decodes declared free fails; a row with an inverse naming a binary phase fails, a forward-only overlay row naming one passes; a combination of a closed and a numerical part reports numerical"
   rulings:
   - R-407
   - R-408
@@ -4067,8 +4067,8 @@
   - file: docs/design/principia_chart_composition.md
     section: "17.5 A frame: valid, reproducible, recorded"
   verify:
+    detail: "cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip: each against the direct operation's bits; controls: the general geodesic in tilt's place, a triple in a zoom's key, an end through the blend, s at f32"
     method: unit test
-    detail: "cargo test -p engine path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip: each against the direct operation's bits; controls: the general geodesic in tilt's place, a triple in a zoom's key, an end through the blend, s at f32"
   rulings:
   - R-309
   - R-484
@@ -4086,8 +4086,8 @@
   - file: docs/design/principia_chart_composition.md
     section: 17.12 Performance
   verify:
+    detail: "cargo test -p engine -- path_gram_flags path_blank_ends path_hold_table path_small_step path_links_cut: each per its row; controls: the flag removed, the other end substituted, the step before the blend, an undeclared seam, a morph across a link id"
     method: unit test
-    detail: "cargo test -p engine path_gram_flags path_blank_ends path_hold_table path_small_step path_links_cut: each per its row; controls: the flag removed, the other end substituted, the step before the blend, an undeclared seam, a morph across a link id"
   rulings:
   - R-467
   - R-470
@@ -4119,8 +4119,8 @@
   - file: docs/design/principia_chart_composition.md
     section: "17.10 Without a lock: alignment"
   verify:
+    detail: "cargo test -p engine -- path_retime path_ends_bitwise: speed spread at most 1.25 on the saturated fixture, g pinned; control: the table off"
     method: unit test
-    detail: "cargo test -p engine path_retime path_ends_bitwise: speed spread at most 1.25 on the saturated fixture, g pinned; control: the table off"
   rulings:
   - R-576
   milestone: M8
@@ -4155,8 +4155,8 @@
   - file: docs/design/principia_chart_composition.md
     section: 12. Tests that can fail
   verify:
+    detail: "cargo test -p engine -- prim_round_trip prim_rejected: each row at f64 and f32; controls: a sign flipped in an inverse, a rejected row accepted, (L_z, E) refused"
     method: unit test
-    detail: "cargo test -p engine prim_round_trip prim_rejected: each row at f64 and f32; controls: a sign flipped in an inverse, a rejected row accepted, (L_z, E) refused"
   rulings:
   - R-369
   - R-669
@@ -4193,8 +4193,8 @@
   - file: docs/design/principia_chart_composition.md
     section: 12. Tests that can fail
   verify:
+    detail: "cargo test -p engine -- prim_round_trip prim_rejected: the rows of section 3.2, and Tanikawa-Mikkola's mass-weighted L_com = 0 at random masses after C, from an independent Σ m r × v; controls: a sign flipped, a scattering row given an inverse, R from the centroid fails at −0.0025 at (x, y) = (0, 0.3), (α₂, β₁) = (0.1, 0), masses (1, 0.8, 0.6), an unweighted sum fails"
     method: unit test
-    detail: "cargo test -p engine prim_round_trip prim_rejected: the rows of section 3.2, and Tanikawa-Mikkola's mass-weighted L_com = 0 at random masses after C, from an independent Σ m r × v; controls: a sign flipped, a scattering row given an inverse, R from the centroid fails at −0.0025 at (x, y) = (0, 0.3), (α₂, β₁) = (0.1, 0), masses (1, 0.8, 0.6), an unweighted sum fails"
   rulings:
   - R-369
   - R-669
@@ -4250,8 +4250,8 @@
   - file: docs/design/principia_chart_composition.md
     section: "18.3 Stored rows and dense output: the conflict, plainly"
   verify:
+    detail: "cargo test -p engine -- time_column_matches_playhead time_rows_on_boundaries time_zoom_floor time_extend_continues time_terminal_holds time_jitter_ic_only time_two_axes_refused time_window_frozen time_morph_rules time_anchor: each with its control, the first with unregularised and regularised arms and a column whose later crossing cancels symbols, control: a row reading a prefix of the final word"
     method: unit test
-    detail: "cargo test -p engine time_column_matches_playhead time_rows_on_boundaries time_zoom_floor time_extend_continues time_terminal_holds time_jitter_ic_only time_two_axes_refused time_window_frozen time_morph_rules time_anchor: each with its control, the first with unregularised and regularised arms and a column whose later crossing cancels symbols, control: a row reading a prefix of the final word"
   rulings:
   - R-66
   - R-369
@@ -40536,8 +40536,8 @@
   - file: docs/design/principia_chart_composition.md
     section: 18.5 Cost per column
   verify:
+    detail: "cargo test -p engine time_memory_budget; cargo test -p engine -- time_column_matches_playhead time_extend_continues: the store arms of § 18.6, with their controls; cargo xtask bench time_column on the human's Mac, with the Windows runner's arm a separate labelled measurement (R-711)"
     method: benchmark
-    detail: "cargo test -p engine time_memory_budget; cargo test -p engine time_column_matches_playhead time_extend_continues: the store arms of § 18.6, with their controls; cargo xtask bench time_column on the human's Mac, with the Windows runner's arm a separate labelled measurement (R-711)"
   rulings:
   - R-186
   - R-369
