@@ -1207,7 +1207,7 @@ owner: yes, it is physics; the tilt changes which systems the chart shows.*
 
 ## RQ-733: Does a user-typed combination with no registered inverse get a general solve, or stay a forward-only overlay? *(a one-way door: scope, and the reading of the order's "combinations of primitives"; Codex's P1 on PR #422, thread PRRT_kwDOUpUQ5c60z6LL; context: TASK-M4-33, TASK-M8-102, REQ-CHART-096, REQ-CHART-107)*
 
-*Queued 7 Nov 2026 from PR #422, for the owner's rulings report. Nothing is implemented until ruled (the owner's order of 6 Nov, A6).*
+*Queued 7 Nov 2026 from PR #422, for the owner's rulings report. Option (b) is not implemented until ruled (the owner's order of 6 Nov, A6); TASK-M4-33 goes ahead on (a).*
 
 *In plain English: an axis can be a formula combining several quantities. To start a system from a pixel, the program must run that formula backwards. Having simple parts doesn't make the whole formula reversible, so the design now treats a formula as reversible only if someone has written down how. This asks whether a formula a user types should get an automatic numerical solver, or stay something you can only draw as an overlay until one is written.*
 
