@@ -4107,8 +4107,8 @@
   - file: docs/design/principia_chart_composition.md
     section: "17.8 Lock: a based homotopy"
   verify:
+    detail: "cargo test -p engine path_lock_centre: where the anchor stays in B, a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B (a region D, a rest and a Burrau B), the probe reads the stored words at s = 0 and B's nearest point to the anchor at s = 1, the slide continuous between (the largest step in the probe's state between frames falling to at most 0.6 of the previous largest step each time the frame step is halved, twice over), with no label and no jump; a time-axis chart to an IC-only chart keeps its labelled jump; controls: the select removed fails, offsets blended linearly fails, a labelled jump where the anchor can't exist in B fails, an unlabelled snap to B's nearest point at one mid-path frame fails"
     method: unit test
-    detail: "cargo test -p engine path_lock_centre: where the anchor stays in B, a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B (a region D, a rest and a Burrau B), the probe reads the stored words at s = 0 and B's nearest point to the anchor at s = 1, the slide continuous between (the largest step in the probe's state between frames shrinking each time the frame step is halved, twice over), with no label and no jump; a time-axis chart to an IC-only chart keeps its labelled jump; controls: the select removed fails, offsets blended linearly fails, a labelled jump where the anchor can't exist in B fails"
   rulings:
   - R-69
   - R-92
