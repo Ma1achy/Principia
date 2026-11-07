@@ -578,6 +578,7 @@ dpi renders.
   ρ* = 30d", p. 229) and the number of runs. RQ-651 below.
 - **Table X** (rotating systems): no target.
 - **Proposed:** AN-2, tier (a), contingent on RQ-651.
+  *4 Nov 2026 (R-702, closing RQ-651, option (b)):* AN-2 is shape-only, the normalised distribution compared up to a free time scale; τ is not needed. Its proposal stands.
 
 ### Umehara & Tanikawa 2000; Saito & Tanikawa 2007 and 2009
 
@@ -612,6 +613,8 @@ Already ingested in PR #332: `../2026-10-29_burrau_pzb2018/` (proposed SP-2; RQ-
 - Johnstone & Rucinski 1991: no licence statement found, so local-only.
 
 ## Corrections and contradictions
+
+*4 Nov 2026 (R-702, closing RQ-650, option (a)):* the next bullet's open point is read: Tanikawa & Mikkola 2021, p. 2, eq. (2), prints (x + 0.5)², Anosova's region, so TM-1 takes no mirror. TM2008's (x − 0.5)² stays recorded as printed.
 
 - **Tanikawa's frame (RQ-650).** `docs/incoming/2026-10-25_replication/catalogue.md` line 13 says: "Tanikawa's papers
   use D11 = {x ≥ 0, y ≥ 0, (x−0.5)² + y² ≤ 1}, the mirror labelling." The same claim is in
