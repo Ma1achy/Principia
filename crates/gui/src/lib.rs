@@ -75,6 +75,7 @@ mod tests {
     mod mock_keyboard_nav_state;
     mod mock_keyboard_stain;
     mod mock_keyboard_windows;
+    mod mock_lattice;
     mod mock_layout_reframe;
     mod mock_layout_remembered;
     mod mock_layout_splitters;

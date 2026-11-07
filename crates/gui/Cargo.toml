@@ -17,6 +17,10 @@ pollster = "1"
 png = "0.18"
 serde_json = "1"
 
+[dev-dependencies]
+# wgpu 30's naga, to read the noise's IR in `lattice_source_is_integer` (REQ-GUI-412).
+naga = { version = "30", default-features = false, features = ["wgsl-in"] }
+
 # `--features mock` runs the app on the mock engine (R-390); the mock is always compiled, and the feature only chooses
 # the engine `main` runs (RQ-252).
 [features]
