@@ -46,7 +46,9 @@
 //! ([`k_floor`]), as is a pixel whose `K*` has no finite double (chart_reference §4.5). Layer 3 reads the pixel's own
 //! decode, and every refusal also runs at the chart's own precision `P`: a target that has no construction only there
 //! is refused by `validate`, not just tagged by the decode at `P`, as [`super::physical`]'s `floor_held`, and a
-//! `ν₀ + d` that rounds onto an end of `(0, 1)` only there is refused too, the decode's triangle a collision.
+//! `ν₀ + d` that rounds onto an end of `(0, 1)` only there is refused too, the decode's triangle a collision. A view
+//! runs that check on its own placement at `P` ([`Tiltable::refusal_own`]), the f64 placement narrowed missing the
+//! rounding inside it; a chart called directly has only the f64 shift, and narrows it.
 //!
 //! **The held values.** The registered charts' own parameters stay as they are; a rest start's momentum controls, the
 //! held `L_z`, a chart's mode and `Φ_θ,L_z`'s warp are held beside the chart by the wrappers [`RestStart`], [`HeldLz`] and
@@ -191,6 +193,11 @@ pub trait RestChart: Chart + Copy {
         None
     }
 
+    /// [`RestChart::refusal`] at the chart's own precision, `shift` that precision's placement.
+    fn refusal_own(&self, _shift: &Shift<Self::Param>) -> Option<Constraint> {
+        None
+    }
+
     /// `D ∘ Φ` at `(u, v)` with the momentum controls `z_mom` from the rest start and `shift` on the chart's physical
     /// hidden coordinates, under `S` at `p`.
     fn decode_moving<S, R>(
@@ -224,8 +231,13 @@ where
     /// `ν₀ + d` outside `(0, 1)`, at f64 or at the chart's own precision: a side zero or negative.
     fn refusal(&self, _a: f64, _b: f64, shift: &Shift<f64>) -> Option<Constraint> {
         let wide = shifted(f64::from(self.nu0), NU0, shift);
-        let own = shifted(self.nu0, NU0, &shift.at_precision::<P>());
-        (outside_unit(wide) || outside_unit(own)).then_some(Constraint::BurrauNu)
+        outside_unit(wide)
+            .then_some(Constraint::BurrauNu)
+            .or_else(|| RestChart::refusal_own(self, &shift.at_precision()))
+    }
+
+    fn refusal_own(&self, shift: &Shift<P>) -> Option<Constraint> {
+        outside_unit(shifted(self.nu0, NU0, shift)).then_some(Constraint::BurrauNu)
     }
 
     /// The triangle at `ν₀ + d`, the masses the map's at `(u, v)`.
@@ -444,6 +456,10 @@ impl<C: RestChart<Param = P>, P: Copy> Tiltable for RestStart<C, P> {
 
     fn refusal(&self, a: f64, b: f64, shift: &Shift<f64>) -> Option<Constraint> {
         self.chart.refusal(a, b, shift)
+    }
+
+    fn refusal_own(&self, _a: P, _b: P, shift: &Shift<P>) -> Option<Constraint> {
+        self.chart.refusal_own(shift)
     }
 }
 
@@ -745,6 +761,11 @@ where
         let own = shifted(self.lz, HELD_LZ, &shift.at_precision::<P>());
         self.refused_at(a, b, shifted(f64::from(self.lz), HELD_LZ, shift), own)
     }
+
+    fn refusal_own(&self, _a: P, b: P, shift: &Shift<P>) -> Option<Constraint> {
+        let own = shifted(self.lz, HELD_LZ, shift);
+        refused_own((own, self.row(b, own)))
+    }
 }
 
 // ── The held K: Φ_θ,L_z ───────────────────────────────────────────────────────────────────────────────────────────
@@ -807,6 +828,10 @@ where
             let (lz, k) = self.by_value(b, shift);
             self.refused_at(a, lz, k)
         })
+    }
+
+    fn refusal_own(&self, _a: P, b: P, shift: &Shift<P>) -> Option<Constraint> {
+        refused_own(self.by_value(b, shift))
     }
 }
 
@@ -986,6 +1011,15 @@ where
             })
         } else {
             self.chart.refusal(a, b, shift)
+        }
+    }
+
+    /// Warped, the pixel's targets; linear, the bare chart's.
+    fn refusal_own(&self, a: P, b: P, shift: &Shift<P>) -> Option<Constraint> {
+        if self.mapping == Mapping::Warped {
+            refused_own(self.warped(b, shift))
+        } else {
+            self.chart.refusal_own(a, b, shift)
         }
     }
 

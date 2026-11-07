@@ -3536,6 +3536,26 @@ where
     assert!(p.map(|&x| f64::from(x)).all(f64::is_finite), "{name}");
 }
 
+/// The tilt `$wide`, built at f64, as a chart at the float `$p` holds it.
+macro_rules! tilt_at {
+    ($p:ident, $wide:expr) => {{
+        let wide = $wide;
+        Tilt::<$p> {
+            on: wide.on,
+            two: wide.two,
+            rank_loss: wide.rank_loss,
+            centre: wide.centre.map(|x| x as $p),
+            columns: wide.columns.map(|c| c.map(|x| x as $p)),
+            x: wide.x,
+            y: wide.y,
+            span: wide.span.map(|x| x as $p),
+            weight: wide.weight as $p,
+            normal_zero: wide.normal_zero,
+            strip: wide.strip,
+        }
+    }};
+}
+
 /// [`check_refused_arm`] and its neighbours at the float `$p`: `K = +∞`, a finite `K` past `max/2`, the floor plus the
 /// warp's line past it and an `L_z` with no finite square, each refused on each chart that reaches it, and `K = max/2`,
 /// the last value still a system (chart_reference §4.5).
@@ -3600,6 +3620,21 @@ macro_rules! no_finite_2k {
             assert_eq!(bare(1.0).refusal(f64::NAN, 0.5, &none), layer_3);
             assert_eq!(warped.refusal(f64::NAN, 0.5, &none), layer_3);
             assert_eq!(held(0.5).refusal(f64::NAN, 0.5, &none), layer_3);
+            // The own-precision check alone, on its placement at $p.
+            let own = Shift::<$p> {
+                x: HELD_K,
+                dx: 1.0,
+                y: HELD_K,
+                dy: 0.0,
+                two: false,
+            };
+            assert_eq!(warped.refusal_own(0.5, 0.5, &own), bound);
+            let plain = Shift::<$p>::none();
+            assert_eq!(warped.refusal_own(0.5, 0.5, &plain), None);
+            assert_eq!(linear.refusal_own(0.5, 0.5, &plain), bound);
+            assert_eq!(bare(1.0).refusal_own(0.5, 0.5, &plain), None);
+            assert_eq!(sum.refusal_own(0.5, 1.0, &plain), bound);
+            assert_eq!(held(0.5).refusal_own(0.5, 0.5, &plain), None);
             // The last value still a system.
             let c = bare(last);
             assert_eq!(c.validate(0.5, 0.5), ValidationResult::Valid);
@@ -3614,20 +3649,7 @@ macro_rules! no_finite_2k {
             assert!(d.ic.p.iter().flatten().all(|x| x.is_finite()));
             // Through the view: weight 0, and not "held at floor".
             let s = spec(30.0, 0.0, TiltMap::Sheet, HELD_K, HELD_K);
-            let wide = Tilt::new(&s, CENTRE, [2.0 * K_SPAN, 2.0 * K_SPAN]);
-            let tilt = Tilt::<$p> {
-                on: wide.on,
-                two: wide.two,
-                rank_loss: wide.rank_loss,
-                centre: wide.centre.map(|x| x as $p),
-                columns: wide.columns.map(|c| c.map(|x| x as $p)),
-                x: wide.x,
-                y: wide.y,
-                span: wide.span.map(|x| x as $p),
-                weight: wide.weight as $p,
-                normal_zero: wide.normal_zero,
-                strip: wide.strip,
-            };
+            let tilt = tilt_at!($p, Tilt::new(&s, CENTRE, [2.0 * K_SPAN, 2.0 * K_SPAN]));
             let view = Tilted::new(warped, tilt).expect("a hidden target");
             assert_eq!(view.weight(1.0, 0.5), 0.0);
             assert!(!view.held_at_floor(1.0, 0.5));
@@ -3819,6 +3841,60 @@ negative_control!(
     expected = "a ν at an end of (0, 1) at f32 is read as a system",
     {
         check_simplex_own_precision(true);
+    }
+);
+
+/// A pixel whose offset rounds differently inside f32's own placement than the f64 offset narrowed: `ν = 1` in the f32
+/// decode, two bodies at one point, where the narrowed `0.9999999404` is a system. The view refuses it, weight 0, from
+/// the placement at f32, and the pixel at the centre stays a system. `cast` reads the narrowed f64 offset (the control).
+/// The span and `u` are the f32s that widen to 3.4026734828948975 and 0.6696754693984985, as Codex's report gives them.
+fn check_simplex_own_placement(cast: bool) {
+    let chart = RestStart::new(MassSimplex::<f32> {
+        nu0: 0.5,
+        eps_m: 1e-4,
+    });
+    let span = f64::from(3.4026735_f32);
+    let wide = Tilt::new(
+        &spec(60.0, 0.0, TiltMap::Sheet, NU0, NU0),
+        [0.5, 0.5],
+        [span, span],
+    );
+    let view = Tilted::new(chart, tilt_at!(f32, wide)).expect("a hidden target");
+    let (u, v) = (0.66967547_f32, 0.5_f32);
+    let (_, own) = view.tilt().place(u, v);
+    assert_eq!(0.5 + own.dx, 1.0, "the f32 placement's ν");
+    let (ab, shift) = view.tilt().place(f64::from(u), f64::from(v));
+    assert!(0.5 + (shift.dx as f32) < 1.0, "the narrowed f64 offset's ν");
+    let (wu, wv) = (f64::from(u), f64::from(v));
+    let got = if cast {
+        chart.refusal(ab[0], ab[1], &shift)
+    } else {
+        match view.validate(wu, wv) {
+            ValidationResult::Reject { failed } => Some(failed),
+            _ => None,
+        }
+    };
+    assert_eq!(
+        got,
+        Some(Constraint::BurrauNu),
+        "a placement at f32 on ν = 1 is read as a system"
+    );
+    assert_eq!(view.weight(wu, wv), 0.0);
+    assert_eq!(view.validate(0.5, 0.5), ValidationResult::Valid);
+    assert!(view.weight(0.5, 0.5) > 0.0);
+}
+
+#[test]
+fn tilt_every_chart_construction_simplex_own_placement() {
+    check_simplex_own_placement(false);
+}
+
+negative_control!(
+    tilt_every_chart_construction_simplex_own_placement,
+    "the f64 offset narrowed misses the rounding inside f32's placement, so it must fail",
+    expected = "a placement at f32 on ν = 1 is read as a system",
+    {
+        check_simplex_own_placement(true);
     }
 );
 

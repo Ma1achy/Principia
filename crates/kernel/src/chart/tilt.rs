@@ -692,6 +692,18 @@ pub trait Tiltable: Hidden {
         None
     }
 
+    /// What [`Tiltable::refusal`] finds at the chart's own precision, `(a, b)` and `shift` that precision's placement of
+    /// the pixel: [`Tilted`] places it there, since the f64 placement narrowed misses the rounding inside it. None on a
+    /// latent control.
+    fn refusal_own(
+        &self,
+        _a: Self::Param,
+        _b: Self::Param,
+        _shift: &Shift<Self::Param>,
+    ) -> Option<Constraint> {
+        None
+    }
+
     /// Whether `shift` takes a held energy's warp coordinate below `t = 0`, so that it is clamped at its floor (R-709);
     /// false on every chart but a warped held `K`.
     fn held_at_floor(&self, _shift: &Shift<f64>) -> bool {
@@ -744,7 +756,16 @@ impl<C: Tiltable<Param = P>, P: Copy> Tilted<C, P> {
     }
 }
 
-impl<C: Tiltable<Param = P>, P: Copy> Chart for Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: Float> Tilted<C, P> {
+    /// The pixel at `(u, v)` placed at the chart's own precision, and what the chart refuses there
+    /// ([`Tiltable::refusal_own`]); none untilted.
+    fn refused_own(&self, u: f64, v: f64) -> Option<Constraint> {
+        let ([a, b], shift) = self.at::<P>(narrow(u), narrow(v));
+        shift.and_then(|s| self.chart.refusal_own(a, b, &s))
+    }
+}
+
+impl<C: Tiltable<Param = P>, P: Float> Chart for Tilted<C, P>
 where
     f64: From<P>,
 {
@@ -787,7 +808,10 @@ where
         match self.at(u, v) {
             (_, None) => self.chart.validate_params(u, v, p),
             ([a, b], Some(shift)) => match self.chart.validate_shifted(a, b, &shift, p) {
-                ValidationResult::Valid => ValidationResult::Valid,
+                ValidationResult::Valid => match self.refused_own(u, v) {
+                    Some(failed) => ValidationResult::Reject { failed },
+                    None => ValidationResult::Valid,
+                },
                 ValidationResult::Project { failed, .. }
                 | ValidationResult::Clamp { failed, .. }
                 | ValidationResult::Reject { failed } => ValidationResult::Reject { failed },
@@ -824,7 +848,7 @@ where
     }
 }
 
-impl<C: Tiltable<Param = P>, P: Copy> Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: Float> Tilted<C, P>
 where
     f64: From<P>,
 {
@@ -832,7 +856,8 @@ where
     /// the cell at its hidden offsets, no system ([`Tiltable::refusal`]; R-633).
     pub fn weight(&self, u: f64, v: f64) -> f64 {
         let ([a, b], shift) = self.at(u, v);
-        match self.chart.refusal(a, b, &shift.unwrap_or(Shift::none())) {
+        let wide = self.chart.refusal(a, b, &shift.unwrap_or(Shift::none()));
+        match wide.or(self.refused_own(u, v)) {
             Some(_) => 0.0,
             None => f64::from(self.tilt.weight),
         }
@@ -848,7 +873,7 @@ where
     }
 }
 
-impl<C: Tiltable<Param = P>, P: Copy> ChartDecode for Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: Float> ChartDecode for Tilted<C, P>
 where
     f64: From<P>,
 {
