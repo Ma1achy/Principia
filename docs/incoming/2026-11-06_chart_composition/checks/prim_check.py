@@ -21,9 +21,11 @@ for _ in range(20000):
     w[4]=max(w[4],abs(e[0]*e[1]-n2*n2/4),abs(e.sum()-1))
     # polar angles about COM -> radial ratios
     u=r/np.linalg.norm(r,axis=1,keepdims=True);A=np.c_[m[1]*u[1],m[2]*u[2]];x=np.linalg.solve(A,-m[0]*u[0])
-    nr=np.linalg.norm(r,axis=1);w[5]=max(w[5],abs(x[0]-nr[1]/nr[0]),abs(x[1]-nr[2]/nr[0])) if abs(np.linalg.det(A))>1e-3 else w[5]
+    nr=np.linalg.norm(r,axis=1);e_=max(abs(x[0]-nr[1]/nr[0]),abs(x[1]-nr[2]/nr[0])); dt=abs(np.linalg.det(A))
+    w[5]=max(w[5],e_) if dt>1e-3 else w[5]; w[7]=max(w[7],e_*dt)  # the inverse divides by det: the cut is its band, w[7] the scaling
     # h inverse: v + (h*-h)/I r
     hs=rng.normal();v2=v+(hs-h)/I*r;w[6]=max(w[6],abs(ip(r,v2)-hs),abs(ip(J(r),v2)-L))
 print("Saari split orth+sum %.1e; K_rho+K_lam %.1e; L_rho+L_lam %.1e; area=n2/(4 sqrt) %.1e; I1 I2=n2^2/4,I1+I2=1 %.1e; COM polar inverse %.1e; h inverse keeps L %.1e"%tuple(w[:7]))
 # Euler crit equal masses
 a=1.;m=1/3;I=2*m*a*a;U=-(m*m)*(2/a+1/(2*a));print("equal-mass Euler L^2|E| crit, M=1: %.5f (25/972=%.5f)"%(I*U*U/2,25/972))
+print("polar inverse: worst error times |det|, no cut: %.1e (band above: |det| > 1e-3)"%w[7])

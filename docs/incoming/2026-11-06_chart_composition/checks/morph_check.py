@@ -145,3 +145,12 @@ for _ in range(60000):
     tot+=1;ny=slerp(na,nb,.5);qy=.5*(qs[0]+qs[1]);r,p=state(m,ny,qy);I,K,U,L=inv(m,r,p)
     if Es<U: blank+=1
 print(" feasible at both ends %d, infeasible at s=.5 %d"%(tot,blank))
+# 7 Nov (physics review 5809670196, sweep): T5's figures are random planes in eight dimensions, far apart. Planes near each other,
+# where arccos loses half its digits and the guard in geo can fire.
+rng=np.random.default_rng(8)
+for dl in (1e-2,1e-4,1e-6,1e-7,1e-8,1e-9,1e-10,1e-12):
+    wo=wr=0
+    for _ in range(2000):
+        a=np.linalg.qr(rng.normal(size=(8,2)))[0]; b=np.linalg.qr(a+dl*rng.normal(size=(8,2)))[0]
+        G=geo(a,b,.37)[0]; wo=max(wo,abs(G.T@G-np.eye(2)).max()); Ge=geo(a,b,1.)[0]; wr=max(wr,np.linalg.norm(Ge@Ge.T-b@b.T))
+    print(" planes %.0e apart: geodesic orthonormal to %.1e, reaches plane to %.1e"%(dl,wo,wr))

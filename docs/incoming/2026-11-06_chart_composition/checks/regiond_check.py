@@ -13,7 +13,7 @@ def state(xi,eta,m=(1/3,1/3,1/3),qa=None):
 def phys(xi,eta):
     r=[(-.5,0.),(.5,0.),(xi,eta)]; c=[sum(x[i] for x in r)/3 for i in (0,1)]
     return [(x[0]-c[0],x[1]-c[1]) for x in r]
-random.seed(1); worst=0; wp=0; wE=0
+random.seed(1); worst=0; wp=0; wE=0; wS=wA=wR=0
 for _ in range(20000):
     while True:
         xi,eta=random.uniform(0,.5),random.uniform(0,.87)
@@ -52,13 +52,20 @@ for _ in range(20000):
     a=mr; b=ml*(xi*xi+eta*eta); p=math.sqrt(mr*ml)*xi; q=math.sqrt(mr*ml)*eta
     I=a+b; n=((a-b)/I,2*p/I,2*q/I)
     k=math.sqrt(mr/ml)
-    worst=max(worst,abs(k*n[1]/(1+n[0])-xi),abs(k*n[2]/(1+n[0])-eta),abs(math.sqrt(sum(x*x for x in n))-1))
+    wS=max(wS,abs(k*n[1]/(1+n[0])-xi),abs(k*n[2]/(1+n[0])-eta),abs(math.sqrt(sum(x*x for x in n))-1))
     # interior angles and side ratios invert to (xi,eta) in Anosova's frame
     g0=math.atan2(eta,xi+.5); g1=math.atan2(eta,.5-xi)
     if eta>1e-6 and g0>1e-6 and g1>1e-6:
         e2=1/(1/math.tan(g0)+1/math.tan(g1)); x2=-.5+e2/math.tan(g0)
-        worst=max(worst,abs(e2-eta)/(1+eta),abs(x2-xi)/(1+abs(xi)))
+        wA=max(wA,abs(e2-eta)/(1+eta),abs(x2-xi)/(1+abs(xi)))
     A=math.hypot(xi+.5,eta); B=math.hypot(xi-.5,eta)
     x3=(A*A-B*B)/2; e3=math.sqrt(max(A*A-(x3+.5)**2,0))
-    worst=max(worst,abs(x3-xi),abs(e3-eta)/(1+eta)) if eta>1e-3 else worst
-print('stereographic, angle and ratio inverses: worst',worst)
+    wR=max(wR,abs(x3-xi),abs(e3-eta)/(1+eta)) if eta>1e-3 else wR
+print('worst: stereographic',wS,'angle inverse, gamma > 1e-6',wA,'ratio inverse, eta > 1e-3',wR)
+# 7 Nov (physics review 5809670196, sweep): the ratio inverse takes the same root as the focal one, so eta > 1e-3 is its band
+wc=0
+for _ in range(100000):
+    xi,eta=random.uniform(-2,2),10**random.uniform(-6,-2)
+    A=math.hypot(xi+.5,eta); B=math.hypot(xi-.5,eta); x3=(A*A-B*B)/2; e3=math.sqrt(max(A*A-(x3+.5)**2,0))
+    wc=max(wc,abs(e3-eta)*eta)
+print('ratio inverse near eta = 0: worst error times eta',wc)

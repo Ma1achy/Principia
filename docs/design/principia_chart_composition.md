@@ -173,8 +173,8 @@ meanwhile nothing built here scores those targets.
 
 ### 3.1 The primitives of 6 Nov
 
-The owner's order of 6 Nov, part C. Each identity `prim_check.py` names is checked to 10⁻¹³ over 20,000 random states, masses included
-(`docs/incoming/2026-11-06_chart_composition/checks/prim_check.py`); `√chazy_qk[2]` to 2.9·10⁻¹¹ at `M = 1`, and `K_shape = I|ṅ|²/8` to 2.6·10⁻⁷, a finite difference (`docs/incoming/2026-11-06_chart_composition/checks/sweep.py`). **Lowering: all CPU batch, labelled `CPU batch: not baked`**,
+The owner's order of 6 Nov, part C. Each identity `prim_check.py` names is checked to 2·10⁻¹³ over 20,000 random states, masses Dirichlet(3, 3, 3)
+(`docs/incoming/2026-11-06_chart_composition/checks/prim_check.py`), except the polar row's 2 × 2 solve: 8.5·10⁻¹⁴ at `|det| > 10⁻³`, and about 2·10⁻¹⁶/`|det|` below it, the determinant vanishing at a collinear state. `√chazy_qk[2]` is checked to 5.7·10⁻¹⁴ on the root, which is 2.9·10⁻¹¹ absolute and 3.9·10⁻¹³ relative on `q`, at `M = 1`, and `K_shape = I|ṅ|²/8` to 2.6·10⁻⁷, a finite difference (`docs/incoming/2026-11-06_chart_composition/checks/sweep.py`). **Lowering: all CPU batch, labelled `CPU batch: not baked`**,
 since the cap's slots are taken (§ 11); only `SuvakovPlane` is baked, by its own ruling. Each closed row is a case of
 `prim_round_trip` (§ 12), which tests `forward(inverse(x)) = x`, with a sign flipped as its control.
 
@@ -203,7 +203,7 @@ since the cap's slots are taken (§ 11); only `SuvakovPlane` is baked, by its ow
 | periapsis ratio | `a_out(1 − e_out)/a_in` | none | | | | V-11, parked | **overlay only**; undefined at `a_in ≤ 0` or `e_out ≥ 1` |
 | distance from Mardling–Aarseth | `(R_p^out/a_in)` against `2.8[(1 + q_out)(1 + e_out)/√(1 − e_out)]^0.4 × factor` (dd_chazy § 3.5), a labelled pair | none closed | | | | V-11, parked | **overlay only**: R-668 parks hierarchical triples. Blank unless `a_in > 0`, `a_out > 0`, `e_out < 1` |
 | distance from Hill stability (Marchal, Saari, Zare) | `c = L²\|E\|` against `f_k`, `f = IU²/2` at the Euler configuration with body `k` in the middle: **three thresholds at unequal masses**, `25/972` at equal masses, `M = 1`. Which applies: **door RQ-730** | at a frozen mass a warp of `L²E`; moving masses `numerical`, the Euler quintic per pixel | bounded | as `L²E` | as `L²E` | none named | **alias** of `L²E` at a frozen mass, once ruled; a definition requirement. Blank at `E ≥ 0`; at `ε ≠ 0` blank, the threshold no longer a function of `c`; `L_z = 0` reads −1, true. Label: Hill-stable means no exchange, not bound: the third body may still escape (P18) |
-| `SuvakovPlane`, two velocity parameters | REQ-CHART-091 | closed, baked by R-669 | its definition | R-630's labels: the middle body is body 1, outer bodies at `∓1`, equal velocities, the middle body `−2` times them at equal masses; at fixed `m₃`, `−2/m₃` times them by `P = 0`, as TASK-M9-40's definition must state | a shape axis: collinear | HU-1, HU-2, AT-D1, AT-D3, OC-4, SD-1's closure | **stays one M9 task** (TASK-M9-40): a reference here, nothing built |
+| `SuvakovPlane`, two velocity parameters | REQ-CHART-091 | closed, baked by R-669 | its definition | R-630's labels: the middle body is body 1, outer bodies at `∓1`, equal velocities, the middle body `−2` times them at equal masses. `m₃` is the middle body's mass in the catalogue's labels, whatever R-630's labelling calls that body: at fixed `m₃` the middle body moves `−2/m₃` times them by `P = 0`, as TASK-M9-40's definition must state | a shape axis: collinear | HU-1, HU-2, AT-D1, AT-D3, OC-4, SD-1's closure | **stays one M9 task** (TASK-M9-40): a reference here, nothing built |
 | isosceles families with matched velocities | **no definition in the corpus** | | | | | none named | **door RQ-725**; a definition requirement |
 
 **The verdicts that aren't as asked.**
@@ -251,7 +251,7 @@ committed. Identities: `docs/incoming/2026-11-06_chart_composition/checks/a5_che
 | velocity angle `Ψ`, a body's velocity against its binary's line | `Ψ = ∠p_λ` at `t = 0` for the labelled pair, `ρ̃` on `+x`. The paper reads it at minimum `I`. `INC/2026-10-27_papers/TARGETS.md` § AAOS 1994b | closed | periodic, **angle-like** | `‖p_λ‖` | `∠p_λ`: `SameQuantity` | Q-2 reads it at min `I`: a result | **alias** at `t = 0`; the paper's `Ψ` is a result, rejected as an axis |
 | isosceles vertex angle, a 1-D family | `γ₂ = 2 atan(1/(2η))` on `ξ = 0`. `INC/2026-10-28_external_sources/tanikawa_umehara_abe_1995/`, Tanikawa, Umehara & Abe 1995 | closed | bounded, **angle-like** | `ξ = 0`, geometric at any mass | `η` on that line | TUA-1, proposed | **axis** of a 1-D chart (§ 10.1); `η` warped. In D, 60° to 180° only; below 60° is the arc or past the mask |
 | homology radius `R_H` | shortest over longest side. `PP/manwadkar_trani_leigh_2020_MNRAS_497_3694_arXiv2004.05475.pdf` | **none** over the sphere: `min/max` (§ 3); in D, closed | bounded | azimuth | in D, side ratio `r₁₂/r₀₁`: `SameQuantity` | none named | **alias** of `r₁₂/r₀₁` inside D; overlay elsewhere |
-| focal coordinates `Z`, `σ` | `Z = |r₁ − r₂|/(r₁ + r₂)`, `σ = (r₁ + r₂)/r₁₂`, foci `A₁`, `A₂`. `TARGETS.md` Q-2, Q-4 | closed on the pair: `τ = ±Zσ`, `ξ = στ/2`, `η = ½√((σ² − 1)(1 − τ²))`, to 5·10⁻¹⁴ over D off `σ = 1`; `ξ ≥ 0` in D fixes the sign | bounded | | another shape pair | Q-4's null; Q-2 reads `Z` at min `I`: a result | **axis**, a pair map. `σ = 1` is the segment `A₁A₂`, one-to-one in `ξ = Z/2`, a fold of the map, not ray-degenerate; `η` loses digits there, so f32's round trip takes a band. In D `σ ≤ 2` and the domain isn't a product |
+| focal coordinates `Z`, `σ` | `Z = |r₁ − r₂|/(r₁ + r₂)`, `σ = (r₁ + r₂)/r₁₂`, foci `A₁`, `A₂`. `TARGETS.md` Q-2, Q-4 | closed on the pair: `τ = ±Zσ`, `ξ = στ/2`, `η = ½√((σ² − 1)(1 − τ²))`, to 8·10⁻¹⁴ over D at `η ≥ 10⁻³`, and about 8·10⁻¹⁷/`η` below it: `σ = 1` is `η = 0`, where the root's error goes as `1/η` (7.4·10⁻¹⁴ near `η = 10⁻³`, 6.6·10⁻¹¹ near `10⁻⁶`, `a5_check.py`); `ξ ≥ 0` in D fixes the sign | bounded | | another shape pair | Q-4's null; Q-2 reads `Z` at min `I`: a result | **axis**, a pair map. `σ = 1` is the segment `A₁A₂`, one-to-one in `ξ = Z/2`, a fold of the map, not ray-degenerate; `η` loses digits there, so f32's round trip takes a band. In D `σ ≤ 2` and the domain isn't a product |
 | Routh `γ = Σ m_i m_j/M²` | threshold `1/27`. Source record: `INC/2026-11-02_library_triage/triage-81-153.csv` (Nauenberg 2002, row 104) | closed with one mass ratio held, a two-root branch | bounded | that ratio | other mass axes | none named | **axis** of mass; not unique alone |
 | elliptic Lagrange `(e, γ)` | equilateral shape, homographic motion of eccentricity `e` | closed. A periapsis start is `h = 0`, rigid rotation, `Q = 2k = 1 + e`, apoapsis `1 − e`; the choice stays a **definition requirement** | bounded | shape | any shape axis | none named | **preset**, on CPU batch, once defined. One shape, so not R-669's plane: RQ-718 names it |
 | binding ratio `b = q/(1 + q)` | `q = K/U` of a pair, dd_chazy § 3.1 | **not unique**; for pair 0, 1 at a frozen shape, closed through `K_ρ` | bounded | shape | `K_ρ`: `SameQuantity` at a frozen shape | none named | **overlay**; alias of `K_ρ` warped under that held set |
@@ -265,7 +265,7 @@ committed. Identities: `docs/incoming/2026-11-06_chart_composition/checks/a5_che
 | `d/a`, single at rest | `PP/manwadkar_kol_trani_leigh_2021_MNRAS_arXiv2101.03661.pdf` § 3: circular binary, single at rest at 100 AU, `a` 5 AU | closed | bounded | true longitude | `λ`'s polar at rest | MK-1, not scored | **door RQ-726** |
 | parabolic `(q/a, apsidal angle)` | Harrington 1970, `INC/2026-11-02_library_triage/triage-81-153.csv` row 63 | closed | | | R-669 | M9-41, not scored | **door RQ-726** |
 | Tanikawa–Mikkola `(α₂, β₁)` | `V₁ = −2α₂R₁ + β₁R₂`, `V₂ = α₂R₁ − 2β₁R₂`, `V₃ = −V₁ − V₂`, `Rᵢ` from the true centre of mass. `INC/2026-10-29_research_batches/tanikawa_mikkola_2023/decode_check.txt`; § 6.1's form, not Table 8's caption | closed: linear in `(α₂, β₁)` | affine | `L = 0` at any mass by algebra: with `A = R₁ × R₂`, the mass-weighted sum cancels through `m₃R₃ = −m₁R₁ − m₂R₂`, which needs `R` from the true centre of mass (from the centroid it fails: −0.0025 at `(0, 0.3)`, `(0.1, 0)`, `(1, 0.8, 0.6)`; `docs/incoming/2026-11-06_chart_composition/checks/tm23.py`, `a5_check.py`). The paper's form at equal masses, our extension otherwise, unscored. `P = 0` at equal masses only, `C`'s boost restoring it without moving `L` | hold `L* ≠ 0` | TM23-1, proposed | **axis pair**, the momentum block's construction, § 8.6's rescale per pixel. **Not fixed `k`**: no conflict with R-669 |
-| Šuvakov plane, `m₃` free and the middle-body-labelled-2 variant | § 3.1's row, the middle body `−2/m₃` times the outer velocity by `P = 0`; the variant is a relabelling | | | | | as § 3.1 | **stays one M9 task**; the variant is its preset |
+| Šuvakov plane, `m₃` free and the middle-body-labelled-2 variant | § 3.1's row: `m₃` the middle body's mass in the catalogue's labels, whatever R-630's labelling calls that body, and the middle body `−2/m₃` times the outer velocity by `P = 0`; the variant is a relabelling | | | | | as § 3.1 | **stays one M9 task**; the variant is its preset |
 | Li & Liao 2017 generalised plane | `r₁ = −r₂ = (x₁, x₂)`, `r₃ = 0`, `ṙ₁ = ṙ₂ = (v₁, v₂)`, `ṙ₃ = −2ṙ₁`. `PP/li_liao_2017_SciChina_60_129511_arXiv1705.00527.pdf` | | | | `(x₁, x₂)` are scale and rotation: **size-only and gauge** after `C` | LL's rows | **`SuvakovPlane` after `C`**: its only valid 2-plane is that plane. No new row |
 | Li–Li–Liao 2020 collinear `L = 0` `(x₁, v₁)`, `(m₁, m₂)` plane | `r = (x₁, 1, 0)` on `x`, perpendicular `v`, `v₂ = −m₁v₁x₁/m₂` (0.4531080538 reproduced), `v₃` by `P = 0`. `PP/li_li_liao_2020_arXiv2007.10184.pdf` | closed | bounded | `L = 0`, collinear | any shape pair | LLL-1, "not scored: no continuation" | **axis pair**, unscored; R-669's "one M9 task" doesn't reach it |
 | BHH collinear-perpendicular Jacobi `(a, c; L)` | definition unread: `INC/2026-10-26_orbit_catalogues/CITATIONS.md` `bhh2026`, an atlas note | | | | | atlas rows | **a definition requirement** (R-72) |
@@ -663,8 +663,8 @@ this, and `ShapeSphere`'s explicit-configuration path carries it.
 the projection from `n = (−1, 0, 0)`, §3.1's collision of bodies 0 and 1. So the plane is conformal to the mass-weighted
 sphere, and the figure's Tier 1 circles are circles because of it. At equal masses D's apex is the pole `L⁺`, and the
 collinear row `η = 0` is the equator. Frames of other papers map onto this plane by § 8.8's ratio: affine for most, a Möbius map for Breen's (§ 20). Checked numerically at random
-masses, to 6·10⁻¹³, against the identity in `λ` (`docs/incoming/2026-11-06_chart_composition/checks/regiond_check.py`; a tested function
-in TASK-M4-34). That check took `λ = (ξ, η)` as given, so it could not see `d`: the offset comes from dd_decoder §3.2, not from it.
+masses, 0.05 to 1 before normalising, over `ξ ∈ [−2, 2]`, `η ∈ [0, 2]`, against the identity in `λ`, to 5.6·10⁻¹⁵ (`docs/incoming/2026-11-06_chart_composition/checks/regiond_check.py`; a tested function
+in TASK-M4-34). The same script's inverses in `(ξ, η)`: from the interior angles to 2.4·10⁻¹³ relative, at `η` and both angles above 10⁻⁶; from the side ratios to 5.9·10⁻¹³ at `η > 10⁻³`, about 2·10⁻¹⁵/`η` below it, the focal row's root (§ 3.2). That check took `λ = (ξ, η)` as given, so it could not see `d`: the offset comes from dd_decoder §3.2, not from it.
 
 ### 8.3 The pairs it carries
 
@@ -717,7 +717,7 @@ The "Anosova entry" of the replication rows is three things. Point import exists
 
 Velocities: exact rest for AA-6 and every free-fall map; eq. 3 for AA-2 and AA-7, and AA-3 and AA-5 read paper I, whose runs
 are eq. 3's, though their rows do not say so (flagged for RQ-714). Masses: equal, but AN-1 and the LL unequal sets at a mass
-point: the plane takes the masses as frozen. **No unequal-mass target runs eq. 3:** AN-1 and the LL sets are free fall, exact rest (`docs/design/principia_dd_replication.md` § 9, "Free fall, unequal masses"), so nothing here needs RQ-714.
+point: the plane takes the masses as frozen. **No unequal-mass target runs eq. 3:** AN-1 and the LL sets are free fall, exact rest (REQ-VAL-279; `INC/2026-10-25_replication/catalogue.md` § 2.5; `docs/design/principia_dd_replication.md` § 5.3, and § 9, "Free fall, unequal masses"), so the unequal-mass case adds nothing to RQ-714, which still holds AA-3 and AA-5.
 
 **Frames.** Each paper's frame is a preset over the registry, written out from the sources in § 20, tested there and in § 8.8. **One source:** if RQ-729 rules for the presets, TASK-M9-20,
 -22 and -28 take them rather than each writing a function, by edges TASK-M4-37 applies then. Until it does, those tasks' own tested functions stand, as on `main`. Each ends in `(ξ, η)` or in a point, so the plane does not depend on them.
@@ -731,7 +731,7 @@ With `p̂ᵢ = (mᵢ/M)·vᵢ/√(GM)` (the import's `unit_state`), then `C`'s `
 q(ξ, η) = √ℓ(ξ, η)·q̄      q̄ = the Jacobi form of p̂      for eq. 3 at equal masses, q̄ = (0, 0, −10⁻⁴/(3√(3G)), 0) = (0, 0, −0.0745, 0)
 ```
 
-`q̄` is a uniform, at most four floats. At equal masses the sum matches eq. 3 and eq. 4 to rounding (checked as above: relative energy
+`q̄` is a uniform, at most four floats. At equal masses the sum matches eq. 3 and eq. 4 to rounding (checked as above, at `η > 10⁻³`: relative energy
 1.2·10⁻¹⁴). At other masses `q̄` is the Jacobi form of `p̂` at those masses, after `C`'s boost: eq. 3's `P_x` is 3·10⁻⁵ at `(1, 0.8, 0.6)`, and `−0.0745` isn't its Jacobi form. This is a residual convention on the momentum block, which reads the configuration: the pattern of kind 3.
 
 **Every `gauge` quantity carries that `ℓ`, and so does time:**
@@ -778,7 +778,7 @@ exact; AN-1's `(1.530844530, 0.281758510)` at most 1, and `(9.897502790, 0.35154
 which is 1.5·10⁻¹⁷ absolute, `d` cancelling. So the tolerance is absolute: `|Δ| ≤ 4 eps·max(1, |ξ|, |η|)`, in f64 and f32, **read from
 the blocks `ρ̃, λ̃`** (physics note 3: worst 2.7 eps at f64). Read from particle positions the worst is 4.3 eps·scale, so that read takes a measured
 tolerance (R-71). A row whose offset is below it, P-1's `δ = 5·10⁻⁸`, H-3's `Δ = 10⁻⁸`, PA-1's Set B, runs at f64 only: at f32 it would collapse to one point and pass. Over D at random masses
-to 10⁻³, the sphere form's worst is 7.4·10⁻¹⁴ at f64 and 2.1·10⁻⁵ at f32, so an f32 read back goes by the ratio. **Bits, as such,
+to 10⁻³, over two draws, one Dirichlet and one log-uniform reaching that floor, with `η` down to 10⁻⁶, the sphere form's worst is 7.4·10⁻¹⁴ at f64 and 2.9·10⁻⁵ at f32, so an f32 read back goes by the ratio. **Bits, as such,
 are the published decimal's own:** rounded once to the working float, as the import does.
 
 **Three things in the order that don't hold as written.**
@@ -1046,7 +1046,7 @@ Each with a control (R-176), named here and owned by a task.
 | `excluded_primitives` | no row with an inverse names a binary phase, eccentricity, impact parameter or fixed `k` (R-669) | one added | TASK-M4-33 |
 | `region_d_native` | § 8.8's table: read-back within tolerance **and** the paper's three separations in the paper's own frame against the decoded state, eq. 4's energy on AA rows | `d` dropped on both sides; bodies 0, 1 swapped at unequal masses; `η` mirrored | TASK-M8-110 |
 | `preset_paper_coords` | § 20's table: the same oracle per frame; offsets below the working float at f64 only, neighbours distinct | the same three; a sub-resolution row at f32 | TASK-M8-112 |
-| `prim_round_trip` | each closed row of §§ 3.1 and 3.2, `forward(inverse(x)) = x`, f64 and f32; Saari's split sums and is orthogonal; `K_shape = I|ṅ|²/8`; `I₁I₂ = n_w²/4`; `h`'s step keeps `L_z`; the aliases equal; Tanikawa–Mikkola's mass-weighted `L_com = 0` at random masses after `C`, from an independent `Σ m r × v` | a sign flipped in an inverse; `R` from the centroid, −0.0025 at § 3.2's point; an unweighted sum | TASK-M8-109 |
+| `prim_round_trip` | each closed row of §§ 3.1 and 3.2, `forward(inverse(x)) = x`, f64 and f32; Saari's split sums and is orthogonal; `K_shape = I|ṅ|²/8`; `I₁I₂ = n_w²/4`; `h`'s step keeps `L_z`; the aliases equal; a row with a stated scaling takes its tolerance from it, `1/η` for § 3.2's focal row, `1/|det|` for § 3.1's polar row, so a fixed tolerance holds only in that row's band; Tanikawa–Mikkola's mass-weighted `L_com = 0` at random masses after `C`, from an independent `Σ m r × v` | a sign flipped in an inverse; `R` from the centroid, −0.0025 at § 3.2's point; an unweighted sum | TASK-M8-109, TASK-M8-111 |
 | `prim_rejected` | each row of "Rejected as axes" has no axis; `L²E` and Hill's distance label `ε ≠ 0`; Hill's distance blank at `E ≥ 0`; pair table rows 19 and 20 refused, rows 17 and 18 refused only under a hold, `(L_z, E)`, `(K_ρ, K_λ)`, `(L_ρ, L_z)` accepted | one accepted; `(L_z, E)` refused | TASK-M8-109 |
 | Golden | `cargo xtask golden decode-preset`: region D through the DECODE preset, TASK-M4-06's acceptance, unchanged | as that task's | TASK-M4-06 |
 
@@ -1060,7 +1060,7 @@ Each states its criterion, written first, then the result. Any may be vetoed; ea
 |---|---|---|---|---|
 | V1 | A warp's kind: a uniform word, not a baked variant | bitwise on the linear arm; the branch taken before the decode, as `ShapeMap`; TASK-M8-100 measures decode time, and past +2% it becomes baked | uniform | precedent; the measurement is that task's |
 | V2 | Keep decode an entry of its own, apart from the integrator | the variant count must stay additive, § 11 | keep it | § 11's numbers |
-| V3 | Region D by explicit configuration, not `atan2` plus the link | the lower worst f32 error against f64 over D; a tie goes to the lowering appendix's row | explicit | worst `1.28·10⁻⁷` against `2.18·10⁻⁷`, 400,000 samples, `docs/incoming/2026-11-06_chart_composition/checks/regiond_f32.py` |
+| V3 | Region D by explicit configuration, not `atan2` plus the link | the lower worst f32 error against f64 over D; a tie goes to the lowering appendix's row | explicit | worst `1.28·10⁻⁷` against `2.18·10⁻⁷`, 400,000 samples at equal masses and `η > 10⁻⁴`; `1.24·10⁻⁷` against `1.98·10⁻⁷` with no cut on `η`; `2.14·10⁻⁷` against `3.67·10⁻⁷` at masses log-uniform to `10⁻³`, `docs/incoming/2026-11-06_chart_composition/checks/regiond_f32.py` |
 | V4 | The registry on the CPU, `chart_authoring` | `kernel` must not learn a kind (REQ-CHART-004) | CPU | by construction |
 | V5 | Angles and side ratios: their own entries, or a warp word on the third-body entry | fewest baked entries, with `closed_inverse_round_trip` green at f32 | decided by TASK-M4-34's test | not measured here |
 | V6 | Pair-table completeness by a rank test on a grid | a table alone can drift; a test finds a missing row | table and test | § 12 |
@@ -1223,7 +1223,7 @@ the one statement that covers the order's cases:
 
 | Question | Result |
 |---|---|
-| Is the blended `z` on the shape sphere, `I = 1`? | Yes: `D`'s image is the sphere at `I = 1` for every `z`; worst 8.9·10⁻¹⁶ over 20,000 blends. **No reprojection is needed.** A blend of `n̂` leaves it (worst `‖n‖ − 1` of 0.99) and a blend of positions leaves `I = 1` (worst 0.998), so neither is an option |
+| Is the blended `z` on the shape sphere, `I = 1`? | Yes: `D`'s image is the sphere at `I = 1` for every `z`; worst 8.9·10⁻¹⁶ over 20,000 blends of `z ∈ [−6, 6]⁸`. **No reprojection is needed.** A blend of `n̂` leaves it (worst `‖n‖ − 1` of 0.99) and a blend of positions leaves `I = 1` (worst 0.998), so neither is an option |
 | Does `z` reach every end? | **No.** `β = π·σ(z_β)` puts every `z` on `n₂ ≥ 0` (held at 5,000 `z`). The shape sphere's lower half is its own systems (R-544), and encode mirrors it (`D(E(x)) = C(x)`). Leaving such an end by `s = 10⁻⁶` jumps by 1.75 median, 3.3 worst |
 | Does `z` reach a held momentum? | **No,** past `q_max`: `q_k = q_max(2σ − 1)` is bounded. Under hold `E` at equal masses: 0.2% of feasible sphere pixels at `E* = −0.5`, near collisions; 0.005% at `E* = 0`. Clamped, with `lookup_clamped` |
 | Is the blend's speed even? | **No,** near a saturated control. From a collinear end, 10% of the angle takes `s = 0.79`: speed spread 247 to 1 |
@@ -1330,7 +1330,7 @@ order's "valid chart" is the sense of § 17.5.
 ### 17.7 Plane to plane
 
 A linear blend squashes: planes swapped give area 0 at `s = ½`; orthogonal planes 0.5; random planes 0.513 median, 0.149 worst.
-The geodesic keeps the frame orthonormal to 1.3·10⁻¹⁵ and reaches B's plane to 2.2·10⁻¹⁵. Export contract Part 3 and
+Between random planes the geodesic keeps the frame orthonormal to 1.3·10⁻¹⁵ and reaches B's plane to 2.2·10⁻¹⁵. Between planes `δ` apart, `arccos` loses half its digits: it reaches B's plane to 1.1·10⁻⁹ at `δ = 10⁻⁶`, about 10⁻¹⁵/`δ`, and to 8·10⁻⁸ at worst below `δ = 10⁻⁷`, and orthonormality falls to 1.5·10⁻¹¹ at `δ = 10⁻¹²` (`morph_check.py`). Export contract Part 3 and
 REQ-TOOL-075 already rule it; nothing builds it yet. Three things the existing words leave open:
 
 - **In-plane rotation.** The geodesic reaches B's plane, not B's `(q₁, q₂)`. R-92 counts in-plane orientation. The remaining
@@ -1355,7 +1355,7 @@ is a test on it.
 | Ends | Verdict |
 |---|---|
 | Both affine | **Holds, by construction.** The path moves `q₁, q₂` only, and `z(½,½) = z₀` at every `s` |
-| Any nonlinear end, through inverse-encode | **Doesn't.** `E(D(z)) = z` bitwise on 0 of 20,000 at f64, and `D(E(D(z)))` is off by up to 1.3·10⁻¹⁵; lookup's tolerance is `ε_phys`, and kind 4 and invariant axes solve or project. A clamp moves it further. Iteration doesn't converge to bits |
+| Any nonlinear end, through inverse-encode | **Doesn't.** `E(D(z)) = z` bitwise on 0 of 20,000 at f64, and `D(E(D(z)))` is off by up to 1.3·10⁻¹⁵, over `z ∈ [−4, 4]⁸`; lookup's tolerance is `ε_phys`, and kind 4 and invariant axes solve or project. A clamp moves it further. Iteration doesn't converge to bits |
 | Across the f32/f64 boundary | **Doesn't, by recomputing.** A CPU batch rounds an f64 state once; the GPU computes at f32, and a component of the two agrees on 58% of samples. Stored words work at any lowering feeding the same precision (P8) |
 | With stored words | **Holds.** The anchor is a state: at the path's start the current view's own lowering gives the centre's IC words, they are recorded, and a sample at chart coordinate exactly the centre takes them by a comparison |
 

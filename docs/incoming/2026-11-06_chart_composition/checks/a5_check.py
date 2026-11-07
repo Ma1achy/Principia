@@ -101,4 +101,23 @@ for _ in range(200000):
     Z=abs(r1-r2)/(r1+r2); s=r1+r2; t=Z*s
     wf=max(wf,abs(s*t/2-x),abs(.5*np.sqrt((s*s-1)*(1-t*t))-y))
     p,q=r2/r1,r2; a=q/p; b=q; xi=(a*a-b*b)/2; wp=max(wp,abs(xi-x),abs(np.sqrt(max(a*a-(xi+.5)**2,0))-y))
-print("focal inverse worst over D",wf,"Parischewsky inverse worst over D",wp)
+print("at eta>=1e-3 over D, uniform draw: focal inverse worst",wf,"Parischewsky inverse worst",wp)
+# 7 Nov (physics review 5809670196, Y1): both inverses take a root that vanishes at eta = 0 (sigma = 1), so the error goes as
+# 1/eta. Draws near that edge, and near corners where a uniform draw is sparse.
+def band(e0,N=100000):
+    x=rng.uniform(0,.5,N); y=rng.uniform(e0,1.2*e0,N); r1=np.hypot(x+.5,y); r2=np.hypot(x-.5,y)
+    Z=np.abs(r1-r2)/(r1+r2); s=r1+r2; t=Z*s
+    f=np.maximum(np.abs(s*t/2-x),np.abs(.5*np.sqrt(np.maximum((s*s-1)*(1-t*t),0))-y))
+    a=r1; b=r2; xi=(a*a-b*b)/2; g=np.maximum(np.abs(xi-x),np.abs(np.sqrt(np.maximum(a*a-(xi+.5)**2,0))-y))
+    return f.max(),g.max()
+for e0 in (1e-1,1e-2,1e-3,1e-4,1e-5,1e-6):
+    f,g=band(e0); print("eta near %.0e: focal worst %.1e (times eta %.1e), Parischewsky worst %.1e"%(e0,f,f*e0,g))
+# Section 8.8's sphere form through to_state and back_sphere, with the draw of the "random masses" loop replaced by one that
+# reaches its floor: masses log-uniform in [1e-3, 1], eta on three scales. That loop's Dirichlet draw rarely comes near 1e-3.
+rng=np.random.default_rng(5); w64=w32=0
+for i in range(100000):
+    m=np.exp(rng.uniform(np.log(1e-3),0,3)); x=rng.uniform(0,.5); y=rng.uniform(0,.87)*rng.choice([1,1e-3,1e-6])
+    if (x+.5)**2+y**2>1: continue
+    s=back_sphere(*to_state(x,y,m)); w64=max(w64,abs(s[0]-x),abs(s[1]-y))
+    s=back_sphere(*to_state(x,y,m,np.float32)); w32=max(w32,abs(float(s[0])-x),abs(float(s[1])-y))
+print("sphere form, masses log-uniform to 1e-3: worst f64 %.1e f32 %.1e"%(w64,w32))
