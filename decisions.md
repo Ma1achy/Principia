@@ -31633,7 +31633,8 @@ is folded in below in its own short phrases, only where it adds to them, so the 
 - **The gloss.** "Every R/RQ/REQ/TASK number in reports carries a plain-English gloss (R-693)."
 - **What the second text adds to the one-way list:** "physics and numerics", "tolerances and thresholds", "anything that
   changes output bits", "deleting anything not created by this work" and "admin actions". Its defaults, licences,
-  publishing, contacting anyone, spending money, and scope and taste are the core's already.
+  publishing, contacting anyone, spending money, and scope and taste are the core's already. Every one-way door goes
+  "with a recommendation", not only one in doubt.
 
 *What it amends:* **R-369.** Item 2's list is decided as two-way doors, where it is no one-way door. Item 3's list stays
 the owner's, as one-way doors asked through `/rulings-report` only, in place of its "(batched at milestone gates)" as
