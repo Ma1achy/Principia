@@ -534,8 +534,9 @@ impl View {
     }
 
     /// The scale, tilts and rotation of `q1`, `q2` on the axes `(a, b)`, the normal `d` and the targets `x`, `y`. `σ` is
-    /// read whole: what `σ u₁` holds off `e_a` and `e_X`, which [`View::basis`] leaves 0, counts in it (R-705), `e_b` aside,
-    /// as a basis sheared on its own axes reads as it did.
+    /// read whole (R-705): the `e_a` column's length `|(q₁[a], q₂[a])|`, `σ u₁`'s part on `e_X`, and what `σ u₁` holds off
+    /// `e_a`, `e_b` and `e_X`, which [`View::basis`] leaves 0. A basis sheared on its own axes reads as it did: `σ u₁`'s
+    /// parts on `e_a` and `e_b` do not enter, the column standing for the first.
     fn in_frame(
         preset: Option<usize>,
         a: usize,
