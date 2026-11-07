@@ -43,7 +43,7 @@ pub enum Command {
     /// `?`: the shortcuts, over everything.
     Shortcuts,
     /// Page Up, Page Down, Home and End: in interaction mode, scroll a list the keyboard scrolls (the console's log,
-    /// R-450); elsewhere nothing.
+    /// R-450); elsewhere nothing, but Home, which is the global command Home everywhere else, in both modes (R-466 K1).
     Scroll(ScrollKey),
 }
 
@@ -82,6 +82,7 @@ pub fn command(key: Key, modifiers: Modifiers) -> Option<Command> {
         Key::ArrowRight => Some(Command::Arrow(Direction::Right)),
         Key::PageUp => Some(Command::Scroll(ScrollKey::PageUp)),
         Key::PageDown => Some(Command::Scroll(ScrollKey::PageDown)),
+        // Shift and Alt leave it Home; Ctrl and Cmd, `command_held` above, make it no Home (R-466 K1).
         Key::Home => Some(Command::Scroll(ScrollKey::Home)),
         Key::End => Some(Command::Scroll(ScrollKey::End)),
         // `?` is Shift+/ on most layouts, so Shift is allowed.
@@ -128,7 +129,7 @@ pub fn repeats(command: Command) -> bool {
 /// The `?` overlay's global rows: render_gui_spec §G3's table, key and action, then F3, which hides the layer
 /// (§G1, §G2's "F3 hide"). A screen adds its own rows through its tree's registration
 /// ([`ScopeTree::register_shortcut`](crate::keyboard::scopes::ScopeTree::register_shortcut)).
-pub const SHORTCUTS: [(&str, &str); 10] = [
+pub const SHORTCUTS: [(&str, &str); 11] = [
     (
         "Tab / Shift+Tab",
         "next / previous big scope, in the numbered order, in navigation mode",
@@ -150,5 +151,9 @@ pub const SHORTCUTS: [(&str, &str); 10] = [
     ("held keys", "delay, then repeat (the DAS / ARR model)"),
     ("Ctrl+Z", "undo, from the contract's history, in either mode"),
     ("?", "shortcuts, over everything, in either mode"),
+    (
+        "Home",
+        "Home: reset Slice centre, Tilt and Navigate to the chart preset's values",
+    ),
     ("F3", "hide / show the egui layer"),
 ];

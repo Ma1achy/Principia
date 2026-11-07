@@ -1,11 +1,12 @@
 //! The top bar (render_gui_spec §G2; 01_main.png; RQ-249, RQ-255): the "principia · dev" wordmark; the menus File,
 //! View, Windows and Help; Overlays ▾ with its count; Run…, Profiler… and Export…, each opening its window (§G5); the
-//! View menu's F3 hide and reset layout (R-462); the Windows menu listing the registry's seven windows (`crate::windows`);
+//! View menu's Home (R-466), F3 hide and reset layout (R-462); the Windows menu listing the registry's seven windows (`crate::windows`);
 //! the mode switch Explore / Stain; the keyboard breadcrumb (§G3); and the status line, in the artboard's format and
 //! order, filled from the snapshot, in egui's `Monospace` (Ubuntu Mono, RQ-251). The top bar is the keyboard's big
 //! scope 1, its controls the sub-scopes Enter reaches, in the order they are drawn; Enter on one acts as its click.
 //! Each menu's entries are the menu's own sub-scopes: Enter opens it on its first entry, the arrows move between
-//! them, Enter on one acts as its click, and Esc closes the menu, back to its control. View holds F3 hide and, after
+//! them, Enter on one acts as its click, and Esc closes the menu, back to its control. View holds Home, its first entry,
+//! dimmed while Home has nothing to do (R-466 K8, K11), a separator, F3 hide and, after
 //! it the row F3 fills by: Extend / Fit, two radio options, `ViewUI`'s and so never an edit (R-468 E4), then Debug view,
 //! a check entry: one undoable `SetField` on `RenderState`'s `debug_view` per toggle, as an Overlays ▾ toggle is
 //! (R-467 D5, R-69). The row is a scope of the menu, Enter going into its options, ← → moving between them and Enter on
@@ -47,6 +48,8 @@ const MENUS: [ScopeId; 5] = ["file", "view", "windows", "overlays", "help"];
 
 /// File's Quit.
 pub const QUIT: (ScopeId, &str) = ("file_quit", "Quit");
+/// View's first entry, Home, its shortcut the Home key's (R-466 K8); the key is this entry's Enter wherever the focus is.
+pub const HOME: (ScopeId, &str) = ("view_home", crate::explore::manifold_view::reset::HOME_NAME);
 /// View's entry that hides the layer, as F3 does.
 pub const HIDE: (ScopeId, &str) = ("view_hide", "F3 hide");
 /// View's row that chooses how the figure fills the window with the layer hidden (R-468 E4), after F3 hide.
@@ -85,6 +88,7 @@ pub fn register(tree: &mut ScopeTree) {
         tree.register(Some(TOP_BAR), scope);
     }
     tree.register(Some("file"), Scope::control(QUIT.0, QUIT.1));
+    tree.register(Some("view"), Scope::control(HOME.0, HOME.1));
     tree.register(Some("view"), Scope::control(HIDE.0, HIDE.1));
     tree.register(Some("view"), Scope::group(FILL_ROW.0, FILL_ROW.1).row());
     for option in [FILL_EXTEND, FILL_FIT] {
@@ -106,6 +110,7 @@ pub fn activate(id: &str, actions: &mut Actions) {
         "explore" => actions.mode = Some(Mode::Explore),
         "stain" => actions.mode = Some(Mode::Stain),
         id if id == QUIT.0 => actions.quit = true,
+        id if id == HOME.0 => actions.home = true,
         id if id == HIDE.0 => actions.toggle_layer = true,
         id if id == FILL_EXTEND.0 => actions.f3_fill = Some(F3Fill::Extend),
         id if id == FILL_FIT.0 => actions.f3_fill = Some(F3Fill::Fit),
@@ -183,6 +188,8 @@ pub struct TopBar<'a> {
     pub keys: KeyMode,
     /// How the figure fills the window with the layer hidden, which View's row marks.
     pub f3_fill: F3Fill,
+    /// Why View › Home is dimmed, while it is (R-466 K3, K11).
+    pub home_dimmed: Option<&'static str>,
 }
 
 /// Draws the top bar in `rect`, recording what its controls ask for in `actions` and where they are in `keyboard`.
@@ -218,6 +225,18 @@ pub fn show(
     });
     keyboard.place_widget("file", &file);
     let view = menu(&mut bar, "View", &mut |ui| {
+        let home = ui
+            .add_enabled(
+                bar_state.home_dimmed.is_none(),
+                Button::new(HOME.1).shortcut_text(HOME.1),
+            )
+            .on_disabled_hover_text(bar_state.home_dimmed.unwrap_or_default());
+        if home.clicked() {
+            actions.home = true;
+            ui.close();
+        }
+        keyboard.place_widget(HOME.0, &home);
+        ui.separator();
         let hide = ui.button(HIDE.1);
         if hide.clicked() {
             actions.toggle_layer = true;

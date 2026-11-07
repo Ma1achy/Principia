@@ -192,6 +192,8 @@ pub struct Actions {
     pub debug_view: bool,
     /// Return every splitter to its default (View › reset layout, R-462 J3).
     pub reset_layout: bool,
+    /// Home: the Home button, the Home key or View › Home (R-466).
+    pub home: bool,
     /// The fill View's row chose (R-468 E4): `ViewUI`'s, so no `SetField`.
     pub f3_fill: Option<engine::contract::view_ui::F3Fill>,
 }
@@ -322,22 +324,31 @@ impl<S: EngineSide> App<S> {
     /// F1, R-466): the pointer's hold's while a button is held, so every frame of a drag joins one entry, else a fresh
     /// key, ended at once. An undoable edit rereads the snapshot and resyncs the clock, as [`App::set_field`]'s.
     fn send(&mut self, command: Vec<SetField>) {
+        match self.hold {
+            Some(key) => self.send_under(command, key),
+            None => self.send_fresh(command),
+        }
+    }
+
+    /// Sends one command's edits under a key of its own, ended at once, whatever the pointer holds: a reset's or Home's
+    /// (R-466 K10). A command of no edits takes no key.
+    fn send_fresh(&mut self, command: Vec<SetField>) {
         if command.is_empty() {
             return;
         }
-        let key = match self.hold {
-            Some(key) => key,
-            None => self.fresh_key(),
-        };
+        let key = self.fresh_key();
+        self.send_under(command, key);
+        self.side.engine().end_key(key);
+    }
+
+    /// Sends `command`'s edits under `key`.
+    fn send_under(&mut self, command: Vec<SetField>, key: HistoryKey) {
         for edit in command {
             if !edit.no_history {
                 self.clock.resync();
                 self.reread = true;
             }
             self.side.engine().set_field_under(edit, key);
-        }
-        if self.hold.is_none() {
-            self.side.engine().end_key(key);
         }
     }
 
@@ -669,6 +680,8 @@ impl<S: EngineSide> App<S> {
                 breadcrumb: &breadcrumb,
                 keys: self.view.focus.mode,
                 f3_fill: self.view.f3_fill,
+                home_dimmed: (!explore::manifold_view::reset::home_enabled(&self.snapshot.sim))
+                    .then(|| explore::manifold_view::reset::dimmed_because(&self.snapshot.sim)),
             },
             &mut self.keyboard,
             &mut actions,
@@ -728,6 +741,14 @@ impl<S: EngineSide> App<S> {
         if self.view.mode == Mode::Explore {
             self.paint_figure(&ctx, &layout, true);
             self.paint_reticle(&ctx, &layout);
+            // The one control over the figure, what the console leaves of its corner (R-466 K7), and only while no
+            // window lies on it: a click there is the window's (R-461).
+            let shown = self.uncovered(layout.figure, &layout);
+            let home = explore::manifold_view::reset::home_rect(shown);
+            if !self.window_over(home, &layout) {
+                actions.home |=
+                    explore::manifold_view::reset::home_button(&ctx, shown, &self.snapshot.sim);
+            }
         }
         // A click on a text field starts typing in it, on every page and in every window (R-456).
         self.keyboard
@@ -748,6 +769,10 @@ impl<S: EngineSide> App<S> {
         if std::mem::take(&mut actions.save_overlays) {
             self.overlay_default = self.snapshot.render.overlays.clone();
         }
+        if std::mem::take(&mut actions.home) {
+            out.fresh
+                .push(explore::manifold_view::reset::home(&self.snapshot.sim));
+        }
         let asked = std::mem::take(&mut actions.open);
         self.apply(&ctx, actions);
         for edit in edits {
@@ -762,6 +787,9 @@ impl<S: EngineSide> App<S> {
         }
         for command in std::mem::take(&mut out.commands) {
             self.send(command);
+        }
+        for command in std::mem::take(&mut out.fresh) {
+            self.send_fresh(command);
         }
         for line in std::mem::take(&mut out.refusals) {
             self.log_warning(line);
@@ -1045,6 +1073,16 @@ impl<S: EngineSide> App<S> {
             shown.max.y = shown.max.y.min(self.console_rect(layout).min.y);
         }
         shown
+    }
+
+    /// Whether an open window reaches `rect`. The windows move, over the figure too (R-461); the console, which does not,
+    /// is [`Self::uncovered`]'s.
+    fn window_over(&self, rect: egui::Rect, layout: &Layout) -> bool {
+        self.view.windows.open.iter().any(|&window| {
+            self.places
+                .shown(window, windows::rect(window, layout), layout.window)
+                .intersects(rect)
+        })
     }
 
     /// This frame's drag on the console's top edge, read before anything is drawn, as a splitter's: from its edge when
