@@ -219,13 +219,18 @@ fn scan_command(file: &str, command: &str, plan: &mut BTreeSet<Item>) {
     }
 }
 
+/// The one workflow the cloud plan doesn't read, by its exact name, as `scripts/cloud-setup.sh` skips it: the Lean
+/// formalisation's (`formal/chart_space/`), which runs only on dispatch and schedule and installs elan, which no cloud
+/// session needs. Cloud sessions are dormant (R-645, R-647). Every other workflow is read and guarded as before.
+const NOT_CLOUD: &str = "formal-chart-space.yml";
+
 /// What CI's Linux jobs in `workflows` install, with the toolchain `toolchain` (the root toolchain file) pins.
 fn ci_plan(workflows: &[(String, String)], toolchain: Option<&str>) -> BTreeSet<Item> {
     let mut plan: BTreeSet<Item> = BTreeSet::new();
     let item = |kind: &str, name: &str, version: &str| {
         (kind.to_owned(), name.to_owned(), version.to_owned())
     };
-    for (file, text) in workflows {
+    for (file, text) in workflows.iter().filter(|(file, _)| file != NOT_CLOUD) {
         let jobs = linux_jobs(file, text);
         if let Some(backend) = workflow_backend(file, text).filter(|_| !jobs.is_empty()) {
             plan.insert(item("env", "PRIN_GPU_BACKEND", &backend));
