@@ -77,33 +77,40 @@ const fn least_length(min: f32, share: f32) -> f32 {
     ((min + EDGE_ROUNDING) / share).ceil()
 }
 
+/// The least window width that gives each panel its minimum in the default layout, each panel's share of the width taken
+/// from 01_main.png's edges: the Manifold view, the figure with its axis strip, the Trajectory panel, the compass, Time
+/// and the Legend.
+pub const LEAST_WIDTHS: [f32; 6] = [
+    least_length(MIN_MANIFOLD_W, LEFT_RIGHT / ARTBOARD[0]),
+    least_length(
+        MIN_CANVAS_W + AXIS_Y_W,
+        (RIGHT_LEFT - LEFT_RIGHT) / ARTBOARD[0],
+    ),
+    least_length(MIN_TRAJECTORY_W, (ARTBOARD[0] - RIGHT_LEFT) / ARTBOARD[0]),
+    least_length(MIN_COMPASS_W, COMPASS_RIGHT / ARTBOARD[0]),
+    least_length(MIN_TIME_W, (LEGEND_LEFT - COMPASS_RIGHT) / ARTBOARD[0]),
+    least_length(MIN_LEGEND_W, (ARTBOARD[0] - LEGEND_LEFT) / ARTBOARD[0]),
+];
+
+/// The least window height that gives each row its minimum in the default layout: the top row, then the bottom row, whose
+/// share of the height is 295/1350.
+pub const LEAST_HEIGHTS: [f32; 2] = [
+    least_length(MIN_TOP_H, (BOTTOM_TOP - TOP_BAR_BOTTOM) / ARTBOARD[1]),
+    least_length(MIN_BOTTOM_H, (FOOTER_TOP - BOTTOM_TOP) / ARTBOARD[1]),
+];
+
 /// The least inner size of the app's window, in points (R-705): the least at which the default layout meets every
-/// minimum, each panel's share of the window taken from 01_main.png's edges. The compass binds the width and the top row
-/// the height; the bottom row alone, its share 295/1350 of the height, would allow less. The window refuses to
-/// go smaller; below it no layout is promised, and [`Layout::with_splits`] still holds only the splitters' drags.
+/// minimum. The compass binds the width and the top row the height; the bottom row alone would allow less. The window
+/// refuses to go smaller; below it no layout is promised, and [`Layout::with_splits`] still holds only the splitters'
+/// drags.
 pub const LEAST_WINDOW: [f32; 2] = [
-    least_length(MIN_MANIFOLD_W, LEFT_RIGHT / ARTBOARD[0])
-        .max(least_length(
-            MIN_CANVAS_W + AXIS_Y_W,
-            (RIGHT_LEFT - LEFT_RIGHT) / ARTBOARD[0],
-        ))
-        .max(least_length(
-            MIN_TRAJECTORY_W,
-            (ARTBOARD[0] - RIGHT_LEFT) / ARTBOARD[0],
-        ))
-        .max(least_length(MIN_COMPASS_W, COMPASS_RIGHT / ARTBOARD[0]))
-        .max(least_length(
-            MIN_TIME_W,
-            (LEGEND_LEFT - COMPASS_RIGHT) / ARTBOARD[0],
-        ))
-        .max(least_length(
-            MIN_LEGEND_W,
-            (ARTBOARD[0] - LEGEND_LEFT) / ARTBOARD[0],
-        )),
-    least_length(MIN_TOP_H, (BOTTOM_TOP - TOP_BAR_BOTTOM) / ARTBOARD[1]).max(least_length(
-        MIN_BOTTOM_H,
-        (FOOTER_TOP - BOTTOM_TOP) / ARTBOARD[1],
-    )),
+    LEAST_WIDTHS[0]
+        .max(LEAST_WIDTHS[1])
+        .max(LEAST_WIDTHS[2])
+        .max(LEAST_WIDTHS[3])
+        .max(LEAST_WIDTHS[4])
+        .max(LEAST_WIDTHS[5]),
+    LEAST_HEIGHTS[0].max(LEAST_HEIGHTS[1]),
 ];
 
 /// The console's least height, in points: its header bar and three log rows, with its window's margins and the line

@@ -21,7 +21,9 @@ use crate::explore::manifold_view::{basis_edit, z0_edit};
 use crate::explore::{COMPASS_JACOBI, COMPASS_PLUCKER, COMPASS_SHAPE, COMPASS_SLICE};
 use crate::headless::Headless;
 use crate::layout::{
-    Layout, Splits, Splitter, LEAST_WINDOW, MIN_BOTTOM_H, MIN_COMPASS_W, MIN_TOP_H,
+    Layout, Splits, Splitter, LEAST_HEIGHTS, LEAST_WIDTHS, LEAST_WINDOW, MIN_BOTTOM_H,
+    MIN_CANVAS_W, MIN_COMPASS_W, MIN_LEGEND_W, MIN_MANIFOLD_W, MIN_TIME_W, MIN_TOP_H,
+    MIN_TRAJECTORY_W,
 };
 use crate::measure;
 use crate::side::MockSide;
@@ -82,6 +84,67 @@ fn layout_least_window_the_default_splits_meet_every_minimum() {
     });
     rejects("a window a point too low for the top row", || {
         check_minimums(&Layout::new(window([LEAST_WINDOW[0], high - 1.0]), 3.0))
+    });
+}
+
+/// Asserts that a panel measured by `size` meets `min` in a window of `layout(least)`, and falls under it four points
+/// shorter on `min`'s scale: `least` is this panel's own, neither under nor far over what it needs.
+fn check_own_least(
+    what: &str,
+    least: f32,
+    min: f32,
+    layout: impl Fn(f32) -> Layout,
+    size: fn(&Layout) -> f32,
+) {
+    let at = size(&layout(least));
+    assert!(at >= min, "{what}: {at} at {least}, under {min}");
+    let short = size(&layout(least * (min - 4.0) / min));
+    assert!(short < min, "{what}: {short} short of {least}, still {min}");
+}
+
+#[test]
+fn layout_least_window_each_panel_is_considered() {
+    type Panel = (&'static str, f32, fn(&Layout) -> f32);
+    let widths: [Panel; 6] = [
+        ("Manifold view", MIN_MANIFOLD_W, |l| l.manifold_view.width()),
+        ("canvas", MIN_CANVAS_W, |l| l.figure.width()),
+        ("Trajectory", MIN_TRAJECTORY_W, |l| l.trajectory.width()),
+        ("compass", MIN_COMPASS_W, |l| l.compass.width()),
+        ("Time", MIN_TIME_W, |l| l.time.width()),
+        ("Legend", MIN_LEGEND_W, |l| l.legend.width()),
+    ];
+    let by_width = |w: f32| Layout::new(window([w, LEAST_WINDOW[1]]), 1.0);
+    for ((what, min, size), least) in widths.into_iter().zip(LEAST_WIDTHS) {
+        check_own_least(what, least, min, by_width, size);
+    }
+    let heights: [Panel; 2] = [
+        ("top row", MIN_TOP_H, |l| {
+            l.bottom_row.min.y - l.top_bar.max.y
+        }),
+        ("bottom row", MIN_BOTTOM_H, |l| l.bottom_row.height()),
+    ];
+    let by_height = |h: f32| Layout::new(window([LEAST_WINDOW[0], h]), 1.0);
+    for ((what, min, size), least) in heights.into_iter().zip(LEAST_HEIGHTS) {
+        check_own_least(what, least, min, by_height, size);
+    }
+    // The window's least is the most any of them needs, the bottom row alone about 792 high.
+    assert_eq!(
+        LEAST_WIDTHS.into_iter().fold(0.0, f32::max),
+        LEAST_WINDOW[0]
+    );
+    assert_eq!(
+        LEAST_HEIGHTS.into_iter().fold(0.0, f32::max),
+        LEAST_WINDOW[1]
+    );
+    const { assert!(LEAST_HEIGHTS[1] < LEAST_HEIGHTS[0]) };
+    // Control: a window a panel's minimum over what it takes.
+    rejects("a least far over what the panel needs", || {
+        let (what, min, size) = widths[0];
+        check_own_least(what, LEAST_WINDOW[0] + 400.0, min, by_width, size)
+    });
+    rejects("a least under what the panel needs", || {
+        let (what, min, size) = widths[0];
+        check_own_least(what, LEAST_WIDTHS[0] - 40.0, min, by_width, size)
     });
 }
 
