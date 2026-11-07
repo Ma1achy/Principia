@@ -3721,7 +3721,7 @@
 - id: REQ-CHART-095
   area: CHART
   kind: definition
-  statement: "Region D's chart must be defined in chart_reference: the third-body pair (ξ, η) at any masses, its closed form and its stereographic identity, eq. 8's domain as RQ-714 rules it, both momentum conventions (exact rest, and eq. 3 at √ℓ), the per-pixel rescale of E, L_z and t, and each axis's extension type."
+  statement: "Region D's chart must be defined in chart_reference: the third-body pair (ξ, η) at any masses, its closed form and its stereographic identity, eq. 8's domain as RQ-714 rules it, both momentum conventions (exact rest; and at equal masses eq. 3 at √ℓ, its q̄ = −0.0745, at other masses q̄ being the Jacobi form of p̂ at those masses, after C's boost), the per-pixel rescale of E, L_z and t, and each axis's extension type."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 8.1 The definition
@@ -3820,7 +3820,7 @@
   - RQ-722
 - id: REQ-CHART-100
   area: CHART
-  statement: "The third-body pair (ξ, η) must be a closed-form baked pair through the explicit-configuration path, with its region-D preset as RQ-714 rules, at exact rest and at eq. 3's velocities, ending in canonicalise as the lowering appendix's row states."
+  statement: "The third-body pair (ξ, η) must be a closed-form baked pair through the explicit-configuration path, with its region-D preset as RQ-714 rules, at exact rest and, at equal masses, at eq. 3's velocities, at other masses q̄ being the Jacobi form of p̂ at those masses, after C's boost, ending in canonicalise as the lowering appendix's row states."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 8.2 The closed form
@@ -4169,7 +4169,7 @@
 - id: REQ-CHART-119
   area: CHART
   kind: definition
-  statement: "The primitives of the full order must be defined in the chart reference, each with forward, inverse class, extension, what's held and its aliases: Psi at t = 0, the isosceles vertex angle, R_H, the focal pair, Routh gamma and the elliptic Lagrange start, the Chazy ratios, the Tanikawa-Mikkola and Li-Li-Liao constructions, the third body's speed as the square root of chazy_qk, and McGehee-type aliases; BHH, isosceles families, Mikkola-Hietarinta, Donnison's variants and Hill's threshold take their definitions as RQ-723, RQ-725 and RQ-730 rule."
+  statement: "The primitives of the full order must be defined in the chart reference, each with forward, inverse class, extension, what's held and its aliases: Psi at t = 0, the isosceles vertex angle, R_H, the focal pair, Routh gamma and the elliptic Lagrange start, the Chazy ratios, the Tanikawa-Mikkola construction with its R_i from the true centre of mass (the paper's form at equal masses, an unscored extension otherwise), the Li-Li-Liao construction, the third body's speed as the square root of chazy_qk, and McGehee-type aliases; BHH, isosceles families, Mikkola-Hietarinta, Donnison's variants and Hill's threshold take their definitions as RQ-723, RQ-725 and RQ-730 rule."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 3.2 The primitives of the full order
@@ -4194,7 +4194,7 @@
     section: 12. Tests that can fail
   verify:
     method: unit test
-    detail: "cargo test -p engine prim_round_trip prim_rejected: the rows of section 3.2; controls: a sign flipped, a scattering row given an inverse"
+    detail: "cargo test -p engine prim_round_trip prim_rejected: the rows of section 3.2, and Tanikawa-Mikkola's mass-weighted L_com = 0 at random masses after C, from an independent Σ m r × v; controls: a sign flipped, a scattering row given an inverse, R from the centroid fails at −0.0025 at (x, y) = (0, 0.3), (α₂, β₁) = (0.1, 0), masses (1, 0.8, 0.6), an unweighted sum fails"
   rulings:
   - R-369
   - R-669

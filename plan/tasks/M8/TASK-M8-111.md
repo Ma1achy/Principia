@@ -20,7 +20,7 @@ Each row of the full order's table, as its verdict says, on CPU batch.
 
 ## Acceptance tests
 - `python3 plan/check_plan.py` — the definitions cited (REQ-CHART-119).
-- `cargo test -p engine prim_round_trip` and `cargo test -p engine prim_rejected` — the rows of section 3.2 (REQ-CHART-120).
+- `cargo test -p engine prim_round_trip` and `cargo test -p engine prim_rejected` — the rows of section 3.2, and Tanikawa–Mikkola's mass-weighted `L_com = 0` at random masses after `C`, from an independent `Σ m r × v`; controls: `R` from the centroid, an unweighted sum (REQ-CHART-120).
 
 ## Notes
 - Nothing here scores a target; R-668 and R-669 stand.

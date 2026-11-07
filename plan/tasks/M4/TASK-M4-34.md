@@ -9,7 +9,7 @@
 - **Size:** ~450 lines
 
 ## Goal
-The first registered closed-form pair: `(ξ, η)` through the explicit-configuration path at any masses, region D as a preset of it, exact rest and eq. 3's velocities, its baked entry, and the interior angles and side ratios on top. TASK-M4-06 lowers its row and renders its golden once RQ-714 rules, by the edge TASK-M4-37 applies then.
+The first registered closed-form pair: `(ξ, η)` through the explicit-configuration path at any masses, region D as a preset of it, exact rest and, at equal masses, eq. 3's velocities (at other masses `q̄` is the Jacobi form of `p̂` at those masses, after `C`'s boost; no unequal-mass target runs eq. 3), its baked entry, and the interior angles and side ratios on top. TASK-M4-06 lowers its row and renders its golden once RQ-714 rules, by the edge TASK-M4-37 applies then.
 
 ## References
 - `docs/design/principia_chart_composition.md` § "8.2 The closed form"
