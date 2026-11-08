@@ -292,7 +292,13 @@ success-output = "immediate"
 #   through the real cargo, and the controls' inventory from the stand-in's listing; the `ci` shards and the nightly run
 #   them;
 # - xtask's `qa_TASK-M0-22_r235`, its `xtask ci --list` run: the same checks over the workspace, listing only; the `ci`
-#   shards and the nightly run it.
+#   shards and the nightly run it;
+# - xtask's `nextest`, every test: lists every workspace test under each CI profile (up to 657 s), and reads only CI's
+#   configuration, no xtask source but a constant; `ci-workspace` runs it, in `ci.yml` and the nightly `cpu` job;
+# - xtask's `controls_on_this_workspace_skips_gui`: lists every control in the workspace through `xtask controls --list`
+#   (up to 320 s); `ci-workspace` runs it, in `ci.yml` and the nightly `cpu` job;
+# - xtask's `controls_runs_on_this_workspace_bare_and_in_ci`: runs `xtask controls` over the workspace (up to 163 s); the
+#   `ci` shards and the nightly `cpu` job run it. `controls.rs`'s tests on fixture crates stay, and catch its mutants.
 [profile.mutants]
 default-filter = """
     not (
@@ -303,6 +309,9 @@ default-filter = """
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_test_without_control))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_passes_when_every_control_trips))
         | (binary_id(=xtask::qa_TASK-M0-22_r235) & test(=qa_r235_ci_list_fails_on_a_test_without_control))
+        | binary_id(=xtask::nextest)
+        | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
+        | (binary_id(=xtask::controls) & test(=controls_runs_on_this_workspace_bare_and_in_ci))
     )
 """
 slow-timeout = { period = "20s", terminate-after = 3 }

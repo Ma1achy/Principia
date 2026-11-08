@@ -828,6 +828,20 @@ const INVENTORY: &[(&str, &str)] = &[
         "xtask::qa_TASK-M0-22_r235",
         "qa_r235_ci_list_fails_on_a_test_without_control",
     ),
+    (
+        "xtask::nextest",
+        "nextest_ci_shards_together_list_every_test",
+    ),
+    (
+        "xtask::nextest",
+        "nextest_ci_steps_list_every_test_under_their_profiles",
+    ),
+    ("xtask::nextest", "nextest_the_guard_reads_a_block_step"),
+    ("xtask::controls", "controls_on_this_workspace_skips_gui"),
+    (
+        "xtask::controls",
+        "controls_runs_on_this_workspace_bare_and_in_ci",
+    ),
 ];
 
 /// Whether the nextest profile `profile`'s `default-filter` in `toml` selects the test.
@@ -874,10 +888,15 @@ fn inventory_runs_once_per_ci_run(toml: &str, ci: &str, nightly: &str) {
                     "NEXTEST_PROFILE: ci\n        run: cargo nextest run --workspace\n",
                 ),
             ]
-        } else {
+        } else if *binary == "validation::qa_TASK-M0-24" {
             vec![
                 (ci, "NEXTEST_PROFILE: ci-workspace\n        run: cargo nextest run -p validation --test qa_TASK-M0-24\n"),
                 (nightly, "NEXTEST_PROFILE: ci-workspace\n        run: cargo nextest run -p validation --test qa_TASK-M0-24\n"),
+            ]
+        } else {
+            vec![
+                (ci, "NEXTEST_PROFILE: ci-workspace\n        run: cargo nextest run -p xtask\n"),
+                (nightly, "NEXTEST_PROFILE: ci-workspace\n        run: cargo nextest run -p xtask --test nextest --test controls\n"),
             ]
         };
         for (workflow, run) in runs {
@@ -895,7 +914,7 @@ fn inventory_runs_once_per_ci_run(toml: &str, ci: &str, nightly: &str) {
         ),
         (
             "xtask::controls",
-            "controls_runs_on_this_workspace_bare_and_in_ci",
+            "controls_crate_without_feature_is_skipped",
         ),
     ] {
         assert!(

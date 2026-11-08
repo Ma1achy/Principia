@@ -102,6 +102,14 @@ jobs:
           PRIN_GPU_BACKEND: vulkan
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask --test qa_TASK-M0-06_list
+      # The `ci-workspace` tests the `mutants` profile leaves out of per-mutant runs (`.config/nextest.toml`), run once
+      # here as `ci.yml`'s `ci-workspace` job runs them: xtask's `nextest`, which lists every workspace test under each
+      # CI profile, and `controls_on_this_workspace_skips_gui`, which lists every control in the workspace.
+      - name: cargo nextest run -p xtask --test nextest --test controls
+        env:
+          PRIN_GPU_BACKEND: vulkan
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p xtask --test nextest --test controls
       - name: cargo test --workspace --doc
         run: cargo test --workspace --doc
       - name: cargo xtask deps
