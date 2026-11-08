@@ -6,8 +6,8 @@ The build assumes these are in place. The agent can't do them, except where note
 
 CI runs on GitHub-hosted runners: `ubuntu-24.04`, pinned by R-375 (CPU suites, lavapipe), and `macos-15` (Metal
 correctness suites).
-One self-hosted runner is approved, `malachys-pc-rtx2080s` on your PC, for measurements only (R-711); no other is registered. Benchmarks and performance gates run on your own Mac via `prin profile`, at
-milestone gates and on demand. If the first Metal check on `macos-15` fails or is flaky, the build stops with a
+One self-hosted runner is approved, `malachys-pc-rtx2080s` on your PC, for measurements only (R-711); no other is registered. From the anchor move it may run what R-859 lists, as named measurements and never as required checks; the at-the-PC items don't block that. Benchmarks and performance gates run on your own Mac via `prin profile`, at
+milestone gates and on demand; Windows benchmark numbers are a separate named series, never mixed with the Mac's (R-859). If the first Metal check on `macos-15` fails or is flaky, the build stops with a
 REVIEW_QUEUE entry proposing a self-hosted runner. The agent then scripts its setup for your approval.
 
 ## 1. Outside-contributor approval (R-174, R-186)

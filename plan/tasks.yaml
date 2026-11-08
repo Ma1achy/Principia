@@ -3520,6 +3520,22 @@
   requirements: [REQ-TOOL-223]  # R-809 (5 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-55
+  milestone: M0
+  title: "The Windows runner's named measurements on `main` (R-859)"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-TOOL-224]  # R-859 (8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-56
+  milestone: M0
+  title: "The heavy-work comparison: the Windows runner against hosted runners (R-859)"
+  depends_on: [TASK-M0-55]
+  needs: []
+  requirements: [REQ-TOOL-225]  # R-859 (8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M8-86
   milestone: M8
   title: "The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand"

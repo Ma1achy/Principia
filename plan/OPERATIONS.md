@@ -960,12 +960,42 @@ anything outside the repository and its build and scratch directories without as
 - Benchmarks and performance gates run on the human's Mac via `prin profile` (R-186), never on a hosted runner or a
   cloud machine. A cloud session never reports a performance number of its own: it asks the human for the run, and its
   PR says it waits for it (`plan/WORKFLOW.md`).
+- Benchmarks of record stay on the owner's Mac (R-186, as R-859 confirms). Windows benchmark numbers are a separate
+  named series, labelled by machine, never mixed with the Mac's and never read against its performance gates (R-711
+  item 3, R-859).
 
 ## Windows GPU results (R-719)
 
 - A Windows-only, non-reproducing GPU result is hardware-suspect: record it, and file it as a code bug only if it reproduces on Metal or lavapipe, or deterministically on Windows.
 - A result that reproduces is checked against Metal and lavapipe. Failing everywhere is our bug. Passing elsewhere is NVIDIA Vulkan specific: file it as a platform finding, with no re-baselining.
 - Once the DX12 opt-in lands, the same card is the second discriminator: the same failure points at the card or our code, a different one at the Vulkan driver path.
+
+## The Windows runner's work (R-859)
+
+The owner's ruling of 8 Nov 2026 on what R-711's runner, `malachys-pc-rtx2080s`, may run:
+
+- **From the anchor move** (the owner's move of the PC hook's signing-gate anchor; before it the hook refuses `main`'s
+  merges), it may run, each as a named measurement reporting under its own name and never a required check, gathered
+  or read by any gate (R-649, R-711 item 1):
+  - the GPU suites, nightly and on pushes to `main`: Vulkan now, DX12 from Phase 2, once its opt-in lands;
+  - gpu-idle, the read-only GPU sample taken while nobody is signed in to the PC, dispatched from the Mac;
+  - the weekly proof, `runner-proof.yml`;
+  - the heavy-work comparison: the GPU suites and one GPU-heavy mutant shard on a task branch, against hosted runners
+    (TASK-M0-56).
+  TASK-M0-55 builds the measurements on `main`. Whether anything the list doesn't name runs there, `win-gpu.yml`'s
+  nightly `win-tests` and the Windows bench arms, is RQ-742's.
+- **Required or heavy CI work stays on hosted runners.** Moving mutants, or the GPU suites as gating checks, to the PC
+  is not approved. It returns as a one-way question through `/rulings-report`, with the comparison's numbers and the
+  fallback design (hosted runners take over if the PC hasn't answered in time). Until then nothing on `main` waits for
+  the PC, and a red job there is not main red.
+- **The comparison** (TASK-M0-56) writes its criterion, "clearly faster" with identical results, and commits it before
+  the first run, never adjusting it after (R-649, R-812). Its trigger on the task branch is RQ-743's.
+- **The security rules stand unchanged:** R-174 as R-711 woke it, R-711 items 1, 5 and 6 and the owner's job rules of 5
+  Nov 2026: push to `main`, schedule and `workflow_dispatch` only, never a `pull_request` trigger; the repository and
+  actor guard; the job-started hook on the PC, with its allow-listed events and the self-check first in every job; the
+  signed-commit gate; no credential, pinned actions; never approve a fork run. A GPU job runs on an idle runner, with
+  nothing alongside it.
+- **The at-the-PC items** (`31 -Prove`, the lock undo rehearsal, the GlobalProtect uninstall) don't block deployment.
 
 ## `measure/` branches (R-272)
 

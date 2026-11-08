@@ -29826,6 +29826,36 @@
   - R-809
   milestone: M0
   note: "Closed by TASK-M0-54. Replaces the read by eye of D-11 in the report of 5 Nov 2026."
+- id: REQ-TOOL-224
+  area: TOOL
+  statement: "From the anchor move, the Windows runner's jobs on `main` must each be a named measurement reporting under its own name, never a required check and never gathered or read by any gate: the GPU suites, Vulkan, nightly and on pushes to `main`; gpu-idle, the read-only GPU sample, by `workflow_dispatch`; and the weekly proof; the runner's security rules unchanged (R-859, R-711). What else runs there is as RQ-742 rules."
+  source:
+  - file: decisions.md
+    section: "R-859 — From the anchor move, the Windows runner may run, as named measurements and never as required checks: the GPU suites (Vulkan now, DX12 from Phase 2) nightly and on pushes to `main`, gpu-idle, the weekly proof and the 7 Nov heavy-work comparison; benchmarks of record stay on the Mac, Windows numbers a separate named series; moving required or heavy CI work to the PC is not approved and returns through `/rulings-report`; the runner's security rules are unchanged *(refines R-186, R-656 and R-711)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_are_named_measurements, every self-hosted job across the workflows being one of the listed measurements, each named, and each listed one present, with the existing trigger, pin, guard, credential and not-gathered checks holding for the gpu-idle job; controls: an unlisted self-hosted job (a mutants job) fails, a listed job removed fails, and the gpu-idle job under a push trigger fails"
+  rulings:
+  - R-859
+  milestone: M0
+  rq:
+  - RQ-742
+  note: "Closed by TASK-M0-55. DX12's job joins after the DX12 opt-in lands (R-711 item 2), outside this requirement."
+- id: REQ-TOOL-225
+  area: TOOL
+  statement: "The heavy-work comparison must run, at one commit of one task branch after the anchor move, the GPU suites, codegen_selftest_pack_unpack_kernel_gpu among them, and one mutant shard holding projection_parity.rs or drift.rs, on the Windows runner and on hosted runners, and report each side's wall time and whether the results are identical: the same test outcomes, and the same caught, missed, unviable and timed-out mutant sets, mutant for mutant; against a criterion committed before the first run and never adjusted after (R-649, R-812); its result and the fallback design going to the next /rulings-report as the one-way question of moving required work, and nothing required moving (R-859)."
+  source:
+  - file: decisions.md
+    section: "R-859 — From the anchor move, the Windows runner may run, as named measurements and never as required checks: the GPU suites (Vulkan now, DX12 from Phase 2) nightly and on pushes to `main`, gpu-idle, the weekly proof and the 7 Nov heavy-work comparison; benchmarks of record stay on the Mac, Windows numbers a separate named series; moving required or heavy CI work to the PC is not approved and returns through `/rulings-report`; the runner's security rules are unchanged *(refines R-186, R-656 and R-711)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask heavy_compare: the comparison reads both sides' test outcomes and mutant outcomes and reports identical only when every test and every mutant matches; controls: one mutant moved from caught to missed, one test passing on one side only, and a mutant present on one side only, each reported as not identical; plus the record, its criterion committed before the run, reviewed"
+  rulings:
+  - R-859
+  milestone: M0
+  rq:
+  - RQ-743
+  note: "Closed by TASK-M0-56. A measurement, never a gate (R-649). The trigger on the task branch is RQ-743's."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
