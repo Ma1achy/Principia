@@ -33009,8 +33009,8 @@ the forward lines of R-69 and R-473, `docs/gui/principia_render_gui_spec.md` § 
 `docs/gui/design/GUI_DESIGN_NOTES.md` § "08 Lock — the reticle and the pin",
 `docs/contracts/principia_chart_decoder_contract.md` Part 4 § "The lock (projective microscope)", the owner's model
 (`docs/design/principia_chart_space_model.md` § 0.7, R-868), REQ-GUI-099 and REQ-CHART-089 (reqio, a statement and a
-note), REQ-GUI-425 (reqio, new), TASK-M8-125 (new), TASK-M8-07, TASK-M8-117 and `plan/rule_groups.yaml`; built by
-TASK-M8-125*
+note), REQ-GUI-425 (reqio, new), TASK-M8-125 (new), TASK-M8-07, TASK-M8-117, `REVIEW_QUEUE.md` (RQ-744, a dated line;
+RQ-749, new) and `plan/rule_groups.yaml`; built by TASK-M8-125*
 
 The owner's words (8 Nov 2026), verbatim:
 
@@ -33060,6 +33060,10 @@ The owner's words (8 Nov 2026), verbatim:
 - **REQ-GUI-099** (the lock's look, TASK-M8-07's, unbuilt) is reworded to this ruling, its old statement kept in its
   note; REQ-CHART-089 (the lock's construction, M2, closed by TASK-M2-23) is unchanged, with a note that TASK-M8-125
   rewrites the re-centring part of the definition it closed.
+
+*Held for the owner,* **RQ-749:** R-863's stage-2 test, "the centre IC is constant", and design § 17.8's probe at
+`(½, ½)` read the anchor at the view's centre, while this ruling puts the pin at the clicked pixel, in general off the
+centre. Which the test holds constant changes what TASK-M8-117 asserts, so it is not chosen here.
 
 R-866 is in the "design" group of `plan/rule_groups.yaml`.
 
