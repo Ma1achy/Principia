@@ -4,11 +4,17 @@
 //! on merge-ready, cancel the in-progress quick run and start the full tier, instead of waiting for it"; PR #450),
 //! written from those orders and the rulings they must keep, not from the implementation:
 //!
-//! - `qa_compose_label_mid_quick_cancels_it_at_once`: `merge-ready` going on while the head's quick attempt is queued
-//!   or in progress cancels it at once, on the first look at the run, and starts the full attempt (`/rerun`, R-276's
+//! - `qa_compose_label_mid_quick_cancels_it_at_once`: `merge-ready` going on while the head's quick attempt is in
+//!   progress cancels it at once, on the first look at the run, and starts the full attempt (`/rerun`, R-276's
 //!   pattern kept by R-678) once the cancelled attempt has been seen ended (the owner, 8 Nov 2026: "ci-full: on
 //!   merge-ready, cancel the in-progress quick run and start the full tier, instead of waiting for it"); a quick attempt
-//!   no cancel ends is never re-run over, the job failing.
+//!   no cancel ends is never re-run over, the job failing. An attempt whose `changes` job has not decided its tier is
+//!   read again until it decides (the orchestrator's decision on code review 5819591377, R-369): decided quick, it is
+//!   then cancelled at once; never deciding, the job fails, named, cancelling nothing.
+//! - `qa_compose_label_acts_only_on_a_shown_tier`: by the same decision, an attempt whose `changes` decides full after
+//!   some reads is waited for, never cancelled; the reads spent waiting for `changes` come out of the full attempt's
+//!   own bounded wait; an attempt whose jobs cannot be read is read again, a bounded number of times (30), then the job
+//!   fails, named, cancelling nothing.
 //! - `qa_compose_label_mid_full_waits_never_cancels`: a full attempt still going (a retry's, or a first attempt opened
 //!   with the label) is the full tier already: it is waited for, never cancelled, and re-run only once ended.
 //! - `qa_compose_a_push_still_takes_the_label_off`: a push still takes `merge-ready` off (`mutants.yml`), the pushed
@@ -85,7 +91,9 @@ fn edited(rel: &str, from: &str, to: &str) -> String {
 /// for. With `QA_MAIN_RUN` set, a query of the runs not narrowed to `event=pull_request` also lists, first, a push run
 /// on `main` (7, a second attempt, in progress), which no cancel ends.
 /// The pull request's head and labels answer from the line of the latest poll (the first before any). The jobs of
-/// attempt `<n>` answer `$QA_DIR/attempt_<n>.json`, failing when it is absent; a run's latest jobs answer
+/// attempt `<n>` answer `$QA_DIR/attempt_<n>.json`, failing when it is absent; its first `QA_UNREAD` reads fail (jobs
+/// unreadable), and, where `$QA_DIR/attempt_<n>.before.json` is present, the `QA_DECIDE_AFTER` reads after those answer
+/// it instead (an attempt whose `changes` has not decided yet, deciding at the next read); a run's latest jobs answer
 /// `$QA_DIR/latest.json`. Every answer is JSON in the API's shape, put through the caller's `--jq` filter by `jq -r`, as
 /// `gh --jq` does. `/rerun` is refused `QA_REFUSE` times.
 const GH: &str = r#"#!/bin/bash
@@ -131,6 +139,13 @@ case "$*" in
     args="$*"
     n=${args#*/attempts/}
     n=${n%%/*}
+    reads=$(grep -c "/attempts/$n/jobs" "$QA_DIR/log")
+    [ "$reads" -gt "${QA_UNREAD:-0}" ] || exit 1
+    if [ -f "$QA_DIR/attempt_$n.before.json" ] \
+      && [ "$reads" -le "$((${QA_UNREAD:-0} + ${QA_DECIDE_AFTER:-0}))" ]; then
+      answer < "$QA_DIR/attempt_$n.before.json"
+      exit
+    fi
     [ -f "$QA_DIR/attempt_$n.json" ] || exit 1
     answer < "$QA_DIR/attempt_$n.json" ;;
   *"/runs/"*"/jobs"*)
@@ -181,6 +196,8 @@ struct World<'a> {
     lines: &'a [&'a str],
     /// `(attempt, jobs JSON)`.
     attempts: &'a [(u32, String)],
+    /// `(attempt, jobs JSON)` its first `QA_DECIDE_AFTER` reads answer, before its `changes` decides.
+    before: &'a [(u32, String)],
     latest: Option<String>,
     /// What `scripts/ci_changes.sh paths` prints; `None`, it fails.
     paths: Option<&'a [&'a str]>,
@@ -221,6 +238,9 @@ fn tier(script: &str, subcommand: &str, world: &World) -> Ran {
     std::fs::write(dir.join("world"), format!("{}\n", world.lines.join("\n"))).expect("world");
     for (n, json) in world.attempts {
         std::fs::write(dir.join(format!("attempt_{n}.json")), json).expect("attempt");
+    }
+    for (n, json) in world.before {
+        std::fs::write(dir.join(format!("attempt_{n}.before.json")), json).expect("attempt before");
     }
     if let Some(latest) = &world.latest {
         std::fs::write(dir.join("latest.json"), latest).expect("latest");
@@ -286,11 +306,70 @@ fn label_on_in(
         &World {
             lines,
             attempts,
+            before: &[],
             latest: None,
             paths: None,
             env: &all,
         },
     )
+}
+
+/// `merge-ready` put on, as `label_on_in`, with attempts whose first `QA_DECIDE_AFTER` reads answer `before`.
+fn label_on_staged(
+    script: &str,
+    lines: &[&str],
+    attempts: &[(u32, String)],
+    before: &[(u32, String)],
+    env: &[(&str, &str)],
+) -> Ran {
+    let mut all = vec![("ACTION", "labeled")];
+    all.extend_from_slice(env);
+    tier(
+        script,
+        "merge-ready",
+        &World {
+            lines,
+            attempts,
+            before,
+            latest: None,
+            paths: None,
+            env: &all,
+        },
+    )
+}
+
+/// An attempt whose `changes` job is still queued: its tier not yet decided.
+fn undecided() -> String {
+    serde_json::json!({"total_count": 1, "jobs": [
+        {"name": "changes", "status": "queued", "conclusion": null}
+    ]})
+    .to_string()
+}
+
+/// The positions in the call log of the reads of attempt `n`'s jobs.
+fn attempt_reads(got: &Ran, n: u32) -> Vec<usize> {
+    let what = format!("/attempts/{n}/jobs");
+    got.calls
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c.contains(&what))
+        .map(|(i, _)| i)
+        .collect()
+}
+
+/// The polls of the head's runs among calls `from..to`.
+fn polls_between(got: &Ran, from: usize, to: usize) -> usize {
+    got.calls[from..to]
+        .iter()
+        .filter(|c| c.contains("/workflows/ci.yml/runs"))
+        .count()
+}
+
+/// The position of the first cancel of run 5, if any.
+fn first_cancel(got: &Ran) -> Option<usize> {
+    got.calls
+        .iter()
+        .position(|c| c.contains("--method POST") && c.contains(CANCEL_5) && c.contains("cancel"))
 }
 
 /// The jobs API's answer for an attempt still going: jobs `(name, conclusion)`, `None` for a job not yet ended.
@@ -366,17 +445,6 @@ fn check_cancels_quick(script: &str) {
             vec![(1, quick_going())],
         ),
         (
-            "a first attempt, queued, its tier not yet decided",
-            vec!["queued 1 aaa111 merge-ready"],
-            vec![(
-                1,
-                serde_json::json!({"total_count": 1, "jobs": [
-                    {"name": "changes", "status": "queued", "conclusion": null}
-                ]})
-                .to_string(),
-            )],
-        ),
-        (
             "a retry's quick attempt in progress",
             vec!["in_progress 2 aaa111 merge-ready"],
             vec![
@@ -441,6 +509,69 @@ fn check_cancels_quick(script: &str) {
         got.calls,
         got.out
     );
+    // A first attempt, queued, its `changes` not yet decided: read again until `changes` decides (here at the fourth
+    // read), quick; then cancelled at once, and the full attempt started once the cancel has ended it.
+    let decide_after = 3;
+    let got = label_on_staged(
+        script,
+        &["queued 1 aaa111 merge-ready"],
+        &[(1, quick_going())],
+        &[(1, undecided())],
+        &[("QA_CANCEL_ENDS", "1"), ("QA_DECIDE_AFTER", "3")],
+    );
+    let reads = attempt_reads(&got, 1);
+    let cancel = first_cancel(&got);
+    assert!(
+        cancel.is_some(),
+        "qa_compose: an attempt that decided quick after some reads was not cancelled: {:?} {}",
+        got.calls,
+        got.out
+    );
+    let cancel = cancel.unwrap_or(0);
+    assert!(
+        reads.iter().filter(|&&r| r < cancel).count() > decide_after,
+        "qa_compose: an attempt was cancelled before its changes job had decided its tier: {:?}",
+        got.calls
+    );
+    let decided_at = reads.get(decide_after).copied().unwrap_or(0);
+    assert!(
+        polls_between(&got, decided_at, cancel) <= 1,
+        "qa_compose: the label waited before cancelling an attempt once it was shown quick: {:?}",
+        got.calls
+    );
+    assert!(
+        got.ok()
+            && got.count("/rerun") == 1
+            && polls_before(&got, "/rerun").unwrap_or(0) > polls_before(&got, "cancel").unwrap_or(0),
+        "qa_compose: the full attempt was not started once, after the cancelled attempt ended (decided late): {:?} {}",
+        got.calls,
+        got.out
+    );
+    // One whose `changes` never decides: the job fails, named, bounded, cancelling and re-running nothing.
+    let got = label_on_staged(
+        script,
+        &["queued 1 aaa111 merge-ready"],
+        &[(1, quick_going())],
+        &[(1, undecided())],
+        &[("QA_CANCEL_ENDS", "1"), ("QA_DECIDE_AFTER", "1000")],
+    );
+    assert!(
+        cancels_of(&got, CANCEL_5) == 0 && got.count("/rerun") == 0,
+        "qa_compose: an attempt whose changes never decided was cancelled or re-run over: {:?} {}",
+        got.calls,
+        got.out
+    );
+    assert!(
+        !got.ok() && got.out.contains("::error::") && got.out.contains("aaa111"),
+        "qa_compose: an attempt whose changes never decided did not fail the job, named: {}",
+        got.out
+    );
+    let n = attempt_reads(&got, 1).len();
+    assert!(
+        (2..=6).contains(&n),
+        "qa_compose: an undecided attempt was not read again, or read past the wait's 6 polls ({n} reads): {:?}",
+        got.calls
+    );
 }
 
 #[test]
@@ -487,6 +618,33 @@ mod reruns_unseen {
             TIER,
             "cancel_quick() {\n",
             "cancel_quick() {\n  gh api --method POST \"repos/$GH_REPO/actions/runs/$1/cancel\" > /dev/null\n  echo \"$1 completed 1\"\n  return 0\n"
+        ))
+    );
+}
+
+/// The defect code review 5819591377 found: an attempt whose tier is not shown taken for a quick one.
+mod undecided_read_as_quick {
+    use super::*;
+    negative_control!(
+        qa_compose_label_mid_quick_cancels_it_at_once,
+        "an attempt whose changes has not decided read as quick, and cancelled",
+        expected =
+            "qa_compose: an attempt was cancelled before its changes job had decided its tier",
+        check_cancels_quick(&edited(TIER, "then return 2; fi", "then return 1; fi"))
+    );
+}
+
+mod undecided_unbounded {
+    use super::*;
+    negative_control!(
+        qa_compose_label_mid_quick_cancels_it_at_once,
+        "an undecided attempt read again past the wait's bound",
+        expected =
+            "qa_compose: an undecided attempt was not read again, or read past the wait's 6 polls",
+        check_cancels_quick(&edited(
+            TIER,
+            "if [ \"$waited\" -ge \"$wait_polls\" ]; then",
+            "if [ \"$waited\" -ge 9 ]; then"
         ))
     );
 }
@@ -580,8 +738,8 @@ mod full_read_as_quick {
         expected = "qa_compose: the label cancelled a full attempt",
         check_full_waited(&edited(
             TIER,
-            "if full_attempt \"$id\" \"$attempt\"; then",
-            "if false; then"
+            "0 | 1) return \"$shown\" ;;",
+            "0 | 1) return 1 ;;"
         ))
     );
 }
@@ -594,6 +752,162 @@ negative_control!(
         TIER,
         "run=$(wait_full) || return 1",
         "run=$(latest_run)"
+    ))
+);
+
+// ---- 1c. Only a shown tier is acted on --------------------------------------------------------------------------------
+
+fn check_shown_tier(script: &str) {
+    // A retry's attempt whose `changes` decides full at the fourth read: waited for, never cancelled, re-run once ended.
+    let lines = [
+        "in_progress 2 aaa111 merge-ready",
+        "in_progress 2 aaa111 merge-ready",
+        "completed 2 aaa111 merge-ready",
+    ];
+    let got = label_on_staged(
+        script,
+        &lines,
+        &[
+            (1, jobs(&[("changes", "success"), (QUICK_JOB, "success")])),
+            (2, full_going()),
+        ],
+        &[(2, undecided())],
+        &[("QA_CANCEL_ENDS", "1"), ("QA_DECIDE_AFTER", "3")],
+    );
+    assert_eq!(
+        cancels_of(&got, CANCEL_5),
+        0,
+        "qa_compose: the label cancelled an attempt that decided full after some reads: {:?}",
+        got.calls
+    );
+    assert!(
+        got.ok()
+            && got.count("/rerun") == 1
+            && seen_at_rerun(&got, &lines).is_some_and(|l| l.starts_with("completed ")),
+        "qa_compose: an attempt that decided full late was not waited for, then re-run once: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // The reads spent waiting for `changes` come out of the same bounded wait as the full attempt's (6 polls here):
+    // decided full at the fifth read, never ending, the job fails having waited at most 6 polls in all.
+    let decide_after = 4;
+    let got = label_on_staged(
+        script,
+        &["in_progress 2 aaa111 merge-ready"],
+        &[(2, full_going())],
+        &[(2, undecided())],
+        &[("QA_CANCEL_ENDS", "1"), ("QA_DECIDE_AFTER", "4")],
+    );
+    assert!(
+        !got.ok() && cancels_of(&got, CANCEL_5) == 0 && got.count("/rerun") == 0,
+        "qa_compose: a late-decided full attempt outlasting the wait was cancelled or re-run, or the job passed: {:?} {}",
+        got.calls,
+        got.out
+    );
+    let reads = attempt_reads(&got, 2);
+    let decided_at = reads.get(decide_after).copied().unwrap_or(0);
+    let waited = decide_after + polls_between(&got, decided_at, got.calls.len());
+    assert!(
+        waited <= 6,
+        "qa_compose: the wait for changes did not share the full attempt's bound ({waited} polls of 6): {:?}",
+        got.calls
+    );
+    // Jobs unread twice, then shown quick: cancelled, and the full attempt started.
+    let got = label_on_in(
+        script,
+        &["in_progress 1 aaa111 merge-ready"],
+        &[(1, quick_going())],
+        &[("QA_CANCEL_ENDS", "1"), ("QA_UNREAD", "2")],
+    );
+    assert!(
+        got.ok() && cancels_of(&got, CANCEL_5) >= 1 && got.count("/rerun") == 1,
+        "qa_compose: a quick attempt whose jobs were read on the third try was not cancelled and re-run: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // Jobs never readable: read again, at most 30 times, then the job fails, named, cancelling nothing.
+    let got = label_on_in(
+        script,
+        &["in_progress 1 aaa111 merge-ready"],
+        &[(1, quick_going())],
+        &[("QA_CANCEL_ENDS", "1"), ("QA_UNREAD", "1000")],
+    );
+    assert!(
+        cancels_of(&got, CANCEL_5) == 0 && got.count("/rerun") == 0,
+        "qa_compose: the label cancelled an attempt whose jobs were unread, or re-ran over it: {:?} {}",
+        got.calls,
+        got.out
+    );
+    assert!(
+        !got.ok() && got.out.contains("::error::") && got.out.contains("aaa111"),
+        "qa_compose: an attempt whose jobs were unread did not fail the job, named: {}",
+        got.out
+    );
+    let n = attempt_reads(&got, 1).len();
+    assert!(
+        (2..=30).contains(&n),
+        "qa_compose: unread jobs were not read again, or read more than 30 times ({n} reads): {:?}",
+        got.calls
+    );
+}
+
+#[test]
+fn qa_compose_label_acts_only_on_a_shown_tier() {
+    check_shown_tier(&read(TIER));
+}
+
+mod late_full_read_as_quick {
+    use super::*;
+    negative_control!(
+        qa_compose_label_acts_only_on_a_shown_tier,
+        "an attempt whose changes has not decided read as quick, and cancelled",
+        expected = "qa_compose: the label cancelled an attempt that decided full after some reads",
+        check_shown_tier(&edited(TIER, "then return 2; fi", "then return 1; fi"))
+    );
+}
+
+mod own_wait_bound {
+    use super::*;
+    negative_control!(
+        qa_compose_label_acts_only_on_a_shown_tier,
+        "the full attempt's wait not reduced by the polls spent waiting for changes",
+        expected = "qa_compose: the wait for changes did not share the full attempt's bound",
+        check_shown_tier(&edited(TIER, " - waited))", "))"))
+    );
+}
+
+mod unread_read_as_quick {
+    use super::*;
+    negative_control!(
+        qa_compose_label_acts_only_on_a_shown_tier,
+        "an attempt whose jobs are unread read as quick, and cancelled",
+        expected = "qa_compose: the label cancelled an attempt whose jobs were unread",
+        check_shown_tier(&edited(TIER, "\"') || return 3", "\"') || return 1"))
+    );
+}
+
+mod unread_unbounded {
+    use super::*;
+    negative_control!(
+        qa_compose_label_acts_only_on_a_shown_tier,
+        "unread jobs read again past 30 reads",
+        expected = "qa_compose: unread jobs were not read again, or read more than 30 times",
+        check_shown_tier(&edited(
+            TIER,
+            "if [ \"$unread\" -ge \"$read_polls\" ]; then",
+            "if [ \"$unread\" -ge 40 ]; then"
+        ))
+    );
+}
+
+negative_control!(
+    qa_compose_label_acts_only_on_a_shown_tier,
+    "unread jobs never read again",
+    expected = "qa_compose: a quick attempt whose jobs were read on the third try was not cancelled and re-run",
+    check_shown_tier(&edited(
+        TIER,
+        "read_polls=\"${CI_TIER_DECIDE_POLLS:-30}\"",
+        "read_polls=1"
     ))
 );
 
@@ -645,6 +959,7 @@ fn check_push(script: &str, mutants: &str) {
         &World {
             lines: &["completed 1 aaa111 merge-ready"],
             attempts: &[],
+            before: &[],
             latest: None,
             paths: Some(&["crates/kernel/src/lib.rs"]),
             env: &[
@@ -799,10 +1114,15 @@ fn check_main_spared(script: &str) {
     // The stand-in lists, to any query of the head's runs not narrowed to `pull_request` runs, a push run on `main`
     // (run 7, a second attempt, in progress) ahead of the pull request's run.
     let main = [("QA_MAIN_RUN", "1"), ("QA_CANCEL_ENDS", "1")];
+    // The stand-in answers jobs by attempt alone: attempt 2 (main's run's, read only by a script that took main's run
+    // for the head's) is shown quick, so such a script would cancel it.
     let got = label_on_in(
         script,
         &["completed 1 aaa111 merge-ready"],
-        &[(1, jobs(&[("changes", "success"), (QUICK_JOB, "success")]))],
+        &[
+            (1, jobs(&[("changes", "success"), (QUICK_JOB, "success")])),
+            (2, quick_going()),
+        ],
         &main,
     );
     assert_eq!(
@@ -825,6 +1145,7 @@ fn check_main_spared(script: &str) {
         &World {
             lines: &["completed 2 aaa111 -"],
             attempts: &[],
+            before: &[],
             latest: None,
             paths: None,
             env: &env,
@@ -981,6 +1302,7 @@ fn decide_full(script: &str, case: &Evidence) -> Ran {
         &World {
             lines: &["completed 1 aaa111 merge-ready"],
             attempts: &case.attempts,
+            before: &[],
             latest: None,
             paths: case.paths,
             env: &[
@@ -1076,6 +1398,7 @@ fn check_evidence(script: &str) {
             &World {
                 lines: &[line],
                 attempts: &quick_ok,
+                before: &[],
                 latest: None,
                 paths: KERNEL,
                 env: &env,
