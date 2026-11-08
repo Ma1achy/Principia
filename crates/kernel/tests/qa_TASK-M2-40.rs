@@ -821,26 +821,113 @@ negative_control!(
     check_latent(true)
 );
 
-/// A latent view saves as an oblique chart, never as a curved chart on the latent parent.
-#[test]
-fn qa_saved_latent_is_not_curved() {
+/// Which saved chart each of the kind checks is given: as the requirement has it, or (each a control) a chart of the
+/// other kind in one of the three places.
+#[derive(Clone, Copy)]
+struct Kinds {
+    /// The curved-parent refusal offered a shape sphere, a curved parent, in place of the latent view.
+    curved_parent: bool,
+    /// The latent view's save replaced by a curved view's.
+    curved_for_latent: bool,
+    /// The curved view's save replaced by the latent view's.
+    latent_for_curved: bool,
+}
+
+const KINDS_AS_SAVED: Kinds = Kinds {
+    curved_parent: false,
+    curved_for_latent: false,
+    latent_for_curved: false,
+};
+
+/// A latent view saves as an oblique chart, never as a curved chart on the latent parent (REQ-CHART-073: the latent
+/// view saved as the oblique chart `(z₀, q₁, q₂)`); a curved view never reads as an oblique one.
+fn check_kinds(case: Kinds) {
     let view = Latent {
         z0: [0.0; 8],
         q1: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         q2: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
     };
-    assert!(Saved::curved(
-        &view,
-        spec(10.0, 0.0, TiltMap::Sheet, 4, 4),
-        [0.5, 0.5],
-        [SPAN, SPAN]
-    )
-    .is_none());
-    assert!(Saved::latent(&view).oblique().is_some());
-    let curved =
-        Saved::curved(&sphere(ShapeMap::Spherical), SAVED_25, S, [SPAN, SPAN]).expect("saves");
+    let curved_view =
+        || Saved::curved(&sphere(ShapeMap::Spherical), SAVED_25, S, [SPAN, SPAN]).expect("saves");
+    let offered = if case.curved_parent {
+        Saved::curved(
+            &sphere(ShapeMap::Spherical),
+            spec(10.0, 0.0, TiltMap::Sheet, X, X),
+            S,
+            [SPAN, SPAN],
+        )
+    } else {
+        Saved::curved(
+            &view,
+            spec(10.0, 0.0, TiltMap::Sheet, 4, 4),
+            [0.5, 0.5],
+            [SPAN, SPAN],
+        )
+    };
+    assert!(
+        offered.is_none(),
+        "a view was saved as a curved chart on the latent parent"
+    );
+    let latent = if case.curved_for_latent {
+        curved_view()
+    } else {
+        Saved::latent(&view)
+    };
+    assert!(
+        latent.oblique().is_some(),
+        "a latent view did not save as an oblique chart"
+    );
+    let curved = if case.latent_for_curved {
+        Saved::latent(&view)
+    } else {
+        curved_view()
+    };
     assert!(
         curved.oblique().is_none(),
         "a curved saved chart reopened as an oblique one"
+    );
+}
+
+#[test]
+fn qa_saved_latent_is_not_curved() {
+    check_kinds(KINDS_AS_SAVED);
+}
+
+mod kinds_curved_parent {
+    use super::*;
+    negative_control!(
+        qa_saved_latent_is_not_curved,
+        "a shape sphere is a curved parent, so the refusal check must fail on it",
+        expected = "saved as a curved chart on the latent parent",
+        check_kinds(Kinds {
+            curved_parent: true,
+            ..KINDS_AS_SAVED
+        })
+    );
+}
+
+mod kinds_curved_for_latent {
+    use super::*;
+    negative_control!(
+        qa_saved_latent_is_not_curved,
+        "a curved view's save is not an oblique chart, so the latent check must fail on it",
+        expected = "did not save as an oblique chart",
+        check_kinds(Kinds {
+            curved_for_latent: true,
+            ..KINDS_AS_SAVED
+        })
+    );
+}
+
+mod kinds_latent_for_curved {
+    use super::*;
+    negative_control!(
+        qa_saved_latent_is_not_curved,
+        "the latent view's save is an oblique chart, so the curved check must fail on it",
+        expected = "reopened as an oblique one",
+        check_kinds(Kinds {
+            latent_for_curved: true,
+            ..KINDS_AS_SAVED
+        })
     );
 }
