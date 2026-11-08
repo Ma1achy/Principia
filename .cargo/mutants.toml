@@ -48,6 +48,12 @@ test_tool = "nextest"
 timeout_multiplier = 3.0
 minimum_test_timeout = 60
 
+# Inside that timeout, each test has a kill limit of its own (the owner's order of 8 Nov 2026, amending R-712's basis,
+# not its multiplier): `.config/nextest.toml`'s `mutants` profile, which the shards, the nightly run and a local run
+# select with NEXTEST_PROFILE=mutants, not here, since these arguments reach the fixtures' runs too, and the per-PR
+# baseline runs without it. A test ended at its limit fails the run, so its mutant is caught, and `cargo xtask
+# mutants-check` lists it as timed out, naming the test. The per-mutant timeout above stays, an outer backstop.
+
 # The per-process memory cap on the test processes (R-348; REQ-VAL-181, confirmed by the human at the M0 gate, R-376,
 # R-71): 8 GiB (8589934592 bytes) of virtual memory, RLIMIT_AS, set by `prlimit --as`. nextest runs
 # each test under `prlimit` as its runner, so the cap binds each test process of the baseline and of every

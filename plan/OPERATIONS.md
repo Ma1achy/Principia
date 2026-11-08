@@ -221,8 +221,11 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   the head the implementer is about to push, never on work in progress. A local run uses R-348's two caps, the
   per-mutant timeout and the memory cap on test processes, at the values CI uses (REQ-VAL-180, REQ-VAL-181), where the
   machine enforces them (applied per R-204, accepted by R-352): on macOS a local run gets the timeout only, and CI's
-  Linux runners enforce both caps (R-352). The `mutants::skip` marker doesn't compile without the `mutants` crate as a
-  dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite
+  Linux runners enforce both caps (R-352). It takes CI's per-test kill limits too, the `mutants` profile in
+  `.config/nextest.toml`, with `--env NEXTEST_PROFILE=mutants` on its job (the owner, 8 Nov 2026: "same limits for
+  nightly and local"), so a hung mutant is ended in minutes and counted caught; as in the nightly run, one `cargo
+  mutants` run's baseline runs under them too. The `mutants::skip` marker doesn't compile without the `mutants` crate as
+  a dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite
   (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
   - **A local run that mutates the gui crate uses hard limits (R-439, amending R-388).** A local gui-crate run crashed
     the Mac twice (two kernel watchdog panics, 15 Oct 2026): a mutant made a gui test process allocate about 10 GB,

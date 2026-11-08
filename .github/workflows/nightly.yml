@@ -382,6 +382,10 @@ jobs:
           PACKAGE: ${{ matrix.package }}
           SHARD: ${{ matrix.k }}/${{ matrix.n }}
           PRIN_CONTAIN: required
+          # The per-PR shards' per-test kill limits (`.config/nextest.toml`'s `mutants` profile; the owner's order of 8
+          # Nov 2026: "same limits for nightly and local"). One `cargo mutants` run gives its baseline the same
+          # environment as its mutants, so this shard's baseline runs under them too.
+          NEXTEST_PROFILE: mutants
           HEARTBEAT_CONTEXT: ${{ matrix.package == 'xtask' && format('mutants-heartbeat nightly ({0})', matrix.k) || '' }}
           HEARTBEAT_OUT: ${{ runner.temp }}/mutants.out
           HEARTBEAT_SHA: ${{ github.sha }}
@@ -395,6 +399,18 @@ jobs:
           echo "cargo mutants $PACKAGE shard $SHARD: exit $code, wall-clock $(( $(date +%s) - start )) s"
           df -h /
           case $code in 0|2|3) ;; *) exit "$code" ;; esac
+      # The shard's baseline against the per-test kill limits, as `mutants.yml`'s baseline is checked: a test that took
+      # more than half its limit is named, with a value regenerated from its time. A shard with no mutant ran no
+      # baseline.
+      - name: cargo xtask mutants-limits (the per-test kill limits against the shard's baseline)
+        if: always()
+        timeout-minutes: 5
+        run: |
+          if [ -f "$RUNNER_TEMP/mutants.out/log/baseline.log" ]; then
+            cargo xtask mutants-limits "$RUNNER_TEMP/mutants.out"
+          else
+            echo "mutants-limits: no baseline in this shard's run"
+          fi
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
