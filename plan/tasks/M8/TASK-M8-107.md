@@ -23,6 +23,7 @@ A path between two baked ends runs live like a tilt: coarse in motion, refining 
 - `cargo xtask bench path_cover` — one coarse cover against the design's target; benchmark: waits for the human's Mac (R-186), which closes it; the Windows runner's arm is a separate labelled measurement that closes nothing, a named measurement and never a required check (R-711, R-860) (REQ-PERF-117).
 
 ## Notes
+- **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - The whole frame, integration included, is measured here for the first time: the design measured only a stand-in for the chart side.
 - A faster CPU-only live path is a recorded goal, with no task.
 - Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

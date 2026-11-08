@@ -32,6 +32,7 @@ The first registered closed-form pair: `(ξ, η)` through the explicit-configura
 - `cargo test -p kernel closed_inverse_round_trip` — `forward(inverse(x)) = x`, every closed row at f64 and f32, each reading back its `Holds`; mutation: named per row, firing there (§ 12) (REQ-CHART-101).
 
 ## Notes
+- **Build order (R-863):** stage 3, the primitive registry and composed axes, each primitive with its round-trip test. Its edge to stage 2 (TASK-M8-117) isn't made: it is in M4 and TASK-M8-117 in M8, so the edge would depend forward across milestones, and TASK-M8-117 already waits on it through TASK-M8-106 and TASK-M8-102, so the edge would close a cycle. RQ-744 (A) holds the choice.
 - R-798's remap (REQ-CHART-093, TASK-M9-45) shares § 8.3's and § 8.2's lines: one source. PA-1's route is unchanged.
 - The target frames (D11, Lehto's lens, Breen's) stay those targets' tested functions (R-72) unless RQ-729 rules for the presets (design § 8.5): this pair does not depend on them either way.
 - The preset's base point, centre and window (R-466's definition of a preset) are undefined on this pair, which isn't two latent coordinate axes: RQ-711, read at TASK-M4-37, or a task that defines them under R-72 as TASK-M9-45 does (design § 20). Only those home values wait: the pair, the mask, the tests and the TASK-M4-06 edge do not.

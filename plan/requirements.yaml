@@ -4463,6 +4463,24 @@
   rulings:
   - R-649
   milestone: M8
+- id: REQ-CHART-139
+  area: CHART
+  statement: "The chart-path work must be one object in `engine` (R-864): a view is a point in chart space and every edit a path through it, its core types (Chart, Path and its families, Lock and anchor, Axis and primitive, PairMap, Hold) one module, designed first; a type sketch with a one-page rationale, reviewed by physics and code against the chart-space model, goes to the owner before any implementation. Today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart must each become a constructor of that object, a path of a named family, reproducing today's result bitwise through it, every existing preset and saved chart included, before any new capability (R-863 stage 1); once an operation runs through the object its old route is deleted, with no fallback; no special case is an if-branch outside a named family; chart maps and decode stay in `kernel`."
+  source:
+  - file: decisions.md
+    section: "R-863 — When the chart-composition design's tasks are released, they are built in five stages, each merging only with the previous stage's tests green: the path object with today's operations bitwise through it; locked paths; the primitive registry and composed axes; morph families, easing and Sequence segments; time-axis charts and the symmetry filter *(the build order of PR #422's tasks; refines no ruling)*"
+  - file: decisions.md
+    section: "R-864 — The chart-path work is one object: core types designed first as one module, a type sketch with a one-page rationale reviewed by physics and code and brought to the owner before any implementation; today's operations re-expressed as named families of it and their old routes deleted; bitwise reproduction first; special cases are named families, never if-branches; the kernel/engine split stays; restructuring `engine/nav`, `engine/lock.rs` and `engine/chart_authoring` is approved *(the architecture of PR #422's chart-path work; refines no ruling on `main`)*"
+  - file: docs/design/principia_chart_composition.md
+    section: "17.3 The constraint: bitwise through the mechanism"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine -- path_pan_bitwise path_zoom_bitwise path_tilt_bitwise path_slice_bitwise path_lock_bitwise path_chart_switch_bitwise path_save_view_bitwise path_presets_bitwise (each operation through the object against today's result, recorded from today's code on the task's first commit: sim key, IC words and image hash bit for bit, on latent, curved and saved charts; every preset and saved chart today's code builds, reopened through the object); controls: one floating-point operation reordered in a family, the general geodesic in place of the tilt family, a path triple in a zoom's sim key, each failing; plus review: no operation's old route left beside the object (R-864 item 2), and the type sketch and its one-page rationale approved by the physics and code reviewers and answered by the owner before any implementation commit (R-864 item 1)"
+  rulings:
+  - R-863
+  - R-864
+  milestone: M8
+  note: "Closed by TASK-M8-124, stage 1 of R-863's build order. Which task keeps REQ-CHART-113's overlapping tests is RQ-744's (B)."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."

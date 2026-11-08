@@ -3652,7 +3652,7 @@
 - id: TASK-M8-101
   milestone: M8
   title: "Curved slices off the shape sphere: the momentum and mass spheres"
-  depends_on: [TASK-M4-37, TASK-M8-100]
+  depends_on: [TASK-M4-37, TASK-M8-100, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-105, REQ-CHART-106]
   reviewers: [code, qa, physics]
@@ -3708,7 +3708,7 @@
 - id: TASK-M8-108
   milestone: M8
   title: "The Sequence's morph segment"
-  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78]
+  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78, TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111, TASK-M8-119]
   needs: []
   requirements: [REQ-GUI-421]
   reviewers: [code, qa, gui]
@@ -3716,7 +3716,7 @@
 - id: TASK-M8-109
   milestone: M8
   title: "The primitives of 6 Nov: axes and overlays"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M8-100, TASK-M7-72]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M8-100, TASK-M7-72, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-117, REQ-CHART-118]
   reviewers: [code, qa, physics]
@@ -3724,7 +3724,7 @@
 - id: TASK-M8-110
   milestone: M8
   title: "Region D's exact map and every target's native coordinates"
-  depends_on: [TASK-M4-37, TASK-M4-34]
+  depends_on: [TASK-M4-37, TASK-M4-34, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-121]
   reviewers: [code, qa, physics]
@@ -3732,7 +3732,7 @@
 - id: TASK-M8-111
   milestone: M8
   title: "The primitives of the full order"
-  depends_on: [TASK-M4-37, TASK-M8-109]
+  depends_on: [TASK-M4-37, TASK-M8-109, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-119, REQ-CHART-120]
   reviewers: [code, qa, physics]
@@ -3748,7 +3748,7 @@
 - id: TASK-M8-113
   milestone: M8
   title: "Time-axis chart mode"
-  depends_on: [TASK-M4-37, TASK-M4-33]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M8-108]
   needs: []
   requirements: [REQ-CHART-123]
   reviewers: [code, qa, physics]
@@ -3756,7 +3756,7 @@
 - id: TASK-M8-114
   milestone: M8
   title: "Time-axis storage and the column cost"
-  depends_on: [TASK-M4-37, TASK-M8-113]
+  depends_on: [TASK-M4-37, TASK-M8-113, TASK-M8-108]
   needs: []
   requirements: [REQ-PERF-118]
   reviewers: [code, qa, physics, perf]
@@ -3764,7 +3764,7 @@
 - id: TASK-M8-115
   milestone: M8
   title: "Time-axis mode in the GUI"
-  depends_on: [TASK-M4-37, TASK-M8-113]
+  depends_on: [TASK-M4-37, TASK-M8-113, TASK-M8-108]
   needs: []
   requirements: [REQ-GUI-422]
   reviewers: [code, qa, gui]
@@ -3772,7 +3772,7 @@
 - id: TASK-M8-116
   milestone: M8
   title: "Time-axis mode in Sequence and export sidecars"
-  depends_on: [TASK-M4-37, TASK-M8-115, TASK-M8-77]
+  depends_on: [TASK-M4-37, TASK-M8-115, TASK-M8-77, TASK-M8-108]
   needs: []
   requirements: [REQ-GUI-423]
   reviewers: [code, qa, gui]
@@ -3780,7 +3780,7 @@
 - id: TASK-M8-117
   milestone: M8
   title: "Paths under a lock: the stored anchor"
-  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23]
+  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23, TASK-M8-124]
   needs: []
   requirements: [REQ-CHART-115]
   reviewers: [code, qa, physics]
@@ -3796,7 +3796,7 @@
 - id: TASK-M8-119
   milestone: M8
   title: "The virial pair: its axis kind, descriptor and entry"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-103]
   reviewers: [code, qa, physics]
@@ -3804,10 +3804,18 @@
 - id: TASK-M8-120
   milestone: M8
   title: "The symmetry filter: a display option after rendering, GUI and export"
-  depends_on: [TASK-M4-37, TASK-M8-112, TASK-M8-103, TASK-M8-32]
+  depends_on: [TASK-M4-37, TASK-M8-112, TASK-M8-103, TASK-M8-32, TASK-M8-108]
   needs: []
   requirements: [REQ-CHART-135, REQ-CHART-136, REQ-CHART-137, REQ-CHART-138, REQ-GUI-424]
   reviewers: [code, qa, physics, gui]
+  pitfalls: []
+- id: TASK-M8-124
+  milestone: M8
+  title: "The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)"
+  depends_on: [TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52]
+  needs: []
+  requirements: [REQ-CHART-139]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M9-01
   milestone: M9

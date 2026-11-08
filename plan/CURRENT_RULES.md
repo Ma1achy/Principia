@@ -491,6 +491,7 @@ as history only.
 - **R-806** — A colour node's default input range and TASK-M7-13's deliverables are deferred to that task, options with a recommendation proposed when it starts *(defers RQ-677)*
 - **R-807** — The slider span of the held shape, angular momentum and kinetic energy is deferred to TASK-M8-48, options with a recommendation proposed when it starts *(defers RQ-679)*
 - **R-862** — DX12 is an opt-in, off by default: a cargo feature and `PRIN_GPU_BACKEND=dx12`, documented "local testing only, untested in CI", in no required or hosted CI job; native DX12 previews web-v1's behaviour on Windows, where Chrome runs WebGPU on D3D12 *(amends R-169 and R-206)*. Still in force: all of it, the order's "in no CI job" read as R-711 item 2 gives it. Amended in part by R-711.
+- **R-864** — The chart-path work is one object: core types designed first as one module, a type sketch with a one-page rationale reviewed by physics and code and brought to the owner before any implementation; today's operations re-expressed as named families of it and their old routes deleted; bitwise reproduction first; special cases are named families, never if-branches; the kernel/engine split stays; restructuring `engine/nav`, `engine/lock.rs` and `engine/chart_authoring` is approved *(the architecture of PR #422's chart-path work; refines no ruling on `main`)*
 
 ## Values
 
@@ -620,6 +621,7 @@ as history only.
 - **R-718** — Generated plan files are not committed if nothing needs them in git; otherwise they are marked in `.gitattributes` and conflicts are resolved by regenerating, never by hand, with a check that the committed copy matches a fresh regeneration; lands in `plan/OPERATIONS.md` § "Merging"
 - **R-719** — A Windows-only, non-reproducing GPU result is hardware-suspect: recorded, not filed as a code bug; one that reproduces is checked against Metal and lavapipe, failing everywhere our bug, passing elsewhere an NVIDIA Vulkan platform finding with no re-baselining; lands in `plan/OPERATIONS.md` § "Windows GPU results"
 - **R-812** — Two-way doors are decided and shown afterwards, by measurement where one can settle it, CI and build tooling among them; one-way doors are asked through `/rulings-report` only while work carries on; when unsure, a door is one-way *(amends R-369)*
+- **R-863** — When the chart-composition design's tasks are released, they are built in five stages, each merging only with the previous stage's tests green: the path object with today's operations bitwise through it; locked paths; the primitive registry and composed axes; morph families, easing and Sequence segments; time-axis charts and the symmetry filter *(the build order of PR #422's tasks; refines no ruling)*
 
 ## CI
 

@@ -33,5 +33,6 @@ The third lowering: an unbaked or numerical pair fills the integrator's IC buffe
 - `cargo test -p engine seam_refinement_masked` — a flagged footprint leaves `n_unresolved`, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes `Seam`, a mixed quad included, `n_seam` counted, no priority from `coherence`; a non-finite copy still fires; an unflagged neighbour still splits; today's registry bitwise; controls: the mask removed, the mask on an unflagged footprint, `Keep` for `Seam`, `Seam` only when every footprint is flagged (REQ-CHART-130).
 
 ## Notes
+- **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - Shares R-669's Path B batch where that exists.
 - Waits on its rulings item: RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
