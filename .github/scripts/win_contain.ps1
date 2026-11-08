@@ -46,6 +46,9 @@ $MemoryCap = 8589934592
 $ProcessLimit = 1024
 # The low limit the check's scenario 45 runs at.
 $CheckProcessLimit = 6
+# CreateProcess's refusal of a start breaking away from a job that doesn't allow it (ERROR_ACCESS_DENIED); the process
+# limit's refusal is ERROR_NOT_ENOUGH_QUOTA, so only this one proves the job held the start.
+$BreakawayRefused = 5
 # Each marker is a loopback address in a `ping` that lasts about ten minutes, so the lister finds it by its command line.
 $LeakMark = '127.29.97.53'
 $OuterMark = '127.59.97.53'
@@ -223,28 +226,38 @@ public static class PrinContain {
         return handle;
     }
 
+    // NUL, opened for reading as an inheritable handle; the caller closes it.
     static IntPtr Nul() {
         SecurityAttributes sa = new SecurityAttributes();
         sa.Length = Marshal.SizeOf(typeof(SecurityAttributes));
         sa.Inherit = 1;
-        return CreateFileW("NUL", 0x80000000, 3, ref sa, 3, 0, IntPtr.Zero);
+        IntPtr h = CreateFileW("NUL", 0x80000000, 3, ref sa, 3, 0, IntPtr.Zero);
+        if (h == new IntPtr(-1)) throw Error("CreateFile NUL");
+        return h;
     }
 
     // Starts `commandLine` with `flags`; with `std`, on this process's output and error and NUL's input.
     static ProcessInformation Start(string commandLine, uint flags, bool std) {
         StartupInfo si = new StartupInfo();
         si.cb = Marshal.SizeOf(typeof(StartupInfo));
+        IntPtr nul = IntPtr.Zero;
         if (std) {
+            nul = Nul();
             si.Flags = UseStdHandles;
-            si.StdInput = Nul();
+            si.StdInput = nul;
             si.StdOutput = Inheritable(GetStdHandle(-11));
             si.StdError = Inheritable(GetStdHandle(-12));
         }
-        ProcessInformation pi;
-        if (!CreateProcessW(null, new StringBuilder(commandLine), IntPtr.Zero, IntPtr.Zero, std, flags, IntPtr.Zero, null,
-            ref si, out pi))
-            throw Error("CreateProcess " + commandLine);
-        return pi;
+        try {
+            ProcessInformation pi;
+            if (!CreateProcessW(null, new StringBuilder(commandLine), IntPtr.Zero, IntPtr.Zero, std, flags, IntPtr.Zero,
+                null, ref si, out pi))
+                throw Error("CreateProcess " + commandLine);
+            return pi;
+        } finally {
+            // The child has its own copy of NUL's handle by now; this one, on every path, is closed.
+            if (nul != IntPtr.Zero) CloseHandle(nul);
+        }
     }
 
     // Runs `argv` in a new job, suspended until it is in it, and returns its exit code once it and all it left have ended.
@@ -265,11 +278,16 @@ public static class PrinContain {
         if (!AssignProcessToJobObject(job, pi.Process)) {
             Exception e = Error("AssignProcessToJobObject");
             TerminateProcess(pi.Process, 125);
+            CloseHandle(pi.Thread);
+            CloseHandle(pi.Process);
             CloseHandle(job);
             throw e;
         }
         if (ResumeThread(pi.Thread) == 0xFFFFFFFF) {
             Exception e = Error("ResumeThread");
+            CloseHandle(pi.Thread);
+            CloseHandle(pi.Process);
+            // The job's close ends the still-suspended process in it.
             CloseHandle(job);
             throw e;
         }
@@ -430,9 +448,12 @@ switch ($verb) {
 
             if ([int]$limit -lt $ProcessLimit) {
                 $held = $false
+                $base = [PrinContain]::ActiveProcesses([IntPtr]::Zero)
+                $started = @()
                 for ($i = 1; $i -le [int]$limit + 1; $i++) {
                     $active = [PrinContain]::ActiveProcesses([IntPtr]::Zero)
                     $child = [PrinContain]::Spawn((Ping-Line $LeakMark), 0)
+                    if ($child -gt 0) { $started += $child }
                     if ($active -lt [int]$limit) {
                         if ($child -le 0) { "probe: 45: start $i refused at $active of $limit active ($(-$child))"; exit 45 }
                     } else {
@@ -443,6 +464,15 @@ switch ($verb) {
                     }
                 }
                 if (-not $held) { "probe: 45: the limit of $limit was never reached"; exit 45 }
+                # Its children give their slots back before 43 and 46, ended by pid: the probe's process group ignores
+                # CTRL+C, and they inherit that, so the broadcast wouldn't end them.
+                foreach ($c in $started) { [PrinContain]::Kill($c) | Out-Null }
+                $until = (Get-Date).AddSeconds(30)
+                while (($active = [PrinContain]::ActiveProcesses([IntPtr]::Zero)) -gt $base) {
+                    if ((Get-Date) -gt $until) { "probe: 45: $active of $limit still active 30 s after its $($started.Count) children were ended, $base before"; exit 45 }
+                    Start-Sleep -Milliseconds 50
+                }
+                "probe: 45: its $($started.Count) children ended; $active of $limit active, as before it"
             }
 
             $parent = [int](Get-CimInstance Win32_Process -Filter "ProcessId = $PID").ParentProcessId
@@ -452,8 +482,12 @@ switch ($verb) {
             if (-not [PrinContain]::Broadcast()) { 'probe: 43: the CTRL+C broadcast could not be sent'; exit 43 }
             'probe: 43: CTRL+C broadcast to the whole console'
 
+            # A slot is free, so a refusal can only be the job's breakaway rule, not the process limit.
+            $active = [PrinContain]::ActiveProcesses([IntPtr]::Zero)
+            if ($active -ge [int]$limit) { "probe: 46: no slot free for the breakaway start: $active of $limit active"; exit 46 }
             $broke = [PrinContain]::Spawn((Ping-Line $LeakMark), [PrinContain]::CreateBreakawayFromJob)
             if ($broke -gt 0) { [PrinContain]::Kill($broke) | Out-Null; "probe: 46: a start broke away from the job: $broke"; exit 46 }
+            if ($broke -ne -$BreakawayRefused) { "probe: 46: the breakaway start refused, not as a breakaway ($(-$broke)), at $active of $limit active"; exit 46 }
             # A console of its own, as `setsid` gives a session of its own; 0x08000000 is CREATE_NO_WINDOW.
             $left = [PrinContain]::Spawn((Ping-Line $LeakMark), 0x08000000)
             Start-Sleep -Seconds 1

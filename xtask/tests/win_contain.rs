@@ -342,6 +342,172 @@ mod close {
     );
 }
 
+// ---- Scenario 45 gives its slots back; 46 counts only the breakaway refusal -------------------------------------------
+
+/// The text of `text` from `from` to the next `to` after it, or None if either is missing.
+fn between<'a>(text: &'a str, from: &str, to: &str) -> Option<&'a str> {
+    let start = text.find(from)?;
+    let end = text[start..].find(to)?;
+    Some(&text[start..start + end])
+}
+
+fn check_slots(script: &str) {
+    let probe = arm(script, "probe");
+    // Scenario 45, from its base count to the console read that starts 43.
+    let s45 = between(
+        probe,
+        "$base = [PrinContain]::ActiveProcesses",
+        "probe: 43:",
+    )
+    .unwrap_or("");
+    assert!(
+        s45.contains("if ($child -gt 0) { $started += $child }")
+            && s45.contains("foreach ($c in $started) { [PrinContain]::Kill($c) | Out-Null }"),
+        "{SCRIPT}'s scenario 45 doesn't end the children it started"
+    );
+    assert!(
+        s45.contains(
+            "while (($active = [PrinContain]::ActiveProcesses([IntPtr]::Zero)) -gt $base)"
+        ),
+        "{SCRIPT}'s scenario 45 doesn't wait for its slots to come back"
+    );
+    assert_eq!(
+        number_after(script, "$BreakawayRefused = "),
+        Some(5),
+        "{SCRIPT} doesn't take ERROR_ACCESS_DENIED as the breakaway refusal"
+    );
+    // Scenario 46's breakaway start, from its slot check to the child it leaves behind.
+    let s46 = between(probe, "probe: 46: no slot free", "$left = ").unwrap_or("");
+    assert!(
+        probe.contains("if ($active -ge [int]$limit) { \"probe: 46: no slot free"),
+        "{SCRIPT}'s scenario 46 doesn't make sure a slot is free"
+    );
+    assert!(
+        s46.contains("if ($broke -ne -$BreakawayRefused) {"),
+        "{SCRIPT}'s scenario 46 accepts any refusal of the breakaway start"
+    );
+}
+
+#[test]
+fn win_contain_low_limit_frees_its_slots() {
+    check_slots(&read(SCRIPT));
+}
+
+negative_control!(
+    win_contain_low_limit_frees_its_slots,
+    "scenario 45's children left holding the job's slots",
+    expected = "doesn't end the children it started",
+    check_slots(&edited(
+        &read(SCRIPT),
+        "foreach ($c in $started) { [PrinContain]::Kill($c) | Out-Null }",
+        ""
+    ))
+);
+
+mod slot_wait {
+    use super::*;
+    negative_control!(
+        win_contain_low_limit_frees_its_slots,
+        "scenario 45 not waiting for its slots",
+        expected = "doesn't wait for its slots to come back",
+        check_slots(&edited(&read(SCRIPT), ")) -gt $base)", ")) -gt $base + 1)"))
+    );
+}
+
+mod any_refusal {
+    use super::*;
+    negative_control!(
+        win_contain_low_limit_frees_its_slots,
+        "scenario 46 accepting the process limit's refusal",
+        expected = "accepts any refusal of the breakaway start",
+        check_slots(&edited(
+            &read(SCRIPT),
+            "if ($broke -ne -$BreakawayRefused) {",
+            "if ($false) {"
+        ))
+    );
+}
+
+mod refusal_code {
+    use super::*;
+    negative_control!(
+        win_contain_low_limit_frees_its_slots,
+        "the process limit's error taken as the breakaway refusal",
+        expected = "doesn't take ERROR_ACCESS_DENIED",
+        check_slots(&edited(
+            &read(SCRIPT),
+            "$BreakawayRefused = 5",
+            "$BreakawayRefused = 1816"
+        ))
+    );
+}
+
+mod no_free_slot {
+    use super::*;
+    negative_control!(
+        win_contain_low_limit_frees_its_slots,
+        "scenario 46 run with the job full",
+        expected = "doesn't make sure a slot is free",
+        check_slots(&edited(
+            &read(SCRIPT),
+            "if ($active -ge [int]$limit) { \"probe: 46: no slot free",
+            "if ($false) { \"probe: 46: no slot free"
+        ))
+    );
+}
+
+/// Run's failure paths after the start close the process and thread handles; NUL's handle is checked and closed.
+fn check_handles(script: &str) {
+    let body = run_body(script);
+    for what in ["AssignProcessToJobObject", "ResumeThread"] {
+        let path = between(
+            body,
+            &format!("Exception e = Error(\"{what}\");"),
+            "throw e;",
+        )
+        .unwrap_or("");
+        assert!(
+            path.contains("CloseHandle(pi.Thread);") && path.contains("CloseHandle(pi.Process);"),
+            "{SCRIPT}'s Run leaves the handles open when {what} fails"
+        );
+    }
+    assert!(
+        script.contains("if (h == new IntPtr(-1)) throw Error(\"CreateFile NUL\");")
+            && script.contains("if (nul != IntPtr.Zero) CloseHandle(nul);"),
+        "{SCRIPT} doesn't check and close NUL's handle"
+    );
+}
+
+#[test]
+fn win_contain_closes_its_handles() {
+    check_handles(&read(SCRIPT));
+}
+
+negative_control!(
+    win_contain_closes_its_handles,
+    "the handles left open when ResumeThread fails",
+    expected = "leaves the handles open when ResumeThread fails",
+    check_handles(&edited(
+        &read(SCRIPT),
+        "Exception e = Error(\"ResumeThread\");\n            CloseHandle(pi.Thread);\n            CloseHandle(pi.Process);\n",
+        "Exception e = Error(\"ResumeThread\");\n"
+    ))
+);
+
+mod nul {
+    use super::*;
+    negative_control!(
+        win_contain_closes_its_handles,
+        "NUL's handle never closed",
+        expected = "doesn't check and close NUL's handle",
+        check_handles(&edited(
+            &read(SCRIPT),
+            "if (nul != IntPtr.Zero) CloseHandle(nul);",
+            ""
+        ))
+    );
+}
+
 // ---- The job: dispatch only, running the check ----------------------------------------------------------------------
 
 fn check_workflow(text: &str) {
