@@ -4639,7 +4639,7 @@
     section: Tilt (basis edit)
   verify:
     method: unit test
-    detail: "cargo test -p kernel saved_chart_skewed: a shape-sphere view saved under Lean each axis at τ = (30°, 40°) into one momentum control, then tilted τ′ = (20°, 0) into the same control, places the pixel (0.3, 0.7) from the centre, and every pixel of a 33 × 33 grid, as RQ-746's ruling composes it, to 1 ulp; at τ′ = 0 bit-identical to the saved view; control: the other option's composition (RQ-746's options (a) and (b) give (0.2026, 0.4759, 0.6628) and (0.1598, 0.4307, 0.7099) at that pixel) fails; review (physics)"
+    detail: "cargo test -p kernel saved_chart_skewed: a shape-sphere view saved under Lean each axis at τ = (30°, 40°) into one momentum control, then tilted τ′ = (20°, 0) into the same control, places the pixel (0.3, 0.7) from the centre, and every pixel of a 33 × 33 grid, as RQ-746's ruling composes it, to 1 ulp; at τ′ = 0 bit-identical to the saved view; control: the other option's composition (RQ-746's options (a) and (b) give (0.2026, 0.4759, 0.6628) and (0.1598, 0.4307, 0.7099) at that pixel) fails; at the edge of Lean's range, a saved tilt at τ = (90°, 40°) (R-474 R8's dead zone) composes, or is not offered, as RQ-746's ruling states (option (a): `t̂` the cross product's own sign, `e_X` fixing none; option (b): the saved target vanishes under R-514 I2 and is not offered), and at τ = (90°, 90°) no composition is made (R-554's `ray-degenerate`, no frame under either option); review (physics)"
   rulings:
   - R-474
   - R-475
