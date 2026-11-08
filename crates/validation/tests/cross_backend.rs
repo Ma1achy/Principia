@@ -189,6 +189,41 @@ negative_control!(
     }
 );
 
+/// Two records of one backend, the second on another driver and failing: the report keys by backend, so it would show
+/// the first's standing and hide the second's failure. The set is refused, naming both drivers.
+fn check_one_backend_twice(second: &str) {
+    let first = clean("Metal");
+    let mut other = clean(second);
+    other.driver = "Metal 9.9.9".to_owned();
+    flip(&mut other, 0, 2);
+    for records in [
+        [first.clone(), other.clone(), clean(CPU)],
+        [first.clone(), clean(CPU), other.clone()],
+        [clean(CPU), first.clone(), other.clone()],
+    ] {
+        let e = compare(&records)
+            .map(|_| ())
+            .expect_err("two records of one backend were compared");
+        assert!(e.contains("Metal: two records"), "{e}");
+        assert!(
+            e.contains("Metal 1.2.3") && e.contains("Metal 9.9.9"),
+            "{e}"
+        );
+    }
+}
+
+#[test]
+fn cross_backend_compare_refuses_one_backend_twice() {
+    check_one_backend_twice("Metal");
+}
+
+negative_control!(
+    cross_backend_compare_refuses_one_backend_twice,
+    "the second record on another backend: nothing to refuse",
+    expected = "two records of one backend were compared",
+    check_one_backend_twice("lavapipe")
+);
+
 #[test]
 fn cross_backend_compare_refuses_rows_that_do_not_line_up() {
     let mut cut = clean("Metal");

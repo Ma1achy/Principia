@@ -2335,6 +2335,22 @@ fn check_alike(records: &[Record]) -> Result<(), String> {
     Ok(())
 }
 
+/// Refuses `records` where two name one backend: the report keys every pair and each driver's standing by backend, so a
+/// second record of one would be hidden behind the first, its driver's failure with it (parity contract § 4: a standing
+/// holds on its adapter and driver version). Records of one backend are compared in separate runs.
+fn check_distinct(records: &[Record]) -> Result<(), String> {
+    for (i, a) in records.iter().enumerate() {
+        if let Some(b) = records[i + 1..].iter().find(|b| b.backend == a.backend) {
+            return Err(format!(
+                "{}: two records ({}, driver {}; {}, driver {}), refused, not compared: the report keys each \
+                 standing and pair by backend, so compare them in separate runs",
+                a.backend, a.adapter, a.driver, b.adapter, b.driver
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// A pair's tally, before its outcome.
 #[derive(Default)]
 struct Tally {
@@ -2392,8 +2408,9 @@ fn domain(record: &Record, entries: &BTreeSet<&str>) -> String {
 }
 
 /// Compares `records`, every pair, and gives each driver its standing (the module's note). A pair over different inputs
-/// is refused. No threshold enters.
+/// is refused, as is a set where two records name one backend. No threshold enters.
 pub fn compare(records: &[Record]) -> Result<Comparison, String> {
+    check_distinct(records)?;
     check_alike(records)?;
     let cpu = records.iter().position(|r| r.backend == CPU);
     let n = records.len();
