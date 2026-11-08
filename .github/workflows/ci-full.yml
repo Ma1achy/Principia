@@ -15,7 +15,10 @@
 # and start the full tier, instead of waiting for it"): a quick attempt still going is cancelled and the re-run starts
 # once the cancellation has ended it, the full attempt then running all it had not passed; a quick attempt that has
 # ended is re-run as it is, the full attempt skipping what it passed (`ci_tier.sh decide`, `quick_passed` and
-# `quick_covers_ci`). A full attempt still going (a retry's) is the full tier already, and is waited for.
+# `quick_covers_ci`). A full attempt still going (a retry's) is the full tier already, and is waited for, never
+# cancelled. Only an attempt shown quick, its `changes` job having ended and `ci-quick` not skipped, is cancelled; one
+# not shown either way (its jobs unread, its `changes` not yet ended) is read again for at most 5 minutes, then fails
+# the job, named, cancelling nothing.
 #
 # Any other label's run skips its one job at job level, and asks for no runner, in a group of its own, so it cancels
 # nothing (below).

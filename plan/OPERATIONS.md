@@ -441,7 +441,9 @@ dev-dependency, links the rest). So before the label:
   and waits as long again, and starts the full attempt. A cancelled attempt passed nothing it had not finished, so the
   full attempt runs all of it again; a wait cut off fails the job, named, and starts nothing, the full-only checks
   staying pending. A full attempt still going (a retry's) is the full tier already: it is waited for, at most 350
-  minutes, never cancelled. The full attempt skips what an earlier
+  minutes, never cancelled. Only an attempt shown quick, its `changes` job having ended and `ci-quick` not skipped, is
+  cancelled; one not shown either way, its jobs unread or its `changes` not yet ended, is read again for at most 5
+  minutes, then fails the job, named, cancelling nothing. The full attempt skips what an earlier
   attempt's `ci-quick` passed on the same merge commit, the re-run keeping its commit, where it would only repeat it:
   `ci-checks`' fmt, clippy and build, the same commands over the workspace (`changes`' output `quick_passed`, read from
   that attempt's jobs); and, when that `ci-quick` tested every crate (`quick_covers_ci`), the `ci` profile's tests it
