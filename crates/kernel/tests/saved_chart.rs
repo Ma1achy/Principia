@@ -374,6 +374,11 @@ fn check_curved(lost: bool) {
             let chart = curved
                 .reopen(sphere(), &new, centre, SPAN)
                 .expect("a composition");
+            assert!(
+                chart.tilt().on() == view.tilt().on,
+                "the saved chart reopened at τ′ = 0 takes a tilt path where the saved view takes none, so it is \
+                 not bitwise the saved view"
+            );
             for [u, v] in window(CENTRE, 1.0) {
                 assert!(
                     bits(&chart.decode::<Defaults, f64>(u, v)) == bits(&view.decode::<Defaults, f64>(u, v))
@@ -462,9 +467,9 @@ negative_control!(
 // ── Every route of a new tilt's offsets (R-513 Q1) ──────────────────────────────────────────────────────────────────
 
 /// Saved and new tilts over every route: one saved target or two, Tip as sheet with both angles set, a new tilt into
-/// the saved target, into the saved second target, into another, and with two targets one of them saved, and a saved
-/// view untilted, its `R` the identity; each about
-/// the view's centre and a panned one, as `R·R′` to one ulp. `swap` composes each pair the other way (the control).
+/// the saved target, into the saved second target, into another, and with two targets one of them saved (either one),
+/// and a saved view untilted, its `R` the identity; each about the view's centre and a panned one, as `R·R′` to one
+/// ulp. `swap` composes each pair the other way (the control).
 fn check_routes(swap: bool) {
     let cases = [
         (
@@ -498,6 +503,10 @@ fn check_routes(swap: bool) {
         (
             spec(-40.0, 0.0, TiltMap::Sheet, 3, 3),
             spec(10.0, 25.0, TiltMap::Sheet, 7, 7),
+        ),
+        (
+            spec(25.0, 0.0, TiltMap::Lean, 2, 2),
+            spec(-15.0, 30.0, TiltMap::Sheet, 2, 5),
         ),
         (
             spec(0.0, 0.0, TiltMap::Sheet, 3, 3),
