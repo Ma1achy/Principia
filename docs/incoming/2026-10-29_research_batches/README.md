@@ -262,7 +262,12 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
   - **Decoded, by running the printed starts** (R-812: a run answers what the page leaves open).
     `scripts/t2000_time_unit.py` (`python3 -I`; output `tanikawa_2000/time_unit_check.txt`) integrates each start in
     the frame both papers print, with G = 1, each mass 1, AB = 1, and times the n_min-th minimum of r; masses of 1/3
-    each (M = 1 as the total) multiply every time by √3 exactly, the column beside it. Paper I Table IIa: 24 of 27
+    each (M = 1 as the total) multiply every time by √3 exactly, the column beside it. **Energy check** (bound
+    fixed before the run, R-649: a measurement's criterion is written first and never moved): the run passes
+    through near-misses that are not head-on without regularisation, so each row reports dE, the largest
+    |E − E0| / |E0| on its integrator steps with r ≥ 1e-3, and a row with dE above 1e-5 reads "CHECK FAILED" and
+    gives no decode result. A time scales as |E|^(−3/2), so 1e-5 moves a time by about 1.5e-5 relative, a tenth
+    of the agreements reported below. Paper I Table IIa: 24 of 27
     printed Times agree to within 3.9e-4 relative, 21 of them with the printed pair (type 1); the √3 reading misses
     each of the 24 by 73 %. The six rows that miss in time or pair lie at or beside a change in the printed sign of
     φ, which p. 348 reads as a triple collision ("the behavior of φ along the vertical or horizontal direction changes

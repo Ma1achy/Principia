@@ -22,7 +22,16 @@ they differ from these by up to 9.2e-7 (52 of the 59 rows do not round to the pr
 and lie off Gamma_3 radially by up to 9.9e-7, while atan2(y, x + 0.5) agrees with the printed alpha
 to 1.3e-7. A run that passes t = 3 * printed + 1 without its n_min-th minimum is NOT REACHED. Column
 t1 is the time of the first minimum of r on the same start, a lower bound on every later one.
-A check, not a target (R-649).
+
+Energy check (TASK-M9-43 review, physics F1; the bound fixed before the run, R-649): a near-miss
+that is not head-on is integrated through without regularisation, which can lose the energy. Each
+run evaluates E = sum |v|^2 / 2 - sum 1/r_ij at every integrator step up to the reported instant on
+which r >= E_SAMPLE_R (closer, the evaluation itself is noise), and column dE is the largest
+|E - E0| / |E0|. Above DE_BOUND the row reads "CHECK FAILED" and gives no decode result (rel.diff
+"--"): the run, not the printed row, is in doubt. DE_BOUND = 1e-5: a time scales as |E|^(-3/2), so
+it moves a time by about 1.5e-5 relative, a tenth of the 1.3e-4 to 5.2e-4 agreements the note
+reports. A first-minimum run (t1) above the bound is marked "t1 CHECK FAILED". A check, not a
+target (R-649).
 
 Rows: Paper I Table IIa (p. 348; x, y, Time as printed on the page image; the PDF's text layer reads
 row 19's Time as 0.7891, the page prints 0.4891) and Tanikawa 2000's reconciled tables
@@ -41,6 +50,8 @@ from scipy.integrate import solve_ivp
 R_STOP = 1e-9  # a near-miss closer than this is taken as the collision itself
 R_BOUNCE = 1e-6  # a head-on approach this close is a collision continued by reversal
 HEAD_ON = 1e-6  # |d x dv| / (|d| |dv|) below this: the pair meets head-on
+DE_BOUND = 1e-5  # largest |E - E0| / |E0| for a row to give a result; fixed before the run (R-649)
+E_SAMPLE_R = 1e-3  # E is evaluated only on steps with r >= this
 WALL_LIMIT = 600.0  # seconds per row, a safety stop only; the t cap decides
 PAIRS = ((0, 1), (1, 2), (0, 2))  # r12 -> type 3, r23 -> type 1, r13 -> type 2 (Paper I p. 339)
 TYPE = (3, 1, 2)
@@ -132,19 +143,38 @@ def head_on(y):
     return abs(d[0] * dv[1] - d[1] * dv[0]) / (r * np.hypot(*dv)) < HEAD_ON
 
 
+def energy(ys):
+    """(E, r) on each column of ys: total energy (G = 1, unit masses) and r = min r_ij."""
+    p = ys[:6].reshape(3, 2, -1)
+    v = ys[6:12]
+    rs = np.array([np.hypot(*(p[i] - p[j])) for i, j in PAIRS])
+    return 0.5 * np.sum(v**2, axis=0) - np.sum(1.0 / rs, axis=0), rs.min(axis=0)
+
+
 def nth_minimum(x, y, nmin, t_cap):
-    """(time, r, type, how): time and r of the n_min-th minimum of r, or what stopped the run."""
+    """(time, r, type, how, dE): the n_min-th minimum of r, or what stopped the run, and the energy error."""
     st = np.array([x, y, -0.5, 0.0, 0.5, 0.0] + [0.0] * 6 + [0.0])
+    e0 = energy(st[:, None])[0][0]
+    de = [0.0]  # largest |E - E0| / |E0| on sampled steps so far
+
+    def track(ys, t_end):
+        e, r = energy(ys)
+        keep = (r >= E_SAMPLE_R) & (ys[12] <= t_end)
+        if keep.any():
+            de[0] = max(de[0], float(np.max(np.abs(e[keep] - e0))) / abs(e0))
+
     s0, n, bounces, t0 = 0.0, 0, 0, wall.time()
     events = [rdot, near]
     while wall.time() - t0 < WALL_LIMIT:
         sol = solve_ivp(rhs, (s0, s0 + 0.5), st, method="DOP853", rtol=1e-12, atol=1e-14, events=events)
+        last = nmin - n - 1  # index of the n_min-th minimum among this segment's, if it falls here
+        track(sol.y, sol.y_events[0][last][12] if 0 <= last < len(sol.y_events[0]) else np.inf)
         note = " (%d bounces before)" % bounces if bounces else ""
         for ye in sol.y_events[0]:
             n += 1
             if n == nmin:
                 k, r = rmin(ye)
-                return ye[12], r, TYPE[k], "minimum" + note
+                return (ye[12], r, TYPE[k], "minimum" + note, de[0])
         if sol.status == 1:
             ye = sol.y_events[1][0]
             s0, st = sol.t_events[1][0], ye.copy()
@@ -152,12 +182,12 @@ def nth_minimum(x, y, nmin, t_cap):
             if events[1] is close:  # a near-miss reached R_STOP: the collision itself
                 n += 1
                 if n == nmin:
-                    return ye[12], r, TYPE[k], "collision" + note
-                return ye[12], r, TYPE[k], "STOPPED at a collision at minimum %d%s" % (n, note)
+                    return (ye[12], r, TYPE[k], "collision" + note, de[0])
+                return (ye[12], r, TYPE[k], "STOPPED at a collision at minimum %d%s" % (n, note), de[0])
             if head_on(ye):  # reverse the pair's relative velocity about its centre of mass
                 n += 1
                 if n == nmin:
-                    return ye[12], r, TYPE[k], "collision" + note
+                    return (ye[12], r, TYPE[k], "collision" + note, de[0])
                 i, j = PAIRS[k]
                 v = st[6:12].reshape(3, 2)
                 vcm = 0.5 * (v[i] + v[j])
@@ -167,29 +197,35 @@ def nth_minimum(x, y, nmin, t_cap):
                 events = [rdot, close]
             continue
         if sol.status != 0:
-            return sol.y[12, -1], float("nan"), None, "STOPPED: integrator (%d minima)" % n
+            return (sol.y[12, -1], float("nan"), None, "STOPPED: integrator (%d minima)" % n, de[0])
         st, s0 = sol.y[:, -1], sol.t[-1]
         if events[1] is close and rmin(st)[1] > R_BOUNCE:
             events = [rdot, near]
         if st[12] > t_cap:
-            return st[12], float("nan"), None, "NOT REACHED by t = %.3f (%d minima)" % (st[12], n)
-    return st[12], float("nan"), None, "STOPPED: wall limit (%d minima)" % n
+            return (st[12], float("nan"), None, "NOT REACHED by t = %.3f (%d minima)" % (st[12], n), de[0])
+    return (st[12], float("nan"), None, "STOPPED: wall limit (%d minima)" % n, de[0])
 
 
 def report(name, rows):
     print("== %s" % name)
-    print("%-6s %-10s %-10s %-10s %-10s %-10s %-9s %-8s %-4s %-10s %s"
-          % ("n_min", "x", "y", "printed", "t(m=1)", "t(m=1/3)", "rel.diff", "r", "type", "t1(m=1)", "how"))
+    print("%-6s %-10s %-10s %-10s %-10s %-10s %-9s %-8s %-4s %-10s %-8s %s"
+          % ("n_min", "x", "y", "printed", "t(m=1)", "t(m=1/3)", "rel.diff", "r", "type", "t1(m=1)", "dE",
+             "how"))
     with multiprocessing.Pool(4) as pool:
         res = pool.starmap(nth_minimum, [(float(x), float(y), nmin, 3 * float(tp) + 1)
                                           for nmin, x, y, tp, _w in rows])
         first = pool.starmap(nth_minimum, [(float(x), float(y), 1, 3 * float(tp) + 1)
                                             for _n, x, y, tp, _w in rows])
-    for (nmin, x, y, tp, want_type), (t, r, ty, how), f in zip(rows, res, first):
-        rel = (t - float(tp)) / float(tp)
+    for (nmin, x, y, tp, want_type), (t, r, ty, how, de), f in zip(rows, res, first):
         flag = "" if want_type is None or ty is None or ty == want_type else " (type %s printed)" % want_type
-        print("%-6d %-10.10s %-10.10s %-10s %-10.7f %-10.7f %+9.1e %-8.1e %-4s %-10.7f %s%s"
-              % (nmin, x, y, tp, t, t * 3**0.5, rel, r, ty, f[0], how, flag))
+        if de > DE_BOUND:
+            rel, how = "--", "CHECK FAILED (run: %s)" % how
+        else:
+            rel = "%+9.1e" % ((t - float(tp)) / float(tp))
+        if f[4] > DE_BOUND:
+            flag += "; t1 CHECK FAILED (dE %.1e)" % f[4]
+        print("%-6d %-10.10s %-10.10s %-10s %-10.7f %-10.7f %9s %-8.1e %-4s %-10.7f %-8.1e %s%s"
+              % (nmin, x, y, tp, t, t * 3**0.5, rel, r, ty, f[0], de, how, flag))
         sys.stdout.flush()
 
 
@@ -197,8 +233,9 @@ def main():
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     rec = os.path.join(here, "tanikawa_2000", "reconciled")
     print("t2000_time_unit.py: G = 1, each mass 1, AB = 1; R_STOP %g, R_BOUNCE %g, HEAD_ON %g; "
-          "t(m=1/3) = t(m=1) * sqrt(3); numpy %s, scipy %s" % (R_STOP, R_BOUNCE, HEAD_ON, np.__version__,
-                                                               scipy.__version__))
+          "t(m=1/3) = t(m=1) * sqrt(3); dE = max |E - E0| / |E0| on steps with r >= %g, "
+          "CHECK FAILED above DE_BOUND %g; numpy %s, scipy %s"
+          % (R_STOP, R_BOUNCE, HEAD_ON, E_SAMPLE_R, DE_BOUND, np.__version__, scipy.__version__))
     report("Paper I (1995) Table IIa, p. 348, type 1, n_min = 2",
            [(2, a, b, c, 1) for a, b, c in (ln.split() for ln in PAPER_I_IIA.splitlines())])
     tables = (("table_unnumbered_p162.csv", "Tanikawa 2000 unnumbered table, p. 162"),
