@@ -1541,7 +1541,7 @@ Nothing below is decided here.
 
 ## 15. Plan
 
-**Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 26 tasks below, and each names the rulings item it waits on, or the design as a whole. Only those tasks wait behind it; no existing task, in M4 or M9, does.
+**Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 26 tasks below, and each names the rulings item it waits on, or the design as a whole; R-847's TASK-M8-122 and TASK-M8-123 wait on it too. Only those 28 tasks wait behind it; no other existing task, in M4 or M9, does.
 
 Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold `L_z` or the virial pair, so those two sit in M8. **One edge is named, not made:** TASK-M4-06's golden needs RQ-714's domain, so TASK-M4-06 gains TASK-M4-34 in Depends on when RQ-714 rules, TASK-M4-37's Deliverables say so, and from then until TASK-M4-34 merges it holds 230 tasks: TASK-M4-06 and the 217 other existing open tasks behind it, and 12 of the tasks below. The seven M9 edges an earlier draft made are dropped: TASK-M9-18, -20, -21 and -22 have no GPU run (R-671), and -26, -28 and -31 reach TASK-M4-06 through TASK-M4-17.
 
