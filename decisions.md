@@ -31907,7 +31907,10 @@ previous stage's tests green.
 
 - **The tasks in each stage.** The owner named stages, not tasks; the placements are ours. Stage 1: no task built
   exactly that, so **TASK-M8-124** is added (REQ-CHART-139), its design governed by R-864. Stage 2: TASK-M8-117
-  (`path_lock_centre`). Stage 3: TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110,
+  (`path_lock_centre`), the based morph with the stored anchor. **No task on `main` builds stage 2's sliding anchor:**
+  TASK-M8-117 keeps design § 17.8's `anchor not in B` arm, labelled and unbased, until the owner's sliding-anchor
+  answer, in the open rulings PR #443 and not yet on `main`, is ported and replaces it; until then stage 2 is
+  incomplete (RQ-744 (D)). Stage 3: TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110,
   TASK-M8-111 and TASK-M8-119. Stage 4: TASK-M8-108. Stage 5: TASK-M8-113 to TASK-M8-116 and TASK-M8-120.
 - **The mechanism.** The owner's words gate merging; Depends on edges put them into effect. Each stage's tasks depend
   on the previous stage's, so they start once those have merged, or early off an approved head as R-388 allows any
@@ -31922,7 +31925,8 @@ previous stage's tests green.
 TASK-M7-72, TASK-M8-102 to TASK-M8-105, TASK-M8-112 and TASK-M8-118); TASK-M8-107 (the live blend) fits none by name;
 TASK-M8-106 straddles stages 1, 2 and 4; and three stage-3 tasks (TASK-M4-33, TASK-M4-34 and TASK-M8-100) can't take the
 edge to stage 2: the two in M4 would depend forward across milestones, and all three are already upstream of TASK-M8-117
-through TASK-M8-106 and TASK-M8-102, so the edge would close a cycle. None of those is given an edge here.
+through TASK-M8-106 and TASK-M8-102, so the edge would close a cycle. None of those is given an edge here. Stage 2's
+sliding anchor has no task on `main` (RQ-744 (D)).
 
 *What it refines:* no ruling. The design it orders is Proposed (`principia_chart_composition.md`'s status), and its
 § 15 placed the tasks by what depends on them; the order is the owner's, and § 15 now points to it. Read with R-864.

@@ -1473,7 +1473,8 @@ fits no stage or straddles two, don't choose. Nothing below is given a stage edg
 *In plain English: the owner set five stages for building the chart-composition tasks. Most tasks fall into one stage
 and now wait on the stage before. Some fall into none, one falls into three, and three stage-3 tasks can't be made to wait
 on stage 2: two sit in an earlier milestone (M4), which may not wait on M8 work, and all three are already needed by
-stage 2's task through the chain the design drew. The owner says where each goes.*
+stage 2's task through the chain the design drew. And stage 2's sliding anchor has no task yet. The owner says where
+each goes.*
 
 - **File, section:** `decisions.md` § R-863, the owner's words: "build in this order: (1) the path object and the bitwise
   tests that today's pan, zoom, tilt, slice, lock and Save-view-as-chart reproduce exactly through it, before any new
@@ -1501,6 +1502,14 @@ stage 2's task through the chain the design drew. The owner says where each goes
   contracts, docs), TASK-M8-102 (CPU batch, numerical inverses), TASK-M8-103 (the builder's panels), TASK-M8-104 (1D
   charts), TASK-M8-107 (live paths: the blend entry; R-863 names no live stage), TASK-M8-112 (paper frames as presets),
   TASK-M8-118 (hold `L_z`) and TASK-M7-72 (contours of any primitive).
+- **(D) Stage 2's sliding anchor has no task on `main`.** The owner's stage 2 is "based morph, then the sliding anchor".
+  TASK-M8-117 is the based morph with the *stored* anchor: its `path_lock_centre` asserts "`anchor not in B` labelled
+  and unbased", and design § 17.8 (`docs/design/principia_chart_composition.md`) says "Its sliding anchor (Theorem 8,
+  "the RQ-721 rider") is RQ-721's, not applied here: until then `anchor not in B` stands". The sliding anchor is the
+  owner's RQ-721 rider in the open rulings PR #443 ("no labelled jumps under the lock. Where the anchor can't exist in
+  chart B ... the anchor slides continuously to its nearest point in B"), not yet on `main`. Until that answer is
+  ported, with a task that builds it in stage 2 and replaces TASK-M8-117's `anchor not in B` arm, stage 2 is incomplete,
+  and stage 3 waits only on its based-morph half.
 - **Options:**
   - (a) Split and re-place: TASK-M8-106 keeps only what is past stage 1 (its line, re-timing, alignment and export),
     drops REQ-CHART-113's tests to TASK-M8-124, and TASK-M8-117 depends on TASK-M8-124 and TASK-M2-23 and not on it,
@@ -1514,7 +1523,8 @@ stage 2's task through the chain the design drew. The owner says where each goes
   - (c) Another, stated by the owner.
 - **Recommendation:** (a) for (B), since it is the split that makes the stage order hold by edges; for (A), (b), since
   moving TASK-M4-33 and TASK-M4-34 out of M4 changes M4's gate. A recommendation, not applied.
-- **Applied meanwhile:** the edges above; none for (A), (B) or (C). Every task here stays behind TASK-M4-37.
+- **Applied meanwhile:** the edges above; none for (A), (B) or (C); (D) recorded in R-863, design § 15 and TASK-M8-117's
+  Notes, no task added, since the sliding anchor's ruling isn't on `main`. Every task here stays behind TASK-M4-37.
 - **Waits:** nothing can start yet: all of it waits behind TASK-M4-37 and, for TASK-M8-124, the owner's answer to R-864's
   type sketch.
 

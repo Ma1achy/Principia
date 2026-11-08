@@ -1559,11 +1559,12 @@ Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold 
 
 **The build order (R-863, the owner's order of 8 Nov 2026).** Once TASK-M4-37 releases them, the tasks are built in five
 stages, each merging only with the previous stage's tests green. Applied per R-369 (R-863), each stage's tasks depend on
-the previous stage's, placed so: (1) TASK-M8-124; (2)
-TASK-M8-117; (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and
-TASK-M8-119; (4) TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and TASK-M8-120. TASK-M8-124 is the 26th task behind
-TASK-M4-37. What the order leaves open, the tasks that fit no stage or straddle two and the stage-3 edges that would point
-forward across milestones or close a cycle, is RQ-744's.
+the previous stage's, placed so: (1) TASK-M8-124; (2) TASK-M8-117, the based morph with the stored anchor (§ 17.8's
+`anchor not in B` stands; no task on `main` builds the sliding anchor, RQ-744 (D)); (3) TASK-M4-33, TASK-M4-34,
+TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119; (4) TASK-M8-108; (5) TASK-M8-113 to
+TASK-M8-116 and TASK-M8-120. TASK-M8-124 is the 26th task behind TASK-M4-37. What the order leaves open, the tasks that
+fit no stage or straddle two and the stage-3 edges that would point forward across milestones or close a cycle, is
+RQ-744's.
 
 ---
 
