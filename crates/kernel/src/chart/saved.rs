@@ -6,10 +6,12 @@
 //! the view held them, never re-orthonormalised (under Lean each axis the pair may be skewed, and is kept so), its axes
 //! affine: reopened, it is the [`Latent`] chart on those vectors, so it decodes the saved view bit for bit (S3, L6).
 //!
-//! **A curved view** ([`Saved::Curved`], [`Curved`]) is saved as its parent chart (its registry id; the chart value,
-//! which holds the hidden coordinates' values at the slice centre, given back on reopening), its centre `s` in the
-//! parent's own parameters and its tilt, the stored angles, targets and map with the targets' slider spans; `R` is
-//! recomputed from them ([`TiltSpec::columns`], [`TiltSpec::inputs`]; R-474 R3). Its own parameters are the saved
+//! **A curved view** ([`Saved::Curved`], [`Curved`]) is saved as its parent chart, its id and params (R-475 L5,
+//! REQ-CHART-073): its registry id, and the chart value by value, the hidden coordinates' values at the slice centre
+//! among its params ([`ParentParams`]), so the definition alone decodes the view ([`Curved::open`]) and a parent with
+//! other params is refused ([`Curved::reopen`]); its centre `s` in the parent's own parameters and its tilt, the
+//! stored angles, targets and map with the targets' slider spans; `R` is recomputed from them ([`TiltSpec::columns`],
+//! [`TiltSpec::inputs`]; R-474 R3). Its own parameters are the saved
 //! view's window offsets from `s`, so a new tilt `R′` acts on them first and the saved `R` after ([`Composed`]; L5,
 //! R-513):
 //! - `(u′, v′, e′) = R′·(ũ, ṽ, 0)`, `(ũ, ṽ)` the pixel's offset from the view's centre `c`, which is also the new
@@ -39,18 +41,47 @@
 //!
 //! **The serialisation** ([`Saved::to_words`], [`Saved::from_words`]): the definition as [`WORDS`] doubles, by value,
 //! so it reads back bit for bit (R-483 H3); a saved chart carries no links (R-478). The words: the kind (0 oblique,
-//! 1 curved), then `z₀`, `q₁`, `q₂` for an oblique chart, or the parent's registry index, `s`, `τ₁`, `τ₂`, the map
-//! (0 Tip as sheet, 1 Lean each axis), `X`, `Y` and the two spans for a curved one, the rest `+0`. A word list that
-//! is not one of these, or holds a non-finite value, reads as `None`.
+//! 1 curved), then `z₀`, `q₁`, `q₂` for an oblique chart, the rest `+0`; or, for a curved one, the parent's registry
+//! index, `s`, `τ₁`, `τ₂`, the map (0 Tip as sheet, 1 Lean each axis), `X`, `Y` and the two spans, then the parent's
+//! [`PARAMS`] words ([`ParentParams`]): its form, which of its registry entry's charts it is, then its params, the
+//! rest `+0`. A word list that is not one of these, or holds a non-finite value, reads as `None`; params that are not
+//! the named parent's are refused on reopening. The layout is the kernel's own (applied per R-369); the export format
+//! is REQ-TOOL-065's and REQ-SYS-011's.
+//!
+//! **The parent's params** ([`ParentParams`]): each value field in declaration order, an enum as its index in
+//! declaration order ([`Mapping`], [`ShapeMap`]), a body or other index as itself; each type-level parameter as a
+//! code, ahead of the fields: a mixed axis's [`axis_code`] (its [`mixed::Coordinate`] and whether it is derived), an energy
+//! axis's [`Quantity`] index; a wrapped chart's params where the wrapper's field is. The link selection a chart is
+//! built for is never written: a saved chart carries no links (R-478); the links are `SimConfig`'s own group.
 
 use spirv_std::num_traits::Float;
 
+use super::burrau::{Burrau, EuclidPlane};
+use super::burrau_acute::{BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz};
+use super::construction::{HeldK, HeldLz, RestStart};
+use super::energy::{Mapped, Mapping, Quantity};
+use super::invariant::{Invariant, InvariantLE, InvariantLK};
 use super::latent::Latent;
+use super::mass_simplex::MassSimplex;
+use super::mixed;
+use super::shape_sphere::{ShapeMap, ShapeSphere};
 use super::tilt::{narrow, Placement, Shift, Tilt, TiltMap, TiltSpec, Tiltable, Tilted};
 use super::{Chart, REGISTRY};
 
-/// The length of a saved chart's serialisation, in doubles: the kind and the oblique chart's 24.
-pub const WORDS: usize = 25;
+/// The words of a curved chart's header: the kind, the parent's index, `s`, `τ₁`, `τ₂`, the map, `X`, `Y`, the spans.
+const HEADER: usize = 11;
+
+/// The words a parent's params take ([`ParentParams`]): its form, then the longest params, the shape sphere's 19.
+pub const PARAMS: usize = 20;
+
+/// The length of a saved chart's serialisation, in doubles: a curved chart's header and its parent's params, longer
+/// than the kind and the oblique chart's 24.
+pub const WORDS: usize = HEADER + PARAMS;
+
+/// An oblique chart's words: the kind and `z₀`, `q₁`, `q₂`.
+const OBLIQUE_WORDS: usize = 25;
+
+const _: () = assert!(OBLIQUE_WORDS <= WORDS);
 
 /// An oblique chart's kind word.
 const OBLIQUE: f64 = 0.0;
@@ -68,6 +99,373 @@ pub struct Curved {
     pub tilt: TiltSpec,
     /// The targets' slider spans (R-507 U1).
     pub span: [f64; 2],
+    /// The parent chart by value ([`ParentParams`]): its form, then its params, the rest `+0`.
+    pub params: [f64; PARAMS],
+}
+
+/// The words of a parent's params ([`ParentParams::write`]), in order.
+pub struct Writer<'a> {
+    words: &'a mut [f64],
+    at: usize,
+}
+
+impl Writer<'_> {
+    /// The value `x`, as it is.
+    #[inline]
+    pub fn put(&mut self, x: f64) {
+        self.words[self.at] = x;
+        self.at += 1;
+    }
+
+    /// Each of `xs`, in order.
+    #[inline]
+    pub fn all(&mut self, xs: &[f64]) {
+        for &x in xs {
+            self.put(x);
+        }
+    }
+
+    /// The index or code `k`, as its double.
+    #[inline]
+    pub fn code(&mut self, k: u32) {
+        self.put(f64::from(k));
+    }
+
+    /// The mapping's index in declaration order.
+    #[inline]
+    pub fn mapping(&mut self, m: Mapping) {
+        self.code(m as u32);
+    }
+}
+
+/// The words of a parent's params ([`ParentParams::read`]), in order.
+pub struct Reader<'a> {
+    words: &'a [f64],
+    at: usize,
+}
+
+impl Reader<'_> {
+    /// The next word; `None` past the last.
+    #[inline]
+    pub fn take(&mut self) -> Option<f64> {
+        let x = *self.words.get(self.at)?;
+        self.at += 1;
+        Some(x)
+    }
+
+    /// The next `N` words.
+    #[inline]
+    pub fn array<const N: usize>(&mut self) -> Option<[f64; N]> {
+        let mut out = [0.0; N];
+        for x in &mut out {
+            *x = self.take()?;
+        }
+        Some(out)
+    }
+
+    /// The next word as an index below `below`; `None` where it is not exactly one.
+    #[inline]
+    pub fn code(&mut self, below: u64) -> Option<u32> {
+        index(self.take()?, below)
+    }
+
+    /// The next word, which must be the code `k`.
+    #[inline]
+    pub fn expect(&mut self, k: u32) -> Option<()> {
+        (self.take()?.to_bits() == f64::from(k).to_bits()).then_some(())
+    }
+
+    /// The next word as a mapping.
+    #[inline]
+    pub fn mapping(&mut self) -> Option<Mapping> {
+        Some(match self.code(2)? {
+            0 => Mapping::Warped,
+            _ => Mapping::Linear,
+        })
+    }
+
+    /// Whether every word left is `+0`.
+    #[inline]
+    fn rest_zero(&self) -> bool {
+        self.words[self.at..].iter().all(|w| w.to_bits() == 0)
+    }
+}
+
+/// A saved curved chart's parent, by value (R-475 L5; R-483 H3; the module's note): its params as words, in the
+/// layout the module's note gives, and back. Every [`SaveParent`] has it, and each chart a parent wraps.
+pub trait ParentParams: Sized {
+    /// Which of its registry entry's charts the parent is, `0` for the entry's own chart: the charts that share a
+    /// name ([`Chart::name`]) have distinct forms.
+    const FORM: u32 = 0;
+    /// The words the params take, the form not counted.
+    const LEN: usize;
+    /// The params, [`ParentParams::LEN`] words.
+    fn write(&self, words: &mut Writer<'_>);
+    /// The chart [`ParentParams::write`] wrote; `None` where the words are not its params.
+    fn read(words: &mut Reader<'_>) -> Option<Self>;
+}
+
+/// The code of the mixed axis `Q`: its [`mixed::Coordinate`]'s index, plus 8 for a derived quantity.
+pub fn axis_code<Q: mixed::Quantity>() -> u32 {
+    Q::COORDINATE as u32 + if Q::DERIVED { 8 } else { 0 }
+}
+
+/// The code of the physical quantity `q`: its index in declaration order ([`Quantity::ALL`]).
+pub fn quantity_code(q: Quantity) -> u32 {
+    q as u32
+}
+
+/// `parent`'s form and params, as [`Curved::params`] holds them.
+fn params_of<C: ParentParams>(parent: &C) -> [f64; PARAMS] {
+    const {
+        assert!(
+            C::LEN < PARAMS,
+            "a parent's params past the saved chart's words"
+        )
+    };
+    let mut words = [0.0; PARAMS];
+    let mut writer = Writer {
+        words: &mut words,
+        at: 0,
+    };
+    writer.code(C::FORM);
+    parent.write(&mut writer);
+    words
+}
+
+/// The latent chart is never a curved parent, saving as an oblique chart ([`Saved::curved`] refuses it): it writes
+/// nothing and reads as `None`.
+impl ParentParams for Latent<f64> {
+    const LEN: usize = 0;
+    fn write(&self, _: &mut Writer<'_>) {}
+    fn read(_: &mut Reader<'_>) -> Option<Self> {
+        None
+    }
+}
+
+/// `map`, `n₀`, `e₁`, `e₂`, `scale`, `inertia`, `phase`, `z_mass`, `z_mom`.
+impl ParentParams for ShapeSphere<f64> {
+    const LEN: usize = 19;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.code(self.map as u32);
+        for v in [&self.n0, &self.e1, &self.e2] {
+            w.all(v);
+        }
+        w.all(&[self.scale, self.inertia, self.phase]);
+        w.all(&self.z_mass);
+        w.all(&self.z_mom);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        let map = match r.code(2)? {
+            0 => ShapeMap::Spherical,
+            _ => ShapeMap::Exponential,
+        };
+        Some(ShapeSphere {
+            map,
+            n0: r.array()?,
+            e1: r.array()?,
+            e2: r.array()?,
+            scale: r.take()?,
+            inertia: r.take()?,
+            phase: r.take()?,
+            z_mass: r.array()?,
+            z_mom: r.array()?,
+        })
+    }
+}
+
+/// `z_cfg`, `z_mass`, `k_max`, `γ_K`.
+impl ParentParams for Invariant<f64> {
+    const LEN: usize = 6;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.all(&self.z_cfg);
+        w.all(&self.z_mass);
+        w.all(&[self.k_max, self.gamma_k]);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(Invariant {
+            z_cfg: r.array()?,
+            z_mass: r.array()?,
+            k_max: r.take()?,
+            gamma_k: r.take()?,
+        })
+    }
+}
+
+/// The invariant charts: their [`Invariant`]'s.
+macro_rules! invariant_params {
+    ($($chart:ident),*) => {$(
+        impl ParentParams for $chart<f64> {
+            const LEN: usize = <Invariant<f64> as ParentParams>::LEN;
+            fn write(&self, w: &mut Writer<'_>) {
+                self.0.write(w);
+            }
+            fn read(r: &mut Reader<'_>) -> Option<Self> {
+                Invariant::read(r).map($chart)
+            }
+        }
+    )*};
+}
+
+invariant_params!(InvariantLE, InvariantLK);
+
+/// The chart's, then each axis's mapping. Form 1: the mapped chart shares its chart's name. The link selection `S`
+/// is not written: a saved chart carries no links (R-478).
+impl<C: ParentParams, S> ParentParams for Mapped<C, S> {
+    const FORM: u32 = 1;
+    const LEN: usize = C::LEN + 2;
+    fn write(&self, w: &mut Writer<'_>) {
+        self.chart.write(w);
+        w.mapping(self.mapping[0]);
+        w.mapping(self.mapping[1]);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        let chart = C::read(r)?;
+        Some(Mapped::new(chart, [r.mapping()?, r.mapping()?]))
+    }
+}
+
+/// `θ_range`, `K`, `λ_L`.
+impl ParentParams for BurrauThetaLz<f64> {
+    const LEN: usize = 4;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.all(&self.theta_range);
+        w.all(&[self.k, self.lz_fraction]);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(BurrauThetaLz {
+            theta_range: r.array()?,
+            k: r.take()?,
+            lz_fraction: r.take()?,
+        })
+    }
+}
+
+/// The chart's, `K_max`, `γ_K`, the mapping. Form 1: it shares `BurrauThetaLz`'s name.
+impl ParentParams for HeldK<f64> {
+    const FORM: u32 = 1;
+    const LEN: usize = <BurrauThetaLz<f64> as ParentParams>::LEN + 3;
+    fn write(&self, w: &mut Writer<'_>) {
+        self.chart.write(w);
+        w.all(&[self.k_max, self.gamma_k]);
+        w.mapping(self.mapping);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(HeldK {
+            chart: BurrauThetaLz::read(r)?,
+            k_max: r.take()?,
+            gamma_k: r.take()?,
+            mapping: r.mapping()?,
+        })
+    }
+}
+
+/// `ν_range`, `K_max`, `γ_K`.
+impl ParentParams for Burrau<f64> {
+    const LEN: usize = 4;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.all(&self.nu_range);
+        w.all(&[self.k_max, self.gamma_k]);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(Burrau {
+            nu_range: r.array()?,
+            k_max: r.take()?,
+            gamma_k: r.take()?,
+        })
+    }
+}
+
+/// `θ_range`, `K_max`, `γ_K`.
+impl ParentParams for BurrauThetaK<f64> {
+    const LEN: usize = 4;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.all(&self.theta_range);
+        w.all(&[self.k_max, self.gamma_k]);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(BurrauThetaK {
+            theta_range: r.array()?,
+            k_max: r.take()?,
+            gamma_k: r.take()?,
+        })
+    }
+}
+
+/// The chart's, the held `L_z`, the mapping.
+impl<C: ParentParams> ParentParams for HeldLz<C, f64> {
+    const LEN: usize = C::LEN + 2;
+    fn write(&self, w: &mut Writer<'_>) {
+        self.chart.write(w);
+        w.put(self.lz);
+        w.mapping(self.mapping);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(HeldLz {
+            chart: C::read(r)?,
+            lz: r.take()?,
+            mapping: r.mapping()?,
+        })
+    }
+}
+
+/// `ν₀`, `ε_m`.
+impl ParentParams for MassSimplex<f64> {
+    const LEN: usize = 2;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.all(&[self.nu0, self.eps_m]);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(MassSimplex {
+            nu0: r.take()?,
+            eps_m: r.take()?,
+        })
+    }
+}
+
+/// `m_range`, `ν_range`.
+impl ParentParams for EuclidPlane<f64> {
+    const LEN: usize = 4;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.all(&self.m_range);
+        w.all(&self.nu_range);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(EuclidPlane {
+            m_range: r.array()?,
+            nu_range: r.array()?,
+        })
+    }
+}
+
+/// `θ_range`, `m_target`.
+impl ParentParams for BurrauThetaDeltaM<f64> {
+    const LEN: usize = 5;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.all(&self.theta_range);
+        w.all(&self.m_target);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(BurrauThetaDeltaM {
+            theta_range: r.array()?,
+            m_target: r.array()?,
+        })
+    }
+}
+
+/// The chart's, `z_mom`.
+impl<C: ParentParams> ParentParams for RestStart<C, f64> {
+    const LEN: usize = C::LEN + 4;
+    fn write(&self, w: &mut Writer<'_>) {
+        self.chart.write(w);
+        w.all(&self.z_mom);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        Some(RestStart {
+            chart: C::read(r)?,
+            z_mom: r.array()?,
+        })
+    }
 }
 
 /// A chart [`Saved::curved`] takes as a parent: a bare chart, every [`Tiltable`] one and the latent chart (which it
@@ -95,10 +493,11 @@ impl Saved {
         Saved::Oblique(*view)
     }
 
-    /// The view of `parent` under `tilt` about `centre`, the targets' spans `span`, saved; `None` where `parent` is the
-    /// latent chart, which saves as an oblique one, or is not in the registry. `parent` is a bare chart ([`SaveParent`]):
-    /// a tilted or reopened saved chart is refused by type, its tilt never dropped.
-    pub fn curved<C: SaveParent>(
+    /// The view of `parent` under `tilt` about `centre`, the targets' spans `span`, saved, `parent` by value
+    /// ([`ParentParams`]); `None` where `parent` is the latent chart, which saves as an oblique one, or is not in the
+    /// registry. `parent` is a bare chart ([`SaveParent`]): a tilted or reopened saved chart is refused by type, its
+    /// tilt never dropped.
+    pub fn curved<C: SaveParent + ParentParams>(
         parent: &C,
         tilt: TiltSpec,
         centre: [f64; 2],
@@ -110,6 +509,7 @@ impl Saved {
             centre,
             tilt,
             span,
+            params: params_of(parent),
         }))
     }
 
@@ -150,21 +550,23 @@ impl Saved {
                     c.span[0],
                     c.span[1],
                 ];
-                words[..fields.len()].copy_from_slice(&fields);
+                words[..HEADER].copy_from_slice(&fields);
+                words[HEADER..].copy_from_slice(&c.params);
             }
         }
         words
     }
 
     /// The definition [`Saved::to_words`] wrote, bit for bit; `None` where `words` is no definition: an unknown kind,
-    /// a parent outside the registry or the latent chart, a map or target that is no index, a non-finite value, or a
-    /// padding word other than `+0`.
+    /// a parent outside the registry or the latent chart, a map, target or form that is no index, a non-finite value,
+    /// or an oblique chart's padding word other than `+0`. A curved chart's params are read on reopening
+    /// ([`Curved::open`]).
     pub fn from_words(words: &[f64; WORDS]) -> Option<Self> {
         if !words.iter().all(|w| w.is_finite()) {
             return None;
         }
         let kind = words[0].to_bits();
-        if kind == OBLIQUE.to_bits() {
+        if kind == OBLIQUE.to_bits() && words[OBLIQUE_WORDS..].iter().all(|w| w.to_bits() == 0) {
             let mut v = [[0.0; 8]; 3];
             for (k, vector) in v.iter_mut().enumerate() {
                 vector.copy_from_slice(&words[1 + 8 * k..9 + 8 * k]);
@@ -174,13 +576,16 @@ impl Saved {
                 q1: v[1],
                 q2: v[2],
             }))
-        } else if kind == CURVED.to_bits() && words[11..].iter().all(|w| w.to_bits() == 0) {
+        } else if kind == CURVED.to_bits() {
+            let any = u64::from(u32::MAX) + 1;
+            index(words[HEADER], any)?;
+            let mut params = [0.0; PARAMS];
+            params.copy_from_slice(&words[HEADER..]);
             let parent = index(words[1], REGISTRY.len() as u64).filter(|&p| p != 0)?;
             let map = match index(words[6], 2)? {
                 0 => TiltMap::Sheet,
                 _ => TiltMap::Lean,
             };
-            let any = u64::from(u32::MAX) + 1;
             Some(Saved::Curved(Curved {
                 parent,
                 centre: [words[2], words[3]],
@@ -192,6 +597,7 @@ impl Saved {
                     y: index(words[8], any)?,
                 },
                 span: [words[9], words[10]],
+                params,
             }))
         } else {
             None
@@ -206,19 +612,43 @@ fn index(x: f64, below: u64) -> Option<u32> {
 }
 
 impl Curved {
-    /// The saved chart reopened on `parent`, the chart value at the slice centre, under a new tilt `new` about the
-    /// view's centre `centre`, its targets' spans `span` ([`Composed`]); `None` where `parent` is not the saved
+    /// The parent, from the definition alone ([`Curved::params`]); `None` where `C` is not the saved parent: another
+    /// registry entry or another of its charts, or words that are not `C`'s params.
+    pub fn parent<C: Chart + ParentParams>(&self) -> Option<C> {
+        let mut words = Reader {
+            words: &self.params,
+            at: 0,
+        };
+        words.expect(C::FORM)?;
+        let chart = C::read(&mut words)?;
+        let named = REGISTRY.get(self.parent as usize) == Some(&chart.name());
+        (named && words.rest_zero()).then_some(chart)
+    }
+
+    /// The saved chart reopened from its definition alone, on its parent ([`Curved::parent`]), under a new tilt `new`
+    /// about the view's centre `centre`, its targets' spans `span` ([`Composed`]); `None` where `C` is not the saved
     /// parent, a target is not one of its hidden coordinates, or [`Composed::new`] refuses the composition.
-    pub fn reopen<C: Tiltable<Param = f64>>(
+    pub fn open<C: Tiltable<Param = f64> + ParentParams>(
+        &self,
+        new: &TiltSpec,
+        centre: [f64; 2],
+        span: [f64; 2],
+    ) -> Option<Tilted<C, f64, Composed<f64>>> {
+        let parent = self.parent::<C>()?;
+        let composed = Composed::new(&self.tilt, self.centre, self.span, new, centre, span)?;
+        Tilted::placed(parent, composed)
+    }
+
+    /// [`Curved::open`], where `parent` is the saved parent, its params bitwise the saved ones; `None` for any other.
+    pub fn reopen<C: Tiltable<Param = f64> + ParentParams>(
         &self,
         parent: C,
         new: &TiltSpec,
         centre: [f64; 2],
         span: [f64; 2],
     ) -> Option<Tilted<C, f64, Composed<f64>>> {
-        let named = REGISTRY.get(self.parent as usize) == Some(&parent.name());
-        let composed = Composed::new(&self.tilt, self.centre, self.span, new, centre, span)?;
-        named.then(|| Tilted::placed(parent, composed)).flatten()
+        let same = params_of(&parent).map(f64::to_bits) == self.params.map(f64::to_bits);
+        same.then(|| self.open(new, centre, span)).flatten()
     }
 }
 
