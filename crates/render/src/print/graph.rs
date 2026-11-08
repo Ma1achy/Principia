@@ -323,7 +323,8 @@ pub struct ExpandedNode {
 
 /// A graph with every preset node replaced by its preset's graph: a sub-graph's node `n`, under preset node `p`, is
 /// `p/n`; its Render node is the preset node's input where one is wired, and its output node is dropped, a wire to
-/// the preset node reading what fed it.
+/// the preset node reading what fed it. An output node left unconnected feeds its `in`'s default, the picture coming
+/// in: the preset node's input, or, with none wired, the render, a Render node `p/<its id>`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Expanded {
     pub name: String,
@@ -333,7 +334,8 @@ pub struct Expanded {
 
 /// `graph` with every preset node expanded, each preset found by name through `presets`; refused, naming it, for a
 /// `$` reference no setting answers, a preset that is not there, a preset that includes itself (naming the cycle), a
-/// preset node's parameter its preset has no setting for, or a wire that names no node.
+/// preset node's parameter its preset has no setting for, a preset's output node with an input other than `in`, or a
+/// wire that names no node.
 pub fn expand(
     graph: &Graph,
     presets: &dyn Fn(&str) -> Option<Graph>,
@@ -435,12 +437,34 @@ impl Expander<'_> {
                 graph.name, out.ty
             ));
         }
-        match out.inputs.get("in") {
-            Some(wire) => self.reference(&mut scope, wire),
-            None => err(format!(
-                "preset `{}`: its output node `{out_id}` is not wired",
+        if let Some(port) = out.inputs.keys().find(|p| *p != "in") {
+            return err(format!(
+                "preset `{}`: its output node `{out_id}` has no input `{port}`, only `in`",
                 graph.name
-            )),
+            ));
+        }
+        match (out.inputs.get("in"), entry) {
+            (Some(wire), _) => self.reference(&mut scope, wire),
+            // Unconnected, the output's `in` reads its declared default, the picture coming in: the preset node's
+            // input, which a sub-graph's unconnected inputs read (a preset node's one input), or, with none wired,
+            // the render, a Render node standing in the dropped output node's place.
+            (None, Some(entry)) => Ok(entry.clone()),
+            (None, None) => {
+                let id = format!("{prefix}{out_id}");
+                self.nodes.insert(
+                    id.clone(),
+                    ExpandedNode {
+                        ty: RENDER.to_owned(),
+                        params: BTreeMap::new(),
+                        inputs: BTreeMap::new(),
+                        entry: None,
+                    },
+                );
+                Ok(Wire {
+                    node: id,
+                    port: None,
+                })
+            }
         }
     }
 

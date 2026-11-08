@@ -7,7 +7,12 @@
 
 use std::collections::BTreeMap;
 
-use render::print::graph::{expand, number, resolve, ExpandedNode, Graph, Value, Wire};
+use render::print::codegen::{generate, Reads};
+use render::print::graph::{
+    expand, number, resolve, Expanded, ExpandedNode, Graph, GraphError, Value, Wire,
+};
+use render::print::registry::check;
+use render::print::{NODES, PRESETS, WGSL};
 use validation::negative_control;
 
 // This file reads the fixture presets, not the fixture registry.
@@ -453,6 +458,70 @@ negative_control!(
     "a preset that includes another, with no cycle",
     expected = "a preset that includes itself expanded",
     check_cycle(&cyclic(), "C", "C → C")
+);
+
+// ----- a preset's unconnected output reads the picture coming in -----
+
+/// A preset whose Output node leaves `in` unconnected: valid on its own, the output's `in` defaulting to `render`.
+const BARE: &str =
+    r#"{"format":"principia.print/1","name":"Bare","nodes":{"out":{"type":"output"}},"out":"out"}"#;
+
+/// A graph running Bare as its one node between the render and the output.
+const ON_BARE: &str = r#"{"format":"principia.print/1","name":"On Bare","nodes":{"img":{"type":"render"},
+  "b":{"type":"preset:Bare","in":{"in":"img"}},"out":{"type":"output","in":{"in":"b"}}},"out":"out"}"#;
+
+/// An expansion: a graph and the presets by name to an expanded graph.
+type Expand = dyn Fn(&Graph, &dyn Fn(&str) -> Option<Graph>) -> Result<Expanded, GraphError>;
+
+/// Bare passes the build-time check beside the shipped registry and presets; as a node, through `expander`, its
+/// unconnected output reads the picture coming in, as its declared default and a preset node's one input have it: the
+/// preset node's input where one is wired, else the render; and both expanded graphs generate, the output reading the
+/// stain's colours.
+fn check_unwired_output(expander: &Expand) {
+    let presets: Vec<(&str, &str)> = PRESETS
+        .iter()
+        .copied()
+        .chain([("Bare.json", BARE)])
+        .collect();
+    let checked = check(NODES, WGSL, &presets)
+        .unwrap_or_else(|e| panic!("Bare does not pass the check: {e}"));
+    let lookup = |n: &str| checked.presets.get(n).cloned();
+    let unwired = ON_BARE.replace(r#","in":{"in":"img"}"#, "");
+    for (text, reads) in [(ON_BARE, "img"), (unwired.as_str(), "b/out")] {
+        let e = expander(&parse(text), &lookup)
+            .unwrap_or_else(|e| panic!("the preset node does not expand: {e}"));
+        assert_eq!(
+            e.nodes["out"].inputs["in"],
+            wire(reads),
+            "the unconnected output does not read the picture coming in"
+        );
+        assert_eq!(e.nodes[reads].ty, "render");
+        let g =
+            generate(&e, &checked.registry).unwrap_or_else(|e| panic!("does not generate: {e}"));
+        assert_eq!(g.textures.len(), 1);
+        assert_eq!(g.textures[0].reads, Reads::Source);
+    }
+    // Its output node takes `in` alone.
+    let typo = BARE.replace(
+        r#"{"type":"output"}"#,
+        r#"{"type":"output","in":{"inn":"out"}}"#,
+    );
+    let err = expand(&parse(ON_BARE), &|_: &str| Some(parse(&typo))).expect_err("`inn` expanded");
+    assert!(err.0.contains("has no input `inn`"), "{err}");
+}
+
+#[test]
+fn print_graph_model_preset_unwired_output_reads_input() {
+    check_unwired_output(&|g, presets| expand(g, presets));
+}
+
+negative_control!(
+    print_graph_model_preset_unwired_output_reads_input,
+    "an expansion refusing a preset whose output node is unconnected",
+    expected = "the preset node does not expand",
+    check_unwired_output(&|_, _| Err(GraphError(
+        "preset `Bare`: its output node `out` is not wired".into()
+    )))
 );
 
 // ----- node ids carry no meaning -----
