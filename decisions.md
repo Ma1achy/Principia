@@ -31926,7 +31926,8 @@ TASK-M7-72, TASK-M8-102 to TASK-M8-105, TASK-M8-112 and TASK-M8-118); TASK-M8-10
 TASK-M8-106 straddles stages 1, 2 and 4; and three stage-3 tasks (TASK-M4-33, TASK-M4-34 and TASK-M8-100) can't take the
 edge to stage 2: the two in M4 would depend forward across milestones, and all three are already upstream of TASK-M8-117
 through TASK-M8-106 and TASK-M8-102, so the edge would close a cycle. None of those is given an edge here. Stage 2's
-sliding anchor has no task on `main` (RQ-744 (D)).
+sliding anchor has no task on `main` (RQ-744 (D)), and Save view as chart's tasks, TASK-M6-49, TASK-M6-51 and
+TASK-M8-48, unmerged, have no edge to TASK-M8-124 either way (RQ-744 (E)).
 
 *What it refines:* no ruling. The design it orders is Proposed (`principia_chart_composition.md`'s status), and its
 § 15 placed the tasks by what depends on them; the order is the owner's, and § 15 now points to it. Read with R-864.

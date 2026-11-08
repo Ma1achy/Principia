@@ -49,6 +49,13 @@ as a fallback (R-864 item 2).
   TASK-M8-117, depends on this task and merges only with its tests green.
 - **Gate (R-864 item 1):** dispatched first for the sketch only. No implementation commit lands before the owner's answer
   to the sketch, which is recorded as a ruling; the rest of the task then goes ahead on the same branch.
+- **Routes covered.** The bitwise baseline and the deletion cover every route of the seven operations on `main` when
+  this task starts, the PR naming each: at least `engine/nav`'s `pan`, `zoom`, `slice`, `tilt` and `tilt_pair`,
+  `engine/lock.rs`'s lock, and the chart switch's route. Save view as chart has no code on `main` yet: its routes are
+  TASK-M6-49's and TASK-M6-51's (the mock) and TASK-M8-48's (the real engine, curved views; R-475), none merged and none
+  in Depends on. Which comes first, and so whether this task's baseline holds their routes or they are built through
+  the object, is RQ-744 (E); until it is answered, a Save view route merged before this task starts is in the baseline
+  and the deletion like the rest.
 - If an operation can't reproduce bitwise as a family of the object, or seems to need a special case outside one, stop
   and bring it back (R-864 item 4): never patch around it.
 - REQ-CHART-113's tests (`path_tilt_bitwise`, `path_zoom_bitwise`, `path_lock_bitwise`, `path_save_view_bitwise`),

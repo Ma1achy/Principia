@@ -1473,8 +1473,8 @@ fits no stage or straddles two, don't choose. Nothing below is given a stage edg
 *In plain English: the owner set five stages for building the chart-composition tasks. Most tasks fall into one stage
 and now wait on the stage before. Some fall into none, one falls into three, and three stage-3 tasks can't be made to wait
 on stage 2: two sit in an earlier milestone (M4), which may not wait on M8 work, and all three are already needed by
-stage 2's task through the chain the design drew. And stage 2's sliding anchor has no task yet. The owner says where
-each goes.*
+stage 2's task through the chain the design drew. And stage 2's sliding anchor has no task yet, and Save view as chart's
+tasks aren't ordered against stage 1. The owner says where each goes.*
 
 - **File, section:** `decisions.md` § R-863, the owner's words: "build in this order: (1) the path object and the bitwise
   tests that today's pan, zoom, tilt, slice, lock and Save-view-as-chart reproduce exactly through it, before any new
@@ -1510,6 +1510,15 @@ each goes.*
   chart B ... the anchor slides continuously to its nearest point in B"), not yet on `main`. Until that answer is
   ported, with a task that builds it in stage 2 and replaces TASK-M8-117's `anchor not in B` arm, stage 2 is incomplete,
   and stage 3 waits only on its based-morph half.
+- **(E) Save view as chart's tasks are not ordered against stage 1.** The owner's stage 1 names "today's ...
+  Save-view-as-chart", and R-864 item 2 says "No parallel code paths". On `main` no Save view as chart code exists: its
+  routes are TASK-M6-49 and TASK-M6-51 (the mock, R-475, R-514) and TASK-M8-48 (the real engine, curved views; R-475),
+  none merged, and TASK-M8-124's Depends on names none of them. If TASK-M8-48 lands after TASK-M8-124, it builds a Save
+  view and tilt and slice route beside the object, and TASK-M8-124's bitwise baseline, "today's code", misses it. Either
+  edge is a choice: TASK-M8-124 after TASK-M8-48 holds stage 1 behind M8's GUI work; TASK-M8-48 after TASK-M8-124 holds
+  TASK-M8-48 behind TASK-M4-37 and the owner's answer to R-864's sketch, and builds Save view as chart as a family of
+  the object. TASK-M6-49 and TASK-M6-51, in M6, can only come before TASK-M8-124 by an edge (an M6 task may not depend
+  forward on an M8 one), or after it by dispatch.
 - **Options:**
   - (a) Split and re-place: TASK-M8-106 keeps only what is past stage 1 (its line, re-timing, alignment and export),
     drops REQ-CHART-113's tests to TASK-M8-124, and TASK-M8-117 depends on TASK-M8-124 and TASK-M2-23 and not on it,
@@ -1521,10 +1530,15 @@ each goes.*
     dispatch, the orchestrator releasing a stage's M4 tasks only once the previous stage has merged, not by edges.
     (B) and (C) as in (a).
   - (c) Another, stated by the owner.
+  - For (E): (i) TASK-M8-124 depends on TASK-M6-49, TASK-M6-51 and TASK-M8-48, its baseline covering their routes;
+    (ii) TASK-M8-48 depends on TASK-M8-124 and builds Save view as chart on curved views through the object, TASK-M6-49
+    and TASK-M6-51 before stage 1 by edge; (iii) another, stated by the owner.
 - **Recommendation:** (a) for (B), since it is the split that makes the stage order hold by edges; for (A), (b), since
-  moving TASK-M4-33 and TASK-M4-34 out of M4 changes M4's gate. A recommendation, not applied.
-- **Applied meanwhile:** the edges above; none for (A), (B) or (C); (D) recorded in R-863, design § 15 and TASK-M8-117's
-  Notes, no task added, since the sliding anchor's ruling isn't on `main`. Every task here stays behind TASK-M4-37.
+  moving TASK-M4-33 and TASK-M4-34 out of M4 changes M4's gate; for (E), (i), since "today's" reads as the routes that
+  exist when stage 1 starts and R-475 is ruled, and stage 1 already waits on TASK-M4-37. A recommendation, not applied.
+- **Applied meanwhile:** the edges above; none for (A), (B), (C) or (E); (D) recorded in R-863, design § 15 and
+  TASK-M8-117's Notes, no task added, since the sliding anchor's ruling isn't on `main`. Every task here stays behind
+  TASK-M4-37.
 - **Waits:** nothing can start yet: all of it waits behind TASK-M4-37 and, for TASK-M8-124, the owner's answer to R-864's
   type sketch.
 
