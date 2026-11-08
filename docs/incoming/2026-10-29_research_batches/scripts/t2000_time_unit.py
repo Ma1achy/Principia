@@ -17,9 +17,12 @@ regularised continuation of a head-on collision; otherwise the run integrates th
 and a fall below R_STOP is taken as the collision itself, which ends the run (reported as the
 n_min-th minimum if it is, else STOPPED). The rows of Tables I-IV, all on Gamma_3, start from the
 printed alpha (radians, Table I's note), x = -0.5 + cos(alpha), y = sin(alpha), so the isosceles
-symmetry is exact; the printed x, y agree with these to their 7 decimals. A run that passes
-t = 3 * printed + 1 without its n_min-th minimum is NOT REACHED. Column t1 is the time of the first
-minimum of r on the same start, a lower bound on every later one. A check, not a target (R-649).
+symmetry is exact. The printed x, y do not place them as well: measured from the reconciled CSVs,
+they differ from these by up to 9.2e-7 (52 of the 59 rows do not round to the printed 7 decimals)
+and lie off Gamma_3 radially by up to 9.9e-7, while atan2(y, x + 0.5) agrees with the printed alpha
+to 1.3e-7. A run that passes t = 3 * printed + 1 without its n_min-th minimum is NOT REACHED. Column
+t1 is the time of the first minimum of r on the same start, a lower bound on every later one.
+A check, not a target (R-649).
 
 Rows: Paper I Table IIa (p. 348; x, y, Time as printed on the page image; the PDF's text layer reads
 row 19's Time as 0.7891, the page prints 0.4891) and Tanikawa 2000's reconciled tables
