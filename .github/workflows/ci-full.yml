@@ -11,8 +11,11 @@
 # watcher puts it on with the user's own token (`plan/OPERATIONS.md` § "Mutants on the merge-ready head").
 #
 # The full tier adds to the quick tier (the owner, 7 Nov 2026: "The full tier should compose / add on to the quick
-# tier"): a quick run still going is waited for, never cancelled, and the re-run starts when it ends; the full attempt
-# then skips what that quick attempt passed (`ci_tier.sh decide`, `quick_passed` and `quick_covers_ci`).
+# tier"), and does not wait for it (the owner, 8 Nov 2026: "ci-full: on merge-ready, cancel the in-progress quick run
+# and start the full tier, instead of waiting for it"): a quick attempt still going is cancelled and the re-run starts
+# once the cancellation has ended it, the full attempt then running all it had not passed; a quick attempt that has
+# ended is re-run as it is, the full attempt skipping what it passed (`ci_tier.sh decide`, `quick_passed` and
+# `quick_covers_ci`). A full attempt still going (a retry's) is the full tier already, and is waited for.
 #
 # Any other label's run skips its one job at job level, and asks for no runner, in a group of its own, so it cancels
 # nothing (below).
@@ -58,8 +61,9 @@ jobs:
   ci-full:
     if: github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
-    # Its waits, for a run to appear and for a quick run to end, are bounded in the script, the second at 350 minutes;
-    # this bounds the job, at GitHub's 360 for a hosted job, as `mutants.yml`'s `mutants-check` waits (R-678).
+    # Its waits, for a run to appear, for a cancelled quick attempt to end and for a full attempt to end, are bounded in
+    # the script, the last at 350 minutes; this bounds the job, at GitHub's 360 for a hosted job, as `mutants.yml`'s
+    # `mutants-check` waits (R-678).
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

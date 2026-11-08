@@ -19,10 +19,11 @@
 //! - `ci_tier_decide_carries_*`: on a full attempt, what an earlier attempt of the run passed of the quick tier
 //!   (`quick_passed`), and whether it tested every crate (`quick_covers_ci`), from those attempts' jobs; nothing that
 //!   cannot be read counts.
-//! - `ci_tier_merge_ready_*`: `merge-ready` going on re-runs the head's run without a push, once it has ended, waiting
-//!   for a quick run still going and never cancelling it (the owner, 7 Nov 2026: "The full tier should compose / add
-//!   on to the quick tier"), and not when every full-only check has passed, the head has moved or the label has come
-//!   off; going off cancels only a full attempt.
+//! - `ci_tier_merge_ready_*`: `merge-ready` going on re-runs the head's run without a push, cancelling a quick attempt
+//!   still going at once and re-running once the cancellation has ended it (the owner, 8 Nov 2026: "ci-full: on
+//!   merge-ready, cancel the in-progress quick run and start the full tier, instead of waiting for it"), waiting for a
+//!   full attempt still going, never cancelling it, and doing nothing when every full-only check has passed, the head
+//!   has moved or the label has come off; going off cancels only a full attempt.
 //! - `ci_full_workflow_*`: `ci-full.yml` takes the label events, `ci.yml` none, so no label's run supersedes the check
 //!   suite holding the required checks (R-678), and only `merge-ready` asks for a runner, for as long as its wait.
 //! - `ci_full_attempt_*`: what a full attempt leaves to the quick tier's pass is its own commands: fmt, clippy and the
@@ -477,19 +478,23 @@ negative_control!(
 // ---- ci_tier.sh under a stand-in `gh` ------------------------------------------------------------------------------
 
 /// A stand-in `gh`: logs each call to `GH_LOG`; a status post fails on `GH_POST_FAILS`; a re-run is refused as many
-/// times as `GH_RERUN_REFUSALS` says; `.head.sha` answers `GH_HEAD`; the labels answer `GH_LABELS`, or fail on
-/// `GH_LABELS_FAIL`; the runs of `ci.yml` answer one line of `GH_RUNS` a call, the last repeating, a blank line meaning no
-/// run; a run's latest jobs answer `GH_PASSED`, the names of those that passed; the jobs of attempt `<n>` answer
-/// `GH_ATTEMPT_<n>`, one passed job's name a line, or fail on `GH_ATTEMPTS_FAIL`.
+/// times as `GH_RERUN_REFUSALS` says, and a cancel on `GH_CANCEL_FAILS`; `.head.sha` answers `GH_HEAD`, or fails on
+/// `GH_HEAD_FAIL`; the labels answer `GH_LABELS`, or fail on `GH_LABELS_FAIL`; the runs of `ci.yml` answer one line of
+/// `GH_RUNS` a call, the last repeating, a blank line meaning no run; a run's latest jobs answer `GH_PASSED`, the names
+/// of those that passed; the jobs of attempt `<n>` answer `GH_ATTEMPT_<n>`, one name a line of those the caller's filter
+/// selects (to `decide`, the jobs that passed; to `merge-ready`, those skipped), or fail on `GH_ATTEMPTS_FAIL`.
 const GH: &str = r#"#!/bin/bash
 echo "$*" >> "$GH_LOG"
 case "$*" in
   *"--method POST"*statuses*) [ -z "${GH_POST_FAILS:-}" ]; exit $? ;;
+  *"--method POST"*/cancel*) [ -z "${GH_CANCEL_FAILS:-}" ]; exit $? ;;
   *"--method POST"*/rerun*)
     refused=$(grep -c '/rerun' "$GH_LOG")
     [ "$refused" -gt "${GH_RERUN_REFUSALS:-0}" ]; exit $? ;;
   *"--method POST"*) exit 0 ;;
-  *".head.sha"*) echo "$GH_HEAD" ;;
+  *".head.sha"*)
+    [ -z "${GH_HEAD_FAIL:-}" ] || exit 1
+    echo "$GH_HEAD" ;;
   *".labels[].name"*)
     [ -z "${GH_LABELS_FAIL:-}" ] || exit 1
     printf '%s\n' $GH_LABELS ;;
@@ -574,7 +579,8 @@ fn tier(
         .env("CI_ROOT", root())
         .env("CI_TIER_POLL_SECONDS", "0")
         .env("CI_TIER_POLLS", "3")
-        .env("CI_TIER_WAIT_POLLS", "4");
+        .env("CI_TIER_WAIT_POLLS", "4")
+        .env("CI_TIER_CANCEL_POLLS", "3");
     for (k, v) in env {
         cmd.env(k, v);
     }
@@ -1582,6 +1588,17 @@ negative_control!(
 const EVERY_CHECK: &str = "ci xtask-ci gpu-kernel gpu-metal gpu-lavapipe";
 const RERUN: &str = "--method POST repos/owner/repo/actions/runs/5/rerun";
 const CANCEL: &str = "--method POST repos/owner/repo/actions/runs/5/cancel";
+const FORCE_CANCEL: &str = "--method POST repos/owner/repo/actions/runs/5/force-cancel";
+
+/// How many calls to the runs of `ci.yml` came before the first call containing `what`: how many answers the script
+/// had read when it made it.
+fn runs_before(got: &Ran, what: &str) -> usize {
+    got.calls
+        .iter()
+        .take_while(|c| !c.contains(what))
+        .filter(|c| c.contains("/workflows/ci.yml/runs"))
+        .count()
+}
 
 fn check_label_on(script: &str) {
     let on = |extra: &[(&'static str, &'static str)], runs: &[&str]| {
@@ -1589,14 +1606,7 @@ fn check_label_on(script: &str) {
         env.extend_from_slice(extra);
         tier(script, "merge-ready", &env, None, runs)
     };
-    // The calls to the runs of `ci.yml` before the re-run: how many answers the script had read when it asked for it.
-    let runs_before_rerun = |got: &Ran| {
-        got.calls
-            .iter()
-            .take_while(|c| !c.contains(RERUN))
-            .filter(|c| c.contains("/workflows/ci.yml/runs"))
-            .count()
-    };
+    let cancels = |got: &Ran| (got.count(CANCEL), got.count(FORCE_CANCEL));
     // The head's quick run has ended: re-run it, once, whole.
     let got = on(&[], &["5 completed 1"]);
     assert!(
@@ -1622,39 +1632,90 @@ fn check_label_on(script: &str) {
         "ci_quick_tier: the label on a head one check short: {:?}",
         got.calls
     );
-    // The label added while the quick run is going (the owner, 7 Nov 2026: the full tier adds to the quick tier): the
-    // run is never cancelled; the re-run waits for it to end.
+    // The label added while the quick attempt is going (the owner, 8 Nov 2026: "ci-full: on merge-ready, cancel the
+    // in-progress quick run and start the full tier, instead of waiting for it"): it is cancelled at once, on the
+    // first answer, and the full attempt asked for once the cancellation has ended it.
     let got = on(
         &[],
         &["5 in_progress 1", "5 in_progress 1", "5 completed 1"],
     );
     assert!(
-        got.ok() && (got.count("/cancel"), got.count(RERUN)) == (0, 1),
-        "ci_quick_tier: the label on a run still going: {:?}",
+        got.ok() && (cancels(&got), got.count(RERUN)) == ((1, 0), 1),
+        "ci_quick_tier: the label on a quick attempt still going: {:?} {}",
+        got.calls,
+        got.out
+    );
+    assert_eq!(
+        runs_before(&got, CANCEL),
+        1,
+        "ci_quick_tier: the label waited for a quick attempt before cancelling it: {:?}",
         got.calls
     );
     assert_eq!(
-        runs_before_rerun(&got),
+        runs_before(&got, RERUN),
         3,
-        "ci_quick_tier: the re-run came before the run ended: {:?}",
+        "ci_quick_tier: the re-run came before the cancelled run ended: {:?}",
         got.calls
     );
-    // A queued run counts as going.
-    let got = on(&[], &["5 queued 1", "5 completed 1"]);
-    assert!(
+    // A queued quick attempt counts as going, and a retry's quick attempt (`retry.yml` re-runs the failed jobs, keeping
+    // `changes`' quick) as much as a first one; so does one whose `changes` has not decided yet, or whose jobs cannot be
+    // read, or which skipped some other job: none is shown full, and cancelling it loses nothing.
+    for (what, extra, runs) in [
+        ("queued", &[][..], ["5 queued 1", "5 completed 1"]),
+        ("a retry's", &[][..], ["5 in_progress 2", "5 completed 2"]),
         (
-            got.count("/cancel"),
-            got.count(RERUN),
-            runs_before_rerun(&got)
-        ) == (0, 1, 2),
-        "ci_quick_tier: the label on a queued run: {:?}",
-        got.calls
+            "with its jobs unread",
+            &[("GH_ATTEMPTS_FAIL", "1")][..],
+            ["5 in_progress 2", "5 completed 2"],
+        ),
+        (
+            "having skipped another job",
+            &[("GH_ATTEMPT_2", "ci-archive\nci-quick-x")][..],
+            ["5 in_progress 2", "5 completed 2"],
+        ),
+    ] {
+        let got = on(extra, &runs);
+        assert!(
+            got.ok()
+                && (cancels(&got), got.count(RERUN), runs_before(&got, RERUN)) == ((1, 0), 1, 2),
+            "ci_quick_tier: the label on a quick attempt {what}: {:?} {}",
+            got.calls,
+            got.out
+        );
+    }
+    // A cancel refused, the run having ended meanwhile: the full attempt still starts.
+    let got = on(
+        &[("GH_CANCEL_FAILS", "1")],
+        &["5 in_progress 1", "5 completed 1"],
     );
-    // The wait is bounded (CI_TIER_WAIT_POLLS, 4 here): a run that ends at the last poll is re-run, and one that never
-    // ends fails the job, named, cancelling and re-running nothing.
+    assert!(
+        got.ok() && got.count(RERUN) == 1,
+        "ci_quick_tier: the label on a quick attempt that ended as its cancel was refused: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // The wait for the cancel is bounded (CI_TIER_CANCEL_POLLS, 3 here): a run that ends at the last poll is re-run;
+    // one that has not ended by then is force-cancelled, once, and waited for as long again; one that still has not
+    // ended fails the job, named, re-running nothing.
     let got = on(
         &[],
         &[
+            "5 in_progress 1",
+            "5 in_progress 1",
+            "5 in_progress 1",
+            "5 completed 1",
+        ],
+    );
+    assert!(
+        got.ok() && (cancels(&got), got.count(RERUN)) == ((1, 0), 1),
+        "ci_quick_tier: the label on a run that ends at the last poll after its cancel: {:?} {}",
+        got.calls,
+        got.out
+    );
+    let got = on(
+        &[],
+        &[
+            "5 in_progress 1",
             "5 in_progress 1",
             "5 in_progress 1",
             "5 in_progress 1",
@@ -1663,17 +1724,69 @@ fn check_label_on(script: &str) {
         ],
     );
     assert!(
-        got.ok() && got.count(RERUN) == 1,
-        "ci_quick_tier: the label on a run that ends at the last poll: {:?} {}",
+        got.ok()
+            && (
+                cancels(&got),
+                got.count(RERUN),
+                runs_before(&got, FORCE_CANCEL)
+            ) == ((1, 1), 1, 4),
+        "ci_quick_tier: the label on a run its cancel did not end: {:?} {}",
         got.calls,
         got.out
     );
     let got = on(&[], &["5 in_progress 1"]);
     assert!(
         !got.ok()
+            && got.out.contains("had not ended after 3 polls")
+            && (cancels(&got), got.count(RERUN)) == ((1, 1), 0),
+        "ci_quick_tier: the label on a run no cancel ends: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // A full attempt still going (`retry.yml`'s re-run of one): the full tier already, its `ci-quick` skipped, under
+    // either name the jobs API gives it. It is never cancelled; the re-run waits for it to end, and only if it fell short.
+    for skipped in ["ci-quick", "changes\nci-quick / ci-quick"] {
+        let got = on(
+            &[("GH_ATTEMPT_2", skipped)],
+            &["5 in_progress 2", "5 in_progress 2", "5 completed 2"],
+        );
+        assert!(
+            got.ok()
+                && (
+                    got.count("/cancel"),
+                    got.count(RERUN),
+                    runs_before(&got, RERUN)
+                ) == (0, 1, 3),
+            "ci_quick_tier: the label on a full attempt still going ({skipped:?}): {:?} {}",
+            got.calls,
+            got.out
+        );
+    }
+    // That wait is bounded (CI_TIER_WAIT_POLLS, 4 here): a run that ends at the last poll is re-run, and one that never
+    // ends fails the job, named, cancelling and re-running nothing.
+    let full = [("GH_ATTEMPT_2", "ci-quick")];
+    let got = on(
+        &full,
+        &[
+            "5 in_progress 2",
+            "5 in_progress 2",
+            "5 in_progress 2",
+            "5 in_progress 2",
+            "5 completed 2",
+        ],
+    );
+    assert!(
+        got.ok() && got.count(RERUN) == 1,
+        "ci_quick_tier: the label on a run that ends at the last poll, a full attempt: {:?} {}",
+        got.calls,
+        got.out
+    );
+    let got = on(&full, &["5 in_progress 2"]);
+    assert!(
+        !got.ok()
             && got.out.contains("had not ended after 4 polls")
             && (got.count("/cancel"), got.count(RERUN)) == (0, 0),
-        "ci_quick_tier: the label on a run that never ends: {:?} {}",
+        "ci_quick_tier: the label on a full attempt that never ends: {:?} {}",
         got.calls,
         got.out
     );
@@ -1692,7 +1805,8 @@ fn check_label_on(script: &str) {
         "ci_quick_tier: the label with no run: {}",
         got.out
     );
-    // A push since: the new head has its own run, and re-running the old one would cancel it.
+    // A push since: the new head has its own run, and re-running the old one would cancel it. Its quick attempt still
+    // going is not cancelled either: the push's run has superseded it.
     let got = on(&[("GH_HEAD", "def456")], &["5 completed 1"]);
     assert!(
         got.ok() && got.count(RERUN) == 0,
@@ -1705,41 +1819,55 @@ fn check_label_on(script: &str) {
     );
     assert!(
         got.ok() && (got.count("/cancel"), got.count(RERUN)) == (0, 0),
-        "ci_quick_tier: the label on a head superseded while its run went on: {:?}",
+        "ci_quick_tier: the label on a superseded head whose run is going: {:?}",
         got.calls
     );
-    // The label off by the time the run ended (a push's `merge-ready-off`, whose token starts no run of ci-full.yml):
-    // nothing to re-run. One that cannot be read fails, re-running nothing.
-    let got = on(
-        &[("GH_LABELS", "design")],
-        &["5 in_progress 1", "5 completed 1"],
-    );
-    assert!(
-        got.ok() && got.count(RERUN) == 0,
-        "ci_quick_tier: the label off by the time the run ended: {:?}",
-        got.calls
-    );
-    let got = on(&[("GH_LABELS_FAIL", "1")], &["5 completed 1"]);
-    assert!(
-        !got.ok()
-            && got.count(RERUN) == 0
-            && got.out.contains("could not read pull request 7's labels"),
-        "ci_quick_tier: the label on with the labels unread: {:?} {}",
-        got.calls,
-        got.out
-    );
-    // The re-run refused because the run started again in between (`retry.yml` re-running a runner fault): that attempt
-    // is waited for too, then re-run. Refused on a run that has ended, or twice, it fails, named.
-    let got = on(
-        &[("GH_RERUN_REFUSALS", "1")],
-        &["5 completed 1", "5 in_progress 2", "5 completed 2"],
-    );
-    assert!(
-        got.ok() && (got.count("/cancel"), got.count(RERUN)) == (0, 2),
-        "ci_quick_tier: the label on a run a retry started again: {:?} {}",
-        got.calls,
-        got.out
-    );
+    // A head that cannot be read fails, cancelling and re-running nothing.
+    for runs in [["5 completed 1"], ["5 in_progress 1"]] {
+        let got = on(&[("GH_HEAD_FAIL", "1")], &runs);
+        assert!(
+            !got.ok()
+                && (got.count("/cancel"), got.count(RERUN)) == (0, 0)
+                && got.out.contains("could not read pull request 7's head"),
+            "ci_quick_tier: the label on with the head unread ({runs:?}): {:?} {}",
+            got.calls,
+            got.out
+        );
+    }
+    // The label already off again (a push's `merge-ready-off`, whose token starts no run of ci-full.yml): nothing to
+    // cancel or re-run. One that cannot be read fails, cancelling and re-running nothing.
+    for runs in [["5 completed 1"], ["5 in_progress 1"]] {
+        let got = on(&[("GH_LABELS", "design")], &runs);
+        assert!(
+            got.ok() && (got.count("/cancel"), got.count(RERUN)) == (0, 0),
+            "ci_quick_tier: the label off again ({runs:?}): {:?}",
+            got.calls
+        );
+        let got = on(&[("GH_LABELS_FAIL", "1")], &runs);
+        assert!(
+            !got.ok()
+                && (got.count("/cancel"), got.count(RERUN)) == (0, 0)
+                && got.out.contains("could not read pull request 7's labels"),
+            "ci_quick_tier: the label on with the labels unread ({runs:?}): {:?} {}",
+            got.calls,
+            got.out
+        );
+    }
+    // The re-run refused because the run started again in between (`retry.yml` re-running a runner fault): a quick
+    // attempt is cancelled then, a full one waited for, then re-run. Refused on a run that has ended, or twice, it fails,
+    // named.
+    for (attempt, cancelled) in [("", 1), ("ci-quick", 0)] {
+        let got = on(
+            &[("GH_RERUN_REFUSALS", "1"), ("GH_ATTEMPT_2", attempt)],
+            &["5 completed 1", "5 in_progress 2", "5 completed 2"],
+        );
+        assert!(
+            got.ok() && (got.count("/cancel"), got.count(RERUN)) == (cancelled, 2),
+            "ci_quick_tier: the label on a run a retry started again ({attempt:?}): {:?} {}",
+            got.calls,
+            got.out
+        );
+    }
     let got = on(&[("GH_RERUN_REFUSALS", "1")], &["5 completed 1"]);
     assert!(
         !got.ok() && got.count(RERUN) == 1 && got.out.contains("could not be re-run"),
@@ -1792,31 +1920,59 @@ mod every_check_passed {
     );
 }
 
-/// The fault the owner's order of 7 Nov 2026 removes: the label cancelling the quick run still going.
-mod the_quick_run_is_not_cancelled {
+/// The wait the owner's order of 8 Nov 2026 removes: the label waiting for the quick attempt to end, cancelling nothing.
+mod the_quick_attempt_is_cancelled {
     use super::*;
     negative_control!(
         ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
-        "the label cancelling the quick run still going, then re-running it",
-        expected = "ci_quick_tier: the label on a run still going",
+        "the label waiting for a quick attempt still going, never cancelling it",
+        expected = "ci_quick_tier: the label on a quick attempt still going",
         check_label_on(&edited(
             TIER,
-            "      run=$(wait_for_end) || return 1\n",
-            "      gh api --method POST \"repos/$GH_REPO/actions/runs/$id/cancel\" > /dev/null\n      run=$(wait_for_end) || return 1\n"
+            "  gh api --method POST \"repos/$GH_REPO/actions/runs/$1/cancel\" > /dev/null \\\n    || echo \"::warning::ci_tier: the cancel of run $1 was refused\" >&2\n",
+            ""
         ))
     );
 }
 
-mod wait_for_the_run_to_end {
+mod cancel_first {
     use super::*;
     negative_control!(
         ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
-        "the label re-running a run still going",
-        expected = "ci_quick_tier: the re-run came before the run ended",
+        "the label waiting for a quick attempt to end, then cancelling it",
+        expected = "ci_quick_tier: the label waited for a quick attempt before cancelling it",
         check_label_on(&edited(
             TIER,
-            "      run=$(wait_for_end) || return 1\n      read -r id status _ <<< \"$run\"\n",
-            ""
+            "        run=$(cancel_quick \"$id\") || return 1\n",
+            "        run=$(wait_full) || return 1\n        run=$(cancel_quick \"$id\") || return 1\n"
+        ))
+    );
+}
+
+mod wait_for_the_cancel {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
+        "the label re-running a run its cancel has not yet ended",
+        expected = "ci_quick_tier: the re-run came before the cancelled run ended",
+        check_label_on(&edited(
+            TIER,
+            "  if wait_for_end \"$polls\" \"$seconds\"; then return 0; fi\n",
+            "  latest_run\n  return 0\n"
+        ))
+    );
+}
+
+mod force_cancel {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
+        "the label waiting again on a run its cancel did not end, without force-cancelling it",
+        expected = "ci_quick_tier: the label on a run its cancel did not end",
+        check_label_on(&edited(
+            TIER,
+            "  gh api --method POST \"repos/$GH_REPO/actions/runs/$1/force-cancel\" > /dev/null \\\n",
+            "  true \\\n"
         ))
     );
 }
@@ -1829,8 +1985,78 @@ mod the_last_poll {
         expected = "ci_quick_tier: the label on a run that ends at the last poll",
         check_label_on(&edited(
             TIER,
-            "  for ((i = 1; i <= polls; i++)); do\n    sleep \"${CI_TIER_WAIT_SECONDS",
-            "  for ((i = 1; i < polls; i++)); do\n    sleep \"${CI_TIER_WAIT_SECONDS"
+            "  for ((i = 1; i <= polls; i++)); do\n    sleep \"$2\"",
+            "  for ((i = 1; i < polls; i++)); do\n    sleep \"$2\""
+        ))
+    );
+}
+
+mod a_full_attempt_goes_on {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
+        "the label cancelling a full attempt still going",
+        expected = "ci_quick_tier: the label on a full attempt still going (\"ci-quick\")",
+        check_label_on(&edited(
+            TIER,
+            "  grep -qxF -e ci-quick -e \"$QUICK_JOB\" <<< \"$skipped\"\n",
+            "  false\n"
+        ))
+    );
+}
+
+mod the_called_name {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
+        "the label reading only the caller's name of the skipped quick job",
+        expected = "ci_quick_tier: the label on a full attempt still going (\"changes\\nci-quick / ci-quick\")",
+        check_label_on(&edited(
+            TIER,
+            "  grep -qxF -e ci-quick -e \"$QUICK_JOB\" <<< \"$skipped\"\n",
+            "  grep -qxF -e ci-quick <<< \"$skipped\"\n"
+        ))
+    );
+}
+
+mod any_skip_is_full {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
+        "the label reading any skipped job, or one named like the quick job, as the full tier",
+        expected = "ci_quick_tier: the label on a quick attempt having skipped another job",
+        check_label_on(&edited(
+            TIER,
+            "  grep -qxF -e ci-quick -e \"$QUICK_JOB\" <<< \"$skipped\"\n",
+            "  grep -qF -e ci-quick -e \"$QUICK_JOB\" <<< \"$skipped\" || [ -n \"$skipped\" ]\n"
+        ))
+    );
+}
+
+mod unread_jobs_are_not_full {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
+        "the label reading an attempt whose jobs cannot be read as the full tier",
+        expected = "ci_quick_tier: the label on a quick attempt with its jobs unread",
+        check_label_on(&edited(
+            TIER,
+            "    --jq '.jobs[] | select(.conclusion == \"skipped\") | .name') || return 1\n",
+            "    --jq '.jobs[] | select(.conclusion == \"skipped\") | .name') || return 0\n"
+        ))
+    );
+}
+
+mod wait_for_a_full_attempt {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
+        "the label re-running a full attempt still going",
+        expected = "ci_quick_tier: the label on a full attempt still going (\"ci-quick\")",
+        check_label_on(&edited(
+            TIER,
+            "        run=$(wait_full) || return 1\n",
+            "        run=$(latest_run)\n"
         ))
     );
 }
@@ -1843,8 +2069,22 @@ mod the_live_head {
         expected = "ci_quick_tier: the label on a superseded head",
         check_label_on(&edited(
             TIER,
-            "    if [ \"$live\" != \"$HEAD_SHA\" ]; then\n      echo \"$HEAD_SHA is no longer the head ($live): nothing to re-run\"\n      return 0\n    fi\n",
+            "  if [ \"$live\" != \"$HEAD_SHA\" ]; then\n    echo \"$HEAD_SHA is no longer the head ($live): nothing to re-run\"\n    return 1\n  fi\n",
             ""
+        ))
+    );
+}
+
+mod the_head_unread {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
+        "the label reading a head it cannot read as superseded",
+        expected = "ci_quick_tier: the label on with the head unread",
+        check_label_on(&edited(
+            TIER,
+            "  live=$(gh api \"repos/$GH_REPO/pulls/$PR\" --jq .head.sha) || {\n    echo \"::error::ci_tier: could not read pull request $PR's head\"\n    return 2\n  }\n",
+            "  live=$(gh api \"repos/$GH_REPO/pulls/$PR\" --jq .head.sha) || true\n"
         ))
     );
 }
@@ -1853,12 +2093,26 @@ mod the_live_label {
     use super::*;
     negative_control!(
         ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
-        "the label re-running a head it has come off while the run went on",
-        expected = "ci_quick_tier: the label off by the time the run ended",
+        "the label cancelling and re-running on a head it has come off",
+        expected = "ci_quick_tier: the label off again",
         check_label_on(&edited(
             TIER,
-            "    if ! grep -qxF merge-ready <<< \"$labels\"; then\n",
-            "    if false; then\n"
+            "  if ! grep -qxF merge-ready <<< \"$labels\"; then\n",
+            "  if false; then\n"
+        ))
+    );
+}
+
+mod the_labels_unread {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
+        "the label reading labels it cannot read as the label off",
+        expected = "ci_quick_tier: the label on with the labels unread",
+        check_label_on(&edited(
+            TIER,
+            "    echo \"::error::ci_tier: could not read pull request $PR's labels\"\n    return 2\n",
+            "    echo \"::error::ci_tier: could not read pull request $PR's labels\"\n    return 1\n"
         ))
     );
 }
@@ -2192,7 +2446,7 @@ fn check_ci_full(files: &[(String, String)]) {
         "write",
         "ci_quick_tier: ci-full.yml cannot re-run a run"
     );
-    // The job outlasts the script's wait for a quick run to end, which it never cancels, within GitHub's 360 minutes.
+    // The job outlasts the script's wait for a full attempt to end, which it never cancels, within GitHub's 360 minutes.
     let script = read(TIER);
     let number = |key: &str| -> u64 {
         let at = script
@@ -2212,7 +2466,7 @@ fn check_ci_full(files: &[(String, String)]) {
     let timeout = job["timeout-minutes"].as_u64().unwrap_or(0);
     assert!(
         wait < timeout && timeout <= 360,
-        "ci_quick_tier: ci-full.yml's job, {timeout} minutes, does not outlast its wait of {wait} for the quick run"
+        "ci_quick_tier: ci-full.yml's job, {timeout} minutes, does not outlast its wait of {wait} for a full attempt"
     );
 }
 
@@ -2281,7 +2535,7 @@ mod outlasts_the_wait {
     use super::*;
     negative_control!(
         ci_full_workflow_takes_the_label_events,
-        "ci-full.yml's job timed out at its old 10 minutes, before a quick run it waits for has ended",
+        "ci-full.yml's job timed out at its old 10 minutes, before a full attempt it waits for has ended",
         expected = "ci_quick_tier: ci-full.yml's job, 10 minutes, does not outlast",
         check_ci_full(&with_edit(
             "ci-full.yml",

@@ -435,9 +435,13 @@ dev-dependency, links the rest). So before the label:
   runs on a head branch protection counts only the latest run's check suite (R-678): a re-run keeps the suite, and
   its `changes` job reads the live label and says full. `ci-status` closes the five statuses from their gates;
 - the full tier adds to the quick tier (the owner, 7 Nov 2026: "The full tier should compose / add on to the quick
-  tier"). A quick run still going when the label goes on is never cancelled: `ci-full.yml` waits for it to end, then
-  starts the full attempt, so quick work is never thrown away. It waits at most 350 minutes; a wait cut off fails its
-  job, named, and starts nothing, the full-only checks staying pending. The full attempt skips what an earlier
+  tier"), and does not wait for it (the owner, 8 Nov 2026: "ci-full: on merge-ready, cancel the in-progress quick run
+  and start the full tier, instead of waiting for it"). A quick attempt still going when the label goes on is
+  cancelled: `ci-full.yml` cancels it, waits for the cancellation to end it, at most 5 minutes, then force-cancels it
+  and waits as long again, and starts the full attempt. A cancelled attempt passed nothing it had not finished, so the
+  full attempt runs all of it again; a wait cut off fails the job, named, and starts nothing, the full-only checks
+  staying pending. A full attempt still going (a retry's) is the full tier already: it is waited for, at most 350
+  minutes, never cancelled. The full attempt skips what an earlier
   attempt's `ci-quick` passed on the same merge commit, the re-run keeping its commit, where it would only repeat it:
   `ci-checks`' fmt, clippy and build, the same commands over the workspace (`changes`' output `quick_passed`, read from
   that attempt's jobs); and, when that `ci-quick` tested every crate (`quick_covers_ci`), the `ci` profile's tests it

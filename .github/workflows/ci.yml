@@ -61,8 +61,9 @@
 # a head, branch protection counts only the latest run's check suite (R-678), so another label's run would supersede the
 # suite holding the required checks. `ci-full.yml` re-runs the head's run when `merge-ready` goes on, a new attempt of
 # the same run, in the same suite, on the same merge commit, and the `changes` job of that attempt, reading the live
-# label, says full (`.github/scripts/ci_tier.sh`). The full tier adds to the quick tier (the owner, 7 Nov 2026): a quick
-# run still going is waited for, never cancelled, and the full attempt skips what an earlier attempt's `ci-quick` passed
+# label, says full (`.github/scripts/ci_tier.sh`). The full tier adds to the quick tier (the owner, 7 Nov 2026), and does
+# not wait for it (the owner, 8 Nov 2026): a quick attempt still going is cancelled, the full attempt starting at once and
+# running all it had not passed, and the full attempt skips what an earlier attempt's `ci-quick` passed
 # on the same merge commit: `ci-checks`' fmt, clippy and build, and, when quick tested every crate, `ci-archive`, the
 # `ci` shards and `ci-workspace`'s tests and doctests; every gate still runs and reports, `ci` passing the shards' skip
 # only on that proof. On a quick run `changes` passes on `docs_only` true, which R-677 reads "runs no full CI",
