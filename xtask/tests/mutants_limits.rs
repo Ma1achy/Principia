@@ -715,17 +715,43 @@ fn selected_where_it_should_be(mutants: &str, nightly: &str, config: &str) {
         "the per-PR baseline is not checked against the limits: {check}"
     );
     let full = &n["jobs"]["mutants"];
+    let by_id = |id: &str| {
+        full["steps"]
+            .as_array()
+            .expect("steps")
+            .iter()
+            .find(|s| s["id"].as_str() == Some(id))
+            .unwrap_or_else(|| panic!("no nightly step `{id}`"))
+    };
+    let (measured, run) = (by_id("baseline"), by_id("run"));
     assert_eq!(
-        profile_of(full, step(full, "cargo mutants --package")),
+        profile_of(full, measured),
+        None,
+        "the nightly baseline runs under a kill limit"
+    );
+    assert!(
+        measured["run"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("--build-timeout 0"),
+        "the nightly baseline is not a baseline alone"
+    );
+    assert_eq!(
+        profile_of(full, run),
         Some(PROFILE),
         "the nightly run does not run under the kill limits"
     );
+    let script = run["run"].as_str().unwrap_or_default();
     assert!(
-        step(full, "cargo xtask mutants-limits")["run"]
-            .as_str()
-            .unwrap_or_default()
-            .contains("cargo xtask mutants-limits \"$RUNNER_TEMP/mutants.out\""),
-        "the nightly run's baselines are not checked against the limits"
+        script.contains("--baseline=skip") && script.contains("--timeout \"$MUTANT_TIMEOUT\""),
+        "the nightly mutants do not take the measured baseline's timeout: {script}"
+    );
+    let timeout = by_id("timeout")["run"].as_str().unwrap_or_default();
+    assert!(
+        timeout.contains("cargo xtask mutants-limits \"$RUNNER_TEMP/baseline/mutants.out\"")
+            && timeout
+                .contains("cargo xtask mutants-timeout \"$RUNNER_TEMP/baseline/mutants.out\""),
+        "the nightly run's baselines are not checked against the limits: {timeout}"
     );
     assert!(
         !config.contains("--profile"),

@@ -268,10 +268,10 @@ success-output = "immediate"
 # Selected by NEXTEST_PROFILE=mutants (cargo-mutants' `--profile` is cargo's, and `.cargo/mutants.toml`'s test arguments
 # reach the fixtures' runs too, which have no such profile), on mutation test runs only: the per-PR shards
 # (`mutants.yml`), the nightly full run (`nightly.yml`) and a local run (`plan/OPERATIONS.md` § "Reviewers", its
-# **Mutants** item). The per-PR baseline runs with no kill limit, under the default profile, so its times are whole:
-# `cargo xtask mutants-limits` fails when a test there used more than half its limit, naming it with a regenerated
-# value. In a single `cargo mutants` invocation, the nightly's and a local run's, cargo-mutants gives its baseline the
-# same test arguments and environment as its mutants, so that baseline runs under these limits.
+# **Mutants** item). Each of those runs measures its baseline first, alone, with no kill limit, under the default
+# profile, so its times are whole (cargo-mutants gives a baseline its mutants' environment, so a run is two invocations:
+# the baseline alone, then the mutants with `--baseline=skip`): `cargo xtask mutants-limits` fails when a test there
+# used more than half its limit, naming it with a regenerated value.
 #
 # The limits: 3 times each test's largest baseline time over 13 runs' logs, the period rounded up to 10 s and
 # `terminate-after = 3` (`slow-timeout`); a test under 20 s takes the profile's 60 s, R-376's floor (REQ-VAL-180).
