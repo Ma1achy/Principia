@@ -7922,6 +7922,8 @@ Adds REQ-CHART-054 and REQ-CHART-055; REQ-GUI-180's statement, verify, rulings, 
 and REQ-GUI-100's statements, verify, rulings, sources and notes, and REQ-GUI-070's note change.
 
 ## R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*
+*Read with R-865 (8 Nov 2026: once TASK-M2-57 merges, latent `β` runs over the full circle and this count spans
+`β ∈ (π, 2π)` too; the optional "mirror pairs counted once" statistic of RQ-739's item 3 is unruled, RQ-739 open on it).*
 *Read by R-467 (20 Oct 2026; the counting is unchanged; the outcome legend's forbidden share leaves the
 presentation legends, the Domain preview's "forbidden in view: N%" standing).*
 *Superseded in part by R-471 (20 Oct 2026; port B1 as the default: an energy-type axis is warped by default, every
@@ -32946,16 +32948,17 @@ R-864 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-CHART-147 (with R-863); changes no existing requirement.
 
-## R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(closes RQ-739)*
+## R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(on RQ-739, which stays open)*
 *8 Nov 2026 · the owner's reply 1 to the code map of that day, pasted as their own; applied in
-`docs/archive/review_queue/M0.md` (RQ-739 moved), the mirror-step markers of `docs/contracts/principia_canonical_spec.md`
+`REVIEW_QUEUE.md` (RQ-739, a dated line, open on its item 3; RQ-750, new), the mirror-step markers of `docs/contracts/principia_canonical_spec.md`
 § 3, `docs/contracts/principia_chart_decoder_contract.md` Part 2 and Part 5,
 `docs/contracts/principia_inverse_encode_contract.md` Part 1, `docs/design/principia_chart_reference.md` § 0.4 and § 3,
 `docs/design/principia_dd_decoder.md` § 3.3, `docs/design/principia_dd_encode.md` § 3.2,
 `docs/design/principia_chart_composition.md` §§ 3, 6.2, 6.6, 8.4, 10.3, 10.4, 17.2 and 17.8 and
 `docs/design/principia_lines.md` § 8, the owner's model (`docs/design/principia_chart_space_model.md` § 0.6, R-868), the
-forward lines of R-82, R-438 and R-544, TASK-M8-120's Notes, TASK-M2-57 (new), REQ-DEC-055 and REQ-DEC-056 (reqio, new),
-`plan/section_notes.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-57*
+forward lines of R-82, R-438 and R-544, R-408's "Read with" line, TASK-M8-120's Notes, `plan/tasks.yaml` and TASK-M2-57
+(new), REQ-DEC-055 and REQ-DEC-056 (reqio, new), the conditional notes of the fifteen requirements below (reqio),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-57, which waits on RQ-750*
 
 The owner's words (8 Nov 2026), verbatim:
 
@@ -32964,7 +32967,7 @@ The owner's words (8 Nov 2026), verbatim:
 >    unchanged); if anything doesn't, bring the list back before proceeding. This also fixes the
 >    latent-chart traces jumping at syzygies. Add a task for it.
 
-*What it decides:* RQ-739's option (a), the owner's proposal of 7 Nov 2026 (R-854, quoted whole in the archived entry):
+*What it decides:* RQ-739's option (a), the owner's proposal of 7 Nov 2026 (R-854, quoted whole in the entry):
 the decoder's mirror step goes, and latent `β` runs over the full circle, so every chart, the shape sphere included,
 uses one decode path with no special case.
 
@@ -32976,14 +32979,34 @@ uses one decode path with no special case.
   `β ∈ (π, 2π)` in place of a mirrored state; latent charts covering both halves have twice the area in `β`. The task
   lists every stored `z`, IC save file or test that relied on the old mirrored encode, and the effect on default windows,
   in its PR. The proposal's optional "mirror pairs counted once" statistic (its item 3) is not ruled here, and no task
-  builds it.
+  builds it: RQ-739 stays open on it (`.claude/commands/rulings-apply.md` § 2, an entry closes only on an answer that
+  settles all of it; code review 5817349158 of PR #449, F1).
 - **Latent-chart traces at syzygies.** The owner's words say this also fixes the traces' jump at syzygies
-  (`docs/design/principia_lines.md` § 8, the `z_β` row, which waited on RQ-739). The task shows it, or says why it
-  can't: RQ-739's physics note recorded that a crossing at `β = 0` would still wrap under `β ∈ (0, 2π)`, so the full
-  circle's link and its seam are a definition the task writes (R-72; REQ-DEC-056), and a trace that still jumps is on
-  the list it brings back.
+  (`docs/design/principia_lines.md` § 8, the `z_β` row, which waited on RQ-739). Under a σ-type link only the syzygies
+  at `β = π` become continuous; one at the link's seam, `β = 0` with `z_β → −∞`, still jumps on any chart showing `z_β`
+  unless `z_β` is made periodic. That is part of RQ-750's question.
 - **A task, as the owner asks:** TASK-M2-57 (REQ-DEC-055, the removal under the bitwise check; REQ-DEC-056, the
   full-circle link and the signed encode, a definition under physics review).
+- **What changes with it, conditionally.** Without the mirror step the encode is no longer mirror-invariant. Inverse
+  encode's T1 becomes an equivariance: `E(Π·x)` is the mirrored `z`, `β → 2π − β`, the momentum controls reflected and
+  `L_z` negated, in place of `E(Π·x) = E(x)`. These requirements change when TASK-M2-57 merges, each carrying a note
+  now and its statement left as it stands until then: REQ-ENC-003 (T1), REQ-ENC-005 (T3's `lookup_mirrored` sign),
+  REQ-ENC-014 (the `lookup_mirrored` notice), REQ-ENC-007 (`β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π]`), REQ-ENC-002,
+  REQ-ENC-015, REQ-DEC-002, REQ-DEC-016, REQ-DEC-017 and REQ-DEC-018 (C's section condition `λ̃_y ≥ −δ_λ`, step 3 in
+  the order, the mirror on full phase space, the one mirror test, the no-op test at the seam), REQ-ENC-034,
+  REQ-CHART-002 and REQ-CHART-020 (the shape sphere's "step 3 not taken" or "mirror undone" path), REQ-COL-006 (the
+  `β = π̂` select on the `−x` half-axis) and REQ-VAL-022, a numerical gate read on `C(x)` "where C's mirror puts L⁻ at
+  w = +1". The gate's restatement is proposed by the task under physics review and recorded by a ruling before it
+  merges, never changed silently in the task's PR. The qa files that assert the mirror change in the task's qa commit
+  as the exception a ruling forces (R-369; the task file lists them).
+
+*Held for the owner,* **RQ-750:** the condition meets the link. dd_decoder § 3.2's `β = π·σ(z_β)` already maps all of
+ℝ onto `(0, π)`, so any link reaching the full circle changes the decoded state of every stored latent `z`, and the
+check fails on every latent preset, saved latent chart and latent golden. The owner's premise ("expected, since the
+mirror step never fires there") holds of the mirror step, not of the link. The ways out (migrate the stored `z`, carry
+the lower half in another coordinate, or make `z_β` periodic) are the owner's: it is their "bring the list back" case,
+found before the task starts (physics review 5817348709 of PR #449, P1). TASK-M2-57's link definition, and so the
+task, waits on it.
 
 *Applied per R-369:*
 
@@ -33001,15 +33024,18 @@ forward line. Until then all three stand as written.
 
 R-865 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Adds REQ-DEC-055 and REQ-DEC-056; changes no existing requirement.
+Adds REQ-DEC-055 and REQ-DEC-056; changes REQ-ENC-002, REQ-ENC-003, REQ-ENC-005, REQ-ENC-007, REQ-ENC-014,
+REQ-ENC-015, REQ-ENC-034, REQ-DEC-002, REQ-DEC-016, REQ-DEC-017, REQ-DEC-018, REQ-CHART-002, REQ-CHART-020,
+REQ-COL-006 and REQ-VAL-022 conditionally: a note on each now, their statements when TASK-M2-57 merges.
 
 ## R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional "centre on pin" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*
 *8 Nov 2026 · the owner's reply 2 to the code map of that day, pasted as their own, "one-way, ruled here"; applied in
 the forward lines of R-69 and R-473, `docs/gui/principia_render_gui_spec.md` § G4 and § G2 (the Lock bullet),
+`docs/design/principia_chart_composition.md` (the 8 Nov status paragraph, § 15's TASK-M8-125 row and § 17.8),
 `docs/gui/design/GUI_DESIGN_NOTES.md` § "08 Lock — the reticle and the pin",
 `docs/contracts/principia_chart_decoder_contract.md` Part 4 § "The lock (projective microscope)", the owner's model
 (`docs/design/principia_chart_space_model.md` § 0.7, R-868), REQ-GUI-099 and REQ-CHART-089 (reqio, a statement and a
-note), REQ-GUI-425 (reqio, new), TASK-M8-125 (new), TASK-M8-07, TASK-M8-117, `REVIEW_QUEUE.md` (RQ-744, a dated line;
+note), REQ-GUI-425 and REQ-GUI-429 (reqio, new), `plan/tasks.yaml`, TASK-M8-125 (new), TASK-M8-07, TASK-M8-117, `REVIEW_QUEUE.md` (RQ-744, a dated line;
 RQ-749, new) and `plan/rule_groups.yaml`; built by TASK-M8-125*
 
 The owner's words (8 Nov 2026), verbatim:
@@ -33037,7 +33063,9 @@ The owner's words (8 Nov 2026), verbatim:
 - **Nonlinear charts.** The owner asks for confirmation that this works where locking today re-centres the window to
   compute the pin (chart_decoder_contract Part 4, "Setting the lock on a nonlinear chart"), and for the reason if it
   can't be exact there. TASK-M8-125's acceptance carries it: exact there, or the task says why, in its PR and to the owner,
-  before anything inexact merges.
+  before anything inexact merges. An inexact pin's bound is never the task's choice: it is a calibration (R-71;
+  REQ-GUI-429), proposed with its evidence and ruled by the owner before merge (physics review 5817348709 of PR #449,
+  P5).
 
 *What it amends:*
 
@@ -33067,7 +33095,7 @@ centre. Which the test holds constant changes what TASK-M8-117 asserts, so it is
 
 R-866 is in the "design" group of `plan/rule_groups.yaml`.
 
-Adds REQ-GUI-425; changes REQ-GUI-099 (its statement) and REQ-CHART-089 (a note).
+Adds REQ-GUI-425 and REQ-GUI-429; changes REQ-GUI-099 (its statement) and REQ-CHART-089 (a note).
 
 ## R-867 — The lock's anchor is stored as the signed starting state, not as a latent point; approved as TASK-M8-117
 *8 Nov 2026 · the owner's reply 3 to the code map of that day, pasted as their own; applied in
@@ -33154,8 +33182,8 @@ Changes no requirement.
 ## R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional "similar systems" overlays; display only, never scored, distinct from the lock
 *8 Nov 2026 · the owner's feature of that day, pasted as their own, "design item for #422 and the next rulings report";
 applied in `docs/design/principia_chart_composition.md` § 10.5 (new) and § 15, `REVIEW_QUEUE.md` (RQ-744, a dated
-line), REQ-GUI-426, REQ-GUI-427 and REQ-GUI-428 (reqio, new), TASK-M8-126 (new) and `plan/rule_groups.yaml`; built by
-TASK-M8-126*
+line), REQ-GUI-426, REQ-GUI-427 and REQ-GUI-428 (reqio, new), `plan/tasks.yaml`, TASK-M8-126 (new) and
+`plan/rule_groups.yaml`; built by TASK-M8-126*
 
 The owner's words (8 Nov 2026), verbatim:
 

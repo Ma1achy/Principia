@@ -1017,7 +1017,8 @@ right-click → lock here) recentres the view on that point and marks it with a 
 - **Unlocking:** the view as it stands becomes the new free start.
 - **The point:** affine charts compute `z_locked = z₀ + (2s−1)q₁ + (2t−1)q₂` directly (chart_decoder_contract Part 3, the
   affine chart); nonlinear charts replay Φ and D on the CPU. On a nonlinear chart, where locking re-centred the window to
-  compute the pin, the pin is held without moving the view, exactly or with the reason stated (R-866; TASK-M8-125).
+  compute the pin, the pin is held without moving the view, exactly, or with the reason stated and its bound a
+  calibration the owner rules on before merge (R-866, R-71; TASK-M8-125).
 - The lock badge offers **unlock**, **centre on pin** (R-866) and **open in Inspector** (§G8). *Was (before R-866):* "The
   lock badge offers **unlock** and **open in Inspector** (§G8)."
 

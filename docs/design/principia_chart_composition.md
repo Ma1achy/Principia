@@ -30,9 +30,9 @@ with the previous stage's tests green, and adds TASK-M8-124, the path object wit
 (§ 15). R-864 is the architecture rule for the chart-path work of § 17: one object, today's operations re-expressed as its
 named families, bitwise first, and a type sketch brought to the owner before any implementation.
 
-**The owner's replies of 8 Nov 2026 to the code map, and their points of interest.** R-865 closes RQ-739: the decoder's
+**The owner's replies of 8 Nov 2026 to the code map, and their points of interest.** R-865, on RQ-739 (which stays open on its item 3, the optional mirror-pairs statistic): the decoder's
 mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check, built by TASK-M2-57
-(§ 6.6). R-866: locking doesn't move the view, the pin at the clicked pixel and tilt and zoom turning about it, built by
+(§ 6.6), which waits on RQ-750, the full-circle link. R-866: locking doesn't move the view, the pin at the clicked pixel and tilt and zoom turning about it, built by
 TASK-M8-125 in stage 1 (§ 15, § 17.8). R-867: the lock's anchor is stored as the signed starting state, not a latent
 point, TASK-M8-117's (§ 17.8). R-868: the model's wording follows R-474, and the owner's corrected model replaces the
 repo's; RQ-738 stays open on the rest of its list. R-869: the owner's direction on RQ-745, which stays open. R-870: points
@@ -772,7 +772,7 @@ What follows from that:
 
 The model's § 0.6 says the same. What this design's own sections owe: § 8's region D and § 20's presets render the full range and take the paper's domain from the filter (§ 10.4); § 10.3's start stays signed; `trajectory_polar_unfolded` and `path_lower_half_stays` test it. The state map and latent-chart traces are ruled to sign too (RQ-736), and those changes are the rulings PR's, in their own documents.
 
-**The mirror step's removal, ruled 8 Nov 2026 (R-865, closing RQ-739), conditional on the bitwise check:** the decoder's mirror step is removed and latent `β` runs over the full circle, so every chart, the shape sphere included, uses one decode path, once TASK-M2-57 has shown that every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged; if anything doesn't, the list goes back to the owner before it proceeds. The owner's words add that it also fixes the latent-chart traces' jump at syzygies. Each section here it touches carries *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*: §§ 3, 6.2, 8.4, 10.3, 10.4, 17.2 and 17.8. They stand as written until TASK-M2-57 lands, and change then. *Was:* "**The owner's proposal, not applied:** removing the decoder's mirror step, with latent `β` over the full circle. "Mirror-step removal stays a proposal until ruled: don't apply it, just tag the sections it would touch." Each section it would touch here carries *[mirror-step proposal: § 6.6]*: §§ 3, 6.2, 8.4, 10.3, 10.4, 17.2 and 17.8."
+**The mirror step's removal, ruled 8 Nov 2026 (R-865, on RQ-739), conditional on the bitwise check:** the decoder's mirror step is removed and latent `β` runs over the full circle, so every chart, the shape sphere included, uses one decode path, once TASK-M2-57 has shown that every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged; if anything doesn't, the list goes back to the owner before it proceeds. The owner's words add that it also fixes the latent-chart traces' jump at syzygies. Each section here it touches carries *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*: §§ 3, 6.2, 8.4, 10.3, 10.4, 17.2 and 17.8. They stand as written until TASK-M2-57 lands, and change then. The condition meets the link: `β = π·σ(z_β)` already covers `(0, π)`, so a full-circle link changes every stored latent `z`, and the task waits on the owner's answer, RQ-750. RQ-739 stays open on the proposal's item 3, the optional "mirror pairs counted once" statistic. *Was:* "**The owner's proposal, not applied:** removing the decoder's mirror step, with latent `β` over the full circle. "Mirror-step removal stays a proposal until ruled: don't apply it, just tag the sections it would touch." Each section it would touch here carries *[mirror-step proposal: § 6.6]*: §§ 3, 6.2, 8.4, 10.3, 10.4, 17.2 and 17.8."
 
 ---
 
@@ -1260,7 +1260,12 @@ The owner's feature of 8 Nov 2026 (R-870, verbatim there), a design item for thi
 - **Owed, not stated by the owner's words.** Definitions (R-72; REQ-GUI-427), written here by TASK-M8-126 and approved by
   the physics reviewer: what "exactly" means for a chart passing through a point, "the nearest chart point", the
   off-slice distance's metric, how a near-match of three or more properties is measured, how marks are found on a path
-  frame with no inverse, and which state group holds the saved points, off the sim key. A value (R-71; REQ-GUI-428): the
+  frame with no inverse, which state group holds the saved points, off the sim key, and the gauge in which property
+  values and the off-slice distance are compared: chart pixels decode in the `I = 1` gauge, where of the conserved
+  quantities only the scale-free `L_z²E` and the signs hold (the model's § 7), so "equals the point's value" is
+  undefined for a scale-dependent primitive (`E`, `L_z`, …) until the gauge is stated; and whether the off-slice
+  distance is taken on canonical representatives (centre of mass, rotation and scale quotiented) with the mirror not
+  quotiented, the point being a signed state (R-854). A value (R-71; REQ-GUI-428): the
   near-match tolerance, proposed by TASK-M8-126 with its evidence and confirmed by the owner at the M8 gate. A point's
   signed state on the latent chart needs the full-circle `β` of R-865 (TASK-M2-57).
 
