@@ -20,7 +20,15 @@
 //!   every run reads, its baseline included, does not select it.
 //! - "The qa control-inventory tests (qa_TASK-M0-22/24/25 and similar, which inspect the whole workspace) run once per
 //!   CI run as a step, not inside per-mutant test runs. Coverage unchanged": the profile's filter leaves each of those
-//!   binaries out, and `ci.yml` and the nightly run still run the profiles that run them.
+//!   binaries out, and `ci.yml` and the nightly run still run the profiles that run them; and each test the `mutants`
+//!   profile leaves out, whole binary or one test, is still run by `ci.yml` and by the nightly `cpu` job: by a step
+//!   under the `ci` profile where that profile does not leave it out too, else by a step under `ci-workspace`, whose
+//!   filter names it, selecting its package and binary with no test-name filter.
+//! - "Baseline with no kill limit; same limits for nightly and local", for the nightly run and a local run: each nightly
+//!   shard measures a baseline in a `cargo mutants` run of its own, outside the kill limits, and runs its mutants with
+//!   `--baseline=skip`, so no baseline runs under the limits; the local procedure in `plan/OPERATIONS.md` measures its
+//!   baseline (`--build-timeout 0`) without the profile, reads its timeout from that baseline's output, and selects the
+//!   profile for the `--baseline=skip` run alone.
 //!
 //! Each test has its negative control (R-176), which feeds the same assertion an input differing in the one respect
 //! the requirement turns on.
@@ -702,3 +710,282 @@ negative_control!(
         &read(".github/workflows/nightly.yml")
     )
 );
+
+// ---------------------------------------------------------------------------------------------------------------
+// Every test the `mutants` profile leaves out still runs once in `ci.yml` and once nightly.
+
+/// A filter's terms, one per line (`binary_id(=…)`, or `(binary_id(=…) & test(…))`), as (binary id, test filter).
+fn terms(filter: &str) -> Vec<(String, Option<String>)> {
+    filter
+        .lines()
+        .map(|l| l.trim().trim_start_matches("| ").trim())
+        .filter(|l| l.contains("binary_id(="))
+        .map(|l| {
+            let l = l
+                .strip_prefix('(')
+                .and_then(|l| l.strip_suffix(')'))
+                .unwrap_or(l);
+            let (binary, test) = match l.split_once(" & ") {
+                Some((b, t)) => (b, Some(t.to_owned())),
+                None => (l, None),
+            };
+            let binary = binary
+                .strip_prefix("binary_id(=")
+                .and_then(|b| b.strip_suffix(')'))
+                .unwrap_or_else(|| panic!("qa-mpl: a term that is not one binary: {l}"));
+            (binary.to_owned(), test)
+        })
+        .collect()
+}
+
+/// Whether `term` falls under one of `list`: the same binary, the whole of it or the same test filter.
+fn covers(list: &[(String, Option<String>)], term: &(String, Option<String>)) -> bool {
+    list.iter()
+        .any(|(b, t)| *b == term.0 && (t.is_none() || *t == term.1))
+}
+
+/// Each `cargo nextest run` command of `yml`, with the NEXTEST_PROFILE it runs under (the step's, the job's or the
+/// workflow's).
+fn nextest_steps(yml: &str) -> Vec<(Option<String>, String)> {
+    let docs = yaml_rust2::YamlLoader::load_from_str(yml).expect("qa-mpl: the workflow is YAML");
+    let doc = &docs[0];
+    let top = doc["env"]["NEXTEST_PROFILE"].as_str();
+    let mut out = Vec::new();
+    for (_, job) in doc["jobs"].as_hash().expect("qa-mpl: jobs") {
+        let at = job["env"]["NEXTEST_PROFILE"].as_str().or(top);
+        for step in job["steps"].as_vec().map_or(&[][..], Vec::as_slice) {
+            let profile = step["env"]["NEXTEST_PROFILE"]
+                .as_str()
+                .or(at)
+                .map(str::to_owned);
+            for line in step["run"].as_str().unwrap_or("").lines() {
+                if let Some(pos) = line.find("cargo nextest run") {
+                    out.push((profile.clone(), line[pos..].trim().to_owned()));
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Whether `cmd` runs every test of `binary` (`<package>::<binary>`, or `<package>` for its library) that its
+/// profile's filter lets through: it selects the package (or the workspace), the binary if it names any, and no
+/// test-name filter or feature narrows it.
+fn selects(cmd: &str, binary: &str) -> bool {
+    let (package, bin) = binary.split_once("::").unwrap_or((binary, ""));
+    let words: Vec<&str> = cmd.split_whitespace().skip(3).collect();
+    let mut packages = Vec::new();
+    let mut tests = Vec::new();
+    let mut workspace = false;
+    let mut i = 0;
+    while i < words.len() {
+        match words[i] {
+            "-p" | "--package" => {
+                packages.push(words.get(i + 1).copied().unwrap_or(""));
+                i += 1;
+            }
+            "--test" => {
+                tests.push(words.get(i + 1).copied().unwrap_or(""));
+                i += 1;
+            }
+            "--no-tests" => i += 1,
+            "--workspace" => workspace = true,
+            _ => return false,
+        }
+        i += 1;
+    }
+    (workspace || packages.contains(&package)) && (tests.is_empty() || tests.contains(&bin))
+}
+
+/// Each term of the `mutants` profile's exclusions is run by `ci.yml` and the nightly run: under `ci` where `ci` does
+/// not exclude it (`ci.yml`'s `ci` shards; the nightly's `--workspace` step), else under `ci-workspace`, whose filter
+/// names it, by a step selecting its binary.
+fn every_exclusion_still_runs(toml: &str, ci: &str, nightly: &str) {
+    let doc: toml_edit::DocumentMut = toml.parse().expect("qa-mpl: nextest.toml is TOML");
+    let excluded = terms(&default_filter(&doc, "mutants"));
+    assert!(
+        excluded.len() >= 10,
+        "qa-mpl: the mutants profile's exclusions did not parse as one term a line: {excluded:?}"
+    );
+    let ci_out = terms(&default_filter(&doc, "ci"));
+    let workspace_in = terms(&default_filter(&doc, "ci-workspace"));
+    for (workflow, text) in [("ci.yml", ci), ("nightly.yml", nightly)] {
+        let steps = nextest_steps(text);
+        for term in &excluded {
+            let shown = format!("{} {}", term.0, term.1.as_deref().unwrap_or("(every test)"));
+            let run = if !covers(&ci_out, term) {
+                steps.iter().any(|(p, cmd)| {
+                    p.as_deref() == Some("ci")
+                        && (cmd.contains("--archive-file") || selects(cmd, &term.0))
+                })
+            } else {
+                covers(&workspace_in, term)
+                    && steps.iter().any(|(p, cmd)| {
+                        p.as_deref() == Some("ci-workspace") && selects(cmd, &term.0)
+                    })
+            };
+            assert!(
+                run,
+                "qa-mpl: {workflow} never runs {shown}, which per-mutant runs leave out"
+            );
+        }
+    }
+}
+
+#[test]
+fn qa_mpl_every_test_left_out_of_mutant_runs_still_runs_in_ci_and_nightly() {
+    every_exclusion_still_runs(
+        &read(".config/nextest.toml"),
+        &read(".github/workflows/ci.yml"),
+        &read(".github/workflows/nightly.yml"),
+    );
+}
+
+negative_control!(
+    qa_mpl_every_test_left_out_of_mutant_runs_still_runs_in_ci_and_nightly,
+    "the nightly step that runs xtask's `nextest` once no longer names it",
+    expected = "qa-mpl: nightly.yml never runs xtask::nextest (every test), which per-mutant runs leave out",
+    every_exclusion_still_runs(
+        &read(".config/nextest.toml"),
+        &read(".github/workflows/ci.yml"),
+        &edited(
+            &read(".github/workflows/nightly.yml"),
+            "run: cargo nextest run -p xtask --test nextest --test controls",
+            "run: cargo nextest run -p xtask --test controls"
+        )
+    )
+);
+
+mod excluded_from_ci_too {
+    use super::*;
+    negative_control!(
+        qa_mpl_every_test_left_out_of_mutant_runs_still_runs_in_ci_and_nightly,
+        "the `ci` profile leaves out `controls_runs_on_this_workspace_bare_and_in_ci` too, and `ci-workspace` does not name it",
+        expected = "qa-mpl: ci.yml never runs xtask::controls test(=controls_runs_on_this_workspace_bare_and_in_ci)",
+        every_exclusion_still_runs(
+            &edited(
+                &read(".config/nextest.toml"),
+                "        | binary_id(=validation::qa_TASK-M0-24)\n",
+                "        | binary_id(=validation::qa_TASK-M0-24)\n        | (binary_id(=xtask::controls) & test(=controls_runs_on_this_workspace_bare_and_in_ci))\n"
+            ),
+            &read(".github/workflows/ci.yml"),
+            &read(".github/workflows/nightly.yml")
+        )
+    );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The nightly and local baselines: measured alone, with no kill limit; the limits bind the mutants alone.
+
+/// Every backtick span of the text from the owner's "Baseline with no kill limit" in `plan/OPERATIONS.md` to the end
+/// of its paragraph.
+fn local_procedure(operations: &str) -> Vec<String> {
+    let at = operations.find("Baseline with no kill limit").expect(
+        "qa-mpl: plan/OPERATIONS.md does not give the owner's \"Baseline with no kill limit\"",
+    );
+    let rest = &operations[at..];
+    let end = ["\n\n", "\n  - "]
+        .iter()
+        .filter_map(|m| rest.find(m))
+        .min()
+        .unwrap_or(rest.len());
+    rest[..end]
+        .split('`')
+        .skip(1)
+        .step_by(2)
+        .map(|s| s.split_whitespace().collect::<Vec<_>>().join(" "))
+        .collect()
+}
+
+fn baselines_have_no_kill_limit(nightly: &str, operations: &str) {
+    let runs = mutants_runs(nightly);
+    let (mutant_runs, baselines): (Vec<_>, Vec<_>) = runs
+        .iter()
+        .partition(|(_, run, _)| run.contains("--baseline=skip"));
+    assert!(
+        !baselines.is_empty() && !mutant_runs.is_empty(),
+        "qa-mpl: the nightly run does not measure its baseline in a run of its own, apart from its mutants: {runs:?}"
+    );
+    for (job, run, profile) in &baselines {
+        assert!(
+            !limited(profile, run),
+            "qa-mpl: the nightly baseline (job `{job}`) runs under the kill limits; the owner: \"Baseline with no kill \
+             limit\""
+        );
+    }
+    let spans = local_procedure(operations);
+    let baseline = spans
+        .iter()
+        .find(|s| s.starts_with("cargo mutants") && s.contains("--build-timeout 0"))
+        .unwrap_or_else(|| {
+            panic!("qa-mpl: plan/OPERATIONS.md gives a local run no baseline run of its own: {spans:?}")
+        });
+    assert!(
+        !baseline.contains("NEXTEST_PROFILE") && !baseline.contains("--profile"),
+        "qa-mpl: the local baseline runs under the kill limits: {baseline}"
+    );
+    let out = baseline
+        .split_whitespace()
+        .skip_while(|w| *w != "-o")
+        .nth(1)
+        .expect("qa-mpl: the local baseline names no output directory");
+    assert!(
+        spans
+            .iter()
+            .any(|s| s.starts_with("cargo xtask mutants-timeout") && s.contains(&format!("{out}/mutants.out"))),
+        "qa-mpl: the local run's timeout is not read from its own baseline's output ({out}/mutants.out): {spans:?}"
+    );
+    let skip = spans
+        .iter()
+        .position(|s| s.starts_with("cargo mutants") && s.contains("--baseline=skip"))
+        .unwrap_or_else(|| {
+            panic!("qa-mpl: the local run's mutants do not skip a limited baseline: {spans:?}")
+        });
+    let limited_at = spans
+        .iter()
+        .position(|s| s.contains("NEXTEST_PROFILE=mutants"))
+        .unwrap_or(0);
+    assert!(
+        limited_at > skip,
+        "qa-mpl: the local procedure selects the kill limits before its `--baseline=skip` run, not for it: {spans:?}"
+    );
+}
+
+#[test]
+fn qa_mpl_nightly_and_local_baselines_have_no_kill_limit() {
+    baselines_have_no_kill_limit(
+        &read(".github/workflows/nightly.yml"),
+        &read("plan/OPERATIONS.md"),
+    );
+}
+
+negative_control!(
+    qa_mpl_nightly_and_local_baselines_have_no_kill_limit,
+    "the nightly shard's baseline step given the mutants profile",
+    expected = "the nightly baseline (job `mutants`) runs under the kill limits",
+    baselines_have_no_kill_limit(
+        &edited(
+            &read(".github/workflows/nightly.yml"),
+            "PRIN_CONTAIN: required\n          HEARTBEAT_CONTEXT",
+            "PRIN_CONTAIN: required\n          NEXTEST_PROFILE: mutants\n          HEARTBEAT_CONTEXT"
+        ),
+        &read("plan/OPERATIONS.md")
+    )
+);
+
+mod local_limited {
+    use super::*;
+    negative_control!(
+        qa_mpl_nightly_and_local_baselines_have_no_kill_limit,
+        "the local baseline told to run under the mutants profile",
+        expected = "the local baseline runs under the kill limits",
+        baselines_have_no_kill_limit(
+            &read(".github/workflows/nightly.yml"),
+            &edited(
+                &read("plan/OPERATIONS.md"),
+                "--build-timeout 0 -o <dir>/baseline`",
+                "--build-timeout 0 -o <dir>/baseline -- --profile mutants`"
+            )
+        )
+    );
+}
