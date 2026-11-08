@@ -3880,19 +3880,21 @@
   - RQ-722
 - id: REQ-CHART-103
   area: CHART
-  statement: "The virial ratio must be a registered axis of the kind RQ-717 rules, with its authoring descriptor, and the pair (configuration axis, Q) must be offered, the kernel's AxisVirial unchanged, the row's forward stated per mapping and a warped axis at a held L_z ≠ 0 labelled Q above the floor."
+  statement: "The virial ratio must be a registered axis of the kind RQ-717 rules, with its authoring descriptor, and the pair (configuration axis, Q) must be offered, the kernel's AxisVirial unchanged but for REQ-CHART-139's floor under the rise, the row's forward stated per mapping: a warped axis at a held L_z ≠ 0 reads its own coordinate Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K under R-817's floor, labelled Q above the floor at Q₀ = 0; its label at Q₀ > 0 is RQ-741's."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 9. Then virial
   verify:
     method: unit test
-    detail: "cargo test -p engine virial_descriptor: the validator takes a chart with a virial axis, refuses it beside hold E and beside a K axis by name; the row's forward by mapping: linear, or at L_z = 0, agrees with the descriptor's virial_ratio; warped at a held L_z ≠ 0 it reads 2(K − L_z²/2I)/|U|, labelled; forward(inverse(x)) = x on both arms; controls: a virial axis with no descriptor is refused, the warped row read as the state's own ratio fails, a factor changed in the inverse fails, the row being a scale solve"
+    detail: "cargo test -p engine virial_descriptor: the validator takes a chart with a virial axis, refuses it beside hold E and beside a K axis by name; the row's forward by mapping: linear, or at L_z = 0, agrees with the descriptor's virial_ratio; warped at a held L_z ≠ 0 it reads Q₀ + 2(K − max(Q₀·|U|/2, L_z²/2I))/|U| (R-817): at Q₀ = 0 that is 2(K − L_z²/2I)/|U|, labelled Q above the floor; at Q₀ > 0 it is the state's own ratio 2K/|U| where Q₀ ≥ Q_min(U) = L_z²/(I·|U|), and that ratio less Q_min(U) − Q₀ elsewhere; forward(inverse(x)) = x on every arm, at Q₀ = 0 and at Q₀ > 0 on a column with Q_min(U) < Q₀, one with Q_min(U) = Q₀ and one with Q_min(U) > Q₀ (Q₀ = 1, Q_min(U) = 0.25, t = 0 reads 1); controls: a virial axis with no descriptor is refused, the warped row read as the state's own ratio fails at Q₀ = 0, the Q₀ = 0 form 2(K − L_z²/2I)/|U| on a Q₀ > 0 axis fails where Q₀ ≥ Q_min(U), a factor changed in the inverse fails, the row being a scale solve"
   rulings:
   - R-506
+  - R-817
   milestone: M8
   rq:
-  - RQ-700
   - RQ-717
+  - RQ-741
+  note: "R-817 (7 Nov 2026, RQ-700 (b)) moves the floor under the rise at Q₀ > 0; the forward is the inverse of its decode, returning the axis's coordinate Q(t) of chart_reference § 2.1. The label at Q₀ > 0, where the axis reads the state's own ratio on a column with Q₀ ≥ Q_min(U) and Q₀ plus the excess above the floor on the rest, is RQ-741's."
 - id: REQ-CHART-104
   area: CHART
   statement: "Each axis must take a warp of the closed four (linear, power, log, feasibility), bitwise today's on the linear arm, and a chart must take a pair map (affine, polar about a point, log-polar), each declared type under physics review."
@@ -4100,19 +4102,19 @@
   - RQ-721
 - id: REQ-CHART-115
   area: CHART
-  statement: "Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, unless the anchor isn't in B, which is labelled and unbased; about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words."
+  statement: "Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "17.8 Lock: a based homotopy"
   verify:
+    detail: "cargo test -p engine path_lock_centre: where the anchor stays in B, a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B (a region D, a rest and a Burrau B), the probe reads the stored words at s = 0 and B's nearest point to the anchor at s = 1, the slide continuous between (the largest step in the probe's state between frames falling to at most 0.6 of the previous largest step each time the frame step is halved, twice over), with no label and no jump; a time-axis chart to an IC-only chart keeps its labelled jump; controls: the select removed fails, offsets blended linearly fails, a labelled jump where the anchor can't exist in B fails, an unlabelled snap to B's nearest point at one mid-path frame fails"
     method: unit test
-    detail: "cargo test -p engine path_lock_centre: a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; anchor not in B labelled, unbased; controls: the select removed fails, offsets blended linearly fails"
   rulings:
   - R-69
   - R-92
+  - R-849
+  - R-850
   milestone: M8
-  rq:
-  - RQ-721
 - id: REQ-CHART-116
   area: CHART
   statement: "A path must offer control charts built from each arm's own interpolation, alignment that reaches the identity at s = 1, and re-timing for constant visual speed by a recorded table pinned at both ends, easing untouched."
@@ -4329,11 +4331,15 @@
   source:
   - file: docs/design/principia_chart_composition.md
     section: 3.3 Every primitive's class
+  - file: decisions.md
+    section: "R-852 — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine primitive_class: every row has its class; a row declared conserved and exact holds along a short run within the run's drift, at ε = 0, the softened and Newtonian energies being R-791's and RQ-709's; a row declared approximate shows the label; a functional is refused as an axis; controls: a state row declared conserved fails, a functional accepted fails"
-  rulings: []
+    detail: "cargo test -p engine primitive_class: every row has its class; a row declared conserved and exact holds along a short run within the run's drift, at ε = 0, the softened and Newtonian energies being R-791's and R-819's; a row declared approximate shows the label; a functional is refused as an axis; controls: a state row declared conserved fails, a functional accepted fails"
+  rulings:
+  - R-852
   milestone: M4
+  note: "R-852 (7 Nov 2026, the owner's model § 6b): the class is a rule of the registry. RQ-709 is ruled by R-819 (the reviews of PR #443, physics P3, code 5). *Was (verify):* \"R-791's and RQ-709's\"."
 - id: REQ-CHART-129
   area: CHART
   statement: "Ensemble jitter on a composed chart must stay in the chart's own coordinates; a footprint whose copies straddle a declared seam, a branch or a composed chart's mask must be flagged per pixel, in the resolve pass, every copy kept; its spread and error_ratio must be reported as seam-contaminated; a chart of today's registry must be unchanged."
@@ -4394,6 +4400,7 @@
     detail: "cargo test -p engine path_lower_half_stays: two views wholly in the open lower hemisphere, whose ends differ at the chart layer, so the arm function returns Path::Line, asserted first, keep n₂ < 0 at every pixel of every frame, ends included, on the signed state; on the other arms the test asserts only signed, no mirror taken; controls: canon::canonicalise for the signed form, which mirrors, fails; a literal z blend, which reaches n₂ ≥ 0 only, fails"
   rulings:
   - R-544
+  - R-853
   milestone: M8
 - id: REQ-CHART-134
   area: CHART
@@ -4408,6 +4415,7 @@
     detail: "cargo test -p kernel trajectory_polar_unfolded: the figure-eight, run by the kernel: φ = acos(n_w) from the signed n̂ at every macro-step lies on both sides of 90°, crosses it at every syzygy, and the sign of n_w matches the triangle's signed area computed from the positions; control: the polar angle folded, min(φ, π − φ), fails"
   rulings:
   - R-544
+  - R-853
   milestone: M8
 - id: REQ-CHART-135
   area: CHART
@@ -4422,6 +4430,7 @@
     detail: "cargo test -p engine symmetry_filter_display_only: filter on and off give one sim key, payload and statistic, bit for bit; a chart's list of symmetries takes a new entry with no change to the filter; control: the filter feeding a statistic fails"
   rulings:
   - R-408
+  - R-855
   milestone: M8
 - id: REQ-CHART-136
   area: CHART
@@ -4434,6 +4443,7 @@
     detail: "cargo test -p engine symmetry_filter_rest_reconstructs: a third-body rest chart declaring the mirror only, one copy, whose pairs decode to exact mirrors, filtered, plus its mirror, is the full chart bitwise, outcome fields equal, signed fields flipped; mutations: a signed field not flipped fails, the canonical side off by one row fails"
   rulings:
   - R-544
+  - R-855
   milestone: M8
 - id: REQ-CHART-137
   area: CHART
@@ -4448,6 +4458,7 @@
     detail: "cargo test -p engine symmetry_filter_fixed_velocity: on a shape-sphere chart with fixed velocities p_ρ = (0.1, 0.1), p_λ = (0, 0) relative to ρ̃ on +x, Π·p ≠ p asserted after signed C first, the filter blanks nothing and reads no duplicates in this chart; a partner out of the view and in the domain still blanks, and at unequal masses or eq. 3's near-rest start the swap blanks nothing; the same chart at p_ρ = (0.1, 0) does blank; mutation: the partner check removed, blanking by the map's (θ, π − φ) alone, fails"
   rulings:
   - R-544
+  - R-855
   milestone: M8
 - id: REQ-CHART-138
   area: CHART
@@ -4462,7 +4473,139 @@
     detail: "cargo test -p engine symmetry_filter_statement: the legend and the sidecar state the canonical choice; a paper-frame preset opens with the filter on, any other chart with it off; a target's score is one with the filter on or off; controls: the statement dropped fails, the default on for every chart fails"
   rulings:
   - R-649
+  - R-855
   milestone: M8
+- id: REQ-CHART-139
+  area: CHART
+  statement: "On a warped virial-ratio axis with an asked bottom Q₀ > 0 at a held L_z ≠ 0, the floor must sit under the rise only: with Q_min(U) = L_z²/(I·|U|), the pixel's ratio must be max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K, so the bottom row is Q₀ where Q₀ is feasible and the floor elsewhere, and at Q₀ = 0 the built additive form must hold bit for bit (R-817)."
+  source:
+  - file: decisions.md
+    section: "R-817 — A warped virial axis with an asked bottom `Q₀ > 0` at a held `L_z ≠ 0` puts the floor under the rise only: the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K` *(closes RQ-700)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel virial_floor_under_rise: on a virial axis with Q₀ > 0 at a held L_z ≠ 0, every bottom-row pixel where Q₀ ≥ Q_min(U) reads ratio Q₀ to f32 rounding and every other reads Q_min(U); every pixel of [0,1]² is a system; at Q₀ = 0 the decode equals the additive form's bit for bit; control: the additive form Q(t) + Q_min(U) fails the bottom-row arm"
+  rulings:
+  - R-708
+  - R-817
+  milestone: M8
+  note: "Closed by TASK-M8-119, which gives the virial axis its descriptor; the built form is the additive one until then, and no chart offers the axis. Physics review is required."
+- id: REQ-CHART-140
+  area: CHART
+  statement: "At ε ≠ 0 every axis that reads U, the lone, mixed and Chart-builder E axes and the virial ratio, must read the Newtonian U, so no pixel's start depends on ε; each must be labelled as Newtonian whenever softening is on, with the softened value beside it in the Inspector, and on the virial ratio the Inspector must show the axis's disagreement with the stored, softened virial_ratio (R-819)."
+  source:
+  - file: decisions.md
+    section: "R-819 — R-791's Newtonian energy reaches every axis that reads `U`: the lone, mixed and Chart-builder `E` axes and the virial ratio, each labelled, the softened value beside it in the Inspector, which also shows the virial axis's disagreement with the stored ratio *(closes RQ-709)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel softened_u_axes: over seeded pixels of a lone E chart, a mixed E chart and a virial chart, at ε ≠ 0 each decoded IC equals the same pixel's at ε = 0 bit for bit; cargo test -p gui inspector_softened_readouts: the label and the softened value appear at ε ≠ 0 and not at ε = 0, and on a virial chart the readout shows both ratios and their difference; controls: the softened V₀ read on one axis fails the first arm; the disagreement hidden fails the second"
+  rulings:
+  - R-791
+  - R-819
+  milestone: M9
+  note: "Closed by TASK-M9-39, with REQ-CHART-092 for the (L_z, E) chart."
+- id: REQ-CHART-141
+  area: CHART
+  kind: calibration
+  statement: "The K_max and γ_K of Φ_θ,L_z's held-K warp must be calibrated, a value of this chart's own (R-71): proposed with its evidence by the task that needs it, K_max at the chart's calibrated K (REQ-CHART-046), so t₀ = 1, with REQ-CHART-044's γ_K, as the proposal the owner named, and whether K_max follows a slice of the held K stated; checked by a reviewer, confirmed by the owner at the gate and recorded in decisions.md (R-833)."
+  source:
+  - file: decisions.md
+    section: "R-833 — `Φ_θ,L_z`'s held `K` warp takes a `K_max` and `γ_K` of its own, a calibration (R-71), with `K_max` at the chart's calibrated `K` proposed at the gate *(closes RQ-710)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 4.5 The Burrau-family chart maps
+  verify:
+    method: review checklist
+    detail: "the proposal states K_max and γ_K for Φ_θ,L_z's held K, with t₀ at the calibrated K and the share of a default tilted view's pixels each value moves; physics review; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-708
+  - R-833
+  milestone: M8
+  note: "Closed by TASK-M8-48, whose sliders give the default tilted view. HeldK takes both values as inputs meanwhile."
+- id: REQ-CHART-142
+  area: CHART
+  statement: "Region D's preset must offer exact rest as its default velocities and eq. 3 as a second preset; eq. 3 must reproduce Agekyan & Anosova's velocities in their own units before canonicalising, as a tested function, and the preset must state beside itself that at I = 1 eq. 3's start varies by about 19% over D at equal masses (ℓ from 0.408 to 0.577), never correcting it (R-851)."
+  source:
+  - file: decisions.md
+    section: "R-851 — Region D's default velocities are exact rest, with eq. 3 the second preset; AA-3 and AA-5 read eq. 3, AA-8 runs under both, eq. 3 reproduces Agekyan & Anosova's velocities in their own units before canonicalising, and its 19% spread at `I = 1` is stated beside the preset *(on RQ-714, which stays open)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 8.6 The momentum, and the rescale per pixel
+  - file: docs/design/principia_dd_replication.md
+    section: "5.8 Region D: Agekyan & Anosova, and Anosova 1969"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine region_d_velocity_presets: the preset opens at exact rest, q = 0 bitwise; the eq. 3 preset's velocities in Agekyan & Anosova's units equal eq. 3's printed values before canonicalising, and after C the speed ratio across D's equal-mass corners is √(ℓ_max/ℓ_min) to f64 rounding; the preset's statement names the spread; controls: eq. 3 applied after canonicalising fails the units arm; the statement dropped fails"
+  rulings:
+  - R-845
+  - R-851
+  milestone: M4
+  note: "Closed by TASK-M4-34. The preset's domain waits on RQ-714's open part."
+- id: REQ-CHART-143
+  area: CHART
+  statement: "A fixed-k chart must be built as a chart and builder axes like any other: the rigid rotation v = ωJr, ω² = 2k|U|/I, over D₁₁ ∪ D₁₂, with its rotation sense, which the source doesn't print, defined at build under physics review (R-72), never guessed (R-847)."
+  source:
+  - file: decisions.md
+    section: "R-847 — R-669 is reversed: fixed-`k` and binary-plus-single (scattering) become charts and builder axes, built when their turn comes, with Heggie & Sweatman 1991 alongside and f_col built with the scattering chart; their targets score in M9; orbital elements are axes at a labelled pair, plus overlays; MK-1 stays, labelled a planar re-run *(closes RQ-723, RQ-725 and RQ-726)*"
+  - file: docs/design/principia_dd_replication.md
+    section: 5.12 Targets that wait for a chart, a diagnostic or data
+  verify:
+    method: unit test
+    detail: "cargo test -p engine fixed_k_chart: every pixel's decoded start is a rigid rotation, its K/|U| equal to the pixel's k to f64 rounding, its sense the defined one; the chart round-trips through its registered inverse; controls: a non-rigid velocity fails the rigid arm; the sense flipped fails"
+  rulings:
+  - R-847
+  milestone: M8
+  note: "Closed by TASK-M8-122. TS-2 (REQ-VAL-326) scores on it in M9."
+- id: REQ-CHART-144
+  area: CHART
+  statement: "A binary-plus-single scattering chart must be built as a chart and builder axes like any other, with Heggie & Sweatman 1991's planar set-up alongside where its set-up is read, its missing definitions (b_max, the pericentre phase, the pull-in distance from infinity to a finite start with a stated tidal error) written at build under physics review (R-72), never guessed (R-847)."
+  source:
+  - file: decisions.md
+    section: "R-847 — R-669 is reversed: fixed-`k` and binary-plus-single (scattering) become charts and builder axes, built when their turn comes, with Heggie & Sweatman 1991 alongside and f_col built with the scattering chart; their targets score in M9; orbital elements are axes at a labelled pair, plus overlays; MK-1 stays, labelled a planar re-run *(closes RQ-723, RQ-725 and RQ-726)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 3.2 The primitives of the full order
+  verify:
+    method: unit test
+    detail: "cargo test -p engine scattering_chart: a pixel's start pulled in from infinity by the hyperbolic Kepler solution reaches the stated distance with its tidal error within the stated bound; b and the phase read back from the decoded state; controls: a start not pulled in fails the tidal arm; the phase taken from t = 0 rather than pericentre passage fails"
+  rulings:
+  - R-847
+  milestone: M8
+  note: "Closed by TASK-M8-123. TR-1, MK-1 and SL-1 score on it in M9 (TASK-M9-23)."
+- id: REQ-CHART-145
+  area: CHART
+  statement: "A builder expression with no registered inverse must be offered as an axis through a general numerical solve on the CPU: it must record the branch rule it uses where several solutions exist, mark seams where that rule flips, be labelled CPU-only (live allowed but slow), report convergence per pixel, and tag every failure, never dropping it (R-849)."
+  source:
+  - file: decisions.md
+    section: "R-849 — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*"
+  - file: docs/design/principia_chart_composition.md
+    section: "7.3 A numerical inverse: branch and seam"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine general_numerical_solve: a typed expression with two solutions takes the recorded branch at every pixel and marks the seam where the rule flips; each pixel carries its convergence; a non-converging pixel is tagged and present in the payload; the view is labelled CPU-only; controls: a failure dropped fails; a seam left unmarked fails"
+  rulings:
+  - R-849
+  milestone: M8
+  note: "Closed by TASK-M8-102. Speeding the solve up is a future goal with no task, as for morphs."
+- id: REQ-CHART-146
+  area: CHART
+  kind: definition
+  statement: "\"Nearest point in B\", where the locked anchor slides when it can't exist in chart B (R-849, the RQ-721 rider), must be defined, the chart-space model's Theorem 8 its construction, the owner's example being to keep shape and masses where B allows and ease the held-fixed coordinates to B's values along the path, written into chart_composition § 17.8 by the task that builds the slide and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: decisions.md
+    section: "R-849 — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*"
+  - file: docs/design/principia_chart_composition.md
+    section: "17.8 Lock: a based homotopy"
+  verify:
+    method: review checklist
+    detail: "chart_composition § 17.8 states the nearest point in B to a locked anchor for region D, rest, Burrau and the other constrained charts: what is kept, what is eased to B's values, the result unique or its tie rule stated, and continuous along the path; the physics reviewer approved"
+  rulings:
+  - R-72
+  - R-849
+  - R-850
+  milestone: M8
+  note: "R-849 (7 Nov 2026): \"define 'nearest'\". Closed by TASK-M8-117."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -6716,7 +6859,7 @@
   milestone: M3
 - id: REQ-EVT-006
   area: EVT
-  statement: "Triple ejection (ionisation) must be reported as `escape` with `detail = 3`, gated on all three pairwise relative energies positive, all three separations growing and total `E > 0`, reading the stored `E_0`, its sign decided once per trajectory at t = 0 at ε = 0 and ε ≠ 0 alike (R-710), evaluated with the escape rule's settling."
+  statement: "Triple ejection (ionisation) must be reported as `escape` with `detail = 3`, gated on all three pairwise relative energies positive, all three separations growing and total `E > 0`, reading the stored `E_0`, its sign decided once per trajectory at t = 0 at ε = 0 and ε ≠ 0 alike (R-710), evaluated with the escape rule's settling, and reached only behind `E_rel > 0`: the escape rule fires first and the gate classifies that escape, never firing on its own (R-818)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 7 — Detectors as the `SimState` producer
@@ -6732,6 +6875,7 @@
   rulings:
   - R-32
   - R-710
+  - R-818
   milestone: M3
   rq:
   - RQ-708
@@ -9745,9 +9889,10 @@
     section: "R-53 — Node interfaces declare their input domains *(GU-2 (a))*"
   verify:
     method: unit test
-    detail: "scan the registry: every entry has inputDomains; an untransformed node's domain equals the manifest [lo, hi] of its field"
+    detail: "scan the registry: every entry has inputDomains, an untransformed input recording inherits; on a wired node its domain equals the manifest [lo, hi] of its field, and a field whose range is unbounded takes (0, 1) (R-815)"
   rulings:
   - R-53
+  - R-815
   milestone: M7
   note: "R-53 is recorded against colour_composition §1.2 and §3, but those sections do not yet state it; the requirement follows the ruling."
 - id: REQ-GEN-020
@@ -14068,8 +14213,9 @@
     section: 13. Invariants
   verify:
     method: property test
-    detail: "fuzz random graph edit sequences: every state renders; forced-invalid graphs render the fallback"
-  rulings: []
+    detail: "cargo test -p engine stain_always_renderable: fuzz random StainGraph edit sequences: every state renders; forced-invalid graphs render the fallback (the crate that holds StainGraph, R-814)"
+  rulings:
+  - R-814
   milestone: M7
 - id: REQ-RENDER-073
   area: RENDER
@@ -14212,10 +14358,11 @@
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
   verify:
     method: review checklist
-    detail: "the proposal names the fallback and its sRGB value, shows it is distinct from the both-None flat mid-grey and from the invalid-pixel pattern (REQ-COL-055, R-132); recorded in decisions.md"
+    detail: "the proposal names the fallback and its sRGB value, shows it is distinct from the both-None flat mid-grey, from the invalid-pixel pattern (REQ-COL-055, R-132) and from the presentation view's #141418 (R-467, R-814), by a colour distance to each; recorded in decisions.md"
   rulings:
   - R-71
   - R-132
+  - R-814
   milestone: M7
 - id: REQ-RENDER-082
   area: RENDER
@@ -15050,6 +15197,19 @@
   - R-476
   - R-509
   milestone: M7
+- id: REQ-RENDER-122
+  area: RENDER
+  statement: "The GPU suite must check each backend's cos near π/2 against f64, relative to its value, so a backend whose cos α there is worse than the decode's ε_phys allows is caught before ROUNDTRIP's acceptance (R-822; RQ-629 (b) at M4)."
+  source:
+  - file: decisions.md
+    section: "R-822 — GPU `sin` and `cos` near π/2: a per-backend check against f64 at M4, the kernel's own `sin` and `cos` ruled with RQ-687 on M4's cross-backend numbers; RQ-679 deferred to M8 and RQ-687 to M4; BR-1 runs both the authors' starts and the seeded draw, each labelled *(defers RQ-629, RQ-679 and RQ-687; closes RQ-696)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine gpu_cos_near_half_pi: on each backend in the suite, cos at f32 arguments approaching π/2 is within the stated relative bound of f64 cos at the same arguments, the bound read from ε_phys's budget; control: a stand-in cos with only the 2⁻¹¹ absolute bound fails"
+  rulings:
+  - R-822
+  milestone: M4
+  note: "Closed by TASK-M4-27. Option (c), the kernel's own sin and cos, is ruled with RQ-687 on M4's cross-backend numbers."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -18442,6 +18602,23 @@
   - R-71
   milestone: M7
   note: "Applied per R-369 (the orchestrator's decision on TASK-M7-08's PR #322): R-71 makes a missing value a calibration requirement, and a calibration requirement is separate from a definition, so REQ-COL-058 keeps the transform's form (R-72) and this requirement its two values. Provisional at TASK-M7-08's proposal, L_mute = 0.31 (the midpoint, to two places, of #141418's OKLab L 0.193 and #4E4E4E's L 0.424) and k_mute = 0.25 (every muted colour of the measured palettes in gamut up to 0.36), until the M7 gate. Closed by TASK-M7-08."
+- id: REQ-COL-163
+  area: COL
+  statement: "Chart position and the trace must read a state at t > 0 in its signed, unfolded form on every target: no mirror identification and no canonical mirror applies to a later state, so colour and trace are continuous through syzygies; a mirror-identified colouring or trace may exist only as a declared, optional view, labelled, never the default (R-853, R-854)."
+  source:
+  - file: decisions.md
+    section: "R-853 — The chart-space model is corrected to the corpus, which stands wherever it measured or ruled; the shape sphere's mirror half is never dropped or folded, the mirror fold is a starting state's only, and the state map and latent-chart traces are signed *(closes RQ-736)*"
+  - file: docs/design/principia_state_map.md
+    section: SM1. Definition
+  verify:
+    method: unit test
+    detail: "cargo test -p engine signed_later_states: on the latent momenta chart, a trace through a syzygy is continuous, its two samples either side within the step's motion, and Chart position's colour there at the same samples is continuous; the mirror-identified view, when on, is labelled and off by default; controls: the canonical mirror applied to a later state makes the trace jump and fails"
+  rulings:
+  - R-544
+  - R-853
+  - R-854
+  milestone: M7
+  note: "Closed by TASK-M7-52, the one projection Chart position and the trace both read; its reading of a lower-half state on a latent target is a definition (R-72) it writes under physics review. The test is scoped to the latent momenta chart (physics review of PR #443, P2): on a chart showing z_β, β = π·σ(z_β) sends z_β to ±∞ at a syzygy and a signed lower-half state has no z_β, so continuity there waits on TASK-M7-52's definition and RQ-739 (its one-way dependency). *Was (verify):* \"a latent-chart trace through a syzygy is continuous, its two samples either side within the step's motion; Chart position's colour at the same samples is continuous;\""
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -18820,7 +18997,8 @@
   verify:
     method: unit test
     detail: "picking a vector field sets subtype vector; one source wired to a colour and a brightness node renders both; a margin node has two field ins"
-  rulings: []
+  rulings:
+  - R-813
   milestone: M7
 - id: REQ-GUI-025
   area: GUI
@@ -20263,7 +20441,7 @@
   milestone: M8
 - id: REQ-GUI-108
   area: GUI
-  statement: "Chart presets must be saved pairs of axes that the user can Save, Duplicate and Delete; a saved preset must store, with its axes, its home values: its base point, its centre and its window (REQ-GUI-224)."
+  statement: "Chart presets must be saved pairs of axes that the user can Save, Duplicate and Delete; a saved preset must store, with its axes, its home values: its base point, its centre and its window (REQ-GUI-224), and a preset whose chart is not two latent axes at one scale must store its whole saved triple (z₀, q₁, q₂) as its home view (R-820)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G7. Chart builder (`03_chartbuilder.png`)
@@ -20277,6 +20455,7 @@
   rulings:
   - R-466
   - R-516
+  - R-820
   milestone: M8
   rq:
   - RQ-711
@@ -23399,7 +23578,7 @@
   note: "R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a), ruled by R-553 as applied meanwhile. R-538 TF1 (J3): where the trace leaves is REQ-GUI-277's. R-569 (21 Oct 2026): each of its icons is placed wholly on screen by its measured extent, the start icon pinned like the others (REQ-GUI-356's set; not the seam ticks, which are line marks drawn at their points as before, R-569 PB10); paused at t = 0 the dashed stretches are drawn dotted with the rest of the line, their rings and \"?\" still marking them (REQ-GUI-355). PR #278's fix round 3, code review 5624320665 F2, applied per R-369: the note follows PB10's set. *Was (note, before fix round 3):* \"R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a), ruled by R-553 as applied meanwhile. R-538 TF1 (J3): where the trace leaves is REQ-GUI-277's. R-569 (21 Oct 2026): each marker is placed wholly on screen by its measured extent, the start icon pinned like the others (REQ-GUI-356); paused at t = 0 the dashed stretches are drawn dotted with the rest of the line, their rings and \"?\" still marking them (REQ-GUI-355).\""
 - id: REQ-GUI-273
   area: GUI
-  statement: "When syzygy markers are on (R-538 TM5), each syzygy, a sign change of R-14's w between consecutive states, must be marked where the drawn line crosses w = 0, interpolated between the two samples, never at a sample; Principia's and Arrows' o–o–o must draw three discs in the body colours in the order the bodies lie on the line (the outer pair lowest-numbered first, the middle body in the centre), on a line #D6D3CB, dark-haloed; a stutter (the same middle body twice running) must be drawn faded unless that option is off; on a chart that carries the y-momenta a marker must be drawn at both ends of the jump; where a syzygy and an end event coincide the end event draws on top (RQ-414 (a))."
+  statement: "When syzygy markers are on (R-538 TM5), each syzygy, a sign change of R-14's w between consecutive states, must be marked where the drawn line crosses w = 0, interpolated between the two samples, never at a sample; Principia's and Arrows' o–o–o must draw three discs in the body colours in the order the bodies lie on the line (the outer pair lowest-numbered first, the middle body in the centre), on a line #D6D3CB, dark-haloed; a stutter (the same middle body twice running) must be drawn faded unless that option is off; where a syzygy and an end event coincide the end event draws on top (RQ-414 (a))."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
@@ -23407,6 +23586,8 @@
     section: 8. Traces
   - file: decisions.md
     section: "R-553 — The trace's queued questions are ruled as applied meanwhile: repeats at half strength; the star at the start, Pictures' triangle; the end event over a syzygy; chevrons and edge pins separate; a presentation readout says \"not a system\" and names the check, `decode_failed`, its detail and \"forbidden\" only in a debug view; a non-finite step ends the run `sim_failed`; the continuous θ branch only; Sunset the ramp's default; three bug classes, no updated bundle; the trace leaves at `|q₃| ≥ q_max`; a curve axis's samples past its edge counted apart; T18's fade arm only where a distance is defined; TF3 the default length's; a kept orbit's `Trace` in `Lines`; TM8 on the shown axes *(closes RQ-412 to RQ-415, RQ-417, RQ-418 and RQ-421 to RQ-429; amends R-537 and R-538)*"
+  - file: decisions.md
+    section: "R-853 — The chart-space model is corrected to the corpus, which stands wherever it measured or ruled; the shape sphere's mirror half is never dropped or folded, the mirror fold is a starting state's only, and the state map and latent-chart traces are signed *(closes RQ-736)*"
   verify:
     method: unit test
     detail: "cargo test -p render trace_syzygy (R-538 T3, T4): on Burrau 3:4:5 to t = 70, at every syzygy (75) the marker's centre lies on the drawn line within 0.5 px, and its discs are in the bodies' actual collinear order, the middle body's in the centre; controls: placing the marker at a sample point is off the line by up to a segment and fails T3; a fixed 1-2-3 order fails T4; review (physics) of the w = 0 test"
@@ -23415,8 +23596,9 @@
   - R-538
   - R-553
   - R-569
+  - R-853
   milestone: M8
-  note: "R-538 TM5 (I9). Closed by TASK-M8-58. RQ-414 (a), ruled by R-553 as applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-569 (21 Oct 2026): a syzygy marker is a path icon, placed wholly on screen by its measured extent (REQ-GUI-356); T3's 0.5 px is measured on a marker whose box lies inside the view."
+  note: "R-538 TM5 (I9). Closed by TASK-M8-58. RQ-414 (a), ruled by R-553 as applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-569 (21 Oct 2026): a syzygy marker is a path icon, placed wholly on screen by its measured extent (REQ-GUI-356); T3's 0.5 px is measured on a marker whose box lies inside the view. R-853 (7 Nov 2026, RQ-736's first open question): traces are continuous through syzygies, so the y-momenta chart's jump and its marker pair go; the clause removed, a faithful restatement, two-way under R-857's flag 10 (physics re-check of PR #443, P1). trace_syzygy's verify never tested the pair and stands. *Was (statement):* \"…; a stutter (the same middle body twice running) must be drawn faded unless that option is off; on a chart that carries the y-momenta a marker must be drawn at both ends of the jump; where a syzygy and an end event coincide the end event draws on top (RQ-414 (a)).\""
 - id: REQ-GUI-274
   area: GUI
   statement: "An icon of the primary copy of every shown trace (the hover or pinned trace and each kept trace) whose point is outside the view must be drawn faint, pinned just inside the view's edge, placed so that its whole measured extent lies inside the view (R-569; REQ-GUI-356), while \"Off-screen icons: pin to the edge (faint)\" is on, and not drawn when it is off (R-538 TM6); join jumps (off) must join a break with a dotted line and window chevrons (off) mark where the line crosses the view's edge, kept separate from the pins (RQ-415 (a))."
@@ -23546,7 +23728,7 @@
   note: "R-538 TF2.2 (J7, J8). Closed by TASK-M8-58. RQ-421 (a) (ruled by R-553) and RQ-430 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a), ruled by R-554 as applied meanwhile: the threshold is REQ-GUI-283's, set from the measured gap, not 3× (TF2.3 measures correct code at 5–97×). The trace's images over a pole on a tilted view follow REQ-SCHED-101 (R-554, RQ-472 (a)); the equator fold is R-554's \"not applied\", the shape sphere ruling governing it. *Was:* \"(R-554, RQ-472 (a)); no equator-fold image on a tilted view.\" *Was:* \"The trace's images over a pole or the equator fold on a tilted view wait on RQ-472.\" Physics review 5594430380 of PR #263, P1, P2; code review 5594440613, F4; applied per R-369. *Was:* \"is within 3× the median step (T16)\". Fix round 1 of PR #274 (gui G2, applied per R-369). *Was (statement):* \"Before a mix, each trace sample's chart parameters must be taken on the branch nearest the previous sample's (θ ± 2π; over a pole θ + π with φ reflected), the first sample's on the canonical branch, then mixed (R-473's tilt), then drawn in every image by the extension types (R-538 TF2.2); along an axis that mixes a periodic parameter with a non-periodic one the trace must not be repeated, the chart being affine there (RQ-430 (a)); the other θ branches of a tilted chart are not drawn (RQ-421 (a), R-553); on a tilted view the trace's images over a pole follow REQ-SCHED-101's pole maps, drawn only where N_a = 0 and N_b = 0, and no image across the equator fold is drawn (R-554, RQ-472 (a)).\" *Was (verify):* \"cargo test -p render trace_branch_continuity (R-538 T16, T17): on the shape sphere tilted 30° toward z_q3, the trace's screen step at every θ wrap and every pole passage is within REQ-GUI-283's calibrated multiple of the median step (T16; RQ-473 (a)); the trace is drawn once along the tilted axis, with no copy at s + 2π/cos τ (T17's trace half; the field's half is REQ-CHART-080); controls: per-sample [0, 2π) θ gives a jump of 2π·cos τ and fails T16; drawing it with periodic repeats fails T17; review (physics)\" R-544 (21 Oct 2026): the shape sphere has no equator fold; over the equator the trace's signed n̂ carries on (REQ-GUI-341). The trace's images over an equator fold on a tilted view, RQ-472 (a)'s clause (R-554 leaving it unapplied), wait on RQ-508. Physics re-check 5606508368 of PR #274 (non-blocking note, applied per R-369): the statement names RQ-508 as REQ-SCHED-101's does. *Was (statement):* \"the equator fold on a tilted view is not applied by R-554, the human's shape sphere ruling governing it.\" R-613 (25 Oct 2026, RQ-508 as meanwhile): no fold anywhere. *Was (statement):* \"the equator fold on a tilted view is not applied by R-554, the human's shape sphere ruling (R-544) governing it, and waits on RQ-508.\""
 - id: REQ-GUI-279
   area: GUI
-  statement: "Every coordinate in a trace's mix must be read in the frame the chart's own parameters are defined in (R-538 TF2.3): on the full shape sphere (θ, φ) and a tilt target are read unmirrored, ρ along +x, never in the encode's canonical frame, which mirrors whenever the shape is in the lower hemisphere; on the latent momenta chart, whose parameters are canonical, the jump at every syzygy, with a marker at both ends, stands (TM5)."
+  statement: "Every coordinate in a trace's mix must be read in the frame the chart's own parameters are defined in (R-538 TF2.3): on the full shape sphere (θ, φ) and a tilt target are read unmirrored, ρ along +x, never in the encode's canonical frame, which mirrors whenever the shape is in the lower hemisphere; on the latent momenta chart, whose parameters are canonical, the trace is drawn in the signed, unfolded state, continuous through syzygies, with no jump and no marker pair there; a mirror-identified trace may remain only as a declared, optional view, labelled as such, never the default (R-853)."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
@@ -23558,6 +23740,8 @@
     section: Part 6 — The canonical inverse policy, completed
   - file: decisions.md
     section: "R-554 — The shape sphere's exponential map past `r = π` is the domain's end by design, blank and unwarned; the Lean-each-axis corner with one target is `ray-degenerate`, unfolded, its area weights 0 and its shares undefined; on a tilted view the pole maps apply only where `N_a = 0` and `N_b = 0`, the equator fold and the mirror's pixel fold left to the human's shape sphere ruling; T16 and T16b against a calibrated threshold; the physical `p_λ` components as the shape sphere's tilt targets *(closes RQ-470 to RQ-474; amends R-467, R-473, R-506, R-537 and R-538)*"
+  - file: decisions.md
+    section: "R-853 — The chart-space model is corrected to the corpus, which stands wherever it measured or ruled; the shape sphere's mirror half is never dropped or folded, the mirror fold is a starting state's only, and the state map and latent-chart traces are signed *(closes RQ-736)*"
   verify:
     method: unit test
     detail: "cargo test -p render trace_mix_frame (R-538 T16b): on the shape sphere tilted toward p_y, the trace's screen step at every syzygy of Burrau 3:4:5 to t = 70 is within REQ-GUI-283's calibrated multiple of the median step (RQ-473 (a)); control: reading p_y in the canonical (mirrored) frame flips it at every syzygy and fails; review (physics)"
@@ -23565,8 +23749,9 @@
   - R-473
   - R-538
   - R-554
+  - R-853
   milestone: M8
-  note: "R-538 TF2.3 (J9). Closed by TASK-M8-58. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a), ruled by R-554 as applied meanwhile (physics review 5594430380 of PR #263, P1, applied per R-369). *Was:* \"is within 3× the median step;\"."
+  note: "R-538 TF2.3 (J9). Closed by TASK-M8-58. Physics review is required (⚑); it does not merge on the code reviewer's word alone. RQ-473 (a), ruled by R-554 as applied meanwhile (physics review 5594430380 of PR #263, P1, applied per R-369). *Was:* \"is within 3× the median step;\". R-853 (7 Nov 2026, RQ-736's first open question): latent-chart traces are signed and continuous through syzygies, so the momenta chart's jump and its marker pair go; restated to the owner's words, a two-way correction under R-857's flag 10 (physics review of PR #443, P1). The shape-sphere arm and trace_mix_frame are unchanged. *Was (statement):* ends \"on the latent momenta chart, whose parameters are canonical, the jump at every syzygy, with a marker at both ends, stands (TM5).\""
 - id: REQ-GUI-280
   area: GUI
   statement: "On a curve axis (Burrau's ν) a trace's point must be the curve's nearest point (inverse encode Part 5(b)), never dropped or clamped, the distance to the curve the fade where an off-plane distance is defined (R-509; RQ-426 (a)); a point whose nearest ν lies past a bounded edge must not be drawn there, the line broken with no reach ring, and counted in the trace readout's \"past the domain's end: N samples\", apart from the not-a-system count and with no warning (R-538 TF1; RQ-425 (a))."
@@ -25794,6 +25979,8 @@
     section: "R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; \"Centre z₀\" is renamed \"Slice centre\" and \"Slice & tilt\" \"Tilt\"; each tilt angle tilts into a latent dimension the user picks, \"tilt τ₁ into [X]\" and \"tilt τ₂ into [Y]\", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's \"the slice step\" and R-451 B1's single tilt target)*"
   - file: decisions.md
     section: "R-459 — The cube's H, V and D axis labels are buttons, each a dropdown of latent dimensions, no dimension twice, each pick one undoable edit, H and V in step with Chart's horizontal q₁ and vertical q₂; in Tilt mode the third axis shows what the gesture tilts into, and a \"4D: see Plücker\" badge appears when both angles are set into different targets *(amends R-451 B1's labels)*"
+  - file: decisions.md
+    section: "R-858 — A typed basis is kept as typed: a mirrored tilt on its own target that doesn't read back stays as the user typed it, and the app never rewrites a basis the user typed *(the report's mirrored-tilt item, which had no queue entry; refines R-459)*"
   verify:
     method: unit test
     detail: "cargo test -p gui manifold_view_basis: q₁ = 0.8 e_μ1, q₂ = e_β reads a finite zoom, in that frame; q₁ = 0.6 e_α + 0.8 e_μ1, q₂ = e_β reads its σ whole; a zoom edit keeps the plane, the span of q₁ and q₂ unchanged, on those bases and on fuzzed typed bases; control: the reading with `outside` leaving X and Y out, and a zoom that rebuilds the basis, each fail"
@@ -25801,8 +25988,9 @@
   - R-457
   - R-459
   - R-705
+  - R-858
   milestone: M6
-  note: "R-705 (4 Nov 2026, RQ-663 (c)), the owner: \"it's a real bug\". Found by code review 5726096107 of PR #366. TASK-M6-56."
+  note: "R-705 (4 Nov 2026, RQ-663 (c)), the owner: \"it's a real bug\". Found by code review 5726096107 of PR #366. TASK-M6-56. R-858 (7 Nov 2026, the owner's \"Mirrored tilt: (a), as typed\"): a mirrored tilt on its own target that doesn't read back, such as q₁ = −0.6 e_α + 0.8 e_q3, q₂ = e_β, stays as typed, as built; the app never rewrites a basis the user typed."
 - id: REQ-GUI-416
   area: GUI
   statement: "With softening on, an (L_z, E) chart's energy axis must be labelled as Newtonian energy, and the Inspector must show the softened energy beside the Newtonian energy (R-791)."
@@ -25936,7 +26124,8 @@
   verify:
     method: unit test
     detail: "cargo test -p gui symmetry_filter_toggle: the toggle on the chart's panel and in the export dialog, its no-partners state, one click from the filter's view to the full disc with no new run; control: the toggle left live with no partners fails"
-  rulings: []
+  rulings:
+  - R-855
   milestone: M8
   rq:
   - RQ-736
@@ -31552,7 +31741,7 @@
   note: "The supported-resolution list: REQ-TOOL-113 (calibration). R-483 C10 (20 Oct 2026)."
 - id: REQ-VAL-099
   area: VAL
-  statement: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any Paper-2 numbers are produced; it gates Paper 2, not the build. A recorded run on R-711's runner can serve, with its named commit, driver version and full output, if the parity measurement itself passes; the paper states the single-card evidence and the owner-reported hardware caveat; a second non-Metal GPU is welcome, not required. The owner-reported hardware caveat is RQ-685's run note: the owner reported that the card may have faulty shader cores, and repeating on one card rules out an intermittent fault, not a fixed one. The gate record prints what the paper must state, with, as a third item applied per R-369, R-690's word for that adapter, API and driver version, gate by gate."
+  statement: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any Paper-2 numbers are produced; it gates Paper 2, not the build. A recorded run on R-711's runner can serve, with its named commit, driver version and full output, if the parity measurement itself passes; the paper states the single-card evidence and the owner-reported hardware caveat; a second non-Metal GPU is welcome, not required. The owner-reported hardware caveat is RQ-685's run note: the owner reported that the card may have faulty shader cores, and repeating on one card rules out an intermittent fault, not a fixed one. The gate record prints what the paper must state, with, as a third item applied per R-369, R-690's word for that adapter, API and driver version, gate by gate. A recorded run filed as that evidence starts from a clean target (R-856)."
   source:
   - file: docs/contracts/principia_canonical_spec.md
     section: 2. The determinism law (the other defining decision)
@@ -31574,8 +31763,10 @@
     section: "R-694 — With the compute setting off, R-297's bit-identity means the branch decisions of REQ-INT-057 and the Tier B fields only, continuous values free across drivers; `E_rel` and `|Δn̂|` take written forms with no driver division or `√` in the decision; the header records \"Off\" only for drivers measured, otherwise wgpu's path with \"driver unverified\" *(closes RQ-685; refines R-297)*"
   - file: decisions.md
     section: "R-710 — The ionisation gate's total-energy condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`, at `ε = 0` and `ε ≠ 0` alike; the condition stays; it is an enumerated exception in `branch_inputs.rs`, the decision differing between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled; a control fixture fails if the condition is dropped *(closes RQ-697; amends R-34 and R-84; refines R-32 and R-694)*"
+  - file: decisions.md
+    section: "R-856 — A recorded run on R-711's runner takes a clean target only where it is filed as evidence; other recorded runs keep the runner's target, as now *(the report's kept-checkout item, which had no queue entry; extends R-711)*"
   verify:
-    detail: "the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results; a run on R-711's runner can serve: its record names its commit, API, driver version and R-690 hardware label and keeps its full output, and a record missing its commit, driver version or output is refused; the parity suite passes; the run's Tier L inputs include the inputs of any level 3 row on that card; control: a synthetic record holding a level 3 row whose inputs the run leaves out is refused; and the gate record prints what the paper must state, the single-card evidence, the owner-reported hardware caveat and R-690's word for that adapter, API and driver version, read from each gate's committed `comparison.md` and `outstanding.json` (`fixtures/gates/cross-backend-branches/`, `fixtures/gates/cross-backend-march/`), including NVIDIA's row as posted to issue #390, a row's input bits from that gate's committed inputs and replay states; the record files themselves are on issue #390 or the branch named there, and the gates' control records are never read as a card's; \"no record\" is a lookup over both gates' `comparison.md` and `outstanding.json` as read, and a missing or unreadable file, or a level 3 row whose input bits can't be read, refuses the gate; control: a missing `comparison.md` is refused, not read as \"not run\"; the word prints gate by gate, each with its own N and each `outstanding.json` row beside it, the march's record and replay apart, and Ns are never summed: a measured failure in either gate prints \"unverified, not supported\" for the card; \"no failure in N\" prints its N; \"not run\" comes from `outstanding.json`'s row, or from that lookup finding no record: a driver version with no record reads \"not run\", and so does a run on an API with no record for that driver version (each applied per R-369); which the physics reviewer checks (R-711)"
+    detail: "the parity suite passes on a real (hardware) Vulkan or D3D12 GPU — lavapipe, the per-commit second backend, does not satisfy this (R-110); recorded before Paper-2 survey results; a run on R-711's runner can serve: its record names its commit, API, driver version and R-690 hardware label and keeps its full output, and a record missing its commit, driver version or output is refused; the parity suite passes; the run's Tier L inputs include the inputs of any level 3 row on that card; control: a synthetic record holding a level 3 row whose inputs the run leaves out is refused; and the gate record prints what the paper must state, the single-card evidence, the owner-reported hardware caveat and R-690's word for that adapter, API and driver version, read from each gate's committed `comparison.md` and `outstanding.json` (`fixtures/gates/cross-backend-branches/`, `fixtures/gates/cross-backend-march/`), including NVIDIA's row as posted to issue #390, a row's input bits from that gate's committed inputs and replay states; the record files themselves are on issue #390 or the branch named there, and the gates' control records are never read as a card's; \"no record\" is a lookup over both gates' `comparison.md` and `outstanding.json` as read, and a missing or unreadable file, or a level 3 row whose input bits can't be read, refuses the gate; control: a missing `comparison.md` is refused, not read as \"not run\"; the word prints gate by gate, each with its own N and each `outstanding.json` row beside it, the march's record and replay apart, and Ns are never summed: a measured failure in either gate prints \"unverified, not supported\" for the card; \"no failure in N\" prints its N; \"not run\" comes from `outstanding.json`'s row, or from that lookup finding no record: a driver version with no record reads \"not run\", and so does a run on an API with no record for that driver version (each applied per R-369); a run filed as that evidence records that it started from a clean target, and a record filed as evidence without it is refused (R-856); which the physics reviewer checks (R-711)"
     method: numerical gate
   rulings:
   - R-58
@@ -31584,8 +31775,9 @@
   - R-694
   - R-710
   - R-711
+  - R-856
   milestone: M8
-  note: "R-711 (5 Nov 2026, item 4; RQ-695): the terms on a run on that runner, added to the statement and the verify. *Was (statement):* ends \"it gates Paper 2, not the build.\" The physics call, from the physics review of PR #416: the corpus settles whether a card with an R-690 failure on record can pass, and a record is no bar (\"can serve\" closed RQ-695; R-690's recording blocks nothing). \"The parity measurement itself\" is the parity suite (parity contract § 2, § 6), not R-690's three-level report. The inputs of a level 3 row on that card join the run's Tier L inputs, and the run itself decides. A level 2 record limits what a pass shows, no fork on the suite's inputs only, so the record and the paper carry R-690's standing word for that adapter, API and driver version, gate by gate, \"unverified, not supported\", \"no failure in N\" or \"not run\", as a third item beside the owner's two, applied per R-369. Tier N tolerances stay as native wgpu pins them (R-85), never re-pinned on this card's spread. R-694 closes RQ-685: the bit-identity a pass shows, on the suite's inputs, is REQ-INT-057's branch decisions, but for R-710's one exception, the ionisation gate's `E_0` sign, measured and reported within REQ-INT-113's width, and the Tier B fields, given those decisions; continuous values stay at their Tier N tolerances (R-85). REQ-INT-057's `E_rel` and `|Δn̂|` take the written forms of TASK-M4-29 (applied per R-369, the removal a consequence of R-694 and the wording the physics review's of #425; *was:* \"RQ-685 stays open, and what a pass covers waits on it.\"). The record's API and hardware label, and the refusal of a record missing its commit, driver version or output, are the same review's, applied per R-369. The gate reads each gate's committed `comparison.md` and `outstanding.json`, and never reads a gate's control records as a card's; a missing or unreadable file, or a level 3 row whose input bits can't be read, refuses the gate; the word prints gate by gate, each with its own N and each `outstanding.json` row beside it, and Ns are never summed; each applied per R-369. A run on an API with no record for that driver version reads \"not run\"; the level 3 join stays on that card, whatever the API. *Was (verify):* \"a run on R-711's runner names its commit and driver version and keeps its full output, the parity measurement itself passing, and the paper states the single-card evidence and the owner-reported hardware caveat (R-711)\"."
+  note: "R-711 (5 Nov 2026, item 4; RQ-695): the terms on a run on that runner, added to the statement and the verify. *Was (statement):* ends \"it gates Paper 2, not the build.\" The physics call, from the physics review of PR #416: the corpus settles whether a card with an R-690 failure on record can pass, and a record is no bar (\"can serve\" closed RQ-695; R-690's recording blocks nothing). \"The parity measurement itself\" is the parity suite (parity contract § 2, § 6), not R-690's three-level report. The inputs of a level 3 row on that card join the run's Tier L inputs, and the run itself decides. A level 2 record limits what a pass shows, no fork on the suite's inputs only, so the record and the paper carry R-690's standing word for that adapter, API and driver version, gate by gate, \"unverified, not supported\", \"no failure in N\" or \"not run\", as a third item beside the owner's two, applied per R-369. Tier N tolerances stay as native wgpu pins them (R-85), never re-pinned on this card's spread. R-694 closes RQ-685: the bit-identity a pass shows, on the suite's inputs, is REQ-INT-057's branch decisions, but for R-710's one exception, the ionisation gate's `E_0` sign, measured and reported within REQ-INT-113's width, and the Tier B fields, given those decisions; continuous values stay at their Tier N tolerances (R-85). REQ-INT-057's `E_rel` and `|Δn̂|` take the written forms of TASK-M4-29 (applied per R-369, the removal a consequence of R-694 and the wording the physics review's of #425; *was:* \"RQ-685 stays open, and what a pass covers waits on it.\"). The record's API and hardware label, and the refusal of a record missing its commit, driver version or output, are the same review's, applied per R-369. The gate reads each gate's committed `comparison.md` and `outstanding.json`, and never reads a gate's control records as a card's; a missing or unreadable file, or a level 3 row whose input bits can't be read, refuses the gate; the word prints gate by gate, each with its own N and each `outstanding.json` row beside it, and Ns are never summed; each applied per R-369. A run on an API with no record for that driver version reads \"not run\"; the level 3 join stays on that card, whatever the API. *Was (verify):* \"a run on R-711's runner names its commit and driver version and keeps its full output, the parity measurement itself passing, and the paper states the single-card evidence and the owner-reported hardware caveat (R-711)\". R-856 (7 Nov 2026, the owner's \"Kept checkout: (ii)\"): a run filed as evidence starts from a clean target, other recorded runs on the runner keeping theirs; the sentence added to the statement. *Was (statement):* ends \"gate by gate.\" R-856's check and its control added to the verify (code re-check of PR #443, finding 1). *Was (verify):* ended \"…a run on an API with no record for that driver version (each applied per R-369); which the physics reviewer checks (R-711)\"."
 - id: REQ-VAL-100
   area: VAL
   statement: "The same spec object must re-render the same video bit-identically on the same backend and match across backends to the parity contract's f32 tolerances, with branch decisions identical on identical inputs, per step, and terminal labels and outcome classes identical except on chaotic trajectories, where they may differ across precisions."
@@ -32524,6 +32716,8 @@
     section: "R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*"
   - file: decisions.md
     section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
+  - file: decisions.md
+    section: "R-857 — The four doors readings #434 left unchosen: a measured change of the shard count is two-way under the CI rider; the \"morning report\" is the dated report file in `orch/`; lint configuration stays R-197's; correcting a requirement's statement to match a ruling is two-way only where it restates the ruling's words faithfully, otherwise one-way *(the report's doors-readings item, flags 2, 8, 9 and 10 of PR #434; refines R-812, R-376 and R-712)*"
   verify:
     method: review checklist
     detail: "the proposal states the shard count n and the per-shard limit with their evidence: the measured wall-clock time of `cargo mutants --in-diff` on `ubuntu-latest` over the diffs of the PRs merged so far, each shard's baseline cost, and the headroom the pair leaves; each shard runs under that limit, marked provisional until the human confirms both at the M0 gate (R-182, R-302); if no practical pair covers per-PR runs, a REVIEW_QUEUE entry instead (R-196)"
@@ -32534,8 +32728,9 @@
   - R-198
   - R-302
   - R-376
+  - R-857
   milestone: M0
-  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate; closes RQ-202): n = 8 shards and 300 minutes per shard, in place of R-305's provisional 120; the limit is a ceiling for unusually large diffs, not a target."
+  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate; closes RQ-202): n = 8 shards and 300 minutes per shard, in place of R-305's provisional 120; the limit is a ceiling for unusually large diffs, not a target. R-857 (7 Nov 2026, doors flag 2): a change of the shard count decided by measurement is a two-way door under R-812's CI rider, its criterion written first and its numbers reported; the 8 shards stand until one, and the per-shard limit stays R-376's."
 - id: REQ-VAL-150
   area: VAL
   statement: "A scheduled nightly workflow must run the full `cargo mutants` over the workspace, with R-196's exclusions, sharded across parallel jobs so that each shard finishes within GitHub's 360-minute job limit (R-402), and write its result as a report, which fails when a shard did not finish."
@@ -33960,7 +34155,7 @@
   note: "Reproduces: the Belgrade gallery's two published periods each for butterfly I (6.235641 / 6.234671) and butterfly II (7.003907 / 7.003707). Chart: none (Path A). Milestone: M9 (was M3; R-650). Compare: exact (a measurement against a published discrepancy) (rule 8). Tolerance: none: the bar is the published periods' own difference, which the measured uncertainty must undercut (PLAN.md § 6 gives it no calibration). Row BG-4 (DRAFT-VAL-07) of principia_dd_replication.md § \"5.4 The Belgrade orbits\"; layer verification, tier A; closed by TASK-M9-12 (was TASK-M3-52) (R-594, R-629). Ported from PLAN.md § 6's DRAFT-VAL-07 by R-629. It carries no calibration: its pass condition is the published periods' difference, not a chosen number (applied per R-369). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2)."
 - id: REQ-VAL-214
   area: VAL
-  statement: "Every Three Body Orbits atlas row's energy and angular momentum, recomputed from its initial conditions through the engine's own encode and decode path, must match the row's catalogued `E_cat` and `L_cat` to their printed precision (OC-2)."
+  statement: "Every Three Body Orbits atlas row's energy and angular momentum, recomputed from its `ref_*` initial conditions (R-824) through the engine's own encode and decode path, must match the row's catalogued `E_cat` and `L_cat` to their printed precision (OC-2)."
   source:
   - file: docs/design/principia_dd_replication.md
     section: 5.2 The orbit atlas
@@ -33993,6 +34188,7 @@
   - R-629
   - R-649
   - R-650
+  - R-824
   milestone: M9
   note: "Reproduces: the atlas's catalogued E and L per row (`E_cat`, `L_cat`). Chart: none (Path A, through encode and decode). Milestone: M9 (was M2; R-650). Compare: exact (rule 8). Tolerance: REQ-VAL-215 (calibration, R-71). Row OC-2 of principia_dd_replication.md § \"5.2 The orbit atlas\"; layer verification, tier A; closed by TASK-M9-01 (was TASK-M2-51) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M2), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2)."
 - id: REQ-VAL-215
@@ -36028,6 +36224,7 @@
   - R-649
   - R-650
   - R-671
+  - R-851
   milestone: M9
   note: "Reproduces: Agekyan & Anosova I, pp. 1012–1014 and Fig. 4. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-271 (calibration, R-71). Row AA-3 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-271
@@ -36134,6 +36331,7 @@
   - R-649
   - R-650
   - R-671
+  - R-851
   milestone: M9
   note: "Reproduces: Agekyan & Anosova I, pp. 1006, 1008–1009. Chart: the Anosova physical-frame entry. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-274 (calibration, R-71). Row AA-5 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-274
@@ -36280,6 +36478,7 @@
   - R-649
   - R-650
   - R-671
+  - R-851
   milestone: M9
   note: "Reproduces: Agekyan & Anosova I Table 1, II Tables 1 and 3. Chart: Latent with one momentum axis, or two runs per start. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-278 (calibration, R-71). Row AA-8 of principia_dd_replication.md § \"5.8 Region D: Agekyan & Anosova, and Anosova 1969\"; layer replication, tier B; closed by TASK-M9-19 (was TASK-M3-59) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-671 (2 Nov 2026, RQ-669 (ii)): its task has no GPU run, so its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-278
@@ -37014,6 +37213,7 @@
   - R-649
   - R-650
   - R-701
+  - R-822
   milestone: M9
   note: "Reproduces: Breen et al. 2020 (MNRAS 494, 2465): per-trajectory Brutus runs to t = 10. Chart: the Anosova physical-frame entry (Breen's frame). Milestone: M9 (was M3; R-650). Compare: exact (rule 8: a converged code) (rule 8). Tolerance: REQ-VAL-298 (calibration, R-71). Row BR-1 of principia_dd_replication.md § \"5.10 Converged-code references\"; layer replication, tier C; closed by TASK-M9-22 (was TASK-M3-62) (R-594, R-629). RQ-598 closed by R-637 (option (a)); scored as R-638 and R-640 to R-642 rule it, R-642 governing: against the authors' own 180 trajectories of github.com/pgbreen/NVM at a35c378 directly, not provisionally (R-641), for those 180 of the paper's ~10⁴, the files never committed (no licence; their per-file sha256 table is docs/incoming/2026-10-28_rq598_data/nvm_a35c378_sha256.txt) and the 44 that end early checked for why before they are scored; the rest of the ~10⁴ awaits the authors' full set, asked for by email. A qualifying reproduction (the paper's set-up, a converged arbitrary-precision integrator; our Brutus from pgbreen/NvMgeneration at 98906f4, BR-1's reference code, GPL-3.0) scores provisionally, labelled \"vs <source>\" (\"vs Brutus, run here\"), never \"replicates the paper\". Re-score obligation (R-640, R-642): when the authors' full set arrives, every result scored against a reproduction is re-scored against it; where ours and theirs disagree, theirs governs and the disagreement is queued. The cost per point is reported before any Brutus run is scaled or goes below ε = 10⁻⁶ (R-638). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (b), the CPU IC inspector: it binds at f64 or higher, and a GPU miss on it is expected, not a defect (R-649 item 2). R-701 (4 Nov 2026, RQ-613, RQ-615, RQ-616): Brutus runs at `p_max` = 4, `L_w` set explicitly. No ε = 10⁻⁷⁰ cost is quoted until the authors answer. The NVM trajectories stay local, and BR-1's converged fraction reports both readings of \"< 0.1\" until Breen answers. RQ-696 holds the seeded draw."
 - id: REQ-VAL-298
@@ -37790,6 +37990,7 @@
   - R-650
   - R-669
   - R-671
+  - R-847
   milestone: M9
   note: "Reproduces: Trani et al. 2024 (A&A 689, A24): the inclination-0 row of their map; f_col (12 nearest neighbours, regular above 2/3). Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TR-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c), RQ-596 (b)): no binary-plus-single chart is built and f_col is not built; it stays in M9, reading \"not scored: no chart\" (and its colouring \"not scored: no f_col\"). *Was (rq):* RQ-593, RQ-596. R-671 (2 Nov 2026, RQ-669 (ii)) reads the f64 runs of a task with no GPU run, and this task has no runs while no chart exists: its row reads \"not scored: no chart\", with no record at (b). Once its task has run with no GPU run, its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-319
@@ -37834,6 +38035,7 @@
   - R-669
   - R-671
   - R-707
+  - R-847
   milestone: M9
   note: "Reproduces: Manwadkar, Kol, Trani & Leigh 2021: per-body escape probabilities over eight mass sets (Table 2, Table 1 for the mass sets). Chart: new: BinaryPlusSingle at a mass point. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-320 (calibration, R-71). Row MK-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c)): no binary-plus-single chart is built; it stays in M9, reading \"not scored: no chart\". *Was (rq):* RQ-593. R-671 (2 Nov 2026, RQ-669 (ii)) reads the f64 runs of a task with no GPU run, and this task has no runs while no chart exists: its row reads \"not scored: no chart\", with no record at (b). Once its task has run with no GPU run, its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669. R-707 (4 Nov 2026, RQ-659 (a)): the paper's Table 2 holds the probabilities, its Table 1 the mass sets. No cut is named. *Was:* \"with their Table 1 (MK-1)\", \"Table 1 transcribed twice\" and \"(Table 1)\"."
 - id: REQ-VAL-320
@@ -37909,6 +38111,7 @@
   - R-650
   - R-669
   - R-671
+  - R-847
   milestone: M9
   note: "Reproduces: Stone & Leigh 2019 (Nature 576, 406): the planar closed forms for the binary's energy and eccentricity. Chart: new: BinaryPlusSingle. Milestone: M9 (was M3; R-650). Compare: statistical (rule 8). Tolerance: REQ-VAL-322 (calibration, R-71). Row SL-1 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-23 (was TASK-M3-63) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M3), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-593 (c), RQ-596 (b)): no binary-plus-single chart is built; it stays in M9, reading \"not scored: no chart\"; its N_scramble cut is REQ-VAL-343's once a chart exists. *Was (rq):* RQ-593, RQ-596. R-671 (2 Nov 2026, RQ-669 (ii)) reads the f64 runs of a task with no GPU run, and this task has no runs while no chart exists: its row reads \"not scored: no chart\", with no record at (b). Once its task has run with no GPU run, its (a) part keeps its tier and reads \"not scored yet: needs a GPU run\" in M9's report, and the same statistic from the task's f64 runs is recorded beside it at (b), with its outcome and instrument stated. *Was (rq):* RQ-669."
 - id: REQ-VAL-322
@@ -38094,6 +38297,7 @@
   - R-649
   - R-650
   - R-669
+  - R-847
   milestone: M9
   rq:
   - RQ-731
@@ -38782,6 +38986,21 @@
   - R-704
   milestone: M9
   note: R-704, applied per R-369. It takes LL-6's tier. TASK-M9-44.
+- id: REQ-VAL-354
+  area: VAL
+  statement: "The f_col diagnostic (12 nearest neighbours, regular above 2/3, Trani et al. 2024) must be defined (R-72) and built with the binary-plus-single scattering chart, so TR-1's colouring is scored (R-847)."
+  source:
+  - file: decisions.md
+    section: "R-847 — R-669 is reversed: fixed-`k` and binary-plus-single (scattering) become charts and builder axes, built when their turn comes, with Heggie & Sweatman 1991 alongside and f_col built with the scattering chart; their targets score in M9; orbital elements are axes at a labelled pair, plus overlays; MK-1 stays, labelled a planar re-run *(closes RQ-723, RQ-725 and RQ-726)*"
+  - file: docs/design/principia_dd_replication.md
+    section: 5.12 Targets that wait for a chart, a diagnostic or data
+  verify:
+    method: unit test
+    detail: "cargo test -p engine f_col: on a fixture of known neighbourhoods f_col reads the fraction of the 12 nearest neighbours sharing the outcome, regular above 2/3; control: 11 neighbours fails"
+  rulings:
+  - R-847
+  milestone: M8
+  note: Closed by TASK-M8-123. R-669 had not built it.
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -40718,6 +40937,19 @@
   milestone: M8
   rq:
   - RQ-727
+- id: REQ-PERF-119
+  area: PERF
+  statement: "A browser run started from the measurement panel's button must be marked in its report as not a measurement, since it reads the refresh rate measured at page load (R-826)."
+  source:
+  - file: decisions.md
+    section: "R-826 — A browser run started from the measurement panel's button is marked in its report as not a measurement *(closes RQ-702)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui measure_button_run_marked: the report of a browser run started from the measurement panel's button carries the not-a-measurement mark, and the reports of a run started by ?run= and of a native run started from the panel's button don't; control: the mark dropped fails"
+  rulings:
+  - R-826
+  milestone: M8
+  note: "Closed by TASK-M8-121; TASK-M8-86, which built the panel, has merged."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."

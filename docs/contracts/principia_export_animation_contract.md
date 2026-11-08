@@ -39,6 +39,11 @@ Mixed animations decompose per keyframe segment into (a)/(b)/(c); the export pla
 
 ## Part 3 — The keyframe system (retained)
 
+*7 Nov 2026 (R-850, ruling RQ-721 (a), amended):* a chart change may morph, live and in export, as one arm of the
+chart-path type of `docs/design/principia_chart_composition.md` § 17; cut and dissolve are still offered, a changed link
+id is still a cut (R-520), and the lines below that say a chart switch is only a cut or a dissolve give way. TASK-M8-105
+carries the change into this Part, REQ-TOOL-075 and REQ-GUI-376.
+
 Keyframes are unchanged in *what they describe*, changed only in *how frames are produced*:
 
 - **What interpolates:** `z₀` eased componentwise; zoom **log-lerped**; basis pairs by **Grassmannian interpolation** (geodesic between planes, re-orthonormalised per frame — never naive vector lerp, which leaves the manifold of frames); slice values eased; render uniforms lerped per their scale metadata; chart *switches* are cuts or dissolves (two renders composited), never parameter interpolation across chart types.

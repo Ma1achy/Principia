@@ -48,6 +48,8 @@ A **WebGPU research instrument** for the planar three-body problem's **8-dimensi
 
 ## 3. The physics & manifold model *(authoritative: `chart_decoder_contract`, `dd_decoder`)*
 
+*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+
 - **8 DOF, not 10, not 5.** The reduced manifold is `2 config ⊕ 4 momentum ⊕ 2 mass`. Full 12 → CoM removal → 8 phase + 2 mass = 10 before gauge → fix rotation (pin ρ̃ to +x) + scale (R̃ = 1, i.e. I = 1) removes 2 *configuration* DOF → **8**. Mass is *inside* the 8, a direction, never an external global.
 - **Latent controls** `z ∈ ℝ⁸` pushed through a **factorised decoder** `D = D_mass × D_cfg × D_mom` (blocks `z[0:2]` config, `z[2:6]` momentum, `z[6:8]` mass); decode order **mass → config → momentum → derived invariants**. No latent coordinate on a gauge direction.
 - **Canonicalise is the one seam to `(m, r, p)`**: the quotient onto the section (CoM, ρ̃ on +x, λ̃_y ≥ 0, I = 1; the mirror's deadband leaves λ̃_y ≥ −δ_λ, so the encode's β reads |λ̃_y|, R-82, R-438). Everything converges through it; **the integrator has one input type `(m, r, p)`, forever**, and never learns the chart's name.

@@ -30,20 +30,21 @@ Codegen walks the stain graph — source(s) → optional colour and optional bri
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
 
 ## Deliverables
-- `crates/render/src/codegen/walk.rs` — graph → `shade()` in backbone order, the post chain in declaration order with insert and reorder, the 8-node bound.
-- `crates/render/src/codegen/fallback.rs` — identity for dangling / absent inputs, the defined fallback shader for an invalid graph.
+- `crates/render/src/assemble.rs` and `crates/render/src/codegen/` extended, with no second walk to `shade()` (R-814, RQ-676 (a); REQ-RENDER-010): the remaining wiring of the post chain in declaration order with insert and reorder and the 8-node bound, identity for dangling / absent inputs, and the defined fallback shader for an invalid graph. *Was:* "`crates/render/src/codegen/walk.rs` — graph → `shade()` in backbone order …" and "`crates/render/src/codegen/fallback.rs` — …", which `assemble.rs` and `combine.rs` already hold in part.
+- A margin occupant: a `colour` (or `post`) node declaring two `// @input`s (R-813, RQ-675 (a)).
 - Tests under `crates/render/tests/`, rendering through the M0 GPU test harness.
 
 ## Acceptance tests
 - `cargo test -p render stain_codegen_wiring` — graphs with each of colour / brightness absent and with 0, 1, 3 posts compile to a fragment shader whose shade() follows the wiring (REQ-RENDER-071).
 - `cargo test -p render stain_delete_mid_node` — delete the colour node of a two-slot graph: the output equals greyscale-of-brightness (REQ-GUI-027).
-- `cargo test -p render stain_always_renderable` (proptest) — fuzz random graph edit sequences: every state renders; forced-invalid graphs render the fallback (REQ-RENDER-072).
+- `cargo test -p engine stain_always_renderable` (proptest) — fuzz random `StainGraph` edit sequences: every state renders; forced-invalid graphs render the fallback (REQ-RENDER-072; in `engine`, which holds `StainGraph`, R-814, RQ-676 (b)).
 - Review (code): colour occupants cannot alter the pipeline topology outside the stain graph; L is owned by the bound brightness metric (REQ-RENDER-068).
 - `cargo test -p render stain_fanout` — picking a vector field sets subtype vector; one source wired to a colour and a brightness node renders both; a margin node has two field ins (REQ-GUI-024).
 - `cargo test -p render post_chain_order` — a 9th post node is rejected; reordering two post nodes changes the output accordingly (REQ-COL-025).
-- Proposal: the invalid-graph fallback (flat grey or error tint) and its sRGB value, distinguishable from both-None mid-grey and from the invalid-pixel pattern (REQ-COL-055's hatch, R-132); the human confirms it at the M7 gate (REQ-RENDER-081).
+- Proposal: the invalid-graph fallback (flat grey or error tint) and its sRGB value, distinguishable from both-None mid-grey, from the invalid-pixel pattern (REQ-COL-055's hatch, R-132) and from the presentation view's `#141418` (R-467; R-814, RQ-676 (c)), by a colour distance to each; the human confirms it at the M7 gate (REQ-RENDER-081).
 
 ## Notes
 - Gap: render_gui_spec §13 gives the invalid-graph fallback as "flat grey / error tint" — which one, and its value, are not given (see the milestone report).
 - Closes, for gaps the corpus leaves open: REQ-RENDER-081 (R-71 calibration) (classification accepted by R-132).
 - *5 Nov 2026 (R-804, R-805):* RQ-675 and RQ-676 are deferred to this task's start: when it starts, their options go to the owner with a recommendation, and it waits on the answers.
+- *7 Nov 2026 (R-813, R-814):* RQ-675 and RQ-676 are ruled, so this task no longer waits on them: the margin is a `colour` or `post` occupant with two `// @input`s, and the deliverables, the proptest's crate and the fallback's distinctness list read as above.
