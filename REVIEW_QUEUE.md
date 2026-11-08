@@ -1004,3 +1004,45 @@ out to take.*
   this is ruled.
 - **Waits:** TASK-M2-57 (its link definition, REQ-DEC-056, and so the task; `rq: RQ-750` on REQ-DEC-055 and
   REQ-DEC-056), and through it TASK-M8-126's latent points.
+
+## RQ-751: Two of `contain.sh check`'s assertions have no Job Object equivalent: does the Windows proof pass without them? *(a one-way door: what the containment proof claims, and so what may be placed on Windows; the owner's CI shape order of 8 Nov 2026, step 1, and its placement rule; `scripts/contain.sh` § `check`; REQ-VAL-181; context: the tooling PR "Windows containment for tests and mutants (Job Object)")*
+
+*Filed 8 Nov 2026 by the implementer of that PR, which builds `.github/scripts/win_contain.ps1` and its dispatch-only
+job, `win-gpu.yml`'s `win-contain`. Nothing is chosen.*
+
+*In plain English: on Linux, CI's containment hides every outside process from the contained run, so a mutant that
+signals "everything" can't reach the runner. Windows has nothing that hides processes: a Job Object (what the owner
+asked for) kills the whole tree when it closes, caps processes and memory, and stops a process breaking out, but a
+process inside can still see an outside process and kill it by its id. So the Windows proof can show every other
+scenario of the Linux check, not these two. The owner says whether that is enough, and for what.*
+
+- **File, section:**
+  - The owner's CI shape order of 8 Nov 2026, step 1: "Windows containment: run tests and mutants inside a Job Object
+    with kill-on-close, a process limit and an 8 GiB per-process memory cap (REQ-VAL-181's equivalent of prlimit). Prove
+    it with the same kill test contain.sh check uses. Until proven, mutants of xtask/src/jobq.rs stay on GitHub-hosted
+    runners." And its placement rule: "Containment, memory cap and the 36 h no-run alert are prerequisites for any job
+    placed on Windows."
+  - `scripts/contain.sh` § `check`, the probe run inside: `if kill -0 "$1" 2> /dev/null; then exit 42; fi` (the
+    outside process must be unseen) and `kill -9 -1 2> /dev/null`, after which the outside process must be alive.
+- **The conflict:** the Job Object the owner names gives kill-on-close, the process limit, the per-process commit cap,
+  and no breakaway; `win_contain.ps1 check` proves each, and maps `kill -9 -1` to Windows' broadcast, CTRL+C to the
+  whole console, which a console of the job's own keeps inside. It can't give a PID namespace: inside the job, the
+  outside process is visible (contain.sh's 42) and, being the same user's, can be opened and terminated by its id. The
+  check measures both and reports them as gaps, never killing anything; its exit status covers the Job Object's
+  scenarios only. So "the same kill test" passes in full only with these two waived or met another way.
+- **Context for the choice:** `xtask/src/jobq.rs`, the module whose mutants the order names, is `#[cfg(unix)]`
+  (`xtask/src/lib.rs`), as are its tests (`xtask/tests/jobq.rs`): on Windows it isn't compiled, so its mutants can't be
+  killed there whatever the containment, and the process-group signalling that made containment necessary on Linux
+  (`kill(-1)`) has no Windows code path. Nothing in the code base terminates a process by an id it didn't start.
+- **The question:** does the Windows proof count as passed, for placing jobs on Windows, with 42 and the kill by pid
+  as known gaps?
+- **Options seen:**
+  - (a) Yes: the Job Object's scenarios are the proof; 42 and the kill by pid are recorded as gaps of the platform.
+  - (b) Yes for jobs but not for `jobq.rs`'s mutants, which stay hosted for good (they can't run on Windows anyway).
+  - (c) No: stronger isolation first (a separate restricted account or token, or a sandbox), which needs work at the PC
+    and a design of its own.
+- **Recommendation:** (b). A measurable alternative: (c), judged by the same check with 42 and the kill by pid turned
+  into failing scenarios.
+- **Applied meanwhile:** nothing is placed on Windows. The check is built and runs by `workflow_dispatch` only; its
+  first run is the orchestrator's, once the runner accepts jobs.
+- **Waits:** the switch of the slow tier and the mutation run to the Windows runner (the order's steps 2 to 5).
