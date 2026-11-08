@@ -30,7 +30,7 @@ Every knob has a blast radius. Consolidated from the render, integrator, and sch
 | Colour occupant params (κ, C, swatches…) | Re-bake the equirect texture (~ms). Sim buffers intact |
 | In-plane pan, zoom, lock | **Nothing.** Pan and zoom re-address which quads are asked for on the same slice plane; the lock changes neither key (R-92) |
 | Slice out of the plane, tilt, rotate, chart-mode switch | **Nothing invalidated** — but the slice plane (and chart) is on the sim key (R-92), so these request *new identities*, whose quads integrate fresh. Old-identity quads stay cached and valid — navigate back and they're still there |
-| `T`, `dt_macro`, thresholds, `eps` floors | **All sim buffers** (signature change; the march re-boots from `t = 0`) |
+| `T`, `dt_macro`, thresholds, `eps` floors | **All sim buffers** (signature change; the march re-boots from `t = 0`). *7 Nov 2026 (R-842, RQ-727 (a)):* on a time-axis chart, raising `T` is a continuation of the march, for a regularised occupant always and for an unregularised one while `dt_macro` is unchanged, up to R-610's cap; the time window `(t_lo, t_hi, warp, rows)` is a view, off the sim key |
 | Integrator occupant | All sim buffers (signature) |
 | Kernel variant (physics ↔ the bring-up mode, colour_composition Appendix A) | All sim buffers (signature — the bring-up mode writes a known pattern instead of physics, so it changes what the kernel computes, colour_composition §0 and Appendix A; RQ-221) |
 | Compute fast-math setting | All sim buffers (signature — it is on the sim key; off by default, R-297) |

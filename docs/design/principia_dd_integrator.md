@@ -220,7 +220,9 @@ Part 7; `principia_01_pitfalls.md` §2); the gap is to re-measure with R-29's `E
   for the checks of pitfalls §2.4 runs only in the validation harness, which keeps its own state; the payload never
   sees it.
 
-Triple ejection is `ESCAPE` with `detail = 3`; its gate is ruled by R-32, applied later.
+Triple ejection is `ESCAPE` with `detail = 3`; its gate is ruled by R-32, applied later. *7 Nov 2026 (R-818, RQ-708
+(a)):* the gate sits behind `E_rel > 0`: the escape rule fires first, as for any escape, and the gate then says whether
+that escape is a triple ejection. It is never a second way to fire.
 
 *Superseded by change 11, kept for the record* — for each candidate body `k` (outer of the Jacobi split against the remaining pair), three gates and a persistence counter:
 

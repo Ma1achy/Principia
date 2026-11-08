@@ -35,6 +35,12 @@ integrate(ic, params):
 
 ### COM projection and invariant monitoring
 
+**During a run nothing but the step and this projection touches the state (R-854, the owner's symmetry rule of 7 Nov
+2026).** The per-step centre-of-mass projection removes floating-point drift and no physical degree of freedom. Energy
+and `L_z` are monitored, never corrected. No rotation removal, rescaling, mirroring or canonicalisation ever happens
+during a run; a regularised occupant changes variables internally for accuracy and evolves the same physical system.
+Symmetry reductions apply only to how a starting state is described at `t = 0`.
+
 The decode already quotients out the CoM translation and bulk momentum. Runtime projection keeps floating-point
 drift from putting them back: without it the state drifts as $\mathbf r_i = \mathbf r_i^{\mathrm{internal}} + \mathbf R_{\mathrm{drift}}$,
 spending f32 dynamic range on physically irrelevant bulk motion. It is housekeeping, not a user-facing feature.
@@ -751,7 +757,9 @@ Escape and collision are where the categorical outcome comes from — every outc
 
 *5 Nov 2026 (R-791, closing RQ-693 (b); R-792, closing RQ-694 (a)):* two additions to that list. The Chazy classifier's two-body potentials soften too, `pair_kup`'s and `out_kup`'s `U` reading `√(d² + ε²)`, the separations, `v_r` and the kinetic terms geometric. And the `(L_z, E)` chart reads a Newtonian `U`, not the softened `V₀`, in its axis, feasible set, warp and `K*`, so a pixel's start does not depend on `ε`. The other axes that read `U` are RQ-709.
 
-- **Escape (pending change 11, landed):** `ESCAPE ⟺ |Δn̂| over a window < tau AND E_rel > 0`. The shape vector has settled, and the escaper is unbound. Escape is a limit being approached, not a threshold crossed: as the third body recedes, `n̂` converges with `|dn̂/dt| ~ 1/t³` (`principia_01_pitfalls.md` §2.1). **`tau` is not a tuned constant** *(to re-measure, R-29)*. Closure separates escapers from bound trajectories by 383× (7.04e-05 against 2.70e-02, stable across `t = 25–30`), and any value in the middle two orders gives the same answer. Measured: **100% precision, 96.3% recall** *(before R-29's `E_rel`; to re-validate)*. It fires late (`t≈10` rather than `t≈1.5`), which is right for a *stored* `t_end`. Neither condition alone is enough: closure alone also fires on bound hierarchies that settle, and energy alone flickers during encounters. It evaluates **post-step on the projected state**. Records which body escaped.
+- **Escape (pending change 11, landed):** `ESCAPE ⟺ |Δn̂| over a window < tau AND E_rel > 0`. The shape vector has settled, and the escaper is unbound. Escape is a limit being approached, not a threshold crossed: as the third body recedes, `n̂` converges with `|dn̂/dt| ~ 1/t³` (`principia_01_pitfalls.md` §2.1). **`tau` is not a tuned constant** *(to re-measure, R-29)*. Closure separates escapers from bound trajectories by 383× (7.04e-05 against 2.70e-02, stable across `t = 25–30`), and any value in the middle two orders gives the same answer. Measured: **100% precision, 96.3% recall** *(before R-29's `E_rel`; to re-validate)*. It fires late (`t≈10` rather than `t≈1.5`), which is right for a *stored* `t_end`. Neither condition alone is enough: closure alone also fires on bound hierarchies that settle, and energy alone flickers during encounters. It evaluates **post-step on the projected state**. Records which body escaped. **Triple ejection** (`detail = 3`, R-32)
+is a classification of a firing this rule has already made, behind `E_rel > 0`, never a second way to fire (R-818,
+ruling RQ-708 (a)).
   **Defined (R-29):**
   - `E_rel = ½|Δv|² − (M_pair + m_b)/d` is the relative two-body energy of the candidate escaper `b` about the centre of
     mass of the other two: `Δv` and `d` are `b`'s velocity and distance relative to that centre of mass, and `M_pair` is the

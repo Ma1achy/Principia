@@ -121,7 +121,13 @@ colour(sample, t) = C_T( fold_T( P_T( E( x(t) ) ) ) )
 - **On the shape sphere chart, no mirror (R-544).** The shape sphere target is the whole sphere: `P_T` reads the
   state's signed `n̂`, and neither `E`'s mirror identification nor `fold_T`'s canonical mirror applies to it, the
   mirror being no identification there. Its quotient is the sphere via `n̂` (SM4), and the `t = 0` identity holds
-  point for point. Every other target is unchanged.
+  point for point. *Was:* "Every other target is unchanged."
+- **On every target, later states are signed (R-853, the owner's answer to RQ-736's first open question; R-854).**
+  A state at `t > 0` is coloured in its signed, unfolded state: neither `E`'s mirror identification nor `fold_T`'s
+  canonical mirror applies to it on any target, so the colour is continuous through syzygies. The mirror fold applies
+  only to how a latent chart encodes a starting state at `t = 0`. A mirror-identified colouring may remain only as a
+  declared, optional view, labelled as such, never the default. How a lower-half state is read on a latent target's
+  coordinates is a definition (R-72) its task writes under physics review (TASK-M7-52).
 
 **The target is the view's own chart by default.** Then, at `t = 0`, every sample sits where it started, and the
 picture is the colour map itself, i.e. the legend. As the playhead moves, it flows.
@@ -152,7 +158,7 @@ this doc's other mentions of those two charts are the prototype's measurements a
 | Target (the prototype's record) | On the chart | Otherwise |
 |---|---|---|
 | `θ × dilation` | `(θ, h)`, `h` the scale-free homologous rate `(Σ m r·v)/I · I^¾` | — (never left) |
-| `ν × dilation` | `(ν, h)`, `ν` the nearest point of the right-triangle curve (mirror folded) | past a bounded edge when `ν ∉ [1/32, 31/32]`: clamped to that end, `h` kept |
+| `ν × dilation` | `(ν, h)`, `ν` the nearest point of the right-triangle curve, signed (R-853; *was:* "(mirror folded)") | past a bounded edge when `ν ∉ [1/32, 31/32]`: clamped to that end, `h` kept |
 
 ## SM2. It changes no sim struct and reads only what the fragment already has
 

@@ -93,6 +93,8 @@ p2 =  p_λ
 
 ### 0.4 Canonicalisation `C`
 
+*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+
 With the canonical-frame decode both steps are no-ops away from the seam. Implement anyway, for
 charts that bypass it:
 
@@ -263,7 +265,10 @@ energy: `U` here, in the feasible set, the warp and §2.2's `K*`, is `V` at `ε 
 physics. The run's own `E₀` is softened, so it isn't the axis value: the axis is labelled as Newtonian energy whenever
 softening is on, and the Inspector shows the softened energy beside it (`principia_render_gui_spec.md` §G2, §G8). Encode
 reads the same Newtonian `U` on this chart, so entering a pixel's `(Lz, E)` returns that pixel's `z` at any `ε`. Whether
-this reaches the other axes that read `U`, the lone, mixed and Chart-builder `E` axes and the virial ratio, is RQ-709.
+this reaches the other axes that read `U`, the lone, mixed and Chart-builder `E` axes and the virial ratio, was RQ-709.
+*7 Nov 2026 (R-819, RQ-709 (a)):* it reaches all of them. Every axis that reads `U` reads the Newtonian `U` at `ε ≠ 0`,
+each labelled, the softened value beside it in the Inspector; on the virial ratio the axis's Newtonian ratio differs
+from the stored, softened `virial_ratio`, and the Inspector shows that disagreement. TASK-M9-39 builds it.
 
 For `(Lz, K)`: identical, with `K* = K(t)` directly. Simpler, since `K ≥ 0` is the natural
 constraint.
@@ -340,8 +345,11 @@ rotation with `a = 0`. The top row exceeds `K_max` on `K`, `KE` and `E`, and `Q_
 range, and `K_max` is passed past `t = 1` too (R-508). The pixel's own virial ratio `2K*/|U|` is
 `Q(t) + L_z²/(I·|U|)`. On `K`, at `I = 1`, the floor is constant, so a row is a level set of `K`. On the virial ratio
 the offset varies with `U`, so a row is no level set of `2K/|U|`, and a readout of the axis shows the pixel's own
-ratio. With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked bottom `Q₀` is not drawn
-even where it is feasible, and `a ≠ 0` on the bottom row. At a held
+ratio. **With `Q₀ > 0` the floor sits under the rise only (R-817, ruling RQ-700 (b)):** with `Q_min(U) = L_z²/(I·|U|)`,
+the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, `K*` its `|U|/2` multiple, so the bottom row is the asked
+bottom `Q₀` where `Q₀` is feasible and on the floor elsewhere, and at `Q₀ = 0` this is the additive form above, bit for
+bit. TASK-M8-119 builds it. *Was:* "With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked
+bottom `Q₀` is not drawn even where it is feasible, and `a ≠ 0` on the bottom row." At a held
 `L_z = 0` the floor is 0 and the lines above stand unchanged. The bottom row must not blank on rounding: the floor is
 the least normal float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded, raised one
 float where it rounded below, and never subnormal, so a backend that flushes subnormals keeps it; adding a non-negative
@@ -477,6 +485,8 @@ all three exactly.
 ---
 
 ## 3. Shape-sphere chart `(θ, φ)`
+
+*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
 
 The quotient of configuration space by translation, rotation and scale. `Φ_S²(u,v) = (n(θ,φ),
 m_fixed, p_fixed)` — masses and momenta held, only the **shape** varies.
@@ -916,7 +926,9 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
 - **Warped mode, the default.** Every pixel inside the chart's square is a system under every tilt, no cell refused.
   `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` floor the axis at the pixel's own held `L_z`, $K = L_z^2/2I + K_{\max} t^{\gamma_K}$,
   which may pass `K_max` at the top, a range as R-508's side continues. `Φ_θ,L_z`'s held `K` is tilted in its warp
-  coordinate, `K = K_max·t^γ_K`, `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)`, `d` in units of `t`, so it stays ≥ 0; it takes
+  coordinate, `K = K_max·t^γ_K`, `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)`, `d` in units of `t`, so it stays ≥ 0, its
+  `K_max` and `γ_K` a calibration of this chart's own (R-71), with `K_max` at the chart's calibrated `K` (REQ-CHART-046),
+  so `t₀ = 1`, the value proposed at the gate (R-833, ruling RQ-710 (c) with (b) proposed); it takes
   no floor, the band above giving `L_z²/2I ≤ K` at every `K ≥ 0`. Rounding at the floor must not blank the bottom row,
   as §2.1 holds `L_max² ≤ 2K`. The held `L_z` moves by value, tilted and sliced alike, `L_z = L_z₀ + d`, with no sign
   constraint: the floor keeps every pixel a system at any `L_z` (§2.1's one exception), and a column above `K_max` at large
