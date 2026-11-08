@@ -505,10 +505,12 @@ const HELPER: &str = r##"{
 }"##;
 
 /// The first pass: a `const`, an `override`, an `alias`, a `struct` with a member named as a helper, a `var<private>`
-/// and two `fn`s, one named `f`, as a literal's suffix is, and a `const` named `x`, as a swizzle is.
+/// and two `fn`s, one named `f`, as a literal's suffix is, a `const` named `x`, as a swizzle is, and a `<` comparing
+/// two of them, no template.
 const HELPER_A: &str = "// Helpers, some named as the second pass names its own.
 const K: f32 = 0.5;
 const x: f32 = 2.0;
+const B: bool = K < x;
 override gain: f32 = 1.0;
 alias V = vec3<f32>;
 struct S { shade: f32, v: vec2<f32> }
@@ -524,13 +526,14 @@ fn run(uv: vec2<f32>) -> vec4<f32> {
 }";
 
 /// The second pass: a `const`, a `struct` and a `fn` of the first pass's names, a comment ending in `fn` before the
-/// first, and a local named as a helper, which shadows it.
+/// first, a local named as a helper, which shadows it, and a local `var`, which keeps its name.
 const HELPER_B: &str = "/*fn*/const K: f32 = 0.25;
 const W: f32 = 2.0;
 struct S { k: f32 }
 fn shade(c: vec3<f32>) -> vec3<f32> {
     let W: f32 = S(K).k;
-    return c * W;
+    var t = W;
+    return c * t;
 }
 fn run(uv: vec2<f32>) -> vec4<f32> {
     return vec4<f32>(shade(tex(prev, uv).rgb), 1.0);
@@ -563,9 +566,10 @@ fn check_helpers(emit: fn(String) -> String) {
             format!("print_n{k}_pass0_h_seen = s.shade + s.v.x;"),
             "return a * 1.0f; }".to_owned(),
             format!("var<private> print_n{k}_pass0_h_seen: f32;"),
+            format!("const print_n{k}_pass0_h_B: bool = print_n{k}_pass0_h_K < print_n{k}_pass0_h_x;\noverride print_n{k}_pass0_h_gain"),
             format!("/*fn*/const print_n{k}_pass1_h_K: f32 = 0.25;"),
             format!("fn print_n{k}_pass1_h_shade(c: vec3<f32>) -> vec3<f32> {{"),
-            format!("    let print_n{k}_pass1_h_W: f32 = print_n{k}_pass1_h_S(print_n{k}_pass1_h_K).k;\n    return c * print_n{k}_pass1_h_W;"),
+            format!("    let print_n{k}_pass1_h_W: f32 = print_n{k}_pass1_h_S(print_n{k}_pass1_h_K).k;\n    var t = print_n{k}_pass1_h_W;\n    return c * t;"),
         ] {
             assert!(g.source.contains(&needle), "the helpers are not the pass's own: no {needle} in {}", g.source);
         }

@@ -381,9 +381,8 @@ fn declarations(wgsl: &str) -> BTreeSet<&str> {
                 );
                 let after = rest[end..].trim_start();
                 if word == "var" && after.starts_with('<') {
-                    // `var<private>`: the name comes after the template.
-                    let skip =
-                        rest.len() - after.len() + after.find('>').map_or(after.len(), |e| e + 1);
+                    // `var<private>`: the name comes after the template, from its `>` on.
+                    let skip = rest.len() - after.len() + after.find('>').unwrap_or(after.len());
                     rest = &rest[skip..];
                     continue;
                 }
