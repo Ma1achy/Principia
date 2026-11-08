@@ -239,39 +239,59 @@ wait_for_end() {
 }
 
 # A full attempt still going is the full tier already, and is waited for, never cancelled: every CI_TIER_WAIT_SECONDS
-# (30, or CI_TIER_POLL_SECONDS where set), at most CI_TIER_WAIT_POLLS times (700: 350 minutes, under the job's 360).
+# (30, or CI_TIER_POLL_SECONDS where set), at most CI_TIER_WAIT_POLLS times (700: 350 minutes, under the job's 360), less
+# the polls `attempt_tier` has already spent waiting for the attempt's `changes` to decide (`waited`).
 wait_full() {
-  wait_for_end "${CI_TIER_WAIT_POLLS:-700}" "${CI_TIER_WAIT_SECONDS:-${CI_TIER_POLL_SECONDS:-30}}"
+  wait_for_end "$((${CI_TIER_WAIT_POLLS:-700} - waited))" "${CI_TIER_WAIT_SECONDS:-${CI_TIER_POLL_SECONDS:-30}}"
 }
 
-# What attempt $2 of run $1 shows of its tier, from one read of its jobs: 0, shown full, its `changes` job having decided
-# and `ci-quick` skipped, under either name the jobs API gives it; 1, shown quick, `changes` having decided and
-# `ci-quick` not skipped; 2, not known, its jobs unread or its `changes` not yet ended.
+# What attempt $2 of run $1 shows of its tier, from one read of its jobs: 0, shown full, its `changes` job having ended
+# and `ci-quick` skipped, under either name the jobs API gives it; 1, shown quick, `changes` having ended and `ci-quick`
+# not skipped; 2, not yet decided, `changes` queued or still going; 3, its jobs unread.
 shown_tier() {
   local jobs
   jobs=$(gh api "repos/$GH_REPO/actions/runs/$1/attempts/$2/jobs?per_page=100" \
-    --jq '.jobs[] | "\(.conclusion) \(.name)"') || return 2
+    --jq '.jobs[] | "\(.conclusion) \(.name)"') || return 3
   if ! grep -qxE '[a-z_]+ changes' <<< "$jobs" || grep -qxF 'null changes' <<< "$jobs"; then return 2; fi
   if grep -qxF -e 'skipped ci-quick' -e "skipped $QUICK_JOB" <<< "$jobs"; then return 0; fi
   return 1
 }
 
 # Whether attempt $2 of run $1 is the full tier: 0, shown full, waited for and never cancelled; 1, shown quick, which
-# alone is cancelled, losing nothing, the full attempt running all a cancelled one had not passed. Not known (its jobs
-# unread, its `changes` not yet ended), it is read again, every CI_TIER_DECIDE_SECONDS (10, or CI_TIER_POLL_SECONDS
-# where set), at most CI_TIER_DECIDE_POLLS reads in all (30: 5 minutes, `changes` deciding as soon as it runs); still
-# not known, it fails 2, named, cancelling nothing, as `wanted` does on an unread head: a retry's full attempt, its
-# `changes` not yet ended, is never taken for a quick one.
+# alone is cancelled, losing nothing, the full attempt running all a cancelled one had not passed. Its `changes` not yet
+# ended (queued, perhaps long, behind a busy runner queue), it is read again until `changes` decides, reading the live
+# label, every CI_TIER_WAIT_SECONDS, within the same CI_TIER_WAIT_POLLS as `wait_full`, each such poll counted in
+# `waited`; its jobs unread, it is read again every CI_TIER_DECIDE_SECONDS (10, or CI_TIER_POLL_SECONDS where set), at
+# most CI_TIER_DECIDE_POLLS reads (30: 5 minutes). Either still not shown, it fails 2, named, cancelling nothing, as
+# `wanted` does on an unread head: an attempt whose tier is not shown, a retry's full attempt just started among them,
+# is never taken for a quick one.
 attempt_tier() {
-  local polls="${CI_TIER_DECIDE_POLLS:-30}" seconds="${CI_TIER_DECIDE_SECONDS:-${CI_TIER_POLL_SECONDS:-10}}" i shown
-  for ((i = 1; i <= polls; i++)); do
-    if [ "$i" -gt 1 ]; then sleep "$seconds"; fi
+  local wait_polls="${CI_TIER_WAIT_POLLS:-700}" wait_seconds="${CI_TIER_WAIT_SECONDS:-${CI_TIER_POLL_SECONDS:-30}}"
+  local read_polls="${CI_TIER_DECIDE_POLLS:-30}" read_seconds="${CI_TIER_DECIDE_SECONDS:-${CI_TIER_POLL_SECONDS:-10}}"
+  local unread=0 shown what="attempt $2 of run $1 on $HEAD_SHA"
+  while true; do
     shown=0
     shown_tier "$1" "$2" || shown=$?
-    if [ "$shown" != 2 ]; then return "$shown"; fi
+    case "$shown" in
+      0 | 1) return "$shown" ;;
+      2)
+        waited=$((waited + 1))
+        if [ "$waited" -ge "$wait_polls" ]; then
+          echo "::error::ci_tier: $what had not decided its tier after $waited polls; cancelling nothing"
+          return 2
+        fi
+        sleep "$wait_seconds"
+        ;;
+      *)
+        unread=$((unread + 1))
+        if [ "$unread" -ge "$read_polls" ]; then
+          echo "::error::ci_tier: the jobs of $what could not be read in $unread reads; cancelling nothing"
+          return 2
+        fi
+        sleep "$read_seconds"
+        ;;
+    esac
   done
-  echo "::error::ci_tier: attempt $2 of run $1 on $HEAD_SHA did not show its tier in $polls reads; cancelling nothing"
-  return 2
 }
 
 # Cancels run $1's quick attempt, still going, so the full attempt starts at once (the owner, 8 Nov 2026: "ci-full: on
@@ -316,7 +336,7 @@ wanted() {
 }
 
 label_on() {
-  local polls="${CI_TIER_POLLS:-12}" i run="" id status attempt round why shown
+  local polls="${CI_TIER_POLLS:-12}" i run="" id status attempt round why shown waited=0
   for ((i = 1; i <= polls; i++)); do
     run=$(latest_run)
     if [ -n "$run" ]; then break; fi
