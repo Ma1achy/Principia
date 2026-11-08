@@ -1054,6 +1054,39 @@
   - R-696
   milestone: M2
   note: R-696, applied per R-369. TASK-M2-53.
+- id: REQ-DEC-055
+  area: DEC
+  statement: "The decoder's mirror step must be removed and latent `β` must run over the full circle, so that every chart, the shape sphere included, uses one decode path with no special case, a lower-half state encoding to `β ∈ (π, 2π)` in place of a mirrored state (R-865); conditional on the owner's bitwise check: every existing preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, bit for bit, through the new decoder, and if any doesn't, the removal stops and the list goes back to the owner before it proceeds, nothing re-baselined or loosened to pass. Latent-chart traces must pass through syzygies without the jump, or the task states why they can't, on that list."
+  source:
+  - file: decisions.md
+    section: "R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(closes RQ-739)*"
+  - file: docs/design/principia_dd_decoder.md
+    section: 3.3 Canonicalise
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel mirror_step_removed: first, before the decoder changes, every preset, saved chart and golden with β in [0, π] recorded through today's decoder on its own commit; then each reproduces through the new decoder bit for bit (IC words, sim key and, for a golden, its image hash), the PR listing every one, and any that doesn't stops the task and goes to the owner; a lower-half state encodes to β in (π, 2π) and decodes back to itself, not its mirror image; a latent-chart trace through a syzygy continuous, or the reason it can't be on the list; controls: the mirror step left in (a lower-half state decoding to its mirror image) fails, and one golden's β moved by one ulp fails the check; plus the PR lists every stored z, IC save file or test that relied on the mirrored encode, and the effect on default windows of twice the area in β"
+  rulings:
+  - R-854
+  - R-865
+  milestone: M2
+  note: "Added by R-865 (8 Nov 2026), closing RQ-739. Closed by TASK-M2-57. The proposal's optional \"mirror pairs counted once\" statistic is not ruled, and not built here."
+- id: REQ-DEC-056
+  area: DEC
+  kind: definition
+  statement: "Latent `β`'s link over the full circle, which replaces `β = π·σ(z_β)` with `β ∈ [0, π]` (R-865), and the signed encode it pairs with must be defined: the link and its inverse, where its seam lies and how a trajectory crossing `β = 0` or `β = π` at a syzygy reads on a latent chart, how a `β ∈ [0, π]` start keeps its bits, and the pole value at `λ̃ = 0`; written into dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 by the task that needs it and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: decisions.md
+    section: "R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(closes RQ-739)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 state the full-circle link and its inverse, the seam and how a syzygy crossing reads on a latent chart, why a β in [0, π] start keeps its bits, and the λ̃ = 0 pole value; the physics reviewer approved"
+  rulings:
+  - R-72
+  - R-865
+  milestone: M2
+  note: Added by R-865 (8 Nov 2026). Closed by TASK-M2-57.
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
@@ -3618,6 +3651,7 @@
   rulings:
   - R-72
   milestone: M2
+  note: "R-866 (8 Nov 2026): locking must not move the view, so the re-centring of a nonlinear chart's window this definition wrote (TASK-M2-23, merged) is replaced; TASK-M8-125 rewrites that part of the definition under REQ-GUI-425, exact or with its reason. This requirement's record stands as closed."
 - id: REQ-CHART-090
   area: CHART
   kind: definition
@@ -4102,10 +4136,12 @@
   - RQ-721
 - id: REQ-CHART-115
   area: CHART
-  statement: "Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words."
+  statement: "Under a lock a path must be a based homotopy: the anchor stored as the signed starting state, its mirror half kept, not as a latent point (R-867), its IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words. What `z_locked` still serves beside the stored state (the sliders' re-basing, snap-back, a chart-mode switch) must be written into chart_composition § 17.8 and approved by the physics reviewer (R-72)."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "17.8 Lock: a based homotopy"
+  - file: decisions.md
+    section: "R-867 — The lock's anchor is stored as the signed starting state, not as a latent point; approved as TASK-M8-117"
   verify:
     detail: "cargo test -p engine path_lock_centre: where the anchor stays in B, a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B (a region D, a rest and a Burrau B), the probe reads the stored words at s = 0 and B's nearest point to the anchor at s = 1, the slide continuous between (the largest step in the probe's state between frames falling to at most 0.6 of the previous largest step each time the frame step is halved, twice over), with no label and no jump; a time-axis chart to an IC-only chart keeps its labelled jump; controls: the select removed fails, offsets blended linearly fails, a labelled jump where the anchor can't exist in B fails, an unlabelled snap to B's nearest point at one mid-path frame fails"
     method: unit test
@@ -4114,7 +4150,11 @@
   - R-92
   - R-849
   - R-850
+  - R-867
   milestone: M8
+  rq:
+  - RQ-749
+  note: "R-867 (8 Nov 2026): the anchor is the signed starting state, not a latent point. Where the test reads once the pin is off the centre (R-866) is RQ-749's. *Was (statement):* \"Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words.\""
 - id: REQ-CHART-116
   area: CHART
   statement: "A path must offer control charts built from each arm's own interpolation, alignment that reaches the identity at s = 1, and re-timing for constant visual speed by a recorded table pinned at both ends, easing untouched."
@@ -20273,7 +20313,7 @@
   note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-409 (10 Oct 2026): the ring's colour shows the keyboard's mode. TASK-M6-25 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the two colours (REQ-GUI-182) and re-checks this requirement on the mock, and TASK-M8-13 re-runs it on the real engine as now worded. R-460 (18 Oct 2026): the ring shows only while keyboard navigation is on, which starts only on keyboard input; a window opened with the mouse takes the focus with no ring (REQ-GUI-210, TASK-M6-41). R-464 (18 Oct 2026): after any mouse click or drag the ring is hidden until the next key press, which shows it where the focus is (REQ-GUI-210, TASK-M6-41). R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-91's, which wires TASK-M8-13's keyboard; TASK-M8-13 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-099
   area: GUI
-  statement: "Locking (K, or right-click → lock here) must recentre the view on that point and mark it with a gold reticle at the centre and a gold pin on the compass, and the lock badge must read '● locked at z_locked' and offer unlock and open in Inspector."
+  statement: "Locking (K, or right-click → lock here) must not move the view (R-866): it must mark the clicked pixel, the pin, with a gold reticle where it is on screen and with a gold pin on the compass, and the lock badge must read '● locked at z_locked' and offer unlock, centre on pin and open in Inspector."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G4. Lock — the reticle and the pin (`08_lock.png`)
@@ -20285,14 +20325,17 @@
     section: 01 Explore — the everyday view
   - file: decisions.md
     section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*"
   verify:
     method: GUI screenshot
     detail: screenshot against 08_lock.png after K over a point
   rulings:
   - R-390
   - R-627
+  - R-866
   milestone: M8
-  note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: TASK-M8-07 keeps it, building the badge and reticle on the mock engine's lock; the real engine's lock is TASK-M8-90's, which re-runs its acceptance there (code review 5664955153 of R-627's port, applied per R-369)."
+  note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: TASK-M8-07 keeps it, building the badge and reticle on the mock engine's lock; the real engine's lock is TASK-M8-90's, which re-runs its acceptance there (code review 5664955153 of R-627's port, applied per R-369). R-866 (8 Nov 2026): locking doesn't move the view; the reticle sits at the pin and the badge gains centre on pin. *Was (statement):* \"Locking (K, or right-click → lock here) must recentre the view on that point and mark it with a gold reticle at the centre and a gold pin on the compass, and the lock badge must read '● locked at z_locked' and offer unlock and open in Inspector.\""
 - id: REQ-GUI-100
   area: GUI
   statement: "Present mode must hide all chrome and Esc must return from it; with the chrome hidden the figure must fill the window as with F3 (REQ-GUI-180), in the mode View › F3 fills by sets (R-468): in Extend past the chart's [0,1]² each axis extending by its declared type with R-407's fallback, a forbidden pixel drawn as the canvas background (R-467); in Fit the view's square scaled to the window's shorter side, the rest the canvas background."
@@ -22828,6 +22871,8 @@
   - R-92
   - R-474
   milestone: M6
+  rq:
+  - RQ-747
   note: "R-474 R4, K5. Closed by TASK-M6-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-GUI-234
   area: GUI
@@ -26147,6 +26192,76 @@
   milestone: M8
   rq:
   - RQ-736
+- id: REQ-GUI-425
+  area: GUI
+  statement: "Locking (K, or right-click → lock here) must not move the view (R-866): it must edit neither `z₀`, the basis nor a nonlinear chart's window; the pin must be the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre; tilt and zoom must turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action must bring the pin to the centre as one undoable navigation edit, and a setting, off by default, must apply it at every lock in the same command, one history entry. On nonlinear charts, where locking re-centred the window to compute the pin, the pin must be exact, or the task must state why it can't be before anything inexact merges; how the pin is held there is written into chart_decoder_contract Part 4 (R-72) and approved by the physics reviewer."
+  source:
+  - file: decisions.md
+    section: "R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G4. Lock — the reticle and the pin (`08_lock.png`)
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The lock (projective microscope)
+  verify:
+    method: unit test
+    detail: "cargo test -p engine lock_moves_no_view and cargo test -p gui lock_moves_no_view: a lock at an off-centre pixel on the latent chart, a mixed chart and an invariant chart leaves z₀, the basis and the window bit for bit, its z_locked equal to today's point at that pixel bit for bit on the latent chart; the pinned pixel decodes the clicked state after tilts and zooms about it (bit for bit, or within the bound and with the reason the task states); centre on pin brings the pin to (½, ½) as one undoable edit; the setting on gives the same state as lock then centre on pin, in one history entry, and off by default; controls: a lock that re-centres fails, a tilt about the centre with an off-centre pin fails; plus review: the nonlinear chart's construction in chart_decoder_contract Part 4, exact or with its reason, approved by the physics reviewer"
+  rulings:
+  - R-69
+  - R-473
+  - R-866
+  milestone: M8
+  note: "Added by R-866 (8 Nov 2026). Closed by TASK-M8-125, in R-863's stage 1 after TASK-M8-124."
+- id: REQ-GUI-426
+  area: GUI
+  statement: "Points of interest (R-870): any pixel's starting state must be savable as a point, any number of them, each named and stored as the signed state; on every chart and every frame of every path (morph, tilt, slice, zoom, chart change) each point must be shown as a filled star where the chart passes through it exactly, otherwise as a hollow star at the nearest chart point labelled with the off-slice distance in a stated metric; optional \"similar systems\" overlays must draw where each property the user picks from the primitive registry equals the point's value (one property a contour line, two their intersection points, three or more near-matches within a stated tolerance), reusing the Tier 1 contour overlays and forward formulas only; display only, never scored, outside the sim key, and distinct from the lock."
+  source:
+  - file: decisions.md
+    section: "R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional \"similar systems\" overlays; display only, never scored, distinct from the lock"
+  - file: docs/design/principia_chart_composition.md
+    section: 10.5 Points of interest
+  verify:
+    method: unit test
+    detail: "cargo test -p gui points_of_interest: a point lying in the chart draws a filled star at the pixel that decodes to it; a one-property overlay passes through the star; overlays redraw consistently across a morph's frames (the owner's three tests); a point off the chart draws a hollow star at the nearest chart point labelled with its distance; saving or showing a point changes no sim key, payload or statistic; controls: a star drawn one pixel off fails, an overlay of another property's value fails to pass through the star, a point in the sim key fails"
+  rulings:
+  - R-870
+  milestone: M8
+  note: Added by R-870 (8 Nov 2026). Closed by TASK-M8-126.
+- id: REQ-GUI-427
+  area: GUI
+  kind: definition
+  statement: "What the points of interest of R-870 leave unstated must be defined: when a chart passes through a point \"exactly\", \"the nearest chart point\", the metric of the off-slice distance, how a near-match of three or more properties is measured, how marks are found on a path frame with no inverse, and which state group holds the saved points, off the sim key; written into chart_composition § 10.5 by the task that needs it and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: decisions.md
+    section: "R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional \"similar systems\" overlays; display only, never scored, distinct from the lock"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 10.5 Points of interest
+  verify:
+    method: review checklist
+    detail: "chart_composition § 10.5 states each definition: \"exactly\", the nearest chart point, the off-slice metric, the near-match measure, marks on a frame with no inverse, and the state group holding the points; the physics reviewer approved"
+  rulings:
+  - R-72
+  - R-870
+  milestone: M8
+  note: Added by R-870 (8 Nov 2026). Closed by TASK-M8-126.
+- id: REQ-GUI-428
+  area: GUI
+  kind: calibration
+  statement: "The near-match tolerance of R-870's \"similar systems\" overlays, within which a pixel matches a point on three or more properties, in REQ-GUI-427's measure, which the owner's words call \"a stated tolerance\" and the corpus does not give, must be calibrated (R-71): proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the owner at the M8 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional \"similar systems\" overlays; display only, never scored, distinct from the lock"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance and its evidence (how many pixels match at it on a stated set of charts and points, against one tighter and one looser value); recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-870
+  milestone: M8
+  note: Added by R-870 (8 Nov 2026). Closed by TASK-M8-126.
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
