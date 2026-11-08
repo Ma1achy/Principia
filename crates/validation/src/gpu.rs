@@ -186,7 +186,8 @@ impl GpuHarness {
     }
 
     /// [`run_wgsl`](Self::run_wgsl)'s pipeline and buffers, built once, so that [`Prepared::run`] times the dispatch
-    /// and readback alone (the benchmark runner, TASK-M0-19).
+    /// and readback alone (the benchmark runner, TASK-M0-19), and so that [`Prepared::load`] can give the same
+    /// pipeline new inputs of the same lengths without compiling it again.
     pub fn prepare(&self, module: &str, entry: &str, inputs: &[&[u32]]) -> Prepared<'_> {
         self.prepare_with(module, entry, inputs, FastMath::default())
     }
@@ -212,7 +213,7 @@ impl GpuHarness {
         let kernel =
             compute::pipeline(&self.device, &shader, setting).unwrap_or_else(|e| panic!("{e}"));
         let storage = |contents: &[u32], usage| {
-            let bytes: Vec<u8> = contents.iter().flat_map(|w| w.to_le_bytes()).collect();
+            let bytes = le_bytes(contents);
             let desc = wgpu::util::BufferInitDescriptor {
                 label: None,
                 contents: &bytes,
@@ -220,13 +221,11 @@ impl GpuHarness {
             };
             self.device.create_buffer_init(&desc)
         };
-        let mut buffers: Vec<_> = inputs
-            .iter()
-            .map(|i| storage(i, wgpu::BufferUsages::STORAGE))
-            .collect();
+        let writable = wgpu::BufferUsages::STORAGE.union(wgpu::BufferUsages::COPY_DST);
+        let mut buffers: Vec<_> = inputs.iter().map(|i| storage(i, writable)).collect();
         buffers.push(storage(
             &vec![0; len],
-            wgpu::BufferUsages::STORAGE.union(wgpu::BufferUsages::COPY_SRC),
+            writable.union(wgpu::BufferUsages::COPY_SRC),
         ));
         let readback = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("readback"),
@@ -243,6 +242,7 @@ impl GpuHarness {
             harness: self,
             kernel,
             bindings,
+            inputs: buffers,
             output,
             readback,
             len,
@@ -250,11 +250,17 @@ impl GpuHarness {
     }
 }
 
+/// `words` as the little-endian bytes a storage buffer holds.
+fn le_bytes(words: &[u32]) -> Vec<u8> {
+    words.iter().flat_map(|w| w.to_le_bytes()).collect()
+}
+
 /// A compiled dispatch and its buffers, from [`GpuHarness::prepare`].
 pub struct Prepared<'h> {
     harness: &'h GpuHarness,
     kernel: ComputeKernel,
     bindings: compute::Bindings,
+    inputs: Vec<wgpu::Buffer>,
     output: wgpu::Buffer,
     readback: wgpu::Buffer,
     len: usize,
@@ -266,12 +272,44 @@ impl Prepared<'_> {
         self.kernel.mode()
     }
 
+    /// Writes `inputs` over the inputs [`GpuHarness::prepare`] bound, each as long as the one it replaces, and fills
+    /// the output with `sentinel`, so that a dispatch that writes nothing reads back `sentinel`, never an earlier
+    /// run's output. The pipeline and its bindings are kept: the next [`run`](Self::run) compiles nothing.
+    pub fn load(&self, inputs: &[&[u32]], sentinel: u32) {
+        assert_eq!(
+            inputs.len(),
+            self.inputs.len(),
+            "load needs as many inputs as prepare bound"
+        );
+        let queue = &self.harness.queue;
+        for (k, (buffer, words)) in self.inputs.iter().zip(inputs).enumerate() {
+            assert_eq!(
+                (words.len() * 4) as u64,
+                buffer.size(),
+                "input {k}'s length differs from the one prepare bound"
+            );
+            queue.write_buffer(buffer, 0, &le_bytes(words));
+        }
+        queue.write_buffer(&self.output, 0, &le_bytes(&vec![sentinel; self.len]));
+    }
+
     /// Dispatches once per word of the first input, copies the output back and returns it, waiting for the GPU.
     pub fn run(&self) -> Vec<u32> {
+        self.submit(true)
+    }
+
+    /// The output as it stands, copied back with no dispatch: what a run whose dispatch was skipped reads, for a
+    /// control that shows a check rejects it.
+    pub fn read(&self) -> Vec<u32> {
+        self.submit(false)
+    }
+
+    /// Dispatches if `dispatch`, then copies the output back and returns it, waiting for the GPU.
+    fn submit(&self, dispatch: bool) -> Vec<u32> {
         let size = (self.len * 4) as u64;
         let (device, queue) = (&self.harness.device, &self.harness.queue);
         let mut encoder = device.create_command_encoder(&Default::default());
-        {
+        if dispatch {
             let mut pass = encoder.begin_compute_pass(&Default::default());
             self.kernel.set(&mut pass, &self.bindings);
             pass.dispatch_workgroups((self.len as u32).div_ceil(WORKGROUP_SIZE), 1, 1);
@@ -749,6 +787,24 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
 }
 ";
 
+    /// What [`check_reload`] fills the output with before each dispatch.
+    pub const SENTINEL: u32 = 0xdead_beef;
+
+    /// `gpu_harness_prepared_reload`'s check: the identity kernel, prepared on the M0 fixture, given its complement by
+    /// [`Prepared::load`] and run, returns the complement; given it again and run by `dispatch`, returns it again, bit
+    /// for bit. The output already holds the complement when the second load fills it with [`SENTINEL`], so only a
+    /// dispatch makes it the complement again: a skipped one reads back the sentinel.
+    pub fn check_reload<'h>(h: &'h GpuHarness, dispatch: fn(&Prepared<'h>) -> Vec<u32>) {
+        let first = identity_fixture();
+        let second: Vec<u32> = first.iter().map(|w| !w).collect();
+        let prepared = h.prepare(IDENTITY_WGSL, "identity", &[&first]);
+        check_bit_exact(&first, &prepared.run());
+        prepared.load(&[&second], SENTINEL);
+        check_bit_exact(&second, &prepared.run());
+        prepared.load(&[&second], SENTINEL);
+        check_bit_exact(&second, &dispatch(&prepared));
+    }
+
     /// `gpu_harness_identity_round_trip`'s check: `output` is `expected`, bit for bit.
     pub fn check_bit_exact(expected: &[u32], output: &[u32]) {
         assert_eq!(
@@ -941,6 +997,29 @@ mod tests {
             &input,
             &harness().run_wgsl(IDENTITY_WGSL, "identity", &[&input]),
         );
+    }
+
+    /// A prepared dispatch takes new inputs of the lengths it was prepared with, and only those, and runs them on its
+    /// own pipeline; a reloaded run whose dispatch is skipped reads back the sentinel and fails.
+    #[test]
+    fn gpu_harness_prepared_reload() {
+        let h = harness();
+        check_reload(&h, Prepared::run);
+        fires(
+            || check_reload(&h, Prepared::read),
+            "the check passed a reloaded run whose dispatch was skipped",
+        );
+        let input = identity_fixture();
+        let prepared = h.prepare(IDENTITY_WGSL, "identity", &[&input]);
+        let (short, long) = (&input[1..], [input.as_slice(), &[0]].concat());
+        for inputs in [&[short][..], &[&long], &[], &[&input, &input]] {
+            fires(
+                || prepared.load(inputs, SENTINEL),
+                "load took inputs of other lengths than prepare bound",
+            );
+        }
+        prepared.load(&[&input], SENTINEL);
+        check_bit_exact(&input, &prepared.run());
     }
 
     /// Pitfalls §9: a check whose reachable output excludes the failure it guards cannot fail. On words with bit 31

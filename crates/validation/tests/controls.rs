@@ -8,7 +8,7 @@
 use engine::contract::fast_math::{FastMath, StageMode};
 use proptest::test_runner::Config;
 use validation::gpu::checks::*;
-use validation::gpu::{identity_fixture, IDENTITY_WGSL};
+use validation::gpu::{identity_fixture, Prepared, IDENTITY_WGSL};
 use validation::negative_control;
 use validation::prop::checks::*;
 use validation::prop::{config, CASES};
@@ -26,6 +26,13 @@ negative_control!(
             &harness().run_wgsl(IDENTITY_WGSL, "identity", &[&input]),
         );
     }
+);
+
+negative_control!(
+    gpu_harness_prepared_reload,
+    "a reloaded run whose dispatch is skipped reads back the sentinel and must fail",
+    expected = "identity dispatch is not bit-exact",
+    check_reload(&harness(), Prepared::read)
 );
 
 negative_control!(
