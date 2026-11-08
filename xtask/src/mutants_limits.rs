@@ -2,8 +2,9 @@
 //! nextest profile `mutants` in `.config/nextest.toml` ends a test at `slow-timeout`'s `terminate-after` periods, so a
 //! hung mutant is stopped in minutes and counted caught. This module reads nextest's output and that profile:
 //!
-//! - [`timed_out_tests`]: the tests a run's log shows nextest ending at their limit (`TIMEOUT`, or `TMT` on a retried
-//!   attempt), which `cargo xtask mutants-check` names for a caught mutant (R-712's listing);
+//! - [`timed_out_tests`]: the tests a run's log shows nextest ending at their limit, which `cargo xtask mutants-check`
+//!   names for a caught mutant (R-712's listing). nextest marks such an attempt `TMT` when retries are on, on every
+//!   attempt and the last; every mutation run sets them (`--retries=2`, `.cargo/mutants.toml`), and a test pins that;
 //! - `cargo xtask mutants-limits <mutants.out>` ([`run`]): fails when, in the run's baseline, any test the profile runs
 //!   took more than half its limit, naming the test and a value regenerated from that time: 3 times it, the period
 //!   rounded up to 10 s, `terminate-after = 3`. The half is the owner's threshold, fixed before any measurement.
@@ -86,12 +87,13 @@ pub fn attempt(line: &str) -> Option<Attempt> {
     })
 }
 
-/// The tests `log` shows nextest ending at their limit, each as `<binary id> <test>`, once each, in order.
+/// The tests `log` shows nextest ending at their limit (`TMT`, under the retries every mutation run sets), each as
+/// `<binary id> <test>`, once each, in order.
 pub fn timed_out_tests(log: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     for a in strip_ansi(log).lines().filter_map(attempt) {
         let name = format!("{} {}", a.binary_id, a.test);
-        if matches!(a.status.as_str(), "TIMEOUT" | "TMT") && !out.contains(&name) {
+        if a.status == "TMT" && !out.contains(&name) {
             out.push(name);
         }
     }

@@ -65,12 +65,6 @@ TRY 1 TRMNTG [>  4.000s] (───) exp::slow hangs
    \u{1b}[31;1mTRY 3 TMT\u{1b}[0m [   4.005s] (2/2) \u{1b}[35;1mexp::slow\u{1b}[0m \u{1b}[34mhangs\u{1b}[0m
 ";
 
-/// The same without retries: nextest's word is TIMEOUT.
-const HUNG_ONCE: &str = "\
- TERMINATING [>  2.000s] (───) exp::slow hangs
-     TIMEOUT [   2.003s] (1/1) exp::slow hangs
-";
-
 /// A finished attempt as [`attempt`] should read it: status, seconds, binary id and test; `None` for no attempt.
 type Read<'a> = Option<(&'a str, f64, &'a str, &'a str)>;
 
@@ -94,8 +88,8 @@ fn mutants_limits_reads_each_finished_attempt() {
             Some(("TMT", 4.004, "exp::slow", "hangs")),
         ),
         (
-            "     TIMEOUT [   2.003s] (1/1) exp::slow mod_a::hangs",
-            Some(("TIMEOUT", 2.003, "exp::slow", "mod_a::hangs")),
+            "  TRY 3 FAIL [   2.003s] (1/1) exp::slow mod_a::hangs",
+            Some(("FAIL", 2.003, "exp::slow", "mod_a::hangs")),
         ),
         ("        SLOW [>  2.000s] (───) exp::slow hangs", None),
         ("TRY 1 TRMNTG [>  4.000s] (───) exp::slow hangs", None),
@@ -129,7 +123,6 @@ fn names_the_ended(log: &str, want: &[&str]) {
 #[test]
 fn mutants_limits_names_each_test_ended_at_its_limit_once() {
     names_the_ended(HUNG, &["exp::slow hangs"]);
-    names_the_ended(HUNG_ONCE, &["exp::slow hangs"]);
     names_the_ended(&HUNG.replace("TMT", "FAIL"), &[]);
 }
 
@@ -640,7 +633,6 @@ fn lists_the_ended(log: Option<&str>, ended: bool) {
 #[test]
 fn mutants_check_lists_a_caught_mutant_nextest_ended_as_timed_out() {
     lists_the_ended(Some(HUNG), true);
-    lists_the_ended(Some(HUNG_ONCE), true);
     lists_the_ended(Some(&HUNG.replace("TMT", "FAIL")), false);
     lists_the_ended(None, false);
 }
@@ -909,4 +901,46 @@ negative_control!(
         &read(".github/workflows/ci.yml"),
         &read(".github/workflows/nightly.yml")
     )
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// The retries that make nextest mark a test ended at its limit `TMT`, the one word `mutants-check` reads.
+
+/// `.cargo/mutants.toml`'s test arguments give nextest at least one retry, so an attempt ended at its limit is marked
+/// `TMT` on every attempt, the last among them (nextest 0.9.146, measured on a probe crate, 8 Nov 2026).
+fn every_mutation_run_retries(toml: &str) {
+    let doc: toml_edit::DocumentMut = toml.parse().expect("mutants.toml parses");
+    let args: Vec<&str> = doc["additional_cargo_test_args"]
+        .as_array()
+        .expect("additional_cargo_test_args")
+        .iter()
+        .filter_map(|v| v.as_str())
+        .collect();
+    let retries = args.iter().enumerate().find_map(|(i, a)| {
+        a.strip_prefix("--retries=").or_else(|| {
+            (*a == "--retries")
+                .then(|| args.get(i + 1).copied())
+                .flatten()
+        })
+    });
+    assert!(
+        retries.and_then(|n| n.parse::<u32>().ok()).is_some_and(|n| n >= 1),
+        "a mutation run's nextest has no retries, so a test ended at its limit is not marked `TMT`: {args:?}"
+    );
+}
+
+#[test]
+fn mutants_runs_retry_so_a_test_ended_at_its_limit_is_marked_tmt() {
+    every_mutation_run_retries(&read(".cargo/mutants.toml"));
+}
+
+negative_control!(
+    mutants_runs_retry_so_a_test_ended_at_its_limit_is_marked_tmt,
+    "the retries turned off",
+    expected = "a mutation run's nextest has no retries",
+    every_mutation_run_retries(&edited(
+        &read(".cargo/mutants.toml"),
+        "\"--retries=2\"",
+        "\"--retries=0\""
+    ))
 );

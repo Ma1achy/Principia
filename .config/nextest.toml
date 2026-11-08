@@ -260,7 +260,7 @@ success-output = "immediate"
 # The mutants profile (the owner's order of 8 Nov 2026, amending R-712's basis, not its multiplier): per-test kill
 # limits for mutation test runs. A hung mutant is stopped in minutes, not at cargo-mutants' per-mutant timeout (R-712: 3
 # times the whole baseline's test time, past the 300-minute shard limit on #431's diff, where three hung mutants cut off
-# their shards). Each test is ended at `terminate-after` periods: nextest reports it TIMEOUT, the run fails (exit 100),
+# their shards). Each test is ended at `terminate-after` periods: nextest reports it `TMT`, the run fails (exit 100),
 # and cargo-mutants counts the mutant caught, as a timeout is counted today; `cargo xtask mutants-check` lists it as
 # timed out, not a survivor, naming the test. With `--retries=2` (`.cargo/mutants.toml`) a hung test costs 3 times its
 # limit and nextest's 10 s grace. cargo-mutants' own per-mutant timeout stays, an outer backstop.
