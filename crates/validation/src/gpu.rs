@@ -797,6 +797,10 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     pub fn check_reload<'h>(h: &'h GpuHarness, dispatch: fn(&Prepared<'h>) -> Vec<u32>) {
         let first = identity_fixture();
         let second: Vec<u32> = first.iter().map(|w| !w).collect();
+        assert!(
+            first.iter().zip(&second).all(|(a, b)| a != b),
+            "the reloaded input does not differ from the first at every word"
+        );
         let prepared = h.prepare(IDENTITY_WGSL, "identity", &[&first]);
         check_bit_exact(&first, &prepared.run());
         prepared.load(&[&second], SENTINEL);
@@ -1019,6 +1023,11 @@ mod tests {
             );
         }
         prepared.load(&[&input], SENTINEL);
+        assert_eq!(
+            prepared.read(),
+            vec![SENTINEL; input.len()],
+            "a load did not fill the output with the sentinel"
+        );
         check_bit_exact(&input, &prepared.run());
     }
 
