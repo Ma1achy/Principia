@@ -30,8 +30,10 @@
 //! itself zero, the parent's own.
 //!
 //! **What is refused** (`None` from [`Composed::new`]): a new tilt into a target of a saved Lean each axis view with one
-//! target and both angles set, whose skewed `R` has no third input (RQ-746); and a composition whose offsets land on
-//! more than two hidden coordinates, which one [`Shift`] cannot carry.
+//! target and both angles set, whose skewed `R` has no third input (RQ-746; REQ-CHART-149, built by TASK-M2-56 once
+//! ruled); and a composition whose offsets land on more than two hidden coordinates, which one [`Shift`] cannot carry
+//! (REQ-CHART-148, built by TASK-M2-55). Saving a saved chart again, the chain `R·R′·R″`, and the composed chart's
+//! area weight and the shape sphere's repeat counting are TASK-M2-55's too (REQ-CHART-148).
 //!
 //! **The serialisation** ([`Saved::to_words`], [`Saved::from_words`]): the definition as [`WORDS`] doubles, by value,
 //! so it reads back bit for bit (R-483 H3); a saved chart carries no links (R-478). The words: the kind (0 oblique,
@@ -243,7 +245,8 @@ pub struct Composed<P> {
 impl Composed<f64> {
     /// The saved tilt `saved` about `saved_centre`, spans `saved_span`, composed after the new tilt `new` about the view's
     /// centre `centre`, spans `span`. `None` where a new offset enters a saved target whose `R` has no input there
-    /// ([`TiltSpec::inputs`]), or where the offsets land on more than two hidden coordinates.
+    /// ([`TiltSpec::inputs`]; RQ-746, TASK-M2-56), or where the offsets land on more than two hidden coordinates
+    /// (TASK-M2-55).
     pub fn new(
         saved: &TiltSpec,
         saved_centre: [f64; 2],
