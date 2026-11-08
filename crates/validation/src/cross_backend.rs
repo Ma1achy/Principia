@@ -1105,6 +1105,12 @@ fn scale_states() -> Vec<Ic<f32>> {
 
 const RATIOS: [f64; 6] = [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8];
 
+/// The unit vector at angle `theta` and the one a quarter turn anticlockwise from it: the inner pair's line and the
+/// direction across it.
+fn frame(theta: f64) -> ([f64; 2], [f64; 2]) {
+    ([theta.cos(), theta.sin()], [-theta.sin(), theta.cos()])
+}
+
 fn hierarchy(ratio: f64, axis: bool, edge: bool, seed: u64) -> Vec<Ic<f32>> {
     let mut rng = SplitMix::new(seed);
     let mut u = |lo: f32, hi: f32| f64::from(rng.uniform(lo, hi));
@@ -1119,7 +1125,7 @@ fn hierarchy(ratio: f64, axis: bool, edge: bool, seed: u64) -> Vec<Ic<f32>> {
             } else {
                 u(0.0, 1.0) * std::f64::consts::TAU
             };
-            let (dir, across) = ([theta.cos(), theta.sin()], [-theta.sin(), theta.cos()]);
+            let (dir, across) = frame(theta);
             let rho = dir.map(|q| ratio * q);
             let inner = rho.map(|q| m[1] * q / m01);
             let l = u(0.5, 2.0);
@@ -1162,6 +1168,20 @@ fn edge_side(m: [f64; 3], r: [[f64; 2]; 3]) -> f64 {
     m[2] * c * c - d * d * (m[0] + m[1]) * sq(rho) * d2
 }
 
+/// Two hundred halvings of `[lo, hi]` toward where `side` turns positive: `hi` stays where `side` is above zero and
+/// `lo` where it is not.
+fn bisect(side: impl Fn(f64) -> f64, mut lo: f64, mut hi: f64) -> (f64, f64) {
+    for _ in 0..200 {
+        let mid = 0.5 * (lo + hi);
+        if side(mid) > 0.0 {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    (lo, hi)
+}
+
 fn hierarchy_edge(j: i32, theta: f64, seed: u64) -> Vec<Ic<f32>> {
     let mut rng = SplitMix::new(seed);
     let mut u = |lo: f32, hi: f32| f64::from(rng.uniform(lo, hi));
@@ -1176,15 +1196,7 @@ fn hierarchy_edge(j: i32, theta: f64, seed: u64) -> Vec<Ic<f32>> {
         let half = f64::from((2f64.powi(j) * u(1.0, 2.0)) as f32);
         let x2 = f64::from(u(0.5, 1.5) as f32);
         let state = |a: f64| [[-half, a], [half, a], [x2, -a]].map(turn);
-        let (mut lo, mut hi) = (0.0f64, 1e-6f64);
-        for _ in 0..200 {
-            let mid = 0.5 * (lo + hi);
-            if edge_side(m, state(mid)) > 0.0 {
-                hi = mid;
-            } else {
-                lo = mid;
-            }
-        }
+        let (lo, hi) = bisect(|a| edge_side(m, state(a)), 0.0, 1e-6);
         let mut a = (0.5 * (lo + hi)) as f32;
         for _ in 0..30 {
             a = a.next_down();
@@ -2848,4 +2860,61 @@ fn run_compare(root: &Path, files: &[&str]) -> Result<(), String> {
     print!("{text}");
     println!("written to {}", path.display());
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `across` is `dir` turned a quarter anticlockwise, at angles off the axes as well as on them.
+    fn check_frame(frame: fn(f64) -> ([f64; 2], [f64; 2])) {
+        for theta in [0.0, 0.7, 2.0, 4.0] {
+            let (dir, across) = frame(theta);
+            let dot = dir[0] * across[0] + dir[1] * across[1];
+            let turn = dir[0] * across[1] - dir[1] * across[0];
+            assert!(
+                dot.abs() < 1e-15 && (turn - 1.0).abs() < 1e-15,
+                "across is not a quarter turn anticlockwise from the line at {theta}: dot {dot}, turn {turn}"
+            );
+        }
+    }
+
+    #[test]
+    fn hierarchy_frame_turns_across_a_quarter() {
+        check_frame(frame);
+    }
+
+    crate::negative_control!(
+        hierarchy_frame_turns_across_a_quarter,
+        "across with its sine's sign lost",
+        expected = "across is not a quarter turn anticlockwise",
+        check_frame(|t| ([t.cos(), t.sin()], [t.sin(), t.cos()]))
+    );
+
+    /// A bracket `(lo, hi)` of the root `c` of `x - c`: tight, `hi` where the side is above zero and `lo` where not.
+    fn check_bracket((lo, hi): (f64, f64), c: f64) {
+        assert!(
+            hi - c > 0.0,
+            "hi {hi} is not where the side is above zero, at {c}"
+        );
+        assert!(lo - c <= 0.0, "lo {lo} is where the side is above zero");
+        assert!(hi - lo < 1e-20, "the bracket [{lo}, {hi}] is not tight");
+    }
+
+    #[test]
+    fn hierarchy_edge_bisect_keeps_hi_above_zero() {
+        // The first midpoint of [0, 1e-6] is c exactly, where the side is zero: lo takes it, never hi.
+        let at_mid = 0.5 * 1e-6;
+        check_bracket(bisect(|x| x - at_mid, 0.0, 1e-6), at_mid);
+        // A root off the first midpoint.
+        let off = 3e-7;
+        check_bracket(bisect(|x| x - off, 0.0, 1e-6), off);
+    }
+
+    crate::negative_control!(
+        hierarchy_edge_bisect_keeps_hi_above_zero,
+        "a bracket whose hi sits on the root, where the side is zero",
+        expected = "is not where the side is above zero",
+        check_bracket((0.5 * 1e-6 - 1e-22, 0.5 * 1e-6), 0.5 * 1e-6)
+    );
 }
