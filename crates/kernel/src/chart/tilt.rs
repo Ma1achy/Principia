@@ -148,7 +148,9 @@ impl TiltSpec {
     /// chart's new tilt feeds it (R-513 Q1; `super::saved`). `None` where `R` is no rotation, Lean each axis with one
     /// target and both angles set, whose skewed columns leave its third input undefined (RQ-742).
     /// - With two targets, each axis turned toward its own: `(−sin τ₁, 0, cos τ₁, 0)` and `(0, −sin τ₂, 0, cos τ₂)`.
-    /// - Tip as sheet with one target and both angles set, Rodrigues' image of `e_X`: `(k_b sin m, −k_a sin m, cos m, 0)`.
+    /// - Tip as sheet with one target and both angles set, Rodrigues' image of `e_X`: `(k_b sin m, −k_a sin m, cos m, 0)`,
+    ///   its first two entries read off the columns, `R_aX = −R_Xa` and `R_bX = −R_Xb` exactly (the axis `k` lies in the
+    ///   plane, `k_X = 0`), and `cos m` at the total tip, which a wrap by 360° leaves unchanged.
     /// - A single angle under either map, the turn in its own axis's plane: `(−sin τ₁, 0, cos τ₁, 0)` for `τ₁`,
     ///   `(0, −sin τ₂, cos τ₂, 0)` for `τ₂`; untilted, `e_X`.
     ///
@@ -161,8 +163,10 @@ impl TiltSpec {
             Some([[-s1, 0.0, c1, 0.0], [0.0, -s2, 0.0, c2]])
         } else if self.tau1 != 0.0 && self.tau2 != 0.0 {
             (self.map == TiltMap::Sheet).then(|| {
-                let (sm, cm, ka, kb) = sheet_turn(self.tau1, self.tau2);
-                [[kb * sm, -ka * sm, cm, 0.0], e_y]
+                let [r1, r2] = self.columns();
+                let total = Float::sqrt(self.tau1 * self.tau1 + self.tau2 * self.tau2);
+                let cm = Float::cos(Float::to_radians(total));
+                [[-r1[2], -r2[2], cm, 0.0], e_y]
             })
         } else if self.tau2 == 0.0 {
             Some([[-s1, 0.0, c1, 0.0], e_y])
@@ -400,17 +404,6 @@ fn lean(tau1: f64, tau2: f64, two: bool) -> [[f64; 4]; 2] {
 /// Tip as sheet's columns at the angles in degrees, both non-zero: the angles wrapped in total tip past 180°, then
 /// Rodrigues' rotation by `m` about `k = (τ₂ e_a − τ₁ e_b)/m`, `v ↦ v cos m + (k × v) sin m + k (k·v)(1 − cos m)`.
 fn tip_as_sheet(tau1: f64, tau2: f64) -> [[f64; 4]; 2] {
-    let (sm, cm, ka, kb) = sheet_turn(tau1, tau2);
-    let w = 1.0 - cm;
-    [
-        [cm + ka * ka * w, ka * kb * w, -kb * sm, 0.0],
-        [ka * kb * w, cm + kb * kb * w, ka * sm, 0.0],
-    ]
-}
-
-/// `(sin m, cos m, k_a, k_b)` of Tip as sheet's rotation at the angles in degrees, both non-zero: the angles wrapped in
-/// total tip past 180°, then `m` and the in-plane axis `k` ([`sheet_axis`]).
-fn sheet_turn(tau1: f64, tau2: f64) -> (f64, f64, f64, f64) {
     let total = Float::sqrt(tau1 * tau1 + tau2 * tau2);
     let wrap = (total - TURN) / total;
     let (t1, t2) = if total > HALF_TURN {
@@ -420,7 +413,11 @@ fn sheet_turn(tau1: f64, tau2: f64) -> (f64, f64, f64, f64) {
     };
     let (m, ka, kb) = sheet_axis(t1, t2);
     let (sm, cm) = Float::sin_cos(Float::to_radians(m));
-    (sm, cm, ka, kb)
+    let w = 1.0 - cm;
+    [
+        [cm + ka * ka * w, ka * kb * w, -kb * sm, 0.0],
+        [ka * kb * w, cm + kb * kb * w, ka * sm, 0.0],
+    ]
 }
 
 /// `m = √(τ₁² + τ₂²)` and the in-plane axis `k = (τ₂ e_a − τ₁ e_b)/m` for angles not both 0. Squares that underflow past
