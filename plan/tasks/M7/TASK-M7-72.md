@@ -22,4 +22,5 @@ The figure's Tier 1: a contour of any registered primitive's forward, display-on
 - `cargo test -p render contour_primitives` — each forward on the decode; the figure's two families at exact angles; no scored field reached; control: an angle off by 1° (REQ-RENDER-121).
 
 ## Notes
+- **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - Waits on the owner's ruling of the design doc as a whole, no single item mapping here (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

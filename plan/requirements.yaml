@@ -4606,6 +4606,24 @@
   - R-850
   milestone: M8
   note: "R-849 (7 Nov 2026): \"define 'nearest'\". Closed by TASK-M8-117."
+- id: REQ-CHART-147
+  area: CHART
+  statement: "The chart-path work must be one object in `engine` (R-864): a view is a point in chart space and every edit a path through it, its core types (Chart, Path and its families, Lock and anchor, Axis and primitive, PairMap, Hold) one module, designed first; a type sketch with a one-page rationale, reviewed by physics and code against the chart-space model, goes to the owner before any implementation. Today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart must each become a constructor of that object, a path of a named family, reproducing today's result bitwise through it, every existing preset and saved chart included, before any new capability (R-863 stage 1); once an operation runs through the object its old route is deleted, with no fallback; no special case is an if-branch outside a named family; chart maps and decode stay in `kernel`."
+  source:
+  - file: decisions.md
+    section: "R-863 — When the chart-composition design's tasks are released, they are built in five stages, each merging only with the previous stage's tests green: the path object with today's operations bitwise through it; locked paths; the primitive registry and composed axes; morph families, easing and Sequence segments; time-axis charts and the symmetry filter *(the build order of PR #422's tasks; refines no ruling)*"
+  - file: decisions.md
+    section: "R-864 — The chart-path work is one object: core types designed first as one module, a type sketch with a one-page rationale reviewed by physics and code and brought to the owner before any implementation; today's operations re-expressed as named families of it and their old routes deleted; bitwise reproduction first; special cases are named families, never if-branches; the kernel/engine split stays; restructuring `engine/nav`, `engine/lock.rs` and `engine/chart_authoring` is approved *(the architecture of PR #422's chart-path work; refines no ruling on `main`)*"
+  - file: docs/design/principia_chart_composition.md
+    section: "17.3 The constraint: bitwise through the mechanism"
+  verify:
+    detail: "cargo test -p engine -- path_pan_bitwise path_zoom_bitwise path_tilt_bitwise path_slice_bitwise path_lock_bitwise path_chart_switch_bitwise path_save_view_bitwise path_presets_bitwise (each operation through the object against today's result, recorded from today's code on its own commit before the re-expression: sim key, IC words and image hash bit for bit, on latent, curved and saved charts; every preset and saved chart today's code builds, reopened through the object); controls: one floating-point operation reordered in a family, the general geodesic in place of the tilt family, a path triple in a zoom's sim key, each failing; plus review: no operation's old route left beside the object (R-864 item 2); no family, pair map or hold beyond today's operations given behaviour, the other core types sketched only until their stage (R-863 stage 1, \"before any new capability\"); and the type sketch and its one-page rationale approved by the physics and code reviewers and then by the owner, the answer recorded as a ruling, before any implementation commit (R-864 item 1)"
+    method: unit test
+  rulings:
+  - R-863
+  - R-864
+  milestone: M8
+  note: "Closed by TASK-M8-124, stage 1 of R-863's build order. Which task keeps REQ-CHART-113's overlapping tests is RQ-744's (B)."
 - id: REQ-CHART-148
   area: CHART
   statement: "A saved curved chart (R-475, R-513) must carry every route its rulings name beyond what REQ-CHART-073 and REQ-CHART-077 build: (a) a new tilt whose offsets, with the saved tilt's, land on three or four hidden coordinates (a saved one-target tilt re-tilted into two other targets, a saved two-target tilt re-tilted into one or two others), each offset on its own target as R-513 Q1 rules, none dropped or refused (R-513 Q1, \"one rule for every new target\"; R-475 S5, planes in which an axis mixes several hidden coordinates reached by saving and tilting again); (b) a saved curved chart saved again, its definition the chain of saved tilts, reopened at zero tilt bitwise and a further tilt composing R·R′·R″ as R-513 rules (R-475 S1, \"tilted, sliced and saved like any other\"); (c) the composed chart's area weight and statistics, as a single tilted chart has them: under Lean each axis the Gram factor of its composed axes (R-474 R7), weight 0 and `ray-degenerate` at the rank-losing corner (R-554), and on the shape sphere the repeat counting of `system_image`, `pixel` and `counted_total` (R-554 L3, R-655)."
@@ -30057,6 +30075,53 @@
   - R-809
   milestone: M0
   note: "Closed by TASK-M0-54. Replaces the read by eye of D-11 in the report of 5 Nov 2026."
+- id: REQ-TOOL-224
+  area: TOOL
+  statement: "From the anchor move, the Windows runner's jobs on `main` must each be a named measurement reporting under its own name, never a required check and never gathered or read by any gate: the GPU suites, Vulkan, nightly and on pushes to `main`; the nightly Windows build and tests, `win-tests`; gpu-idle, the read-only GPU sample, by `workflow_dispatch`; and the weekly proof; the runner's security rules unchanged (R-859, R-860, R-711)."
+  source:
+  - file: decisions.md
+    section: "R-859 — From the anchor move, the Windows runner may run, as named measurements and never as required checks: the GPU suites (Vulkan now, DX12 from Phase 2) nightly and on pushes to `main`, gpu-idle, the weekly proof and the 7 Nov heavy-work comparison; benchmarks of record stay on the Mac, Windows numbers a separate named series; moving required or heavy CI work to the PC is not approved and returns through `/rulings-report`; the runner's security rules are unchanged *(refines R-186, R-656 and R-711)*"
+  - file: decisions.md
+    section: "R-860 — R-859's list of what the Windows runner may run is not exhaustive: the nightly `win-tests` job and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, never required checks *(closes RQ-742; refines R-859)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_are_named_measurements, every self-hosted job across the workflows being one of the listed measurements, each named, and each listed one present, with the existing trigger, pin, guard, credential and not-gathered checks holding for the gpu-idle job; controls: an unlisted self-hosted job (a mutants job) fails, a listed job removed fails, and the gpu-idle job under a push trigger fails"
+  rulings:
+  - R-859
+  - R-860
+  milestone: M0
+  note: "Closed by TASK-M0-55. RQ-742 answered by R-860: `win-tests` stays and is on the list. DX12's job is REQ-TOOL-226's, after the DX12 opt-in (R-862)."
+- id: REQ-TOOL-225
+  area: TOOL
+  statement: "The heavy-work comparison must run, at one commit of one task branch after the anchor move, the GPU suites, codegen_selftest_pack_unpack_kernel_gpu among them, and one mutant shard holding projection_parity.rs or drift.rs, on the Windows runner and on hosted runners, and report each side's wall time and whether the results are identical: the same test outcomes, and the same caught, missed, unviable and timed-out mutant sets, mutant for mutant; against a criterion committed before the first run and never adjusted after (R-649, R-812); its result and the fallback design going to the next /rulings-report as the one-way question of moving required work, and nothing required moving (R-859)."
+  source:
+  - file: decisions.md
+    section: "R-859 — From the anchor move, the Windows runner may run, as named measurements and never as required checks: the GPU suites (Vulkan now, DX12 from Phase 2) nightly and on pushes to `main`, gpu-idle, the weekly proof and the 7 Nov heavy-work comparison; benchmarks of record stay on the Mac, Windows numbers a separate named series; moving required or heavy CI work to the PC is not approved and returns through `/rulings-report`; the runner's security rules are unchanged *(refines R-186, R-656 and R-711)*"
+  - file: decisions.md
+    section: "R-861 — The heavy-work comparison starts by `workflow_dispatch` on its task branch; the runner's security rules are unchanged; the 7 Nov order's \"push trigger\" was an error *(closes RQ-743; corrects R-859)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask heavy_compare: the comparison reads both sides' test outcomes and mutant outcomes and reports identical only when every test and every mutant matches; controls: one mutant moved from caught to missed, one test passing on one side only, and a mutant present on one side only, each reported as not identical; plus the record, its criterion committed before the run, reviewed"
+  rulings:
+  - R-859
+  - R-861
+  milestone: M0
+  note: "Closed by TASK-M0-56. A measurement, never a gate (R-649). Started by `workflow_dispatch` on the task branch (R-861)."
+- id: REQ-TOOL-226
+  area: TOOL
+  statement: "Once the DX12 opt-in lands, the Windows runner must run the GPU suites on DX12, nightly and on pushes to `main`, as a named measurement reporting under its own name, never a required check and never gathered or read by any gate, beside the Vulkan run and named apart from it, the runner's security rules unchanged (R-859's \"DX12 from Phase 2\", R-711 item 2, R-862)."
+  source:
+  - file: decisions.md
+    section: "R-862 — DX12 is an opt-in, off by default: a cargo feature and `PRIN_GPU_BACKEND=dx12`, documented \"local testing only, untested in CI\", in no required or hosted CI job; native DX12 previews web-v1's behaviour on Windows, where Chrome runs WebGPU on D3D12 *(amends R-169 and R-206)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_are_named_measurements with the DX12 job in its list, the job building the dx12 feature with PRIN_GPU_BACKEND=dx12, and every trigger, guard, pin and credential check holding for it; controls: the DX12 job in a hosted workflow, and the DX12 job without the feature, each failing; plus one nightly DX12 run on `main` after the merge, linked on the PR, in no required check"
+  rulings:
+  - R-711
+  - R-859
+  - R-862
+  milestone: M0
+  note: Closed by TASK-M0-58. Phase 2 of the runner's GPU suites.
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -40958,6 +41023,7 @@
   - R-186
   - R-369
   - R-711
+  - R-860
   milestone: M8
   rq:
   - RQ-721
@@ -40976,6 +41042,7 @@
   - R-186
   - R-369
   - R-711
+  - R-860
   milestone: M8
   rq:
   - RQ-727
@@ -42707,3 +42774,20 @@
   - R-668
   milestone: M3
   note: "R-668 (1 Nov 2026, RQ-668): the kernel stays at G = 1; another G is converted at the import boundary (validation::import, the recorded rescale, TASK-M2-20, which already refuses a G that is not finite and positive), and what can't be converted is refused. m_total beside g, applied per R-369: Part 5 fixes M = 1 beside G = 1, and SimUniforms carries both. Closed by TASK-M3-66."
+- id: REQ-SYS-097
+  area: SYS
+  statement: "DX12 must be an opt-in backend, off by default: behind a cargo feature, `dx12`, and selected only by an explicit `PRIN_GPU_BACKEND=dx12` in a build with that feature; an unset value never selects it (R-206); without the feature `dx12` is refused as an error naming the variable and the feature; it is documented as \"local testing only, untested in CI\", and no required or hosted CI job builds the feature or sets `PRIN_GPU_BACKEND=dx12` (R-862, R-711 item 2)."
+  source:
+  - file: decisions.md
+    section: "R-862 — DX12 is an opt-in, off by default: a cargo feature and `PRIN_GPU_BACKEND=dx12`, documented \"local testing only, untested in CI\", in no required or hosted CI job; native DX12 previews web-v1's behaviour on Windows, where Chrome runs WebGPU on D3D12 *(amends R-169 and R-206)*"
+  - file: decisions.md
+    section: R-206 — An unset `PRIN_GPU_BACKEND` defaults by platform
+  verify:
+    method: unit test
+    detail: "cargo test -p validation gpu_backend_env (default features: `dx12` refused naming the variable and the feature; unset never DX12) and cargo test -p validation --features dx12 gpu_backend_env (`dx12` selects DX12; unset still metal on macOS and vulkan elsewhere); cargo test -p xtask --test ci_self_hosted dx12_in_no_required_or_hosted_job (no job of a required or hosted workflow enables the feature or sets the value); controls: the feature's selection removed, `dx12` accepted without the feature, and a hosted job setting PRIN_GPU_BACKEND=dx12, each failing; plus one DX12 run by hand on a Windows machine, its log naming the DX12 adapter, posted to the PR"
+  rulings:
+  - R-206
+  - R-711
+  - R-862
+  milestone: M0
+  note: "Closed by TASK-M0-57. The order of 4 Nov 2026; its \"in no CI job\" reads \"in no required or hosted CI job\" (R-711 item 2)."

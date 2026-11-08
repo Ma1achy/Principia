@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-103, REQ-CHART-139
-- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-37
+- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M8-117
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -27,6 +27,7 @@ The kernel's `AxisVirial` is built on TASK-M2-37: this gives it the descriptor t
 - `cargo test -p kernel virial_floor_under_rise` — REQ-CHART-139's arms and control.
 
 ## Notes
+- **Build order (R-863):** stage 3, the primitive registry and composed axes, each primitive with its round-trip test. It depends on stage 2's task, TASK-M8-117, and merges only with its tests green.
 - *Was, until R-817:* RQ-700 is outside TASK-M4-37's gate, so nothing in Depends on holds it: the arm for a held L_z ≠ 0, where the axis reads above the floor (§ 9), doesn't start until RQ-700 is ruled, by this note. TS-2 stays "not scored: no fixed-k velocity chart" (R-669).
 - Waits on its rulings item: RQ-717. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
 - *7 Nov 2026 (R-816, R-838, R-817):* the virial ratio is kind 3 (RQ-682 (a), RQ-717), and RQ-700 is ruled (b). Both waits end.

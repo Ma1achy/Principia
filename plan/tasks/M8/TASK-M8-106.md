@@ -36,5 +36,6 @@ Every arm of the path type, with tilt and zoom calling their own code, a frame r
 - `cargo test -p engine path_retime` — spread at most 1.25, pinned ends; control: the table off (REQ-CHART-116).
 
 ## Notes
+- **Build order (R-863):** it straddles stages 1, 2 and 4: its path type and bitwise tests are stage 1's, now TASK-M8-124's too; its line on blocks is the morph stage 2 bases or one of stage 4's families; its re-timing, alignment and export are stage 4's. No stage edge is made; RQ-744 (B) holds the choice.
 - If path_tilt_bitwise or path_zoom_bitwise can't pass through the path type, the generalisation isn't adopted: stop and report (the owner's rule).
 - Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

@@ -86,15 +86,15 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 123 requirements** (and every earlier gate still green):
+**Exit gate — 127 requirements** (and every earlier gate still green):
 
 - PAY (22): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091…092
 - GEN (13): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029, REQ-GEN-031…032
 - SCHED (1): REQ-SCHED-001
 - RENDER (3): REQ-RENDER-001…002, REQ-RENDER-083
-- TOOL (21): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223
+- TOOL (24): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223…226
 - VAL (38): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167, REQ-VAL-169, REQ-VAL-175…176, REQ-VAL-178…181
-- SYS (25): REQ-SYS-001…008, REQ-SYS-063…079
+- SYS (26): REQ-SYS-001…008, REQ-SYS-063…079, REQ-SYS-097
 <!-- /gate:M0 -->
 
 ## M1 — The synthetic payload and the eyes
@@ -444,10 +444,10 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both are recorded".
 
 <!-- gate:M8 -->
-**Exit gate — 517 requirements** (and every earlier gate still green):
+**Exit gate — 518 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
-- CHART (48): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088, REQ-CHART-102…107, REQ-CHART-111…124, REQ-CHART-126, REQ-CHART-129…139, REQ-CHART-141, REQ-CHART-143…146
+- CHART (49): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088, REQ-CHART-102…107, REQ-CHART-111…124, REQ-CHART-126, REQ-CHART-129…139, REQ-CHART-141, REQ-CHART-143…147
 - INT (3): REQ-INT-093, REQ-INT-096, REQ-INT-107
 - GEN (1): REQ-GEN-023
 - SCHED (5): REQ-SCHED-073, REQ-SCHED-101…102, REQ-SCHED-104…105
