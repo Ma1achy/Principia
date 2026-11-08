@@ -445,7 +445,10 @@ dev-dependency, links the rest). So before the label:
   cancelled. One whose `changes` has not ended (queued, perhaps long, behind a busy runner queue) is read again until
   `changes` decides, reading the live label, within the same 350 minutes, then cancelled if quick or waited for if
   full; one whose jobs cannot be read is read again for at most 5 minutes. Either still not shown fails the job, named,
-  cancelling nothing. The full attempt skips what an earlier
+  cancelling nothing. Every one of these waits, in either round, draws on one deadline, 345 minutes after the script
+  starts, which no wait passes, and no cancel is posted unless the time left covers its two waits and 60 s for the
+  re-run: with the checkout and the few reads after the deadline the job ends within about 347 of its 360 minutes,
+  named, never killed between a cancel and its re-run. The full attempt skips what an earlier
   attempt's `ci-quick` passed on the same merge commit, the re-run keeping its commit, where it would only repeat it:
   `ci-checks`' fmt, clippy and build, the same commands over the workspace (`changes`' output `quick_passed`, read from
   that attempt's jobs); and, when that `ci-quick` tested every crate (`quick_covers_ci`), the `ci` profile's tests it

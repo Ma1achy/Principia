@@ -19,7 +19,8 @@
 # cancelled. Only an attempt shown quick, its `changes` job having ended and `ci-quick` not skipped, is cancelled. One
 # whose `changes` has not ended (queued, perhaps long) is read again until it decides, within the same 350 minutes, then
 # cancelled if quick or waited for if full; one whose jobs cannot be read is read again for at most 5 minutes. Either
-# still not shown fails the job, named, cancelling nothing.
+# still not shown fails the job, named, cancelling nothing. Every wait, in either round, draws on one deadline, 345
+# minutes after the script starts (the job's timeout, below, gives the sum).
 #
 # Any other label's run skips its one job at job level, and asks for no runner, in a group of its own, so it cancels
 # nothing (below).
@@ -65,9 +66,13 @@ jobs:
   ci-full:
     if: github.event.label.name == 'merge-ready'
     runs-on: ubuntu-24.04
-    # Its waits, for a run to appear, for a cancelled quick attempt to end and for a full attempt to end, are bounded in
-    # the script, the last at 350 minutes; this bounds the job, at GitHub's 360 for a hosted job, as `mutants.yml`'s
-    # `mutants-check` waits (R-678).
+    # Its waits, for a run to appear, for an attempt's `changes` to decide or its jobs to be read, for a cancelled quick
+    # attempt to end and for a full attempt to end, in either round, all draw on one deadline in the script, 345 minutes
+    # after it starts, which no wait passes; no cancel is posted unless the time left covers its two waits (10 minutes)
+    # and 60 s for the re-run. After the deadline only a few reads and the re-run remain, seconds. So: the checkout,
+    # under a minute, + 345 + those seconds, under 347 minutes, against this bound of 360, GitHub's for a hosted job: a
+    # margin of over 13 minutes, so the job ends named, never killed between a cancel and its re-run. As
+    # `mutants.yml`'s `mutants-check` waits (R-678).
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
