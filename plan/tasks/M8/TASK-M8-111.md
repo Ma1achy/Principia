@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-119, REQ-CHART-120
-- **Depends on:** TASK-M4-37, TASK-M8-109
+- **Depends on:** TASK-M4-37, TASK-M8-109, TASK-M8-117
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -23,6 +23,7 @@ Each row of the full order's table, as its verdict says, on CPU batch.
 - `cargo test -p engine prim_round_trip` and `cargo test -p engine prim_rejected` — `forward(inverse(x)) = x` on the rows of section 3.2 with an inverse, each reading back its `Holds`, mutation: named per row, firing there (§ 12); and Tanikawa–Mikkola's mass-weighted `L_com = 0` at random masses after `C`, from an independent `Σ m r × v`; controls: `R` from the centroid, an unweighted sum; the tolerances set here with a stated margin over § 12's measured worsts (REQ-CHART-120).
 
 ## Notes
+- **Build order (R-863):** stage 3, the primitive registry and composed axes, each primitive with its round-trip test. It depends on stage 2's task, TASK-M8-117, and merges only with its tests green.
 - Nothing here scores a target; R-668 and R-669 stand.
 - Waits on its rulings item: RQ-723, RQ-725, RQ-726, RQ-730. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
 - *7 Nov 2026 (R-847):* RQ-725 and RQ-726 are ruled (b), R-669 reversed: the scattering rows and fixed-`k` are axes, and their charts are TASK-M8-122's and TASK-M8-123's.

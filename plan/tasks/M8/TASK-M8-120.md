@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-135, REQ-CHART-136, REQ-CHART-137, REQ-CHART-138, REQ-GUI-424
-- **Depends on:** TASK-M4-37, TASK-M8-112, TASK-M8-103, TASK-M8-32
+- **Depends on:** TASK-M4-37, TASK-M8-112, TASK-M8-103, TASK-M8-32, TASK-M8-108
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -33,6 +33,7 @@ The owner's order of 7 Nov: an optional toggle that draws as transparent every p
 - `cargo test -p gui symmetry_filter_toggle` — the toggle in both places, its no-partners state, one click to the full disc with no new run; control: the toggle left live with no partners (REQ-GUI-424).
 
 ## Notes
+- **Build order (R-863):** stage 5, time-axis charts and the symmetry filter. It depends on stage 4's task, TASK-M8-108, and merges only with its tests green.
 - The optional later "skip computing duplicates" export setting, off by default and labelled, is not built here, and no task owes it yet.
 - The test names are this design's; the two the order asks for are the owner's.
 - The mirror-step proposal (design § 6.6) isn't applied: the filter reads the signed map and doesn't assume it.

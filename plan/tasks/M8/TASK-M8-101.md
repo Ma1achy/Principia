@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-105, REQ-CHART-106
-- **Depends on:** TASK-M4-37, TASK-M8-100
+- **Depends on:** TASK-M4-37, TASK-M8-100, TASK-M8-117
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -24,4 +24,5 @@ Define (R-72) and build the two other 2-spheres in the state, under § 3.3's exp
 - `cargo test -p kernel exp_map_targets` — L_z and K hold on the momentum sphere; on a wide mass chart every unblanked pixel has all components positive and √mᵢ = nᵢ, each outside pixel blank and uncounted, no two unblanked pixels giving one mass set; the shape target bitwise; `forward(inverse(x)) = x` on each target; controls: a bad frame, squaring with the mask removed, mutation: named per target (REQ-CHART-106).
 
 ## Notes
+- **Build order (R-863):** stage 3, the primitive registry and composed axes, each primitive with its round-trip test. It depends on stage 2's task, TASK-M8-117, and merges only with its tests green.
 - Waits on its rulings item: RQ-720. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

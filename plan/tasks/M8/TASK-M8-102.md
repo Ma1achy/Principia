@@ -35,6 +35,7 @@ The third lowering: an unbaked or numerical pair fills the integrator's IC buffe
 - `cargo test -p engine general_numerical_solve` — REQ-CHART-145's arms and controls.
 
 ## Notes
+- **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - Shares R-669's Path B batch where that exists.
 - Waits on its rulings item: RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
 - *7 Nov 2026 (R-849, R-839):* RQ-733 is ruled (b), and RQ-719 (a): a labelled CPU-batch view is seam 3's stated exception.

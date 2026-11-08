@@ -3520,6 +3520,38 @@
   requirements: [REQ-TOOL-223]  # R-809 (5 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-55
+  milestone: M0
+  title: "The Windows runner's named measurements on `main` (R-859)"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-TOOL-224]  # R-859 (8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-56
+  milestone: M0
+  title: "The heavy-work comparison: the Windows runner against hosted runners (R-859)"
+  depends_on: [TASK-M0-55]
+  needs: []
+  requirements: [REQ-TOOL-225]  # R-859 (8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-57
+  milestone: M0
+  title: "The DX12 opt-in: a cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default, local testing only (R-862)"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-SYS-097]  # R-862 (the order of 4 Nov 2026, ported 8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-58
+  milestone: M0
+  title: "The Windows runner's DX12 run, Phase 2: the GPU suites on DX12 as a named measurement (R-862, R-859)"
+  depends_on: [TASK-M0-55, TASK-M0-57]
+  needs: []
+  requirements: [REQ-TOOL-226]  # R-862, R-859 (8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M8-86
   milestone: M8
   title: "The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand"
@@ -3620,7 +3652,7 @@
 - id: TASK-M8-101
   milestone: M8
   title: "Curved slices off the shape sphere: the momentum and mass spheres"
-  depends_on: [TASK-M4-37, TASK-M8-100]
+  depends_on: [TASK-M4-37, TASK-M8-100, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-105, REQ-CHART-106]
   reviewers: [code, qa, physics]
@@ -3676,7 +3708,7 @@
 - id: TASK-M8-108
   milestone: M8
   title: "The Sequence's morph segment"
-  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78]
+  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78, TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111, TASK-M8-119]
   needs: []
   requirements: [REQ-GUI-421]
   reviewers: [code, qa, gui]
@@ -3684,7 +3716,7 @@
 - id: TASK-M8-109
   milestone: M8
   title: "The primitives of 6 Nov: axes and overlays"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M8-100, TASK-M7-72]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M8-100, TASK-M7-72, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-117, REQ-CHART-118]
   reviewers: [code, qa, physics]
@@ -3692,7 +3724,7 @@
 - id: TASK-M8-110
   milestone: M8
   title: "Region D's exact map and every target's native coordinates"
-  depends_on: [TASK-M4-37, TASK-M4-34]
+  depends_on: [TASK-M4-37, TASK-M4-34, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-121]
   reviewers: [code, qa, physics]
@@ -3700,7 +3732,7 @@
 - id: TASK-M8-111
   milestone: M8
   title: "The primitives of the full order"
-  depends_on: [TASK-M4-37, TASK-M8-109]
+  depends_on: [TASK-M4-37, TASK-M8-109, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-119, REQ-CHART-120]
   reviewers: [code, qa, physics]
@@ -3716,7 +3748,7 @@
 - id: TASK-M8-113
   milestone: M8
   title: "Time-axis chart mode"
-  depends_on: [TASK-M4-37, TASK-M4-33]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M8-108]
   needs: []
   requirements: [REQ-CHART-123]
   reviewers: [code, qa, physics]
@@ -3724,7 +3756,7 @@
 - id: TASK-M8-114
   milestone: M8
   title: "Time-axis storage and the column cost"
-  depends_on: [TASK-M4-37, TASK-M8-113]
+  depends_on: [TASK-M4-37, TASK-M8-113, TASK-M8-108]
   needs: []
   requirements: [REQ-PERF-118]
   reviewers: [code, qa, physics, perf]
@@ -3732,7 +3764,7 @@
 - id: TASK-M8-115
   milestone: M8
   title: "Time-axis mode in the GUI"
-  depends_on: [TASK-M4-37, TASK-M8-113]
+  depends_on: [TASK-M4-37, TASK-M8-113, TASK-M8-108]
   needs: []
   requirements: [REQ-GUI-422]
   reviewers: [code, qa, gui]
@@ -3740,7 +3772,7 @@
 - id: TASK-M8-116
   milestone: M8
   title: "Time-axis mode in Sequence and export sidecars"
-  depends_on: [TASK-M4-37, TASK-M8-115, TASK-M8-77]
+  depends_on: [TASK-M4-37, TASK-M8-115, TASK-M8-77, TASK-M8-108]
   needs: []
   requirements: [REQ-GUI-423]
   reviewers: [code, qa, gui]
@@ -3748,7 +3780,7 @@
 - id: TASK-M8-117
   milestone: M8
   title: "Paths under a lock: the stored anchor"
-  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23]
+  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23, TASK-M8-124]
   needs: []
   requirements: [REQ-CHART-115, REQ-CHART-146]
   reviewers: [code, qa, physics]
@@ -3764,7 +3796,7 @@
 - id: TASK-M8-119
   milestone: M8
   title: "The virial pair: its axis kind, descriptor and entry"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M8-117]
   needs: []
   requirements: [REQ-CHART-103, REQ-CHART-139]
   reviewers: [code, qa, physics]
@@ -3772,7 +3804,7 @@
 - id: TASK-M8-120
   milestone: M8
   title: "The symmetry filter: a display option after rendering, GUI and export"
-  depends_on: [TASK-M4-37, TASK-M8-112, TASK-M8-103, TASK-M8-32]
+  depends_on: [TASK-M4-37, TASK-M8-112, TASK-M8-103, TASK-M8-32, TASK-M8-108]
   needs: []
   requirements: [REQ-CHART-135, REQ-CHART-136, REQ-CHART-137, REQ-CHART-138, REQ-GUI-424]
   reviewers: [code, qa, physics, gui]
@@ -3799,6 +3831,14 @@
   depends_on: [TASK-M4-37, TASK-M8-111, TASK-M8-102]
   needs: []
   requirements: [REQ-CHART-144, REQ-VAL-354]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M8-124
+  milestone: M8
+  title: "The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)"
+  depends_on: [TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52]
+  needs: []
+  requirements: [REQ-CHART-147]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M9-01
