@@ -8,6 +8,23 @@ Where this document meets a ruling, the ruling wins. Ids are final, from the id 
 document's base is `main` at 13edf773, so R-694 to R-720, R-791 to R-809, RQ-682, RQ-700 and RQ-701 are read from there. PR #388,
 TASK-M2-52's branch, is read as it stood on 6 Nov.
 
+**Ruled 7 Nov 2026, by the owner's reply of that day and the orders it held (the rulings PR).** Where the body below
+still reads as Proposed, these rule, and TASK-M4-37 carries each into the body. RQ-712 (a), R-834; RQ-713 (a), R-835;
+RQ-714 time (a), R-845, with exact rest the velocity default and eq. 3 the second preset, R-851, its outside still open;
+RQ-715 (a) with (i), R-836; RQ-716 (a), R-837, C3's 2 s on Vulkan still open; RQ-717 as RQ-682 (a), kind 3, R-838 and
+R-816; RQ-718, R-846: R-669's reversal rewrites it, a user's own plane stays unscored; RQ-719 (a), R-839; RQ-720 (a),
+R-840; RQ-721 (a), amended, R-850, with its rider, R-849: no labelled jump under the lock, the anchor slides
+continuously to its nearest point in B, the jump kept only for time-axis to IC-only charts; RQ-722 (b), a label "not at
+rest", R-841; RQ-723 (b), orbital elements as axes at a labelled pair, plus overlays, R-847; RQ-724, `h` a builder axis,
+R-848; RQ-725 and RQ-726, R-669 reversed, fixed-`k` and binary-plus-single charts built when their turn comes, R-847;
+RQ-727 (a), R-842; RQ-728 (a), R-843, its mask read with RQ-714's open part; RQ-730 (a), R-844; RQ-733 (b), a general
+numerical solve on CPU batch, R-849; RQ-736, R-853, with the symmetry rule, R-854, and the filter order, R-855; the model's
+§ 6b classification, R-852. RQ-711 (a), R-820, the zoom row's scale still open. RQ-700 (b), R-817, in chart_reference §2.1, which
+TASK-M8-119 carries into § 9: at `Q₀ > 0` the virial floor sits under the rise only, so § 9's axis reads its coordinate `Q(t)`, the state's own ratio
+on a column where `Q₀` is feasible, and `Q above the floor` is its label at `Q₀ = 0`; its label at `Q₀ > 0` is RQ-741's. Open: RQ-729, RQ-731 and RQ-732, the
+record PR's; RQ-734, RQ-735; RQ-738, RQ-736's correction list and the filter's conflicts; RQ-739, the mirror-step
+proposal; RQ-741, the virial axis's label at `Q₀ > 0`.
+
 **The owner's rulings of 8 Nov 2026 on building it.** R-863 orders the tasks of § 15 in five stages, each merging only
 with the previous stage's tests green, and adds TASK-M8-124, the path object with today's operations bitwise through it
 (§ 15). R-864 is the architecture rule for the chart-path work of § 17: one object, today's operations re-expressed as its
@@ -1524,7 +1541,7 @@ Nothing below is decided here.
 
 ## 15. Plan
 
-**Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 25 tasks below, and each names the rulings item it waits on, or the design as a whole. Only those tasks wait behind it; no existing task, in M4 or M9, does.
+**Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 26 tasks below, and each names the rulings item it waits on, or the design as a whole. Only those tasks wait behind it; no existing task, in M4 or M9, does.
 
 Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold `L_z` or the virial pair, so those two sit in M8. **One edge is named, not made:** TASK-M4-06's golden needs RQ-714's domain, so TASK-M4-06 gains TASK-M4-34 in Depends on when RQ-714 rules, TASK-M4-37's Deliverables say so, and from then until TASK-M4-34 merges it holds 230 tasks: TASK-M4-06 and the 217 other existing open tasks behind it, and 12 of the tasks below. The seven M9 edges an earlier draft made are dropped: TASK-M9-18, -20, -21 and -22 have no GPU run (R-671), and -26, -28 and -31 reach TASK-M4-06 through TASK-M4-17.
 
@@ -1559,12 +1576,13 @@ Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold 
 
 **The build order (R-863, the owner's order of 8 Nov 2026).** Once TASK-M4-37 releases them, the tasks are built in five
 stages, each merging only with the previous stage's tests green. Applied per R-369 (R-863), each stage's tasks depend on
-the previous stage's, placed so: (1) TASK-M8-124; (2) TASK-M8-117, the based morph with the stored anchor (§ 17.8's
-`anchor not in B` stands; no task on `main` builds the sliding anchor, RQ-744 (D)); (3) TASK-M4-33, TASK-M4-34,
-TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119; (4) TASK-M8-108; (5) TASK-M8-113 to
-TASK-M8-116 and TASK-M8-120. TASK-M8-124 is the 26th task behind TASK-M4-37. What the order leaves open, the tasks that
-fit no stage or straddle two and the stage-3 edges that would point forward across milestones or close a cycle, is
-RQ-744's.
+the previous stage's, placed so: (1) TASK-M8-124; (2) TASK-M8-117, the based morph with the stored anchor and then the
+sliding anchor, which R-849 gives it in place of § 17.8's `anchor not in B` (RQ-744 (D), filed before R-849 merged, is
+moot); (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119; (4)
+TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and TASK-M8-120. TASK-M8-124 is the 26th of this section's tasks behind
+TASK-M4-37, and with R-847's TASK-M8-122 and TASK-M8-123 (R-863 names neither) 28 tasks wait on it. What the order
+leaves open, the tasks that fit no stage or straddle two and the stage-3 edges that would point forward across
+milestones or close a cycle, is RQ-744's.
 
 ---
 

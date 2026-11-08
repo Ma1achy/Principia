@@ -1,7 +1,7 @@
 # TASK-M4-34 — Region D: the third-body pair, its preset, and the angles and side ratios it carries
 
 - **Milestone:** M4
-- **Closes:** REQ-CHART-100, REQ-CHART-101
+- **Closes:** REQ-CHART-100, REQ-CHART-101, REQ-CHART-142
 - **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-20
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
@@ -26,10 +26,12 @@ The first registered closed-form pair: `(ξ, η)` through the explicit-configura
 - `crates/kernel/src/stage/decode.rs`: its `DecodeVariant` and entry.
 - The registry's rows and the preset.
 - Choice V5 decided, with its evidence in the PR.
+- Region D's velocity presets: exact rest the default, eq. 3 the second, eq. 3 reproducing Agekyan & Anosova's velocities in their own units before canonicalising, and the 19% spread at `I = 1` stated beside the preset (R-851; REQ-CHART-142).
 
 ## Acceptance tests
 - `cargo test -p kernel region_d_plane` and `cargo test -p engine region_d_variant` — Table 1's pixels against the import; edges; √ℓ; I = 1; the stereographic identity; controls: bodies swapped, q unscaled, the mass ratio inverted, d dropped at unequal masses, where Table 1's equal masses can't see it (REQ-CHART-100).
 - `cargo test -p kernel closed_inverse_round_trip` — `forward(inverse(x)) = x`, every closed row at f64 and f32, each reading back its `Holds`; mutation: named per row, firing there (§ 12) (REQ-CHART-101).
+- `cargo test -p engine region_d_velocity_presets` — REQ-CHART-142's arms and controls.
 
 ## Notes
 - **Build order (R-863):** stage 3, the primitive registry and composed axes, each primitive with its round-trip test. Its edge to stage 2 (TASK-M8-117) isn't made: it is in M4 and TASK-M8-117 in M8, so the edge would depend forward across milestones, and TASK-M8-117 already waits on it through TASK-M8-106 and TASK-M8-102, so the edge would close a cycle. RQ-744 (A) holds the choice.
@@ -38,3 +40,4 @@ The first registered closed-form pair: `(ξ, η)` through the explicit-configura
 - The preset's base point, centre and window (R-466's definition of a preset) are undefined on this pair, which isn't two latent coordinate axes: RQ-711, read at TASK-M4-37, or a task that defines them under R-72 as TASK-M9-45 does (design § 20). Only those home values wait: the pair, the mask, the tests and the TASK-M4-06 edge do not.
 - RQ-736's filter order overtakes RQ-714's mask for the preset: the full disc, signed, with D its filter's output (design §§ 8.4 and 10.4). What the preset draws until TASK-M8-120 lands is on RQ-736's list.
 - Waits on its rulings item: RQ-713, RQ-714, RQ-736 for the preset's domain. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- *7 Nov 2026 (R-845, R-851, R-843):* RQ-714's time and velocities are ruled; its outside, a mask or the full disc under the filter order, is still open, so the preset's domain waits on it, and RQ-728's labelled D is read with it.

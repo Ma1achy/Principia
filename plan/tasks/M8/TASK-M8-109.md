@@ -29,3 +29,4 @@ Every row of the registry's 6 Nov table, each as an axis on CPU batch, an alias 
 - **Build order (R-863):** stage 3, the primitive registry and composed axes, each primitive with its round-trip test. It depends on stage 2's task, TASK-M8-117, and merges only with its tests green.
 - No row is baked. Nothing here scores a target: R-668 and R-669 stand.
 - Waits on its rulings item: RQ-723, RQ-724, RQ-725, RQ-730. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- *7 Nov 2026 (R-847, R-848, R-844):* RQ-723 is ruled (b): inner and outer orbital elements are axes at a labelled pair, plus the overlays; `h` is a builder axis, its range under physics review (RQ-724); Hill's threshold takes the labelled pair (RQ-730 (a)).

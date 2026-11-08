@@ -1,7 +1,7 @@
 # TASK-M8-124 — The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)
 
 - **Milestone:** M8
-- **Closes:** REQ-CHART-139
+- **Closes:** REQ-CHART-147
 - **Depends on:** TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -40,15 +40,15 @@ as a fallback (R-864 item 2).
 ## Acceptance tests
 - Review: the type sketch and its one-page rationale approved by the physics and code reviewers, then approved by the
   owner, the answer recorded as a ruling, before any implementation commit: no commit on the branch touches `crates/`
-  before it (REQ-CHART-139).
+  before it (REQ-CHART-147).
 - `cargo test -p engine -- path_pan_bitwise path_zoom_bitwise path_tilt_bitwise path_slice_bitwise path_lock_bitwise path_chart_switch_bitwise path_save_view_bitwise path_presets_bitwise` —
   each operation through the object against the recorded baseline: sim key, IC words and image hash bit for bit, on
   latent, curved and saved charts; every preset and saved chart today's code builds, reopened through the object;
   controls: one floating-point operation reordered in a family, the general geodesic in place of the tilt family, a path
-  triple in a zoom's sim key, each failing (REQ-CHART-139).
+  triple in a zoom's sim key, each failing (REQ-CHART-147).
 - Review: no operation's old route left beside the object, and no special case an if-branch outside a named family
   (R-864 items 2 and 4); no family, pair map or hold beyond today's operations given behaviour (R-863 stage 1)
-  (REQ-CHART-139).
+  (REQ-CHART-147).
 
 ## Notes
 - **Build order (R-863):** stage 1, the path object and the bitwise tests, before any new capability. Stage 2,
@@ -66,5 +66,5 @@ as a fallback (R-864 item 2).
   and bring it back (R-864 item 4): never patch around it.
 - REQ-CHART-113's tests (`path_tilt_bitwise`, `path_zoom_bitwise`, `path_lock_bitwise`, `path_save_view_bitwise`),
   TASK-M8-106's, overlap this task's; which task keeps them is RQ-744 (B).
-- Waits on RQ-721 (chart paths; answered in the open rulings PR #443, not yet on `main`) and, like every task of the
-  design, on TASK-M4-37.
+- Waits on RQ-721 (chart paths; answered by R-850, with its rider R-849, the owner's reply of 7 Nov 2026) and, like
+  every task of the design, on TASK-M4-37.

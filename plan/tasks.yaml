@@ -1363,7 +1363,7 @@
   title: "The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)"
   depends_on: [TASK-M2-07, TASK-M2-24, TASK-M2-25]
   needs: [REQ-DEC-017, REQ-DEC-008]
-  requirements: [REQ-VAL-347]
+  requirements: [REQ-VAL-347, REQ-RENDER-122]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M4-28
@@ -1419,7 +1419,7 @@
   title: "Region D: the third-body pair, its preset, and the angles and side ratios it carries"
   depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-20]
   needs: []
-  requirements: [REQ-CHART-100, REQ-CHART-101]
+  requirements: [REQ-CHART-100, REQ-CHART-101, REQ-CHART-142]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M4-37
@@ -2525,7 +2525,7 @@
   title: "The one projection: each target chart's projection, the leaving rule on main's clamped encode and a curve axis's nearest point, one Rust source for Chart position and the trace (R-542 H11, H12) ⚑"
   depends_on: [TASK-M2-25, TASK-M2-26]
   needs: []
-  requirements: [REQ-COL-133, REQ-COL-134]
+  requirements: [REQ-COL-133, REQ-COL-134, REQ-COL-163]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M7-53
@@ -3061,7 +3061,7 @@
   title: "On the real engine: tilt and slice on every chart, the energy axes' mapping control, the navigation stop in the edit path, and Save view as chart on curved views (R-469, R-471, R-473, R-475) ⚑"
   depends_on: [TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18, TASK-M2-52]  # TASK-M2-52: R-633 (RQ-603), every chart's tilt and REQ-CHART-062; applied per R-369
   needs: [REQ-CHART-060, REQ-CHART-062, REQ-CHART-068, REQ-CHART-073, REQ-CHART-077]
-  requirements: [REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244]
+  requirements: [REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244, REQ-CHART-141]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-49
@@ -3662,7 +3662,7 @@
   title: "CPU batch: numerical inverses, their branch rule and seam"
   depends_on: [TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-100]
   needs: []
-  requirements: [REQ-CHART-107, REQ-CHART-129, REQ-CHART-130]
+  requirements: [REQ-CHART-107, REQ-CHART-129, REQ-CHART-130, REQ-CHART-145]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-103
@@ -3782,7 +3782,7 @@
   title: "Paths under a lock: the stored anchor"
   depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23, TASK-M8-124]
   needs: []
-  requirements: [REQ-CHART-115]
+  requirements: [REQ-CHART-115, REQ-CHART-146]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-118
@@ -3798,7 +3798,7 @@
   title: "The virial pair: its axis kind, descriptor and entry"
   depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M8-117]
   needs: []
-  requirements: [REQ-CHART-103]
+  requirements: [REQ-CHART-103, REQ-CHART-139]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-120
@@ -3809,12 +3809,36 @@
   requirements: [REQ-CHART-135, REQ-CHART-136, REQ-CHART-137, REQ-CHART-138, REQ-GUI-424]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
+- id: TASK-M8-121
+  milestone: M8
+  title: "A browser run from the measurement panel's button marked in its report as not a measurement (R-826)"
+  depends_on: [TASK-M8-86]
+  needs: []
+  requirements: [REQ-PERF-119]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-122
+  milestone: M8
+  title: "The fixed-k chart: rigid rotation at a chosen virial coefficient over D₁₁ ∪ D₁₂, a chart and builder axes (R-847)"
+  depends_on: [TASK-M4-37, TASK-M8-109, TASK-M8-102]
+  needs: []
+  requirements: [REQ-CHART-143]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M8-123
+  milestone: M8
+  title: "The binary-plus-single scattering chart, with f_col and Heggie & Sweatman 1991 alongside (R-847)"
+  depends_on: [TASK-M4-37, TASK-M8-111, TASK-M8-102]
+  needs: []
+  requirements: [REQ-CHART-144, REQ-VAL-354]
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M8-124
   milestone: M8
   title: "The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)"
   depends_on: [TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52]
   needs: []
-  requirements: [REQ-CHART-139]
+  requirements: [REQ-CHART-147]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M9-01
@@ -3996,7 +4020,7 @@
 - id: TASK-M9-23
   milestone: M9
   title: "Binary-plus-single targets: Trani et al.'s planar row, Manwadkar et al.'s escape probabilities, Stone & Leigh's closed forms (TR-1, MK-1, SL-1)"
-  depends_on: [TASK-M3-34]
+  depends_on: [TASK-M3-34, TASK-M8-123]
   needs: []
   requirements: [REQ-VAL-318, REQ-VAL-319, REQ-VAL-320, REQ-VAL-321, REQ-VAL-322]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -4036,7 +4060,7 @@
 - id: TASK-M9-28
   milestone: M9
   title: "Symbol-sequence maps: Tanikawa & Mikkola's free-fall and non-zero-L maps, and Valtonen et al.'s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7)"
-  depends_on: [TASK-M4-17, TASK-M3-16]
+  depends_on: [TASK-M4-17, TASK-M3-16, TASK-M8-122]
   needs: []
   requirements: [REQ-VAL-325, REQ-VAL-326, REQ-VAL-327, REQ-VAL-328, REQ-VAL-342]  # R-594, R-629 (27 Oct 2026); R-669: REQ-VAL-342
   reviewers: [code, qa, physics]
@@ -4126,7 +4150,7 @@
   title: "The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted"
   depends_on: [TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35, TASK-M7-39, TASK-M2-17, TASK-M8-16]  # R-670: what softening reaches
   needs: []
-  requirements: [REQ-INT-111, REQ-SYS-094, REQ-SYS-095, REQ-CHART-092, REQ-EVT-034, REQ-GUI-416]  # R-654 (30 Oct 2026), R-791, R-792 (5 Nov 2026)
+  requirements: [REQ-INT-111, REQ-SYS-094, REQ-SYS-095, REQ-CHART-092, REQ-EVT-034, REQ-GUI-416, REQ-CHART-140]  # R-654 (30 Oct 2026), R-791, R-792 (5 Nov 2026)
   reviewers: [code, qa, physics, perf, gui]
   pitfalls: [PIT-9]
 - id: TASK-M9-40
