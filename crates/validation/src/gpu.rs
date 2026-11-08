@@ -794,7 +794,7 @@ fn as_u32(@builtin(global_invocation_id) id: vec3<u32>) {
     /// [`Prepared::load`] and run, returns the complement; given it again and run by `dispatch`, returns it again, bit
     /// for bit. The output already holds the complement when the second load fills it with [`SENTINEL`], so only a
     /// dispatch makes it the complement again: a skipped one reads back the sentinel.
-    pub fn check_reload<'h>(h: &'h GpuHarness, dispatch: fn(&Prepared<'h>) -> Vec<u32>) {
+    pub fn check_reload(h: &GpuHarness, dispatch: fn(&Prepared<'_>) -> Vec<u32>) {
         let first = identity_fixture();
         let second: Vec<u32> = first.iter().map(|w| !w).collect();
         assert!(
@@ -1008,9 +1008,9 @@ mod tests {
     #[test]
     fn gpu_harness_prepared_reload() {
         let h = harness();
-        check_reload(&h, Prepared::run);
+        check_reload(&h, |p| p.run());
         fires(
-            || check_reload(&h, Prepared::read),
+            || check_reload(&h, |p| p.read()),
             "the check passed a reloaded run whose dispatch was skipped",
         );
         let input = identity_fixture();
