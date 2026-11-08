@@ -476,13 +476,6 @@ fn check_reserved(emit: fn(String) -> String) {
     compile(&emit(g.source));
 }
 
-/// The module with each parameter's member and its reads written by the bare parameter name.
-fn bare(source: String) -> String {
-    ["type", "smooth", "from", "__x", "_"]
-        .iter()
-        .fold(source, |s, n| s.replace(&format!("p_{n}"), n))
-}
-
 #[test]
 fn print_registry_entries_reserved_parameter_names_compile() {
     check_reserved(|s| s);
@@ -492,7 +485,10 @@ negative_control!(
     print_registry_entries_reserved_parameter_names_compile,
     "the members written by the bare parameter names",
     expected = "the generated WGSL does not parse",
-    check_reserved(bare)
+    // The module with each parameter's member and its reads written by the bare parameter name.
+    check_reserved(|source| ["type", "smooth", "from", "__x", "_"]
+        .iter()
+        .fold(source, |s, n| s.replace(&format!("p_{n}"), n)))
 );
 
 // ----- registration refusals -----
