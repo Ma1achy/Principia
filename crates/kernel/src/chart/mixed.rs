@@ -258,7 +258,6 @@ impl<H: Quantity, V: Quantity, P: fmt::Debug> fmt::Debug for Mixed<H, V, P> {
 
 /// A saved chart's parent ([`ParentParams`]): the axes' codes ([`axis_code`]), then `frozen`, `h_range`, `v_range`.
 impl<H: Quantity, V: Quantity> ParentParams for Mixed<H, V, f64> {
-    const LEN: usize = 14;
     fn write(&self, w: &mut Writer<'_>) {
         w.code(axis_code::<H>());
         w.code(axis_code::<V>());

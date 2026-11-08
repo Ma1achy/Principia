@@ -24,7 +24,9 @@ use kernel::chart::invariant::InvariantLK;
 use kernel::chart::mass_simplex::MassSimplex;
 use kernel::chart::mixed::{Alpha, Beta, Mixed, ZAlpha, ZBeta, ZQ1};
 use kernel::chart::physical::{AxisE, AxisK, AxisKE, AxisVirial, MixedEnergy, MixedMassRatio};
-use kernel::chart::saved::{Composed, Curved, ParentParams, SaveParent, Saved, PARAMS, WORDS};
+use kernel::chart::saved::{
+    params_len, Composed, Curved, ParentParams, SaveParent, Saved, PARAMS, WORDS,
+};
 use kernel::chart::shape_sphere::pixel_centre;
 use kernel::chart::tilt::{latent_basis, Hidden, LatentFrame, Placement, Shift};
 use kernel::chart::{
@@ -1220,7 +1222,7 @@ fn bump(x: f64) -> f64 {
 }
 
 /// The parent `c`, saved, reads back from its words (`alter`ed after writing) as itself, its words bit for bit; each
-/// of its `ParentParams::LEN` words moved by one ulp reads as another parent whose words are those, except its `codes`
+/// of its `params_len` words moved by one ulp reads as another parent whose words are those, except its `codes`
 /// words, a type's code, an enum or an index, which read as no parent; and every word past them is `+0`, any other
 /// value refused.
 fn check_parent<C>(c: C, codes: usize, what: &str, alter: fn(&mut [f64; WORDS]))
@@ -1235,7 +1237,7 @@ where
         back == Some(c) && same,
         "{what} does not read back as its parent: {back:?}"
     );
-    let params = HEAD + 1..HEAD + 1 + C::LEN;
+    let params = HEAD + 1..HEAD + 1 + params_len(&c);
     let mut refused = 0;
     for k in params.clone() {
         let mut moved = words;
