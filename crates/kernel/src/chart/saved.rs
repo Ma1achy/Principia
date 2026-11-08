@@ -33,7 +33,9 @@
 //! target and both angles set, whose skewed `R` has no third input (RQ-746; REQ-CHART-149, built by TASK-M2-56 once
 //! ruled); and a composition whose offsets land on more than two hidden coordinates, which one [`Shift`] cannot carry
 //! (REQ-CHART-148, built by TASK-M2-55). Saving a saved chart again, the chain `R·R′·R″`, and the composed chart's
-//! area weight and the shape sphere's repeat counting are TASK-M2-55's too (REQ-CHART-148).
+//! area weight and the shape sphere's repeat counting are TASK-M2-55's too (REQ-CHART-148); meanwhile
+//! [`Saved::curved`] refuses a saved or tilted chart as a parent by type ([`SaveParent`]), never saving it without its
+//! tilt.
 //!
 //! **The serialisation** ([`Saved::to_words`], [`Saved::from_words`]): the definition as [`WORDS`] doubles, by value,
 //! so it reads back bit for bit (R-483 H3); a saved chart carries no links (R-478). The words: the kind (0 oblique,
@@ -68,6 +70,16 @@ pub struct Curved {
     pub span: [f64; 2],
 }
 
+/// A chart [`Saved::curved`] takes as a parent: a bare chart, every [`Tiltable`] one and the latent chart (which it
+/// refuses, a latent view saving as an oblique chart). A tilted chart, a reopened saved one included, is not one: it
+/// names its parent ([`Chart::name`]), so saving it as a parent would drop its tilt, the saved `R` with it. Saving a
+/// saved chart again, the chain `R·R′·R″`, is TASK-M2-55's (R-475 S1, REQ-CHART-148).
+pub trait SaveParent: Chart {}
+
+impl<C: Tiltable> SaveParent for C {}
+
+impl<P: Copy> SaveParent for Latent<P> {}
+
 /// A saved chart's definition (R-475 S2).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Saved {
@@ -84,8 +96,9 @@ impl Saved {
     }
 
     /// The view of `parent` under `tilt` about `centre`, the targets' spans `span`, saved; `None` where `parent` is the
-    /// latent chart, which saves as an oblique one, or is not in the registry.
-    pub fn curved<C: Chart>(
+    /// latent chart, which saves as an oblique one, or is not in the registry. `parent` is a bare chart ([`SaveParent`]):
+    /// a tilted or reopened saved chart is refused by type, its tilt never dropped.
+    pub fn curved<C: SaveParent>(
         parent: &C,
         tilt: TiltSpec,
         centre: [f64; 2],

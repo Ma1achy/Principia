@@ -95,7 +95,7 @@ pub use latent::Latent;
 pub use mass_simplex::MassSimplex;
 pub use mixed::Mixed;
 pub use physical::{MixedEnergy, MixedMassRatio};
-pub use saved::{Composed, Saved};
+pub use saved::{Composed, SaveParent, Saved};
 pub use shape_sphere::{ShapeMap, ShapeSphere};
 pub use tilt::{Tilt, TiltMap, TiltSpec, Tilted};
 

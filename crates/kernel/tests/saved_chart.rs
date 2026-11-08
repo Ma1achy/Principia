@@ -12,7 +12,7 @@
 //! `ε·Σ|terms|`, a criterion fixed before the run (R-649). Each test registers its negative control (R-176).
 
 use kernel::chart::invariant::Invariant;
-use kernel::chart::saved::{Composed, Curved, Saved, WORDS};
+use kernel::chart::saved::{Composed, Curved, SaveParent, Saved, WORDS};
 use kernel::chart::shape_sphere::pixel_centre;
 use kernel::chart::tilt::{latent_basis, Hidden, LatentFrame, Placement, Shift};
 use kernel::chart::{
@@ -768,6 +768,94 @@ negative_control!(
     expected = "does not read back bit for bit",
     {
         check_words(|w| w[5] = f64::from(w[5] as f32));
+    }
+);
+
+// ── Parents: a tilted chart is no parent ────────────────────────────────────────────────────────────────────────────
+
+/// A type, probed at run time for the bounds below: method resolution takes a by-value arm, `true`, only where the
+/// type meets its bound, and falls back to the autoref arm, `false`, where it does not.
+struct Probe<T>(core::marker::PhantomData<T>);
+
+trait SaveParentArm {
+    fn save_parent(&self) -> bool {
+        true
+    }
+}
+impl<T: SaveParent> SaveParentArm for Probe<T> {}
+trait SaveParentMiss {
+    fn save_parent(&self) -> bool {
+        false
+    }
+}
+impl<T> SaveParentMiss for &Probe<T> {}
+
+trait ChartArm {
+    fn chart(&self) -> bool {
+        true
+    }
+}
+impl<T: Chart> ChartArm for Probe<T> {}
+trait ChartMiss {
+    fn chart(&self) -> bool {
+        false
+    }
+}
+impl<T> ChartMiss for &Probe<T> {}
+
+/// Whether the type `$t` meets `SaveParent`, and whether it meets `Chart`.
+macro_rules! meets {
+    ($t:ty) => {{
+        let probe = &Probe::<$t>(core::marker::PhantomData);
+        (probe.save_parent(), probe.chart())
+    }};
+}
+
+/// `Saved::curved` takes a bare chart as a parent, the shape sphere and the latent chart (which it refuses at run
+/// time), and refuses by type a reopened saved chart and a tilted view, which name their parent, so saving them would
+/// drop the saved `R` (code review 5816802860 of PR #447, C2), and what is no chart. `bound_chart` reads the bound as
+/// `Chart`, which every chart meets (the control: the bound before the fix).
+fn check_parents(bound_chart: bool) {
+    let taken = |(save_parent, chart): (bool, bool)| if bound_chart { chart } else { save_parent };
+    let admitted = [
+        (taken(meets!(ShapeSphere<f64>)), "the shape sphere"),
+        (taken(meets!(Latent<f64>)), "the latent chart"),
+    ];
+    let refused = [
+        (
+            taken(meets!(Tilted<ShapeSphere<f64>, f64, Composed<f64>>)),
+            "a reopened saved chart, its saved R dropped",
+        ),
+        (
+            taken(meets!(Tilted<ShapeSphere<f64>, f64>)),
+            "a tilted view, its tilt dropped",
+        ),
+        (taken(meets!(TiltSpec)), "a tilt, which is no chart"),
+    ];
+    for (taken, what) in admitted {
+        assert!(taken, "{what} is not taken as a saved chart's parent");
+    }
+    for (taken, what) in refused {
+        assert!(!taken, "{what}, is taken as a saved chart's parent");
+    }
+    let reopened = reopened(&saved_spec(), &second(), CENTRE);
+    assert!(
+        reopened.name() == "ShapeSphere" && reopened.tilt().saved().on,
+        "a reopened saved chart does not name its parent under its saved tilt, so the bound guards nothing"
+    );
+}
+
+#[test]
+fn saved_chart_parents() {
+    check_parents(false);
+}
+
+negative_control!(
+    saved_chart_parents,
+    "a parent bounded as any chart takes a reopened saved chart, dropping its R, so it must fail",
+    expected = "is taken as a saved chart's parent",
+    {
+        check_parents(true);
     }
 );
 
