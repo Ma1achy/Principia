@@ -1416,9 +1416,12 @@ not a requirement.
 
 ## R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*
 *Amended by R-186.*
+*Amended in part by R-862 (the owner's DX12 order of 4 Nov 2026, ported 8 Nov 2026: `PRIN_GPU_BACKEND=dx12` behind a
+cargo feature, off by default, in no required or hosted CI job, "local testing only, untested in CI").*
 *Still in force: TASK-M0-04's GPU jobs (Metal, and ubuntu with lavapipe), `PRIN_GPU_BACKEND=metal|vulkan`, and an
 install step for every toolchain in the task that first needs it; the Metal job runs on GitHub-hosted `macos-15`, not a
-self-hosted runner (R-186).*
+self-hosted runner (R-186). `dx12` is a third value only behind R-862's opt-in feature, and no CI job of this ruling's
+sets it (R-862).*
 *25 Sep 2026 · applied in step 8*
 
 TASK-M0-04 adds the GPU CI jobs: a macOS arm64 self-hosted job (Metal) and an ubuntu job with `mesa-vulkan-drivers`
@@ -1890,6 +1893,11 @@ asking; it's an addition, not a choice."
 and its test.
 
 ## R-206 — An unset `PRIN_GPU_BACKEND` defaults by platform
+*Amended in part by R-862 (the owner's DX12 order of 4 Nov 2026, ported 8 Nov 2026: `PRIN_GPU_BACKEND=dx12` selects
+DX12 only in a build with its opt-in cargo feature, off by default).*
+*Still in force: all of it. An unset value still defaults to metal on macOS and vulkan elsewhere, never to DX12; an
+explicit value still overrides, an unknown value is still an error, CI still sets it explicitly, and the chosen backend
+is still logged. `dx12` is a known value only in a build with R-862's feature.*
 *27 Sep 2026*
 
 "When PRIN_GPU_BACKEND is unset, default by platform: metal on macOS, vulkan elsewhere. An explicit value still
@@ -31007,6 +31015,8 @@ and on pushes to `main` (Vulkan now, DX12 from Phase 2), gpu-idle, the weekly pr
 Windows benchmark numbers are a separate named series; its security rules are unchanged).*
 *Still in force: all of it, items 1 to 6; R-859 says what the runner may run from the anchor move, and that moving
 required or heavy CI work to it is not approved.*
+*Read with R-862 (8 Nov 2026: the owner's DX12 order of 4 Nov, whose "in no CI job" item 2 rewords, is now that
+ruling, the number "The DX12 order's wording" below could not yet give).*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
 `docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), REQ-SYS-065 and REQ-VAL-099 (reqio), TASK-M0-04, TASK-M8-41,
 `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md` and `plan/rule_groups.yaml`*
@@ -31660,6 +31670,13 @@ REQ-VAL-149 reads as it did.
 R-812 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-859 — From the anchor move, the Windows runner may run, as named measurements and never as required checks: the GPU suites (Vulkan now, DX12 from Phase 2) nightly and on pushes to `main`, gpu-idle, the weekly proof and the 7 Nov heavy-work comparison; benchmarks of record stay on the Mac, Windows numbers a separate named series; moving required or heavy CI work to the PC is not approved and returns through `/rulings-report`; the runner's security rules are unchanged *(refines R-186, R-656 and R-711)*
+*Refined by R-860 (8 Nov 2026, RQ-742: the list is not exhaustive; the nightly `win-tests` job and the Windows arms of
+the path-cover and time-column benchmarks stay as named measurements, never required checks).*
+*Corrected in part by R-861 (8 Nov 2026, RQ-743: the 7 Nov order's "push trigger" was an error; the comparison starts
+by `workflow_dispatch` on the task branch, the runner's security rules unchanged).*
+*Still in force: all of it, the owner's words and the 7 Nov order quoted as given; the order's "via push trigger" reads
+as R-861 corrects it, and the list of what the runner may run is not exhaustive (R-860). Its "Held for the owner" items
+are answered by R-860 and R-861.*
 *8 Nov 2026 · the owner's ruling of that day, pasted as their own; applied in the forward lines of R-186, R-656 and
 R-711, `docs/contracts/principia_parity_contract.md` § 6, `REVIEW_QUEUE.md` (RQ-742 and RQ-743, new), `plan/OPERATIONS.md`
 § "Metal and perf (Mac only)" and § "The Windows runner's work (R-859)" (new), `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md`,
@@ -31695,6 +31712,10 @@ The order it names, the owner's of 7 Nov 2026, verbatim, recorded here because t
 > branches; the required check accepts the PC's result if present within a time limit, otherwise the
 > hosted runners run as now, so the PC is never a single point of failure. Keep all runner security
 > rules: push/schedule/dispatch only, signed-commit gate, never pull_request triggers.
+
+*Correction, 8 Nov 2026 (R-861):* the owner's answer to RQ-743 says their "push trigger" wording above was an error:
+the comparison starts by `workflow_dispatch` on the task branch, and the runner's security rules are unchanged. The
+order is quoted as they gave it.
 
 *What it decides:*
 
@@ -31744,3 +31765,112 @@ open entry carried the question it answers.
 R-859 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes no existing requirement; adds REQ-TOOL-224 and REQ-TOOL-225.
+
+## R-860 — R-859's list of what the Windows runner may run is not exhaustive: the nightly `win-tests` job and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, never required checks *(closes RQ-742; refines R-859)*
+*8 Nov 2026 · the owner's answers of that day, pasted as their own; applied in R-859's forward lines,
+`docs/archive/review_queue/M0.md` (RQ-742 moved), `REVIEW_QUEUE.md`, `plan/OPERATIONS.md` § "The Windows runner's work
+(R-859)", TASK-M0-55, TASK-M8-107 and TASK-M8-114, REQ-TOOL-224, REQ-PERF-117 and REQ-PERF-118 (reqio) and
+`plan/rule_groups.yaml`; built by TASK-M0-55*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-742: the R-859 list is not exhaustive. Keep the existing nightly Windows test job and the
+> Windows halves of the path-cover and time-column benchmarks as named measurements, never required
+> checks.
+
+*What it decides:* RQ-742's option (b). R-859's list names what the runner may newly run from the anchor move; it is
+not the whole of what may run there. Two things it doesn't name stay, each a named measurement and never a required
+check (R-649, R-711 item 1):
+
+- **`win-tests`,** `win-gpu.yml`'s nightly Windows build and tests, "the existing nightly Windows test job". It stays in
+  `win-gpu.yml`, and TASK-M0-55's guard test names it in the runner's ruled list of jobs beside the GPU suites, gpu-idle
+  and the weekly proof (REQ-TOOL-224).
+- **The Windows arms of the path-cover and time-column benchmarks,** TASK-M8-107's and TASK-M8-114's (REQ-PERF-117,
+  REQ-PERF-118): each is the separate named Windows series of R-859's benchmark line, never mixed with the Mac's and
+  closing nothing; R-186's benchmarks of record stay on the owner's Mac.
+
+*Applied per R-369:* `win-self-check`, the nightly self-check, stays as the security rules' daily re-proof, as RQ-742
+read it; the owner's answer left that reading standing. A bench arm that runs as a runner job, not by hand, joins the
+guard test's list by name in its own task's pull request.
+
+*What it refines:* **R-859**, its list of what the runner may run. It closes **RQ-742**.
+
+R-860 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-224 (statement, source, rulings, rq, note), REQ-PERF-117 and REQ-PERF-118 (rulings).
+
+## R-861 — The heavy-work comparison starts by `workflow_dispatch` on its task branch; the runner's security rules are unchanged; the 7 Nov order's "push trigger" was an error *(closes RQ-743; corrects R-859)*
+*8 Nov 2026 · the owner's answers of that day, pasted as their own; applied in R-859's forward line and its dated
+correction under the 7 Nov order, `docs/archive/review_queue/M0.md` (RQ-743 moved), `REVIEW_QUEUE.md`,
+`plan/OPERATIONS.md` § "The Windows runner's work (R-859)", TASK-M0-56, REQ-TOOL-225 (reqio) and
+`plan/rule_groups.yaml`; built by TASK-M0-56*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-743: start the comparison by workflow_dispatch on the task branch. Runner security rules
+> unchanged; my "push trigger" wording was an error.
+
+*What it decides:* RQ-743's option (a). TASK-M0-56 starts the comparison on the PC by `workflow_dispatch` on its task
+branch, dispatched from the Mac, and the hosted side at the same commit. The runner's security rules are unchanged: R-711
+item 1's push trigger on `main` alone, schedule and `workflow_dispatch`, and the owner's job rules of 5 Nov 2026,
+"Branch runs only via workflow_dispatch"; the guard test, `xtask/tests/ci_self_hosted.rs`, needs no exception. The 7 Nov
+order's "run on the PC via push trigger", quoted in R-859, was an error of wording; the quote stays as the owner gave
+it, with a dated correction under it.
+
+*What it corrects:* **R-859**, the 7 Nov order it quotes, in its trigger only. It closes **RQ-743**.
+
+R-861 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-225 (source, rulings, rq, note).
+
+## R-862 — DX12 is an opt-in, off by default: a cargo feature and `PRIN_GPU_BACKEND=dx12`, documented "local testing only, untested in CI", in no required or hosted CI job; native DX12 previews web-v1's behaviour on Windows, where Chrome runs WebGPU on D3D12 *(amends R-169 and R-206)*
+*Amended in part by R-711 (5 Nov 2026, item 2: the order's "in no CI job" reads "in no required or hosted CI job";
+once the opt-in lands, DX12 may run on R-711's runner as a measurement job).*
+*Still in force: all of it, the order's "in no CI job" read as R-711 item 2 gives it.*
+*8 Nov 2026 · the owner's order of 4 Nov 2026, ported at their word of 8 Nov; applied in the forward lines of R-169 and
+R-206, R-711's "Read with" line, `docs/contracts/principia_parity_contract.md` § 6, `plan/OPERATIONS.md` § "The Windows
+runner's work (R-859)", TASK-M0-57 and TASK-M0-58 (new), REQ-SYS-097 and REQ-TOOL-226 (reqio, new) and
+`plan/rule_groups.yaml`; built by TASK-M0-57 and TASK-M0-58*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> DX12: port my 4 Nov DX12 order verbatim as a ruling (it should be in your saved orders); include it
+> in #445 or the next rulings PR, whichever comes first, so Phase 2 can run under R-859.
+
+The order, the owner's of 4 Nov 2026, verbatim:
+
+> DX12: approved as a small, opt-in change: behind a cargo feature and PRIN_GPU_BACKEND=dx12, off by default, in no CI job, documented as "local testing only, untested in CI". Rationale to record in the R-169/R-206 amendment: Chrome on Windows runs WebGPU on D3D12, so native DX12 runs preview web-v1 behaviour on Windows. It waits behind the queued PRs as you planned. Vulkan Phase 1 on #390 proceeds now.
+
+*What it decides:*
+
+- **The opt-in.** DX12 is a backend behind a cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default. A default build
+  has no DX12, an unset `PRIN_GPU_BACKEND` never selects it (R-206's platform default stands), and it is documented as
+  "local testing only, untested in CI". "A small, opt-in change": no default, physics, tolerance or required check
+  changes.
+- **The rationale, as the owner gave it:** "Chrome on Windows runs WebGPU on D3D12, so native DX12 runs preview web-v1
+  behaviour on Windows."
+- **CI.** "In no CI job" reads, since R-711 item 2 (5 Nov 2026), "in no required or hosted CI job": "once its opt-in
+  lands, DX12 may run on this runner as a measurement job. It stays out of every required or hosted CI job". R-859 (8 Nov
+  2026) gives that job its place: "the Windows runner may run, as named measurements and never as required checks: the
+  GPU suites (Vulkan now, DX12 from Phase 2), nightly and on pushes to main". The two sit together: no required or
+  hosted job builds the feature or sets `dx12`, and from Phase 2 the runner's DX12 run is a named measurement, which
+  gates nothing and is not CI's test of DX12, so the documented "untested in CI" holds as the owner worded it. The
+  owner's word of 8 Nov ports the order "so Phase 2 can run under R-859".
+- **Phase 2** is that DX12 run on the runner, after the opt-in lands; "Vulkan Phase 1 on #390" was the runner's first
+  phase, and "It waits behind the queued PRs as you planned" was the order of work on 4 Nov. Both are history here.
+
+*Applied per R-369:*
+
+- **Two tasks, in M0** beside TASK-M0-04, whose harness reads `PRIN_GPU_BACKEND`: TASK-M0-57 builds the opt-in (REQ-SYS-097),
+  and TASK-M0-58 adds the DX12 run to the runner's named measurements (REQ-TOOL-226), after TASK-M0-55 and TASK-M0-57.
+  R-859 put DX12's job "in the task that follows that opt-in"; TASK-M0-58 is that task.
+- **The feature is named `dx12`.** In a build without it, `PRIN_GPU_BACKEND=dx12` is refused as an error naming the
+  variable and the feature, as today's tests of an unknown value expect, never quietly another backend: R-206 has every
+  run say what it ran on.
+
+*What it amends:* **R-169** (a third value of `PRIN_GPU_BACKEND`, behind the feature, set by no CI job of R-169's) and
+**R-206** (`dx12` a known value only with the feature; the default by platform unchanged). It closes no queue entry.
+
+R-862 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-SYS-097 and REQ-TOOL-226; changes no existing requirement.
