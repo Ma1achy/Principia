@@ -50,9 +50,9 @@
 //!
 //! **The parent's params** ([`ParentParams`]): each value field in declaration order, an enum as its index in
 //! declaration order ([`Mapping`], [`ShapeMap`]), a body or other index as itself; each type-level parameter as a
-//! code, ahead of the fields: a mixed axis's [`axis_code`] (its [`mixed::Coordinate`] and whether it is derived), an energy
-//! axis's [`Quantity`] index; a wrapped chart's params where the wrapper's field is. The link selection a chart is
-//! built for is never written: a saved chart carries no links (R-478); the links are `SimConfig`'s own group.
+//! code, ahead of the fields: a mixed axis's [`axis_code`] (its [`mixed::Coordinate`] and whether it is derived), an
+//! energy axis's [`Quantity`] index; a wrapped chart's params where the wrapper's field is. The link selection a chart
+//! is built for is never written: a saved chart carries no links (R-478); the links are `SimConfig`'s own group.
 
 use spirv_std::num_traits::Float;
 
@@ -704,7 +704,7 @@ impl Composed<f64> {
             saved: r,
             new: r_new,
             inputs: [[0.0; 4]; 2],
-            into: [[false; 2]; 2],
+            into: [[false, false], [false, false]],
             sources: [Source::SavedX, Source::SavedY],
             targets: [saved.x, saved.y],
             two: r.two,
