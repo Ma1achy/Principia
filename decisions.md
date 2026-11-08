@@ -1417,9 +1417,12 @@ not a requirement.
 
 ## R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*
 *Amended by R-186.*
+*Amended in part by R-862 (the owner's DX12 order of 4 Nov 2026, ported 8 Nov 2026: `PRIN_GPU_BACKEND=dx12` behind a
+cargo feature, off by default, in no required or hosted CI job, "local testing only, untested in CI").*
 *Still in force: TASK-M0-04's GPU jobs (Metal, and ubuntu with lavapipe), `PRIN_GPU_BACKEND=metal|vulkan`, and an
 install step for every toolchain in the task that first needs it; the Metal job runs on GitHub-hosted `macos-15`, not a
-self-hosted runner (R-186).*
+self-hosted runner (R-186). `dx12` is a third value only behind R-862's opt-in feature, and no CI job of this ruling's
+sets it (R-862).*
 *25 Sep 2026 · applied in step 8*
 
 TASK-M0-04 adds the GPU CI jobs: a macOS arm64 self-hosted job (Metal) and an ubuntu job with `mesa-vulkan-drivers`
@@ -1583,6 +1586,8 @@ can compile it.
 *Amended by R-375 and R-656.*
 *Amended in part by R-711 (5 Nov 2026: one measurement-only self-hosted runner, `malachys-pc-rtx2080s`, is approved; PC
 benchmarks are separate measurements, never compared against this ruling's Mac performance gates).*
+*Refined by R-859 (8 Nov 2026: this ruling stands, benchmarks of record staying on the owner's Mac; Windows benchmark
+numbers are a separate named series, never mixed with the Mac's).*
 *Still in force: all of it but the Linux runner's label and R-711's runner: CI's Linux jobs run on `ubuntu-24.04`, pinned, not
 `ubuntu-latest`, and moving to Ubuntu 26 is a deliberate later step (R-375); the Metal correctness suites on
 `macos-15`; benchmarks and performance gates on the human's Mac, never on hosted runners; no other self-hosted runner,
@@ -1889,6 +1894,11 @@ asking; it's an addition, not a choice."
 and its test.
 
 ## R-206 — An unset `PRIN_GPU_BACKEND` defaults by platform
+*Amended in part by R-862 (the owner's DX12 order of 4 Nov 2026, ported 8 Nov 2026: `PRIN_GPU_BACKEND=dx12` selects
+DX12 only in a build with its opt-in cargo feature, off by default).*
+*Still in force: all of it. An unset value still defaults to metal on macOS and vulkan elsewhere, never to DX12; an
+explicit value still overrides, an unknown value is still an error, CI still sets it explicitly, and the chosen backend
+is still logged. `dx12` is a known value only in a build with R-862's feature.*
 *27 Sep 2026*
 
 "When PRIN_GPU_BACKEND is unset, default by platform: metal on macOS, vulkan elsewhere. An explicit value still
@@ -29050,6 +29060,8 @@ label off; `reviews.yml` cancels its superseded runs per pull request and event)
 *Amended in part by R-692 (4 Nov 2026: five paths of `crates/gui/` are GPU paths once TASK-M6-53 merges).*
 *Amended in part by R-711 (5 Nov 2026: "no self-hosted runner" excepts `malachys-pc-rtx2080s`, one measurement-only
 runner, whose jobs have their own workflow file; `ci.yml`, its counts and gates are unchanged).*
+*Refined by R-859 (8 Nov 2026: from the anchor move R-711's runner runs its jobs as named measurements, never as
+required checks; moving required or heavy CI work to it is not approved).*
 *Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's and R-677's,
 how the merge-ready head's mutants run and `reviews.yml`'s concurrency, which are R-676's, and which heads' mutants run,
 which is R-677's, and which of `gui`'s paths are GPU paths, which is R-692's: the push trigger, the cancelled runs, the in-job skips under each required check's own name, mutants
@@ -31102,7 +31114,13 @@ Adds REQ-INT-113; changes REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, RE
 
 ## R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
 *Extended by R-856 (7 Nov 2026: a recorded run on the runner takes a clean target only where it is filed as evidence, item 4's parity run among them; other recorded runs keep the runner's target).*
-*Still in force: all of it.*
+*Refined by R-859 (8 Nov 2026: from the anchor move the runner may run, as named measurements, the GPU suites nightly
+and on pushes to `main` (Vulkan now, DX12 from Phase 2), gpu-idle, the weekly proof and the heavy-work comparison;
+Windows benchmark numbers are a separate named series; its security rules are unchanged).*
+*Still in force: all of it, items 1 to 6; R-856 says which recorded runs take a clean target; R-859 says what the
+runner may run from the anchor move, and that moving required or heavy CI work to it is not approved.*
+*Read with R-862 (8 Nov 2026: the owner's DX12 order of 4 Nov, whose "in no CI job" item 2 rewords, is now that
+ruling, the number "The DX12 order's wording" below could not yet give).*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
 `docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), REQ-SYS-065 and REQ-VAL-099 (reqio), TASK-M0-04, TASK-M8-41,
 `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md` and `plan/rule_groups.yaml`*
@@ -32294,6 +32312,8 @@ The owner's words (7 Nov 2026), verbatim:
 R-848 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-849 — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*
+*Read with R-863 (8 Nov 2026: the owner's build order puts the based morph and then this sliding anchor in stage 2,
+TASK-M8-117) and R-864 (8 Nov 2026: the chart-path work is one object, special cases named families of it).*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-733 moved), REQ-CHART-145 (reqio, new), TASK-M8-102, TASK-M8-117, `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 adds REQ-CHART-145*
 *Also applied 7 Nov 2026, from Codex's finding on PR #443: REQ-CHART-115 (reqio), the sliding anchor in place of `anchor not in B`, REQ-CHART-146 (reqio, new), "nearest" as a definition (R-72), and TASK-M8-117's acceptance.*
@@ -32322,6 +32342,9 @@ R-849 is in the "design" group of `plan/rule_groups.yaml`.
 ## R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*
 *Amended in part by R-849 (7 Nov 2026, the owner's later rider: under the lock the anchor slides, no labelled jump, the jump kept only for time-axis to IC-only charts).*
 *Still in force: all of it but the labelled jump under the lock.*
+*Read with R-864 (8 Nov 2026: the chart-path work is one object; today's operations re-expressed as named families of
+it, their old routes deleted; special cases named families, never if-branches) and R-863 (8 Nov 2026: the build order,
+the path object with today's operations bitwise through it first).*
 *7 Nov 2026 · the owner's answer to RQ-721 of that day and its amendment of the same day, held for this rulings PR; applied in `docs/archive/review_queue/M0.md` (RQ-721 moved), `docs/contracts/principia_export_animation_contract.md` Part 3, `docs/design/principia_sequence.md` § 3.4, `docs/design/principia_chart_composition.md` (status), TASK-M8-105, TASK-M4-37, the forward and "Still in force" lines of R-483, R-576 and R-577, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement here; TASK-M8-105 carries REQ-TOOL-075 and REQ-GUI-376*
 
@@ -32643,3 +32666,345 @@ as R-705 has it. Nothing built changes, so no task.
 *What it refines:* **R-459**, whose words on H and V in step with `q₁` and `q₂` the item read.
 
 R-858 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-859 — From the anchor move, the Windows runner may run, as named measurements and never as required checks: the GPU suites (Vulkan now, DX12 from Phase 2) nightly and on pushes to `main`, gpu-idle, the weekly proof and the 7 Nov heavy-work comparison; benchmarks of record stay on the Mac, Windows numbers a separate named series; moving required or heavy CI work to the PC is not approved and returns through `/rulings-report`; the runner's security rules are unchanged *(refines R-186, R-656 and R-711)*
+*Refined by R-860 (8 Nov 2026, RQ-742: the list is not exhaustive; the nightly `win-tests` job and the Windows arms of
+the path-cover and time-column benchmarks stay as named measurements, never required checks).*
+*Corrected in part by R-861 (8 Nov 2026, RQ-743: the 7 Nov order's "push trigger" was an error; the comparison starts
+by `workflow_dispatch` on the task branch, the runner's security rules unchanged).*
+*Still in force: all of it, the owner's words and the 7 Nov order quoted as given; the order's "via push trigger" reads
+as R-861 corrects it, and the list of what the runner may run is not exhaustive (R-860). Its "Held for the owner" items
+are answered by R-860 and R-861.*
+*8 Nov 2026 · the owner's ruling of that day, pasted as their own; applied in the forward lines of R-186, R-656 and
+R-711, `docs/contracts/principia_parity_contract.md` § 6, `REVIEW_QUEUE.md` (RQ-742 and RQ-743, new), `plan/OPERATIONS.md`
+§ "Metal and perf (Mac only)" and § "The Windows runner's work (R-859)" (new), `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md`,
+TASK-M0-55 and TASK-M0-56 (new), REQ-TOOL-224 and REQ-TOOL-225 (reqio, new) and `plan/rule_groups.yaml`; built by
+TASK-M0-55 and TASK-M0-56*
+
+The owner's words, 8 Nov 2026, verbatim:
+
+> Ruling on the Windows runner's work (answers R-186 and R-656), 8 Nov:
+> - The at-the-PC items (31 -Prove, the lock undo rehearsal, the GlobalProtect uninstall) don't
+>   block deployment.
+> - From the anchor move onwards, the Windows runner may run, as named measurements and never as
+>   required checks: the GPU suites (Vulkan now, DX12 from Phase 2), nightly and on pushes to main;
+>   gpu-idle and the weekly proof; and the heavy-work comparison I asked for on 7 Nov (GPU suites and
+>   one GPU-heavy mutant shard on a task branch, against hosted runners).
+> - R-186 stands: benchmarks of record stay on my Mac. Windows benchmark numbers are a separate named
+>   series, never mixed with the Mac's.
+> - Moving required or heavy CI work (mutants, GPU suites as gating checks) to the Windows runner is
+>   NOT approved yet: it comes back via /rulings-report with the comparison's numbers and the
+>   fallback design (hosted runners take over if the PC hasn't answered in time).
+> - All runner security rules stand unchanged.
+
+The order it names, the owner's of 7 Nov 2026, verbatim, recorded here because the comparison is defined by it:
+
+> Measure (two-way, criterion written first): is the Windows runner faster for the heavy work?
+> After the anchor move, on one real task branch, run on the PC via push trigger: (1) the GPU test
+> suites, including codegen_selftest_pack_unpack_kernel_gpu, and (2) one mutant shard that includes
+> GPU-suite files (projection_parity.rs or drift.rs). Compare against the same work on hosted
+> runners: wall time, and identical results (same test outcomes; same caught/missed/unviable mutant
+> sets, mutant for mutant).
+> If it's clearly faster with identical results, bring a design to /rulings-report (it changes the
+> gate and the runner's role, so it's one-way): the PC runs the heavy jobs first on pushed task
+> branches; the required check accepts the PC's result if present within a time limit, otherwise the
+> hosted runners run as now, so the PC is never a single point of failure. Keep all runner security
+> rules: push/schedule/dispatch only, signed-commit gate, never pull_request triggers.
+
+*Correction, 8 Nov 2026 (R-861):* the owner's answer to RQ-743 says their "push trigger" wording above was an error:
+the comparison starts by `workflow_dispatch` on the task branch, and the runner's security rules are unchanged. The
+order is quoted as they gave it.
+
+*What it decides:*
+
+- **Deployment.** The three items that need someone at the PC (the `31 -Prove` run, the lock undo rehearsal and the
+  GlobalProtect uninstall) don't block the runner's deployment.
+- **What the runner may run, from the anchor move** (the owner's move of the PC hook's signing-gate anchor; until it,
+  the hook refuses `main`'s merges, which hold R-711 item 6's unsigned pre-signing commits): each as a named
+  measurement, never a required check (R-649, R-711 item 1):
+  - the GPU suites, nightly and on pushes to `main`: Vulkan now, DX12 from Phase 2, the DX12 run on this card once its
+    opt-in lands (R-711 item 2, R-719);
+  - gpu-idle, the read-only GPU sample taken while nobody is signed in to the PC;
+  - the weekly proof of the sandbox, `runner-proof.yml`;
+  - the heavy-work comparison of the 7 Nov order: the GPU suites and one GPU-heavy mutant shard on a task branch, on
+    the PC and on hosted runners.
+- **Benchmarks.** R-186 stands: benchmarks of record stay on the owner's Mac. Windows benchmark numbers are a separate
+  named series, never mixed with the Mac's (refining R-711 item 3's "labelled by machine").
+- **Required or heavy work stays where it is.** Moving required or heavy CI work, mutants and the GPU suites as gating
+  checks, to the Windows runner is not approved. It comes back as a one-way question through `/rulings-report`, with the
+  comparison's numbers and the fallback design: hosted runners take over if the PC hasn't answered in time.
+- **Security.** Every runner security rule stands unchanged: R-174 as R-711 woke it, R-711 items 1, 5 and 6, and the
+  owner's job rules of 5 Nov 2026 (the triggers, the repository and actor guard, no credential, pinned actions, the
+  job-started hook and the self-check first in every job, no fork run approved).
+
+*Applied per R-369:*
+
+- **Two tasks.** TASK-M0-55 builds the named measurements on `main` and TASK-M0-56 the heavy-work comparison, both in
+  M0 beside the CI tasks (TASK-M0-54 the last), each closing a new requirement, REQ-TOOL-224 and REQ-TOOL-225. Both
+  start after the anchor move. The Vulkan suites, the nightly self-check and the weekly proof are already on `main`
+  (`win-gpu.yml`, `runner-proof.yml`); gpu-idle so far runs only from a test branch, which goes after the anchor work.
+- **DX12's job** isn't in TASK-M0-55: "from Phase 2" places it after the DX12 opt-in, which isn't built. It joins the
+  measurement workflow in the task that follows that opt-in.
+- **The comparison's criterion,** "clearly faster", is written and committed in TASK-M0-56's pull request before its
+  first run, and not adjusted after (R-649, R-812). The result and the fallback design go to the next
+  `/rulings-report`.
+
+*Held for the owner:*
+
+- **RQ-742.** Whether the list of what the runner may run leaves out what it doesn't name: `win-gpu.yml`'s nightly
+  Windows build and tests (`win-tests`), and the Windows bench arms of TASK-M8-107 and TASK-M8-114.
+- **RQ-743.** The 7 Nov order's "run on the PC via push trigger" on a task branch, against R-711 item 1's push to
+  `main` alone, which "All runner security rules stand unchanged" keeps.
+
+*What it refines:* **R-186** (the Windows series beside the Mac's benchmarks of record), **R-656** (what the one
+self-hosted runner R-711 excepts may run) and **R-711** (its jobs, from the anchor move). It closes no queue entry: no
+open entry carried the question it answers.
+
+R-859 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes no existing requirement; adds REQ-TOOL-224 and REQ-TOOL-225.
+
+## R-860 — R-859's list of what the Windows runner may run is not exhaustive: the nightly `win-tests` job and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, never required checks *(closes RQ-742; refines R-859)*
+*8 Nov 2026 · the owner's answers of that day, pasted as their own; applied in R-859's forward lines,
+`docs/archive/review_queue/M0.md` (RQ-742 moved), `REVIEW_QUEUE.md`, `plan/OPERATIONS.md` § "The Windows runner's work
+(R-859)", TASK-M0-55, TASK-M8-107 and TASK-M8-114, REQ-TOOL-224, REQ-PERF-117 and REQ-PERF-118 (reqio) and
+`plan/rule_groups.yaml`; built by TASK-M0-55*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-742: the R-859 list is not exhaustive. Keep the existing nightly Windows test job and the
+> Windows halves of the path-cover and time-column benchmarks as named measurements, never required
+> checks.
+
+*What it decides:* RQ-742's option (b). R-859's list names what the runner may newly run from the anchor move; it is
+not the whole of what may run there. Two things it doesn't name stay, each a named measurement and never a required
+check (R-649, R-711 item 1):
+
+- **`win-tests`,** `win-gpu.yml`'s nightly Windows build and tests, "the existing nightly Windows test job". It stays in
+  `win-gpu.yml`.
+- **The Windows arms of the path-cover and time-column benchmarks,** TASK-M8-107's and TASK-M8-114's (REQ-PERF-117,
+  REQ-PERF-118): each is the separate named Windows series of R-859's benchmark line, never mixed with the Mac's and
+  closing nothing; R-186's benchmarks of record stay on the owner's Mac.
+
+*Applied per R-369:* `win-self-check`, the nightly self-check, stays as the security rules' daily re-proof, as RQ-742
+read it; the owner's answer left that reading standing. TASK-M0-55's guard test names `win-tests` in the runner's ruled
+list of jobs beside the GPU suites, gpu-idle and the weekly proof (REQ-TOOL-224). A bench arm that runs as a runner job,
+not by hand, joins the guard test's list by name in its own task's pull request.
+
+*What it refines:* **R-859**, its list of what the runner may run. It closes **RQ-742**.
+
+R-860 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-224 (statement, source, rulings, rq, note), REQ-PERF-117 and REQ-PERF-118 (rulings).
+
+## R-861 — The heavy-work comparison starts by `workflow_dispatch` on its task branch; the runner's security rules are unchanged; the 7 Nov order's "push trigger" was an error *(closes RQ-743; corrects R-859)*
+*8 Nov 2026 · the owner's answers of that day, pasted as their own; applied in R-859's forward line and its dated
+correction under the 7 Nov order, `docs/archive/review_queue/M0.md` (RQ-743 moved), `REVIEW_QUEUE.md`,
+`plan/OPERATIONS.md` § "The Windows runner's work (R-859)", TASK-M0-56, REQ-TOOL-225 (reqio) and
+`plan/rule_groups.yaml`; built by TASK-M0-56*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-743: start the comparison by workflow_dispatch on the task branch. Runner security rules
+> unchanged; my "push trigger" wording was an error.
+
+*What it decides:* RQ-743's option (a). The comparison on the PC starts by `workflow_dispatch` on its task branch. The
+runner's security rules are unchanged: R-711 item 1's push trigger on `main` alone, schedule and `workflow_dispatch`,
+and the owner's job rules of 5 Nov 2026, "Branch runs only via workflow_dispatch"; the guard test,
+`xtask/tests/ci_self_hosted.rs`, needs no exception. The 7 Nov order's "run on the PC via push trigger", quoted in
+R-859, was an error of wording; the quote stays as the owner gave it, with a dated correction under it.
+
+*Applied per R-369:* TASK-M0-56 builds it: the run dispatched from the Mac, and the hosted side at the same commit
+(REQ-TOOL-225).
+
+*What it corrects:* **R-859**, the 7 Nov order it quotes, in its trigger only. It closes **RQ-743**.
+
+R-861 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-225 (source, rulings, rq, note).
+
+## R-862 — DX12 is an opt-in, off by default: a cargo feature and `PRIN_GPU_BACKEND=dx12`, documented "local testing only, untested in CI", in no required or hosted CI job; native DX12 previews web-v1's behaviour on Windows, where Chrome runs WebGPU on D3D12 *(amends R-169 and R-206)*
+*Amended in part by R-711 (5 Nov 2026, item 2: the order's "in no CI job" reads "in no required or hosted CI job";
+once the opt-in lands, DX12 may run on R-711's runner as a measurement job).*
+*Still in force: all of it, the order's "in no CI job" read as R-711 item 2 gives it.*
+*8 Nov 2026 · the owner's order of 4 Nov 2026, ported at their word of 8 Nov; applied in the forward lines of R-169 and
+R-206, R-711's "Read with" line, `docs/contracts/principia_parity_contract.md` § 6, `plan/OPERATIONS.md` § "The Windows
+runner's work (R-859)", TASK-M0-57 and TASK-M0-58 (new), REQ-SYS-097 and REQ-TOOL-226 (reqio, new) and
+`plan/rule_groups.yaml`; built by TASK-M0-57 and TASK-M0-58*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> DX12: port my 4 Nov DX12 order verbatim as a ruling (it should be in your saved orders); include it
+> in #445 or the next rulings PR, whichever comes first, so Phase 2 can run under R-859.
+
+The order, the owner's of 4 Nov 2026, verbatim:
+
+> DX12: approved as a small, opt-in change: behind a cargo feature and PRIN_GPU_BACKEND=dx12, off by default, in no CI job, documented as "local testing only, untested in CI". Rationale to record in the R-169/R-206 amendment: Chrome on Windows runs WebGPU on D3D12, so native DX12 runs preview web-v1 behaviour on Windows. It waits behind the queued PRs as you planned. Vulkan Phase 1 on #390 proceeds now.
+
+*What it decides:*
+
+- **The opt-in.** DX12 is a backend behind a cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default. A default build
+  has no DX12, an unset `PRIN_GPU_BACKEND` never selects it (R-206's platform default stands), and it is documented as
+  "local testing only, untested in CI". "A small, opt-in change": no default, physics, tolerance or required check
+  changes.
+- **The rationale, as the owner gave it:** "Chrome on Windows runs WebGPU on D3D12, so native DX12 runs preview web-v1
+  behaviour on Windows."
+- **CI.** "In no CI job" reads, since R-711 item 2 (5 Nov 2026), "in no required or hosted CI job": "once its opt-in
+  lands, DX12 may run on this runner as a measurement job. It stays out of every required or hosted CI job". R-859 (8 Nov
+  2026) gives that job its place: "the Windows runner may run, as named measurements and never as required checks: the
+  GPU suites (Vulkan now, DX12 from Phase 2), nightly and on pushes to main". The two sit together: no required or
+  hosted job builds the feature or sets `dx12`, and from Phase 2 the runner's DX12 run is a named measurement, which
+  gates nothing and is not CI's test of DX12, so the documented "untested in CI" holds as the owner worded it. The
+  owner's word of 8 Nov ports the order "so Phase 2 can run under R-859".
+- **Phase 2** is that DX12 run on the runner, after the opt-in lands; "Vulkan Phase 1 on #390" was the runner's first
+  phase, and "It waits behind the queued PRs as you planned" was the order of work on 4 Nov. Both are history here.
+
+*Applied per R-369:*
+
+- **Two tasks, in M0** beside TASK-M0-04, whose harness reads `PRIN_GPU_BACKEND`: TASK-M0-57 builds the opt-in (REQ-SYS-097),
+  and TASK-M0-58 adds the DX12 run to the runner's named measurements (REQ-TOOL-226), after TASK-M0-55 and TASK-M0-57.
+  R-859 put DX12's job "in the task that follows that opt-in"; TASK-M0-58 is that task.
+- **The feature is named `dx12`.** In a build without it, `PRIN_GPU_BACKEND=dx12` is refused as an error naming the
+  variable and the feature, as today's tests of an unknown value expect, never quietly another backend: R-206 has every
+  run say what it ran on.
+
+*What it amends:* **R-169** (a third value of `PRIN_GPU_BACKEND`, behind the feature, set by no CI job of R-169's) and
+**R-206** (`dx12` a known value only with the feature; the default by platform unchanged). It closes no queue entry.
+
+R-862 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-SYS-097 and REQ-TOOL-226; changes no existing requirement.
+
+## R-863 — When the chart-composition design's tasks are released, they are built in five stages, each merging only with the previous stage's tests green: the path object with today's operations bitwise through it; locked paths; the primitive registry and composed axes; morph families, easing and Sequence segments; time-axis charts and the symmetry filter *(the build order of PR #422's tasks; refines no ruling)*
+*8 Nov 2026 · the owner's order of that day, pasted as their own; applied in `docs/design/principia_chart_composition.md`
+§ 15 and § 17, `REVIEW_QUEUE.md` (RQ-744, new), `plan/tasks.yaml` and the files of TASK-M4-32 to TASK-M4-34,
+TASK-M4-37, TASK-M7-72, TASK-M8-100 to TASK-M8-120 and TASK-M8-124 (new), REQ-CHART-147 (reqio, new) and
+`plan/rule_groups.yaml`; built by TASK-M8-124 and the stages' tasks*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> When #422's tasks are released, build in this order: (1) the path object and the bitwise tests
+> that today's pan, zoom, tilt, slice, lock and Save-view-as-chart reproduce exactly through it,
+> before any new capability; (2) locked paths (based morph, then the sliding anchor) with the test
+> that the centre IC is constant; (3) the primitive registry and composed axes, each primitive with
+> its round-trip test; (4) morph families, easing and Sequence segments; (5) time-axis charts and
+> the symmetry filter. Each stage merges only with the previous stage's tests green.
+
+*What it decides:* the order in which the design's tasks are built once TASK-M4-37, the gate holding them until the
+owner has ruled the design, releases them: the five stages below, in that order, each stage merging only with the
+previous stage's tests green.
+
+1. **The path object and the bitwise tests**, before any new capability: today's pan, zoom, tilt, slice, lock and
+   Save view as chart reproduce exactly through the one object.
+2. **Locked paths**, the based morph and then the sliding anchor, with the test that the centre's IC is constant.
+3. **The primitive registry and composed axes**, each primitive with its round-trip test.
+4. **Morph families, easing and Sequence segments.**
+5. **Time-axis charts and the symmetry filter.**
+
+*Item 2 read with R-849 (applied per R-369):* the test that the centre's IC is constant applies where the anchor stays
+in B; on a sliding path the centre follows the anchor (R-849), and the test checks R-849's slide instead.
+
+*Applied per R-369:*
+
+- **The tasks in each stage.** The owner named stages, not tasks; the placements are ours. Stage 1: no task built
+  exactly that, so **TASK-M8-124** is added (REQ-CHART-147), its design governed by R-864. Stage 2: TASK-M8-117
+  (`path_lock_centre`), the based morph with the stored anchor and then the sliding anchor, which R-849 (the owner's
+  RQ-721 rider, 7 Nov 2026) gives it in place of design § 17.8's `anchor not in B`, with the definition of B's nearest
+  point (REQ-CHART-146); its test that the centre's IC is constant applies where the anchor stays in B, and on a sliding
+  path it checks R-849's slide instead: the stored words at `s = 0`, B's nearest point at `s = 1`, continuous between,
+  with no label and no jump. RQ-744 (D), filed while R-849 was not yet on `main`, is moot. Stage 3: TASK-M4-33,
+  TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119. Stage 4: TASK-M8-108.
+  Stage 5: TASK-M8-113 to TASK-M8-116 and TASK-M8-120.
+- **The mechanism.** The owner's words gate merging; Depends on edges put them into effect. Each stage's tasks depend
+  on the previous stage's, so they start once those have merged, or early off an approved head as R-388 allows any
+  task, and none merges before the stage ahead of it.
+- **The edges.** TASK-M8-117 depends on TASK-M8-124; TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and
+  TASK-M8-119 on TASK-M8-117; TASK-M8-108 on every stage-3 task; and each stage-5 task on TASK-M8-108. Each task file
+  names its stage in its Notes.
+- **TASK-M8-124 in M8,** beside the chart-path tasks (TASK-M8-105 to TASK-M8-108 and TASK-M8-117), behind TASK-M4-37
+  like every task of the design, closing a new requirement, REQ-CHART-147, through `reqio.py apply`.
+
+*Held for the owner,* **RQ-744:** what the order leaves to a choice. Eight tasks fit none of the five stages
+(TASK-M4-32, TASK-M7-72, TASK-M8-102 to TASK-M8-105, TASK-M8-112 and TASK-M8-118); TASK-M8-107 (the live blend) fits
+none by name; TASK-M8-106 straddles stages 1, 2 and 4; and three stage-3 tasks (TASK-M4-33, TASK-M4-34 and TASK-M8-100)
+can't take the edge to stage 2: the two in M4 would depend forward across milestones, and all three are already upstream
+of TASK-M8-117 through TASK-M8-106 and TASK-M8-102, so the edge would close a cycle. None of those is given an edge
+here. TASK-M8-122 and TASK-M8-123, R-847's fixed-`k` and scattering charts, also wait behind TASK-M4-37 but are not PR
+#422's tasks, so the order doesn't name them and they get no edge either (RQ-744 (C)). Stage 2's sliding anchor is
+TASK-M8-117's by R-849 (RQ-744 (D), moot), and Save view as chart's tasks, TASK-M6-49, TASK-M6-51 and TASK-M8-48,
+unmerged, have no edge to TASK-M8-124 either way (RQ-744 (E)).
+
+*What it refines:* no ruling. The design it orders is Proposed (`principia_chart_composition.md`'s status), and its
+§ 15 placed the tasks by what depends on them; the order is the owner's, and § 15 now points to it. Read with R-864.
+
+R-863 is in the "process" group of `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-147; changes no existing requirement.
+
+## R-864 — The chart-path work is one object: core types designed first as one module, a type sketch with a one-page rationale reviewed by physics and code and brought to the owner before any implementation; today's operations re-expressed as named families of it and their old routes deleted; bitwise reproduction first; special cases are named families, never if-branches; the kernel/engine split stays; restructuring `engine/nav`, `engine/lock.rs` and `engine/chart_authoring` is approved *(the architecture of PR #422's chart-path work; refines no ruling on `main`)*
+*8 Nov 2026 · the owner's rule of that day, pasted as their own; applied in `docs/design/principia_chart_composition.md`
+§ 17 and its status block, the "Read with" lines of R-849 and R-850, TASK-M8-124 (new), REQ-CHART-147 (reqio, new)
+and `plan/rule_groups.yaml`; built by TASK-M8-124 and the tasks after it*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> Architecture rule for the chart-path work (owner, 8 Nov): one clean generalisation, no patches.
+> 1. One object. A view is a point in chart space; every edit is a path through it. Design the core
+>    types first (Chart, Path and its families, Lock/anchor, Axis/primitive, PairMap, Hold) as one
+>    coherent module, and bring me a type sketch with a one-page rationale before any implementation.
+>    Physics and code review it against the chart-space model.
+> 2. Re-express, don't wrap. Today's pan, zoom, tilt, slice, lock, chart switch and
+>    Save-view-as-chart become constructors of that one object (a path of a named family), not
+>    functions sitting beside it. No parallel code paths: once an operation runs through the general
+>    object, its old route is deleted, not kept as a fallback.
+> 3. Bitwise first. The re-expression lands before any new capability, proven by bitwise
+>    reproduction of every existing operation, preset and saved chart. New capabilities (morph
+>    families, composed axes, time charts, the symmetry filter) are then additions to the object,
+>    never new special cases outside it.
+> 4. Special cases are named families, never if-branches. If something seems to need one, it's
+>    either a family of the general object or a gap in the design; bring it back rather than patch
+>    around it.
+> 5. The kernel/engine split stays: chart maps and decode in kernel (shared CPU/GPU), the
+>    path/lock/authoring object in engine.
+> Restructuring engine/nav, engine/lock.rs and engine/chart_authoring to fit this is approved.
+
+*What it decides:*
+
+1. **One object.** A view is a point in chart space, and every edit is a path through it. The core types, Chart, Path
+   and its families, Lock and its anchor, Axis and primitive, PairMap and Hold, are designed first, as one coherent
+   module. **A gate:** before any implementation, a type sketch with a one-page rationale, reviewed by physics and code
+   against the chart-space model (`docs/design/principia_chart_space_model.md`), goes to the owner. TASK-M8-124's
+   implementation waits on the owner's answer to it.
+2. **Re-express, don't wrap.** Pan, zoom, tilt, slice, lock, chart switch and Save view as chart become constructors of
+   that one object, each a path of a named family, not functions beside it. Once an operation runs through the object,
+   its old route is deleted, not kept as a fallback: no parallel code paths.
+3. **Bitwise first.** The re-expression lands before any new capability, proven by bitwise reproduction of every
+   existing operation, preset and saved chart (R-863's stage 1). Morph families, composed axes, time charts and the
+   symmetry filter are then additions to the object, never special cases outside it.
+4. **Special cases are named families, never if-branches.** What seems to need one is a family of the object or a gap
+   in the design, brought back to the owner, not patched around.
+5. **The kernel/engine split stays** (R-185's crate map): chart maps and decode in `kernel`, shared by CPU and GPU; the
+   path, lock and authoring object in `engine`.
+
+Restructuring `engine/nav`, `engine/lock.rs` and `engine/chart_authoring` to fit it is approved.
+
+*Where it meets the design:* `principia_chart_composition.md` § 17.3 has the path type's tilt and zoom arms "call the
+existing code". Under item 2 that code becomes the family's own, and its old route goes once the operation runs through
+the object; the bitwise tests of § 17.3 stand, as item 3's proof. § 17 now points here.
+
+*Applied per R-369:* the gate is recorded in TASK-M8-124: the sketch is its first deliverable, reviewed on its pull
+request by the physics and code reviewers, and taken to the owner through `/rulings-report`; no implementation commit
+lands before the owner's answer.
+
+*Read with:* R-850 (RQ-721, the owner's answer of 7 Nov 2026 on chart paths: "Where a path is a special case, it is
+evaluated by that operation's existing code as an exact specialisation") and R-849 (RQ-721's rider: the sliding anchor
+R-863's stage 2 names), both merged by PR #443; each now carries a "Read with R-864" line, added by this ruling's own
+pull request. R-850's "existing code" meets item 2's "Re-express, don't wrap" as § 17.3's arms do above: that code
+becomes its family's own, and its old route goes; R-850's two tests per operation stand, item 3's bitwise proof among
+them.
+
+*What it refines:* no ruling. R-185's crate map stands, as item 5 says.
+
+R-864 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-147 (with R-863); changes no existing requirement.

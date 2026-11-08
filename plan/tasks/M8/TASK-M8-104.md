@@ -22,5 +22,6 @@ One swept axis and one annotation axis, as the Euclid plane has it, offered as a
 - `cargo xtask screenshot 03_chartbuilder` and `cargo test -p engine one_d_chart` — 1 + 7; a density claim refused; control: the annotation coordinate read (REQ-GUI-420).
 
 ## Notes
+- **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - R-669 stands: this does not build a binary-plus-single chart, and TR-1 stays "not scored: no chart".
 - Waits on the owner's ruling of the design doc as a whole, no single item mapping here (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

@@ -29,5 +29,6 @@ Power and log as options per axis, polar and log-polar on any pair, each declare
 - `cargo test -p engine ftle_chart_independent` — one bit pattern from a linear chart, a warped one and a third with a different tangent gives one `λ_T`, read on copy 0; control: `δ₀`'s direction from a chart tangent, caught by the third (REQ-CHART-132).
 
 ## Notes
+- **Build order (R-863):** stage 3, the primitive registry and composed axes, each primitive with its round-trip test. Its edge to stage 2 (TASK-M8-117) isn't made: TASK-M8-117 already waits on it through TASK-M8-106 and TASK-M8-102, so the edge would close a cycle. RQ-744 (A) holds the choice.
 - Reviewed under RQ-720's reading of R-594 item 5.
 - Waits on its rulings item: RQ-720. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

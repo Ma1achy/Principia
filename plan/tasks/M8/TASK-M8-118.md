@@ -33,6 +33,7 @@ The new constraint, the twin of `η_E`: a uniform, off by default and bitwise to
 - `cargo xtask bench hold-rigid-tau` — under RQ-715's option (i), against a criterion written before measuring (R-649), the proposal shows τ at masses log-uniform to 10⁻³, on the two GPU backends, and the kernel routine's cost. The Metal leg and the cost run on the human's Mac and wait for that run (R-186); the lavapipe leg is a tag measurement, no timing, and runs as `hold_rigid_tau_tags` in that same step of CI's `gpu-lavapipe suites` job (`PRIN_GPU_BACKEND=vulkan`, R-169), where the plan sets lavapipe up. A reviewer checks it, the human confirms it at the M8 gate (REQ-CHART-126). Under option (ii), REQ-CHART-126 retires.
 
 ## Notes
+- **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - RQ-722 is for the rest charts. RQ-715 closes only the held-L_z half of RQ-701.
 - Free charts take no tilt target on L*; a chart holding L_z by construction moves by value (R-720).
 - Waits on its rulings item: RQ-715, RQ-722. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

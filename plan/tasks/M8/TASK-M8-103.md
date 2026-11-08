@@ -23,5 +23,6 @@
 - `cargo xtask screenshot 03_chartbuilder` and `cargo test -p gui composition_panels` — a refused pair shows its reason, a labelled pair runs, a saved composed chart reopens bitwise; control: a refused pair offered as Apply (REQ-GUI-419).
 
 ## Notes
+- **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - What to try: on `cargo run -p gui --features mock`, build a pair the table refuses, and read the Domain preview.
 - Waits on the owner's ruling of the design doc as a whole, no single item mapping here (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

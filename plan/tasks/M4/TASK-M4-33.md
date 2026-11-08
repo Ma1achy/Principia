@@ -38,5 +38,6 @@ The authoring layer gains the registry, every pair is validated against one refu
 - `cargo test -p engine baked_cap` — at or under the ledger's cap; control: one over (REQ-PERF-116).
 
 ## Notes
+- **Build order (R-863):** stage 3, the primitive registry and composed axes, each primitive with its round-trip test. Its edge to stage 2 (TASK-M8-117) isn't made: it is in M4 and TASK-M8-117 in M8, so the edge would depend forward across milestones, and TASK-M8-117 already waits on it through TASK-M8-106 and TASK-M8-102, so the edge would close a cycle. RQ-744 (A) holds the choice.
 - The cap's value is RQ-716's ruling. Nothing here changes a kernel bit.
 - Waits on its rulings item: RQ-716, RQ-722. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
