@@ -31,7 +31,7 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 
 ## Part 2 — The decoder
 
-*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, closing RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged). This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
 
 **Latent controls** `z ∈ ℝ⁸`. These are *controls*, not physical quantities — each is pushed through a smooth decoder (sigmoid / softmax / warp) to reach a physical value. Chart coordinates `(s,t) ∈ [0,1]²` map in via a chart map; the validated region is the unit hypercube `[0,1]⁸`. (Past `[0,1]²`, where the figure fills the window, an extended pixel's `z` may leave `[0,1]⁸`: the hypercube bound is the encode path's check, inverse_encode layer 1 on lookup and lock, and an extended pixel is checked by layers 2 and 3 only, Part 3, R-407.) **No latent coordinate is spent on a gauge direction** (this is why the old z₂, z₃ Cartesian-Jacobi directions were dropped in the 10D→8D cleanup).
 
@@ -476,9 +476,17 @@ tangent-vector targets.
 
 Every chart has a centre; point-dependent directions are always evaluated there. **The lock is simply the gesture that sets the centre to a chosen IC and pins it.** It is CPU-side chart construction, held in `SimConfig` (R-69) — nothing about the chart maths changes.
 
-**Setting the lock.** Select the pixel at $(s,t)$ and snap the centre to its IC. For an affine chart,
+**Setting the lock.** Select the pixel at $(s,t)$ and pin its IC there, **without moving the view** (R-866, the owner's
+reply of 8 Nov 2026: "locking must not move the view"): no edit of `z₀`, the basis or a nonlinear chart's window. The pin
+is the clicked pixel; its initial in-plane excursion is that pixel's offset from the view's centre, and tilt and zoom
+turn about it, so the pinned pixel stays fixed on screen. For an affine chart,
 $\mathbf z_{\mathrm{locked}} = \mathbf z_0 + (2s-1)\mathbf q_1 + (2t-1)\mathbf q_2$: CPU arithmetic, with no GPU readback.
-For a nonlinear chart, replay $\Phi$ and $D$ on the CPU, or read the GPU buffer back.
+For a nonlinear chart, replay $\Phi$ and $D$ on the CPU, or read the GPU buffer back. **Centre on pin** is an optional
+action, a navigation edit that brings the pin to the centre, and a setting, off by default, applies it at every lock in
+the same command (render_gui_spec §G4). Where this part reads the anchor as the centre pixel (the anchor-preserving
+class below, "keeps the anchor at centre", and the nonlinear chart's re-centred window), the anchor is at the pin;
+TASK-M8-125 builds it, exactly on nonlinear charts or stating why not (R-866; REQ-GUI-425). Until it lands the code
+re-centres as below. *Was (before R-866):* "Select the pixel at $(s,t)$ and snap the centre to its IC."
 
 The centre pixel has one special property: `z(½,½) = z₀` **regardless of the basis**. That property sorts the operations into two classes:
 
@@ -511,7 +519,10 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   the ladder clamps none of the controls the chart's axes set, `z_locked` decodes the clicked state within lookup's
   `ε_phys`; where it clamps one, `z_locked` holds the clamp's image and the lock carries `lookup_clamped`, its free
   decode as far from the clicked state as the clamp moved it, and the rebuilt chart's centre pixel still decodes the
-  clicked state bit for bit. The edits are the `SetField` on `z₀ = z_locked` and the lock group's:
+  clicked state bit for bit. *(R-866, 8 Nov 2026: locking must not move the view, so this re-centring of the window is
+  replaced; how the pin is held on a nonlinear chart without it, exactly or with the reason it can't be, is TASK-M8-125's
+  definition (R-72; REQ-GUI-425), written here. This bullet stands as the built behaviour until then.)* The edits are the
+  `SetField` on `z₀ = z_locked` and the lock group's:
   one command, sent in one frame under one history key, so the history keeps one entry and one undo restores both
   (gui_state_contract §2, "A command of several edits is one history entry"; R-466); a re-centre's edits likewise. The
   window is chart construction, held in `SimConfig` (R-69) among "chart id and params"; `SimConfig`'s chart group has no
@@ -552,7 +563,7 @@ The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in fre
 
 ## Part 5 — Well-posedness and the validation contract
 
-*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, closing RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged). This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
 
 A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**: no block over- or under-determined. The usual case is 2 swept + 6 frozen. The exception is **annotation axes** (below): a chart may sweep only 1 physical DOF and render it across a 2D canvas, giving 1 swept + 7 frozen, provided the other axis is declared annotation-only.
 

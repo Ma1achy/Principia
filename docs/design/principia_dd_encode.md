@@ -125,7 +125,7 @@ lies on the leg-swapped half (`ν < √2 − 1`).
 
 ### 3.2 Canonicalisation `C` — the exact ordered procedure
 
-*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, closing RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged). This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
 
 Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is load-bearing.
 

@@ -93,7 +93,7 @@ p2 =  p_λ
 
 ### 0.4 Canonicalisation `C`
 
-*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, closing RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged). This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
 
 With the canonical-frame decode both steps are no-ops away from the seam. Implement anyway, for
 charts that bypass it:
@@ -486,7 +486,7 @@ all three exactly.
 
 ## 3. Shape-sphere chart `(θ, φ)`
 
-*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, closing RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged). This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
 
 The quotient of configuration space by translation, rotation and scale. `Φ_S²(u,v) = (n(θ,φ),
 m_fixed, p_fixed)` — masses and momenta held, only the **shape** varies.

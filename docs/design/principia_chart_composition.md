@@ -30,6 +30,14 @@ with the previous stage's tests green, and adds TASK-M8-124, the path object wit
 (§ 15). R-864 is the architecture rule for the chart-path work of § 17: one object, today's operations re-expressed as its
 named families, bitwise first, and a type sketch brought to the owner before any implementation.
 
+**The owner's replies of 8 Nov 2026 to the code map, and their points of interest.** R-865 closes RQ-739: the decoder's
+mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check, built by TASK-M2-57
+(§ 6.6). R-866: locking doesn't move the view, the pin at the clicked pixel and tilt and zoom turning about it, built by
+TASK-M8-125 in stage 1 (§ 15, § 17.8). R-867: the lock's anchor is stored as the signed starting state, not a latent
+point, TASK-M8-117's (§ 17.8). R-868: the model's wording follows R-474, and the owner's corrected model replaces the
+repo's; RQ-738 stays open on the rest of its list. R-869: the owner's direction on RQ-745, which stays open. R-870: points
+of interest, § 10.5, built by TASK-M8-126.
+
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
 refusals are genuine contradictions, each with a named reason. Reduced capability is a label, not a refusal.
@@ -173,7 +181,7 @@ In the formulas `r_ij = ‖r_i − r_j‖`, `γ_k` is the interior angle at body
 | pair binding energies | `½μv² − m_i m_j/r_ij` | **none** | — | — | no | gauge |
 | `I`, `R`, `ℓ` | §0.5 | refused: **size-only** | — | — | no | size-only |
 
-*[mirror-step proposal: § 6.6]* **Combinations.** A combination is an expression over primitives, in the stain's expression syntax, the subset §4.1 of
+*[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]* **Combinations.** A combination is an expression over primitives, in the stain's expression syntax, the subset §4.1 of
 `principia_lines.md` needs (R-509). Its forward is the expression. Its inverse class is not read from its parts: `exp(K) + K`
 has closed parts and no closed inverse, and `K + L_z` doesn't say which part moves. It is `closed` only with a registered
 closed inverse, `numerical` only with a registered numerical one, naming what it solves for and its branch rule (§ 7.3), and
@@ -691,7 +699,7 @@ of rank 2 (§ 12).
 | `branch: <rule>`, `seam` | § 7.3 |
 | `axis reads before the hold` | § 5.4, a hidden `p_fixed` or `p_λ` tilt target included |
 | `reduced domain` | a paper's domain of starts shown as a labelled view: the mirror for `η ≥ 0`, the body swap at equal masses for `ξ ≥ 0`. On the third-body pair it's the symmetry filter's output and the full disc is its one click off (§ 10.4; RQ-736). The angle pair's axes can't carry the sign, so it keeps the label with no filter (§ 8.8) |
-| `one orientation` | an inverse reaching one orientation by its own coordinates, as `\|n_w\|`'s aliases do. Every shape-sphere chart shows the full `θ` and `φ` range (R-544, § 6.6). *[mirror-step proposal: § 6.6]* |
+| `one orientation` | an inverse reaching one orientation by its own coordinates, as `\|n_w\|`'s aliases do. Every shape-sphere chart shows the full `θ` and `φ` range (R-544, § 6.6). *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]* |
 | `mirror pairs shown once: η ≥ 0` | the filter's statement, one per declared symmetry (§ 10.4) |
 | `paper scale differs` | a `gauge` axis at `I = 1` (§ 8.6), a held `L*` or `E*` on region D (§ 5.3), or a chart read against a paper that normalises `E`, so `ℓ` moves across it (§ 3.2's Orlov row) |
 | `Q above the floor` | a warped virial axis at a held `L_z ≠ 0`: it reads the excess above the rotational floor, the state's own `Q` in the readout (§ 9) |
@@ -764,7 +772,7 @@ What follows from that:
 
 The model's § 0.6 says the same. What this design's own sections owe: § 8's region D and § 20's presets render the full range and take the paper's domain from the filter (§ 10.4); § 10.3's start stays signed; `trajectory_polar_unfolded` and `path_lower_half_stays` test it. The state map and latent-chart traces are ruled to sign too (RQ-736), and those changes are the rulings PR's, in their own documents.
 
-**The owner's proposal, not applied:** removing the decoder's mirror step, with latent `β` over the full circle. "Mirror-step removal stays a proposal until ruled: don't apply it, just tag the sections it would touch." Each section it would touch here carries *[mirror-step proposal: § 6.6]*: §§ 3, 6.2, 8.4, 10.3, 10.4, 17.2 and 17.8.
+**The mirror step's removal, ruled 8 Nov 2026 (R-865, closing RQ-739), conditional on the bitwise check:** the decoder's mirror step is removed and latent `β` runs over the full circle, so every chart, the shape sphere included, uses one decode path, once TASK-M2-57 has shown that every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged; if anything doesn't, the list goes back to the owner before it proceeds. The owner's words add that it also fixes the latent-chart traces' jump at syzygies. Each section here it touches carries *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*: §§ 3, 6.2, 8.4, 10.3, 10.4, 17.2 and 17.8. They stand as written until TASK-M2-57 lands, and change then. *Was:* "**The owner's proposal, not applied:** removing the decoder's mirror step, with latent `β` over the full circle. "Mirror-step removal stays a proposal until ruled: don't apply it, just tag the sections it would touch." Each section it would touch here carries *[mirror-step proposal: § 6.6]*: §§ 3, 6.2, 8.4, 10.3, 10.4, 17.2 and 17.8."
 
 ---
 
@@ -965,7 +973,7 @@ D is not a product of two ranges. Three ways to draw it:
 **Recommended (a), as a preset of the third-body pair**, whose own axes are `ξ` bounded and `η` bounded. The lowering
 appendix's "region D bounds" uniform is the mask. **Door** RQ-714.
 
-**The owner's filter order overtakes this for the presets (RQ-736):** "region D presets render the full disc, with the filter on by default for the paper-frame presets only." So the preset is (b) with the filter of § 10.4, and D is its output; the decode must reach `η < 0` and `ξ < 0` signed. What "the full disc" is, and so the preset's axes, is a choice on RQ-736's list, not made here: the lens `(|ξ| + ½)² + η² ≤ 1` of D's four images with the box's corners masked, the box `ξ ∈ [−½, ½]`, `η ∈ [−√3/2, √3/2]` drawn whole, or any window holding the lens with all three swaps declared, which filters to exactly D (§ 10.4). What TASK-M4-34's preset does before TASK-M8-120 exists is on that list too. *[mirror-step proposal: § 6.6]*
+**The owner's filter order overtakes this for the presets (RQ-736):** "region D presets render the full disc, with the filter on by default for the paper-frame presets only." So the preset is (b) with the filter of § 10.4, and D is its output; the decode must reach `η < 0` and `ξ < 0` signed. What "the full disc" is, and so the preset's axes, is a choice on RQ-736's list, not made here: the lens `(|ξ| + ½)² + η² ≤ 1` of D's four images with the box's corners masked, the box `ξ ∈ [−½, ½]`, `η ∈ [−√3/2, √3/2]` drawn whole, or any window holding the lens with all three swaps declared, which filters to exactly D (§ 10.4). What TASK-M4-34's preset does before TASK-M8-120 exists is on that list too. *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*
 
 A mask has a cost the ruling must meet: contract Part 3 says "**Inside `[0,1]²` every gallery chart is valid by
 construction** … so a pixel hatched there is a decoder bug", and REQ-CHART-058 sweeps for it. R-554 made the same exception
@@ -1174,7 +1182,7 @@ coordinates. Functionals stay excluded at every `T`.
 **The mirror half.** `Enc` mirrors a start with `λ̃_y < −δ_λ` (encode contract Part 6 step 3), and clamps one past `q_max`
 (§ 17.2). The owner's rider to RQ-736 says the mirror half is never dropped or folded, in any chart. So a start found stays in
 the signed state: it takes the signed `C` of § 17.2 and fills the IC from the state through CPU batch, with no `z`, so neither
-the mirror nor the clamp runs. RQ-734 confirms this reading. *[mirror-step proposal: § 6.6]* Through `Enc` proper, `φ_T` would jump along every curve where the
+the mirror nor the clamp runs. RQ-734 confirms this reading. *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]* Through `Enc` proper, `φ_T` would jump along every curve where the
 start found is collinear, with copies across it mirror images, flagged per copy from `lookup_mirrored`, and a clamped start
 would need a mask of its own.
 
@@ -1207,7 +1215,7 @@ would need a mask of its own.
 
 ### 10.4 The symmetry filter
 
-The owner's order of 7 Nov, verbatim in RQ-736: "a display option applied after rendering, never a change to what's computed". TASK-M8-120 builds it. It is the rule of § 6.6's "declared, optional view". *[mirror-step proposal: § 6.6]*
+The owner's order of 7 Nov, verbatim in RQ-736: "a display option applied after rendering, never a change to what's computed". TASK-M8-120 builds it. It is the rule of § 6.6's "declared, optional view". *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*
 
 - **What it does.** An optional toggle, in the GUI and on export, that draws as transparent every pixel whose **starting state** is the symmetry image of another start present in the same chart, keeping one canonical representative of each pair. A self-partner (`η = 0`) is kept.
 - **Its symmetries are declared per chart, and extensible.** The mirror, whole system, positions and velocities; body-label swaps where the masses make them exact. A chart's declaration is a list on `ChartSpec`, off the sim key, so a new symmetry is a new entry. A chart may declare fewer than are exact, as Anosova's preset does (the table below). Under a swap a body-indexed outcome field (the escaper, the binary pair, the collision pair) is permuted, the rest equal; under the mirror outcome fields are equal and signed fields flipped.
@@ -1231,6 +1239,30 @@ The owner's order of 7 Nov, verbatim in RQ-736: "a display option applied after 
 | Parischewsky's pair, the angle pair | nothing | no partner: unsigned axes | no filter; `reduced domain` (§ 8.8) |
 
 Where this meets R-544's words, "no hemisphere toggle", and the other conflicts: RQ-736's list.
+
+### 10.5 Points of interest
+
+The owner's feature of 8 Nov 2026 (R-870, verbatim there), a design item for this document. TASK-M8-126 builds it.
+
+- **A point.** Any pixel's starting state may be saved as a point: any number of them, each named, each stored as the
+  signed state (R-854: its mirror half kept, never folded).
+- **Marks, on every chart and every frame of every path** (morph, tilt, slice, zoom, chart change): a **filled star**
+  where the chart passes through the point exactly; otherwise a **hollow star** at the nearest chart point, labelled
+  with the off-slice distance in a stated metric.
+- **"Similar systems" overlays, optional.** The user picks properties from the primitive registry (§ 3), and the chart
+  draws where each property equals the point's value: one property gives a contour line, two give intersection points,
+  three or more give near-matches within a stated tolerance. They reuse § 10.2's Tier 1 contour overlays (TASK-M7-43,
+  TASK-M7-72) and need forward formulas only, never an inverse.
+- **Display only, never scored,** like § 10.4's filter: nothing computed changes, not the sim key, the payload, an
+  outcome or a statistic. **Distinct from the lock:** points mark, the lock constrains (§ 17.8).
+- **The owner's tests:** a point lying in the chart draws a filled star at the pixel that decodes to it; a one-property
+  overlay passes through the star; overlays redraw consistently across a morph's frames.
+- **Owed, not stated by the owner's words.** Definitions (R-72; REQ-GUI-427), written here by TASK-M8-126 and approved by
+  the physics reviewer: what "exactly" means for a chart passing through a point, "the nearest chart point", the
+  off-slice distance's metric, how a near-match of three or more properties is measured, how marks are found on a path
+  frame with no inverse, and which state group holds the saved points, off the sim key. A value (R-71; REQ-GUI-428): the
+  near-match tolerance, proposed by TASK-M8-126 with its evidence and confirmed by the owner at the M8 gate. A point's
+  signed state on the latent chart needs the full-circle `β` of R-865 (TASK-M2-57).
 
 ---
 
@@ -1586,6 +1618,17 @@ TASK-M8-120. TASK-M8-124 is the 26th of this section's tasks behind TASK-M4-37, 
 TASK-M8-123 (R-863 names neither) 28 tasks wait on it. What the order leaves open, the tasks that fit no stage or
 straddle two and the stage-3 edges that would point forward across milestones or close a cycle, is RQ-744's.
 
+*8 Nov 2026 (R-866, R-870):* two tasks join, each behind TASK-M4-37, so 30 tasks now wait on it:
+
+| Task | Milestone | What | Waits |
+|---|---|---|---|
+| TASK-M8-125 | M8 | locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, "centre on pin" and the auto-snap setting, exact on nonlinear charts or saying why (R-866) | TASK-M8-124 |
+| TASK-M8-126 | M8 | points of interest, their marks and "similar systems" overlays (R-870, § 10.5) | TASK-M7-43, TASK-M7-72, TASK-M4-33, TASK-M8-124, TASK-M8-108, TASK-M2-57 |
+
+TASK-M8-125 is in stage 1, after TASK-M8-124's bitwise re-expression, which records today's lock as its baseline, and
+TASK-M8-117 (stage 2) depends on it (applied per R-369, R-866). TASK-M8-126 is in no stage: the owner's stages don't name
+it, and it joins RQ-744 (C)'s list.
+
 ---
 
 ## 16. What this does not settle
@@ -1679,7 +1722,7 @@ reparametrisation of the literal line, not the same line. The order said `z`, an
 (RQ-736): the model's § 0.1 agrees with this section, a chart mapping into the signed state space and a path blending each
 block in its own geometry. RQ-721 still applies it.
 
-*[mirror-step proposal: § 6.6]* **The mirror half is never dropped or folded (R-544; the owner's rider to RQ-736).** That holds in any chart and any morph, and
+*[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]* **The mirror half is never dropped or folded (R-544; the owner's rider to RQ-736).** That holds in any chart and any morph, and
 it's why the blend is signed: a morph through shape-sphere charts keeps both halves. A path between two lower-half views stays
 in the lower half, since the great circle between two points of an open hemisphere stays in it (`path_lower_half_stays`, § 17.14).
 
@@ -1799,7 +1842,7 @@ Zoom is log-lerped and `z₀` eased, as Part 3. This arm is general `PlaneRotati
 
 **The model.** `docs/design/principia_chart_space_model.md` is the statement of how navigation and chart paths work. Its § 0
 agrees with this section: it describes, and doesn't override a measured or ruled section (RQ-736, the owner's ruling of 7 Nov).
-Its sliding anchor (Theorem 8, "the RQ-721 rider") is RQ-721's, not applied here: until then `anchor not in B` stands, below. *[mirror-step proposal: § 6.6]*
+Its sliding anchor (Theorem 8, "the RQ-721 rider") is RQ-721's, not applied here: until then `anchor not in B` stands, below. *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*
 
 **What the code holds.** `lock::centre` is `z(½,½) = z₀`, and "the kernel's chart is `(z₀, q₁, q₂)` and nothing of the lock".
 On a nonlinear chart the rebuilt chart's centre decodes the clicked state bit for bit through `Φ`, while `z_locked`'s own
@@ -1833,6 +1876,15 @@ by `ε_phys`. They agree only if a locked B, as a view, carries the words too: a
 them. That's a change to the lock's state (`SimConfig`'s lock group gains an IC, outside the sim key, or R-92 needs amending, since
 a lock "changes neither key"; P8) and it adds nothing to the GPU's chart. The
 test reads a probe at `(½, ½)`, since an even grid has no pixel there.
+
+**The owner's rulings of 8 Nov 2026 on the lock.** R-867: the anchor is stored as the signed starting state, its mirror
+half kept, not as a latent point; the words above are that state's, and what `z_locked` still serves beside it (the
+sliders' re-basing, snap-back, a chart-mode switch) is a definition TASK-M8-117 writes here under physics review (R-72).
+R-866: locking doesn't move the view. The pin is the clicked pixel, in general off the centre, its initial in-plane
+excursion that pixel's offset from the centre, and tilt and zoom turn about it; TASK-M8-125 builds it in stage 1, before
+this task. What stage 2's test reads once the pin is off the centre, R-863's "the centre IC is constant" and this
+section's probe at `(½, ½)` against R-866's pin at the clicked pixel, is not settled by either ruling: RQ-749 asks it, and
+nothing here changes until it is ruled.
 
 **Default correspondence:** the anchor, pixel to pixel by offset. **With an excursion** (`δ ≠ 0`): the pin is the current
 `z₀`, as "turns about the pin"; the words are that point's; `z_locked` and `δ` are not touched, so snap-back, `z₀ ← z_locked`,

@@ -197,7 +197,9 @@ being typed in it moves the caret *(conformed to R-466)*.
 
 ## 08 Lock — the reticle and the pin
 
-Locking (K, or right-click → lock here) recentres the view on that point and marks it with a gold reticle at the centre. Every
+Locking (K, or right-click → lock here) does not move the view: it pins the clicked pixel where it is and marks it with a gold
+reticle there; "centre on pin" is an optional action, and a setting, off by default, snaps automatically *(conformed to
+R-866; was: "recentres the view on that point and marks it with a gold reticle at the centre")*. Every
 tilted plane passes through it, so it's the one point that stays still while the picture turns. The compass shows the same point
 as a gold pin. Sliders are re-based (see 01). Affine charts compute z_locked directly; nonlinear charts replay Φ and D on the CPU.
 K is the Figure's shortcut, acting with the focus in the Figure in either keyboard mode *(conformed to R-409)*.

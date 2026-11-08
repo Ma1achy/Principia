@@ -48,7 +48,7 @@ A **WebGPU research instrument** for the planar three-body problem's **8-dimensi
 
 ## 3. The physics & manifold model *(authoritative: `chart_decoder_contract`, `dd_decoder`)*
 
-*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, closing RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged). This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
 
 - **8 DOF, not 10, not 5.** The reduced manifold is `2 config ⊕ 4 momentum ⊕ 2 mass`. Full 12 → CoM removal → 8 phase + 2 mass = 10 before gauge → fix rotation (pin ρ̃ to +x) + scale (R̃ = 1, i.e. I = 1) removes 2 *configuration* DOF → **8**. Mass is *inside* the 8, a direction, never an external global.
 - **Latent controls** `z ∈ ℝ⁸` pushed through a **factorised decoder** `D = D_mass × D_cfg × D_mom` (blocks `z[0:2]` config, `z[2:6]` momentum, `z[6:8]` mass); decode order **mass → config → momentum → derived invariants**. No latent coordinate on a gauge direction.

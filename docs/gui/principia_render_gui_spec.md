@@ -319,7 +319,8 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
   sample points being distinct, neither event raises it, the bands along the axes included; the genuine floor still
   does (REQ-GUI-012)." *Was:* "at a quad where f64 `J_D`'s columns along the view's plane are 0 while its f64 sample points
   are distinct, neither event raises it; the genuine floor still does (REQ-GUI-012)."
-- **Lock:** a "● locked at z_locked" badge with **unlock**. Sliders are **re-based to the anchor, not frozen** (§G4).
+- **Lock:** a "● locked at z_locked" badge with **unlock** and **centre on pin** (§G4, R-866). Sliders are **re-based to the anchor, not frozen** (§G4).
+  *Was (before R-866):* "a "● locked at z_locked" badge with **unlock**".
 - **Slice centre** (named "Centre z₀" before R-457): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its
   number box beside it. Moving the slice along its normal is the slider of the normal's dimension, the cube's D axis
   (R-457, R-459). Its **reset**, beside its heading, returns every out-of-plane coordinate of `z₀` to the chart preset's
@@ -998,17 +999,27 @@ steps are confirmed as #174 built them, and recorded in R-404.
 ## G4. Lock — the reticle and the pin (`08_lock.png`)
 
 Locking (K, a shortcut with the focus in the Figure, in either keyboard mode (§G3, R-409); or right-click → lock
-here) recentres the view on that point and marks it with a gold reticle at the centre.
-Every tilted plane passes through it, so it's the one point that stays still while the picture turns. The compass shows the
-same point as a gold pin.
+here) **does not move the view** (R-866): it pins the clicked pixel where it is on screen and marks it with a gold
+reticle there. The pin's initial in-plane excursion is that pixel's offset from the view's centre.
+Every tilted plane passes through it, so it's the one point that stays still while the picture turns: tilt and zoom turn
+about the pin, and the pinned pixel stays fixed on screen. The compass shows the same point as a gold pin.
+*Was (before R-866):* "Locking (K, a shortcut with the focus in the Figure, in either keyboard mode (§G3, R-409); or
+right-click → lock here) recentres the view on that point and marks it with a gold reticle at the centre."
+- **Centre on pin** (R-866): an optional action, on the lock badge, that brings the pin to the view's centre; a
+  navigation edit, a `SetField` on `z₀` (or, on a nonlinear chart, its window), undoable as any navigation (R-69). A
+  setting, **Centre on pin when locking**, off by default, snaps automatically: with it on, a lock and its centre on pin
+  are one command, one history entry. The setting is a preference, not undoable.
 - **Sliders are re-based, not frozen:** each shows the anchor plus an offset, and moving one is a deliberate excursion from
   the anchor. The lock flag, the anchor and the excursion `δ` are `SimConfig` — lock is chart construction, so locking and unlocking
-  are undoable (R-69; gui_state_contract §2); recentring is a `SetField` on `z₀`.
+  are undoable (R-69; gui_state_contract §2); the lock itself edits no view field (R-866), and centring on the pin is a
+  `SetField` on `z₀`. *Was (before R-866):* "recentring is a `SetField` on `z₀`".
 - **Still works:** tilt, rotation, zoom and chart changes all turn about the pin.
 - **Unlocking:** the view as it stands becomes the new free start.
 - **The point:** affine charts compute `z_locked = z₀ + (2s−1)q₁ + (2t−1)q₂` directly (chart_decoder_contract Part 3, the
-  affine chart); nonlinear charts replay Φ and D on the CPU.
-- The lock badge offers **unlock** and **open in Inspector** (§G8).
+  affine chart); nonlinear charts replay Φ and D on the CPU. On a nonlinear chart, where locking re-centred the window to
+  compute the pin, the pin is held without moving the view, exactly or with the reason stated (R-866; TASK-M8-125).
+- The lock badge offers **unlock**, **centre on pin** (R-866) and **open in Inspector** (§G8). *Was (before R-866):* "The
+  lock badge offers **unlock** and **open in Inspector** (§G8)."
 
 ## G5. Windows (`04_windows.png`)
 

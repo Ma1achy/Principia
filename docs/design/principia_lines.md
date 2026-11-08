@@ -334,7 +334,7 @@ it:
   | a physical quantity (`E`, `L_z`, `K`, a momentum, the dilation rate) | No, unless its warp's inverse has no value (`K ≥ 0` always; R-508 continues `t > 1`) |
   | a curve axis (Burrau's ν) | No: the encode projects onto the nearest point of the curve (inverse encode Part 5(b)) and the distance to the curve is fade (R-509). A point whose nearest ν lies past a bounded edge is not drawn there, the line broken, with no ring; it is a real system the axis does not show, counted in the readout's "past the domain's end: N samples", apart from the not-a-system count (RQ-425 (a), R-553) |
   | a latent coordinate behind a saturating link (`z_q` past `q_max`, `z_α` past the decoder's α limits) | Yes, exactly when it has weight in the shown axis: on the latent momenta chart, or a tilt toward `z_q`; never on the latent `z_α × z_β` chart through a momentum |
-  | `z_β` at a syzygy | It runs to ±∞ and comes back: a jump at infinity, not a sample off the chart. *[Waits on TASK-M7-52's definition and RQ-739, 7 Nov 2026: R-853's "traces are continuous through syzygies" can't hold on `z_β` while the decoder's `β = π·σ(z_β)` stands, `β` being 0 or π at a syzygy and a signed lower-half state having no `z_β`; this row stands meanwhile (physics review of PR #443, P2).]* |
+  | `z_β` at a syzygy | It runs to ±∞ and comes back: a jump at infinity, not a sample off the chart. *[Waits on TASK-M7-52's definition and RQ-739, 7 Nov 2026: R-853's "traces are continuous through syzygies" can't hold on `z_β` while the decoder's `β = π·σ(z_β)` stands, `β` being 0 or π at a syzygy and a signed lower-half state having no `z_β`; this row stands meanwhile (physics review of PR #443, P2).]* *[8 Nov 2026: RQ-739 is ruled (R-865): the mirror step goes and latent `β` runs over the full circle, conditional on the bitwise check, and the owner's words say this also fixes the latent-chart traces' jump at syzygies. TASK-M2-57 shows it, or brings back why not (its full-circle link is its definition, REQ-DEC-056); this row stands until it lands.]* |
 
   A tilted axis is a mix, a weighted sum of the chart's parameters and the tilt target (R-473), and leaves only through
   a term with non-zero weight: tilted toward a latent momentum `z_q` (weight `sin τ`), the trace leaves while the
@@ -351,7 +351,7 @@ it:
   (Three in a row, Line and bead, Numeral tag, Crossing tick, Eclipse) stay selectable, the selector defaulting to "from
   the icon set". On every chart the trace is drawn in the signed, unfolded state, so it is continuous through syzygies
   (R-853, the owner's answer to RQ-736's first open question; R-854; on an axis showing `z_β`, see the table's `z_β` row,
-  which waits on RQ-739); a mirror-identified trace may remain only as a
+  which waits on TASK-M2-57, RQ-739 being ruled by R-865; *was:* "which waits on RQ-739"); a mirror-identified trace may remain only as a
   declared, optional view, labelled as such, never the default. *Was:* "On a chart that carries the y-momenta the
   canonical frame mirrors at every syzygy, so the trace jumps there and a marker is drawn at both ends of the jump."
 - **Off-screen icons (R-538, R-569).** An icon whose point is outside the view is drawn faint, pinned just inside the

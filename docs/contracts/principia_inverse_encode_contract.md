@@ -6,7 +6,7 @@
 
 ## Part 1 — What encode is: a quotient map onto a section
 
-*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, closing RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged). This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
 
 The forward decode `D: z → (m, r, p)` lands on a **canonical section** of physical state space: CoM at origin, total momentum zero, `ρ̃` on +x, `λ̃_y ≥ 0`, `I = 1`. Encode `E` is the composition
 
