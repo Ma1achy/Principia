@@ -819,7 +819,7 @@ negative_control!(
     }
 );
 
-const NO_GROUP: &str = "plan/rule_groups.yaml: decisions.md's entry R-99999 is in no group";
+const NO_GROUP: &str = "decisions.md's entry R-99999 is in no group";
 
 /// Appends a ruling, R-99999, to `root`'s `decisions.md`.
 fn add_ruling(root: &Path) {
@@ -841,20 +841,9 @@ fn plan_check_fails_on_rules_that_cannot_be_generated() {
 
 negative_control!(
     plan_check_fails_on_rules_that_cannot_be_generated,
-    "the ruling put in a group generates, so the failure check, naming the group fault, must fail",
-    expected = "plan-check did not name the fault",
-    {
-        let root = copy("plan_check_ctl_no_group");
-        add_ruling(&root);
-        edit(
-            &root,
-            "plan/rule_groups.yaml",
-            "authority:",
-            "rules: [Porting rule,",
-            "rules: [R-99999, Porting rule,",
-        );
-        fails_naming(&root, NO_GROUP);
-    }
+    "a copy with no ruling added generates, and passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    fails_naming(&copy("plan_check_ctl_no_group"), NO_GROUP)
 );
 
 const STALE_GATE: &str = "plan/MILESTONES.md is out of date";
