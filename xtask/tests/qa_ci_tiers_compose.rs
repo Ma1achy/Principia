@@ -1,14 +1,22 @@
 //! QA's tests for the CI tooling change "the full tier adds to the quick tier" (no task id; the owner, 7 Nov 2026:
 //! "Yeah if adding the label cancels the quick tier that needs to be changed lol if not don't worry / The full tier
-//! should compose / add on to the quick tier"), written from that order and the rulings it must keep, not from the
-//! implementation:
+//! should compose / add on to the quick tier"), as the owner's order of 8 Nov 2026 amends its waiting clause ("ci-full:
+//! on merge-ready, cancel the in-progress quick run and start the full tier, instead of waiting for it"; PR #450),
+//! written from those orders and the rulings they must keep, not from the implementation:
 //!
-//! - `qa_compose_label_mid_quick_never_cancels_it`: `merge-ready` going on while the head's quick run is queued or in
-//!   progress never cancels it (no `/cancel` nor `/force-cancel` call), and the full attempt (`/rerun`, R-276's pattern
-//!   kept by R-678) starts only once the run has been seen ended.
+//! - `qa_compose_label_mid_quick_cancels_it_at_once`: `merge-ready` going on while the head's quick attempt is queued
+//!   or in progress cancels it at once, on the first look at the run, and starts the full attempt (`/rerun`, R-276's
+//!   pattern kept by R-678) once the cancelled attempt has been seen ended (the owner, 8 Nov 2026: "ci-full: on
+//!   merge-ready, cancel the in-progress quick run and start the full tier, instead of waiting for it"); a quick attempt
+//!   no cancel ends is never re-run over, the job failing.
+//! - `qa_compose_label_mid_full_waits_never_cancels`: a full attempt still going (a retry's, or a first attempt opened
+//!   with the label) is the full tier already: it is waited for, never cancelled, and re-run only once ended.
 //! - `qa_compose_a_push_still_takes_the_label_off`: a push still takes `merge-ready` off (`mutants.yml`), the pushed
-//!   head's first attempt is quick whatever the label says, and a push or the label coming off during the wait
-//!   starts no full attempt on the old head.
+//!   head's first attempt is quick whatever the label says, a superseded head's quick attempt or one whose label is
+//!   already off is never cancelled, and a push or the label coming off during a wait starts no full attempt on the old
+//!   head.
+//! - `qa_compose_label_never_cancels_a_run_on_main`: neither the label going on nor going off cancels a run on `main`
+//!   (R-656).
 //! - `qa_compose_evidence_only_from_an_earlier_passed_quick_attempt`: what `ci_tier.sh decide` carries into the full
 //!   attempt is shown only by an earlier attempt of the same run whose quick job concluded `success`; it covers the `ci`
 //!   shards only when that quick tier tested every crate; nothing unread counts. The stand-in `gh` answers the jobs API
@@ -73,6 +81,9 @@ fn edited(rel: &str, from: &str, to: &str) -> String {
 
 /// The stand-in `gh`. The world advances one line of `$QA_DIR/world` with each call for the runs of `ci.yml` (a poll),
 /// the last line repeating; a line is `<run status|none> <run attempt> <pull request head> <labels, comma-joined, or ->`.
+/// With `QA_CANCEL_ENDS=<n>`, the run (5) reads `completed` once `<n>` cancels or force-cancels of it have been asked
+/// for. With `QA_MAIN_RUN` set, a query of the runs not narrowed to `event=pull_request` also lists, first, a push run
+/// on `main` (7, a second attempt, in progress), which no cancel ends.
 /// The pull request's head and labels answer from the line of the latest poll (the first before any). The jobs of
 /// attempt `<n>` answer `$QA_DIR/attempt_<n>.json`, failing when it is absent; a run's latest jobs answer
 /// `$QA_DIR/latest.json`. Every answer is JSON in the API's shape, put through the caller's `--jq` filter by `jq -r`, as
@@ -102,10 +113,19 @@ case "$*" in
   *"--method POST"*) exit 0 ;;
   *"/workflows/ci.yml/runs"*)
     read -r status attempt _ <<< "$(tick)"
+    if [ -n "${QA_CANCEL_ENDS:-}" ] && [ "$status" != none ] \
+      && [ "$(grep -c -e '/runs/5/cancel' -e '/runs/5/force-cancel' "$QA_DIR/log")" -ge "$QA_CANCEL_ENDS" ]; then
+      status=completed
+    fi
+    main=""
+    if [ -n "${QA_MAIN_RUN:-}" ] && [[ "$*" != *event=pull_request* ]]; then
+      main='{"id":7,"event":"push","head_branch":"main","status":"in_progress","run_attempt":2}'
+    fi
     if [ "$status" = none ]; then
-      echo '{"total_count":0,"workflow_runs":[]}' | answer
+      printf '{"workflow_runs":[%s]}\n' "$main" | answer
     else
-      printf '{"total_count":1,"workflow_runs":[{"id":5,"status":"%s","run_attempt":%s}]}\n' "$status" "$attempt" | answer
+      printf '{"workflow_runs":[%s%s{"id":5,"event":"pull_request","status":"%s","run_attempt":%s}]}\n' \
+        "$main" "${main:+,}" "$status" "$attempt" | answer
     fi ;;
   *"/attempts/"*"/jobs"*)
     args="$*"
@@ -251,8 +271,13 @@ fn tier(script: &str, subcommand: &str, world: &World) -> Ran {
     }
 }
 
-/// `merge-ready` put on, in a world of `lines`.
-fn label_on(script: &str, lines: &[&str], env: &[(&str, &str)]) -> Ran {
+/// `merge-ready` put on, in a world of `lines` whose attempts' jobs answer `attempts`.
+fn label_on_in(
+    script: &str,
+    lines: &[&str],
+    attempts: &[(u32, String)],
+    env: &[(&str, &str)],
+) -> Ran {
     let mut all = vec![("ACTION", "labeled")];
     all.extend_from_slice(env);
     tier(
@@ -260,12 +285,38 @@ fn label_on(script: &str, lines: &[&str], env: &[(&str, &str)]) -> Ran {
         "merge-ready",
         &World {
             lines,
-            attempts: &[],
+            attempts,
             latest: None,
             paths: None,
             env: &all,
         },
     )
+}
+
+/// The jobs API's answer for an attempt still going: jobs `(name, conclusion)`, `None` for a job not yet ended.
+fn going(list: &[(&str, Option<&str>)]) -> String {
+    let jobs: Vec<Value> = list
+        .iter()
+        .map(|(n, c)| match c {
+            Some(c) => serde_json::json!({"name": n, "status": "completed", "conclusion": c}),
+            None => serde_json::json!({"name": n, "status": "in_progress", "conclusion": null}),
+        })
+        .collect();
+    serde_json::json!({"total_count": jobs.len(), "jobs": jobs}).to_string()
+}
+
+/// A quick attempt still going: `changes` said quick, so the quick job runs.
+fn quick_going() -> String {
+    going(&[("changes", Some("success")), (QUICK_JOB, None)])
+}
+
+/// A full attempt still going: `changes` said full, so the quick job skipped.
+fn full_going() -> String {
+    going(&[
+        ("changes", Some("success")),
+        (QUICK_JOB, Some("skipped")),
+        ("ci-checks", None),
+    ])
 }
 
 /// The world line the latest poll before the first `/rerun` call saw, if the script re-ran the run.
@@ -278,93 +329,275 @@ fn seen_at_rerun<'a>(got: &Ran, lines: &[&'a str]) -> Option<&'a str> {
     Some(lines[polls.clamp(1, lines.len()) - 1])
 }
 
-// ---- 1. The label added mid-quick never cancels the quick run -------------------------------------------------------
+/// How many polls of the head's runs came before the first call containing `what`, if there is one.
+fn polls_before(got: &Ran, what: &str) -> Option<usize> {
+    let at = got.calls.iter().position(|c| c.contains(what))?;
+    Some(
+        got.calls[..at]
+            .iter()
+            .filter(|c| c.contains("/workflows/ci.yml/runs"))
+            .count(),
+    )
+}
 
-fn check_never_cancels(script: &str) {
-    let cases: &[(&str, &[&str])] = &[
+/// A cancel of the head's run, `5` (`/cancel` or `/force-cancel`).
+const CANCEL_5: &str = "/runs/5/";
+
+fn cancels_of(got: &Ran, run: &str) -> usize {
+    got.calls
+        .iter()
+        .filter(|c| c.contains("--method POST") && c.contains(run) && c.contains("cancel"))
+        .count()
+}
+
+/// A label case: what it is, its world's lines, and its attempts' jobs.
+type Case = (&'static str, Vec<&'static str>, Vec<(u32, String)>);
+
+// ---- 1. The label added mid-quick cancels the quick attempt and starts the full one at once --------------------------
+
+fn check_cancels_quick(script: &str) {
+    // The stand-in run ends only when cancelled (`QA_CANCEL_ENDS`): a script that waits for it, as on 7 Nov, never
+    // sees it end.
+    let ends = [("QA_CANCEL_ENDS", "1")];
+    let cases: Vec<Case> = vec![
         (
-            "in progress, then ended",
-            &[
-                "in_progress 1 aaa111 merge-ready",
-                "in_progress 1 aaa111 merge-ready",
-                "in_progress 1 aaa111 merge-ready",
-                "completed 1 aaa111 merge-ready",
-            ],
+            "a first attempt, quick, in progress",
+            vec!["in_progress 1 aaa111 merge-ready"],
+            vec![(1, quick_going())],
         ),
         (
-            "queued, then in progress, then ended",
-            &[
-                "queued 1 aaa111 merge-ready",
-                "in_progress 1 aaa111 merge-ready",
-                "completed 1 aaa111 merge-ready",
+            "a first attempt, queued, its tier not yet decided",
+            vec!["queued 1 aaa111 merge-ready"],
+            vec![(
+                1,
+                serde_json::json!({"total_count": 1, "jobs": [
+                    {"name": "changes", "status": "queued", "conclusion": null}
+                ]})
+                .to_string(),
+            )],
+        ),
+        (
+            "a retry's quick attempt in progress",
+            vec!["in_progress 2 aaa111 merge-ready"],
+            vec![
+                (1, jobs(&[("changes", "success"), (QUICK_JOB, "failure")])),
+                (2, quick_going()),
             ],
         ),
-        ("already ended", &["completed 1 aaa111 merge-ready"]),
     ];
-    for (what, lines) in cases {
-        let got = label_on(script, lines, &[]);
-        assert_eq!(
-            got.count("cancel"),
-            0,
-            "qa_compose: the label cancelled the quick run ({what}): {:?}",
+    for (what, lines, attempts) in &cases {
+        let got = label_on_in(script, lines, attempts, &ends);
+        assert!(
+            cancels_of(&got, CANCEL_5) >= 1,
+            "qa_compose: the label did not cancel the quick attempt ({what}): {:?} {}",
+            got.calls,
+            got.out
+        );
+        let before = polls_before(&got, "cancel").unwrap_or(usize::MAX);
+        assert!(
+            before <= 1,
+            "qa_compose: the label waited before cancelling the quick attempt ({what}; {before} polls first): {:?}",
             got.calls
         );
         assert!(
             got.ok() && got.count("/rerun") == 1,
-            "qa_compose: the label did not start the full attempt once ({what}): {:?} {}",
+            "qa_compose: the label did not start the full attempt once after cancelling ({what}): {:?} {}",
             got.calls,
             got.out
         );
-        let seen = seen_at_rerun(&got, lines).unwrap_or("");
+        // Asked for only once the cancelled attempt has been seen ended: a poll after the cancel, before the re-run.
+        let at_cancel = polls_before(&got, "cancel").unwrap_or(0);
+        let at_rerun = polls_before(&got, "/rerun").unwrap_or(0);
         assert!(
-            seen.starts_with("completed "),
-            "qa_compose: the full attempt was asked for before the quick run ended ({what}; last seen `{seen}`): {:?}",
+            at_rerun > at_cancel,
+            "qa_compose: the full attempt was asked for before the cancelled quick attempt was seen ended ({what}): {:?}",
             got.calls
         );
     }
-    // A quick run that outlasts the bounded wait is neither cancelled nor re-run; the job fails, so the full-only checks
-    // stay pending, never passed.
-    let got = label_on(script, &["in_progress 1 aaa111 merge-ready"], &[]);
+    // A quick attempt already ended: nothing to cancel; the full attempt starts.
+    let got = label_on_in(
+        script,
+        &["completed 1 aaa111 merge-ready"],
+        &[(1, jobs(&[("changes", "success"), (QUICK_JOB, "success")]))],
+        &ends,
+    );
     assert!(
-        !got.ok() && got.count("cancel") == 0 && got.count("/rerun") == 0,
-        "qa_compose: a quick run outlasting the wait was cancelled or re-run, or the job passed: {:?} {}",
+        got.ok() && cancels_of(&got, CANCEL_5) == 0 && got.count("/rerun") == 1,
+        "qa_compose: the label on an ended quick attempt cancelled it or did not start the full attempt: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // A quick attempt no cancel ends is never re-run over: the job fails, bounded, so the full-only checks stay
+    // pending, never passed.
+    let got = label_on_in(
+        script,
+        &["in_progress 1 aaa111 merge-ready"],
+        &[(1, quick_going())],
+        &[],
+    );
+    assert!(
+        !got.ok() && got.count("/rerun") == 0,
+        "qa_compose: a quick attempt no cancel ended was re-run, or the job passed: {:?} {}",
         got.calls,
         got.out
     );
 }
 
 #[test]
-fn qa_compose_label_mid_quick_never_cancels_it() {
-    check_never_cancels(&read(TIER));
+fn qa_compose_label_mid_quick_cancels_it_at_once() {
+    check_cancels_quick(&read(TIER));
 }
 
-/// The fault the owner's order removes: the label cancelling the quick run, then re-running it.
-mod cancels_first {
+/// The rule the owner's order of 8 Nov 2026 removes: the quick attempt waited for, never cancelled.
+mod waits_as_on_7_nov {
     use super::*;
     negative_control!(
-        qa_compose_label_mid_quick_never_cancels_it,
-        "the wait cancelling the run it waits for",
-        expected = "qa_compose: the label cancelled the quick run",
-        check_never_cancels(&edited(
+        qa_compose_label_mid_quick_cancels_it_at_once,
+        "the label waiting for a quick attempt to end, cancelling nothing",
+        expected = "qa_compose: the label did not cancel the quick attempt",
+        check_cancels_quick(&edited(
             TIER,
-            "wait_for_end() {\n",
-            "wait_for_end() {\n  gh api --method POST \"repos/$GH_REPO/actions/runs/5/cancel\" > /dev/null || true\n"
+            "run=$(cancel_quick \"$id\") || return 1",
+            "run=$(wait_full) || return 1"
+        ))
+    );
+}
+
+mod polls_first {
+    use super::*;
+    negative_control!(
+        qa_compose_label_mid_quick_cancels_it_at_once,
+        "the label polling the run again before cancelling it",
+        expected = "qa_compose: the label waited before cancelling the quick attempt",
+        check_cancels_quick(&edited(
+            TIER,
+            "cancel_quick() {\n",
+            "cancel_quick() {\n  latest_run > /dev/null\n"
+        ))
+    );
+}
+
+mod reruns_unseen {
+    use super::*;
+    negative_control!(
+        qa_compose_label_mid_quick_cancels_it_at_once,
+        "the re-run asked for straight after the cancel, the run not seen ended",
+        expected = "qa_compose: the full attempt was asked for before the cancelled quick attempt was seen ended",
+        check_cancels_quick(&edited(
+            TIER,
+            "cancel_quick() {\n",
+            "cancel_quick() {\n  gh api --method POST \"repos/$GH_REPO/actions/runs/$1/cancel\" > /dev/null\n  echo \"$1 completed 1\"\n  return 0\n"
         ))
     );
 }
 
 negative_control!(
-    qa_compose_label_mid_quick_never_cancels_it,
-    "the wait returning at once, the run still going",
-    expected = "qa_compose: the full attempt was asked for before the quick run ended",
-    check_never_cancels(&edited(
+    qa_compose_label_mid_quick_cancels_it_at_once,
+    "the cancel's wait passing on a run it has not ended",
+    expected = "qa_compose: a quick attempt no cancel ended was re-run",
+    check_cancels_quick(&edited(
         TIER,
-        "wait_for_end() {\n",
-        "wait_for_end() {\n  latest_run\n  return 0\n"
+        "  wait_for_end \"$polls\" \"$seconds\"\n}",
+        "  latest_run\n}"
     ))
 );
 
-// ---- 2. A push still takes merge-ready off ---------------------------------------------------------------------------
+// ---- 1b. A full attempt still going is waited for, never cancelled ---------------------------------------------------
+
+fn check_full_waited(script: &str) {
+    // A cancel would end the stand-in run at once, so a script that cancels it is seen re-running it early.
+    let ends = [("QA_CANCEL_ENDS", "1")];
+    let cases: Vec<Case> = vec![
+        (
+            "a retry's full attempt in progress, then ended",
+            vec![
+                "in_progress 2 aaa111 merge-ready",
+                "in_progress 2 aaa111 merge-ready",
+                "in_progress 2 aaa111 merge-ready",
+                "completed 2 aaa111 merge-ready",
+            ],
+            vec![
+                (1, jobs(&[("changes", "success"), (QUICK_JOB, "success")])),
+                (2, full_going()),
+            ],
+        ),
+        (
+            "a first attempt, opened with the label, full, in progress, then ended",
+            vec![
+                "in_progress 1 aaa111 merge-ready",
+                "in_progress 1 aaa111 merge-ready",
+                "completed 1 aaa111 merge-ready",
+            ],
+            vec![(1, full_going())],
+        ),
+    ];
+    for (what, lines, attempts) in &cases {
+        let got = label_on_in(script, lines, attempts, &ends);
+        assert_eq!(
+            cancels_of(&got, CANCEL_5),
+            0,
+            "qa_compose: the label cancelled a full attempt ({what}): {:?}",
+            got.calls
+        );
+        assert!(
+            got.ok() && got.count("/rerun") == 1,
+            "qa_compose: the label did not re-run once after the full attempt ({what}): {:?} {}",
+            got.calls,
+            got.out
+        );
+        let seen = seen_at_rerun(&got, lines).unwrap_or("");
+        assert!(
+            seen.starts_with("completed "),
+            "qa_compose: the full attempt was re-run before it ended ({what}; last seen `{seen}`): {:?}",
+            got.calls
+        );
+    }
+    // One that outlasts the bounded wait is neither cancelled nor re-run; the job fails.
+    let got = label_on_in(
+        script,
+        &["in_progress 2 aaa111 merge-ready"],
+        &[(2, full_going())],
+        &[],
+    );
+    assert!(
+        !got.ok() && cancels_of(&got, CANCEL_5) == 0 && got.count("/rerun") == 0,
+        "qa_compose: a full attempt outlasting the wait was cancelled or re-run, or the job passed: {:?} {}",
+        got.calls,
+        got.out
+    );
+}
+
+#[test]
+fn qa_compose_label_mid_full_waits_never_cancels() {
+    check_full_waited(&read(TIER));
+}
+
+mod full_read_as_quick {
+    use super::*;
+    negative_control!(
+        qa_compose_label_mid_full_waits_never_cancels,
+        "every attempt still going read as quick, a full one cancelled",
+        expected = "qa_compose: the label cancelled a full attempt",
+        check_full_waited(&edited(
+            TIER,
+            "if full_attempt \"$id\" \"$attempt\"; then",
+            "if false; then"
+        ))
+    );
+}
+
+negative_control!(
+    qa_compose_label_mid_full_waits_never_cancels,
+    "the full attempt not waited for, re-run while still going",
+    expected = "qa_compose: the full attempt was re-run before it ended",
+    check_full_waited(&edited(
+        TIER,
+        "run=$(wait_full) || return 1",
+        "run=$(latest_run)"
+    ))
+);
+
+// ---- 2. A push still takes merge-ready off; a superseded head or a label off is never cancelled ----------------------
 
 /// A minimal evaluation of the `mutants.yml` job that answers a push: whether, on a `synchronize` whose payload lists
 /// `merge-ready`, some step it runs deletes the label.
@@ -430,25 +663,62 @@ fn check_push(script: &str, mutants: &str) {
         got.outputs,
         got.out
     );
-    // A push during the wait: the old head's run ends (cancelled by the push's run), and nothing is re-run on it, even
-    // before the push's `merge-ready-off` has taken the label off.
-    let pushed = [
-        "in_progress 1 aaa111 merge-ready",
-        "completed 1 bbb222 merge-ready",
-    ];
-    let got = label_on(script, &pushed, &[]);
+    let ends = [("QA_CANCEL_ENDS", "1")];
+    // A superseded head: the pull request's head has moved on (bbb222) while the old head's quick attempt still runs,
+    // the push's `merge-ready-off` not yet having taken the label off. The old run is never cancelled nor re-run: the
+    // push's run has superseded it.
+    let got = label_on_in(
+        script,
+        &["in_progress 1 bbb222 merge-ready"],
+        &[(1, quick_going())],
+        &ends,
+    );
     assert!(
-        got.ok() && got.count("/rerun") == 0 && got.count("cancel") == 0,
+        got.ok() && cancels_of(&got, CANCEL_5) == 0 && got.count("/rerun") == 0,
+        "qa_compose: a superseded head's quick attempt was cancelled or re-run: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // The label already off when this job reads it, the head unchanged: the quick attempt is never cancelled.
+    let got = label_on_in(
+        script,
+        &["in_progress 1 aaa111 -"],
+        &[(1, quick_going())],
+        &ends,
+    );
+    assert!(
+        got.ok() && cancels_of(&got, CANCEL_5) == 0 && got.count("/rerun") == 0,
+        "qa_compose: the label already off, the quick attempt was still cancelled or re-run: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // A push during the wait for a full attempt: the old head's run ends (cancelled by the push's run), and nothing is
+    // re-run on it, even before the push's `merge-ready-off` has taken the label off.
+    let got = label_on_in(
+        script,
+        &[
+            "in_progress 2 aaa111 merge-ready",
+            "completed 2 bbb222 merge-ready",
+        ],
+        &[(2, full_going())],
+        &ends,
+    );
+    assert!(
+        got.ok() && got.count("/rerun") == 0 && cancels_of(&got, CANCEL_5) == 0,
         "qa_compose: a push during the wait still started the full attempt on the old head: {:?} {}",
         got.calls,
         got.out
     );
-    // The label taken off during the wait, the head unchanged: nothing is re-run.
-    let off = ["in_progress 1 aaa111 merge-ready", "completed 1 aaa111 -"];
-    let got = label_on(script, &off, &[]);
+    // The label taken off during the wait for a full attempt, the head unchanged: nothing is re-run.
+    let got = label_on_in(
+        script,
+        &["in_progress 2 aaa111 merge-ready", "completed 2 aaa111 -"],
+        &[(2, full_going())],
+        &ends,
+    );
     assert!(
-        got.ok() && got.count("/rerun") == 0 && got.count("cancel") == 0,
-        "qa_compose: the label off by the quick run's end still started the full attempt: {:?} {}",
+        got.ok() && got.count("/rerun") == 0 && cancels_of(&got, CANCEL_5) == 0,
+        "qa_compose: the label off by the full attempt's end still started the full attempt: {:?} {}",
         got.calls,
         got.out
     );
@@ -496,8 +766,8 @@ mod old_head_rerun {
     use super::*;
     negative_control!(
         qa_compose_a_push_still_takes_the_label_off,
-        "the wait's end re-running the head it was given, not the live one",
-        expected = "qa_compose: a push during the wait",
+        "the script reading the head it was given, not the live one",
+        expected = "qa_compose: a superseded head's quick attempt was cancelled or re-run",
         check_push(
             &edited(
                 TIER,
@@ -511,16 +781,73 @@ mod old_head_rerun {
 
 negative_control!(
     qa_compose_a_push_still_takes_the_label_off,
-    "the wait's end not reading the live label",
-    expected = "qa_compose: the label off by the quick run's end",
+    "the script not reading the live label",
+    expected = "qa_compose: the label already off, the quick attempt was still cancelled",
     check_push(
         &edited(
             TIER,
-            "    if ! grep -qxF merge-ready <<< \"$labels\"; then\n",
-            "    if false; then\n"
+            "  if ! grep -qxF merge-ready <<< \"$labels\"; then\n",
+            "  if false; then\n"
         ),
         &read(MUTANTS)
     )
+);
+
+// ---- 2b. A run on main is never cancelled (R-656) --------------------------------------------------------------------
+
+fn check_main_spared(script: &str) {
+    // The stand-in lists, to any query of the head's runs not narrowed to `pull_request` runs, a push run on `main`
+    // (run 7, a second attempt, in progress) ahead of the pull request's run.
+    let main = [("QA_MAIN_RUN", "1"), ("QA_CANCEL_ENDS", "1")];
+    let got = label_on_in(
+        script,
+        &["completed 1 aaa111 merge-ready"],
+        &[(1, jobs(&[("changes", "success"), (QUICK_JOB, "success")]))],
+        &main,
+    );
+    assert_eq!(
+        cancels_of(&got, "/runs/7/"),
+        0,
+        "qa_compose: a run on main was cancelled (label on): {:?}",
+        got.calls
+    );
+    assert!(
+        got.ok() && got.count("/runs/5/rerun") == 1,
+        "qa_compose: the label on did not start the pull request's full attempt beside a run on main: {:?} {}",
+        got.calls,
+        got.out
+    );
+    let mut env = vec![("ACTION", "unlabeled")];
+    env.extend_from_slice(&main);
+    let got = tier(
+        script,
+        "merge-ready",
+        &World {
+            lines: &["completed 2 aaa111 -"],
+            attempts: &[],
+            latest: None,
+            paths: None,
+            env: &env,
+        },
+    );
+    assert_eq!(
+        cancels_of(&got, "/runs/7/"),
+        0,
+        "qa_compose: a run on main was cancelled (label off): {:?}",
+        got.calls
+    );
+}
+
+#[test]
+fn qa_compose_label_never_cancels_a_run_on_main() {
+    check_main_spared(&read(TIER));
+}
+
+negative_control!(
+    qa_compose_label_never_cancels_a_run_on_main,
+    "the head's runs read without narrowing them to pull_request runs",
+    expected = "qa_compose: a run on main was cancelled",
+    check_main_spared(&edited(TIER, "&event=pull_request", ""))
 );
 
 // ---- 3. The evidence the full attempt carries ------------------------------------------------------------------------
@@ -576,6 +903,16 @@ fn evidence_cases() -> Vec<Evidence> {
             what: "quick cancelled",
             attempt: "2",
             attempts: vec![(1, quick("cancelled"))],
+            paths: KERNEL,
+            passed: false,
+            covers: false,
+        },
+        // The label's cancel (the owner, 8 Nov 2026) caught the quick job before it ended: a cancelled quick attempt
+        // never counts as passed, whatever conclusion its job was left with.
+        Evidence {
+            what: "quick cancelled by the label, its job never concluded",
+            attempt: "2",
+            attempts: vec![(1, going(&[("changes", Some("success")), (QUICK_JOB, None)]))],
             paths: KERNEL,
             passed: false,
             covers: false,
