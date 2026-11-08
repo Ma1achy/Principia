@@ -29,6 +29,10 @@
 //! their blocks by latent controls, and those that hold one by a physical construction, whose hidden coordinates are
 //! its physical parameters ([`mod@construction`]; R-633).
 //!
+//! **Saved charts** ([`mod@saved`]; R-475, R-513): a latent view saved as the oblique chart `(z₀, q₁, q₂)`, reopened as
+//! [`Latent`] on the stored vectors; a curved one as its parent, slice centre and tilt, reopened as [`Tilted`] on the
+//! parent under the saved tilt composed after a new one ([`Composed`]), so tilts compose.
+//!
 //! **Masses come from the decode** (lowering Part 3, "Mass source"; REQ-DEC-006): every chart's masses are its own
 //! decode's, per pixel, and each declares [`Chart::requires_per_pixel_mass`], CPU-side metadata saying whether a
 //! uniform mass, `SimUniforms.m[3]`, describes its pixels for CPU consumers. The kernel reads no such uniform.
@@ -72,6 +76,7 @@ pub mod latent;
 pub mod mass_simplex;
 pub mod mixed;
 pub mod physical;
+pub mod saved;
 pub mod shape_sphere;
 pub mod tilt;
 
@@ -90,6 +95,7 @@ pub use latent::Latent;
 pub use mass_simplex::MassSimplex;
 pub use mixed::Mixed;
 pub use physical::{MixedEnergy, MixedMassRatio};
+pub use saved::{Composed, Saved};
 pub use shape_sphere::{ShapeMap, ShapeSphere};
 pub use tilt::{Tilt, TiltMap, TiltSpec, Tilted};
 
@@ -101,7 +107,9 @@ use spirv_std::num_traits::FloatConst;
 /// The chart registry: every chart of this crate, by its [`Chart::name`], in chart_reference §5.1's order (the module's
 /// note), so that a test iterating every chart reads the set from one place (TASK-M2-24's `decode_totality`). The
 /// mixed-axis charts with a physical-quantity axis ([`MixedEnergy`], [`MixedMassRatio`]) are `Mixed`, by their name,
-/// and an energy chart under a mapping ([`Mapped`]) is its own chart's.
+/// and an energy chart under a mapping ([`Mapped`]) is its own chart's. A saved chart ([`Saved`]; R-475) is a chart
+/// of the registry too, not a name of its own: an oblique chart is `Latent`, and a curved one its parent's, under its
+/// saved and new tilts.
 pub const REGISTRY: [&str; 11] = [
     "Latent",
     "ShapeSphere",
