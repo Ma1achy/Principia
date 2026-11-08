@@ -6,7 +6,7 @@
 
 | area | count |
 |---|---|
-| DEC | 54 |
+| DEC | 56 |
 | ENC | 38 |
 | CHART | 146 |
 | INT | 112 |
@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 122 |
 | COL | 162 |
-| GUI | 398 |
+| GUI | 403 |
 | TOOL | 224 |
 | VAL | 353 |
 | PERF | 119 |
 | SYS | 97 |
-| **total** | **2170** |
+| **total** | **2177** |
 
-Of these: 240 calibration, 193 definition, 1737 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 242 calibration, 195 definition, 1740 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -32,25 +32,25 @@ Of these: 240 calibration, 193 definition, 1737 obligation. Retired (kept for th
 |---|---|
 | M0 | 127 |
 | M1 | 108 |
-| M2 | 222 |
+| M2 | 224 |
 | M3 | 235 |
 | M4 | 129 |
 | M5 | 183 |
 | M6 | 229 |
 | M7 | 263 |
-| M8 | 518 |
+| M8 | 523 |
 | M9 | 156 |
 
 ## Sections
 
-1889 sections in 63 files: 1453 yield at least one requirement; 436 yield none and are listed below with the reason.
+1896 sections in 63 files: 1458 yield at least one requirement; 438 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 319 |
+| informative only | 321 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -265,8 +265,10 @@ Of these: 240 calibration, 193 definition, 1737 obligation. Retired (kept for th
 | R-846 — RQ-718 closes on R-669's reversal: a user-built plane is the user's chart and is never scored *(closes RQ-718)* | informative only | the chart design's door; a user's plane is never scored |
 | R-848 — The Saari split's `h` is a builder axis, its range under physics review; R-793 stands *(closes RQ-724)* | informative only | the chart design's door; TASK-M8-109 builds the axis |
 | R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)* | informative only | the chart design's door; TASK-M8-105 to TASK-M8-117 carry it |
-| R-854 — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected | informative only | the owner's symmetry rule: the integrator contract, state map and lines carry it; RQ-739 holds its proposal |
+| R-854 — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected | informative only | the owner's symmetry rule: the integrator contract, state map and lines carry it; its proposal is ruled by R-865, on RQ-739, which stays open; TASK-M2-57 waits on RQ-750 |
 | R-855 — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only | informative only | carried by REQ-CHART-135 to REQ-CHART-138, REQ-GUI-424 and TASK-M8-120, which design § 10.4 already wrote |
+| R-868 — The chart-space model's wording follows R-474: Tip as sheet is the default tilt, Lean each axis the other map; the owner has corrected the model, and their copy replaces the repo's *(on RQ-738, which stays open)* | informative only | the owner's corrected chart-space model replaces the repo's; RQ-738 carries what is left |
+| R-869 — The owner's direction for the acute-angle Burrau charts: unfold the leg swap and show both labellings, the reduced view coming from the symmetry filter (R-855) *(on RQ-745, which stays open)* | informative only | the owner's direction, recorded on RQ-745, which stays open; no task until it is ruled |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

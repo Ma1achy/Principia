@@ -37,4 +37,5 @@ The owner's order of 7 Nov: an optional toggle that draws as transparent every p
 - The optional later "skip computing duplicates" export setting, off by default and labelled, is not built here, and no task owes it yet.
 - The test names are this design's; the two the order asks for are the owner's.
 - The mirror-step proposal (design § 6.6) isn't applied: the filter reads the signed map and doesn't assume it.
+- *8 Nov 2026 (R-865):* the mirror step's removal is ruled, conditional on the bitwise check, and TASK-M2-57 builds it. The filter still reads the signed map, so nothing here depends on it.
 - Waits on its rulings item: RQ-736, whose conflicts include what "bitwise" means for its fixture and which preset the filter can't take to D. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

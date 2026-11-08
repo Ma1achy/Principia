@@ -21,10 +21,12 @@ override a measured or ruled section.** The proofs below stand on the corrected 
    convex, and the sphere is connected through great circles), so a path exists between any two charts,
    built **block by block in each block's own geometry** (linear on convex blocks, geodesic on the
    sphere). "Always blend in Z" is withdrawn. Blend each block in its own signed state.
-2. **Affine tilt is the ruled lean-each-axis map (R-474), not a Grassmannian geodesic.** Theorem 2's
-   geodesic and area statements describe *a* family, not Principia's tilt. Correct statement: tilt is its
-   own named family, "lean-each-axis", and it's exactly its own formula. "Never squash" remains a property
-   of the geodesic *morph* family only, not a claim about R-474's tilt.
+2. **Affine tilt is R-474's tilt maps, not a Grassmannian geodesic.** R-474 rules two tilt maps:
+   **tip-as-sheet (the default)** and **lean-each-axis**. Theorem 2's geodesic and area statements
+   describe *a* family, not Principia's tilt. Correct statement: each of R-474's two maps is its own named
+   path family, and each is exactly its own formula. "Never squash" remains a property of the geodesic
+   *morph* family only, not a claim about R-474's tilt. *(Wording corrected 8 Nov, RQ-738: an earlier
+   version named lean-each-axis as the tilt; the default is tip-as-sheet.)*
 3. **Slice is a translation in the chart's own hidden coordinates**, not necessarily in `Z`. On charts that
    hold a block by construction, the held block isn't translated.
 4. **Blanks mid-morph can come from a held constraint** (§17.11), not only from a chart's mask. Corollary 1
@@ -42,11 +44,16 @@ override a measured or ruled section.** The proofs below stand on the corrected 
    full range of the angles it sweeps. Shape-sphere charts show both mirror halves of starts (R-544), and a
    mirror is only ever a declared, optional view or statistic: counting mirror pairs once, or the IC
    constructor's display of a triangle and its flip.
-   *Proposed (rulings report, one-way):* remove the decoder's mirror step and let latent `β` run over the
-   full circle. Then `D(Z)` reaches the mirror half, item 1's mirror exception disappears, every chart uses
-   one decode path, and the mirror deadband seam in §8 no longer exists. Until that's ruled, item 1 stands as
-   written.
-7. Everything else stands: concatenation and easing (Thm 4–5), the lock's anchor-preserving and excursion
+   *Ruled 8 Nov (RQ-739), conditional on the bitwise check:* remove the decoder's mirror step and let latent
+   `β` run over the full circle. Then `D(Z)` reaches the mirror half, item 1's mirror exception disappears,
+   every chart uses one decode path, the mirror deadband seam in §8 no longer exists, and latent-chart traces
+   pass smoothly through syzygies.
+7. **The lock doesn't move the view (owner, 8 Nov).** Locking sets the anchor at the clicked pixel with an
+   initial in-plane excursion equal to that pixel's offset from the view centre. Theorem 6 generalises: an
+   anchor-preserving edit turns about the *pin*, not the screen centre (conjugate by the excursion), so the
+   pinned pixel stays fixed on screen through tilt and zoom. "Centre on pin" is an optional action. The
+   anchor is stored as the signed starting state, not a latent point (TASK-M8-117).
+8. Everything else stands: concatenation and easing (Thm 4–5), the lock's anchor-preserving and excursion
    split (Thm 6), the based morph and the sliding anchor (Thm 7–8, with the anchor in `S`), time charts
    (Thm 9), composed axes (Thm 10, with assembly into `S`), and the quantity classes with final-condition
    charts (§6b, Thm 11, approximate in the app).
@@ -153,7 +160,7 @@ difference is `O(θ²)`. ∎
 they're different paths, both valid. The general morph must therefore include **three canonical families**:
 
 1. the **latent line** `L`;
-2. the **latent plane geodesic** (affine tilt);
+2. the **latent plane geodesic** (an idealised tilt; Principia's tilt is R-474's two maps, §0.2);
 3. the **chart-parameter geodesic** (curved tilt, and any morph between two charts of the same parametric
    family).
 

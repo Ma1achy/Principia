@@ -727,6 +727,9 @@ stage 2's task.) The owner says where each goes.*
     scattering chart), R-847's, wait behind TASK-M4-37 too. They are not PR #422's tasks, so R-863's words don't name
     them; both already depend on stage-3 tasks (TASK-M8-109 and TASK-M8-111) and on TASK-M8-102. No stage edge is made;
     the options below place them with (C)'s tasks.
+  - *8 Nov 2026 (R-870):* TASK-M8-126, points of interest, joins this list: the owner's stages don't name it. It
+    depends on TASK-M8-124 (stage 1) and TASK-M8-108 (stage 4), so it can't be built before stage 4, but no stage edge is
+    made for it.
 - **(D) Stage 2's sliding anchor has no task on `main`.** The owner's stage 2 is "based morph, then the sliding anchor".
   TASK-M8-117 is the based morph with the *stored* anchor: its `path_lock_centre` asserts "`anchor not in B` labelled
   and unbased", and design § 17.8 (`docs/design/principia_chart_composition.md`) says "Its sliding anchor (Theorem 8,
@@ -766,6 +769,8 @@ stage 2's task.) The owner says where each goes.*
   exist when stage 1 starts and R-475 is ruled, and stage 1 already waits on TASK-M4-37. A recommendation, not applied.
 - **Applied meanwhile:** the edges above; none for (A), (B), (C) or (E); (D) moot by R-849, recorded in R-863, design
   § 15 and TASK-M8-117's Notes. Every task here stays behind TASK-M4-37.
+  - *8 Nov 2026 (R-866, applied per R-369):* TASK-M8-125, locking without moving the view, is in stage 1, after
+    TASK-M8-124's bitwise re-expression, and TASK-M8-117 depends on it.
 - **Waits:** nothing can start yet: all of it waits behind TASK-M4-37 and, for TASK-M8-124, the owner's answer to R-864's
   type sketch.
 
@@ -799,6 +804,7 @@ removing starting states or shrinking a chart. An older ruling (R-27) keeps thes
   (c) another, stated by the owner.
 - **Applied meanwhile:** nothing. The charts stay as built, labelled "shape only" (R-27); no code or doc changes.
 - **Waits:** nothing built waits; under (b) a task re-expresses the three charts once TASK-M8-120's filter exists.
+- **8 Nov 2026, the owner's direction (R-869):** "5. Burrau acute charts: unfold the leg swap; show both labellings, with the reduced view from the symmetry filter (R-855). Add it to the review queue with that as my direction." That is option (b). The owner asks for it to be queued with that as their direction, so the entry stays open for their ruling at the next rulings report, where R-27's "shape only" fold charts would give way. No task is added and nothing changes meanwhile.
 ## RQ-738: RQ-736's correction list and the conflicts the filter order leaves *(carried from RQ-736, closed by R-853 on 7 Nov 2026; the owner's model against the corpus; a one-way door where an item changes what is built; context: TASK-M4-34, TASK-M8-120, TASK-M4-37)*
 
 *Filed 7 Nov 2026 by the rulings PR of that day. RQ-736 closed on what the owner ruled (R-853, R-855); these two lists were not answered by any of it, so they move here unchanged, so they aren't lost. Nothing in them is applied but the "reading held" each states.*
@@ -839,6 +845,7 @@ removing starting states or shrinking a chart. An older ruling (R-27) keeps thes
   8. **Order of building.** TASK-M4-34's preset and TASK-M4-06's golden are M4, the filter M8. Reading held: the preset renders the window conflict 3 rules, D as a contour, until TASK-M8-120 lands, and the golden reads `in_region_d`. It inherits conflict 3's choice: on (a) a mask is built in M4 after all, on (b) and (c) none.
   9. **Unequal masses.** The ruling: "state what the preset does there (RQ-728 links)". RQ-728 settles the labelling; no document says how a paper's D at a Li & Liao mass set is shown once the mask is gone. Reading held: a contour on the half the mirror leaves (design § 8.8). A gap.
 - **Waits:** TASK-M4-34's preset and TASK-M8-120 (conflicts 3 and 4, through RQ-714's open part); the correction list waits for the owner's next revision of the model.
+- **8 Nov 2026 (R-868):** the owner: "4. RQ-738: the model's wording follows R-474 (tip-as-sheet default, lean-each-axis the other map); I'll correct the model." Their corrected model of that day replaces `docs/design/principia_chart_space_model.md` byte for byte. That settles the correction list's item 1, as its option (a): § 0.2 now names R-474's two maps, Tip as sheet the default. **Still open:** the correction list's items 2 to 9, which the owner's copy doesn't change (its other changes are § 0.6, R-865, and a new § 0.7, R-866 and R-867), and all nine conflicts the filter order leaves. The entry stays open for them.
 
 ## RQ-739: Remove the decoder's mirror step, letting latent `β` run over the full circle? *(the owner's proposal of 7 Nov 2026 with the symmetry rule, R-854; a one-way door: it changes the decoder; R-82, R-438, R-544, R-408; context: no task)*
 
@@ -870,6 +877,7 @@ removing starting states or shrinking a chart. An older ruling (R-27) keeps thes
 - **A dependency, one-way (7 Nov 2026, the physics review of PR #443, P2):** R-853's answer to RQ-736's first open question, the owner's words: "Colour later states and draw traces in the signed, unfolded state; traces are continuous through syzygies." Against it, `docs/design/principia_dd_decoder.md` § 3.2's link `β = π·σ(z_β)`, with `β ∈ [0, π]`, and `docs/design/principia_lines.md` § "8. Traces", the table row: "`z_β` at a syzygy | It runs to ±∞ and comes back: a jump at infinity, not a sample off the chart". At a syzygy `β` is 0 or π, so `z_β` runs to ±∞, and a signed lower-half state has no `z_β` under the present link; under this entry's `β ∈ (0, 2π)` a crossing at `β = 0` would still wrap. So on any chart showing `z_β` a signed trace can't be continuous through a syzygy; the latent momenta chart can. TASK-M7-52's definition (R-72, how a lower-half state reads on a latent target) needs latent coordinates beyond `β ∈ [0, π]`, which is this entry's item 4. Not resolved here: REQ-COL-163's test is scoped to the latent momenta chart, and the `lines.md` row is tagged as waiting.
 - **Applied meanwhile:** nothing. The decoder and its tests are unchanged.
 - **Waits:** nothing built; no task depends on it.
+- **8 Nov 2026 (R-865):** the owner ruled the removal: "1. RQ-739: remove the decoder's mirror step; latent beta runs over the full circle. Conditional on the bitwise check (every preset, saved chart and golden with beta in [0, pi] reproduces unchanged); if anything doesn't, bring the list back before proceeding. This also fixes the latent-chart traces jumping at syzygies. Add a task for it." That is option (a), built by TASK-M2-57. The entry was moved to the archive by PR #449's first head and is reopened by its fix round (code review 5817349158, F1), since the answer doesn't settle all of it (`.claude/commands/rulings-apply.md` § 2). **Still open:** the proposal's item 3, R-408's count-each-system-once statistics as an optional "mirror pairs counted once" statistic, never by dropping starts; R-408's count spans `β ∈ (π, 2π)` once the step goes, and nothing rules the statistic. Flagged for the next rulings report. The link question the condition meets is RQ-750's.
 
 ## RQ-740: Does R-708's "every pixel is a system under every tilt" allow an f32 chart to refuse a pixel inside the band where f32 rounding, not the chart, decides? *(a one-way door: what the instrument computes; R-708, R-471; the report of 7 Nov 2026, "Open from today's merges, to be filed as entries"; context: TASK-M2-52 (PR #388, merged))*
 
@@ -900,3 +908,148 @@ removing starting states or shrinking a chart. An older ruling (R-27) keeps thes
 - **Options seen:** (a) `Q`, the ratio, with the columns where `Q₀` is infeasible marked (as the floor is) and the state's own ratio in the readout; (b) `Q above the floor` throughout, its meaning stated as `Q₀` plus the excess above the floor; (c) a label per column kind, `Q` where `Q₀` is feasible and `Q above the floor` elsewhere; (d) another, stated by the owner.
 - **Applied meanwhile:** REQ-CHART-103 and TASK-M8-119 take R-817's forward and its round trip, and `Q above the floor` at `Q₀ = 0` only, both settled by R-817 and § 2.1; they name this entry for the label at `Q₀ > 0`.
 - **Waits:** TASK-M8-119's label at `Q₀ > 0` only; its descriptor, forward and decode go ahead.
+
+## RQ-747: Where are the latent chart's tilt angles stored, when R-474 says "angles are stored as set" and TASK-M6-48 adds no angle field? *(a one-way door: what the instrument computes and records; R-474 R3, K3, K15; REQ-GUI-233; `docs/contracts/principia_gui_state_contract.md` § 2; context: TASK-M6-48, TASK-M6-49, TASK-M6-56, TASK-M8-124)*
+
+*Filed 8 Nov 2026 by the rulings PR of that day, from the physics review of the chart-path design work. Nothing is
+chosen.*
+
+*In plain English: under the new default tilt map, "Tip as sheet", each of the two tilt angles can go to ±180°, and
+the owner's ruling says the angles are stored as set. But the task that builds it adds nowhere to store them: the GUI
+works the angles out again from the view's axes each time. Past a total tip of 180° that gives back different, wrapped
+angles from the ones set, so the sliders show other numbers, and the next keyboard step tilts to a different plane from
+the one that stepping the set angles would give. Where the angles live also decides whether undo, saved views and the
+chart-path object see them.*
+
+- **File, section:**
+  - `decisions.md` § "R-474 — RQ-340 is ruled: two tilt maps, …": R3, "Angles are stored as set and **wrapped only in
+    total tip, at 360°** … This is the same rotation, so nothing changes."; K3, "the stored angles are as set, and the
+    rotation is computed from them, wrapped internally"; K15, "Under Tip as sheet an angle may be stored past ±90°, which
+    Lean each axis's range does not hold. Choosing Lean each axis clamps each such angle to ±90°, its sign kept, in the
+    same history entry as the map change".
+  - `plan/requirements.yaml` REQ-GUI-233, verify: "at τ = (100°, 30°) under Sheet the readout holds "same plane as
+    (−72.4°, −21.7°), mirrored" and the stored angles are bit-identical after it".
+  - `plan/tasks/M6/TASK-M6-48.md` § Deliverables: "`SimConfig`'s `tilt_map` in the contract
+    (`crates/engine/src/contract/sim_config.rs`), default Sheet, its absence read as Lean." No angle field.
+  - `docs/contracts/principia_gui_state_contract.md` § 2: "`SimConfig`'s slice frame gains `tilt_map: Sheet | Lean`
+    (`SliceFrame { normal, tilt_x, tilt_y, tilt_map }`)", where `tilt_x` and `tilt_y` are the targets
+    (`crates/engine/src/contract/sim_config.rs`, `SliceFrame`); § 2's heading, "The editable state is the entire coupling
+    surface", with "every knob is a typed field on the state"; and § 2, "A curved chart's tilt (R-473) is part of
+    `SimConfig`'s chart params: the angles, the targets (indices of its hidden coordinates) and the map".
+- **The silence:** with no angle field, the angles are read back from the basis (`View::framed`,
+  `crates/gui/src/explore/manifold_view/mod.rs`). A view with total tip `m > 180°` reads back as its wrapped angles:
+  `(150°, 150°)` reads back as `(−104.6°, −104.6°)`. The sliders show those, and a +1° keyboard step gives
+  `(−103.6°, −104.6°)`, a different plane from that of `(151°, 150°)`, which wraps to `(−104.4°, −103.7°)`. So R3's
+  "computed from the stored angles" does not hold, and at `m = 180°` the read-back also loses the split between the tip
+  axis and the in-plane turn `γ`. No file says where the stored angles live.
+- **The question:** where are the latent chart's tilt angles stored?
+- **Options seen:**
+  - (a) In `SimConfig`, beside `tilt_map`, always written: chart construction, undone in the same entry as the basis,
+    in saved views and exports (R-474 R5). It amends TASK-M6-48's Deliverables and gui_state_contract § 2's `SliceFrame`
+    line, and changes the canonical text and its `qa_TASK-M0-18` pins once more (TASK-M6-48 changes them already). The
+    chart-path object's starting point carries them, since it holds `SimConfig`. Its precedent: § 2 already puts a curved
+    chart's angles in `SimConfig`'s chart params; only the latent chart lacks the field. Its cost: every route that
+    writes the basis other than through the angles needs a rule for the stored angles, or the two disagree. Those routes
+    are the typed basis (TASK-M6-56), the compass steers and picks, the presets, the Tilt reset and Home; the rule could
+    be "re-derive by the read-back" or "reset to the preset's".
+  - (b) In the GUI's own scratch state, outside `SimConfig`. No schema change, but undo, saved views and exports don't
+    carry them; it conflicts with § 2's "every knob is a typed field on the state"; and the chart-path object's starting
+    point would miss them, so a path's starting point would be incomplete. K15's "one Ctrl+Z restores the map and the
+    angles together" presumes the angles are in the undoable state, which (b) leaves them out of.
+  - (c) The status quo, TASK-M6-48 as its file stands: no stored angles, the read-back standing under either map. R3's,
+    K3's and REQ-GUI-233's "stored angles" are then read as the read-back's, which amends R3's wording and accepts the
+    divergence above past `m = 180°`.
+  - (d) Another, stated by the owner.
+- **Recommended:** (a). It is the one option under which R3 holds as worded and every path sees the angles the user
+  set. A recommendation, not applied.
+- **Applied meanwhile:** none. The chart-path stage 1 (TASK-M8-124) decides nothing on it: its baseline freezes
+  whichever behaviour lands, and the task that stores the angles re-freezes it.
+- **Waits:** TASK-M6-48 (its file's Waits line), and through it TASK-M6-49's Save view, which records the view, and
+  TASK-M8-124's baseline.
+
+## RQ-749: Once locking leaves the pin off the view's centre (R-866), what does stage 2's "the centre IC is constant" test read: the centre pixel or the pin? *(a one-way door: what the lock's test claims; R-863 item 2 against R-866; `docs/design/principia_chart_composition.md` § 17.8; REQ-CHART-115; context: TASK-M8-117, TASK-M8-125)*
+
+*Filed 8 Nov 2026 by the rulings PR that ports R-865 to R-870, where porting R-866 met R-863's words. Nothing is
+chosen.*
+
+*In plain English: the owner's build order says the locked-paths stage is proved by a test that the centre's starting
+state stays constant along the path. The owner's new lock rule leaves the view where it is when you lock, so the locked
+point is usually not at the centre of the view but wherever you clicked. The test as written reads the centre. The owner
+says whether it should read the locked point instead.*
+
+- **File, section:**
+  - `decisions.md` § R-863, the owner's words: "(2) locked paths (based morph, then the sliding anchor) with the test
+    that the centre IC is constant".
+  - `docs/design/principia_chart_composition.md` § "17.8 Lock: a based homotopy": "The test reads a probe at `(½, ½)`,
+    since an even grid has no pixel there."; and "**With an excursion** (`δ ≠ 0`): the pin is the current `z₀`, as
+    "turns about the pin"; the words are that point's".
+  - `plan/requirements.yaml` REQ-CHART-115, which reads the centre three times: its statement has the anchor's IC words
+    "taken at the centre on every frame", "the centre pixel follow it" for the sliding anchor, and "the area factor at
+    the centre within 0.5 of the ends'"; its verify has "a probe at (½, ½) reads one set of words on every frame, ends
+    included, affine and nonlinear, δ = 0 and δ ≠ 0".
+- **Against:** `decisions.md` § R-866, the owner's words: "The pin is set at the clicked pixel with an initial in-plane
+  excursion equal to that pixel's offset from the view centre; tilt and zoom turn about the pin, so the pinned pixel
+  stays fixed on screen."; and `docs/contracts/principia_chart_decoder_contract.md` § "The lock (projective microscope)":
+  "where `δ` has an in-plane part the pin is off-centre".
+- **The conflict:** after R-866 a fresh lock has an in-plane excursion wherever the click was off the centre, so the
+  anchor sits at the pin, not at `(½, ½)`. § 17.8 reads the anchor's words at the centre and calls the current `z₀` the
+  pin under an excursion; the contract and R-866 put the pin at the clicked pixel. Which the stage-2 test holds constant
+  changes what TASK-M8-117 builds and asserts.
+- **Options seen** (each settles all three of REQ-CHART-115's centre reads; *added 8 Nov 2026, physics review
+  5817348709 of PR #449, P3*):
+  - (a) The test reads the pin: the anchor's stored state at the pin's pixel, constant on every frame; R-863's "centre"
+    read as the lock's centre, the pin. The sliding anchor's follower is the pin's pixel, and the area factor is taken
+    at the pin.
+  - (b) The test reads the view's centre, as written: constant where the pin is at the centre (after "centre on pin", or
+    a click at the centre); an off-centre lock is tested by R-866's pin staying fixed on screen instead. The slide and
+    the area factor are tested at the centre on centred locks only, and an off-centre lock has neither tested.
+  - (c) Both: the pin's state constant on every frame, and the centre's too where the pin is centred; the slide and the
+    area factor at the pin, and also at the centre where the pin is centred.
+  - (d) Another, stated by the owner.
+- **Recommended:** (a), since R-866 puts the anchor at the pin and a based homotopy is based at the anchor. A
+  recommendation, not applied.
+- **Applied meanwhile:** nothing. REQ-CHART-115 and § 17.8 stand as written; TASK-M8-125 builds R-866 either way.
+- **Waits:** TASK-M8-117's `path_lock_centre`, for what it reads off the centre (REQ-CHART-115 carries `rq: RQ-749`).
+
+## RQ-750: R-865's bitwise condition can't hold under any full-circle link for latent `β`: migrate the stored `z`, carry the lower half in another coordinate, or make `z_β` periodic? *(a one-way door: what the instrument computes and every stored latent view; R-865 against `docs/design/principia_dd_decoder.md` § 3.2; physics review 5817348709 of PR #449, P1; context: TASK-M2-57, REQ-DEC-055, REQ-DEC-056, TASK-M8-126)*
+
+*Filed 8 Nov 2026 by the fix round of the rulings PR that ports R-865 (PR #449), from its physics review. Nothing is
+chosen: it is the owner's "bring the list back" case, found before the task starts.*
+
+*In plain English: the owner ruled that the decoder stops folding mirror images, with the shape angle β running round
+the whole circle, on condition that every existing preset, saved chart and golden image comes out bit for bit the same.
+But the latent coordinate already maps every value onto half the circle, so any way of stretching it to the whole circle
+moves every stored latent view. The condition fails on all of them before anything is built. The owner says which way
+out to take.*
+
+- **File, section:**
+  - `decisions.md` § R-865, the owner's words: "remove the decoder's mirror step; latent beta runs over the full circle.
+    Conditional on the bitwise check (every preset, saved chart and golden with beta in [0, pi] reproduces unchanged); if
+    anything doesn't, bring the list back before proceeding. This also fixes the latent-chart traces jumping at
+    syzygies."; and the owner's proposal of 7 Nov 2026 (RQ-739, item 1): "every existing preset, saved chart and golden
+    test with beta in [0, pi] reproduces unchanged (expected, since the mirror step never fires there)".
+  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi": the link
+    `β = π·σ(z_β)`, which maps all of ℝ onto `(0, π)`.
+- **The conflict:** the owner's premise holds of the mirror step: on canonical-frame decodes with `β ∈ [0, π]` step 3
+  never fires (dd_decoder § 3.3; its no-op test, § 5.5), so removing the step alone changes no bit. It doesn't hold of
+  the link "full circle" needs. Since `π·σ` already uses all of ℝ for `(0, π)`, no link reaching `(π, 2π)` agrees with it
+  on every `z_β`: `2π·σ(z_β)`, a periodic `z_β`, or any other moves the decoded state of every stored latent `z`, so the
+  check fails on each latent preset's `z₀`, each saved latent chart and each latent golden's image hash.
+- **Traces at syzygies (the owner's "this also fixes"):** under a σ-type link only the syzygies at `β = π` become
+  continuous; a syzygy at the link's seam, `β = 0` with `z_β → −∞`, still jumps on any chart showing `z_β`, unless
+  `z_β` is made periodic (option (c)). *(This corrects RQ-739's physics note of 7 Nov, which had a crossing at `β = 0`
+  wrapping under `β ∈ (0, 2π)`, and folds it here.)*
+- **The question:** which way out, given that the check as worded fails on every latent item?
+- **Options seen:**
+  - (a) Migrate the stored `z` to the new link. That isn't "unchanged": IC words stay bitwise only where a migrated `z′`
+    happens to land on the old `β`.
+  - (b) Keep `β = π·σ(z_β)` and carry the lower half in another coordinate. Every stored `z` is unchanged, but it isn't
+    "β runs over the full circle".
+  - (c) Make `z_β` periodic. Every syzygy is continuous, but it changes the latent chart's premise of a convex `ℝ⁸`, and
+    the stored `z` change as under (a).
+  - (d) Another, stated by the owner.
+- **Recommended:** none. The owner's words send this case back to them.
+- **Applied meanwhile:** nothing. The decoder and its tests are unchanged; TASK-M2-57 records its baseline only once
+  this is ruled.
+- **Waits:** TASK-M2-57 (its link definition, REQ-DEC-056, and so the task; `rq: RQ-750` on REQ-DEC-055 and
+  REQ-DEC-056), and through it TASK-M8-126's latent points.
