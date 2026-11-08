@@ -40,7 +40,7 @@
 //! mirror ([`display::cvd`]; dd_colouring §3.8; TASK-M7-20).
 //!
 //! The Print graph (TASK-M7-54; principia_print_graph.md §4; R-485, R-486): post-processing as a node graph of its
-//! own after the stain, its data model, port types, registry, build-time check and codegen ([`print`]).
+//! own after the stain, its data model, port types, registry, build-time check and codegen ([`mod@print`]).
 //!
 //! The image embedding lives here too (`embed`): its record format, tiled writer, read searches and majority-vote
 //! reader. The plan layout names no export crate.
