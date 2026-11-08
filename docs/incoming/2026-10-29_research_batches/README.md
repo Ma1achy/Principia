@@ -289,7 +289,9 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
     with its printed type; the check passes on all of these. It fails on the rest: the p. 162 table's n_min 5 and 6
     rows (dE 2.0e-5 and 2.9e-4) and Table VIII's other twelve (type 1, n_min 4 to 10; type 3, n_min 6 to 10; dE
     1.1e-4 to 4.9e2; the run integrates their near-misses, which are not head-on, unregularised). Those rows give no
-    result: this check cannot follow them, which says nothing about their printed digits.
+    result: this check cannot follow them, which says nothing about their printed digits. Table VIII's type 1 rows
+    n_min 5 to 10 start within 2e-8 of each other, and its type 3 rows n_min 7 to 10 within 1.0e-6 in x and 1.9e-6
+    in y.
     **Tables I–IV are not decoded:** their "time" is not the instant of the n_min-th minimum in Paper I's unit, nor
     any one multiple of it. Table I and Table IV rest on the first-minimum runs (t1, which stop at the first
     m1–m3 collision and pass the check on every row): on 16 of Table I's 17 starts (n_min 5 to 20), the printed time
