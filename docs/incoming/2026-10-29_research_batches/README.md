@@ -267,13 +267,15 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
     through near-misses that are not head-on without regularisation, so each row reports dE, the largest
     |E − E0| / |E0| on its integrator steps with r ≥ 1e-3, and a row with dE above 1e-5 reads "CHECK FAILED" and
     gives no decode result. A time scales as |E|^(−3/2), so 1e-5 moves a time by about 1.5e-5 relative, a tenth
-    of the agreements reported below. Paper I Table IIa: 24 of 27
-    printed Times agree to within 3.9e-4 relative, 21 of them with the printed pair (type 1); the √3 reading misses
-    each of the 24 by 73 %. The six rows that miss in time or pair lie at or beside a change in the printed sign of
-    φ, which p. 348 reads as a triple collision ("the behavior of φ along the vertical or horizontal direction changes
-    at a triple collision"), and one of them, at y = 0.1200000, prints the row above's x, θ and Time (recorded, not
-    resolved). **So Paper I's M = 1 is each mass: m1 = m2 = m3 = 1, G = 1, |AB| = 1, and the time unit is
-    (|AB|³ / (G m))^½, m one body's mass.** A check, not a target (R-649).
+    of the agreements reported below. Paper I Table IIa: the check fails on 4 of the 27 rows (x = 0.41, 0.405,
+    0.403 and 0.400; dE 1.1e-4 to 35, the run passing a near-miss it does not regularise), so those four give no
+    result, from the run, not from the page. Of the other 23, 22 printed Times agree to within 1.0e-4 relative, 20 of
+    them with the printed pair (type 1); the √3 reading misses each of the 22 by 73 %. The three that miss in time
+    or pair lie at or beside a change in the printed sign of φ, which p. 348 reads as a triple collision ("the
+    behavior of φ along the vertical or horizontal direction changes at a triple collision"), and one of them, at
+    y = 0.1200000, prints the row above's x, θ and Time (recorded, not resolved). **So Paper I's M = 1 is each
+    mass: m1 = m2 = m3 = 1, G = 1, |AB| = 1, and the time unit is (|AB|³ / (G m))^½, m one body's mass.** A
+    check, not a target (R-649).
   - **Tanikawa 2000 states no unit** on any page. p. 157: "We consider the equal mass case: m1 = m2 = m3"; p. 158: the
     same frame ("Let mass points m2 and m3 stand still at A(−0.5, 0) and B(+0.5, 0)"), and "For a precise
     description, see Paper I."; p. 160: "The code for short integrations to find collision orbits is due to the author
@@ -281,23 +283,30 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
     p. 167, "n_min is the number of minima of the minimal mutual distances up to and including binary collision. …
     'time' is the instant of binary collision."; Tables II–IV, pp. 172–173, "For notation, see Table I."; Table V,
     p. 174, "For other notation, see Table I."; Tables VI–VIII, pp. 175 and 182, "see Table V".
-  - **What it keeps, by the same run.** Paper I's unit, for the p. 162 table (3 of 3 rows within 4.5e-4 relative),
-    Table V (16 of 16 within 1.3e-4), Table VI (15 of 15 within 1.4e-4), Table VII (10 of 10 within 4.0e-4) and six
-    rows of Table VIII (type 1, n_min 2 and 4; type 3, n_min 2, 4, 5 and 6; within 5.2e-4), each with its printed
-    type. Table VIII's other ten rows (type 1, n_min 5 to 10, printed starts equal to within 5e-8; type 3, n_min 7
-    to 10, within 1.1e-6) do not agree from the printed digits (the run's n_min-th minimum falls elsewhere, or not by
-    3 × the printed time + 1), so they are not decoded.
+  - **What it keeps, by the same run.** Paper I's unit, for Table V (16 of 16 within 1.3e-4 relative), Table VI (15
+    of 15 within 1.4e-4), Table VII (10 of 10 within 4.0e-4), the p. 162 table's n_min 4 row (Table V's first row,
+    within 2.8e-6) and four rows of Table VIII (type 1, n_min 2; type 3, n_min 2, 4 and 5; within 5.2e-4), each
+    with its printed type; the check passes on all of these. It fails on the rest: the p. 162 table's n_min 5 and 6
+    rows (dE 2.0e-5 and 2.9e-4) and Table VIII's other twelve (type 1, n_min 4 to 10; type 3, n_min 6 to 10; dE
+    1.1e-4 to 4.9e2; the run integrates their near-misses, which are not head-on, unregularised). Those rows give no
+    result: this check cannot follow them, which says nothing about their printed digits.
     **Tables I–IV are not decoded:** their "time" is not the instant of the n_min-th minimum in Paper I's unit, nor
-    any one multiple of it. On 16 of Table I's 17 starts (n_min 5 to 20), the printed time (0.4532403 down to
-    0.3932582) comes before even the first m1–m3 collision in this unit (0.5193 to 0.5657). Tables II–IV, run through
-    each m1–m3 collision on Γ3 (head-on there, so continued by reversing the pair's relative velocity): none of their
-    42 rows agrees, and printed over computed runs from 0.87 to 0.26 down Table II and from 1.43 to 0.44 down
-    Table III. The pages say nothing more of what these four columns hold.
-  - **For T2000-1.** The time columns of the p. 162 table, Tables V–VII and Table VIII's six decoded rows are in a
-    known unit (G = 1, m1 = m2 = m3 = 1, |AB| = 1; the instant of the n_min-th minimum of r) and may be proposed beside
-    their positions, the page re-read first (R-680). Tables I–IV's time columns stay out: positions only. No target is
-    added here (R-72). § 9's short times: Li 2021's unit is this one (§ 5.1, "G = 1 and the masses of the three
-    bodies m1 = m2 = m3 = 1"), and Table I's times are short even in it (n_min 5 to 20 come before the first
+    any one multiple of it. Table I and Table IV rest on the first-minimum runs (t1, which stop at the first
+    m1–m3 collision and pass the check on every row): on 16 of Table I's 17 starts (n_min 5 to 20), the printed time
+    (0.4532403 down to 0.3932582) comes before even the first m1–m3 collision in this unit (0.5193 to 0.5657), and
+    on all 9 of Table IV's (printed 0.4819557 to 0.4872600, t1 0.4938 to 0.4977). Tables II–III rest on runs
+    through each m1–m3 collision on Γ3 (head-on there, so continued by reversing the pair's relative velocity at
+    r = 1e-6). The check fails on 29 of their 33 rows (dE 1.0e-5 to 7.8e-5), as it does on 16 of Table I's 17
+    n_min runs and all 9 of Table IV's (dE 1.5e-5 to 1.1e-4), so those give no time. The four rows it passes do not
+    agree, and need different factors: printed over computed is 0.61 (Table II, n_min 7), 0.49 (II, 9), 1.43
+    (Table III, n_min 6) and 0.69 (III, 13). The printed times fall as n_min rises down both tables, while the
+    computed times rise on those four (1.90 to 2.35 in II, 1.18 to 2.38 in III). The pages say nothing more of
+    what these four columns hold.
+  - **For T2000-1.** The time columns of Tables V–VII, the p. 162 table's n_min 4 row and Table VIII's four decoded
+    rows are in a known unit (G = 1, m1 = m2 = m3 = 1, |AB| = 1; the instant of the n_min-th minimum of r) and may be
+    proposed beside their positions, the page re-read first (R-680). Tables I–IV's time columns stay out: positions
+    only. No target is added here (R-72). § 9's short times: Li 2021's unit is this one (§ 5.1, "G = 1 and the
+    masses of the three bodies m1 = m2 = m3 = 1"), and Table I's times are short even in it (n_min 5 to 20 come before the first
     collision on their own starts), so the gap to Li 2021's 6.9 to 11.3 lies in what the column holds, not in a unit
     factor.
 
