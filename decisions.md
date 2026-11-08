@@ -32917,9 +32917,10 @@ lands before the owner's answer.
 
 *Read with:* R-850 (RQ-721, the owner's answer of 7 Nov 2026 on chart paths: "Where a path is a special case, it is
 evaluated by that operation's existing code as an exact specialisation") and R-849 (RQ-721's rider: the sliding anchor
-R-863's stage 2 names), both merged by PR #443, which carries a "Read with R-864" line in each. R-850's "existing code"
-meets item 2's "Re-express, don't wrap" as § 17.3's arms do above: that code becomes its family's own, and its old
-route goes; R-850's two tests per operation stand, item 3's bitwise proof among them.
+R-863's stage 2 names), both merged by PR #443; each now carries a "Read with R-864" line, added by this ruling's own
+pull request. R-850's "existing code" meets item 2's "Re-express, don't wrap" as § 17.3's arms do above: that code
+becomes its family's own, and its old route goes; R-850's two tests per operation stand, item 3's bitwise proof among
+them.
 
 *What it refines:* no ruling. R-185's crate map stands, as item 5 says.
 
