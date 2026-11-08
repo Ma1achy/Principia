@@ -674,7 +674,7 @@ impl<A: Coordinate, Q: EnergyAxis, S: Selection> ParentParams for MixedEnergy<A,
 }
 
 /// A saved chart's parent ([`ParentParams`]), form 2 of `Mixed`: the axis's code ([`axis_code`]), then `frozen`,
-/// `a_range`, `ratio`, `bodies`, `held`, the mapping. The link selection `S` is not written: a saved chart carries no
+/// `a_range`, `ratio`, `bodies` (each a body, below 3), `held`, the mapping. The link selection `S` is not written: a saved chart carries no
 /// links (R-478).
 impl<A: Coordinate, S: Selection> ParentParams for MixedMassRatio<A, S, f64> {
     const FORM: u32 = 2;
@@ -692,12 +692,11 @@ impl<A: Coordinate, S: Selection> ParentParams for MixedMassRatio<A, S, f64> {
     fn read(r: &mut Reader<'_>) -> Option<Self> {
         let () = Self::APART;
         r.expect(axis_code::<A>())?;
-        let any = u64::from(u32::MAX) + 1;
         Some(MixedMassRatio {
             frozen: r.array()?,
             a_range: r.array()?,
             ratio: r.array()?,
-            bodies: [r.code(any)?, r.code(any)?],
+            bodies: [r.code(3)?, r.code(3)?],
             held: r.take()?,
             mapping: r.mapping()?,
             axes: PhantomData,

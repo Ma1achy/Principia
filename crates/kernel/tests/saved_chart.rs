@@ -1446,9 +1446,42 @@ fn check_every_parent(alter: fn(&mut [f64; WORDS])) {
     );
 }
 
+/// A mass-ratio chart's bodies read back up to the last body, `2`, and refuse a body past it, `3`.
+fn check_bodies(last: f64) {
+    let chart = MixedMassRatio::<ZBeta, Defaults, f64>::new(
+        FROZEN,
+        [0.25, 2.75],
+        [0.5, 2.0],
+        [0, 2],
+        Mapping::Linear,
+        &LinkParams::DEFAULT,
+    )
+    .expect("two bodies, an increasing range");
+    let words = words_of(&chart);
+    let body = HEAD + 1 + 1 + 8 + 2 + 2 + 1;
+    assert!(
+        words[body].to_bits() == 2.0f64.to_bits(),
+        "the second body's word is not where the layout puts it"
+    );
+    let mut past = words;
+    past[body] = last + 1.0;
+    let mut at = words;
+    at[body] = last;
+    assert!(
+        curved_of(&at)
+            .parent::<MixedMassRatio<ZBeta, Defaults, f64>>()
+            .is_some()
+            && curved_of(&past)
+                .parent::<MixedMassRatio<ZBeta, Defaults, f64>>()
+                .is_none(),
+        "a body past the last reads as a mass-ratio chart, or the last does not"
+    );
+}
+
 #[test]
 fn saved_chart_parent_round_trip() {
     check_every_parent(|_| {});
+    check_bodies(2.0);
 }
 
 negative_control!(
@@ -1459,6 +1492,18 @@ negative_control!(
         check_every_parent(|w| w[HEAD + 1..].fill(0.0));
     }
 );
+
+mod bodies {
+    use super::*;
+    negative_control!(
+        saved_chart_parent_round_trip,
+        "a body checked past the last, 3, is refused, so it must fail",
+        expected = "a body past the last",
+        {
+            check_bodies(3.0);
+        }
+    );
+}
 
 /// Two charts `name()` cannot tell apart save to different words, and each one's words read as no chart of the
 /// other's type; `masked` compares the words with the form and the first two params, where the codes are, masked
