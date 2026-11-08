@@ -523,10 +523,15 @@ fn run(uv: vec2<f32>) -> vec4<f32> {
     return vec4<f32>(shade(tex(in_in, uv).rgb), 1.0);
 }";
 
-/// The second pass: a `const`, a `struct` and a `fn` of the first pass's names.
-const HELPER_B: &str = "const K: f32 = 0.25;
+/// The second pass: a `const`, a `struct` and a `fn` of the first pass's names, a comment ending in `fn` before the
+/// first, and a local named as a helper, which shadows it.
+const HELPER_B: &str = "/*fn*/const K: f32 = 0.25;
+const W: f32 = 2.0;
 struct S { k: f32 }
-fn shade(c: vec3<f32>) -> vec3<f32> { return c * S(K).k; }
+fn shade(c: vec3<f32>) -> vec3<f32> {
+    let W: f32 = S(K).k;
+    return c * W;
+}
 fn run(uv: vec2<f32>) -> vec4<f32> {
     return vec4<f32>(shade(tex(prev, uv).rgb), 1.0);
 }";
@@ -558,7 +563,9 @@ fn check_helpers(emit: fn(String) -> String) {
             format!("print_n{k}_pass0_h_seen = s.shade + s.v.x;"),
             "return a * 1.0f; }".to_owned(),
             format!("var<private> print_n{k}_pass0_h_seen: f32;"),
-            format!("fn print_n{k}_pass1_h_shade(c: vec3<f32>) -> vec3<f32> {{ return c * print_n{k}_pass1_h_S(print_n{k}_pass1_h_K).k; }}"),
+            format!("/*fn*/const print_n{k}_pass1_h_K: f32 = 0.25;"),
+            format!("fn print_n{k}_pass1_h_shade(c: vec3<f32>) -> vec3<f32> {{"),
+            format!("    let print_n{k}_pass1_h_W: f32 = print_n{k}_pass1_h_S(print_n{k}_pass1_h_K).k;\n    return c * print_n{k}_pass1_h_W;"),
         ] {
             assert!(g.source.contains(&needle), "the helpers are not the pass's own: no {needle} in {}", g.source);
         }

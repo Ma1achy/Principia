@@ -310,10 +310,10 @@ fn rename(wgsl: &str, base: &str, function: &str) -> String {
     let own = declarations(wgsl);
     let mut out = String::with_capacity(wgsl.len() + 64);
     let mut rest = wgsl;
-    let mut depth = 0usize;
-    // Whether a `struct` keyword awaits its body, and the depth of the struct body the scan is in.
+    // Whether a `struct` keyword awaits its body, and whether the scan is in one: WGSL declares a struct at module
+    // level only, its body holding no braces.
     let mut struct_next = false;
-    let mut struct_body = None;
+    let mut struct_body = false;
     while let Some(c) = rest.chars().next() {
         let end = if rest.starts_with("//") {
             rest.find('\n').unwrap_or(rest.len())
@@ -326,7 +326,7 @@ fn rename(wgsl: &str, base: &str, function: &str) -> String {
             let word = &rest[..end];
             let member = out.trim_end().ends_with('.')
                 || out.ends_with(|ch: char| ch.is_ascii_digit())
-                || (struct_body == Some(depth) && rest[end..].trim_start().starts_with(':'));
+                || (struct_body && rest[end..].trim_start().starts_with(':'));
             match renamed(word, base, function) {
                 Some(name) => out.push_str(&name),
                 None if own.contains(word) && !member => {
@@ -334,24 +334,16 @@ fn rename(wgsl: &str, base: &str, function: &str) -> String {
                 }
                 None => out.push_str(word),
             }
-            struct_next |= depth == 0 && word == "struct";
+            struct_next |= word == "struct";
             rest = &rest[end..];
             continue;
         } else {
             match c {
                 '{' => {
-                    depth += 1;
-                    if struct_next {
-                        struct_next = false;
-                        struct_body = Some(depth);
-                    }
+                    struct_body = struct_next;
+                    struct_next = false;
                 }
-                '}' => {
-                    if struct_body == Some(depth) {
-                        struct_body = None;
-                    }
-                    depth = depth.saturating_sub(1);
-                }
+                '}' => struct_body = false,
                 _ => {}
             }
             c.len_utf8()
