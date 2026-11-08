@@ -1242,6 +1242,32 @@ enum Tok {
     Punct,
 }
 
+/// The length in bytes of the block comment `b` opens with, through the `*/` that closes it: WGSL's block comments
+/// nest, so each `/*` inside it needs its own `*/` first. `None` where `b` does not open with `/*`, or the comment is
+/// never closed. It compares bytes, so it is safe in UTF-8: a `/` or `*` byte is never part of a multi-byte character.
+pub(crate) fn block_comment_len(b: &[u8]) -> Option<usize> {
+    if !b.starts_with(b"/*") {
+        return None;
+    }
+    let mut depth = 0usize;
+    let mut rest = b;
+    while !rest.is_empty() {
+        if rest.starts_with(b"/*") {
+            depth += 1;
+            rest = &rest[2..];
+        } else if rest.starts_with(b"*/") {
+            depth -= 1;
+            rest = &rest[2..];
+            if depth == 0 {
+                return Some(b.len() - rest.len());
+            }
+        } else {
+            rest = &rest[1..];
+        }
+    }
+    None
+}
+
 /// `s` as tokens, each its kind and byte range: comments (`//` to the line's end, `/* */` nested), identifiers,
 /// numbers (a digit and the letters and digits after it), white space and single punctuation characters.
 fn lex(s: &str) -> Result<Vec<(Tok, usize, usize)>, AssembleError> {
@@ -1260,23 +1286,8 @@ fn lex(s: &str) -> Result<Vec<(Tok, usize, usize)>, AssembleError> {
                 .map_or(b.len(), |k| i + k);
             Tok::Comment
         } else if b[i..].starts_with(b"/*") {
-            let mut depth = 0;
-            loop {
-                if b[i..].starts_with(b"/*") {
-                    depth += 1;
-                    i += 2;
-                } else if b[i..].starts_with(b"*/") {
-                    depth -= 1;
-                    i += 2;
-                    if depth == 0 {
-                        break;
-                    }
-                } else if i >= b.len() {
-                    return Err(AssembleError::Compile("an unclosed `/*` comment".into()));
-                } else {
-                    i += 1;
-                }
-            }
+            i += block_comment_len(&b[i..])
+                .ok_or_else(|| AssembleError::Compile("an unclosed `/*` comment".into()))?;
             Tok::Comment
         } else if c.is_ascii_whitespace() {
             while i < b.len() && b[i].is_ascii_whitespace() {

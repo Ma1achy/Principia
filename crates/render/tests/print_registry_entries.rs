@@ -2,8 +2,8 @@
 //! REQ-RENDER-103): every registered entry carries each declared field; the Render node's category reads "Print
 //! source" and no Print graph category reads "Source" or "post"; the generated WGSL of a two-node graph compiles under
 //! naga and holds each node's passes; an entry without a motion policy, and one without `temporally_stable`, each fail
-//! to register; and the stain's codegen given a Print graph node refuses it. Each test registers its negative control
-//! (R-176).
+//! to register; a pass's nested block comments are skipped whole, and one never closed is refused; and the stain's
+//! codegen given a Print graph node refuses it. Each test registers its negative control (R-176).
 
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use render::codegen::{generate as stain_generate, Arg, Call, Node as StainNode, Slot, ValueType};
@@ -592,6 +592,109 @@ negative_control!(
     check_helpers(|source| ["n1_pass0", "n1_pass1", "n2_pass0", "n2_pass1"]
         .iter()
         .fold(source, |s, p| s.replace(&format!("print_{p}_h_"), "")))
+);
+
+// ----- nested block comments -----
+
+/// An entry of one pass, `nested.wgsl`.
+const NESTED: &str = r##"{
+  "id": "nested", "label": "Nested", "category": "photo",
+  "doc": "A test entry: a pass with nested block comments.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [],
+  "passes": ["nested.wgsl"], "cost": "light", "motion": "full", "temporally_stable": true,
+  "screen_medium": false, "deviations": ["A test entry."]
+}"##;
+
+/// A pass whose block comments nest, as WGSL's do, each holding text that is code once the comment ends at its first
+/// `*/`: a retired `fn max`, an open brace before a helper's declaration, and a member after a `.`.
+const NESTED_PASS: &str = "const K: f32 = 0.5;
+struct S { shade: f32 }
+fn shade(c: f32) -> f32 { return c * K; }
+/* retired: /* v1 */ fn max(a: f32, b: f32) -> f32 { return a; } */
+/* an open brace: /* v1 */ { */
+fn lift(c: f32) -> f32 { return max(c, K); }
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let s = S(shade(uv.x));
+    return vec4<f32>(lift(s. /* see /* v1 */ notes */ shade), 0.0, 0.0, 1.0);
+}";
+
+/// The generated module of one node of the nested entry, its pass `pass`.
+fn nested(pass: &'static str) -> Result<Generated, String> {
+    let mut registry = support::registry();
+    registry
+        .register(NESTED, &|f: &str| {
+            (f == "nested.wgsl").then(|| pass.to_owned())
+        })
+        .expect("the nested entry registers");
+    let graph = Graph::parse(
+        r#"{"format":"principia.print/1","name":"N","nodes":{"img":{"type":"render"},
+          "n":{"type":"nested","in":{"in":"img"}},"out":{"type":"output","in":{"in":"n"}}},"out":"out"}"#,
+    )
+    .expect("parses");
+    let e = expand(&graph, &|_: &str| None).expect("expands");
+    generate(&e, &registry).map_err(|e| e.0)
+}
+
+/// The nested pass's module, as `emit` writes it, skips each block comment through the `*/` closing it: the member
+/// keeps its name, the builtin `max` is not the pass's, the helper after the open brace is, and it compiles.
+fn check_nested(emit: fn(String) -> String) {
+    let g = nested(NESTED_PASS).unwrap_or_else(|e| panic!("does not generate: {e}"));
+    let source = emit(g.source);
+    let missing: Vec<&str> = [
+        "/* retired: /* v1 */ fn max(a: f32, b: f32) -> f32 { return a; } */\n/* an open brace: /* v1 */ { */\n",
+        "fn print_n1_pass0_h_lift(c: f32) -> f32 {",
+        "return max(c, print_n1_pass0_h_K); }",
+        "(s. /* see /* v1 */ notes */ shade)",
+    ]
+    .into_iter()
+    .filter(|needle| !source.contains(needle))
+    .collect();
+    assert!(
+        missing.is_empty(),
+        "a nested comment ends at its first `*/`: no {missing:?} in {source}"
+    );
+    compile(&source);
+}
+
+#[test]
+fn print_registry_entries_nested_comments_skipped() {
+    check_nested(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_nested_comments_skipped,
+    "the helper after the open brace left unrenamed, as a scan ending the comment at its first `*/` leaves it",
+    expected = "a nested comment ends at its first `*/`",
+    check_nested(|s| s.replace("print_n1_pass0_h_lift", "lift"))
+);
+
+/// A pass whose block comment, `/* /* v1 */ open`, is never closed is refused, the refusal naming it.
+fn check_unclosed(pass: &'static str) {
+    match nested(pass) {
+        Ok(g) => panic!("a pass with an unclosed comment generated: {}", g.source),
+        Err(e) => assert_eq!(
+            e,
+            "node `n`'s pass `nested.wgsl` has an unclosed `/*` comment"
+        ),
+    }
+}
+
+#[test]
+fn print_registry_entries_unclosed_comment_refused() {
+    check_unclosed(
+        "fn run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }\n/* /* v1 */ open",
+    );
+}
+
+negative_control!(
+    print_registry_entries_unclosed_comment_refused,
+    "the comment closed",
+    expected = "a pass with an unclosed comment generated",
+    check_unclosed(
+        "fn run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }\n/* /* v1 */ open */"
+    )
 );
 
 // ----- registration refusals -----

@@ -29,6 +29,7 @@ use std::fmt::{self, Write as _};
 use super::graph::{Expanded, Value, RENDER};
 use super::ports::{validate, Feed, InputDefault};
 use super::registry::{check_params, Entry, ParamKind, Registry};
+use crate::assemble::block_comment_len;
 
 /// The namespace of every name the Print graph's module declares; the stain's codegen refuses it.
 pub const PREFIX: &str = "print_";
@@ -107,8 +108,8 @@ impl fmt::Display for CodegenError {
 impl std::error::Error for CodegenError {}
 
 /// `graph`'s module, generated from `registry`; refused where its wiring does not validate
-/// ([`super::ports::validate`]), a parameter is not its type's or out of its range ([`check_params`]), or its nodes
-/// read each other in a cycle.
+/// ([`super::ports::validate`]), a parameter is not its type's or out of its range ([`check_params`]), its nodes
+/// read each other in a cycle, or a pass's block comment is never closed.
 pub fn generate(graph: &Expanded, registry: &Registry) -> Result<Generated, CodegenError> {
     let wiring = validate(graph, registry).map_err(|e| CodegenError(e.0))?;
     let order = run_order(&wiring.inputs)?;
@@ -149,7 +150,7 @@ pub fn generate(graph: &Expanded, registry: &Registry) -> Result<Generated, Code
             &node.params,
             &wiring.inputs[id],
             graph,
-        );
+        )?;
     }
     Ok(out)
 }
@@ -183,7 +184,8 @@ fn run_order(inputs: &BTreeMap<String, Vec<(String, Feed)>>) -> Result<Vec<Strin
     Ok(order)
 }
 
-/// Node `k`, `id`, of type `entry`, its parameters checked: its textures, its uniform and its passes, onto `out`.
+/// Node `k`, `id`, of type `entry`, its parameters checked: its textures, its uniform and its passes, onto `out`;
+/// refused where a pass's block comment is never closed.
 fn node_module(
     out: &mut Generated,
     k: usize,
@@ -192,7 +194,7 @@ fn node_module(
     params: &BTreeMap<String, Value>,
     feeds: &[(String, Feed)],
     graph: &Expanded,
-) {
+) -> Result<(), CodegenError> {
     let base = format!("{PREFIX}n{k}");
     let _ = write!(
         out.source,
@@ -260,13 +262,19 @@ fn node_module(
     for (j, pass) in entry.passes.iter().enumerate() {
         let function = format!("{base}_pass{j}");
         let entry_point = format!("{function}_main");
+        let Some(wgsl) = rename(&pass.wgsl, &base, &function) else {
+            return Err(CodegenError(format!(
+                "node `{id}`'s pass `{}` has an unclosed `/*` comment",
+                pass.file
+            )));
+        };
         let _ = write!(
             out.source,
             "\n// {} pass {j}, from {}.\n{}\n@fragment\nfn {entry_point}(@builtin(position) frag: vec4<f32>) -> \
              @location(0) vec4<f32> {{\n    return {function}(frag_uv(frag.xy, print_frame.res));\n}}\n",
             entry.id,
             pass.file,
-            rename(&pass.wgsl, &base, &function).trim_end()
+            wgsl.trim_end()
         );
         out.passes.push(PassEntry {
             node: id.to_owned(),
@@ -276,6 +284,7 @@ fn node_module(
             entry_point,
         });
     }
+    Ok(())
 }
 
 /// An admitted parameter value as its uniform holds it: a number, one f32; a colour `#rrggbb`, three, each pair of hex
@@ -305,8 +314,9 @@ fn uniform_value(value: &Value) -> Vec<f32> {
 /// own module-level declarations ([`declarations`]: a helper `fn`, a `const`, `override`, `var`, `struct` or `alias`)
 /// are its pass's, `<function>_h_<name>`, so two nodes of one type, or two passes declaring one name, never declare it
 /// twice in the module; their every use is renamed with them, but a member (after `.`, or declared in a struct's
-/// body) and a literal's suffix (after a digit), which never name a declaration.
-fn rename(wgsl: &str, base: &str, function: &str) -> String {
+/// body) and a literal's suffix (after a digit), which never name a declaration. A block comment ends at the `*/`
+/// closing it, its nested comments closed first, as WGSL's do; `None` where one is never closed.
+fn rename(wgsl: &str, base: &str, function: &str) -> Option<String> {
     let own = declarations(wgsl);
     let mut out = String::with_capacity(wgsl.len() + 64);
     let mut rest = wgsl;
@@ -323,7 +333,7 @@ fn rename(wgsl: &str, base: &str, function: &str) -> String {
         let end = if rest.starts_with("//") {
             rest.find('\n').unwrap_or(rest.len())
         } else if rest.starts_with("/*") {
-            rest.find("*/").map_or(rest.len(), |e| e + 2)
+            block_comment_len(rest.as_bytes())?
         } else if c.is_ascii_alphabetic() || c == '_' {
             let end = rest
                 .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
@@ -362,11 +372,11 @@ fn rename(wgsl: &str, base: &str, function: &str) -> String {
         out.push_str(&rest[..end]);
         rest = &rest[end..];
     }
-    out
+    Some(out)
 }
 
-/// The names a pass's WGSL declares at module level, outside every brace and comment: the name after `fn`, `const`,
-/// `override`, `struct`, `alias`, or `var` and its `<…>`.
+/// The names a pass's WGSL declares at module level, outside every brace and comment (a block comment nested, as in
+/// [`rename`]): the name after `fn`, `const`, `override`, `struct`, `alias`, or `var` and its `<…>`.
 fn declarations(wgsl: &str) -> BTreeSet<&str> {
     let mut names = BTreeSet::new();
     let mut rest = wgsl;
@@ -376,7 +386,8 @@ fn declarations(wgsl: &str) -> BTreeSet<&str> {
         let end = if rest.starts_with("//") {
             rest.find('\n').unwrap_or(rest.len())
         } else if rest.starts_with("/*") {
-            rest.find("*/").map_or(rest.len(), |e| e + 2)
+            // Unclosed, it runs to the end; [`rename`] refuses the pass.
+            block_comment_len(rest.as_bytes()).unwrap_or(rest.len())
         } else if c.is_ascii_alphabetic() || c == '_' {
             let end = rest
                 .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
