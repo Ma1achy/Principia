@@ -8,6 +8,23 @@ Where this document meets a ruling, the ruling wins. Ids are final, from the id 
 document's base is `main` at 13edf773, so R-694 to R-720, R-791 to R-809, RQ-682, RQ-700 and RQ-701 are read from there. PR #388,
 TASK-M2-52's branch, is read as it stood on 6 Nov.
 
+**Ruled 7 Nov 2026, by the owner's reply of that day and the orders it held (the rulings PR).** Where the body below
+still reads as Proposed, these rule, and TASK-M4-37 carries each into the body. RQ-712 (a), R-834; RQ-713 (a), R-835;
+RQ-714 time (a), R-845, with exact rest the velocity default and eq. 3 the second preset, R-851, its outside still open;
+RQ-715 (a) with (i), R-836; RQ-716 (a), R-837, C3's 2 s on Vulkan still open; RQ-717 as RQ-682 (a), kind 3, R-838 and
+R-816; RQ-718, R-846: R-669's reversal rewrites it, a user's own plane stays unscored; RQ-719 (a), R-839; RQ-720 (a),
+R-840; RQ-721 (a), amended, R-850, with its rider, R-849: no labelled jump under the lock, the anchor slides
+continuously to its nearest point in B, the jump kept only for time-axis to IC-only charts; RQ-722 (b), a label "not at
+rest", R-841; RQ-723 (b), orbital elements as axes at a labelled pair, plus overlays, R-847; RQ-724, `h` a builder axis,
+R-848; RQ-725 and RQ-726, R-669 reversed, fixed-`k` and binary-plus-single charts built when their turn comes, R-847;
+RQ-727 (a), R-842; RQ-728 (a), R-843, its mask read with RQ-714's open part; RQ-730 (a), R-844; RQ-733 (b), a general
+numerical solve on CPU batch, R-849; RQ-736, R-853, with the symmetry rule, R-854, and the filter order, R-855; the model's
+§ 6b classification, R-852. RQ-711 (a), R-820, the zoom row's scale still open. RQ-700 (b), R-817, in chart_reference §2.1, which
+TASK-M8-119 carries into § 9: at `Q₀ > 0` the virial floor sits under the rise only, so § 9's axis reads its coordinate `Q(t)`, the state's own ratio
+on a column where `Q₀` is feasible, and `Q above the floor` is its label at `Q₀ = 0`; its label at `Q₀ > 0` is RQ-741's. Open: RQ-729, RQ-731 and RQ-732, the
+record PR's; RQ-734, RQ-735; RQ-738, RQ-736's correction list and the filter's conflicts; RQ-739, the mirror-step
+proposal; RQ-741, the virial axis's label at `Q₀ > 0`.
+
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
 refusals are genuine contradictions, each with a named reason. Reduced capability is a label, not a refusal.

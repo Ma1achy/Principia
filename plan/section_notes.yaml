@@ -1716,3 +1716,139 @@
   section: "0. Revision after #422's review (7 Nov): the corpus wins where it measured"
   reason: informative only
   note: "the owner's revision of the model, RQ-736; it yields no requirement until the rulings PR carries it"
+- file: decisions.md
+  section: "R-813 — A margin node's two field inputs sit on a `colour` or `post` occupant declaring two `// @input`s; render_gui_spec § 5's example is reworded and a `source` keeps no input *(closes RQ-675)*"
+  reason: informative only
+  note: "carried by TASK-M7-12 and REQ-GUI-024's rulings"
+- file: decisions.md
+  section: "R-814 — TASK-M7-12 extends `assemble.rs` and `codegen/` with no second walk, its edit-sequence proptest runs under `cargo test -p engine`, and the fallback must differ from `#141418` too *(closes RQ-676)*"
+  reason: informative only
+  note: "carried by TASK-M7-12, REQ-RENDER-072 and REQ-RENDER-081"
+- file: decisions.md
+  section: "R-815 — An untransformed slot input's default domain is \"inherits\", resolved per wire at assembly, an unbounded field taking `(0, 1)`; TASK-M7-13's scan is decided by the written relocated-binary and wasm criterion *(closes RQ-677)*"
+  reason: informative only
+  note: "carried by TASK-M7-13 and REQ-GEN-019"
+- file: decisions.md
+  section: "R-816 — A virial-ratio axis is kind 3: it solves into the momenta, reading the configuration and the masses as fixed upstream; R-471 H3's \"not kind 3\" is read as about B1's extension only *(closes RQ-682)*"
+  reason: informative only
+  note: "carried by the decoder contract's kinds table and TASK-M8-119"
+- file: decisions.md
+  section: "R-818 — A `MixedEnergy` chart's held `L_z` tilts and slices by value on the floor and its held `K` on the warp line, with `K_max` ruled as RQ-710's, built in M8; and a triple ejection waits behind `E_rel > 0` *(on RQ-701, which stays open, deferred to M8; closes RQ-708)*"
+  reason: informative only
+  note: "carried by REQ-EVT-006, TASK-M3-12 and TASK-M8-48; RQ-701 deferred to M8"
+- file: decisions.md
+  section: "R-820 — A saved preset whose chart is not two latent axes at one scale stores its whole saved triple `(z₀, q₁, q₂)` as its home view; the zoom row's scale is still to be named *(on RQ-711, which stays open)*"
+  reason: informative only
+  note: "carried by REQ-GUI-108 and TASK-M8-18; RQ-711 stays open for the zoom row's scale"
+- file: decisions.md
+  section: "R-821 — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-823 — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-824 — OC-2 recomputes each atlas row from its `ref_*` state, the figures rerun at M9; the rest of TASK-M9-01's gaps stay deferred to M9 *(on RQ-681, which stays open, deferred to M9)*"
+  reason: informative only
+  note: "carried by REQ-VAL-214's statement and TASK-M9-01; the rest deferred to M9 in RQ-681"
+- file: decisions.md
+  section: "R-825 — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-827 — R-676's merge of `main` right before the `merge-ready` label lapses where there is no conflict; R-388's merge at an early start stays *(closes RQ-704)*"
+  reason: informative only
+  note: "process: plan/OPERATIONS.md § Merging follows; no requirement changes"
+- file: decisions.md
+  section: "R-828 — R-374 stands: CI's test binaries keep their line tables, and the `strip = \"debuginfo\"` half of R-716's item 4 is dropped *(closes RQ-705)*"
+  reason: informative only
+  note: "CI: no strip; no requirement changes"
+- file: decisions.md
+  section: "R-829 — The kernel's built output isn't cached: it may be shared as an artifact within a run only if that measurably saves time; R-285 is unchanged *(closes RQ-706)*"
+  reason: informative only
+  note: "CI: no kernel-output cache; no requirement changes"
+- file: decisions.md
+  section: "R-830 — RQ-688 closes: `stand-in-soak`'s cause was the cold first run on the slow runner band, the timer untouched, and the entry's own criterion is met *(closes RQ-688)*"
+  reason: informative only
+  note: "closes a CI entry; no requirement changes"
+- file: decisions.md
+  section: "R-831 — RQ-689 closes: the job-queue test's flaky control was fixed test-only by #410 *(closes RQ-689)*"
+  reason: informative only
+  note: "closes a test-only entry; no requirement changes"
+- file: decisions.md
+  section: "R-832 — RQ-703 closes, overtaken: the quick tier merged by #414, and what remains of the CI series follows R-684's order, step (1) next *(closes RQ-703)*"
+  reason: informative only
+  note: "closes an overtaken entry; plan/OPERATIONS.md follows"
+- file: decisions.md
+  section: "R-834 — Four axis kinds stay: a new capability is a registry entry under one of them, \"no new chart type\" is the rule from now on for anything not already ruled, and `SuvakovPlane` stands as R-669 ruled it *(closes RQ-712)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M4-37 carries it into the design"
+- file: decisions.md
+  section: "R-835 — A side-ratio axis in the builder and R-798's \"no `SideRatio` chart\" both stand: the axis is a registered closed pair, and PA-1 keeps its remap *(closes RQ-713)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M4-37 carries it into the design"
+- file: decisions.md
+  section: "R-836 — Hold `L_z` adds the rigid rotation, the scale taking only the part orthogonal to it when both are held, and outcomes 4 and 5 test `rigid(v, Jr)`, an exact predicate against a dyadic `τ` *(closes RQ-715)*"
+  reason: informative only
+  note: "the chart design's door; dd_decoder § 2 takes its row; TASK-M8-118 builds it under REQ-CHART-108 to REQ-CHART-110 and REQ-CHART-126"
+- file: decisions.md
+  section: "R-837 — The axis cap is 4 baked entries beyond the gallery, counted as entries, decode-only, created on first use, a pair past the cap running as CPU batch *(on RQ-716, which stays open)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M4-37 carries it, TASK-M4-33's baked_cap tests it; RQ-716 stays open on the 2 s"
+- file: decisions.md
+  section: "R-838 — The virial-ratio axis's kind is RQ-682's answer: kind 3 *(closes RQ-717)*"
+  reason: informative only
+  note: "restates R-816 for RQ-717"
+- file: decisions.md
+  section: "R-839 — Core seam 3 holds for live views; a labelled CPU-batch view is the stated exception, writing the IC buffer the decode stage writes, never reached by a gesture *(closes RQ-719)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M8-102 builds it"
+- file: decisions.md
+  section: "R-840 — R-594 item 5 governs charts built for a target; the builder's general options are the owner's own order and built in M8, last *(closes RQ-720)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M4-37 carries it"
+- file: decisions.md
+  section: "R-841 — A chart at rest under hold `L_z` is labelled \"not at rest\", not refused *(closes RQ-722)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M4-37 carries it"
+- file: decisions.md
+  section: "R-842 — Time as an axis is a chart mode, not a fifth kind: `T` on the sim key and the window off it, a cache per column of at most one screen height of rows, re-integrating from `t = 0` past it; it amends the temporal note and the caching contract's `T` row *(closes RQ-727)*"
+  reason: informative only
+  note: "the chart design's door; the temporal note and the caching contract carry a dated note; TASK-M8-113 to TASK-M8-116 build it"
+- file: decisions.md
+  section: "R-843 — Region D at unequal masses: the plane is geometric at every mass, D is labelled, one sector, AN-1 is its own preset, a half-disc of radius 10, and a statistic over D says \"one labelling\" *(closes RQ-728)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M4-37 and TASK-M8-110 carry it"
+- file: decisions.md
+  section: "R-844 — Hill's threshold at unequal masses is the labelled pair's: pair `(i, j)` is cut off from the third iff `c > max(f_i, f_j)`, blank at `E ≥ 0` and `ε ≠ 0` *(closes RQ-730)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M8-109 builds it"
+- file: decisions.md
+  section: "R-845 — Region D as a chart: a paper's fixed horizon is read by running to the longest pixel's horizon and cutting each pixel at its own; the default velocities are each target's, offered as presets *(on RQ-714, which stays open)*"
+  reason: informative only
+  note: "the chart design's door; RQ-714 stays open on its outside; REQ-CHART-142 carries the velocities"
+- file: decisions.md
+  section: "R-846 — RQ-718 closes on R-669's reversal: a user-built plane is the user's chart and is never scored *(closes RQ-718)*"
+  reason: informative only
+  note: "the chart design's door; a user's plane is never scored"
+- file: decisions.md
+  section: "R-848 — The Saari split's `h` is a builder axis, its range under physics review; R-793 stands *(closes RQ-724)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M8-109 builds the axis"
+- file: decisions.md
+  section: "R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*"
+  reason: informative only
+  note: "the chart design's door; TASK-M8-105 to TASK-M8-117 carry it"
+- file: decisions.md
+  section: "R-852 — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)*"
+  reason: informative only
+  note: "the design's § 3.3 holds the classification; RQ-734 stays open"
+- file: decisions.md
+  section: "R-854 — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected"
+  reason: informative only
+  note: "the owner's symmetry rule: the integrator contract, state map and lines carry it; RQ-739 holds its proposal"
+- file: decisions.md
+  section: "R-855 — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only"
+  reason: informative only
+  note: "carried by REQ-CHART-135 to REQ-CHART-138, REQ-GUI-424 and TASK-M8-120, which design § 10.4 already wrote"

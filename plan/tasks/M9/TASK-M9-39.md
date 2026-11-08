@@ -1,7 +1,7 @@
 # TASK-M9-39 — The softened force law: Plummer softening, built after the core build, and the refusal of ε ≠ 0 lifted
 
 - **Milestone:** M9
-- **Closes:** REQ-INT-111, REQ-SYS-094, REQ-SYS-095, REQ-CHART-092, REQ-EVT-034, REQ-GUI-416
+- **Closes:** REQ-INT-111, REQ-SYS-094, REQ-SYS-095, REQ-CHART-092, REQ-EVT-034, REQ-GUI-416, REQ-CHART-140
 - **Depends on:** TASK-M3-01, TASK-M3-05, TASK-M3-06, TASK-M4-03, TASK-M4-06, TASK-M4-04, TASK-M4-13, TASK-M2-12, TASK-M2-25, TASK-M3-12, TASK-M3-22, TASK-M7-35, TASK-M7-39, TASK-M2-17, TASK-M8-16
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf, gui
@@ -82,3 +82,4 @@
 - Calibrations proposed here (R-71; human confirmation with the M9 report if this task has landed by then, otherwise in the next batch after it lands, then recorded in decisions.md): REQ-SYS-095, the range of `ε`. *Was:* "Definitions written here (R-72; physics reviewer approves before merge): the range of `ε`." (code review 5730587922 of PR #375, C4; applied per R-369).
 - Scheduled at the owner's word; R-415's early-merge test does not bring it forward.
 - *4 Nov 2026 (R-710, closing RQ-697 (b)):* the wait on RQ-697 ends; RQ-693 and RQ-694 remain. (*5 Nov 2026:* both since ruled, by R-791 and R-792, above.)
+- *7 Nov 2026 (R-819, RQ-709 (a)):* the Newtonian `U` reaches every axis that reads `U`: the lone, mixed and Chart-builder `E` axes and the virial ratio, each labelled, the softened value beside it in the Inspector, and on the virial ratio the Inspector shows the axis's disagreement with the stored `virial_ratio` (REQ-CHART-140).

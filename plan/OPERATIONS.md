@@ -509,9 +509,12 @@ CI then confirms that head. A push is never how a fix round finds out whether it
 
 **Merging `main` into an open pull request, in batches (R-676).** Each push to a pull request re-runs its CI and takes
 its `merge-ready` label off, so `main` is not merged into open pull requests after every merge to `main`. It is merged
-in only when the pull request conflicts with `main`, when a merged change it depends on must be in its tree, or once,
-right before the `merge-ready` label, after the reviewers' approvals and before § "Merging" step 2's merged-tree check.
-Approvals are of a head, so the reviewers approve the merged head again before the watcher labels it.
+in only when the pull request conflicts with `main`, or when a merged change it depends on must be in its tree; then the
+reviewers approve the merged head again before the watcher labels it. An early start's merge of `main` before its pull
+request opens stays (R-388). *7 Nov 2026 (R-827, RQ-704 (b)):* the merge "once, right before the `merge-ready` label"
+lapses where there is no conflict; § "Merging" step 2's merged-tree check stands in for it. *Was:* "or once, right
+before the `merge-ready` label, after the reviewers' approvals and before § "Merging" step 2's merged-tree check.
+Approvals are of a head, so the reviewers approve the merged head again before the watcher labels it."
 
 **CI demand (R-713).** A head not ready for review is not pushed, and pushes go in order of what is closest to merging.
 
@@ -519,9 +522,9 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 **Measuring CI (R-715).** A speed-up is claimed or rejected only on medians over at least 5 runs per arm, with per-step durations and `cargo build --timings` totals. `ci-workspace` red on a test timer is diagnosed first, as disk pressure, runner load or a slow test; the retry doesn't cover it, the timeout isn't raised, and the cause is fixed or the shard split.
 
-**CI candidates (R-716).** The ten candidates are worked one pull request each, measured before and after, negative results reported. Items 3 and 4 and the order against R-683 are held in RQ-703, RQ-705 and RQ-706.
+**CI candidates (R-716).** The ten candidates are worked one pull request each, measured before and after, negative results reported. Item 4's strip half is dropped, R-374 standing (R-828); item 3's cache is not taken, the kernel's output shared as an in-run artifact only if a measurement shows it saves time, R-285 unchanged (R-829); what remains of R-683's series follows R-684's order, step (1) next (R-832). *Was:* "Items 3 and 4 and the order against R-683 are held in RQ-703, RQ-705 and RQ-706."
 
-**No refresh merges (R-717).** `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch with no conflict. RQ-704 holds this against R-676's paragraph in this section and R-388.
+**No refresh merges (R-717).** `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch with no conflict. R-827 settles it against R-676's paragraph in this section and R-388 (*was:* "RQ-704 holds this against R-676's paragraph in this section and R-388.").
 
 **Generated files (R-718).** A generated plan file is not committed if nothing needs it in git. Otherwise it is marked in `.gitattributes`, a conflict in it is resolved by regenerating, never by hand, and a check shows the committed copy matches a fresh regeneration.
 
@@ -708,6 +711,8 @@ a split moves every requirement to a named task (R-264).
 - **When to ask** is R-369's as R-812 amends it, applying from 7 Nov 2026 (CLAUDE.md § "When to ask the human", which
   lists both kinds of door). If the answer would be a rubber stamp, don't ask; if running something could answer the
   question, run it instead. Correcting the record is two-way; changing what a ruling or requirement says is one-way.
+  Correcting a requirement's statement to match a ruling is two-way only where it restates the ruling's words
+  faithfully; otherwise it is one-way (R-857).
   When unsure which door it is, treat it as one-way, with a recommendation and a measurable alternative in the report.
   Never size, never what a ruling already settles, and once a one-way door is open it stays open for that work, unless
   it turns out different: more at stake, a check failing, something the human didn't know.
@@ -715,6 +720,9 @@ a split moves every requirement to a named task (R-264).
   tooling among them: write the criterion before running, run it, decide, and report the numbers, and never adjust the
   criterion after seeing results (R-649). Each goes in the veto list of the next `/rulings-report`, and in the morning
   report with its numbers, as "decided, open to veto". Reverting on the human's veto must be possible without loss.
+  The morning report is the dated report file in `orch/` (R-857). A change of the mutants job's shard count
+  (REQ-VAL-149), decided by measurement, is one of these, under R-812's CI rider (R-857); lint configuration is not:
+  changing `clippy.toml` or a `[lints]` table still needs a ruling (R-197, R-857).
 - **One-way doors** go to `/rulings-report` only, never as a blocking prompt: physics where the choice changes results
   and the docs genuinely don't settle it, and R-812's other kinds of what the instrument claims or computes; calibration
   values (batched at milestone gates); passing a milestone gate; dropping or deferring a requirement; the words of the
@@ -965,6 +973,8 @@ anything outside the repository and its build and scratch directories without as
 
 - A Windows-only, non-reproducing GPU result is hardware-suspect: record it, and file it as a code bug only if it reproduces on Metal or lavapipe, or deterministically on Windows.
 - A result that reproduces is checked against Metal and lavapipe. Failing everywhere is our bug. Passing elsewhere is NVIDIA Vulkan specific: file it as a platform finding, with no re-baselining.
+- A recorded run on R-711's runner takes a clean target only where it is filed as evidence, as the Paper 2 parity run
+  is; every other recorded run keeps the runner's target, as now (R-856).
 - Once the DX12 opt-in lands, the same card is the second discriminator: the same failure points at the card or our code, a different one at the Vulkan driver path.
 
 ## `measure/` branches (R-272)
