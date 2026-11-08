@@ -31874,3 +31874,120 @@ The order, the owner's of 4 Nov 2026, verbatim:
 R-862 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-SYS-097 and REQ-TOOL-226; changes no existing requirement.
+
+## R-863 — When the chart-composition design's tasks are released, they are built in five stages, each merging only with the previous stage's tests green: the path object with today's operations bitwise through it; locked paths; the primitive registry and composed axes; morph families, easing and Sequence segments; time-axis charts and the symmetry filter *(the build order of PR #422's tasks; refines no ruling)*
+*8 Nov 2026 · the owner's order of that day, pasted as their own; applied in `docs/design/principia_chart_composition.md`
+§ 15 and § 17, `REVIEW_QUEUE.md` (RQ-744, new), `plan/tasks.yaml` and the files of TASK-M4-32 to TASK-M4-34,
+TASK-M4-37, TASK-M7-72, TASK-M8-100 to TASK-M8-120 and TASK-M8-124 (new), REQ-CHART-139 (reqio, new) and
+`plan/rule_groups.yaml`; built by TASK-M8-124 and the stages' tasks*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> When #422's tasks are released, build in this order: (1) the path object and the bitwise tests
+> that today's pan, zoom, tilt, slice, lock and Save-view-as-chart reproduce exactly through it,
+> before any new capability; (2) locked paths (based morph, then the sliding anchor) with the test
+> that the centre IC is constant; (3) the primitive registry and composed axes, each primitive with
+> its round-trip test; (4) morph families, easing and Sequence segments; (5) time-axis charts and
+> the symmetry filter. Each stage merges only with the previous stage's tests green.
+
+*What it decides:* the order in which the design's tasks are built once TASK-M4-37, the gate holding them until the
+owner has ruled the design, releases them. Each stage's tasks start after the previous stage's have merged, and a
+stage merges only with the previous stage's tests green.
+
+1. **The path object and the bitwise tests**, before any new capability: today's pan, zoom, tilt, slice, lock and
+   Save view as chart reproduce exactly through the one object. No task built exactly that, so **TASK-M8-124** is added
+   (REQ-CHART-139), its design governed by R-864.
+2. **Locked paths**, the based morph and then the sliding anchor, with the test that the centre's IC is constant:
+   TASK-M8-117 (`path_lock_centre`).
+3. **The primitive registry and composed axes**, each primitive with its round-trip test: TASK-M4-33, TASK-M4-34,
+   TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119.
+4. **Morph families, easing and Sequence segments:** TASK-M8-108.
+5. **Time-axis charts and the symmetry filter:** TASK-M8-113 to TASK-M8-116 and TASK-M8-120.
+
+*Applied per R-369:*
+
+- **The edges.** TASK-M8-117 depends on TASK-M8-124; TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and
+  TASK-M8-119 on TASK-M8-117; TASK-M8-108 on every stage-3 task; and each stage-5 task on TASK-M8-108. Each task file
+  names its stage in its Notes.
+- **TASK-M8-124 in M8,** beside the chart-path tasks (TASK-M8-105 to TASK-M8-108 and TASK-M8-117), behind TASK-M4-37
+  like every task of the design, closing a new requirement, REQ-CHART-139, through `reqio.py apply`.
+
+*Held for the owner,* **RQ-744:** what the order leaves to a choice. Eight tasks fit none of the five stages (TASK-M4-32,
+TASK-M7-72, TASK-M8-102 to TASK-M8-105, TASK-M8-112 and TASK-M8-118); TASK-M8-107 (the live blend) fits none by name;
+TASK-M8-106 straddles stages 1, 2 and 4; and three stage-3 tasks (TASK-M4-33, TASK-M4-34 and TASK-M8-100) can't take the
+edge to stage 2: the two in M4 would depend forward across milestones, and all three are already upstream of TASK-M8-117
+through TASK-M8-106 and TASK-M8-102, so the edge would close a cycle. None of those is given an edge here.
+
+*What it refines:* no ruling. The design it orders is Proposed (`principia_chart_composition.md`'s status), and its
+§ 15 placed the tasks by what depends on them; the order is the owner's, and § 15 now points to it. Read with R-864.
+
+R-863 is in the "process" group of `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-139; changes no existing requirement.
+
+## R-864 — The chart-path work is one object: core types designed first as one module, a type sketch with a one-page rationale reviewed by physics and code and brought to the owner before any implementation; today's operations re-expressed as named families of it and their old routes deleted; bitwise reproduction first; special cases are named families, never if-branches; the kernel/engine split stays; restructuring `engine/nav`, `engine/lock.rs` and `engine/chart_authoring` is approved *(the architecture of PR #422's chart-path work; refines no ruling on `main`)*
+*8 Nov 2026 · the owner's rule of that day, pasted as their own; applied in `docs/design/principia_chart_composition.md`
+§ 17 and its status block, TASK-M8-124 (new), REQ-CHART-139 (reqio, new) and `plan/rule_groups.yaml`; built by
+TASK-M8-124 and the tasks after it*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> Architecture rule for the chart-path work (owner, 8 Nov): one clean generalisation, no patches.
+> 1. One object. A view is a point in chart space; every edit is a path through it. Design the core
+>    types first (Chart, Path and its families, Lock/anchor, Axis/primitive, PairMap, Hold) as one
+>    coherent module, and bring me a type sketch with a one-page rationale before any implementation.
+>    Physics and code review it against the chart-space model.
+> 2. Re-express, don't wrap. Today's pan, zoom, tilt, slice, lock, chart switch and
+>    Save-view-as-chart become constructors of that one object (a path of a named family), not
+>    functions sitting beside it. No parallel code paths: once an operation runs through the general
+>    object, its old route is deleted, not kept as a fallback.
+> 3. Bitwise first. The re-expression lands before any new capability, proven by bitwise
+>    reproduction of every existing operation, preset and saved chart. New capabilities (morph
+>    families, composed axes, time charts, the symmetry filter) are then additions to the object,
+>    never new special cases outside it.
+> 4. Special cases are named families, never if-branches. If something seems to need one, it's
+>    either a family of the general object or a gap in the design; bring it back rather than patch
+>    around it.
+> 5. The kernel/engine split stays: chart maps and decode in kernel (shared CPU/GPU), the
+>    path/lock/authoring object in engine.
+> Restructuring engine/nav, engine/lock.rs and engine/chart_authoring to fit this is approved.
+
+*What it decides:*
+
+1. **One object.** A view is a point in chart space, and every edit is a path through it. The core types, Chart, Path
+   and its families, Lock and its anchor, Axis and primitive, PairMap and Hold, are designed first, as one coherent
+   module. **A gate:** before any implementation, a type sketch with a one-page rationale, reviewed by physics and code
+   against the chart-space model (`docs/design/principia_chart_space_model.md`), goes to the owner. TASK-M8-124's
+   implementation waits on the owner's answer to it.
+2. **Re-express, don't wrap.** Pan, zoom, tilt, slice, lock, chart switch and Save view as chart become constructors of
+   that one object, each a path of a named family, not functions beside it. Once an operation runs through the object,
+   its old route is deleted, not kept as a fallback: no parallel code paths.
+3. **Bitwise first.** The re-expression lands before any new capability, proven by bitwise reproduction of every
+   existing operation, preset and saved chart (R-863's stage 1). Morph families, composed axes, time charts and the
+   symmetry filter are then additions to the object, never special cases outside it.
+4. **Special cases are named families, never if-branches.** What seems to need one is a family of the object or a gap
+   in the design, brought back to the owner, not patched around.
+5. **The kernel/engine split stays** (R-185's crate map): chart maps and decode in `kernel`, shared by CPU and GPU; the
+   path, lock and authoring object in `engine`.
+
+Restructuring `engine/nav`, `engine/lock.rs` and `engine/chart_authoring` to fit it is approved.
+
+*Where it meets the design:* `principia_chart_composition.md` § 17.3 has the path type's tilt and zoom arms "call the
+existing code". Under item 2 that code becomes the family's own, and its old route goes once the operation runs through
+the object; the bitwise tests of § 17.3 stand, as item 3's proof. § 17 now points here.
+
+*Applied per R-369:* the gate is recorded in TASK-M8-124: the sketch is its first deliverable, reviewed on its pull
+request by the physics and code reviewers, and taken to the owner through `/rulings-report`; no implementation commit
+lands before the owner's answer.
+
+*Read with:* the owner's answers to RQ-721 (chart paths: "special cases run by their own code as exact
+specialisations") and to RQ-733's rider (the sliding anchor R-863's stage 2 names), ruled in the open rulings PR #443
+(the owner's reply of 7 Nov 2026), not yet on `main`, so not cited here by number (`check_plan.py` refuses an id
+`main` doesn't hold). Whichever of the two PRs merges second gives the chart-path ruling its "Read with R-864" line and
+this line its numbers.
+
+*What it refines:* no ruling on `main`. R-185's crate map stands, as item 5 says.
+
+R-864 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-139 (with R-863); changes no existing requirement.

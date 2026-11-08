@@ -8,6 +8,11 @@ Where this document meets a ruling, the ruling wins. Ids are final, from the id 
 document's base is `main` at 13edf773, so R-694 to R-720, R-791 to R-809, RQ-682, RQ-700 and RQ-701 are read from there. PR #388,
 TASK-M2-52's branch, is read as it stood on 6 Nov.
 
+**The owner's rulings of 8 Nov 2026 on building it.** R-863 orders the tasks of § 15 in five stages, each merging only
+with the previous stage's tests green, and adds TASK-M8-124, the path object with today's operations bitwise through it
+(§ 15). R-864 is the architecture rule for the chart-path work of § 17: one object, today's operations re-expressed as its
+named families, bitwise first, and a type sketch brought to the owner before any implementation.
+
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
 refusals are genuine contradictions, each with a named reason. Reduced capability is a label, not a refusal.
@@ -1550,6 +1555,14 @@ Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold 
 | TASK-M8-115 | M8 | time-axis mode in the GUI | TASK-M8-113, RQ-727 |
 | TASK-M8-116 | M8 | time-axis mode in Sequence and sidecars | TASK-M8-115, TASK-M8-77, RQ-727 |
 | TASK-M8-120 | M8 | the symmetry filter | TASK-M8-112, TASK-M8-103, TASK-M8-32, RQ-736 |
+| TASK-M8-124 | M8 | the path object; pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864) | TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, RQ-721; the owner's answer to R-864's type sketch |
+
+**The build order (R-863, the owner's order of 8 Nov 2026).** Once TASK-M4-37 releases them, the tasks are built in five
+stages, each depending on the previous stage's tasks and merging only with their tests green: (1) TASK-M8-124; (2)
+TASK-M8-117; (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and
+TASK-M8-119; (4) TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and TASK-M8-120. TASK-M8-124 is the 26th task behind
+TASK-M4-37. What the order leaves open, the tasks that fit no stage or straddle two and the stage-3 edges that would point
+forward across milestones or close a cycle, is RQ-744's.
 
 ---
 
@@ -1572,6 +1585,14 @@ The owner's consolidated order of 6 Nov: "a view is a point in chart space; ever
 clause by clause, each checked against the code, the corpus and the rulings branches of 4 and 5 Nov, which change nothing
 here. Every numeric claim comes from `docs/incoming/2026-11-06_chart_composition/checks/morph_check.py` and `path_check.py`, on a
 Python replica of chart_reference §0, unless it says otherwise. All of it is **door** RQ-721.
+
+**R-864 governs this section's types (the owner's architecture rule of 8 Nov 2026).** One object: a view is a point in
+chart space and every edit a path through it, its core types (Chart, Path and its families, Lock and anchor, Axis and
+primitive, PairMap, Hold) designed as one module, and a type sketch with a one-page rationale, reviewed by physics and
+code against `principia_chart_space_model.md`, brought to the owner before any implementation (TASK-M8-124). Where this
+section has an arm call the existing code (§ 17.3), R-864's item 2 reads: the operation becomes a constructor of the one
+object, a path of a named family, and its old route is deleted once it runs through it. Bitwise reproduction comes first
+(R-863's stage 1), and a special case is a named family or a gap brought back, never an if-branch.
 
 **Where the order can't hold as stated:**
 

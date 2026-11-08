@@ -1464,3 +1464,87 @@ waits on the answer.
   blocks nothing now.
 - **Waits:** nothing now: V-11 is parked by R-668 item 5. Its prograde comparison number waits on this only if the
   parking is lifted and V-11 is scored.
+
+## RQ-744: R-863's build order: the tasks that fit no stage or straddle two, and the stage-3 edges the milestones and the existing edges refuse *(the owner's order of 8 Nov 2026, R-863; a one-way door where an answer moves a task out of its milestone's gate, otherwise a reading of the owner's order; `docs/design/principia_chart_composition.md` § 15; context: TASK-M4-32, TASK-M4-33, TASK-M4-34, TASK-M7-72, TASK-M8-100, TASK-M8-102 to TASK-M8-107, TASK-M8-112, TASK-M8-117, TASK-M8-118, TASK-M8-124)*
+
+*Filed 8 Nov 2026 by the rulings PR that ports R-863 and R-864 (PR #445). The orchestrator's instruction: where a task
+fits no stage or straddles two, don't choose. Nothing below is given a stage edge.*
+
+*In plain English: the owner set five stages for building the chart-composition tasks. Most tasks fall into one stage
+and now wait on the stage before. Some fall into none, one falls into three, and three stage-3 tasks can't be made to wait
+on stage 2: two sit in an earlier milestone (M4), which may not wait on M8 work, and all three are already needed by
+stage 2's task through the chain the design drew. The owner says where each goes.*
+
+- **File, section:** `decisions.md` § R-863, the owner's words: "build in this order: (1) the path object and the bitwise
+  tests that today's pan, zoom, tilt, slice, lock and Save-view-as-chart reproduce exactly through it, before any new
+  capability; (2) locked paths (based morph, then the sliding anchor) with the test that the centre IC is constant; (3)
+  the primitive registry and composed axes, each primitive with its round-trip test; (4) morph families, easing and
+  Sequence segments; (5) time-axis charts and the symmetry filter. Each stage merges only with the previous stage's tests
+  green."; `docs/design/principia_chart_composition.md` § 15, "Tasks, milestones chosen by what depends on them";
+  `plan/check_plan.py`: a task may not depend "forward across milestones", and the graph may have no cycle.
+- **Applied:** stage 1 TASK-M8-124 (new); stage 2 TASK-M8-117; stage 3 TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101,
+  TASK-M8-109, TASK-M8-110, TASK-M8-111, TASK-M8-119; stage 4 TASK-M8-108; stage 5 TASK-M8-113 to TASK-M8-116 and
+  TASK-M8-120. Edges: TASK-M8-117 on TASK-M8-124; TASK-M8-101, -109, -110, -111 and -119 on TASK-M8-117; TASK-M8-108 on
+  every stage-3 task; every stage-5 task on TASK-M8-108.
+- **(A) Stage-3 tasks with no edge to stage 2.** TASK-M4-33 (the registry) and TASK-M4-34 (region D's pair) are in M4,
+  TASK-M8-117 in M8, so the edge would depend forward across milestones. And TASK-M4-33, TASK-M4-34 and TASK-M8-100 (warps
+  and pair maps) are upstream of TASK-M8-117 already: TASK-M8-117 → TASK-M8-106 → TASK-M8-102 (CPU batch) → TASK-M4-33,
+  TASK-M4-34, TASK-M8-100. So today stage 2 waits on these three stage-3 tasks, against the order. TASK-M4-34 also holds
+  TASK-M4-06 once RQ-714 rules (TASK-M4-37's Deliverables), so moving it behind stage 2 would hold M4's golden behind the
+  path work.
+- **(B) Straddles: TASK-M8-106** (the path type, the line on blocks, export through CPU batch). Its path type and its
+  bitwise tests (`path_tilt_bitwise`, `path_zoom_bitwise`, `path_lock_bitwise`, `path_save_view_bitwise`, REQ-CHART-113)
+  are stage 1, now TASK-M8-124's too; its line on blocks is the morph a based morph (stage 2) needs, or one of stage 4's
+  families; its re-timing, alignment and export are stage 4. Its edge to TASK-M8-102 is what puts (A)'s three tasks
+  before stage 2.
+- **(C) No stage names them:** TASK-M4-32 (the composition in the contracts, docs), TASK-M8-105 (chart paths in the
+  contracts, docs), TASK-M8-102 (CPU batch, numerical inverses), TASK-M8-103 (the builder's panels), TASK-M8-104 (1D
+  charts), TASK-M8-107 (live paths: the blend entry; R-863 names no live stage), TASK-M8-112 (paper frames as presets),
+  TASK-M8-118 (hold `L_z`) and TASK-M7-72 (contours of any primitive).
+- **Options:**
+  - (a) Split and re-place: TASK-M8-106 keeps only what is past stage 1 (its line, re-timing, alignment and export),
+    drops REQ-CHART-113's tests to TASK-M8-124, and TASK-M8-117 depends on TASK-M8-124 and TASK-M2-23 and not on it,
+    so stage 2 no longer waits on stage 3; TASK-M4-33 and TASK-M4-34 move to M8 (new ids, their requirements leaving
+    M4's gate, TASK-M4-06's edge then from M8), or stay in M4 under (b); (C)'s tasks placed by the stage they serve:
+    TASK-M4-32 before stage 3 and TASK-M8-105 before stage 1 (docs first), TASK-M8-102 and TASK-M8-118 in stage 3,
+    TASK-M8-107 and TASK-M8-103, TASK-M8-104 and TASK-M8-112 in stage 4 or 5 as the owner says, TASK-M7-72 in stage 3.
+  - (b) Keep the milestones: the stage-3 tasks in M4 keep their place, and the order across M4 and M8 is kept by
+    dispatch, the orchestrator releasing a stage's M4 tasks only once the previous stage has merged, not by edges.
+    (B) and (C) as in (a).
+  - (c) Another, stated by the owner.
+- **Recommendation:** (a) for (B), since it is the split that makes the stage order hold by edges; for (A), (b), since
+  moving TASK-M4-33 and TASK-M4-34 out of M4 changes M4's gate. A recommendation, not applied.
+- **Applied meanwhile:** the edges above; none for (A), (B) or (C). Every task here stays behind TASK-M4-37.
+- **Waits:** nothing can start yet: all of it waits behind TASK-M4-37 and, for TASK-M8-124, the owner's answer to R-864's
+  type sketch.
+
+## RQ-745: The acute-angle Burrau charts show `θ ∈ (0, π/4]` only, one labelling of each shape, the leg swap folded out: does that stand under the symmetry rule and the filter? *(a one-way door: what the instrument shows; R-27 against the owner's symmetry rule and symmetry-filter order of 7 Nov 2026, both ported in the open rulings PR #443; `crates/kernel/src/chart/burrau_acute.rs`; context: REQ-CHART-024, REQ-CHART-025, REQ-CHART-027, TASK-M8-120)*
+
+*Filed 8 Nov 2026 by the rulings PR that ports R-863 and R-864 (PR #445), from the orchestrator's read of the built
+charts against the 7 Nov rulings.*
+
+*In plain English: three built Burrau charts sweep the triangle's acute angle only up to 45°, because the angle and its
+complement give the same triangle with its two legs swapped. So each shape appears once and its swapped twin never does.
+The owner's 7 Nov symmetry rule says a symmetry may be shown once only by an optional filter after rendering, never by
+removing starting states or shrinking a chart. An older ruling (R-27) keeps these folded charts on purpose, labelled
+"shape only", beside the full-range charts. The owner says which stands for these charts.*
+
+- **File, section:** `crates/kernel/src/chart/burrau_acute.rs`:6-12, the module note: "`θ ∈ (0, π/4]` is horizontal, …
+  `θ` folds out the leg swap (`θ` and `π/2 − θ` are the same triangle with the legs swapped), so each chart covers each
+  shape once: [`SystemImage::Bijective`], the quotient "shape only" ([`ChartLabel`])."; :89-92, `in_fold`, "Layer 2's
+  `θ ∈ (0, π/4]`"; :121-124, `fold_label`, "The acute-angle charts' label: `name`, bijective, "shape only" (the module's note)"; :144,
+  `reject_early`, which rejects a `θ(u)` outside the fold.
+- **Against:** the owner's symmetry rule of 7 Nov 2026 (ported in the open rulings PR #443, not yet on `main`, so not
+  cited here by number), the owner's words: "Where a symmetry is used at all
+  (counting mirror pairs once, the IC constructor showing that a triangle and its flip are mirror images), it is a
+  declared, optional view or statistic, never a removal of starting states or angles. Every chart shows the full range of
+  the angles it sweeps."; and the owner's symmetry-filter order of 7 Nov 2026 (ported in PR #443 too), the owner's words: "Region D's quarter disc, the Anosova
+  half-disc and the half shape sphere at rest come out of this filter rather than out of reduced chart domains, so the
+  papers' figures are reproducible with the full disc still computed underneath."
+- **For:** `decisions.md` § R-27 (24 Sep 2026): "Shape only (the fold) and shape × labelling (the full range) are both
+  kept."; `docs/design/principia_chart_reference.md` § 4.5.
+- **Options:** (a) keep them as R-27 has them, labelled "shape only", beside the full-range `ν` charts; (b) re-express
+  them as the full chart through the symmetry filter (TASK-M8-120), the leg swap shown once only when the filter is on;
+  (c) another, stated by the owner.
+- **Applied meanwhile:** nothing. The charts stay as built, labelled "shape only" (R-27); no code or doc changes.
+- **Waits:** nothing built waits; under (b) a task re-expresses the three charts once TASK-M8-120's filter exists.
