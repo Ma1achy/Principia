@@ -11,7 +11,9 @@
 //! parameter named as a WGSL reserved word (`type`, `smooth`, `from`, `_`) is still a member WGSL admits.
 //!
 //! **A pass** is its registry file's WGSL, a function `fn run(uv: vec2<f32>) -> vec4<f32>`, the lab's `vec4 run()`
-//! in WGSL, written with the lab's names, which the generated module renames: `in_<port>`, `prev`, `p_<param>`, `res`
+//! in WGSL, and any helpers it declares at module level (a `fn`, `const`, `struct`, …), which the module names
+//! `print_n<k>_pass<j>_h_<name>`, so they are the pass's own. It is written with the lab's names, which the generated
+//! module renames: `in_<port>`, `prev`, `p_<param>`, `res`
 //! and `px` (the target's size in pixels, and one pixel in UV), and `tex(t, uv)`, a texture read. `uv` is the
 //! coordinate convention's, bottom-left origin, Y-up (`shaders/wgsl/lib/coords.wgsl`), as the lab's is.
 //!
@@ -299,10 +301,19 @@ fn uniform_value(value: &Value) -> Vec<f32> {
 }
 
 /// A pass's WGSL with the lab's names renamed into node `base`'s namespace (the module docs): every identifier but
-/// those in comments. The lab's names are reserved in a pass: a local named `res` or `p_x` is renamed too.
+/// those in comments. The lab's names are reserved in a pass: a local named `res` or `p_x` is renamed too. The pass's
+/// own module-level declarations ([`declarations`]: a helper `fn`, a `const`, `override`, `var`, `struct` or `alias`)
+/// are its pass's, `<function>_h_<name>`, so two nodes of one type, or two passes declaring one name, never declare it
+/// twice in the module; their every use is renamed with them, but a member (after `.`, or declared in a struct's
+/// body) and a literal's suffix (after a digit), which never name a declaration.
 fn rename(wgsl: &str, base: &str, function: &str) -> String {
+    let own = declarations(wgsl);
     let mut out = String::with_capacity(wgsl.len() + 64);
     let mut rest = wgsl;
+    let mut depth = 0usize;
+    // Whether a `struct` keyword awaits its body, and the depth of the struct body the scan is in.
+    let mut struct_next = false;
+    let mut struct_body = None;
     while let Some(c) = rest.chars().next() {
         let end = if rest.starts_with("//") {
             rest.find('\n').unwrap_or(rest.len())
@@ -312,19 +323,91 @@ fn rename(wgsl: &str, base: &str, function: &str) -> String {
             let end = rest
                 .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
                 .unwrap_or(rest.len());
-            match renamed(&rest[..end], base, function) {
+            let word = &rest[..end];
+            let member = out.trim_end().ends_with('.')
+                || out.ends_with(|ch: char| ch.is_ascii_digit())
+                || (struct_body == Some(depth) && rest[end..].trim_start().starts_with(':'));
+            match renamed(word, base, function) {
                 Some(name) => out.push_str(&name),
-                None => out.push_str(&rest[..end]),
+                None if own.contains(word) && !member => {
+                    let _ = write!(out, "{function}_h_{word}");
+                }
+                None => out.push_str(word),
             }
+            struct_next |= depth == 0 && word == "struct";
             rest = &rest[end..];
             continue;
         } else {
+            match c {
+                '{' => {
+                    depth += 1;
+                    if struct_next {
+                        struct_next = false;
+                        struct_body = Some(depth);
+                    }
+                }
+                '}' => {
+                    if struct_body == Some(depth) {
+                        struct_body = None;
+                    }
+                    depth = depth.saturating_sub(1);
+                }
+                _ => {}
+            }
             c.len_utf8()
         };
         out.push_str(&rest[..end]);
         rest = &rest[end..];
     }
     out
+}
+
+/// The names a pass's WGSL declares at module level, outside every brace and comment: the name after `fn`, `const`,
+/// `override`, `struct`, `alias`, or `var` and its `<…>`.
+fn declarations(wgsl: &str) -> BTreeSet<&str> {
+    let mut names = BTreeSet::new();
+    let mut rest = wgsl;
+    let mut depth = 0usize;
+    let mut declaring = false;
+    while let Some(c) = rest.chars().next() {
+        let end = if rest.starts_with("//") {
+            rest.find('\n').unwrap_or(rest.len())
+        } else if rest.starts_with("/*") {
+            rest.find("*/").map_or(rest.len(), |e| e + 2)
+        } else if c.is_ascii_alphabetic() || c == '_' {
+            let end = rest
+                .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+                .unwrap_or(rest.len());
+            let word = &rest[..end];
+            if declaring {
+                names.insert(word);
+                declaring = false;
+            } else if depth == 0 {
+                declaring = matches!(
+                    word,
+                    "fn" | "const" | "override" | "struct" | "alias" | "var"
+                );
+                let after = rest[end..].trim_start();
+                if word == "var" && after.starts_with('<') {
+                    // `var<private>`: the name comes after the template.
+                    let skip =
+                        rest.len() - after.len() + after.find('>').map_or(after.len(), |e| e + 1);
+                    rest = &rest[skip..];
+                    continue;
+                }
+            }
+            end
+        } else {
+            match c {
+                '{' => depth += 1,
+                '}' => depth = depth.saturating_sub(1),
+                _ => {}
+            }
+            c.len_utf8()
+        };
+        rest = &rest[end..];
+    }
+    names
 }
 
 /// The module's name for the lab's name `word` in node `base`'s pass `function`, if it is one.

@@ -491,6 +491,95 @@ negative_control!(
         .fold(source, |s, n| s.replace(&format!("p_{n}"), n)))
 );
 
+// ----- a pass's own helpers -----
+
+/// An entry of two passes, each declaring helpers at module level, some of one name in both.
+const HELPER: &str = r##"{
+  "id": "helper", "label": "Helper", "category": "photo",
+  "doc": "A test entry: passes declaring helpers.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [],
+  "passes": ["helper_a.wgsl", "helper_b.wgsl"], "cost": "light", "motion": "full", "temporally_stable": true,
+  "screen_medium": false, "deviations": ["A test entry."]
+}"##;
+
+/// The first pass: a `const`, an `override`, an `alias`, a `struct` with a member named as a helper, a `var<private>`
+/// and two `fn`s, one named `f`, as a literal's suffix is, and a `const` named `x`, as a swizzle is.
+const HELPER_A: &str = "// Helpers, some named as the second pass names its own.
+const K: f32 = 0.5;
+const x: f32 = 2.0;
+override gain: f32 = 1.0;
+alias V = vec3<f32>;
+struct S { shade: f32, v: vec2<f32> }
+var<private> seen: f32;
+fn f(a: f32) -> f32 { return a * 1.0f; }
+fn shade(c: V) -> V {
+    let s = S(K, vec2<f32>(x, 0.0));
+    seen = s.shade + s.v.x;
+    return c * f(s.shade) * gain + seen;
+}
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    return vec4<f32>(shade(tex(in_in, uv).rgb), 1.0);
+}";
+
+/// The second pass: a `const`, a `struct` and a `fn` of the first pass's names.
+const HELPER_B: &str = "const K: f32 = 0.25;
+struct S { k: f32 }
+fn shade(c: vec3<f32>) -> vec3<f32> { return c * S(K).k; }
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    return vec4<f32>(shade(tex(prev, uv).rgb), 1.0);
+}";
+
+/// A graph of two helper nodes in a chain: the module, as `emit` writes it, compiles under naga, each pass's helpers
+/// its own.
+fn check_helpers(emit: fn(String) -> String) {
+    let mut registry = support::registry();
+    registry
+        .register(HELPER, &|f: &str| match f {
+            "helper_a.wgsl" => Some(HELPER_A.to_owned()),
+            "helper_b.wgsl" => Some(HELPER_B.to_owned()),
+            _ => None,
+        })
+        .expect("the helper entry registers");
+    let graph = Graph::parse(
+        r#"{"format":"principia.print/1","name":"H","nodes":{"img":{"type":"render"},
+          "a":{"type":"helper","in":{"in":"img"}},"b":{"type":"helper","in":{"in":"a"}},
+          "out":{"type":"output","in":{"in":"b"}}},"out":"out"}"#,
+    )
+    .expect("parses");
+    let e = expand(&graph, &|_: &str| None).expect("expands");
+    let g = generate(&e, &registry).unwrap_or_else(|e| panic!("does not generate: {e}"));
+    for k in [1, 2] {
+        for needle in [
+            format!("fn print_n{k}_pass0_h_shade(c: print_n{k}_pass0_h_V) -> print_n{k}_pass0_h_V {{"),
+            format!("let s = print_n{k}_pass0_h_S(print_n{k}_pass0_h_K, vec2<f32>(print_n{k}_pass0_h_x, 0.0));"),
+            format!("struct print_n{k}_pass0_h_S {{ shade: f32, v: vec2<f32> }}"),
+            format!("print_n{k}_pass0_h_seen = s.shade + s.v.x;"),
+            "return a * 1.0f; }".to_owned(),
+            format!("var<private> print_n{k}_pass0_h_seen: f32;"),
+            format!("fn print_n{k}_pass1_h_shade(c: vec3<f32>) -> vec3<f32> {{ return c * print_n{k}_pass1_h_S(print_n{k}_pass1_h_K).k; }}"),
+        ] {
+            assert!(g.source.contains(&needle), "the helpers are not the pass's own: no {needle} in {}", g.source);
+        }
+    }
+    compile(&emit(g.source));
+}
+
+#[test]
+fn print_registry_entries_pass_helpers_compile() {
+    check_helpers(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_pass_helpers_compile,
+    "the helpers declared by their bare names, as the pass writes them",
+    expected = "the generated WGSL does not parse",
+    check_helpers(|source| ["n1_pass0", "n1_pass1", "n2_pass0", "n2_pass1"]
+        .iter()
+        .fold(source, |s, p| s.replace(&format!("print_{p}_h_"), "")))
+);
+
 // ----- registration refusals -----
 
 /// The output entry's declaration with `member` taken out.
