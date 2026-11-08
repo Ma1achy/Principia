@@ -1558,7 +1558,8 @@ Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold 
 | TASK-M8-124 | M8 | the path object; pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864) | TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, RQ-721; the owner's answer to R-864's type sketch |
 
 **The build order (R-863, the owner's order of 8 Nov 2026).** Once TASK-M4-37 releases them, the tasks are built in five
-stages, each depending on the previous stage's tasks and merging only with their tests green: (1) TASK-M8-124; (2)
+stages, each merging only with the previous stage's tests green. Applied per R-369 (R-863), each stage's tasks depend on
+the previous stage's, placed so: (1) TASK-M8-124; (2)
 TASK-M8-117; (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and
 TASK-M8-119; (4) TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and TASK-M8-120. TASK-M8-124 is the 26th task behind
 TASK-M4-37. What the order leaves open, the tasks that fit no stage or straddle two and the stage-3 edges that would point

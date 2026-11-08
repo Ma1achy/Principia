@@ -31891,8 +31891,8 @@ The owner's words (8 Nov 2026), verbatim:
 > the symmetry filter. Each stage merges only with the previous stage's tests green.
 
 *What it decides:* the order in which the design's tasks are built once TASK-M4-37, the gate holding them until the
-owner has ruled the design, releases them. Each stage's tasks start after the previous stage's have merged, and a
-stage merges only with the previous stage's tests green.
+owner has ruled the design, releases them: the five stages below, in that order, each stage merging only with the
+previous stage's tests green.
 
 1. **The path object and the bitwise tests**, before any new capability: today's pan, zoom, tilt, slice, lock and
    Save view as chart reproduce exactly through the one object. No task built exactly that, so **TASK-M8-124** is added
@@ -31906,6 +31906,9 @@ stage merges only with the previous stage's tests green.
 
 *Applied per R-369:*
 
+- **The mechanism.** The owner's words gate merging; Depends on edges put them into effect. Each stage's tasks depend
+  on the previous stage's, so they start once those have merged, or early off an approved head as R-388 allows any
+  task, and none merges before the stage ahead of it.
 - **The edges.** TASK-M8-117 depends on TASK-M8-124; TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and
   TASK-M8-119 on TASK-M8-117; TASK-M8-108 on every stage-3 task; and each stage-5 task on TASK-M8-108. Each task file
   names its stage in its Notes.
