@@ -861,6 +861,14 @@
   requirements: [REQ-GEN-045]
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M2-57
+  milestone: M2
+  title: "The decoder's mirror step removed, latent β over the full circle, under the owner's bitwise check (R-865) ⚑"
+  depends_on: [TASK-M2-40]
+  needs: []
+  requirements: [REQ-DEC-055, REQ-DEC-056]
+  reviewers: [code, qa, physics]  # ⚑ physics review required: it changes the decoder
+  pitfalls: []
 - id: TASK-M3-02
   milestone: M3
   title: Stepper occupants and the capability profile
@@ -3780,7 +3788,7 @@
 - id: TASK-M8-117
   milestone: M8
   title: "Paths under a lock: the stored anchor"
-  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23, TASK-M8-124]
+  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23, TASK-M8-124, TASK-M8-125]  # TASK-M8-125: R-866, stage 1 (applied per R-369)
   needs: []
   requirements: [REQ-CHART-115, REQ-CHART-146]
   reviewers: [code, qa, physics]
@@ -3840,6 +3848,22 @@
   needs: []
   requirements: [REQ-CHART-147]
   reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M8-125
+  milestone: M8
+  title: "Locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, centre on pin and the auto-snap setting, exact on nonlinear charts or saying why (R-866, R-863 stage 1)"
+  depends_on: [TASK-M4-37, TASK-M8-124]
+  needs: []
+  requirements: [REQ-GUI-425, REQ-GUI-429]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: []
+- id: TASK-M8-126
+  milestone: M8
+  title: "Points of interest: saved signed states, their stars on every chart and path frame, and similar-systems overlays (R-870)"
+  depends_on: [TASK-M4-37, TASK-M8-124, TASK-M8-108, TASK-M7-43, TASK-M7-72, TASK-M4-33, TASK-M2-57]
+  needs: []
+  requirements: [REQ-GUI-426, REQ-GUI-427, REQ-GUI-428]
+  reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M9-01
   milestone: M9
