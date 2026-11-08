@@ -27,28 +27,34 @@ as a fallback (R-864 item 2).
   Axis and primitive, PairMap, Hold) as one module, with a one-page rationale, in a design note under `docs/design/`
   named in the PR, on the PR's first commit; reviewed there by the physics and code reviewers against the chart-space
   model, then taken to the owner through `/rulings-report`.
-- After the owner's answer: the module in `crates/engine/src/`, and `engine/nav`, `engine/lock.rs` and
+- After the owner has approved the sketch: the module in `crates/engine/src/`, and `engine/nav`, `engine/lock.rs` and
   `engine/chart_authoring` restructured to fit it (approved by R-864); pan, zoom, tilt, slice, lock, chart switch and
   Save view as chart each a constructor of the object, a path of a named family; each operation's old route deleted.
+- **Stage 1's fence (R-863, "before any new capability").** The sketch designs every core type; the module implements
+  only what today's operations use. Composed Axis and primitive and PairMap (stage 3's), Hold (TASK-M8-118's, unplaced:
+  RQ-744 (C)) and any family beyond today's operations are sketched only, and carry no new behaviour until their
+  stage's task.
 - The bitwise baseline, today's results recorded from today's code on its own commit before the re-expression.
 - Chart maps and decode stay in `kernel` (R-864 item 5): nothing here changes a kernel bit.
 
 ## Acceptance tests
-- Review: the type sketch and its one-page rationale approved by the physics and code reviewers, and the owner's answer
-  recorded, before any implementation commit (REQ-CHART-139).
+- Review: the type sketch and its one-page rationale approved by the physics and code reviewers, then approved by the
+  owner, the answer recorded as a ruling, before any implementation commit: no commit on the branch touches `crates/`
+  before it (REQ-CHART-139).
 - `cargo test -p engine -- path_pan_bitwise path_zoom_bitwise path_tilt_bitwise path_slice_bitwise path_lock_bitwise path_chart_switch_bitwise path_save_view_bitwise path_presets_bitwise` —
   each operation through the object against the recorded baseline: sim key, IC words and image hash bit for bit, on
   latent, curved and saved charts; every preset and saved chart today's code builds, reopened through the object;
   controls: one floating-point operation reordered in a family, the general geodesic in place of the tilt family, a path
   triple in a zoom's sim key, each failing (REQ-CHART-139).
 - Review: no operation's old route left beside the object, and no special case an if-branch outside a named family
-  (R-864 items 2 and 4) (REQ-CHART-139).
+  (R-864 items 2 and 4); no family, pair map or hold beyond today's operations given behaviour (R-863 stage 1)
+  (REQ-CHART-139).
 
 ## Notes
 - **Build order (R-863):** stage 1, the path object and the bitwise tests, before any new capability. Stage 2,
   TASK-M8-117, depends on this task and merges only with its tests green.
-- **Gate (R-864 item 1):** dispatched first for the sketch only. No implementation commit lands before the owner's answer
-  to the sketch, which is recorded as a ruling; the rest of the task then goes ahead on the same branch.
+- **Gate (R-864 item 1):** dispatched first for the sketch only. No implementation commit lands before the owner has
+  approved the sketch, the answer recorded as a ruling; the rest of the task then goes ahead on the same branch.
 - **Routes covered.** The bitwise baseline and the deletion cover every route of the seven operations on `main` when
   this task starts, the PR naming each: at least `engine/nav`'s `pan`, `zoom`, `slice`, `tilt` and `tilt_pair`,
   `engine/lock.rs`'s lock, and the chart switch's route. Save view as chart has no code on `main` yet: its routes are
