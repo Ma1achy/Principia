@@ -1464,3 +1464,20 @@ waits on the answer.
   blocks nothing now.
 - **Waits:** nothing now: V-11 is parked by R-668 item 5. Its prograde comparison number waits on this only if the
   parking is lifted and V-11 is scored.
+
+## RQ-742: A saved curved chart tilted again into its own saved target, where the saved tilt is Lean each axis with one target and both angles set: what is `R`'s third input? *(physics; silence; R-513 Q1, R-474, R-475 L5; context: TASK-M2-40, REQ-CHART-077, TASK-M8-48)*
+
+*Queued 8 Nov 2026 by TASK-M2-40's implementer, for the physics reviewer and, if they can't settle it from the corpus, the owner's rulings report. A one-way door if it reaches the owner: it changes what a saved chart computes.*
+
+**In plain English:** when you save a tilted curved view and tilt it again into the same hidden coordinate, R-513 says the two rotations compose: the new tilt's offset on that coordinate is fed into the saved rotation as its third input. That needs the saved rotation's third column. Every saved tilt has one except a "Lean each axis" tilt with one target and both angles set, which isn't a rotation: its two tilted axes are skewed, so nothing says where the third input goes.
+
+- **File, section:**
+  - `decisions.md` § R-513, Q1: "The new tilt's offset on the saved target enters `R`'s third input"; and its ruling, "`(a, b, d) = R·(u′, v′, d′)`, that is `R·R′·(u, v, 0)`".
+  - `decisions.md` § R-474 and `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Two tilt maps": "**Lean each axis**, an option (`lean`), is the formula above per axis, `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_X`, skewed (`u₁·u₂ = sin τ₁ sin τ₂`)." Its map gives `R·e_a` and `R·e_b` only; with one target and both angles set it is no rotation, so `R·e_X` is not defined.
+  - `decisions.md` § R-513, Q3: "The saved target is offered again in the Tilt section's target dropdowns of a saved curved chart".
+- **Options seen:**
+  - (a) **Recommended**, by analogy with R-514 (a latent view saved at a tilt tilts again in the orthonormal frame Gram–Schmidt makes of the stored pair and the target): `R`'s third input is `e_X` made orthogonal to the saved plane, `û₁ × û₂` normalised, the sign toward `+e_X`. The composition is then no longer a rotation, as the saved Lean map isn't.
+  - (b) Refuse the case: a saved Lean view with one target and both angles set doesn't offer its saved target to a new tilt (Q3 holding everywhere else).
+  - (c) Another, stated by the owner.
+- **Applied meanwhile:** the kernel refuses that composition (`kernel::chart::saved::Composed::new` returns `None`; `TiltSpec::inputs` returns `None` for that tilt), computing nothing it can't justify. A new tilt into any other target of such a chart composes as the block form, which needs no third input, and every other saved tilt composes as R-513 rules.
+- **Waits:** only that case: a new tilt into the saved target of a saved curved chart whose tilt is Lean each axis, one target, both angles set. REQ-CHART-077's own verify (a 25° single-angle saved tilt) doesn't reach it.
