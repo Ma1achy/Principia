@@ -3779,7 +3779,7 @@
   pitfalls: []
 - id: TASK-M8-121
   milestone: M8
-  title: "A run from the measurement panel's button marked in its report as not a measurement (R-826)"
+  title: "A browser run from the measurement panel's button marked in its report as not a measurement (R-826)"
   depends_on: [TASK-M8-86]
   needs: []
   requirements: [REQ-PERF-119]

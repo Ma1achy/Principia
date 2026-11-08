@@ -40945,7 +40945,7 @@
     section: "R-826 — A browser run started from the measurement panel's button is marked in its report as not a measurement *(closes RQ-702)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui measure_button_run_marked: the report of a run started from the measurement panel's button carries the not-a-measurement mark, and the report of a run started by ?run= doesn't; control: the mark dropped fails"
+    detail: "cargo test -p gui measure_button_run_marked: the report of a browser run started from the measurement panel's button carries the not-a-measurement mark, and the reports of a run started by ?run= and of a native run started from the panel's button don't; control: the mark dropped fails"
   rulings:
   - R-826
   milestone: M8
