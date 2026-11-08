@@ -861,6 +861,22 @@
   requirements: [REQ-GEN-045]
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M2-55
+  milestone: M2
+  title: "Saved curved charts, the rest: compositions onto three or four hidden coordinates, a saved chart saved again, and the composed chart's area weight and repeat counting (R-475, R-513) ⚑"
+  depends_on: [TASK-M2-40]  # split from TASK-M2-40 (code review 5816802860 of PR #447, C1; physics F3); applied per R-369
+  needs: []
+  requirements: [REQ-CHART-148]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M2-56
+  milestone: M2
+  title: "A saved Lean each axis tilt with one target and both angles set, tilted again into its target, as RQ-746 rules ⚑"
+  depends_on: [TASK-M2-40]  # split from REQ-CHART-077 (physics review 5816819537 of PR #447, F2); waits on RQ-746; applied per R-369
+  needs: []
+  requirements: [REQ-CHART-149]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
 - id: TASK-M3-02
   milestone: M3
   title: Stepper occupants and the capability profile
