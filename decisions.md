@@ -31005,6 +31005,8 @@ Adds REQ-INT-113; changes REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, RE
 *Refined by R-859 (8 Nov 2026: from the anchor move the runner may run, as named measurements, the GPU suites nightly
 and on pushes to `main` (Vulkan now, DX12 from Phase 2), gpu-idle, the weekly proof and the heavy-work comparison;
 Windows benchmark numbers are a separate named series; its security rules are unchanged).*
+*Still in force: all of it, items 1 to 6; R-859 says what the runner may run from the anchor move, and that moving
+required or heavy CI work to it is not approved.*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
 `docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), REQ-SYS-065 and REQ-VAL-099 (reqio), TASK-M0-04, TASK-M8-41,
 `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md` and `plan/rule_groups.yaml`*
