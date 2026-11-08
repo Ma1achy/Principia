@@ -8,7 +8,8 @@ Read this first; each rule points at its source.
   § "Archived — record only, do not implement"). Transcribe from `docs/reference/` into the contracts, and cite the
   contract.
 - For the rules in force, read `plan/CURRENT_RULES.md`, which is generated from `decisions.md`. Read `decisions.md` for
-  their history and why they were made (R-292).
+  their history and why they were made (R-292). It is not committed (the owner, 8 Nov 2026): run
+  `python3 plan/tools/regenerate.py` first, every time, so the copy you read is current.
 
 ## Papers and licences (`decisions.md` § R-643)
 - No publisher PDF is committed unless its licence allows redistribution, checked before commit (R-643). A file that

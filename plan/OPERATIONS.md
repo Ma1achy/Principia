@@ -91,6 +91,7 @@ milestone waits on it, and no CI workflow runs it.
    - The script warns, and does not fail, when the machine's `python3` is another minor version than the one CI sets
      up (R-347): `plan/check_plan.py` and the xtask tools need only Python 3 with PyYAML.
 2. **Read** `CLAUDE.md`, `plan/WORKFLOW.md`, `plan/CURRENT_RULES.md`, this file and `REVIEW_QUEUE.md` (everything open).
+   `plan/CURRENT_RULES.md` is not committed: run `python3 plan/tools/regenerate.py` first (the owner, 8 Nov 2026).
    Then `gh pr list --repo Ma1achy/Principia` for the PRs in flight (in a cloud session, its REST form, § "Where the
    build loop runs"). The loop needs `gh`, signed in to GitHub
    (`gh auth status`); CI's runner images have it, so the setup script doesn't install it.
@@ -527,6 +528,7 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 **No refresh merges (R-717).** `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch with no conflict. R-827 settles it against R-676's paragraph in this section and R-388 (*was:* "RQ-704 holds this against R-676's paragraph in this section and R-388.").
 
 **Generated files (R-718).** A generated plan file is not committed if nothing needs it in git. Otherwise it is marked in `.gitattributes`, a conflict in it is resolved by regenerating, never by hand, and a check shows the committed copy matches a fresh regeneration.
+Applied, by the owner's order of 8 Nov 2026 ("Generated plan files (plan/coverage.md etc.) stop being committed; CI regenerates and checks them."): `plan/CURRENT_RULES.md`, `plan/coverage.md` and the reviewers' lists, `plan/reviewers/lists/`, are not committed (`.gitignore`); `python3 plan/tools/regenerate.py` writes them, and every reader runs it first. The gate and report blocks of `plan/MILESTONES.md` stay committed, as `cargo xtask gate-report` and tests read them from git: `.gitattributes` marks the file, and a conflict inside a block is resolved by `python3 plan/tools/regenerate.py --all`, which rewrites every block whole; a conflict in its hand-written text is resolved by hand. `plan/check_plan.py`, which CI runs on every plan and docs change, fails if a generated file is committed, if a generator can't build its file from the sources, or if the committed blocks differ from a fresh regeneration.
 
 **Numbers.**
 - **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`
