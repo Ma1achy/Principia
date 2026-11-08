@@ -1465,7 +1465,7 @@ waits on the answer.
 - **Waits:** nothing now: V-11 is parked by R-668 item 5. Its prograde comparison number waits on this only if the
   parking is lifted and V-11 is scored.
 
-## RQ-742: REQ-RENDER-102 and REQ-RENDER-104 test a `linocut` with a `depth` parameter and `ground` and `field` inputs, which the lab's linocut does not have *(record conflict between a verify and the reference; TASK-M7-54, PR for REQ-RENDER-101 to REQ-RENDER-104; context: the task that ports the lab's linocut)*
+## RQ-748: REQ-RENDER-102 and REQ-RENDER-104 test a `linocut` with a `depth` parameter and `ground` and `field` inputs, which the lab's linocut does not have *(record conflict between a verify and the reference; TASK-M7-54, PR for REQ-RENDER-101 to REQ-RENDER-104; context: the task that ports the lab's linocut)*
 
 *Queued 8 Nov 2026 by TASK-M7-54. A record correction, two-way under R-369 (§ "When to ask the human"): the orchestrator
 and the reviewers can settle it. It blocks nothing now: no linocut ships in TASK-M7-54, and its tests use a fixture.*
