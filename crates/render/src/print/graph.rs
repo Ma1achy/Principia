@@ -529,7 +529,7 @@ impl Expander<'_> {
         );
         self.stack.pop();
         let exit = exit?;
-        scope.pending.retain(|p| p != id);
+        scope.pending.pop();
         scope.exits.insert(id.to_owned(), exit.clone());
         Ok(exit)
     }
@@ -637,10 +637,8 @@ pub fn number(value: f64) -> Result<String, GraphError> {
             out.push('.');
             out.push_str(rest);
         }
-        let e = n - 1;
-        out.push('e');
-        out.push(if e < 0 { '-' } else { '+' });
-        out.push_str(&e.unsigned_abs().to_string());
+        // The exponent with its sign, `+` or `-`: never 0 here, as n = 1 is written above.
+        out.push_str(&format!("e{:+}", n - 1));
     }
     Ok(out)
 }

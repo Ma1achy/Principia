@@ -263,7 +263,7 @@ fn node_module(
              @location(0) vec4<f32> {{\n    return {function}(frag_uv(frag.xy, print_frame.res));\n}}\n",
             entry.id,
             pass.file,
-            rename(&pass.wgsl, &base, &function, entry).trim_end()
+            rename(&pass.wgsl, &base, &function).trim_end()
         );
         out.passes.push(PassEntry {
             node: id.to_owned(),
@@ -298,55 +298,45 @@ fn uniform_value(value: &Value) -> Vec<f32> {
 }
 
 /// A pass's WGSL with the lab's names renamed into node `base`'s namespace (the module docs): every identifier but
-/// those after a `.` (a member) and those in comments.
-fn rename(wgsl: &str, base: &str, function: &str, entry: &Entry) -> String {
+/// those in comments. The lab's names are reserved in a pass: a local named `res` or `p_x` is renamed too.
+fn rename(wgsl: &str, base: &str, function: &str) -> String {
     let mut out = String::with_capacity(wgsl.len() + 64);
     let mut rest = wgsl;
-    let mut after_dot = false;
     while let Some(c) = rest.chars().next() {
-        if rest.starts_with("//") {
-            let end = rest.find('\n').unwrap_or(rest.len());
-            out.push_str(&rest[..end]);
-            rest = &rest[end..];
+        let end = if rest.starts_with("//") {
+            rest.find('\n').unwrap_or(rest.len())
         } else if rest.starts_with("/*") {
-            let end = rest.find("*/").map_or(rest.len(), |e| e + 2);
-            out.push_str(&rest[..end]);
-            rest = &rest[end..];
+            rest.find("*/").map_or(rest.len(), |e| e + 2)
         } else if c.is_ascii_alphabetic() || c == '_' {
             let end = rest
                 .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
                 .unwrap_or(rest.len());
-            let word = &rest[..end];
-            match (after_dot, renamed(word, base, function, entry)) {
-                (false, Some(name)) => out.push_str(&name),
-                _ => out.push_str(word),
+            match renamed(&rest[..end], base, function) {
+                Some(name) => out.push_str(&name),
+                None => out.push_str(&rest[..end]),
             }
             rest = &rest[end..];
-            after_dot = false;
+            continue;
         } else {
-            out.push(c);
-            rest = &rest[c.len_utf8()..];
-            if !c.is_whitespace() {
-                after_dot = c == '.';
-            }
-        }
+            c.len_utf8()
+        };
+        out.push_str(&rest[..end]);
+        rest = &rest[end..];
     }
     out
 }
 
 /// The module's name for the lab's name `word` in node `base`'s pass `function`, if it is one.
-fn renamed(word: &str, base: &str, function: &str, entry: &Entry) -> Option<String> {
-    let input = |p: &str| entry.inputs.iter().any(|i| i.name == p);
-    let param = |p: &str| entry.params.iter().any(|q| q.name == p);
+fn renamed(word: &str, base: &str, function: &str) -> Option<String> {
     match word {
         "run" => Some(function.to_owned()),
         "tex" => Some(format!("{PREFIX}tex")),
         "res" | "px" => Some(format!("{PREFIX}frame.{word}")),
-        "prev" if entry.passes.len() > 1 => Some(format!("{base}_prev")),
+        "prev" => Some(format!("{base}_prev")),
         _ => match (word.strip_prefix("in_"), word.strip_prefix("p_")) {
-            (Some(p), _) if input(p) => Some(format!("{base}_in_{p}")),
-            (_, Some(p)) if param(p) => Some(format!("{base}.{p}")),
-            _ => None,
+            (Some(port), _) => Some(format!("{base}_in_{port}")),
+            (None, Some(param)) => Some(format!("{base}.{param}")),
+            (None, None) => None,
         },
     }
 }

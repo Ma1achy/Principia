@@ -17,7 +17,7 @@ use std::fmt;
 
 use serde_json::{Map, Value as Json};
 
-use super::graph::{expand, Graph, Value, PRESET_PREFIX};
+use super::graph::{expand, Graph, Value};
 use super::ports::{validate, InputDefault, PortType};
 
 /// A node type's category: the lab's eleven, its `source` named "Print source" in the port, as the stage the graph
@@ -364,7 +364,8 @@ fn entry(json: &Json, wgsl: &dyn Fn(&str) -> Option<String>) -> Result<Entry, Re
     if let Some((key, what)) = FIELDS.iter().find(|(k, _)| !obj.contains_key(*k)) {
         return refuse(format!("no `{key}` ({what})"));
     }
-    if !is_identifier(&id) || id.starts_with(PRESET_PREFIX) {
+    // An identifier holds no `:`, so no id is a preset's, `preset:<name>`.
+    if !is_identifier(&id) {
         return refuse("the id is not an identifier, [a-z_][a-z0-9_]*".into());
     }
     let category = obj
@@ -565,11 +566,12 @@ fn param(name: &str, p: &Map<String, Json>) -> Result<Param, String> {
     }
     let num = |key: &str| p.get(key).and_then(Json::as_f64).filter(|v| v.is_finite());
     let default = match (kind, p.get("default")) {
-        ("colour", Some(Json::String(s))) => Value::Text(s.clone()),
-        (_, Some(Json::Number(_))) if num("default").is_some() => {
-            Value::Number(num("default").unwrap_or_default())
-        }
-        _ => return Err("it has no default of its kind".into()),
+        ("colour", Some(Json::String(s))) => Some(Value::Text(s.clone())),
+        (_, Some(Json::Number(n))) => n.as_f64().map(Value::Number),
+        _ => None,
+    };
+    let Some(default) = default else {
+        return Err("it has no default of its kind".into());
     };
     let kind = match kind {
         "number" => {

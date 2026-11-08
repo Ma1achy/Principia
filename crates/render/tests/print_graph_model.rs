@@ -68,6 +68,18 @@ fn print_graph_model_linocut_round_trips_bitwise() {
         r#"{"format":"principia.print/1","name":"P","nodes":{"o":{"type":"output"}},"out":"o"}"#;
     let want = r#"{"format":"principia.print/1","name":"P","nodes":{"o":{"type":"output"}},"out":"o","settings":{}}"#;
     check_round_trip(bare, want, canonical);
+    // Strings are escaped as JCS escapes them (RFC 8785 §3.2.2.2): a space as itself, U+001F and U+0001 as `\u00xx`.
+    let name = "A b\u{1f}\u{1}\u{8}\t\n\u{c}\r\"\\é";
+    let g = Graph {
+        name: name.into(),
+        ..parse(bare)
+    };
+    let text = canonical(&g);
+    assert!(
+        text.contains(r#""name":"A b\u001f\u0001\b\t\n\f\r\"\\é""#),
+        "the name is not escaped as JCS escapes it: {text}"
+    );
+    assert_eq!(canonical(&parse(&text)), text);
 }
 
 negative_control!(
@@ -203,6 +215,13 @@ fn check_resolve(resolve: Resolver) {
     ] {
         assert!(read(bad).is_err(), "{bad:?} was resolved");
     }
+    assert_eq!(
+        read("$ink+1"),
+        Err(
+            "\"$ink+1\": the setting `ink` = \"#171414\" is no number, so it takes no offset"
+                .to_owned()
+        )
+    );
 }
 
 #[test]
@@ -224,6 +243,7 @@ fn check_missing(graph: &str) {
     assert!(err.contains("`missing`"), "{err}");
     let err = expand(&parse(graph), &|_: &str| None)
         .expect_err("a graph reading a setting it does not have expanded");
+    assert_eq!(err.to_string(), err.0);
     assert!(
         err.0.contains("setting `missing`") && err.0.contains("`cut`") && err.0.contains("`depth`"),
         "the error does not name the setting, the node and the parameter: {err}"
@@ -317,6 +337,66 @@ fn print_graph_model_preset_expands_as_sub_graph() {
     let typo = ON_POLAROID.replace(r#""seed":"$s+2""#, r#""sed":1"#);
     let err = expand(&parse(&typo), &|n: &str| presets.get(n).cloned()).expect_err("expanded");
     assert!(err.0.contains("no setting `sed`"), "{err}");
+    check_preset_wiring(&presets);
+}
+
+/// A preset node's output read as `pol` or `pol.out`, never another port; its one input `in`; chained preset nodes;
+/// a preset node reading its own output; and a preset whose own preset node reads its Render node, the outer input.
+fn check_preset_wiring(presets: &BTreeMap<String, Graph>) {
+    let lookup = |n: &str| presets.get(n).cloned();
+    let out_of =
+        |text: &str| expand(&parse(text), &lookup).map(|e| e.nodes["out"].inputs["in"].clone());
+    assert_eq!(
+        out_of(&ON_POLAROID.replace(r#"{"in":"pol"}"#, r#"{"in":"pol.out"}"#)),
+        Ok(wire("pol/pol"))
+    );
+    let err = out_of(&ON_POLAROID.replace(r#"{"in":"pol"}"#, r#"{"in":"pol.grain"}"#))
+        .expect_err("pol.grain");
+    assert!(err.0.contains("has one output, `out`"), "{err}");
+    let err = out_of(&ON_POLAROID.replace(r#""in":{"in":"img"}"#, r#""in":{"src":"img"}"#))
+        .expect_err("src");
+    assert!(err.0.contains("a preset node has one input, `in`"), "{err}");
+    let chained = r#"{"format":"principia.print/1","name":"Two","nodes":{"img":{"type":"render"},
+      "a":{"type":"preset:Polaroid","in":{"in":"img"}},"b":{"type":"preset:Polaroid","in":{"in":"a"}},
+      "out":{"type":"output","in":{"in":"b"}}},"out":"out"}"#;
+    let e = expand(&parse(chained), &lookup).expect("two presets in a chain expand");
+    assert_eq!(e.nodes["b/pol"].inputs["in"], wire("a/pol"));
+    assert_eq!(e.nodes["out"].inputs["in"], wire("b/pol"));
+    let own = chained.replace(
+        r#""a":{"type":"preset:Polaroid","in":{"in":"img"}}"#,
+        r#""a":{"type":"preset:Polaroid","in":{"in":"a"}}"#,
+    );
+    let err = expand(&parse(&own), &lookup).expect_err("a preset node reading itself expanded");
+    assert!(
+        err.0.contains("node `a`: its preset reads its own output"),
+        "{err}"
+    );
+    // Wrap runs Polaroid on its own input: inside it, the Render node is Wrap's input, and the preset node is not.
+    let wrap = parse(
+        r#"{"format":"principia.print/1","name":"Wrap","nodes":{"r":{"type":"render"},
+            "q":{"type":"preset:Polaroid","in":{"in":"r"}},"out":{"type":"output","in":{"in":"q"}}},"out":"out"}"#,
+    );
+    let mut more = presets.clone();
+    more.insert("Wrap".into(), wrap);
+    let outer = ON_POLAROID
+        .replace("preset:Polaroid", "preset:Wrap")
+        .replace(r#","params":{"seed":"$s+2"}"#, "");
+    let e = expand(&parse(&outer), &|n: &str| more.get(n).cloned()).expect("Wrap expands");
+    assert_eq!(
+        e.nodes["out"].inputs["in"],
+        wire("pol/q/pol"),
+        "the preset node read as its input"
+    );
+    assert_eq!(e.nodes["pol/q/pol"].inputs["in"], wire("img"));
+    assert_eq!(e.nodes["pol/q/pol"].entry, Some(wire("img")));
+    // A sub-graph's node may not read the sub-graph's output node, which expansion drops.
+    let reads_out = parse(
+        r#"{"format":"principia.print/1","name":"Polaroid","settings":{"seed":0},"nodes":{"m":{"type":"polaroid",
+            "in":{"in":"out"}},"out":{"type":"output","in":{"in":"m"}}},"out":"out"}"#,
+    );
+    let err = expand(&parse(ON_POLAROID), &|_: &str| Some(reads_out.clone()))
+        .expect_err("read its output");
+    assert!(err.0.contains("reads the preset's output node"), "{err}");
 }
 
 negative_control!(

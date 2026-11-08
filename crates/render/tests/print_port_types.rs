@@ -108,7 +108,7 @@ fn print_port_types_unconnected_inputs_take_defaults() {
       "b":{"type":"blur","in":{"in":"img"}},"pol":{"type":"preset:Bare","in":{"in":"b"}},
       "out":{"type":"output","in":{"in":"pol"}}},"out":"out"}"#;
     let bare = Graph::parse(
-        r#"{"format":"principia.print/1","name":"Bare","nodes":{"m":{"type":"polaroid"},
+        r#"{"format":"principia.print/1","name":"Bare","nodes":{"m":{"type":"linocut"},
             "out":{"type":"output","in":{"in":"m"}}},"out":"out"}"#,
     )
     .expect("parses");
@@ -121,10 +121,16 @@ fn print_port_types_unconnected_inputs_take_defaults() {
         node: "b".into(),
         port: "out".into(),
     };
+    // Its `in` defaults to the render, so reads the preset node's input; its `ground` takes its own default.
+    let feeds = &wiring.inputs["pol/m"];
     assert_eq!(
-        wiring.inputs["pol/m"],
-        [("in".to_owned(), b_out)],
+        feeds[0],
+        ("in".to_owned(), b_out),
         "the sub-graph does not read its input"
+    );
+    assert_eq!(
+        feeds[3],
+        ("ground".to_owned(), Feed::Default(InputDefault::Paper))
     );
 }
 
@@ -151,7 +157,10 @@ fn check_refusals(cases: &[(&str, &str)]) {
     for (text, why) in cases {
         match validate(&expanded(text), &registry) {
             Ok(_) => panic!("a miswired graph validated: {text}"),
-            Err(e) => assert!(e.0.contains(why), "the refusal {e} does not say {why:?}"),
+            Err(e) => {
+                assert!(e.0.contains(why), "the refusal {e} does not say {why:?}");
+                assert_eq!(e.to_string(), e.0);
+            }
         }
     }
 }

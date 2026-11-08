@@ -128,7 +128,10 @@ fn check_unregistered(edit: impl Fn(&str) -> String, why: &str) {
     let decl = edit(&fixture("nodes/linocut.json"));
     match Registry::new().register(&decl, &support::wgsl) {
         Ok(_) => panic!("the edited linocut registered"),
-        Err(e) => assert!(e.0.contains(why), "the refusal {e} does not say {why:?}"),
+        Err(e) => {
+            assert!(e.0.contains(why), "the refusal {e} does not say {why:?}");
+            assert_eq!(e.to_string(), e.0);
+        }
     }
 }
 
@@ -279,6 +282,11 @@ fn print_registry_check_declaration_refusals() {
             "is not an identifier",
         ),
         (
+            r#""name": "flow""#,
+            r#""name": "fLow""#,
+            "is not an identifier",
+        ),
+        (
             r#""default": "black" }"#,
             r#""default": "black", "pos": 1 }"#,
             "carries `pos`, which no port has",
@@ -387,6 +395,11 @@ fn print_registry_check_declaration_refusals() {
         (
             r##""default": "#171414""##,
             r##""default": "#17141""##,
+            "its default \"#17141\" is no value of its kind, a colour",
+        ),
+        (
+            r##""default": "#171414""##,
+            r#""default": "1714141""#,
             "is no value of its kind, a colour",
         ),
         (
@@ -402,7 +415,7 @@ fn print_registry_check_declaration_refusals() {
         (
             r##""default": "#171414""##,
             r#""default": 3"#,
-            "is no value of its kind, a colour",
+            "its default 3 is no value of its kind, a colour",
         ),
         (
             r#""default": 0, "options""#,

@@ -6,7 +6,10 @@
 //! so fails the build arms; and the copy with a bad preset fails the clean arm.
 //!
 //! The copy: render's folder copied, every file written anew, so cargo builds it again; every other member and
-//! top-level entry linked; `Cargo.toml` and `Cargo.lock` copied, so cargo writes nothing back. The fixture `linocut`
+//! top-level entry linked; `Cargo.toml` and `Cargo.lock` copied, so cargo writes nothing back. cargo identifies a path
+//! package by its path relative to the workspace, not by where the workspace is, so two copies' renders would be one
+//! unit in the shared target folder, and a copy written while another arm's build ran would read as built already. So
+//! each arm gives its copy's render a version of its own, `0.1.0-<arm>`, and is a unit of its own. The fixture `linocut`
 //! entry (`fixtures/print_graph/nodes/linocut.*`) is added to the copy's entries in every arm, as no linocut ships
 //! yet: it holds the range `linocut.depth` is checked against. The copy is built with `cargo check -p render --lib
 //! --offline`, which compiles and runs render's build script as `cargo build` does, without compiling the
@@ -23,6 +26,9 @@ use validation::spawn::Spawn;
 mod scratch;
 
 use scratch::Scratch;
+
+/// render's version line, which each arm's copy replaces.
+const VERSION: &str = "version.workspace = true";
 
 /// render's build script's call of the check, which the control's copy leaves out.
 const CHECK_CALL: &str = "    check_or_exit(&nodes, &wgsl, &presets);\n";
@@ -73,9 +79,10 @@ fn link(from: &Path, to: &Path) {
     }
 }
 
-/// A copy of the workspace in `dir`: the fixture linocut among render's entries, the fixture preset `preset` (if any)
-/// among its presets, and render's build script without its call of the check unless `with_check`.
-fn workspace_copy(dir: &Path, preset: Option<&str>, with_check: bool) {
+/// A copy of the workspace in `dir`: render at the version `0.1.0-<arm>`, the fixture linocut among its entries, the
+/// fixture preset `preset` (if any) among its presets, and its build script without its call of the check unless
+/// `with_check`.
+fn workspace_copy(dir: &Path, arm: &str, preset: Option<&str>, with_check: bool) {
     let root = root();
     std::fs::create_dir_all(dir.join("crates")).expect("the copy's crates folder");
     for entry in std::fs::read_dir(&root).expect("the workspace root") {
@@ -100,6 +107,17 @@ fn workspace_copy(dir: &Path, preset: Option<&str>, with_check: bool) {
             link(&path, &dest);
         }
     }
+    let manifest = dir.join("crates/render/Cargo.toml");
+    let text = std::fs::read_to_string(&manifest).expect("render's manifest");
+    assert!(
+        text.contains(VERSION),
+        "render's manifest does not hold {VERSION:?}"
+    );
+    std::fs::write(
+        &manifest,
+        text.replace(VERSION, &format!("version = \"0.1.0-{arm}\"")),
+    )
+    .expect("the copy's manifest");
     let print = dir.join("crates/render/src/print");
     for file in ["linocut.json", "linocut.wgsl"] {
         copy_file(
@@ -124,10 +142,11 @@ fn workspace_copy(dir: &Path, preset: Option<&str>, with_check: bool) {
     }
 }
 
-/// Builds render in a fresh copy of the workspace (see [`workspace_copy`]); whether it built, and cargo's stderr.
-fn build(tag: &str, preset: Option<&str>, with_check: bool) -> (bool, String) {
-    let dir = Scratch::new(tag);
-    workspace_copy(&dir, preset, with_check);
+/// Builds render in a fresh copy of the workspace for the arm `arm` (see [`workspace_copy`]); whether it built, and
+/// cargo's stderr.
+fn build(arm: &str, preset: Option<&str>, with_check: bool) -> (bool, String) {
+    let dir = Scratch::new(&format!("print_registry_build-{arm}"));
+    workspace_copy(&dir, arm, preset, with_check);
     let target = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("print_registry_build-target");
     let out = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned()))
         .args([
@@ -148,9 +167,9 @@ fn build(tag: &str, preset: Option<&str>, with_check: bool) -> (bool, String) {
     )
 }
 
-/// render does not build with `preset` added, cargo's error naming each of `named`.
-fn check_refused(preset: &str, with_check: bool, named: &[&str]) {
-    let (built, stderr) = build("print_registry_build", Some(preset), with_check);
+/// render does not build with `preset` added, cargo's error naming each of `named`; `arm` names the build.
+fn check_refused(arm: &str, preset: &str, with_check: bool, named: &[&str]) {
+    let (built, stderr) = build(arm, Some(preset), with_check);
     assert!(!built, "render built with the bad preset {preset}");
     for n in named {
         assert!(
@@ -163,6 +182,7 @@ fn check_refused(preset: &str, with_check: bool, named: &[&str]) {
 #[test]
 fn print_registry_build_refuses_unknown_node_type() {
     check_refused(
+        "unknown",
         "Typo.json",
         true,
         &["preset `Typo`", "node `cut`", "`linocutt`"],
@@ -173,12 +193,13 @@ negative_control!(
     print_registry_build_refuses_unknown_node_type,
     "a build script that does not call the check",
     expected = "render built with the bad preset Typo.json",
-    check_refused("Typo.json", false, &["`linocutt`"])
+    check_refused("unknown-unchecked", "Typo.json", false, &["`linocutt`"])
 );
 
 #[test]
 fn print_registry_build_refuses_out_of_range_value() {
     check_refused(
+        "range",
         "Too deep.json",
         true,
         &[
@@ -193,12 +214,12 @@ negative_control!(
     print_registry_build_refuses_out_of_range_value,
     "a build script that does not call the check",
     expected = "render built with the bad preset Too deep.json",
-    check_refused("Too deep.json", false, &["`depth`"])
+    check_refused("range-unchecked", "Too deep.json", false, &["`depth`"])
 );
 
-/// render builds in the copy with `preset` (if any) added.
-fn check_builds(preset: Option<&str>) {
-    let (built, stderr) = build("print_registry_build_clean", preset, true);
+/// render builds in the copy with `preset` (if any) added; `arm` names the build.
+fn check_builds(arm: &str, preset: Option<&str>) {
+    let (built, stderr) = build(arm, preset, true);
     assert!(
         built,
         "the copy with neither bad preset does not build:\n{stderr}"
@@ -207,12 +228,12 @@ fn check_builds(preset: Option<&str>) {
 
 #[test]
 fn print_registry_build_builds_with_neither() {
-    check_builds(None);
+    check_builds("clean", None);
 }
 
 negative_control!(
     print_registry_build_builds_with_neither,
     "the copy with the preset naming `linocutt`",
     expected = "the copy with neither bad preset does not build",
-    check_builds(Some("Typo.json"))
+    check_builds("clean-typo", Some("Typo.json"))
 );

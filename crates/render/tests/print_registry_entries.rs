@@ -236,6 +236,13 @@ fn print_registry_entries_two_node_graph_compiles() {
         "{}",
         blurred.source
     );
+    // Comments keep the lab's names as written.
+    for comment in [
+        "// A test fixture's second pass: down, reading the first through prev, not in_in.\nfn print_n1_pass1(",
+        "print_n1.sigma); /* p_sigma, px: the lab's names, kept in a comment */\n",
+    ] {
+        assert!(blurred.source.contains(comment), "the comment is not kept as written: {}", blurred.source);
+    }
     let reads: Vec<(u32, &str, Reads)> = blurred
         .textures
         .iter()
@@ -364,7 +371,10 @@ fn check_codegen_refusals(cases: &[(&str, &str)]) {
         let e = expand(&graph, &|_: &str| None).expect("expands");
         match generate(&e, &support::registry()) {
             Ok(_) => panic!("a graph codegen cannot run generated: {text}"),
-            Err(err) => assert!(err.0.contains(why), "{err} does not say {why:?}"),
+            Err(err) => {
+                assert!(err.0.contains(why), "{err} does not say {why:?}");
+                assert_eq!(err.to_string(), err.0);
+            }
         }
     }
 }
@@ -384,7 +394,10 @@ fn print_registry_entries_codegen_refusals() {
         )
     };
     check_codegen_refusals(&[
-        (CYCLE, "read each other in a cycle"),
+        (
+            CYCLE,
+            "the nodes [\"a\", \"b\", \"out\"] read each other in a cycle",
+        ),
         (
             &with(r#"{"sigma":9}"#),
             "`sigma` = 9 is outside its range [0.5, 8]",
