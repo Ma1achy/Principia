@@ -314,6 +314,11 @@ fn rename(wgsl: &str, base: &str, function: &str) -> String {
     // level only, its body holding no braces.
     let mut struct_next = false;
     let mut struct_body = false;
+    // The previous token, read from the source, never from `out`, which holds copied comments; comments are skipped:
+    // whether it was a `.`, whitespace between skipped too, and whether it was a digit with no whitespace between (a
+    // comment there splits a literal from its suffix, which is no valid WGSL either way).
+    let mut after_dot = false;
+    let mut after_digit = false;
     while let Some(c) = rest.chars().next() {
         let end = if rest.starts_with("//") {
             rest.find('\n').unwrap_or(rest.len())
@@ -324,9 +329,11 @@ fn rename(wgsl: &str, base: &str, function: &str) -> String {
                 .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
                 .unwrap_or(rest.len());
             let word = &rest[..end];
-            let member = out.trim_end().ends_with('.')
-                || out.ends_with(|ch: char| ch.is_ascii_digit())
+            let member = after_dot
+                || after_digit
                 || (struct_body && rest[end..].trim_start().starts_with(':'));
+            after_dot = false;
+            after_digit = false;
             match renamed(word, base, function) {
                 Some(name) => out.push_str(&name),
                 None if own.contains(word) && !member => {
@@ -346,6 +353,10 @@ fn rename(wgsl: &str, base: &str, function: &str) -> String {
                 '}' => struct_body = false,
                 _ => {}
             }
+            if !c.is_whitespace() {
+                after_dot = c == '.';
+            }
+            after_digit = c.is_ascii_digit();
             c.len_utf8()
         };
         out.push_str(&rest[..end]);

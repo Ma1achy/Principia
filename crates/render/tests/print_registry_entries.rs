@@ -518,7 +518,9 @@ var<private> seen: f32;
 fn f(a: f32) -> f32 { return a * 1.0f; }
 fn shade(c: V) -> V {
     let s = S(K, vec2<f32>(x, 0.0));
+    // Count the shade.
     seen = s.shade + s.v.x;
+    /* Again. */ seen = seen + K + s. /* a member */ shade;
     return c * f(s.shade) * gain + seen;
 }
 fn run(uv: vec2<f32>) -> vec4<f32> {
@@ -540,7 +542,7 @@ fn run(uv: vec2<f32>) -> vec4<f32> {
 }";
 
 /// A graph of two helper nodes in a chain: the module, as `emit` writes it, compiles under naga, each pass's helpers
-/// its own.
+/// its own, a use after a comment ending in `.`, and a member after a `.` and a comment, among them.
 fn check_helpers(emit: fn(String) -> String) {
     let mut registry = support::registry();
     registry
@@ -563,7 +565,8 @@ fn check_helpers(emit: fn(String) -> String) {
             format!("fn print_n{k}_pass0_h_shade(c: print_n{k}_pass0_h_V) -> print_n{k}_pass0_h_V {{"),
             format!("let s = print_n{k}_pass0_h_S(print_n{k}_pass0_h_K, vec2<f32>(print_n{k}_pass0_h_x, 0.0));"),
             format!("struct print_n{k}_pass0_h_S {{ shade: f32, v: vec2<f32> }}"),
-            format!("print_n{k}_pass0_h_seen = s.shade + s.v.x;"),
+            format!("// Count the shade.\n    print_n{k}_pass0_h_seen = s.shade + s.v.x;"),
+            format!("/* Again. */ print_n{k}_pass0_h_seen = print_n{k}_pass0_h_seen + print_n{k}_pass0_h_K + s. /* a member */ shade;"),
             "return a * 1.0f; }".to_owned(),
             format!("var<private> print_n{k}_pass0_h_seen: f32;"),
             format!("const print_n{k}_pass0_h_B: bool = print_n{k}_pass0_h_K < print_n{k}_pass0_h_x;\noverride print_n{k}_pass0_h_gain"),
