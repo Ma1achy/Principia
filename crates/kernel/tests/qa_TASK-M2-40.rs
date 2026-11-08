@@ -4,7 +4,9 @@
 //!   `(z₀, q₁, q₂)`, the stored vectors exactly, reopened (through the serialisation) decodes bit-identically at every
 //!   pixel of a 33 × 33 grid, under both tilt maps (control: re-orthonormalising `q₁`, `q₂` is not bitwise under Lean);
 //!   a shape-sphere view tilted 25° into a momentum control saved and reopened at zero tilt likewise, on both shape
-//!   maps (controls: the saved tilt dropped, and the slice centre dropped, each differ); a further tilt into a second
+//!   maps, opened from the definition alone (controls: the saved tilt dropped, and the slice centre dropped from the
+//!   definition, each differ); the parent saved by id and params, read back field for field, and a parent with other
+//!   params refused (control: the saved parent itself reopens); a further tilt into a second
 //!   momentum control decodes as the block form `(R ⊕ 1)·(1 ⊕ R′)` applied to `(u, v, 0, 0)` to 1 ulp (controls: the
 //!   3 × 3 product `R·R′` feeding `d′` into `R`'s third input, and the order `R′·R`, each fail).
 //! - REQ-CHART-077 (R-513 Q1 to Q3): a shape-sphere view tilted `τ = (25°, 0)` into a momentum control, saved, then
@@ -565,7 +567,8 @@ struct Reopen {
     hair: bool,
     /// The saved tilt dropped.
     tilt_lost: bool,
-    /// The slice centre's hidden values dropped (the parent's controls reset to 0).
+    /// The slice centre's hidden values dropped from the definition (the parent saved with its controls reset to 0),
+    /// the chart then opened from the definition alone (R-475 L5: the parent saved by id and params; R-483 H3).
     centre_lost: bool,
 }
 
@@ -592,26 +595,35 @@ fn check_curved_bitwise(how: Reopen) {
             } else {
                 saved
             };
-            let mut reopened_parent = parent;
+            let mut saved_parent = parent;
             if how.centre_lost {
-                reopened_parent.z_mom = [0.0; 4];
+                saved_parent.z_mom = [0.0; 4];
             }
             let new = if how.hair {
                 spec(1e-9, 0.0, TiltMap::Sheet, X, X)
             } else {
                 spec(0.0, 0.0, TiltMap::Sheet, X, X)
             };
-            let chart = Saved::curved(&parent, stored, S, [SPAN, SPAN]).expect("saves");
+            let chart = Saved::curved(&saved_parent, stored, S, [SPAN, SPAN]).expect("saves");
             let read = Saved::from_words(&chart.to_words()).expect("reads back");
             let Saved::Curved(c) = read else {
                 panic!("a curved view read back as oblique")
             };
+            // From the definition alone: the parent comes from its saved id and params.
             let view = c
-                .reopen(reopened_parent, &new, S, [SPAN, SPAN])
-                .expect("reopens");
+                .open::<ShapeSphere<f64>>(&new, S, [SPAN, SPAN])
+                .expect("opens from the definition alone");
+            // And on the parent it was saved from, which must be the same chart.
+            let given = c
+                .reopen(saved_parent, &new, S, [SPAN, SPAN])
+                .expect("reopens on the parent it was saved from");
             for [u, v] in window(S, 1.0, N) {
                 let want = original.decode::<Defaults, f64>(u, v);
                 let got = view.decode::<Defaults, f64>(u, v);
+                assert!(
+                    bits(&given.decode::<Defaults, f64>(u, v)) == bits(&got),
+                    "reopened on its parent and opened from the definition differ at ({u}, {v})"
+                );
                 assert!(
                     bits(&got) == bits(&want),
                     "the reopened saved chart at ({u}, {v}), saved {saved:?}, {shape:?}, is not the saved view bitwise"
@@ -665,12 +677,83 @@ mod curved_centre_lost {
     use super::*;
     negative_control!(
         qa_saved_curved_reopens_bitwise,
-        "a saved chart that drops the slice centre's hidden values is not the saved view, so it must fail",
+        "a definition that drops the slice centre's hidden values is not the saved view, so it must fail",
         expected = "is not the saved view bitwise",
         check_curved_bitwise(Reopen {
             centre_lost: true,
             ..AS_SAVED
         })
+    );
+}
+
+// ── REQ-CHART-073: the parent saved by id and params ───────────────────────────────────────────────────────────
+
+/// What the saved definition is reopened on: a parent whose params differ from the saved one's in one field, or (the
+/// control) the saved parent itself.
+#[derive(Clone, Copy)]
+enum Other {
+    /// The momentum controls at the slice centre moved.
+    Centre,
+    /// The shape map changed.
+    Map,
+    /// A scale changed by one ulp.
+    Scale,
+    /// The saved parent, unchanged (the control: it must be accepted).
+    Same,
+}
+
+/// R-475 L5 saves the parent by id and params, so a definition reopened on a chart with other params is not the saved
+/// view and is refused, never decoded as if it were (REQ-CHART-073). The saved parent opens from the definition alone
+/// and equals the parent it was saved from, field for field.
+fn refused(other: Other) -> bool {
+    let parent = sphere(ShapeMap::Spherical);
+    let chart = Saved::curved(&parent, SAVED_25, S, [SPAN, SPAN]).expect("saves");
+    let Saved::Curved(c) = Saved::from_words(&chart.to_words()).expect("reads back") else {
+        panic!("a curved view read back as oblique")
+    };
+    let back = c
+        .parent::<ShapeSphere<f64>>()
+        .expect("the saved parent opens");
+    assert!(
+        format!("{back:?}") == format!("{parent:?}"),
+        "the parent read from the definition is not the saved one: {back:?}"
+    );
+    let mut given = parent;
+    match other {
+        Other::Centre => given.z_mom[0] = 0.4,
+        Other::Map => given.map = ShapeMap::Exponential,
+        Other::Scale => given.scale = f64::from_bits(given.scale.to_bits() + 1),
+        Other::Same => {}
+    }
+    let untilted = spec(0.0, 0.0, TiltMap::Sheet, X, X);
+    c.reopen(given, &untilted, S, [SPAN, SPAN]).is_none()
+}
+
+fn check_other_parent(other: Other) {
+    assert!(
+        refused(other),
+        "the saved chart reopened on a parent other than the saved one"
+    );
+}
+
+#[test]
+fn qa_saved_curved_refuses_other_parent() {
+    for other in [Other::Centre, Other::Map, Other::Scale] {
+        check_other_parent(other);
+    }
+    assert!(
+        !refused(Other::Same),
+        "the saved chart does not reopen on the parent it was saved from"
+    );
+}
+
+mod other_parent_same {
+    use super::*;
+    negative_control!(
+        qa_saved_curved_refuses_other_parent,
+        "the saved parent itself must reopen, so the refusal check must fail on it",
+        expected = "reopened on a parent other than the saved one",
+        check_other_parent(Other::Same)
     );
 }
 
