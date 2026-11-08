@@ -176,11 +176,12 @@ struct Placed {
 /// The reference placement of the pixel at `(u, v)` of a saved chart (centre `CENTRE`, tilt `saved`) under a new tilt
 /// `new` about `centre`: `(u′, v′, e′) = R′·(ũ, ṽ, 0)`, then `R·(u′ + c − s, v′ + c − s, e′)`, every offset in units of
 /// its span; with each value's tolerance, one ulp of its terms: `ε` times the sum of the magnitudes of every product
-/// and sum that forms it, through both rotations.
+/// and sum that forms it, through both rotations. `span[k]` is the slider span control `k`'s offset is scaled by.
 fn reference(
     saved: &TiltSpec,
     new: &TiltSpec,
     centre: [f64; 2],
+    span: &[f64; 8],
     u: f64,
     v: f64,
 ) -> (Placed, Placed) {
@@ -202,8 +203,8 @@ fn reference(
     let mut d = [0.0; 8];
     let mut tol_d = [0.0; 8];
     for k in 0..8 {
-        d[k] = SPAN[0] * z[2 + k];
-        tol_d[k] = f64::EPSILON * SPAN[0] * size[2 + k];
+        d[k] = span[k] * z[2 + k];
+        tol_d[k] = f64::EPSILON * span[k] * size[2 + k];
     }
     (
         Placed { ab, d },
@@ -273,7 +274,7 @@ fn check_composes(
     let mut worst = 0.0f64;
     for [u, v] in window(centre, zoom) {
         let have = placed(&view, got, u, v);
-        let (expect, tol) = reference(&want.0, &want.1, centre, u, v);
+        let (expect, tol) = reference(&want.0, &want.1, centre, &[SPAN[0]; 8], u, v);
         assert!(
             within(&have, &expect, &tol),
             "the saved chart at ({u}, {v}) is not the composition R·R′: {have:?} against {expect:?}"
@@ -532,6 +533,89 @@ negative_control!(
     expected = "is not the composition R·R′",
     {
         check_routes(true);
+    }
+);
+
+// ── The spans each offset is scaled by (R-513 Q2) ───────────────────────────────────────────────────────────────────
+
+/// The saved tilt's slider spans, unequal, and the new tilt's, unequal and unlike them.
+const SAVED_SPAN: [f64; 2] = [1.5, 2.5];
+const NEW_SPAN: [f64; 2] = [0.7, 3.0];
+
+/// With unequal spans, each offset is scaled by the span R-513 Q2 names for it, at every pixel of the window about the
+/// view's centre and a panned one, to one ulp: an offset out of `R` on a saved target by that target's saved span,
+/// whatever span the new tilt names for it, and a new offset on another target by the new tilt's span for it (code
+/// review 5816802860 of PR #447, C3); a control no tilt names, span 0, never moves. Each route's spans are written out
+/// per control. `swap` builds the chart with the saved and new spans exchanged (the control).
+fn check_spans(swap: bool) {
+    let (built_saved, built_new) = if swap {
+        (NEW_SPAN, SAVED_SPAN)
+    } else {
+        (SAVED_SPAN, NEW_SPAN)
+    };
+    // (saved tilt, new tilt, the span of each control's offset)
+    let routes = [
+        // Two saved targets, the new tilt into the first: X's offset by X's saved span, Y's by Y's, the new span unread.
+        (
+            spec(25.0, -30.0, TiltMap::Lean, 2, 3),
+            spec(20.0, 0.0, TiltMap::Sheet, 2, 2),
+            [(2, 1.5), (3, 2.5)],
+        ),
+        // Two saved targets, the new tilt into the second.
+        (
+            spec(25.0, -30.0, TiltMap::Lean, 2, 3),
+            spec(0.0, 20.0, TiltMap::Sheet, 3, 3),
+            [(2, 1.5), (3, 2.5)],
+        ),
+        // One saved target, the new tilt's first target saved and its second another: that one by its new span.
+        (
+            spec(25.0, 0.0, TiltMap::Sheet, 2, 2),
+            spec(20.0, 10.0, TiltMap::Lean, 2, 4),
+            [(2, 1.5), (4, 3.0)],
+        ),
+        // One saved target, the new tilt's first target another, by its new span, and its second saved.
+        (
+            spec(25.0, 0.0, TiltMap::Sheet, 2, 2),
+            spec(20.0, 10.0, TiltMap::Lean, 4, 2),
+            [(2, 1.5), (4, 0.7)],
+        ),
+    ];
+    for (saved, new, spans) in routes {
+        let mut span = [0.0; 8];
+        for (k, s) in spans {
+            span[k] = s;
+        }
+        let def = Saved::curved(&sphere(), saved, CENTRE, built_saved).expect("a curved parent");
+        let Some(Saved::Curved(curved)) = Saved::from_words(&def.to_words()) else {
+            panic!("the words do not read back as a curved chart");
+        };
+        for centre in [CENTRE, PANNED] {
+            let view = curved
+                .reopen(sphere(), &new, centre, built_new)
+                .expect("a composition");
+            for [u, v] in window(centre, 1.0) {
+                let have = placed(&view, Got::Kernel, u, v);
+                let (expect, tol) = reference(&saved, &new, centre, &span, u, v);
+                assert!(
+                    within(&have, &expect, &tol),
+                    "the saved chart at ({u}, {v}) scales an offset by another span: {have:?} against {expect:?}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn saved_chart_spans() {
+    check_spans(false);
+}
+
+negative_control!(
+    saved_chart_spans,
+    "the saved and new tilts' spans exchanged scale each offset by another span, so it must fail",
+    expected = "scales an offset by another span",
+    {
+        check_spans(true);
     }
 );
 
