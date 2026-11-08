@@ -615,7 +615,7 @@ pub fn number(value: f64) -> Result<String, GraphError> {
     let k = digits.len() as isize;
     let n = int.len() as isize + exponent - (all.len() - significant.len()) as isize;
     let mut out = String::new();
-    if value < 0.0 {
+    if value.is_sign_negative() {
         out.push('-');
     }
     if k <= n && n <= 21 {

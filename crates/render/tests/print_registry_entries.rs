@@ -239,7 +239,7 @@ fn print_registry_entries_two_node_graph_compiles() {
     // Comments keep the lab's names as written.
     for comment in [
         "// A test fixture's second pass: down, reading the first through prev, not in_in.\nfn print_n1_pass1(",
-        "print_n1.sigma); /* p_sigma, px: the lab's names, kept in a comment */\n",
+        "print_n1.sigma); /* the lab's names, kept in a comment: p_sigma, px*/\n",
     ] {
         assert!(blurred.source.contains(comment), "the comment is not kept as written: {}", blurred.source);
     }

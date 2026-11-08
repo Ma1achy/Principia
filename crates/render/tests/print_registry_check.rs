@@ -470,8 +470,11 @@ fn print_registry_check_declaration_refusals() {
         .0
         .contains("registered twice"));
     assert!(r.get("linocut").is_some() && r.get("linocutt").is_none());
-    // Its ranges' ends and a choice's last index are admitted.
+    // Its ranges' ends and a choice's last index are admitted, and identifiers with `_` and digits after the first.
     for (from, to) in [
+        (r#""id": "linocut""#, r#""id": "lino_cut_2""#),
+        (r#""id": "linocut""#, r#""id": "_lino""#),
+        (r#""name": "depth""#, r#""name": "depth_2""#),
         (DEPTH, r#""default": 0, "min": 0, "max": 1, "step": 0.01"#),
         (DEPTH, r#""default": 1, "min": 0, "max": 1, "step": 0.01"#),
         (r#""default": 0, "options""#, r#""default": 1, "options""#),
