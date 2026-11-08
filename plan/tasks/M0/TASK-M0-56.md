@@ -17,6 +17,7 @@ a fallback design go to the next `/rulings-report` as the one-way question of mo
 
 ## References
 - `decisions.md` § "R-859 — From the anchor move, the Windows runner may run, as named measurements and never as required checks: the GPU suites (Vulkan now, DX12 from Phase 2) nightly and on pushes to `main`, gpu-idle, the weekly proof and the 7 Nov heavy-work comparison; benchmarks of record stay on the Mac, Windows numbers a separate named series; moving required or heavy CI work to the PC is not approved and returns through `/rulings-report`; the runner's security rules are unchanged *(refines R-186, R-656 and R-711)*"
+- `decisions.md` § "R-861 — The heavy-work comparison starts by `workflow_dispatch` on its task branch; the runner's security rules are unchanged; the 7 Nov order's "push trigger" was an error *(closes RQ-743; corrects R-859)*"
 - `decisions.md` § "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
 - `decisions.md` § "R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*"
 - `decisions.md` § "R-812 — Two-way doors are decided and shown afterwards, by measurement where one can settle it, CI and build tooling among them; one-way doors are asked through `/rulings-report` only while work carries on; when unsure, a door is one-way *(amends R-369)*"
@@ -26,8 +27,9 @@ a fallback design go to the next `/rulings-report` as the one-way question of mo
 - The criterion, written first: what "clearly faster" means in wall time, and that the results must be identical,
   committed to the PR before the first run of either side and never changed after (R-649, R-812).
 - The run on the PC: a measurement job in its own workflow, keeping every runner security rule (R-711 items 1, 5 and
-  6; the hook's allow-listed events, no fork run, an idle runner with nothing alongside), its trigger on the task branch
-  as RQ-743 rules. The guard test, `xtask/tests/ci_self_hosted.rs`, admits it by name.
+  6; the hook's allow-listed events, no fork run, an idle runner with nothing alongside), started by `workflow_dispatch`
+  on the task branch, dispatched from the Mac (R-861). The guard test, `xtask/tests/ci_self_hosted.rs`, admits it by
+  name, with no exception to its trigger checks.
 - The same work on hosted runners at the same commit: the GPU suites, and the same mutant shard's mutants.
 - `cargo xtask heavy-compare`: reads both sides' test outcomes and mutant outcomes and reports each side's wall time,
   each test whose outcome differs, and each mutant whose outcome (caught, missed, unviable, timed out, R-712) differs or
@@ -48,7 +50,8 @@ a fallback design go to the next `/rulings-report` as the one-way question of mo
   the PR (REQ-TOOL-225).
 
 ## Notes
-- Starts after the anchor move. Waits on RQ-743 for its trigger.
+- Starts after the anchor move. The 7 Nov order's "via push trigger" was an error of wording (R-861): no push trigger
+  on a task branch.
 - The verdict moves nothing: required or heavy CI work stays on hosted runners until the owner rules on the queue
   entry (R-859).
 - Lavapipe on the hosted side and NVIDIA Vulkan on the PC are different backends; a test whose outcome differs is a

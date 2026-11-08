@@ -3536,6 +3536,22 @@
   requirements: [REQ-TOOL-225]  # R-859 (8 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-57
+  milestone: M0
+  title: "The DX12 opt-in: a cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default, local testing only (R-862)"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-SYS-097]  # R-862 (the order of 4 Nov 2026, ported 8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-58
+  milestone: M0
+  title: "The Windows runner's DX12 run, Phase 2: the GPU suites on DX12 as a named measurement (R-862, R-859)"
+  depends_on: [TASK-M0-55, TASK-M0-57]
+  needs: []
+  requirements: [REQ-TOOL-226]  # R-862, R-859 (8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M8-86
   milestone: M8
   title: "The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand"
