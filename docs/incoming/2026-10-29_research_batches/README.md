@@ -236,6 +236,65 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
   Tanikawa 2000 triple-collision point coincides with a Li 2021 orbit (closest 1.1e-2, `tanikawa_2000/vs_li2021.txt`),
   so the unit cannot be fixed that way. RQ-640.
 - p. 172 points to Tanikawa, Umehara & Abe 1995's Table IV (task 15 item 16).
+- *8 Nov 2026 (TASK-M9-43; R-702, REQ-VAL-351): Paper I's normalisation, read from its pages (R-680), and what
+  Tanikawa 2000 keeps.* Both papers are held locally, so only these quotes enter the repo: Paper I (Tanikawa, Umehara
+  & Abe 1995, CeMDA 62, 335–362),
+  `docs/incoming/_local/external_sources_2026-10-28/springer/Tanikawa_Umehara_Abe_1995_Collision_orbits_I.pdf`,
+  sha256 `7e4c5463…ac344`; Tanikawa 2000 (CeMDA 76, 157–185),
+  `docs/incoming/_local/research_batches_2026-10-29/chatgpt/Tanikawa_2000_Collision_orbits_II.pdf`, sha256
+  `466065a5…c8ebd`.
+  - **Paper I's units, quoted.** p. 342: "Our integration program uses a fourth order Runge–Kutta method with
+    Levi-Civita's regularization for two-body approaches. … In the units G = 1, M = 1, AB = 1, the integrated time is
+    typically less than 10 compared to the escape time 60 in the Pythagorian case." (the page prints AB with an
+    overbar, the length of the side A–B). p. 335: "We consider the equal mass case: m1 = m2 = m3", and "Let mass
+    points m2 and m3 stand still at A(−0.5, 0) and B(+0.5, 0), respectively in the (x, y) plane and m1 stand still at
+    a point P(x, y)". **M is not defined:** the text layer finds it on p. 342 only, and no page read defines it, so
+    the page does not say whether M = 1 is each mass or the three together. REQ-VAL-351's note, "decoded as each mass
+    1", is not the page's: it is the integration of two Table IIa rows in
+    `../2026-10-28_external_sources/README.md` § "Tanikawa, Umehara & Abe 1995 ("Collision orbits I")"
+    (`tanikawa_umehara_abe_1995/units_check.txt` there). The run below repeats it on all 27 rows, and agrees.
+  - **Paper I's "Time".** p. 347: "In Table IIa,b, the first and second columns show the (x, y) coordinates of the
+    binary collision points, the third column shows the position angle θ defined in Section 2. The fourth column is
+    the time when this encounter occurs." The encounter is the n_min-th minimum of r: p. 339, "let
+    r = min{r12, r23, r13}", and "Suppose r(t) experiences n minima and (n − 1) maxima". Table IIa, p. 348:
+    "Positions of the binary collision points of type 1 for n_min = 2", Time to 4 decimals. Tables IIIa–c
+    (pp. 353–355) carry the same column.
+  - **Decoded, by running the printed starts** (R-812: a run answers what the page leaves open).
+    `scripts/t2000_time_unit.py` (`python3 -I`; output `tanikawa_2000/time_unit_check.txt`) integrates each start in
+    the frame both papers print, with G = 1, each mass 1, AB = 1, and times the n_min-th minimum of r; masses of 1/3
+    each (M = 1 as the total) multiply every time by √3 exactly, the column beside it. Paper I Table IIa: 24 of 27
+    printed Times agree to within 3.9e-4 relative, 21 of them with the printed pair (type 1); the √3 reading misses
+    each of the 24 by 73 %. The six rows that miss in time or pair lie at or beside a change in the printed sign of
+    φ, which p. 348 reads as a triple collision ("the behavior of φ along the vertical or horizontal direction changes
+    at a triple collision"), and one of them, at y = 0.1200000, prints the row above's x, θ and Time (recorded, not
+    resolved). **So Paper I's M = 1 is each mass: m1 = m2 = m3 = 1, G = 1, |AB| = 1, and the time unit is
+    (|AB|³ / (G m))^½, m one body's mass.** A check, not a target (R-649).
+  - **Tanikawa 2000 states no unit** on any page. p. 157: "We consider the equal mass case: m1 = m2 = m3"; p. 158: the
+    same frame ("Let mass points m2 and m3 stand still at A(−0.5, 0) and B(+0.5, 0)"), and "For a precise
+    description, see Paper I."; p. 160: "The code for short integrations to find collision orbits is due to the author
+    and adopts Levi-Civita's regularization." Its "time": p. 162, "'time' the instant of collision"; Table I's note,
+    p. 167, "n_min is the number of minima of the minimal mutual distances up to and including binary collision. …
+    'time' is the instant of binary collision."; Tables II–IV, pp. 172–173, "For notation, see Table I."; Table V,
+    p. 174, "For other notation, see Table I."; Tables VI–VIII, pp. 175 and 182, "see Table V".
+  - **What it keeps, by the same run.** Paper I's unit, for the p. 162 table (3 of 3 rows within 4.5e-4 relative),
+    Table V (16 of 16 within 1.3e-4), Table VI (15 of 15 within 1.4e-4), Table VII (10 of 10 within 4.0e-4) and six
+    rows of Table VIII (type 1, n_min 2 and 4; type 3, n_min 2, 4, 5 and 6; within 5.2e-4), each with its printed
+    type. Table VIII's other ten rows (type 1, n_min 5 to 10, printed starts equal to within 5e-8; type 3, n_min 7
+    to 10, within 1.1e-6) do not agree from the printed digits (the run's n_min-th minimum falls elsewhere, or not by
+    3 × the printed time + 1), so they are not decoded.
+    **Tables I–IV are not decoded:** their "time" is not the instant of the n_min-th minimum in Paper I's unit, nor
+    any one multiple of it. On 16 of Table I's 17 starts (n_min 5 to 20), the printed time (0.4532403 down to
+    0.3932582) comes before even the first m1–m3 collision in this unit (0.5193 to 0.5657). Tables II–IV, run through
+    each m1–m3 collision on Γ3 (head-on there, so continued by reversing the pair's relative velocity): none of their
+    42 rows agrees, and printed over computed runs from 0.87 to 0.26 down Table II and from 1.43 to 0.44 down
+    Table III. The pages say nothing more of what these four columns hold.
+  - **For T2000-1.** The time columns of the p. 162 table, Tables V–VII and Table VIII's six decoded rows are in a
+    known unit (G = 1, m1 = m2 = m3 = 1, |AB| = 1; the instant of the n_min-th minimum of r) and may be proposed beside
+    their positions, the page re-read first (R-680). Tables I–IV's time columns stay out: positions only. No target is
+    added here (R-72). § 9's short times: Li 2021's unit is this one (§ 5.1, "G = 1 and the masses of the three
+    bodies m1 = m2 = m3 = 1"), and Table I's times are short even in it (n_min 5 to 20 come before the first
+    collision on their own starts), so the gap to Li 2021's 6.9 to 11.3 lies in what the column holds, not in a unit
+    factor.
 
 ### 5.7 Schubart 1956, decoded (pp. 21–22; `schubart_1956/decode_check.txt`, `scripts/schubart_decode.py`)
 
