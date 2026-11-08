@@ -1,0 +1,5 @@
+path	sha256	doi	citation	licence_verified	route	committed
+circ_3body_all_runs.h5.1	03b916d27c874089589ad91b37544be448b9aaabd122ef17629168a91f0ea20c	10.5281/zenodo.11032352	Horn, Saz Ulibarrena, Koren & Portegies Zwart 2024, Zenodo	CC BY 4.0 (Zenodo API, README 3.1)	zenodo, md5:873fac461d67f57db5d4d389bab3bed0	never (930 MB), on demand
+circ_3body_training.h5.1	9a52b636cfb24587aad8815ed27975bf5ecd777bd6161f17981720296a0fc3c7	10.5281/zenodo.11032352	as above	CC BY 4.0 (Zenodo API, README 3.1)	zenodo, md5:e8416577e763f349eb18c314450c07af	not committed, on demand
+myllari_valtonen_pasechnik_mikkola_2018_MNRAS_476_830.pdf	625a5494b0709c2bda4fae11e6dbacf6bfb6c63b6e0caa13c1cbcb653f63b55c	10.1093/mnras/sty237	Myllari, Valtonen, Pasechnik & Mikkola 2018, MNRAS 476, 830-841	no open licence (Crossref none; (c) 2018 The Author(s), published by OUP on behalf of the RAS)	owner-copy	local only
+zare_chesley_1998_Chaos_8_475.pdf	070d786cb158679da679704e8fbaf38368beabd26124e9d2ec2abe1f09fa6f19	10.1063/1.166329	Zare & Chesley 1998, Chaos 8(2), 475-494	no open licence (Crossref none; (c) 1998 American Institute of Physics)	owner-copy	local only

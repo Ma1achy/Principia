@@ -1,0 +1,27 @@
+# TASK-M8-101 — Curved slices off the shape sphere: the momentum and mass spheres
+
+- **Milestone:** M8
+- **Closes:** REQ-CHART-105, REQ-CHART-106
+- **Depends on:** TASK-M4-37, TASK-M8-100
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** none
+- **Size:** ~400 lines
+
+## Goal
+Define (R-72) and build the two other 2-spheres in the state, under § 3.3's exponential map, the shape sphere's bits unchanged.
+
+## References
+- `docs/design/principia_chart_composition.md` § "5.2 Curved slices off the shape sphere"
+- `docs/design/principia_chart_reference.md` § "3.3 The chart map"
+
+## Deliverables
+- The chart reference's section.
+- `ExpMap<Target>` in `crates/kernel/src/chart/`.
+
+## Acceptance tests
+- Physics reviewer: the section, its frames and seams (REQ-CHART-105).
+- `cargo test -p kernel exp_map_targets` — L_z and K hold on the momentum sphere; on a wide mass chart every unblanked pixel has all components positive and √mᵢ = nᵢ, each outside pixel blank and uncounted, no two unblanked pixels giving one mass set; the shape target bitwise; `forward(inverse(x)) = x` on each target; controls: a bad frame, squaring with the mask removed, mutation: named per target (REQ-CHART-106).
+
+## Notes
+- Waits on its rulings item: RQ-720. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.

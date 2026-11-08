@@ -1876,6 +1876,8 @@
     detail: "no runtime axis-kind dispatch in the kernel; each chart is a type parameter of the kernel"
   rulings: []
   milestone: M2
+  rq:
+  - RQ-712
 - id: REQ-CHART-005
   area: CHART
   statement: "A derived-in-block (kind 2) axis must declare and label its residual convention for the leftover within-block DOF, and encode must use the same convention as the forward axis."
@@ -3686,6 +3688,781 @@
   - R-798
   milestone: M9
   note: "Closed by TASK-M9-45; TASK-M9-24 reads it for PA-1 (REQ-VAL-323). The remap lives in crates/kernel/src/chart/side_ratio.rs, so validation and the engine read one source. The unequal-mass arm: physics review 5805354224 of PR #430, F5; *was (verify):* \"the equilateral point maps to the sphere's pole,\", true at equal masses only."
+- id: REQ-CHART-094
+  area: CHART
+  kind: definition
+  statement: "The chart composition must be written into the contracts: the registry's fields, the refusals and labels, the three lowerings and the pair maps in chart_decoder_contract and chart_reference, the Anosova row of the lowering appendix conformed to kind 2 × kind 2, render_gui_spec §G7's panels, and principia_lines.md §4.1's new variables."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 2. The two layers
+  - file: docs/design/principia_chart_composition.md
+    section: 3. The primitive registry
+  - file: docs/design/principia_chart_composition.md
+    section: "7. Lowering: three ways a pair runs"
+  - file: docs/design/principia_chart_composition.md
+    section: "14. Doors: the rulings items"
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72): each doc section written, approved by the physics reviewer; `python3 plan/check_plan.py` green; every ruling RQ-712 to RQ-716 and RQ-719 gave is carried as ruled"
+  rulings:
+  - R-72
+  - R-407
+  - R-471
+  - R-506
+  milestone: M4
+  rq:
+  - RQ-712
+  - RQ-713
+  - RQ-714
+  - RQ-715
+  - RQ-716
+  - RQ-719
+  note: "Applied per the chart composition design; waits on its rulings items."
+- id: REQ-CHART-095
+  area: CHART
+  kind: definition
+  statement: "Region D's chart must be defined in chart_reference: the third-body pair (ξ, η) at any masses, its closed form and its stereographic identity, eq. 8's domain as RQ-714 rules it, both momentum conventions (exact rest; and at equal masses eq. 3 at √ℓ, its q̄ = −0.0745, at other masses q̄ being the Jacobi form of p̂ at those masses, after C's boost), the per-pixel rescale of E, L_z and t, and each axis's extension type."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 8.1 The definition
+  - file: docs/design/principia_chart_composition.md
+    section: 8.2 The closed form
+  - file: docs/design/principia_chart_composition.md
+    section: "8.4 What the chart is: the domain"
+  - file: docs/design/principia_chart_composition.md
+    section: 8.6 The momentum, and the rescale per pixel
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 1.6 Agekyan–Anosova region D — the near-rest starts (R-592)
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72): the chart reference gains the section, approved by the physics reviewer, each formula checked against dd_validation_orbits §1.6 and the import's rescale"
+  rulings:
+  - R-72
+  - R-592
+  milestone: M4
+  rq:
+  - RQ-712
+  - RQ-713
+  - RQ-714
+  - RQ-715
+  - RQ-716
+  - RQ-719
+- id: REQ-CHART-096
+  area: CHART
+  statement: "Every primitive must be one row of one CPU-side registry declaring its forward formula, its inverse class (closed, numerical or none), its axis kind, its natural extension type, whether it is angle-like, and its scale behaviour; a combination must be classed closed or numerical only by a registered inverse of that class, a numerical one naming what it solves for and its branch rule, and none otherwise, whatever its parts' classes; a size-only primitive must be refused as an axis by name; and no row with an inverse may name a binary phase, eccentricity, impact parameter or fixed k, forward-only overlay rows being free to (R-669)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 3. The primitive registry
+  verify:
+    detail: "cargo test -p engine -- size_only_refused excluded_primitives: I, R and ℓ refused by name; every registered row sampled on decodes, one constant there and not declared size-only failing; control: a row constant on decodes declared free fails; a row with an inverse naming a binary phase fails, a forward-only overlay row naming one passes; a combination of closed parts with no registered inverse, as exp(K) + K, reports none and refuses as an axis with NoJointInverse, and one with a registered closed or numerical inverse reports that class; control: the first reported closed fails"
+    method: unit test
+  rulings:
+  - R-407
+  - R-408
+  milestone: M4
+  rq:
+  - RQ-716
+  - RQ-722
+  - RQ-733
+- id: REQ-CHART-097
+  area: CHART
+  statement: "Any axis must pair with any other of any kind, and the validator must refuse only genuine contradictions (an axis and a constraint on one quantity, two axes fixing one quantity, a pair with no joint inverse, a size-only axis, and, if RQ-722 so rules, a hold on a chart declared at rest), each a named Refusal variant the Domain preview shows."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 5.5 Every case where two axes can't be independent
+  - file: docs/design/principia_chart_composition.md
+    section: "6.1 Refusals: genuine contradictions only"
+  - file: docs/design/principia_chart_composition.md
+    section: 6.3 The Domain preview shows why
+  verify:
+    method: unit test
+    detail: "cargo test -p engine pair_table_complete: every registered pair's rank on a grid agrees with the table in both directions; controls: a table row removed fails, a rank-2 pair added to the table fails"
+  rulings:
+  - R-25
+  - R-670
+  milestone: M4
+  rq:
+  - RQ-716
+  - RQ-722
+- id: REQ-CHART-098
+  area: CHART
+  statement: "A validated chart must carry its lowering (uniform affine, baked entry or CPU batch) and each reduced capability as a label, never a refusal, and resolve must return the baked entry for a baked (H, V, M) and CPU batch for any other."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "6.2 Labels: reduced capability, never a refusal"
+  - file: docs/design/principia_chart_composition.md
+    section: "7. Lowering: three ways a pair runs"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine lowering_labels: a latent pair lowers uniform, a baked pair to its entry, an unbaked closed pair to CPU batch with its label, a numerical pair to CPU batch with its label; control: an unbaked pair returning a refusal fails"
+  rulings:
+  - R-369
+  milestone: M4
+  rq:
+  - RQ-716
+  - RQ-722
+- id: REQ-CHART-099
+  area: CHART
+  statement: "Every existing chart, gallery preset and saved chart must reopen bitwise under the composition: decode bits against a digest fixture written before the first change, and SimConfig's canonical form unchanged with every new field at its default."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 1. What exists, and is kept
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  verify:
+    method: unit test
+    detail: "cargo test -p engine presets_bitwise: each chart of kernel::chart::REGISTRY, each gallery preset and a saved chart of each kind against fixtures/chart_composition/digest.json, written on the commit before the registry; controls: one mantissa bit flipped in a digest fails, a default field serialised fails"
+  rulings:
+  - R-475
+  - R-484
+  milestone: M4
+  rq:
+  - RQ-716
+  - RQ-722
+- id: REQ-CHART-100
+  area: CHART
+  statement: "The third-body pair (ξ, η) must be a closed-form baked pair through the explicit-configuration path, with its region-D preset as RQ-714 and RQ-736 rule, at exact rest and, at equal masses, at eq. 3's velocities, at other masses q̄ being the Jacobi form of p̂ at those masses, after C's boost, ending in the signed canonicalisation, C with its step 3, the mirror, not taken (canonicalise_signed, R-544's path), at the lowering appendix's canonicalise entry: a pixel at η < 0 must decode to its own system, the mirror image of the pixel at (ξ, −η) where the held velocities are their own mirror image, never folded onto it; and on η ≥ 0, D included, the decode must be bit-identical to C with the mirror step."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 8.2 The closed form
+  - file: docs/design/principia_chart_composition.md
+    section: "8.4 What the chart is: the domain"
+  - file: docs/design/principia_chart_composition.md
+    section: 8.6 The momentum, and the rescale per pixel
+  - file: docs/contracts/principia_lowering_contract.md
+    section: Appendix — worked enumeration of the current chart set
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state within REQ-VAL-120's tolerance; eq. 8's edges; eq. 3's momenta at √ℓ; I = 1; the stereographic identity at random masses; the signed half: on both presets, every pixel with η < 0 decodes to Π of the (ξ, −η) pixel's state to the decode's rounding, λ̃_y < 0 kept, and at eq. 3 with L_z opposite; every pixel with η ≥ 0 is bit-identical to the decode ending in canonicalise; controls: bodies 0 and 1 swapped misses the rows, q not scaled by √ℓ fails, μ_ρ/μ_λ inverted fails, d dropped at unequal masses fails (Table 1's equal masses have d = 0, so this control runs on the stereographic identity's masses), a decode ending in canonicalise (step 3 taken), which lands every η < 0 pixel on its (ξ, −η) partner, fails"
+  rulings:
+  - R-592
+  milestone: M4
+  rq:
+  - RQ-711
+  - RQ-713
+  - RQ-714
+  - RQ-736
+- id: REQ-CHART-101
+  area: CHART
+  statement: "Each closed-form primitive and pair must round-trip, forward(inverse(x)) = x over its domain at f64 and at f32, the interior angles and the side ratios among them, each with its mass-weighted form onto the shape sphere."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 8.3 The pairs it carries
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel closed_inverse_round_trip: every closed row of the registry, the virial row by its mapping's forward at a held L_z ≠ 0; each case reads back the row's Holds; control: a named mutation per row that fires there (design § 12: a factor or exponent on a scale solve) fails"
+  rulings:
+  - R-72
+  milestone: M4
+  rq:
+  - RQ-713
+  - RQ-714
+- id: REQ-CHART-102
+  area: CHART
+  statement: "Hold L_z must be offered on any chart beside energy normalisation, off by default and bitwise today's when off, by the rigid rotation, both held by RQ-715's form, as a uniform with no new variant, refused where L_z is an axis, every Some(L*) including Some(0), and, if RQ-722 so rules, against a rest convention."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
+  - file: docs/design/principia_chart_composition.md
+    section: 5.4 What the constraints do to a momentum axis
+  verify:
+    detail: "cargo test -p kernel hold_lz, cargo test -p kernel hold_outcomes, cargo nextest run -p engine --test hold_cross_backend, cargo test -p engine hold_encode and cargo test -p engine constraint_axis_refused: L_z = L* to tolerance on every chart allowing it, Σp = 0, both held E* too; off, bitwise; the outcomes in order, at f32 the state the second projection leaves at K̂ = 0, above the floor and on it; under RQ-715's option (i) the outcome tags bit-identical at f32 and f64, Metal and lavapipe beside the CPU, on identical (m, r, v) across a fixture grid on both sides of τ, that state and exactly rigid draws included, no NaN on any arm; under (ii) rigid draws exempt from test 12's tag equality, each float's outcome finite; inverse_encode_contract Part 6's step 4 reads the held decode and a state off {L_z = L*} gets the stated outcome; every row of the refusal table by name; controls: η_E alone with both on fails L_z, under (i) a tag from s = 0 and K̂ = 0 differs on the rigid draws, under (ii) the K̂ = 0 test removed gives NaN, step 4 on the unheld decode lands on a wrong pixel, the flag cleared on (L_z, E) fails"
+    method: unit test
+  rulings:
+  - R-25
+  - R-471
+  - R-670
+  milestone: M8
+  rq:
+  - RQ-715
+  - RQ-722
+- id: REQ-CHART-103
+  area: CHART
+  statement: "The virial ratio must be a registered axis of the kind RQ-717 rules, with its authoring descriptor, and the pair (configuration axis, Q) must be offered, the kernel's AxisVirial unchanged, the row's forward stated per mapping and a warped axis at a held L_z ≠ 0 labelled Q above the floor."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 9. Then virial
+  verify:
+    method: unit test
+    detail: "cargo test -p engine virial_descriptor: the validator takes a chart with a virial axis, refuses it beside hold E and beside a K axis by name; the row's forward by mapping: linear, or at L_z = 0, agrees with the descriptor's virial_ratio; warped at a held L_z ≠ 0 it reads 2(K − L_z²/2I)/|U|, labelled; forward(inverse(x)) = x on both arms; controls: a virial axis with no descriptor is refused, the warped row read as the state's own ratio fails, a factor changed in the inverse fails, the row being a scale solve"
+  rulings:
+  - R-506
+  milestone: M8
+  rq:
+  - RQ-700
+  - RQ-717
+- id: REQ-CHART-104
+  area: CHART
+  statement: "Each axis must take a warp of the closed four (linear, power, log, feasibility), bitwise today's on the linear arm, and a chart must take a pair map (affine, polar about a point, log-polar), each declared type under physics review."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "4. The axis layer: warps"
+  - file: docs/design/principia_chart_composition.md
+    section: 5.1 Pair maps
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel warps_and_pair_maps: forward(inverse(x)) = x for each warp and each pair map; polar's period and its pole-crossing partner; the linear arm bit-for-bit today's; decode time recorded, past +2% the warp becomes baked (V1); controls: a warp not offered on an energy-type axis is refused, a named mutation per inverse fails"
+  rulings:
+  - R-407
+  - R-471
+  - R-506
+  milestone: M8
+  rq:
+  - RQ-720
+- id: REQ-CHART-105
+  area: CHART
+  kind: definition
+  statement: "The curved slices off the shape sphere, the momentum sphere at fixed L_z and K and the mass sphere (√m₀, √m₁, √m₂), must be defined in chart_reference §3.3's form, each with its frame, its seed rule and its seam; on the mass sphere the map runs on the sphere, a pixel with any component ≤ 0 is the domain's end, blank, out of the count and the total, mᵢ = nᵢ² is read only inside, and the rule at an edge or corner is the mass simplex's, validation layer 2's narrowed simplex, buffered mᵢ ≥ ε_m."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 5.2 Curved slices off the shape sphere
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72): the section written, approved by the physics reviewer"
+  rulings:
+  - R-72
+  - R-82
+  milestone: M8
+  rq:
+  - RQ-720
+- id: REQ-CHART-106
+  area: CHART
+  statement: "The exponential map must generalise to ExpMap<Target>, the shape sphere's bits unchanged, with the momentum and mass targets as REQ-CHART-105 defines."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 5.2 Curved slices off the shape sphere
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel exp_map_targets: on the momentum sphere L_z and K hold at every pixel; on a wide mass chart every unblanked pixel has all components positive and √mᵢ = nᵢ, each outside pixel is blank and uncounted, and no two unblanked pixels give one mass set; the shape target bit-for-bit today's; forward(inverse(x)) = x on each target; controls: a frame not orthonormal fails, squaring with the mask removed fails, a named mutation per target fails"
+  rulings:
+  - R-82
+  milestone: M8
+  rq:
+  - RQ-720
+- id: REQ-CHART-107
+  area: CHART
+  statement: "A pair with a numerical inverse must run as CPU batch in f64, each start rounded once to f32, in the integrator's IC layout, its branch rule a pure function of the pixel, its branch recorded per sample and its seam reported; a failed solve must be decode_failed and blank."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 7.2 CPU batch
+  - file: docs/design/principia_chart_composition.md
+    section: "7.3 A numerical inverse: branch and seam"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine numerical_branch_seam: the (area, perimeter) pair reports its rule, per-pixel branch and seam; the same pixels in two orders give one bit pattern; forward(inverse(x)) = x on every written sample; a fixture of known solvable samples solves, with no failures; controls: a rule reading a neighbour fails, the pair with no rule is refused by the registry, the solve's target mutated to F(z) + x writes a wrong root and fails"
+  rulings:
+  - R-82
+  - R-470
+  milestone: M8
+  rq:
+  - RQ-719
+- id: REQ-CHART-108
+  area: CHART
+  kind: definition
+  statement: "The computed form of both held must be defined in dd_decoder §3.7: `K_δ` from `δv` in the scaled form, never `K₀ − L₀²/2I`, and `Jr` projected out a second time after normalising, with a near-rigid fixture."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
+  verify:
+    method: review checklist
+    detail: "dd_decoder §3.7 carries the form, approved by the physics reviewer; the test is REQ-CHART-102's hold_lz at M8, at ‖δv‖/‖v‖ from 1e-1 to 1e-7 at f32, control: one projection fails the fixture"
+  rulings:
+  - R-25
+  - R-72
+  milestone: M4
+  rq:
+  - RQ-712
+  - RQ-713
+  - RQ-714
+  - RQ-715
+  - RQ-716
+  - RQ-719
+- id: REQ-CHART-109
+  area: CHART
+  kind: definition
+  statement: "Both-held's outcomes must be defined in order in dd_decoder §3.7 and §2 (the collision pole, E* < U, the exact 2K* < L*², rigid(v, Jr) on the floor with the rotation applied, rigid(v, Jr) above it, otherwise apply), rigid(v, Jr) being an exact comparison as RQ-715 rules, a tagged pixel keeping its momenta as decoded, with REQ-DEC-041 and §3.7's feasibility sentence conformed and a rule for a non-finite L*."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
+  verify:
+    method: review checklist
+    detail: "dd_decoder §3.7 and §2 carry the order, approved by the physics reviewer; the test is REQ-CHART-102's hold_outcomes at M8, the six in order on exact fixtures, control: outcomes 2 and 3 swapped"
+  rulings:
+  - R-25
+  - R-72
+  milestone: M4
+  rq:
+  - RQ-712
+  - RQ-713
+  - RQ-714
+  - RQ-715
+  - RQ-716
+  - RQ-719
+- id: REQ-CHART-110
+  area: CHART
+  kind: definition
+  statement: "Encode under a hold must be defined in inverse_encode_contract Part 6: step 4 tests the held decode, and a state off {L_z = L*} gets a stated outcome, hold E's gap closed with it."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
+  verify:
+    method: review checklist
+    detail: "inverse_encode_contract Part 6 carries it, approved by the physics reviewer; the test is REQ-CHART-102's hold_encode at M8, step 4 on the held decode, control: step 4 on the unheld decode lands on a wrong pixel"
+  rulings:
+  - R-72
+  milestone: M4
+  rq:
+  - RQ-712
+  - RQ-713
+  - RQ-714
+  - RQ-715
+  - RQ-716
+  - RQ-719
+- id: REQ-CHART-111
+  area: CHART
+  statement: "A momentum-momentum plane must report ray-degenerate where it contains Jr under hold L_z, alone or with hold E; where it passes through rest under hold E alone; or where it passes through a point with δv = 0, rest or a rigid rotation, with both held."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 5.4 What the constraints do to a momentum axis
+  - file: docs/design/principia_chart_composition.md
+    section: 5.5 Every case where two axes can't be independent
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel hold_rank: a plane containing Jr, one through rest under hold E alone, and one through rest and one through a rigid rotation with both held report it, a generic plane doesn't; controls: the label removed fails; a plane through a rigid rotation under hold E alone reports no rank loss, and reporting it fails"
+  rulings:
+  - R-369
+  milestone: M8
+  rq:
+  - RQ-715
+  - RQ-722
+- id: REQ-CHART-112
+  area: CHART
+  kind: definition
+  statement: "The chart path must be defined in the contracts: a view as a point, a path type with arms for tilt, zoom, plane rotation, per-axis blend, pair map, line and per-field, blending at the last layer where the ends differ and running everything downstream once, the line's blocks (mass in μ_k = ln(m_k/m₀), shape on the great circle, momentum in q), and the named default path."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.2 The mechanism
+  - file: docs/design/principia_chart_composition.md
+    section: 17.6 Per-axis and pair-map morphs
+  - file: docs/design/principia_chart_composition.md
+    section: 17.7 Plane to plane
+  - file: docs/design/principia_chart_composition.md
+    section: 17.9 Path shape and timing
+  verify:
+    method: review checklist
+    detail: "plan/check_plan.py: export_animation_contract Part 3, chart_decoder_contract and principia_sequence.md carry the definition, as ruled"
+  rulings:
+  - R-72
+  - R-576
+  milestone: M8
+  rq:
+  - RQ-721
+- id: REQ-CHART-113
+  area: CHART
+  statement: "Tilt, zoom, lock and Save view as chart must reproduce bitwise through the path type, each by a test; s = 0.0 and s = 1.0 must take A's and B's own path, never the blend; a frame must record (A, B, path, s) by value, and a tilt or zoom frame must be the plain view."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "17.3 The constraint: bitwise through the mechanism"
+  - file: docs/design/principia_chart_composition.md
+    section: 17.4 `s = 0` and `s = 1`
+  - file: docs/design/principia_chart_composition.md
+    section: "17.5 A frame: valid, reproducible, recorded"
+  verify:
+    detail: "cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip: each against the direct operation's bits; controls: the general geodesic in tilt's place, a triple in a zoom's key, an end through the blend, s at f32"
+    method: unit test
+  rulings:
+  - R-309
+  - R-484
+  milestone: M8
+  rq:
+  - RQ-721
+- id: REQ-CHART-114
+  area: CHART
+  statement: "A path frame must flag seams and degenerate frames by the Gram area factor, tag infeasible pixels and never drop them, keep a pixel blank or tagged at either end blank mid-path, report what each held quantity means, take one colour window for the segment, admit no statistic, and keep a changed link id a cut."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.11 Honesty
+  - file: docs/design/principia_chart_composition.md
+    section: "17.5 A frame: valid, reproducible, recorded"
+  - file: docs/design/principia_chart_composition.md
+    section: 17.12 Performance
+  verify:
+    detail: "cargo test -p engine -- path_gram_flags path_blank_ends path_hold_table path_small_step path_links_cut: each per its row; controls: the flag removed, the other end substituted, the step before the blend, an undeclared seam, a morph across a link id"
+    method: unit test
+  rulings:
+  - R-467
+  - R-470
+  - R-649
+  milestone: M8
+  rq:
+  - RQ-721
+- id: REQ-CHART-115
+  area: CHART
+  statement: "Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, unless the anchor isn't in B, which is labelled and unbased; about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "17.8 Lock: a based homotopy"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine path_lock_centre: a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; anchor not in B labelled, unbased; controls: the select removed fails, offsets blended linearly fails"
+  rulings:
+  - R-69
+  - R-92
+  milestone: M8
+  rq:
+  - RQ-721
+- id: REQ-CHART-116
+  area: CHART
+  statement: "A path must offer control charts built from each arm's own interpolation, alignment that reaches the identity at s = 1, and re-timing for constant visual speed by a recorded table pinned at both ends, easing untouched."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.9 Path shape and timing
+  - file: docs/design/principia_chart_composition.md
+    section: "17.10 Without a lock: alignment"
+  verify:
+    detail: "cargo test -p engine -- path_retime path_ends_bitwise: speed spread at most 1.25 on the saturated fixture, g pinned; control: the table off"
+    method: unit test
+  rulings:
+  - R-576
+  milestone: M8
+  rq:
+  - RQ-721
+- id: REQ-CHART-117
+  area: CHART
+  kind: definition
+  statement: "The primitives of 6 Nov must be defined in the chart reference: forward, inverse class, extension, what's held, and each alias: the Jacobi polar pair, per-body speed and heading, flight-path angle, K and L_z split by Jacobi vector, the Saari split and `h`, L²E, the angle rows, signed area, distance to a named shape, elongation, the inner share of L_z, Hill's distance with its source, and the isosceles families."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 3.1 The primitives of 6 Nov
+  verify:
+    method: review checklist
+    detail: "the chart reference carries each row, reviewed by the physics reviewer; RQ-723 to RQ-725 and RQ-730 applied"
+  rulings:
+  - R-72
+  milestone: M8
+  rq:
+  - RQ-723
+  - RQ-724
+  - RQ-725
+  - RQ-730
+- id: REQ-CHART-118
+  area: CHART
+  statement: "Each closed row of the primitives of 6 Nov must round-trip, the aliases must equal their rows, pair table rows 19 and 20 must be refused and rows 17 and 18 refused only under a hold, with (L_z, E), (K_ρ, K_λ) and (L_ρ, L_z) accepted, and the rejected list must have no axis."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 3.1 The primitives of 6 Nov
+  - file: docs/design/principia_chart_composition.md
+    section: 5.5 Every case where two axes can't be independent
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  verify:
+    method: unit test
+    detail: "cargo test -p engine -- prim_round_trip prim_rejected: each row at f64 and f32; each case reads back the row's Holds; controls: a named mutation per row that fires there (design § 12: a factor or exponent on a scale solve) fails, a rejected row accepted, (L_z, E) refused"
+  rulings:
+  - R-369
+  - R-669
+  milestone: M8
+  rq:
+  - RQ-723
+  - RQ-724
+  - RQ-725
+  - RQ-730
+- id: REQ-CHART-119
+  area: CHART
+  kind: definition
+  statement: "The primitives of the full order must be defined in the chart reference, each with forward, inverse class, extension, what's held and its aliases: Psi at t = 0, the isosceles vertex angle, R_H, the focal pair, Routh gamma and the elliptic Lagrange start, the Chazy ratios, the Tanikawa-Mikkola construction with its R_i from the true centre of mass (the paper's form at equal masses, an unscored extension otherwise), the Li-Li-Liao construction, the third body's speed as the square root of chazy_qk, and McGehee-type aliases; BHH, isosceles families, Mikkola-Hietarinta, Donnison's variants and Hill's threshold take their definitions as RQ-723, RQ-725 and RQ-730 rule."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 3.2 The primitives of the full order
+  verify:
+    method: review checklist
+    detail: "the chart reference carries each row, reviewed by the physics reviewer"
+  rulings:
+  - R-72
+  milestone: M8
+  rq:
+  - RQ-723
+  - RQ-725
+  - RQ-726
+  - RQ-730
+- id: REQ-CHART-120
+  area: CHART
+  statement: "Each closed row of the full order's primitives must round-trip, each alias must equal its row, the scattering rows must have no inverse while R-669 stands, and the longer rejected list must have no axis."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 3.2 The primitives of the full order
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  verify:
+    method: unit test
+    detail: "cargo test -p engine -- prim_round_trip prim_rejected: the rows of section 3.2, and Tanikawa-Mikkola's mass-weighted L_com = 0 at random masses after C, from an independent Σ m r × v; each case reads back the row's Holds; controls: a named mutation per row that fires there (design § 12: a factor or exponent on a scale solve) fails, a scattering row given an inverse, R from the centroid fails at −0.0025 at (x, y) = (0, 0.3), (α₂, β₁) = (0.1, 0), masses (1, 0.8, 0.6), an unweighted sum fails"
+  rulings:
+  - R-369
+  - R-669
+  milestone: M8
+  rq:
+  - RQ-723
+  - RQ-725
+  - RQ-726
+  - RQ-730
+- id: REQ-CHART-121
+  area: CHART
+  statement: "The third-body plane must read back xi + i eta = d + lambda/rho at any masses, geometric and midpoint-centred, and every target of the region-D table must reproduce its native coordinates to 4 eps max(1, |xi|, |eta|) read from the blocks rho-tilde and lambda-tilde; a read from particle positions takes a measured tolerance (R-71)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 8.8 Region D must match the papers (order item A5)
+  verify:
+    method: unit test
+    detail: "cargo test -p engine region_d_native: each row at f64 and at f32, a row whose offset is below the tolerance at f64 only, unequal masses included, with an oracle independent of the chart: the paper's three separations in its own frame, and eq. 4's energy on AA rows; forward(inverse(x)) = x on each row; controls: d dropped on both sides, bodies 0 and 1 swapped at unequal masses, eta mirrored, a sign flipped in the inverse on one side only fails the round trip"
+  rulings:
+  - R-369
+  - R-592
+  milestone: M8
+  rq:
+  - RQ-728
+- id: REQ-CHART-122
+  area: CHART
+  statement: "Each paper frame of the preset table must be a preset over the registry with no new machinery, reproduce the paper's coordinates, and leave every listed gap unbuilt; catalogue energy normalisations must be a unit conversion, never an axis."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 20. Paper frames as presets (order part E)
+  verify:
+    method: unit test
+    detail: "cargo test -p engine preset_paper_coords: each row with the same oracle, forward(inverse(x)) = x on each, sub-resolution offsets at f64 with neighbours distinct; controls: as region_d_native, its one-sided sign flip included, and such a row at f32"
+  rulings:
+  - R-369
+  - R-669
+  milestone: M8
+  rq:
+  - RQ-650
+  - RQ-711
+  - RQ-729
+- id: REQ-CHART-123
+  area: CHART
+  statement: "A time-axis chart must be a chart mode with no fifth axis kind, with T on the sim key and the window off it, run each column once from t = 0, read rows as integer boundary indices per occupant, floor time zoom at one boundary, hold terminal states, jitter the IC axis only, keep one colour window, anchor at (IC, t), refuse a second time axis by name, and cut to an IC-only chart."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "18.1 Verdict: a chart mode, no fifth axis kind"
+  - file: docs/design/principia_chart_composition.md
+    section: 18.2 Against the core
+  - file: docs/design/principia_chart_composition.md
+    section: 18.4 Interactions
+  - file: docs/design/principia_chart_composition.md
+    section: 18.6 Tests
+  - file: docs/design/principia_chart_composition.md
+    section: "18.3 Stored rows and dense output: the conflict, plainly"
+  verify:
+    detail: "cargo test -p engine -- time_column_matches_playhead time_rows_on_boundaries time_zoom_floor time_extend_continues time_terminal_holds time_jitter_ic_only time_two_axes_refused time_window_frozen time_morph_rules time_anchor: each with its control, the first with unregularised and regularised arms and a column whose later crossing cancels symbols, control: a row reading a prefix of the final word"
+    method: unit test
+  rulings:
+  - R-66
+  - R-369
+  - R-565
+  milestone: M8
+  rq:
+  - RQ-727
+- id: REQ-CHART-124
+  area: CHART
+  kind: definition
+  statement: "The metric on the blended state Y, its unit n, gauge-scaled q and mass controls, must be defined for arc length and the Gram factor, the mass-weighted metric on the I = 1 state being the candidate."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.11 Honesty
+  - file: docs/design/principia_chart_composition.md
+    section: 17.9 Path shape and timing
+  verify:
+    method: review checklist
+    detail: "the chart reference states the metric, reviewed by the physics reviewer"
+  rulings:
+  - R-72
+  milestone: M8
+  rq:
+  - RQ-721
+- id: REQ-CHART-125
+  area: CHART
+  kind: definition
+  statement: "The chart composition's rulings items, RQ-712 to RQ-731, must be answered by the owner and each answer applied to the design doc, before any task of that design starts: nothing is implemented until ruled."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "14. Doors: the rulings items"
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72): every one of RQ-712 to RQ-731 closed by a ruling in decisions.md, each carried into the design doc, its status no longer Proposed; python3 plan/check_plan.py green"
+  rulings:
+  - R-72
+  milestone: M4
+  note: "The gate of the design's 24 tasks: they name its task in Depends on, the field the ready list reads. Only those tasks wait behind it; no existing task does."
+- id: REQ-CHART-126
+  area: CHART
+  kind: calibration
+  statement: "If RQ-715 rules its option (i), the dyadic constant τ of hold L_z's rigid(v, Jr) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate. Proposed 2⁻²²."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: benchmark
+    detail: "against a criterion written before measuring (R-649), the proposal shows τ at masses log-uniform to 10⁻³, on the two GPU backends, and the kernel routine's cost"
+  rulings:
+  - R-71
+  milestone: M8
+  rq:
+  - RQ-715
+- id: REQ-CHART-127
+  area: CHART
+  statement: "Every primitive with a claimed inverse must ship with a forward(inverse(x)) = x test that can fail and a named mutation control, and the registry must fail by name a row with an inverse and no such case; identities alone do not satisfy this."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  verify:
+    method: unit test
+    detail: "cargo test -p engine round_trip_complete: every registered row with an inverse, closed or numerical, has a round-trip case, a read-back of its Holds column and a named mutation control that fires on that row; forward-only rows and combinations classed none need none; controls: a case removed fails, an inverse added with no case fails, a K case with its momentum direction wrong fails"
+  rulings:
+  - R-176
+  milestone: M4
+- id: REQ-CHART-128
+  area: CHART
+  statement: "Every registry row must carry its class: state function, conserved (exact or approximate, labelled) or trajectory functional, or unclassified while its definition is unread, and a trajectory functional must be refused as an axis by name."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 3.3 Every primitive's class
+  verify:
+    method: unit test
+    detail: "cargo test -p engine primitive_class: every row has its class; a row declared conserved and exact holds along a short run within the run's drift, at ε = 0, the softened and Newtonian energies being R-791's and RQ-709's; a row declared approximate shows the label; a functional is refused as an axis; controls: a state row declared conserved fails, a functional accepted fails"
+  rulings: []
+  milestone: M4
+- id: REQ-CHART-129
+  area: CHART
+  statement: "Ensemble jitter on a composed chart must stay in the chart's own coordinates; a footprint whose copies straddle a declared seam, a branch or a composed chart's mask must be flagged per pixel, in the resolve pass, every copy kept; its spread and error_ratio must be reported as seam-contaminated; a chart of today's registry must be unchanged."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "7.4 Seams: jitter, spread and refinement"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine seam_jitter_flagged: on a composed chart the copies are the sampling note's offsets in (u, v), whatever the seam; a footprint across a numerical seam, a closed-form CPU batch row's two-root branch or mask, polar's branch line or a baked chart's mask is flagged in the resolve pass, any CPU batch chart's branch read from the IC record and its mask from that record's decode_failed, all E + 1 copies in the pool, spread_shape, spread_event, ensemble_spread and error_ratio labelled seam-contaminated; two orders, one flag; controls: a copy dropped at the seam fails, the flag read from a neighbour fails"
+  rulings:
+  - R-80
+  - R-100
+  milestone: M8
+- id: REQ-CHART-130
+  area: CHART
+  statement: "Declared seams must be masked from the refinement criterion: on a flagged footprint unresolved(f) must not fire from spread, event class, the latch or a composed chart's own mask, a quad with any flagged footprint and none unresolved must take the decision Seam with its count n_seam reported, the added QuadReduction slot and CPU batch's branch word being a schema change, its coherence must not raise its priority, and a chart of today's registry must be bitwise unchanged."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "7.4 Seams: jitter, spread and refinement"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine seam_refinement_masked: a flagged footprint leaves n_unresolved, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes the decision Seam, a mixed quad included, with n_seam counted, and coherence gives it no priority; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart of today's registry decides bitwise as REQ-REF-022; controls: the mask removed splits quads along the seam at every depth, the mask applied to an unflagged footprint fails, Keep taken for Seam, Seam taken only when every footprint is flagged fails"
+  rulings: []
+  milestone: M8
+- id: REQ-CHART-131
+  area: CHART
+  statement: "Any statistic over a composed or warped chart must either be weighted by the chart's area factor, the Gram determinant, into a named reference measure, or be labelled per pixel of this chart; refinement density must never feed it, and a replication fraction must use its paper's own measure."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "6.4 Measure: a statistic says what it counts"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine statistic_measure: a statistic over a warped chart is weighted into a named measure or labelled; a fixture of known fraction is recovered through a power warp; a fraction in a paper's own measure equals the flat grid in the paper's coordinates; controls: no weight and no label fails, the weight inverted fails, a count of quadtree leaves fed in fails"
+  rulings:
+  - R-408
+  milestone: M8
+- id: REQ-CHART-132
+  area: CHART
+  statement: "FTLE and Lyapunov exponents must be computed in physical phase space, never in chart coordinates, so that a chart's warp cannot change a system's exponent; the Benettin shadow's offset must be a function of the state, never of the chart."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 6.5 Chaos measures live in phase space
+  verify:
+    method: unit test
+    detail: "cargo test -p engine ftle_chart_independent: a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one lambda_T bit for bit, read on copy 0; control: delta_0's direction taken from a chart tangent fails"
+  rulings: []
+  milestone: M8
+- id: REQ-CHART-133
+  area: CHART
+  statement: "The mirror half of the shape sphere must never be dropped or folded by a path: a path between two lower-half views must stay in the lower half, at every pixel of every frame (R-544; the owner's rider to RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.2 The mechanism
+  - file: docs/design/principia_chart_composition.md
+    section: 17.14 Tests
+  verify:
+    method: unit test
+    detail: "cargo test -p engine path_lower_half_stays: two views wholly in the open lower hemisphere, whose ends differ at the chart layer, so the arm function returns Path::Line, asserted first, keep n₂ < 0 at every pixel of every frame, ends included, on the signed state; on the other arms the test asserts only signed, no mirror taken; controls: canon::canonicalise for the signed form, which mirrors, fails; a literal z blend, which reaches n₂ ≥ 0 only, fails"
+  rulings:
+  - R-544
+  milestone: M8
+- id: REQ-CHART-134
+  area: CHART
+  statement: "A shape-sphere trajectory's polar angle must never be folded: read from the signed n̂ it must cross 90° at syzygies and lie on both sides of it (R-544; the owner's second rider to RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.2 The mechanism
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel trajectory_polar_unfolded: the figure-eight, run by the kernel: φ = acos(n_w) from the signed n̂ at every macro-step lies on both sides of 90°, crosses it at every syzygy, and the sign of n_w matches the triangle's signed area computed from the positions; control: the polar angle folded, min(φ, π − φ), fails"
+  rulings:
+  - R-544
+  milestone: M8
+- id: REQ-CHART-135
+  area: CHART
+  statement: "The symmetry filter must be a display option applied after rendering, never a change to what is computed: on or off, the sim key, the payload, refinement, every outcome and R-408's statistics must be unchanged, and a chart's symmetries (the mirror of the whole system, body-label swaps where the masses make them exact) must be declared per chart and extensible (the owner's order of 7 Nov, RQ-736; design § 6.6)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: docs/design/principia_chart_composition.md
+    section: 6.6 The symmetry rule
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_filter_display_only: filter on and off give one sim key, payload and statistic, bit for bit; a chart's list of symmetries takes a new entry with no change to the filter; control: the filter feeding a statistic fails"
+  rulings:
+  - R-408
+  milestone: M8
+- id: REQ-CHART-136
+  area: CHART
+  statement: "A pixel must be drawn transparent only if its starting state is the image of another start present in the same chart, one canonical representative of each pair kept, so that on a rest chart the filtered chart and its mirror reproduce the full chart bitwise, outcome fields equal and signed fields flipped (the owner's test, RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_filter_rest_reconstructs: a third-body rest chart declaring the mirror only, one copy, whose pairs decode to exact mirrors, filtered, plus its mirror, is the full chart bitwise, outcome fields equal, signed fields flipped; mutations: a signed field not flipped fails, the canonical side off by one row fails"
+  rulings:
+  - R-544
+  milestone: M8
+- id: REQ-CHART-137
+  area: CHART
+  statement: "A pixel must be blanked only if its partner is actually in the chart's domain, checked through the chart's own map after signed C (translation, rotation and scale removed, the mirror step not taken) and never through the contract's C or Enc; on a chart holding something that breaks the symmetry nothing must be blanked and the toggle must read \"no duplicates in this chart\" (the owner's order, RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: docs/design/principia_chart_composition.md
+    section: 8.8 Region D must match the papers (order item A5)
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_filter_fixed_velocity: on a shape-sphere chart with fixed velocities p_ρ = (0.1, 0.1), p_λ = (0, 0) relative to ρ̃ on +x, Π·p ≠ p asserted after signed C first, the filter blanks nothing and reads no duplicates in this chart; a partner out of the view and in the domain still blanks, and at unequal masses or eq. 3's near-rest start the swap blanks nothing; the same chart at p_ρ = (0.1, 0) does blank; mutation: the partner check removed, blanking by the map's (θ, π − φ) alone, fails"
+  rulings:
+  - R-544
+  milestone: M8
+- id: REQ-CHART-138
+  area: CHART
+  statement: "The canonical choice must be stated in the legend and the export sidecar (for example \"mirror pairs shown once: eta >= 0\"), and the filter must default on for the paper-frame presets only, so that region D's quarter disc, the Anosova half-disc and the half shape sphere at rest are its output with the full domain computed underneath, and a replication target must score what is computed, never what the filter drew (the owner's order, RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: docs/design/principia_chart_composition.md
+    section: 8.1 The definition
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_filter_statement: the legend and the sidecar state the canonical choice; a paper-frame preset opens with the filter on, any other chart with it off; a target's score is one with the filter on or off; controls: the statement dropped fails, the default on for every chart fails"
+  rulings:
+  - R-649
+  milestone: M8
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -13476,6 +14253,8 @@
   rulings:
   - R-113
   milestone: M4
+  rq:
+  - RQ-714
   note: Split from REQ-RENDER-027 (R-113, RQ-95).
 - id: REQ-RENDER-083
   area: RENDER
@@ -14278,6 +15057,19 @@
   - R-618
   milestone: M7
   note: "R-618 (25 Oct 2026, RQ-538 (b)): the split a definition, applied per R-369. Closed by TASK-M7-69. perf review 5661999637 of PR #293, P2 (a): *was (verify):* \"and that with neither the screen pass is the identity;\"."
+- id: REQ-RENDER-121
+  area: RENDER
+  statement: "A contour must be drawable of any registered primitive through its forward formula, display-only and never scored, §4.1's variables gaining the interior angles and the pair binding energies and its functions acos."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.2 Tier 1 overlays
+  verify:
+    method: unit test
+    detail: "cargo test -p render contour_primitives: each registered forward evaluates on the decode, the Tier 1 figure's two families at their exact angles; a primitive's contour reaches no scored field; control: an angle off by 1° misses the analytic line"
+  rulings:
+  - R-476
+  - R-509
+  milestone: M7
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -19506,6 +20298,8 @@
   - R-466
   - R-516
   milestone: M8
+  rq:
+  - RQ-711
   note: "R-466 (18 Oct 2026; review round 1 of PR #243, gui review F6): a chart preset carries a base point, a centre and a window (REQ-GUI-224, defined by TASK-M6-45), and a saved preset stores them with its axes. R-475 L3 (20 Oct 2026): saved charts (Save view as chart) sit in the preset selector's Saved group beside the builder's presets, in the same store (REQ-GUI-239). R-478 W3: the Chart builder shows the links read-only (REQ-GUI-253, 20 Oct 2026). R-516 (20 Oct 2026): a preset may optionally pin the links it was designed under, stored with it and applied on load (REQ-GUI-254, TASK-M6-50); the builder's Save, Duplicate and Delete keep a preset's pin with it. Gui review G2 of PR #265 (applied per R-369): the verify gains the pin arm (R-516 K2). *Was:* the verify's \"; control: a saved preset whose resets fall back to another preset's values fails\"."
 - id: REQ-GUI-109
   area: GUI
@@ -25059,6 +25853,113 @@
   - R-798
   milestone: M9
   note: "Closed by TASK-M9-45. Which pair of ratios follows PA-1's paper; which mirror point the preset centres on, its map and its window are written by that task (R-72, R-71). At rest, and the map: physics review 5805354224 of PR #430, F5, R-798's reading. The ratios reach the Inspector through the engine's typed surface. *Was (statement):* no \"at rest\"; *was (verify):* no map, centre pixel or momenta control."
+- id: REQ-GUI-418
+  area: GUI
+  kind: calibration
+  statement: "The mock noise's jump-line detector's two values in `lattice_field_has_no_jump_lines`, `JUMP_STEP` (the smallest local-peak step away from the neighbouring slopes) and `JUMP_RUN` (how many adjacent pixels along a line must hold one), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M6 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-685 — The real kernel and the other WGSL and rust-gpu shaders are audited for the mock noise's pattern, hashes or lattice lookups where neighbouring invocations must agree bitwise and compile-time offsets feeding them; the fix is proposed as a task with its own ADR, plus a regression test that asserts shared lattice corners bitwise equal on every backend; no fix until lavapipe and the audit are in"
+  verify:
+    detail: "the proposal gives the shipped field's and the distributed-offset control's line counts at both views on Metal and lavapipe, and how they move with each value; recorded in decisions.md"
+    method: review checklist
+  rulings:
+  - R-71
+  milestone: M6
+  note: "Proposed by TASK-M6-53, pending the M6 gate: JUMP_STEP 0.01, JUMP_RUN 16. Measured at 1236×1031, centre 0/0 ×0.77 and 0.18/0.41 ×1.00, tilts 0, on the M3 Pro: the shipped warp.x and warp.y peak at a step of 0.0009 and hold 0 lines at every step and run tried from 0.002 and 8; the shipped n peaks at 0.025 and sets the run: at step 0.01, run 8 it holds 6,3 lines (V,H) at ×0.77 and 0,1 at ×1.00, at run 16 none; at step 0.004, run 16 it holds 11,5 and 2,5, at step 0.02, run 8 none. The distributed-offset control at the proposal holds n 129,99, warp.x 50,46, warp.y 51,44 at ×0.77 and n 123,107, warp.x 52,39, warp.y 52,40 at ×1.00, within 2 lines on macos-15 and lavapipe, where the shipped field holds 0. The values were chosen after seeing the shipped field on Metal, so the shipped n's margin is the run's, not a derived one. The distributed-offset control's movement, Metal only (M3 Pro; the sweep is not measured on lavapipe), n / warp.x / warp.y (V,H), ×0.77 then ×1.00: step 0.01, run 8: 501,388 / 81,62 / 82,65, then 478,384 / 62,54 / 62,62; step 0.004, run 16: 161,116 / 77,62 / 82,65, then 148,124 / 63,53 / 62,64; step 0.02, run 8: 384,306 / 53,45 / 52,52, then 358,275 / 52,37 / 43,39; step 0.002, run 8: 648,501 / 85,67 / 84,67, then 619,496 / 63,55 / 62,65; step 0.02, run 16: 88,83 / 30,30 / 29,29, then 93,79 / 32,29 / 23,30; step 0.01, run 24: 70,61 / 39,35 / 38,32, then 69,64 / 32,36 / 23,37."
+- id: REQ-GUI-419
+  area: GUI
+  statement: "The Chart builder must offer per axis a primitive or combination, a warp, an extension and what it holds fixed, and per chart a pair map and the constraints, and must show a refusal's name and text in the Domain preview, a label beside the chart, and a numerical axis's seam."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 2. The two layers
+  - file: docs/design/principia_chart_composition.md
+    section: 6.3 The Domain preview shows why
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7. Chart builder (`03_chartbuilder.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 03_chartbuilder (composition cases) and cargo test -p gui composition_panels: a refused pair shows its reason and no quick render; a labelled pair runs and says so; a saved composed chart reopens bitwise; control: a pair refused in engine and offered as Apply fails"
+  rulings:
+  - R-475
+  - R-506
+  milestone: M8
+- id: REQ-GUI-420
+  area: GUI
+  statement: "A 1D chart must be a builder option, one swept axis and one annotation axis, labelled as a 1-swept family, drawn as a strip with a line of the chosen field, statistics per value along its axis only."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.1 1D charts
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 03_chartbuilder (1D case) and cargo test -p engine one_d_chart: well-posed as 1 + 7; a 2D density claim refused; control: the annotation coordinate read by the decode fails"
+  rulings:
+  - R-369
+  milestone: M8
+- id: REQ-GUI-421
+  area: GUI
+  statement: "A chart-change segment must offer morph, cut and dissolve, a morph segment showing a band on the Chart lane with its path's name instead of a cut mark, the planner pricing it as class (b) with its flag, and a cut remaining a cut, an existing spec bitwise."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.13 The Sequence
+  verify:
+    method: unit test
+    detail: "cargo test -p gui morph_segment: the band, the planner's row and flag, an old spec reopened bitwise, a link-id change still a cut; controls: a mark on a morph, no flag"
+  rulings:
+  - R-576
+  - R-577
+  - R-623
+  milestone: M8
+  rq:
+  - RQ-721
+- id: REQ-GUI-422
+  area: GUI
+  statement: "Time-axis mode must show the playhead's controls disabled with the reason beside them, make the horizon the axis's range, keep and restore the playhead, read (IC, t) in hover, Inspector and lock, offer Time once per chart with a linear or log warp, draw time ticks and a mode badge, and update the keyboard model for the disabled scope."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 19. Time-axis mode in the GUI (order part D, UI)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui time_mode: each bullet; control: the scrubber left live"
+  rulings:
+  - R-369
+  - R-466
+  - R-571
+  milestone: M8
+  rq:
+  - RQ-727
+- id: REQ-GUI-423
+  area: GUI
+  statement: "In time-axis mode the Sequence's Playhead lane must be disabled with the reason, a time to IC-only segment must show the cut mark, and export sidecars must record the mode and the time range."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 19. Time-axis mode in the GUI (order part D, UI)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui time_sequence and cargo test -p engine time_sidecar: the lane, the cut mark and the block's round trip; control: the lane left live"
+  rulings:
+  - R-369
+  - R-576
+  milestone: M8
+  rq:
+  - RQ-727
+- id: REQ-GUI-424
+  area: GUI
+  statement: "The symmetry filter must be a toggle in the GUI and on export, reading \"no duplicates in this chart\", not an empty toggle, where the chart has no partners; on a region-D preset turning it off must be the one click to the full disc (the owner's order and ruling, RQ-736)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: docs/design/principia_chart_composition.md
+    section: "6.2 Labels: reduced capability, never a refusal"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui symmetry_filter_toggle: the toggle on the chart's panel and in the export dialog, its no-partners state, one click from the filter's view to the full disc with no new run; control: the toggle left live with no partners fails"
+  rulings: []
+  milestone: M8
+  rq:
+  - RQ-736
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -26226,6 +27127,8 @@
     detail: "random keyframe pairs: every interpolated basis is orthonormal; zoom midpoint equals the geometric mean; a chart change yields no interpolated chart"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-721
 - id: REQ-TOOL-076
   area: TOOL
   statement: "A keyframe animation must serialise as {keyframes: [(t_wall, ViewState, RenderState, playhead policy)], segments: [(easing, transition, link-parameter choice)], fps, duration}, one segment between each pair of neighbouring keyframes, each with its own easing curve (R-576) and, at a link-parameter change, its choice of cut or interpolate, interpolate the default (R-623), provenance-complete, URL-encodable and re-renderable."
@@ -29227,6 +30130,8 @@
   - R-84
   - R-547
   milestone: M2
+  rq:
+  - RQ-715
   note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): branch inputs are built only from operations every IEEE backend rounds alike, with no subnormal intermediate; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration). TASK-M2-24 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-48, which re-proves test 12 with the rewritten M₀₁ (applied per R-369). *Was:* \"R-34 extends explicit fma to every multi-op branch input\" and the verify's \"feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs\" (stale value, replaced by R-547). Fix round 1 of PR #274 (qa Q5, applied per R-369). *Was (verify):* \"decoder test 12: fuzz z on all backends (Metal and lavapipe beside the CPU); continuous outputs within f32-eps-scaled tolerance; branch tags bitwise equal; every branch input formed as dd_decoder §2's enumerated table gives it, each built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), feasibility K* ≥ L_z²/2 among them\". RQ-621, decided by the orchestrator per R-369 (a test decision, option (a), 30 Oct 2026, TASK-M2-48): test 12's inputs gain TASK-M2-02's onset crossings and the emulations gain \"contracted (fused)\". *Was (verify):* \"control: on the same fuzzed inputs the superseded forms (the explicit fma(m₁, 1, m₀), a plain float subtract or compare), evaluated on the CPU under an unfused or flush-to-zero emulation, give a different tag from the unflushed CPU on at least one input\"."
 - id: REQ-VAL-018
   area: VAL
@@ -37213,6 +38118,8 @@
   - R-650
   - R-669
   milestone: M9
+  rq:
+  - RQ-731
   note: "Reproduces: Tanikawa & Mikkola 2008, Fig. 7: first-symbol maps at non-zero angular momentum, virial ratio 0 to 0.7. Chart: new: a fixed-k velocity prescription over D11 ∪ D12. Milestone: M9 (was M4; R-650). Compare: qualitative (rule 8). Tolerance: none: qualitative. Row TS-2 of principia_dd_replication.md § \"5.12 Targets that wait for a chart, a diagnostic or data\"; layer replication, tier B; closed by TASK-M9-28 (was TASK-M4-24) (R-594, R-629). 30 Oct 2026 (R-649, R-650): a measurement, never a gate; scored in M9 (was M4), or early as a peek, information only; its outcome PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED. Tier (a), the GPU explorer: it is scored there, statistically or qualitatively only, with `error_ratio` flagging what it can't resolve (R-649 item 2; the owner's clarification of 29 Oct 2026 and his confirmation of 30 Oct 2026: \"statistical targets are scored on tier (a), exact targets on tier (b)\"). Tier *was* (corrected 30 Oct 2026 by the owner's confirmation): \"(b), with (a) expected to agree statistically or qualitatively\". R-669 (1 Nov 2026, RQ-595 (b)): no fixed-k velocity chart is built; it stays in M9, reading \"not scored: no fixed-k velocity chart\". *Was (rq):* RQ-595."
 - id: REQ-VAL-327
   area: VAL
@@ -39785,6 +40692,55 @@
   - R-705
   milestone: M8
   note: "R-627 (27 Oct 2026): closed by TASK-M8-96, the v1 web skeleton's measurements on the Pages deploy of TASK-M8-86, on the mock engine. It measures for RQ-550 and RQ-551 and settles neither, so it carries no `rq` and waits on neither. *Was (R-627's port, before code review 5663981956 F1, applied per R-369):* \"closed by TASK-M8-86, the v1 web skeleton, on the mock engine\". qa review 5665189777 of R-627's port, F4 (applied per R-369): a vsync-capped fps would read the display, not the work, so the refresh rate, the work time and the capped mark are recorded and the 5th-percentile fps is defined. *Was (verify):* \"the report in systems_architecture §3 gives, per browser, version, layout and window size, the mean and 5th-percentile frames per second over at least 30 s of a scripted pan and of idle, beside `cargo run -p gui --features mock` on the same Mac; the perf reviewer checks the method; control: a figure with no duration, window size or browser version fails the review\". qa review 5665267650 of R-627's port, G1, G2 and nit (applied per R-369): the refresh rate is measured apart from the work, since requestAnimationFrame slows to the app's rate when a frame overruns; mean fps is frames over duration; one capped rule for each reported figure; the percentile is nearest-rank. *Was (verify):* \"the report in systems_architecture §3 gives, per browser, version, layout and window size, with the display's refresh rate: the mean fps; the 5th-percentile fps, the 5th percentile of 1000 / interval_ms over every frame presented in the 30 s window after a 5 s warm-up; and the per-frame work time in ms (mean and 95th percentile), each of the scripted pan (one figure width every 5 s, back and forth) and of idle, each fps figure within 2% of the refresh rate marked \"capped\", beside `cargo run -p gui --features mock` on the same Mac by the same method (TASK-M8-86's frame statistics); the perf reviewer checks the method; controls: a figure with no duration, window size, browser version, refresh rate or work time, and a capped figure not marked, each fail the review\". R-705 (4 Nov 2026, RQ-657 (a)): `--release` added; the site is built `--release`, and that command without it runs unoptimised. *Was (verify):* \"beside `cargo run -p gui --features mock` on the same Mac\"."
+- id: REQ-PERF-116
+  area: PERF
+  statement: "The closed-form axis pairs baked into the GPU kernel beyond the gallery must not exceed the ledger's cap, RQ-716's ruled value, and each must be created lazily, on Apply, not at start-up."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 11. The axis cap
+  verify:
+    method: unit test
+    detail: "cargo test -p engine baked_cap: the count of baked pairs in the variant table at or under the ledger constant; control: one entry over fails; a chart switch to a baked pair creates its pipeline once, inside the re-integration"
+  rulings:
+  - R-369
+  milestone: M4
+  rq:
+  - RQ-716
+  - RQ-722
+- id: REQ-PERF-117
+  area: PERF
+  statement: "A path between two baked closed-form ends must run live under the two-regime policy by one generic blend entry and no baked (A, B) entry, its chart side measured against the design's target on one coarse cover on the human's Mac, the Windows runner's arm a separate labelled measurement that closes nothing; a CPU-only end must run in export and run labelled live."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 17.12 Performance
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench path_cover on the human's Mac against the design's target, with the Windows runner's arm a separate labelled measurement (R-711); cargo test -p engine blend_entry_counted: stage_blend the only morph entry, control: a baked (A, B) entry fails"
+  rulings:
+  - R-186
+  - R-369
+  - R-711
+  milestone: M8
+  rq:
+  - RQ-721
+- id: REQ-PERF-118
+  area: PERF
+  statement: "A time-axis chart must store by distinct boundary at most K rows per column, each with its own word when symbolic features are active, under the tier's budget, never macro-step dense output, and its per-column cost must be measured on Heggie × RK4 and on the GPU on the human's Mac against the stated criterion, the Windows runner's arm a separate labelled measurement that closes nothing."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "18.3 Stored rows and dense output: the conflict, plainly"
+  - file: docs/design/principia_chart_composition.md
+    section: 18.5 Cost per column
+  verify:
+    detail: "cargo test -p engine time_memory_budget; cargo test -p engine -- time_column_matches_playhead time_extend_continues: the store arms of § 18.6, with their controls; cargo xtask bench time_column on the human's Mac, with the Windows runner's arm a separate labelled measurement (R-711)"
+    method: benchmark
+  rulings:
+  - R-186
+  - R-369
+  - R-711
+  milestone: M8
+  rq:
+  - RQ-727
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."

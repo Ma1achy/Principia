@@ -1,0 +1,203 @@
+RESULT arm P 0 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 0 119.5 rc 0
+RESULT bytes 0 kernel.spv 766248
+RESULT bytes 0 kernel.wgsl 1004550
+RESULT test_rc 0 0
+RESULT 0 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 0 naga_ms 106.5
+RESULT 0 entries 33 gallery 12 pairs 0
+RESULT 0 gallery 12 pass 0 ms 3339.6
+RESULT 0 gallery 12 pass 1 ms 2740.4
+RESULT 0 gallery 12 pass 2 ms 2716.9
+RESULT 0 eager 12 pass 0 ms 2726.3
+RESULT 0 eager 12 pass 1 ms 2719.7
+RESULT 0 eager 12 pass 2 ms 2686.9
+RESULT 0 cover samples 32400 latent_p50_ms 6.53 sphere_p50_ms 6.64
+RESULT 0 cover_fixed_overhead_one_sample_p50_ms 0.16
+RESULT arm P 1 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 1 28.0 rc 0
+RESULT bytes 1 kernel.spv 813344
+RESULT bytes 1 kernel.wgsl 1064947
+RESULT test_rc 1 0
+RESULT 1 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 1 naga_ms 112.6
+RESULT 1 entries 34 gallery 12 pairs 1
+RESULT 1 first_pair_ms 331.2
+RESULT 1 gallery 12 pass 0 ms 2863.7
+RESULT 1 gallery 12 pass 1 ms 2841.7
+RESULT 1 gallery 12 pass 2 ms 2877.9
+RESULT 1 eager 13 pass 0 ms 3182.4
+RESULT 1 eager 13 pass 1 ms 3061.0
+RESULT 1 eager 13 pass 2 ms 3010.2
+RESULT 1 cover samples 32400 latent_p50_ms 7.39 sphere_p50_ms 6.75
+RESULT 1 cover_fixed_overhead_one_sample_p50_ms 0.16
+RESULT arm P 4 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 4 32.5 rc 0
+RESULT bytes 4 kernel.spv 954368
+RESULT bytes 4 kernel.wgsl 1246645
+RESULT test_rc 4 0
+RESULT 4 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 4 naga_ms 132.0
+RESULT 4 entries 37 gallery 12 pairs 4
+RESULT 4 first_pair_ms 372.7
+RESULT 4 gallery 12 pass 0 ms 3360.3
+RESULT 4 gallery 12 pass 1 ms 3429.1
+RESULT 4 gallery 12 pass 2 ms 3398.2
+RESULT 4 eager 16 pass 0 ms 4736.6
+RESULT 4 eager 16 pass 1 ms 4355.8
+RESULT 4 eager 16 pass 2 ms 4438.5
+RESULT 4 cover samples 32400 latent_p50_ms 7.18 sphere_p50_ms 7.34
+RESULT 4 cover_fixed_overhead_one_sample_p50_ms 0.16
+RESULT arm P 8 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 8 39.2 rc 0
+RESULT bytes 8 kernel.spv 1142400
+RESULT bytes 8 kernel.wgsl 1489065
+RESULT test_rc 8 0
+RESULT 8 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 8 naga_ms 157.3
+RESULT 8 entries 41 gallery 12 pairs 8
+RESULT 8 first_pair_ms 419.3
+RESULT 8 gallery 12 pass 0 ms 4097.2
+RESULT 8 gallery 12 pass 1 ms 4064.8
+RESULT 8 gallery 12 pass 2 ms 4062.2
+RESULT 8 eager 20 pass 0 ms 7163.9
+RESULT 8 eager 20 pass 1 ms 6648.8
+RESULT 8 eager 20 pass 2 ms 6672.9
+RESULT 8 cover samples 32400 latent_p50_ms 6.89 sphere_p50_ms 6.54
+RESULT 8 cover_fixed_overhead_one_sample_p50_ms 0.15
+RESULT arm P 0 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 0 26.1 rc 0
+RESULT bytes 0 kernel.spv 766248
+RESULT bytes 0 kernel.wgsl 1004550
+RESULT test_rc 0 0
+RESULT 0 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 0 naga_ms 113.0
+RESULT 0 entries 33 gallery 12 pairs 0
+RESULT 0 gallery 12 pass 0 ms 2779.2
+RESULT 0 gallery 12 pass 1 ms 2727.5
+RESULT 0 gallery 12 pass 2 ms 2708.7
+RESULT 0 eager 12 pass 0 ms 2690.8
+RESULT 0 eager 12 pass 1 ms 2741.8
+RESULT 0 eager 12 pass 2 ms 2686.5
+RESULT 0 cover samples 32400 latent_p50_ms 6.77 sphere_p50_ms 6.56
+RESULT 0 cover_fixed_overhead_one_sample_p50_ms 0.15
+RESULT arm P 1 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 1 28.0 rc 0
+RESULT bytes 1 kernel.spv 813344
+RESULT bytes 1 kernel.wgsl 1064947
+RESULT test_rc 1 0
+RESULT 1 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 1 naga_ms 113.2
+RESULT 1 entries 34 gallery 12 pairs 1
+RESULT 1 first_pair_ms 326.1
+RESULT 1 gallery 12 pass 0 ms 2884.4
+RESULT 1 gallery 12 pass 1 ms 2843.0
+RESULT 1 gallery 12 pass 2 ms 2895.8
+RESULT 1 eager 13 pass 0 ms 3131.0
+RESULT 1 eager 13 pass 1 ms 3095.2
+RESULT 1 eager 13 pass 2 ms 3015.4
+RESULT 1 cover samples 32400 latent_p50_ms 7.70 sphere_p50_ms 7.78
+RESULT 1 cover_fixed_overhead_one_sample_p50_ms 0.16
+RESULT arm P 4 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 4 32.7 rc 0
+RESULT bytes 4 kernel.spv 954368
+RESULT bytes 4 kernel.wgsl 1246645
+RESULT test_rc 4 0
+RESULT 4 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 4 naga_ms 132.9
+RESULT 4 entries 37 gallery 12 pairs 4
+RESULT 4 first_pair_ms 370.5
+RESULT 4 gallery 12 pass 0 ms 3355.8
+RESULT 4 gallery 12 pass 1 ms 3400.0
+RESULT 4 gallery 12 pass 2 ms 3379.5
+RESULT 4 eager 16 pass 0 ms 4709.4
+RESULT 4 eager 16 pass 1 ms 4346.2
+RESULT 4 eager 16 pass 2 ms 4395.2
+RESULT 4 cover samples 32400 latent_p50_ms 6.82 sphere_p50_ms 6.95
+RESULT 4 cover_fixed_overhead_one_sample_p50_ms 0.18
+RESULT arm P 8 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 8 39.2 rc 0
+RESULT bytes 8 kernel.spv 1142400
+RESULT bytes 8 kernel.wgsl 1489065
+RESULT test_rc 8 0
+RESULT 8 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 8 naga_ms 158.5
+RESULT 8 entries 41 gallery 12 pairs 8
+RESULT 8 first_pair_ms 421.0
+RESULT 8 gallery 12 pass 0 ms 4119.1
+RESULT 8 gallery 12 pass 1 ms 4082.1
+RESULT 8 gallery 12 pass 2 ms 4129.6
+RESULT 8 eager 20 pass 0 ms 7245.5
+RESULT 8 eager 20 pass 1 ms 6735.4
+RESULT 8 eager 20 pass 2 ms 6750.2
+RESULT 8 cover samples 32400 latent_p50_ms 7.53 sphere_p50_ms 6.96
+RESULT 8 cover_fixed_overhead_one_sample_p50_ms 0.16
+RESULT arm P 0 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 0 26.3 rc 0
+RESULT bytes 0 kernel.spv 766248
+RESULT bytes 0 kernel.wgsl 1004550
+RESULT test_rc 0 0
+RESULT 0 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 0 naga_ms 105.9
+RESULT 0 entries 33 gallery 12 pairs 0
+RESULT 0 gallery 12 pass 0 ms 2793.7
+RESULT 0 gallery 12 pass 1 ms 2733.5
+RESULT 0 gallery 12 pass 2 ms 2726.1
+RESULT 0 eager 12 pass 0 ms 2715.3
+RESULT 0 eager 12 pass 1 ms 2761.5
+RESULT 0 eager 12 pass 2 ms 2627.6
+RESULT 0 cover samples 32400 latent_p50_ms 7.43 sphere_p50_ms 7.62
+RESULT 0 cover_fixed_overhead_one_sample_p50_ms 0.16
+RESULT arm P 1 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 1 28.2 rc 0
+RESULT bytes 1 kernel.spv 813344
+RESULT bytes 1 kernel.wgsl 1064947
+RESULT test_rc 1 0
+RESULT 1 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 1 naga_ms 114.7
+RESULT 1 entries 34 gallery 12 pairs 1
+RESULT 1 first_pair_ms 338.0
+RESULT 1 gallery 12 pass 0 ms 2874.6
+RESULT 1 gallery 12 pass 1 ms 2898.5
+RESULT 1 gallery 12 pass 2 ms 2906.3
+RESULT 1 eager 13 pass 0 ms 3031.6
+RESULT 1 eager 13 pass 1 ms 3073.8
+RESULT 1 eager 13 pass 2 ms 3032.9
+RESULT 1 cover samples 32400 latent_p50_ms 7.15 sphere_p50_ms 7.70
+RESULT 1 cover_fixed_overhead_one_sample_p50_ms 0.19
+RESULT arm P 4 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 4 32.7 rc 0
+RESULT bytes 4 kernel.spv 954368
+RESULT bytes 4 kernel.wgsl 1246645
+RESULT test_rc 4 0
+RESULT 4 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 4 naga_ms 136.9
+RESULT 4 entries 37 gallery 12 pairs 4
+RESULT 4 first_pair_ms 367.3
+RESULT 4 gallery 12 pass 0 ms 3337.2
+RESULT 4 gallery 12 pass 1 ms 3382.5
+RESULT 4 gallery 12 pass 2 ms 3383.9
+RESULT 4 eager 16 pass 0 ms 4706.4
+RESULT 4 eager 16 pass 1 ms 4373.9
+RESULT 4 eager 16 pass 2 ms 4447.7
+RESULT 4 cover samples 32400 latent_p50_ms 7.50 sphere_p50_ms 7.83
+RESULT 4 cover_fixed_overhead_one_sample_p50_ms 0.15
+RESULT arm P 8 load n/a Windows-11-10.0.26200-SP0
+RESULT build_s 8 38.8 rc 0
+RESULT bytes 8 kernel.spv 1142400
+RESULT bytes 8 kernel.wgsl 1489065
+RESULT test_rc 8 0
+RESULT 8 adapter Vulkan "NVIDIA GeForce RTX 2080 SUPER"
+RESULT 8 naga_ms 160.0
+RESULT 8 entries 41 gallery 12 pairs 8
+RESULT 8 first_pair_ms 431.3
+RESULT 8 gallery 12 pass 0 ms 4119.5
+RESULT 8 gallery 12 pass 1 ms 4064.1
+RESULT 8 gallery 12 pass 2 ms 4088.6
+RESULT 8 eager 20 pass 0 ms 7281.2
+RESULT 8 eager 20 pass 1 ms 6751.9
+RESULT 8 eager 20 pass 2 ms 6812.2
+RESULT 8 cover samples 32400 latent_p50_ms 7.50 sphere_p50_ms 7.54
+RESULT 8 cover_fixed_overhead_one_sample_p50_ms 0.17
+RESULT cpu_rc 0
+RESULT ns_per_sample shape_sphere 128.6 latent 128.7

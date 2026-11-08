@@ -1053,9 +1053,10 @@ fn read_back_off(read: &View, q1: &Latent, q2: &Latent) -> f64 {
         .fold(0.0, f64::max)
 }
 
-/// R-459 G3: a negative determinant is the pair the other way round where that order reads the basis back, or, reading
-/// back in neither order, where it keeps more of the tilt; otherwise it stays as typed. A typed mirrored basis outside
-/// the map's image keeps its tilt, and the next edit built from the view keeps the plane near it.
+/// R-459 G3: a negative determinant is the pair the other way round where that order reads the basis back. Reading back
+/// in neither order it stays as typed where that keeps strictly more of the tilt, a typed mirrored basis outside the
+/// map's image keeping its tilt, and the view's own basis at another scale reading the same; otherwise, or with a target
+/// on the wrong vector, it reads its dominant axes (R-705, `manifold_view_basis`).
 #[test]
 fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     let vector = |parts: &[(usize, f64)]| -> Latent {
@@ -1080,9 +1081,9 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     let tilt = 0.8_f64.atan2(0.6).to_degrees();
     let as_typed = in_frame(frame(Z_Q3, Z_Q3, Z_MU1), &q1, &q2);
     check_tilt_kept(&as_typed, tilt);
-    // The next edit built from the view, a zoom, leaves the axes and the tilt where they were.
+    // The view's own basis, at another scale, reads the same: the axes and the tilt where they were.
     let (p1, p2) = as_typed.with_zoom(1.0).basis();
-    let zoomed = View::framed(
+    let rescaled = View::framed(
         &Plane {
             z0: [0.0; 8],
             q1: p1,
@@ -1090,8 +1091,8 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
         },
         Some(&frame(Z_Q3, Z_Q3, Z_MU1)),
     );
-    check_axes(&zoomed, (Z_ALPHA, Z_BETA), "zoomed");
-    check_tau1(&zoomed, tilt);
+    check_axes(&rescaled, (Z_ALPHA, Z_BETA), "rescaled");
+    check_tau1(&rescaled, tilt);
     rejects("a swap that loses the tilt", || {
         assert_eq!((as_typed.a, as_typed.b), (Z_BETA, Z_ALPHA))
     });
@@ -1109,11 +1110,11 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     rejects("the swap's reading where X != Y loses z_q3", || {
         check_tilt_kept(&swapped, tilt)
     });
-    rejects("a zoom that loses the tilt", || {
+    rejects("a rescaled view that loses the tilt", || {
         check_tau1(
             &View {
                 tau1: 0.0,
-                ..zoomed
+                ..rescaled
             },
             tilt,
         )
@@ -1150,27 +1151,28 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_swapped_where_that_keeps_it() {
     rejects("within the cut, read as past it", || {
         check_axes(&at(1.5e-18), (Z_ALPHA, Z_BETA), "past it")
     });
-    // Neither order reads it back: the swap only if it keeps more of the tilt. Here it keeps both targets' parts, and
-    // the order as typed neither.
+    // Neither order reads it back, each target on its own vector, and the swap would keep more of the tilt: the dominant
+    // axes, which here are the swap's. A swap reads only where it reads back (R-705, R-459 G3, `manifold_view_basis`).
     let more = in_frame(
         frame(Z_Q3, Z_Q3, Z_MU1),
-        &[(Z_ALPHA, -0.6), (Z_MU1, 0.8)],
-        &[(Z_BETA, 1.0), (Z_Q3, 0.3)],
+        &[(Z_ALPHA, 0.6), (Z_BETA, 0.8), (Z_Q3, 0.3)],
+        &[(Z_ALPHA, 1.0), (Z_BETA, 0.2), (Z_MU1, 0.5)],
     );
-    check_axes(&more, (Z_BETA, Z_ALPHA), "keeps more of the tilt");
-    // And a tie, no tilt to keep, stays as typed: the unequal lengths are no reading's, so no read-back.
+    check_axes(&more, (Z_BETA, Z_ALPHA), "the dominant axes");
+    // And a tie, no tilt to keep, reads its dominant axes, here the order as typed: the unequal lengths are no reading's,
+    // so no read-back.
     let tie = in_frame(
         frame(Z_Q3, Z_Q3, Z_MU1),
         &[(Z_ALPHA, -0.6), (Z_BETA, 0.1)],
         &[(Z_ALPHA, 0.1), (Z_BETA, 1.0)],
     );
-    check_axes(&tie, (Z_ALPHA, Z_BETA), "a tie");
+    check_axes(&tie, (Z_ALPHA, Z_BETA), "a tie's dominant axes");
     rejects("a tie swapped", || {
-        check_axes(&tie, (Z_BETA, Z_ALPHA), "keeps more of the tilt")
+        check_axes(&tie, (Z_BETA, Z_ALPHA), "the other order")
     });
     rejects(
-        "the swap that keeps more of the tilt, left as typed",
-        || check_axes(&more, (Z_ALPHA, Z_BETA), "a tie"),
+        "the basis that would keep more of the tilt, left as typed",
+        || check_axes(&more, (Z_ALPHA, Z_BETA), "the order as typed"),
     );
 }
 
@@ -1202,26 +1204,29 @@ fn check_reads_basis(read: &View, q1: &Latent, q2: &Latent) {
 }
 
 /// `tilted_axes`'s determinant is the difference of the products, not of a quotient: the basis below has `1 · 0.5 −
-/// 0.5 · 2 = −0.5`, so it is mirrored, while `1 / 0.5 − 0.5 · 2` and `1 · 0.5 − 0.5 / 2` are both positive. Reading back
-/// in neither order, it swaps because that keeps more of the tilt, and the swap's reading is worked by hand from
-/// `View::in_frame`: on `(z_β, z_α)`, `γ = atan2(1, 2)`, so `sin γ = 1/√5`, `cos γ = 2/√5`; `σ cos τ₁ = √0.5`,
-/// `σ sin τ₁ = −0.3/√5`; `tan τ₂ = (0.8/√5) / √5 = 0.16`.
+/// 0.5 · 2 = −0.5`, so it is mirrored, while `1 / 0.5 − 0.5 · 2` and `1 · 0.5 − 0.5 / 2` are both positive and would read
+/// the pair as typed. Each target is on its own vector and neither order reads it back, and the swap would keep more of
+/// the tilt, so it reads its dominant axes (R-459 G3), worked by hand from `View::in_frame`: on `(z_α, z_μ1)`, the target
+/// `Y` being the axis and reading as `z_q3`, `γ = atan2(−2, 1)`, so `sin γ = −2/√5`, `cos γ = 1/√5`; `σ cos τ₁ = √5`,
+/// `σ sin τ₁ = 0.3/√5`; `σ` read whole (R-705), counting the `1.5/√5` that `z_β` leaves on `σ u₁`; and on `q₂`'s side
+/// `cos τ₂ ∝ 0.8`, `sin τ₂ ∝ −0.6/√5`.
 #[test]
 fn mock_cube_axis_buttons_a_mirrored_basis_is_told_by_its_determinant() {
     let read = read_of(
-        &[(Z_ALPHA, 1.0), (Z_BETA, 0.5), (Z_MU1, 0.8)],
-        &[(Z_ALPHA, 2.0), (Z_BETA, 0.5), (Z_Q3, 0.3)],
+        &[(Z_ALPHA, 1.0), (Z_BETA, 0.5), (Z_Q3, 0.3)],
+        &[(Z_ALPHA, 2.0), (Z_BETA, 0.5), (Z_MU1, 0.8)],
     );
     let check = |read: &View| {
         let root5 = 5.0_f64.sqrt();
-        let (cos1, sin1) = (0.5_f64.sqrt(), -0.3 / root5);
-        assert_eq!((read.a, read.b), (Z_BETA, Z_ALPHA), "{read:?}");
+        let (cos1, sin1) = (root5, 0.3 / root5);
+        let stray = 1.5 / root5;
+        assert_eq!((read.a, read.b), (Z_ALPHA, Z_MU1), "{read:?}");
         assert_eq!(read.preset, None, "{read:?}");
         for (got, want, what) in [
-            (read.gamma, 1.0_f64.atan2(2.0), "γ"),
-            (read.scale, cos1.hypot(sin1), "σ"),
+            (read.gamma, (-2.0_f64).atan2(1.0), "γ"),
+            (read.scale, cos1.hypot(sin1).hypot(stray), "σ"),
             (read.tau1, sin1.atan2(cos1), "τ₁"),
-            (read.tau2, 0.8_f64.atan2(5.0), "τ₂"),
+            (read.tau2, (-0.6 / root5).atan2(0.8), "τ₂"),
         ] {
             assert!((got - want).abs() < 1e-12, "{what}: {got} for {want}");
         }
@@ -1234,19 +1239,17 @@ fn mock_cube_axis_buttons_a_mirrored_basis_is_told_by_its_determinant() {
     rejects("the mirrored basis read in the order as typed", || {
         check(&as_typed)
     });
-    // The same pair, with the tilts on each other's targets: the pair's assertion holds, and the angles' do not.
+    // The same pair with another tilt: the pair's assertion holds, and the angles' do not.
     let other_tilt = read_of(
-        &[(Z_ALPHA, 1.0), (Z_BETA, 0.5), (Z_Q3, 0.8)],
-        &[(Z_ALPHA, 2.0), (Z_BETA, 0.5), (Z_MU1, 0.3)],
+        &[(Z_ALPHA, 1.0), (Z_BETA, 0.5), (Z_Q3, 0.3)],
+        &[(Z_ALPHA, 2.0), (Z_BETA, 0.5), (Z_MU1, 0.9)],
     );
     assert_eq!(
         (other_tilt.a, other_tilt.b),
-        (Z_BETA, Z_ALPHA),
+        (Z_ALPHA, Z_MU1),
         "{other_tilt:?}"
     );
-    rejects("the same pair with the tilts exchanged", || {
-        check(&other_tilt)
-    });
+    rejects("the same pair with another tilt", || check(&other_tilt));
     rejects("the same axes at another turn", || {
         check(&View {
             gamma: read.gamma + 1e-6,

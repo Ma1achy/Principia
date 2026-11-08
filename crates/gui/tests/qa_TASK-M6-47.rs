@@ -235,21 +235,24 @@ fn field_px(size: [u32; 2]) -> [f64; 4] {
     [r.min.x, r.min.y, r.max.x, r.max.y].map(|v| f64::from(v * PIXELS_PER_POINT))
 }
 
-/// The keys from launch to the row: Tab to the top bar, Enter, → to View, Enter (on F3 hide), ↓ to the row.
-const TO_ROW: [Key; 5] = [
+/// The keys from launch to the row: Tab to the top bar, Enter, → to View, Enter (on Home, R-466 K8; changed by
+/// TASK-M6-45's qa commit, K15), ↓ to F3 hide, ↓ to the row.
+const TO_ROW: [Key; 6] = [
     Key::Tab,
     Key::Enter,
     Key::ArrowRight,
     Key::Enter,
     Key::ArrowDown,
+    Key::ArrowDown,
 ];
 
 /// [`TO_ROW`] as a capture's steps, then Enter on to Extend, → to Fit, Enter.
-const CHOOSE_FIT: [Step; 8] = [
+const CHOOSE_FIT: [Step; 9] = [
     Step::Tab,
     Step::Enter,
     Step::ArrowRight,
     Step::Enter,
+    Step::ArrowDown,
     Step::ArrowDown,
     Step::Enter,
     Step::ArrowRight,
@@ -386,7 +389,7 @@ fn qa_m6_47_row_keyboard_enter_chooses_moving_does_not() {
     assert_eq!(set_fields, 0, "a SetField");
     // Control: without the ↓, Enter and → act on F3 hide and on View's neighbours, and Fit is not chosen.
     let (mut other, mut h) = app_at(&canvas, SIZE, F3Fill::default());
-    for key in &TO_ROW[..4] {
+    for key in &TO_ROW[..5] {
         press(&mut h, &mut other, *key);
     }
     for key in [Key::ArrowRight, Key::Enter] {

@@ -261,23 +261,43 @@ pub(super) fn unread<F: Float>() -> ChartOut<F> {
     }
 }
 
-/// The layer-3 check on the f64 decode `d` (the module's note): `None` where it is sane. The masses are positive at
+/// The layer-3 check on the decode `d`, at f64 or at a view's own precision (the module's note): `None` where it is sane, a decode with no construction
+/// not, its finite momenta no system (chart_reference §4.5). The masses are positive at
 /// every `ν ∈ (0, 1)`, so only the positions and the momenta are read.
-pub(super) fn sanity(d: &Decoded<f64>) -> Option<Constraint> {
-    let finite = |v: &[[f64; 2]; 3]| v.iter().flatten().all(|x| x.is_finite());
+pub(super) fn sanity<R: LinkReal + PayloadReal>(d: &Decoded<R>) -> Option<Constraint> {
+    let finite = |v: &[[R; 2]; 3]| v.iter().flatten().all(|x| x.is_finite());
     if !finite(&d.ic.r) {
         Some(Constraint::ComAtOrigin)
-    } else if !finite(&d.ic.p) {
+    } else if !finite(&d.ic.p) || d.degenerate == Some(Degenerate::InvariantInfeasible) {
         Some(Constraint::MomentumZero)
     } else {
         None
     }
 }
 
+/// `rest`, the chart's check at `(u, v)`, then `refusal` at the point it accepts, or moves to: a point the check would
+/// commit to and the tilted value refuses is refused.
+pub(super) fn refuse(
+    u: f64,
+    v: f64,
+    rest: ValidationResult,
+    refusal: impl Fn(f64, f64) -> Option<Constraint>,
+) -> ValidationResult {
+    let (a, b) = match rest {
+        ValidationResult::Valid => (u, v),
+        ValidationResult::Project { u, v, .. } | ValidationResult::Clamp { u, v, .. } => (u, v),
+        ValidationResult::Reject { .. } => return rest,
+    };
+    match refusal(a, b) {
+        Some(failed) => ValidationResult::Reject { failed },
+        None => rest,
+    }
+}
+
 /// Layer 2's `ν ∈ (0, 1)`.
 #[inline]
-fn in_family(nu: f64) -> bool {
-    nu > 0.0 && nu < 1.0
+pub(super) fn in_family<F: Float>(nu: F) -> bool {
+    nu > F::zero() && nu < F::one()
 }
 
 /// The leg swap's fixed point `ν = √2 − 1`, the isosceles triangle (`a = b`): `θ(ν) = π/4`.
@@ -403,6 +423,37 @@ where
     }
 }
 
+impl<P: Copy> Burrau<P>
+where
+    f64: From<P>,
+{
+    /// The check without layer 3: `ν` in the family, finiteness, and `K ≥ 0`, a `v` below 0 projected to 0.
+    pub(super) fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
+        if !(u.is_finite() && v.is_finite()) {
+            return ValidationResult::Reject {
+                failed: select(
+                    u.is_finite(),
+                    Constraint::KNonNegative,
+                    Constraint::BurrauNu,
+                ),
+            };
+        }
+        if !in_family(self.nu(u)) {
+            return ValidationResult::Reject {
+                failed: Constraint::BurrauNu,
+            };
+        }
+        if v < 0.0 {
+            return ValidationResult::Project {
+                u,
+                v: 0.0,
+                failed: Constraint::KNonNegative,
+            };
+        }
+        ValidationResult::Valid
+    }
+}
+
 impl<P: Copy> Chart for Burrau<P>
 where
     f64: From<P>,
@@ -442,30 +493,9 @@ where
 
     /// Layer 2's `ν ∈ (0, 1)` and `K ≥ 0`, then layer 3 on the f64 decode (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
-        if !(u.is_finite() && v.is_finite()) {
-            return ValidationResult::Reject {
-                failed: select(
-                    u.is_finite(),
-                    Constraint::KNonNegative,
-                    Constraint::BurrauNu,
-                ),
-            };
-        }
-        if !in_family(self.nu(u)) {
-            return ValidationResult::Reject {
-                failed: Constraint::BurrauNu,
-            };
-        }
-        let t = v.max(0.0);
-        match sanity(&decode(self, u, t).0) {
-            Some(failed) => ValidationResult::Reject { failed },
-            None if t != v => ValidationResult::Project {
-                u,
-                v: t,
-                failed: Constraint::KNonNegative,
-            },
-            None => ValidationResult::Valid,
-        }
+        refuse(u, v, self.check_axes(u, v), |a, b| {
+            sanity(&decode(self, a, b).0)
+        })
     }
 }
 
@@ -477,8 +507,19 @@ where
     R: LinkReal + PayloadReal + WarpReal + From<P>,
     P: Copy,
 {
+    decode_lz(chart, u, R::zero(), chart.kinetic(v))
+}
+
+/// [`decode()`] with the construction at the held `L_z = lz` in place of 0, the chart's hidden coordinate, and `K* = k`
+/// in place of `K(v)`, the row its mode gives (R-633, R-708; `super::construction`).
+#[inline]
+pub fn decode_lz<R, P>(chart: &Burrau<P>, u: R, lz: R, k: R) -> (Decoded<R>, Outcome)
+where
+    R: LinkReal + PayloadReal + WarpReal + From<P>,
+    P: Copy,
+{
     let nu = chart.nu(u);
-    let mut blocks = BurrauBlocks::new(embed(nu), seed(nu), R::zero(), chart.kinetic(v));
+    let mut blocks = BurrauBlocks::new(embed(nu), seed(nu), lz, k);
     let decoded = decode::decode_with(&mut blocks, &unread().z);
     (decoded, blocks.outcome())
 }

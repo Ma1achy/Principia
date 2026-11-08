@@ -55,7 +55,10 @@ ci_records() {
   local files=() file
   while IFS= read -r file; do
     files+=("$file")
-  done < <(find "$WORKFLOWS" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) | sort)
+  # One workflow is skipped by its exact name: the Lean formalisation's (`formal/chart_space/`), which runs only on
+  # dispatch and schedule and installs elan, which no cloud session needs; cloud sessions are dormant (R-645, R-647).
+  # Every other workflow is read and guarded as before.
+  done < <(find "$WORKFLOWS" -maxdepth 1 -type f \( -name '*.yml' -o -name '*.yaml' \) ! -name 'formal-chart-space.yml' | sort)
   [ "${#files[@]}" -gt 0 ] || die "no workflow files under $WORKFLOWS"
   awk -v q="'" '
     function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }

@@ -8,23 +8,23 @@
 |---|---|
 | DEC | 54 |
 | ENC | 38 |
-| CHART | 92 |
+| CHART | 137 |
 | INT | 112 |
 | EVT | 34 |
 | PAY | 111 |
 | GEN | 45 |
 | SCHED | 103 |
 | REF | 52 |
-| RENDER | 120 |
+| RENDER | 121 |
 | COL | 161 |
-| GUI | 391 |
+| GUI | 398 |
 | TOOL | 221 |
 | VAL | 352 |
-| PERF | 115 |
+| PERF | 118 |
 | SYS | 96 |
-| **total** | **2097** |
+| **total** | **2153** |
 
-Of these: 237 calibration, 181 definition, 1679 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 239 calibration, 192 definition, 1722 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -34,28 +34,28 @@ Of these: 237 calibration, 181 definition, 1679 obligation. Retired (kept for th
 | M1 | 108 |
 | M2 | 222 |
 | M3 | 235 |
-| M4 | 112 |
+| M4 | 127 |
 | M5 | 183 |
-| M6 | 228 |
-| M7 | 261 |
-| M8 | 470 |
+| M6 | 229 |
+| M7 | 262 |
+| M8 | 509 |
 | M9 | 155 |
 
 ## Sections
 
-1750 sections in 61 files: 1378 yield at least one requirement; 372 yield none and are listed below with the reason.
+1837 sections in 63 files: 1434 yield at least one requirement; 403 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 264 |
+| informative only | 286 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 55 |
+| parent heading (obligations are in its subsections) | 61 |
 | planned (the plan PR) | 22 |
-| rationale | 19 |
+| rationale | 22 |
 | superseded (kept for the record) | 4 |
 
 
@@ -233,6 +233,7 @@ Of these: 237 calibration, 181 definition, 1679 obligation. Retired (kept for th
 | R-808 — `.claude/commands/*.md` joins the rulings reference check *(closes RQ-698)* | informative only | the owner's word on the rulings reference check; tooling; changes no requirement |
 | R-810 — A warped mass-ratio axis's range is searched at half the round-trip tolerance, `ε_μ/2`, and `principia_chart_reference.md` § 2.1 says so, with the measured reason *(closes RQ-707)* | informative only | docs only: the margin stays as built, and chart_reference § 2.1 names it |
 | R-811 — The census's drift reference is R-33's convergence reference, not the inspector's RK45, and the proposal's § 3.2 clause says why *(closes RQ-619)* | informative only | the census has no requirement yet; the proposal carries it |
+| R-812 — Two-way doors are decided and shown afterwards, by measurement where one can settle it, CI and build tooling among them; one-way doors are asked through `/rulings-report` only while work carries on; when unsure, a door is one-way *(amends R-369)* | informative only | the owner's ruling on two-way and one-way doors, its CI and build tooling rider and their confirmation, applying from 7 Nov 2026: what can be undone is decided and shown afterwards, by measurement where one can settle it; what can't is asked through /rulings-report only, while work carries on; when unsure, a door is one-way; correcting the record is two-way, changing what a ruling or requirement says is one-way; amends R-369; CLAUDE.md, the rulings report, plan/OPERATIONS.md and plan/WORKFLOW.md follow; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -328,6 +329,28 @@ Of these: 237 calibration, 181 definition, 1679 obligation. Retired (kept for th
 | 9. Tests (each with an arm that can fail) | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | 10. Open questions (for the review queue) | planned (the plan PR) | the design doc's three open questions, queued as RQ-392 to RQ-394 and ruled by R-528 to R-530; the plan PR's requirements cite this section |
 
+### `docs/design/principia_chart_composition.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia — chart composition: axes from primitives, in the Chart builder | informative only | the status line and the findings |
+| 0. The order's rules, checked | informative only | the order checked against the code and the rulings |
+| 5. The chart layer, and where two axes can't be independent | parent heading (obligations are in its subsections) | its subsections |
+| 6. Refusals and labels | parent heading (obligations are in its subsections) | its subsections |
+| 7.1 What runs on the GPU | rationale | how the lowering contract applies; the obligation is in section 7 |
+| 7.5 The browser build: what it gets | informative only | a door, RQ-735; it yields no requirement until ruled |
+| 8. First customer: region D | parent heading (obligations are in its subsections) | its subsections |
+| 8.5 Which M9 target needs which part | informative only | which task needs which part; carried in those tasks' Depends on |
+| 8.7 Where it lands | informative only | the plan's placing |
+| 10. The gaps, each as a builder option | parent heading (obligations are in its subsections) | its subsections |
+| 10.3 Final-condition charts | informative only | a door, RQ-734; it yields no requirement until ruled |
+| 13. Reversible choices: decided, for veto | rationale | the veto list |
+| 15. Plan | informative only | the task list, carried in plan/tasks.yaml |
+| 16. What this does not settle | informative only | what was not settled |
+| 17. Chart paths | parent heading (obligations are in its subsections) | its subsections |
+| 17.1 The framing | rationale | the framing checked against the contract |
+| 18. Time as an axis (order part D) | parent heading (obligations are in its subsections) | its subsections |
+
 ### `docs/design/principia_chart_reference.md`
 
 | section | reason | note |
@@ -336,6 +359,24 @@ Of these: 237 calibration, 181 definition, 1679 obligation. Retired (kept for th
 | 1.2 Geometry + momentum in a fundamental domain | informative only | describes a chart option not in the §5.1 implementation list; too underspecified to test (ρ₀, λ₀, the p_λ sweep range unstated) |
 | 4. The Burrau family chart `(ν, K)` and friends | parent heading (obligations are in its subsections) |  |
 | 5. Implementation plan | parent heading (obligations are in its subsections) |  |
+
+### `docs/design/principia_chart_space_model.md`
+
+| section | reason | note |
+|---|---|---|
+| The chart-space model: views, edits and paths | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 0. Revision after #422's review (7 Nov): the corpus wins where it measured | informative only | the owner's revision of the model, RQ-736; it yields no requirement until the rulings PR carries it |
+| 1. Objects | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 2. The central theorem: every edit is a path, and a path always exists | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 3. The existing operations are paths of named families | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 3b. Axes, composed axes and physical-quantity projections | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 4. Composition: Sequence, waypoints and easing | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 5. The lock: based homotopy, excursions and the sliding anchor | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 6. Time as an axis | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 6b. Initial-condition, dynamical and shared quantities | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 7. What the model settles | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 8. Floating point: what the proofs don't cover | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
+| 9. One-paragraph version for the agents | informative only | the model of 7 Nov 2026, a statement of how navigation and chart paths work; it yields no requirement until the rulings PR carries its consequences |
 
 ### `docs/design/principia_colour_composition.md`
 
