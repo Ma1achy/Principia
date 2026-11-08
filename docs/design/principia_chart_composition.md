@@ -25,6 +25,11 @@ on a column where `Q₀` is feasible, and `Q above the floor` is its label at `Q
 record PR's; RQ-734, RQ-735; RQ-738, RQ-736's correction list and the filter's conflicts; RQ-739, the mirror-step
 proposal; RQ-741, the virial axis's label at `Q₀ > 0`.
 
+**The owner's rulings of 8 Nov 2026 on building it.** R-863 orders the tasks of § 15 in five stages, each merging only
+with the previous stage's tests green, and adds TASK-M8-124, the path object with today's operations bitwise through it
+(§ 15). R-864 is the architecture rule for the chart-path work of § 17: one object, today's operations re-expressed as its
+named families, bitwise first, and a type sketch brought to the owner before any implementation.
+
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
 refusals are genuine contradictions, each with a named reason. Reduced capability is a label, not a refusal.
@@ -1536,7 +1541,7 @@ Nothing below is decided here.
 
 ## 15. Plan
 
-**Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 25 tasks below, and each names the rulings item it waits on, or the design as a whole. Only those tasks wait behind it; no existing task, in M4 or M9, does.
+**Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 26 tasks below, and each names the rulings item it waits on, or the design as a whole; R-847's TASK-M8-122 and TASK-M8-123 wait on it too. Only those 28 tasks wait behind it; no other existing task, in M4 or M9, does.
 
 Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold `L_z` or the virial pair, so those two sit in M8. **One edge is named, not made:** TASK-M4-06's golden needs RQ-714's domain, so TASK-M4-06 gains TASK-M4-34 in Depends on when RQ-714 rules, TASK-M4-37's Deliverables say so, and from then until TASK-M4-34 merges it holds 230 tasks: TASK-M4-06 and the 217 other existing open tasks behind it, and 12 of the tasks below. The seven M9 edges an earlier draft made are dropped: TASK-M9-18, -20, -21 and -22 have no GPU run (R-671), and -26, -28 and -31 reach TASK-M4-06 through TASK-M4-17.
 
@@ -1567,6 +1572,19 @@ Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold 
 | TASK-M8-115 | M8 | time-axis mode in the GUI | TASK-M8-113, RQ-727 |
 | TASK-M8-116 | M8 | time-axis mode in Sequence and sidecars | TASK-M8-115, TASK-M8-77, RQ-727 |
 | TASK-M8-120 | M8 | the symmetry filter | TASK-M8-112, TASK-M8-103, TASK-M8-32, RQ-736 |
+| TASK-M8-124 | M8 | the path object; pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864) | TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, RQ-721; the owner's answer to R-864's type sketch |
+
+**The build order (R-863, the owner's order of 8 Nov 2026).** Once TASK-M4-37 releases them, the tasks are built in five
+stages, each merging only with the previous stage's tests green. Applied per R-369 (R-863), each stage's tasks depend on
+the previous stage's, placed so: (1) TASK-M8-124; (2) TASK-M8-117, the based morph with the stored anchor and then the
+sliding anchor, which R-849 gives it in place of § 17.8's `anchor not in B` (RQ-744 (D), filed before R-849 merged, is
+moot); stage 2's test that the centre's IC is constant applies where the anchor stays in B, and on a sliding path, where
+the centre follows the anchor (R-849), it checks R-849's slide instead: the stored words at `s = 0`, B's nearest point
+at `s = 1`, continuous between, with no label and no jump; (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101,
+TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119; (4) TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and
+TASK-M8-120. TASK-M8-124 is the 26th of this section's tasks behind TASK-M4-37, and with R-847's TASK-M8-122 and
+TASK-M8-123 (R-863 names neither) 28 tasks wait on it. What the order leaves open, the tasks that fit no stage or
+straddle two and the stage-3 edges that would point forward across milestones or close a cycle, is RQ-744's.
 
 ---
 
@@ -1589,6 +1607,14 @@ The owner's consolidated order of 6 Nov: "a view is a point in chart space; ever
 clause by clause, each checked against the code, the corpus and the rulings branches of 4 and 5 Nov, which change nothing
 here. Every numeric claim comes from `docs/incoming/2026-11-06_chart_composition/checks/morph_check.py` and `path_check.py`, on a
 Python replica of chart_reference §0, unless it says otherwise. All of it is **door** RQ-721.
+
+**R-864 governs this section's types (the owner's architecture rule of 8 Nov 2026).** One object: a view is a point in
+chart space and every edit a path through it, its core types (Chart, Path and its families, Lock and anchor, Axis and
+primitive, PairMap, Hold) designed as one module, and a type sketch with a one-page rationale, reviewed by physics and
+code against `principia_chart_space_model.md`, brought to the owner before any implementation (TASK-M8-124). Where this
+section has an arm call the existing code (§ 17.3), R-864's item 2 reads: the operation becomes a constructor of the one
+object, a path of a named family, and its old route is deleted once it runs through it. Bitwise reproduction comes first
+(R-863's stage 1), and a special case is a named family or a gap brought back, never an if-branch.
 
 **Where the order can't hold as stated:**
 
