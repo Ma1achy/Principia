@@ -244,14 +244,34 @@ wait_full() {
   wait_for_end "${CI_TIER_WAIT_POLLS:-700}" "${CI_TIER_WAIT_SECONDS:-${CI_TIER_POLL_SECONDS:-30}}"
 }
 
-# Whether attempt $2 of run $1 is shown to be the full tier: its `changes` job said not quick, so `ci-quick` skipped. A
-# quick attempt, one whose `changes` has not decided yet, and one whose jobs cannot be read are not shown full; each is
-# cancelled, which loses nothing, the full attempt running all a cancelled one had not passed.
-full_attempt() {
-  local skipped
-  skipped=$(gh api "repos/$GH_REPO/actions/runs/$1/attempts/$2/jobs?per_page=100" \
-    --jq '.jobs[] | select(.conclusion == "skipped") | .name') || return 1
-  grep -qxF -e ci-quick -e "$QUICK_JOB" <<< "$skipped"
+# What attempt $2 of run $1 shows of its tier, from one read of its jobs: 0, shown full, its `changes` job having decided
+# and `ci-quick` skipped, under either name the jobs API gives it; 1, shown quick, `changes` having decided and
+# `ci-quick` not skipped; 2, not known, its jobs unread or its `changes` not yet ended.
+shown_tier() {
+  local jobs
+  jobs=$(gh api "repos/$GH_REPO/actions/runs/$1/attempts/$2/jobs?per_page=100" \
+    --jq '.jobs[] | "\(.conclusion) \(.name)"') || return 2
+  if ! grep -qxE '[a-z_]+ changes' <<< "$jobs" || grep -qxF 'null changes' <<< "$jobs"; then return 2; fi
+  if grep -qxF -e 'skipped ci-quick' -e "skipped $QUICK_JOB" <<< "$jobs"; then return 0; fi
+  return 1
+}
+
+# Whether attempt $2 of run $1 is the full tier: 0, shown full, waited for and never cancelled; 1, shown quick, which
+# alone is cancelled, losing nothing, the full attempt running all a cancelled one had not passed. Not known (its jobs
+# unread, its `changes` not yet ended), it is read again, every CI_TIER_DECIDE_SECONDS (10, or CI_TIER_POLL_SECONDS
+# where set), at most CI_TIER_DECIDE_POLLS reads in all (30: 5 minutes, `changes` deciding as soon as it runs); still
+# not known, it fails 2, named, cancelling nothing, as `wanted` does on an unread head: a retry's full attempt, its
+# `changes` not yet ended, is never taken for a quick one.
+attempt_tier() {
+  local polls="${CI_TIER_DECIDE_POLLS:-30}" seconds="${CI_TIER_DECIDE_SECONDS:-${CI_TIER_POLL_SECONDS:-10}}" i shown
+  for ((i = 1; i <= polls; i++)); do
+    if [ "$i" -gt 1 ]; then sleep "$seconds"; fi
+    shown=0
+    shown_tier "$1" "$2" || shown=$?
+    if [ "$shown" != 2 ]; then return "$shown"; fi
+  done
+  echo "::error::ci_tier: attempt $2 of run $1 on $HEAD_SHA did not show its tier in $polls reads; cancelling nothing"
+  return 2
 }
 
 # Cancels run $1's quick attempt, still going, so the full attempt starts at once (the owner, 8 Nov 2026: "ci-full: on
@@ -296,7 +316,7 @@ wanted() {
 }
 
 label_on() {
-  local polls="${CI_TIER_POLLS:-12}" i run="" id status attempt round why
+  local polls="${CI_TIER_POLLS:-12}" i run="" id status attempt round why shown
   for ((i = 1; i <= polls; i++)); do
     run=$(latest_run)
     if [ -n "$run" ]; then break; fi
@@ -308,12 +328,16 @@ label_on() {
   fi
   read -r id status attempt <<< "$run"
   # A second round only when the re-run is refused because the run started again meanwhile (`retry.yml`'s re-run of a
-  # runner fault): that attempt is cancelled too, if quick, or waited for, if full.
+  # runner fault): that attempt is cancelled too, if shown quick, or waited for, if full; not shown either, it fails.
   for round in 1 2; do
     if [ "$status" != completed ]; then
-      if full_attempt "$id" "$attempt"; then
+      shown=0
+      attempt_tier "$id" "$attempt" || shown=$?
+      if [ "$shown" = 0 ]; then
         echo "run $id on $HEAD_SHA is a full attempt, $status: waiting for it to end"
         run=$(wait_full) || return 1
+      elif [ "$shown" != 1 ]; then
+        return 1
       else
         why=0
         wanted || why=$?

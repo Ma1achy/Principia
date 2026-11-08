@@ -23,7 +23,9 @@
 //!   still going at once and re-running once the cancellation has ended it (the owner, 8 Nov 2026: "ci-full: on
 //!   merge-ready, cancel the in-progress quick run and start the full tier, instead of waiting for it"), waiting for a
 //!   full attempt still going, never cancelling it, and doing nothing when every full-only check has passed, the head
-//!   has moved or the label has come off; going off cancels only a full attempt.
+//!   has moved or the label has come off; an attempt it cannot show quick or full (its jobs unread, its `changes` not
+//!   yet ended) is read again, for a bounded time, then fails the job, named, cancelling nothing; going off cancels
+//!   only a full attempt.
 //! - `ci_full_workflow_*`: `ci-full.yml` takes the label events, `ci.yml` none, so no label's run supersedes the check
 //!   suite holding the required checks (R-678), and only `merge-ready` asks for a runner, for as long as its wait.
 //! - `ci_full_attempt_*`: what a full attempt leaves to the quick tier's pass is its own commands: fmt, clippy and the
@@ -481,8 +483,9 @@ negative_control!(
 /// times as `GH_RERUN_REFUSALS` says, and a cancel on `GH_CANCEL_FAILS`; `.head.sha` answers `GH_HEAD`, or fails on
 /// `GH_HEAD_FAIL`; the labels answer `GH_LABELS`, or fail on `GH_LABELS_FAIL`; the runs of `ci.yml` answer one line of
 /// `GH_RUNS` a call, the last repeating, a blank line meaning no run; a run's latest jobs answer `GH_PASSED`, the names
-/// of those that passed; the jobs of attempt `<n>` answer `GH_ATTEMPT_<n>`, one name a line of those the caller's filter
-/// selects (to `decide`, the jobs that passed; to `merge-ready`, those skipped), or fail on `GH_ATTEMPTS_FAIL`.
+/// of those that passed; the jobs of attempt `<n>` answer `GH_ATTEMPT_<n>`, a line a job, as the caller's filter prints
+/// it (to `decide`, the name of each that passed; to `merge-ready`, each one's conclusion and name), or fail on
+/// `GH_ATTEMPTS_FAIL`; the first `GH_UNDECIDED` reads of them answer `changes` not yet ended (`null changes`).
 const GH: &str = r#"#!/bin/bash
 echo "$*" >> "$GH_LOG"
 case "$*" in
@@ -505,6 +508,7 @@ case "$*" in
     sed -n "${n}p" "$GH_RUNS" ;;
   *"/attempts/"*"/jobs"*)
     [ -z "${GH_ATTEMPTS_FAIL:-}" ] || exit 1
+    if [ "$(grep -c '/attempts/' "$GH_LOG")" -le "${GH_UNDECIDED:-0}" ]; then echo "null changes"; exit 0; fi
     args="$*"
     n=${args#*/attempts/}
     var=GH_ATTEMPT_${n%%/*}
@@ -580,7 +584,8 @@ fn tier(
         .env("CI_TIER_POLL_SECONDS", "0")
         .env("CI_TIER_POLLS", "3")
         .env("CI_TIER_WAIT_POLLS", "4")
-        .env("CI_TIER_CANCEL_POLLS", "3");
+        .env("CI_TIER_CANCEL_POLLS", "3")
+        .env("CI_TIER_DECIDE_POLLS", "3");
     for (k, v) in env {
         cmd.env(k, v);
     }
@@ -1600,12 +1605,25 @@ fn runs_before(got: &Ran, what: &str) -> usize {
         .count()
 }
 
+/// The jobs of an attempt still going, as `merge-ready` reads them, each one's conclusion and name: a quick attempt,
+/// `changes` having decided and `ci-quick` running, and a full one, `changes` having decided and `ci-quick` skipped.
+const QUICK_JOBS: &str = "success changes\nnull ci-quick / ci-quick";
+const FULL_JOBS: &str = "success changes\nskipped ci-quick";
+
+/// `merge-ready` put on, with `extra` env, on `runs`: by default each attempt still going is shown quick.
+fn label_on(script: &str, extra: &[(&str, &str)], runs: &[&str]) -> Ran {
+    let mut env = vec![
+        ("ACTION", "labeled"),
+        ("GH_LABELS", "merge-ready"),
+        ("GH_ATTEMPT_1", QUICK_JOBS),
+        ("GH_ATTEMPT_2", QUICK_JOBS),
+    ];
+    env.extend_from_slice(extra);
+    tier(script, "merge-ready", &env, None, runs)
+}
+
 fn check_label_on(script: &str) {
-    let on = |extra: &[(&'static str, &'static str)], runs: &[&str]| {
-        let mut env = vec![("ACTION", "labeled"), ("GH_LABELS", "merge-ready")];
-        env.extend_from_slice(extra);
-        tier(script, "merge-ready", &env, None, runs)
-    };
+    let on = |extra: &[(&'static str, &'static str)], runs: &[&str]| label_on(script, extra, runs);
     let cancels = |got: &Ran| (got.count(CANCEL), got.count(FORCE_CANCEL));
     // The head's quick run has ended: re-run it, once, whole.
     let got = on(&[], &["5 completed 1"]);
@@ -1657,20 +1675,22 @@ fn check_label_on(script: &str) {
         "ci_quick_tier: the re-run came before the cancelled run ended: {:?}",
         got.calls
     );
-    // A queued quick attempt counts as going, and a retry's quick attempt (`retry.yml` re-runs the failed jobs, keeping
-    // `changes`' quick) as much as a first one; so does one whose `changes` has not decided yet, or whose jobs cannot be
-    // read, or which skipped some other job: none is shown full, and cancelling it loses nothing.
+    // A queued quick attempt counts as going, its `changes` deciding at the last read (CI_TIER_DECIDE_POLLS, 3 here), and
+    // a retry's quick attempt (`retry.yml` re-runs the failed jobs, keeping `changes`' quick) as much as a first one; so
+    // does one which skipped some other job: each is shown quick, and cancelling it loses nothing.
     for (what, extra, runs) in [
-        ("queued", &[][..], ["5 queued 1", "5 completed 1"]),
+        (
+            "queued",
+            &[("GH_UNDECIDED", "2")][..],
+            ["5 queued 1", "5 completed 1"],
+        ),
         ("a retry's", &[][..], ["5 in_progress 2", "5 completed 2"]),
         (
-            "with its jobs unread",
-            &[("GH_ATTEMPTS_FAIL", "1")][..],
-            ["5 in_progress 2", "5 completed 2"],
-        ),
-        (
             "having skipped another job",
-            &[("GH_ATTEMPT_2", "ci-archive\nci-quick-x")][..],
+            &[(
+                "GH_ATTEMPT_2",
+                "success changes\nskipped ci-archive\nskipped ci-quick-x",
+            )][..],
             ["5 in_progress 2", "5 completed 2"],
         ),
     ] {
@@ -1745,9 +1765,15 @@ fn check_label_on(script: &str) {
     );
     // A full attempt still going (`retry.yml`'s re-run of one): the full tier already, its `ci-quick` skipped, under
     // either name the jobs API gives it. It is never cancelled; the re-run waits for it to end, and only if it fell short.
-    for skipped in ["ci-quick", "changes\nci-quick / ci-quick"] {
+    for (skipped, jobs) in [
+        ("ci-quick", FULL_JOBS),
+        (
+            "ci-quick / ci-quick",
+            "success changes\nskipped ci-quick / ci-quick",
+        ),
+    ] {
         let got = on(
-            &[("GH_ATTEMPT_2", skipped)],
+            &[("GH_ATTEMPT_2", jobs)],
             &["5 in_progress 2", "5 in_progress 2", "5 completed 2"],
         );
         assert!(
@@ -1764,7 +1790,7 @@ fn check_label_on(script: &str) {
     }
     // That wait is bounded (CI_TIER_WAIT_POLLS, 4 here): a run that ends at the last poll is re-run, and one that never
     // ends fails the job, named, cancelling and re-running nothing.
-    let full = [("GH_ATTEMPT_2", "ci-quick")];
+    let full = [("GH_ATTEMPT_2", FULL_JOBS)];
     let got = on(
         &full,
         &[
@@ -1856,7 +1882,7 @@ fn check_label_on(script: &str) {
     // The re-run refused because the run started again in between (`retry.yml` re-running a runner fault): a quick
     // attempt is cancelled then, a full one waited for, then re-run. Refused on a run that has ended, or twice, it fails,
     // named.
-    for (attempt, cancelled) in [("", 1), ("ci-quick", 0)] {
+    for (attempt, cancelled) in [(QUICK_JOBS, 1), (FULL_JOBS, 0)] {
         let got = on(
             &[("GH_RERUN_REFUSALS", "1"), ("GH_ATTEMPT_2", attempt)],
             &["5 completed 1", "5 in_progress 2", "5 completed 2"],
@@ -1999,8 +2025,8 @@ mod a_full_attempt_goes_on {
         expected = "ci_quick_tier: the label on a full attempt still going (\"ci-quick\")",
         check_label_on(&edited(
             TIER,
-            "  grep -qxF -e ci-quick -e \"$QUICK_JOB\" <<< \"$skipped\"\n",
-            "  false\n"
+            "  if grep -qxF -e 'skipped ci-quick' -e \"skipped $QUICK_JOB\" <<< \"$jobs\"; then return 0; fi\n",
+            ""
         ))
     );
 }
@@ -2010,11 +2036,11 @@ mod the_called_name {
     negative_control!(
         ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
         "the label reading only the caller's name of the skipped quick job",
-        expected = "ci_quick_tier: the label on a full attempt still going (\"changes\\nci-quick / ci-quick\")",
+        expected = "ci_quick_tier: the label on a full attempt still going (\"ci-quick / ci-quick\")",
         check_label_on(&edited(
             TIER,
-            "  grep -qxF -e ci-quick -e \"$QUICK_JOB\" <<< \"$skipped\"\n",
-            "  grep -qxF -e ci-quick <<< \"$skipped\"\n"
+            "  if grep -qxF -e 'skipped ci-quick' -e \"skipped $QUICK_JOB\" <<< \"$jobs\"; then return 0; fi\n",
+            "  if grep -qxF -e 'skipped ci-quick' <<< \"$jobs\"; then return 0; fi\n"
         ))
     );
 }
@@ -2027,22 +2053,8 @@ mod any_skip_is_full {
         expected = "ci_quick_tier: the label on a quick attempt having skipped another job",
         check_label_on(&edited(
             TIER,
-            "  grep -qxF -e ci-quick -e \"$QUICK_JOB\" <<< \"$skipped\"\n",
-            "  grep -qF -e ci-quick -e \"$QUICK_JOB\" <<< \"$skipped\" || [ -n \"$skipped\" ]\n"
-        ))
-    );
-}
-
-mod unread_jobs_are_not_full {
-    use super::*;
-    negative_control!(
-        ci_tier_merge_ready_on_starts_the_full_tier_without_a_push,
-        "the label reading an attempt whose jobs cannot be read as the full tier",
-        expected = "ci_quick_tier: the label on a quick attempt with its jobs unread",
-        check_label_on(&edited(
-            TIER,
-            "    --jq '.jobs[] | select(.conclusion == \"skipped\") | .name') || return 1\n",
-            "    --jq '.jobs[] | select(.conclusion == \"skipped\") | .name') || return 0\n"
+            "  if grep -qxF -e 'skipped ci-quick' -e \"skipped $QUICK_JOB\" <<< \"$jobs\"; then return 0; fi\n",
+            "  if grep -qF -e 'skipped ci-quick' -e \"skipped $QUICK_JOB\" <<< \"$jobs\" || grep -q '^skipped ' <<< \"$jobs\"; then return 0; fi\n"
         ))
     );
 }
@@ -2139,6 +2151,216 @@ negative_control!(
         TIER,
         "    if [ -n \"$run\" ]; then break; fi\n",
         "    break\n"
+    ))
+);
+
+/// The attempts whose jobs `merge-ready` read.
+fn attempt_reads(got: &Ran) -> usize {
+    got.count("/attempts/")
+}
+
+fn check_label_on_unknown(script: &str) {
+    let on = |extra: &[(&'static str, &'static str)], runs: &[&str]| label_on(script, extra, runs);
+    let named = "did not show its tier in 3 reads";
+    // A retry's full attempt (`retry.yml` restarted the run), its `changes` not yet ended at the first two reads and
+    // shown full at the last (CI_TIER_DECIDE_POLLS, 3 here): waited for, never cancelled, and re-run once it has ended.
+    let got = on(
+        &[("GH_UNDECIDED", "2"), ("GH_ATTEMPT_2", FULL_JOBS)],
+        &["5 in_progress 2", "5 in_progress 2", "5 completed 2"],
+    );
+    assert!(
+        got.ok()
+            && (
+                got.count("/cancel"),
+                attempt_reads(&got),
+                got.count(RERUN),
+                runs_before(&got, RERUN)
+            ) == (0, 3, 1, 3),
+        "ci_quick_tier: the label on a retry's attempt whose changes had not decided, then full: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // The same, met in the second round, after `retry.yml` restarted the run between the label and its re-run.
+    let got = on(
+        &[
+            ("GH_RERUN_REFUSALS", "1"),
+            ("GH_UNDECIDED", "1"),
+            ("GH_ATTEMPT_2", FULL_JOBS),
+        ],
+        &["5 completed 1", "5 in_progress 2", "5 completed 2"],
+    );
+    assert!(
+        got.ok() && (got.count("/cancel"), got.count(RERUN)) == (0, 2),
+        "ci_quick_tier: the label on a retry started in between, its changes not yet decided: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // `changes` not decided at any of the reads, or the jobs not read at all: the job fails, named, after the bounded
+    // re-read, cancelling, waiting for and re-running nothing; in either round.
+    for (what, extra, runs) in [
+        (
+            "its changes never deciding",
+            &[("GH_UNDECIDED", "3")][..],
+            &["5 in_progress 2"][..],
+        ),
+        (
+            "its jobs unread",
+            &[("GH_ATTEMPTS_FAIL", "1")][..],
+            &["5 in_progress 2"][..],
+        ),
+        (
+            "its jobs unread, in the second round",
+            &[("GH_ATTEMPTS_FAIL", "1"), ("GH_RERUN_REFUSALS", "1")][..],
+            &["5 completed 1", "5 in_progress 2"][..],
+        ),
+    ] {
+        let got = on(extra, runs);
+        assert!(
+            !got.ok()
+                && got.out.contains(named)
+                && (got.count("/cancel"), attempt_reads(&got)) == (0, 3)
+                && got.count(RERUN) == usize::from(runs.len() == 2)
+                && got.count("/workflows/ci.yml/runs") == runs.len(),
+            "ci_quick_tier: the label on an attempt {what}: {:?} {}",
+            got.calls,
+            got.out
+        );
+    }
+    // Shown quick at the first read: cancelled, as before, with no re-read.
+    let got = on(&[], &["5 in_progress 2", "5 completed 2"]);
+    assert!(
+        got.ok() && (got.count(CANCEL), attempt_reads(&got), got.count(RERUN)) == (1, 1, 1),
+        "ci_quick_tier: the label on an attempt shown quick: {:?} {}",
+        got.calls,
+        got.out
+    );
+}
+
+#[test]
+fn ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick() {
+    check_label_on_unknown(&read(TIER));
+}
+
+mod unread_jobs_are_not_quick {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick,
+        "the label reading an attempt whose jobs cannot be read as quick, and cancelling it",
+        expected = "ci_quick_tier: the label on an attempt its jobs unread",
+        check_label_on_unknown(&edited(
+            TIER,
+            "    --jq '.jobs[] | \"\\(.conclusion) \\(.name)\"') || return 2\n",
+            "    --jq '.jobs[] | \"\\(.conclusion) \\(.name)\"') || return 1\n"
+        ))
+    );
+}
+
+mod unread_jobs_are_not_full {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick,
+        "the label reading an attempt whose jobs cannot be read as full, and waiting for it",
+        expected = "ci_quick_tier: the label on an attempt its jobs unread",
+        check_label_on_unknown(&edited(
+            TIER,
+            "    --jq '.jobs[] | \"\\(.conclusion) \\(.name)\"') || return 2\n",
+            "    --jq '.jobs[] | \"\\(.conclusion) \\(.name)\"') || return 0\n"
+        ))
+    );
+}
+
+mod undecided_is_not_quick {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick,
+        "the label reading an attempt whose changes has not ended as quick, and cancelling a retry's full attempt",
+        expected = "ci_quick_tier: the label on a retry's attempt whose changes had not decided, then full",
+        check_label_on_unknown(&edited(
+            TIER,
+            " || grep -qxF 'null changes' <<< \"$jobs\"; then return 2; fi\n",
+            "; then return 2; fi\n"
+        ))
+    );
+}
+
+mod reread_until_shown {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick,
+        "the label failing at the first read that does not show the tier, without reading again",
+        expected = "ci_quick_tier: the label on a retry's attempt whose changes had not decided, then full",
+        check_label_on_unknown(&edited(
+            TIER,
+            "    if [ \"$shown\" != 2 ]; then return \"$shown\"; fi\n",
+            "    return \"$shown\"\n"
+        ))
+    );
+}
+
+mod the_last_read {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick,
+        "the re-read giving up a read early",
+        expected = "ci_quick_tier: the label on a retry's attempt whose changes had not decided, then full",
+        check_label_on_unknown(&edited(
+            TIER,
+            "  for ((i = 1; i <= polls; i++)); do\n    if [ \"$i\" -gt 1 ]",
+            "  for ((i = 1; i < polls; i++)); do\n    if [ \"$i\" -gt 1 ]"
+        ))
+    );
+}
+
+mod a_bounded_reread {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick,
+        "the re-read going on a read past its bound",
+        expected = "ci_quick_tier: the label on an attempt its changes never deciding",
+        check_label_on_unknown(&edited(
+            TIER,
+            "  for ((i = 1; i <= polls; i++)); do\n    if [ \"$i\" -gt 1 ]",
+            "  for ((i = 0; i <= polls; i++)); do\n    if [ \"$i\" -gt 1 ]"
+        ))
+    );
+}
+
+mod not_known_is_not_quick {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick,
+        "the label cancelling an attempt whose tier it could not read",
+        expected = "ci_quick_tier: the label on an attempt its changes never deciding",
+        check_label_on_unknown(&edited(
+            TIER,
+            "      elif [ \"$shown\" != 1 ]; then\n        return 1\n",
+            ""
+        ))
+    );
+}
+
+mod not_known_is_named {
+    use super::*;
+    negative_control!(
+        ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick,
+        "the label waiting on an attempt whose tier it could not read, as if full",
+        expected = "ci_quick_tier: the label on an attempt its changes never deciding",
+        check_label_on_unknown(&edited(
+            TIER,
+            "      if [ \"$shown\" = 0 ]; then\n",
+            "      if [ \"$shown\" != 1 ]; then\n"
+        ))
+    );
+}
+
+negative_control!(
+    ci_tier_merge_ready_on_cancels_only_an_attempt_shown_quick,
+    "the label re-reading an attempt already shown quick",
+    expected = "ci_quick_tier: the label on an attempt shown quick",
+    check_label_on_unknown(&edited(
+        TIER,
+        "    if [ \"$shown\" != 2 ]; then return \"$shown\"; fi\n",
+        "    if [ \"$shown\" = 0 ]; then return 0; fi\n"
     ))
 );
 
