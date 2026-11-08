@@ -1465,7 +1465,7 @@ waits on the answer.
 - **Waits:** nothing now: V-11 is parked by R-668 item 5. Its prograde comparison number waits on this only if the
   parking is lifted and V-11 is scored.
 
-## RQ-742: A saved curved chart tilted again into its own saved target, where the saved tilt is Lean each axis with one target and both angles set: what is `R`'s third input? *(physics; silence; R-513 Q1, R-474, R-475 L5; context: TASK-M2-40, REQ-CHART-077, TASK-M8-48)*
+## RQ-746: A saved curved chart tilted again into its own saved target, where the saved tilt is Lean each axis with one target and both angles set: what is `R`'s third input? *(physics; silence; R-513 Q1, R-474, R-475 L5; context: TASK-M2-40, REQ-CHART-077, TASK-M8-48)*
 
 *Queued 8 Nov 2026 by TASK-M2-40's implementer, for the physics reviewer and, if they can't settle it from the corpus, the owner's rulings report. A one-way door if it reaches the owner: it changes what a saved chart computes.*
 

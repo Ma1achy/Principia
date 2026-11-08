@@ -30,7 +30,7 @@
 //! itself zero, the parent's own.
 //!
 //! **What is refused** (`None` from [`Composed::new`]): a new tilt into a target of a saved Lean each axis view with one
-//! target and both angles set, whose skewed `R` has no third input (RQ-742); and a composition whose offsets land on
+//! target and both angles set, whose skewed `R` has no third input (RQ-746); and a composition whose offsets land on
 //! more than two hidden coordinates, which one [`Shift`] cannot carry.
 //!
 //! **The serialisation** ([`Saved::to_words`], [`Saved::from_words`]): the definition as [`WORDS`] doubles, by value,

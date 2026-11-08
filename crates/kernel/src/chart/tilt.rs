@@ -146,7 +146,7 @@ impl TiltSpec {
 
     /// `R·e_X` and `R·e_Y` in `(a, b, d_X, d_Y)`: where the rotation sends an offset on each target, the inputs a saved
     /// chart's new tilt feeds it (R-513 Q1; `super::saved`). `None` where `R` is no rotation, Lean each axis with one
-    /// target and both angles set, whose skewed columns leave its third input undefined (RQ-742).
+    /// target and both angles set, whose skewed columns leave its third input undefined (RQ-746).
     /// - With two targets, each axis turned toward its own: `(−sin τ₁, 0, cos τ₁, 0)` and `(0, −sin τ₂, 0, cos τ₂)`.
     /// - Tip as sheet with one target and both angles set, Rodrigues' image of `e_X`: `(k_b sin m, −k_a sin m, cos m, 0)`,
     ///   its first two entries read off the columns, `R_aX = −R_Xa` and `R_bX = −R_Xb` exactly (the axis `k` lies in the

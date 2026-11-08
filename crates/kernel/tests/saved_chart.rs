@@ -611,7 +611,7 @@ negative_control!(
 // ── R's inputs: the third column of a rotation ──────────────────────────────────────────────────────────────────────
 
 /// Every stored tilt that is a rotation gives `R·e_X` (and with two targets `R·e_Y`) as the reference rotation's
-/// column, to one ulp; Lean each axis with one target and both angles set gives none (RQ-742). `flip` negates the
+/// column, to one ulp; Lean each axis with one target and both angles set gives none (RQ-746). `flip` negates the
 /// input, a reflection's (the control).
 fn check_inputs(flip: f64) {
     let rotations = [
@@ -774,7 +774,7 @@ negative_control!(
 // ── Refusals ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Reopenings that must be refused: a new tilt into the target of a saved Lean view with one target and both angles
-/// set (RQ-742), a composition onto three hidden coordinates, a parent other than the saved one, a target that is not
+/// set (RQ-746), a composition onto three hidden coordinates, a parent other than the saved one, a target that is not
 /// hidden; and two that must not. `admitted` is checked as refused (the control).
 fn check_refused(admitted: bool) {
     let lean = spec(30.0, 40.0, TiltMap::Lean, 4, 4);
