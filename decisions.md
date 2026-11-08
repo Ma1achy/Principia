@@ -31783,15 +31783,15 @@ not the whole of what may run there. Two things it doesn't name stay, each a nam
 check (R-649, R-711 item 1):
 
 - **`win-tests`,** `win-gpu.yml`'s nightly Windows build and tests, "the existing nightly Windows test job". It stays in
-  `win-gpu.yml`, and TASK-M0-55's guard test names it in the runner's ruled list of jobs beside the GPU suites, gpu-idle
-  and the weekly proof (REQ-TOOL-224).
+  `win-gpu.yml`.
 - **The Windows arms of the path-cover and time-column benchmarks,** TASK-M8-107's and TASK-M8-114's (REQ-PERF-117,
   REQ-PERF-118): each is the separate named Windows series of R-859's benchmark line, never mixed with the Mac's and
   closing nothing; R-186's benchmarks of record stay on the owner's Mac.
 
 *Applied per R-369:* `win-self-check`, the nightly self-check, stays as the security rules' daily re-proof, as RQ-742
-read it; the owner's answer left that reading standing. A bench arm that runs as a runner job, not by hand, joins the
-guard test's list by name in its own task's pull request.
+read it; the owner's answer left that reading standing. TASK-M0-55's guard test names `win-tests` in the runner's ruled
+list of jobs beside the GPU suites, gpu-idle and the weekly proof (REQ-TOOL-224). A bench arm that runs as a runner job,
+not by hand, joins the guard test's list by name in its own task's pull request.
 
 *What it refines:* **R-859**, its list of what the runner may run. It closes **RQ-742**.
 
@@ -31810,12 +31810,14 @@ The owner's words (8 Nov 2026), verbatim:
 > RQ-743: start the comparison by workflow_dispatch on the task branch. Runner security rules
 > unchanged; my "push trigger" wording was an error.
 
-*What it decides:* RQ-743's option (a). TASK-M0-56 starts the comparison on the PC by `workflow_dispatch` on its task
-branch, dispatched from the Mac, and the hosted side at the same commit. The runner's security rules are unchanged: R-711
-item 1's push trigger on `main` alone, schedule and `workflow_dispatch`, and the owner's job rules of 5 Nov 2026,
-"Branch runs only via workflow_dispatch"; the guard test, `xtask/tests/ci_self_hosted.rs`, needs no exception. The 7 Nov
-order's "run on the PC via push trigger", quoted in R-859, was an error of wording; the quote stays as the owner gave
-it, with a dated correction under it.
+*What it decides:* RQ-743's option (a). The comparison on the PC starts by `workflow_dispatch` on its task branch. The
+runner's security rules are unchanged: R-711 item 1's push trigger on `main` alone, schedule and `workflow_dispatch`,
+and the owner's job rules of 5 Nov 2026, "Branch runs only via workflow_dispatch"; the guard test,
+`xtask/tests/ci_self_hosted.rs`, needs no exception. The 7 Nov order's "run on the PC via push trigger", quoted in
+R-859, was an error of wording; the quote stays as the owner gave it, with a dated correction under it.
+
+*Applied per R-369:* TASK-M0-56 builds it: the run dispatched from the Mac, and the hosted side at the same commit
+(REQ-TOOL-225).
 
 *What it corrects:* **R-859**, the 7 Nov order it quotes, in its trigger only. It closes **RQ-743**.
 
@@ -31895,17 +31897,18 @@ owner has ruled the design, releases them: the five stages below, in that order,
 previous stage's tests green.
 
 1. **The path object and the bitwise tests**, before any new capability: today's pan, zoom, tilt, slice, lock and
-   Save view as chart reproduce exactly through the one object. No task built exactly that, so **TASK-M8-124** is added
-   (REQ-CHART-139), its design governed by R-864.
-2. **Locked paths**, the based morph and then the sliding anchor, with the test that the centre's IC is constant:
-   TASK-M8-117 (`path_lock_centre`).
-3. **The primitive registry and composed axes**, each primitive with its round-trip test: TASK-M4-33, TASK-M4-34,
-   TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119.
-4. **Morph families, easing and Sequence segments:** TASK-M8-108.
-5. **Time-axis charts and the symmetry filter:** TASK-M8-113 to TASK-M8-116 and TASK-M8-120.
+   Save view as chart reproduce exactly through the one object.
+2. **Locked paths**, the based morph and then the sliding anchor, with the test that the centre's IC is constant.
+3. **The primitive registry and composed axes**, each primitive with its round-trip test.
+4. **Morph families, easing and Sequence segments.**
+5. **Time-axis charts and the symmetry filter.**
 
 *Applied per R-369:*
 
+- **The tasks in each stage.** The owner named stages, not tasks; the placements are ours. Stage 1: no task built
+  exactly that, so **TASK-M8-124** is added (REQ-CHART-139), its design governed by R-864. Stage 2: TASK-M8-117
+  (`path_lock_centre`). Stage 3: TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110,
+  TASK-M8-111 and TASK-M8-119. Stage 4: TASK-M8-108. Stage 5: TASK-M8-113 to TASK-M8-116 and TASK-M8-120.
 - **The mechanism.** The owner's words gate merging; Depends on edges put them into effect. Each stage's tasks depend
   on the previous stage's, so they start once those have merged, or early off an approved head as R-388 allows any
   task, and none merges before the stage ahead of it.
