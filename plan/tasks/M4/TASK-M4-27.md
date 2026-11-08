@@ -1,7 +1,7 @@
 # TASK-M4-27 — The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)
 
 - **Milestone:** M4
-- **Closes:** REQ-VAL-347
+- **Closes:** REQ-VAL-347, REQ-RENDER-122
 - **Depends on:** TASK-M2-07, TASK-M2-24, TASK-M2-25
 - **Needs (earlier milestones):** REQ-DEC-017, REQ-DEC-008
 - **Reviewers:** code, qa, physics
@@ -71,6 +71,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   - **Where the records run.** Metal's on the Mac, through the job queue. Lavapipe's and CPU f32's in a step `cross-backend records` of `.github/workflows/gate.yml`'s `gpu-lavapipe` job, right after `cargo xtask build-kernel`, which uploads them as the artifact `cross-backend-records`. `--record` asserts nothing, so that step can't fail on a rate (R-649). Each record is posted to #390, since an artifact expires before NVIDIA's record may arrive.
   - **The comparison in M4's report.** `--compare` writes `comparison.md` in the gate's directory, committed with the run, and `render` prints it beside the outstanding lines. It is no `Outcome` either.
 - Negative controls for this task's tests (R-176).
+- A per-backend check of `cos` near `π/2` against f64, relative to its value, in the GPU suite (R-822, RQ-629 (b) at M4; REQ-RENDER-122).
 
 ## Acceptance tests
 - `cargo test -p validation cross_backend_compare` (no GPU) — the comparison over synthetic records: a record against itself
@@ -96,6 +97,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
 - `python3 plan/check_plan.py`.
+- `cargo test -p engine gpu_cos_near_half_pi` — REQ-RENDER-122's arm on each backend in the suite, with its control.
 
 ## Notes
 - **R-690's driver condition is about bits, not forks.** An ulp moved in a branch input forks only within about an ulp of a threshold,

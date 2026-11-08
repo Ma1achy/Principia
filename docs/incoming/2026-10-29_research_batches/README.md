@@ -236,6 +236,81 @@ not a bound. The collision point is the barycentre, ((m1 x − (m2 − m3)/2)/Σ
   Tanikawa 2000 triple-collision point coincides with a Li 2021 orbit (closest 1.1e-2, `tanikawa_2000/vs_li2021.txt`),
   so the unit cannot be fixed that way. RQ-640.
 - p. 172 points to Tanikawa, Umehara & Abe 1995's Table IV (task 15 item 16).
+- *8 Nov 2026 (TASK-M9-43; R-702, REQ-VAL-351): Paper I's normalisation, read from its pages (R-680), and what
+  Tanikawa 2000 keeps.* Both papers are held locally, so only these quotes enter the repo: Paper I (Tanikawa, Umehara
+  & Abe 1995, CeMDA 62, 335–362),
+  `docs/incoming/_local/external_sources_2026-10-28/springer/Tanikawa_Umehara_Abe_1995_Collision_orbits_I.pdf`,
+  sha256 `7e4c5463…ac344`; Tanikawa 2000 (CeMDA 76, 157–185),
+  `docs/incoming/_local/research_batches_2026-10-29/chatgpt/Tanikawa_2000_Collision_orbits_II.pdf`, sha256
+  `466065a5…c8ebd`.
+  - **Paper I's units, quoted.** p. 342: "Our integration program uses a fourth order Runge–Kutta method with
+    Levi-Civita's regularization for two-body approaches. … In the units G = 1, M = 1, AB = 1, the integrated time is
+    typically less than 10 compared to the escape time 60 in the Pythagorian case." (the page prints AB with an
+    overbar, the length of the side A–B). p. 335: "We consider the equal mass case: m1 = m2 = m3", and "Let mass
+    points m2 and m3 stand still at A(−0.5, 0) and B(+0.5, 0), respectively in the (x, y) plane and m1 stand still at
+    a point P(x, y)". **M is not defined:** the text layer finds it on p. 342 only, and no page read defines it, so
+    the page does not say whether M = 1 is each mass or the three together. REQ-VAL-351's note, "decoded as each mass
+    1", is not the page's: it is the integration of two Table IIa rows in
+    `../2026-10-28_external_sources/README.md` § "Tanikawa, Umehara & Abe 1995 ("Collision orbits I")"
+    (`tanikawa_umehara_abe_1995/units_check.txt` there). The run below repeats it on all 27 rows, and agrees.
+  - **Paper I's "Time".** p. 347: "In Table IIa,b, the first and second columns show the (x, y) coordinates of the
+    binary collision points, the third column shows the position angle θ defined in Section 2. The fourth column is
+    the time when this encounter occurs." The encounter is the n_min-th minimum of r: p. 339, "let
+    r = min{r12, r23, r13}", and "Suppose r(t) experiences n minima and (n − 1) maxima". Table IIa, p. 348:
+    "Positions of the binary collision points of type 1 for n_min = 2", Time to 4 decimals. Tables IIIa–c
+    (pp. 353–355) carry the same column.
+  - **Decoded, by running the printed starts** (R-812: a run answers what the page leaves open).
+    `scripts/t2000_time_unit.py` (`python3 -I`; output `tanikawa_2000/time_unit_check.txt`) integrates each start in
+    the frame both papers print, with G = 1, each mass 1, AB = 1, and times the n_min-th minimum of r; masses of 1/3
+    each (M = 1 as the total) multiply every time by √3 exactly, the column beside it. **Energy check** (bound
+    fixed before the run, R-649: a measurement's criterion is written first and never moved): the run passes
+    through near-misses that are not head-on without regularisation, so each row reports dE, the largest
+    |E − E0| / |E0| on its integrator steps with r ≥ 1e-3, and a row with dE above 1e-5 reads "CHECK FAILED" and
+    gives no decode result. A time scales as |E|^(−3/2), so 1e-5 moves a time by about 1.5e-5 relative, a tenth
+    of the agreements reported below. Paper I Table IIa: the check fails on 4 of the 27 rows (x = 0.41, 0.405,
+    0.403 and 0.400; dE 1.1e-4 to 35, the run passing a near-miss it does not regularise), so those four give no
+    result, from the run, not from the page. Of the other 23, 22 printed Times agree to within 1.0e-4 relative, 20 of
+    them with the printed pair (type 1); the √3 reading misses each of the 22 by 73 %. The three that miss in time
+    or pair lie at or beside a change in the printed sign of φ, which p. 348 reads as a triple collision ("the
+    behavior of φ along the vertical or horizontal direction changes at a triple collision"), and one of them, at
+    y = 0.1200000, prints the row above's x, θ and Time (recorded, not resolved). **So Paper I's M = 1 is each
+    mass: m1 = m2 = m3 = 1, G = 1, |AB| = 1, and the time unit is (|AB|³ / (G m))^½, m one body's mass.** A
+    check, not a target (R-649).
+  - **Tanikawa 2000 states no unit** on any page. p. 157: "We consider the equal mass case: m1 = m2 = m3"; p. 158: the
+    same frame ("Let mass points m2 and m3 stand still at A(−0.5, 0) and B(+0.5, 0)"), and "For a precise
+    description, see Paper I."; p. 160: "The code for short integrations to find collision orbits is due to the author
+    and adopts Levi-Civita's regularization." Its "time": p. 162, "'time' the instant of collision"; Table I's note,
+    p. 167, "n_min is the number of minima of the minimal mutual distances up to and including binary collision. …
+    'time' is the instant of binary collision."; Tables II–IV, pp. 172–173, "For notation, see Table I."; Table V,
+    p. 174, "For other notation, see Table I."; Tables VI–VIII, pp. 175 and 182, "see Table V".
+  - **What it keeps, by the same run.** Paper I's unit, for Table V (16 of 16 within 1.3e-4 relative), Table VI (15
+    of 15 within 1.4e-4), Table VII (10 of 10 within 4.0e-4), the p. 162 table's n_min 4 row (Table V's first row,
+    within 2.8e-6) and four rows of Table VIII (type 1, n_min 2; type 3, n_min 2, 4 and 5; within 5.2e-4), each
+    with its printed type; the check passes on all of these. It fails on the rest: the p. 162 table's n_min 5 and 6
+    rows (dE 2.0e-5 and 2.9e-4) and Table VIII's other twelve (type 1, n_min 4 to 10; type 3, n_min 6 to 10; dE
+    1.1e-4 to 4.9e2; the run integrates their near-misses, which are not head-on, unregularised). Those rows give no
+    result: this check cannot follow them, which says nothing about their printed digits. Table VIII's type 1 rows
+    n_min 5 to 10 start within 2e-8 of each other, and its type 3 rows n_min 7 to 10 within 1.0e-6 in x and 1.9e-6
+    in y.
+    **Tables I–IV are not decoded:** their "time" is not the instant of the n_min-th minimum in Paper I's unit, nor
+    any one multiple of it. Table I and Table IV rest on the first-minimum runs (t1, which stop at the first
+    m1–m3 collision and pass the check on every row): on 16 of Table I's 17 starts (n_min 5 to 20), the printed time
+    (0.4532403 down to 0.3932582) comes before even the first m1–m3 collision in this unit (0.5193 to 0.5657), and
+    on all 9 of Table IV's (printed 0.4819557 to 0.4872600, t1 0.4938 to 0.4977). Tables II–III rest on runs
+    through each m1–m3 collision on Γ3 (head-on there, so continued by reversing the pair's relative velocity at
+    r = 1e-6). The check fails on 29 of their 33 rows (dE 1.0e-5 to 7.8e-5), as it does on 16 of Table I's 17
+    n_min runs and all 9 of Table IV's (dE 1.5e-5 to 1.1e-4), so those give no time. The four rows it passes do not
+    agree, and need different factors: printed over computed is 0.61 (Table II, n_min 7), 0.49 (II, 9), 1.43
+    (Table III, n_min 6) and 0.69 (III, 13). The printed times fall as n_min rises down both tables, while the
+    computed times rise on those four (1.90 to 2.35 in II, 1.18 to 2.38 in III). The pages say nothing more of
+    what these four columns hold.
+  - **For T2000-1.** The time columns of Tables V–VII, the p. 162 table's n_min 4 row and Table VIII's four decoded
+    rows are in a known unit (G = 1, m1 = m2 = m3 = 1, |AB| = 1; the instant of the n_min-th minimum of r) and may be
+    proposed beside their positions, the page re-read first (R-680). Tables I–IV's time columns stay out: positions
+    only. No target is added here (R-72). § 9's short times: Li 2021's unit is this one (§ 5.1, "G = 1 and the
+    masses of the three bodies m1 = m2 = m3 = 1"), and Table I's times are short even in it (n_min 5 to 20 come before the first
+    collision on their own starts), so the gap to Li 2021's 6.9 to 11.3 lies in what the column holds, not in a unit
+    factor.
 
 ### 5.7 Schubart 1956, decoded (pp. 21–22; `schubart_1956/decode_check.txt`, `scripts/schubart_decode.py`)
 

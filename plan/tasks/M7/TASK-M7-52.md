@@ -1,7 +1,7 @@
 # TASK-M7-52 — The one projection: each target chart's projection, the leaving rule on main's clamped encode and a curve axis's nearest point, one Rust source for Chart position and the trace (R-542 H11, H12) ⚑
 
 - **Milestone:** M7
-- **Closes:** REQ-COL-133, REQ-COL-134
+- **Closes:** REQ-COL-133, REQ-COL-134, REQ-COL-163
 - **Depends on:** TASK-M2-25, TASK-M2-26
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -31,6 +31,7 @@ One Rust source for SM1's `P_T`, "the target chart's projection, the one the tra
 ## Acceptance tests
 - Review checklist — REQ-COL-133's verify (the definition in SM5, checked by the physics reviewer).
 - `cargo test -p render one_projection_agreement` — REQ-COL-134's verify (native against generated WGSL; code re-review C3, option (a), applied per R-369). Each consumer's call is REQ-COL-135's, checked in its own task.
+- `cargo test -p engine signed_later_states` — REQ-COL-163's arms and control.
 
 ## Notes
 - **⚑ Physics review is required** (SM1, SM5): this task does not merge on the code reviewer's word alone.
@@ -44,3 +45,4 @@ One Rust source for SM1's `P_T`, "the target chart's projection, the one the tra
 - **Goal reworded (C5):** *Was:* "Chart position (TASK-M7-47, generated to WGSL, R-116) and the trace (TASK-M8-58) both call it."
 - **Ruled by R-558 as applied meanwhile:** RQ-498 (a), the shape-sphere target from the signed n̂; RQ-503 (a), main's `α_min = 0`.
 - *5 Nov 2026 (R-793, closing RQ-680 (a)):* the targets are the app's own charts, through `encode_into` and `curve::nearest`; SM1's two dilation rows are the prototype's record, and the wait on RQ-680 ends.
+- *7 Nov 2026 (R-853, R-854):* the one projection reads a state at `t > 0` signed and unfolded on every target, so Chart position and the trace are continuous through syzygies; a mirror-identified reading only as a declared optional view, labelled, off by default (REQ-COL-163). How a lower-half state reads on a latent target's coordinates is a definition (R-72) this task writes under physics review before building it.

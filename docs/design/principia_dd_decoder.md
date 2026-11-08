@@ -74,6 +74,10 @@ decode makes that test 12 compares bit for bit across backends, with the value i
 | `η_E`'s outcome | `r_min_pair_0 = 0`, `E* < V₀`, `E* = V₀` and `s = 0`, comparisons of emitted values with no arithmetic at the decision (§3.7) | `kernel::decode::energy_norm::normalise` |
 | `η_E`'s switch | the energy target's `Option`: on the GPU a uniform flag beside `E*` (R-25), the same for the whole dispatch | `kernel::stage::decode::target` |
 | the mirror in `C` (the shape sphere's decode) | `λ̃_y < −δ_λ`, decided in exact mantissa-exponent arithmetic from the state's pair differences (§3.3; R-82). It writes no tag: its branch is compared bit for bit across backends by TASK-M2-07's `canon_gpu` (`canonicaliser_seam_sweep` at the seam states, `canonicaliser_mirror_tie` at the tie), and test 12 compares the shape sphere's decode it feeds | `kernel::canon::mirror_decision` |
+| `ENERGY_UNSCALABLE` and the rotation-only outcome, hold `L_z` | `rigid(v, Jr)`: with `w = Jr`, `p` the first index of the largest `\|wᵢ\|`, `V` the largest `\|vᵢ\|`, `\|v_b w_p − v_p w_b\| ≤ τ·V·\|w_p\|` for every component `b`; `τ` a dyadic constant (REQ-CHART-126); each comparison decided exactly from the bits, as `infeasible`, no division, no mass, no intermediate that can be subnormal (R-547) | `kernel::decode::invariant::rigid` |
+
+*7 Nov 2026 (R-836, ruling RQ-715 (a) with (i)):* the last row is RQ-715's option (i), the text the queue entry gave
+for this table, entered now that it is ruled; hold `L_z` is built by TASK-M8-118.
 
 The selects that choose a pole's value (§3.2's `atan2` poles, §3.6's `rho_angle` cases and R-436's pole values) read
 comparisons against the constant 0 or `±π̂` of values already computed; they choose a stored value, not a tag.
@@ -206,6 +210,8 @@ r₀  = r₀₁ − (m₁/M₀₁) ρ      r₁ = r₀₁ + (m₀/M₀₁) ρ
 *4 Nov 2026 (R-696, RQ-687 (b)):* at f32, the shape sphere's exponential sinc (`crates/kernel/src/chart/shape_sphere.rs`:162) never reads the backend's `sin` near 0; f64's bits do not move (REQ-DEC-053). Whether the kernel takes its own `sin` and `cos` at f32 is deferred to M4, with RQ-629.
 
 ### 3.3 Canonicalise
+
+*[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]*
 
 Only needed when the input did **not** come through the canonical frame (physical-frame charts, encode):
 
