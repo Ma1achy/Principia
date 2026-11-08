@@ -2,7 +2,8 @@
 
 The build plan's milestones, in dependency order. Each has a scope, the build order it comes from, and an exit
 gate stated as requirement ids from `plan/requirements.yaml`. The gate blocks are generated
-(`plan/tools/milestones.py`); the prose is not.
+(`plan/tools/milestones.py`); the prose is not. The blocks stay committed, and a merge conflict inside one is resolved
+by `python3 plan/tools/regenerate.py --all`, never by hand (R-718; `.gitattributes`).
 
 *30 Oct 2026 (R-649, R-650):* M9, external replication, follows M8 and has no exit gate: its targets are measurements,
 never gates, and it exits on its report (§ "M9 — External replication"). Its block is a report block, generated the

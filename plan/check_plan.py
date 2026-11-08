@@ -16,7 +16,8 @@ Fails if:
   - a ruling says it amends, supersedes, corrects or replaces R-n (or reverses, refines, extends or withdraws it), and
     R-n lacks the matching forward line under its heading (R-292), or "Superseded by" it;
   - a ruling amended in part has no "Still in force: …" line under its heading, or one superseded outright has one,
-    or plan/CURRENT_RULES.md lists a ruling superseded or withdrawn outright (R-293);
+    or the CURRENT_RULES.md that plan/tools/current_rules.py builds lists a ruling superseded or withdrawn outright
+    (R-293);
   - an R-n or RQ-n reference in the live files or the review queue's archive names no entry, or an RQ id is used
     twice (R-292; plan/tools/rulings.py lists the files);
   - REVIEW_QUEUE.md, which merges by union, holds what a union merge leaves: two entries with one question, an entry
@@ -33,8 +34,11 @@ Fails if:
   - plan/tools/rulings_reply.py misses one of its built-in bad cases;
   - a value in plan/section_notes.yaml doesn't load in full: an unquoted value whose " #" YAML reads as the start of a
     comment, so the text after it is silently dropped (PR #110's code review);
-and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and current_rules.py with --check (the last
-fails if plan/CURRENT_RULES.md is stale, R-292).
+  - a generated file plan/tools/regenerate.py names (plan/CURRENT_RULES.md, plan/coverage.md, plan/reviewers/lists/)
+    is committed: the owner's order of 8 Nov 2026 takes them out of git, and CI regenerates and checks them;
+and also runs plan/tools/coverage.py, milestones.py, reviewer_lists.py and current_rules.py with --check: each fails if
+it can't generate its file from the sources, and milestones.py if MILESTONES.md's committed gate blocks differ from a
+fresh regeneration (R-292, R-718). None reads an uncommitted copy on disk, which may be stale or missing.
 
 Usage: python3 plan/check_plan.py
        python3 plan/check_plan.py --queue PATH [--archive DIR]
@@ -54,6 +58,7 @@ from rulings import superseded_listed, unresolved_refs  # noqa: E402
 from rulings import self_test as rulings_self_test  # noqa: E402
 from veto_marks import errors as veto_mark_errors, self_test as veto_self_test  # noqa: E402
 from rulings_reply import self_test as reply_self_test  # noqa: E402
+from regenerate import tracked_generated  # noqa: E402
 
 REQS = "plan/requirements.yaml"
 TASKS = "plan/tasks.yaml"
@@ -562,6 +567,10 @@ def main():
 
     # section_notes.yaml: every value loads in full, with no " #…" dropped as a comment
     errors += truncated_scalars("plan/section_notes.yaml")
+
+    # the generated files are not committed (the owner, 8 Nov 2026); their generators' checks follow
+    errors += [f"{p}: generated, so not committed: git rm --cached it (plan/tools/regenerate.py writes it)"
+               for p in tracked_generated(ROOT)]
 
     for tool in ("plan/tools/coverage.py", "plan/tools/milestones.py", "plan/tools/reviewer_lists.py",
                  "plan/tools/current_rules.py"):

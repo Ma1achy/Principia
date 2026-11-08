@@ -13,7 +13,7 @@ So an open mark must be named by an open entry in REVIEW_QUEUE.md, on a line
 When the entry is ruled it moves to docs/archive/review_queue/ (R-292), which this check doesn't read, so a mark the
 ruling settled but left reading "veto?" fails here until it names that ruling.
 
-Scanned: decisions.md, CLAUDE.md, plan/ (its .md and .yaml files, less the generated CURRENT_RULES.md and coverage.md)
+Scanned: decisions.md, CLAUDE.md, plan/ (its .md and .yaml files, less the generated ones plan/tools/regenerate.py names)
 and docs/ less docs/archive/ and docs/reference/ (records, not the corpus, R-159). Files that don't exist are skipped
 (the plan-check tests copy only part of the tree). A mark quoted to name the convention (`"applied per R-204 —
 veto?"`: a double quote just before it, or just after it or its closing parenthesis) is not a mark.
@@ -26,9 +26,11 @@ Usage: python3 plan/tools/veto_marks.py [--self-test]
 """
 import glob, os, re, sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from regenerate import is_generated  # noqa: E402
+
 QUEUE = "REVIEW_QUEUE.md"
 GLOBS = ["decisions.md", "CLAUDE.md", "plan/**/*.md", "plan/**/*.yaml", "docs/**/*.md"]
-SKIP = ("plan/CURRENT_RULES.md", "plan/coverage.md")
 SKIP_DIRS = ("docs/archive/", "docs/reference/")
 # "applied per R-204 — veto?", "Applied per R-204 (RQ-162) — veto?", "applied per R-204, R-305 — veto?",
 # "applied per R-204, veto?"; the words may wrap over one line break, but never cross a sentence or a quote.
@@ -42,7 +44,8 @@ def files():
     out = []
     for g in GLOBS:
         for p in sorted(glob.glob(g, recursive=True)):
-            if os.path.isfile(p) and p not in SKIP and not p.startswith(SKIP_DIRS) and p not in out:
+            generated = is_generated(p.replace(os.sep, "/"))
+            if os.path.isfile(p) and not generated and not p.startswith(SKIP_DIRS) and p not in out:
                 out.append(p)
     return out
 

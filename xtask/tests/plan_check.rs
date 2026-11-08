@@ -709,3 +709,315 @@ negative_control!(
         queue_fails_naming(&queue, &archive, "are two versions of one text");
     }
 );
+
+// ---- The generated files: not committed; CI regenerates and checks them (the owner, 8 Nov 2026) ----------------------
+
+/// Runs `python3 <script> <args>` in `root`: (passed, its output).
+fn python(root: &Path, script: &str, args: &[&str]) -> (bool, String) {
+    let out = Command::new("python3")
+        .arg(script)
+        .args(args)
+        .current_dir(root)
+        .timed_output()
+        .expect("python3 ran");
+    let text =
+        String::from_utf8_lossy(&out.stdout).into_owned() + &String::from_utf8_lossy(&out.stderr);
+    (out.status.success(), text)
+}
+
+/// Writes `root`'s generated files and makes `root` a git repo; with `track`, `plan/coverage.md` is added to its index,
+/// past the `.gitignore` the main tree has.
+fn generated_in_git(root: &Path, track: bool) {
+    let (passed, out) = python(root, "plan/tools/regenerate.py", &[]);
+    assert!(passed, "regenerate.py failed:\n{out}");
+    git(root, &["init", "-q"]);
+    if track {
+        git(root, &["add", "-f", "plan/coverage.md"]);
+    }
+}
+
+const COMMITTED: &str = "plan/coverage.md: generated, so not committed";
+
+#[test]
+fn plan_check_fails_on_a_committed_generated_file() {
+    let root = copy("plan_check_committed");
+    generated_in_git(&root, true);
+    fails_naming(&root, COMMITTED);
+}
+
+negative_control!(
+    plan_check_fails_on_a_committed_generated_file,
+    "the same files written but left out of git pass, so the failure check must fail on them",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_committed");
+        generated_in_git(&root, false);
+        fails_naming(&root, COMMITTED);
+    }
+);
+
+/// Appends `text` to `root`'s perf checklist.
+fn append_to_perf(root: &Path, text: &str) {
+    let path = root.join("plan/reviewers/perf.md");
+    let doc = fs::read_to_string(&path).expect("checklist read");
+    fs::write(&path, format!("{doc}\n{text}")).expect("checklist written");
+}
+
+const LIST_BLOCK: &str = "plan/reviewers/perf.md holds a `<!-- list:… -->` block";
+
+#[test]
+fn plan_check_fails_on_a_list_block_committed_in_a_checklist() {
+    let root = copy("plan_check_list_block");
+    append_to_perf(
+        &root,
+        "<!-- list:benchmarks -->\n*48 requirements*\n<!-- /list:benchmarks -->\n",
+    );
+    fails_naming(&root, LIST_BLOCK);
+}
+
+negative_control!(
+    plan_check_fails_on_a_list_block_committed_in_a_checklist,
+    "a comment that is no list marker passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_list_block");
+        append_to_perf(&root, "<!-- a note on the benchmarks -->\n");
+        fails_naming(&root, LIST_BLOCK);
+    }
+);
+
+const UNNAMED_LIST: &str =
+    "plan/reviewers/perf.md doesn't name its list `plan/reviewers/lists/benchmarks.md`";
+
+#[test]
+fn plan_check_fails_on_a_checklist_not_naming_its_list() {
+    let root = copy("plan_check_unnamed_list");
+    edit(
+        &root,
+        "plan/reviewers/perf.md",
+        "## 9. Benchmarks",
+        "`plan/reviewers/lists/benchmarks.md`",
+        "the benchmarks list",
+    );
+    fails_naming(&root, UNNAMED_LIST);
+}
+
+negative_control!(
+    plan_check_fails_on_a_checklist_not_naming_its_list,
+    "the pointer reworded around the path still names it, and passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_unnamed_list");
+        edit(
+            &root,
+            "plan/reviewers/perf.md",
+            "## 9. Benchmarks",
+            "are listed in",
+            "are in",
+        );
+        fails_naming(&root, UNNAMED_LIST);
+    }
+);
+
+const NO_GROUP: &str = "plan/rule_groups.yaml: decisions.md's entry R-99999 is in no group";
+
+/// Appends a ruling, R-99999, to `root`'s `decisions.md`.
+fn add_ruling(root: &Path) {
+    let path = root.join("decisions.md");
+    let text = fs::read_to_string(&path).expect("decisions.md read");
+    fs::write(
+        &path,
+        format!("{text}\n## R-99999 — A ruling in no group\n\nText.\n"),
+    )
+    .expect("decisions.md written");
+}
+
+#[test]
+fn plan_check_fails_on_rules_that_cannot_be_generated() {
+    let root = copy("plan_check_no_group");
+    add_ruling(&root);
+    fails_naming(&root, NO_GROUP);
+}
+
+negative_control!(
+    plan_check_fails_on_rules_that_cannot_be_generated,
+    "the ruling put in a group generates, so the failure check, naming the group fault, must fail",
+    expected = "plan-check did not name the fault",
+    {
+        let root = copy("plan_check_ctl_no_group");
+        add_ruling(&root);
+        edit(
+            &root,
+            "plan/rule_groups.yaml",
+            "authority:",
+            "rules: [Porting rule,",
+            "rules: [R-99999, Porting rule,",
+        );
+        fails_naming(&root, NO_GROUP);
+    }
+);
+
+const STALE_GATE: &str = "plan/MILESTONES.md is out of date";
+
+/// In `root`'s `plan/MILESTONES.md`, drops one requirement from M0's committed gate block.
+fn stale_gate(root: &Path) {
+    edit(
+        root,
+        "plan/MILESTONES.md",
+        "<!-- gate:M0 -->",
+        "REQ-SYS-063…079",
+        "REQ-SYS-063…078",
+    );
+}
+
+#[test]
+fn plan_check_fails_on_a_gate_block_unlike_a_fresh_regeneration() {
+    let root = copy("plan_check_stale_gate");
+    stale_gate(&root);
+    fails_naming(&root, STALE_GATE);
+}
+
+negative_control!(
+    plan_check_fails_on_a_gate_block_unlike_a_fresh_regeneration,
+    "an edit to the hand-written prose, outside every block, passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_stale_gate");
+        edit(
+            &root,
+            "plan/MILESTONES.md",
+            "# Milestones",
+            "in dependency order",
+            "in the order of their dependencies",
+        );
+        fails_naming(&root, STALE_GATE);
+    }
+);
+
+/// Puts a merge conflict, as git writes one, after `anchor`'s line in `root`'s `plan/MILESTONES.md`.
+fn conflict_after(root: &Path, anchor: &str) {
+    edit(
+        root,
+        "plan/MILESTONES.md",
+        anchor,
+        &format!("{anchor}\n"),
+        &format!("{anchor}\n<<<<<<< HEAD\n- one side\n=======\n- the other side\n>>>>>>> theirs\n"),
+    );
+}
+
+/// `regenerate.py --all` resolves `root`'s conflicted `plan/MILESTONES.md` to the tree's own.
+fn resolves(root: &Path) {
+    let (passed, out) = python(root, "plan/tools/regenerate.py", &["--all"]);
+    assert!(passed, "regenerate.py --all failed:\n{out}");
+    let (now, tree) = (
+        fs::read_to_string(root.join("plan/MILESTONES.md")).expect("resolved file read"),
+        fs::read_to_string(repo_root().join("plan/MILESTONES.md")).expect("tree's file read"),
+    );
+    assert!(now == tree, "the resolved MILESTONES.md is not the tree's");
+}
+
+#[test]
+fn regenerate_all_resolves_a_conflict_inside_a_gate_block() {
+    let root = copy("regenerate_conflict_in_block");
+    conflict_after(&root, "<!-- gate:M0 -->");
+    fails_naming(&root, "a merge conflict inside a generated block");
+    resolves(&root);
+    let (passed, out) = check(&root);
+    assert!(passed, "plan-check failed on the resolved copy:\n{out}");
+}
+
+negative_control!(
+    regenerate_all_resolves_a_conflict_inside_a_gate_block,
+    "a conflict in the hand-written prose is no generated block's, so regenerating must refuse it",
+    expected = "regenerate.py --all failed",
+    {
+        let root = copy("regenerate_ctl_conflict_in_block");
+        conflict_after(&root, "# Milestones — M0 to M9");
+        resolves(&root);
+    }
+);
+
+const OUTSIDE: &str = "a merge conflict outside the generated blocks";
+
+/// `regenerate.py --all` refuses `root`, naming a conflict in the hand-written text.
+fn refuses_outside(root: &Path) {
+    let (passed, out) = python(root, "plan/tools/regenerate.py", &["--all"]);
+    assert!(!passed, "regenerate.py --all passed:\n{out}");
+    assert!(
+        out.contains(OUTSIDE),
+        "regenerate.py --all did not name the fault:\n{out}"
+    );
+}
+
+#[test]
+fn regenerate_all_refuses_a_conflict_in_the_hand_written_text() {
+    let root = copy("regenerate_conflict_outside");
+    conflict_after(&root, "# Milestones — M0 to M9");
+    refuses_outside(&root);
+}
+
+negative_control!(
+    regenerate_all_refuses_a_conflict_in_the_hand_written_text,
+    "a conflict inside a gate block is the generator's to resolve, so the refusal check must fail on it",
+    expected = "regenerate.py --all passed",
+    {
+        let root = copy("regenerate_ctl_conflict_outside");
+        conflict_after(&root, "<!-- gate:M0 -->");
+        refuses_outside(&root);
+    }
+);
+
+/// Runs `regenerate.py` with `args` on a copy whose M0 gate block is stale; returns the copy.
+fn regenerate_on_a_stale_gate(name: &str, args: &[&str]) -> PathBuf {
+    let root = copy(name);
+    for file in [
+        "plan/CURRENT_RULES.md",
+        "plan/coverage.md",
+        "plan/reviewers/lists",
+    ] {
+        let path = root.join(file);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_dir_all(&path);
+    }
+    stale_gate(&root);
+    let (passed, out) = python(&root, "plan/tools/regenerate.py", args);
+    assert!(passed, "regenerate.py failed:\n{out}");
+    root
+}
+
+/// `root`'s uncommitted files are written, and its committed MILESTONES.md is as it was.
+fn wrote_only_the_uncommitted(root: &Path) {
+    for file in [
+        "plan/CURRENT_RULES.md",
+        "plan/coverage.md",
+        "plan/reviewers/lists/numerical-gates.md",
+        "plan/reviewers/lists/m9-targets.md",
+        "plan/reviewers/lists/benchmarks.md",
+        "plan/reviewers/lists/gui-screenshots.md",
+    ] {
+        assert!(
+            root.join(file).is_file(),
+            "regenerate.py did not write {file}"
+        );
+    }
+    let text = fs::read_to_string(root.join("plan/MILESTONES.md")).expect("MILESTONES.md read");
+    assert!(
+        text.contains("REQ-SYS-063…078"),
+        "regenerate.py rewrote the committed MILESTONES.md"
+    );
+}
+
+#[test]
+fn regenerate_writes_the_uncommitted_files_and_leaves_committed_ones() {
+    wrote_only_the_uncommitted(&regenerate_on_a_stale_gate("regenerate_default", &[]));
+}
+
+negative_control!(
+    regenerate_writes_the_uncommitted_files_and_leaves_committed_ones,
+    "--all rewrites the committed gate blocks too, so the leaves-them check must fail on it",
+    expected = "regenerate.py rewrote the committed MILESTONES.md",
+    wrote_only_the_uncommitted(&regenerate_on_a_stale_gate(
+        "regenerate_ctl_default",
+        &["--all"]
+    ))
+);
