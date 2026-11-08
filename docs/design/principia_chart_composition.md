@@ -1578,11 +1578,13 @@ Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold 
 stages, each merging only with the previous stage's tests green. Applied per R-369 (R-863), each stage's tasks depend on
 the previous stage's, placed so: (1) TASK-M8-124; (2) TASK-M8-117, the based morph with the stored anchor and then the
 sliding anchor, which R-849 gives it in place of § 17.8's `anchor not in B` (RQ-744 (D), filed before R-849 merged, is
-moot); (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119; (4)
-TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and TASK-M8-120. TASK-M8-124 is the 26th of this section's tasks behind
-TASK-M4-37, and with R-847's TASK-M8-122 and TASK-M8-123 (R-863 names neither) 28 tasks wait on it. What the order
-leaves open, the tasks that fit no stage or straddle two and the stage-3 edges that would point forward across
-milestones or close a cycle, is RQ-744's.
+moot); stage 2's test that the centre's IC is constant applies where the anchor stays in B, and on a sliding path, where
+the centre follows the anchor (R-849), it checks R-849's slide instead: the stored words at `s = 0`, B's nearest point
+at `s = 1`, continuous between, with no label and no jump; (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101,
+TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119; (4) TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and
+TASK-M8-120. TASK-M8-124 is the 26th of this section's tasks behind TASK-M4-37, and with R-847's TASK-M8-122 and
+TASK-M8-123 (R-863 names neither) 28 tasks wait on it. What the order leaves open, the tasks that fit no stage or
+straddle two and the stage-3 edges that would point forward across milestones or close a cycle, is RQ-744's.
 
 ---
 

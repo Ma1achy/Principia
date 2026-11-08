@@ -32820,15 +32820,20 @@ previous stage's tests green.
 4. **Morph families, easing and Sequence segments.**
 5. **Time-axis charts and the symmetry filter.**
 
+*Item 2 read with R-849 (applied per R-369):* the test that the centre's IC is constant applies where the anchor stays
+in B; on a sliding path the centre follows the anchor (R-849), and the test checks R-849's slide instead.
+
 *Applied per R-369:*
 
 - **The tasks in each stage.** The owner named stages, not tasks; the placements are ours. Stage 1: no task built
   exactly that, so **TASK-M8-124** is added (REQ-CHART-147), its design governed by R-864. Stage 2: TASK-M8-117
   (`path_lock_centre`), the based morph with the stored anchor and then the sliding anchor, which R-849 (the owner's
   RQ-721 rider, 7 Nov 2026) gives it in place of design § 17.8's `anchor not in B`, with the definition of B's nearest
-  point (REQ-CHART-146); RQ-744 (D), filed while R-849 was not yet on `main`, is moot. Stage 3: TASK-M4-33, TASK-M4-34,
-  TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119. Stage 4: TASK-M8-108. Stage 5:
-  TASK-M8-113 to TASK-M8-116 and TASK-M8-120.
+  point (REQ-CHART-146); its test that the centre's IC is constant applies where the anchor stays in B, and on a sliding
+  path it checks R-849's slide instead: the stored words at `s = 0`, B's nearest point at `s = 1`, continuous between,
+  with no label and no jump. RQ-744 (D), filed while R-849 was not yet on `main`, is moot. Stage 3: TASK-M4-33,
+  TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119. Stage 4: TASK-M8-108.
+  Stage 5: TASK-M8-113 to TASK-M8-116 and TASK-M8-120.
 - **The mechanism.** The owner's words gate merging; Depends on edges put them into effect. Each stage's tasks depend
   on the previous stage's, so they start once those have merged, or early off an approved head as R-388 allows any
   task, and none merges before the stage ahead of it.
