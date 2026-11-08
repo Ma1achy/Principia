@@ -217,11 +217,13 @@ def report(name, rows):
         first = pool.starmap(nth_minimum, [(float(x), float(y), 1, 3 * float(tp) + 1)
                                             for _n, x, y, tp, _w in rows])
     for (nmin, x, y, tp, want_type), (t, r, ty, how, de), f in zip(rows, res, first):
-        flag = "" if want_type is None or ty is None or ty == want_type else " (type %s printed)" % want_type
-        if de > DE_BOUND:
+        flag = ""
+        if de > DE_BOUND:  # the run is in doubt: no decode result, so no type comparison either
             rel, how = "--", "CHECK FAILED (run: %s)" % how
         else:
             rel = "%+9.1e" % ((t - float(tp)) / float(tp))
+            if want_type is not None and ty is not None and ty != want_type:
+                flag = " (type %s printed)" % want_type
         if f[4] > DE_BOUND:
             flag += "; t1 CHECK FAILED (dE %.1e)" % f[4]
         print("%-6d %-10.10s %-10.10s %-10s %-10.7f %-10.7f %9s %-8.1e %-4s %-10.7f %-8.1e %s%s"
