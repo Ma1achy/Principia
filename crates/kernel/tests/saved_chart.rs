@@ -1127,7 +1127,7 @@ negative_control!(
     }
 );
 
-// ── The parent by value (R-475 L5, R-483 H3; physics review 5816908974 of PR #447, P1) ────────────────────────────────
+// ── The parent by value (R-475 L5, R-483 H3; physics review 5816908974 of PR #447, P1) ───────────────────────────────
 
 /// The first word of a curved chart's parent: its form, then its params.
 const HEAD: usize = WORDS - PARAMS;
