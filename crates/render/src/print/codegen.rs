@@ -7,7 +7,8 @@
 //! node `k` in that order owns every name `print_n<k>_…`. Its pass `j` is the function `print_n<k>_pass<j>` and the
 //! fragment entry point `print_n<k>_pass<j>_main`; each input `p` is the texture `print_n<k>_in_<p>`; a node of more
 //! than one pass reads its previous pass as `print_n<k>_prev` (black for the first, as the lab's `prev`); and its
-//! parameters are the uniform `print_n<k>`, one member each.
+//! parameters are the uniform `print_n<k>`, one member each, `p_<name>`: the pass's own name for it, the lab's, so a
+//! parameter named as a WGSL reserved word (`type`, `smooth`, `from`, `_`) is still a member WGSL admits.
 //!
 //! **A pass** is its registry file's WGSL, a function `fn run(uv: vec2<f32>) -> vec4<f32>`, the lab's `vec4 run()`
 //! in WGSL, written with the lab's names, which the generated module renames: `in_<port>`, `prev`, `p_<param>`, `res`
@@ -61,8 +62,8 @@ pub struct Texture {
     pub reads: Reads,
 }
 
-/// Node `node`'s uniform, at binding `binding` of [`UNIFORM_GROUP`]: each member's name and value, in declaration
-/// order; a number or a choice's index one f32, a colour three, its hex digits over 255, as the lab sets them.
+/// Node `node`'s uniform, at binding `binding` of [`UNIFORM_GROUP`]: each parameter's name and value, in declaration
+/// order (the member of parameter `x` is `p_x`); a number or a choice's index one f32, a colour three, its hex digits over 255, as the lab sets them.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Uniforms {
     pub node: String,
@@ -239,7 +240,7 @@ fn node_module(
             } else {
                 "f32"
             };
-            let _ = writeln!(out.source, "    {}: {wgsl},", p.name);
+            let _ = writeln!(out.source, "    p_{}: {wgsl},", p.name);
             values.push((p.name.clone(), uniform_value(value)));
         }
         let binding = u32::try_from(k).unwrap_or(u32::MAX);
@@ -335,7 +336,7 @@ fn renamed(word: &str, base: &str, function: &str) -> Option<String> {
         "prev" => Some(format!("{base}_prev")),
         _ => match (word.strip_prefix("in_"), word.strip_prefix("p_")) {
             (Some(port), _) => Some(format!("{base}_in_{port}")),
-            (None, Some(param)) => Some(format!("{base}.{param}")),
+            (None, Some(_)) => Some(format!("{base}.{word}")),
             (None, None) => None,
         },
     }

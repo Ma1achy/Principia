@@ -232,14 +232,16 @@ fn print_registry_entries_two_node_graph_compiles() {
         blurred.source
     );
     assert!(
-        blurred.source.contains("print_frame.px.x * print_n1.sigma"),
+        blurred
+            .source
+            .contains("print_frame.px.x * print_n1.p_sigma"),
         "{}",
         blurred.source
     );
     // Comments keep the lab's names as written.
     for comment in [
         "// A test fixture's second pass: down, reading the first through prev, not in_in.\nfn print_n1_pass1(",
-        "print_n1.sigma); /* the lab's names, kept in a comment: p_sigma, px*/\n",
+        "print_n1.p_sigma); /* the lab's names, kept in a comment: p_sigma, px*/\n",
     ] {
         assert!(blurred.source.contains(comment), "the comment is not kept as written: {}", blurred.source);
     }
@@ -335,10 +337,10 @@ fn check_linocut(g: &Generated) {
         values, &want,
         "the linocut's uniform does not hold its parameters"
     );
-    assert!(g.source.contains("struct PrintN1 {\n    depth: f32,\n    gouge: f32,\n    seed: f32,\n    ink: vec3<f32>,\n    cut: f32,\n}"));
+    assert!(g.source.contains("struct PrintN1 {\n    p_depth: f32,\n    p_gouge: f32,\n    p_seed: f32,\n    p_ink: vec3<f32>,\n    p_cut: f32,\n}"));
     assert!(
         g.source
-            .contains("mix(print_n1.ink, print_tex(print_n1_in_ground, uv).rgb, cut)"),
+            .contains("mix(print_n1.p_ink, print_tex(print_n1_in_ground, uv).rgb, cut)"),
         "{}",
         g.source
     );
@@ -423,6 +425,74 @@ negative_control!(
     "a graph codegen can run",
     expected = "a graph codegen cannot run generated",
     check_codegen_refusals(&[(ACYCLIC, "")])
+);
+
+// ----- parameters named as WGSL reserved words -----
+
+/// An entry whose parameters are named `type`, `smooth`, `from` (as the lab's `ground`, `stereogram` and `unfinished`
+/// name theirs), `_` and `__x`, none of them a WGSL identifier.
+const RESERVED: &str = r##"{
+  "id": "reserved", "label": "Reserved", "category": "photo",
+  "doc": "A test entry: parameters named as WGSL reserved words.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [
+    { "name": "type", "kind": "number", "default": 0, "min": 0, "max": 1, "step": 1, "unit": "none" },
+    { "name": "smooth", "kind": "number", "default": 0.5, "min": 0, "max": 1, "step": 0.01, "unit": "fraction" },
+    { "name": "from", "kind": "choice", "default": 0, "options": ["a", "b"] },
+    { "name": "_", "kind": "colour", "default": "#808080" },
+    { "name": "__x", "kind": "number", "default": 1, "min": 0, "max": 2, "step": 1, "unit": "none" }
+  ],
+  "passes": ["reserved.wgsl"], "cost": "light", "motion": "full", "temporally_stable": true,
+  "screen_medium": false, "deviations": ["A test entry."]
+}"##;
+
+const RESERVED_PASS: &str = "fn run(uv: vec2<f32>) -> vec4<f32> {
+    let k = p_type + p_smooth + p_from + p___x;
+    return vec4<f32>(tex(in_in, uv).rgb * p__ * k, 1.0);
+}";
+
+/// The reserved entry's module, as `emit` writes it, compiles under naga.
+fn check_reserved(emit: fn(String) -> String) {
+    let mut registry = support::registry();
+    registry
+        .register(RESERVED, &|f: &str| {
+            (f == "reserved.wgsl").then(|| RESERVED_PASS.to_owned())
+        })
+        .expect("the reserved entry registers");
+    let graph = Graph::parse(
+        r#"{"format":"principia.print/1","name":"R","nodes":{"img":{"type":"render"},
+          "r":{"type":"reserved","params":{"smooth":0.25},"in":{"in":"img"}},
+          "out":{"type":"output","in":{"in":"r"}}},"out":"out"}"#,
+    )
+    .expect("parses");
+    let e = expand(&graph, &|_: &str| None).expect("expands");
+    let g = generate(&e, &registry).unwrap_or_else(|e| panic!("does not generate: {e}"));
+    assert!(
+        g.source.contains("    p_type: f32,") && g.source.contains("print_n1.p_from"),
+        "the members are not prefixed: {}",
+        g.source
+    );
+    compile(&emit(g.source));
+}
+
+/// The module with each parameter's member and its reads written by the bare parameter name.
+fn bare(source: String) -> String {
+    ["type", "smooth", "from", "__x", "_"]
+        .iter()
+        .fold(source, |s, n| s.replace(&format!("p_{n}"), n))
+}
+
+#[test]
+fn print_registry_entries_reserved_parameter_names_compile() {
+    check_reserved(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_reserved_parameter_names_compile,
+    "the members written by the bare parameter names",
+    expected = "the generated WGSL does not parse",
+    check_reserved(bare)
 );
 
 // ----- registration refusals -----
