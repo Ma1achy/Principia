@@ -24,8 +24,9 @@
 //!   merge-ready, cancel the in-progress quick run and start the full tier, instead of waiting for it"), waiting for a
 //!   full attempt still going, never cancelling it, and doing nothing when every full-only check has passed, the head
 //!   has moved or the label has come off; an attempt it cannot show quick or full (its jobs unread, its `changes` not
-//!   yet ended) is read again, for a bounded time, then fails the job, named, cancelling nothing; going off cancels
-//!   only a full attempt.
+//!   yet ended) is read again, for a bounded time, then fails the job, named, cancelling nothing; every wait draws on
+//!   one deadline, and no cancel is posted without the time left to start the full attempt; going off cancels only a
+//!   full attempt.
 //! - `ci_full_workflow_*`: `ci-full.yml` takes the label events, `ci.yml` none, so no label's run supersedes the check
 //!   suite holding the required checks (R-678), and only `merge-ready` asks for a runner, for as long as its wait.
 //! - `ci_full_attempt_*`: what a full attempt leaves to the quick tier's pass is its own commands: fmt, clippy and the
@@ -521,6 +522,10 @@ case "$*" in
 esac
 "#;
 
+/// A stand-in clock: `sleep <n>` moves `GH_CLOCK` on by <n> seconds, at once, and `date +%s` reads it; it starts at 0.
+const SLEEP: &str = "#!/bin/bash\necho $(( $(cat \"$GH_CLOCK\") + ${1%%.*} )) > \"$GH_CLOCK\"\n";
+const DATE: &str = "#!/bin/bash\n[ \"$1\" = +%s ] || exit 9\ncat \"$GH_CLOCK\"\n";
+
 /// A run of the script: whether it passed, its output, its `$GITHUB_OUTPUT`, and the `gh` calls it made.
 struct Ran {
     code: Option<i32>,
@@ -557,6 +562,8 @@ fn tier(
     let bin = dir.join("bin");
     std::fs::create_dir_all(&bin).expect("scratch");
     write_executable(&bin.join("gh"), GH).expect("gh stand-in");
+    write_executable(&bin.join("sleep"), SLEEP).expect("sleep stand-in");
+    write_executable(&bin.join("date"), DATE).expect("date stand-in");
     let file = dir.join("ci_tier.sh");
     write_executable(&file, script).expect("script");
     std::fs::write(dir.join("ci_quick_crates.py"), read(CRATES)).expect("crates script");
@@ -568,11 +575,13 @@ fn tier(
     write_executable(&changes, body).expect("changes stand-in");
     let (log, output, runs_file) = (dir.join("gh.log"), dir.join("output"), dir.join("runs"));
     std::fs::write(&log, "").expect("log");
+    std::fs::write(dir.join("clock"), "0\n").expect("clock");
     std::fs::write(&runs_file, format!("{}\n", runs.join("\n"))).expect("runs");
     let mut cmd = Command::new("bash");
     cmd.arg(&file).arg(subcommand);
     clean(&mut cmd, &dir, Some(&bin));
     cmd.env("GH_LOG", &log)
+        .env("GH_CLOCK", dir.join("clock"))
         .env("GH_RUNS", &runs_file)
         .env("GH_HEAD", "abc123")
         .env("GH_PASSED", "")
@@ -2014,8 +2023,8 @@ mod the_last_poll {
         expected = "ci_quick_tier: the label on a run that ends at the last poll",
         check_label_on(&edited(
             TIER,
-            "  for ((i = 1; i <= polls; i++)); do\n    sleep \"$2\"",
-            "  for ((i = 1; i < polls; i++)); do\n    sleep \"$2\""
+            "  for ((i = 1; i <= polls; i++)); do\n    pause \"$2\"",
+            "  for ((i = 1; i < polls; i++)); do\n    pause \"$2\""
         ))
     );
 }
@@ -2404,6 +2413,270 @@ unknown_control!(
     "      0) return 0 ;;\n      1)\n        shown_tier \"$1\" \"$2\" || true\n        return 1\n        ;;\n"
 );
 
+/// `merge-ready` put on, on the stand-in clock: a full attempt is waited for every 30 s, unread jobs read again every
+/// 10 s, a cancel waited for every 10 s (3 polls, so a cancel and the re-run need 2 x 3 x 10 + 60 = 120 s), within a
+/// deadline of `deadline` seconds.
+fn label_on_by(
+    script: &str,
+    deadline: &'static str,
+    extra: &[(&'static str, &'static str)],
+    runs: &[&str],
+) -> Ran {
+    let mut env = vec![
+        ("CI_TIER_DEADLINE_SECONDS", deadline),
+        ("CI_TIER_WAIT_SECONDS", "30"),
+        ("CI_TIER_DECIDE_SECONDS", "10"),
+        ("CI_TIER_CANCEL_SECONDS", "10"),
+    ];
+    env.extend_from_slice(extra);
+    label_on(script, &env, runs)
+}
+
+const DEADLINE: &str = "the job's deadline leaves no time to";
+const NO_TIME_TO_CANCEL: &str =
+    "the job's deadline leaves less than the 120 s a cancel and the re-run need";
+
+fn check_deadline(script: &str) {
+    let by = |deadline, extra: &[(&'static str, &'static str)], runs: &[&str]| {
+        label_on_by(script, deadline, extra, runs)
+    };
+    // A quick attempt shown when the time left (two polls of 30 s spent on its `changes`: 60 s gone) is 119 s, under
+    // the 120 s a cancel and the re-run need: the job fails, named, cancelling nothing. With 120 s left, it is
+    // cancelled and the full attempt started.
+    let got = by("179", &[("GH_UNDECIDED", "2")], &["5 in_progress 1"]);
+    assert!(
+        !got.ok()
+            && got.out.contains(NO_TIME_TO_CANCEL)
+            && (got.count("/cancel"), got.count(RERUN)) == (0, 0),
+        "ci_quick_tier: the label on a quick attempt shown with the deadline nearly spent: {:?} {}",
+        got.calls,
+        got.out
+    );
+    let got = by(
+        "180",
+        &[("GH_UNDECIDED", "2")],
+        &["5 in_progress 1", "5 completed 1"],
+    );
+    assert!(
+        got.ok() && (got.count(CANCEL), got.count(RERUN)) == (1, 1),
+        "ci_quick_tier: the label on a quick attempt shown with just the time a cancel needs: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // A full attempt waited for: a poll that would pass the deadline (60 s) is not made, and the job fails, named,
+    // within the poll count's bound (4); one that ends at the last poll the deadline allows is re-run.
+    let full = [("GH_ATTEMPT_1", FULL_JOBS)];
+    let got = by("60", &full, &["5 in_progress 1"]);
+    assert!(
+        !got.ok()
+            && got.out.contains(DEADLINE)
+            && (
+                got.count("/workflows/ci.yml/runs"),
+                got.count("/cancel"),
+                got.count(RERUN)
+            ) == (3, 0, 0),
+        "ci_quick_tier: the label on a full attempt that outlasts the deadline: {:?} {}",
+        got.calls,
+        got.out
+    );
+    let got = by(
+        "60",
+        &full,
+        &["5 in_progress 1", "5 in_progress 1", "5 completed 1"],
+    );
+    assert!(
+        got.ok() && got.count(RERUN) == 1,
+        "ci_quick_tier: the label on a full attempt that ends at the deadline's last poll: {:?} {}",
+        got.calls,
+        got.out
+    );
+    // The re-reads of unread jobs (every 10 s) and of an undecided `changes` (every 30 s) draw on it too, within their
+    // own bounds (3 reads, 4 polls), as does the wait for a run to appear (every 5 s, 3 polls).
+    for (what, deadline, extra, runs, reads) in [
+        (
+            "its jobs unread",
+            "15",
+            &[("GH_ATTEMPTS_FAIL", "1")][..],
+            &["5 in_progress 1"][..],
+            2,
+        ),
+        (
+            "its changes undecided",
+            "45",
+            &[("GH_UNDECIDED", "9")][..],
+            &["5 in_progress 1"][..],
+            2,
+        ),
+        (
+            "no run yet",
+            "7",
+            &[("CI_TIER_POLL_SECONDS", "5")][..],
+            &[""][..],
+            0,
+        ),
+    ] {
+        let got = by(deadline, extra, runs);
+        assert!(
+            !got.ok()
+                && got.out.contains(DEADLINE)
+                && (
+                    got.count("/attempts/"),
+                    got.count("/cancel"),
+                    got.count(RERUN)
+                ) == (reads, 0, 0),
+            "ci_quick_tier: the label with the deadline passing, {what}: {:?} {}",
+            got.calls,
+            got.out
+        );
+    }
+    // One deadline for both rounds: a full attempt waited for 30 s in the first, the re-run refused because a retry
+    // started the run again, a quick attempt shown in the second with 119 s left fails, named, cancelling nothing; with
+    // 120 s left it is cancelled and re-run.
+    let retry = [("GH_RERUN_REFUSALS", "1"), ("GH_ATTEMPT_1", FULL_JOBS)];
+    let got = by(
+        "149",
+        &retry,
+        &["5 in_progress 1", "5 completed 1", "5 in_progress 2"],
+    );
+    assert!(
+        !got.ok()
+            && got.out.contains(NO_TIME_TO_CANCEL)
+            && (got.count("/cancel"), got.count(RERUN)) == (0, 1),
+        "ci_quick_tier: the label's second round with the deadline nearly spent: {:?} {}",
+        got.calls,
+        got.out
+    );
+    let got = by(
+        "150",
+        &retry,
+        &[
+            "5 in_progress 1",
+            "5 completed 1",
+            "5 in_progress 2",
+            "5 completed 2",
+        ],
+    );
+    assert!(
+        got.ok() && (got.count(CANCEL), got.count(RERUN)) == (1, 2),
+        "ci_quick_tier: the label's second round with just the time a cancel needs: {:?} {}",
+        got.calls,
+        got.out
+    );
+}
+
+#[test]
+fn ci_tier_merge_ready_on_keeps_one_deadline() {
+    check_deadline(&read(TIER));
+}
+
+/// One control of `ci_tier_merge_ready_on_keeps_one_deadline`: `TIER` edited `from` → `to`.
+macro_rules! deadline_control {
+    ($name:ident, $what:literal, $expected:literal, $from:expr, $to:expr) => {
+        mod $name {
+            use super::*;
+            negative_control!(
+                ci_tier_merge_ready_on_keeps_one_deadline,
+                $what,
+                expected = $expected,
+                check_deadline(&edited(TIER, $from, $to))
+            );
+        }
+    };
+}
+
+#[cfg(feature = "controls")]
+const ROOM: &str = "  if [ \"$((deadline - $(now)))\" -lt \"$need\" ]; then\n";
+#[cfg(feature = "controls")]
+const PAUSE: &str = "  if [ \"$(($(now) + $1))\" -gt \"$deadline\" ]; then\n";
+
+deadline_control!(
+    room_for_the_cancel,
+    "the label cancelling a quick attempt with no time left to start the full one",
+    "ci_quick_tier: the label on a quick attempt shown with the deadline nearly spent",
+    ROOM,
+    "  if false; then\n"
+);
+
+deadline_control!(
+    just_room,
+    "the label refusing a cancel with just the time it needs",
+    "ci_quick_tier: the label on a quick attempt shown with just the time a cancel needs",
+    ROOM,
+    "  if [ \"$((deadline - $(now)))\" -le \"$need\" ]; then\n"
+);
+
+deadline_control!(
+    room_for_the_rerun,
+    "the room for a cancel leaving out the re-run",
+    "ci_quick_tier: the label on a quick attempt shown with the deadline nearly spent",
+    "  need=$((2 * polls * seconds + 60))\n",
+    "  need=$((2 * polls * seconds))\n"
+);
+
+deadline_control!(
+    room_for_the_force_cancel,
+    "the room for a cancel leaving out the force-cancel's wait",
+    "ci_quick_tier: the label on a quick attempt shown with the deadline nearly spent",
+    "  need=$((2 * polls * seconds + 60))\n",
+    "  need=$((polls * seconds + 60))\n"
+);
+
+deadline_control!(
+    waits_keep_the_deadline,
+    "every wait passing the deadline",
+    "ci_quick_tier: the label on a full attempt that outlasts the deadline",
+    PAUSE,
+    "  if false; then\n"
+);
+
+deadline_control!(
+    the_last_pause,
+    "the deadline refusing a poll that ends just at it",
+    "ci_quick_tier: the label on a full attempt that outlasts the deadline",
+    PAUSE,
+    "  if [ \"$(($(now) + $1))\" -ge \"$deadline\" ]; then\n"
+);
+
+deadline_control!(
+    the_run_wait,
+    "the wait for a run to end sleeping past the deadline",
+    "ci_quick_tier: the label on a full attempt that outlasts the deadline",
+    "    pause \"$2\" \"wait for the run on $HEAD_SHA to end\" || return 1\n",
+    "    sleep \"$2\"\n"
+);
+
+deadline_control!(
+    the_read_wait,
+    "the re-read of unread jobs sleeping past the deadline",
+    "ci_quick_tier: the label with the deadline passing, its jobs unread",
+    "        pause \"$read_seconds\" \"read the jobs of $what again\" || return 2\n",
+    "        sleep \"$read_seconds\"\n"
+);
+
+deadline_control!(
+    the_decide_wait,
+    "the wait for changes sleeping past the deadline",
+    "ci_quick_tier: the label with the deadline passing, its changes undecided",
+    "        pause \"$wait_seconds\" \"wait for $what to decide its tier\" || return 2\n",
+    "        sleep \"$wait_seconds\"\n"
+);
+
+deadline_control!(
+    the_first_poll,
+    "the wait for a run to appear sleeping past the deadline",
+    "ci_quick_tier: the label with the deadline passing, no run yet",
+    "    pause \"${CI_TIER_POLL_SECONDS:-5}\" \"wait for a run on $HEAD_SHA to appear\" || return 1\n",
+    "    sleep \"${CI_TIER_POLL_SECONDS:-5}\"\n"
+);
+
+deadline_control!(
+    one_deadline_for_both_rounds,
+    "the deadline set again for the second round",
+    "ci_quick_tier: the label's second round with the deadline nearly spent",
+    "  for round in 1 2; do\n",
+    "  for round in 1 2; do\n    deadline=$(($(now) + ${CI_TIER_DEADLINE_SECONDS:-20700}))\n"
+);
+
 fn check_label_off(script: &str) {
     let off = |runs: &[&str]| {
         tier(
@@ -2730,6 +3003,13 @@ fn check_ci_full(files: &[(String, String)]) {
         wait < timeout && timeout <= 360,
         "ci_quick_tier: ci-full.yml's job, {timeout} minutes, does not outlast its wait of {wait} for a full attempt"
     );
+    // Every wait draws on one deadline, and the job outlasts it by at least 10 minutes: the steps before the script and
+    // the few reads and the re-run left after the deadline, which no wait passes.
+    let deadline = number("${CI_TIER_DEADLINE_SECONDS:-") / 60;
+    assert!(
+        deadline + 10 <= timeout,
+        "ci_quick_tier: ci-full.yml's job, {timeout} minutes, does not outlast the script's deadline of {deadline} by 10"
+    );
 }
 
 #[test]
@@ -2789,6 +3069,21 @@ mod merge_ready_runs_apart {
             "ci-full.yml",
             "    || github.event.label.name != 'merge-ready')\n",
             "    || github.event.label.name == 'merge-ready')\n"
+        ))
+    );
+}
+
+mod outlasts_the_deadline {
+    use super::*;
+    negative_control!(
+        ci_full_workflow_takes_the_label_events,
+        "ci-full.yml's job timed out 9 minutes after the script's deadline",
+        expected =
+            "ci_quick_tier: ci-full.yml's job, 354 minutes, does not outlast the script's deadline",
+        check_ci_full(&with_edit(
+            "ci-full.yml",
+            "    timeout-minutes: 360\n",
+            "    timeout-minutes: 354\n"
         ))
     );
 }

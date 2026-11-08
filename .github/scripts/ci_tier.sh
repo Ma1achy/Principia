@@ -221,12 +221,26 @@ already_passed() {
   done
 }
 
+now() { date +%s; }
+
+# One deadline for every wait `merge-ready` makes, so the job ends named, never killed by its 360-minute timeout:
+# `label_on` sets `deadline`, CI_TIER_DEADLINE_SECONDS (20700: 345 minutes) after it starts, and every wait draws on it,
+# in either round. `pause <seconds> <what>` sleeps <seconds>, or fails, named, cancelling nothing, when that would pass
+# the deadline.
+pause() {
+  if [ "$(($(now) + $1))" -gt "$deadline" ]; then
+    echo "::error::ci_tier: the job's deadline leaves no time to $2; cancelling nothing" >&2
+    return 1
+  fi
+  sleep "$1"
+}
+
 # Waits for the head's latest run to end: `wait_for_end <polls> <seconds>` polls every <seconds>, at most <polls> times;
 # prints the ended run, or fails, named, when it has not ended.
 wait_for_end() {
   local polls=$1 i run status
   for ((i = 1; i <= polls; i++)); do
-    sleep "$2"
+    pause "$2" "wait for the run on $HEAD_SHA to end" || return 1
     run=$(latest_run)
     status=$(cut -d' ' -f2 <<< "$run")
     if [ "$status" = completed ]; then
@@ -239,8 +253,8 @@ wait_for_end() {
 }
 
 # A full attempt still going is the full tier already, and is waited for, never cancelled: every CI_TIER_WAIT_SECONDS
-# (30, or CI_TIER_POLL_SECONDS where set), at most CI_TIER_WAIT_POLLS times (700: 350 minutes, under the job's 360), less
-# the polls `attempt_tier` has already spent waiting for the attempt's `changes` to decide (`waited`).
+# (30, or CI_TIER_POLL_SECONDS where set), at most CI_TIER_WAIT_POLLS times (700: 350 minutes), less the polls
+# `attempt_tier` has already spent waiting for the attempt's `changes` to decide (`waited`), and within the deadline.
 wait_full() {
   wait_for_end "$((${CI_TIER_WAIT_POLLS:-700} - waited))" "${CI_TIER_WAIT_SECONDS:-${CI_TIER_POLL_SECONDS:-30}}"
 }
@@ -280,7 +294,7 @@ attempt_tier() {
           echo "::error::ci_tier: $what had not decided its tier after $waited polls; cancelling nothing"
           return 2
         fi
-        sleep "$wait_seconds"
+        pause "$wait_seconds" "wait for $what to decide its tier" || return 2
         ;;
       *)
         unread=$((unread + 1))
@@ -288,7 +302,7 @@ attempt_tier() {
           echo "::error::ci_tier: the jobs of $what could not be read in $unread reads; cancelling nothing"
           return 2
         fi
-        sleep "$read_seconds"
+        pause "$read_seconds" "read the jobs of $what again" || return 2
         ;;
     esac
   done
@@ -299,9 +313,17 @@ attempt_tier() {
 # cancellation to end it: every CI_TIER_CANCEL_SECONDS (10, or CI_TIER_POLL_SECONDS where set), at most
 # CI_TIER_CANCEL_POLLS times (30: 5 minutes). A run the cancel has not ended by then is force-cancelled, once, and waited
 # for as long again. `latest_run` reads `pull_request` runs alone, so this never cancels a run on `main` (R-656). A
-# refused cancel is waited out too: the run may have ended meanwhile. Prints the ended run, or fails, named.
+# refused cancel is waited out too: the run may have ended meanwhile. Prints the ended run, or fails, named. Nothing is
+# cancelled unless the time left before the deadline covers both waits and 60 s more for the re-run and the reads before
+# it: a cancel the job could not follow with the full attempt would leave the head with neither tier.
 cancel_quick() {
-  local polls="${CI_TIER_CANCEL_POLLS:-30}" seconds="${CI_TIER_CANCEL_SECONDS:-${CI_TIER_POLL_SECONDS:-10}}"
+  local polls="${CI_TIER_CANCEL_POLLS:-30}" seconds="${CI_TIER_CANCEL_SECONDS:-${CI_TIER_POLL_SECONDS:-10}}" need
+  need=$((2 * polls * seconds + 60))
+  if [ "$((deadline - $(now)))" -lt "$need" ]; then
+    echo "::error::ci_tier: the job's deadline leaves less than the $need s a cancel and the re-run need;" \
+      "cancelling nothing" >&2
+    return 1
+  fi
   gh api --method POST "repos/$GH_REPO/actions/runs/$1/cancel" > /dev/null \
     || echo "::warning::ci_tier: the cancel of run $1 was refused" >&2
   if wait_for_end "$polls" "$seconds"; then return 0; fi
@@ -336,11 +358,12 @@ wanted() {
 }
 
 label_on() {
-  local polls="${CI_TIER_POLLS:-12}" i run="" id status attempt round why shown waited=0
+  local polls="${CI_TIER_POLLS:-12}" i run="" id status attempt round why shown waited=0 deadline
+  deadline=$(($(now) + ${CI_TIER_DEADLINE_SECONDS:-20700}))
   for ((i = 1; i <= polls; i++)); do
     run=$(latest_run)
     if [ -n "$run" ]; then break; fi
-    sleep "${CI_TIER_POLL_SECONDS:-5}"
+    pause "${CI_TIER_POLL_SECONDS:-5}" "wait for a run on $HEAD_SHA to appear" || return 1
   done
   if [ -z "$run" ]; then
     echo "::error::ci_tier: no pull_request run of ci.yml on $HEAD_SHA to re-run"
