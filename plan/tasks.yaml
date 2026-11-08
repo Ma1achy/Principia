@@ -3854,7 +3854,7 @@
   title: "Locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, centre on pin and the auto-snap setting, exact on nonlinear charts or saying why (R-866, R-863 stage 1)"
   depends_on: [TASK-M4-37, TASK-M8-124]
   needs: []
-  requirements: [REQ-GUI-425]
+  requirements: [REQ-GUI-425, REQ-GUI-429]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-126

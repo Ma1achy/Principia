@@ -9,14 +9,15 @@
 - **Size:** ~400 lines, the tests included
 
 ## Goal
-R-865 closes RQ-739: the decoder's mirror step goes, and latent `β` runs over the full circle, so every chart, the shape
+R-865, on RQ-739: the decoder's mirror step goes, and latent `β` runs over the full circle, so every chart, the shape
 sphere included, uses one decode path with no special case, and a lower-half state encodes to `β ∈ (π, 2π)` in place
 of a mirrored state. It is conditional on the owner's bitwise check: every existing preset, saved chart and golden with
 `β ∈ [0, π]` reproduces unchanged through the new decoder. If anything doesn't, the task stops and brings the list back
-to the owner before proceeding.
+to the owner before proceeding. **It waits on RQ-750:** `β = π·σ(z_β)` already covers `(0, π)`, so any full-circle
+link changes every stored latent `z`, and the owner chooses the way out before the link is defined or anything is built.
 
 ## References
-- `decisions.md` § "R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(closes RQ-739)*"
+- `decisions.md` § "R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(on RQ-739, which stays open)*"
 - `decisions.md` § "R-854 — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi"
@@ -43,24 +44,51 @@ to the owner before proceeding.
   windows of twice the area in `β` (the proposal's items 4 and 5).
 
 ## Acceptance tests
-- `cargo test -p kernel mirror_step_removed` — every preset, saved chart and golden with `β ∈ [0, π]` through the new
-  decoder against the recorded baseline, bit for bit; a lower-half state encodes to `β ∈ (π, 2π)` and decodes back to
-  itself, not its mirror image; a latent-chart trace through a syzygy continuous, or the reason it can't be on the list
-  brought back; controls: the mirror step left in fails, one golden's `β` moved by one ulp fails the check (REQ-DEC-055).
-- `cargo test -p kernel --test roundtrip` and `cargo test -p kernel saved_chart` — re-run, passing as before (REQ-DEC-055).
-- Review: the full-circle link and the signed encode in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2, approved by
-  the physics reviewer (REQ-DEC-056).
+- Before the decoder changes, on its own commit: the baseline of every preset, saved chart and golden with
+  `β ∈ [0, π]`, recorded through today's decoder (IC words, sim key and, for a golden, its image hash), the PR listing
+  each (REQ-DEC-055).
+- `cargo test -p kernel mirror_step_removed` — a lower-half state encodes to `β ∈ (π, 2π)` and decodes back to itself,
+  not its mirror image; a latent-chart trace through a syzygy continuous, or the reason it can't be on the list brought
+  back; controls: the mirror step left in fails, one golden's `β` moved by one ulp fails the check (REQ-DEC-055).
+- `cargo test -p gui mirror_step_presets` and `cargo test -p engine mirror_step_presets` — every chart preset each crate
+  holds (the gui's in `crates/gui/src/explore/manifold_view/chart.rs`), through the new decoder against the baseline,
+  bit for bit (REQ-DEC-055).
+- `cargo test -p kernel saved_chart` — the saved charts, against the baseline, bit for bit (REQ-DEC-055).
+- `cargo test -p render --test debug_views`, `cargo test -p render --test qa_TASK-M2-32`, `cargo test -p validation --test
+  decode_preset_golden` and `cargo test -p validation --test qa_TASK-M2-28` — the golden suites re-run with every golden
+  unchanged, in the GPU jobs that run them (REQ-DEC-055).
+- `cargo test -p kernel --test roundtrip` — with the assertions the ruling changes: T1 as the equivariance `E(Π·x)` = the
+  mirrored `z` (`β → 2π − β`, the momentum controls reflected, `L_z` negated) in place of `E(Π·x) = E(x)`, and
+  `t3_half_mirror` removed under REQ-ENC-005's change (REQ-DEC-055).
+- Any preset, saved chart or golden that doesn't reproduce stops the task: the list goes to the owner, nothing
+  re-baselined (REQ-DEC-055).
+- Review: the full-circle link and the signed encode in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2, written to the
+  owner's answer to RQ-750 and approved by the physics reviewer (REQ-DEC-056).
 
 ## Notes
-- Added by R-865 (8 Nov 2026), the owner's reply 1 to the code map of that day, closing RQ-739.
+- Added by R-865 (8 Nov 2026), the owner's reply 1 to the code map of that day, on RQ-739 (open on its item 3, the
+  optional "mirror pairs counted once" statistic, which this task doesn't build).
+- **Waits on RQ-750** (`rq: RQ-750` on REQ-DEC-055 and REQ-DEC-056): physics review 5817348709 of PR #449, P1. Not
+  dispatched until it is ruled.
+- **Requirements that change when this merges (R-865; physics review 5817348709, P2).** Each carries a note now; this
+  task rewrites their statements to the built decoder, each keeping a "Was": REQ-ENC-003 (T1, to the equivariance
+  above), REQ-ENC-005, REQ-ENC-014, REQ-ENC-007, REQ-ENC-002, REQ-ENC-015, REQ-DEC-002, REQ-DEC-016, REQ-DEC-017,
+  REQ-DEC-018, REQ-ENC-034, REQ-CHART-002, REQ-CHART-020 and REQ-COL-006. **REQ-VAL-022** is a numerical gate read on
+  `C(x)` "where C's mirror puts L⁻ at w = +1": its restatement is proposed here under physics review and recorded by a
+  ruling before this task merges, never changed silently in its PR.
+- **qa's files (R-290, R-237; the exception a ruling forces, R-369).** The qa files that assert the mirror change in this
+  task's qa commit and only there, the PR listing each `M` line with its reason and the code reviewer confirming no
+  other assertion is weakened: `crates/kernel/tests/qa_TASK-M2-07.rs`, `qa_TASK-M2-07_edge.rs` and `qa_TASK-M2-15.rs`
+  among them, with every other qa file the build shows asserting the mirror. `crates/kernel/tests/roundtrip.rs` is
+  TASK-M2-16's, the implementer's to change.
 - **The condition is a stop, not a gate to tune.** If any preset, saved chart or golden with `β ∈ [0, π]` doesn't
   reproduce, the task stops before the removal merges and the list goes to the owner (the orchestrator files it on the
   review queue). Nothing is re-baselined, loosened or special-cased to pass.
-- **Traces at syzygies.** The owner's words say this also fixes the latent-chart traces' jump at syzygies. RQ-739's
-  physics note recorded that a crossing at `β = 0` would still wrap under `β ∈ (0, 2π)`; the link this task defines
-  decides it, and a trace that still jumps goes on the list.
+- **Traces at syzygies.** The owner's words say this also fixes the latent-chart traces' jump at syzygies. Under a σ-type
+  link only the syzygies at `β = π` become continuous, one at the seam `β = 0` still jumping unless `z_β` is periodic
+  (RQ-750, which corrects RQ-739's 7 Nov note); a trace that still jumps goes on the list.
 - **Not here:** the proposal's optional "mirror pairs counted once" statistic (its item 3) is not ruled, and no task
-  builds it.
+  builds it: RQ-739 stays open on it.
 - **Applied per R-369:** in M2, the decoder's milestone; it depends on TASK-M2-40 so that the saved charts it builds are
   among those checked. R-82's mirror test, R-438's `|λ̃_y|` and R-544's skip go with the step once this merges (their
   forward lines).

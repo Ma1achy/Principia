@@ -27,7 +27,8 @@ scored, distinct from the lock.
 ## Deliverables
 - The definitions R-870 leaves unstated, written into chart_composition § 10.5 under physics review (R-72;
   REQ-GUI-427): "exactly", the nearest chart point, the off-slice metric, the near-match measure, marks on a path frame
-  with no inverse, and the state group holding the points, off the sim key.
+  with no inverse, the state group holding the points, off the sim key, and the gauge in which property values and the
+  off-slice distance are compared (pixels decode at `I = 1`; the mirror not quotiented, R-854).
 - Points saved, named and stored as signed states; their marks drawn on every chart and every frame of a path; the
   similar-systems overlays through TASK-M7-43's and TASK-M7-72's contours.
 - The near-match tolerance's proposal, with its evidence (R-71; REQ-GUI-428).

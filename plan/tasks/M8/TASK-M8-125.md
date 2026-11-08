@@ -1,7 +1,7 @@
 # TASK-M8-125 — Locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, centre on pin and the auto-snap setting, exact on nonlinear charts or saying why (R-866, R-863 stage 1)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-425
+- **Closes:** REQ-GUI-425, REQ-GUI-429
 - **Depends on:** TASK-M4-37, TASK-M8-124
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, gui
@@ -33,7 +33,8 @@ the window to compute the pin, the pin is exact, or the task says why it can't b
   about the pin on the latent chart and on curved charts (R-473 J7 as R-866 amends it), in `engine` and `gui`.
 - On nonlinear charts (mixed and invariant): the pin held without re-centring the window, its construction written into
   chart_decoder_contract Part 4 in place of "The window is re-centred", under physics review (R-72); exact, or the reason
-  it can't be, stated in the PR and taken to the owner before anything inexact merges.
+  it can't be, stated in the PR and taken to the owner before anything inexact merges, its bound an R-71 calibration
+  (REQ-GUI-429).
 - The lock badge's **centre on pin** and the setting, **Centre on pin when locking**, off by default, a preference outside
   `SimConfig` and `RenderState` (render_gui_spec § G4).
 
@@ -41,7 +42,8 @@ the window to compute the pin, the pin is exact, or the task says why it can't b
 - `cargo test -p engine lock_moves_no_view` and `cargo test -p gui lock_moves_no_view` — REQ-GUI-425's verify: a lock at
   an off-centre pixel on the latent chart, a mixed chart and an invariant chart leaves `z₀`, the basis and the window bit
   for bit; on the latent chart its `z_locked` is today's point at that pixel bit for bit; the pinned pixel decodes the
-  clicked state after tilts and zooms about it, bit for bit or within the bound the task states with its reason; centre
+  clicked state after tilts and zooms about it, bit for bit, or within REQ-GUI-429's calibrated bound where the task
+  states why it can't be exact; centre
   on pin brings the pin to `(½, ½)` as one undoable edit; the setting on gives lock then centre on pin in one history
   entry, and is off by default; controls: a lock that re-centres fails, a tilt about the centre with an off-centre pin
   fails (REQ-GUI-425).
@@ -49,6 +51,9 @@ the window to compute the pin, the pin is exact, or the task says why it can't b
   this ruling changes it and each such change listed in the PR (REQ-GUI-425).
 - Review: the nonlinear chart's construction in chart_decoder_contract Part 4, exact or with its stated reason, approved
   by the physics reviewer (REQ-GUI-425).
+- Proposal, only if the pin can't be exact on a nonlinear chart: the bound with its evidence and the reason, checked by
+  the physics reviewer and ruled by the owner before this task merges, recorded in decisions.md; never a bound chosen in
+  the PR (R-71; REQ-GUI-429). If the pin is exact, the PR shows it bit for bit and proposes no value.
 
 ## Notes
 - Added by R-866 (8 Nov 2026), the owner's reply 2 to the code map of that day: "Confirm this works on nonlinear charts,
@@ -60,3 +65,4 @@ the window to compute the pin, the pin is exact, or the task says why it can't b
 - What stage 2's test reads once the pin is off the centre is RQ-749's; this task builds R-866 either way.
 - TASK-M8-07 builds the lock's look on the mock engine and keeps REQ-GUI-099, which R-866 rewords: the reticle at the pin
   and the badge's centre on pin.
+- *Physics review 5817348709 of PR #449, P5:* an inexact pin's bound is a calibration ruled by the owner before merge, not the task's choice. Holding the pin exactly looks achievable: evaluated as pivot + R·(offset), the pin's chart parameters come out bitwise, pin + R·0 = pin.
