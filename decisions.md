@@ -1582,6 +1582,8 @@ can compile it.
 *Amended by R-375 and R-656.*
 *Amended in part by R-711 (5 Nov 2026: one measurement-only self-hosted runner, `malachys-pc-rtx2080s`, is approved; PC
 benchmarks are separate measurements, never compared against this ruling's Mac performance gates).*
+*Refined by R-859 (8 Nov 2026: this ruling stands, benchmarks of record staying on the owner's Mac; Windows benchmark
+numbers are a separate named series, never mixed with the Mac's).*
 *Still in force: all of it but the Linux runner's label and R-711's runner: CI's Linux jobs run on `ubuntu-24.04`, pinned, not
 `ubuntu-latest`, and moving to Ubuntu 26 is a deliberate later step (R-375); the Metal correctness suites on
 `macos-15`; benchmarks and performance gates on the human's Mac, never on hosted runners; no other self-hosted runner,
@@ -28968,6 +28970,8 @@ label off; `reviews.yml` cancels its superseded runs per pull request and event)
 *Amended in part by R-692 (4 Nov 2026: five paths of `crates/gui/` are GPU paths once TASK-M6-53 merges).*
 *Amended in part by R-711 (5 Nov 2026: "no self-hosted runner" excepts `malachys-pc-rtx2080s`, one measurement-only
 runner, whose jobs have their own workflow file; `ci.yml`, its counts and gates are unchanged).*
+*Refined by R-859 (8 Nov 2026: from the anchor move R-711's runner runs its jobs as named measurements, never as
+required checks; moving required or heavy CI work to it is not approved).*
 *Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's and R-677's,
 how the merge-ready head's mutants run and `reviews.yml`'s concurrency, which are R-676's, and which heads' mutants run,
 which is R-677's, and which of `gui`'s paths are GPU paths, which is R-692's: the push trigger, the cancelled runs, the in-job skips under each required check's own name, mutants
@@ -30998,6 +31002,9 @@ R-710 is in the "physics" group of `plan/rule_groups.yaml`.
 Adds REQ-INT-113; changes REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, REQ-INT-111, REQ-INT-112, REQ-SYS-094, REQ-SYS-095, REQ-VAL-059, REQ-VAL-099 and REQ-VAL-348.
 
 ## R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*
+*Refined by R-859 (8 Nov 2026: from the anchor move the runner may run, as named measurements, the GPU suites nightly
+and on pushes to `main` (Vulkan now, DX12 from Phase 2), gpu-idle, the weekly proof and the heavy-work comparison;
+Windows benchmark numbers are a separate named series; its security rules are unchanged).*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
 `docs/archive/review_queue/M0.md` (RQ-695 moved), `REVIEW_QUEUE.md`, TASK-M4-28 (a note), REQ-SYS-065 and REQ-VAL-099 (reqio), TASK-M0-04, TASK-M8-41,
 `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md` and `plan/rule_groups.yaml`*
@@ -31649,3 +31656,89 @@ R-390's silences on look, and R-681's and R-682's word to the owner on a stuck c
 REQ-VAL-149 reads as it did.
 
 R-812 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-859 — From the anchor move, the Windows runner may run, as named measurements and never as required checks: the GPU suites (Vulkan now, DX12 from Phase 2) nightly and on pushes to `main`, gpu-idle, the weekly proof and the 7 Nov heavy-work comparison; benchmarks of record stay on the Mac, Windows numbers a separate named series; moving required or heavy CI work to the PC is not approved and returns through `/rulings-report`; the runner's security rules are unchanged *(refines R-186, R-656 and R-711)*
+*8 Nov 2026 · the owner's ruling of that day, pasted as their own; applied in the forward lines of R-186, R-656 and
+R-711, `docs/contracts/principia_parity_contract.md` § 6, `REVIEW_QUEUE.md` (RQ-742 and RQ-743, new), `plan/OPERATIONS.md`
+§ "Metal and perf (Mac only)" and § "The Windows runner's work (R-859)" (new), `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md`,
+TASK-M0-55 and TASK-M0-56 (new), REQ-TOOL-224 and REQ-TOOL-225 (reqio, new) and `plan/rule_groups.yaml`; built by
+TASK-M0-55 and TASK-M0-56*
+
+The owner's words, 8 Nov 2026, verbatim:
+
+> Ruling on the Windows runner's work (answers R-186 and R-656), 8 Nov:
+> - The at-the-PC items (31 -Prove, the lock undo rehearsal, the GlobalProtect uninstall) don't
+>   block deployment.
+> - From the anchor move onwards, the Windows runner may run, as named measurements and never as
+>   required checks: the GPU suites (Vulkan now, DX12 from Phase 2), nightly and on pushes to main;
+>   gpu-idle and the weekly proof; and the heavy-work comparison I asked for on 7 Nov (GPU suites and
+>   one GPU-heavy mutant shard on a task branch, against hosted runners).
+> - R-186 stands: benchmarks of record stay on my Mac. Windows benchmark numbers are a separate named
+>   series, never mixed with the Mac's.
+> - Moving required or heavy CI work (mutants, GPU suites as gating checks) to the Windows runner is
+>   NOT approved yet: it comes back via /rulings-report with the comparison's numbers and the
+>   fallback design (hosted runners take over if the PC hasn't answered in time).
+> - All runner security rules stand unchanged.
+
+The order it names, the owner's of 7 Nov 2026, verbatim, recorded here because the comparison is defined by it:
+
+> Measure (two-way, criterion written first): is the Windows runner faster for the heavy work?
+> After the anchor move, on one real task branch, run on the PC via push trigger: (1) the GPU test
+> suites, including codegen_selftest_pack_unpack_kernel_gpu, and (2) one mutant shard that includes
+> GPU-suite files (projection_parity.rs or drift.rs). Compare against the same work on hosted
+> runners: wall time, and identical results (same test outcomes; same caught/missed/unviable mutant
+> sets, mutant for mutant).
+> If it's clearly faster with identical results, bring a design to /rulings-report (it changes the
+> gate and the runner's role, so it's one-way): the PC runs the heavy jobs first on pushed task
+> branches; the required check accepts the PC's result if present within a time limit, otherwise the
+> hosted runners run as now, so the PC is never a single point of failure. Keep all runner security
+> rules: push/schedule/dispatch only, signed-commit gate, never pull_request triggers.
+
+*What it decides:*
+
+- **Deployment.** The three items that need someone at the PC (the `31 -Prove` run, the lock undo rehearsal and the
+  GlobalProtect uninstall) don't block the runner's deployment.
+- **What the runner may run, from the anchor move** (the owner's move of the PC hook's signing-gate anchor; until it,
+  the hook refuses `main`'s merges, which hold R-711 item 6's unsigned pre-signing commits): each as a named
+  measurement, never a required check (R-649, R-711 item 1):
+  - the GPU suites, nightly and on pushes to `main`: Vulkan now, DX12 from Phase 2, the DX12 run on this card once its
+    opt-in lands (R-711 item 2, R-719);
+  - gpu-idle, the read-only GPU sample taken while nobody is signed in to the PC;
+  - the weekly proof of the sandbox, `runner-proof.yml`;
+  - the heavy-work comparison of the 7 Nov order: the GPU suites and one GPU-heavy mutant shard on a task branch, on
+    the PC and on hosted runners.
+- **Benchmarks.** R-186 stands: benchmarks of record stay on the owner's Mac. Windows benchmark numbers are a separate
+  named series, never mixed with the Mac's (refining R-711 item 3's "labelled by machine").
+- **Required or heavy work stays where it is.** Moving required or heavy CI work, mutants and the GPU suites as gating
+  checks, to the Windows runner is not approved. It comes back as a one-way question through `/rulings-report`, with the
+  comparison's numbers and the fallback design: hosted runners take over if the PC hasn't answered in time.
+- **Security.** Every runner security rule stands unchanged: R-174 as R-711 woke it, R-711 items 1, 5 and 6, and the
+  owner's job rules of 5 Nov 2026 (the triggers, the repository and actor guard, no credential, pinned actions, the
+  job-started hook and the self-check first in every job, no fork run approved).
+
+*Applied per R-369:*
+
+- **Two tasks.** TASK-M0-55 builds the named measurements on `main` and TASK-M0-56 the heavy-work comparison, both in
+  M0 beside the CI tasks (TASK-M0-54 the last), each closing a new requirement, REQ-TOOL-224 and REQ-TOOL-225. Both
+  start after the anchor move. The Vulkan suites, the nightly self-check and the weekly proof are already on `main`
+  (`win-gpu.yml`, `runner-proof.yml`); gpu-idle so far runs only from a test branch, which goes after the anchor work.
+- **DX12's job** isn't in TASK-M0-55: "from Phase 2" places it after the DX12 opt-in, which isn't built. It joins the
+  measurement workflow in the task that follows that opt-in.
+- **The comparison's criterion,** "clearly faster", is written and committed in TASK-M0-56's pull request before its
+  first run, and not adjusted after (R-649, R-812). The result and the fallback design go to the next
+  `/rulings-report`.
+
+*Held for the owner:*
+
+- **RQ-742.** Whether the list of what the runner may run leaves out what it doesn't name: `win-gpu.yml`'s nightly
+  Windows build and tests (`win-tests`), and the Windows bench arms of TASK-M8-107 and TASK-M8-114.
+- **RQ-743.** The 7 Nov order's "run on the PC via push trigger" on a task branch, against R-711 item 1's push to
+  `main` alone, which "All runner security rules stand unchanged" keeps.
+
+*What it refines:* **R-186** (the Windows series beside the Mac's benchmarks of record), **R-656** (what the one
+self-hosted runner R-711 excepts may run) and **R-711** (its jobs, from the anchor move). It closes no queue entry: no
+open entry carried the question it answers.
+
+R-859 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes no existing requirement; adds REQ-TOOL-224 and REQ-TOOL-225.
