@@ -1847,8 +1847,16 @@
 - file: decisions.md
   section: "R-854 — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected"
   reason: informative only
-  note: "the owner's symmetry rule: the integrator contract, state map and lines carry it; RQ-739 holds its proposal"
+  note: "the owner's symmetry rule: the integrator contract, state map and lines carry it; its proposal is ruled by R-865, on RQ-739, which stays open; TASK-M2-57 waits on RQ-750"
 - file: decisions.md
   section: "R-855 — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only"
   reason: informative only
   note: "carried by REQ-CHART-135 to REQ-CHART-138, REQ-GUI-424 and TASK-M8-120, which design § 10.4 already wrote"
+- file: decisions.md
+  section: "R-868 — The chart-space model's wording follows R-474: Tip as sheet is the default tilt, Lean each axis the other map; the owner has corrected the model, and their copy replaces the repo's *(on RQ-738, which stays open)*"
+  reason: informative only
+  note: "the owner's corrected chart-space model replaces the repo's; RQ-738 carries what is left"
+- file: decisions.md
+  section: "R-869 — The owner's direction for the acute-angle Burrau charts: unfold the leg swap and show both labellings, the reduced view coming from the symmetry filter (R-855) *(on RQ-745, which stays open)*"
+  reason: informative only
+  note: "the owner's direction, recorded on RQ-745, which stays open; no task until it is ruled"
