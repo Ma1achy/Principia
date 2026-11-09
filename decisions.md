@@ -6254,6 +6254,9 @@ Changes no requirement.
 *Still in force: items 1 to 3 as recorded, item 1's local run taking R-439's hard limits where it mutates the gui
 crate; item 4's nextest, its test selection by package rather than the whole workspace, and its unchanged shard count
 and time limits (R-376).*
+*Read with R-908 (8 Nov 2026) and R-909 (9 Nov 2026): item 1's local `cargo mutants --in-diff` run before review, and
+"CI's mutants gate stays the authority", stand until the pull-request tier's restructure, whose pull request (R-909's
+step (2)) rewords them and brings to the owner any change to what this ruling says.*
 *6 Oct 2026 · applied in `plan/OPERATIONS.md` § "Roles and the loop", § "Dispatching" and § "Reviewers" (its
 **Mutants** item), `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR", § "Task files" and § "The review
 loop", `CLAUDE.md` § "How work runs", `.claude/agents/implementer.md` and `plan/rule_groups.yaml`; item 4 built by a
@@ -6333,7 +6336,7 @@ of ready-next tasks, starting a task off its approved dependency's head, and fas
 
 Changes no requirement.
 
-*8 Nov 2026, R-908 and R-909:* with no mutation run on the pull-request path once the pull-request tier's restructure
+*8 and 9 Nov 2026, R-908 and R-909:* with no mutation run on the pull-request path once the pull-request tier's restructure
 lands, this ruling's local `cargo mutants` run before a pull request opens, and its "CI's mutants gate stays the
 authority", are reworded by that restructure's pull request (R-909's step (2)), which brings to the owner any change to
 what this ruling says; until then they stand.
@@ -33755,6 +33758,12 @@ added to the sketch:
   routes differ only in rounding, one canonical formula is chosen and the bit change is accepted, deliberate and
   documented, with a conversion test as for RQ-750 (R-898): each changed case decodes to the same system to rounding
   precision, its outcome class unchanged. A difference that isn't rounding is not merged; it comes back (R-864 item 4).
+  *Applied per R-369 (physics review 5820482634, P11):* "to rounding precision" here carries R-544's mirror-test
+  precision rule: each case's difference in `z` (or `n̂`) is within the ulp count derived from the two formulas; its
+  decoded state is within REQ-ENC-024's `ε_phys`, and its outcome class unchanged, only on the cases whose `n̂` lies
+  farther than a stated `δ` from each of the three binary-collision landmarks, with `ulp/δ ≤ ε_phys`, since near a
+  landmark a rounding-level difference turns the state by `O(1)` (R-544, "The mirror test's precision"); `δ` and the
+  excluded set are stated, and a rounding difference inside it is not brought back as a real one.
 - **The GUI routes** (keys, panel, compass step, compass drag) become thin input adapters feeding the same leaf.
 - **The same-frame slips, D19 and D23 of the brief,** are fixed in that step, each case's change documented; D19 and
   D23 as "kept bit for bit, filed" end there.
@@ -33917,7 +33926,11 @@ The owner's words (8 Nov 2026), verbatim:
   where it is on screen; "centre on pin" (R-866) clears the in-plane part; the two together are today's
   `z₀ ← z_locked`. On an oblique basis, splitting `δ` into its in-plane and hidden parts is a projection, so snap-back
   alone is exact only to rounding: its construction is a definition TASK-M8-125 writes into chart_decoder_contract Part 4
-  under physics review (R-72), its residual decoding to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state. The composite is
+  under physics review (R-72), its rounding bound is derived from the construction TASK-M8-125 defines (of order
+  `ε_R·κ(B)·‖δ‖` for a solve on the basis `B = [q₁ q₂ | hidden]`, or a few ulps if built as `z_locked` plus the in-plane
+  part recomputed from the pin's stored chart parameters) and stated by that task, its decoded state within
+  REQ-ENC-024's `ε_phys` only where that bound and the decoder's conditioning allow; a bound that can't be derived is a
+  calibration (R-71); the test's fixture names its `κ(B)` and `‖δ‖` (physics review 5820482634, P12). The composite is
   bitwise by definition: centre on pin after snap-back assigns `z₀ ← z_locked` (applied per R-369). The auto-snap setting is off by default, as R-866 already reads it. Built by TASK-M8-125 with R-866
   (REQ-GUI-425).
   *What it amends:* chart_decoder_contract Part 4, "snap-back is `z₀ ← z_locked`, bit for bit", and design § 17.8's
@@ -33935,7 +33948,11 @@ The owner's words (8 Nov 2026), verbatim:
   owner's lock-with-morphs message, R-902), not as chart coordinates, so it survives a chart switch. Untilt (a1), in
   the words of the type sketch the brief was read with (v9, Q5): "fold `d0` into the slice centre at the untilt, then
   reset `d0` to zero: the pin is kept and J6 stands, and `U₀` re-bases once on Linear energy axes, stated in the
-  readout"; (a2), a zero-angle tilt path, and (a3), a labelled cut, are not taken. It amends R-473 (tilt and
+  readout"; (a2), a zero-angle tilt path, and (a3), a labelled cut, are not taken. `d0`, in the same sketch's words, is the record's
+  hidden offset: "the kernel tilt gains `origin` and `d0` … `d0` is in hidden-coordinate units, one per target", the
+  pin's hidden offset, so a Window lock placed off-centre on a tilted view has `d0 ≠ 0`, and a never-pinned view has
+  `d0 = [−0, −0]`. The untilt (a1) therefore acts only under an off-centre lock: its test is TASK-M8-125's
+  (REQ-CHART-163), not TASK-M8-48's (code review 5820497276, item 3). It amends R-473 (tilt and
   slice on every chart): a curved chart's tilt turns about the recorded
   pivot, not only the window's centre. TASK-M8-48 builds the record and the kernel tilt at a centred pin, before stage 1 (RQ-744 (E) (i), R-873;
   REQ-CHART-157); the off-centre pin is TASK-M8-125's (REQ-CHART-163) and the record's survival across a chart switch
@@ -34354,7 +34371,7 @@ R-907 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-148 (statement, verify, source, rulings, note) and REQ-VAL-149 (source, rulings, note).
 
-## R-908 — CI: decide and act: pull-request feedback in under 30 minutes and merge-ready to merge in under an hour; the required checks become build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set and reviews; process tests move off the pull-request path, or are retired where history shows high cost and no product catch, each in its own commit; mutation, in-depth GPU tests and the slow tier leave the pull-request path; product-correctness tests are never retired *(amends R-196, R-202, R-302, R-305, R-376, R-678, R-684, R-904, R-905 and R-907)*
+## R-908 — CI: decide and act: pull-request feedback in under 30 minutes and merge-ready to merge in under an hour; the required checks become build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set and reviews; process tests move off the pull-request path, or are retired where history shows high cost and no product catch, each in its own commit; mutation, in-depth GPU tests and the slow tier leave the pull-request path; product-correctness tests are never retired *(amends R-196, R-202, R-302, R-305, R-376, R-678, R-683, R-684, R-904, R-905 and R-907)*
 *Amended in part by R-909 (9 Nov 2026: the approved CI model governs where they differ).*
 *Still in force: its goal and its limits: product-correctness tests (kernel, physics, validation algebra, FD against analytic, goldens, cross-backend) run on every pull request or every merge to `main`, none retired; reviews and the runner's security rules unchanged; no spending; a retired test deleted in its own commit; a failing process test filing a task, never making `main` red; a test that may be product correctness asked of the owner; the report after, with before and after times. Its required checks and its moves read as R-909's model has them.*
 *8 Nov 2026 · the owner's message of that day, "CI: decide and act, don't ask"; applied in the forward lines of R-196,
@@ -34423,7 +34440,7 @@ R-908 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-148 (statement, verify, source, rulings, note) and REQ-VAL-149 (source, rulings, note).
 
-## R-909 — The CI model is approved: a required pull-request tier under 30 minutes, an advisory tier on each merge to `main`, and a nightly and Windows background; the golden runner over every suite and the screenshot runner's self-test are product correctness, run per merge and never retired; the 17 retirement candidates are retired, one commit each; branch protection stays the owner's, who changes it from an exact old-to-new list *(amends R-677, R-684, R-904, R-905, R-907 and R-908)*
+## R-909 — The CI model is approved: a required pull-request tier under 30 minutes, an advisory tier on each merge to `main`, and a nightly and Windows background; the golden runner over every suite and the screenshot runner's self-test are product correctness, run per merge and never retired; the 17 retirement candidates are retired, one commit each; branch protection stays the owner's, who changes it from an exact old-to-new list *(amends R-677, R-683, R-684, R-904, R-905, R-907 and R-908)*
 *9 Nov 2026 · the owner's message of that day, "CI model: approved as proposed, with these"; applied in the forward lines
 of R-677, R-684, R-904, R-905, R-907 and R-908, REQ-VAL-148 and REQ-VAL-149 (reqio) and `plan/rule_groups.yaml`; built by
 the PR-tier restructure, the per-merge workflow, the retirements and the Windows and nightly steps, in the model's order;
@@ -34545,7 +34562,7 @@ without it:
 - **R-683**: this ruling amends R-683 in part: its step (2)'s "full suite once at merge-ready" gives way to the model's
   pull-request tier, the full product suite running on each merge to `main`.
 
-*To repoint when built (8 Nov 2026, applied per R-369, code review 5820413299 finding 3):* what this model changes
+*To repoint when built (9 Nov 2026, applied per R-369, code review 5820413299 finding 3):* what this model changes
 in the record outside this ruling, and who changes it:
 - **The retired tests in requirements:** REQ-VAL-163 (the controls runner's listing mode) names
   `qa_m0_24_every_registered_control_makes_its_test_fail`, and REQ-SYS-077 (CI job sizes) names the `qa_TASK-M0-24`,

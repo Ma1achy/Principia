@@ -507,8 +507,12 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   a slice step or a slider move edits `z₀` alone, so `δ` accumulates it; snap-back undoes the slice only, clearing the
   hidden part of `δ` and leaving the pin where it is on screen, and "centre on pin" (R-866) clears its in-plane part, the
   two together `z₀ ← z_locked`, bitwise by definition: centre on pin after snap-back assigns `z₀ ← z_locked`. On an
-  oblique basis the split of `δ` into in-plane and hidden parts is a projection, so snap-back alone is exact to rounding,
-  its residual decoding to the same system within REQ-ENC-024's `ε_phys`; its construction is a definition TASK-M8-125
+  oblique basis the split of `δ` into in-plane and hidden parts is a projection, so snap-back alone is exact to rounding:
+  its rounding bound is derived from the construction TASK-M8-125 defines (of order `ε_R·κ(B)·‖δ‖` for a solve on the
+  basis `B = [q₁ q₂ | hidden]`, or a few ulps if built as `z_locked` plus the in-plane part recomputed from the pin's
+  stored chart parameters) and stated by that task, its decoded state within REQ-ENC-024's `ε_phys` only where that bound
+  and the decoder's conditioning allow; a bound that can't be derived is a calibration (R-71); the test's fixture names
+  its `κ(B)` and `‖δ‖`; its construction is a definition TASK-M8-125
   writes here under physics review (R-72) (the chart-path brief's Q2 (a), R-899; the auto-snap setting off by
   default); and `δ` has no field of its own that could disagree with `z₀`. *Was:* "snap-back is `z₀ ← z_locked`, bit
   for bit;". Unlock clears the flag and the anchor and leaves

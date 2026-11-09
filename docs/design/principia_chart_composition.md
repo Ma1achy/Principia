@@ -1954,8 +1954,12 @@ bitwise check, golden hashes regenerated with a record of why (R-900).
 `z₀`, as "turns about the pin"; the words are that point's; `z_locked` and `δ` are not touched. Snap-back undoes the
 slice only, clearing the hidden excursion and leaving the pin where it is on screen, and "centre on pin" clears the
 in-plane part; together they are `z₀ ← z_locked`, bitwise by definition, centre on pin after snap-back assigning
-`z₀ ← z_locked`; snap-back alone, a projection on an oblique basis, is exact to rounding, within REQ-ENC-024's
-`ε_phys` on the decoded state, its construction TASK-M8-125's (R-72) (the brief's Q2 (a), R-899). *Was:* "`z_locked` and `δ` are
+`z₀ ← z_locked`; snap-back alone, a projection on an oblique basis, is exact to rounding, its rounding bound is derived
+from the construction TASK-M8-125 defines (of order `ε_R·κ(B)·‖δ‖` for a solve on the basis `B = [q₁ q₂ | hidden]`, or a
+few ulps if built as `z_locked` plus the in-plane part recomputed from the pin's stored chart parameters) and stated by
+that task, its decoded state within REQ-ENC-024's `ε_phys` only where that bound and the decoder's conditioning allow; a
+bound that can't be derived is a calibration (R-71); the test's fixture names its `κ(B)` and `‖δ‖`, its construction
+TASK-M8-125's (R-72) (the brief's Q2 (a), R-899). *Was:* "`z_locked` and `δ` are
 not touched, so snap-back, `z₀ ← z_locked`, stays bit for bit." **Deep zoom:** REQ-DEC-033's linearised decoder lands in M6. `J_D` at the anchor doesn't change along the
 path, since the anchor doesn't; what changes is the chart's tangent plane, per frame. At depth a frame is locally a plane
 morph, the same first-order part transported above, so a deep frame is the linearisation of the coarse frame over it. CPU work per
