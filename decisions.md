@@ -276,6 +276,10 @@ query it. Files: chart_reference §5.1, §5.2; chart_decoder_contract Parts 3, 5
 lowering_contract appendix; scheduler_contract (a quad-skip rule); the step-6 GUI docs.
 
 ## R-27 — Both Burrau charts are kept, each labelled with its quotient *(CD-7)*
+*Amended in part by R-875 (8 Nov 2026; RQ-745 (b): the acute-angle fold charts are re-expressed over the full
+acute range, both labellings shown, the leg swap shown once only by the symmetry filter, TASK-M8-127 building it).*
+*Still in force: all of it until TASK-M8-127 merges; then all of it but the acute-angle "shape only" fold charts, the
+full-range `ν` charts and their labels standing.*
 *24 Sep 2026 · recorded; applied before any Burrau statistic*
 *The Euclid-plane correction is also applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 —
 Well-posedness and the validation contract" (the ray-degenerate example reworded as a chart sweeping both `m` and `n`,
@@ -1764,9 +1768,8 @@ Standing rule, "so this doesn't recur":
 
 ## R-196 — Mutation testing joins the QA gate
 *Amended by R-302.*
-*Still in force: per PR, `cargo mutants --in-diff` on the changed code, sharded across parallel CI jobs under R-302;
-nightly, a full run written as a report; every surviving mutant in a PR's diff is a qa finding; the three exclusions;
-a REVIEW_QUEUE entry, not a dropped run, if per-PR runs prove impractical.*
+*Amended in part by R-904, R-905 and R-908 (8 Nov 2026: no mutation run on the pull-request path; the in-diff run is on `main` and the full run nightly, placed per job on the Windows runner or GitHub-hosted runners (R-905); a survivor not on the equivalents list files a task automatically and never makes `main` red; R-909's model governs).*
+*Still in force: the in-diff run on the changed code, now on each merge to `main` (R-905, R-909), sharded under R-302; nightly, a full run written as a report; the three exclusions. Not per pull request, and a survivor files a task rather than being a qa finding on the pull request (R-904, R-905, R-908).*
 *26 Sep 2026 · given before R-197, recorded with TASK-M0-04*
 
 "mutation testing joins the QA gate.
@@ -1830,6 +1833,9 @@ ledger's unit tests, a unit test there has its control registered from the same 
 targets.
 
 ## R-202 — A surviving mutant fails the per-PR job unless it is a listed, justified equivalent *(closes RQ-139)*
+*Refined by R-903 (8 Nov 2026: a listed equivalent mutant is skipped up front, not run and filtered; the nightly still runs it).*
+*Amended in part by R-904, R-905 and R-908 (8 Nov 2026: there is no per-PR mutants job; a survivor not on the equivalents list files a task automatically and never makes `main` red).*
+*Still in force: the checked-in list of equivalent mutants, each entry with a one-line justification the code and qa reviewers approve, a survivor not on it filing a task (R-905); a listed mutant skipped up front in the in-diff run and run by the nightly (R-903).*
 *26 Sep 2026 · applied in TASK-M0-04*
 
 Asked in RQ-139, the human chose "Fail; list justified ones": the per-PR `cargo mutants --in-diff` job goes red on
@@ -3089,8 +3095,8 @@ change. Test infra: the new tests build their own one-case suite in a temp dir (
 
 ## R-292 — Forward lines on amended rulings, a generated CURRENT_RULES.md, and a review queue of open entries only
 *Amended by R-293.*
-*Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it
-shows the rest (R-293).*
+*Amended in part by R-906 (8 Nov 2026: `plan/CURRENT_RULES.md` is generated and not committed; `check_plan.py` fails if it can't be built, not if a committed copy is stale; built by #451).*
+*Still in force: all six items and their Applied choices, except which rulings CURRENT_RULES.md leaves out and how it shows the rest (R-293), and item 3's committed, stale-checked file (R-906).*
 *30 Sep 2026 · applied in decisions.md, REVIEW_QUEUE.md, docs/archive/review_queue/, plan/check_plan.py, plan/tools/,
 plan/CURRENT_RULES.md and CLAUDE.md*
 
@@ -3448,8 +3454,8 @@ caches. The ten `v0-rust-*` entries then present were all in current use by PR #
 
 ## R-302 — Per-PR mutation runs are sharded across parallel CI jobs; the nightly full run is the backstop *(closes RQ-176; amends R-196)*
 *Amended by R-376.*
-*Still in force: all of it; R-376 confirms the pair at the M0 gate: n = 8 shards and 300 minutes per shard, a ceiling
-for unusually large diffs, not a target.*
+*Amended in part by R-904 and R-908 (8 Nov 2026: the sharded in-diff run leaves the pull-request path; the nightly full run stays the backstop).*
+*Still in force: the in-diff run sharded across parallel CI jobs, n = 8 shards of 300 minutes each, a ceiling, not a target (R-376), now off the pull-request path (R-908, R-909); the nightly full run the backstop.*
 *30 Sep 2026 · applied in REQ-VAL-148, REQ-VAL-149 and TASK-M0-23 (PR #65)*
 
 "RQ-176, ahead of #65's proposal (R-302): per-PR mutation runs are sharded across parallel CI jobs (cargo mutants
@@ -3504,11 +3510,8 @@ for its merge-ready run).*
 file under `crates/`).*
 *Amended in part by R-678 (3 Nov 2026: a head that is not merge-ready passes "not applicable"; a merge-ready head once
 its run finds no mutant).*
-*Still in force: all of it but the per-shard value and when `mutants-check` passes: n = 8 shards stands, confirmed, and
-R-376 replaces 120 minutes per shard with 300, a ceiling for unusually large diffs, not a target; items 10–13, the
-required `mutants-check` and the comment-width nit stand; `mutants-check` reports on every pull request event (R-678),
-passing at once, "not applicable", on a head whose change has no `.rs` file under `crates/` (R-677) or that is not
-merge-ready, and on a merge-ready head once its merge-ready run finds no mutant (R-676, R-678).*
+*Amended in part by R-907 and R-908 (8 Nov 2026: `mutants-check` leaves the required checks with the per-PR mutants run; the owner changes branch protection, R-909).*
+*Still in force: all of it but the per-shard value, when `mutants-check` passes and its place among the required checks: n = 8 shards stands, confirmed, and R-376 replaces 120 minutes per shard with 300, a ceiling for unusually large diffs, not a target; items 10–13 and the comment-width nit stand; `mutants-check` reports on every pull request event (R-678), passing at once, "not applicable", on a head whose change has no `.rs` file under `crates/` (R-677) or that is not merge-ready, and on a merge-ready head once its merge-ready run finds no mutant (R-676, R-678), until the pull-request tier's restructure takes it out of the required checks (R-907, R-908, R-909).*
 *30 Sep 2026 · applied in PR #65 (TASK-M0-23): `.github/workflows/mutants.yml` and `plan/HUMAN_SETUP.md` §2*
 
 "#65 (R-305):
@@ -4344,10 +4347,8 @@ its installer's current release is used. A cargo tool CI adds later other than t
 ## R-348 — Mutants runs get a per-mutant timeout and a per-process memory cap on test processes; both values are calibrated
 *Amended by R-352 and R-376.*
 *Amended in part by R-712 (5 Nov 2026: the per-mutant timeout is about 3× the baseline's test time, in place of 2.0×).*
-*Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on
-macOS a local run gets the per-mutant timeout only, and CI's Linux runners enforce both caps. The per-mutant timeout is
-about 3× the baseline's test time (R-712) with R-376's 60 s floor (REQ-VAL-180), and R-376 confirms
-the memory cap at 8 GiB, set by `prlimit --as` with `--core=1` (REQ-VAL-181).*
+*Amended in part by R-903 (8 Nov 2026: the per-mutant timeout becomes each test's own limit, nextest's terminate-after at 3 times that test's measured baseline, with named overrides for known-slow tests).*
+*Still in force: all of it; R-352 accepts its items applied per R-204 and settles how a local run applies the caps: on macOS a local run gets the timeout only, and CI's Linux runners enforce both caps. The timeout is a per-test limit at about 3× each test's measured baseline (R-712, R-903), whether R-376's 60 s floor applies per test stated with its values (R-903; REQ-VAL-180), and R-376 confirms the memory cap at 8 GiB, set by `prlimit --as` with `--core=1` (REQ-VAL-181).*
 *1 Oct 2026 · applied in REQ-VAL-179, REQ-VAL-180 and REQ-VAL-181 (new), TASK-M0-49 (new) and TASK-M0-19*
 
 The human's message of 1 Oct 2026 numbered its first two rulings R-347 and R-348. R-347 was already taken (it closes
@@ -5692,9 +5693,8 @@ on their measured cost, counted each run, under a 330-minute step limit).*
 *Amended in part by R-712 (5 Nov 2026: REQ-VAL-180's per-mutant timeout is about 3 times the measured baseline test time,
 in place of 2.0 times).*
 *Refined by R-857 (7 Nov 2026: a change of REQ-VAL-149's shard count decided by measurement is two-way under R-812's CI rider; the 8 shards stand until one).*
-*Still in force: all of it but its note on the nightly full run's shards and REQ-VAL-180's multiplier: the other confirmed
-values stand, REQ-VAL-149's 8 shards × 300 min for the per-PR run among them, and REQ-VAL-180's 60 s floor; R-402 sizes
-the nightly full run's shards and gives its step a 330-minute limit; R-712 sets the multiplier.*
+*Amended in part by R-907 and R-908 (8 Nov 2026: REQ-VAL-149's 8 shards × 300 min size the in-diff run, now off the pull-request path).*
+*Still in force: all of it but its note on the nightly full run's shards and REQ-VAL-180's multiplier: the other confirmed values stand, REQ-VAL-149's 8 shards × 300 min for the in-diff run among them, now off the pull-request path (R-907, R-908), and REQ-VAL-180's 60 s floor, per test as R-903's values state; R-402 sizes the nightly full run's shards and gives its step a 330-minute limit; R-712 sets the multiplier.*
 *3 Oct 2026 · applied in the six requirements (reqio), `.github/workflows/mutants.yml`, `.github/workflows/nightly.yml`,
 `.cargo/mutants.toml`, `crates/validation/src/spawn.rs`, `crates/validation/src/prop.rs`, `xtask/src/golden.rs`,
 `fixtures/golden/BASELINES.md`, the forward lines of the rulings it amends, and `docs/archive/review_queue/M0.md`
@@ -7296,8 +7296,8 @@ Changes REQ-TOOL-160's statement, verify, rulings, sources and note; adds no req
 ## R-402 — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: each package's mutants dealt round-robin into shards sized on their measured cost, counted each run *(amends R-376 as it applies to the nightly full run's shards)*
 *Amended in part by R-712 (5 Nov 2026: REQ-VAL-180's multiplier is about 3 times, in place of 2.0 times, for a nightly
 shard too).*
-*Still in force: all of it, a shard's baseline running that package's tests alone, so that the timeout is the package's
-own, at R-712's multiplier.*
+*Amended in part by R-906 (8 Nov 2026: the nightly run is incremental: a mutant whose fingerprint of its crate's source and tests is unchanged since the last completed run keeps its outcome, and a 7-night rotation re-tests every mutant weekly).*
+*Still in force: all of it, a shard's baseline running that package's tests alone, so that the limits are the package's own, at R-712's multiplier per test (R-903); the shards deal the night's changed and rotated mutants (R-906).*
 *9 Oct 2026 · applied in `.github/workflows/nightly.yml` (its `concurrency` group and jobs `mutants-plan`, `mutants`
 and `mutants-report`), `xtask/tests/qa_TASK-M0-19.rs` (`check_mutants`, a ruling-forced qa-file change), REQ-VAL-150
 (reqio), R-376's forward lines and `plan/rule_groups.yaml`*
@@ -7935,6 +7935,8 @@ option).*
 one-hemisphere toggle, go: the shape sphere is the whole sphere, with no hemisphere mode).*
 *Amended in part by R-665 (31 Oct 2026; a named exception of measure zero on a tilted shape sphere, the lines where a
 pole map's image keeps `d`, each pixel counted; closes RQ-634).*
+*Read with R-874 (8 Nov 2026: the full count is the default statistic; "mirror pairs counted once" is an optional
+statistic beside it, off by default, stated wherever used, built by TASK-M8-120; RQ-739 closed).*
 *Still in force: all of it but B1 as the default, which is the linear option's rule (R-471, R-506), the shape
 sphere's one-hemisphere case and 2-to-1 fold (R-544), and R-665's named exception; the counting and its statistics are
 unchanged (R-470).*
@@ -14118,10 +14120,14 @@ as R-554 L5's `p_λ`: the mass simplex's `ν₀`, a rest start's four momentum c
 *Amended in part by R-866 (8 Nov 2026; J7: under a lock the tilt turns about the pin, set at the clicked pixel and in
 general off the view's centre, so the pinned pixel stays fixed on screen; TASK-M8-125 builds it on curved charts, exact
 or saying why).*
+*Amended in part by R-899 (8 Nov 2026; the chart-path brief's Q5 (a), untilt (a1): a pivot record in the view,
+stored as the pinned state, so the pin is exact on tilted or zoomed curved charts, the untilt re-basing energy once,
+shown; TASK-M8-48 builds it).*
 *Still in force: all of it but T4's proposal and J3's meanwhile, which R-507 replaces; R-513 says how J9's
 composition runs into the saved target; R-554 adds the physical `p_λ` targets, and R-633 adds J1's principle for the
 charts that hold a block by a physical construction, J2's latent-control rule holding for every other target; J7's
-"the locked IC fixed under a tilt" holds about the pin, not the view's centre (R-866).*
+"the locked IC fixed under a tilt" holds about the pin, not the view's centre (R-866); a curved chart's tilt under a
+lock turns about the view's pivot record (R-899).*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (a paragraph added,
 "Tilt on every chart"), § "Directions are axis kinds — the unifying rule" (a paragraph added, the curve-axis lock rule
 as it applies to GUI tilt), § "What the GPU knows about all of this: nothing" (a sentence) and § "Part 5 —
@@ -20705,8 +20711,12 @@ Adds REQ-COL-136 to REQ-COL-138; amends REQ-COL-129, REQ-COL-130, REQ-GUI-337, R
 *Extended by R-854 (7 Nov 2026: the owner's symmetry rule carries "no fold" from the shape sphere to every chart and trajectory display; R-853 and R-855 read it, the filter a declared optional view).*
 *Amended in part by R-865 (8 Nov 2026, conditionally: once TASK-M2-57 has passed the owner's bitwise check and merged,
 every chart uses one decode path, so the shape sphere's separate path, its skip of the mirror step, goes).*
-*Still in force: all of it; once TASK-M2-57 merges, all of it but the separate decode path, the whole sphere and every
-pixel its own system standing.*
+*Amended in part by R-878 (8 Nov 2026; RQ-738 conflict 1's reading held, the owner's: "no hemisphere toggle" is
+read as no hemisphere chart; the symmetry filter of R-855, a display option after rendering, may show one hemisphere
+as a view).*
+*Still in force: all of it, read with R-878: the chart is the whole sphere and nothing is removed, the filter only
+hiding a declared partner as a view; once TASK-M2-57 merges, all of it but the separate decode path, the whole sphere and
+every pixel its own system standing.*
 *21 Oct 2026 · applied in `docs/incoming/2026-10-21_shape_sphere_whole/` (the instruction as delivered, its two
 addenda, the plain summary's two versions, the reply, and `checks/r544_check.py`, the port's check),
 `docs/design/principia_chart_reference.md` § "3. Shape-sphere chart `(θ, φ)`" (the held values), § "3.3 The chart map"
@@ -24768,7 +24778,11 @@ REQ-GUI-102 (statement, verify, rulings, source, note).
 
 ## R-576 — Easing is set per segment, between keyframes: the spec object carries one segment between each pair of neighbouring keyframes, each with its own easing curve and its transition at a chart change; the curves offered and the playhead policies' semantics are a definition *(amends R-520 as to whose easing curve gives a segment's progress; amends REQ-TOOL-076)*
 *Amended in part by R-850 (7 Nov 2026; RQ-721 (a), amended: a segment's transition at a chart change may also be a morph, live and in export, a new chart-change segment defaulting to morph where the ends allow).*
-*Still in force: all of it, cut and dissolve still offered, old specs untouched; a morph joins them at a chart change (R-850).*
+*Amended in part by R-901 (8 Nov 2026: easing and the path curve are a property of each path segment, shared by
+live morphs, saved paths and export; where a keyframe pair is joined by several path segments, each carries its own
+timing and the Sequence segment's easing is theirs, concatenated).*
+*Still in force: all of it, cut and dissolve still offered, old specs untouched; a morph joins them at a chart change
+(R-850); a segment's easing is its path segments' timing where it holds several (R-901).*
 *21 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
 (retained)" (the spec object's bullet and R-520's bullet, each with its earlier words kept),
 `docs/design/principia_sequence.md` (new, §3.4), `docs/gui/principia_render_gui_spec.md` § "G9a. Sequence · Spotlights
@@ -29913,9 +29927,8 @@ Changes REQ-VAL-148 (source, rulings, note).
 passed by its job, not posted).*
 *Refined by R-684 (3 Nov 2026: tier (a)'s "full CI" on a code head reads R-684's two tiers, full on a merge candidate and `main`, quick on any other head; the classifier is unchanged).*
 *Amended in part by R-790 (4 Nov 2026: `.claude/` is tier (c), docs, no longer an unnamed path that runs full CI).*
-*Still in force: all of it, the `mutants-check` of a head with no `.rs` file under `crates/` reported passed at once,
-"not applicable", by `mutants.yml`'s job (R-678) rather than posted, tier (a) reading R-684's two code tiers, and
-`.claude/` in tier (c), docs (R-790), rather than an unnamed path.*
+*Amended in part by R-909 (9 Nov 2026: a head that changes `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` also runs the process tests; tier (a)'s code tiers read R-909's pull-request tier).*
+*Still in force: all of it, the `mutants-check` of a head with no `.rs` file under `crates/` reported passed at once, "not applicable", by `mutants.yml`'s job (R-678) rather than posted, while `mutants-check` runs; tier (a) reading R-909's pull-request tier in place of R-684's two code tiers; a head of tier (b) or (c) running the process tests where R-909's paths say; and `.claude/` in tier (c), docs (R-790), rather than an unnamed path.*
 *2 Nov 2026 · the owner's message of that day, item 3, and his two replies on `plan/requirements.yaml` later that day;
 applied in `scripts/ci_changes.sh`, `scripts/ci_req_fields.py`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`,
@@ -30048,6 +30061,8 @@ R-677 is in the "ci" group of `plan/rule_groups.yaml`.
 Changes REQ-VAL-148 (source, rulings, note) and REQ-SYS-067 (source, rulings, note).
 
 ## R-678 — `mutants-check` is a job of every run of `mutants.yml`, never a check run posted through the Checks API: every pull-request event and label change reports it, the merge-ready run with its verdict, a head with no `.rs` file under `crates/` or not merge-ready passed as "not applicable", and another label's change on a merge-ready head with that head's merge-ready verdict; a test checks that every required check reports on every path *(amends R-676, R-677 and R-305)*
+*Amended in part by R-907 and R-908 (8 Nov 2026: `mutants-check` leaves the required checks once the pull-request tier is restructured; the owner changes branch protection, R-909).*
+*Still in force: all of it while `mutants.yml` runs on pull requests: `mutants-check` a job of every run, never a posted check run; and the test that every required check reports on every path, for the required checks R-909's model names.*
 *3 Nov 2026 · the owner's two messages of that day; applied in `.github/workflows/mutants.yml`,
 `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`, `xtask/tests/mutants_no_mutant.rs`, `plan/OPERATIONS.md`,
 `plan/HUMAN_SETUP.md` §2, REQ-VAL-148's note and `plan/rule_groups.yaml`*
@@ -30439,6 +30454,9 @@ row to a target, whichever task takes it.
 R-680 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-681 — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)*
+*Refined by R-904 (8 Nov 2026: a slow-tier test failing on `main` is a red `main`).*
+*Amended in part by R-907 (8 Nov 2026: a red `main` is a correctness failure on `main`, physics, validation, bit-for-bit or golden; any other failure there files a top-priority task without freezing pull-request work).*
+*Still in force: all of it, a red `main` read as a correctness failure there (R-907, R-909): while it lasts, or while a required check is stuck, no other pull request is opened or updated and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is re-run alone.*
 *3 Nov 2026 · the owner's three messages of that day on `main`'s red `xtask-ci` and the stuck `mutants-check`; ported
 3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph and step 6's pointer) and § "Autonomy (R-369)" (a
 line), R-369's and R-633's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
@@ -30514,8 +30532,8 @@ R-682 is in the "process" group of `plan/rule_groups.yaml`.
 *Amended in part by R-684 (3 Nov 2026: steps (2) and (4) are ruled, still in that order after step (1): step (2)'s
 quick and full tiers by R-684's part (A), step (4)'s cache by its part (B), R-656's approved bound applied to R-285,
 built with `actions/cache` or `rust-cache` (target only), not sccache).*
-*Still in force: all of it; the series, its order and its before and after numbers; R-285's wording still comes with
-step (4)'s pull request.*
+*Refined by R-906 (8 Nov 2026: paid larger runners, the question this ruling left open: no, the owner's decision).*
+*Still in force: all of it; the series, its order and its before and after numbers; R-285's wording still comes with step (4)'s pull request; paid larger runners not taken (R-906).*
 *3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/rule_groups.yaml` and
 `plan/section_notes.yaml`; changes no requirement and no ruling in force*
 
@@ -30554,6 +30572,8 @@ not sccache, so R-666 stands; applied at step (4)'s pull request, R-285 unedited
 R-683 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-684 — CI's two code tiers: full CI on every merge-candidate head, the one carrying the `merge-ready` label, and on every push to `main`; a quick tier on every other pull-request head (fmt, clippy, build, and the tests of the changed crates and their reverse dependencies), each full-only required check posted pending, never skipped-as-success; R-677's classifier first; done as R-683's step (2), and R-656's bounded target cache, without sccache, as its step (4) *(amends R-110, R-177 and R-235; rules R-676's tiers and R-683's steps (2) and (4))*
+*Amended in part by R-904, R-905, R-907, R-908 and R-909 (8 and 9 Nov 2026: the two code tiers give way to R-909's model, a required pull-request tier (fmt, Clippy, the build, the product tests of the changed crates and their reverse dependencies without the slow tier or the in-depth GPU tests, a lavapipe GPU smoke set, reviews) and an advisory full tier on each merge to `main`, with no full tier on the merge-candidate head).*
+*Still in force: R-677's classifier first; every required check reporting under its own name on every path, never skipped-as-success; part (B)'s cache. Its tiers read as R-909's model has them.*
 *3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in the forward lines of R-110, R-177, R-235,
 R-676, R-677 and R-683, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement here; built with R-683's
 steps (2) and (4)*
@@ -30951,7 +30971,10 @@ Changes REQ-VAL-319 (statement, verify, rulings, source, note).
 *Refined by R-709 (4 Nov 2026: a held energy's warp coordinate past `t < 0`, if the implementer confirms it arises, clamps at `t = 0`).*
 *Amended in part by R-720 (5 Nov 2026: "tilted in their warp coordinate" is narrowed to held `K` only; the held `L_z` tilts and slices by value, `L_z = L_z0 + d`).*
 *Refined by R-817 (7 Nov 2026; RQ-700 (b): on a virial axis with `Q₀ > 0` the floor sits under the rise only) and R-833 (7 Nov 2026; RQ-710 (c): `Φ_θ,L_z`'s held `K` warp takes a `K_max` and `γ_K` of its own, a calibration).*
-*Still in force: all of it, but that a held `L_z` tilts in a warp coordinate, which R-720 narrows away.*
+*Refined by R-876 (8 Nov 2026; RQ-740: "every pixel is a system" allows an f32 chart to refuse a pixel inside the
+float-wide band at the warp's floor, the refusal labelled as rounding; the edge walk repeated on the GPU, TASK-M4-06).*
+*Still in force: all of it, but that a held `L_z` tilts in a warp coordinate, which R-720 narrows away; read with R-876
+for the float-wide band at f32.*
 *4 Nov 2026 · the owner's ruling of that day; applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid" and § "4.5 The Burrau-family chart maps", R-471's, R-508's and R-633's forward lines, `docs/archive/review_queue/M0.md` (RQ-678, moved with its ruling), `REVIEW_QUEUE.md` (RQ-699, new), REQ-CHART-061, REQ-CHART-062 and REQ-CHART-067 (reqio), TASK-M2-38 and TASK-M2-52, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-52, and by TASK-M2-37 for the single energy axis*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -31099,7 +31122,9 @@ Changes REQ-SYS-065 and REQ-VAL-099 (statement, verify, source, rulings, note).
 
 ## R-712 — The per-mutant timeout is set from the measured baseline test time, at about 3 times it; 8 shards are kept; a timed-out mutant counts as caught and is listed; #360's 135 unreached mutants go to the nightly run, and the same rule applies to #387 if it hits the limit *(amends R-348, R-376 and R-402 for REQ-VAL-180)*
 *Refined by R-857 (7 Nov 2026: its 8 shards may change by measurement, a two-way door under R-812's CI rider).*
-*Still in force: all of it, the 8 shards until a measured change (R-857).*
+*Amended in part by R-903 (8 Nov 2026: the baseline is each test's own, a per-test limit in a nextest mutants profile at 3 times it with named overrides for known-slow tests, in place of the whole suite's).*
+*Refined by R-906 (8 Nov 2026: a killed test is listed as "timed out (not a survivor)"; the baseline runs with no kill limit; the nightly and local runs take the same limits).*
+*Still in force: its multiplier, about 3 times, now per test (R-903); a timeout caught and listed (R-906); the 8 shards until a measured change (R-857). Not its one timeout per run, nor its applied form for nightly and local runs (R-903, R-906).*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-348, R-376 and R-402, REQ-VAL-180 (reqio)
 and `plan/rule_groups.yaml`; built by #415*
 
@@ -31242,6 +31267,8 @@ The owner's words, 4 Nov 2026, verbatim:
 R-717 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-718 — Generated plan files are not committed if nothing needs them in git; otherwise they are marked in `.gitattributes` and conflicts are resolved by regenerating, never by hand, with a check that the committed copy matches a fresh regeneration; lands in `plan/OPERATIONS.md` § "Merging"
+*Refined by R-906 (8 Nov 2026: generated plan files stop being committed, CI regenerating and checking them; which files leave git, and the treatment of a generated block inside a hand-written file, are #451's).*
+*Still in force: all of it.*
 *4 Nov 2026 · the owner's order of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -32253,6 +32280,11 @@ R-848 is in the "physics" group of `plan/rule_groups.yaml`.
 ## R-849 — A typed combination with no registered inverse gets a general numerical solve on the CPU, recording its branch rule, marking its seams and labelled CPU-only; and under the lock a chart path never jumps: the anchor slides continuously to its nearest point in a constrained chart *(closes RQ-733; on RQ-721, closed by R-850)*
 *Read with R-863 (8 Nov 2026: the owner's build order puts the based morph and then this sliding anchor in stage 2,
 TASK-M8-117) and R-864 (8 Nov 2026: the chart-path work is one object, special cases named families of it).*
+*8 Nov 2026, the owner's message on easing and the time axis (R-901), restating this ruling's rider: "Time-axis
+charts: the RQ-721 rider stands — under a lock the anchor slides, except time-axis → IC-only charts, which keep a
+labelled jump. Name this in the sketch." No new ruling: it is this one.*
+*Read with R-902 (8 Nov 2026: the lock is the path's; any locked path, blend segments and chart switches included,
+slides per this rider where the target can't hold the pinned state).*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-733 moved), REQ-CHART-145 (reqio, new), TASK-M8-102, TASK-M8-117, `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 adds REQ-CHART-145*
 *Also applied 7 Nov 2026, from Codex's finding on PR #443: REQ-CHART-115 (reqio), the sliding anchor in place of `anchor not in B`, REQ-CHART-146 (reqio, new), "nearest" as a definition (R-72), and TASK-M8-117's acceptance.*
@@ -32611,9 +32643,8 @@ R-858 is in the "design" group of `plan/rule_groups.yaml`.
 the path-cover and time-column benchmarks stay as named measurements, never required checks).*
 *Corrected in part by R-861 (8 Nov 2026, RQ-743: the 7 Nov order's "push trigger" was an error; the comparison starts
 by `workflow_dispatch` on the task branch, the runner's security rules unchanged).*
-*Still in force: all of it, the owner's words and the 7 Nov order quoted as given; the order's "via push trigger" reads
-as R-861 corrects it, and the list of what the runner may run is not exhaustive (R-860). Its "Held for the owner" items
-are answered by R-860 and R-861.*
+*Amended in part by R-905 (8 Nov 2026: heavy work, the slow tier and the mutation run, may run on the Windows runner on `main` and nightly, advisory and never required, where R-905's placement rule puts it, after Windows containment, the 8 GiB cap and the 36-hour no-run alert; R-909's model governs).*
+*Still in force: all of it, the owner's words and the 7 Nov order quoted as given; the order's "via push trigger" reads as R-861 corrects it, and the list of what the runner may run is not exhaustive (R-860). Its "Held for the owner" items are answered by R-860 and R-861. Its "NOT approved yet" for heavy work gives way to R-905's placement rule; nothing on the runner becomes a required check.*
 *8 Nov 2026 · the owner's ruling of that day, pasted as their own; applied in the forward lines of R-186, R-656 and
 R-711, `docs/contracts/principia_parity_contract.md` § 6, `REVIEW_QUEUE.md` (RQ-742 and RQ-743, new), `plan/OPERATIONS.md`
 § "Metal and perf (Mac only)" and § "The Windows runner's work (R-859)" (new), `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md`,
@@ -32815,6 +32846,12 @@ R-862 is in the "design" group of `plan/rule_groups.yaml`.
 Adds REQ-SYS-097 and REQ-TOOL-226; changes no existing requirement.
 
 ## R-863 — When the chart-composition design's tasks are released, they are built in five stages, each merging only with the previous stage's tests green: the path object with today's operations bitwise through it; locked paths; the primitive registry and composed axes; morph families, easing and Sequence segments; time-axis charts and the symmetry filter *(the build order of PR #422's tasks; refines no ruling)*
+*Amended in part by R-897 (8 Nov 2026; RQ-749 (a): stage 2's test reads the recorded state at the pin, not the
+view's centre, the slide's follower and the area factor taken at the pin).*
+*Refined by R-894 (8 Nov 2026: a consolidation step, TASK-M8-129, sits after stage 1 and before stage 2) and R-873
+(8 Nov 2026; RQ-744: the leftovers placed, milestones kept and the order kept by dispatch).*
+*Still in force: all of it, stage 2's "centre IC" read as the recorded state at the pin (R-897), with R-894's step
+between stages 1 and 2.*
 *8 Nov 2026 · the owner's order of that day, pasted as their own; applied in `docs/design/principia_chart_composition.md`
 § 15 and § 17, `REVIEW_QUEUE.md` (RQ-744, new), `plan/tasks.yaml` and the files of TASK-M4-32 to TASK-M4-34,
 TASK-M4-37, TASK-M7-72, TASK-M8-100 to TASK-M8-120 and TASK-M8-124 (new), REQ-CHART-147 (reqio, new) and
@@ -32881,6 +32918,13 @@ R-863 is in the "process" group of `plan/rule_groups.yaml`.
 Adds REQ-CHART-147; changes no existing requirement.
 
 ## R-864 — The chart-path work is one object: core types designed first as one module, a type sketch with a one-page rationale reviewed by physics and code and brought to the owner before any implementation; today's operations re-expressed as named families of it and their old routes deleted; bitwise reproduction first; special cases are named families, never if-branches; the kernel/engine split stays; restructuring `engine/nav`, `engine/lock.rs` and `engine/chart_authoring` is approved *(the architecture of PR #422's chart-path work; refines no ruling on `main`)*
+*Refined by R-894 (8 Nov 2026: bit-for-bit reproduction is stage 1's safety net, not a permanent rule to keep
+per-route arithmetic; after stage 1 the leaves consolidate, a rounding-only difference resolved to one canonical formula
+with a documented bit change and a conversion test).*
+*Refined by R-900 (8 Nov 2026: stage 2's saved-file rewrite is handled as
+RQ-750, a versioned format converted on load, a conversion test in place of the bitwise check, golden hashes
+regenerated with a record of why).*
+*Still in force: all of it, "bitwise reproduction first" holding for stage 1 and read with R-894 and R-900 after it.*
 *8 Nov 2026 · the owner's rule of that day, pasted as their own; applied in `docs/design/principia_chart_composition.md`
 § 17 and its status block, the "Read with" lines of R-849 and R-850, TASK-M8-124 (new), REQ-CHART-147 (reqio, new)
 and `plan/rule_groups.yaml`; built by TASK-M8-124 and the tasks after it*
@@ -32949,6 +32993,13 @@ R-864 is in the "design" group of `plan/rule_groups.yaml`.
 Adds REQ-CHART-147 (with R-863); changes no existing requirement.
 
 ## R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(on RQ-739, which stays open)*
+*Amended in part by R-898 (8 Nov 2026; RQ-750 (a) + (c): latent `β` a periodic angle over the full circle, every
+stored latent view, saved chart and golden converted once; for this change the bitwise condition is replaced by a
+conversion test, each converted value decoding to the same system to rounding precision, the goldens' outcome classes
+identical and the goldens regenerated with a record of why; the saved-file format versioned, old files converted on
+load).*
+*Still in force: all of it but the bitwise condition, which R-898's conversion test replaces for this change; the
+removal, its forward lines on R-82, R-438 and R-544 and its conditional notes standing.*
 *8 Nov 2026 · the owner's reply 1 to the code map of that day, pasted as their own; applied in
 `REVIEW_QUEUE.md` (RQ-739, a dated line, open on its item 3; RQ-750, new), the mirror-step markers of `docs/contracts/principia_canonical_spec.md`
 § 3, `docs/contracts/principia_chart_decoder_contract.md` Part 2 and Part 5,
@@ -33222,3 +33273,1220 @@ don't name it, so it joins RQ-744 (C)'s list.
 R-870 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-GUI-426, REQ-GUI-427 and REQ-GUI-428; changes no existing requirement.
+
+## R-871 — Region D's chart is the plane, unmasked: the full disc rendered literally, every mirror and body swap declared, so the symmetry filter leaves exactly region D with no mask, on by default for the paper-frame presets only; its check, the filtered area 0.307 at equal masses and rest *(closes RQ-714; on RQ-738, which stays open)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-714 moved; RQ-738, a
+dated line), `docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` (status, § 8.4),
+REQ-CHART-100 and REQ-CHART-138 (reqio), TASK-M4-34, TASK-M8-120, TASK-M4-37 and `plan/rule_groups.yaml`;
+changes REQ-CHART-100 and REQ-CHART-138*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-714: (b), with RQ-738 conflict 3 read as its (c): the full disc rendered literally, every mirror and body swap declared, so the symmetry filter leaves exactly region D with no mask. Filter on by default for the paper-frame presets only, as R-855 says. Check: the filtered area is 0.307 at equal masses and rest.
+
+*What it decides:* RQ-714's outside, the one part left open after R-845 (the horizon) and R-851 (the velocities):
+option (b), the plane unmasked, D drawn as a contour and the statistics filtered, with no exception to the rule that a
+pixel inside `[0,1]²` is a system. "Full disc" is read as RQ-738's conflict 3, option (c), in that option's words: "'Full
+disc' read literally, any window holding the lens, the mirror and all three swaps declared, as the order's 'body-label
+swaps where the masses make them exact' allows: every pixel outside the lens has its partner in the domain, the filter
+gives exactly D with no mask, and the order's words hold as written." So:
+
+- **No mask is built,** in M4 or later: R-554's exception is not extended to region D, and the 12:16 reply's "outside
+  masked (a)" gives way to the owner's later filter order (R-855), as this answer says. The import's refusal of a point
+  outside eq. 8 stands (an import isn't a chart; RQ-738 conflict 2's reading held).
+- **The filter's default** is R-855's: on for the paper-frame presets only.
+- **The check, the owner's:** at equal masses and exact rest, the filter on the full disc leaves an area of 0.307, D's
+  own (eq. 8: `ξ ≥ 0`, `η ≥ 0`, `(ξ + ½)² + η² ≤ 1`). TASK-M8-120's acceptance carries it (REQ-CHART-138).
+- **Before the filter exists** (RQ-738 conflict 8's reading held, which R-878 makes the owner's): TASK-M4-34's preset
+  renders the full disc with D as a contour, and TASK-M4-06's golden reads `in_region_d`. TASK-M4-37 applies the edge
+  from TASK-M4-06 to TASK-M4-34 its Deliverables name for this ruling.
+- **Where the swaps aren't exact** (eq. 3's velocities, unequal masses), only the mirror holds; that is RQ-738's
+  conflicts 4 and 9, whose readings held R-878 keeps.
+
+R-871 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-872 — The 2 s start-up limit of the axis cap's criterion is the Mac's; issue #427 sets a Vulkan and Windows budget from its own measurements *(closes RQ-716)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-716 moved),
+`docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` (status), TASK-M4-37,
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-716: the 2 s start-up limit is the Mac's; #427 sets a Vulkan/Windows budget from its own measurements.
+
+*What it decides:* the part of RQ-716 that R-837 left open, in the owner's words: the design's C3 criterion, 2 s of
+start-up, is the Mac's number, unchanged, and it does not apply on Vulkan or Windows, where the gallery alone takes
+2.7 s. Issue #427 (the start-up object count) sets any Vulkan and Windows start-up budget, from its own measurements.
+R-837's cap of 4 baked entries stands on this reading, the one under which it passed; nothing is built differently.
+
+R-872 is in the "values" group of `plan/rule_groups.yaml`.
+
+## R-873 — The build order's leftovers: the milestones are kept and the order across them kept by dispatch; TASK-M8-106 is split, its stage-1 tests to TASK-M8-124; each unplaced task goes in the stage it serves, points of interest one task in stage 3; and the stage-1 path object depends on the Save view tasks *(closes RQ-744)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-744 moved),
+`docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` § 15, `plan/tasks.yaml`, the files of
+TASK-M4-32, TASK-M4-33, TASK-M4-34, TASK-M7-72, TASK-M8-102 to TASK-M8-107, TASK-M8-112, TASK-M8-117, TASK-M8-118,
+TASK-M8-122 to TASK-M8-124 and TASK-M8-126, REQ-CHART-113 and REQ-CHART-147 (reqio), `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes REQ-CHART-113 and REQ-CHART-147*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-744: (A) (b), keep the milestones, order kept by dispatch. (B) (a), split TASK-M8-106 as described. (C) place each unplaced task by the stage it serves, and TASK-M8-126 (points of interest) in stage 3 as one task. (E) (i).
+
+*What it decides,* part by part of the entry:
+
+- **(A) (b), "keep the milestones, order kept by dispatch".** TASK-M4-33 (the registry) and TASK-M4-34 (region D's pair)
+  stay in M4; TASK-M7-72 (contours of any primitive) stays in M7. The orchestrator releases a stage's M4 and M7 tasks only
+  once the previous stage has merged, not by edges, since an earlier milestone may not depend on M8 work.
+- **(B) (a), "split TASK-M8-106 as described".** TASK-M8-106 keeps only what is past stage 1, its re-timing, alignment
+  and export, a stage-4 task; REQ-CHART-113's tests (`path_tilt_bitwise`, `path_zoom_bitwise`, `path_lock_bitwise`,
+  `path_save_view_bitwise` and the rest) go to TASK-M8-124; and TASK-M8-117 depends on TASK-M8-124 and TASK-M2-23, not
+  on TASK-M8-106, so stage 2 no longer waits on stage 3. The line on blocks, which the entry left as the morph a based
+  morph needs "or one of stage 4's families", is built in stage 2 by TASK-M8-117, as the owner's Q9 (a) says (R-899).
+- **(C), "place each unplaced task by the stage it serves, and TASK-M8-126 (points of interest) in stage 3 as one task".**
+  By the stage each serves (applied per R-369, each named so it can be vetoed): TASK-M8-105 (chart paths in the
+  contracts) before stage 1, docs first, and TASK-M4-32 (the composition in the contracts) before stage 3, which its
+  edges already give; TASK-M8-102 (CPU batch), TASK-M8-103 (the builder's composition panels), TASK-M8-104 (1D charts),
+  TASK-M8-112 (paper frames as presets), TASK-M8-118 (hold `L_z`), TASK-M8-122 and TASK-M8-123 (the fixed-`k` and
+  scattering charts), TASK-M7-72 and TASK-M8-126 in stage 3, the primitive registry and composed axes they serve;
+  TASK-M8-107 (live paths, the blend entry) in stage 4, with the morph families. TASK-M8-126 is one task (Q6 (a), R-899).
+- **(D)** was moot before the report (R-849 gave the sliding anchor to TASK-M8-117).
+- **(E) (i).** TASK-M8-124 depends on TASK-M6-49 (Save view on the mock), TASK-M6-51 (a saved latent view tilted again)
+  and TASK-M8-48 (tilt, slice and Save view on the real engine), so stage 1's baseline covers their routes.
+
+*Applied per R-369:* the edges: TASK-M8-124 gains TASK-M6-49, TASK-M6-51, TASK-M8-48 and TASK-M8-105; TASK-M8-117 loses
+TASK-M8-106; TASK-M8-102, TASK-M8-103, TASK-M8-104 and TASK-M8-118 gain TASK-M8-117 (stage 2), as the other stage-3 tasks
+of M8 have it; TASK-M8-106 gains every stage-3 task of M8, as TASK-M8-108 has them, and so TASK-M8-107, behind it, sits
+in stage 4; TASK-M8-108 gains the stage-3 tasks it lacked; and TASK-M8-126 depends on TASK-M8-117 in place of
+TASK-M8-108, so it can sit in stage 3, its across-a-morph test run on stage 2's line on blocks. REQ-CHART-113 moves from
+TASK-M8-106 to TASK-M8-124. The consolidation task between stage 1 and stage 2 is R-894's.
+
+R-873 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-874 — The decoder's mirror step is removed, as R-865 has it; the full count is the default statistic, and "mirror pairs counted once" an optional statistic beside it, off by default, stated wherever used *(closes RQ-739)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-739 moved),
+`docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` (status), R-408's forward line,
+REQ-CHART-150 (reqio, new), TASK-M8-120, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-150*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-739: (a). Item 3: the full count is the default; "mirror pairs counted once" is an optional statistic beside it, off by default, stated wherever used.
+
+*What it decides:* RQ-739's option (a), confirming R-865 (the removal, built by TASK-M2-57 under RQ-750's answer,
+R-898), and the proposal's item 3, the one part R-865 left open: R-408's statistics keep the full count as the default,
+every start counted, the lower half of `β` included once the step goes; "mirror pairs counted once" is an optional
+statistic beside it, off by default, and wherever it is used it says so, in the legend and the export sidecar. It never
+drops a start (R-854).
+
+*Applied per R-369:* TASK-M8-120 (the symmetry filter) builds the optional statistic, since it is where a chart's mirror
+pairs are declared (REQ-CHART-135); REQ-CHART-150 is its requirement.
+
+R-874 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-875 — The acute-angle Burrau charts are re-expressed over the full acute range, both labellings of each shape shown, the leg swap shown once only by the symmetry filter; R-27's "shape only" fold charts give way *(closes RQ-745; amends R-27)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-745 moved),
+`docs/archive/review_queue/M0.md`, `docs/design/principia_chart_reference.md` § 4.5 (a dated line), R-27's forward and
+"Still in force" lines, REQ-CHART-151 (reqio, new), notes on REQ-CHART-024, REQ-CHART-025 and REQ-CHART-045 (reqio),
+TASK-M8-127 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-151, changes REQ-CHART-024,
+REQ-CHART-025 and REQ-CHART-045 (notes)*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-745: (b).
+
+*What it decides:* RQ-745's option (b), the owner's direction of 8 Nov (R-869) now ruled: the three acute-angle Burrau
+charts (`burrau_acute.rs`) are re-expressed as the full chart, `θ` over the whole acute range rather than folded at
+`π/4`, both labellings of each shape shown, and the leg swap (`θ` and `π/2 − θ`) shown once only when the symmetry
+filter (R-855, TASK-M8-120) is on. A new task, TASK-M8-127, builds it once the filter exists. The charts stay as built,
+labelled "shape only", until it merges.
+
+*What it amends:* **R-27** ("Shape only (the fold) and shape × labelling (the full range) are both kept"): the fold
+charts give way to the full range with the filter; the full-range `ν` charts R-27 keeps are unchanged. REQ-CHART-045,
+the acute-angle range `θ_min`, `θ_max`, a calibration confirmed at the M2 gate, now ranges within `(0, π/2)` once
+TASK-M8-127 merges; until then it stands within `(0, π/4]`, and the value comes back to the owner at the gate as the
+report said.
+
+R-875 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-876 — An f32 chart may refuse a pixel inside the float-wide band at the warp's floor, the refusal labelled as rounding; the edge walk is repeated on the GPU when the shader decodes these charts *(closes RQ-740; refines R-708)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-740 moved),
+`docs/archive/review_queue/M0.md`, `docs/design/principia_chart_reference.md` § 2.1 (a dated line), R-708's forward line,
+REQ-CHART-152 (reqio, new), TASK-M4-06, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-152*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-740: allow a refusal inside the float-wide band, labelled as rounding; repeat the edge walk on the GPU when the shader decodes these charts.
+
+*What it decides:* R-708's "every pixel is a system under every tilt" allows an f32 chart (`HeldLz`, `HeldK` and the
+Burrau charts R-708 covers) to refuse a pixel inside the band one float wide at the warp's floor, where f32 rounding, not
+the chart, decides; such a refusal is labelled as rounding, not drawn as the chart's edge. Nothing false is ever shown:
+the f32 view still accepts no pixel that isn't a system. When the shader decodes these charts, the edge walk measured on
+7 Nov is repeated on the GPU, its criterion written first (R-649).
+
+*Applied per R-369:* TASK-M4-06, which bakes every chart of the lowering appendix into the compute kernels, carries both:
+the label and the GPU edge walk (REQ-CHART-152).
+
+R-876 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-877 — A warped virial axis at a held `L_z ≠ 0` with `Q₀ > 0` is labelled `Q`, the ratio, the columns where `Q₀` is infeasible marked as the floor is, and the state's own ratio in the readout *(closes RQ-741)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-741 moved),
+`docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` (status), REQ-CHART-103 (reqio),
+TASK-M8-119 and `plan/rule_groups.yaml`; changes REQ-CHART-103*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-741: (a).
+
+*What it decides:* RQ-741's option (a): on a warped virial axis at a held `L_z ≠ 0` with an asked bottom `Q₀ > 0`, the
+axis is labelled `Q`, the ratio, with the columns where `Q₀` is infeasible (`Q_min(U) > Q₀`) marked, as the floor is, and
+the state's own ratio in the readout. At `Q₀ = 0` the label stays `Q above the floor` (R-817). TASK-M8-119 builds it.
+
+R-877 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-878 — The symmetry filter's conflicts keep their readings held, conflict 3 as the RQ-714 answer reads it; the model's correction items 2 to 9 are the owner's to correct, from a list sent to them *(on RQ-738, which stays open)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-738, a dated line),
+`docs/contracts/principia_chart_decoder_contract.md` (the shape sphere's statistics paragraph, conflict 1),
+`docs/design/principia_chart_composition.md` (status), R-544's forward line, TASK-M4-34, `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-738: the readings held stand for conflicts 1, 2 and 4 to 9; conflict 3 as in my RQ-714 answer. Items 2 to 9: send me the list and I'll correct the model.
+
+*What it decides:*
+
+- **The filter's conflicts 1, 2 and 4 to 9:** each "reading held" in the entry stands, now as the owner's. Among them:
+  conflict 1, R-544's words ("no hemisphere toggle") amended, the filter being such a toggle as a view, so the contract's
+  "The shape sphere has no one-hemisphere view (R-544)" now reads that the chart has none and the filter gives one as a
+  view, the old words kept as a "Was"; conflict 2, the import's refusal outside eq. 8 stands; conflict 6, the angle pair
+  and Parischewsky's pair keep `reduced domain`, with no filter; conflict 7, a filtered view's legend shares are those of
+  the computed chart, a paper's own fraction by `in_region_d`; conflict 8, TASK-M4-34's preset renders the window conflict
+  3 rules, D as a contour, until TASK-M8-120 lands, and TASK-M4-06's golden reads `in_region_d`; conflict 9, at unequal
+  masses a contour on the half the mirror leaves (design § 8.8). Conflict 4 and conflict 5 keep theirs likewise.
+- **Conflict 3:** as the RQ-714 answer reads it, its option (c) (R-871).
+- **The model's correction list, items 2 to 9:** the owner corrects the model; the orchestrator sends them the list
+  (done on 8 Nov), and the entry stays open on those items only. Two lines join that list from this PR's port (R-898,
+  R-899): the model's § 1 and Theorem 1's "`Z = R^8`" against R-898's periodic `z_β`, and the model's § 5 and § 7
+  snap-back ("Setting `δ ← 0` restores `φ(0) = a` exactly") against R-899's Q2 (a).
+
+*Why RQ-738 stays open:* the reply hands items 2 to 9 to the owner's own revision of the model, which hasn't come; the
+entry carries a dated line saying so.
+
+R-878 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-879 — Final-condition charts are built after the M8 charts, as a CPU batch chart on the default integrator, the round-trip miss measured per pixel and large misses masked; the standard size is kept at the chosen state, with a per-pixel horizon as a labelled exception for final-condition charts only; the rejection of "anything measured after `t = 0`" narrows to trajectory functionals and event reads *(closes RQ-734)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-734 moved),
+`docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` (status), `docs/contracts/principia_integrator_contract.md`
+Part 5 and `docs/contracts/principia_canonical_spec.md` § 1 (a dated line each, the single global horizon),
+REQ-CHART-153 and REQ-CHART-154 (reqio, new), TASK-M8-128 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds
+REQ-CHART-153 and REQ-CHART-154*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-734: build after the M8 charts, as a CPU batch chart, on the default integrator with the round-trip miss measured per pixel and large misses masked. Keep the standard size at the chosen state; since the rescale doesn't commute with the flow, this chart may use a per-pixel horizon, as a labelled exception for final-condition charts only. Narrow the "anything measured after t = 0" rejection to trajectory functionals and event reads.
+
+*What it decides,* question by question of the entry:
+
+- **Whether:** built, after the M8 charts, as a CPU batch chart (design § 10.3), by a new task, TASK-M8-128.
+- **The occupant:** the default integrator, as an approximate inverse (the entry's (a)): flip the momenta, integrate
+  forward `T`, flip back; the round-trip miss measured at each pixel and reported, and large misses masked. What
+  "large" is, is a value (R-71): proposed by TASK-M8-128 with its evidence, checked by the physics reviewer and confirmed
+  by the owner at the M8 gate (REQ-CHART-154).
+- **The gauge:** the standard size `I = 1` is kept at the chosen state (the entry's (a)). Since the rescale doesn't
+  commute with the flow, this chart may use a per-pixel horizon, labelled, as an exception for final-condition charts
+  only. Every other chart keeps the single global horizon of integrator contract Part 5 and canonical spec § 1, which
+  carry a dated line naming the exception.
+- **The mirror half:** as applied from R-853: a start found stays in the signed state.
+- **The rejection:** design § 3.1's "anything measured after `t = 0`" narrows to trajectory functionals and event reads,
+  so a state function at a fixed `T` can be an axis of this chart. TASK-M4-37 carries it into § 3.1's table.
+- **The check that conserved axes are `T`-independent** (R-852): TASK-M8-128's acceptance carries it.
+
+R-879 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-880 — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-577, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-577: defer:M3
+
+*What it decides:* the deferral, as it reads, restating R-795's and R-821's. Nothing is built, and R-637's leanings stay
+leanings.
+
+R-880 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-881 — GPU `sin` and `cos` near π/2 stay deferred to M4 *(defers RQ-629)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-629, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-629: defer:M4
+
+*What it decides:* the deferral, as it reads, restating R-796's and R-822's: option (b) is built at M4 by TASK-M4-27,
+option (c) ruled with RQ-687 on the cross-backend numbers.
+
+R-881 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-882 — The slider span of `ν₀`, the held `L_z` and the held `K` stays deferred to M8 *(defers RQ-679)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-679, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-679: defer:M8
+
+*What it decides:* the deferral, as it reads, restating R-807's and R-822's: to M8, the start of TASK-M8-48.
+
+R-882 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-883 — Whether the kernel takes its own f32 `sin` and `cos` stays deferred to M4 *(defers RQ-687)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-687, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-687: defer:M4
+
+*What it decides:* the deferral, as it reads, restating R-797's and R-822's: option (a) on M4's cross-backend
+measurement.
+
+R-883 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-884 — Paper frames: presets where the papers are read, each tested against its paper; each remaining gap stays unbuilt, its target "not scored" with the gap named *(closes RQ-729)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-729 moved),
+`docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` (status), TASK-M4-37,
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-729: (a).
+
+*What it decides:* RQ-729's option (a), as already applied meanwhile: presets where read, tested against the paper;
+each remaining gap of design § 20 stays unbuilt, and a target that needs it reads "not scored" with the gap named. No
+frame is guessed. TASK-M8-112 builds the presets; RQ-650's finding (Tanikawa & Mikkola 2008's printed `D11` is exactly
+`D₁₁ ∪ D₁₂`) is evidence for that entry, not a ruling on it. With RQ-731, this lets TASK-M4-37 proceed as far as its
+other waits allow.
+
+R-884 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-885 — V-11's prograde limit is read from eq. (11) as printed *(closes RQ-737)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-737 moved),
+`docs/archive/review_queue/M0.md`, REQ-VAL-330 (reqio, a note) and `plan/rule_groups.yaml`; changes REQ-VAL-330 (a
+note)*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-737: (a).
+
+*What it decides:* RQ-737's option (a): Mylläri et al. 2018's eq. (11) as printed, `f(0, 1) = 0.7`, which reproduces
+the paper's own figures, governs over the sentence "At the limit of ein = i = m3 = 0, f g = 1". Nothing is built: V-11
+stays parked by R-668 item 5, and its prograde number reads eq. (11) if it is ever unparked.
+
+R-885 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-886 — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-643, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-643: defer:M9
+
+*What it decides:* the deferral, as it reads, restating R-800's and R-823's; option (b) stays applied.
+
+R-886 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-887 — The rest of TASK-M9-01's gaps stay deferred to M9 *(defers RQ-681)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-681, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-681: defer:M9
+
+*What it decides:* the deferral, as it reads, restating R-794's and R-824's; what they ruled stays applied.
+
+R-887 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-888 — A saved preset's zoom row reads 1× at the saved view, so zoom is relative to what was saved *(closes RQ-711)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-711 moved),
+`docs/archive/review_queue/M0.md`, `docs/gui/principia_render_gui_spec.md` § G2, REQ-GUI-108 (reqio), TASK-M8-18,
+TASK-M4-37 and `plan/rule_groups.yaml`; changes REQ-GUI-108*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-711: the saved view itself reads 1x, so zoom is relative to what was saved.
+
+*What it decides:* the value R-820's option (a) left to be named: the scale the zoom row reads against for a preset
+whose chart is not two latent axes at one scale is the saved view itself. The saved triple `(z₀, q₁, q₂)` reads 1×,
+and zoom is relative to it. TASK-M8-18 builds it (REQ-GUI-108); region D's preset (TASK-M4-34) and the paper-frame
+presets (TASK-M8-112) read it for their home values.
+
+R-888 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-889 — The browser build gets a WASM CPU route too: numerical axes, unbaked closed forms and CPU-only morphs run as CPU batch in the engine's worker, labelled and not live *(closes RQ-735)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-735 moved),
+`docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` (status), REQ-CHART-155 (reqio, new),
+TASK-M8-102, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-155*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-735: (b).
+
+*What it decides:* RQ-735's option (b), R-571's "the whole native app" read for chart composition: in the browser,
+numerical axes, closed forms past the cap or unbaked, and morphs with a CPU-only end run as CPU batch in the engine's
+worker, the same Rust compiled to WebAssembly, labelled and not live, as natively. It adds a target and its tests, not
+a design. The thread count CPU batch gets in the browser is TASK-M8-96's measurement; whether a wasm f64 solve matches
+the native one bit for bit is measured and reported, and where it doesn't, a saved numerical chart reopens with its
+round trip intact and its pixels not bitwise (design § 7.5).
+
+*Applied per R-369:* TASK-M8-102 (CPU batch) builds the wasm target and its tests (REQ-CHART-155).
+
+R-889 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-890 — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-391, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-391: defer until the exporter is designed.
+
+*What it decides:* the deferral, as it reads, restating R-803's and R-825's.
+
+R-890 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-891 — REQ-VAL-326's fixed-`k` prescription is read from Tanikawa & Mikkola 2008, § 3.1 and § 4.2, not the 2015 paper, and TS-2's "virial ratio 0 to 0.7" is `k = T/|U|`, with `Q = 2k` *(closes RQ-731)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-731 moved),
+`docs/archive/review_queue/M0.md`, REQ-VAL-326 (reqio), TASK-M4-37 and `plan/rule_groups.yaml`; changes REQ-VAL-326*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-731: (a).
+
+*What it decides:* RQ-731's option (a), a record correction: REQ-VAL-326's pointer changes to Tanikawa & Mikkola 2008,
+§ 3.1 and § 4.2, and its "virial ratio 0 to 0.7" is noted as `k = T/|U|`, `Q = 2k`. TS-2 stays "not scored" until its
+chart exists (R-669, R-847). With RQ-729, this lets TASK-M4-37 proceed as far as its other waits allow.
+
+R-891 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-892 — The seven older plan lines that give `cargo test` two filters are rewritten to `cargo test -p <crate> -- <a> <b>` *(closes RQ-732)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-732 moved),
+`docs/archive/review_queue/M0.md`, TASK-M6-32 and TASK-M6-33 (acceptance), REQ-CHART-070, REQ-PAY-097, REQ-PAY-098 and
+REQ-GUI-178 (reqio, their verify details), `plan/reviewers/gui.md` (regenerated) and `plan/rule_groups.yaml`; changes
+REQ-CHART-070, REQ-PAY-097, REQ-PAY-098 and REQ-GUI-178*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-732: (a).
+
+*What it decides:* RQ-732's option (a), a record correction: the 2 task acceptance lines and the 4 verify details become
+the valid form, `cargo test -p <crate> -- <a> <b>`, and the fifth, `plan/reviewers/gui.md`, is regenerated. No test
+changes; the 36 valid lines stay as they are.
+
+R-892 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-893 — RQ-701 closes: R-818 ruled its form and R-833 its energy cap; the build is TASK-M8-48's *(closes RQ-701)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-701 moved),
+`docs/archive/review_queue/M0.md` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-701: close
+
+*What it decides:* RQ-701 is ruled in full, so it closes: R-818 gave its form (held `L_z` by value on the floor, held
+`K` on the warp line, both sliced by value) and R-833 the held `K` warp's `K_max` and `γ_K`, a calibration. The build
+is already written into TASK-M8-48. R-818's deferral to M8 is spent: nothing is left for the owner.
+
+R-893 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-894 — Right after stage 1 and before stage 2, a consolidation step collapses the chart-path leaves to one per operation: bitwise-equal pairs merged with no bit change, rounding-only differences resolved to one canonical formula with a documented bit change and a conversion test, the GUI routes thin input adapters, the same-frame slips fixed; bit-for-bit reproduction is stage 1's safety net, not a permanent rule; the dispatch classes sit in the GUI's `dispatch.rs`, the path in `chart_space` *(the report's D-43, which stands; refines R-863 and R-864)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026, its D-43 line and its "Consolidation" paragraph, and their
+later message of that day on the mid-morph tilt; applied in `docs/design/principia_chart_composition.md` § 15,
+the forward lines of R-863 and R-864, REQ-CHART-156 (reqio, new), TASK-M8-129 (new), TASK-M8-117, `plan/tasks.yaml`,
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-156*
+
+The owner's words (8 Nov 2026), verbatim, the D-43 line and the paragraph it points to:
+
+> D-43: stands, with the consolidation addition below.
+
+> Consolidation, added to the sketch: bit-for-bit reproduction is stage 1's safety net, not a permanent rule to keep per-route arithmetic. Right after stage 1, before stage 2, collapse route-leaves into one leaf per operation: one pan, one zoom, one tilt per R-474 map (each in its X = Y and X != Y forms), one slice, one lock, each cut kind once. Where a ≟ pair measures bitwise-equal under D2, merge with no bit change; where routes differ only in rounding, choose one canonical formula and accept a deliberate, documented bit change with a conversion test as for RQ-750. The GUI routes become thin input adapters (keys, panel, compass step, compass drag) feeding the same leaf. Fix the same-frame slips (D19, D23) in that step. State whether the four dispatch classes belong in chart_space or in the GUI's app layer calling it.
+
+and, in their later message of the same day:
+
+> Dispatch classes in crates/gui/src/dispatch.rs, path in chart_space: stands.
+
+*What it decides:* D-43, the chart-path brief's own decisions (D2, D16, D17, D19, D22 to D27), stands, with this step
+added to the sketch:
+
+- **Where.** A new task, TASK-M8-129, after stage 1's tasks (TASK-M8-124 and TASK-M8-125) and before every stage-2 task
+  (TASK-M8-117 depends on it).
+- **One leaf per operation,** as the owner lists them: one pan, one zoom, one tilt per R-474 map (each in its `X = Y`
+  and `X ≠ Y` forms), one slice, one lock, each cut kind once.
+- **Merging.** Where a pair of leaves measures bitwise-equal under D2's criterion, they merge with no bit change. Where
+  routes differ only in rounding, one canonical formula is chosen and the bit change is accepted, deliberate and
+  documented, with a conversion test as for RQ-750 (R-898): each changed case decodes to the same system to rounding
+  precision, its outcome class unchanged. A difference that isn't rounding is not merged; it comes back (R-864 item 4).
+- **The GUI routes** (keys, panel, compass step, compass drag) become thin input adapters feeding the same leaf.
+- **The same-frame slips, D19 and D23 of the brief,** are fixed in that step, each case's change documented; D19 and
+  D23 as "kept bit for bit, filed" end there.
+- **The placement of the four dispatch classes** (Batch, Command, Fresh, Direct): the owner's later message confirms the
+  sketch's, as standing: the dispatch classes in `crates/gui/src/dispatch.rs`, the GUI's app layer, and the path in
+  `chart_space`. TASK-M8-129's scope records it; it is not left to the task to state.
+
+*What it refines:* **R-864**'s "bitwise reproduction first": bit-for-bit reproduction is stage 1's safety net, not a
+permanent rule to keep per-route arithmetic; after stage 1 a deliberate, documented bit change with a conversion test is
+allowed where routes differ only in rounding, and in the saved-file rewrite of stage 2 (R-900). **R-863**'s order gains
+the step between its stages 1 and 2. Each has its forward line.
+
+*D-1 to D-42* of the same report stand as the owner's lines say ("stands"), with no ruling needed (the PR lists them).
+
+R-894 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-895 — A re-tilt of a saved Lean each axis chart, one target and both angles set, into its own saved target takes R-513's `R·R′` literally, `R`'s third input the saved plane's unit normal *(closes RQ-746)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026, "in my own words"; applied in `REVIEW_QUEUE.md` (RQ-746
+moved), `docs/archive/review_queue/M0.md`, `docs/design/principia_chart_reference.md` § 1.1 (a dated line),
+REQ-CHART-149 (reqio), TASK-M2-56, TASK-M8-48 and `plan/rule_groups.yaml`; changes REQ-CHART-149*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-746: (a).
+
+*What it decides:* RQ-746's option (a), in its words: "keep R-513's ruled form `R·R′` literally, with `R = [û₁ û₂ t̂]`,
+`R`'s third input `t̂` the unit normal of the saved plane, `û₁ × û₂` normalised, the sign toward `+e_X`." It borrows
+only `t̂` from R-514 and doesn't apply the new tilt as R-514 does. The composition is then not a rotation, as the saved
+Lean map isn't; at the edge of Lean's range (`|τ₁|` or `|τ₂|` = 90° with the other set) `t̂` takes the cross product's
+own sign, `e_X` fixing none, and at `|τ₁| = |τ₂| = 90°` there is no frame (R-554's `ray-degenerate`). At the entry's test
+pixel, a saved Lean view at `τ = (30°, 40°)`, one target `X`, then `τ′ = (20°, 0)` into `X`, at `(u, v) = (0.3, 0.7)`
+from the centre, `(a, b, d_X) = (0.2026, 0.4759, 0.6628)`; option (b)'s `(0.1598, 0.4307, 0.7099)` is the control.
+TASK-M2-56 loses its wait and builds it; the saved target is then offered in that case too (R-513 Q3), and TASK-M8-48's
+dropdowns offer it once TASK-M2-56 merges.
+
+R-895 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-896 — The latent chart's tilt angles are stored as set, in the view's state beside `tilt_map` *(closes RQ-747)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026, "in my own words"; applied in `REVIEW_QUEUE.md` (RQ-747
+moved), `docs/archive/review_queue/M0.md`, `docs/contracts/principia_gui_state_contract.md` § 2, REQ-GUI-233 (reqio),
+REQ-GUI-430 (reqio, new), TASK-M6-48, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-GUI-430, changes
+REQ-GUI-233*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-747: (a), in the view's state beside the tilt map.
+
+*What it decides:* RQ-747's option (a): the latent chart's two tilt angles are stored as set, in `SimConfig`'s slice
+frame beside `tilt_map`, always written: chart construction, undone in the same history entry as the basis, carried in
+saved views and exports (R-474 R5), and so in the chart-path object's starting point. R-474 R3 and K3 then hold as
+worded: the rotation is computed from the stored angles, wrapped only in total tip at 360°, and the sliders show the
+angles set, never a read-back past 180°. TASK-M6-48 loses its wait and gains the field, its canonical text and its
+`qa_TASK-M0-18` pins changing once (TASK-M6-48 changes them already).
+
+*Left to TASK-M6-48 to state, as a definition (R-72; REQ-GUI-430), under physics review:* the rule for every route that
+writes the basis other than through the angles (the typed basis, TASK-M6-56; the compass steers and picks; the presets;
+the Tilt reset; Home), so the stored angles and the basis never disagree. The entry names two candidates, "re-derive by
+the read-back" or "reset to the preset's"; the owner's answer chooses neither, so the task proposes and the physics
+reviewer approves, or it comes back.
+
+R-896 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-897 — Stage 2's lock test reads the recorded state at the pin: the anchor's stored state at the pin's pixel, constant on every frame, the slide's follower and the area factor taken at the pin *(closes RQ-749; amends R-863)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026, "in my own words"; applied in `REVIEW_QUEUE.md` (RQ-749
+moved), `docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` § 17.8 and § 17.14,
+R-863's forward and "Still in force" lines, REQ-CHART-115 (reqio), TASK-M8-117 and `plan/rule_groups.yaml`; changes
+REQ-CHART-115*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-749: (a), the recorded state at the pin.
+
+*What it decides:* RQ-749's option (a), the same answer as the brief's Q1 (a) (R-899): the stage-2 test reads the pin,
+not the view's centre. The anchor's recorded state at the pin's pixel is constant on every frame, ends included; R-863's
+"the centre IC is constant" is read as the lock's centre, the pin; on a sliding path the follower is the pin's pixel and
+the area factor is taken at the pin. All three of REQ-CHART-115's centre reads move to the pin. TASK-M8-117 builds and
+asserts it.
+
+*What it amends:* **R-863** item (2)'s test, "with the test that the centre IC is constant", now the recorded state at
+the pin; its forward and "Still in force" lines say so.
+
+R-897 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-898 — Latent `β` becomes a periodic angle over the full circle; every stored latent view, saved chart and golden is converted once, the bitwise check replaced for this change by a conversion test; the saved-file format is versioned, old files converted on load; not a hidden half-flag *(closes RQ-750; amends R-865)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026, "in my own words"; applied in `REVIEW_QUEUE.md` (RQ-750
+moved; RQ-738, a dated line), `docs/archive/review_queue/M0.md`, the latent space's statements in
+`docs/contracts/principia_canonical_spec.md` § 1, `docs/contracts/principia_chart_decoder_contract.md` Part 2,
+`docs/contracts/principia_inverse_encode_contract.md` (layer 1's space) and `docs/design/principia_chart_reference.md`
+(the latent chart), a dated line each, R-865's forward and "Still in force" lines, REQ-DEC-055 and REQ-DEC-056 (reqio),
+TASK-M2-57 and `plan/rule_groups.yaml`; changes REQ-DEC-055 and REQ-DEC-056*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> RQ-750: (a) + (c). Latent beta becomes a periodic angle over the full circle; every stored latent view, saved chart and golden is converted once. For this deliberate change the bitwise check is replaced by a conversion test: each converted value decodes to the same system to rounding precision, outcome classes on the goldens identical, goldens regenerated with a record of why. Saved-file format versioned, old files converted on load. Not (b): a hidden half-flag is the special case this ruling removes.
+
+*What it decides:* RQ-750's options (a) and (c), together, and not (b):
+
+- **(c), the link:** `z_β` is made periodic, a latent angle over the full circle, so every syzygy is continuous on a
+  chart showing it, at `β = 0` as at `β = π`. The latent space is then no longer the convex `ℝ⁸` the corpus states for
+  it, but `ℝ × S¹ × ℝ⁶` (`z_β` the circle). The owner chose it knowingly: the report's (c) said so. The corpus's `z ∈ ℝ⁸`
+  statements carry a dated line now and are rewritten by TASK-M2-57; the owner's model (§ 1 and Theorem 1's "`Z = R^8`")
+  is the owner's to correct, and goes on RQ-738's list (R-878).
+- **(a), the stored values:** every stored latent view, saved chart and golden is converted once to the new link.
+- **The check, for this deliberate change,** takes the place of R-865's bitwise condition: each converted value decodes to the
+  same system to rounding precision; the outcome classes on the goldens are identical; the goldens are regenerated with
+  a record of why.
+- **The saved-file format** is versioned, and old files are converted on load.
+- **Not (b):** "a hidden half-flag is the special case this ruling removes."
+
+*Left to TASK-M2-57 to state, as a definition (R-72; REQ-DEC-056), under physics review:* whether a converted `z_β` is
+stored reduced to one period or unreduced, and so where a wrap enters the affine leaves (pan, zoom, the latent tilts),
+the latent-line blend and the select, which R-864's rule 4 would make a named family. The owner's words don't settle it.
+
+*What it amends:* **R-865**'s condition, "every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged",
+replaced for this change by the conversion test above; and REQ-DEC-056's clause "how a `β ∈ [0, π]` start keeps its
+bits", restated as how a stored value converts. R-865's forward and "Still in force" lines say so. TASK-M2-57's
+acceptance is rewritten to the conversion test.
+
+R-898 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-899 — The chart-path brief's nine questions: the lock test reads the recorded state at the pin; snap-back undoes the slice only, auto-snap off; jumps under a lock kept and labelled until the sliding anchor exists; the pin's screen position stored, "assumed" at the centre where none can be derived; a pivot record in the view, untilt (a1), amending R-473; points of interest one task in stage 3; their star filled within the lock's tolerance, the off-slice distance shown; marks mid-morph to pixel resolution, the filter off, labelled; the block line built in stage 2 *(amends R-473, and the snap-back of chart_decoder_contract Part 4 and design § 17.8)*
+*8 Nov 2026 · the owner's reply to the report of 8 Nov 2026, "in my own words", to the chart-path brief v9; applied in
+`docs/contracts/principia_chart_decoder_contract.md` Part 4 (the lock's construction: snap-back), `docs/design/principia_chart_composition.md`
+§ 17.8, R-473's forward and "Still in force" lines, REQ-CHART-157 and REQ-CHART-158 (reqio, new), REQ-CHART-115,
+REQ-CHART-147, REQ-GUI-425, REQ-GUI-426 and REQ-GUI-427 (reqio), TASK-M8-48, TASK-M8-117, TASK-M8-124, TASK-M8-125,
+TASK-M8-126, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-157 and REQ-CHART-158, changes REQ-CHART-115,
+REQ-CHART-147, REQ-GUI-425, REQ-GUI-426 and REQ-GUI-427*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> Chart-path brief v9: Q1 (a). Q2 (a), auto-snap off by default. Q3 (a), labelled, until the sliding anchor exists. Q4 (a), with (a-i). Q5 (a), untilt (a1), amending R-473 as stated. Q6 (a). Q7 (c): filled within the lock's tolerance, plus the off-slice distance shown. Q8 (a). Q9 (a).
+
+*The brief's questions,* as the brief put them to the owner (v9, 8 Nov 2026), quoted so this ruling stands on its own:
+
+1. "**Q1**, stage 2's "state at the pin stays constant" test with the pin off-centre (a sliding anchor is checked by its
+   slide instead): (a) the recorded state, moved to the pin; (b) screen centre only; (c) a CPU read."
+2. "**Q2**, snap-back: (a) undo the slice only, auto-snap off; (b) today's full snap, which re-centres; (c) (a) with
+   auto-snap on."
+3. "**Q3**, edits that jump the view under a lock (Home, resets, presets, steers, capture), which R-849 (no jumps under
+   a lock) forbids: (a) keep them, labelled, until the sliding anchor exists; (b) unlock first; (c) refuse."
+4. "**Q4**, which pixel the pin is after a slice: (a) store its screen position; (b) on curved charts only; (c) now, and
+   the state later (two migrations). … Where there's no pixel to derive (an old lock on a degenerate view, or a reset
+   landing a locked view on one): (a-i) centre, labelled "assumed"; (a-ii) refuse the old lock, and name the reset's
+   analogue: refuse, unlock or leave the pin."
+5. "**Q5**, the pin exact on tilted or zoomed curved charts: (a) a pivot record in the view, amending R-473 (tilt and
+   slice on every chart), the untilt re-basing energy once, shown; (b) as today, a first-order energy error at the pin;
+   (c) re-centre on lock. **(a), untilt (a1)**. It blocks TASK-M8-48 (tilt, slice and Save view on curved charts)."
+6. "**Q6**, points of interest: (a) one task in stage 3; (b) split over stages 2 and 3."
+7. "**Q7**, "exactly" for a point's star: (a) within the lock's tolerance, calibrated at the gate; (b) bit-exact only;
+   (c) (a) plus a distance measure."
+8. "**Q8**, mid-morph: (a) points "to pixel resolution", symmetry filter off, labelled; (b) the filter says "no
+   duplicates"; (c) both off."
+9. "**Q9**, the block line: (a) built in stage 2 as the locked path's carrier; (b) test-only."
+
+*What it decides,* question by question:
+
+- **Q1 (a):** RQ-749's answer (R-897): stage 2's test reads the recorded state, moved to the pin. TASK-M8-117.
+- **Q2 (a), auto-snap off by default:** snap-back undoes the slice only, clearing the hidden excursion and leaving the pin
+  where it is on screen; "centre on pin" (R-866) clears the in-plane part; the two together are today's
+  `z₀ ← z_locked`. The auto-snap setting is off by default, as R-866 already reads it. Built by TASK-M8-125 with R-866
+  (REQ-GUI-425).
+  *What it amends:* chart_decoder_contract Part 4, "snap-back is `z₀ ← z_locked`, bit for bit", and design § 17.8's
+  "snap-back, `z₀ ← z_locked`, stays bit for bit", each keeping its old words as a "Was"; the owner's model (§ 5,
+  "Setting `δ ← 0` restores `φ(0) = a` exactly", and § 7's "Snap-back is exact") is the owner's to correct, on RQ-738's
+  list (R-878). R-866 itself already has "centre on pin" optional and the auto-snap setting off by default, so it needs
+  no line (the brief's item 10, checked).
+- **Q3 (a), labelled, until the sliding anchor exists:** the edits that jump the view under a lock (Home, the resets,
+  presets, steers, capture) are kept, each labelled as a cut under a lock, until stage 2's sliding anchor exists; each
+  stage-1 task states its non-conformance with R-849 until then (REQ-CHART-147).
+- **Q4 (a), with (a-i):** the pin's screen position is stored; where no pixel can be derived (an old lock on a degenerate
+  view, or a reset landing a locked view on one), the pin is the centre, labelled "assumed". Stage 2's record holds it
+  (TASK-M8-117, REQ-CHART-115).
+- **Q5 (a), untilt (a1), amending R-473 as stated:** a pivot record lives in the view, stored as the pinned state (the
+  owner's lock-with-morphs message, R-902), not as chart coordinates, so it survives a chart switch; the untilt re-bases
+  energy once, shown. It amends R-473 (tilt and slice on every chart): a curved chart's tilt turns about the recorded
+  pivot, not only the window's centre. TASK-M8-48 builds it, before stage 1 (RQ-744 (E) (i), R-873; REQ-CHART-157).
+- **Q6 (a):** points of interest are one task, TASK-M8-126, in stage 3 (RQ-744 (C), R-873).
+- **Q7 (c):** a point's star is filled where the chart passes through it within the lock's tolerance, and otherwise
+  hollow at the nearest chart point with the off-slice distance shown (R-870). The lock's tolerance is a value the
+  corpus doesn't give: a calibration (R-71; REQ-CHART-158), proposed with its evidence by TASK-M8-117, which first needs
+  it, and confirmed by the owner at the M8 gate.
+- **Q8 (a):** on a mid-morph frame, the marks are found "to pixel resolution", the symmetry filter is off, and both are
+  labelled.
+- **Q9 (a):** the line on blocks is built in stage 2, by TASK-M8-117, as the locked path's carrier; stage 4 adds the
+  rest (R-873's split of TASK-M8-106).
+
+*What it amends:* **R-473**, by Q5 (a) (forward and "Still in force" lines); the snap-back statements above, by Q2 (a).
+
+R-899 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-900 — Stage 2's saved-file rewrite is handled as RQ-750: a versioned format, old files converted on load, a conversion test in place of the bitwise check, and any golden hashes regenerated with a record of why *(refines R-864)*
+*8 Nov 2026 · the owner's message of that day; applied in R-864's forward line, REQ-CHART-159 (reqio, new), TASK-M8-117,
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-159*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> Stage 2's saved-file rewrite: treat as RQ-750 — versioned format, convert on load, conversion test in place of the bitwise check, and any golden hashes regenerated with a record of why.
+
+*What it decides:* stage 2 (TASK-M8-117) rewrites every saved record's text, about 59 files by the brief's count, to
+carry the lock's stored state and the pin. That rewrite is not held to R-864's bitwise reproduction; it is handled as
+R-898 handles RQ-750: the saved-file format's version is bumped, old files are converted on load, a conversion test
+replaces the bitwise check (each converted record decodes to the same system to rounding precision, its outcome class
+unchanged), and any golden hash it changes is regenerated with a record of why. TASK-M8-117's acceptance carries it
+(REQ-CHART-159).
+
+*The same message's first line,* "Reply 2 (locking doesn't move the view; centre-on-pin optional; auto-snap off): record
+it on #445 now so its step isn't blocked.", is already recorded: PR #445 had merged, and reply 2 is R-866 (merged with
+PR #449), which states "centre on pin" as optional and the auto-snap setting off by default. No line is added.
+
+R-900 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-901 — Easing and the path curve are a property of each segment of a path, per the chart-space model's Theorems 4 and 5, one representation shared by live morphs, saved paths and export, built with the path object *(amends R-576 and export contract Part 3)*
+*8 Nov 2026 · the owner's message of that day; applied in `docs/contracts/principia_export_animation_contract.md` Part 3,
+`docs/design/principia_chart_composition.md` § 17.9, R-576's forward and "Still in force" lines, R-849 (a dated line),
+REQ-CHART-160 (reqio, new), TASK-M8-124, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-160*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> Easing and path curves: a property of each segment of a path (per chart-space model Thms 4–5), shared by live morphs, saved paths and export. Place it in the type sketch now so stage 2 doesn't add it beside the object.
+
+*What it decides:* every segment of a path carries its own timing, its easing and its path curve, one representation
+read by live morphs, saved paths and export alike, with Theorem 4's concatenation of eased segments and Theorem 5's
+timing-only invariant (re-timing changes no frame's content, only when it is shown) stated and tested. It is built with
+the path object in stage 1 (TASK-M8-124), so stage 4's morph families and Sequence segments add nothing beside it.
+
+*Against R-576 and export contract Part 3* (`segments: [(easing, transition)]`, "one segment between each pair of
+neighbouring keyframes, each with its own easing curve"): where a Sequence segment's path is one path segment, its
+easing is that segment's timing and nothing changes; where a keyframe pair is joined by several path segments (a tilt
+then a morph), each carries its own timing and the Sequence's easing is theirs, concatenated. The owner's later message
+of the same day confirms this as an amendment ("easing vs export Part 3: stand as amendments"), so R-576 and Part 3
+carry it, with REQ-TOOL-197's one `s` per frame read per path segment, a note on it.
+
+*The message's second line,* "Time-axis charts: the RQ-721 rider stands — under a lock the anchor slides, except
+time-axis → IC-only charts, which keep a labelled jump. Name this in the sketch.", restates R-849 (the RQ-721 rider,
+on `main`): R-849 carries a dated line quoting it, and no new ruling.
+
+R-901 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-902 — The lock is a property of the path: any locked path, blend segments and chart switches included, keeps the pinned state fixed, sliding per the RQ-721 rider where the target can't hold it; the pivot record is stored as the state; a tilt or slice mid-morph goes to both endpoint charts, each in its own hidden coordinates and tilt map, about the pinned state, the morph continuing from its parameter; the gate test closes stage 2
+*8 Nov 2026 · the owner's two messages of that day, on the lock with morphs and on the mid-morph tilt; applied in
+`docs/design/principia_chart_composition.md` § 17.5 (a cross-reference) and § 17.8, REQ-CHART-161 (reqio, new),
+TASK-M8-117, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-161*
+
+The owner's words (8 Nov 2026), verbatim, on the lock with morphs:
+
+> Lock with morphs: the lock is a property of the path, not of each operation. Any path under a lock, including blend segments and chart switches, keeps the pinned state fixed; where B can't hold it, the anchor slides per the RQ-721 rider (labelled jump per Q3 until the sliding anchor exists). The Q5 pivot record is stored as the state, not chart coordinates, so it survives chart switches. A tilt or slice mid-morph concatenates from the current point. Gate test: lock → morph A→B → tilt → slice → morph back; the pinned state holds to the lock's tolerance throughout, and the round trip returns the same view.
+
+and, on the mid-morph tilt, which answers that message's sentence "A tilt or slice mid-morph concatenates from the
+current point":
+
+> New RQ (tilt or slice mid-morph): (d) — apply the tilt or slice to both endpoint charts of the morph, each in its own hidden coordinates and its own R-474 map, about the pinned state; the morph continues from its current parameter between the tilted endpoints. No hidden coordinate is invented for the blend, so §17.5 stands as written. Under a lock the pin holds, since both endpoints keep the pinned state at the same screen position. Where an endpoint can't take the tilt (no free hidden coordinate in that direction), that endpoint holds and the anchor slides per the RQ-721 rider. Not (a): a frozen blend has no hidden coordinate. Not (c): refusing is a special case.
+>
+> Snap-back contract amendment, latent β amendment, easing vs export Part 3: stand as amendments.
+
+*What it decides:*
+
+- **The lock is the path's,** not each operation's. Any path under a lock, blend segments and chart switches included,
+  keeps the pinned state fixed; where the target chart can't hold it, the anchor slides per the RQ-721 rider (R-849),
+  as a labelled jump until the sliding anchor exists (Q3 (a), R-899).
+- **The Q5 pivot record** (R-899) is stored as the state, not chart coordinates, so it survives chart switches.
+- **A tilt or slice mid-morph,** the owner's option (d): it goes to both endpoint charts of the morph, each in its own
+  hidden coordinates and its own R-474 map, about the pinned state, and the morph continues from its current parameter
+  between the tilted endpoints. No hidden coordinate is invented for the blend, so design § 17.5 ("Saving a mid frame …
+  with no tilt or slice: its chart has no hidden coordinate to turn") stands as written, and gains a cross-reference to
+  this ruling. Under a lock the pin holds, both endpoints keeping the pinned state at the same screen position. Where an
+  endpoint can't take the tilt (no free hidden coordinate in that direction), that endpoint holds and the anchor slides
+  per the RQ-721 rider. Not (a), a frozen blend, which has no hidden coordinate; not (c), refusing, a special case. So no
+  queue entry is filed for it (the brief's item 13 (i)).
+- **The gate test,** the owner's: lock → morph A → B → tilt → slice → morph back; the pinned state holds to the lock's
+  tolerance (REQ-CHART-158) throughout, and the round trip returns the same view. It is the acceptance of the task that
+  closes stage 2, TASK-M8-117 (REQ-CHART-161), with the mid-morph tilt and slice of the item above.
+
+*The same later message* also confirms, "as amendments", the snap-back contract's (R-899, Q2), the latent `β` one (R-898)
+and easing against export Part 3 (R-901); and the dispatch classes' placement as standing (R-894).
+
+R-902 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-903 — A hung mutant is stopped in minutes: each test gets its own limit in a nextest mutants profile, 3 times its measured baseline, with named overrides for known-slow tests, and a test killed so counts as a timeout, caught; listed equivalent mutants are skipped up front and run by the nightly; the 300-minute limit and 8 shards stay *(amends R-712 and R-348; refines R-202)*
+*Refined by R-906 (8 Nov 2026: a test killed by its limit is listed by `mutants-check` as "timed out (not a survivor)"; the baseline runs with no kill limit; the nightly and local runs take the same limits).*
+*Still in force: all of it, with R-906's listing and its same limits for every run.*
+*8 Nov 2026 · the owner's message of that day on #431's (the kernel cross-backend check's) cut-off mutant shards, its
+"Fix 1" and "Fix 2"; applied in the forward lines of R-202, R-348 and R-712, REQ-VAL-148, REQ-VAL-149, REQ-VAL-150 and REQ-VAL-180 (reqio) and
+`plan/rule_groups.yaml`; built by #452 (the per-test kill limits); changes REQ-VAL-148, REQ-VAL-149, REQ-VAL-150 and
+REQ-VAL-180*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> Stop #431's queued mutants re-run: the three cut-off shards are hung mutants, not slow runners, and will hang again. Shard 0: cross_backend.rs:1608 "replace * with + in crossings"; shard 4: :1609 "replace || with && in crossings" (>12,840 s); shard 6: :2462 "replace += with *= in compare". The per-mutant timeout is 22,067 s (3 × the whole multi-package baseline of 7,353 s), above the 300-min shard limit, so it can never fire.
+> Fix 1 (hangs), amending R-712's basis, not its multiplier: a hung mutant must be stopped in minutes. Use nextest's per-test terminate-after in a mutants profile, sized from each test's measured baseline (3×, per R-712), with named overrides for the known-slow tests (codegen_selftest_pack_unpack_kernel_gpu 1,728 s, debug_scenes 598 s, etc.). A test killed this way counts as a timeout, which is caught, as today. Report the values before applying.
+> Fix 2 (equivalents): mutants already listed in .cargo/mutants-equivalent.toml are skipped up front instead of run and filtered. The nightly full run still runs them, so a listed equivalent that stops being equivalent is caught there. Fix the nightly first (0/30) so that backstop is real.
+> Then rerun #431 and report per shard: builds, caught, unviable, timeouts, wall time. The 300-min limit and 8 shards stay.
+> Later, measured with criteria written first: the unviable-build cost (77 of 200 mutants don't compile) and the per-mutant build time.
+
+*What it decides:*
+
+- **Fix 1, the hangs.** R-712's per-mutant timeout, 3 times the measured baseline, was taken over the whole
+  multi-package test suite: 3 × 7,353 s = 22,067 s, above the 300-minute shard limit, so it could never fire, and a hung
+  mutant held its shard until the shard was cut off. The basis becomes each test's own: nextest's per-test
+  terminate-after, in a mutants profile, sized at 3 times that test's measured baseline (R-712's multiplier, unchanged),
+  with named overrides for the known-slow tests (the owner's examples: `codegen_selftest_pack_unpack_kernel_gpu`
+  1,728 s, `debug_scenes` 598 s). A test killed this way counts as a timeout, which is caught, as today. The values are
+  reported to the owner before they are applied. REQ-VAL-180 states it.
+- **Fix 2, the equivalents.** Mutants already listed in `.cargo/mutants-equivalent.toml` are skipped up front, not run
+  and then filtered, in the in-diff run (the per-PR run when this was given; wherever R-909 places it now). The nightly
+  full run still runs them, so a listed mutant that stops being equivalent is caught there (R-302's backstop). The
+  nightly is fixed first (0 of 30 runs passing when this was given), so that the backstop is real. REQ-VAL-148 and
+  REQ-VAL-150 state it.
+- **What stays.** The 300-minute shard limit and the 8 shards (REQ-VAL-149, R-376). Changes to what counts as caught, or
+  to the equivalents list, stay the owner's (R-202).
+- **Later, measured with criteria written first:** the cost of mutants that don't build (77 of 200 didn't compile) and
+  the per-mutant build time. Two-way measurements (R-812), not ruled here.
+- **The re-run of #431** with its per-shard report (builds, caught, unviable, timeouts, wall time) was the day's order;
+  R-909 orders it: #452 merges before any mutants re-run, and #431's and #448's re-runs are skipped if the required-check
+  switch is within a day.
+
+*Read, not chosen:* R-376's 60 s floor on the timeout is not named. Whether a per-test limit takes it is stated with the
+values reported before they are applied.
+
+*What it amends:*
+
+- **R-712**, its basis: "the measured baseline test time" is each test's own, not the whole suite's. Its "applied per
+  R-369" form (an explicit timeout from one baseline for the per-PR shards, the multiplier for nightly and local runs)
+  gives way to per-test limits on every run, the same for nightly and local (R-906). Its multiplier, its listing of
+  timeouts and its 8 shards stand.
+- **R-348**, its per-mutant timeout, which becomes a per-test limit; its memory cap stands.
+- **R-202**, refined: a listed equivalent is skipped up front rather than run and filtered after; the list, its
+  one-line justifications and the reviewers' approval are unchanged.
+
+R-903 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-180 (statement, verify, source, rulings, note), REQ-VAL-148 (statement, verify, source, rulings, note),
+REQ-VAL-150 (statement, verify, source, rulings, note) and REQ-VAL-149 (source, rulings, note).
+
+## R-904 — CI speed: mutation testing moves off the per-PR path to the nightly full run, once the nightly runs green on `main`, each nightly survivor not on the equivalents list filing a task, and `mutants-check` leaves the required checks after three green nights in a row; tests over 60 s become a slow tier, run on pushes to `main` and nightly *(amends R-196, R-202, R-302 and R-684; refines R-681)*
+*Refined by R-905 (8 Nov 2026: where the mutation run and the slow tier go is decided per job by the placement rule, the Windows runner or GitHub-hosted runners, after five measured steps).*
+*Amended in part by R-907 (8 Nov 2026: a slow-tier failure on `main` is red only if it is a correctness failure; any other failure files a top-priority task).*
+*Amended in part by R-908 (8 Nov 2026: mutation testing leaves the pull-request path at once, best-effort until the nightly fits, with no wait for three green nights; changes are reported after they are made, not before).*
+*Amended in part by R-909 (9 Nov 2026: the approved CI model governs where they differ).*
+*Still in force: the slow tier, tests over 60 s tagged by name with their measured time, off the pull-request path; each nightly survivor not on the equivalents list filing a task automatically; and a physics or validation test moved into the slow tier going to the owner first. Not its conditions on moving mutation off the pull-request path (R-908), and a slow test failing on `main` makes it red only as a correctness failure (R-907).*
+*8 Nov 2026 · the owner's message of that day, "CI speed, owner's decisions", items 1 and 2; applied in the forward
+lines of R-196, R-202, R-302, R-681 and R-684, REQ-VAL-148 and REQ-VAL-150 (reqio) and `plan/rule_groups.yaml`; built
+by the PR-tier restructure and the per-merge workflow (tooling pull requests, R-909's order); changes REQ-VAL-148 and
+REQ-VAL-150*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> CI speed, owner's decisions:
+> 1. Mutation testing moves off the per-PR path to the nightly full run (amends R-196/202). Fix the nightly first (0/30 passing); until it runs green on main, per-PR mutants stay. Each nightly survivor not on the equivalents list files a task automatically. The per-PR mutants-check is removed from required checks only once the nightly has run green 3 nights in a row. [Or, if I keep per-PR: per-PR mutants run without the slow tier and without the baseline job, with per-test timeouts.]
+> 2. Slow tier: measured on #431's baseline, 80 of 3,846 tests take 86% of test time (13,596 s of 15,810 s); xtask is ~half (7,723 s), largely tests that build the whole workspace, plus the GPU tests on lavapipe (codegen_selftest_pack_unpack_kernel_gpu 1,728 s). Tag tests over 60 s as slow, listed by name with measured time. Slow tests run on push to main and nightly; PR heads run the rest. A slow test failing on main is a red main (R-681). Report the list before applying; moving any physics or validation test into the slow tier comes to me first.
+> 3. Drop the mutants-baseline job; per-test timeouts per my earlier block.
+> 4. ci-full: on merge-ready, cancel the in-progress quick run and start the full tier, instead of waiting for it (#431 waited 2 h).
+> 5. Measure: whether memory pressure (14.5 of 16 GB, swap off) slows the test phase; try nextest with fewer test threads on one run and report wall time.
+> 6. For me to decide, with a cost estimate: GitHub larger runners for the full tier only.
+> Two-way items (3, 4, 5) by measurement with criterion written first; 1, 2 and 6 are mine as stated.
+
+*What it decides:* items 1 and 2, the owner's. Items 3, 4 and 5 are two-way (R-812), decided by measurement with the
+criterion written first and recorded as "applied per R-369/R-812" in their own pull requests; they are not ruled here.
+Item 6 was the owner's to decide with a cost estimate; R-906 records their answer, "Larger runners: no".
+
+- **Item 1, mutation testing.** It moves off the per-PR path to the nightly full run. Its conditions, as given: fix the
+  nightly first (0 of 30 runs passing); until it runs green on `main`, per-PR mutants stay; each nightly survivor not on
+  the equivalents list files a task automatically; `mutants-check` is removed from the required checks only once the
+  nightly has run green three nights in a row. The bracketed sentence, "[Or, if I keep per-PR: per-PR mutants run
+  without the slow tier and without the baseline job, with per-test timeouts.]", is the owner's fallback, recorded as
+  written; it is not a second decision.
+- **Item 2, the slow tier.** On #431's baseline, 80 of 3,846 tests take 86% of test time (13,596 s of 15,810 s). Tests
+  over 60 s are tagged slow, listed by name with their measured time. Slow tests run on push to `main` and nightly; pull
+  request heads run the rest. A slow test failing on `main` is a red `main` (R-681). The list is reported before it is
+  applied, and moving any physics or validation test into the slow tier goes to the owner first.
+
+*Where later rulings govern:* R-905 places the mutation run and the slow tier, R-907 narrows what makes `main` red,
+R-908 takes mutation testing off the pull-request path without item 1's conditions and has changes reported after they
+are made, and R-909's approved model governs over all of them. Each says so.
+
+*What it amends:*
+
+- **R-196** and **R-202**: no per-PR `cargo mutants --in-diff` job, and so no per-PR gate on a survivor; a survivor not on
+  the equivalents list files a task. The equivalents list and its approval stand.
+- **R-302**: its per-PR sharded run leaves the pull-request path; the nightly full run, its backstop, stays.
+- **R-684**: a merge-candidate head's full tier no longer runs the slow tier, which runs on `main` and nightly.
+- **R-681**, refined: a slow test failing on `main` is a red `main` (narrowed by R-907 to correctness failures).
+
+R-904 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 and REQ-VAL-150 (statement, verify, source, rulings, note).
+
+## R-905 — CI shape: pull requests run the normal suite and quick checks only; the slow tier and the mutation run go to pushes to `main` and nightly, advisory, each job placed on the Windows runner or on GitHub-hosted runners by where it measurably finishes fastest with identical results; containment, the 8 GiB cap and a 36-hour no-run alert come first on Windows, and the mutants of `xtask/src/jobq.rs` stay hosted until containment is proven *(amends R-196, R-202, R-684 and R-859; refines R-904)*
+*Amended in part by R-907 (8 Nov 2026: its step 2, a week of the slow tier on lavapipe and the RTX 2080 Super, is withdrawn by the owner's item 4; a slow-tier failure on `main` is red only if it is a correctness failure; the pull-request side goes first, needing no Windows).*
+*Amended in part by R-908 (8 Nov 2026: in-depth GPU tests and the slow tier run on `main` through the Windows runner, or GitHub-hosted until it is up; changes are reported after they are made).*
+*Amended in part by R-909 (9 Nov 2026: the approved CI model governs where they differ).*
+*Still in force: the placement rule, each heavy job placed per job by a side-by-side run on the same commit and re-checked if either side changes; Windows containment by a Job Object with kill-on-close, a process limit and an 8 GiB per-process cap, proven by `contain.sh check`'s kill test, the cap, the 36-hour no-run alert and below-normal priority overnight as prerequisites for any job placed on Windows; the mutants of `xtask/src/jobq.rs` on GitHub-hosted runners until Windows containment is proven; the Windows runner advisory, never required, every runner rule unchanged; mutation survivors not on the equivalents list filing a task and never making `main` red. Not its step 2 (R-907), nor its order where R-907 and R-909 set another.*
+*8 Nov 2026 · the owner's message of that day, "CI shape, owner's decision"; applied in the forward lines of R-196,
+R-202, R-684, R-859 and R-904, REQ-VAL-148 and REQ-VAL-181 (reqio) and `plan/rule_groups.yaml`; built by #453 (Windows
+containment) and the per-merge workflow; changes REQ-VAL-148 and REQ-VAL-181*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> CI shape, owner's decision (amends R-196/202 and R-684):
+> - PRs (GitHub-hosted, required): the normal test suite and quick checks, excluding the slow tier. No per-PR mutation run.
+> - Windows runner (push to main + nightly, advisory, never required; all runner rules unchanged): the slow tier and the mutation run (--in-diff against the previous main on push; full nightly).
+> - A slow-tier failure on main counts as red main (R-681). Mutation survivors not on the equivalents list file a task automatically; they do not make main red.
+> Before switching, in this order, each measured with its criterion written first:
+> 1. Windows containment: run tests and mutants inside a Job Object with kill-on-close, a process limit and an 8 GiB per-process memory cap (REQ-VAL-181's equivalent of prlimit). Prove it with the same kill test contain.sh check uses. Until proven, mutants of xtask/src/jobq.rs stay on GitHub-hosted runners.
+> 2. Run the slow tier on both lavapipe (GitHub-hosted) and the RTX 2080 Super for one week; report any test that differs and why. Goldens are not regenerated to make them agree.
+> 3. Mutation run on Windows vs GitHub-hosted on the same commit: same mutants, same outcomes, wall time side by side.
+> 4. Alert if no Windows nightly completes in 36 h, as well as on failure. Nightly runs overnight at below-normal priority.
+> 5. Only then: drop mutants-check and the slow tier from PR required checks. The runner's job-started refusal on main (Windows session investigating) is resolved first.
+>
+> Placement rule: each heavy job (slow tier, mutation run) runs where it measurably finishes fastest with identical results (same tests run, same mutants and outcomes), Windows runner or GitHub-hosted, decided per job by a side-by-side run on the same commit and re-checked if either side changes. Containment, memory cap and the 36 h no-run alert are prerequisites for any job placed on Windows. PRs keep only the normal suite either way.
+
+*What it decides:*
+
+- **Pull requests** (GitHub-hosted, required): the normal test suite and quick checks, without the slow tier. No
+  per-PR mutation run.
+- **The Windows runner** (push to `main` and nightly, advisory, never required, every runner rule unchanged): the slow
+  tier and the mutation run, `--in-diff` against the previous `main` on a push and full nightly.
+- **Red and not red.** A slow-tier failure on `main` counts as a red `main` (R-681; narrowed by R-907 to correctness
+  failures). A mutation survivor not on the equivalents list files a task automatically and does not make `main` red.
+- **Its preconditions, in order, each measured with its criterion written first:** (1) Windows containment, a Job
+  Object with kill-on-close, a process limit and an 8 GiB per-process memory cap, REQ-VAL-181's equivalent of
+  `prlimit`, proven by the kill test `contain.sh check` uses; until proven, the mutants of `xtask/src/jobq.rs` stay on
+  GitHub-hosted runners. (2) The slow tier on lavapipe and on the RTX 2080 Super for a week, any test that differs
+  reported with its reason, no golden regenerated to make them agree: withdrawn by R-907's item 4. (3) The mutation run
+  on Windows and on GitHub-hosted runners on the same commit: the same mutants, the same outcomes, wall times side by
+  side. (4) An alert if no Windows nightly completes in 36 hours, as well as on failure; the nightly runs overnight at
+  below-normal priority. (5) Only then are `mutants-check` and the slow tier dropped from the pull-request required
+  checks, the runner's job-started refusal on `main` resolved first. R-907 puts the pull-request side first, since it
+  needs no Windows, and R-908 has it done without waiting.
+- **The placement rule.** Each heavy job (the slow tier, the mutation run) runs where it measurably finishes fastest
+  with identical results (the same tests run, the same mutants and outcomes), on the Windows runner or GitHub-hosted,
+  decided per job by a side-by-side run on the same commit and re-checked if either side changes. Containment, the
+  memory cap and the 36-hour no-run alert are prerequisites for any job placed on Windows. Pull requests keep only the
+  normal suite either way.
+- **Over R-904:** where the two differ, this ruling, the later, governs: item 1's "the nightly full run" becomes the
+  placement rule's choice, per job.
+
+*What it amends:*
+
+- **R-196** and **R-202**: the mutation run is on `main` and nightly, never per pull request; a survivor files a task
+  and never makes `main` red.
+- **R-684**: the slow tier leaves both pull-request tiers.
+- **R-859**: its "Moving required or heavy CI work (mutants, GPU suites as gating checks) to the Windows runner is NOT
+  approved yet" gives way, for heavy work, to the placement rule under the preconditions above. Nothing on the Windows
+  runner becomes a required check, the runner's security rules stand, and benchmarks of record stay on the owner's Mac
+  (R-186). Precondition (3) is a run of the kind R-859's heavy-work comparison (REQ-TOOL-225, TASK-M0-56) makes.
+- **R-904**, refined, as above.
+
+R-905 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 (statement, verify, source, rulings, note) and REQ-VAL-181 (statement, source, rulings, note).
+
+## R-906 — CI levers: generated plan files are no longer committed, CI regenerating and checking them; lavapipe's GPU tests may run at a smaller size only once it is shown to reach the same branches and stages, the full size running on the RTX nightly; a test killed by its limit is listed as "timed out (not a survivor)"; the control-inventory tests run once per CI run; the nightly mutation run becomes incremental by fingerprint, every mutant re-tested at least weekly; larger runners: no *(amends R-292 and R-402; refines R-683, R-712, R-718 and R-903)*
+*8 Nov 2026 · the owner's message of that day, "CI levers"; applied in the forward lines of R-292, R-402, R-683, R-712,
+R-718 and R-903, REQ-VAL-148, REQ-VAL-150 and REQ-VAL-180 (reqio) and `plan/rule_groups.yaml`; built by #451 (generated
+plan files no longer committed), #452 and the nightly's tooling pull requests; changes REQ-VAL-148, REQ-VAL-150 and
+REQ-VAL-180*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> CI levers:
+> - Approved as two-way trials, criteria first, before/after in the morning report: 1 (xtask tests share one build or use small fixture workspaces), 2 (nextest archive: build once, partition the run), 4 (skip mutants that can't compile; no compiling mutant dropped), 5 (test only the mutated crate; each exclusion stated with reason; same mutants caught), 7 (opt-level for dependencies in test builds), 8 (merge in planned order), 9 (linker check), 10 (path-filtered quick tier; full tier on merge-ready stays the backstop).
+> - Item 3: yes. Generated plan files (plan/coverage.md etc.) stop being committed; CI regenerates and checks them. Amend whatever rule keeps them committed and say which.
+> - Item 6: yes, on condition: the lavapipe GPU tests run at a smaller size only once you show the smaller size reaches the same code paths (same branches and stages hit); the full size runs on the RTX nightly. Report before switching.
+> - Killed test recorded by mutants-check as "timed out (not a survivor)": yes. Baseline with no kill limit; same limits for nightly and local: fine.
+> - Larger runners: no, as you recommend.
+> - The qa control-inventory tests (qa_TASK-M0-22/24/25 and similar, which inspect the whole workspace) run once per CI run as a step, not inside per-mutant test runs. Coverage unchanged; report which tests move.
+> Nightly cycle: before choosing (a) or (b), add incremental mutation. Record each mutant's outcome against a fingerprint of its crate's source and tests; a mutant whose fingerprint is unchanged since the last completed run keeps its outcome and isn't re-run. Each night tests only changed mutants; a 7-night rotation still re-tests everything weekly, so a stale fingerprint can't hide a survivor for more than a week. Criterion: on one full pass, the fingerprinted outcomes match a from-scratch run. Then size the cycle from the new cost, with Windows as capacity under the placement rule.
+
+*What it decides:*
+
+- **The two-way trials** (items 1, 2, 4, 5, 7, 8, 9 and 10 of the owner's list) are approved as trials, each with its
+  criterion written first and its before and after numbers in the morning report (R-812). They are listed, not ruled.
+- **Item 3, generated plan files.** `plan/coverage.md` and the other generated plan files stop being committed; CI
+  regenerates and checks them. The rule that kept them committed is **R-292**, item 3: `plan/CURRENT_RULES.md` "generated
+  only, rebuilt by a script, and check_plan fails if it's stale", a staleness check that presumes a committed copy; and
+  `plan/WORKFLOW.md` § "Keeping the plan true", which names no ruling. **R-718** (prefer not committing a generated file
+  if nothing needs it in git) didn't keep them, and is refined: which files leave git, and how a generated block inside a
+  hand-written file is treated, is the tooling pull request's (#451), which may land before this ruling and cites these
+  words.
+- **Item 6, smaller GPU tests.** Yes, on its condition: lavapipe's GPU tests run at a smaller size only once the
+  smaller size is shown to reach the same code paths, the same branches and stages hit; the full size runs on the RTX
+  nightly. The showing is the condition; the report comes with the change (R-908).
+- **A killed test** is recorded by `mutants-check` as "timed out (not a survivor)", completing R-903's Fix 1 and R-712's
+  listing. The baseline runs with no kill limit, and the nightly and local runs take the same limits. REQ-VAL-180
+  states it.
+- **The control-inventory tests** (`qa_TASK-M0-22`, `qa_TASK-M0-24`, `qa_TASK-M0-25` and the like, which inspect the
+  whole workspace) run once per CI run, as a step, not inside a mutant's test run. Coverage is unchanged; which tests
+  move is reported. REQ-VAL-148 states it.
+- **Incremental mutation, before the nightly cycle is chosen.** Each mutant's outcome is recorded against a fingerprint
+  of its crate's source and tests; a mutant whose fingerprint is unchanged since the last completed run keeps its
+  outcome and isn't re-run. Each night tests only the changed mutants; a 7-night rotation still re-tests every mutant
+  weekly, so a stale fingerprint can't hide a survivor for more than a week. The owner's criterion, verbatim: "on one
+  full pass, the fingerprinted outcomes match a from-scratch run." Then the cycle is sized from the new cost, with
+  Windows as capacity under R-905's placement rule. The cycle's two options shown to the owner, (a) and (b), are not
+  chosen here. REQ-VAL-150 states it.
+- **Larger runners: no.** The owner's decision on the question R-683 left open ("Don't propose paid runners or moving the
+  repo to an organisation; I'll decide those later"), and the answer to R-904's item 6.
+
+*What it amends:*
+
+- **R-292**, item 3, in part: `plan/CURRENT_RULES.md` is generated and not committed; `check_plan.py` fails if it can't
+  be built, not if a committed copy is stale.
+- **R-402**, in part: the nightly run is incremental, each night re-testing only the mutants whose fingerprint changed,
+  every mutant re-tested at least once in 7 nights; its sharding stands.
+- **R-683**, refined: its open question on paid runners is answered, no.
+- **R-712** and **R-903**, refined: a killed test's listing, the baseline without a kill limit, and the same limits for
+  the nightly and local runs.
+- **R-718**, refined: generated plan files stop being committed, CI regenerating and checking them; the per-file
+  treatment is #451's.
+
+R-906 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148, REQ-VAL-150 and REQ-VAL-180 (statement, verify, source, rulings, note).
+
+## R-907 — CI restructure: pull-request CI is a sanity check (build, fmt, Clippy, the normal suite, a lavapipe GPU smoke set); process tests run on a pull request only when it changes `.github/`, `xtask/`, `scripts/` or plan files, and nightly on `main`; each merge to `main` is tested on its own, advisory, a correctness failure making `main` red and any other filing a top-priority task; a 36-hour no-run alert, with lavapipe's full GPU suite as the fallback; no lavapipe-versus-RTX week *(amends R-305, R-376, R-678, R-681, R-684, R-904 and R-905)*
+*Amended in part by R-908 (8 Nov 2026: process tests may also be retired where history shows high cost and no product catch; the split is applied, then reported; the required checks are named).*
+*Amended in part by R-909 (9 Nov 2026: the approved CI model governs where they differ, process tests also running on a pull request that changes `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/`).*
+*Still in force: pull-request CI as a sanity check, with no mutants, no slow tier, no in-depth GPU tests and process tests only by the path rule; each merge commit to `main` tested individually and advisory, a correctness failure (physics, validation, bit-for-bit, golden) red under R-681 and any other failure filing a top-priority task without freezing pull-request work; the 36-hour alert and its lavapipe fallback; no lavapipe-versus-RTX week until a renderer exists, then as its own task; item 5's audit, a report. Not its reporting before applying, and the path rule as R-909 widens it.*
+*8 Nov 2026 · the owner's message of that day, "CI restructure, owner's decision"; applied in the forward lines of
+R-305, R-376, R-678, R-681, R-684, R-904 and R-905, REQ-VAL-148 and REQ-VAL-149 (reqio) and `plan/rule_groups.yaml`; built
+by the PR-tier restructure and the per-merge workflow; changes REQ-VAL-148 and REQ-VAL-149*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> CI restructure, owner's decision (amends R-684's tiers and the required-check list):
+> 1. Process tests off the PR path. #431's baseline: xtask was 49% of all test time, ~85% of that testing CI and process (nextest listings, qa_TASK-M0-*, plan_check, controls, ci*, deps, rq_union), ~15% product tooling (build_kernel, lint_wgsl_*). Process tests run on a PR only when it changes .github/, xtask/, scripts/ or plan files, plus nightly on main. Product-tooling tests (build_kernel, lint_wgsl_*) stay on every PR. Report the exact split, test by test, before applying; any test you can't classify comes to me.
+> 2. PR CI (GitHub-hosted, required) is a sanity check: build, fmt, Clippy, the normal test suite, a lavapipe GPU smoke set. No mutants, no slow tier, no in-depth GPU tests, no process tests unless rule 1 triggers them.
+> 3. On every merge to main, each merge commit tested individually: the Windows runner runs in-depth GPU tests (RTX 2080 Super), the slow tier and in-diff mutants; nightly runs the full rotation and the process tests. Advisory, never blocking a merge. A correctness failure (physics, validation, bit-for-bit, golden) is red main under R-681; any other failure files a top-priority task without freezing PR work. If no Windows main run completes in 36 h, alert me and run the lavapipe full GPU suite on GitHub-hosted.
+> 4. No lavapipe-vs-RTX comparison week: not enough GPU code yet to measure anything. Do it later, when a renderer exists, as its own task.
+> 5. Process-test audit, report only, nothing removed: every xtask and qa test over 10 s with its time, the rule it enforces, and each real defect it has caught (link) or "none on record"; grouped keep / make cheaper / candidate to retire. Retiring is my decision.
+> Order: anchor moved and the Windows gate passing; containment proven; then 1 and 2 (these need no Windows and can go first); then 3; 5 alongside. Say what gpu-metal covers and where it belongs under this shape.
+
+*What it decides:*
+
+- **Item 1, process tests off the pull-request path.** On #431's baseline xtask was 49% of all test time, about 85% of
+  it testing CI and process. Process tests run on a pull request only when it changes `.github/`, `xtask/`, `scripts/`
+  or plan files, and nightly on `main`; product-tooling tests (`build_kernel`, `lint_wgsl_*`) stay on every pull
+  request. The owner asked for the split, test by test, before applying, and for any test that can't be classified;
+  R-908 has the split applied and reported after, and keeps the owner's question for a test that may be product
+  correctness.
+- **Item 2, pull-request CI** (GitHub-hosted, required) is a sanity check: build, fmt, Clippy, the normal test suite and
+  a lavapipe GPU smoke set. No mutants, no slow tier, no in-depth GPU tests, and no process tests unless item 1's paths
+  trigger them.
+- **Item 3, each merge to `main`,** each merge commit tested on its own: the Windows runner runs the in-depth GPU tests
+  (RTX 2080 Super), the slow tier and the in-diff mutants; the nightly runs the full rotation and the process tests.
+  Advisory, never blocking a merge. A correctness failure (physics, validation, bit-for-bit, golden) is a red `main`
+  under R-681; any other failure files a top-priority task without freezing pull-request work. If no Windows run on
+  `main` completes in 36 hours, the owner is alerted and lavapipe's full GPU suite runs on GitHub-hosted runners.
+- **Item 4:** no lavapipe-versus-RTX comparison week, there being too little GPU code to measure; it is done later, when
+  a renderer exists, as its own task. R-905's step 2 is withdrawn by this item.
+- **Item 5** is a report, not a ruling: the process-test audit, nothing removed, retiring the owner's decision (made in
+  R-909).
+- **The order:** the anchor moved and the Windows gate passing; containment proven; then items 1 and 2, which need no
+  Windows and can go first; then item 3; item 5 alongside. What gpu-metal covers, and where it belongs under this shape,
+  is a report the owner asked for.
+- **Over R-904 and R-905:** where they differ, this ruling, the later, governs.
+
+*What it amends:* each ruling or requirement that names the required checks or the per-PR mutants gate, as follows.
+
+- **R-684**, its tiers: the pull-request tier is item 2's sanity check, the in-depth and slow work moving to each merge
+  to `main` (item 3).
+- **R-305** and **R-678**: `mutants-check`, the per-PR mutation gate's verdict, leaves the required checks once the
+  pull-request tier is restructured (R-909: the owner changes branch protection).
+- **R-376**, for REQ-VAL-149: the 8 shards × 300 minutes size the in-diff run, now on `main`, not a per-PR run.
+- **R-681**: a red `main` is a correctness failure on `main`; any other failure files a top-priority task without
+  stopping other pull-request work.
+- **R-904** and **R-905**, as above.
+
+R-907 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 (statement, verify, source, rulings, note) and REQ-VAL-149 (source, rulings, note).
+
+## R-908 — CI: decide and act: pull-request feedback in under 30 minutes and merge-ready to merge in under an hour; the required checks become build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set and reviews; process tests move off the pull-request path, or are retired where history shows high cost and no product catch, each in its own commit; mutation, in-depth GPU tests and the slow tier leave the pull-request path; product-correctness tests are never retired *(amends R-196, R-202, R-302, R-305, R-376, R-678, R-684, R-904, R-905 and R-907)*
+*Amended in part by R-909 (9 Nov 2026: the approved CI model governs where they differ).*
+*Still in force: its goal and its limits: product-correctness tests (kernel, physics, validation algebra, FD against analytic, goldens, cross-backend) run on every pull request or every merge to `main`, none retired; reviews and the runner's security rules unchanged; no spending; a retired test deleted in its own commit; a failing process test filing a task, never making `main` red; a test that may be product correctness asked of the owner; the report after, with before and after times. Its required checks and its moves read as R-909's model has them.*
+*8 Nov 2026 · the owner's message of that day, "CI: decide and act, don't ask"; applied in the forward lines of R-196,
+R-202, R-302, R-305, R-376, R-678, R-684, R-904, R-905 and R-907, REQ-VAL-148 and REQ-VAL-149 (reqio) and
+`plan/rule_groups.yaml`; built by the PR-tier restructure, the per-merge workflow and the retirements; changes REQ-VAL-148
+and REQ-VAL-149*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> CI: decide and act, don't ask (supersedes my unsent CI-shape blocks; the standing delegation is widened as below).
+> Goal: PR feedback in under 30 minutes and merge-ready to merge in under an hour, as soon as possible. Product correctness is what CI protects: physics, numerics, output, GUI behaviour. Machinery that tests the machinery is secondary.
+> Use the weeks of run history you already have — no new measurement phase. From it, report once: (1) where CI time goes, by package and test; (2) every CI failure over the last month classified as product bug (code was wrong) or pipeline breakage (CI, harness, tooling, flake, runner), with counts.
+> Then act, without asking first:
+> - Process and pipeline tests (CI listings, controls inventories, plan checks, ci* and qa tooling tests, deps rules): move them off the PR path to run only when a PR changes .github/, xtask/, scripts/ or plan files, plus nightly — or retire them outright where history shows they cost a lot and caught no product bug. A failing process test never makes main red; it files a task.
+> - Mutation testing: off the PR path entirely; nightly/Windows as already agreed, best-effort until the nightly fits.
+> - In-depth GPU tests and the slow tier: off the PR path, on main via the Windows runner (or GitHub-hosted until Windows is up).
+> - PR required checks become: build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set, reviews.
+> Limits that stay: product correctness tests (kernel, physics, validation algebra, FD-vs-analytic, goldens, cross-backend) keep running on every PR or on every merge to main — none retired; reviews unchanged; runner security rules unchanged; no spending. Retired tests are deleted in their own commits so any can be restored by revert.
+> Report after: what was cut, moved or kept, with before/after PR and merge times. Anything you're genuinely unsure is product-correctness, ask; everything else is yours.
+
+*What it decides:*
+
+- **The goal.** Pull-request feedback in under 30 minutes, and merge-ready to merge in under an hour, as soon as
+  possible. What CI protects is product correctness: physics, numerics, output and GUI behaviour.
+- **The delegation, widened.** The owner's standing CI-speed delegation of 8 Nov 2026 is a two-way order, not a ruling
+  (its words: "Standing delegation, CI speed (two-way, until I withdraw it): optimise CI and test wall time across
+  GitHub-hosted runners and the Windows runner as you see fit, without asking first", under invariants that began "no
+  test deleted, skipped or weakened (moving a test to another tier or runner is allowed; it still runs on main or
+  nightly)" and included "required checks keep their meaning"). This ruling widens it: the orchestrator acts, without
+  asking first, on the moves below, which retire process tests and change the required checks.
+- **One report from the run history, no new measurement phase:** where CI time goes, by package and test; and every CI
+  failure of the last month classed as a product bug (the code was wrong) or a pipeline breakage (CI, harness, tooling,
+  flake, runner), with counts.
+- **Then, without asking:** process and pipeline tests (CI listings, control inventories, plan checks, `ci*` and qa
+  tooling tests, dependency rules) move off the pull-request path, running only on a pull request that changes
+  `.github/`, `xtask/`, `scripts/` or plan files, and nightly; or are retired outright where history shows they cost a
+  lot and caught no product bug. A failing process test never makes `main` red; it files a task. Mutation testing leaves
+  the pull-request path entirely, nightly and on the Windows runner as agreed, best-effort until the nightly fits.
+  In-depth GPU tests and the slow tier leave the pull-request path, running on `main` through the Windows runner, or on
+  GitHub-hosted runners until it is up. The pull-request required checks become: build, fmt, Clippy, the product test
+  suite, a lavapipe GPU smoke set, and reviews.
+- **The limits that stay:** product-correctness tests (kernel, physics, validation algebra, FD against analytic,
+  goldens, cross-backend) keep running on every pull request or on every merge to `main`, and none is retired; reviews
+  unchanged; the runner's security rules unchanged; no spending. A retired test is deleted in its own commit, so that
+  any can be restored by a revert. Where the orchestrator is genuinely unsure whether a test is product correctness, the
+  owner is asked; everything else is the orchestrator's.
+- **The report after:** what was cut, moved or kept, with before and after pull-request and merge times.
+- **Over R-904, R-905 and R-907:** where they differ, this ruling governs. So R-904's conditions on taking mutation off
+  the pull-request path (the nightly green first, three green nights before `mutants-check` leaves the required checks)
+  give way to "off the PR path entirely … best-effort until the nightly fits"; and the reports R-904's item 2 and
+  R-907's item 1 asked for before applying come after it. R-904's "moving any physics or validation test into the slow
+  tier comes to me first" is not named here and stands: the slow tier now runs on each merge to `main`, inside this
+  ruling's limits, and a test that may be product correctness is still asked.
+
+*What it amends:*
+
+- **R-196**, **R-202** and **R-302**: no mutation run on the pull-request path; R-302's nightly backstop stays.
+- **R-305**, **R-678** and **R-376**: the per-PR mutants gate is not among the required checks; REQ-VAL-149's pair sizes
+  the in-diff run off the pull-request path.
+- **R-684**: the required checks of a pull request are the list above.
+- **R-904**, **R-905** and **R-907**, as above.
+
+R-908 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 (statement, verify, source, rulings, note) and REQ-VAL-149 (source, rulings, note).
+
+## R-909 — The CI model is approved: a required pull-request tier under 30 minutes, an advisory tier on each merge to `main`, and a nightly and Windows background; the golden runner over every suite and the screenshot runner's self-test are product correctness, run per merge and never retired; the 17 retirement candidates are retired, one commit each; branch protection stays the owner's, who changes it from an exact old-to-new list *(amends R-677, R-684, R-904, R-905, R-907 and R-908)*
+*9 Nov 2026 · the owner's message of that day, "CI model: approved as proposed, with these"; applied in the forward lines
+of R-677, R-684, R-904, R-905, R-907 and R-908, REQ-VAL-148 and REQ-VAL-149 (reqio) and `plan/rule_groups.yaml`; built by
+the PR-tier restructure, the per-merge workflow, the retirements and the Windows and nightly steps, in the model's order;
+changes REQ-VAL-148 and REQ-VAL-149*
+
+The owner's words (9 Nov 2026), verbatim:
+
+> CI model: approved as proposed, with these:
+> - Golden runner over every suite (qa_TASK-M0-06_runner, _list) and the screenshot runner self-test (qa_TASK-M0-20): product correctness — per merge, never retired.
+> - The 17 retirements: approved, one commit each.
+> - #450: close unmerged once the PR-tier restructure lands.
+> - Order fix: #452 (per-test kill limits) merges before any mutants re-run; re-running #431 without it hangs on the same three mutants. If the required-check switch is within a day, skip the #431/#448 mutant re-runs and merge them once mutants-check is no longer required.
+> - Branch protection: I'll change it myself. When the PR-tier restructure lands, give me the exact required-check list, old → new, as a copyable list.
+> - Measure push → verdict and merge-ready → merge for the first ten PRs after the switch and report them; the 25–35 min is an estimate until then.
+> Go.
+
+The model they approve, as proposed to them on 9 Nov 2026, quoted from its first section on so that this ruling stands
+without it:
+
+> ## 1. Every PR (required; target < 30 min), in parallel, fmt first (fail fast)
+> - fmt, Clippy, workspace build.
+> - Product tests: changed crates + reverse deps (ci_quick_crates.py selection), excluding the slow tier (tests > 60 s by name)
+>   and in-depth GPU tests.
+> - Product-rule commands run directly (not the slow test wrappers): `cargo xtask deps`, `lint constants`, `lint wgsl`,
+>   `lint vocab`, generated-WGSL-is-current, static "every test has a registered control" listing (no control execution).
+> - lavapipe GPU smoke set; Metal smoke set on GPU-path PRs.
+> - check_plan.py, reviews-complete, pr-check, no-atlas-params.
+> - Process tests only when the PR changes .github/, xtask/, scripts/, plan/, decisions.md, REVIEW_QUEUE.md or docs/.
+> - `ci` no longer runs on task-branch push events: pull_request and main push only.
+> Required checks drop mutants-check, xtask-ci, full-tier GPU jobs (smoke jobs keep names where needed). Owner flips protection.
+>
+> ## 2. Each merge to main (per merge commit; advisory; never blocks a merge)
+> - Hosted: full product suite, slow tier, in-depth GPU on lavapipe, full Metal, golden --all, golden runner over every
+>   suite (qa_TASK-M0-06_runner/_list) and screenshot self-test (qa_TASK-M0-20) (product correctness, never retired).
+> - Correctness failure (physics, validation, bit-for-bit, golden) = red main (R-681); other failures file a top-priority task.
+> - Windows once proven: RTX in-depth GPU, slow tier, in-diff mutants, all process tests; lavapipe full on hosted if no
+>   Windows main run completes in 36 h (alert).
+>
+> ## 3. Nightly / Windows background: full pedantic suite (every process test, full mutation rotation, slow tier); failures file tasks, never block.
+>
+> ## Retired (one commit each): 17 tests, scratch/ci-audit-9nov.csv group "candidate to retire".
+> ## Make cheaper (58, 7,009 s): off PR path first, then by cost.
+>
+> ## Order
+> 1. Now: ci off task-branch push; codegen_selftest reuse; #452 then #451 merge; #452 BEFORE any mutants re-run; if the
+>    required-check switch is within a day, skip #431/#448 re-runs and merge them once mutants-check is no longer required.
+> 2. PR-tier restructure PR; then give the owner old -> new required-check list (copyable). Close #450 unmerged when it lands.
+> 3. Per-merge workflow (hosted).
+> 4. 17 retirements; make-cheaper by cost.
+> 5. Windows: anchor + gate; #453 proof; move per-merge suite to Windows; warm target on E:; 36 h alert.
+> 6. Nightly: shard re-size, incremental mutation, rotation sized with Windows.
+> Measure push->verdict and merge-ready->merge for the first ten PRs after the switch.
+
+*What it decides:*
+
+- **The model, as quoted.** Every pull request, required, under 30 minutes: fmt first, then Clippy and the workspace
+  build; the product tests of the changed crates and their reverse dependencies, without the slow tier (tests over 60 s,
+  by name) and the in-depth GPU tests; the product-rule commands run directly (`cargo xtask deps`, `lint constants`,
+  `lint wgsl`, `lint vocab`, generated WGSL current, the static listing that every test has a registered control); a
+  lavapipe GPU smoke set, and a Metal smoke set on GPU-path pull requests; `check_plan.py`, `reviews-complete`,
+  `pr-check` and `no-atlas-params`; process tests only on a pull request that changes `.github/`, `xtask/`, `scripts/`,
+  `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/`; `ci` on `pull_request` and pushes to `main` only, never on a
+  task branch's push. The required checks drop `mutants-check`, `xtask-ci` and the full-tier GPU jobs, the smoke jobs
+  keeping their names where needed. Each merge to `main`, per merge commit, advisory, never blocking a merge: on
+  GitHub-hosted runners the full product suite, the slow tier, the in-depth GPU tests on lavapipe, the full Metal suite,
+  `golden --all`, the golden runner over every suite and the screenshot runner's self-test; a correctness failure
+  (physics, validation, bit-for-bit, golden) is a red `main` (R-681), any other failure files a top-priority task; on the
+  Windows runner once proven, the RTX in-depth GPU tests, the slow tier, the in-diff mutants and every process test, with
+  lavapipe's full suite on GitHub-hosted runners, and an alert, if no Windows run on `main` completes in 36 hours.
+  Nightly and on the Windows runner in the background: the full pedantic suite (every process test, the full mutation
+  rotation, the slow tier), whose failures file tasks and never block.
+- **Product correctness, never retired:** the golden runner over every suite (`qa_TASK-M0-06_runner`,
+  `qa_TASK-M0-06_list`) and the screenshot runner's self-test (`qa_TASK-M0-20`), run on each merge.
+- **The 17 retirements, approved, one commit each:** the candidates the process-test audit (R-907's item 5) grouped
+  "candidate to retire":
+  `qa_m0_24_every_registered_control_makes_its_test_fail` and `qa_m0_24_every_implementer_test_has_a_registered_control`
+  (`qa_TASK-M0-24`); `qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test` and
+  `qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test` (`qa_TASK-M0-25`);
+  `qa_cargo_xtask_alias_runs_the_deps_check` and `qa_xtask_deps_passes_on_the_live_workspace` (`qa_TASK-M0-01`);
+  `qa_m0_26_r206_lists_its_five_tests_and_no_child_path` and `qa_m0_26_r206_test_has_no_child_path_and_qa_child_has_it`
+  (`qa_TASK-M0-26`); `qa_lint_wgsl_workspace_passes` (`qa_TASK-M0-50`); `qa_lint_wgsl_repository_read_side_is_clean`
+  (`qa_TASK-M1-01`); `lint_wgsl_ctx_occupant_structural_occupants_lint_clean` (`lint_wgsl_ctx_occupant`);
+  `lint_wgsl_occupant_repository_lints_clean` (`lint_wgsl_occupant_rules`);
+  `qa02_a_failing_plan_check_turns_xtask_ci_red` and `qa02_xtask_plan_check_passes_on_the_tree_and_streams`
+  (`qa_TASK-M0-02`); `plan_check_passes_on_the_tree` (`plan_check`);
+  `qa_m0_29_live_default_path_check_accepts_the_live_count` (`qa_TASK-M0-29_live`); and
+  `qa_m0_29_workspace_deps_check_accepts_xtask_deps_on_the_workspace` (`qa_TASK-M0-29`). Each duplicates a check that
+  stays (the `controls`, `deps`, `lint wgsl` and plan-check runners, or another test), and none has a product catch on
+  record. Retiring a qa test is a change to qa's files that this ruling forces (R-290's exception, `CLAUDE.md`). The 58
+  tests grouped "make cheaper" leave the pull-request path first, then are made cheaper by cost.
+- **#450** (merge-ready cancels the quick run and starts the full tier) is closed unmerged once the pull-request tier's
+  restructure lands.
+- **The order fix:** #452 (the per-test kill limits, R-903) merges before any mutants re-run, since re-running #431
+  without it hangs on the same three mutants. If the required-check switch is within a day, #431's and #448's mutant
+  re-runs are skipped, and they merge once `mutants-check` is no longer required.
+- **Branch protection is the owner's.** They change it themselves. When the pull-request tier's restructure lands, the
+  orchestrator gives them the exact required-check list, old to new, as a copyable list. Nothing here changes branch
+  protection, and no agent does (R-682).
+- **Measured after the switch:** push to verdict, and merge-ready to merge, for the first ten pull requests, reported;
+  the 25 to 35 minutes is an estimate until then.
+- **The model's order:** (1) now, `ci` off task-branch pushes, `codegen_selftest`'s build reused, #452 then #451 merged,
+  #452 before any mutants re-run; (2) the pull-request tier's restructure, then the owner's old-to-new list, #450 closed
+  when it lands; (3) the per-merge workflow, hosted; (4) the 17 retirements, then the make-cheaper group by cost; (5)
+  Windows: the anchor and its gate, #453's proof, the per-merge suite moved to Windows, a warm target on its E: drive,
+  the 36-hour alert; (6) the nightly: its shards re-sized, incremental mutation (R-906), its rotation sized with Windows.
+- **Over R-904, R-905, R-907 and R-908:** where they differ, this ruling governs. So process tests run on a pull request
+  that changes `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` too, wider than R-907's and R-908's paths, and
+  `xtask-ci` and the full-tier GPU jobs leave the required checks beside `mutants-check`.
+
+*What it amends:*
+
+- **R-684**: its two code tiers give way to the model's pull-request tier, with no full tier on the merge-candidate head;
+  the full product suite runs on each merge to `main`. The guarantee R-684 recorded, that `main` receives only
+  fully-tested heads, becomes: every pull request passes the required tier, and each merge commit is tested in full on
+  `main`, a correctness failure there making `main` red (R-681).
+- **R-677**: a head that changes `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` (its tiers (b) and (c)) also
+  runs the process tests; its classifier otherwise stands.
+- **R-904**, **R-905**, **R-907** and **R-908**, as above.
+
+R-909 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 (statement, verify, source, rulings, note) and REQ-VAL-149 (source, rulings, note).

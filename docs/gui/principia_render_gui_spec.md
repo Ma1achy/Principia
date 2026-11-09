@@ -364,8 +364,10 @@ can never disagree (the definition R-466 allows); its **window** is a scale `σ_
 coordinate axes at one scale, as all six of the mock's are (§G7). What the three values are for any other chart a
 preset can hold (an oblique or unequal-scale pair, an axis of another kind, a curved chart) and for a view saved
 tilted is not yet defined: RQ-711, for TASK-M8-18. *7 Nov 2026 (R-820, RQ-711 (a)):* a saved preset stores its whole
-saved triple `(z₀, q₁, q₂)` as its home view, so Home returns the chart that was saved; the scale the zoom row reads
-against on such a preset is still to be named, and RQ-711 stays open for it. R-798's equilateral-point preset is the exception, its map and
+saved triple `(z₀, q₁, q₂)` as its home view, so Home returns the chart that was saved. *8 Nov 2026 (R-888, RQ-711):* the
+saved view itself reads 1×, so on such a preset the zoom row reads × 1.00 at the saved view and zoom is relative to what
+was saved. *Was:* "the scale the zoom row reads against on such a preset is still to be named, and RQ-711 stays open for
+it." R-798's equilateral-point preset is the exception, its map and
 window being TASK-M9-45's (R-798). The zoom row reads `log₂(σ_h / σ)` and its magnification `σ_h / σ`, so it
 reads 0 and × 1.00 at the window whatever `σ_h` is; with no active preset there is no window, and the row reads
 `−log₂ σ` and `1 / σ`, `σ_h = 1` (applied per R-369). The depth readout stays absolute, `−log₂ σ` (§G2's depth readout):
