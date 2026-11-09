@@ -61,15 +61,18 @@ def out_dir(argv, root=ROOT):
     at = argv.index("--out") + 1
     if at == len(argv) or argv[at].startswith("--"):
         sys.exit("--out needs a directory")
-    out = os.path.abspath(argv[at])
+    # realpath, not abspath: a symlink anywhere in <dir> is followed, so a link to a folder in the tree is caught.
+    out = os.path.realpath(argv[at])
     if inside(out, root):
         sys.exit(f"--out {argv[at]} is inside the repo tree {root}: name a directory outside it (your target directory)")
     return out
 
 
 def inside(path, tree):
-    """True if `path` is `tree` or under it. Compared by file identity, not by name, as a case-insensitive volume or a
-    symlink gives one directory two names; a part of `path` not yet made is matched through its nearest existing parent."""
+    """True if `path`, once every symlink in it is followed, is `tree` or under it. Each of its parents is compared with
+    `tree` by file identity, not by name, as a case-insensitive volume or a symlink gives one directory two names; a part
+    of `path` not yet made is matched through its nearest existing parent."""
+    path = os.path.realpath(path)
     while True:
         if os.path.exists(path) and os.path.samefile(path, tree):
             return True

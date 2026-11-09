@@ -1095,20 +1095,26 @@ const OUT_INSIDE: &str = "is inside the repo tree";
 
 /// `regenerate.py --out <dir>` refuses `dir`, naming it inside the tree, and writes nothing there.
 fn refuses_out(root: &Path, dir: &Path) {
+    refuses_out_by(root, "plan/tools/regenerate.py", dir);
+}
+
+/// `<script> --out <dir>` refuses `dir`, naming it inside the tree, and writes nothing there. Run with `-B`, as
+/// `regenerate.py` runs the generators, so Python's bytecode cache for their imports isn't counted as a write.
+fn refuses_out_by(root: &Path, script: &str, dir: &Path) {
     let before = snapshot(root);
     let (passed, out) = python(
         root,
-        "plan/tools/regenerate.py",
-        &["--out", dir.to_str().expect("utf-8 path")],
+        "-B",
+        &[script, "--out", dir.to_str().expect("utf-8 path")],
     );
-    assert!(!passed, "regenerate.py --out passed:\n{out}");
+    assert!(!passed, "{script} --out passed:\n{out}");
     assert!(
         out.contains(OUT_INSIDE),
-        "regenerate.py --out did not name the fault:\n{out}"
+        "{script} --out did not name the fault:\n{out}"
     );
     assert!(
         snapshot(root) == before,
-        "regenerate.py --out wrote into the tree"
+        "{script} --out wrote into the tree"
     );
 }
 
@@ -1128,6 +1134,49 @@ negative_control!(
         let sibling = PathBuf::from(format!("{}-sibling", root.display()));
         let _ = fs::remove_dir_all(&sibling);
         refuses_out(&root, &sibling);
+    }
+);
+
+/// Each script that takes `--out`: `regenerate.py` and the generators it runs, which share its guard.
+#[cfg(unix)]
+const OUT_SCRIPTS: [&str; 4] = [
+    "plan/tools/regenerate.py",
+    "plan/tools/current_rules.py",
+    "plan/tools/coverage.py",
+    "plan/tools/reviewer_lists.py",
+];
+
+/// A symlink named after `name` beside the copy `root`, outside it, to `to`.
+#[cfg(unix)]
+fn link_beside(root: &Path, name: &str, to: &Path) -> PathBuf {
+    let link = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}_link"));
+    let _ = fs::remove_file(&link);
+    std::os::unix::fs::symlink(to, &link).expect("symlink made");
+    assert!(!link.starts_with(root), "the link is outside the copy");
+    link
+}
+
+#[cfg(unix)]
+#[test]
+fn regenerate_out_refuses_a_symlink_to_a_directory_in_the_tree() {
+    let (root, _) = copy_and_out("regenerate_out_symlink");
+    let link = link_beside(&root, "regenerate_out_symlink", &root.join("plan"));
+    for script in OUT_SCRIPTS {
+        refuses_out_by(&root, script, &link.join("z"));
+    }
+    assert!(!root.join("plan/z").exists(), "a generator wrote plan/z");
+}
+
+#[cfg(unix)]
+negative_control!(
+    regenerate_out_refuses_a_symlink_to_a_directory_in_the_tree,
+    "a symlink to a directory outside the tree is outside it, and passes, so the refusal check must fail on it",
+    expected = "--out passed",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out_symlink");
+        fs::create_dir_all(&out).expect("out made");
+        let link = link_beside(&root, "regenerate_ctl_out_symlink", &out);
+        refuses_out_by(&root, "plan/tools/regenerate.py", &link.join("z"));
     }
 );
 
