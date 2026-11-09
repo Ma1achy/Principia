@@ -35,8 +35,11 @@ RUSTUP_SHA256=b1c8cb14e30889e7e2999e6b69e62d9e9b9ffc0f4df8180564d306d9680e6c55
 NEXTEST_VERSION=0.9.146
 MUTANTS_VERSION=27.1.0
 # What builds and tests the workspace on the CPU: a C toolchain and pkg-config for the crates' build scripts, python3
-# with PyYAML for xtask's tests, git and curl, and util-linux and procps for `scripts/contain.sh`.
-PACKAGES=(build-essential pkg-config python3 python3-yaml git curl ca-certificates util-linux procps)
+# with PyYAML for xtask's tests, git and curl, and util-linux and procps for `scripts/contain.sh`. And lavapipe, Mesa's
+# software Vulkan driver, as `ci.yml`'s "Install Mesa (lavapipe)" steps install it on the hosted runner, the same one
+# package (it depends on libvulkan1, the loader): the workspace's tests include the GPU harness self-tests, which open
+# an adapter. The driver lives in the distro, from the snapshot; the Windows driver store is never mounted (proof 2).
+PACKAGES=(build-essential pkg-config python3 python3-yaml git curl ca-certificates util-linux procps mesa-vulkan-drivers)
 
 out=${1:?usage: build-image.sh <out-dir>}
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

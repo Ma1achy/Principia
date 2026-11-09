@@ -27,9 +27,10 @@ case "${1:-}" in
 esac
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 work="$HOME/work"
-# The build settings every workflow's top-level env sets (`win-gpu.yml`), which cross no `wsl.exe` boundary.
+# The build settings every workflow's top-level env sets (`win-gpu.yml`), which cross no `wsl.exe` boundary; and the GPU
+# backend, Vulkan, which `ci.yml`'s test jobs set too: in the distro it finds lavapipe, as on the hosted runner.
 export CARGO_TERM_COLOR=never CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=line-tables-only \
-  CARGO_PROFILE_TEST_DEBUG=line-tables-only
+  CARGO_PROFILE_TEST_DEBUG=line-tables-only PRIN_GPU_BACKEND=vulkan
 export PATH="$HOME/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 failed=0

@@ -10,7 +10,8 @@
 //! `.github/wsl-cpu-enabled` is absent, as it is until a reviewed PR adds it after all six proofs have passed;
 //! `/etc/wsl.conf` is exactly the owner's, with no `[boot]` and so no systemd, and the image has no sudo and no sudoers
 //! entry; the base and rustup are pinned by hash and checked before use, the packages come from one dated snapshot,
-//! the toolchain is `rust-toolchain.toml`'s; registration refuses without a pinned manifest hash; proof 3 tries the
+//! the toolchain is `rust-toolchain.toml`'s; the image installs the Vulkan packages `ci.yml`'s lavapipe steps install,
+//! and `inside.sh` selects the backend those jobs select; registration refuses without a pinned manifest hash; proof 3 tries the
 //! host over WSL's virtual switch, at the distro's gateway and on SMB's 445, as well as over the LAN; and proof 4 runs
 //! the unprivileged check and fails unless the processes outside survive it, inside and on Windows.
 
@@ -480,6 +481,185 @@ mod other_host {
             ),
             &read(CONF),
             &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+// ---- Vulkan, as on the hosted runner ------------------------------------------------------------------------------
+
+const CI: &str = ".github/workflows/ci.yml";
+
+/// The packages of `NAME=(...)` in the build script.
+fn array<'a>(build: &'a str, name: &str) -> Vec<&'a str> {
+    setting(build, name)
+        .strip_prefix('(')
+        .and_then(|a| a.strip_suffix(')'))
+        .unwrap_or_else(|| panic!("{BUILD}'s {name} isn't an array"))
+        .split_whitespace()
+        .collect()
+}
+
+/// `ci.yml`'s jobs that install lavapipe: the packages each one's step installs, sorted, and every `PRIN_GPU_BACKEND`
+/// or `VK_*` setting of the job's env or a step's.
+fn hosted_vulkan(ci: &str) -> (Vec<Vec<String>>, Vec<(String, String)>) {
+    let doc = parse(ci);
+    let (mut installs, mut env) = (Vec::new(), Vec::new());
+    let jobs = doc["jobs"].as_hash().expect("ci.yml's jobs");
+    for job in jobs.values() {
+        let steps = job["steps"].as_vec().map_or(&[][..], Vec::as_slice);
+        let mut lavapipe = false;
+        for step in steps {
+            let named = step["name"].as_str().unwrap_or("").contains("lavapipe");
+            let run = step["run"].as_str().unwrap_or("");
+            if let Some((_, rest)) = run.split_once("apt-get install").filter(|_| named) {
+                lavapipe = true;
+                let mut packages: Vec<String> = rest
+                    .split_whitespace()
+                    .filter(|w| !w.starts_with('-'))
+                    .map(str::to_owned)
+                    .collect();
+                packages.sort();
+                installs.push(packages);
+            }
+        }
+        if !lavapipe {
+            continue;
+        }
+        let envs = std::iter::once(&job["env"]).chain(steps.iter().map(|s| &s["env"]));
+        for map in envs.filter_map(Yaml::as_hash) {
+            for (k, v) in map {
+                let key = k.as_str().unwrap_or("");
+                if key == "PRIN_GPU_BACKEND" || key.starts_with("VK_") {
+                    env.push((key.to_owned(), v.as_str().unwrap_or("").to_owned()));
+                }
+            }
+        }
+    }
+    (installs, env)
+}
+
+fn check_vulkan(ci: &str, build: &str, inside: &str) {
+    let (installs, env) = hosted_vulkan(ci);
+    let first = installs
+        .first()
+        .unwrap_or_else(|| panic!("{CI} installs no lavapipe"));
+    assert!(
+        installs.iter().all(|i| i == first),
+        "{CI}'s lavapipe steps install different packages: {installs:?}"
+    );
+    let packages = array(build, "PACKAGES");
+    for package in first {
+        assert!(
+            packages.contains(&package.as_str()),
+            "the image doesn't install the hosted job's Vulkan package {package}"
+        );
+    }
+    assert!(
+        env.iter().any(|(k, _)| k == "PRIN_GPU_BACKEND"),
+        "{CI}'s lavapipe jobs select no GPU backend"
+    );
+    // The settings `inside.sh` makes for every verb, before its first function.
+    let top = &inside[..inside.find("\nok() {").expect("inside.sh's ok()")];
+    for (key, value) in &env {
+        let set = format!("{key}={value}");
+        assert!(
+            top.split_whitespace().any(|w| w == set),
+            "inside.sh doesn't select the hosted job's Vulkan: no {set}"
+        );
+    }
+}
+
+#[test]
+fn wsl_image_provisions_the_hosted_jobs_vulkan() {
+    check_vulkan(&read(CI), &read(BUILD), &read(INSIDE));
+}
+
+negative_control!(
+    wsl_image_provisions_the_hosted_jobs_vulkan,
+    "no lavapipe in the image",
+    expected = "the image doesn't install the hosted job's Vulkan package mesa-vulkan-drivers",
+    check_vulkan(
+        &read(CI),
+        &edited(&read(BUILD), " mesa-vulkan-drivers)", ")"),
+        &read(INSIDE)
+    )
+);
+
+mod hosted_loader {
+    use super::*;
+    negative_control!(
+        wsl_image_provisions_the_hosted_jobs_vulkan,
+        "the hosted job installs a package the image lacks",
+        expected = "the image doesn't install the hosted job's Vulkan package vulkan-tools",
+        {
+            let ci = read(CI).replace(
+                "apt-get install -y mesa-vulkan-drivers",
+                "apt-get install -y mesa-vulkan-drivers vulkan-tools",
+            );
+            check_vulkan(&ci, &read(BUILD), &read(INSIDE));
+        }
+    );
+}
+
+mod hosted_differ {
+    use super::*;
+    negative_control!(
+        wsl_image_provisions_the_hosted_jobs_vulkan,
+        "two hosted jobs install different packages",
+        expected = "lavapipe steps install different packages",
+        check_vulkan(
+            &edited(
+                &read(CI),
+                "apt-get install -y mesa-vulkan-drivers",
+                "apt-get install -y mesa-vulkan-drivers vulkan-tools"
+            ),
+            &read(BUILD),
+            &read(INSIDE)
+        )
+    );
+}
+
+mod hosted_none {
+    use super::*;
+    negative_control!(
+        wsl_image_provisions_the_hosted_jobs_vulkan,
+        "no hosted lavapipe step",
+        expected = "installs no lavapipe",
+        check_vulkan(
+            &read(CI).replace("Install Mesa (lavapipe)", "Install Mesa"),
+            &read(BUILD),
+            &read(INSIDE)
+        )
+    );
+}
+
+mod no_backend {
+    use super::*;
+    negative_control!(
+        wsl_image_provisions_the_hosted_jobs_vulkan,
+        "the distro selects no backend",
+        expected = "inside.sh doesn't select the hosted job's Vulkan: no PRIN_GPU_BACKEND=vulkan",
+        check_vulkan(
+            &read(CI),
+            &read(BUILD),
+            &edited(&read(INSIDE), " PRIN_GPU_BACKEND=vulkan", "")
+        )
+    );
+}
+
+mod hosted_icd {
+    use super::*;
+    negative_control!(
+        wsl_image_provisions_the_hosted_jobs_vulkan,
+        "the hosted job names an ICD the distro doesn't",
+        expected = "no VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json",
+        check_vulkan(
+            &read(CI).replace(
+                "\n      PRIN_GPU_BACKEND: vulkan\n",
+                "\n      PRIN_GPU_BACKEND: vulkan\n      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json\n",
+            ),
+            &read(BUILD),
+            &read(INSIDE)
         )
     );
 }
