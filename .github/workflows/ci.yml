@@ -461,7 +461,8 @@ jobs:
   # The process tests (the owner's CI model, 9 Nov 2026: "Process tests only when the PR changes .github/, xtask/,
   # scripts/, plan/, decisions.md, REVIEW_QUEUE.md or docs/"): the split's process class, the `process` nextest profile,
   # less its slow tier, which runs nightly and on `main`. Advisory: its check, `process`, is no required check (the
-  # owner, 8 Nov 2026: "A failing process test never makes main red; it files a task"), and it skips at job level when
+  # owner, 8 Nov 2026: "A failing process test never makes main red; it files a task"), though the orchestrator's merge
+  # script refuses a merge with a red `process` job on the head (applied per R-369/R-812). It skips at job level when
   # the change touches none of the machinery, which only a passing classification can say.
   # Runner disk: `ci-workspace`, whose tests these largely are, grew 20-69 GB (runner-disk artefacts of 9 Nov 2026), so
   # it frees the long list, without `docker image prune`. Applied per R-369/R-812.

@@ -441,7 +441,10 @@ On a code change the jobs run in parallel:
   class: CI's own tests, the plan checks', the negative-control registry's, the job queue's, the deps rules' synthetic
   workspaces' and the like), less their own slow tier, only when the change touches `.github/`, `xtask/`, `scripts/`,
   `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` (`scripts/ci_changes.sh`'s `process`). A failing process test
-  is read and fixed in its pull request; on `main` it files a task, never a red `main` (the owner, 8 Nov 2026);
+  is read and fixed in its pull request. On `main`, the per-merge workflow (order step 3) brings the owner's "A failing
+  process test never makes main red; it files a task" (8 Nov 2026); until it lands, a failing process test on `main`
+  turns the interim run's `ci` or `xtask-ci` job red and is handled as a red `main`. The orchestrator's merge script
+  refuses a merge with a red `process` job on the head, though branch protection does not require it;
 - `web-skeleton`, advisory: the v1 web skeleton's wasm build.
 Every job bearing a required check runs on every pull request, `if: always()`, and skips its work inside the job on the
 classification's verdict (R-656: "Do the GPU and mutants skips inside the job … then skip as success under the same
