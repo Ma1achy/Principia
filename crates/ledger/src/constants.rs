@@ -1576,6 +1576,26 @@ pub const HIDDEN_HELD_LZ: ConstantBuilder = chart("hidden_held_lz", 9.0, HIDDEN_
 /// canonical units: a dimension index, no unit.
 pub const HIDDEN_HELD_K: ConstantBuilder = chart("hidden_held_k", 10.0, HIDDEN_PHYSICAL);
 
+/// A saved chart travels by value (R-483 H3; R-475 L4, L5): its definition, the parent's params included, as doubles.
+const SAVED_BY_VALUE: Citation = Citation::Corpus {
+    file: "decisions.md",
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)",
+};
+
+/// A saved curved chart's header, 11 words: the kind, the parent's registry index, the slice centre's two, the stored
+/// angles `τ₁`, `τ₂`, the map, the targets `X`, `Y` and the two spans (R-475 L5; `kernel::chart::saved`, TASK-M2-40).
+/// Admissible as expressed in canonical units: a word count, no unit.
+pub const SAVED_HEADER_WORDS: ConstantBuilder = chart("saved_header_words", 11.0, SAVED_BY_VALUE);
+
+/// A saved curved chart's parent, 20 words: its form, then its params, the longest being the shape sphere's 19 (R-475
+/// L5, REQ-CHART-073's "parent chart (id and params)"; `kernel::chart::saved::PARAMS`, TASK-M2-40). Admissible as
+/// expressed in canonical units: a word count, no unit.
+pub const SAVED_PARENT_WORDS: ConstantBuilder = chart("saved_parent_words", 20.0, SAVED_BY_VALUE);
+
+/// A saved oblique chart, 25 words: the kind, then `z₀`, `q₁`, `q₂`, eight each (R-475 L4; `kernel::chart::saved`,
+/// TASK-M2-40). Admissible as expressed in canonical units: a word count, no unit.
+pub const SAVED_OBLIQUE_WORDS: ConstantBuilder = chart("saved_oblique_words", 25.0, SAVED_BY_VALUE);
+
 /// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
 /// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
@@ -1589,9 +1609,9 @@ pub const HIDDEN_HELD_K: ConstantBuilder = chart("hidden_held_k", 10.0, HIDDEN_P
 /// REQ-INT-094), and the view window's square (TASK-M2-21), and the slice frame's default axis (TASK-M6-38), and the
 /// wrapper's loop parameters' defaults, the horizon's cap and the macro-step's floor (TASK-M3-06; R-132, R-610), and the
 /// tilt's angles in degrees (TASK-M2-36; R-474), and the construction charts' physical hidden coordinates' indices
-/// (TASK-M2-52; R-633), and the custom-stop ramp's OKLab bound (TASK-M7-11), and the arctangent
-/// generator's working precision (TASK-M2-26; REQ-GEN-044). Then the drift suspect predicates' thresholds and the
-/// drift views' `lin` ranges (TASK-M3-05; REQ-INT-085, REQ-TOOL-150).
+/// (TASK-M2-52; R-633), and a saved chart's word counts (TASK-M2-40; R-475, R-483), and the custom-stop ramp's OKLab
+/// bound (TASK-M7-11), and the arctangent generator's working precision (TASK-M2-26; REQ-GEN-044). Then the drift
+/// suspect predicates' thresholds and the drift views' `lin` ranges (TASK-M3-05; REQ-INT-085, REQ-TOOL-150).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -1687,5 +1707,8 @@ pub const REGISTER: &[ConstantBuilder] = &[
     HIDDEN_NU0,
     HIDDEN_HELD_LZ,
     HIDDEN_HELD_K,
+    SAVED_HEADER_WORDS,
+    SAVED_PARENT_WORDS,
+    SAVED_OBLIQUE_WORDS,
     ARCTAN_SUM_BITS,
 ];

@@ -3323,7 +3323,7 @@
   - R-475
   - R-513
   milestone: M2
-  note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\"."
+  note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\". Code review 5816802860 of PR #447, C1, and physics review 5816819537, F3: saving a saved curved chart again, compositions onto three or four hidden coordinates, and the composed chart's area weight and shape-sphere repeat counting are REQ-CHART-148 (TASK-M2-55); TASK-M2-40 refuses the first two meanwhile (applied per R-369: the remainder is a follow-up task)."
 - id: REQ-CHART-074
   area: CHART
   statement: "A link parameter change must move the result where it acts: `mu_max = 4` against 5 must give different payloads on a latent configuration view at the fixed non-zero mass logit z_μ = (0.5, −0.3), whose masses softmax(0, μ_max·tanh z_μ) go through the mass link (R-626; the mass simplex chart, which sets its masses directly, cannot show it), and identical payloads on a latent configuration view with both mass logits at 0."
@@ -3412,7 +3412,7 @@
   - R-507
   - R-513
   milestone: M2
-  note: "R-475 L5 (physics review 5586890917 of PR #255, F3); R-513 (RQ-403 ruled, option (b)), Q1 to Q5. Closed by TASK-M2-40 with REQ-CHART-073 (applied per R-369, R-513 Q4: the composition is built once). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered.\", the verify's \"decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs\", and \"Waits for RQ-403; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P3: non-parallel tilts, so the R′·R control can fail. *Was:* \"a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control,\"."
+  note: "R-475 L5 (physics review 5586890917 of PR #255, F3); R-513 (RQ-403 ruled, option (b)), Q1 to Q5. Closed by TASK-M2-40 with REQ-CHART-073 (applied per R-369, R-513 Q4: the composition is built once). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered.\", the verify's \"decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs\", and \"Waits for RQ-403; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P3: non-parallel tilts, so the R′·R control can fail. *Was:* \"a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control,\". Physics review 5816819537 of PR #447, F2: a new tilt into the saved target of a saved Lean each axis view with one target and both angles set waits on RQ-746, split to REQ-CHART-149 (TASK-M2-56); TASK-M2-40 refuses it meanwhile. Code review 5816802860 of PR #447, C1, and physics F3: a composition onto three or four hidden coordinates (Q1's \"one rule for every new target\" past two) is REQ-CHART-148 (TASK-M2-55); TASK-M2-40 refuses it meanwhile (applied per R-369: the remainder is a follow-up task)."
 - id: REQ-CHART-078
   area: CHART
   kind: definition
@@ -4669,6 +4669,48 @@
   - R-864
   milestone: M8
   note: "Closed by TASK-M8-124, stage 1 of R-863's build order. Which task keeps REQ-CHART-113's overlapping tests is RQ-744's (B)."
+- id: REQ-CHART-148
+  area: CHART
+  statement: "A saved curved chart (R-475, R-513) must carry every route its rulings name beyond what REQ-CHART-073 and REQ-CHART-077 build: (a) a new tilt whose offsets, with the saved tilt's, land on three or four hidden coordinates (a saved one-target tilt re-tilted into two other targets, a saved two-target tilt re-tilted into one or two others), each offset on its own target as R-513 Q1 rules, none dropped or refused (R-513 Q1, \"one rule for every new target\"; R-475 S5, planes in which an axis mixes several hidden coordinates reached by saving and tilting again); (b) a saved curved chart saved again, its definition the chain of saved tilts, reopened at zero tilt bitwise and a further tilt composing R·R′·R″ as R-513 rules (R-475 S1, \"tilted, sliced and saved like any other\"); (c) the composed chart's area weight and statistics, as a single tilted chart has them: under Lean each axis the Gram factor of its composed axes (R-474 R7), weight 0 and `ray-degenerate` at the rank-losing corner (R-554), and on the shape sphere the repeat counting of `system_image`, `pixel` and `counted_total` (R-554 L3, R-655)."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: decisions.md
+    section: "R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel saved_chart_wide: a shape-sphere view saved at τ = (25°, −30°) into two momentum controls and re-tilted τ′ = (20°, 40°) into two others places every pixel of a 33 × 33 grid as (R ⊕ 1)·(1 ⊕ R′) to 1 ulp, all four offsets on their controls, and a saved one-target view re-tilted into two others likewise; a saved chart of a saved chart reopens at zero tilt bitwise and a further tilt into its target composes R·R′·R″ to 1 ulp; a saved Lean each axis view at the corner |τ₁| = |τ₂| = 90° with one target reports area weight 0 and `ray-degenerate`, a composed Lean view's weight is its composed axes' Gram factor, and a composed shape-sphere view counts each repeat once; controls: an offset dropped, the chain composed in the reverse order, and the weight of the new tilt alone, each fail; review (physics)"
+  rulings:
+  - R-474
+  - R-475
+  - R-513
+  - R-554
+  - R-655
+  milestone: M2
+  note: "Split from TASK-M2-40 (code review 5816802860 of PR #447, C1; physics review 5816819537, F3; applied per R-369, task scoping: the remainder is a follow-up task, nothing ruled dropped). Closed by TASK-M2-55. TASK-M2-40 refuses (a) (`Composed::new` returns None) and (b) by type (`Saved::curved` takes no tilted chart), and gives (c) no weight or repeat counting meanwhile."
+- id: REQ-CHART-149
+  area: CHART
+  statement: "A new tilt of a saved curved chart into its own saved target, where the saved tilt is Lean each axis with one target and both angles set (its axes skewed, so R has no third column for R-513 Q1's input), must compose as RQ-746 rules; until then the kernel refuses that composition (`kernel::chart::saved::Composed::new` returns None) and the saved target is not offered in that one case (R-513 Q3 holding everywhere else)."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: decisions.md
+    section: "R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel saved_chart_skewed: a shape-sphere view saved under Lean each axis at τ = (30°, 40°) into one momentum control, then tilted τ′ = (20°, 0) into the same control, places the pixel (0.3, 0.7) from the centre, and every pixel of a 33 × 33 grid, as RQ-746's ruling composes it, to 1 ulp; at τ′ = 0 bit-identical to the saved view; control: the other option's composition (RQ-746's options (a) and (b) give (0.2026, 0.4759, 0.6628) and (0.1598, 0.4307, 0.7099) at that pixel) fails; at the edge of Lean's range, a saved tilt at τ = (90°, 40°) (R-474 R8's dead zone) composes, or is not offered, as RQ-746's ruling states (option (a): `t̂` the cross product's own sign, `e_X` fixing none; option (b): the saved target vanishes under R-514 I2 and is not offered), and at τ = (90°, 90°) no composition is made (R-554's `ray-degenerate`, no frame under either option); review (physics)"
+  rulings:
+  - R-474
+  - R-475
+  - R-513
+  milestone: M2
+  rq:
+  - RQ-746
+  note: "Split from REQ-CHART-077 (physics review 5816819537 of PR #447, F2; R-473 J12's precedent: a requirement waiting on an RQ carries the key). Closed by TASK-M2-56, which waits on RQ-746. TASK-M8-48's target dropdowns don't offer the saved target in this case until it is ruled."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."

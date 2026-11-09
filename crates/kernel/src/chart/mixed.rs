@@ -52,6 +52,7 @@ use core::marker::PhantomData;
 use spirv_std::num_traits::Float;
 
 use super::invariant::WarpReal;
+use super::saved::{axis_code, ParentParams, Reader, Writer};
 use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{AxisMeta, BlockTouch, Chart, ChartDecode, ChartOut, Constraint, ValidationResult};
 use crate::decode::{self, Decoded, Latent};
@@ -252,6 +253,22 @@ impl<H: Quantity, V: Quantity, P: fmt::Debug> fmt::Debug for Mixed<H, V, P> {
             .field("h_range", &self.h_range)
             .field("v_range", &self.v_range)
             .finish()
+    }
+}
+
+/// A saved chart's parent ([`ParentParams`]): the axes' codes ([`axis_code`]), then `frozen`, `h_range`, `v_range`.
+impl<H: Quantity, V: Quantity> ParentParams for Mixed<H, V, f64> {
+    fn write(&self, w: &mut Writer<'_>) {
+        w.code(axis_code::<H>());
+        w.code(axis_code::<V>());
+        w.all(&self.frozen);
+        w.all(&self.h_range);
+        w.all(&self.v_range);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        r.expect(axis_code::<H>())?;
+        r.expect(axis_code::<V>())?;
+        Some(Mixed::new(r.array()?, r.array()?, r.array()?))
     }
 }
 
