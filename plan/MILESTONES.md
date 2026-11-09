@@ -270,8 +270,8 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
     (R-919). A row reads the provider's state bitwise; the figure-eight's row at `kT` equals its row at 0 bitwise; the
     Lagrange states within the bound derived from the closed form, else [CAL].
   - **G12. The rest of the core:** hold `L_z` on the CPU (TASK-M2-69), `τ` provisional at M2 (R-919, F13 (b));
-    tilts into the held `ν₀`, `L_z` and `K` (TASK-M2-63; REQ-CHART-188), their spans per RQ-679, awaiting the owner's
-    confirmation (R-919, F14); the virial pair, curved slices, region D, the primitives, the paper frames, the fixed-`k`
+    tilts into the held `ν₀`, `L_z` and `K` (TASK-M2-63; REQ-CHART-188), their spans as R-920 rules them, RQ-679
+    confirmed (R-919, F14; *was:* "per RQ-679, awaiting the owner's confirmation"); the virial pair, curved slices, region D, the primitives, the paper frames, the fixed-`k`
     and scattering charts on a synthetic payload; the symmetry filter's maths and region D's filtered area
     `π/6 − √3/8 ≈ 0.30709` within the derived pixel bound (TASK-M2-84); points of interest's maths (TASK-M2-80); the
     acute Burrau charts (TASK-M2-85); a statistic's measure (TASK-M2-71).
