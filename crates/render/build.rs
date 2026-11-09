@@ -9,11 +9,15 @@
 use std::fs;
 use std::path::PathBuf;
 
-// The registry's modules, compiled here as in the library, so the build runs the library's own check. What the
-// check does not reach (the canonical serialisation, the codegen's inputs) is unused in this script.
+// The registry's modules and the lexer it reads a pass with, compiled here as in the library, so the build runs the
+// library's own check. What the check does not reach (the canonical serialisation, the codegen's inputs) is unused in
+// this script.
 #[allow(dead_code)]
 #[path = "src/print/graph.rs"]
 mod graph;
+#[allow(dead_code)]
+#[path = "src/lex.rs"]
+mod lex;
 #[allow(dead_code)]
 #[path = "src/print/ports.rs"]
 mod ports;

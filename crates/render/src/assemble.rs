@@ -49,6 +49,7 @@ use std::fmt::{self, Write as _};
 use std::sync::OnceLock;
 
 use crate::codegen;
+use crate::lex::{tokens, Tok};
 use ledger::gen::{self as generate, prelude, read};
 use ledger::schema::{Entry, Scale, Word};
 use naga::valid::{Capabilities, FunctionInfo, ModuleInfo, ValidationFlags, Validator};
@@ -1237,86 +1238,12 @@ fn shade(
 
 // ── Node functions: one per node, its names prefixed ──────────────────────────────────────────────────────────────
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Tok {
-    Ident,
-    Number,
-    Comment,
-    Space,
-    Punct,
-}
-
-/// The length in bytes of the block comment `b` opens with, through the `*/` that closes it: WGSL's block comments
-/// nest, so each `/*` inside it needs its own `*/` first. `None` where `b` does not open with `/*`, or the comment is
-/// never closed. It compares bytes, so it is safe in UTF-8: a `/` or `*` byte is never part of a multi-byte character.
-pub(crate) fn block_comment_len(b: &[u8]) -> Option<usize> {
-    if !b.starts_with(b"/*") {
-        return None;
-    }
-    let mut depth = 0usize;
-    let mut rest = b;
-    while !rest.is_empty() {
-        if rest.starts_with(b"/*") {
-            depth += 1;
-            rest = &rest[2..];
-        } else if rest.starts_with(b"*/") {
-            depth -= 1;
-            rest = &rest[2..];
-            if depth == 0 {
-                return Some(b.len() - rest.len());
-            }
-        } else {
-            rest = &rest[1..];
-        }
-    }
-    None
-}
-
-/// `s` as tokens, each its kind and byte range: comments (`//` to the line's end, `/* */` nested), identifiers,
-/// numbers (a digit and the letters and digits after it), white space and single punctuation characters.
+/// `s` as [`tokens`]: refused where a block comment is never closed.
 fn lex(s: &str) -> Result<Vec<(Tok, usize, usize)>, AssembleError> {
-    let b = s.as_bytes();
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < b.len() {
-        let start = i;
-        let c = b[i];
-        // The comment branches compare bytes, never slice `s`: inside a comment `i` steps a byte at a time, through
-        // the middle of a multi-byte character, and a `/`, `*` or newline byte is never part of one (UTF-8).
-        let tok = if b[i..].starts_with(b"//") {
-            i = b[i..]
-                .iter()
-                .position(|&x| x == b'\n')
-                .map_or(b.len(), |k| i + k);
-            Tok::Comment
-        } else if b[i..].starts_with(b"/*") {
-            i += block_comment_len(&b[i..])
-                .ok_or_else(|| AssembleError::Compile("an unclosed `/*` comment".into()))?;
-            Tok::Comment
-        } else if c.is_ascii_whitespace() {
-            while i < b.len() && b[i].is_ascii_whitespace() {
-                i += 1;
-            }
-            Tok::Space
-        } else if c.is_ascii_alphabetic() || c == b'_' {
-            while i < b.len() && (b[i].is_ascii_alphanumeric() || b[i] == b'_') {
-                i += 1;
-            }
-            Tok::Ident
-        } else if c.is_ascii_digit() {
-            // A number's letters — its suffix, hex digits and exponent letter — are its own, never a name; a `.`, an
-            // exponent's sign and the digits after them lex as punctuation and numbers, which nothing renames.
-            while i < b.len() && b[i].is_ascii_alphanumeric() {
-                i += 1;
-            }
-            Tok::Number
-        } else {
-            i += s[i..].chars().next().map_or(1, char::len_utf8);
-            Tok::Punct
-        };
-        out.push((tok, start, i));
+    match tokens(s) {
+        (toks, true) => Ok(toks),
+        (_, false) => Err(AssembleError::Compile("an unclosed `/*` comment".into())),
     }
-    Ok(out)
 }
 
 /// The names of the functions `text` defines, in order: each name after `fn`, comments skipped (the registry reads

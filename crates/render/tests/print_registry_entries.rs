@@ -2,8 +2,9 @@
 //! REQ-RENDER-103): every registered entry carries each declared field; the Render node's category reads "Print
 //! source" and no Print graph category reads "Source" or "post"; the generated WGSL of a two-node graph compiles under
 //! naga and holds each node's passes; an entry without a motion policy, and one without `temporally_stable`, each fail
-//! to register; a pass's nested block comments are skipped whole, and one never closed is refused; and the stain's
-//! codegen given a Print graph node refuses it. Each test registers its negative control (R-176).
+//! to register; a pass's nested block comments are skipped whole, and one never closed is refused; a comment between
+//! a pass's tokens is trivia, as white space is; and the stain's codegen given a Print graph node refuses it. Each
+//! test registers its negative control (R-176).
 
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use render::codegen::{generate as stain_generate, Arg, Call, Node as StainNode, Slot, ValueType};
@@ -695,6 +696,168 @@ negative_control!(
     check_unclosed(
         "fn run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }\n/* /* v1 */ open */"
     )
+);
+
+// ----- comments between tokens -----
+
+/// An entry of one pass, `commented.wgsl`.
+const COMMENTED: &str = r##"{
+  "id": "commented", "label": "Commented", "category": "photo",
+  "doc": "A test entry: a pass with comments between its tokens.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [],
+  "passes": ["commented.wgsl"], "cost": "light", "motion": "full", "temporally_stable": true,
+  "screen_medium": false, "deviations": ["A test entry."]
+}"##;
+
+/// The module of two commented nodes in a chain, its pass `pass`: nodes 1 and 2 of the module, so a helper the
+/// module does not namespace is declared twice. The registration's refusal, or the codegen's, else.
+fn commented(pass: &str) -> Result<Generated, String> {
+    let mut registry = support::registry();
+    registry
+        .register(COMMENTED, &|f: &str| {
+            (f == "commented.wgsl").then(|| pass.to_owned())
+        })
+        .map_err(|e| e.0)?;
+    let graph = Graph::parse(
+        r#"{"format":"principia.print/1","name":"C","nodes":{"img":{"type":"render"},
+          "a":{"type":"commented","in":{"in":"img"}},"b":{"type":"commented","in":{"in":"a"}},
+          "out":{"type":"output","in":{"in":"b"}}},"out":"out"}"#,
+    )
+    .expect("parses");
+    let e = expand(&graph, &|_: &str| None).expect("expands");
+    generate(&e, &registry).map_err(|e| e.0)
+}
+
+/// The commented pass `pass` registers and generates; its module, as `emit` writes it, holds each of `needles` for
+/// both nodes (`{k}` the node's number) and compiles.
+fn check_commented(pass: &str, needles: &[&str], emit: fn(String) -> String) {
+    let g = commented(pass)
+        .unwrap_or_else(|e| panic!("a pass with comments between its tokens is refused: {e}"));
+    let source = emit(g.source);
+    let missing: Vec<String> = [1, 2]
+        .into_iter()
+        .flat_map(|k| {
+            needles
+                .iter()
+                .map(move |n| n.replace("{k}", &k.to_string()))
+        })
+        .filter(|needle| !source.contains(needle.as_str()))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "a comment between tokens is not trivia: no {missing:?} in {source}"
+    );
+    compile(&source);
+}
+
+/// A struct's member with a comment before its colon, named as a helper is, and one with white space beyond ASCII
+/// (U+2029) before it: each member keeps its name, as its use after `.` does.
+const MEMBER_PASS: &str = "struct S { shade /* units */: f32, tone\u{2029}: f32 }
+fn shade(c: f32) -> f32 { return c; }
+fn tone(c: f32) -> f32 { return c; }
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let s = S(uv.x, uv.y);
+    return vec4<f32>(shade(s.shade), tone(s.tone), 0.0, 1.0);
+}";
+
+fn check_member(emit: fn(String) -> String) {
+    check_commented(
+        MEMBER_PASS,
+        &[
+            "struct print_n{k}_pass0_h_S { shade /* units */: f32, tone\u{2029}: f32 }",
+            "print_n{k}_pass0_h_shade(s.shade), print_n{k}_pass0_h_tone(s.tone)",
+        ],
+        emit,
+    );
+}
+
+#[test]
+fn print_registry_entries_comment_before_member_colon() {
+    check_member(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_comment_before_member_colon,
+    "the member namespaced as the helper is, as a whitespace-only lookahead for its colon leaves it",
+    expected = "a comment between tokens is not trivia",
+    check_member(|s| s.replace("{ shade /* units */", "{ print_n1_pass0_h_shade /* units */"))
+);
+
+/// Two `var<private>`s: one with a comment before its template, one with comments inside it, one of them holding a
+/// `>`: each name after the template's own `>` is the pass's, and the address space keeps its name.
+const TEMPLATE_PASS: &str = "var /* scratch */<private> seen: f32;
+var</* the */ private /* x > y */> kept: f32;
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    seen = uv.x;
+    kept = uv.y;
+    return vec4<f32>(seen, kept, 0.0, 1.0);
+}";
+
+fn check_template(emit: fn(String) -> String) {
+    check_commented(
+        TEMPLATE_PASS,
+        &[
+            "var /* scratch */<private> print_n{k}_pass0_h_seen: f32;",
+            "var</* the */ private /* x > y */> print_n{k}_pass0_h_kept: f32;",
+            "print_n{k}_pass0_h_seen = uv.x;\n    print_n{k}_pass0_h_kept = uv.y;",
+        ],
+        emit,
+    );
+}
+
+#[test]
+fn print_registry_entries_comment_in_var_template() {
+    check_template(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_comment_in_var_template,
+    "the address space namespaced, as a whitespace-only lookahead for the template leaves it",
+    expected = "a comment between tokens is not trivia",
+    check_template(|s| s.replace("<private> print_n1", "<print_n1_pass0_h_private> print_n1"))
+);
+
+/// `fn run` with a comment between `fn` and `run`, and one with a line comment between `run` and `(`, each registers
+/// and generates as its pass's function; a pass whose only `fn run` is in a comment defines none, and is refused.
+fn check_run(passes: &[(&str, &str)]) {
+    for (pass, needle) in passes {
+        check_commented(pass, &[needle], |s| s);
+    }
+    let commented_out = "/* fn run(uv: vec2<f32>) -> vec4<f32> */
+fn runner(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }";
+    match commented(commented_out) {
+        Ok(g) => panic!(
+            "a pass whose `fn run` is commented out registered: {}",
+            g.source
+        ),
+        Err(e) => assert!(e.contains("defines no `fn run`"), "{e}"),
+    }
+}
+
+#[test]
+fn print_registry_entries_comment_around_run() {
+    check_run(&[
+        (
+            "fn /* entry */ run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }",
+            "fn /* entry */ print_n{k}_pass0(uv: vec2<f32>)",
+        ),
+        (
+            "fn run // entry\n(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }",
+            "fn print_n{k}_pass0 // entry\n(uv: vec2<f32>)",
+        ),
+    ]);
+}
+
+negative_control!(
+    print_registry_entries_comment_around_run,
+    "a pass whose `run` is commented out, its only function `runner`",
+    expected = "a pass with comments between its tokens is refused",
+    check_run(&[(
+        "/* fn run(uv: vec2<f32>) -> vec4<f32> */\nfn runner(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }",
+        "fn print_n{k}_pass0(",
+    )])
 );
 
 // ----- registration refusals -----

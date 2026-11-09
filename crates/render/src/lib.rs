@@ -59,6 +59,7 @@ pub mod export;
 pub mod frame_record;
 pub mod headless;
 pub mod hot_reload;
+pub(crate) mod lex;
 pub mod pipeline_cache;
 pub mod present;
 pub mod presets;

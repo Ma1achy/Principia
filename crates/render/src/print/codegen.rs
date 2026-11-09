@@ -29,7 +29,7 @@ use std::fmt::{self, Write as _};
 use super::graph::{Expanded, Value, RENDER};
 use super::ports::{validate, Feed, InputDefault};
 use super::registry::{check_params, Entry, ParamKind, Registry};
-use crate::assemble::block_comment_len;
+use crate::lex::{pass_tokens, Tok, Token};
 
 /// The namespace of every name the Print graph's module declares; the stain's codegen refuses it.
 pub const PREFIX: &str = "print_";
@@ -314,111 +314,86 @@ fn uniform_value(value: &Value) -> Vec<f32> {
 /// own module-level declarations ([`declarations`]: a helper `fn`, a `const`, `override`, `var`, `struct` or `alias`)
 /// are its pass's, `<function>_h_<name>`, so two nodes of one type, or two passes declaring one name, never declare it
 /// twice in the module; their every use is renamed with them, but a member (after `.`, or declared in a struct's
-/// body) and a literal's suffix (after a digit), which never name a declaration. A block comment ends at the `*/`
-/// closing it, its nested comments closed first, as WGSL's do; `None` where one is never closed.
+/// body), which never names a declaration. A literal's suffix is its number's, never a name. The scan reads the
+/// pass's tokens ([`pass_tokens`]), a comment between two of them trivia, as white space is: a block comment ends at
+/// the `*/` closing it, its nested comments closed first, as WGSL's do; `None` where one is never closed.
 fn rename(wgsl: &str, base: &str, function: &str) -> Option<String> {
-    let own = declarations(wgsl);
+    let (toks, closed) = pass_tokens(wgsl);
+    if !closed {
+        return None;
+    }
+    let own = declarations(&toks);
     let mut out = String::with_capacity(wgsl.len() + 64);
-    let mut rest = wgsl;
     // Whether a `struct` keyword awaits its body, and whether the scan is in one: WGSL declares a struct at module
     // level only, its body holding no braces.
     let mut struct_next = false;
     let mut struct_body = false;
-    // The previous token, read from the source, never from `out`, which holds copied comments; comments are skipped:
-    // whether it was a `.`, whitespace between skipped too, and whether it was a digit with no whitespace between (a
-    // comment there splits a literal from its suffix, which is no valid WGSL either way).
-    let mut after_dot = false;
-    let mut after_digit = false;
-    while let Some(c) = rest.chars().next() {
-        let end = if rest.starts_with("//") {
-            rest.find('\n').unwrap_or(rest.len())
-        } else if rest.starts_with("/*") {
-            block_comment_len(rest.as_bytes())?
-        } else if c.is_ascii_alphabetic() || c == '_' {
-            let end = rest
-                .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
-                .unwrap_or(rest.len());
-            let word = &rest[..end];
-            let member = after_dot
-                || after_digit
-                || (struct_body && rest[end..].trim_start().starts_with(':'));
-            after_dot = false;
-            after_digit = false;
-            match renamed(word, base, function) {
-                Some(name) => out.push_str(&name),
-                None if own.contains(word) && !member => {
-                    let _ = write!(out, "{function}_h_{word}");
+    // The previous token that is not trivia.
+    let mut prev = "";
+    for (k, t) in toks.iter().enumerate() {
+        match t.kind {
+            Tok::Ident => {
+                let word = t.text;
+                let member = prev == "." || (struct_body && next_text(&toks[k + 1..]) == Some(":"));
+                prev = word;
+                match renamed(word, base, function) {
+                    Some(name) => out.push_str(&name),
+                    None if own.contains(word) && !member => {
+                        let _ = write!(out, "{function}_h_{word}");
+                    }
+                    None => out.push_str(word),
                 }
-                None => out.push_str(word),
+                struct_next |= word == "struct";
+                continue;
             }
-            struct_next |= word == "struct";
-            rest = &rest[end..];
-            continue;
-        } else {
-            match c {
-                '{' => {
-                    struct_body = struct_next;
-                    struct_next = false;
-                }
-                '}' => struct_body = false,
-                _ => {}
+            _ if t.text == "{" => {
+                struct_body = struct_next;
+                struct_next = false;
             }
-            if !c.is_whitespace() {
-                after_dot = c == '.';
-            }
-            after_digit = c.is_ascii_digit();
-            c.len_utf8()
-        };
-        out.push_str(&rest[..end]);
-        rest = &rest[end..];
+            _ if t.text == "}" => struct_body = false,
+            _ => {}
+        }
+        if !t.trivia {
+            prev = t.text;
+        }
+        out.push_str(t.text);
     }
     Some(out)
 }
 
-/// The names a pass's WGSL declares at module level, outside every brace and comment (a block comment nested, as in
-/// [`rename`]): the name after `fn`, `const`, `override`, `struct`, `alias`, or `var` and its `<…>`.
-fn declarations(wgsl: &str) -> BTreeSet<&str> {
+/// The text of the first token of `toks` that is not trivia.
+fn next_text<'a>(toks: &[Token<'a>]) -> Option<&'a str> {
+    toks.iter().find(|t| !t.trivia).map(|t| t.text)
+}
+
+/// The names a pass's tokens declare at module level, outside every brace, comments trivia (as in [`rename`]): the
+/// name after `fn`, `const`, `override`, `struct`, `alias`, or `var` and its `<…>`, which ends at the template's own
+/// `>`, never one in a comment.
+fn declarations<'a>(toks: &[Token<'a>]) -> BTreeSet<&'a str> {
     let mut names = BTreeSet::new();
-    let mut rest = wgsl;
     let mut depth = 0usize;
     let mut declaring = false;
-    while let Some(c) = rest.chars().next() {
-        let end = if rest.starts_with("//") {
-            rest.find('\n').unwrap_or(rest.len())
-        } else if rest.starts_with("/*") {
-            // Unclosed, it runs to the end; [`rename`] refuses the pass.
-            block_comment_len(rest.as_bytes()).unwrap_or(rest.len())
-        } else if c.is_ascii_alphabetic() || c == '_' {
-            let end = rest
-                .find(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
-                .unwrap_or(rest.len());
-            let word = &rest[..end];
-            if declaring {
-                names.insert(word);
+    let mut rest = toks.iter();
+    while let Some(t) = rest.next() {
+        match t.kind {
+            Tok::Ident if declaring => {
+                names.insert(t.text);
                 declaring = false;
-            } else if depth == 0 {
+            }
+            Tok::Ident if depth == 0 => {
                 declaring = matches!(
-                    word,
+                    t.text,
                     "fn" | "const" | "override" | "struct" | "alias" | "var"
                 );
-                let after = rest[end..].trim_start();
-                if word == "var" && after.starts_with('<') {
-                    // `var<private>`: the name comes after the template, from its `>` on.
-                    let skip = rest.len() - after.len() + after.find('>').unwrap_or(after.len());
-                    rest = &rest[skip..];
-                    continue;
+                if t.text == "var" && next_text(rest.as_slice()) == Some("<") {
+                    // `var<private>`: the name comes after the template, through its own `>`.
+                    let _ = rest.find(|t| !t.trivia && t.text == ">");
                 }
             }
-            end
-        } else {
-            match c {
-                '{' => depth += 1,
-                '}' => depth = depth.saturating_sub(1),
-                _ => {}
-            }
-            c.len_utf8()
-        };
-        rest = &rest[end..];
+            _ if t.text == "{" => depth += 1,
+            _ if t.text == "}" => depth = depth.saturating_sub(1),
+            _ => {}
+        }
     }
     names
 }

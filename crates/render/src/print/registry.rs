@@ -17,6 +17,8 @@ use std::fmt;
 
 use serde_json::{Map, Value as Json};
 
+use crate::lex::pass_tokens;
+
 use super::graph::{expand, Graph, Value};
 use super::ports::{validate, InputDefault, PortType};
 
@@ -628,15 +630,12 @@ fn is_identifier(s: &str) -> bool {
         && chars.all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
-/// Whether `wgsl` holds `fn run(`, spaces allowed between the tokens.
+/// Whether `wgsl` holds `fn run(` outside comments, its tokens ([`pass_tokens`]), white space and comments allowed
+/// between them. A block comment never closed runs to the end; the codegen refuses the pass.
 fn defines_run(wgsl: &str) -> bool {
-    wgsl.split("fn").skip(1).any(|rest| {
-        rest.starts_with(char::is_whitespace)
-            && rest
-                .trim_start()
-                .strip_prefix("run")
-                .is_some_and(|r| r.trim_start().starts_with('('))
-    })
+    let (toks, _) = pass_tokens(wgsl);
+    let sig: Vec<&str> = toks.iter().filter(|t| !t.trivia).map(|t| t.text).collect();
+    sig.windows(3).any(|w| w == ["fn", "run", "("])
 }
 
 // ── The build-time check ────────────────────────────────────────────────────────────────────────────────────────
