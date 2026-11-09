@@ -95,6 +95,8 @@ const REQUIRED: [&str; 11] = [
     "gpu-kernel",
     "mutants-check",
 ];
+/// A script that reads CI's results, as the controls give it a line naming a self-hosted job.
+#[cfg(feature = "controls")]
 const TIER_SCRIPT: &str = ".github/scripts/ci_tier.sh";
 const SETUP: &str = "plan/HUMAN_SETUP.md";
 
