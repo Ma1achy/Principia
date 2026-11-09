@@ -35,8 +35,7 @@ reproduction is stage 1's safety net, not a permanent rule to keep per-route ari
 
 ## Acceptance tests
 - `cargo test -p engine --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_pin_kept path_control_`
-  — merged pairs bitwise; each changed case listed old against new with its largest difference in ulps, decoding to the
-  same system, its outcome class unchanged; controls: a reordered operation fails (REQ-CHART-156).
+  — merged pairs bitwise; each changed case listed old against new with its largest difference in ulps, decoding to the same system within REQ-ENC-024's `ε_phys` on the decoded state, its outcome class unchanged; controls: a reordered operation fails (REQ-CHART-156).
 - `cargo test -p gui --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_adapter_same_leaf path_frame_batch_running path_drag_running path_pin_kept path_control_`
   — each adapter's output equals its leaf's constructor's bitwise; a frame's keyboard tilt and wheel zoom both land (D19);
   a drag's fold on the current state (D23); controls: an adapter holding a formula fails (REQ-CHART-156).

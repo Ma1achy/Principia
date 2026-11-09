@@ -34,7 +34,7 @@ The owner's order of 7 Nov: an optional toggle that draws as transparent every p
 - `cargo test -p engine symmetry_filter_statement` — the legend and sidecar state the choice; a paper-frame preset opens on, any other chart off; a target's score is one with the filter on or off; controls: the statement dropped, the default on for every chart (REQ-CHART-138).
 - `cargo test -p gui symmetry_filter_toggle` — the toggle in both places, its no-partners state, one click to the full disc with no new run; control: the toggle left live with no partners (REQ-GUI-424).
 - `cargo test -p engine mirror_pairs_statistic` — on a mirror-symmetric rest preset the default statistic counts every start, and with the option on the paired count is half the full count up to the pixels on the mirror line, the legend and the sidecar saying so; the option is off by default; controls: the option on by default, a paired count that drops a start from the computed chart, the statement missing from the sidecar, each failing (REQ-CHART-150).
-- On region D's preset at equal masses and exact rest, the full disc filtered leaves an area of 0.307, D's own (eq. 8), to the grid's resolution: the owner's check (R-871; REQ-CHART-138).
+- On region D's preset at equal masses and exact rest, the full disc filtered leaves D's own area (eq. 8), `π/6 − √3/8 ≈ 0.30709` (the owner's 0.307), within the derived bound of the pixels the boundary of D crosses times one pixel's area: the owner's check (R-871; REQ-CHART-138). *Was:* "leaves an area of 0.307, D's own (eq. 8), to the grid's resolution" (P10 of physics review 5820410914).
 
 ## Notes
 - **Build order (R-863):** stage 5, time-axis charts and the symmetry filter. It depends on stage 4's task, TASK-M8-108, and merges only with its tests green.

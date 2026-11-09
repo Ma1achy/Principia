@@ -51,8 +51,8 @@ link changes every stored latent `z`, and the owner chooses the way out before t
 - `cargo test -p kernel mirror_step_removed` — a lower-half state encodes to `β ∈ (π, 2π)` and decodes back to itself,
   not its mirror image; a latent-chart trace through a syzygy at `β = 0` and at `β = π` continuous; controls: the mirror
   step left in fails, a σ-type link that jumps at `β = 0` fails (REQ-DEC-055).
-- `cargo test -p kernel latent_conversion` — every converted `z` decodes to the same system as its old `z` to rounding
-  precision; a saved file of the old version converted on load, one of an unknown kind refused by `Saved::from_words`;
+- `cargo test -p kernel latent_conversion` — every converted `z` decodes to the same system as its old `z`
+  within REQ-ENC-024's `ε_phys` on the decoded state; a saved file of the old version converted on load, one of an unknown kind refused by `Saved::from_words`;
   the converted words marked with a new kind value; control: a value converted by the wrong link fails (R-898;
   REQ-DEC-055).
 - `cargo test -p gui mirror_step_presets` and `cargo test -p engine mirror_step_presets` — every chart preset each crate
@@ -67,12 +67,16 @@ link changes every stored latent `z`, and the owner chooses the way out before t
 - `cargo test -p kernel --test roundtrip` — with the assertions the ruling changes: T1 as the equivariance `E(Π·x)` = the
   mirrored `z` (`β → 2π − β`, the momentum controls reflected, `L_z` negated) in place of `E(Π·x) = E(x)`, and
   `t3_half_mirror` removed under REQ-ENC-005's change (REQ-DEC-055).
-- Any preset, saved chart or golden whose converted value doesn't decode to the same system to rounding precision, or
+- Any preset, saved chart or golden whose converted value doesn't decode to the same system within REQ-ENC-024's `ε_phys` on the decoded state, or
   whose outcome classes change, stops the task: the list goes to the owner (REQ-DEC-055).
 - Review: the full-circle link and the signed encode in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2, written to the
   owner's answer to RQ-750 (R-898: `z_β` a periodic angle, each stored value converted once) and approved by the physics
   reviewer, with whether a converted `z_β` is stored reduced to one period or unreduced and where a wrap enters (R-72;
   REQ-DEC-056).
+- Review: for every saved oblique latent chart whose `q₁[1]` or `q₂[1]` is nonzero, the PR states which form it
+  takes, the curved chart under the old link read through the new inverse or a planar approximation, and why: under the
+  new `β` link such a plane becomes a curved surface, so a planar approximation is kept only where it passes the
+  conversion test, and one that fails it stops the task like any other (brief item 15; R-898; REQ-DEC-055).
 
 ## Notes
 - Added by R-865 (8 Nov 2026), the owner's reply 1 to the code map of that day, on RQ-739 (open on its item 3, the
@@ -102,3 +106,4 @@ link changes every stored latent `z`, and the owner chooses the way out before t
   among those checked. R-82's mirror test, R-438's `|λ̃_y|` and R-544's skip go with the step once this merges (their
   forward lines).
 - *8 Nov 2026 (R-898):* RQ-750 is ruled (a) + (c): `z_β` is a periodic angle over the full circle, every stored latent view, saved chart and golden converted once, and for this deliberate change R-865's bitwise check is replaced by a conversion test (each converted value decoding to the same system to rounding precision, the goldens' outcome classes identical and regenerated with a record of why). The wait above is over, and the Goal's bitwise condition reads with R-898. The saved-file format: no version field, a new kind value instead, `Saved::from_words` refusing unknown kinds (applied per R-369). The curved form is recommended for oblique latent charts whose `q₁[1]` or `q₂[1]` is nonzero; the PR lists the affected charts. Whether a converted `z_β` is stored reduced or unreduced is a definition this task writes (R-72). *Was (acceptance):* "- `cargo test -p kernel mirror_step_removed` — a lower-half state encodes to `β ∈ (π, 2π)` and decodes back to itself, not its mirror image; a latent-chart trace through a syzygy continuous, or the reason it can't be on the list brought back; controls: the mirror step left in fails, one golden's `β` moved by one ulp fails the check (REQ-DEC-055)." "holds (the gui's in `crates/gui/src/explore/manifold_view/chart.rs`), through the new decoder against the baseline, bit for bit (REQ-DEC-055)." "- `cargo test -p kernel saved_chart` — the saved charts, against the baseline, bit for bit (REQ-DEC-055)." "decode_preset_golden` and `cargo test -p validation --test qa_TASK-M2-28` — the golden suites re-run with every golden unchanged, in the GPU jobs that run them (REQ-DEC-055)." "- Any preset, saved chart or golden that doesn't reproduce stops the task: the list goes to the owner, nothing re-baselined (REQ-DEC-055)." "owner's answer to RQ-750 and approved by the physics reviewer (REQ-DEC-056)."
+- *Fix round of PR #455 (P2 of physics review 5820410914; code review 5820413299 finding 5):* "to rounding precision" is bounded by REQ-ENC-024's `ε_phys`, applied per R-369; brief item 15 is an acceptance line. *Was (acceptance, the clauses):* "decodes to the same system as its old `z` to rounding precision;" and "doesn't decode to the same system to rounding precision, or".

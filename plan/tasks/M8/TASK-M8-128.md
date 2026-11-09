@@ -40,3 +40,6 @@ charts only; a start found kept in the signed state; conserved axes shown `T`-in
 - Added by R-879 (8 Nov 2026). Its Depends on, the M8 charts and TASK-M8-102's CPU batch route, applied per R-369.
 - The horizon's exception is written into the integrator contract's Part 5 by R-879; nothing else changes the standard
   size.
+- The owner wrote "this chart may use a per-pixel horizon"; the control that a single global horizon fails where the
+  rescale differs per pixel is applied per R-369 (P8 of physics review 5820410914 of PR #455), `I = 1` being kept at the
+  chosen state.

@@ -41,6 +41,8 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - `crates/engine/src/variants.rs`: the variant key and pipeline table, each pipeline created through TASK-M0-44's compute-pipeline entry point with the compute fast-math setting (R-297); the copy dispatch loop (copy_index 0..E as a uniform, same pipeline) and the per-copy offsets (copy 0 at the centre, copies 1..E at Halton (2,3) points 1..E minus ½, scaled to the footprint).
 - DECODE-preset goldens for the Burrau int lattice and Anosova in `fixtures/golden/decode_preset/`, rendered with native wgpu offscreen (R-110).
 - A per-chart checklist table in the PR mapping each appendix row to its registry entry and kernel variant.
+- The f32 band defined in chart_reference § 2.1: its quantity and width (R-72; REQ-CHART-152; P1 of physics review
+  5820410914 of PR #455).
 
 ## Acceptance tests
 - Physics + code reviewers: one row per chart of the lowering appendix checked against the chart registry and the kernel variants (latent slice with its scale in q; shape sphere lowering (s, t) → (θ, φ) → n → (ρ̃, λ̃) by R-14's map (R-117) with `system_image: bijective` over the whole sphere and canonicalise's step 3 not taken (R-544; *was:* "`system_image: n-to-1`, n = 2 (R-141)"); (L_z,E)/(L_z,K) writing tagged payloads in-kernel; ternary mass; Euclid ν plane annotation axis; θ×K strip requiring lock for tilt; Burrau lattice per-cell dispatch, its `system_image` bijective (R-113); Anosova through canonicalise) (REQ-CHART-037); backed by `cargo test -p kernel chart_lowering_rows`.
@@ -51,6 +53,9 @@ Compute-side lowering, per lowering Part 3 and its appendix: chart type, link se
 - `cargo test -p engine copy_offsets` — copy 0's offset is exactly zero; copy k's offset equals (Halton_k − ½) scaled to the footprint for k = 1..E (REQ-INT-083).
 - `cargo xtask golden decode-preset` — the DECODE preset for the Burrau int lattice and the Anosova physical-frame chart matches a CPU-decoded reference image, without special-casing (REQ-RENDER-082).
 - `cargo test -p kernel f32_band_label` — a pixel on the floor that the f32 decode refuses is labelled rounding and its f64 decode is a system; no f32-accepted pixel fails its f64 check; the GPU edge walk over HeldLz, HeldK and the Burrau charts run in the GPU job with its criterion written before the first run, its result in the PR; controls: a band refusal drawn as the edge, an accepted non-system, each failing (REQ-CHART-152).
+- Review: what "one float wide" is measured in and the band's width in it, written into chart_reference § 2.1, approved by
+  the physics reviewer; a width that is a number rather than a derivation proposed with its evidence and confirmed by
+  the owner at the M4 gate (R-72, R-71; REQ-CHART-152).
 
 ## Notes
 - RQ-71 ruled: R-141 — the shape sphere's row carries `system_image: n-to-1`, n = 2; `DoubleCover` stays only for the full-range Burrau chart (R-157) (REQ-CHART-037).

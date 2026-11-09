@@ -1,7 +1,7 @@
 # TASK-M8-125 — Locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, centre on pin and the auto-snap setting, exact on nonlinear charts or saying why (R-866, R-863 stage 1)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-425, REQ-GUI-429
+- **Closes:** REQ-GUI-425, REQ-GUI-429, REQ-CHART-163
 - **Depends on:** TASK-M4-37, TASK-M8-124
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, gui
@@ -55,7 +55,9 @@ the window to compute the pin, the pin is exact, or the task says why it can't b
 - Proposal, only if the pin can't be exact on a nonlinear chart: the bound with its evidence and the reason, checked by
   the physics reviewer and ruled by the owner before this task merges, recorded in decisions.md; never a bound chosen in
   the PR (R-71; REQ-GUI-429). If the pin is exact, the PR shows it bit for bit and proposes no value.
-- `cargo test -p engine lock_moves_no_view` — snap-back after a slice under an off-centre lock clears the hidden excursion bit for bit, the pin's pixel unmoved; snap-back then centre on pin equals `z₀ ← z_locked` bit for bit (R-899 Q2 (a); REQ-GUI-425).
+- `cargo test -p engine lock_moves_no_view` — snap-back after a slice under an off-centre lock clears the hidden excursion, its residual decoding to the same system within REQ-ENC-024's `ε_phys` on the decoded state, the pin's pixel unmoved; snap-back then centre on pin equals `z₀ ← z_locked` bit for bit, centre on pin assigning it (R-899 Q2 (a); REQ-GUI-425).
+- Review: snap-back's construction (the split of `δ` into in-plane and hidden parts on an oblique basis) written into chart_decoder_contract Part 4, approved by the physics reviewer (R-72; REQ-GUI-425).
+- `cargo test -p engine curved_pivot_off_centre` — on a tilted and zoomed curved chart locked at an off-centre pixel, the pinned pixel decodes the pinned state after each tilt and zoom about it; control: a tilt about the window's centre with an off-centre pin fails (REQ-CHART-163).
 
 ## Notes
 - Added by R-866 (8 Nov 2026), the owner's reply 2 to the code map of that day: "Confirm this works on nonlinear charts,
@@ -69,3 +71,4 @@ the window to compute the pin, the pin is exact, or the task says why it can't b
   and the badge's centre on pin.
 - *Physics review 5817348709 of PR #449, P5:* an inexact pin's bound is a calibration ruled by the owner before merge, not the task's choice. Holding the pin exactly looks achievable: evaluated as pivot + R·(offset), the pin's chart parameters come out bitwise, pin + R·0 = pin.
 - *8 Nov 2026 (R-899):* The brief's Q2 (a): snap-back undoes the slice only, clearing the hidden excursion and leaving the pin where it is on screen; centre on pin clears the in-plane part; the two together are `z₀ ← z_locked` bit for bit. Auto-snap stays off by default (R-866). RQ-749 is ruled (R-897): stage 2 reads the recorded state at the pin; the note above is answered.
+- *Fix round of PR #455 (P5 of physics review 5820410914; code review 5820413299 finding 4, applied per R-369):* snap-back alone is a projection on an oblique basis, exact to rounding within `ε_phys`, its construction this task's (R-72); the composite with centre on pin is bitwise by assignment. The off-centre case of TASK-M8-48's curved pivot (REQ-CHART-163) is this task's, since the off-centre pin is built here. *Was (acceptance):* "snap-back after a slice under an off-centre lock clears the hidden excursion bit for bit, the pin's pixel unmoved; snap-back then centre on pin equals `z₀ ← z_locked` bit for bit"; *was (header):* "- **Closes:** REQ-GUI-425, REQ-GUI-429". The 8 Nov note above reads with this one.

@@ -3806,7 +3806,7 @@
   title: "Paths under a lock: the stored anchor"
   depends_on: [TASK-M4-37, TASK-M2-23, TASK-M8-124, TASK-M8-125, TASK-M8-129]  # TASK-M8-125: R-866, stage 1 (applied per R-369); R-894, R-899 Q9
   needs: []
-  requirements: [REQ-CHART-115, REQ-CHART-146, REQ-CHART-158, REQ-CHART-159, REQ-CHART-161]
+  requirements: [REQ-CHART-115, REQ-CHART-146, REQ-CHART-158, REQ-CHART-159, REQ-CHART-161, REQ-CHART-164]  # REQ-CHART-164 split from REQ-CHART-157 (applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-118
@@ -3870,7 +3870,7 @@
   title: "Locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, centre on pin and the auto-snap setting, exact on nonlinear charts or saying why (R-866, R-863 stage 1)"
   depends_on: [TASK-M4-37, TASK-M8-124]
   needs: []
-  requirements: [REQ-GUI-425, REQ-GUI-429]
+  requirements: [REQ-GUI-425, REQ-GUI-429, REQ-CHART-163]  # REQ-CHART-163 split from REQ-CHART-157 (applied per R-369)
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-126
@@ -3884,9 +3884,9 @@
 - id: TASK-M8-127
   milestone: M8
   title: "The acute-angle Burrau charts over the full acute range, both labellings, the leg swap through the symmetry filter (R-875)"
-  depends_on: [TASK-M8-120]  # R-875: outside the TASK-M4-37 gate
+  depends_on: [TASK-M8-120]  # R-875: behind TASK-M4-37 through TASK-M8-120
   needs: []
-  requirements: [REQ-CHART-151]
+  requirements: [REQ-CHART-151, REQ-CHART-162]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-128
