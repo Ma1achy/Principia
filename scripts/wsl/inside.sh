@@ -7,6 +7,8 @@
 #   inside.sh identity               who runs here: `whoami`, `id`, the kernel and the release (proof 1)
 #   inside.sh isolation              no drive and no Windows program reachable from here (proof 2)
 #   inside.sh address                the distro's own IPv4 address
+#   inside.sh gateway [<route file>] the default route's gateway, from /proc/net/route or <route file>: in WSL's NAT
+#                                    mode, the Windows host on WSL's virtual switch (proof 3, outbound)
 #   inside.sh listen <port> <secs>   a TCP listener on every address, for <secs>; prints `listening`, then `accepted <ip>`
 #                                    for each connection (proof 3, inbound)
 #   inside.sh connect <host> <port>  one TCP connection, 5 s at most; exits 0 only if it connected (proof 3, outbound)
@@ -98,6 +100,22 @@ while (left := end - time.time()) > 0:
 EOF
 }
 
+# The first default route (destination 0.0.0.0) whose RTF_GATEWAY flag (2) is set: its gateway, which the kernel
+# writes as a little-endian hex word. Exits 1, naming why, if there is none.
+gateway() {
+  python3 - "${1:-/proc/net/route}" << 'EOF'
+import socket, struct, sys
+with open(sys.argv[1]) as f:
+    rows = [line.split() for line in f.readlines()[1:]]
+for row in rows:
+    if len(row) > 3 and row[1] == "00000000" and int(row[3], 16) & 2:
+        print(socket.inet_ntoa(struct.pack("<L", int(row[2], 16))))
+        sys.exit(0)
+print("gateway: no default route through a gateway in", sys.argv[1])
+sys.exit(1)
+EOF
+}
+
 connect() {
   python3 - "$1" "$2" << 'EOF'
 import socket, sys
@@ -167,6 +185,7 @@ case "$verb" in
     ;;
   isolation) isolation ;;
   address) hostname -I | awk '{ print $1 }' ;;
+  gateway) gateway "$@" ;;
   listen) listen "$@" ;;
   connect) connect "$@" ;;
   check) PRIN_CONTAIN=unprivileged bash "$repo/scripts/contain.sh" check ;;
@@ -175,7 +194,7 @@ case "$verb" in
   cpu) cpu ;;
   results) tar -C "$HOME/results" -cf - . ;;
   *)
-    echo "usage: inside.sh identity|isolation|address|listen|connect|check|parity|compare|cpu|results" >&2
+    echo "usage: inside.sh identity|isolation|address|gateway|listen|connect|check|parity|compare|cpu|results" >&2
     exit 2
     ;;
 esac

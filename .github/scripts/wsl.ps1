@@ -228,7 +228,9 @@ switch ($verb) {
                 Report 2 ($r.Code -eq 0) "inside.sh isolation: exit $($r.Code), $(@($r.Lines | Where-Object { $_ -like 'FAIL:*' }).Count) failed check(s)"
             }
 
-            # Proof 3: nothing gets in to a listener inside; nothing inside gets out to the LAN.
+            # Proof 3: nothing gets in to a listener inside; nothing inside gets out to the LAN, or to the host over WSL's
+            # virtual switch: the distro's default gateway (in NAT mode, the host's side of the switch) and the host's
+            # vEthernet and WSL addresses, each on a port the host listens on and on SMB's 445.
             if ($cloned) { Report 3 $false "no clone: $cloned" } else {
                 $port = 47913
                 $listener = Start-Wsl @('-d', $Distro, '-u', $User, '--cd', '/', '--', 'bash', $Inside, 'listen', "$port", '30')
@@ -248,15 +250,25 @@ switch ($verb) {
                         $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' -and
                         $_.InterfaceAlias -notlike 'vEthernet*' -and $_.InterfaceAlias -notlike '*WSL*' } |
                     ForEach-Object { $_.IPAddress })
+                $gateway = ((Invoke-Ci @('bash', $Inside, 'gateway')).Lines | Select-Object -Last 1)
+                if ($gateway -notmatch '^\d{1,3}(\.\d{1,3}){3}$') { $gateway = '' }
+                $hostSwitch = @(@($gateway) + @(Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+                            $_.InterfaceAlias -like 'vEthernet*' -or $_.InterfaceAlias -like '*WSL*' } |
+                        ForEach-Object { $_.IPAddress }) | Where-Object { $_ } | Select-Object -Unique)
                 $outPort = 47914
                 $server = New-Object System.Net.Sockets.TcpListener([Net.IPAddress]::Any, $outPort)
                 $server.Start()
                 try {
                     $reachable = @($lan | Where-Object { Test-Tcp $_ $outPort })
                     $outbound = @(foreach ($ip in $reachable) { if ((Invoke-Ci @('bash', $Inside, 'connect', $ip, "$outPort")).Code -eq 0) { $ip } })
+                    # The gateway must be the host's own, listening on the port, or its refusal shows nothing.
+                    $gatewayListens = $gateway -and (Test-Tcp $gateway $outPort)
+                    $smbListens = $gateway -and (Test-Tcp $gateway 445)
+                    $viaSwitch = @(foreach ($ip in $hostSwitch) {
+                            foreach ($p in @($outPort, 445)) { if ((Invoke-Ci @('bash', $Inside, 'connect', $ip, "$p")).Code -eq 0) { "${ip}:$p" } } })
                 } finally { $server.Stop() }
-                $ok = $up -and $selfIn -and $address -and -not $inbound -and -not $accepted -and $reachable.Count -gt 0 -and -not $outbound
-                Report 3 $ok "listener inside on ${address}:$port up: $up, reached from inside: $selfIn; reached from Windows at: '$($inbound -join ', ')', accepted from outside: '$($accepted -join ', ')'; the host's LAN addresses '$($lan -join ', ')', listening on: '$($reachable -join ', ')', reached from inside: '$($outbound -join ', ')'"
+                $ok = $up -and $selfIn -and $address -and -not $inbound -and -not $accepted -and $reachable.Count -gt 0 -and -not $outbound -and $gatewayListens -and -not $viaSwitch
+                Report 3 $ok "listener inside on ${address}:$port up: $up, reached from inside: $selfIn; reached from Windows at: '$($inbound -join ', ')', accepted from outside: '$($accepted -join ', ')'; the host's LAN addresses '$($lan -join ', ')', listening on: '$($reachable -join ', ')', reached from inside: '$($outbound -join ', ')'; the gateway inside '$gateway', the host listening there on ${outPort}: $gatewayListens, on 445: $smbListens; the switch's host addresses '$($hostSwitch -join ', ')', reached from inside on $outPort or 445: '$($viaSwitch -join ', ')'"
             }
 
             # Proof 4: contain.sh check, unprivileged, with its real `kill -9 -1`; a ci process outside its namespace

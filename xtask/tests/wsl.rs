@@ -10,8 +10,9 @@
 //! `.github/wsl-cpu-enabled` is absent, as it is until a reviewed PR adds it after all six proofs have passed;
 //! `/etc/wsl.conf` is exactly the owner's, with no `[boot]` and so no systemd, and the image has no sudo and no sudoers
 //! entry; the base and rustup are pinned by hash and checked before use, the packages come from one dated snapshot,
-//! the toolchain is `rust-toolchain.toml`'s; registration refuses without a pinned manifest hash; and proof 4 runs the
-//! unprivileged check and fails unless the processes outside survive it, inside and on Windows.
+//! the toolchain is `rust-toolchain.toml`'s; registration refuses without a pinned manifest hash; proof 3 tries the
+//! host over WSL's virtual switch, at the distro's gateway and on SMB's 445, as well as over the LAN; and proof 4 runs
+//! the unprivileged check and fails unless the processes outside survive it, inside and on Windows.
 
 use std::path::{Path, PathBuf};
 
@@ -508,6 +509,185 @@ mod unchecked_copy {
         expected = "register imports before checking the image against the pin",
         check_register(&edited(&read(PS), "if ($copied -ne $built)", "if ($false)"))
     );
+}
+
+// ---- Proof 3, the host over WSL's virtual switch -------------------------------------------------------------------
+
+/// Proof 3 tries the host over WSL's virtual switch as well as over the LAN: the distro's default gateway (in NAT mode,
+/// the host's side of the switch) and the host's vEthernet and WSL addresses, on a port the host listens on and on
+/// SMB's 445. It passes only if the host listens at the gateway, so that the refusal shows something, and nothing there
+/// is reached from inside.
+fn check_proof_three(script: &str) {
+    let three = &script[script.find("# Proof 3:").expect("no proof 3")
+        ..script.find("# Proof 4:").expect("no proof 4")];
+    assert!(
+        three.contains(
+            "$gateway = ((Invoke-Ci @('bash', $Inside, 'gateway')).Lines | Select-Object -Last 1)"
+        ),
+        "proof 3 doesn't ask inside for the gateway"
+    );
+    assert!(
+        three.contains("$_.InterfaceAlias -like 'vEthernet*' -or $_.InterfaceAlias -like '*WSL*'"),
+        "proof 3 leaves out the host's addresses on the virtual switch"
+    );
+    assert!(
+        three.contains("foreach ($p in @($outPort, 445))"),
+        "proof 3 doesn't try both the host's listener and SMB over the switch"
+    );
+    assert!(
+        three.contains("$gatewayListens = $gateway -and (Test-Tcp $gateway $outPort)"),
+        "proof 3 doesn't check the host listens at the gateway"
+    );
+    let ok = three
+        .lines()
+        .find(|l| l.trim_start().starts_with("$ok = "))
+        .expect("proof 3 has no verdict");
+    assert!(
+        ok.contains(" -and $gatewayListens"),
+        "proof 3 passes without the host listening at the gateway"
+    );
+    assert!(
+        ok.contains(" -and -not $viaSwitch"),
+        "proof 3 passes with the host reached over the virtual switch"
+    );
+}
+
+#[test]
+fn wsl_proof_three_tries_the_host_over_the_switch() {
+    check_proof_three(&read(PS));
+}
+
+negative_control!(
+    wsl_proof_three_tries_the_host_over_the_switch,
+    "the switch's results ignored",
+    expected = "proof 3 passes with the host reached over the virtual switch",
+    check_proof_three(&edited(
+        &read(PS),
+        " -and $gatewayListens -and -not $viaSwitch\n",
+        " -and $gatewayListens\n"
+    ))
+);
+
+mod no_smb {
+    use super::*;
+    negative_control!(
+        wsl_proof_three_tries_the_host_over_the_switch,
+        "SMB left out",
+        expected = "proof 3 doesn't try both the host's listener and SMB over the switch",
+        check_proof_three(&edited(&read(PS), "@($outPort, 445)", "@($outPort)"))
+    );
+}
+
+mod gateway_unchecked {
+    use super::*;
+    negative_control!(
+        wsl_proof_three_tries_the_host_over_the_switch,
+        "a gateway the host may not listen at",
+        expected = "proof 3 passes without the host listening at the gateway",
+        check_proof_three(&edited(
+            &read(PS),
+            " -and $gatewayListens -and -not $viaSwitch\n",
+            " -and -not $viaSwitch\n"
+        ))
+    );
+}
+
+/// `inside.sh gateway`, run on route tables written as the kernel writes /proc/net/route.
+#[cfg(unix)]
+mod gateway {
+    use super::*;
+    use std::process::Command;
+    use std::time::Duration;
+    use validation::spawn::Spawn;
+
+    use crate::scratch::Scratch;
+
+    const HEAD: &str = "Iface\tDestination\tGateway\tFlags\tRefCnt\tUse\tMetric\tMask\n";
+
+    /// `inside` saved and run as `inside.sh gateway <table>`: its exit code and output.
+    fn gateway(tag: &str, inside: &str, table: &str) -> (Option<i32>, String) {
+        let dir = Scratch::new(tag);
+        std::fs::create_dir_all(&*dir).expect("scratch");
+        let script = dir.join("inside.sh");
+        let route = dir.join("route");
+        std::fs::write(&script, inside).expect("scratch");
+        std::fs::write(&route, format!("{HEAD}{table}")).expect("scratch");
+        let out = Command::new("bash")
+            .arg(&script)
+            .arg("gateway")
+            .arg(&route)
+            .output_within(Duration::from_secs(60))
+            .expect("bash ran");
+        (
+            out.status.code(),
+            String::from_utf8_lossy(&out.stdout).trim().to_owned(),
+        )
+    }
+
+    /// The first default route with RTF_GATEWAY (2) set gives its gateway, read little-endian; a default route without
+    /// the flag, and a route that isn't the default, are passed over; with none, it exits 1 naming why.
+    fn check_gateway(tag: &str, inside: &str) {
+        let tables = [
+            // eth0's default, through 172.29.112.1 (WSL's NAT switch), after a route to 10.0.0.0/8 through 10.0.0.1.
+            (
+                "eth0\t0000000A\t0100000A\t0003\t0\t0\t0\t000000FF\neth0\t00000000\t01701DAC\t0003\t0\t0\t0\t00000000\n",
+                (Some(0), "172.29.112.1"),
+            ),
+            // A default route without the flag (on-link), then one through 192.168.0.1 with it (flags 0x0002 alone).
+            (
+                "eth1\t00000000\t00000000\t0001\t0\t0\t0\t00000000\neth0\t00000000\t0100A8C0\t0002\t0\t0\t0\t00000000\n",
+                (Some(0), "192.168.0.1"),
+            ),
+        ];
+        for (n, (table, (code, out))) in tables.iter().enumerate() {
+            let got = gateway(&format!("{tag}_{n}"), inside, table);
+            assert_eq!(
+                got,
+                (*code, (*out).to_owned()),
+                "inside.sh gateway misreads the table"
+            );
+        }
+        let none = gateway(
+            &format!("{tag}_none"),
+            inside,
+            "eth0\t00000000\t0100A8C0\t0001\t0\t0\t0\t00000000\n",
+        );
+        assert!(
+            none.0 == Some(1)
+                && none
+                    .1
+                    .starts_with("gateway: no default route through a gateway"),
+            "inside.sh gateway names a gateway with no default route through one: {none:?}"
+        );
+    }
+
+    #[test]
+    fn wsl_inside_reads_the_default_gateway() {
+        check_gateway("wsl_gateway", &read(INSIDE));
+    }
+
+    negative_control!(
+        wsl_inside_reads_the_default_gateway,
+        "the gateway read big-endian",
+        expected = "inside.sh gateway misreads the table",
+        check_gateway(
+            "wsl_gateway_endian",
+            &edited(&read(INSIDE), "struct.pack(\"<L\"", "struct.pack(\">L\"")
+        )
+    );
+
+    mod flag_ignored {
+        use super::*;
+        negative_control!(
+            wsl_inside_reads_the_default_gateway,
+            "the gateway flag ignored",
+            expected = "inside.sh gateway misreads the table",
+            check_gateway(
+                "wsl_gateway_flag",
+                &edited(&read(INSIDE), " and int(row[3], 16) & 2", "")
+            )
+        );
+    }
 }
 
 // ---- Proof 4 ------------------------------------------------------------------------------------------------------
