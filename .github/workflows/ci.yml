@@ -627,8 +627,10 @@ jobs:
           done
 
   # The Metal GPU smoke set, the required check `gpu-metal`, on a change with a GPU-path file: GitHub-hosted Apple
-  # silicon's paravirtual Metal (R-169, R-186), the same `gpu-smoke` profile as lavapipe's, with the GPU harness's,
-  # the fast-math probe's and the compute entry point's unit tests (R-297). It skips inside the job like the others, a
+  # silicon's paravirtual Metal (R-169, R-186), the `gpu-smoke` profile's tests of the stages the Metal suites ran
+  # before (the pack and unpack, decode, canonicalisation, encode, the invariant seed and the cross-backend decode),
+  # with the GPU harness's, the fast-math probe's and the compute entry point's unit tests (R-297). The stages only
+  # lavapipe ran (the toolchain, bring-up, per-pixel mass, lock, `atan2` and agreement-preset tests) stay lavapipe's. It skips inside the job like the others, a
   # macOS runner held for its first step alone on a change without a GPU-path file. On a push too, as `gpu-lavapipe`'s,
   # to save its rust-gpu build on `main`.
   gpu-metal-smoke:
@@ -689,12 +691,12 @@ jobs:
         if: env.RUN == 'true'
         env:
           NEXTEST_PROFILE: gpu-smoke
-        run: cargo nextest run -p validation --lib --test toolchain --test bringup --test codegen_selftest --test agreement_preset_gpu --no-capture
+        run: cargo nextest run -p validation --lib --test codegen_selftest --no-capture
       - name: cargo nextest run -p engine (the GPU smoke set)
         if: env.RUN == 'true'
         env:
           NEXTEST_PROFILE: gpu-smoke
-        run: cargo nextest run -p engine --lib --test decode_stage_gpu --test canon_gpu --test encode_gpu --test invariant_gpu --test per_pixel_mass_gpu --test lock_gpu --test arctan_gpu --test decode_cross_backend --no-capture
+        run: cargo nextest run -p engine --lib --test decode_stage_gpu --test canon_gpu --test encode_gpu --test invariant_gpu --test decode_cross_backend --no-capture
 
   # ---------------------------------------------------------------------------------------------------------------------
   # The interim per-merge run: on a push only (`main`, `measure/`), the full suite as before, until the per-merge

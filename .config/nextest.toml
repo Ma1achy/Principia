@@ -1783,7 +1783,7 @@ default-filter = """
 # (`scripts/ci_changes.sh`'s `gpu`). Each is its stage's fastest test that dispatches the stage on the GPU, by the
 # lavapipe and Metal times of `main`'s run 42536974219 (8 Nov 2026), lavapipe's first:
 # - the kernel toolchain, rust-gpu to SPIR-V to naga's WGSL, dispatched: `toolchain_trivial_kernel` (11.2 s, Metal not run);
-# - the bring-up mode's readback of the SPIR-V build: `bringup_pattern_spirv` (5.4 s);
+# - the bring-up mode's readback of the SPIR-V build: `bringup_pattern_spirv` (5.4 s, Metal not run);
 # - the payload's pack and unpack through the generated WGSL on the GPU: `codegen_selftest_pack_unpack_wgsl_gpu`
 #   (7.9 s, 6.8 s);
 # - the decode stage D, through the `tanh_sat` window Metal's own `tanh` fails without its clamp:
@@ -1802,8 +1802,10 @@ default-filter = """
 # About 126 s of test time on lavapipe, under a minute of the job's wall time on its four test threads. Beside them, the
 # kernel build's own checks, which read the kernel the job has just built and take under a second: xtask's
 # `build_kernel` tests but its two slow-tier ones, which `cargo xtask build-kernel` itself covers, `fragment_wgsl` and
-# `qa_TASK-M0-14`. On Metal, the GPU harness's, the compute fast-math probe's and the hosted-Metal probe's unit tests in
-# validation, and the compute entry point's in engine (R-297), each under a second. Applied per R-369/R-812.
+# `qa_TASK-M0-14`. `gpu-metal` runs the six with a Metal time, the stages the Metal suites ran before, by `--test`; the
+# ones Metal did not run stay lavapipe's, so the smoke set asks nothing of Metal its suites never did. Beside them on
+# Metal, the GPU harness's, the compute fast-math probe's and the hosted-Metal probe's unit tests in validation, and the
+# compute entry point's in engine (R-297), each under a second. Applied per R-369/R-812.
 [profile.gpu-smoke]
 default-filter = """
     (binary_id(=validation::toolchain) & test(=toolchain_trivial_kernel))
