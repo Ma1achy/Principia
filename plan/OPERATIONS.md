@@ -214,7 +214,7 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   it (R-369).
 - **Mutants.** The implementer runs `cargo mutants --in-diff` on its own diff against `origin/main` before it requests
   review (opens the PR), and again before it pushes fixes for survivors (R-388). It tests the boundary of every
-  comparison and match arm it adds. Reviewers don't run it. Since the owner's CI model (9 Nov 2026) no pull-request
+  comparison and match arm it adds. Reviewers don't run it. Since the owner's CI model (R-908, R-909) no pull-request
   run mutates (`mutants.yml` runs on no pull request; the nightly full run and, once proven, the Windows runner's
   per-merge run are where CI mutates), so the local run is the pull request's mutation check. *Was:* "CI's mutants
   gate stays the authority (`mutants.yml`, R-302): a clean local run doesn't replace a green `mutants-check`." The
@@ -341,7 +341,7 @@ required check on a pull request is stuck, no agent opens or updates any other p
 merges, until `main` is green again or the check reports; the owner is told in one message what is red or stuck. A
 stuck check is cleared by re-running only the job that reports it, never a whole pipeline. A CI-tooling pull request,
 one that changes what CI runs or checks, shows its own run of what it changes passing on its head before it merges
-(its `process` check, the process tests, since the owner's CI model of 9 Nov 2026; *was:* "its own `xtask-ci` run"):
+(its `process` check, the process tests, since the owner's CI model of 9 Nov 2026, R-907 and R-909; *was:* "its own `xtask-ci` run"):
 #381 merged and broke `main`.
 
 **Advisory bot reviews before the merge (R-651, a standing rule).** Before step 3, the orchestrator's merge script
@@ -386,7 +386,7 @@ required it again since; he removed `mutants-check` on 3 Nov 2026 (R-678), "beca
 required it again once R-678's fix had reported on a real pull request; R-305 allowed the orchestrator one settings
 change, adding `mutants-check`, which lapses with it (R-907).
 
-**What CI runs on a pull request: the PR tier (the owner's CI model, approved 9 Nov 2026; his order of 8 Nov 2026:
+**What CI runs on a pull request: the PR tier (the owner's CI model, R-909, approved 9 Nov 2026; R-907, R-908, his order of 8 Nov 2026:
 "PR feedback in under 30 minutes … Product correctness is what CI protects: physics, numerics, output, GUI behaviour.
 Machinery that tests the machinery is secondary").** `ci.yml` runs on a push to `main` (and to a `measure/` branch,
 R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps
@@ -430,13 +430,18 @@ On a code change the jobs run in parallel:
   `.github/` and `scripts/` narrows the set, since `validation`, every other crate's dev-dependency, links the rest),
   under the `pr` nextest profile, and their doctests. The `pr` profile runs every test but four kinds, each named in
   `.config/nextest.toml`: the process tests; the in-depth GPU tests (the `gpu-kernel` profile's, which need the built
-  kernel); the golden runner over every suite and the screenshot runner's self-test (the owner, 9 Nov 2026: "product
-  correctness — per merge, never retired"); and the slow tier, each test measured over 60 s (the per-test times of
-  8 Nov 2026), named with its time. A product-tooling test in the slow tier is covered on the pull request by its
-  command (`lint wgsl` in `build`, `build-kernel` in `gpu-lavapipe`);
+  kernel); the golden runner over every suite and the screenshot runner's self-test (R-909; the owner, 9 Nov 2026:
+  "product correctness — per merge, never retired"); and the slow tier, each test measured over 60 s (the per-test
+  times of 8 Nov 2026), named with its time (R-904, R-908). A product-tooling test in the slow tier is covered on the
+  pull request by its command (`lint wgsl` in `build`, `build-kernel` in `gpu-lavapipe`). The slow tier holds 34
+  physics, validation and render tests (4,981 s measured) by the owner's ruling of 9 Nov 2026, "1: move them.", in
+  answer to R-904's "moving any physics or validation test into the slow tier comes to me first";
+  `xtask/tests/ci_pr_tier.rs` pins exactly that list, so no other physics, validation or render test enters the slow
+  tier without a ruling;
 - `gpu-lavapipe` and `gpu-metal`, on a change with a GPU-path file (`gpu`; R-692's rule unchanged): `cargo xtask
   build-kernel`, then the GPU smoke set, one fast test of each GPU stage (the `gpu-smoke` profile, which names each and
-  why), on lavapipe and on Metal, and on lavapipe every numerical gate but `decode-agreement`. They run on a push to
+  why), and the mock noise's shared-lattice-corner tests, bit-equal on every backend (REQ-GUI-412, R-685, R-692), on
+  lavapipe and on Metal, and on lavapipe every numerical gate but `decode-agreement`. They run on a push to
   `main` too, to save their own rust-gpu builds there (REQ-SYS-075);
 - `process`, advisory, no required check: the process tests (the `process` profile, the split of 9 Nov 2026's process
   class: CI's own tests, the plan checks', the negative-control registry's, the job queue's, the deps rules' synthetic
@@ -456,14 +461,14 @@ a required check is never a job skipped at job level. No job polls or waits on a
 What a pull request leaves to a merge runs on every push to `main`: the slow tier, the in-depth GPU suites on lavapipe
 and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xtask golden --all`, `cargo xtask gate
 decode-agreement`), the golden and screenshot runners' self-tests, the release profile (R-547), `cargo xtask ci`, the
-controls run among it, and every process test. Until the per-merge workflow takes them (the owner's CI model, order
+controls run among it, and every process test. Until the per-merge workflow takes them (the owner's CI model, R-909, order
 step 3), they are `ci.yml`'s interim per-merge run, the full suite's jobs as they ran before, on a push only, bearing
 no required check. A head that changes only prose a test reads does not run that test unless it changes the
 machinery, so a contract's renamed heading can turn `main` red after a green pull request (R-662). New code that loads
 a data file for behaviour adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a
 literal data path missing from it.
 
-*Was (R-656, R-676, R-677, R-678, R-684, until the owner's CI model of 9 Nov 2026):* a code pull request's head ran
+*Was (R-656, R-676, R-677, R-678, R-684, until the owner's CI model of 9 Nov 2026, R-907 to R-909):* a code pull request's head ran
 the quick tier, one job, `ci-quick` (fmt, clippy, the build and the tests of the changed crates and their reverse
 dependencies under the `ci` and `ci-workspace` profiles), and full CI (the unit, property, numerical-gate and native
 golden suites, the controls, the release profile and the GPU suites) ran on the merge-candidate head, the one carrying
@@ -474,7 +479,7 @@ pending. The same label started `mutants.yml`'s merge-ready run, the per-PR muta
 `mutants-check`, a job of every run of the workflow (R-678), was the verdict; a push took the label off
 (`merge-ready-off`), and a failed verdict went to qa and a fix round. The owner's CI model ended all of it on the pull
 request's path, the label-triggered full attempt and the per-PR mutants run with it, and mutation testing moved "off
-the PR path entirely; nightly/Windows as already agreed" (his order of 8 Nov 2026).
+the PR path entirely; nightly/Windows as already agreed" (his order of 8 Nov 2026, R-908).
 `mutants.yml` is kept, unused, for the per-merge work.
 
 **Fix rounds are verified locally first (R-676).** A fix round runs the tests its fixes touch, their controls, and its
@@ -484,7 +489,7 @@ CI then confirms that head. A push is never how a fix round finds out whether it
 **Merging `main` into an open pull request, in batches (R-676).** Each push to a pull request re-runs its CI, so `main`
 is not merged into open pull requests after every merge to `main`. It is merged in only when the pull request
 conflicts with `main`, or when a merged change it depends on must be in its tree; then the reviewers approve the merged
-head again. *Was (until the owner's CI model of 9 Nov 2026, which ended the label):* "Each push … takes its
+head again. *Was (until the owner's CI model of 9 Nov 2026, R-909, which ended the label):* "Each push … takes its
 `merge-ready` label off", and the reviewers approved the merged head again "before the watcher labels it". An early
 start's merge of `main` before its pull request opens stays (R-388). *7 Nov 2026 (R-827, RQ-704 (b)):* the merge "once, right before the `merge-ready` label"
 lapses where there is no conflict; § "Merging" step 2's merged-tree check stands in for it. *Was:* "or once, right
