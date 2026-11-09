@@ -11,12 +11,17 @@
 //! stops. Controls: a stop that keeps the requested value, a stop one bisection step short, and a per-chart override.
 //!
 //! **`nav_fuzz_never_leaves*`** (REQ-CHART-061): on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
-//! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts, warped,
-//! every pixel of a 65 × 65 grid over `[0,1]²` whose own `(a, b)` lie in the square validates at every tilt reached,
-//! every grid pixel under Lean each axis, with two targets or with one angle set, each angle within ±90° (R-512; past
-//! 90°, Tip as sheet's range, a turned window's pixel can leave the square, and the in-square arm holds); under the
-//! linear option infeasible pixels appear and each is classified not a system. Controls: the stop disabled, and the
-//! linear arm run warped or read as a system.
+//! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts and
+//! `Φ_θ,L_z` (its `L_z` an energy-type axis, R-471 H1; its held `K`, R-708), warped, every pixel of a 65 × 65 grid over
+//! `[0,1]²` whose own `(a, b)` lie in the square validates at every tilt reached, under every tilt configuration, and
+//! each run validates at least one such pixel past its start (R-512: E3 and C6 read over the chart's square; R-708's
+//! "every pixel" likewise). Where the view's centre lies in the square, every grid pixel's `(a, b)` does too under Lean
+//! each axis, with two targets or with one angle set, each angle within ±90° (R-471 H9, R-512 F2), and that is
+//! asserted; a centre outside the square, which the stop admits where it is a system (a held `K₀ = 0`, R-720, R-709),
+//! takes the pixels between it and the window out of the square, past the edge, and C6 does not read them (R-512).
+//! Past 90°, Tip as sheet's range, a turned window's pixel can leave the square, and the in-square arm holds. Under the
+//! linear option infeasible pixels appear and each is classified not a system. Controls: the stop disabled, H9's claim
+//! asserted without the centre in the square, and the linear arm run warped or read as a system.
 //!
 //! The draws are SplitMix64 from fixed seeds, each printed. `I = 1` throughout (the canonical-frame decode).
 
@@ -832,10 +837,17 @@ const KINDS: [Kind; 10] = [
 #[derive(Clone, Copy, PartialEq)]
 enum Grid {
     None,
-    /// Every pixel whose `(a, b)` lie in the square validates; every pixel under Lean, two targets or one angle, each
-    /// angle within ±90°, where `(a, b)` lie between the pixel and the centre. Past 90° (Tip as sheet's range) a single
-    /// turn, or each of two, takes the window over, and a pixel can leave the square (R-512).
-    Warped,
+    /// Every pixel whose own `(a, b)` lie in the square validates, at every tilt and under every configuration (R-512:
+    /// C6's every-pixel arm is over the chart's square). Under Lean, two targets or one angle, each angle within ±90°,
+    /// `(a, b)` lie between the pixel and the centre, so with the centre in the square every pixel's `(a, b)` lie in it
+    /// too (R-471 H9, R-512 F2), and that is asserted. With the centre outside the square (the stop admits one where it
+    /// is a system, as at a held `K₀ = 0`) those pixels can leave the square, past the edge, where § 5.4's affine
+    /// continuation is not a system; they are not checked. Past 90° (Tip as sheet's range) a single turn, or each of
+    /// two, takes the window over, and a pixel can leave the square even with the centre in it. `centred` false drops
+    /// the centre from H9's premise (a control).
+    Warped {
+        centred: bool,
+    },
     /// The infeasible pixels, each classified not a system; with `as_system` each read as a system (a control).
     Linear {
         as_system: bool,
@@ -850,6 +862,10 @@ struct Tally {
     refused: u32,
     tilts: u32,
     grid_checked: u64,
+    /// Whether the run checks the warped arm's grid.
+    warped: bool,
+    /// The warped arm's in-square pixels validated at the tilts reached, the start's grid not counted.
+    in_square: u64,
     infeasible: u64,
     faults: Vec<String>,
 }
@@ -1004,12 +1020,19 @@ impl<C: Nav> Curved<C> {
     }
 }
 
-/// C6's grid at the current view: the warped arm's every pixel, or the linear arm's infeasible ones.
+/// Whether `x` lies in `[0, 1]`.
+fn unit(x: f64) -> bool {
+    (0.0..=1.0).contains(&x)
+}
+
+/// C6's grid at the current view: the warped arm's in-square pixels, and H9's every pixel in the square where its
+/// premise holds; or the linear arm's infeasible ones.
 fn check_grid<C: Nav>(state: &Curved<C>, grid: Grid, t: &mut Tally, at_edit: u32) {
     let view = state.view().expect("the view").chart;
     let s = state.spec;
     let within = s.tau1.abs() <= 90.0 && s.tau2.abs() <= 90.0;
     let every = within && (s.map == TiltMap::Lean || s.x != s.y || s.tau1 == 0.0 || s.tau2 == 0.0);
+    let centred = unit(state.centre[0]) && unit(state.centre[1]);
     for j in 0..=GRID {
         for i in 0..=GRID {
             let (u, v) = (
@@ -1017,10 +1040,19 @@ fn check_grid<C: Nav>(state: &Curved<C>, grid: Grid, t: &mut Tally, at_edit: u32
                 f64::from(j) / f64::from(GRID),
             );
             let ([a, b], _) = view.at(u, v);
-            let square = (0.0..=1.0).contains(&a) && (0.0..=1.0).contains(&b);
+            let square = unit(a) && unit(b);
             match grid {
-                Grid::Warped if every || square => {
+                Grid::Warped { centred: premise } if !square && every && (centred || !premise) => {
+                    t.fault(format!(
+                        "edit {at_edit}: the warped pixel ({u}, {v}) at (a, b) = ({a}, {b}) under {s:?} about {:?} leaves the square",
+                        state.centre
+                    ));
+                }
+                Grid::Warped { .. } if square => {
                     t.grid_checked += 1;
+                    if at_edit > 0 {
+                        t.in_square += 1;
+                    }
                     let r = view.validate(u, v);
                     if r != ValidationResult::Valid {
                         t.fault(format!(
@@ -1071,7 +1103,10 @@ fn fuzz_curved<C: Nav>(
         values[k as usize] = chart.value(k);
     }
     let mut d = Draw(seed);
-    let mut t = Tally::default();
+    let mut t = Tally {
+        warped: matches!(grid, Grid::Warped { .. }),
+        ..Tally::default()
+    };
     if verdict(state.view()).is_some() {
         t.fault(format!(
             "the starting centre fails: {:?}",
@@ -1372,8 +1407,10 @@ const MIXED_EDITS: u32 = EDITS;
 
 /// Every gallery chart (gallery_sweep's list, R-467 D11), warped, at f64: the latent chart and its flat slices, the
 /// shape sphere's three maps, the invariant charts, the Euclid plane, `(ν, K)`, `Φ_θ,K` (and `Φ_strip,K`, the same map),
-/// `Φ_θ,L_z`, `Φ_θ,δm` (and `Φ_strip,δm`), the mass simplex, and the mixed-axis pairs.
-fn gallery(off: bool) -> Vec<Job> {
+/// `Φ_θ,L_z`, `Φ_θ,δm` (and `Φ_strip,δm`), the mass simplex, and the mixed-axis pairs. C6's warped grid runs on the
+/// invariant charts, `(ν, K)`, `Φ_θ,K` and `Φ_θ,L_z`, the charts with an energy-type axis or a held `K` (R-471 H1,
+/// R-708).
+fn gallery(off: bool, centred: bool) -> Vec<Job> {
     let mut jobs: Vec<Job> = Vec::new();
     if !off {
         let z0 = [0.3, -0.5, 0.2, -0.1, 0.15, 0.05, 0.7, -0.4];
@@ -1403,7 +1440,11 @@ fn gallery(off: bool) -> Vec<Job> {
             Box::new(move || fuzz_latent(frame, z0, SEED ^ 0xA7, EDITS)),
         ));
     }
-    let warped = if off { Grid::None } else { Grid::Warped };
+    let warped = if off {
+        Grid::None
+    } else {
+        Grid::Warped { centred }
+    };
     for (name, map, scale) in [
         ("shape sphere, spherical", ShapeMap::Spherical, 0.0),
         (
@@ -1457,7 +1498,7 @@ fn gallery(off: bool) -> Vec<Job> {
         warped,
     );
     let theta_lz = HeldK::new(theta_lz(), K_MAX.number(), GAMMA_K.number());
-    curved_jobs(&mut jobs, "Φ_θ,L_z", theta_lz, EDITS, off, Grid::None);
+    curved_jobs(&mut jobs, "Φ_θ,L_z", theta_lz, EDITS, off, warped);
     let delta_m = BurrauThetaDeltaM {
         theta_range: theta_range(),
         m_target: BurrauThetaDeltaM::<f64>::equal_masses(),
@@ -1543,8 +1584,8 @@ fn report(runs: &[(String, Tally)]) {
     println!("seed {SEED:#x}");
     for (name, t) in runs {
         println!(
-            "{name}: {} edits, {} stopped, {} refused, {} tilts, {} grid pixels checked, {} infeasible",
-            t.edits, t.stopped, t.refused, t.tilts, t.grid_checked, t.infeasible
+            "{name}: {} edits, {} stopped, {} refused, {} tilts, {} grid pixels checked, {} in-square past the start, {} infeasible",
+            t.edits, t.stopped, t.refused, t.tilts, t.grid_checked, t.in_square, t.infeasible
         );
     }
     let faults: Vec<String> = runs
@@ -1559,25 +1600,42 @@ fn report(runs: &[(String, Tally)]) {
     );
 }
 
-/// The warped fuzz over every gallery chart; `off` disables the stop (the control).
-fn check_fuzz(off: bool) {
-    let runs = run(gallery(off));
+/// The warped fuzz over every gallery chart; `off` disables the stop, and `centred` false drops the centre from H9's
+/// premise (the controls). Each run with the warped grid validates an in-square pixel past its start.
+fn check_fuzz(off: bool, centred: bool) {
+    let runs = run(gallery(off, centred));
     report(&runs);
+    for (name, t) in runs.iter().filter(|(_, t)| t.warped) {
+        assert!(
+            t.in_square > 0,
+            "{name}'s warped grid validates no in-square pixel past its start"
+        );
+    }
     let stopped: u32 = runs.iter().map(|(_, t)| t.stopped + t.refused).sum();
     assert!(stopped > 0, "no edit of the fuzz reached an edge");
 }
 
 #[test]
 fn nav_fuzz_never_leaves() {
-    check_fuzz(false);
+    check_fuzz(false, true);
 }
 
 negative_control!(
     nav_fuzz_never_leaves,
     "the fuzz with the stop disabled reaches an invalid centre",
     expected = "leaves the manifold",
-    check_fuzz(true)
+    check_fuzz(true, true)
 );
+
+mod uncentred {
+    use super::*;
+    negative_control!(
+        nav_fuzz_never_leaves,
+        "H9's every-pixel claim without the centre in the square fails",
+        expected = "leaves the square",
+        check_fuzz(false, false)
+    );
+}
 
 /// The linear option's arm (R-471 E2, A7): the same run, the stop keeping the centre feasible, finds infeasible pixels
 /// inside `[0,1]²`, each classified not a system. `mapping` warped finds none (a control); `grid` read as a system
