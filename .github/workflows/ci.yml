@@ -640,11 +640,10 @@ jobs:
   # silicon's paravirtual Metal (R-169, R-186), the `gpu-smoke` profile's tests of the stages the Metal suites ran
   # before (the pack and unpack, decode, canonicalisation, encode, the invariant seed and the cross-backend decode),
   # with the GPU harness's, the fast-math probe's and the compute entry point's unit tests (R-297). The stages only
-  # lavapipe ran (the toolchain, bring-up, per-pixel mass, lock, `atan2` and agreement-preset tests) stay lavapipe's. The
-# mock noise's lattice tests run on both (REQ-GUI-412: "CI's lavapipe and Metal block"). It skips inside the job like
-# the others, a
-  # macOS runner held for its first step alone on a change without a GPU-path file. On a push too, as `gpu-lavapipe`'s,
-  # to save its rust-gpu build on `main`.
+  # lavapipe ran (the toolchain, bring-up, per-pixel mass, lock, `atan2` and agreement-preset tests) stay lavapipe's.
+  # The mock noise's lattice tests run on both (REQ-GUI-412: "CI's lavapipe and Metal block"). It skips inside the job
+  # like the others, a macOS runner held for its first step alone on a change without a GPU-path file. On a push too,
+  # as `gpu-lavapipe`'s, to save its rust-gpu build on `main`.
   gpu-metal-smoke:
     name: gpu-metal
     needs: changes
