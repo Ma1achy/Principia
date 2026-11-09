@@ -6,6 +6,9 @@
 //! - `ci_pr_tier_slow_tier_is_named_with_its_time`: `.config/nextest.toml`'s `pr` and `process` profiles each leave out
 //!   their slow tier by name, every test of it under a table naming it with its measured time, over 60 s, and the
 //!   table and the filter name the same tests.
+//! - `ci_pr_tier_slow_tier_holds_no_physics_test`: the `pr` profile's slow tier holds only xtask's tests and the
+//!   in-depth GPU tests; physics and validation tests stay on the pull request until the owner rules (his order of
+//!   8 Nov 2026, item 2: "moving any physics or validation test into the slow tier comes to me first").
 //! - `ci_pr_tier_profiles_split_the_tests`: what `pr` leaves out by binary is exactly the `process` profile's binaries,
 //!   the `gpu-kernel` profile's (the in-depth GPU tests) and the golden and screenshot runners' three (the owner,
 //!   9 Nov 2026: "per merge, never retired"), so no binary falls out of both `pr` and `process` unnamed.
@@ -180,8 +183,43 @@ negative_control!(
     expected = "which its slow tier does not list with its time",
     check_slow_tier(&edited(
         ".config/nextest.toml",
-        "#     621.8 s  render::observation_taps observation_taps_leave_the_payload_unchanged\n",
+        "#     689.6 s  xtask::build_kernel build_kernel_runs_in_ci\n",
         "",
+    ))
+);
+
+/// The owner's order of 8 Nov 2026, item 2: "moving any physics or validation test into the slow tier comes to me
+/// first". Until he rules, the `pr` profile's slow tier holds only xtask's tests and the in-depth GPU tests (the
+/// `gpu-kernel` profile's binaries, which the owner moved off the pull request's path).
+fn check_slow_tier_held(toml: &str) {
+    let gpu_kernel = bare_binaries(&profile(toml, "gpu-kernel").filter);
+    let table = timed(&profile(toml, "pr").comments);
+    assert!(
+        !table.is_empty(),
+        "ci_pr_tier: the pr profile names no slow tier"
+    );
+    for (binary, test) in table.keys() {
+        assert!(
+            binary.starts_with("xtask::") || gpu_kernel.contains(binary),
+            "ci_pr_tier: the pr profile's slow tier leaves out {binary} {test}, a physics or validation test the owner \
+             has not ruled off the pull request"
+        );
+    }
+}
+
+#[test]
+fn ci_pr_tier_slow_tier_holds_no_physics_test() {
+    check_slow_tier_held(&read(".config/nextest.toml"));
+}
+
+negative_control!(
+    ci_pr_tier_slow_tier_holds_no_physics_test,
+    "A kernel test put into the pr profile's slow tier fails the check.",
+    expected = "leaves out kernel::gallery_sweep gallery_sweep_unit_square, a physics or validation test",
+    check_slow_tier_held(&edited(
+        ".config/nextest.toml",
+        "#     689.6 s  xtask::build_kernel build_kernel_runs_in_ci\n",
+        "#     689.6 s  xtask::build_kernel build_kernel_runs_in_ci\n#      64.7 s  kernel::gallery_sweep gallery_sweep_unit_square\n",
     ))
 );
 
