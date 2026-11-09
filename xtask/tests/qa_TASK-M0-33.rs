@@ -24,9 +24,10 @@
 //! What stands in for the pairing is held per tier, not workflow-wide: on every tier the selecting step's job runs on
 //! (the pull-request tier, the push tier, or both, read from the job's `if:` and, where that does not say `always()`,
 //! the jobs it needs), some job of that tier runs a whole `cargo test --doc` step (no test-name filter) covering each
-//! package the step names: `--workspace`, `-p <package>`, or the changed crates' `$PACKAGES` list, which covers a
-//! workspace package with a library (`cargo test $PACKAGES --doc` over the changed crates and their reverse
-//! dependencies). A `--lib` or `--test` step whose package has no such step on one of its tiers fails.
+//! package the step names: `--workspace`, `-p <package>`, or, on the pull-request tier only, the changed crates'
+//! `$PACKAGES` list, which covers a workspace package with a library (`cargo test $PACKAGES --doc` over the changed
+//! crates and their reverse dependencies); on the push tier only `--workspace` or `-p` counts, R-677's "every doctest
+//! runs on `main`". A `--lib` or `--test` step whose package has no such step on one of its tiers fails.
 
 use std::path::Path;
 
@@ -140,9 +141,10 @@ fn has_library(pkg: &str) -> bool {
     dir.join("src/lib.rs").is_file()
 }
 
-/// Whether `run` is a whole `cargo test --doc` step (no test-name filter) over `pkg`'s doctests: by `--workspace`,
-/// `-p <pkg>`, or the changed crates' `$PACKAGES` when `pkg` has a library.
-fn doc_step_covers(run: &str, pkg: &str) -> bool {
+/// Whether `run` is a whole `cargo test --doc` step (no test-name filter) over `pkg`'s doctests on `tier`: by
+/// `--workspace` or `-p <pkg>`, or, on the pull-request tier only, the changed crates' `$PACKAGES` when `pkg` has a
+/// library. On the push tier the changed crates are not every doctest, and R-677 says "every doctest runs on `main`".
+fn doc_step_covers(run: &str, pkg: &str, tier: &str) -> bool {
     let Some(words) = words_after(run, "cargo test") else {
         return false;
     };
@@ -157,7 +159,7 @@ fn doc_step_covers(run: &str, pkg: &str) -> bool {
                 it.next();
             }
             "--workspace" => covers = true,
-            "$PACKAGES" => covers |= has_library(pkg),
+            "$PACKAGES" => covers |= tier == "pull_request" && has_library(pkg),
             w if w.starts_with('-') => {}
             // A test-name filter: the step runs some of the package's doctests, not all.
             _ => return false,
@@ -315,7 +317,7 @@ fn check_nextest_and_doctest_steps(workflow: &str) {
                         let covered = jobs.iter().any(|(j, rs)| {
                             let (p, q) = tier_of(j);
                             (if tier == "push" { q } else { p })
-                                && rs.iter().any(|r| doc_step_covers(r, pkg))
+                                && rs.iter().any(|r| doc_step_covers(r, pkg, tier))
                         });
                         assert!(
                             covered,
@@ -461,6 +463,35 @@ mod push_tier_doctests {
                 .collect::<Vec<_>>()
                 .join("\n")
         )
+    );
+}
+
+/// The push tier does not take the changed crates for every doctest: with the workspace's doctest steps (`ci`'s and
+/// `ci-release`'s) narrowed to `cargo test $PACKAGES … --doc`, gui's `--lib` lattice step has no whole doctest step on
+/// the push tier (R-677: "every doctest runs on `main`").
+mod push_tier_changed_crates {
+    use super::*;
+    negative_control!(
+        qa_m0_33_each_nextest_step_has_its_doctest_step,
+        "CI's workflow with its workspace doctest steps narrowed to the changed crates' `$PACKAGES`",
+        expected = "whose package gui's doctests no `cargo test --doc` step runs on the push tier",
+        check_nextest_and_doctest_steps(&{
+            let ci = ci_workflow();
+            for from in [
+                "run: cargo test --workspace --doc\n",
+                "run: cargo test --workspace --release --no-fail-fast --doc\n",
+            ] {
+                assert!(ci.contains(from), "{from}");
+            }
+            ci.replace(
+                "run: cargo test --workspace --doc\n",
+                "run: cargo test $PACKAGES --doc\n",
+            )
+            .replace(
+                "run: cargo test --workspace --release --no-fail-fast --doc\n",
+                "run: cargo test $PACKAGES --release --no-fail-fast --doc\n",
+            )
+        })
     );
 }
 
