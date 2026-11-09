@@ -333,14 +333,13 @@ stuck check is cleared by re-running only the job that reports it, never a whole
 one that changes what CI runs or checks, shows its own `xtask-ci` run passing on its head before it merges: #381
 merged and broke `main`.
 
-**Advisory bot reviews before the merge (R-651, a standing rule).** Before step 3, the orchestrator's merge script
-checks, for Codex, Gemini CLI and Copilot each:
+**Advisory bot reviews before the merge (R-651, a standing rule; R-910).** Before step 3, the orchestrator's merge
+script checks, for Codex and Gemini CLI each (Copilot is never requested, R-910):
 - **A review on the exact head SHA being merged.** Where a bot's last review is on an older head, it re-requests that
-  bot (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a reviewer) and waits for it. A bot that hasn't
-  reviewed the exact SHA within its limit, counted from the request (Codex 25 minutes; Gemini CLI 30 minutes, its job's
-  25-minute timeout, PR #339, plus start-up; Copilot 15 minutes), errors, or refuses on quota or rate limit counts as
-  unavailable: the PR notes "no <bot> review on <sha>: <reason>", and the merge goes ahead on the others, never blocked
-  by a bot.
+  bot (`@codex review`, `@gemini-cli /review`) and waits for it. A bot that hasn't reviewed the exact SHA within its
+  limit, counted from the request (Codex 25 minutes; Gemini CLI 30 minutes, its job's 25-minute timeout, PR #339, plus
+  start-up), errors, or refuses on quota or rate limit counts as unavailable: the PR notes "no <bot> review on <sha>:
+  <reason>", and the merge goes ahead on the others, never blocked by a bot.
 - **No unresolved bot thread.** Every finding has been verified against the code, the spec or the physics and closed
   out with a reply: fixed (the commit named), not applicable (wrong, out of scope or already covered, with the reason),
   or moved to a tracked task or RQ; then resolved. A thread resolved without a reply is reopened and answered. A wrong

@@ -43,14 +43,14 @@ Of these: 241 calibration, 195 definition, 1742 obligation. Retired (kept for th
 
 ## Sections
 
-1894 sections in 63 files: 1456 yield at least one requirement; 438 yield none and are listed below with the reason.
+1895 sections in 63 files: 1456 yield at least one requirement; 439 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 321 |
+| informative only | 322 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -269,6 +269,7 @@ Of these: 241 calibration, 195 definition, 1742 obligation. Retired (kept for th
 | R-855 — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only | informative only | carried by REQ-CHART-135 to REQ-CHART-138, REQ-GUI-424 and TASK-M8-120, which design § 10.4 already wrote |
 | R-868 — The chart-space model's wording follows R-474: Tip as sheet is the default tilt, Lean each axis the other map; the owner has corrected the model, and their copy replaces the repo's *(on RQ-738, which stays open)* | informative only | the owner's corrected chart-space model replaces the repo's; RQ-738 carries what is left |
 | R-869 — The owner's direction for the acute-angle Burrau charts: unfold the leg swap and show both labellings, the reduced view coming from the symmetry filter (R-855) *(on RQ-745, which stays open)* | informative only | the owner's direction, recorded on RQ-745, which stays open; no task until it is ruled |
+| R-910 — Copilot is dropped from the advisory bot reviews: Codex and Gemini CLI only, and Copilot is never requested *(amends R-651 and R-635: Copilot's place in them)* | informative only | the owner's ruling of 9 Nov 2026: Copilot leaves R-651's cadence and R-635's reviewers, Codex and Gemini CLI only; process, carried by CLAUDE.md, AGENTS.md, plan/WORKFLOW.md § The review loop and plan/OPERATIONS.md § Merging; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
