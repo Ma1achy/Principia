@@ -43,14 +43,14 @@ Of these: 245 calibration, 195 definition, 1755 obligation. Retired (kept for th
 
 ## Sections
 
-1935 sections in 63 files: 1487 yield at least one requirement; 448 yield none and are listed below with the reason.
+1936 sections in 63 files: 1487 yield at least one requirement; 449 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 331 |
+| informative only | 332 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -281,6 +281,7 @@ Of these: 245 calibration, 195 definition, 1755 obligation. Retired (kept for th
 | R-887 — The rest of TASK-M9-01's gaps stay deferred to M9 *(defers RQ-681)* | informative only | a deferral; no requirement changes |
 | R-890 — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)* | informative only | a deferral; no requirement changes |
 | R-893 — RQ-701 closes: R-818 ruled its form and R-833 its energy cap; the build is TASK-M8-48's *(closes RQ-701)* | informative only | RQ-701 closes on R-818 and R-833; the build is TASK-M8-48's, whose requirements already carry it |
+| R-910 — Copilot is dropped from the advisory bot reviews: Codex and Gemini CLI only, and Copilot is never requested *(amends R-651 and R-635: Copilot's place in them)* | informative only | the owner's ruling of 9 Nov 2026: Copilot leaves R-651's cadence and R-635's reviewers, Codex and Gemini CLI only; process, carried by CLAUDE.md, AGENTS.md, plan/WORKFLOW.md § The review loop and plan/OPERATIONS.md § Merging; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

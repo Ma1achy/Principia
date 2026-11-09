@@ -1437,6 +1437,10 @@
   reason: informative only
   note: "the owner's standing rule of 30 Oct 2026 with its two addenda: a fresh advisory review from Codex, Gemini CLI and Copilot before merge on the final head, after substantive pushes and periodically, every bot finding closed out before merge; process, carried by plan/WORKFLOW.md § The review loop, plan/OPERATIONS.md § Merging and the orchestrator's merge script; amends R-635's cadence; changes no requirement"
 - file: decisions.md
+  section: "R-910 — Copilot is dropped from the advisory bot reviews: Codex and Gemini CLI only, and Copilot is never requested *(amends R-651 and R-635: Copilot's place in them)*"
+  reason: informative only
+  note: "the owner's ruling of 9 Nov 2026: Copilot leaves R-651's cadence and R-635's reviewers, Codex and Gemini CLI only; process, carried by CLAUDE.md, AGENTS.md, plan/WORKFLOW.md § The review loop and plan/OPERATIONS.md § Merging; changes no requirement"
+- file: decisions.md
   section: "R-657 — The R-369 decisions listed in the orchestrator's summary of 30 Oct 2026 stand, with no veto"
   reason: informative only
   note: "the owner's words of 30 and 31 Oct 2026: the listed R-369 decisions stand, with no veto; process; changes no requirement"
