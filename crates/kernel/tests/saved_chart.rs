@@ -876,8 +876,8 @@ mod skewed_sign {
 
 /// Every stored tilt gives `R·e_X` (and with two targets `R·e_Y`) as the reference's column, to one ulp: a rotation's,
 /// or under Lean each axis with one target and both angles set the saved plane's unit normal toward `+e_X` (R-895),
-/// at the edge of Lean's range and past it too; at RQ-471's corner none. `flip` negates the input, a reflection's
-/// (the control).
+/// at the edge of Lean's range and past it too; a single angle under either map its closed form, bit for bit; at
+/// RQ-471's corner none. `flip` negates the input, a reflection's (the control).
 fn check_inputs(flip: f64) {
     let rotations = [
         spec(0.0, 0.0, TiltMap::Sheet, 4, 4),
@@ -913,6 +913,23 @@ fn check_inputs(flip: f64) {
             assert!(
                 iy == [0.0, 0.0, 0.0, flip],
                 "R·e_Y of {t:?} is not the rotation's column: {iy:?}"
+            );
+        }
+    }
+    for map in [TiltMap::Sheet, TiltMap::Lean] {
+        for (tau1, tau2) in [(35.0, 0.0), (0.0, -60.0), (0.0, 0.0)] {
+            let t = spec(tau1, tau2, map, 4, 4);
+            let (s1, c1) = sc(tau1);
+            let (s2, c2) = sc(tau2);
+            let want = if tau2 == 0.0 {
+                [-s1, 0.0, c1, 0.0]
+            } else {
+                [0.0, -s2, c2, 0.0]
+            };
+            let [ix, _] = t.inputs().expect("a single angle");
+            assert!(
+                ix.map(|x| (flip * x).to_bits()) == want.map(f64::to_bits),
+                "R·e_X of {t:?} is not the rotation's column, its closed form bit for bit: {ix:?}"
             );
         }
     }
