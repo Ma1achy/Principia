@@ -42,9 +42,10 @@
 //! - `ci_changes_no_file_code_reads_is_docs_only`: a static scan, best effort, of the string literals in every crate's
 //!   `src/`, `tests/` and `build.rs`, and in `xtask/`, for a data file they name, and of their `src/` for the plan's
 //!   markdown; none may classify as docs, so a new reader cannot silently leave its data in tier (c). Prose a test
-//!   checks, and a test of a script, are not data (R-662). A `/`-led literal, the tail of
-//!   `concat!(env!("CARGO_MANIFEST_DIR"), "/../../…")`, is read from its package directory. Its limit: a reader
-//!   walking a directory, or building a path from more than one literal, is not seen; the script lists those by hand.
+//!   checks, and a test of a script or of any file under `scripts/`, are not data (R-662). A `/`-led literal, the
+//!   tail of `concat!(env!("CARGO_MANIFEST_DIR"), "/../../…")`, is read from its package directory. Its limit: a
+//!   reader walking a directory, or building a path from more than one literal, is not seen; the script lists those
+//!   by hand.
 //! - `ci_changes_data_tier_runs_every_reader`: on a data change `ci-workspace` runs the tests of every reader of what
 //!   changed, as that scan finds them and as the walkers listed here by hand read them: each test file reading tier
 //!   (b)'s data, and each xtask module's own tests, is among the `--test`s of the step its flag runs (R-677).
@@ -1737,9 +1738,12 @@ negative_control!(
 
 /// Whether `reader` naming `file` is reading data for behaviour (R-662): anything but prose and scripts, or the plan's
 /// markdown named from a package's `src/`, which a test's mention of it is not. Prose a test checks, a citation in the
-/// ledger's register and a test of a script stay on the docs' side.
+/// ledger's register and a test of a script stay on the docs' side. Anything under `scripts/` is a script's, which
+/// R-662 gives only the cheap checks (the scripts that run full CI are `reads_code`'s, by R-677): the WSL2 distro's
+/// `scripts/wsl/wsl.conf`, which `xtask/tests/wsl.rs` reads, is so.
 fn loads_data(reader: &str, file: &str) -> bool {
-    let prose_or_script = [".md", ".py", ".sh"].iter().any(|x| file.ends_with(x));
+    let prose_or_script =
+        file.starts_with("scripts/") || [".md", ".py", ".sh"].iter().any(|x| file.ends_with(x));
     !prose_or_script
         || (file.starts_with("plan/") && file.ends_with(".md") && reader.contains("/src/"))
 }
@@ -1774,6 +1778,10 @@ fn check_readers(script: &str, named: &[(String, String)]) {
             want.1
         );
     }
+    assert!(
+        !loads_data("xtask/tests/wsl.rs", "scripts/wsl/wsl.conf"),
+        "ci_changes: a test reading a file of scripts/ is counted as loading data, which R-662 gives the cheap checks"
+    );
     let mut verdicts: std::collections::BTreeMap<&str, bool> = std::collections::BTreeMap::new();
     let mut wrong = Vec::new();
     for (reader, file) in named {
