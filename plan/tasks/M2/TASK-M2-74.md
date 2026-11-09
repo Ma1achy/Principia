@@ -31,5 +31,5 @@ Every row of the registry's 6 Nov table, each as an axis on CPU batch, an alias 
 - No row is baked. Nothing here scores a target: R-668 and R-669 stand.
 - Waits on its rulings item: RQ-723, RQ-724, RQ-725, RQ-730. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M2-58 in Depends on holds it.
 - *7 Nov 2026 (R-847, R-848, R-844):* RQ-723 is ruled (b): inner and outer orbital elements are axes at a labelled pair, plus the overlays; `h` is a builder axis, its range under physics review (RQ-724); Hill's threshold takes the labelled pair (RQ-730 (a)).
-- *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-109; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Closes: REQ-CHART-117, REQ-CHART-118"; "Depends on: TASK-M2-58, TASK-M4-33, TASK-M2-71, TASK-M7-72, TASK-M2-65".
+- *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-109; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Closes: REQ-CHART-117, REQ-CHART-118"; "Depends on: TASK-M4-37, TASK-M4-33, TASK-M8-100, TASK-M7-72, TASK-M8-117".
 - *9 Nov 2026 (R-916):* REQ-CHART-184, the round-trip tolerance § 12 gives only as measured worsts, is this task's calibration, its criterion written first, set by measurement (R-649/650), confirmed at the M2 gate (G5).

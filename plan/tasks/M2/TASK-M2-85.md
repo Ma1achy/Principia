@@ -44,7 +44,7 @@ that chart's symmetry. R-27's "shape only" fold gives way for these charts.
   TASK-M8-120, not given it directly.
 - The M2 gate confirms REQ-CHART-045's range within `(0, π/4]` for the charts as built; the full range within
   `(0, π/2)` is this task's proposal, REQ-CHART-162, confirmed at the M2 gate (P4 of physics review 5820410914).
-- *Fix round of PR #455:* *Was (Notes):* "outside TASK-M2-58's gate, since it rebuilds three gallery charts, it waits on
+- *Fix round of PR #455:* *Was (Notes):* "outside TASK-M4-37's gate, since it rebuilds three gallery charts, it waits on
   TASK-M8-120 alone, whose filter shows the swap once." and "The range comes back to the owner at the M2 gate within
   `(0, π/2)` (REQ-CHART-045's note)."; *was (acceptance, the clause):* "with the filter on the drawn half reproduces
   today's shape-only chart bit for bit".

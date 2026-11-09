@@ -24,4 +24,4 @@ The read-back map at any masses, and a test per region-D target.
 ## Notes
 - **Build order (R-863):** stage 3, the primitive registry and composed axes, each primitive with its round-trip test. It depends on stage 2's task, TASK-M2-65, and merges only with its tests green.
 - Waits on its rulings item: RQ-728. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M2-58 in Depends on holds it.
-- *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-110; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Depends on: TASK-M2-58, TASK-M4-34, TASK-M2-65".
+- *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-110; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Depends on: TASK-M4-37, TASK-M4-34, TASK-M8-117".
