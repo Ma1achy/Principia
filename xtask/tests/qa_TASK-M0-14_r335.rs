@@ -1,7 +1,9 @@
 //! qa's tests for R-335 in TASK-M0-14, written from REQ-VAL-166 ("CI runs every control through `cargo xtask ci` in a
 //! job of its own, in parallel with the tests, failing on any finding (R-235)") as R-335 reads it: the controls job
 //! "still cannot be skipped or pass with a finding", where only the job's own `if:` (indent 4) can skip it; a step's
-//! `if:`, as R-326's conditional cache save in that job, does not.
+//! `if:`, as R-326's conditional cache save in that job, does not. The owner's CI model (9 Nov 2026) runs the controls
+//! on each merge to `main`, not on a pull request: the job's `if:` keeping it off pull requests is allowed, and any
+//! other still fails (R-290's exception, applied per R-369).
 //!
 //! `qa_TASK-M0-22_r235.rs`'s `check_controls_job_beside_the_tests` is narrowed to the job's `if:` (R-335); R-335 keeps
 //! the rest of that file as it is, so the controls showing that a job-level `if:` or `continue-on-error:` still fails
@@ -67,12 +69,15 @@ fn check_controls_job_runs_and_fails(workflow: &str) {
     let (id, lines) = controls_job(workflow);
     for l in &lines {
         let t = l.trim().trim_start_matches("- ");
-        // R-656's skip of a docs-only pull request is the one job-level `if:` allowed; the gate `xtask-ci` passes
-        // it only on that verdict.
+        // R-656's skip of a docs-only pull request was the one job-level `if:` allowed. The owner's CI model (9 Nov
+        // 2026) moves the controls off the pull request's path to each merge to `main`, so the job's other allowed
+        // `if:` keeps it off pull requests alone: it still runs, and cannot be skipped, on every push to `main`
+        // (R-290's exception, applied per R-369 by the orchestrator).
         assert!(
             !(indent(l) == 4
                 && t.starts_with("if:")
-                && t != "if: needs.changes.outputs.docs_only != 'true'"),
+                && t != "if: needs.changes.outputs.docs_only != 'true'"
+                && t != "if: github.event_name != 'pull_request'"),
             "the controls job `{id}` can be skipped: its own `{t}`"
         );
         assert!(
@@ -114,11 +119,11 @@ fn qa_r335_the_controls_job_cannot_be_skipped() {
 
 negative_control!(
     qa_r335_the_controls_job_cannot_be_skipped,
-    "the checked-in workflow with a job-level `if:` on the controls job",
-    expected = "can be skipped: its own `if: github.event_name == 'push'`",
+    "the checked-in workflow with the controls job skipped on `main`",
+    expected = "can be skipped: its own `if: github.ref != 'refs/heads/main'`",
     check_controls_job_runs_and_fails(&the_workflow().replacen(
-        "  xtask-ci:\n    runs-on: ubuntu-24.04\n",
-        "  xtask-ci:\n    if: github.event_name == 'push'\n    runs-on: ubuntu-24.04\n",
+        "    if: github.event_name != 'pull_request'\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n      # Runner disk: on PRs #251",
+        "    if: github.ref != 'refs/heads/main'\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n      # Runner disk: on PRs #251",
         1
     ))
 );

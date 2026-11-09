@@ -482,7 +482,8 @@ set"):
 | Burrau int lattice | `0`, as the Burrau family | `false` | the pixel's cell's quantised point, where the per-cell dispatch decodes it |
 | Anosova physical-frame | `0` (Φ constructs `(m, r, p)`, entering at canonicalise) | `false` | `ctx.chart.slice_uv` |
 
-The last two rows' sections are added by the task that builds those charts (REQ-RENDER-082, TASK-M4-06), under the same
+The last two rows' sections are added by the task that builds those charts (REQ-RENDER-082, TASK-M4-06, the Burrau int
+lattice's; REQ-RENDER-123, TASK-M4-34, the Anosova physical-frame's, R-914), under the same
 rule: the chart's own `D ∘ Φ`, generated, evaluated at the pixel's point. *Was:* "evaluated at the point the kernel
 decoded". A preset that recomputes from `z` alone (`encode(decode(z))`) is defined only where `z_latent` is `true`; on
 another chart it recomputes from the generated decode's system, never from `z`. *Applied per R-369 (TASK-M2-25), under

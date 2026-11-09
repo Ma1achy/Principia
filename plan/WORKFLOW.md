@@ -188,16 +188,19 @@ crate's test binaries one after another; nextest runs every test of every binary
 
 1. **The implementer** opens the PR once the task's acceptance tests pass locally and it has run `cargo mutants
    --in-diff` on its own diff against `origin/main` and tested the boundary of every comparison and match arm it adds
-   (R-388; `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item). CI's mutants gate stays the authority.
+   (R-388; `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item). Since the owner's CI model (R-908, R-909) no
+   pull-request run mutates, so that local run is the pull request's mutation check. *Was:* "CI's mutants gate stays
+   the authority."
 2. **Every reviewer named in the task** (`plan/reviewers/<name>.md`) reviews against their checklist and the task's
    References. The reviewers are agents (R-175): each posts a PR review headed `VERDICT: APPROVE <role>` or
    `VERDICT: CHANGES <role>`, since GitHub won't let one account approve its own PR. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
    Reviewers never share a checkout: each gets its own git worktree at the PR head and its own `CARGO_TARGET_DIR`,
    which the orchestrator makes before dispatch and removes afterwards (R-219).
    A reviewer runs the acceptance commands and the tests the diff touches plus their dependents, and checks CI is green
-   on the head for the full suite; a full local run is only for a cross-cutting change (R-229). Before `merge-ready`, a
-   code head's green is the quick tier's, the full-only checks pending; the full suite then runs on the approved head
-   (R-684; `plan/OPERATIONS.md` § "What CI runs on a pull request").
+   on the head; a full local run is only for a cross-cutting change (R-229). A head's green is the PR tier's
+   (`plan/OPERATIONS.md` § "What CI runs on a pull request: the PR tier"); the full suite runs on each merge to `main`.
+   *Was (R-684):* "Before `merge-ready`, a code head's green is the quick tier's, the full-only checks pending; the
+   full suite then runs on the approved head."
 3. **Findings cite file and line** — of the diff, or of the doc section a finding rests on (`file` § "section"). A
    finding without a citation isn't actionable and is returned to its author.
 4. **The implementer fixes** each finding and replies on the finding with the fixing commit.
@@ -213,10 +216,9 @@ crate's test binaries one after another; nextest runs every test of every binary
    stacked; if a stack is ever needed, the child PR is retargeted to `main` before the PR below it merges, because
    merging deletes the lower branch at once and deleting a base branch closes its child PRs (CLAUDE.md § Git, R-362).
 
-**Advisory bot reviews (R-651, a standing rule).** Codex, Gemini CLI and GitHub Copilot review alongside the named
-reviewers, advisory only: they never replace the named reviewers' approvals, and `reviews-complete` doesn't count them.
-The orchestrator asks each bot for a fresh review (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a
-reviewer):
+**Advisory bot reviews (R-651, a standing rule; R-910).** Codex and Gemini CLI review alongside the named reviewers,
+advisory only: they never replace the named reviewers' approvals, and `reviews-complete` doesn't count them. Copilot is
+never requested (R-910). The orchestrator asks each bot for a fresh review (`@codex review`, `@gemini-cli /review`):
 - **before the merge, on the final head:** step 6 waits for a review from each bot on the exact SHA being merged, and
   re-requests a bot whose last review is on an older head;
 - **after every substantive push:** new logic, physics or algebra, a fix responding to review findings (whatever it
@@ -225,7 +227,7 @@ reviewer):
   large one, so problems surface partway through rather than at the end.
 
 Under limits the order is pre-merge, then post-push, then periodic. A bot is unavailable when it hasn't reviewed the
-exact SHA within its limit, counted from the request (Codex 25 minutes, Gemini CLI 30, Copilot 15), errors, or refuses
+exact SHA within its limit, counted from the request (Codex 25 minutes, Gemini CLI 30), errors, or refuses
 on quota or rate limit; it is noted on the PR and the merge goes ahead with the others; the owner is told if pre-merge
 reviews start being skipped. Every bot finding is closed out before the merge: verified against the code, the spec or
 the physics, then fixed (the reply names the commit), answered with why it doesn't apply (wrong, out of scope, already

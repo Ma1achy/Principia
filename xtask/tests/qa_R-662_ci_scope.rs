@@ -22,8 +22,11 @@
 //! - `qa_r662_every_tracked_path_classifies_as_the_ruling_says`: every path `git ls-files` lists, against this file's
 //!   own reading of the ruling's lists (`ruling`).
 //! - `qa_r662_unknown_paths_run_everything`: paths the ruling names nowhere, alone and beside a cheap path.
-//! - `qa_r662_required_checks_report_on_the_cheap_path`: `ci.yml`'s jobs walked as GitHub would on each verdict, each
-//!   gate's own script run under bash; the three other required checks and the atlas guard read from their workflows.
+//! - `qa_r662_required_checks_report_on_the_cheap_path`: `ci.yml`'s jobs walked as GitHub would on each verdict of a
+//!   pull request, each required job's classification check run under bash and its steps' `if:`s read: the PR tier's
+//!   six required checks (the owner's CI model, 9 Nov 2026, in place of the full tier's gates) conclude success on the
+//!   cheap path running nothing heavy; `mutants.yml` runs on no pull request; the two other required checks and the
+//!   atlas guard read from their workflows (R-290's exception for the model, applied per R-369).
 //! - `qa_r662_mutants_shard_skips_only_rust_not_principias`: `mutants.yml`'s own diff step on real `git diff`s.
 //! - `qa_r662_detect_fails_towards_full_ci`: `detect` on real merge commits: a move out of the code, a deletion, an
 //!   empty merge, a path git must quote, a commit that isn't there.
@@ -505,16 +508,21 @@ fn needs_of(job: &Value) -> Vec<String> {
     }
 }
 
-/// A finished run: each job's result, and each job's outputs.
-#[derive(Default)]
+/// A finished run: each job's result, and each job's outputs; `env`, a job's own `env:` while its steps are read.
+/// The owner's CI model (9 Nov 2026) put the required checks' skips inside each job's steps, behind job `env:` values
+/// and the event, so the walk reads `github.event_name`, `github.ref` and `env.<key>` too, as a pull request's run on
+/// its merge ref (R-290's exception, applied per R-369 by the orchestrator).
+#[derive(Default, Clone)]
 struct Walk {
     results: BTreeMap<String, String>,
     outputs: BTreeMap<String, BTreeMap<String, String>>,
+    env: BTreeMap<String, String>,
 }
 
 impl Walk {
-    /// One operand of an expression: `needs.<job>.result`, `needs.<job>.outputs.<key>` or a quoted string. Anything else
-    /// stops the test: the walk knows only what these workflows' conditions use.
+    /// One operand of an expression: `needs.<job>.result`, `needs.<job>.outputs.<key>`, `github.event_name`,
+    /// `github.ref`, `env.<key>` or a quoted string. Anything else stops the test: the walk knows only what these
+    /// workflows' conditions use.
     fn term(&self, term: &str) -> String {
         let t = term.trim();
         if let Some(q) = t.strip_prefix('\'') {
@@ -529,6 +537,10 @@ impl Walk {
                 .and_then(|o| o.get(*key))
                 .cloned()
                 .unwrap_or_default(),
+            // A pull request's run, the one the required checks are read on.
+            ["github", "event_name"] => "pull_request".to_owned(),
+            ["github", "ref"] => "refs/pull/1/merge".to_owned(),
+            ["env", key] => self.env.get(*key).cloned().unwrap_or_default(),
             // A step's status functions, in a run with no failed step, which is the run this walk is of.
             ["always()"] => "true".to_owned(),
             ["failure()"] => "false".to_owned(),
@@ -560,9 +572,11 @@ impl Walk {
     }
 }
 
-/// `ci.yml` walked as GitHub runs it. `verdict` is what `changes` outputs; each job in `fail` fails. A job whose `needs`
-/// didn't all succeed is skipped unless its `if` holds `always()`; a matrix job counts as one. A gate (a job of one step
-/// with `RESULTS` in its env) has its own script run under bash, with its own env expressions evaluated.
+/// `ci.yml` walked as GitHub runs it on a pull request. `verdict` is what `changes` outputs (`docs_only`, `gpu`, and
+/// the tier and the rest as they follow from them); each job in `fail` fails. A job whose `needs` didn't all succeed is
+/// skipped unless its `if` holds `always()`; a matrix job counts as one. A job whose first step checks the
+/// classification (`CHANGES` in its env, the owner's CI model of 9 Nov 2026) has that step's script run under bash, as
+/// a gate (a job of one step with `RESULTS` in its env) has its own, with its own env expressions evaluated.
 fn walk(yml: &Value, verdict: (bool, bool), fail: &[&str]) -> Walk {
     let jobs = yml["jobs"].as_object().expect("qa_r662: jobs");
     let mut w = Walk::default();
@@ -589,6 +603,21 @@ fn walk(yml: &Value, verdict: (bool, bool), fail: &[&str]) -> Walk {
                 "failure"
             } else if let Some(env) = job["steps"][0]
                 .get("env")
+                .filter(|e| e.get("CHANGES").is_some())
+            {
+                let mut cmd = Command::new("bash");
+                cmd.args(["-e", "-c", &s(&job["steps"][0]["run"])]);
+                for (k, v) in env.as_object().expect("env") {
+                    cmd.env(k, w.eval(&s(v)));
+                }
+                let out = cmd.timed_output().expect("qa_r662: bash ran");
+                if out.status.success() {
+                    "success"
+                } else {
+                    "failure"
+                }
+            } else if let Some(env) = job["steps"][0]
+                .get("env")
                 .filter(|e| e.get("RESULTS").is_some())
             {
                 let results: Vec<&str> = needs.iter().map(|n| w.results[n].as_str()).collect();
@@ -612,8 +641,19 @@ fn walk(yml: &Value, verdict: (bool, bool), fail: &[&str]) -> Walk {
             let mut outputs = BTreeMap::new();
             if id == "changes" {
                 if result == "success" {
-                    outputs.insert("docs_only".to_owned(), verdict.0.to_string());
-                    outputs.insert("gpu".to_owned(), verdict.1.to_string());
+                    let tier = if verdict.0 { "docs" } else { "code" };
+                    for (k, v) in [
+                        ("docs_only", verdict.0.to_string()),
+                        ("gpu", verdict.1.to_string()),
+                        ("tier", tier.to_owned()),
+                        ("plan_data", "false".to_owned()),
+                        ("gui_data", "false".to_owned()),
+                        ("process", "false".to_owned()),
+                        ("packages", "--workspace".to_owned()),
+                        ("doc_packages", "--workspace".to_owned()),
+                    ] {
+                        outputs.insert(k.to_owned(), v);
+                    }
                 }
             } else if result != "skipped" {
                 if let Some(o) = job["outputs"].as_object() {
@@ -661,7 +701,9 @@ fn check_result(yml: &Value, w: &Walk, name: &str) -> String {
     w.results[by[0]].clone()
 }
 
-const GATES: [&str; 5] = ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-lavapipe"];
+/// `ci.yml`'s required checks: the PR tier's six, the owner's CI model (9 Nov 2026), in place of R-656's `ci`,
+/// `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` gates over the full tier.
+const GATES: [&str; 6] = ["fmt", "clippy", "build", "ci", "gpu-metal", "gpu-lavapipe"];
 
 /// The status functions a step's `if` holds read as a run with no failed step, and any other expression still stops
 /// the walk: it must not read as a false that hides a step.
@@ -700,20 +742,35 @@ negative_control!(
     check_walk_reads_status(&Walk::default(), &["failure()"])
 );
 
-/// The commands `ci-workspace` runs when `changes` said `docs_only`.
-fn workspace_runs(yml: &Value, docs_only: bool) -> String {
-    let mut w = Walk::default();
-    let mut outputs = BTreeMap::new();
-    outputs.insert("docs_only".to_owned(), docs_only.to_string());
-    w.outputs.insert("changes".to_owned(), outputs);
-    yml["jobs"]["ci-workspace"]["steps"]
-        .as_array()
-        .expect("qa_r662: ci-workspace's steps")
-        .iter()
-        .filter(|step| step.get("if").is_none_or(|c| w.eval(&s(c)) == "true"))
-        .map(|step| s(&step["run"]))
-        .collect::<Vec<_>>()
-        .join("\n")
+/// The commands the jobs that ran in `w` run, as (job id, command): each step's `if:` evaluated with its job's own
+/// `env:`. Until the owner's CI model (9 Nov 2026) this read `ci-workspace` alone, which ran the cheap checks; they run
+/// in the PR tier's `build` now, the product tests in `tests` (R-290's exception, applied per R-369).
+fn pr_runs(yml: &Value, w: &Walk) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for (id, job) in yml["jobs"].as_object().expect("qa_r662: jobs") {
+        if w.results.get(id).is_none_or(|r| r == "skipped") {
+            continue;
+        }
+        let mut jw = w.clone();
+        if let Some(env) = job["env"].as_object() {
+            for (k, v) in env {
+                let raw = s(v);
+                let value = if raw.contains("${{") {
+                    jw.eval(&raw)
+                } else {
+                    raw
+                };
+                jw.env.insert(k.clone(), value);
+            }
+        }
+        for step in job["steps"].as_array().expect("qa_r662: steps") {
+            if step.get("run").is_some() && step.get("if").is_none_or(|c| jw.eval(&s(c)) == "true")
+            {
+                out.push((id.clone(), s(&step["run"])));
+            }
+        }
+    }
+    out
 }
 
 /// The check `check` of `wf` runs on every pull request, on no path filter, and can't be skipped; returns its job.
@@ -738,7 +795,8 @@ fn unconditional(wf: &str, check: &str) -> Value {
 
 fn check_required(ci: &str, mutants: &str) {
     let yml = parse(ci);
-    // The cheap path: every gate reports success, and nothing but `changes`, the cheap checks and the gates ran.
+    // The cheap path: every gate reports success, and nothing but `changes` and the PR tier's required jobs, which skip
+    // their work inside, ran.
     let cheap = walk(&yml, (true, false), &[]);
     for gate in GATES {
         assert_eq!(
@@ -756,58 +814,90 @@ fn check_required(ci: &str, mutants: &str) {
     assert_eq!(
         ran,
         vec![
+            "build",
             "changes",
-            "ci-gate",
-            "ci-workspace",
-            "gpu-kernel-gate",
-            "gpu-lavapipe-gate",
-            "gpu-metal-gate",
-            "xtask-ci-gate"
+            "clippy",
+            "fmt",
+            "gpu-lavapipe-smoke",
+            "gpu-metal-smoke",
+            "tests"
         ],
         "qa_r662: the cheap path ran other jobs"
     );
-    let runs = workspace_runs(&yml, true);
+    let runs = pr_runs(&yml, &cheap);
     for want in ["python3 plan/check_plan.py", "cargo xtask lint vocab"] {
+        let by = runs.iter().find(|(_, r)| r.trim() == want);
         assert!(
-            runs.contains(want),
-            "qa_r662: the cheap path does not run `{want}`:\n{runs}"
+            by.is_some(),
+            "qa_r662: the cheap path does not run `{want}`:\n{runs:#?}"
+        );
+        // A failed cheap check is a red required check: the job running it bears one.
+        let (id, _) = by.expect("checked");
+        let job = &yml["jobs"][id.as_str()];
+        assert!(
+            GATES.contains(&reported_name(id, job).as_str()),
+            "qa_r662: the cheap path's `{want}` runs in `{id}`, which bears no required check"
         );
     }
-    for never in [
-        "nextest",
-        "cargo test",
-        "cargo build",
-        "clippy",
-        "cargo fmt",
-        "cargo doc",
+    for (id, run) in &runs {
+        for never in [
+            "nextest",
+            "cargo test",
+            "cargo build",
+            "clippy",
+            "cargo fmt",
+            "cargo doc",
+        ] {
+            assert!(
+                !run.contains(never),
+                "qa_r662: the cheap path runs `{never}` in `{id}`:\n{run}"
+            );
+        }
+    }
+    // The other side: on code every PR-tier job runs, and runs what the cheap path skipped, and the gates pass; the
+    // full tier's jobs run on `main` alone, the process tests on a change to the machinery alone.
+    let full = walk(&yml, (false, true), &[]);
+    for gate in GATES {
+        assert_eq!(
+            check_result(&yml, &full, gate),
+            "success",
+            "qa_r662: the required check `{gate}` is not a success on code"
+        );
+    }
+    let ran: Vec<&str> = full
+        .results
+        .iter()
+        .filter(|(_, r)| r.as_str() != "skipped")
+        .map(|(id, _)| id.as_str())
+        .collect();
+    assert_eq!(
+        ran,
+        vec![
+            "build",
+            "changes",
+            "clippy",
+            "fmt",
+            "gpu-lavapipe-smoke",
+            "gpu-metal-smoke",
+            "tests",
+            "web-skeleton"
+        ],
+        "qa_r662: a code pull request skipped a PR-tier job or ran another: {:?}",
+        full.results
+    );
+    let runs = pr_runs(&yml, &full);
+    for want in [
+        "cargo fmt --all --check",
+        "cargo clippy --workspace --all-targets -- -D warnings",
+        "cargo build --workspace",
+        "cargo nextest run $PACKAGES",
+        "cargo xtask build-kernel",
     ] {
         assert!(
-            !runs.contains(never),
-            "qa_r662: the cheap path runs `{never}`:\n{runs}"
+            runs.iter().any(|(_, r)| r.trim() == want),
+            "qa_r662: a code pull request does not run `{want}`:\n{runs:#?}"
         );
     }
-    // The other side: full CI on code runs what the cheap path skipped, and the gates pass.
-    let full = walk(&yml, (false, true), &[]);
-    assert!(
-        // R-684: the quick tier's job, and `ci-status`, which only a code pull request's full tier runs.
-        full.results
-            .iter()
-            .all(|(id, r)| r == "success" || id == "ci-quick" || id == "ci-status"),
-        "qa_r662: full CI skipped a job: {:?}",
-        full.results
-    );
-    let runs = workspace_runs(&yml, false);
-    assert!(
-        runs.contains("cargo nextest run -p xtask") && !runs.contains("cargo xtask lint vocab"),
-        "qa_r662: ci-workspace on code does not run its tests:\n{runs}"
-    );
-    // A failed cheap check is a red `ci`: the skips never hide it.
-    let red = walk(&yml, (true, false), &["ci-workspace"]);
-    assert_eq!(
-        check_result(&yml, &red, "ci"),
-        "failure",
-        "qa_r662: `ci` passes a failed cheap check"
-    );
     // A classification that failed is no cheap path: every gate turns red, and none reports a skip.
     let lost = walk(&yml, (true, false), &["changes"]);
     for gate in GATES {
@@ -817,68 +907,20 @@ fn check_required(ci: &str, mutants: &str) {
             "qa_r662: the required check `{gate}` is not red when the classification failed"
         );
     }
-    // A code change whose shards were skipped is red, verdict and all.
-    let skipped = walk(&yml, (false, true), &["ci-archive"]);
-    assert_eq!(
-        check_result(&yml, &skipped, "ci"),
-        "failure",
-        "qa_r662: `ci` passes when its archive job failed"
-    );
+    // Retired with the full tier from the pull request's path (the owner's CI model, 9 Nov 2026): "a code change
+    // whose shards were skipped is red", which read `ci-archive` under the gate `ci`. No pull request builds an archive
+    // now; `ci`'s tests are built in the job that reports it.
 
-    // `mutants-check`: its verdict job (`mutants-verdict`, R-656's merge-ready run) always runs once started, and the
-    // job `mutants-check`, in every run (R-678, which replaced the check run the verdict job posted: R-678's exception
-    // to R-290, the one change here), runs whatever the verdict ended in and reports its result; the verdict's own
-    // script passes a run with no report and fails a failed shard.
+    // `mutants-check`: R-656's merge-ready verdict and R-678's job of every run were held here. The owner's CI model
+    // (9 Nov 2026) takes the per-PR mutation run and `mutants-check` off the pull request's path, so what is kept is
+    // that no mutants work runs on a pull request, the cheap path's included: `mutants.yml` has no `pull_request`
+    // trigger. R-290's exception, applied per R-369.
     let mutants = parse(mutants);
-    let job = &mutants["jobs"]["mutants-verdict"];
     assert!(
-        s(&job["if"]).starts_with("always()"),
-        "qa_r662: `mutants-check`'s verdict can be skipped"
+        mutants["on"].get("pull_request").is_none()
+            && mutants["on"].get("pull_request_target").is_none(),
+        "qa_r662: mutants.yml runs on a pull request"
     );
-    let check = &mutants["jobs"]["mutants-check"];
-    let needs = match &check["needs"] {
-        Value::Array(a) => a.iter().map(s).collect::<Vec<_>>(),
-        other => vec![s(other)],
-    };
-    assert!(
-        s(&check["if"]) == "always()" && needs.iter().any(|n| n == "mutants-verdict"),
-        "qa_r662: `mutants-check` is not a job run whatever its verdict ended in (if: `{}`, needs: {needs:?})",
-        s(&check["if"])
-    );
-    assert!(
-        check["steps"]
-            .as_array()
-            .expect("qa_r662: mutants-check's steps")
-            .iter()
-            .any(|st| st.get("if").is_none()
-                && st["env"].as_object().is_some_and(|e| e
-                    .values()
-                    .any(|v| s(v) == "${{ needs.mutants-verdict.result }}"))),
-        "qa_r662: `mutants-check` does not report the verdict's result in a step that always runs"
-    );
-    let steps = job["steps"]
-        .as_array()
-        .expect("qa_r662: mutants-verdict's steps");
-    let step = steps
-        .iter()
-        .find(|st| s(&st["run"]).contains("cargo xtask mutants-check"))
-        .expect("qa_r662: mutants-check's step");
-    for (result, pass) in [("success", true), ("failure", false), ("cancelled", false)] {
-        let dir = Scratch::new("qa_r662_mutants_check");
-        std::fs::create_dir_all(&*dir).expect("scratch");
-        let run = s(&step["run"]).replace("${{ needs.mutants.result }}", result);
-        let out = Command::new("bash")
-            .args(["-e", "-c", &run])
-            .env("RUNNER_TEMP", &*dir)
-            .timed_output()
-            .expect("qa_r662: bash ran");
-        assert_eq!(
-            out.status.success(),
-            pass,
-            "qa_r662: `mutants-check` with no report and its shards `{result}`: {}",
-            String::from_utf8_lossy(&out.stdout)
-        );
-    }
 
     // `pr-check`, `reviews-complete` and the atlas guard take no part in the classification and run on every head.
     unconditional("pr-check.yml", "pr-check");
@@ -907,47 +949,66 @@ fn qa_r662_required_checks_report_on_the_cheap_path() {
 
 negative_control!(
     qa_r662_required_checks_report_on_the_cheap_path,
-    "ci.yml with the gate `xtask-ci` run only when its shards succeeded",
-    expected = "the required check `xtask-ci` is not a success on the cheap path",
+    "ci.yml with `build` skipped at job level on the cheap path",
+    expected = "the required check `build` is not a success on the cheap path",
     check_required(
         &swap(
             &read(".github/workflows/ci.yml"),
-            "    needs: [xtask-ci, changes]\n    if: always() && needs.changes.outputs.quick != 'true'\n",
-            "    needs: [xtask-ci, changes]\n"
+            "  build:\n    needs: changes\n    if: always() && github.event_name == 'pull_request'\n",
+            "  build:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n"
         ),
         &read(".github/workflows/mutants.yml")
     )
 );
 
-mod mutants_check_skipped_with_its_verdict {
+// `mutants_check_skipped_with_its_verdict` and `mutants_check_ignores_its_verdict`, the controls of `mutants-check`'s
+// job, are retired with it from the pull request's path (the owner's CI model, 9 Nov 2026).
+mod a_lost_classification_passed {
     use super::*;
     negative_control!(
         qa_r662_required_checks_report_on_the_cheap_path,
-        "mutants.yml's `mutants-check` job run only when its verdict passed",
-        expected = "`mutants-check` is not a job run whatever its verdict ended in",
+        "ci.yml's `fmt` passing whatever `changes` ended in",
+        expected = "the required check `fmt` is not red when the classification failed",
         check_required(
-            &read(".github/workflows/ci.yml"),
             &swap(
-                &read(".github/workflows/mutants.yml"),
-                "  mutants-check:\n    if: always()\n",
-                "  mutants-check:\n"
-            )
+                &read(".github/workflows/ci.yml"),
+                "        run: '[ \"$CHANGES\" = success ] || { echo \"changes ended $CHANGES: no verdict to skip on\"; exit 1; }'\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n        if: needs.changes.outputs.docs_only != 'true'\n      # The toolchain",
+                "        run: 'true'\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n        if: needs.changes.outputs.docs_only != 'true'\n      # The toolchain"
+            ),
+            &read(".github/workflows/mutants.yml")
         )
     );
 }
 
-mod mutants_check_ignores_its_verdict {
+mod a_build_on_the_cheap_path {
     use super::*;
     negative_control!(
         qa_r662_required_checks_report_on_the_cheap_path,
-        "mutants.yml's `mutants-check` reading no verdict",
-        expected = "`mutants-check` does not report the verdict's result",
+        "ci.yml building the workspace on every pull request",
+        expected = "the cheap path runs `cargo build` in `build`",
+        check_required(
+            &swap(
+                &read(".github/workflows/ci.yml"),
+                "      - name: cargo build --workspace\n        if: needs.changes.outputs.docs_only != 'true'\n",
+                "      - name: cargo build --workspace\n"
+            ),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod mutants_on_a_pull_request {
+    use super::*;
+    negative_control!(
+        qa_r662_required_checks_report_on_the_cheap_path,
+        "mutants.yml triggered by pull requests again",
+        expected = "mutants.yml runs on a pull request",
         check_required(
             &read(".github/workflows/ci.yml"),
             &swap(
                 &read(".github/workflows/mutants.yml"),
-                "          VERDICT: ${{ needs.mutants-verdict.result }}\n",
-                "          VERDICT: success\n"
+                "on:\n  workflow_dispatch:\n",
+                "on:\n  workflow_dispatch:\n  pull_request:\n"
             )
         )
     );

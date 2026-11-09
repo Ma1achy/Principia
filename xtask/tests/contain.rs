@@ -582,3 +582,437 @@ negative_control!(
         check_stopped(&script, 15, true, "contain_scope_late_control_run");
     }
 );
+
+// ---- The unprivileged mode (the owner's ruling of 9 Nov 2026, for the WSL2 distro) ---------------------------------
+//
+// "Inside WSL, check proves the unprivileged mode, meaning user and PID namespaces with no sudo, using the real kill -9
+// -1. ... Other machines keep the strict mode unchanged ... The WSL run selects the unprivileged mode explicitly, so
+// nothing falls back to it silently. If user namespaces aren't available, the check fails. It never skips." The mode
+// itself needs Linux with user namespaces: `wsl-proofs` proves it in the distro, with the real `kill -9 -1`. Here, on
+// any machine, its selection and its refusals, on stand-ins. No `check` here ever reaches its probe on a stand-in
+// `unshare` that runs its command: the probe's `kill -9 -1` would then reach this user's processes.
+
+/// What `unshare` stands in as: running its command as it is, or refusing as a kernel without user namespaces does.
+const UNSHARE_RUNS: &str =
+    "while case \"$1\" in --*) true ;; *) false ;; esac; do shift; done\nexec \"$@\"";
+const UNSHARE_REFUSES: &str = "echo 'unshare: unshare failed: Operation not permitted' >&2\nexit 1";
+
+/// A machine of stand-ins in a scratch folder: `uname` says `system`, `id -u` says `uid`, `sudo` notes its call in
+/// `sudo` and refuses, `unshare` notes its arguments in `unshare` and then does `unshare`, `setsid` runs its command.
+/// Returns the folder and the PATH that puts them first.
+fn unprivileged_machine(tag: &str, system: &str, uid: u32, unshare: &str) -> (Scratch, String) {
+    let dir = Scratch::new(tag);
+    let bin = dir.join("bin");
+    std::fs::create_dir_all(&bin).expect("scratch");
+    let note = |name: &str| dir.join(name).display().to_string();
+    let stubs = [
+        ("uname", format!("echo {system}")),
+        (
+            "id",
+            format!("[ \"$1\" = -u ] && {{ echo {uid}; exit 0; }}\nexec /usr/bin/id \"$@\""),
+        ),
+        ("sudo", format!("echo \"$*\" >> '{}'\nexit 1", note("sudo"))),
+        (
+            "unshare",
+            format!("echo \"$*\" >> '{}'\n{unshare}", note("unshare")),
+        ),
+        ("setsid", "exec \"$@\"".to_owned()),
+    ];
+    for (name, body) in stubs {
+        write_executable(&bin.join(name), format!("#!/bin/bash\n{body}\n")).expect("stand-in");
+    }
+    let path = format!(
+        "{}:{}",
+        bin.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    (dir, path)
+}
+
+/// `script <args>` on the machine at `path`, with PRIN_CONTAIN as `mode` (unset for `None`): its status, stdout and
+/// stderr.
+fn on_machine(
+    script: &Path,
+    args: &[&str],
+    path: &str,
+    mode: Option<&str>,
+) -> (Option<i32>, String, String) {
+    let mut command = Command::new(script);
+    command
+        .args(args)
+        .env_remove("PRIN_CONTAIN")
+        .env_remove("PRIN_TEST_PIDNS")
+        .env("PATH", path);
+    if let Some(mode) = mode {
+        command.env("PRIN_CONTAIN", mode);
+    }
+    let out = command
+        .output_within(Duration::from_secs(60))
+        .expect("contain.sh ran");
+    (
+        out.status.code(),
+        String::from_utf8_lossy(&out.stdout).into_owned(),
+        String::from_utf8_lossy(&out.stderr).into_owned(),
+    )
+}
+
+fn contain_script() -> PathBuf {
+    root().join("scripts/contain.sh")
+}
+
+/// A copy of the script with `from` replaced by `to`, in `dir`.
+#[cfg(feature = "controls")]
+fn mutated_copy(dir: &Path, from: &str, to: &str) -> PathBuf {
+    let text = read("scripts/contain.sh");
+    assert!(text.contains(from), "the control's text is gone: {from}");
+    let path = dir.join("contain-mutated.sh");
+    write_executable(&path, text.replacen(from, to, 1)).expect("the script's copy");
+    path
+}
+
+/// Where user namespaces can't be had, the mode named `mode` must fail both `check` and `run`, never pass or skip,
+/// and must not run the command.
+fn check_never_skips(mode: Option<&str>, system: &str, why: &str, tag: &str) {
+    let (dir, path) = unprivileged_machine(tag, system, 1000, UNSHARE_REFUSES);
+    let (code, out, err) = on_machine(&contain_script(), &["check"], &path, mode);
+    assert!(
+        code == Some(125) && !out.contains("not required") && err.contains(why),
+        "the unprivileged check skipped or passed without user namespaces: {code:?}, {out:?}, {err:?}"
+    );
+    let marker = dir.join("ran");
+    let (code, _, err) = on_machine(
+        &contain_script(),
+        &["run", "touch", marker.to_str().expect("utf-8 path")],
+        &path,
+        mode,
+    );
+    assert!(
+        code == Some(125) && !marker.exists() && err.contains(why),
+        "the unprivileged run ran, or failed for another reason, without user namespaces: {code:?}, {err:?}"
+    );
+}
+
+#[test]
+fn contain_unprivileged_fails_never_skips_without_user_namespaces() {
+    check_never_skips(
+        Some("unprivileged"),
+        "Linux",
+        "user and PID namespaces can't be had here",
+        "contain_userns_none",
+    );
+    check_never_skips(
+        Some("unprivileged"),
+        "Darwin",
+        "this is not Linux: no user namespaces",
+        "contain_userns_darwin",
+    );
+}
+
+negative_control!(
+    contain_unprivileged_fails_never_skips_without_user_namespaces,
+    "the mode not selected: check passes, saying containment isn't required",
+    expected = "the unprivileged check skipped or passed without user namespaces",
+    check_never_skips(
+        None,
+        "Linux",
+        "user and PID namespaces can't be had here",
+        "contain_userns_control"
+    )
+);
+
+/// On this machine itself, where it isn't Linux (the Mac): the real `uname`, the real refusal.
+#[cfg(not(target_os = "linux"))]
+fn check_fails_here(path: &str) {
+    let (code, out, err) = on_machine(&contain_script(), &["check"], path, Some("unprivileged"));
+    assert!(
+        code == Some(125)
+            && !out.contains("not required")
+            && err.contains("unprivileged containment selected, and this is not Linux: no user namespaces"),
+        "the unprivileged check didn't fail here, off Linux, for want of user namespaces: {code:?}, {out:?}, {err:?}"
+    );
+}
+
+#[cfg(not(target_os = "linux"))]
+#[test]
+fn contain_unprivileged_fails_on_this_machine() {
+    check_fails_here(&std::env::var("PATH").unwrap_or_default());
+}
+
+#[cfg(not(target_os = "linux"))]
+negative_control!(
+    contain_unprivileged_fails_on_this_machine,
+    "a stand-in that says Linux: the refusal is another one",
+    expected = "the unprivileged check didn't fail here",
+    {
+        let (_dir, path) =
+            unprivileged_machine("contain_here_control", "Linux", 1000, UNSHARE_REFUSES);
+        check_fails_here(&path);
+    }
+);
+
+/// `required` on a machine whose sudo refuses and whose `unshare` would work: it must fail, and never fall back to the
+/// unprivileged mode, which would call `unshare` and run the command.
+fn check_no_fallback(mode: &str, tag: &str) {
+    let (dir, path) = unprivileged_machine(tag, "Linux", 1000, UNSHARE_RUNS);
+    let marker = dir.join("ran");
+    let (code, _, _) = on_machine(
+        &contain_script(),
+        &["run", "touch", marker.to_str().expect("utf-8 path")],
+        &path,
+        Some(mode),
+    );
+    assert!(
+        code == Some(125) && !marker.exists() && !dir.join("unshare").exists(),
+        "a required run fell back to the unprivileged mode: {code:?}, ran {}",
+        marker.exists()
+    );
+}
+
+#[test]
+fn contain_required_never_falls_back_to_unprivileged() {
+    check_no_fallback("required", "contain_no_fallback");
+}
+
+negative_control!(
+    contain_required_never_falls_back_to_unprivileged,
+    "the unprivileged mode itself, on the same machine, does run the command",
+    expected = "a required run fell back to the unprivileged mode",
+    check_no_fallback("unprivileged", "contain_no_fallback_control")
+);
+
+/// A value of PRIN_CONTAIN that names no mode fails `run` and `check` alike: a misspelt mode never runs a command
+/// uncontained, nor skips the check.
+fn check_misspelt(mode: Option<&str>, tag: &str) {
+    let (dir, path) = unprivileged_machine(tag, "Linux", 1000, UNSHARE_REFUSES);
+    let marker = dir.join("ran");
+    let (run, _, err) = on_machine(
+        &contain_script(),
+        &["run", "touch", marker.to_str().expect("utf-8 path")],
+        &path,
+        mode,
+    );
+    let (check, out, _) = on_machine(&contain_script(), &["check"], &path, mode);
+    assert!(
+        run == Some(125)
+            && !marker.exists()
+            && err.contains("names no mode")
+            && check == Some(125)
+            && !out.contains("not required"),
+        "a misspelt mode ran the command or skipped the check: run {run:?}, check {check:?}"
+    );
+}
+
+#[test]
+fn contain_refuses_a_misspelt_mode() {
+    check_misspelt(Some("Unprivileged"), "contain_misspelt");
+    check_misspelt(Some("require"), "contain_misspelt_required");
+}
+
+negative_control!(
+    contain_refuses_a_misspelt_mode,
+    "no mode at all: the command runs as it is, and the check says containment isn't required",
+    expected = "a misspelt mode ran the command or skipped the check",
+    check_misspelt(None, "contain_misspelt_control")
+);
+
+/// The unprivileged run as root: refused, as the mode is an ordinary user's.
+fn check_not_root(uid: u32, tag: &str) {
+    let (dir, path) = unprivileged_machine(tag, "Linux", uid, UNSHARE_RUNS);
+    let marker = dir.join("ran");
+    let (code, _, err) = on_machine(
+        &contain_script(),
+        &["run", "touch", marker.to_str().expect("utf-8 path")],
+        &path,
+        Some("unprivileged"),
+    );
+    assert!(
+        code == Some(125) && !marker.exists() && err.contains("this is root"),
+        "the unprivileged mode ran as root: {code:?}, {err:?}"
+    );
+}
+
+#[test]
+fn contain_unprivileged_refuses_root() {
+    check_not_root(0, "contain_root");
+}
+
+negative_control!(
+    contain_unprivileged_refuses_root,
+    "an ordinary user, whose run goes ahead",
+    expected = "the unprivileged mode ran as root",
+    check_not_root(1000, "contain_root_control")
+);
+
+/// An unprivileged run: the command's own status; `unshare` asked for a user and a PID namespace, killed with it,
+/// /proc its own; sudo never called; the command's environment without the heartbeat's token or PRIN_CONTAIN, and with
+/// PRIN_TEST_PIDNS, so the queue's tests get namespaces of their own inside.
+fn check_unprivileged_run(script: &Path, tag: &str) {
+    let (dir, path) = unprivileged_machine(tag, "Linux", 1000, UNSHARE_RUNS);
+    let env = dir.join("env");
+    let mut command = Command::new(script);
+    command
+        .args([
+            "run",
+            "sh",
+            "-c",
+            &format!("env > '{}'; exit 7", env.display()),
+        ])
+        .env_remove("PRIN_TEST_PIDNS")
+        .env("PATH", &path)
+        .env("PRIN_CONTAIN", "unprivileged")
+        .env("HEARTBEAT_TOKEN", "sekrit-token");
+    let code = command
+        .output_within(Duration::from_secs(60))
+        .expect("contain.sh ran")
+        .status
+        .code();
+    let unshare = std::fs::read_to_string(dir.join("unshare")).unwrap_or_default();
+    let env = std::fs::read_to_string(env).unwrap_or_default();
+    assert_eq!(code, Some(7), "the command's status didn't come back");
+    assert!(
+        unshare.lines().any(|l| l.starts_with(
+            "--user --map-current-user --pid --fork --kill-child --mount-proc bash -c "
+        )),
+        "the run wasn't in a user and PID namespace of its own: {unshare:?}"
+    );
+    assert!(
+        !dir.join("sudo").exists(),
+        "the unprivileged run called sudo"
+    );
+    assert!(
+        !env.contains("sekrit-token")
+            && !env.contains("PRIN_CONTAIN=")
+            && env.contains("PRIN_TEST_PIDNS=1"),
+        "the command's environment is wrong: {env}"
+    );
+}
+
+#[test]
+fn contain_unprivileged_run_uses_namespaces_without_sudo() {
+    check_unprivileged_run(&contain_script(), "contain_unprivileged_run");
+}
+
+negative_control!(
+    contain_unprivileged_run_uses_namespaces_without_sudo,
+    "a run with no PID namespace",
+    expected = "the run wasn't in a user and PID namespace of its own",
+    {
+        let dir = Scratch::new("contain_unprivileged_run_control");
+        std::fs::create_dir_all(&*dir).expect("scratch");
+        let script = mutated_copy(
+            &dir,
+            "  unshare --user --map-current-user --pid --fork --kill-child --mount-proc \\\n",
+            "  unshare --user --map-current-user --fork --kill-child --mount-proc \\\n",
+        );
+        check_unprivileged_run(&script, "contain_unprivileged_run_control_run");
+    }
+);
+
+mod unprivileged_token {
+    use super::*;
+    negative_control!(
+        contain_unprivileged_run_uses_namespaces_without_sudo,
+        "the heartbeat's token left in the command's environment",
+        expected = "the command's environment is wrong",
+        {
+            let dir = Scratch::new("contain_unprivileged_token_control");
+            std::fs::create_dir_all(&*dir).expect("scratch");
+            let script = mutated_copy(
+                &dir,
+                "  unset HEARTBEAT_TOKEN PRIN_CONTAIN\n  export PRIN_TEST_PIDNS=1\n  trap 'stop_unprivileged",
+                "  unset PRIN_CONTAIN\n  export PRIN_TEST_PIDNS=1\n  trap 'stop_unprivileged",
+            );
+            check_unprivileged_run(&script, "contain_unprivileged_token_control_run");
+        }
+    );
+}
+
+mod unprivileged_sudo {
+    use super::*;
+    negative_control!(
+        contain_unprivileged_run_uses_namespaces_without_sudo,
+        "a run that asks sudo first",
+        expected = "the unprivileged run called sudo",
+        {
+            let dir = Scratch::new("contain_unprivileged_sudo_control");
+            std::fs::create_dir_all(&*dir).expect("scratch");
+            let script = mutated_copy(
+                &dir,
+                "run_unprivileged() {\n  require_userns\n",
+                "run_unprivileged() {\n  require_userns\n  sudo -n true || true\n",
+            );
+            check_unprivileged_run(&script, "contain_unprivileged_sudo_control_run");
+        }
+    );
+}
+
+/// An unprivileged run sent SIGTERM while its command runs: the run ends at once with 143, and `unshare`, whose death
+/// ends the namespace (`--kill-child`), is dead. The stand-in `unshare` records its pid, then becomes the namespace's
+/// init; the command, which a real namespace would take with it, is ended by the driver.
+fn check_unprivileged_signal(script: &Path, tag: &str) {
+    let (dir, path) = unprivileged_machine(
+        tag,
+        "Linux",
+        1000,
+        &format!("echo $$ > '{}'\n{UNSHARE_RUNS}", dir_note(tag)),
+    );
+    let ns = dir_note(tag);
+    let command = dir.join("command");
+    let pid = dir.join("pid");
+    write_executable(
+        &command,
+        format!(
+            "#!/bin/bash\necho $$ > '{}'\nexec sleep 20\n",
+            pid.display()
+        ),
+    )
+    .expect("stand-in");
+    let driver = format!(
+        "set -m\n'{script}' run '{command}' > /dev/null 2>&1 &\nrun=$!\ni=0\n\
+         while [ ! -s '{pid}' ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i + 1)); done\n\
+         kill -TERM $run\nwait $run\necho \"status $?\"\nsleep 0.2\n\
+         kill -0 \"$(cat '{ns}')\" 2> /dev/null && echo namespace-alive\n\
+         kill -9 \"$(cat '{pid}')\" 2> /dev/null\nkill -9 -- -$run 2> /dev/null\nexit 0",
+        script = script.display(),
+        command = command.display(),
+        pid = pid.display(),
+    );
+    let out = Command::new("bash")
+        .args(["-c", &driver])
+        .env_remove("PRIN_TEST_PIDNS")
+        .env("PATH", &path)
+        .env("PRIN_CONTAIN", "unprivileged")
+        .output_within(Duration::from_secs(60))
+        .expect("the driver ran");
+    let seen = String::from_utf8_lossy(&out.stdout);
+    let _ = std::fs::remove_file(&ns);
+    assert!(
+        seen.contains("status 143") && !seen.contains("namespace-alive"),
+        "SIGTERM did not end the unprivileged run and its namespace: {seen:?}"
+    );
+}
+
+/// Where the stand-in `unshare` of the test tagged `tag` notes its pid: beside the scratch folder, which is made after.
+fn dir_note(tag: &str) -> String {
+    std::env::temp_dir()
+        .join(format!("{tag}-{}.ns", std::process::id()))
+        .display()
+        .to_string()
+}
+
+#[test]
+fn contain_a_signal_ends_an_unprivileged_run() {
+    check_unprivileged_signal(&contain_script(), "contain_unprivileged_signal");
+}
+
+negative_control!(
+    contain_a_signal_ends_an_unprivileged_run,
+    "a script that ignores SIGTERM",
+    expected = "SIGTERM did not end the unprivileged run and its namespace",
+    {
+        let dir = Scratch::new("contain_unprivileged_signal_control");
+        std::fs::create_dir_all(&*dir).expect("scratch");
+        let script = mutated_copy(&dir, "trap 'stop_unprivileged 15' TERM", "trap '' TERM");
+        check_unprivileged_signal(&script, "contain_unprivileged_signal_control_run");
+    }
+);

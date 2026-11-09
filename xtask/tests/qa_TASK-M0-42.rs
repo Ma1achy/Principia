@@ -1136,8 +1136,10 @@ fn qa_m0_42_every_restore_runs_in_every_run() {
 
 negative_control!(
     qa_m0_42_every_restore_runs_in_every_run,
-    "ci.yml with the ci job's pool restore limited to pushes to main, so a pull-request run starts cold",
-    expected = "job `ci` step `actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0`: does not restore in every run",
+    // The first of ci.yml's pool restores is the PR tier's `process` job's since the owner's CI model (9 Nov 2026),
+    // which put the PR jobs ahead of the per-merge `ci`; the edit is the same, its job named as it now is.
+    "ci.yml with the process job's pool restore limited to pushes to main, so a pull-request run starts cold",
+    expected = "job `process` step `actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0`: does not restore in every run",
     check_saved_only_on_main(&all_jobs(&edited(
         "ci.yml",
         "      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0\n        with:\n          path: target/tmp/fixture-targets",
