@@ -19,8 +19,12 @@
 #                                    in its unprivileged mode, into ~/results (`wsl-cpu`, while its flag is set)
 #   inside.sh results                ~/results as a tar stream on stdout
 set -euo pipefail
-# One stream for Windows to read, but for the tar stream, which is stdout alone.
-[ "${1:-}" = results ] || exec 2>&1
+# One stream for Windows to read, but for the tar stream, which is stdout alone, and parity's results, which the hosted
+# job writes from stdout to the file `parity.py compare` reads: their stderr stays apart (wsl.ps1 shows it after).
+case "${1:-}" in
+  results | parity) ;;
+  *) exec 2>&1 ;;
+esac
 repo=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 work="$HOME/work"
 # The build settings every workflow's top-level env sets (`win-gpu.yml`), which cross no `wsl.exe` boundary.

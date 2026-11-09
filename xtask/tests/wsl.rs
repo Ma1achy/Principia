@@ -906,4 +906,52 @@ mod parity {
             check_empty("wsl_parity_empty_control", EVENTS)
         );
     }
+
+    /// `inside` saved as `<scratch>/scripts/wsl/inside.sh`, outside any git repository and with HOME the scratch, and
+    /// run as `inside.sh parity <commit>`: git fails, and its message must reach stderr, never stdout, which the hosted
+    /// job writes to the results `parity.py compare` reads.
+    fn check_parity_streams(tag: &str, inside: &str) {
+        let dir = Scratch::new(tag);
+        let wsl = dir.join("scripts/wsl");
+        std::fs::create_dir_all(&wsl).expect("scratch");
+        std::fs::write(wsl.join("inside.sh"), inside).expect("scratch");
+        let out = Command::new("bash")
+            .arg(wsl.join("inside.sh"))
+            .args(["parity", "2a69136e"])
+            .env("HOME", &*dir)
+            .env("GIT_CEILING_DIRECTORIES", &*dir)
+            .output_within(Duration::from_secs(60))
+            .expect("bash ran");
+        let (stdout, stderr) = (
+            String::from_utf8_lossy(&out.stdout),
+            String::from_utf8_lossy(&out.stderr),
+        );
+        assert_ne!(
+            out.status.code(),
+            Some(0),
+            "parity passed with no repository"
+        );
+        assert!(
+            stdout.is_empty() && !stderr.is_empty(),
+            "inside.sh parity's stderr reaches its stdout: stdout '{stdout}', stderr '{stderr}'"
+        );
+    }
+
+    #[test]
+    fn wsl_parity_keeps_stderr_off_its_results() {
+        check_parity_streams("wsl_parity_streams", &read(INSIDE));
+    }
+
+    mod merged {
+        use super::*;
+        negative_control!(
+            wsl_parity_keeps_stderr_off_its_results,
+            "parity's stderr merged into stdout",
+            expected = "inside.sh parity's stderr reaches its stdout",
+            check_parity_streams(
+                "wsl_parity_streams_control",
+                &edited(&read(INSIDE), "  results | parity) ;;", "  results) ;;")
+            )
+        );
+    }
 }
