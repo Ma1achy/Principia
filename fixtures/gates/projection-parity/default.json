@@ -1,0 +1,6 @@
+{
+  "description": "stepOnce at CPU-f32, dt 1e-3, every occupant on 1024 shared states, 256 of each class: repeated runs and the written order, bit for bit.",
+  "fuzz": { "seed": 1, "states": 1024 },
+  "dt": 0.001,
+  "expected": "pass"
+}

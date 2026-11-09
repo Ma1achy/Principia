@@ -41,12 +41,19 @@ test_tool = "nextest"
 # order of 5 Nov 2026, R-712, whose multiplier of 3 supersedes R-376's 2.0):
 # a mutant whose tests run past it is recorded as a timeout, not a survivor (R-202), and the run goes on to its next
 # mutant. It comes from the unmutated baseline's measured test time: `timeout_multiplier` times that time, but no less
-# than `minimum_test_timeout` seconds. Every run reads it here: the nightly full run (TASK-M0-19) and a local run, on
-# Linux or macOS (R-352), through cargo-mutants, which measures its own baseline; the per-PR shards (`mutants.yml`)
-# through `cargo xtask mutants-timeout`, from the one baseline `mutants-baseline` measures for all eight, each shard
-# having skipped its own: a shard of PR #360 spent 5064-5554 s of its 300 minutes on it (run 41957362447).
+# than `minimum_test_timeout` seconds. Every run reads it here, through `cargo xtask mutants-timeout` on a baseline
+# measured alone, with no per-test kill limit (below), its mutants then run with `--baseline=skip`: the per-PR shards
+# (`mutants.yml`) from the one baseline `mutants-baseline` measures for all eight, each shard having skipped its own (a
+# shard of PR #360 spent 5064-5554 s of its 300 minutes on it, run 41957362447); each shard of the nightly full run
+# (TASK-M0-19) from its own; a local run, on Linux or macOS (R-352), from its own.
 timeout_multiplier = 3.0
 minimum_test_timeout = 60
+
+# Inside that timeout, each test has a kill limit of its own (the owner's order of 8 Nov 2026, amending R-712's basis,
+# not its multiplier): `.config/nextest.toml`'s `mutants` profile, which the shards, the nightly run and a local run
+# select with NEXTEST_PROFILE=mutants, not here, since these arguments reach the fixtures' runs and every baseline too,
+# which runs without it. A test ended at its limit fails the run, so its mutant is caught, and `cargo xtask
+# mutants-check` lists it as timed out, naming the test. The per-mutant timeout above stays, an outer backstop.
 
 # The per-process memory cap on the test processes (R-348; REQ-VAL-181, confirmed by the human at the M0 gate, R-376,
 # R-71): 8 GiB (8589934592 bytes) of virtual memory, RLIMIT_AS, set by `prlimit --as`. nextest runs

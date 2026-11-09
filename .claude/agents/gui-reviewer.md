@@ -37,9 +37,17 @@ submit: rustup's proxies there have clippy and fmt, and `~/.cargo/bin`'s cargo h
 ```
 export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
 "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority merge --label <TASK-id> \
-  --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+  --env CARGO_TARGET_DIR=<target> -- cargo nextest run -p kernel --test roundtrip
 "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
 ```
+
+**Tests run under nextest** (`plan/WORKFLOW.md` § "Agents' test runs: cargo nextest"). Run tests with `cargo nextest
+run`, not `cargo test`, with the same package, target, feature and filter arguments, plus `cargo test --doc -p <crate>`
+where `cargo test` would have run the crate's doctests. A task's `cargo test …` acceptance command is run as its
+nextest equivalent; the PR or review shows the command actually run, with its output, beside the task's command it
+stands for. The tests that read the built kernel (`.config/nextest.toml`'s `gpu-kernel` list) need `cargo xtask
+build-kernel` first, through the queue, in your worktree: it writes the gitignored `target/spirv/kernel.wgsl` there.
+That section lists what stays on `cargo test`.
 
 **Enforced by the orchestrator.** After you return, the orchestrator runs `git status --porcelain` in your worktree and checks that HEAD
 hasn't moved. Any change or commit you made is discarded, you are re-run, and the violation is noted on the PR.

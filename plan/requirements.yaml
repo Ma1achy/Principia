@@ -3323,7 +3323,7 @@
   - R-475
   - R-513
   milestone: M2
-  note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\"."
+  note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\". Code review 5816802860 of PR #447, C1, and physics review 5816819537, F3: saving a saved curved chart again, compositions onto three or four hidden coordinates, and the composed chart's area weight and shape-sphere repeat counting are REQ-CHART-148 (TASK-M2-55); TASK-M2-40 refuses the first two meanwhile (applied per R-369: the remainder is a follow-up task)."
 - id: REQ-CHART-074
   area: CHART
   statement: "A link parameter change must move the result where it acts: `mu_max = 4` against 5 must give different payloads on a latent configuration view at the fixed non-zero mass logit z_μ = (0.5, −0.3), whose masses softmax(0, μ_max·tanh z_μ) go through the mass link (R-626; the mass simplex chart, which sets its masses directly, cannot show it), and identical payloads on a latent configuration view with both mass logits at 0."
@@ -3412,7 +3412,7 @@
   - R-507
   - R-513
   milestone: M2
-  note: "R-475 L5 (physics review 5586890917 of PR #255, F3); R-513 (RQ-403 ruled, option (b)), Q1 to Q5. Closed by TASK-M2-40 with REQ-CHART-073 (applied per R-369, R-513 Q4: the composition is built once). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered.\", the verify's \"decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs\", and \"Waits for RQ-403; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P3: non-parallel tilts, so the R′·R control can fail. *Was:* \"a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control,\"."
+  note: "R-475 L5 (physics review 5586890917 of PR #255, F3); R-513 (RQ-403 ruled, option (b)), Q1 to Q5. Closed by TASK-M2-40 with REQ-CHART-073 (applied per R-369, R-513 Q4: the composition is built once). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered.\", the verify's \"decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs\", and \"Waits for RQ-403; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P3: non-parallel tilts, so the R′·R control can fail. *Was:* \"a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control,\". Physics review 5816819537 of PR #447, F2: a new tilt into the saved target of a saved Lean each axis view with one target and both angles set waits on RQ-746, split to REQ-CHART-149 (TASK-M2-56); TASK-M2-40 refuses it meanwhile. Code review 5816802860 of PR #447, C1, and physics F3: a composition onto three or four hidden coordinates (Q1's \"one rule for every new target\" past two) is REQ-CHART-148 (TASK-M2-55); TASK-M2-40 refuses it meanwhile (applied per R-369: the remainder is a follow-up task)."
 - id: REQ-CHART-078
   area: CHART
   kind: definition
@@ -4669,6 +4669,48 @@
   - R-864
   milestone: M8
   note: "Closed by TASK-M8-124, stage 1 of R-863's build order. Which task keeps REQ-CHART-113's overlapping tests is RQ-744's (B)."
+- id: REQ-CHART-148
+  area: CHART
+  statement: "A saved curved chart (R-475, R-513) must carry every route its rulings name beyond what REQ-CHART-073 and REQ-CHART-077 build: (a) a new tilt whose offsets, with the saved tilt's, land on three or four hidden coordinates (a saved one-target tilt re-tilted into two other targets, a saved two-target tilt re-tilted into one or two others), each offset on its own target as R-513 Q1 rules, none dropped or refused (R-513 Q1, \"one rule for every new target\"; R-475 S5, planes in which an axis mixes several hidden coordinates reached by saving and tilting again); (b) a saved curved chart saved again, its definition the chain of saved tilts, reopened at zero tilt bitwise and a further tilt composing R·R′·R″ as R-513 rules (R-475 S1, \"tilted, sliced and saved like any other\"); (c) the composed chart's area weight and statistics, as a single tilted chart has them: under Lean each axis the Gram factor of its composed axes (R-474 R7), weight 0 and `ray-degenerate` at the rank-losing corner (R-554), and on the shape sphere the repeat counting of `system_image`, `pixel` and `counted_total` (R-554 L3, R-655)."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: decisions.md
+    section: "R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel saved_chart_wide: a shape-sphere view saved at τ = (25°, −30°) into two momentum controls and re-tilted τ′ = (20°, 40°) into two others places every pixel of a 33 × 33 grid as (R ⊕ 1)·(1 ⊕ R′) to 1 ulp, all four offsets on their controls, and a saved one-target view re-tilted into two others likewise; a saved chart of a saved chart reopens at zero tilt bitwise and a further tilt into its target composes R·R′·R″ to 1 ulp; a saved Lean each axis view at the corner |τ₁| = |τ₂| = 90° with one target reports area weight 0 and `ray-degenerate`, a composed Lean view's weight is its composed axes' Gram factor, and a composed shape-sphere view counts each repeat once; controls: an offset dropped, the chain composed in the reverse order, and the weight of the new tilt alone, each fail; review (physics)"
+  rulings:
+  - R-474
+  - R-475
+  - R-513
+  - R-554
+  - R-655
+  milestone: M2
+  note: "Split from TASK-M2-40 (code review 5816802860 of PR #447, C1; physics review 5816819537, F3; applied per R-369, task scoping: the remainder is a follow-up task, nothing ruled dropped). Closed by TASK-M2-55. TASK-M2-40 refuses (a) (`Composed::new` returns None) and (b) by type (`Saved::curved` takes no tilted chart), and gives (c) no weight or repeat counting meanwhile."
+- id: REQ-CHART-149
+  area: CHART
+  statement: "A new tilt of a saved curved chart into its own saved target, where the saved tilt is Lean each axis with one target and both angles set (its axes skewed, so R has no third column for R-513 Q1's input), must compose as RQ-746 rules; until then the kernel refuses that composition (`kernel::chart::saved::Composed::new` returns None) and the saved target is not offered in that one case (R-513 Q3 holding everywhere else)."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: decisions.md
+    section: "R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel saved_chart_skewed: a shape-sphere view saved under Lean each axis at τ = (30°, 40°) into one momentum control, then tilted τ′ = (20°, 0) into the same control, places the pixel (0.3, 0.7) from the centre, and every pixel of a 33 × 33 grid, as RQ-746's ruling composes it, to 1 ulp; at τ′ = 0 bit-identical to the saved view; control: the other option's composition (RQ-746's options (a) and (b) give (0.2026, 0.4759, 0.6628) and (0.1598, 0.4307, 0.7099) at that pixel) fails; at the edge of Lean's range, a saved tilt at τ = (90°, 40°) (R-474 R8's dead zone) composes, or is not offered, as RQ-746's ruling states (option (a): `t̂` the cross product's own sign, `e_X` fixing none; option (b): the saved target vanishes under R-514 I2 and is not offered), and at τ = (90°, 90°) no composition is made (R-554's `ray-degenerate`, no frame under either option); review (physics)"
+  rulings:
+  - R-474
+  - R-475
+  - R-513
+  milestone: M2
+  rq:
+  - RQ-746
+  note: "Split from REQ-CHART-077 (physics review 5816819537 of PR #447, F2; R-473 J12's precedent: a requirement waiting on an RQ carries the key). Closed by TASK-M2-56, which waits on RQ-746. TASK-M8-48's target dropdowns don't offer the saved target in this case until it is ruled."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -5394,11 +5436,15 @@
     section: Part 2 — Occupants and the capability profile
   - file: docs/design/principia_dd_integrator.md
     section: 2. Consolidated contract
+  - file: decisions.md
+    section: R-660 — RQ-626 (a) confirmed *(closes RQ-626)*
   verify:
     method: unit test
-    detail: "payload has no suspect bits; predicate evaluated at read; Euler + energy-drift view lights SUSPECT_ENERGY everywhere"
-  rulings: []
+    detail: "payload has no suspect bits; predicate evaluated at read; Euler + energy-drift view lights SUSPECT_ENERGY everywhere, read by R-660 over bound, interacting states: an 8 x 8 grid of rest starts and dd tests 2 and 7"
+  rulings:
+  - R-660
   milestone: M3
+  note: "R-660 (31 Oct 2026, RQ-626 (a)). What the predicates read beside REQ-INT-045 and REQ-PAY-112 was RQ-636, ruled by R-669 (1 Nov 2026, RQ-636 (a)): the read-time predicates and the display read the stored latches. *Was (note, R-669):* \"What the predicates read beside REQ-INT-045 and REQ-PAY-112 is RQ-636, which this requirement does not wait on (the owner's ruling of 31 Oct 2026).\""
 - id: REQ-INT-041
   area: INT
   statement: "The diffusion slope must be a Welford streaming slope per macro-step: the time-only part derived in closed form (n = step_count, mean_t = (n+1)h/2, C_tt = h²n(n²−1)/12), the per-sample part updating mean_y and C_ty in two f32 accumulators with the old-mean time deviation δ_t = 0.5·n·h, never as stored (t, y) points or naive raw sums, and the slope C_ty/C_tt(n) read as NaN for n < 2 (R-245)."
@@ -6752,6 +6798,22 @@
   - R-605
   milestone: M3
   note: "R-605 (25 Oct 2026, RQ-528 (d)): REQ-INT-085 is closed by TASK-M3-05 before Heggie is built, so the recalibration is its own calibration, applied per R-369. Closed by TASK-M3-41. Physics review 5644374613 of PR #293, F2 (applied per R-369): the value replaces REQ-INT-085's one threshold, so the proposal reports every occupant's verdict at it."
+- id: REQ-INT-110
+  area: INT
+  kind: calibration
+  statement: "The projection-parity gate's minimum number of regions, the classes of shared states its stepOnce property test must cover before its verdict on REQ-INT-030 stands (parity contract §3: synthetic states a trajectory reaches rarely, fed as shared states), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_parity_contract.md
+    section: "3. The load-bearing discipline: never accumulate before comparing"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate projection-parity prints the classes of shared states it fed and their count against the minimum, and flags a verdict drawn from fewer; the proposal states the minimum with its evidence; recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  milestone: M3
+  note: "Proposed by TASK-M3-05 (applied per R-369): the gate framework names a calibration requirement for every gate's region minimum, and REQ-INT-030's own threshold, 0, is not one. Proposed at 4: a generic state, a close pair, a high-momentum state and a state far off its centre of mass with a bulk momentum."
 - id: REQ-INT-111
   area: INT
   statement: "With `epsilon` ≠ 0 the force law must be Plummer softening, V = −Σ mᵢmⱼ/√(r² + ε²) with F the negative gradient of V, ε a fraction of the initial hyperradius R fixed at t = 0 and never co-moving (R₀ = √(I₀/M) = 1 in the gauge, so the sim-key value is the fraction and the length, read as given and never recomputed from the state), and E, E₀ and the drift meters must read the softened V. At ε ≠ 0 (R-670), the collision test must stay on geometric r, min ‖rᵢ − rⱼ‖ < r_coll; the Chazy classifier's E must be the softened E_0; E_rel and the ionisation gate's three pairwise relative energies must take the softened potential, d read as √(d² + ε²) in the potential term only, each enumerated as a branch input under R-34, as R-547 corrects it, and decided comparison-only, no sqrt or div at the decision; the gate's total E > 0 must read the stored softened E_0, its sign decided once per trajectory at t = 0 (R-710); the decode stage's and the fragment decode's V₀ must be softened, ε their input, virial_ratio following; and the substep law must stay on geometric d² and r_min."
@@ -28685,12 +28747,15 @@
     section: 10.1 The shared prelude library
   - file: docs/read_first/principia_01_pitfalls.md
     section: 3. Standing rules earned in this sequence
+  - file: decisions.md
+    section: "R-652 — The four drift goldens are re-baselined as TASK-M3-05 renders them, each `BASELINES.md` row leading with R-652, the derived case at `lin`; they are confirmed at the M3 gate *(closes RQ-625)*"
   verify:
+    detail: "the proposal gives R for energy_drift and for Lz_drift with its evidence: the drifts measured, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and the lin view rendered at the proposed R (range_norm over the fixed, clamped [−R, R], on the diverging ramp) beside the default symlog view; it passes only if, on test 2's orbit, Euler's and RK4's final drifts render as distinct 8-bit sRGB pixels and neither pixel equals the saturated end colour c− or c+, and fails if the two pixels are equal or either equals c− or c+; the symplectic occupants (KDK, Yoshida-4, Yoshida-6) may render as the neutral c0 and are not required to be told apart; test 7's drifts are recorded and may saturate; distinct 8-bit pixels adds no numeric threshold; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md The same gate confirms the four drift goldens R-652 re-baselines: debug-views/derived-energy_drift (at lin), debug-views/generated-energy_drift, debug-views/generated-Lz_drift and m1-synthetic/energy_drift_ramp."
     method: numerical gate
-    detail: "the proposal gives R for energy_drift and for Lz_drift with its evidence: the drifts measured, final and max, for Euler, RK4 and the symplectic occupants (KDK, Yoshida-4, Yoshida-6) on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and the lin view rendered at the proposed R (range_norm over the fixed, clamped [−R, R], on the diverging ramp) beside the default symlog view; it passes only if, on test 2's orbit, Euler's and RK4's final drifts render as distinct 8-bit sRGB pixels and neither pixel equals the saturated end colour c− or c+, and fails if the two pixels are equal or either equals c− or c+; the symplectic occupants (KDK, Yoshida-4, Yoshida-6) may render as the neutral c0 and are not required to be told apart; test 7's drifts are recorded and may saturate; distinct 8-bit pixels adds no numeric threshold; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md"
   rulings:
   - R-71
   - R-381
+  - R-652
   milestone: M3
 - id: REQ-TOOL-151
   area: TOOL

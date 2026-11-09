@@ -177,6 +177,55 @@ here.*
   RQ-687: defer:M4
   RQ-696: (c).").
 
+## RQ-637: Near a zero `E_0` or `L_z`, `symlog`'s neutral band can't give what ruling (d) also asks, an exactly neutral fresh sample: the band is relative to the reference, and the rounding isn't *(physics; R-652, the owner's ruling (d); `docs/contracts/principia_render_contract.md` § "Part 5", "The neutral band"; physics review 5723029285 of PR #360, Q1; REQ-TOOL-149; context: TASK-M3-05)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round. For the owner: yes, it is physics, it changes which real drifts a view
+shows. Code unchanged; TASK-M3-05's PR doesn't wait on it, the ruling's band being built as ruled.*
+
+- **File, section:**
+  - `decisions.md` § R-652, the owner's ruling (d): "give symlog a neutral band of k·f32-ulp relative to |E₀| (and |L| for
+    L_z), with k justified in writing (rounding-level differences aren't physics)".
+  - The same ruling: "add a test that a fresh sample renders exactly neutral on every backend".
+  - `docs/contracts/principia_render_contract.md` Part 5: "At or near a zero reference the band narrows to nothing".
+- **The conflict:** a fresh sample's rounding scales with `K + |V|` for the energy and `S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|)`
+  for `L_z`, not with `|E_0|` or `|Lz_0|`. Near a cancellation the band is narrow while the rounding is not, so both can't
+  hold. `drift_view_neutral_fresh_sample_renders_exactly_neutral` passes on the samples inside its stated domain (R-652,
+  "The test's domain"), at least 4 of 8.
+- **Evidence:**
+  - It errs toward showing a tint: the band never hides more than `k·2⁻²³·|reference|`.
+  - dd test 2's fresh figure-eight has `L_z ≈ 0` with moving bodies, so its band is empty and it is outside "exactly
+    neutral". The physics reviewer's estimate, not a render: a fragment rounding of about 1e-7 at `ε_L = 1e-6` gives
+    `s ≈ 0.1`, `t ≈ 0.54`, a visible tint that depends on the backend.
+  - In the other direction, RK4 at f64 on dd test 7 (ΔE −9.65e-7, relative 5.6e-6) is true truncation drift and now reads
+    neutral under `symlog`; `log` has no band and shows it, and `dE_max` holds it.
+- **The question:** whether the band stays relative to the reference, or scales by the rounding itself.
+- **Options seen:** (a) keep it as ruled, with the limit recorded (render contract Part 5); (b) scale the band by the
+  rounding, `k'·2⁻²³·(K + |V|)` and `k'·2⁻²³·S`, with `k'` from the bound: 15 with a CPU reference, 22 with a GPU one for
+  the energy; 5 and 6 for `L_z`. This closes the gap near zero and hides less at small `K/|E_0|`, where 128 is 8.5 times
+  the bound; it departs from the ruling's words;
+  (c) another, stated by the owner.
+- **Applied meanwhile:** (a). Nothing waits.
+
+## RQ-638: `symlog`'s neutral band is in the three drift debug views; a field ramp on `energy_drift` or `Lz_drift` has none, so a fresh sample's rounding still shows as colour there *(physics; R-652, the owner's ruling (d); `docs/design/principia_colour_composition.md` § "6. Debug views as presets"; code review 5723219417 of PR #360, C2; REQ-TOOL-149; context: TASK-M3-05)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round. For the owner: yes, it changes what a real stain shows. Code unchanged;
+the scope is stated in render contract Part 5 and R-652, applied per R-369, and TASK-M3-05's PR doesn't wait on it.*
+
+- **File, section:**
+  - `decisions.md` § R-652, the owner's ruling (d), its reason: "every t = 0 pixel is a fresh sample, so Metal's ulp noise
+    rendering as colour would appear on real data too. Fix the view."
+  - `docs/design/principia_colour_composition.md` § 6: "A field view *is* `colour = FieldRamp{field, recommended ramp}`",
+    "`f_edrift` = `energy_drift · diverging · symlog`".
+- **The gap in the code:** `render::colour::defaults::default_ramp` gives these fields `Compaction::Diverging { x0 }`,
+  which is `compact_symlog(x, x0)` in `crates/render/shaders/wgsl/lib/compaction.wgsl`, and `qa_field_either_role_any_field`
+  (`crates/render/tests/qa_TASK-M7-05.rs`) renders a field ramp on `energy_drift`. No band is on that path, so a stain's
+  field ramp still draws a fresh sample's rounding as backend-dependent colour at `x₀ = 10⁻⁶`. No golden exercises it.
+- **The question:** whether "Fix the view" reaches the field-ramp path.
+- **Options seen:** (a) extend the band to it, where the drift is read, since `compact_symlog` has no reference and also
+  serves `E_0` and `Lz_0`, with the fresh-sample test extended; (b) leave it there, the band being the debug views' alone,
+  a field ramp showing the rounding; (c) another, stated by the owner.
+- **Applied meanwhile:** (b), the code unchanged, the scope stated. Nothing waits.
+
 ## RQ-679: The slider span of `ν₀`, the held `L_z` and the held `K`, which R-507 U1 divides a hidden offset by, while § G2's Slice centre lists only the eight latent sliders *(a definition requirement, R-72, and a value, R-71; R-507 U1; R-633; render_gui_spec § G2; context: TASK-M8-48, TASK-M2-52)*
 
 *Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flights. Nothing is chosen.*
@@ -636,6 +685,24 @@ waits on the answer.
 - **Waits:** nothing now: V-11 is parked by R-668 item 5. Its prograde comparison number waits on this only if the
   parking is lifted and V-11 is scored.
 
+## RQ-746: A saved curved chart tilted again into its own saved target, where the saved tilt is Lean each axis with one target and both angles set: what is `R`'s third input? *(physics; silence; R-513 Q1, R-474, R-475 L5; context: TASK-M2-40, REQ-CHART-077, TASK-M8-48)*
+
+*Queued 8 Nov 2026 by TASK-M2-40's implementer, for the physics reviewer and, if they can't settle it from the corpus, the owner's rulings report. A one-way door if it reaches the owner: it changes what a saved chart computes.*
+
+**In plain English:** when you save a tilted curved view and tilt it again into the same hidden coordinate, R-513 says the two rotations compose: the new tilt's offset on that coordinate is fed into the saved rotation as its third input. That needs the saved rotation's third column. Every saved tilt has one except a "Lean each axis" tilt with one target and both angles set, which isn't a rotation: its two tilted axes are skewed, so nothing says where the third input goes.
+
+- **File, section:**
+  - `decisions.md` § R-513, Q1: "The new tilt's offset on the saved target enters `R`'s third input"; and its ruling, "`(a, b, d) = R·(u′, v′, d′)`, that is `R·R′·(u, v, 0)`".
+  - `decisions.md` § R-474 and `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Two tilt maps": "**Lean each axis**, an option (`lean`), is the formula above per axis, `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_X`, skewed (`u₁·u₂ = sin τ₁ sin τ₂`)." Its map gives `R·e_a` and `R·e_b` only; with one target and both angles set it is no rotation, so `R·e_X` is not defined.
+  - `decisions.md` § R-513, Q3: "The saved target is offered again in the Tilt section's target dropdowns of a saved curved chart".
+- **Options seen:**
+  - (a) **Recommended**: keep R-513's ruled form `R·R′` literally, with `R = [û₁ û₂ t̂]`, `R`'s third input `t̂` the unit normal of the saved plane, `û₁ × û₂` normalised, the sign toward `+e_X`. From R-514 it borrows only `t̂` (a target projected off the saved plane and normalised); it does not apply the new tilt as R-514 does (option (b)). The composition is then no longer a rotation, as the saved Lean map isn't; a single `τ′` tips one saved axis toward `t̂` and leaves the other where it was. At the edge of Lean's range, `|τ₁|` or `|τ₂|` = 90° with the other angle set (R-474 R8's dead zone), `û₁ × û₂ = (−s₁c₂, −c₁s₂, c₁c₂)` has no `e_X` component (`c₁c₂ = 0`), so "toward `+e_X`" fixes no sign and (a) takes the cross product's own; at the corner `|τ₁| = |τ₂| = 90°` the cross product is 0 and (a) has no frame (R-554's `ray-degenerate`).
+  - (b) **R-514's frame action**, carried over from latent saved charts (R-514 I1, I3, I4): the new tilt acts as the rotation `M = F·R′·Fᵀ` in the orthonormal frame `F = (q̂₁, q̂₂⊥, t̂)` Gram–Schmidt makes of the saved axes and the target, `q̂₁ = û₁`, `q̂₂⊥` the second axis made orthogonal to the first, and carries the stored pair: `(a, b, d) = M·(u·û₁ + v·û₂)`. The new tilt stays an isometry of the scaled 3-space acting on the saved plane, but the result is not of `R·R′` form: with `U = [û₁ û₂]` skewed, `Fᵀ·U` is upper-triangular and does not commute with `R′`, so `U·R′ ≠ F·R′·Fᵀ·U`. At the dead-zone edge `e_X` lies in the saved plane, so its projection vanishes and R-514 I2 drops it as a target: the saved target is not offered at all; at the corner `|τ₁| = |τ₂| = 90°` (b) has no frame either (R-554's `ray-degenerate`).
+  - (c) Refuse the case: a saved Lean view with one target and both angles set doesn't offer its saved target to a new tilt (Q3 holding everywhere else).
+  - (d) Another, stated by the owner.
+- **Worked numbers** (physics review 5816819537 of PR #447, F1, checked by the implementer): a saved Lean each axis view at `τ = (30°, 40°)`, one target `X`, then `τ′ = (20°, 0)` into `X`, at the pixel `(u, v) = (0.3, 0.7)` from the centre, in `(a, b, d_X)`: option (a) gives `(0.2026, 0.4759, 0.6628)`; option (b) gives `(0.1598, 0.4307, 0.7099)`. Both are continuous, and both are the saved view at `τ′ = 0`; they are two different answers.
+- **Applied meanwhile:** the kernel refuses that composition (`kernel::chart::saved::Composed::new` returns `None`; `TiltSpec::inputs` returns `None` for that tilt), computing nothing it can't justify. A new tilt into any other target of such a chart composes as the block form, which needs no third input, and every other saved tilt composes as R-513 rules.
+- **Waits:** only that case: a new tilt into the saved target of a saved curved chart whose tilt is Lean each axis, one target, both angles set. REQ-CHART-077's own verify (a 25° single-angle saved tilt) doesn't reach it. The case is split from REQ-CHART-077 as REQ-CHART-149, carrying `rq: RQ-746`, closed by TASK-M2-56 once ruled; TASK-M8-48's target dropdowns don't offer the saved target in that case meanwhile (physics review 5816819537 of PR #447, F2).
 ## RQ-744: R-863's build order: the tasks that fit no stage or straddle two, and the stage-3 edges the milestones and the existing edges refuse *(the owner's order of 8 Nov 2026, R-863; a one-way door where an answer moves a task out of its milestone's gate, otherwise a reading of the owner's order; `docs/design/principia_chart_composition.md` § 15; context: TASK-M4-32, TASK-M4-33, TASK-M4-34, TASK-M7-72, TASK-M8-100, TASK-M8-102 to TASK-M8-107, TASK-M8-112, TASK-M8-117, TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-124)*
 
 *Filed 8 Nov 2026 by the rulings PR that ports R-863 and R-864 (PR #445). The orchestrator's instruction: where a task
@@ -1004,3 +1071,45 @@ out to take.*
   this is ruled.
 - **Waits:** TASK-M2-57 (its link definition, REQ-DEC-056, and so the task; `rq: RQ-750` on REQ-DEC-055 and
   REQ-DEC-056), and through it TASK-M8-126's latent points.
+
+## RQ-751: Two of `contain.sh check`'s assertions have no Job Object equivalent: does the Windows proof pass without them? *(a one-way door: what the containment proof claims, and so what may be placed on Windows; the owner's CI shape order of 8 Nov 2026, step 1, and its placement rule; `scripts/contain.sh` § `check`; REQ-VAL-181; context: the tooling PR "Windows containment for tests and mutants (Job Object)")*
+
+*Filed 8 Nov 2026 by the implementer of that PR, which builds `.github/scripts/win_contain.ps1` and its dispatch-only
+job, `win-gpu.yml`'s `win-contain`. Nothing is chosen.*
+
+*In plain English: on Linux, CI's containment hides every outside process from the contained run, so a mutant that
+signals "everything" can't reach the runner. Windows has nothing that hides processes: a Job Object (what the owner
+asked for) kills the whole tree when it closes, caps processes and memory, and stops a process breaking out, but a
+process inside can still see an outside process and kill it by its id. So the Windows proof can show every other
+scenario of the Linux check, not these two. The owner says whether that is enough, and for what.*
+
+- **File, section:**
+  - The owner's CI shape order of 8 Nov 2026, step 1: "Windows containment: run tests and mutants inside a Job Object
+    with kill-on-close, a process limit and an 8 GiB per-process memory cap (REQ-VAL-181's equivalent of prlimit). Prove
+    it with the same kill test contain.sh check uses. Until proven, mutants of xtask/src/jobq.rs stay on GitHub-hosted
+    runners." And its placement rule: "Containment, memory cap and the 36 h no-run alert are prerequisites for any job
+    placed on Windows."
+  - `scripts/contain.sh` § `check`, the probe run inside: `if kill -0 "$1" 2> /dev/null; then exit 42; fi` (the
+    outside process must be unseen) and `kill -9 -1 2> /dev/null`, after which the outside process must be alive.
+- **The conflict:** the Job Object the owner names gives kill-on-close, the process limit, the per-process commit cap,
+  and no breakaway; `win_contain.ps1 check` proves each, and maps `kill -9 -1` to Windows' broadcast, CTRL+C to the
+  whole console, which a console of the job's own keeps inside. It can't give a PID namespace: inside the job, the
+  outside process is visible (contain.sh's 42) and, being the same user's, can be opened and terminated by its id. The
+  check measures both and reports them as gaps, never killing anything; its exit status covers the Job Object's
+  scenarios only. So "the same kill test" passes in full only with these two waived or met another way.
+- **Context for the choice:** `xtask/src/jobq.rs`, the module whose mutants the order names, is `#[cfg(unix)]`
+  (`xtask/src/lib.rs`), as are its tests (`xtask/tests/jobq.rs`): on Windows it isn't compiled, so its mutants can't be
+  killed there whatever the containment, and the process-group signalling that made containment necessary on Linux
+  (`kill(-1)`) has no Windows code path. Nothing in the code base terminates a process by an id it didn't start.
+- **The question:** does the Windows proof count as passed, for placing jobs on Windows, with 42 and the kill by pid
+  as known gaps?
+- **Options seen:**
+  - (a) Yes: the Job Object's scenarios are the proof; 42 and the kill by pid are recorded as gaps of the platform.
+  - (b) Yes for jobs but not for `jobq.rs`'s mutants, which stay hosted for good (they can't run on Windows anyway).
+  - (c) No: stronger isolation first (a separate restricted account or token, or a sandbox), which needs work at the PC
+    and a design of its own.
+- **Recommendation:** (b). A measurable alternative: (c), judged by the same check with 42 and the kill by pid turned
+  into failing scenarios.
+- **Applied meanwhile:** nothing is placed on Windows. The check is built and runs by `workflow_dispatch` only; its
+  first run is the orchestrator's, once the runner accepts jobs.
+- **Waits:** the switch of the slow tier and the mutation run to the Windows runner (the order's steps 2 to 5).

@@ -186,6 +186,7 @@ fn constants_file(chart: &[Param], tunables: &[Tunable]) -> String {
     s.push_str(&scale_skip());
     s.push_str(&tilt_angles());
     s.push_str(&hidden_indices());
+    s.push_str(&saved_words());
     s.push_str(&sinc());
     s
 }
@@ -290,6 +291,25 @@ fn hidden_indices() -> String {
         nu0 = HIDDEN_NU0.number() as u32,
         lz = HIDDEN_HELD_LZ.number() as u32,
         k = HIDDEN_HELD_K.number() as u32,
+    )
+}
+
+/// A saved chart's word counts, the register's `saved_header_words`, `saved_parent_words` and `saved_oblique_words`
+/// (R-475 L4, L5; R-483 H3), which `kernel::chart::saved` lays its serialisation out by, written as the hidden indices
+/// are. They are not chart constants, so not [`links::CHART_CONSTANTS`] members, and not hashed.
+fn saved_words() -> String {
+    use crate::constants::{SAVED_HEADER_WORDS, SAVED_OBLIQUE_WORDS, SAVED_PARENT_WORDS};
+    format!(
+        "\n/// The register's `saved_header_words`: a saved curved chart's header, in doubles (R-475 L5).\n\
+         pub const SAVED_HEADER_WORDS: usize = {header};\n\n\
+         /// The register's `saved_parent_words`: a saved curved chart's parent, its form and params, in doubles\n\
+         /// (R-475 L5).\n\
+         pub const SAVED_PARENT_WORDS: usize = {parent};\n\n\
+         /// The register's `saved_oblique_words`: a saved oblique chart, in doubles (R-475 L4).\n\
+         pub const SAVED_OBLIQUE_WORDS: usize = {oblique};\n",
+        header = SAVED_HEADER_WORDS.number() as usize,
+        parent = SAVED_PARENT_WORDS.number() as usize,
+        oblique = SAVED_OBLIQUE_WORDS.number() as usize,
     )
 }
 

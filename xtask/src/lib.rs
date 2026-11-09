@@ -20,6 +20,7 @@ pub mod lint_no_alloc;
 pub mod lint_vocab;
 pub mod lint_wgsl;
 pub mod mutants_check;
+pub mod mutants_limits;
 pub mod pages_workflow;
 pub mod plan_check;
 pub mod pr_check;

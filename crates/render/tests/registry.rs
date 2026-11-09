@@ -49,18 +49,32 @@ fn catalogue_fields() -> Vec<&'static str> {
 /// Runs ledger codegen's catalogue emitter into a scratch workspace, removes the view of each of `removed`, scans the
 /// render crate there, and asserts each of the catalogue's views is a debug registry entry of the `colour` slot; then
 /// that the crate's own registry holds them the same way.
-/// The uniforms a generated view declares: a numeric view's `RANGE_AUTO` and `u_range` (RQ-231; TASK-M1-09), else
-/// none.
-fn declared_uniforms(field: &str) -> Vec<&'static str> {
+/// The uniforms a generated view declares: a numeric view's `RANGE_AUTO` and `u_range` (RQ-231; TASK-M1-09); a drift
+/// view's `COMPACTION`, `PALETTE`, `LIN_R`, the energy predicate's floor `EPS_E`, and its own floor's uniform where that
+/// is another, `EPS_L` (R-381; TASK-M3-05); else none.
+fn declared_uniforms(field: &str) -> Vec<String> {
     let l = ledger::layout();
     let entries = ledger::gen::validate(&l).expect("the ledger validates");
     let numeric = entries
         .iter()
         .find(|e| e.name == field)
         .and_then(ledger::gen::numeric::NumericView::of);
-    match numeric {
-        Some(_) => vec!["RANGE_AUTO", "u_range"],
-        None => Vec::new(),
+    let floor = catalogue::views(&l.words, &entries)
+        .into_iter()
+        .find(|v| v.field == field)
+        .and_then(|v| v.floor);
+    match (numeric, floor) {
+        (Some(_), _) => vec!["RANGE_AUTO".to_owned(), "u_range".to_owned()],
+        (None, Some(floor)) => {
+            let mut u: Vec<String> = ["COMPACTION", "PALETTE", "LIN_R", "EPS_E"]
+                .map(str::to_owned)
+                .into();
+            if floor != "eps_E" {
+                u.push(floor.to_uppercase());
+            }
+            u
+        }
+        (None, None) => Vec::new(),
     }
 }
 
@@ -98,10 +112,10 @@ fn check_generated_views_in_registry(removed: &[&str]) {
                 "`{id}` is not tagged debug"
             );
             assert_eq!(entry.slot, Kind::Colour, "`{id}`'s slot is not colour");
-            let uniforms: Vec<&str> = entry
+            let uniforms: Vec<String> = entry
                 .uniform_schema
                 .iter()
-                .map(|u| u.name.as_str())
+                .map(|u| u.name.clone())
                 .collect();
             assert!(
                 uniforms == declared_uniforms(field) && entry.input_domains.len() == 1,
@@ -318,7 +332,7 @@ negative_control!(
 
 /// The field set each of `catalogue`'s views must load: the read-side members its accessors name (`detail`'s with its
 /// key, `state`), the word as `word.w`, the one component its `.w` accessor reads, and an `ICDescriptor` member as `ic.<member>` (R-378;
-/// RQ-227).
+/// RQ-227); a drift view's also its stored latches (TASK-M3-05). Sorted and deduplicated, as the fragment lists them.
 fn expected_fields(field: &str) -> Vec<String> {
     let l = ledger::layout();
     let entries = ledger::gen::validate(&l).expect("the ledger validates");
@@ -334,6 +348,8 @@ fn expected_fields(field: &str) -> Vec<String> {
             Accessor::IcMember(m) => Some(format!("ic.{m}")),
             Accessor::Function(_) => None,
         })
+        .collect::<std::collections::BTreeSet<String>>()
+        .into_iter()
         .collect()
 }
 

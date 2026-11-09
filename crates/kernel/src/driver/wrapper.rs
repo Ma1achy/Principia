@@ -26,9 +26,12 @@
 //! `bounded`; there is no timeout state) and `running` where the cadence's `done` ended it, for the terminal's label to
 //! replace; and `t_end_step`, the completed macro-steps (Part 5, "Exact step-index timing invariant"; payload §2): a
 //! macro-step counts once its `N_sub` substeps were all taken, so one that `done` cut short does not, while the loop's
-//! counter `macro`, which still advances past it, bounds the loop only. A terminal's label and step, `d_min` and the
-//! monitored fields are the cadence's hooks' (TASK-M3-05, TASK-M3-09, TASK-M3-12); `d_min` is written unset and
-//! `dmin_pair` its sentinel until then.
+//! counter `macro`, which still advances past it, bounds the loop only. [`integrate`] writes the monitored fields from
+//! its cadence's monitor ([`monitored`]; Part 1, "COM projection and invariant monitoring"): `E_0` and `Lz_0`, stored
+//! before the loop, and `packed_b`'s `dE_max` and `dLz_max`, the maxima latched at `Real` during the march and packed
+//! to f16 once, here (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
+//! side derives them from the final state (payload §5). A terminal's label and step and `d_min` are the cadence's hooks'
+//! (TASK-M3-09, TASK-M3-12); `d_min` is written unset and `dmin_pair` its sentinel until then.
 //!
 //! **The Welford diffusion** (dd_simstate_payload §4; dd_integrator §3.5; [`super::welford`]): after each completed
 //! macro-step, on the state the occupant returns (post-projection), the wrapper takes the sample `y` against the IC's
@@ -46,8 +49,8 @@ use crate::decode::Ic;
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    pack_times, set_d_min_unset, set_dmin_pair, set_state, PayloadReal, SimStateBaseOf,
-    SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING,
+    pack_packed_b, pack_times, set_d_min_unset, set_detail, set_dmin_pair, set_state, PayloadReal,
+    SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING, STATE_SIM_FAILED,
 };
 use crate::real::IeeeBits;
 use crate::shape::shape;
@@ -75,13 +78,72 @@ pub struct WrapperUniforms<R> {
 }
 
 /// The integration of `ic` under the sim key's `uniforms` by the occupant `A`, with the wrapper's own cadence
-/// ([`WrapperCadence`]): [`integrate_with`].
+/// ([`WrapperCadence`]), built from `ic` before the loop: [`integrate_with`], then the monitored fields
+/// ([`monitored`]).
 #[inline]
 pub fn integrate<A: Advance, R: WrapperReal>(
     ic: &Ic<R>,
     uniforms: &WrapperUniforms<R>,
 ) -> SimStateBaseOf<R> {
-    integrate_with::<A, R, WrapperCadence>(ic, uniforms, &mut WrapperCadence::default())
+    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+    let out = integrate_with::<A, R, WrapperCadence<R>>(ic, uniforms, &mut cadence);
+    monitored(out, &cadence)
+}
+
+/// `out` with the monitored fields of the run `cadence` followed (Part 1, "COM projection and invariant monitoring";
+/// payload §1, §2): `E_0` and `Lz_0` as stored before the loop, and `packed_b` holding `dE_max = max|ΔE|` and
+/// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed to f16 (clamped to binary16's finite range first).
+///
+/// **A run whose monitor latched a non-finite value** is marked, never stored as measured: `state` `sim_failed`, with
+/// its detail by what failed (payload §2: `failed_detail`), and both latches the defined failed-state 0.0 (payload §1,
+/// "Failed-state contents are defined"; R-79, R-271; `d_min` is unset already). The rest of the failure path, the terminal
+/// that ends the march and the other fields' failed-state values, is TASK-M3-17's and TASK-M3-18's.
+#[inline]
+pub fn monitored<R: WrapperReal>(
+    out: SimStateBaseOf<R>,
+    cadence: &WrapperCadence<R>,
+) -> SimStateBaseOf<R> {
+    let m = cadence.monitor_state();
+    let failed = m.non_finite();
+    let (packed_a, de_max, dlz_max) = if failed {
+        let marked = set_state(out.packed_a, STATE_SIM_FAILED);
+        (set_detail(marked, failed_detail(&out.r, &out.p)), 0.0, 0.0)
+    } else {
+        (out.packed_a, m.de_max().quantise(), m.dlz_max().quantise())
+    };
+    SimStateBaseOf {
+        E_0: m.e_0(),
+        Lz_0: m.lz_0(),
+        packed_a,
+        packed_b: pack_packed_b(de_max, dlz_max),
+        ..out
+    }
+}
+
+/// `sim_failed`'s detail for a run ending at `(r, p)` (payload §2): 0 for a NaN in the state, else 1 for a `±∞` in it,
+/// else 2, a non-finite derived quantity on a finite state. The two are told apart on the bits
+/// ([`IeeeBits::nan_bits`], [`IeeeBits::non_finite_bits`]; gpu_determinism_note § "The discipline", rule 4).
+#[inline]
+fn failed_detail<R: WrapperReal>(r: &[[R; 2]; 3], p: &[[R; 2]; 3]) -> u32 {
+    let (mut nan, mut inf) = (false, false);
+    let mut i = 0;
+    while i < 3 {
+        let mut j = 0;
+        while j < 2 {
+            let (a, b) = (r[i][j], p[i][j]);
+            nan = nan || a.nan_bits() || b.nan_bits();
+            inf = inf || a.non_finite_bits() || b.non_finite_bits();
+            j += 1;
+        }
+        i += 1;
+    }
+    if nan {
+        0
+    } else if inf {
+        1
+    } else {
+        2
+    }
 }
 
 /// The integration of `ic` under `uniforms` by the occupant `A` with its word: `cadence` the per-substep callback, with
@@ -104,7 +166,7 @@ where
     let mut word_cadence = WordCadence::new(cadence, &ic.r, index, words);
     let out = integrate_with::<A, R, _>(ic, uniforms, &mut word_cadence);
     let packed_a = word_cadence.mirror_last_symbol(out.packed_a);
-    SimStateBaseOf { packed_a, ..out }
+    cadence.finish(SimStateBaseOf { packed_a, ..out })
 }
 
 /// The integration of `ic` under `uniforms` by the occupant `A`, `cadence` the per-substep callback it passes in

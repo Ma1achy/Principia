@@ -9,6 +9,14 @@
 //! exclusions, the per-PR job's one list, and uploads its report of caught, missed, unviable and timed-out mutants) and
 //! from REQ-VAL-179 (the nightly run's timeout and memory cap read from the one place the per-PR shards read them).
 //! Each test has its negative control (R-176).
+//!
+//! R-290 exception (applied per R-369 by the orchestrator, PR #452): this file has one non-qa commit (e8b61961,
+//! R-402's package sharding), so qa may not edit it by R-290's rule alone. The owner's order of 8 Nov 2026 ("Baseline
+//! with no kill limit; same limits for nightly and local") split each nightly shard's `cargo mutants` into two steps,
+//! each with its own `PACKAGE: ${{ matrix.package }}`, so a check that looked for that line anywhere in the job no
+//! longer failed when one step's line changed: the control `by_package::..._env` stopped tripping. qa changed the
+//! check to read the `PACKAGE` line of the very step that runs `--package "$PACKAGE"` (or the job's own `env:` before
+//! its steps), and added a control on the second step's line. No assertion was weakened.
 // The file name `qa_TASK-M0-19` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -758,10 +766,19 @@ fn check_mutants(files: &[(String, String)], config: &str) {
             .iter()
             .find(|(_, j)| j.lines().any(|x| x == *l))
             .unwrap();
-        assert!(
-            job.contains("PACKAGE: ${{ matrix.package }}"),
-            "the nightly mutants run narrows by a package that is not its matrix entry: {l}"
-        );
+        // The step that runs this line sets `PACKAGE` to its matrix entry, or the job does before its steps; a
+        // `PACKAGE` set in another step of the job does not reach this one.
+        const MATRIX_PACKAGE: &str = "PACKAGE: ${{ matrix.package }}";
+        let preamble = job.split("\n    steps:").next().unwrap_or_default();
+        let steps = steps_running(&nightly, l);
+        assert!(!steps.is_empty(), "no step of nightly.yml runs {l}");
+        for step in &steps {
+            assert!(
+                preamble.lines().any(|x| x.trim() == MATRIX_PACKAGE)
+                    || step.lines().any(|x| x.trim() == MATRIX_PACKAGE),
+                "the nightly mutants run narrows by a package that is not its matrix entry: {l}"
+            );
+        }
         let planner = job
             .lines()
             .find_map(|x| x.split("fromJSON(needs.").nth(1))
@@ -866,6 +883,33 @@ fn check_mutants(files: &[(String, String)], config: &str) {
     );
 }
 
+/// The code text of each step of a workflow (a `- ` item of a job's `steps:`) holding `line` as one of its code lines.
+fn steps_running(workflow: &str, line: &str) -> Vec<String> {
+    let raw: Vec<&str> = workflow.lines().collect();
+    let indent = |l: &str| l.len() - l.trim_start().len();
+    let mut out = Vec::new();
+    for (i, l) in raw.iter().enumerate() {
+        if code(l) != line {
+            continue;
+        }
+        let Some(start) = (0..=i)
+            .rev()
+            .find(|&j| raw[j].trim_start().starts_with("- ") && indent(raw[j]) < indent(l))
+        else {
+            continue;
+        };
+        let at = indent(raw[start]);
+        let end = (start + 1..raw.len())
+            .find(|&j| {
+                let t = raw[j].trim_start();
+                !t.is_empty() && !t.starts_with('#') && indent(raw[j]) <= at
+            })
+            .unwrap_or(raw.len());
+        out.push(code(&raw[start..end].join("\n")));
+    }
+    out
+}
+
 fn mutants_toml() -> String {
     std::fs::read_to_string(root().join(".cargo/mutants.toml")).unwrap()
 }
@@ -947,6 +991,33 @@ mod by_package {
                 "PACKAGE: ${{ matrix.package }}",
                 "PACKAGE: xtask"
             ),
+            &mutants_toml()
+        )
+    );
+
+    // The full run's own step (the second `PACKAGE` line), its baseline step's left as it is.
+    negative_control!(
+        qa_m019_nightly_runs_the_full_mutants_under_the_one_list_env_run,
+        "a nightly shard whose full run's PACKAGE is not its matrix entry must fail",
+        expected = "not its matrix entry",
+        check_mutants(
+            &workflows()
+                .into_iter()
+                .map(|(f, t)| {
+                    if f != "nightly.yml" {
+                        return (f, t);
+                    }
+                    let from = "PACKAGE: ${{ matrix.package }}";
+                    let at = t.rfind(from).expect("nightly.yml has no PACKAGE line");
+                    assert_ne!(
+                        t.find(from),
+                        Some(at),
+                        "nightly.yml has one PACKAGE line, not two"
+                    );
+                    let t = format!("{}PACKAGE: xtask{}", &t[..at], &t[at + from.len()..]);
+                    (f, t)
+                })
+                .collect::<Vec<_>>(),
             &mutants_toml()
         )
     );
