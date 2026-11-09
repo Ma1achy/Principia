@@ -27777,8 +27777,9 @@ up to 15 minutes after the PR opens; every bot finding is closed out before merg
 thread does not merge; the cadence is a standing rule).*
 *Amended in part by R-659 (how the Gemini review runs: one request to the Gemini API with a fallback chain; the CLI and
 its action are gone; the name `@gemini-cli /review` stays).*
-*Still in force: all of it but its cadence and how the Gemini workflow runs: the three bots stay advisory, never merge
-gates and never counted by `reviews-complete`; every finding is verified, answered on its thread and resolved, a P0 / CRITICAL claim goes to the
+*Amended in part by R-910 (9 Nov 2026: Copilot is dropped; the advisory reviewers are Codex and Gemini CLI only).*
+*Still in force: all of it but its cadence, how the Gemini workflow runs and Copilot's place: the two bots left, Codex
+and Gemini CLI, stay advisory, never merge gates and never counted by `reviews-complete`; every finding is verified, answered on its thread and resolved, a P0 / CRITICAL claim goes to the
 physics reviewer, a late review is handled as a follow-up, and the trial's tally and report stand; its 15-minute bound
 is replaced by a limit per bot, counted from each review the orchestrator requests (R-651).*
 
@@ -28820,6 +28821,12 @@ and REQ-VAL-252 to REQ-VAL-332 to M9; changes REQ-VAL-047, REQ-VAL-130, REQ-VAL-
 adds REQ-VAL-333 to REQ-VAL-337, REQ-VAL-340 and REQ-VAL-341.
 
 ## R-651 — Advisory review cadence: a fresh review from each of Codex, Gemini CLI and Copilot before merge on the final head, after every substantive push and at least once a working day on a long-running PR, in that priority under limits; a bot unavailable or rate-limited is noted on the PR and the merge goes ahead with the others; every bot finding is verified and closed out before merge (fixed, answered or moved to a task or RQ, then its thread resolved), and a PR with an unresolved bot thread does not merge; the bots stay advisory and never replace the required approvals *(amends R-635: its cadence; a standing rule)*
+*Amended in part by R-910 (9 Nov 2026: Copilot is dropped; Codex and Gemini CLI only, Copilot never requested, and
+its 15-minute limit goes).*
+*Still in force: all of it for Codex and Gemini CLI: the cadence (pre-merge on the final head, after every substantive
+push, periodically on a long-running PR), its priority under limits, their limits (Codex 25 minutes, Gemini CLI 30),
+the unavailable-bot note, every finding closed out before merge with the unresolved-thread merge check, and the bots
+staying advisory; Copilot's place in it is withdrawn (R-910).*
 *30 Oct 2026 · the owner's rule and his two addenda of that day; ported 30 Oct 2026 with R-649 and R-650 (PR #342);
 applied in `plan/WORKFLOW.md` (§ "The review loop"), `plan/OPERATIONS.md` (§ "Merging"), `CLAUDE.md` (§ "Working with
 review"), the forward line on R-635 and `plan/rule_groups.yaml`; the merge script that checks it is the orchestrator's
@@ -33222,3 +33229,35 @@ don't name it, so it joins RQ-744 (C)'s list.
 R-870 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-GUI-426, REQ-GUI-427 and REQ-GUI-428; changes no existing requirement.
+
+## R-910 — Copilot is dropped from the advisory bot reviews: Codex and Gemini CLI only, and Copilot is never requested *(amends R-651 and R-635: Copilot's place in them)*
+*9 Nov 2026 · the owner, in session, answering the orchestrator's proposal; applied in `CLAUDE.md` (§ "Working with
+review"), `AGENTS.md` (§ "Code Review Rules"), `GEMINI.md` and `.github/copilot-instructions.md` (its copies),
+`plan/WORKFLOW.md` (§ "The review loop"), `plan/OPERATIONS.md` (§ "Merging"), the forward lines on R-651 and R-635,
+`plan/rule_groups.yaml` and `plan/section_notes.yaml`; the merge script that requests the bots is the orchestrator's
+own, outside the repository*
+
+The orchestrator proposed dropping Copilot from R-651: Copilot answered "unable to review" to 219 of 228 review
+requests (96%), by the orchestrator's PR-latency measurement of that day. The owner's words (9 Nov 2026), verbatim:
+
+> Yeah remove copilot
+
+*What it decides:* the advisory bot reviewers are Codex and Gemini CLI only. Copilot is never requested as a reviewer,
+at any point of R-651's cadence (pre-merge, post-push or periodic), and its 15-minute unavailability limit goes. A PR
+notes no "no Copilot review" line.
+
+*What it amends:* R-651's three advisory reviewers become two, Codex and Gemini CLI; the rest of R-651 stands for
+them: the cadence, its priority under limits, their limits (Codex 25 minutes, Gemini CLI 30), the unavailable-bot
+note, every finding closed out before merge with the unresolved-thread check, and the bots staying advisory. R-635's
+three reviewers become the same two; its finding handling, its P0 / CRITICAL route to the physics reviewer and its
+late-review handling stand.
+
+*Applied per R-369:*
+- **`.github/copilot-instructions.md` stays,** an unused copy of `AGENTS.md` § "Code Review Rules", so
+  `xtask/tests/ai_review_rules.rs` stays unchanged and still checks it byte for byte; deleting it would also change that
+  test and `xtask/tests/ci_changes.rs`, for no gain. The brief says it is unused.
+- **A Copilot finding that exists anyway,** posted before this ruling on a PR still open or by a review GitHub starts
+  by itself, is not waited for, but its thread is answered and resolved before the merge like any other bot finding,
+  since R-651's merge check counts every unresolved bot thread.
+
+R-910 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement and no code.
