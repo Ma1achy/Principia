@@ -1262,18 +1262,19 @@ slow-timeout = { period = "30s", terminate-after = 3 }
 # - the in-depth GPU tests, the `gpu-kernel` profile's, which need the built kernel: `ci.yml`'s `gpu-lavapipe` and
 #   `gpu-metal` run one fast test of each GPU stage of them (`gpu-smoke` below), and every one runs on `main`;
 # - the golden runner over every suite and the screenshot runner's self-test, product correctness the owner moved to
-#   each merge (9 Nov 2026: "per merge, never retired");
-# - the slow tier: each test measured over 60 s (the per-test times of 8 Nov 2026, the longer of PR #431's run and
-#   the second measurement), named below with its time, which runs on `main`. A product-tooling test among them is
-#   covered on the pull request by its command, run directly in `ci.yml`'s `build` and `gpu-lavapipe` jobs
-#   (`cargo xtask lint wgsl`, `cargo xtask build-kernel`). The slow tier here holds only xtask's tests and the in-depth
-#   GPU tests: the owner's order of 8 Nov 2026, item 2, says "moving any physics or validation test into the slow tier
-#   comes to me first", so the slow tests of kernel, ledger, render and validation outside the `gpu-kernel` profile
-#   stay on the pull request until he rules (34 tests, 4,981 s measured; listed in PR #457 for his rulings report).
-#   Applied per R-369 by the orchestrator.
+#   each merge (R-909; 9 Nov 2026: "per merge, never retired");
+# - the slow tier (R-904, R-908): each test measured over 60 s (the per-test times of 8 Nov 2026, the longer of PR
+#   #431's run and the second measurement), named below with its time, which runs on `main`. A product-tooling test
+#   among them is covered on the pull request by its command, run directly in `ci.yml`'s `build` and `gpu-lavapipe` jobs
+#   (`cargo xtask lint wgsl`, `cargo xtask build-kernel`). Beside xtask's tests and the in-depth GPU tests, the slow
+#   tier holds 34 physics, validation and render tests (4,981 s measured) of kernel, ledger, render and validation
+#   outside the `gpu-kernel` profile, by the owner's ruling of 9 Nov 2026, verbatim: "1: move them." It answers R-904's
+#   "moving any physics or validation test into the slow tier comes to me first" for exactly those 34, which run on each
+#   merge to `main`. No other physics, validation or render test enters the slow tier without a ruling;
+#   `xtask/tests/ci_pr_tier.rs` pins the list.
 # `xtask/tests/ci_pr_tier.rs` checks this table against the filter, and the process binaries here against `process`'s.
-# Applied per R-369/R-812.
-# The slow tier of the xtask and in-depth GPU tests (seconds, binary, test):
+# Applied per R-369/R-812, but for the 34, the owner's.
+# The slow tier (seconds, binary, test):
 #      60.2 s  engine::canon_gpu canonicaliser_coincident_inner_pair
 #     179.9 s  engine::canon_gpu canonicaliser_hierarchy
 #      79.5 s  engine::canon_gpu canonicaliser_hierarchy_edge
@@ -1288,15 +1289,49 @@ slow-timeout = { period = "30s", terminate-after = 3 }
 #      73.0 s  engine::qa_TASK-M2-24_gpu qa_m224_gpu_feasibility_tag
 #     407.3 s  engine::qa_TASK-M2-24_gpu qa_m224_gpu_new_charts
 #      60.7 s  engine::qa_TASK-M2-47_gpu canonicaliser_qa_m247_branches_agree
+#      64.7 s  kernel::gallery_sweep gallery_sweep_unit_square
+#      84.9 s  kernel::qa_TASK-M3-03 qa_nsub_bucket_floor_pairs_match_the_specification
+#     111.8 s  ledger::derived current_drift_property_matches_the_reference
+#      70.3 s  render::compaction_ramps field_either_role_every_form_and_ramp_assembles
+#     413.5 s  render::debug_views debug_views_render_far_from_ties
+#      70.7 s  render::decode_preset decode_preset_vs_decode_only
+#     184.0 s  render::embed_survives embed_survives_the_list
+#     315.8 s  render::observation_taps observation_taps_leave_every_bound_buffer_unchanged
+#     621.8 s  render::observation_taps observation_taps_leave_the_payload_unchanged
+#      83.0 s  render::prelude dbg_helpers_match_the_cpu_mirror_on_the_gpu
+#      82.0 s  render::prelude prelude_luts_colour_space_maps
+#     158.5 s  render::presentation_no_hatch presentation_no_hatch_field_ramps
+#     147.9 s  render::presentation_no_hatch presentation_no_hatch_override
+#      81.2 s  render::qa_TASK-M1-03 qa_dbg_helpers_cat
+#     173.7 s  render::qa_TASK-M1-03 qa_prelude_generated_custom_node_compiles
+#      63.3 s  render::qa_TASK-M1-08 qa_tool020_each_view_assembles_reading_only_its_field
+#      79.4 s  render::qa_TASK-M1-15 qa_m1_15_debug_views_bind_the_payload_read_only
+#      63.5 s  render::qa_TASK-M2-34 qa_m2_34_presentation_field_ramps
+#      63.1 s  render::qa_TASK-M2-34 qa_m2_34_presentation_field_ramps_overridden
+#      65.9 s  render::qa_TASK-M7-05 qa_field_either_role_any_field
+#     160.8 s  render::qa_TASK-M7-29 embed_survives_qa_property
+#      61.1 s  render::qa_TASK-M7-30 embed_hybrid_rotation_qa_angles_at_1024
 #     291.7 s  validation::agreement_preset_gpu agreement_preset_gate_runs
 #      78.7 s  validation::agreement_preset_gpu agreement_preset_healthy
 #      95.6 s  validation::agreement_preset_gpu agreement_preset_operands
 #     191.0 s  validation::agreement_preset_gpu agreement_preset_permitted_stores
 #      71.7 s  validation::agreement_preset_gpu agreement_preset_window_gate
 #    1728.3 s  validation::codegen_selftest codegen_selftest_pack_unpack_kernel_gpu
+#     597.5 s  validation::debug_scenes debug_scenes_render_their_references
+#      75.0 s  validation::decode_preset_harness decode_preset_harness_probe
+#     138.7 s  validation::decode_preset_shape_poles decode_preset_shape_poles
+#      70.6 s  validation::expected_message control_panicking_in_setup_fails_and_one_reaching_its_check_passes
+#     165.8 s  validation::golden_scene golden_scene_renders_its_twin
 #      64.2 s  validation::invariant_gradient_gpu invariant_gradient_verdict
+#      68.4 s  validation::oklab_roundtrip_gate oklab_gate_fixtures
 #     102.2 s  validation::qa_TASK-M0-14 qa_toolchain_each_tier_b_field_misbuild_is_seen
 #      70.6 s  validation::qa_TASK-M0-14 qa_toolchain_native_and_gpu_are_payload_s2_bit_for_bit
+#     131.4 s  validation::qa_TASK-M1-13 qa_structural_views_colour_by_the_cpu_struct
+#      64.7 s  validation::qa_TASK-M1-14 qa_m1_14_each_golden_is_its_render_and_can_fail
+#     190.6 s  validation::qa_TASK-M1-14 qa_m1_14_each_tile_shows_its_own_sample
+#      63.8 s  validation::qa_TASK-M1-19 qa_quad_fields_all_9_shown
+#      65.7 s  validation::qa_TASK-M2-25 qa_m225_chart_z_is_the_definition
+#     127.9 s  validation::qa_TASK-M2-25 qa_m225_decode_off_lattice_and_pole
 #      66.5 s  validation::qa_TASK-M2-25_gpu qa_m225_kernel_rho_angle_at_the_lambda_pole
 #      80.3 s  validation::qa_TASK-M2-25_gpu qa_m225_two_swapped_descriptors_show_where_they_are
 #      66.3 s  validation::qa_TASK-M2-25_gpu qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole
@@ -1487,15 +1522,49 @@ default-filter = """
         | (binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_feasibility_tag))
         | (binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_new_charts))
         | (binary_id(=engine::qa_TASK-M2-47_gpu) & test(=canonicaliser_qa_m247_branches_agree))
+        | (binary_id(=kernel::gallery_sweep) & test(=gallery_sweep_unit_square))
+        | (binary_id(=kernel::qa_TASK-M3-03) & test(=qa_nsub_bucket_floor_pairs_match_the_specification))
+        | (binary_id(=ledger::derived) & test(=current_drift_property_matches_the_reference))
+        | (binary_id(=render::compaction_ramps) & test(=field_either_role_every_form_and_ramp_assembles))
+        | (binary_id(=render::debug_views) & test(=debug_views_render_far_from_ties))
+        | (binary_id(=render::decode_preset) & test(=decode_preset_vs_decode_only))
+        | (binary_id(=render::embed_survives) & test(=embed_survives_the_list))
+        | (binary_id(=render::observation_taps) & test(=observation_taps_leave_every_bound_buffer_unchanged))
+        | (binary_id(=render::observation_taps) & test(=observation_taps_leave_the_payload_unchanged))
+        | (binary_id(=render::prelude) & test(=dbg_helpers_match_the_cpu_mirror_on_the_gpu))
+        | (binary_id(=render::prelude) & test(=prelude_luts_colour_space_maps))
+        | (binary_id(=render::presentation_no_hatch) & test(=presentation_no_hatch_field_ramps))
+        | (binary_id(=render::presentation_no_hatch) & test(=presentation_no_hatch_override))
+        | (binary_id(=render::qa_TASK-M1-03) & test(=qa_dbg_helpers_cat))
+        | (binary_id(=render::qa_TASK-M1-03) & test(=qa_prelude_generated_custom_node_compiles))
+        | (binary_id(=render::qa_TASK-M1-08) & test(=qa_tool020_each_view_assembles_reading_only_its_field))
+        | (binary_id(=render::qa_TASK-M1-15) & test(=qa_m1_15_debug_views_bind_the_payload_read_only))
+        | (binary_id(=render::qa_TASK-M2-34) & test(=qa_m2_34_presentation_field_ramps))
+        | (binary_id(=render::qa_TASK-M2-34) & test(=qa_m2_34_presentation_field_ramps_overridden))
+        | (binary_id(=render::qa_TASK-M7-05) & test(=qa_field_either_role_any_field))
+        | (binary_id(=render::qa_TASK-M7-29) & test(=embed_survives_qa_property))
+        | (binary_id(=render::qa_TASK-M7-30) & test(=embed_hybrid_rotation_qa_angles_at_1024))
         | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_gate_runs))
         | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_healthy))
         | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_operands))
         | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_permitted_stores))
         | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_window_gate))
         | (binary_id(=validation::codegen_selftest) & test(=codegen_selftest_pack_unpack_kernel_gpu))
+        | (binary_id(=validation::debug_scenes) & test(=debug_scenes_render_their_references))
+        | (binary_id(=validation::decode_preset_harness) & test(=decode_preset_harness_probe))
+        | (binary_id(=validation::decode_preset_shape_poles) & test(=decode_preset_shape_poles))
+        | (binary_id(=validation::expected_message) & test(=control_panicking_in_setup_fails_and_one_reaching_its_check_passes))
+        | (binary_id(=validation::golden_scene) & test(=golden_scene_renders_its_twin))
         | (binary_id(=validation::invariant_gradient_gpu) & test(=invariant_gradient_verdict))
+        | (binary_id(=validation::oklab_roundtrip_gate) & test(=oklab_gate_fixtures))
         | (binary_id(=validation::qa_TASK-M0-14) & test(=qa_toolchain_each_tier_b_field_misbuild_is_seen))
         | (binary_id(=validation::qa_TASK-M0-14) & test(=qa_toolchain_native_and_gpu_are_payload_s2_bit_for_bit))
+        | (binary_id(=validation::qa_TASK-M1-13) & test(=qa_structural_views_colour_by_the_cpu_struct))
+        | (binary_id(=validation::qa_TASK-M1-14) & test(=qa_m1_14_each_golden_is_its_render_and_can_fail))
+        | (binary_id(=validation::qa_TASK-M1-14) & test(=qa_m1_14_each_tile_shows_its_own_sample))
+        | (binary_id(=validation::qa_TASK-M1-19) & test(=qa_quad_fields_all_9_shown))
+        | (binary_id(=validation::qa_TASK-M2-25) & test(=qa_m225_chart_z_is_the_definition))
+        | (binary_id(=validation::qa_TASK-M2-25) & test(=qa_m225_decode_off_lattice_and_pole))
         | (binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m225_kernel_rho_angle_at_the_lambda_pole))
         | (binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m225_two_swapped_descriptors_show_where_they_are))
         | (binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole))

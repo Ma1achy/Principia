@@ -6,9 +6,11 @@
 //! - `ci_pr_tier_slow_tier_is_named_with_its_time`: `.config/nextest.toml`'s `pr` and `process` profiles each leave out
 //!   their slow tier by name, every test of it under a table naming it with its measured time, over 60 s, and the
 //!   table and the filter name the same tests.
-//! - `ci_pr_tier_slow_tier_holds_no_physics_test`: the `pr` profile's slow tier holds only xtask's tests and the
-//!   in-depth GPU tests; physics and validation tests stay on the pull request until the owner rules (his order of
-//!   8 Nov 2026, item 2: "moving any physics or validation test into the slow tier comes to me first").
+//! - `ci_pr_tier_slow_tier_holds_only_the_approved_physics_tests`: the `pr` profile's slow tier holds xtask's tests,
+//!   the in-depth GPU tests and exactly the 34 physics, validation and render tests the owner moved into it (his ruling
+//!   of 9 Nov 2026, verbatim: "1: move them."), answering R-904's "moving any physics or validation test into the slow
+//!   tier comes to me first"; no other enters it without a ruling. `ci_pr_tier_slow_tier_keeps_the_approved_physics_tests`
+//!   runs the same check, its control dropping one of the 34.
 //! - `ci_pr_tier_profiles_split_the_tests`: what `pr` leaves out by binary is exactly the `process` profile's binaries,
 //!   the `gpu-kernel` profile's (the in-depth GPU tests) and the golden and screenshot runners' three (the owner,
 //!   9 Nov 2026: "per merge, never retired"), so no binary falls out of both `pr` and `process` unnamed.
@@ -188,38 +190,170 @@ negative_control!(
     ))
 );
 
-/// The owner's order of 8 Nov 2026, item 2: "moving any physics or validation test into the slow tier comes to me
-/// first". Until he rules, the `pr` profile's slow tier holds only xtask's tests and the in-depth GPU tests (the
-/// `gpu-kernel` profile's binaries, which the owner moved off the pull request's path).
+/// The physics, validation and render tests the owner moved into the `pr` profile's slow tier, his ruling of 9 Nov 2026,
+/// verbatim: "1: move them." (the 34 of PR #457's list, 4,981 s measured), answering R-904's "moving any physics or
+/// validation test into the slow tier comes to me first". No other test outside xtask and the in-depth GPU tests enters
+/// the slow tier without a ruling.
+const APPROVED_SLOW: [(&str, &str); 34] = [
+    ("kernel::gallery_sweep", "gallery_sweep_unit_square"),
+    (
+        "kernel::qa_TASK-M3-03",
+        "qa_nsub_bucket_floor_pairs_match_the_specification",
+    ),
+    (
+        "ledger::derived",
+        "current_drift_property_matches_the_reference",
+    ),
+    (
+        "render::compaction_ramps",
+        "field_either_role_every_form_and_ramp_assembles",
+    ),
+    ("render::debug_views", "debug_views_render_far_from_ties"),
+    ("render::decode_preset", "decode_preset_vs_decode_only"),
+    ("render::embed_survives", "embed_survives_the_list"),
+    (
+        "render::observation_taps",
+        "observation_taps_leave_every_bound_buffer_unchanged",
+    ),
+    (
+        "render::observation_taps",
+        "observation_taps_leave_the_payload_unchanged",
+    ),
+    (
+        "render::prelude",
+        "dbg_helpers_match_the_cpu_mirror_on_the_gpu",
+    ),
+    ("render::prelude", "prelude_luts_colour_space_maps"),
+    (
+        "render::presentation_no_hatch",
+        "presentation_no_hatch_field_ramps",
+    ),
+    (
+        "render::presentation_no_hatch",
+        "presentation_no_hatch_override",
+    ),
+    ("render::qa_TASK-M1-03", "qa_dbg_helpers_cat"),
+    (
+        "render::qa_TASK-M1-03",
+        "qa_prelude_generated_custom_node_compiles",
+    ),
+    (
+        "render::qa_TASK-M1-08",
+        "qa_tool020_each_view_assembles_reading_only_its_field",
+    ),
+    (
+        "render::qa_TASK-M1-15",
+        "qa_m1_15_debug_views_bind_the_payload_read_only",
+    ),
+    ("render::qa_TASK-M2-34", "qa_m2_34_presentation_field_ramps"),
+    (
+        "render::qa_TASK-M2-34",
+        "qa_m2_34_presentation_field_ramps_overridden",
+    ),
+    ("render::qa_TASK-M7-05", "qa_field_either_role_any_field"),
+    ("render::qa_TASK-M7-29", "embed_survives_qa_property"),
+    (
+        "render::qa_TASK-M7-30",
+        "embed_hybrid_rotation_qa_angles_at_1024",
+    ),
+    (
+        "validation::debug_scenes",
+        "debug_scenes_render_their_references",
+    ),
+    (
+        "validation::decode_preset_harness",
+        "decode_preset_harness_probe",
+    ),
+    (
+        "validation::decode_preset_shape_poles",
+        "decode_preset_shape_poles",
+    ),
+    (
+        "validation::expected_message",
+        "control_panicking_in_setup_fails_and_one_reaching_its_check_passes",
+    ),
+    ("validation::golden_scene", "golden_scene_renders_its_twin"),
+    ("validation::oklab_roundtrip_gate", "oklab_gate_fixtures"),
+    (
+        "validation::qa_TASK-M1-13",
+        "qa_structural_views_colour_by_the_cpu_struct",
+    ),
+    (
+        "validation::qa_TASK-M1-14",
+        "qa_m1_14_each_golden_is_its_render_and_can_fail",
+    ),
+    (
+        "validation::qa_TASK-M1-14",
+        "qa_m1_14_each_tile_shows_its_own_sample",
+    ),
+    ("validation::qa_TASK-M1-19", "qa_quad_fields_all_9_shown"),
+    (
+        "validation::qa_TASK-M2-25",
+        "qa_m225_chart_z_is_the_definition",
+    ),
+    (
+        "validation::qa_TASK-M2-25",
+        "qa_m225_decode_off_lattice_and_pole",
+    ),
+];
+
+/// The `pr` profile's slow tier, less xtask's tests and the in-depth GPU tests (the `gpu-kernel` profile's binaries,
+/// which the owner moved off the pull request's path, R-908), is exactly [`APPROVED_SLOW`].
 fn check_slow_tier_held(toml: &str) {
     let gpu_kernel = bare_binaries(&profile(toml, "gpu-kernel").filter);
     let table = timed(&profile(toml, "pr").comments);
-    assert!(
-        !table.is_empty(),
-        "ci_pr_tier: the pr profile names no slow tier"
-    );
-    for (binary, test) in table.keys() {
-        assert!(
-            binary.starts_with("xtask::") || gpu_kernel.contains(binary),
+    let approved: BTreeSet<(String, String)> = APPROVED_SLOW
+        .iter()
+        .map(|(b, t)| (b.to_string(), t.to_string()))
+        .collect();
+    let held: BTreeSet<(String, String)> = table
+        .keys()
+        .filter(|(binary, _)| !binary.starts_with("xtask::") && !gpu_kernel.contains(binary))
+        .cloned()
+        .collect();
+    if let Some((binary, test)) = held.difference(&approved).next() {
+        panic!(
             "ci_pr_tier: the pr profile's slow tier leaves out {binary} {test}, a physics or validation test the owner \
              has not ruled off the pull request"
+        );
+    }
+    if let Some((binary, test)) = approved.difference(&held).next() {
+        panic!(
+            "ci_pr_tier: the pr profile's slow tier lacks {binary} {test}, which the owner moved into it (9 Nov 2026)"
         );
     }
 }
 
 #[test]
-fn ci_pr_tier_slow_tier_holds_no_physics_test() {
+fn ci_pr_tier_slow_tier_holds_only_the_approved_physics_tests() {
     check_slow_tier_held(&read(".config/nextest.toml"));
 }
 
 negative_control!(
-    ci_pr_tier_slow_tier_holds_no_physics_test,
-    "A kernel test put into the pr profile's slow tier fails the check.",
-    expected = "leaves out kernel::gallery_sweep gallery_sweep_unit_square, a physics or validation test",
+    ci_pr_tier_slow_tier_holds_only_the_approved_physics_tests,
+    "A kernel test the owner did not rule on, put into the pr profile's slow tier, fails the check.",
+    expected = "leaves out kernel::monitor monitor_reports_each_failure, a physics or validation test",
     check_slow_tier_held(&edited(
         ".config/nextest.toml",
         "#     689.6 s  xtask::build_kernel build_kernel_runs_in_ci\n",
-        "#     689.6 s  xtask::build_kernel build_kernel_runs_in_ci\n#      64.7 s  kernel::gallery_sweep gallery_sweep_unit_square\n",
+        "#     689.6 s  xtask::build_kernel build_kernel_runs_in_ci\n#      61.0 s  kernel::monitor monitor_reports_each_failure\n",
+    ))
+);
+
+#[test]
+fn ci_pr_tier_slow_tier_keeps_the_approved_physics_tests() {
+    check_slow_tier_held(&read(".config/nextest.toml"));
+}
+
+negative_control!(
+    ci_pr_tier_slow_tier_keeps_the_approved_physics_tests,
+    "One of the 34 the owner moved, dropped from the pr profile's slow tier, fails the check.",
+    expected =
+        "lacks kernel::gallery_sweep gallery_sweep_unit_square, which the owner moved into it",
+    check_slow_tier_held(&edited(
+        ".config/nextest.toml",
+        "#      64.7 s  kernel::gallery_sweep gallery_sweep_unit_square\n",
+        "",
     ))
 );
 
