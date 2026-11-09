@@ -802,9 +802,14 @@ the local job queue, `cargo xtask job` (`xtask/src/jobq.rs`), and waits for it.
   ```
   export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
   "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority fix --label TASK-M2-36 \
-    --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+    --env CARGO_TARGET_DIR=<target> -- cargo nextest run -p kernel --test roundtrip
   "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
   ```
+
+  Tests run as `cargo nextest run`, not `cargo test`, with `cargo test --doc` beside it where doctests would have run,
+  and a task's `cargo test …` acceptance command is run as its nextest equivalent, shown in the PR beside the command
+  it stands for (applied per R-369 and R-812, 9 Nov 2026; `plan/WORKFLOW.md` § "Agents' test runs: cargo nextest",
+  which lists what stays on `cargo test` and the `cargo xtask build-kernel` the built kernel's tests need first).
 
   `submit` prints the job id; `wait` blocks until the job ends, prints how it ended and its log path, and exits with
   the job's status (its exit code; 124 timed out, 125 lost, 126 not started, 130 cancelled). The job doesn't belong to
