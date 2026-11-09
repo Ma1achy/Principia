@@ -27,3 +27,4 @@ A path between two baked ends runs live like a tilt: coarse in motion, refining 
 - The whole frame, integration included, is measured here for the first time: the design measured only a stand-in for the chart side.
 - A faster CPU-only live path is a recorded goal, with no task.
 - Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- *8 Nov 2026 (R-873):* **Build order:** stage 4, through TASK-M8-106, which now depends on every stage-3 task (RQ-744 (A) (a)); R-901: easing is TASK-M8-124's, a property of each path segment, so nothing here adds easing beside it.

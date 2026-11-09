@@ -1,6 +1,7 @@
 # Measurements on the owner's Windows PC, `malachys-pc-rtx2080s`, RTX 2080 SUPER (R-711 item 1, which amends R-186 and
 # R-656 for this one runner): the Vulkan GPU suites, nightly and on `main`; the Windows build and tests, nightly; and
-# a nightly self-check, the only daily re-proof of the setup, since `schedule` fires only from `main`. Every result
+# a nightly self-check, the only daily re-proof of the setup, since `schedule` fires only from `main`; and, dispatched by
+# hand alone, the proof of Windows containment (`win-contain`, below). Every result
 # here is a measurement, never a required check (R-649): the PC is sometimes off, and nothing on `main` waits for it.
 # No job here is gathered, retried or read by any gate, and a red one is not main red; `xtask/tests/ci_self_hosted.rs`
 # fails if that ever stops holding, or if a rule below is broken. DX12 waits for its opt-in (R-711 item 2). No
@@ -83,6 +84,7 @@ on:
           - win-vulkan
           - win-tests
           - win-self-check
+          - win-contain
 
 permissions:
   contents: read
@@ -385,5 +387,66 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: win-self-check-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # The proof of Windows containment (the owner's CI shape order of 8 Nov 2026, step 1):
+  # `.github/scripts/win_contain.ps1 check`, the scenarios of `scripts/contain.sh check` against a Job Object with
+  # kill-on-close, a process limit and REQ-VAL-181's 8 GiB per-process cap. "Containment, memory cap and the 36 h no-run
+  # alert are prerequisites for any job placed on Windows": until this passes here, mutants of `xtask/src/jobq.rs` and
+  # every job that would be placed on Windows stay on GitHub-hosted runners. By `workflow_dispatch` with `only` set to it
+  # alone, never on a push, the schedule or `all`, until the proof has passed (`xtask/tests/win_contain.rs` pins that):
+  # `gh workflow run win-gpu.yml --ref main -f only=win-contain`. The step "Containment check" ends
+  # `win_contain.ps1 check: contained: ...` and exit 0 when every Job Object scenario held. It runs no cargo.
+  win-contain:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'win-contain'
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 30
+    concurrency:
+      group: win-contain
+      cancel-in-progress: false
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: Containment check
+        env:
+          PRIN_CONTAIN: required
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run contain-check powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_contain.ps1 check
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: win-contain-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/win-measure
           retention-days: 90

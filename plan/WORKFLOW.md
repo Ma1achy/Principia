@@ -134,6 +134,56 @@ cargo test --workspace --doc
 until the README of 18 Oct 2026, which has no build instructions; `xtask/tests/nextest.rs` checks this run against CI's
 pinned version.)
 
+### Agents' test runs: cargo nextest
+
+Every agent, and the orchestrator, runs tests locally with `cargo nextest run` in place of `cargo test`, as R-231 and
+CI already do. Applied per R-369 and R-812 on 9 Nov 2026, against a criterion written before measuring (at least 10%
+faster than `cargo test` on the same warm target, by more than the spread between rounds): the test phase took kernel
+151 / 129 s → 85 / 65 s and ledger 84 / 107 s → 74 / 46 s, 37–46% faster, with no result changed. `cargo test` runs a
+crate's test binaries one after another; nextest runs every test of every binary at once, one process per test, as CI.
+- **The same arguments.** `cargo nextest run` takes `cargo test`'s package, target, feature and profile arguments as
+  they are (`-p`, `--workspace`, `--lib`, `--test <name>`, `--features`, `--release`) and its positional name filters
+  (`cargo nextest run -p gui mock_keyboard`). After `--`, libtest's `--exact`, `--skip`, `--ignored` and
+  `--include-ignored` work as they are; `-- --nocapture` becomes `--no-capture`, and `-- --test-threads N` becomes
+  `--test-threads N`. Run it on the default profile, with no `NEXTEST_PROFILE` set (a mutants run's `mutants` profile
+  aside, `plan/OPERATIONS.md` § "Reviewers"); it runs every test, and keeps `.config/nextest.toml`'s overrides that run
+  the tests that run cargo alone.
+- **Doctests.** nextest runs none. Where `cargo test` would have run them (no `--lib`, `--test` or `--bins` selection)
+  and the crate has a library, also run `cargo test --doc` with the same package, features and filter. `prin` has no
+  library, and `--doc` fails on it.
+- **A task's acceptance commands.** A task file's `cargo test …` acceptance command is run as its nextest equivalent,
+  plus its `--doc` run where the line above asks for one. The PR shows the command actually run, with its output,
+  beside the task's command it stands for (`cargo test -p kernel --test roundtrip`, run as `cargo nextest run -p
+  kernel --test roundtrip`). The task files are not rewritten; this rule covers them, and the reviewer checklists'
+  `cargo test` lines alike.
+- **A filter that selects nothing.** nextest fails a run that selects no test (exit 4), where `cargo test` passes with
+  0 tests. Don't pass `--no-tests=pass`: a command that selects nothing tests nothing. Fix the filter; if the task's
+  own command selects nothing, that is an escalation (§ "Escalation").
+- **The built kernel first.** The tests that read the built kernel (the `gpu-kernel` profile's list in
+  `.config/nextest.toml`: engine's and validation's `*_gpu` tests, `decode_cross_backend`, `codegen_selftest`,
+  `bringup`, `toolchain` and the rest) need `cargo xtask build-kernel` run first, through the queue, in the same
+  worktree. It writes `target/spirv/kernel.spv` and `target/spirv/kernel.wgsl` under the worktree's root, whatever
+  `CARGO_TARGET_DIR` is; they are gitignored, so a fresh worktree has neither, and a change under `crates/kernel/`
+  needs it run again. Without them those tests fail with "target/spirv/kernel.wgsl: run `cargo xtask build-kernel`
+  first".
+- **What stays on `cargo test`:**
+  - doctests, `cargo test --doc` (above);
+  - the stand-in soak (`stand-in-soak.yml`, REQ-SYS-070): its 50 runs of `cargo test -p xtask --test <name>` test the
+    fork/exec race among one binary's tests run as threads of one process, which nextest's process per test would
+    remove (`xtask/tests/nextest.rs`, `LIBTEST_SOAK`); a local repeat of it runs the workflow's own command;
+  - the `cargo test` that tools and tests run themselves, as a child: `cargo xtask controls`, which keeps its own cargo
+    invocations (R-231); the test listings `cargo test <args> -- --list` (`xtask/tests/nextest.rs`'s no-test-dropped
+    check, `gate.yml`'s listing, REQ-SYS-079); and the tests that run `cargo test` as their subject (validation's
+    `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26`, and xtask's `ci_debug_info`, among them). An agent runs
+    those tests themselves under nextest, as CI does; what they spawn is not rewritten.
+
+  The tests that re-run their own binary by name with libtest's arguments (`current_exe()` with `--exact` and
+  `--test-threads 1`: `xtask/tests/lint_no_alloc.rs`, `lint_wgsl_rules.rs`, `lint_compute_pipelines.rs` and
+  `qa_ops_golden_harness_ci.rs`; `crates/render/tests/pipeline_teardown.rs` and `qa_TASK-M2-42.rs`;
+  `crates/validation/tests/qa_TASK-M0-33_type.rs`, `qa_TASK-M0-48.rs` and `support/scratch_guard.rs`;
+  `crates/prin/tests/qa_TASK-M0-18.rs`), and those that took in-process locks under `cargo test` (`WORKSPACE_TARGET`,
+  `WORKSPACE_RUN`), run under nextest as they do in CI, so they are not on this list.
+
 ## The review loop
 
 1. **The implementer** opens the PR once the task's acceptance tests pass locally and it has run `cargo mutants

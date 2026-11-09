@@ -374,16 +374,17 @@ its branch at once. So if a stack is ever needed, per PR n: `gh pr edit n+1 --ba
 `gh pr reopen`, then `gh pr edit --base main`.
 
 **Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it.
-The owner's CI model (his order of 8 Nov 2026: "PR required checks become: build, fmt, Clippy, the product test suite, a
-lavapipe GPU smoke set, reviews") makes them `fmt`, `clippy`, `build`, `ci`, `gpu-lavapipe`, `gpu-metal`, `pr-check`
-and `reviews-complete`, which `plan/HUMAN_SETUP.md` §2 lists and `xtask/tests/ci_changes.rs` checks every required
-check against on every path; the owner switches branch protection to them himself, from the copyable list, old to
-new, the orchestrator gives him when the PR-tier restructure lands. *Was:* `ci`, `pr-check`, `reviews-complete`,
-`xtask-ci`, `gpu-kernel`, `gpu-metal`, `gpu-lavapipe` and `mutants-check`. The history kept: the human removed
+The owner's CI model (R-908 and R-909; his order of 8 Nov 2026: "PR required checks become: build, fmt, Clippy, the
+product test suite, a lavapipe GPU smoke set, reviews") makes them `fmt`, `clippy`, `build`, `ci`, `gpu-lavapipe`,
+`gpu-metal`, `pr-check` and `reviews-complete`, which `plan/HUMAN_SETUP.md` §2 lists and `xtask/tests/ci_changes.rs`
+checks every required check against on every path; the owner switches branch protection to them himself, from the
+copyable list, old to new, the orchestrator gives him when the PR-tier restructure lands (R-909). *Was:* `ci`,
+`pr-check`, `reviews-complete`, `xtask-ci`, `gpu-kernel`, `gpu-metal`, `gpu-lavapipe` and `mutants-check`, which
+`mutants-check`, `xtask-ci` and the full-tier GPU jobs leave (R-907 to R-909). The history kept: the human removed
 `gpu-kernel` from the required checks until #96 (TASK-M0-14) merged, since PRs off `main` never reported it, and
 required it again since; he removed `mutants-check` on 3 Nov 2026 (R-678), "because it was hanging merges", and
 required it again once R-678's fix had reported on a real pull request; R-305 allowed the orchestrator one settings
-change, adding `mutants-check`, which lapses with it.
+change, adding `mutants-check`, which lapses with it (R-907).
 
 **What CI runs on a pull request: the PR tier (the owner's CI model, approved 9 Nov 2026; his order of 8 Nov 2026:
 "PR feedback in under 30 minutes … Product correctness is what CI protects: physics, numerics, output, GUI behaviour.
@@ -769,9 +770,14 @@ the local job queue, `cargo xtask job` (`xtask/src/jobq.rs`), and waits for it.
   ```
   export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
   "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority fix --label TASK-M2-36 \
-    --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+    --env CARGO_TARGET_DIR=<target> -- cargo nextest run -p kernel --test roundtrip
   "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
   ```
+
+  Tests run as `cargo nextest run`, not `cargo test`, with `cargo test --doc` beside it where doctests would have run,
+  and a task's `cargo test …` acceptance command is run as its nextest equivalent, shown in the PR beside the command
+  it stands for (applied per R-369 and R-812, 9 Nov 2026; `plan/WORKFLOW.md` § "Agents' test runs: cargo nextest",
+  which lists what stays on `cargo test` and the `cargo xtask build-kernel` the built kernel's tests need first).
 
   `submit` prints the job id; `wait` blocks until the job ends, prints how it ended and its log path, and exits with
   the job's status (its exit code; 124 timed out, 125 lost, 126 not started, 130 cancelled). The job doesn't belong to
@@ -966,6 +972,17 @@ The owner's ruling of 8 Nov 2026 on what R-711's runner, `malachys-pc-rtx2080s`,
     hosted job; TASK-M0-57 builds it, TASK-M0-58 the runner's DX12 run);
   - gpu-idle, the read-only GPU sample taken while nobody is signed in to the PC, dispatched from the Mac;
   - the weekly proof, `runner-proof.yml`;
+  - the containment proof, `win-gpu.yml`'s `win-contain` job (the owner's CI shape order of 8 Nov 2026, step 1): by
+    `workflow_dispatch` naming it alone, never on a push, the schedule or `all`, until it has passed. It runs
+    `.github/scripts/win_contain.ps1 check`, Windows' counterpart of `scripts/contain.sh check`: a Job Object with
+    kill-on-close, a process limit (1024, applied per R-369) and REQ-VAL-181's 8 GiB per-process commit cap, each
+    scenario against a live process outside. Trigger it with
+    `gh workflow run win-gpu.yml --ref main -f only=win-contain`; the step "Containment check" ends
+    `win_contain.ps1 check: contained: ...` and exits 0 when every Job Object scenario held, exit 125 naming the one
+    that didn't otherwise, and its artifact keeps the output. Two of
+    `contain.sh check`'s assertions have no Job Object equivalent: the outside process unseen, and out of reach of a
+    kill by pid; the check reports them as gaps (RQ-751). Until the proof has passed and RQ-751 is ruled, mutants of
+    `xtask/src/jobq.rs` and every job that would be placed on Windows stay on GitHub-hosted runners;
   - the heavy-work comparison: the GPU suites and one GPU-heavy mutant shard on a task branch, against hosted runners
     (TASK-M0-56).
   TASK-M0-55 builds the measurements on `main`. The list is not exhaustive (R-860): `win-gpu.yml`'s nightly

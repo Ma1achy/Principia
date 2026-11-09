@@ -1,8 +1,8 @@
 # TASK-M8-106 — The path type, the line on blocks, and export through CPU batch
 
 - **Milestone:** M8
-- **Closes:** REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133
-- **Depends on:** TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31
+- **Closes:** REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133
+- **Depends on:** TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31, TASK-M8-103, TASK-M8-104, TASK-M8-112, TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-126, TASK-M7-72
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -30,7 +30,6 @@ Every arm of the path type, with tilt and zoom calling their own code, a frame r
 
 ## Acceptance tests
 - Physics reviewer: the metric on the blended state in the chart reference (REQ-CHART-124).
-- `cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip` — each against the direct operation (REQ-CHART-113).
 - `cargo test -p engine -- path_gram_flags path_blank_ends path_hold_table path_small_step path_links_cut` — each row and its control, path_small_step's fixture of planes δ = 10⁻¹⁰ apart with `arccos` as its control (REQ-CHART-114).
 - `cargo test -p engine path_lower_half_stays` — two views wholly in the open lower hemisphere, whose ends differ at the chart layer, so the arm function returns `Path::Line`, asserted first, keep `n₂ < 0` at every pixel of every frame, ends included; the other arms assert only signed, no mirror taken (R-544, the owner's rider to RQ-736); mutation: `canon::canonicalise` for the signed form; control: a literal `z` blend (REQ-CHART-133).
 - `cargo test -p engine path_retime` — spread at most 1.25, pinned ends; control: the table off (REQ-CHART-116).
@@ -39,3 +38,4 @@ Every arm of the path type, with tilt and zoom calling their own code, a frame r
 - **Build order (R-863):** it straddles stages 1, 2 and 4: its path type and bitwise tests are stage 1's, now TASK-M8-124's too; its line on blocks is the morph stage 2 bases or one of stage 4's families; its re-timing, alignment and export are stage 4's. No stage edge is made; RQ-744 (B) holds the choice.
 - If path_tilt_bitwise or path_zoom_bitwise can't pass through the path type, the generalisation isn't adopted: stop and report (the owner's rule).
 - Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- *8 Nov 2026 (R-873, R-899):* **Split (RQ-744 (B) (a)).** REQ-CHART-113's stage-1 tests move to TASK-M8-124; the line on blocks is built by TASK-M8-117 as the locked path's carrier (the brief's Q9 (a), R-899); this task keeps re-timing, alignment and export through CPU batch, stage 4, and depends on every stage-3 task. *Was (acceptance):* "`cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip` — each against the direct operation (REQ-CHART-113)." *Was:* "- **Closes:** REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133"; "- **Depends on:** TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31"
