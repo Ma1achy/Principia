@@ -14,7 +14,7 @@
 //! - `runner [<dir>]` is the runner itself, started by `submit` (and by `wait`, should the runner have died), with the
 //!   state directory as its argument so that `ps` shows which queue it serves.
 //!
-//! Priorities, highest first: `merge` (merge-ready verification of a final head), `fix` (fix-round tests), `build`
+//! Priorities, highest first: `merge` (the verification of a final head), `fix` (fix-round tests), `build`
 //! (new-task builds), `peek` (exploratory runs); first in, first out within a class.
 //!
 //! The state lives under `<root>`, `$PRINCIPIA_JOBQ` or [`DEFAULT_ROOT`], outside the repository: `jobs/<id>.json`, one

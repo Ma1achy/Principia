@@ -138,16 +138,19 @@ pinned version.)
 
 1. **The implementer** opens the PR once the task's acceptance tests pass locally and it has run `cargo mutants
    --in-diff` on its own diff against `origin/main` and tested the boundary of every comparison and match arm it adds
-   (R-388; `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item). CI's mutants gate stays the authority.
+   (R-388; `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item). Since the owner's CI model (9 Nov 2026) no
+   pull-request run mutates, so that local run is the pull request's mutation check. *Was:* "CI's mutants gate stays
+   the authority."
 2. **Every reviewer named in the task** (`plan/reviewers/<name>.md`) reviews against their checklist and the task's
    References. The reviewers are agents (R-175): each posts a PR review headed `VERDICT: APPROVE <role>` or
    `VERDICT: CHANGES <role>`, since GitHub won't let one account approve its own PR. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
    Reviewers never share a checkout: each gets its own git worktree at the PR head and its own `CARGO_TARGET_DIR`,
    which the orchestrator makes before dispatch and removes afterwards (R-219).
    A reviewer runs the acceptance commands and the tests the diff touches plus their dependents, and checks CI is green
-   on the head for the full suite; a full local run is only for a cross-cutting change (R-229). Before `merge-ready`, a
-   code head's green is the quick tier's, the full-only checks pending; the full suite then runs on the approved head
-   (R-684; `plan/OPERATIONS.md` § "What CI runs on a pull request").
+   on the head; a full local run is only for a cross-cutting change (R-229). A head's green is the PR tier's
+   (`plan/OPERATIONS.md` § "What CI runs on a pull request: the PR tier"); the full suite runs on each merge to `main`.
+   *Was (R-684):* "Before `merge-ready`, a code head's green is the quick tier's, the full-only checks pending; the
+   full suite then runs on the approved head."
 3. **Findings cite file and line** — of the diff, or of the doc section a finding rests on (`file` § "section"). A
    finding without a citation isn't actionable and is returned to its author.
 4. **The implementer fixes** each finding and replies on the finding with the fixing commit.
