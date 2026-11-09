@@ -1064,7 +1064,7 @@
 - id: TASK-M2-57
   milestone: M2
   title: "The decoder's mirror step removed, latent β over the full circle, under the owner's bitwise check (R-865) ⚑"
-  depends_on: [TASK-M2-40]
+  depends_on: [TASK-M2-40, TASK-M2-65]  # R-916 (stage 3), applied with R-919
   needs: []
   requirements: [REQ-DEC-055, REQ-DEC-056]
   reviewers: [code, qa, physics]  # ⚑ physics review required: it changes the decoder
