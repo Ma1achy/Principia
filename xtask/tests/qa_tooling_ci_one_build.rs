@@ -26,6 +26,8 @@ use xtask::controls::IN_CI_WORKSPACE;
 
 const M0_24_FILTER: &str = "binary_id(=validation::qa_TASK-M0-24)";
 const DOCS_ONLY_SKIP: &str = "needs.changes.outputs.docs_only != 'true'";
+/// The full tier's jobs' own condition since the owner's CI model (9 Nov 2026): each merge to `main`, no pull request.
+const PER_MERGE: &str = "github.event_name != 'pull_request'";
 /// A test step's skip on a full attempt that adds to the quick tier (the owner, 7 Nov 2026): a docs or data head, or
 /// an earlier attempt of the run that passed `ci-quick` over every crate.
 const COMPOSED_SKIP: &str =
@@ -192,10 +194,12 @@ negative_control!(
 /// Each control the shards leave is in one step of `ci`, in `ci-workspace`, built with the feature it compiles under,
 /// under the profile that selects its binary, and runs on exactly the heads the shards run on.
 fn check_left_controls_run_once(ci: &str) {
+    // The owner's CI model (9 Nov 2026) runs the shards and `ci-workspace` on each merge to `main`, off the pull
+    // request's path, the steps unconditional within (R-290's exception, applied per R-369 by the orchestrator).
     let shards = job_lines(ci, "xtask-ci");
     assert_eq!(
         job_condition(&shards),
-        DOCS_ONLY_SKIP,
+        PER_MERGE,
         "the shards' own condition changed"
     );
     for control in IN_CI_WORKSPACE {
@@ -212,9 +216,8 @@ fn check_left_controls_run_once(ci: &str) {
         let (job, condition, step) = &found[0];
         assert_eq!(job, "ci-workspace", "`{control}` runs in `{job}`");
         assert!(
-            // R-684: the job skips on a quick run, as the shards do, and its `ci-quick` runs the rest.
-            *condition == "needs.changes.outputs.quick != 'true'"
-                && step.condition == DOCS_ONLY_SKIP,
+            // The job runs on the shards' heads, every push to `main`, and the step on every run of the job.
+            *condition == job_condition(&shards) && step.condition.is_empty(),
             "`{control}` runs on other heads than the shards that left it: `{}`",
             step.condition
         );
@@ -247,8 +250,8 @@ negative_control!(
     "the controls' step skipped on a head the shards run on",
     expected = "runs on other heads than the shards that left it",
     check_left_controls_run_once(&workflow("ci").replace(
-        "      - name: cargo nextest run --features controls (the default-feature listing's controls)\n        if: needs.changes.outputs.docs_only != 'true'",
-        "      - name: cargo nextest run --features controls (the default-feature listing's controls)\n        if: needs.changes.outputs.gpu == 'true'",
+        "      - name: cargo nextest run --features controls (the default-feature listing's controls)\n",
+        "      - name: cargo nextest run --features controls (the default-feature listing's controls)\n        if: github.ref == 'refs/heads/main'\n",
     ))
 );
 
@@ -265,7 +268,8 @@ fn check_ci_workspace_is_measured(ci: &str) {
     let nextest: Vec<usize> = (0..steps.len())
         .filter(|&at| {
             steps[at].run.starts_with("cargo nextest run")
-                && [DOCS_ONLY_SKIP, COMPOSED_SKIP].contains(&steps[at].condition.as_str())
+                // Unconditional since the owner's CI model (9 Nov 2026): the job runs only on `main`'s pushes.
+                && ["", DOCS_ONLY_SKIP, COMPOSED_SKIP].contains(&steps[at].condition.as_str())
         })
         .collect();
     assert!(
