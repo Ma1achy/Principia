@@ -988,7 +988,9 @@ D is not a product of two ranges. Three ways to draw it:
   apex a ray-degenerate edge.
 
 **Recommended (a), as a preset of the third-body pair**, whose own axes are `ξ` bounded and `η` bounded. The lowering
-appendix's "region D bounds" uniform is the mask. **Door** RQ-714.
+appendix's "region D bounds" uniform is the mask. **Door** RQ-714. *Superseded by R-871 (record correction, 9 Nov
+2026, applied per R-369):* no region-D mask uniform is built; the full disc is rendered unmasked, and the appendix's
+Anosova row, region D's pair, is lowered by TASK-M4-34 (R-914, REQ-CHART-165). The sentence before is kept as a *Was*.
 
 **The owner's filter order overtakes this for the presets (RQ-736):** "region D presets render the full disc, with the filter on by default for the paper-frame presets only." So the preset is (b) with the filter of § 10.4, and D is its output; the decode must reach `η < 0` and `ξ < 0` signed. What "the full disc" is, and so the preset's axes, is a choice on RQ-736's list, not made here: the lens `(|ξ| + ½)² + η² ≤ 1` of D's four images with the box's corners masked, the box `ξ ∈ [−½, ½]`, `η ∈ [−√3/2, √3/2]` drawn whole, or any window holding the lens with all three swaps declared, which filters to exactly D (§ 10.4). What TASK-M4-34's preset does before TASK-M8-120 exists is on that list too. *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*
 

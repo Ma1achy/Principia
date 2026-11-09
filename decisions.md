@@ -34890,7 +34890,8 @@ R-913 is in the "process" group of `plan/rule_groups.yaml`. It changes no requir
 `docs/archive/review_queue/M0.md`, R-871's forward line, `docs/design/principia_chart_composition.md` (§§ 8.4, 8.5, 8.7,
 8.8, 12 and 15), `docs/design/principia_colour_composition.md` (§ 3), REQ-RENDER-082, REQ-RENDER-123, REQ-CHART-037,
 REQ-CHART-165 and REQ-CHART-100 (reqio), `plan/tasks.yaml`, TASK-M4-06, TASK-M4-34, TASK-M4-37 and
-`plan/rule_groups.yaml`; changes REQ-RENDER-082, REQ-CHART-037 and REQ-CHART-100, adds REQ-RENDER-123 and REQ-CHART-165*
+`plan/rule_groups.yaml`, with a record correction under R-871 in `docs/contracts/principia_lowering_contract.md`'s
+appendix; changes REQ-RENDER-082, REQ-CHART-037 and REQ-CHART-100, adds REQ-RENDER-123 and REQ-CHART-165*
 
 RQ-752, from Codex's finding on PR #455: TASK-M8-117 (stage 2) waits on TASK-M8-124 (stage 1), which waits on
 TASK-M8-48 (R-873 (E) (i)), on TASK-M8-18, on TASK-M4-17, on TASK-M4-06; R-871's edge would have TASK-M4-06 wait on
@@ -34921,6 +34922,10 @@ TASK-M4-34, which R-873 (A) (b) releases only after stage 2 has merged. The owne
   have nothing correct to lower. So REQ-CHART-037's Anosova clause becomes REQ-CHART-165, closed by TASK-M4-34 through
   its `region_d_variant`, with no mask and no fold to `(ξ, −η)`; REQ-CHART-037 keeps the other eight rows, and
   REQ-CHART-100 stands.
+- **A record correction under R-871 (code review 5829649251 of this ruling's PR):** the lowering contract's appendix
+  listed "region D bounds" as the Anosova row's extra uniform, and `principia_chart_composition.md` § 8.4 called that
+  uniform the mask, against R-871's "No mask is built". Both are annotated as superseded by R-871: no region-D mask
+  uniform, the full disc unmasked, the row lowered by TASK-M4-34; the old text is kept as a *Was*.
 - **TASK-M4-34 gains TASK-M4-06 in Depends on:** it renders the reference through TASK-M4-06's variant table and its
   DECODE-preset golden harness. That closes no cycle, since TASK-M4-06 no longer reaches TASK-M4-34, and holds nothing
   R-873's dispatch doesn't already hold: stage 3 follows stage 2, which follows TASK-M4-06.
