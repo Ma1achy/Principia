@@ -264,7 +264,7 @@ the scope is stated in render contract Part 5 and R-652, applied per R-369, and 
   RQ-687: defer:M4
   RQ-696: (c).").
 - **Deferred:** deferred to M8 by owner 8 Nov 2026 (R-882, the owner: "RQ-679: defer:M8").
-- **9 Nov 2026 (R-919, F14):** the physics reviewer's proposal (R-919, F14), for the owner to confirm on PR #PRNUM. R-919 brings this entry forward from M8 (R-882's deferral, superseded): tilts into `ν₀`, `L_z` and `K` are in M2, REQ-CHART-188 carries the spans, "per RQ-679, awaiting the owner's confirmation", and the entry stays open until the owner answers. The proposal, verbatim:
+- **9 Nov 2026 (R-919, F14):** the physics reviewer's proposal (R-919, F14), for the owner to confirm on PR #465. R-919 brings this entry forward from M8 (R-882's deferral, superseded): tilts into `ν₀`, `L_z` and `K` are in M2, REQ-CHART-188 carries the spans, "per RQ-679, awaiting the owner's confirmation", and the entry stays open until the owner answers. The proposal, verbatim:
 
   > # RQ-679: the physics reviewer's proposal (9 Nov 2026), for the owner to confirm on the rulings PR
   >
