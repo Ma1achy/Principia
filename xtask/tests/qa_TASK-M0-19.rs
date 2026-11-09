@@ -584,11 +584,16 @@ negative_control!(
     qa_m019_ci_runs_fmt_clippy_and_xtask_ci_on_push,
     "a ci.yml whose clippy allows warnings must fail",
     expected = "ci.yml does not run clippy",
-    check_ci(&edited(
-        "ci.yml",
-        "        run: cargo clippy --workspace --all-targets -- -D warnings",
-        "        run: cargo clippy --workspace --all-targets"
-    ))
+    // Every clippy of ci.yml's: the PR tier's `clippy` and the per-merge `ci-checks` both run it since the owner's CI
+    // model (9 Nov 2026), so the control drops `-D warnings` from each.
+    check_ci(&{
+        let mut files = workflows();
+        let (_, text) = files.iter_mut().find(|(f, _)| f == "ci.yml").unwrap();
+        let from = "cargo clippy --workspace --all-targets -- -D warnings";
+        assert!(text.contains(from), "ci.yml has no {from:?} to edit");
+        *text = text.replace(from, "cargo clippy --workspace --all-targets");
+        files
+    })
 );
 
 /// The sharded `cargo xtask ci` with one slice dropped from the matrix no longer runs all of it.

@@ -150,6 +150,10 @@ z = ( z_α, z_β | z_q0, z_q1, z_q2, z_q3 | z_μ1, z_μ2 ) ∈ ℝ⁸
       config       momentum                 mass
 ```
 
+*[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β` becomes a periodic angle over the full circle, so the latent space
+is `ℝ × S¹ × ℝ⁶`, `z_β` on the circle, not `ℝ⁸`; every stored latent view, saved chart and golden is converted once.
+This section stands as written until TASK-M2-57 merges, which rewrites it.]*
+
 **No latent coordinate is spent on gauge.** Rotation and scale are fixed by the canonical-frame
 decode, which is why the chart is 8D and not 10D.
 
@@ -197,6 +201,10 @@ offered with the others (R-513). A latent view saved at a tilt offers as its tar
 its first parent's axes, each projected off the saved plane and normalised, the vanishing ones dropped; both tilt maps
 act in the orthonormal frame `(q̂₁, q̂₂⊥, t̂)` that Gram–Schmidt makes of the stored pair and the target, and carry the
 stored pair itself, so it is kept and the view reopens bitwise (R-514).
+*Ruled 8 Nov 2026 (R-895, RQ-746 (a)):* where the saved tilt is Lean each axis with one target and both angles set, its
+axes skewed, `R`'s third input is the saved plane's unit normal, `t̂ = û₁ × û₂` normalised, its sign toward `+e_X`, and
+the composition is R-513's `R·R′` literally, not a rotation (the cross product's own sign at Lean's edge, no frame at
+`|τ₁| = |τ₂| = 90°`). TASK-M2-56 builds it; until it merges the kernel refuses that one case.
 
 ### 1.2 Geometry + momentum in a fundamental domain
 
@@ -947,8 +955,20 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   output reports the clamped-pixel share. There is no mirror.
 - **Linear mode, the option per axis (R-471 E2).** Rows keep fixed physical values, a held coordinate tilts by value,
   and a cell with no construction there (`K < L_z²/2I`) is no system, area weight 0, blank (R-470).
+- **The f32 band at the floor (R-876, 8 Nov 2026, RQ-740).** "Every pixel is a system" allows an f32 chart (`HeldLz`,
+  `HeldK` and the Burrau charts R-708 covers) to refuse a pixel inside the band one float wide at the warp's floor, where
+  f32 rounding, not the chart, decides: such a refusal is labelled as rounding, never drawn as the chart's edge, and no
+  pixel that isn't a system is ever accepted. The edge walk is repeated on the GPU when the shader decodes these charts
+  (TASK-M4-06). What "one float wide" is measured in, and the band's width in it, is a definition TASK-M4-06 writes
+  here under physics review (R-72); a width that is a number rather than a derivation is a calibration (R-71)
+  (REQ-CHART-152).
 
 Built by TASK-M2-52 on TASK-M2-36's tilt path, the linear option on TASK-M2-37's.
+
+*Ruled 8 Nov 2026 (R-875, RQ-745 (b)):* the three acute-angle charts are re-expressed over the full acute range, both
+labellings of each shape shown, the leg swap shown once only by the symmetry filter (R-855); R-27's "shape only" fold
+charts give way. TASK-M8-127 builds it once the filter (TASK-M8-120) exists; until it merges they stand as built, and
+REQ-CHART-045's range comes back to the owner at the M2 gate.
 
 ### 4.6 The central hypothesis
 

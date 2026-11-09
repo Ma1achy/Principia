@@ -38,6 +38,23 @@ point, TASK-M8-117's (§ 17.8). R-868: the model's wording follows R-474, and th
 repo's; RQ-738 stays open on the rest of its list. R-869: the owner's direction on RQ-745, which stays open. R-870: points
 of interest, § 10.5, built by TASK-M8-126.
 
+**The owner's reply of 8 Nov 2026 to that day's rulings report, and their messages of the same day.** Where the body
+still reads as Proposed, these rule, and TASK-M4-37 carries each into the body as it does the 7 Nov rulings. RQ-714's
+outside, (b) with RQ-738's conflict 3 read as its (c), the full disc rendered literally, every mirror and body swap
+declared, the filter giving exactly D with no mask, R-871 (§ 8.4); RQ-716's 2 s, the Mac's, #427 setting any Vulkan and
+Windows budget, R-872 (§ 11); RQ-744, the stages' leftovers placed, R-873 (§ 15); RQ-739, closed, the full count the
+default and "mirror pairs counted once" an optional statistic, off by default, R-874 (§ 6.4, § 6.6); RQ-745 (b), the
+acute-angle Burrau charts unfolded through the filter, R-875; RQ-740, a refusal in the f32 band labelled as rounding,
+R-876; RQ-741 (a), the virial axis labelled `Q` at `Q₀ > 0`, R-877 (§ 9); RQ-738's conflicts settled by their readings
+held, its model items 2 to 11 the owner's, R-878; RQ-734, final-condition charts built after the M8 charts by
+TASK-M8-128, the rejection of § 3.1 narrowed to trajectory functionals and event reads, R-879 (§ 3.1, § 10.3); RQ-729 (a),
+R-884 (§ 20); RQ-711, the saved view reading 1×, R-888; RQ-735 (b), a WASM CPU route, R-889 (§ 7.5); RQ-731 and RQ-732,
+the record corrections, R-891 and R-892. On the chart-path work (§ 17): the consolidation step between stages 1 and 2,
+TASK-M8-129, R-894; RQ-746 (a), R-895; RQ-747 (a), the tilt angles stored beside `tilt_map`, R-896; RQ-749 (a), stage 2's
+test at the pin, R-897 (§ 17.8); RQ-750 (a) + (c), a periodic latent `β`, R-898; the brief's nine questions, R-899
+(§ 17.8); stage 2's saved-file rewrite as RQ-750, R-900; easing per path segment, R-901 (§ 17.9); the lock as the path's,
+the mid-morph tilt and stage 2's gate test, R-902 (§ 17.5, § 17.8). Open: none of § 14's items; RQ-738's model items.
+
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
 refusals are genuine contradictions, each with a named reason. Reduced capability is a label, not a refusal.
@@ -971,9 +988,19 @@ D is not a product of two ranges. Three ways to draw it:
   apex a ray-degenerate edge.
 
 **Recommended (a), as a preset of the third-body pair**, whose own axes are `ξ` bounded and `η` bounded. The lowering
-appendix's "region D bounds" uniform is the mask. **Door** RQ-714.
+appendix's "region D bounds" uniform is the mask. **Door** RQ-714. *Superseded by R-871 (record correction, 9 Nov
+2026, applied per R-369):* no region-D mask uniform is built; the full disc is rendered unmasked, and the appendix's
+Anosova row, region D's pair, is lowered by TASK-M4-34 (R-914, REQ-CHART-165). The sentence before is kept as a *Was*.
 
 **The owner's filter order overtakes this for the presets (RQ-736):** "region D presets render the full disc, with the filter on by default for the paper-frame presets only." So the preset is (b) with the filter of § 10.4, and D is its output; the decode must reach `η < 0` and `ξ < 0` signed. What "the full disc" is, and so the preset's axes, is a choice on RQ-736's list, not made here: the lens `(|ξ| + ½)² + η² ≤ 1` of D's four images with the box's corners masked, the box `ξ ∈ [−½, ½]`, `η ∈ [−√3/2, √3/2]` drawn whole, or any window holding the lens with all three swaps declared, which filters to exactly D (§ 10.4). What TASK-M4-34's preset does before TASK-M8-120 exists is on that list too. *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*
+
+**Ruled 8 Nov 2026 (R-871, R-878):** (b), with "the full disc" read as the third reading above, "any window holding the
+lens with all three swaps declared, which filters to exactly D": no mask is built, in M4 or later, and R-554's exception
+is not extended. The filter is on by default for the paper-frame presets only (R-855), and its check is the owner's: at
+equal masses and rest, the filtered area is 0.307, D's own (TASK-M8-120). Until TASK-M8-120 lands, TASK-M4-34's preset
+renders that window with D as a contour, and TASK-M4-06's golden reads `in_region_d` (RQ-738 conflict 8's reading held).
+*Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* that GPU reference, the golden that reads region D, is TASK-M4-34's own, not
+TASK-M4-06's; TASK-M4-34 can't close until it reads region D as R-871 requires, and TASK-M4-06 gains no edge to it.
 
 A mask has a cost the ruling must meet: contract Part 3 says "**Inside `[0,1]²` every gallery chart is valid by
 construction** … so a pixel hatched there is a decoder bug", and REQ-CHART-058 sweeps for it. R-554 made the same exception
@@ -993,7 +1020,7 @@ The "Anosova entry" of the replication rows is three things. Point import exists
 |---|---|---|
 | **Points**: a published start through the import | yes, TASK-M2-20 | LL-1, LL-2, LL-3 (TASK-M9-06, -07), TM-1 (-09), AA-6 (-10), AA-2, AA-3, AA-5, AA-7, AN-1 (-19), BR-1 (-22) |
 | **Samples**: many points in D, drawn, or a small grid of f64 starts through the import; no GPU run (R-671) | the membership test, `in_region_d`; the import | Q-1 (-18), Q-2, L-3, L-4, L-5 (-20), V-9, MT-1 (-21), GG-1's 1/64 grid (-22) |
-| **The plane**: a pixel grid over D, run on the GPU | **no** | L-1 (-26), L-2 (-31), TS-1, V-1/3/7 (-28), and TASK-M4-06's golden (REQ-RENDER-082) |
+| **The plane**: a pixel grid over D, run on the GPU | **no** | L-1 (-26), L-2 (-31), TS-1, V-1/3/7 (-28), and TASK-M4-34's region-D golden (REQ-RENDER-123, R-914; *was* TASK-M4-06's, REQ-RENDER-082) |
 
 Velocities: exact rest for AA-6 and every free-fall map; eq. 3 for AA-2 and AA-7, and AA-3 and AA-5 read paper I, whose runs
 are eq. 3's, though their rows do not say so (flagged for RQ-714). Masses: equal, but AN-1 and the LL unequal sets at a mass
@@ -1032,6 +1059,15 @@ is Proposed** (applied per R-369): TASK-M4-06's golden (REQ-RENDER-082) needs RQ
 Deliverables, to apply when RQ-714 rules, and it would then hold 230 tasks until TASK-M4-34 merges (§ 15). The plane targets of § 8.5 then reach
 TASK-M4-34 through TASK-M4-06 and need no edge of their own; the samples need none. It is not "built ahead of" a target (R-594 item 5): its first
 customer would be M4's own golden.
+
+*Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* the edge is dropped and never applied. With it, TASK-M4-06 would have waited on
+TASK-M4-34, which R-873 releases in stage 3, after stage 2, while stage 2 waits, through TASK-M8-124, TASK-M8-48,
+TASK-M8-18 and TASK-M4-17, on TASK-M4-06: a cycle. The GPU reference that reads region D, the DECODE-preset golden of
+the Anosova physical-frame chart (REQ-RENDER-123), is TASK-M4-34's, which depends on TASK-M4-06 and can't close until
+that reference reads region D as R-871 requires. The appendix's Anosova physical-frame row is this pair, so its
+lowering is TASK-M4-34's too, through `region_d_variant`, unmasked and never folded to `(ξ, −η)` (REQ-CHART-165).
+TASK-M4-06 and the tasks behind it wait on no task of this design.
+The plane targets reach TASK-M4-34 through TASK-M8-112, by R-884's edges.
 
 ### 8.8 Region D must match the papers (order item A5)
 
@@ -1104,7 +1140,7 @@ positions, against the decoded state's, and eq. 4's energy on AA rows. Controls:
 | TS-2 | `D₁₁ ∪ D₁₂` at fixed `k` | **not built** (R-669) | the frame's map only |
 | H-3 | `(Δx, √3 + Δy)` at side 2 | Lagrange apex offset, no D mask | Table III's rows, f64 |
 | PA-1 | `(S₁/S₂, S₁/S₃)` | Parischewsky, through R-798's remap until RQ-713 is ruled | `(0.8498…, 0.7211…) → (0.1, 0.6)` |
-| TASK-M4-06's golden | a grid over D | Agekyan–Anosova | its grid |
+| TASK-M4-34's region-D golden (R-914; *was* TASK-M4-06's) | a grid over D | Agekyan–Anosova | its grid |
 
 ---
 
@@ -1450,7 +1486,7 @@ Each with a control (R-176), named here and owned by a task.
 | `seam_refinement_masked` | a flagged footprint doesn't fire `unresolved`, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes `Seam`, a mixed quad included, with `n_seam` counted, and its `coherence` doesn't raise its priority; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart of today's registry bitwise today's | the mask removed: quads split along the seam at every depth; the mask applied to an unflagged footprint; `Keep` taken for `Seam`; `Seam` taken only when every footprint is flagged | TASK-M8-102 |
 | `statistic_measure` | a statistic over a warped chart is weighted into a named measure or labelled `per pixel of this chart`; a fixture of known fraction recovered through a power warp; a fraction in a paper's own measure equals the flat grid in the paper's coordinates | no weight and no label; the weight inverted; a count of quadtree leaves fed in | TASK-M8-100 |
 | `ftle_chart_independent` | a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one `λ_T` bit for bit, read on copy 0 (§ 6.5) | `δ₀`'s direction taken from a chart tangent, which only the third chart can catch: a warp rescales the tangent and keeps its direction | TASK-M8-100 |
-| Golden | `cargo xtask golden decode-preset`: region D through the DECODE preset, TASK-M4-06's acceptance, unchanged | as that task's | TASK-M4-06 |
+| Golden | `cargo xtask golden decode-preset`: region D through the DECODE preset, TASK-M4-34's acceptance (R-914; *was* TASK-M4-06's), unchanged | as that task's | TASK-M4-34 |
 
 The test names `round_trip_complete` to `ftle_chart_independent`, `trajectory_polar_unfolded`, the `symmetry_filter_` tests and `path_lower_half_stays` (§ 17.14) are this design's proposals; the two the order asks for are the owner's.
 
@@ -1580,7 +1616,7 @@ Nothing below is decided here.
 
 **Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 26 tasks below, and each names the rulings item it waits on, or the design as a whole; R-847's TASK-M8-122 and TASK-M8-123 wait on it too. Only those 28 tasks wait behind it; no other existing task, in M4 or M9, does.
 
-Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold `L_z` or the virial pair, so those two sit in M8. **One edge is named, not made:** TASK-M4-06's golden needs RQ-714's domain, so TASK-M4-06 gains TASK-M4-34 in Depends on when RQ-714 rules, TASK-M4-37's Deliverables say so, and from then until TASK-M4-34 merges it holds 230 tasks: TASK-M4-06 and the 217 other existing open tasks behind it, and 12 of the tasks below. The seven M9 edges an earlier draft made are dropped: TASK-M9-18, -20, -21 and -22 have no GPU run (R-671), and -26, -28 and -31 reach TASK-M4-06 through TASK-M4-17.
+Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold `L_z` or the virial pair, so those two sit in M8. **One edge is named, not made:** TASK-M4-06's golden needs RQ-714's domain, so TASK-M4-06 gains TASK-M4-34 in Depends on when RQ-714 rules, TASK-M4-37's Deliverables say so, and from then until TASK-M4-34 merges it holds 230 tasks: TASK-M4-06 and the 217 other existing open tasks behind it, and 12 of the tasks below. *Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* the edge is never made, since it closed a cycle through stage 2; region D's GPU reference is TASK-M4-34's, and TASK-M4-34 depends on TASK-M4-06 instead. The seven M9 edges an earlier draft made are dropped: TASK-M9-18, -20, -21 and -22 have no GPU run (R-671), and -26, -28 and -31 reach TASK-M4-06 through TASK-M4-17.
 
 | Task | Milestone | What | Waits |
 |---|---|---|---|
@@ -1633,6 +1669,26 @@ straddle two and the stage-3 edges that would point forward across milestones or
 TASK-M8-125 is in stage 1, after TASK-M8-124's bitwise re-expression, which records today's lock as its baseline, and
 TASK-M8-117 (stage 2) depends on it (applied per R-369, R-866). TASK-M8-126 is in no stage: the owner's stages don't name
 it, and it joins RQ-744 (C)'s list.
+
+*8 Nov 2026, the owner's reply to that day's report (R-873, R-894, R-875, R-879).* RQ-744 is ruled, and this section's
+order now reads: **before stage 1**, TASK-M8-105 (docs first), and, by (E) (i), TASK-M6-49, TASK-M6-51 and TASK-M8-48,
+on which TASK-M8-124 depends; **(1)** TASK-M8-124, then TASK-M8-125; **between (1) and (2)**, TASK-M8-129, the
+consolidation step (R-894); **(2)** TASK-M8-117, which no longer depends on TASK-M8-106 and builds the line on blocks as
+the locked path's carrier (Q9 (a), R-899); **(3)** as above, with TASK-M8-102, TASK-M8-103, TASK-M8-104, TASK-M8-112,
+TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-126 (one task, its across-a-morph test on stage 2's line) and TASK-M7-72
+added, TASK-M4-32 before them; the M4 and M7 tasks of stage 3 are released by dispatch, the milestones kept (A) (b);
+**(4)** TASK-M8-106, now its re-timing, alignment and export only, its stage-1 tests (REQ-CHART-113) moved to
+TASK-M8-124, then TASK-M8-107 and TASK-M8-108; **(5)** as above. Three tasks join, each behind TASK-M4-37 but the first:
+
+| Task | Milestone | What | Waits |
+|---|---|---|---|
+| TASK-M8-127 | M8 | the acute-angle Burrau charts over the full acute range through the filter (R-875) | TASK-M8-120 |
+| TASK-M8-128 | M8 | final-condition charts (R-879, § 10.3) | TASK-M8-102, the M8 charts |
+| TASK-M8-129 | M8 | the consolidation step: one leaf per operation, the GUI routes as adapters, D19 and D23 fixed (R-894) | TASK-M8-124, TASK-M8-125 |
+
+TASK-M8-127 is not given TASK-M4-37 directly: it rebuilds three gallery charts and waits on TASK-M8-120 alone of the
+design's tasks, so it is behind the gate through TASK-M8-120. *Was:* "TASK-M8-127 is outside the design's gate: it
+rebuilds three gallery charts, and waits on TASK-M8-120 alone of the design's tasks."
 
 ---
 
@@ -1809,6 +1865,11 @@ axes and blocks, and a frame has neither; a blend touches every block. Part 5's 
 decoded state (§ 10.2). **Saving a mid frame** gives a frame record, reopened as CPU batch, with no tilt or slice: its chart
 has no hidden coordinate to turn. That is reduced capability, a label.
 
+*Read with R-902 (8 Nov 2026):* a tilt or slice made **mid-morph**, on a live path rather than a saved frame, goes to both
+endpoint charts of the morph, each in its own hidden coordinates and R-474 map, about the pinned state, and the morph
+continues from its parameter between the tilted ends. No hidden coordinate is invented for the blend, so the sentence
+above stands as written.
+
 **R-669.** A frame is never a target's chart and never scored (replication rule 6, R-649). A morph doesn't make a refused
 chart reachable as a chart: each end has to be built, and `excluded_primitives` still holds. It can pass close to a refused
 plane, with the same answer as RQ-718: it is a user's picture, and the row stays "not scored".
@@ -1891,9 +1952,28 @@ this task. What stage 2's test reads once the pin is off the centre, R-863's "th
 section's probe at `(½, ½)` against R-866's pin at the clicked pixel, is not settled by either ruling: RQ-749 asks it, and
 nothing here changes until it is ruled.
 
+**The owner's reply of 8 Nov 2026 on the lock (R-897, R-899, R-900, R-902).** RQ-749 (a): the test reads the recorded
+state at the pin, not `(½, ½)`; on a sliding path the follower and the area factor are taken at the pin. The pin's screen
+position is stored, the centre labelled "assumed" where none can be derived (Q4 (a), (a-i)); a curved chart's pivot
+record lives in the view, stored as the pinned state (Q5 (a), untilt (a1)); the line on blocks is built here as the
+locked path's carrier (Q9 (a)); a point's star is filled within the lock's tolerance, a calibration (Q7 (c)). The lock is
+the path's: every locked path, blend segments and chart switches included, keeps the pinned state, sliding by R-849
+where B can't hold it, a labelled jump until the slide exists (Q3 (a)). The gate test, the owner's: lock → morph A → B →
+tilt → slice → morph back, the pinned state within the lock's tolerance throughout, the round trip returning the same
+view. Stage 2's saved-file rewrite is handled as RQ-750: versioned, converted on load, a conversion test in place of the
+bitwise check, golden hashes regenerated with a record of why (R-900).
+
 **Default correspondence:** the anchor, pixel to pixel by offset. **With an excursion** (`δ ≠ 0`): the pin is the current
-`z₀`, as "turns about the pin"; the words are that point's; `z_locked` and `δ` are not touched, so snap-back, `z₀ ← z_locked`,
-stays bit for bit. **Deep zoom:** REQ-DEC-033's linearised decoder lands in M6. `J_D` at the anchor doesn't change along the
+`z₀`, as "turns about the pin"; the words are that point's; `z_locked` and `δ` are not touched. Snap-back undoes the
+slice only, clearing the hidden excursion and leaving the pin where it is on screen, and "centre on pin" clears the
+in-plane part; together they are `z₀ ← z_locked`, bitwise by definition, centre on pin after snap-back assigning
+`z₀ ← z_locked`; snap-back alone, a projection on an oblique basis, is exact to rounding, its rounding bound is derived
+from the construction TASK-M8-125 defines (of order `ε_R·κ(B)·‖δ‖` for a solve on the basis `B = [q₁ q₂ | hidden]`, or a
+few ulps if built as `z_locked` plus the in-plane part recomputed from the pin's stored chart parameters) and stated by
+that task, its decoded state within REQ-ENC-024's `ε_phys` only where that bound and the decoder's conditioning allow; a
+bound that can't be derived is a calibration (R-71); the test's fixture names its `κ(B)` and `‖δ‖`, its construction
+TASK-M8-125's (R-72) (the brief's Q2 (a), R-899). *Was:* "`z_locked` and `δ` are
+not touched, so snap-back, `z₀ ← z_locked`, stays bit for bit." **Deep zoom:** REQ-DEC-033's linearised decoder lands in M6. `J_D` at the anchor doesn't change along the
 path, since the anchor doesn't; what changes is the chart's tangent plane, per frame. At depth a frame is locally a plane
 morph, the same first-order part transported above, so a deep frame is the linearisation of the coarse frame over it. CPU work per
 frame, f64, not built, owed to the M6 task.
@@ -1917,6 +1997,12 @@ at `g(0) = 0`, `g(1) = 1`. On the worst case above: max over median speed falls 
 3:** "No field takes `u` directly and none has a second curve". Only the blend takes `g`; every eased field keeps `s`. In a
 chart-change segment those are the playhead and render uniforms, so the zoom-against-pan reason doesn't reach it, but it's
 a second curve, and RQ-721 says so.
+
+*Amended 8 Nov 2026 (R-901):* easing and the path curve are a property of each **path segment**, shared by live morphs,
+saved paths and export, with the model's Theorem 4 (concatenation of eased segments) and Theorem 5 (timing changes no
+frame's content) stated and tested; TASK-M8-124 builds the field with the path object, so stage 4 adds nothing beside
+it. Where a Sequence segment holds one path segment, its easing is that segment's; where it holds several, each keeps
+its own, concatenated (export contract Part 3, R-576's forward line).
 
 ### 17.10 Without a lock: alignment
 
@@ -2057,6 +2143,11 @@ Each with a control (R-176). `path_lock_centre` is TASK-M8-117's, `blend_entry_c
 | `path_hold_table` | each row of § 17.11's table | the step before the blend |
 | `path_links_cut` | a changed link id is a cut, live and export | a morph across it |
 | `blend_entry_counted` | `stage_blend` is the only morph entry; the cap test unchanged | a baked `(A, B)` entry |
+
+*8 Nov 2026 (R-897, R-873):* `path_lock_centre` reads the recorded state at the pin, not a probe at `(½, ½)`, the area
+factor taken at the pin; and `path_tilt_bitwise`, `path_zoom_bitwise`, `path_lock_bitwise`, `path_save_view_bitwise`,
+`path_keyframe_bitwise`, `path_ends_bitwise` and `path_record_round_trip` (REQ-CHART-113) are TASK-M8-124's, not
+TASK-M8-106's.
 
 ---
 

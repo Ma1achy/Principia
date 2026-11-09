@@ -164,11 +164,13 @@ fn check_controls_job_beside_the_tests(workflow: &str) {
         "the controls job and the tests' job wait on one another, not beside each other"
     );
     // The job's own `if:` (indent 4) can skip it; a step's `if:` (R-326's conditional cache save) cannot (R-335).
-    // R-656's skip of a docs-only pull request is the one job-level `if:` allowed; the gate `xtask-ci` passes it only
-    // on that verdict.
+    // R-656's skip of a docs-only pull request was the one job-level `if:` allowed. The owner's CI model (9 Nov 2026)
+    // runs every control on each merge to `main`, off the pull request's path, so the `if:` keeping the job off pull
+    // requests is allowed too; on a push to `main` nothing skips it (R-290's exception, applied per R-369).
     let job_if = controls_lines.iter().any(|l| {
         l.starts_with("    if:")
             && l.as_str() != "    if: needs.changes.outputs.docs_only != 'true'"
+            && l.as_str() != "    if: github.event_name != 'pull_request'"
     });
     assert!(
         !job_if && !has_key(controls_lines, "continue-on-error:"),

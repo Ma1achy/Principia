@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-144, REQ-VAL-354
-- **Depends on:** TASK-M4-37, TASK-M8-111, TASK-M8-102
+- **Depends on:** TASK-M4-37, TASK-M8-111, TASK-M8-102, TASK-M8-117
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -27,3 +27,4 @@ The owner's reversal of R-669 (R-847, RQ-726 (b)): binary-plus-single scattering
 
 ## Notes
 - Nothing here is built until TASK-M4-37 has carried the rulings into the design (its Depends on).
+- *8 Nov 2026 (R-873):* **Build order:** stage 3 of R-863's order, after stage 2 (TASK-M8-117), placed by R-873 (RQ-744 (A) (a) and (C)); TASK-M8-106 and TASK-M8-108, stage 4, depend on it. The note above that no stage edge is made is overtaken. *Was:* "- **Depends on:** TASK-M4-37, TASK-M8-111, TASK-M8-102"

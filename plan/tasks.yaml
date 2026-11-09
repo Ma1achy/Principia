@@ -914,7 +914,7 @@
   title: COM projection and invariant monitoring
   depends_on: [TASK-M3-04, TASK-M2-24]
   needs: [REQ-PAY-010, REQ-PAY-031, REQ-GEN-007, REQ-DEC-025, REQ-TOOL-009]
-  requirements: [REQ-INT-010, REQ-INT-011, REQ-INT-012, REQ-INT-030, REQ-INT-040, REQ-VAL-033, REQ-TOOL-149, REQ-INT-085, REQ-TOOL-150]
+  requirements: [REQ-INT-010, REQ-INT-011, REQ-INT-012, REQ-INT-030, REQ-INT-040, REQ-VAL-033, REQ-TOOL-149, REQ-INT-085, REQ-TOOL-150, REQ-INT-110]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10, PIT-3]
 - id: TASK-M3-06
@@ -1258,7 +1258,7 @@
   title: "The baked compute variants: chart × link × occupant × FTLE, with copy_index a uniform"
   depends_on: [TASK-M4-05, TASK-M2-25, TASK-M2-28, TASK-M3-14, TASK-M0-44]
   needs: [REQ-CHART-001, REQ-CHART-002, REQ-CHART-013, REQ-CHART-017, REQ-CHART-028, REQ-CHART-029, REQ-CHART-031, REQ-DEC-007, REQ-INT-005, REQ-PAY-026, REQ-INT-035, REQ-INT-043, REQ-RENDER-027, REQ-SYS-074]
-  requirements: [REQ-CHART-037, REQ-SYS-024, REQ-INT-065, REQ-INT-069, REQ-RENDER-031, REQ-RENDER-082, REQ-INT-083]
+  requirements: [REQ-CHART-037, REQ-SYS-024, REQ-INT-065, REQ-INT-069, REQ-RENDER-031, REQ-RENDER-082, REQ-INT-083, REQ-CHART-152]  # R-876
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M4-07
@@ -1441,9 +1441,9 @@
 - id: TASK-M4-34
   milestone: M4
   title: "Region D: the third-body pair, its preset, and the angles and side ratios it carries"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-20]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-20, TASK-M4-06]  # R-914
   needs: []
-  requirements: [REQ-CHART-100, REQ-CHART-101, REQ-CHART-142]
+  requirements: [REQ-CHART-100, REQ-CHART-101, REQ-CHART-142, REQ-RENDER-123, REQ-CHART-165]  # R-914
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M4-37
@@ -2083,7 +2083,7 @@
   title: "The GUI track (R-390): RQ-340 ruled — Tip as sheet the default, Lean each axis an option, over the pole, the compass drawing the active map, the readout's lines (R-474) ⚑"
   depends_on: [TASK-M6-38, TASK-M6-39, TASK-M6-40, TASK-M6-45]  # R-474 K13: the Tilt section's targets (M6-38), live drags (M6-39), the H, V, D buttons (M6-40) and the resets (M6-45)
   needs: []
-  requirements: [REQ-GUI-231, REQ-GUI-232, REQ-GUI-233, REQ-GUI-234, REQ-GUI-235, REQ-GUI-236, REQ-GUI-237, REQ-GUI-238]
+  requirements: [REQ-GUI-231, REQ-GUI-232, REQ-GUI-233, REQ-GUI-234, REQ-GUI-235, REQ-GUI-236, REQ-GUI-237, REQ-GUI-238, REQ-GUI-430]  # R-896
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M6-49
@@ -3085,7 +3085,7 @@
   title: "On the real engine: tilt and slice on every chart, the energy axes' mapping control, the navigation stop in the edit path, and Save view as chart on curved views (R-469, R-471, R-473, R-475) ⚑"
   depends_on: [TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18, TASK-M2-52]  # TASK-M2-52: R-633 (RQ-603), every chart's tilt and REQ-CHART-062; applied per R-369
   needs: [REQ-CHART-060, REQ-CHART-062, REQ-CHART-068, REQ-CHART-073, REQ-CHART-077]
-  requirements: [REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244, REQ-CHART-141]
+  requirements: [REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244, REQ-CHART-141, REQ-CHART-157]  # R-899 Q5
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-49
@@ -3684,15 +3684,15 @@
 - id: TASK-M8-102
   milestone: M8
   title: "CPU batch: numerical inverses, their branch rule and seam"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-100]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-100, TASK-M8-117]  # R-873: stage 3, after stage 2
   needs: []
-  requirements: [REQ-CHART-107, REQ-CHART-129, REQ-CHART-130, REQ-CHART-145]
+  requirements: [REQ-CHART-107, REQ-CHART-129, REQ-CHART-130, REQ-CHART-145, REQ-CHART-155]  # R-889
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-103
   milestone: M8
   title: "The Chart builder's composition panels"
-  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-34, TASK-M8-118, TASK-M8-100, TASK-M8-102]
+  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-34, TASK-M8-118, TASK-M8-100, TASK-M8-102, TASK-M8-117]  # R-873: stage 3, after stage 2
   needs: []
   requirements: [REQ-GUI-419]
   reviewers: [code, qa, physics, gui]
@@ -3700,7 +3700,7 @@
 - id: TASK-M8-104
   milestone: M8
   title: "1D charts in the GUI"
-  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-33]
+  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-33, TASK-M8-117]  # R-873: stage 3, after stage 2
   needs: []
   requirements: [REQ-GUI-420]
   reviewers: [code, qa, gui]
@@ -3715,10 +3715,10 @@
   pitfalls: []
 - id: TASK-M8-106
   milestone: M8
-  title: "The path type, the line on blocks, and export through CPU batch"
-  depends_on: [TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31]
+  title: "Path re-timing, alignment and export through CPU batch (the path type is TASK-M8-124's, the line on blocks TASK-M8-117's; R-873, R-899)"
+  depends_on: [TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31, TASK-M8-103, TASK-M8-104, TASK-M8-112, TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-126, TASK-M7-72]  # R-873: stage 4, after every stage-3 task
   needs: []
-  requirements: [REQ-CHART-113, REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133]
+  requirements: [REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133]  # REQ-CHART-113 moved to TASK-M8-124 (R-873)
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-107
@@ -3732,7 +3732,7 @@
 - id: TASK-M8-108
   milestone: M8
   title: "The Sequence's morph segment"
-  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78, TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111, TASK-M8-119]
+  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78, TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111, TASK-M8-119, TASK-M8-102, TASK-M8-103, TASK-M8-104, TASK-M8-112, TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-126, TASK-M7-72]  # R-873: stage 4
   needs: []
   requirements: [REQ-GUI-421]
   reviewers: [code, qa, gui]
@@ -3764,7 +3764,7 @@
 - id: TASK-M8-112
   milestone: M8
   title: "Paper frames as presets"
-  depends_on: [TASK-M4-37, TASK-M8-110]
+  depends_on: [TASK-M4-37, TASK-M8-110, TASK-M8-117]  # R-873: stage 3, after stage 2
   needs: []
   requirements: [REQ-CHART-122]
   reviewers: [code, qa, physics]
@@ -3804,15 +3804,15 @@
 - id: TASK-M8-117
   milestone: M8
   title: "Paths under a lock: the stored anchor"
-  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M2-23, TASK-M8-124, TASK-M8-125]  # TASK-M8-125: R-866, stage 1 (applied per R-369)
+  depends_on: [TASK-M4-37, TASK-M2-23, TASK-M8-124, TASK-M8-125, TASK-M8-129]  # TASK-M8-125: R-866, stage 1 (applied per R-369); R-894, R-899 Q9
   needs: []
-  requirements: [REQ-CHART-115, REQ-CHART-146]
+  requirements: [REQ-CHART-115, REQ-CHART-146, REQ-CHART-158, REQ-CHART-159, REQ-CHART-161, REQ-CHART-164]  # REQ-CHART-164 split from REQ-CHART-157 (applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-118
   milestone: M8
   title: "Hold L_z on any chart, beside energy normalisation"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52]
+  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52, TASK-M8-117]  # R-873: stage 3, after stage 2
   needs: []
   requirements: [REQ-CHART-102, REQ-CHART-111, REQ-CHART-126]
   reviewers: [code, qa, physics, perf]
@@ -3830,7 +3830,7 @@
   title: "The symmetry filter: a display option after rendering, GUI and export"
   depends_on: [TASK-M4-37, TASK-M8-112, TASK-M8-103, TASK-M8-32, TASK-M8-108]
   needs: []
-  requirements: [REQ-CHART-135, REQ-CHART-136, REQ-CHART-137, REQ-CHART-138, REQ-GUI-424]
+  requirements: [REQ-CHART-135, REQ-CHART-136, REQ-CHART-137, REQ-CHART-138, REQ-GUI-424, REQ-CHART-150]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-121
@@ -3844,7 +3844,7 @@
 - id: TASK-M8-122
   milestone: M8
   title: "The fixed-k chart: rigid rotation at a chosen virial coefficient over D₁₁ ∪ D₁₂, a chart and builder axes (R-847)"
-  depends_on: [TASK-M4-37, TASK-M8-109, TASK-M8-102]
+  depends_on: [TASK-M4-37, TASK-M8-109, TASK-M8-102, TASK-M8-117]  # R-873: stage 3, after stage 2
   needs: []
   requirements: [REQ-CHART-143]
   reviewers: [code, qa, physics]
@@ -3852,7 +3852,7 @@
 - id: TASK-M8-123
   milestone: M8
   title: "The binary-plus-single scattering chart, with f_col and Heggie & Sweatman 1991 alongside (R-847)"
-  depends_on: [TASK-M4-37, TASK-M8-111, TASK-M8-102]
+  depends_on: [TASK-M4-37, TASK-M8-111, TASK-M8-102, TASK-M8-117]  # R-873: stage 3, after stage 2
   needs: []
   requirements: [REQ-CHART-144, REQ-VAL-354]
   reviewers: [code, qa, physics]
@@ -3860,9 +3860,9 @@
 - id: TASK-M8-124
   milestone: M8
   title: "The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)"
-  depends_on: [TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52]
+  depends_on: [TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, TASK-M6-49, TASK-M6-51, TASK-M8-48, TASK-M8-105]  # R-873: RQ-744 (E) (i), before stage 1
   needs: []
-  requirements: [REQ-CHART-147]
+  requirements: [REQ-CHART-147, REQ-CHART-113, REQ-CHART-160]  # R-873, R-901
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-125
@@ -3870,15 +3870,39 @@
   title: "Locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, centre on pin and the auto-snap setting, exact on nonlinear charts or saying why (R-866, R-863 stage 1)"
   depends_on: [TASK-M4-37, TASK-M8-124]
   needs: []
-  requirements: [REQ-GUI-425, REQ-GUI-429]
+  requirements: [REQ-GUI-425, REQ-GUI-429, REQ-CHART-163]  # REQ-CHART-163 split from REQ-CHART-157 (applied per R-369)
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-126
   milestone: M8
   title: "Points of interest: saved signed states, their stars on every chart and path frame, and similar-systems overlays (R-870)"
-  depends_on: [TASK-M4-37, TASK-M8-124, TASK-M8-108, TASK-M7-43, TASK-M7-72, TASK-M4-33, TASK-M2-57]
+  depends_on: [TASK-M4-37, TASK-M8-124, TASK-M7-43, TASK-M7-72, TASK-M4-33, TASK-M2-57, TASK-M8-117]  # R-873: stage 3 (applied per R-369)
   needs: []
   requirements: [REQ-GUI-426, REQ-GUI-427, REQ-GUI-428]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: []
+- id: TASK-M8-127
+  milestone: M8
+  title: "The acute-angle Burrau charts over the full acute range, both labellings, the leg swap through the symmetry filter (R-875)"
+  depends_on: [TASK-M8-120]  # R-875: behind TASK-M4-37 through TASK-M8-120
+  needs: []
+  requirements: [REQ-CHART-151, REQ-CHART-162]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M8-128
+  milestone: M8
+  title: "Final-condition charts: a CPU batch chart of state functions at time T, the round-trip miss measured, large misses masked (R-879)"
+  depends_on: [TASK-M4-37, TASK-M8-102, TASK-M8-108, TASK-M8-118, TASK-M8-122, TASK-M8-123]  # R-879: after the M8 charts
+  needs: []
+  requirements: [REQ-CHART-153, REQ-CHART-154]
+  reviewers: [code, qa, physics, perf]
+  pitfalls: []
+- id: TASK-M8-129
+  milestone: M8
+  title: "Consolidating the chart path: one leaf per operation, the GUI routes as input adapters, D19 and D23 fixed (R-894)"
+  depends_on: [TASK-M4-37, TASK-M8-124, TASK-M8-125]  # R-894: between stages 1 and 2
+  needs: []
+  requirements: [REQ-CHART-156]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M9-01

@@ -17,6 +17,15 @@
 //! - `qa_no_head_passes_until_its_own_full_tier_has`: one pull request's life, under a stateful stand-in `gh`.
 //! - `qa_a_quick_run_retries_on_a_runner_fault_only`: `ci_retry.py` on the name a called workflow's job really has.
 //!
+//! The owner's CI model (approved 9 Nov 2026) replaces R-684's quick and full tiers on a pull request with the PR tier,
+//! a sanity check whose crate selection is the quick tier's (`ci_quick_crates.py`), and moves the full tier to each
+//! merge to `main`; the merge-ready label, `ci-quick.yml` and `ci-full.yml` are gone. So (R-290's exception, applied
+//! per R-369 by the orchestrator): the crate list's tests stand; `qa_the_doctest_step_passes_on_every_crate_list`,
+//! `qa_each_path_reports_the_required_checks`, `qa_the_quick_tier_runs_what_the_ruling_lists`,
+//! `qa_another_label_never_cancels_the_full_tier` (now: no label starts or cancels the PR tier) and the retry test are
+//! re-pointed at `ci.yml`'s PR tier; `qa_no_head_passes_until_its_own_full_tier_has`, which held the full tier's
+//! pending statuses and the label's re-run, is retired with them.
+//!
 //! Each test has its negative control (R-176). No test runs a workflow `run:` step but the doctest step, and that one
 //! with a scratch HOME and CARGO_HOME, in a scratch folder, under the stand-in `cargo`. Unix only: the stand-ins are
 //! executable scripts found through `PATH`.
@@ -39,12 +48,25 @@ const CRATES: &str = ".github/scripts/ci_quick_crates.py";
 const RETRY: &str = ".github/scripts/ci_retry.py";
 const CHANGES: &str = "scripts/ci_changes.sh";
 const CI: &str = ".github/workflows/ci.yml";
-const CI_QUICK: &str = ".github/workflows/ci-quick.yml";
-const CI_FULL: &str = ".github/workflows/ci-full.yml";
 
 /// `plan/HUMAN_SETUP.md` § 2: the required checks. These three report on every path; the rest are the full tier's.
-const EVERY_HEAD: [&str; 3] = ["pr-check", "reviews-complete", "mutants-check"];
-const FULL_ONLY: [&str; 5] = ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-lavapipe"];
+/// The owner's CI model (9 Nov 2026) makes them the PR tier's: `ci.yml`'s six, and these two; `mutants-check`,
+/// `xtask-ci` and `gpu-kernel` leave the list with the full tier.
+const EVERY_HEAD: [&str; 2] = ["pr-check", "reviews-complete"];
+const PR_TIER: [&str; 6] = ["fmt", "clippy", "build", "ci", "gpu-lavapipe", "gpu-metal"];
+/// The per-merge run's jobs, by id: the full tier, which runs on a push to `main` and on no pull request.
+const PER_MERGE_JOBS: [&str; 10] = [
+    "ci-archive",
+    "ci",
+    "ci-checks",
+    "ci-workspace",
+    "ci-release-archive",
+    "ci-release",
+    "xtask-ci",
+    "gpu-kernel",
+    "gpu-metal",
+    "gpu-lavapipe",
+];
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -316,10 +338,6 @@ impl Repo {
         Repo { dir }
     }
 
-    fn state(&self, file: &str, text: &str) {
-        std::fs::write(self.dir.join("state").join(file), text).expect("state");
-    }
-
     fn lines(&self, file: &str) -> Vec<String> {
         std::fs::read_to_string(self.dir.join("state").join(file))
             .expect("state")
@@ -379,31 +397,6 @@ impl Repo {
         )
     }
 
-    /// `report`, on the gates' `results`, all passing but those named.
-    fn report(&self, head: &str, results: &[(&str, &str)]) -> Ran {
-        let mut env: Vec<(String, String)> = FULL_ONLY
-            .iter()
-            .map(|c| {
-                (
-                    format!("RESULT_{}", c.replace('-', "_")),
-                    "success".to_owned(),
-                )
-            })
-            .collect();
-        for (c, r) in results {
-            let key = format!("RESULT_{}", c.replace('-', "_"));
-            env.iter_mut().find(|(k, _)| *k == key).expect("a gate").1 = (*r).to_owned();
-        }
-        env.push(("HEAD_SHA".to_owned(), head.to_owned()));
-        let env: Vec<(&str, &str)> = env.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
-        self.run("report", &env)
-    }
-
-    /// `ci_tier.sh merge-ready` on the label event `action`.
-    fn label(&self, action: &str, head: &str) -> Ran {
-        self.run("merge-ready", &[("ACTION", action), ("HEAD_SHA", head)])
-    }
-
     /// Each context's latest state on `head`.
     fn statuses(&self, head: &str) -> BTreeMap<String, String> {
         self.lines("statuses")
@@ -418,14 +411,6 @@ impl Repo {
                 })
             })
             .collect()
-    }
-
-    /// Whether every full-only check has passed on `head`: what the ruling makes the condition of a merge.
-    fn passed(&self, head: &str) -> bool {
-        let s = self.statuses(head);
-        FULL_ONLY
-            .iter()
-            .all(|c| s.get(*c).map(String::as_str) == Some("success"))
     }
 }
 
@@ -507,11 +492,8 @@ fn check_list_fails_safe(tier: &str) {
             everything(packages),
             "qa: when {what}, the quick tier tests only `{packages}`"
         );
-        assert_eq!(
-            ran.outputs.get("workspace_tests").map(String::as_str),
-            Some("true"),
-            "qa: when {what}, the quick tier drops the ci-workspace profile's tests"
-        );
+        // `workspace_tests`, the `ci-workspace` profile's share of the quick tier, is gone with it (the owner's CI
+        // model, 9 Nov 2026): the process tests run on a change to the machinery, in a job of their own.
     }
 }
 
@@ -661,21 +643,20 @@ echo "error: no library targets found in package" >&2
 exit 101
 "#;
 
-/// Runs the steps of `ci-quick.yml`'s text that doctest, given the `changes` job's outputs, as the workflow hands them
-/// on: each step's `env`, its `if:` over `inputs`, and the script itself under `bash -e`, in `work`, with nothing of
-/// this process's environment but `PATH` led by `bin`. Prints each step's exit status.
+/// Runs the steps of `ci.yml`'s `tests` job (the required check `ci`) that doctest, given the `changes` job's outputs on
+/// a code change: each step's `env`, its `if:` over those outputs and the job's `CODE`, and the script itself under
+/// `bash -e`, in `work`, with nothing of this process's environment but `PATH` led by `bin`. Prints each step's exit
+/// status. (`ci-quick.yml`'s, until the owner's CI model of 9 Nov 2026 moved the step here.)
 const DRIVER: &str = r#"
 import json, os, re, subprocess, sys, yaml
-ci, quick, outputs, work, bin_dir = yaml.safe_load(open(sys.argv[1])), yaml.safe_load(open(sys.argv[2])), json.loads(sys.argv[3]), sys.argv[4], sys.argv[5]
+ci, outputs, work, bin_dir = yaml.safe_load(open(sys.argv[1])), json.loads(sys.argv[2]), sys.argv[3], sys.argv[4]
 def out(text):
     return re.sub(r"\$\{\{\s*needs\.changes\.outputs\.(\w+)\s*\}\}", lambda m: outputs.get(m[1], ""), str(text))
-inputs = {k: out(v) for k, v in ci["jobs"]["ci-quick"]["with"].items()}
-def expand(text):
-    return re.sub(r"\$\{\{\s*inputs\.(\w+)\s*\}\}", lambda m: inputs[m[1]], str(text))
 def holds(cond):
-    e = re.sub(r"inputs\.(\w+)", lambda m: repr(inputs[m[1]]), str(cond)).replace("&&", "and").replace("||", "or")
+    e = re.sub(r"needs\.changes\.outputs\.(\w+)", lambda m: repr(outputs.get(m[1], "")), str(cond))
+    e = e.replace("env.CODE", "'true'").replace("env.RUN", "'true'").replace("&&", "and").replace("||", "or")
     return bool(eval(e, {"__builtins__": {}}))
-for step in quick["jobs"]["ci-quick"]["steps"]:
+for step in ci["jobs"]["tests"]["steps"]:
     if "--doc" not in str(step.get("run", "")):
         continue
     if "if" in step and not holds(step["if"]):
@@ -683,22 +664,17 @@ for step in quick["jobs"]["ci-quick"]["steps"]:
         continue
     env = {"PATH": bin_dir + ":" + os.environ["PATH"], "HOME": work, "CARGO_HOME": work + "/cargo",
            "LIBS": os.environ["LIBS"], "CARGO_LOG": os.environ["CARGO_LOG"]}
-    env.update({k: expand(v) for k, v in (step.get("env") or {}).items()})
+    env.update({k: out(v) for k, v in (step.get("env") or {}).items()})
     print(subprocess.run(["bash", "-e", "-c", step["run"]], cwd=work, env=env, capture_output=True).returncode)
 "#;
 
-fn check_doctests(quick_yml: &str) {
+fn check_doctests(ci_yml: &str) {
     let members = members();
     let dir = Scratch::new("qa_doctest_step");
     let bin = dir.join("bin");
     std::fs::create_dir_all(&bin).expect("scratch");
     write_executable(&bin.join("cargo"), CARGO).expect("cargo");
-    let (libs, log, ci, quick) = (
-        dir.join("libs"),
-        dir.join("cargo.log"),
-        dir.join("ci.yml"),
-        dir.join("ci-quick.yml"),
-    );
+    let (libs, log, ci) = (dir.join("libs"), dir.join("cargo.log"), dir.join("ci.yml"));
     let lib_names: Vec<&str> = members
         .iter()
         .filter(|m| m.lib)
@@ -709,8 +685,7 @@ fn check_doctests(quick_yml: &str) {
         "qa: every member has a library, so `--doc` is never refused"
     );
     std::fs::write(&libs, format!("{}\n", lib_names.join("\n"))).expect("libs");
-    std::fs::write(&ci, read(CI)).expect("ci");
-    std::fs::write(&quick, quick_yml).expect("quick");
+    std::fs::write(&ci, ci_yml).expect("ci");
     for changed in &members {
         let changes = format!("printf '%s\\n' '{}'", sample(changed));
         let repo = Repo::new(&read(TIER), &read(CRATES), &changes);
@@ -726,7 +701,6 @@ fn check_doctests(quick_yml: &str) {
             .arg("-c")
             .arg(DRIVER)
             .arg(&ci)
-            .arg(&quick)
             .arg(Value::Object(outputs).to_string())
             .arg(&*dir)
             .arg(&bin)
@@ -741,8 +715,12 @@ fn check_doctests(quick_yml: &str) {
         );
         let statuses = String::from_utf8_lossy(&out.stdout).into_owned();
         assert!(
+            !statuses.trim().is_empty(),
+            "qa: `ci.yml`'s `tests` job has no doctest step"
+        );
+        assert!(
             statuses.lines().all(|s| s == "0" || s == "skipped"),
-            "qa: on a change to `{}` alone, the quick tier's doctest step exits {statuses:?}: `{}`",
+            "qa: on a change to `{}` alone, the PR tier's doctest step exits {statuses:?}: `{}`",
             changed.name,
             ran.outputs["packages"]
         );
@@ -764,56 +742,76 @@ fn names_a_library(packages: &str, libs: &[&str]) -> bool {
 
 #[test]
 fn qa_the_doctest_step_passes_on_every_crate_list() {
-    check_doctests(&read(CI_QUICK));
+    check_doctests(&read(CI));
 }
 
 negative_control!(
     qa_the_doctest_step_passes_on_every_crate_list,
-    "a quick tier whose doctest step takes a list naming only a crate with no library",
-    expected = "the quick tier's doctest step exits",
+    "a PR tier whose doctest step takes a list naming only a crate with no library",
+    expected = "the PR tier's doctest step exits",
     check_doctests(
-        "jobs:\n  ci-quick:\n    steps:\n      - run: cargo test $PACKAGES --doc\n        env:\n          PACKAGES: -p prin\n"
+        "jobs:\n  tests:\n    steps:\n      - run: cargo test $PACKAGES --doc\n        env:\n          PACKAGES: -p prin\n"
     )
 );
 
 /// A run of a workflow takes its place in a workflow-level `concurrency` group before any job's `if:` is read, so a run
-/// whose job then skips still cancels the group's run in progress. `mutants.yml` gives another label's run a group of
-/// its own for this reason (R-678).
+/// whose job then skips still cancels the group's run in progress: R-678 gave another label's run of `ci-full.yml` a
+/// group of its own for this reason. The owner's CI model (9 Nov 2026) removes the label's run altogether: `ci.yml`'s
+/// `pull_request` trigger takes no label event, so a label neither starts nor cancels a PR tier run, and no step of it
+/// cancels or re-runs a run (R-290's exception, applied per R-369).
 fn check_label_concurrency(yml: &str) {
     let wf = parse(yml);
-    let c = &wf["concurrency"];
-    if c.is_null() || c["cancel-in-progress"] == Value::Bool(false) {
-        return;
+    let pr = &wf["on"]["pull_request"];
+    let types: Vec<&str> = pr["types"]
+        .as_array()
+        .map(|t| t.iter().filter_map(Value::as_str).collect())
+        .unwrap_or_default();
+    for label in ["labeled", "unlabeled"] {
+        assert!(
+            !types.contains(&label),
+            "qa: a `{label}` event runs ci.yml, so a label's run takes the pull request's group and cancels its PR tier run"
+        );
     }
-    let group = c["group"].as_str().unwrap_or_default();
-    assert!(
-        group.contains("github.event.label.name"),
-        "qa: another label's run of ci-full.yml takes the group `{group}`, so it cancels the run on `merge-ready`, \
-         queued or waiting, and the head's full tier never starts"
-    );
+    for job in wf["jobs"].as_object().expect("qa: jobs").values() {
+        for step in job["steps"]
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or_default()
+        {
+            let run = step["run"].as_str().unwrap_or_default();
+            assert!(
+                !(run.contains("/cancel") || run.contains("/rerun")),
+                "qa: a step of ci.yml cancels or re-runs a run: {run}"
+            );
+        }
+    }
 }
 
 #[test]
 fn qa_another_label_never_cancels_the_full_tier() {
-    check_label_concurrency(&read(CI_FULL));
+    check_label_concurrency(&read(CI));
 }
 
 negative_control!(
     qa_another_label_never_cancels_the_full_tier,
-    "one group per pull request, whatever the label",
-    expected = "another label's run of ci-full.yml takes the group",
-    check_label_concurrency(
-        "concurrency:\n  group: full-${{ github.ref }}\n  cancel-in-progress: true\n"
-    )
+    "ci.yml run on a label put on",
+    expected = "a `labeled` event runs ci.yml",
+    check_label_concurrency(&edited(
+        CI,
+        "  pull_request:\n",
+        "  pull_request:\n    types: [opened, synchronize, reopened, labeled]\n"
+    ))
 );
 
 /// Walks `ci.yml`'s jobs on `changes`' outputs: each job's result, its name as written, and the name it runs under.
 const WALK: &str = r#"
 import json, re, sys, yaml
-wf, outputs, failed = yaml.safe_load(open(sys.argv[1])), json.loads(sys.argv[2]), sys.argv[3] == "failed"
+wf, outputs, failed, event = yaml.safe_load(open(sys.argv[1])), json.loads(sys.argv[2]), sys.argv[3] == "failed", sys.argv[4]
 jobs, results = wf["jobs"], {}
+ref = "refs/heads/main" if event == "push" else "refs/pull/1/merge"
 def holds(cond):
     e = re.sub(r"needs\.changes\.outputs\.(\w+)", lambda m: repr(outputs.get(m[1], "")), cond)
+    e = e.replace("github.event_name", repr(event)).replace("github.ref", repr(ref))
     e = e.replace("always()", "True").replace("&&", "and").replace("||", "or")
     return bool(eval(e, {"__builtins__": {}}))
 def result(jid):
@@ -840,11 +838,13 @@ for jid, job in jobs.items():
 print(json.dumps(out))
 "#;
 
-/// (job id, result, name as written, name it runs under).
+/// (job id, result, name as written, name it runs under), on the event `event` (the owner's CI model of 9 Nov 2026
+/// conditions jobs on it).
 fn walk(
     yml: &str,
     outputs: &BTreeMap<String, String>,
     changes: &str,
+    event: &str,
 ) -> Vec<(String, String, String, String)> {
     let dir = Scratch::new("qa_walk");
     std::fs::create_dir_all(&*dir).expect("scratch");
@@ -857,6 +857,7 @@ fn walk(
         .arg(&file)
         .arg(json)
         .arg(changes)
+        .arg(event)
         .timed_output()
         .expect("qa: python3 ran");
     assert!(
@@ -882,135 +883,110 @@ fn ran(jobs: &[(String, String, String, String)]) -> BTreeSet<&str> {
         .collect()
 }
 
+/// `ci_tier.sh decide`'s outputs with the classifier's verdict on `tier` beside them, as `changes` outputs both.
+fn with_verdict(outputs: &BTreeMap<String, String>, tier: &str) -> BTreeMap<String, String> {
+    let mut all = outputs.clone();
+    for (k, v) in [
+        ("tier", tier),
+        ("docs_only", if tier == "code" { "false" } else { "true" }),
+        ("gpu", if tier == "code" { "true" } else { "false" }),
+        ("process", "false"),
+    ] {
+        all.insert(k.to_owned(), v.to_owned());
+    }
+    all
+}
+
+/// On `jobs`, each PR-tier check is reported by exactly one job that ran, and no skipped job bears a required name,
+/// which GitHub would count as passed.
+fn check_reported(jobs: &[(String, String, String, String)], what: &str) {
+    for check in PR_TIER {
+        for (id, result, raw, _) in jobs {
+            assert!(
+                *result != "skipped" || raw != check,
+                "qa: on {what} job `{id}` skips under the required name `{check}`, which GitHub counts as passed"
+            );
+        }
+        let by: Vec<&String> = jobs
+            .iter()
+            .filter(|j| j.1 == "success" && j.3 == check)
+            .map(|j| &j.0)
+            .collect();
+        assert_eq!(
+            by.len(),
+            1,
+            "qa: on {what} the required check `{check}` is reported by {by:?}"
+        );
+    }
+}
+
+/// Every pull request runs the PR tier's required checks, whatever its tier, posts no status, and runs nothing of the
+/// per-merge run; a push to `main` runs the per-merge run whole; a failed classification still runs every required
+/// check's job, which then fails at its first step. (Until the owner's CI model of 9 Nov 2026 this held R-684's quick
+/// run, the merge-ready attempt and the statuses posted pending on a quick head; R-290's exception, applied per R-369.)
 fn check_paths(yml: &str) {
-    let required: Vec<&str> = EVERY_HEAD.iter().chain(FULL_ONLY.iter()).copied().collect();
     let setup = read("plan/HUMAN_SETUP.md");
-    for check in &required {
+    for check in EVERY_HEAD.iter().chain(PR_TIER.iter()) {
         assert!(
             setup.contains(&format!("`{check}`")),
             "qa: `{check}` is not in plan/HUMAN_SETUP.md § 2"
         );
     }
-
-    // Quick: nothing bears a full-only name, run or skipped, and nothing runs but the quick tier.
-    let repo = Repo::new(&read(TIER), &read(CRATES), GUI_CHANGE);
-    let quick = repo.decide("pull_request", "synchronize", "1", "code", "h1");
-    assert_eq!(quick.outputs["quick"], "true", "qa: {}", quick.text);
-    let jobs = walk(yml, &quick.outputs, "passed");
-    for (id, result, raw, name) in &jobs {
-        for check in FULL_ONLY {
+    for tier in ["code", "data", "docs"] {
+        let repo = Repo::new(&read(TIER), &read(CRATES), GUI_CHANGE);
+        let run = repo.decide("pull_request", "synchronize", "1", tier, "h1");
+        assert!(run.ok, "qa: decide on a {tier} head: {}", run.text);
+        let what = format!("a {tier} pull request");
+        let jobs = walk(
+            yml,
+            &with_verdict(&run.outputs, tier),
+            "passed",
+            "pull_request",
+        );
+        check_reported(&jobs, &what);
+        let names = ran(&jobs);
+        for job in PER_MERGE_JOBS {
             assert!(
-                *result != "success" || name != check,
-                "qa: on a quick run job `{id}` reports the required check `{check}`"
-            );
-            assert!(
-                *result != "skipped" || raw != check,
-                "qa: on a quick run job `{id}` skips under the required name `{check}`, which GitHub counts as passed"
+                !names.contains(job),
+                "qa: {what} ran the per-merge run's `{job}`"
             );
         }
+        assert!(
+            repo.statuses("h1").is_empty(),
+            "qa: {what} posted statuses, which hold a head pending"
+        );
     }
-    assert_eq!(
-        ran(&jobs),
-        BTreeSet::from(["changes", "ci-quick"]),
-        "qa: a quick run runs more than the quick tier"
-    );
-    let posted: BTreeSet<String> = repo.statuses("h1").keys().cloned().collect();
-    let want: BTreeSet<String> = FULL_ONLY.iter().map(|c| (*c).to_owned()).collect();
-    assert_eq!(
-        posted, want,
-        "qa: the checks a quick run posts are not the full-only required checks"
-    );
-    assert!(
-        repo.statuses("h1").values().all(|s| s == "pending"),
-        "qa: a quick run posted something but pending"
-    );
 
-    // Full: the merge-ready attempt, and a push to `main`, run each gate under its required name.
-    let full_repo = Repo::new(&read(TIER), &read(CRATES), GUI_CHANGE);
-    full_repo.state("labels", "merge-ready\n");
-    let full = full_repo.decide("pull_request", "synchronize", "2", "code", "h1");
-    let main = full_repo.decide("push", "", "1", "code", "m1");
+    // A push to `main`: every crate, and the per-merge run whole.
+    let repo = Repo::new(&read(TIER), &read(CRATES), GUI_CHANGE);
+    let main = repo.decide("push", "", "1", "code", "m1");
+    assert_eq!(
+        main.outputs.get("packages").map(String::as_str),
+        Some("--workspace"),
+        "qa: a push to main tests less than every crate: {}",
+        main.text
+    );
     assert!(
-        full_repo.statuses("m1").is_empty(),
+        repo.statuses("m1").is_empty(),
         "qa: a push to main posted statuses"
     );
-    for (what, run) in [
-        ("the merge-ready attempt", &full),
-        ("a push to main", &main),
-    ] {
-        assert_eq!(
-            run.outputs["quick"], "false",
-            "qa: {what} is not full: {}",
-            run.text
+    let jobs = walk(yml, &with_verdict(&main.outputs, "code"), "passed", "push");
+    let names = ran(&jobs);
+    for job in PER_MERGE_JOBS {
+        assert!(
+            names.contains(job),
+            "qa: a push to main skipped the per-merge run's `{job}`"
         );
-        let jobs = walk(yml, &run.outputs, "passed");
-        for check in FULL_ONLY {
-            assert!(
-                jobs.iter().any(|j| j.1 == "success" && j.3 == check),
-                "qa: {what} does not report `{check}`"
-            );
-        }
-        let names = ran(&jobs);
-        assert!(!names.contains("ci-quick"), "qa: {what} ran the quick tier");
-        for job in [
-            "ci",
-            "ci-checks",
-            "ci-workspace",
-            "ci-release",
-            "xtask-ci",
-            "gpu-kernel",
-            "gpu-metal",
-            "gpu-lavapipe",
-        ] {
-            assert!(
-                names.contains(job),
-                "qa: {what} skipped the full tier's `{job}`"
-            );
-        }
     }
 
-    // R-677 first: a docs or data head runs neither tier and opens no status, whatever the label.
-    for tier in ["docs", "data"] {
-        for labels in ["", "merge-ready\n"] {
-            let repo = Repo::new(&read(TIER), &read(CRATES), GUI_CHANGE);
-            repo.state("labels", labels);
-            let run = repo.decide("pull_request", "synchronize", "1", tier, "h1");
-            assert_eq!(run.outputs["quick"], "false", "qa: a {tier} head is quick");
-            assert!(
-                repo.statuses("h1").is_empty(),
-                "qa: a {tier} head opened statuses"
-            );
-            let jobs = walk(yml, &run.outputs, "passed");
-            let names = ran(&jobs);
-            assert!(
-                !names.contains("ci-quick"),
-                "qa: a {tier} head ran the quick tier"
-            );
-            assert!(
-                !names.contains("xtask-ci"),
-                "qa: a {tier} head ran the full tier"
-            );
-            for check in FULL_ONLY {
-                assert!(
-                    jobs.iter().any(|j| j.1 == "success" && j.3 == check),
-                    "qa: a {tier} head does not report `{check}`"
-                );
-            }
-        }
-    }
-
-    // The classification failed: nothing says quick, so the gates run, and they, not a skip, decide.
-    let jobs = walk(yml, &BTreeMap::new(), "failed");
-    for check in FULL_ONLY {
+    // The classification failed: every required check's job still runs, and its first step, not a skip, decides.
+    let jobs = walk(yml, &BTreeMap::new(), "failed", "pull_request");
+    for check in PR_TIER {
         assert!(
             jobs.iter().any(|j| j.1 == "success" && j.3 == check),
-            "qa: `{check}`'s gate does not run when the classification failed"
+            "qa: `{check}`'s job does not run when the classification failed"
         );
     }
-    assert!(
-        !ran(&jobs).contains("ci-quick"),
-        "qa: the quick tier ran on a failed classification"
-    );
 }
 
 #[test]
@@ -1020,26 +996,30 @@ fn qa_each_path_reports_the_required_checks() {
 
 negative_control!(
     qa_each_path_reports_the_required_checks,
-    "the gate `xtask-ci` named outright, so that a quick run's skip reports the required name",
-    expected = "skips under the required name `xtask-ci`",
+    "the per-merge Metal suites named outright `gpu-metal`, so a pull request's skip of them reports the required name",
+    expected = "skips under the required name `gpu-metal`",
     check_paths(&edited(
         CI,
-        "  xtask-ci-gate:\n    name: ${{ matrix.check }}\n",
-        "  xtask-ci-gate:\n    name: xtask-ci\n"
+        "    name: gpu-metal suites\n",
+        "    name: gpu-metal\n"
     ))
 );
 
+/// The skips a PR-tier step may carry: the classification's (R-656: the skip is inside the job, on its verdict).
+const CLASSIFICATION_SKIPS: [&str; 2] = [
+    "needs.changes.outputs.docs_only != 'true'",
+    "env.CODE == 'true'",
+];
+
+/// The owner's model, item 1, "fmt, Clippy, workspace build. Product tests", none of them soft: each in the job that
+/// reports its required check, run on every code change. (`ci-quick.yml`'s job, until that model.)
 fn check_quick_steps(yml: &str) {
     let wf = parse(yml);
-    let job = &wf["jobs"]["ci-quick"];
-    assert!(
-        job.get("continue-on-error").is_none(),
-        "qa: the quick tier's job may fail"
-    );
-    let steps = job["steps"].as_array().expect("qa: steps");
-    let wanted: [(&str, &[&str]); 4] = [
-        ("fmt", &["cargo fmt", "--check"]),
+    let jobs = wf["jobs"].as_object().expect("qa: jobs");
+    let wanted: [(&str, &str, &[&str]); 4] = [
+        ("fmt", "fmt", &["cargo fmt", "--check"]),
         (
+            "clippy",
             "clippy",
             &[
                 "cargo clippy",
@@ -1048,10 +1028,19 @@ fn check_quick_steps(yml: &str) {
                 "-D warnings",
             ],
         ),
-        ("the build", &["cargo build", "--workspace"]),
-        ("the tests", &["cargo nextest run", "$PACKAGES"]),
+        ("the build", "build", &["cargo build", "--workspace"]),
+        ("the tests", "ci", &["cargo nextest run", "$PACKAGES"]),
     ];
-    for (what, words) in wanted {
+    for (what, check, words) in wanted {
+        let (id, job) = jobs
+            .iter()
+            .find(|(id, j)| j.get("name").and_then(Value::as_str).unwrap_or(id) == check)
+            .unwrap_or_else(|| panic!("qa: no job reports `{check}`"));
+        assert!(
+            job.get("continue-on-error").is_none(),
+            "qa: the PR tier's `{id}` may fail"
+        );
+        let steps = job["steps"].as_array().expect("qa: steps");
         let found: Vec<&Value> = steps
             .iter()
             .filter(|s| {
@@ -1060,12 +1049,15 @@ fn check_quick_steps(yml: &str) {
                     .all(|w| s["run"].as_str().is_some_and(|r| r.contains(w)))
             })
             .collect();
-        assert!(!found.is_empty(), "qa: the quick tier does not run {what}");
+        assert!(!found.is_empty(), "qa: the PR tier does not run {what}");
         let hard = found
             .iter()
-            .find(|s| s.get("if").is_none())
+            .find(|s| {
+                s.get("if")
+                    .is_none_or(|c| CLASSIFICATION_SKIPS.contains(&c.as_str().unwrap_or_default()))
+            })
             .unwrap_or_else(|| {
-                panic!("qa: the quick tier runs {what} only under a condition");
+                panic!("qa: the PR tier runs {what} only under a condition other than the classification's");
             });
         assert!(
             hard.get("continue-on-error").is_none(),
@@ -1080,163 +1072,28 @@ fn check_quick_steps(yml: &str) {
 
 #[test]
 fn qa_the_quick_tier_runs_what_the_ruling_lists() {
-    check_quick_steps(&read(CI_QUICK));
+    check_quick_steps(&read(CI));
 }
 
 negative_control!(
     qa_the_quick_tier_runs_what_the_ruling_lists,
-    "a quick tier in which fmt may fail",
+    "a PR tier in which fmt may fail",
     expected = "fmt is continue-on-error",
     check_quick_steps(&edited(
-        CI_QUICK,
+        CI,
         "        run: cargo fmt --all --check\n",
         "        run: cargo fmt --all --check\n        continue-on-error: true\n"
     ))
 );
 
-// ---- One pull request's life ---------------------------------------------------------------------------------------
-
-fn check_life(tier: &str) {
-    let repo = Repo::new(tier, &read(CRATES), GUI_CHANGE);
-    let reruns = || {
-        repo.lines("actions")
-            .iter()
-            .filter(|l| l.ends_with("/rerun"))
-            .count()
-    };
-
-    // A push: quick, whatever the payload's label, every full-only check pending.
-    repo.state("labels", "merge-ready\n");
-    let push = repo.decide("pull_request", "synchronize", "1", "code", "h1");
-    assert_eq!(
-        push.outputs["quick"], "true",
-        "qa: a push is full on a stale label: {}",
-        push.text
-    );
-    assert!(!repo.passed("h1"), "qa: a quick head has passed");
-
-    // `merge-ready` on the ended quick run: re-runs it, nothing else starts.
-    repo.state("run", "5 completed 1\n");
-    let on = repo.label("labeled", "h1");
-    assert!(on.ok, "qa: {}", on.text);
-    assert_eq!(
-        reruns(),
-        1,
-        "qa: the label did not re-run the head's run: {}",
-        on.text
-    );
-
-    // The new attempt reads the live label and is full.
-    let attempt = repo.decide("pull_request", "synchronize", "2", "code", "h1");
-    assert_eq!(
-        attempt.outputs["quick"], "false",
-        "qa: the label's attempt is quick"
-    );
-    assert_eq!(
-        attempt.outputs["report"], "true",
-        "qa: the full tier closes no status"
-    );
-    assert!(
-        !repo.passed("h1"),
-        "qa: a full tier still running has passed"
-    );
-
-    // Anything but a pass leaves the head unmerged.
-    assert!(
-        repo.report("h1", &[("gpu-metal", "failure")]).ok,
-        "qa: report failed"
-    );
-    assert_eq!(
-        repo.statuses("h1")["gpu-metal"],
-        "failure",
-        "qa: a failed gate is not failure"
-    );
-    assert!(!repo.passed("h1"), "qa: a failed gate left the head passed");
-    for result in ["cancelled", "skipped"] {
-        assert!(
-            repo.report("h1", &[("xtask-ci", result)]).ok,
-            "qa: report failed"
-        );
-        assert_eq!(
-            repo.statuses("h1")["xtask-ci"],
-            "pending",
-            "qa: a {result} gate left `xtask-ci` not pending"
-        );
-        assert!(
-            !repo.passed("h1"),
-            "qa: a {result} gate left the head passed"
-        );
-    }
-    assert!(repo.report("h1", &[]).ok, "qa: report failed");
-    assert!(
-        repo.passed("h1"),
-        "qa: every gate passed and the head has not"
-    );
-
-    // Label off after a pass: the pass stands, on that head only; nothing is cancelled on an ended run.
-    repo.state("labels", "");
-    repo.state("run", "5 completed 2\n");
-    assert!(repo.label("unlabeled", "h1").ok, "qa: label off failed");
-    assert!(
-        repo.passed("h1"),
-        "qa: label off took back a pass on that exact head"
-    );
-    assert!(
-        repo.lines("actions")
-            .iter()
-            .all(|l| !l.ends_with("/cancel")),
-        "qa: cancelled an ended run"
-    );
-
-    // Label on again: nothing to do once every full-only check has passed, a re-run if one has not.
-    repo.state("labels", "merge-ready\n");
-    repo.state("passed", &format!("{}\n", FULL_ONLY.join("\n")));
-    assert!(repo.label("labeled", "h1").ok, "qa: label on failed");
-    assert_eq!(reruns(), 1, "qa: re-ran a full tier that has passed");
-    repo.state("passed", &format!("{}\n", FULL_ONLY[1..].join("\n")));
-    assert!(repo.label("labeled", "h1").ok, "qa: label on failed");
-    assert_eq!(reruns(), 2, "qa: `ci` had not passed and nothing re-ran");
-
-    // The next head starts over: a pass on `h1` is no pass on `h2`.
-    repo.state("head", "h2\n");
-    let next = repo.decide("pull_request", "synchronize", "1", "code", "h2");
-    assert_eq!(
-        next.outputs["quick"], "true",
-        "qa: the next head is not quick"
-    );
-    assert!(!repo.passed("h2"), "qa: `h2` passed on `h1`'s full tier");
-    assert!(
-        repo.passed("h1"),
-        "qa: the next head changed `h1`'s statuses"
-    );
-
-    // An unreadable label fails the run: no tier is guessed.
-    repo.state("no-labels", "");
-    let unread = repo.decide("pull_request", "reopened", "1", "code", "h2");
-    assert!(!unread.ok, "qa: decide passed on an unreadable label");
-    assert_ne!(
-        unread.outputs.get("quick").map(String::as_str),
-        Some("false"),
-        "qa: an unreadable label reads full"
-    );
-}
-
-#[test]
-fn qa_no_head_passes_until_its_own_full_tier_has() {
-    check_life(&read(TIER));
-}
-
-negative_control!(
-    qa_no_head_passes_until_its_own_full_tier_has,
-    "report closing a cancelled gate as a pass",
-    expected = "a cancelled gate left `xtask-ci` not pending",
-    check_life(&edited(TIER, "*) state=pending ;;", "*) state=success ;;"))
-);
+// `check_life` and `qa_no_head_passes_until_its_own_full_tier_has`, one pull request's life through the quick run,
+// the merge-ready label's re-run and the full tier's statuses, are retired with that path (the owner's CI model,
+// 9 Nov 2026): no head is held pending on a full tier, and no label starts one.
 
 // ---- The retry -----------------------------------------------------------------------------------------------------
 
-/// `ci_retry.py classify` on a quick run whose one failed job is the called workflow's, as the jobs API names it:
-/// `ci-quick / ci-quick` (`gh api …/check-runs` on this pull request's head).
+/// `ci_retry.py classify` on a pull request's run whose one failed job is the PR tier's product tests, `ci` (the job
+/// `tests`; `ci-quick / ci-quick`, the called workflow's, until the owner's CI model of 9 Nov 2026).
 fn retry_on(script: &str, message: &str) -> String {
     let dir = Scratch::new("qa_retry");
     std::fs::create_dir_all(dir.join("annotations")).expect("scratch");
@@ -1249,7 +1106,7 @@ fn retry_on(script: &str, message: &str) -> String {
     std::fs::write(
         dir.join("jobs.json"),
         r#"[{"id":1,"name":"changes","status":"completed","conclusion":"success"},
-            {"id":2,"name":"ci-quick / ci-quick","status":"completed","conclusion":"failure"}]"#,
+            {"id":2,"name":"ci","status":"completed","conclusion":"failure"}]"#,
     )
     .expect("jobs");
     let note =
@@ -1277,7 +1134,7 @@ fn check_retry(script: &str) {
     let fault = retry_on(script, "System.IO.IOException: No space left on device");
     assert!(
         fault.contains("retry=true"),
-        "qa: a runner fault in ci-quick is not retried: {fault}"
+        "qa: a runner fault in ci is not retried: {fault}"
     );
     let code = retry_on(
         script,
@@ -1285,7 +1142,7 @@ fn check_retry(script: &str) {
     );
     assert!(
         code.contains("retry=false"),
-        "qa: a real failure in ci-quick is retried: {code}"
+        "qa: a real failure in ci is retried: {code}"
     );
 }
 
@@ -1297,6 +1154,6 @@ fn qa_a_quick_run_retries_on_a_runner_fault_only() {
 negative_control!(
     qa_a_quick_run_retries_on_a_runner_fault_only,
     "a retry script with no attempts left",
-    expected = "a runner fault in ci-quick is not retried",
+    expected = "a runner fault in ci is not retried",
     check_retry(&edited(RETRY, "MAX_ATTEMPTS = 3", "MAX_ATTEMPTS = 0"))
 );

@@ -763,24 +763,23 @@ negative_control!(
     }
 );
 
-/// The `cachekey` lines of `ci`, which saves the fixture pool, and `xtask-ci`, which restores it: the same line, naming
-/// each build setting the pool's builds carry. A pool built under other settings would restore and be rebuilt whole
-/// beside itself.
+/// The `cachekey` lines of `ci`, which saves the fixture pool, and of the jobs that restore it (`ci-workspace`, and the
+/// pull request's `tests` and `process`, the owner's CI model of 9 Nov 2026): the same line, naming each build setting
+/// the pool's builds carry. A pool built under other settings would restore and be rebuilt whole beside itself.
 fn check_pool_key(ci: &str) {
     let keyed: Vec<&str> = ci
         .lines()
         .map(uncommented)
         .filter(|l| l.contains("echo \"cachekey="))
         .collect();
-    assert_eq!(
-        keyed.len(),
-        2,
-        "`cachekey` is computed {} times, not twice",
+    assert!(
+        keyed.len() >= 2,
+        "`cachekey` is computed {} times, not by the saving job and a restoring one",
         keyed.len()
     );
-    assert_eq!(
-        keyed[0], keyed[1],
-        "`ci` and `xtask-ci` compute different `cachekey`s, so `xtask-ci` never restores `ci`'s pool"
+    assert!(
+        keyed.iter().all(|k| *k == keyed[0]),
+        "the jobs compute different `cachekey`s, so one never restores `ci`'s pool"
     );
     assert!(
         keyed[0].contains(KEYED_ENV),
@@ -824,7 +823,7 @@ mod apart {
 
     negative_control!(
         the_fixture_pool_key_follows_the_build_settings,
-        "`xtask-ci` computing another `cachekey`, so it never restores `ci`'s pool",
+        "the last job keyed computing another `cachekey`, so it never restores `ci`'s pool",
         expected = "compute different `cachekey`s",
         {
             let ci = ci_yml();

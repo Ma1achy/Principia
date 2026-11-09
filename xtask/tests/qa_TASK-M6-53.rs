@@ -1,7 +1,11 @@
 //! QA tests for TASK-M6-53's CI wiring, written from REQ-GUI-412 and R-692, not from the workflow's edit.
 //!
 //! - REQ-GUI-412: "CI's lavapipe and Metal block". So gui's lattice tests run in `gpu-metal` on the Metal backend and in
-//!   the `ci` shards on Vulkan, with nothing letting a failure through.
+//!   the `ci` shards on Vulkan, with nothing letting a failure through. Since the owner's CI model (9 Nov 2026) both
+//!   are the per-merge run's, every push to `main` (`gpu-metal` reporting `gpu-metal suites`), which this file checks.
+//!   On a pull request, the product tests run them on lavapipe in `tests` when gui changes, and the GPU smoke sets
+//!   `gpu-lavapipe` and `gpu-metal` run them on lavapipe and on Metal on a GPU-path change (`qa_tooling_pr_tier.rs`'s
+//!   `qa_pr_tier_lattice_tests_block_on_both_smoke_sets` checks those).
 //! - R-692: "the paths the new `gpu-metal` step reads are GPU paths, and the rest of the crate is not", and it lists five.
 //!   What classifies each path is `qa_R-662_ci_scope.rs`'s; here, that the five are all the step reads: a sixth file it
 //!   reads would fail on `main` first, with no ruling behind that gap.
@@ -127,10 +131,12 @@ fn qa_m653_lattice_tests_block_on_metal_and_on_lavapipe() {
     rejects("a step whose failure is let through", || {
         assert_metal(&tolerated)
     });
+    // The job `gpu-metal`'s own backend: since the owner's CI model (9 Nov 2026) the Metal smoke set, `gpu-metal-smoke`,
+    // sets it too, so the edit names the job (R-290's exception, applied per R-369).
     let backend = parse(&changed(
         &text,
-        "      PRIN_GPU_BACKEND: metal",
-        "      PRIN_GPU_BACKEND: vulkan",
+        "  gpu-metal:\n    runs-on: macos-15\n    env:\n      PRIN_GPU_BACKEND: metal\n",
+        "  gpu-metal:\n    runs-on: macos-15\n    env:\n      PRIN_GPU_BACKEND: vulkan\n",
     ));
     rejects("the step off Metal", || assert_metal(&backend));
     let excluded = parse(&text.replace(

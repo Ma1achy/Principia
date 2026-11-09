@@ -402,8 +402,13 @@ fn quotient<R: P>(c: Canon<R>, x: &Ic<f64>, g: &Gauge) -> Result<f64, String> {
     if d > QUOTIENT_EPS {
         return Err(format!("C(g·x) is {d} eps from x, over κ = {kappa}"));
     }
+    // Idempotence carries step 1b's residual too: `C(y)`'s momenta hold the rounding of the boost the first unboost
+    // subtracted, `eps·boost` in output units, and the second `C`'s step 1b removes `mᵢ·Σp` of that residue. Where
+    // `x`'s momenta are small, that residue is `C(y)`'s whole momentum scale, so the momenta are measured over
+    // `C(y)`'s largest `‖pᵢ‖` plus `boost`, as the clause above does; positions carry no added translation, `C(y)`
+    // being already at its CoM to rounding of its own size.
     let again = c(&out.ic);
-    let di = gap(&wide(&out.ic), &wide(&again.ic), e) / kappa;
+    let di = gap_over(&wide(&out.ic), &wide(&again.ic), e, [0.0, boost]) / kappa;
     if again.mirrored || again.clamped || di > QUOTIENT_EPS {
         return Err(format!(
             "C(C(y)) is {di} eps from C(y), mirrored {} clamped {}",

@@ -53,7 +53,11 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
   keyframes, each with its own easing curve, which gives that segment's progress `s ∈ [0, 1]` at each frame for every
   eased field, and its transition at a chart change, a cut or a dissolve with its length. The playhead policy is one of
   hold, advance with wall time, or set to a value. The curves offered, the default curve and the playhead policies'
-  semantics are a definition (R-72, REQ-TOOL-197), written here by TASK-M8-31. The screen that makes a spec is
+  semantics are a definition (R-72, REQ-TOOL-197), written here by TASK-M8-31. *8 Nov 2026 (R-901):* easing and the
+  path curve are a property of each path segment, shared by live morphs, saved paths and export. Where a segment's
+  path is one path segment, the segment's easing is that segment's timing; where a keyframe pair is joined by several
+  path segments (a tilt, then a morph), each carries its own timing, concatenated, and REQ-TOOL-197's one `s` per frame is
+  read per path segment. The screen that makes a spec is
   `principia_sequence.md` (R-577). *Was:* "A keyframe animation serialises as `{keyframes: [(t_wall, ViewState,
   RenderState, playhead policy)], easing, fps, duration}`" (stale value, replaced by R-576).
   **The frame grid, the progress and the playhead (fix round 6 of PR #286, physics review 5631678451, P1; applied per

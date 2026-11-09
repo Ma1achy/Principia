@@ -6,9 +6,11 @@
 //! `cargo xtask ci` in a job of its own [...] failing on any finding"), not from the implementation.
 //!
 //! - The workflow: each sharded step's job has a matrix of exactly the shards 1 to n its `--partition` names; the
-//!   `ci` job's nextest step uses nextest's `hash:`; the doctests run in one shard of the matrix; the checks branch
-//!   protection requires, `ci` and `xtask-ci`, gather every shard, cannot be skipped by a failed shard, and fail
-//!   unless every shard succeeded.
+//!   `ci` job's nextest step uses nextest's `hash:`; the doctests run in one shard of the matrix. The checks branch
+//!   protection requires cannot be skipped by a failed job they need: since the owner's CI model (9 Nov 2026) these
+//!   are the PR tier's six, each failing at its first step unless the classification succeeded; the gates that
+//!   gathered the full tier's shards into `ci` and `xtask-ci` are gone with that tier from the pull request's path,
+//!   and their tests retired (R-290's exception, applied per R-369).
 //! - `cargo xtask controls --partition k/4`, run on a stand-in `cargo` (`CARGO`) that answers `metadata` and the
 //!   listings from canned text and logs each control it is asked to run: the 4 shards together run each control
 //!   exactly as often as the unpartitioned run does, each in one shard; a control's shard depends on its name alone,
@@ -291,164 +293,116 @@ negative_control!(
     )
 );
 
-/// The job whose `name:` is `check` (the status check branch protection requires), and its run script.
-fn gate<'a>(jobs: &'a [Job], check: &str) -> (&'a Job, String) {
-    let found: Vec<&Job> = jobs
-        .iter()
-        .filter(|j| match j.own("name") {
-            // R-684: a gate is named by its one-value matrix, so a quick run's skip reports no required name.
-            Some(name) if name == "${{ matrix.check }}" => j
-                .lines
-                .iter()
-                .any(|l| l.trim() == format!("check: [{check}]")),
-            Some(name) => name == check,
-            // A matrix job reports one check per shard, `<id> (<k>)`, never `<id>`.
-            None => j.id == check && j.shards().is_none(),
-        })
-        .collect();
-    assert_eq!(found.len(), 1, "no single job reports the check `{check}`");
-    let job = found[0];
-    let runs = job.runs();
-    assert_eq!(runs.len(), 1, "job `{}` has not one run step", job.id);
-    (job, runs[0].clone())
-}
+// `gate`, `passes`, `check_gate` and three tests on them, `qa_m0_45_the_xtask_ci_check_fails_unless_every_shard_passed`,
+// `qa_m0_45_the_ci_check_gathers_every_test_shard_and_the_checks` and `qa_m0_45_the_ci_check_gathers_the_workspace_tests`,
+// held the required checks `ci` and `xtask-ci` to gate jobs gathering every shard of the full tier. The owner's CI
+// model (approved 9 Nov 2026) takes the full tier off the pull request's path to each merge to `main`, where no
+// required check reads it, and drops `xtask-ci` from the required checks: the gates are gone, and those tests are
+// retired with them. The shards themselves, every test and every control once, stay held above and below. What the
+// last of them held, that a required check cannot be skipped, is re-pointed at the PR tier's required checks (R-290's
+// exception, applied per R-369 by the orchestrator).
 
-/// Runs `script` under bash, as Actions runs a step, with `RESULTS` set to `results`; whether it passed.
-fn passes(script: &str, results: &str) -> bool {
+/// The PR tier's required checks `ci.yml` bears (the owner's CI model, 9 Nov 2026).
+const REQUIRED: [&str; 6] = ["fmt", "clippy", "build", "ci", "gpu-lavapipe", "gpu-metal"];
+
+/// Runs a step's one-line `run:` (its YAML quotes dropped) under bash with `CHANGES` set to `changes`; whether it
+/// passed.
+fn passes_with(script: &str, changes: &str) -> bool {
+    let script = script
+        .strip_prefix('\'')
+        .and_then(|s| s.strip_suffix('\''))
+        .unwrap_or(script);
     Command::new("bash")
         .args(["-e", "-c", script])
-        .env("RESULTS", results)
+        .env("CHANGES", changes)
         .timed_output()
         .expect("run bash")
         .status
         .success()
 }
 
-/// REQ-VAL-166 and R-266 on `workflow`: the required check `check` is reported by a job that gathers every job in
-/// `gathers` (`needs:`), runs whatever they ended in (`if: always()`, so a failed shard turns it red rather than
-/// skipping it, which branch protection counts as passing), reads their results, and passes only when every one
-/// succeeded.
-fn check_gate(workflow: &str, check: &str, gathers: &[&str]) {
+/// R-266 and R-656 on `workflow`: the job reporting the required check `check`, one job, runs whatever the job it
+/// needs ended in (its own `if:` is `always()`, alone or first, so a failed classification turns it red rather than
+/// skipping it, which branch protection counts as passing), and its first step, the classification's check, passes
+/// only when `changes` succeeded.
+fn check_unskippable(workflow: &str, check: &str) {
     let jobs = jobs(workflow);
-    let (job, script) = gate(&jobs, check);
-    let needs = job.own("needs").unwrap_or_default();
-    let needs: BTreeSet<&str> = needs
-        .trim_start_matches('[')
-        .trim_end_matches(']')
-        .split(',')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
+    let found: Vec<&Job> = jobs
+        .iter()
+        .filter(|j| match j.own("name") {
+            Some(name) => name == check,
+            None => j.id == check && j.shards().is_none(),
+        })
         .collect();
-    for g in gathers {
-        assert!(
-            needs.contains(g),
-            "the check `{check}` (job `{}`) does not gather job `{g}`: needs {needs:?}",
-            job.id
-        );
-    }
-    assert_eq!(
-        job.own("if").as_deref(),
-        Some("always() && needs.changes.outputs.quick != 'true'"),
-        "the check `{check}` (job `{}`) can be skipped when a job it gathers fails",
+    assert_eq!(found.len(), 1, "no single job reports the check `{check}`");
+    let job = found[0];
+    assert!(
+        job.own("if")
+            .is_some_and(|c| c == "always()" || c.starts_with("always() && ")),
+        "the check `{check}` (job `{}`) can be skipped when the job it needs fails",
         job.id
     );
+    let first = job
+        .runs()
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| panic!("the check `{check}` (job `{}`) runs nothing", job.id));
     assert!(
-        job.lines.iter().any(|l| l.contains("needs.*.result")),
-        "the check `{check}` does not read the results of the jobs it gathers"
-    );
-    assert!(
-        passes(&script, "success success success success success"),
-        "the check `{check}` fails when every job it gathers succeeded: `{script}`"
+        passes_with(&first, "success"),
+        "the check `{check}` fails at its first step when the classification succeeded: `{first}`"
     );
     for bad in ["failure", "cancelled", "skipped"] {
         assert!(
-            !passes(&script, &format!("success success {bad} success success")),
-            "the check `{check}` passes with a job it gathers {bad}: `{script}`"
+            !passes_with(&first, bad),
+            "the check `{check}` passes its first step with the classification {bad}: `{first}`"
         );
     }
 }
-
-#[test]
-fn qa_m0_45_the_xtask_ci_check_fails_unless_every_shard_passed() {
-    check_gate(&the_workflow(), "xtask-ci", &["xtask-ci"]);
-}
-
-negative_control!(
-    qa_m0_45_the_xtask_ci_check_fails_unless_every_shard_passed,
-    "the checked-in workflow with the xtask-ci check failing only on `failure`, so a cancelled shard passes it",
-    expected = "passes with a job it gathers cancelled",
-    check_gate(
-        &the_workflow().replace(r#"[ "$r" = success ]"#, r#"[ "$r" != failure ]"#),
-        "xtask-ci",
-        &["xtask-ci"]
-    )
-);
-
-#[test]
-fn qa_m0_45_the_ci_check_gathers_every_test_shard_and_the_checks() {
-    check_gate(&the_workflow(), "ci", &["ci", "ci-checks", "ci-workspace"]);
-}
-
-negative_control!(
-    qa_m0_45_the_ci_check_gathers_every_test_shard_and_the_checks,
-    "the checked-in workflow with the ci check gathering the test shards alone, not `ci-checks`",
-    expected = "does not gather job `ci-checks`",
-    check_gate(
-        &the_workflow().replace(
-            "needs: [ci, ci-checks, ci-workspace,",
-            "needs: [ci, ci-workspace,"
-        ),
-        "ci",
-        &["ci", "ci-checks", "ci-workspace"]
-    )
-);
-
-/// R-372: the xtask tests that left the shards for `ci-workspace` still count toward the required check `ci`.
-#[test]
-fn qa_m0_45_the_ci_check_gathers_the_workspace_tests() {
-    check_gate(&the_workflow(), "ci", &["ci", "ci-checks", "ci-workspace"]);
-}
-
-negative_control!(
-    qa_m0_45_the_ci_check_gathers_the_workspace_tests,
-    "the checked-in workflow with the ci check gathering the shards and the checks, not `ci-workspace`",
-    expected = "does not gather job `ci-workspace`",
-    check_gate(
-        &the_workflow().replace("needs: [ci, ci-checks, ci-workspace,", "needs: [ci, ci-checks,"),
-        "ci",
-        &["ci", "ci-checks", "ci-workspace"]
-    )
-);
 
 #[test]
 fn qa_m0_45_the_required_checks_cannot_be_skipped() {
     let workflow = the_workflow();
-    check_gate(&workflow, "ci", &["ci", "ci-checks", "ci-workspace"]);
-    check_gate(&workflow, "xtask-ci", &["xtask-ci"]);
+    for check in REQUIRED {
+        check_unskippable(&workflow, check);
+    }
 }
 
 negative_control!(
     qa_m0_45_the_required_checks_cannot_be_skipped,
-    "the checked-in workflow with `if: always()` dropped from the xtask-ci check, which a failed shard then skips",
-    expected = "can be skipped when a job it gathers fails",
+    "the checked-in workflow with `always()` dropped from the `ci` check, which a failed classification then skips",
+    expected = "can be skipped when the job it needs fails",
     {
-        let workflow = the_workflow();
-        let at = workflow.find("\n  xtask-ci-gate:\n").expect("no xtask-ci-gate job");
-        let (head, tail) = workflow.split_at(at);
-        check_gate(
-            &format!(
-                "{head}{}",
-                tail.replacen(
-                    "    if: always() && needs.changes.outputs.quick != 'true'\n",
-                    "",
-                    1
-                )
-            ),
-            "xtask-ci",
-            &["xtask-ci"],
-        )
+        let workflow = the_workflow().replacen(
+            "    name: ci\n    needs: changes\n    if: always() && github.event_name == 'pull_request'\n",
+            "    name: ci\n    needs: changes\n    if: github.event_name == 'pull_request'\n",
+            1,
+        );
+        for check in REQUIRED {
+            check_unskippable(&workflow, check);
+        }
     }
 );
+
+mod a_cancelled_classification_passes {
+    use super::*;
+    negative_control!(
+        qa_m0_45_the_required_checks_cannot_be_skipped,
+        "the checked-in workflow whose `gpu-metal` passes its classification check unless `changes` failed",
+        expected = "the check `gpu-metal` passes its first step with the classification cancelled",
+        {
+            let workflow = the_workflow();
+            let at = workflow.find("\n  gpu-metal-smoke:\n").expect("no gpu-metal-smoke job");
+            let (head, tail) = workflow.split_at(at);
+            let workflow = format!(
+                "{head}{}",
+                tail.replacen(r#"[ "$CHANGES" = success ]"#, r#"[ "$CHANGES" != failure ]"#, 1)
+            );
+            for check in REQUIRED {
+                check_unskippable(&workflow, check);
+            }
+        }
+    );
+}
 
 // ---- `cargo xtask controls --partition` on a stand-in cargo --------------------------------------------------------
 

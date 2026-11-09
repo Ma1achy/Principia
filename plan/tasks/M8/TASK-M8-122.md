@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-143
-- **Depends on:** TASK-M4-37, TASK-M8-109, TASK-M8-102
+- **Depends on:** TASK-M4-37, TASK-M8-109, TASK-M8-102, TASK-M8-117
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -25,3 +25,5 @@ The owner's reversal of R-669 (R-847, RQ-725 (b)): fixed-`k` becomes a chart and
 
 ## Notes
 - Nothing here is built until TASK-M4-37 has carried the rulings into the design (its Depends on). REQ-VAL-326's pointer to the 2008 paper is RQ-731's, the record PR's.
+- *8 Nov 2026 (R-873):* **Build order:** stage 3 of R-863's order, after stage 2 (TASK-M8-117), placed by R-873 (RQ-744 (A) (a) and (C)); TASK-M8-106 and TASK-M8-108, stage 4, depend on it. The note above that no stage edge is made is overtaken. *Was:* "- **Depends on:** TASK-M4-37, TASK-M8-109, TASK-M8-102"
+- *8 Nov 2026 (R-891):* RQ-731 is ruled (a): REQ-VAL-326's pointer is Tanikawa & Mikkola 2008, § 3.1 and § 4.2, its virial ratio k = T/|U|, Q = 2k.

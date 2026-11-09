@@ -354,16 +354,16 @@ fn overrides_name_one_test_each(toml: &str) {
             "an override that does not end its test at the third period: {filter}"
         );
     }
-    assert_eq!(seen.len(), 231, "not the 231 measured tests");
+    assert_eq!(seen.len(), 232, "not the 232 measured tests");
 }
 
 #[test]
-fn mutants_profile_names_the_231_measured_tests_once_each() {
+fn mutants_profile_names_the_232_measured_tests_once_each() {
     overrides_name_one_test_each(&nextest_toml());
 }
 
 negative_control!(
-    mutants_profile_names_the_231_measured_tests_once_each,
+    mutants_profile_names_the_232_measured_tests_once_each,
     "an override that ends its test at the second period",
     expected = "does not end its test at the third period",
     overrides_name_one_test_each(&edited(

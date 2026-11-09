@@ -4,6 +4,10 @@ Named on every task (`plan/WORKFLOW.md` § "Task files": `code` and `qa` always)
 rules: what is compiled where, what may cross which boundary, what is generated, what is baked, and how the docs change.
 Crate names are the plan's layout (`plan/WORKFLOW.md` § "Conventions: crates and runners (R-146)").
 
+The tests a task, a requirement or this checklist names as `cargo test …` are run locally as their `cargo nextest run`
+equivalents, with `cargo test --doc` where doctests would have run, and the run shows the command actually run beside
+the one it stands for (`plan/WORKFLOW.md` § "Agents' test runs: cargo nextest").
+
 ## 1. One source, compiled twice
 
 - [ ] Physics (decode, canonicalise, wrapper, occupants, detectors, events) lives once in `crates/kernel`, generic over the float type, compiled to f32 SPIR-V → WGSL by rust-gpu and to f64 by rustc; there is no CPU-only or GPU-only copy of any physics logic. `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the defining decision)"; `docs/design/principia_core_design.md` § "1. Physics defined once, compiled twice — now *structurally*, not by discipline"

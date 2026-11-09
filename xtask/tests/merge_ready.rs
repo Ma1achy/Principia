@@ -4,8 +4,9 @@
 //! report correctly in both tiers (skip-as-success only where the tier logic allows it)", "cancel superseded `reviews`
 //! runs per PR").
 //!
-//! - `merge_ready_mutants_gate_waits_for_the_label`: `mutants.yml` runs on a pull request's new heads and on every
-//!   label change, put on or taken off, with no filter; its shards, fixture and verdict run only on the `merge-ready`
+//! - `merge_ready_mutants_gate_waits_for_the_label`: `mutants.yml` runs on a dispatch alone, off the pull request's
+//!   path (the owner's CI model, approved 9 Nov 2026), kept for the per-merge workflow; as it ran per pull
+//!   request, on its new heads and every label change, its shards, fixture and verdict run only on the `merge-ready`
 //!   label's run, the verdict whatever the shards ended in; one job, `mutants-check`, `if: always()`, reports
 //!   `mutants-check` in every run (R-678: GitHub counts only the latest run's check suite, so a check posted into
 //!   another run's suite is lost). Its report step, run under bash with stand-in `gh` and `sleep`, concludes on each
@@ -427,23 +428,17 @@ const REPORTS: &[(&str, Env, bool, &str)] = &[
 
 fn check_gate(yml: &str) {
     let wf = parse(yml);
-    let pr = &wf["on"]["pull_request"];
-    let types: Vec<String> = pr["types"]
-        .as_array()
-        .map(|a| a.iter().map(text).collect())
-        .unwrap_or_default();
-    for t in ["opened", "synchronize", "reopened", "labeled", "unlabeled"] {
-        assert!(
-            types.iter().any(|x| x == t),
-            "merge_ready: mutants.yml does not run on `{t}`: {types:?}"
-        );
-    }
-    for key in ["paths", "paths-ignore", "branches", "branches-ignore"] {
-        assert!(
-            pr.get(key).is_none(),
-            "merge_ready: mutants.yml filters its pull requests with `{key}:`"
-        );
-    }
+    // Off the pull request's path (the owner's CI model, approved 9 Nov 2026): only a dispatch runs it, kept
+    // for the per-merge workflow, and none of its jobs runs there.
+    let triggers: Vec<String> = match &wf["on"] {
+        Value::Object(o) => o.keys().cloned().collect(),
+        other => vec![text(other)],
+    };
+    assert_eq!(
+        triggers,
+        ["workflow_dispatch"],
+        "merge_ready: mutants.yml runs on more than a dispatch"
+    );
 
     // `mutants-check` is a job of every run, never skipped (R-678): GitHub counts only the latest run's check suite.
     let jobs = wf["jobs"].as_object().expect("merge_ready: jobs");
@@ -460,7 +455,8 @@ fn check_gate(yml: &str) {
     );
     let check = &jobs["mutants-check"];
     assert!(
-        text(&check["if"]) == "always()" && text(&check["needs"]) == "mutants-verdict",
+        text(&check["if"]) == "always() && github.event_name == 'pull_request'"
+            && text(&check["needs"]) == "mutants-verdict",
         "merge_ready: mutants-check can be skipped, or does not wait for the verdict: if `{}`, needs `{}`",
         text(&check["if"]),
         text(&check["needs"])
@@ -630,22 +626,22 @@ mod check_skippable {
         expected = "mutants-check can be skipped, or does not wait for the verdict",
         check_gate(&edited(
             "mutants.yml",
-            "  mutants-check:\n    if: always()\n",
+            "  mutants-check:\n    if: always() && github.event_name == 'pull_request'\n",
             "  mutants-check:\n    if: always() && github.event.label.name == 'merge-ready'\n"
         ))
     );
 }
 
-mod no_unlabeled {
+mod on_pull_requests {
     use super::*;
     negative_control!(
         merge_ready_mutants_gate_waits_for_the_label,
-        "a workflow not run when a label is taken off",
-        expected = "mutants.yml does not run on `unlabeled`",
+        "the workflow back on every pull request",
+        expected = "mutants.yml runs on more than a dispatch",
         check_gate(&edited(
             "mutants.yml",
-            "    types: [opened, synchronize, reopened, labeled, unlabeled]\n",
-            "    types: [opened, synchronize, reopened, labeled]\n"
+            "on:\n  workflow_dispatch:\n",
+            "on:\n  workflow_dispatch:\n  pull_request:\n"
         ))
     );
 }

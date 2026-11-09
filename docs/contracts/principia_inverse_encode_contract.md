@@ -335,7 +335,8 @@ coordinates and checks each shown axis on its own (R-538 TF2.1; `principia_lines
    within $r_{\mathrm{coll}}$ give a $t = 0$ collision outcome, which is a real outcome. Exactly coincident bodies
    can't be represented, and layer 1's range check catches them with `lookup_clamped`.
 
-**Layer 1's space and bounds** (R-72; REQ-ENC-023; TASK-M2-19). The controls `z ∈ ℝ⁸` are unbounded: each is a
+**Layer 1's space and bounds** (R-72; REQ-ENC-023; TASK-M2-19). *[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β`
+becomes a periodic angle, the controls' space `ℝ × S¹ × ℝ⁶`; this stands as written until TASK-M2-57 merges.]* The controls `z ∈ ℝ⁸` are unbounded: each is a
 logit or an artanh, and every real `z` decodes. "$z_k \in [0,1]$" is read in the space each control's link maps it
 into before its affine scale, Part 3's clamp space: `s_α = 2α/π`, `s_β = β/π` and `s_qk = ½(q_k/q_max + 1)`, each
 `σ(z_k)` under the default links, and for the masses `μ_k/μ_max = tanh(z_μk)`. The bounds are the clamps', not the

@@ -134,20 +134,73 @@ cargo test --workspace --doc
 until the README of 18 Oct 2026, which has no build instructions; `xtask/tests/nextest.rs` checks this run against CI's
 pinned version.)
 
+### Agents' test runs: cargo nextest
+
+Every agent, and the orchestrator, runs tests locally with `cargo nextest run` in place of `cargo test`, as R-231 and
+CI already do. Applied per R-369 and R-812 on 9 Nov 2026, against a criterion written before measuring (at least 10%
+faster than `cargo test` on the same warm target, by more than the spread between rounds): the test phase took kernel
+151 / 129 s → 85 / 65 s and ledger 84 / 107 s → 74 / 46 s, 37–46% faster, with no result changed. `cargo test` runs a
+crate's test binaries one after another; nextest runs every test of every binary at once, one process per test, as CI.
+- **The same arguments.** `cargo nextest run` takes `cargo test`'s package, target, feature and profile arguments as
+  they are (`-p`, `--workspace`, `--lib`, `--test <name>`, `--features`, `--release`) and its positional name filters
+  (`cargo nextest run -p gui mock_keyboard`). After `--`, libtest's `--exact`, `--skip`, `--ignored` and
+  `--include-ignored` work as they are; `-- --nocapture` becomes `--no-capture`, and `-- --test-threads N` becomes
+  `--test-threads N`. Run it on the default profile, with no `NEXTEST_PROFILE` set (a mutants run's `mutants` profile
+  aside, `plan/OPERATIONS.md` § "Reviewers"); it runs every test, and keeps `.config/nextest.toml`'s overrides that run
+  the tests that run cargo alone.
+- **Doctests.** nextest runs none. Where `cargo test` would have run them (no `--lib`, `--test` or `--bins` selection)
+  and the crate has a library, also run `cargo test --doc` with the same package, features and filter. `prin` has no
+  library, and `--doc` fails on it.
+- **A task's acceptance commands.** A task file's `cargo test …` acceptance command is run as its nextest equivalent,
+  plus its `--doc` run where the line above asks for one. The PR shows the command actually run, with its output,
+  beside the task's command it stands for (`cargo test -p kernel --test roundtrip`, run as `cargo nextest run -p
+  kernel --test roundtrip`). The task files are not rewritten; this rule covers them, and the reviewer checklists'
+  `cargo test` lines alike.
+- **A filter that selects nothing.** nextest fails a run that selects no test (exit 4), where `cargo test` passes with
+  0 tests. Don't pass `--no-tests=pass`: a command that selects nothing tests nothing. Fix the filter; if the task's
+  own command selects nothing, that is an escalation (§ "Escalation").
+- **The built kernel first.** The tests that read the built kernel (the `gpu-kernel` profile's list in
+  `.config/nextest.toml`: engine's and validation's `*_gpu` tests, `decode_cross_backend`, `codegen_selftest`,
+  `bringup`, `toolchain` and the rest) need `cargo xtask build-kernel` run first, through the queue, in the same
+  worktree. It writes `target/spirv/kernel.spv` and `target/spirv/kernel.wgsl` under the worktree's root, whatever
+  `CARGO_TARGET_DIR` is; they are gitignored, so a fresh worktree has neither, and a change under `crates/kernel/`
+  needs it run again. Without them those tests fail with "target/spirv/kernel.wgsl: run `cargo xtask build-kernel`
+  first".
+- **What stays on `cargo test`:**
+  - doctests, `cargo test --doc` (above);
+  - the stand-in soak (`stand-in-soak.yml`, REQ-SYS-070): its 50 runs of `cargo test -p xtask --test <name>` test the
+    fork/exec race among one binary's tests run as threads of one process, which nextest's process per test would
+    remove (`xtask/tests/nextest.rs`, `LIBTEST_SOAK`); a local repeat of it runs the workflow's own command;
+  - the `cargo test` that tools and tests run themselves, as a child: `cargo xtask controls`, which keeps its own cargo
+    invocations (R-231); the test listings `cargo test <args> -- --list` (`xtask/tests/nextest.rs`'s no-test-dropped
+    check, `gate.yml`'s listing, REQ-SYS-079); and the tests that run `cargo test` as their subject (validation's
+    `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26`, and xtask's `ci_debug_info`, among them). An agent runs
+    those tests themselves under nextest, as CI does; what they spawn is not rewritten.
+
+  The tests that re-run their own binary by name with libtest's arguments (`current_exe()` with `--exact` and
+  `--test-threads 1`: `xtask/tests/lint_no_alloc.rs`, `lint_wgsl_rules.rs`, `lint_compute_pipelines.rs` and
+  `qa_ops_golden_harness_ci.rs`; `crates/render/tests/pipeline_teardown.rs` and `qa_TASK-M2-42.rs`;
+  `crates/validation/tests/qa_TASK-M0-33_type.rs`, `qa_TASK-M0-48.rs` and `support/scratch_guard.rs`;
+  `crates/prin/tests/qa_TASK-M0-18.rs`), and those that took in-process locks under `cargo test` (`WORKSPACE_TARGET`,
+  `WORKSPACE_RUN`), run under nextest as they do in CI, so they are not on this list.
+
 ## The review loop
 
 1. **The implementer** opens the PR once the task's acceptance tests pass locally and it has run `cargo mutants
    --in-diff` on its own diff against `origin/main` and tested the boundary of every comparison and match arm it adds
-   (R-388; `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item). CI's mutants gate stays the authority.
+   (R-388; `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item). Since the owner's CI model (R-908, R-909) no
+   pull-request run mutates, so that local run is the pull request's mutation check. *Was:* "CI's mutants gate stays
+   the authority."
 2. **Every reviewer named in the task** (`plan/reviewers/<name>.md`) reviews against their checklist and the task's
    References. The reviewers are agents (R-175): each posts a PR review headed `VERDICT: APPROVE <role>` or
    `VERDICT: CHANGES <role>`, since GitHub won't let one account approve its own PR. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
    Reviewers never share a checkout: each gets its own git worktree at the PR head and its own `CARGO_TARGET_DIR`,
    which the orchestrator makes before dispatch and removes afterwards (R-219).
    A reviewer runs the acceptance commands and the tests the diff touches plus their dependents, and checks CI is green
-   on the head for the full suite; a full local run is only for a cross-cutting change (R-229). Before `merge-ready`, a
-   code head's green is the quick tier's, the full-only checks pending; the full suite then runs on the approved head
-   (R-684; `plan/OPERATIONS.md` § "What CI runs on a pull request").
+   on the head; a full local run is only for a cross-cutting change (R-229). A head's green is the PR tier's
+   (`plan/OPERATIONS.md` § "What CI runs on a pull request: the PR tier"); the full suite runs on each merge to `main`.
+   *Was (R-684):* "Before `merge-ready`, a code head's green is the quick tier's, the full-only checks pending; the
+   full suite then runs on the approved head."
 3. **Findings cite file and line** — of the diff, or of the doc section a finding rests on (`file` § "section"). A
    finding without a citation isn't actionable and is returned to its author.
 4. **The implementer fixes** each finding and replies on the finding with the fixing commit.
@@ -163,10 +216,9 @@ pinned version.)
    stacked; if a stack is ever needed, the child PR is retargeted to `main` before the PR below it merges, because
    merging deletes the lower branch at once and deleting a base branch closes its child PRs (CLAUDE.md § Git, R-362).
 
-**Advisory bot reviews (R-651, a standing rule).** Codex, Gemini CLI and GitHub Copilot review alongside the named
-reviewers, advisory only: they never replace the named reviewers' approvals, and `reviews-complete` doesn't count them.
-The orchestrator asks each bot for a fresh review (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a
-reviewer):
+**Advisory bot reviews (R-651, a standing rule; R-910).** Codex and Gemini CLI review alongside the named reviewers,
+advisory only: they never replace the named reviewers' approvals, and `reviews-complete` doesn't count them. Copilot is
+never requested (R-910). The orchestrator asks each bot for a fresh review (`@codex review`, `@gemini-cli /review`):
 - **before the merge, on the final head:** step 6 waits for a review from each bot on the exact SHA being merged, and
   re-requests a bot whose last review is on an older head;
 - **after every substantive push:** new logic, physics or algebra, a fix responding to review findings (whatever it
@@ -175,7 +227,7 @@ reviewer):
   large one, so problems surface partway through rather than at the end.
 
 Under limits the order is pre-merge, then post-push, then periodic. A bot is unavailable when it hasn't reviewed the
-exact SHA within its limit, counted from the request (Codex 25 minutes, Gemini CLI 30, Copilot 15), errors, or refuses
+exact SHA within its limit, counted from the request (Codex 25 minutes, Gemini CLI 30), errors, or refuses
 on quota or rate limit; it is noted on the PR and the merge goes ahead with the others; the owner is told if pre-merge
 reviews start being skipped. Every bot finding is closed out before the merge: verified against the code, the spec or
 the physics, then fixed (the reply names the commit), answered with why it doesn't apply (wrong, out of scope, already
