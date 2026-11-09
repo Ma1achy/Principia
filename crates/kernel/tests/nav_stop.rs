@@ -52,7 +52,8 @@ const P: LinkParams<f64> = LinkParams::DEFAULT;
 const C: [f64; 2] = [0.37, 0.61];
 /// The targets' slider spans: the Slice centre slider's range, `[−1, 1]` (R-507 U1).
 const SPAN: [f64; 2] = [2.0, 2.0];
-/// R-469 A3's bound on the bisection: the f64s of `[0, 1]` number fewer than 2⁶².
+/// R-469 A3's bound on the bisection: the f64s of `[0, 1]` number fewer than 2⁶². They number `0x3FF0…0 + 1`, just
+/// under 2⁶², so halving their bit patterns' interval to adjacent ends takes 61 or 62 steps, by where the edge lies.
 const MAX_STEPS: u32 = 62;
 
 // ── The independent check ─────────────────────────────────────────────────────────────────────────────────────────
@@ -79,8 +80,8 @@ fn verdict<C: Chart<Param = f64>>(view: Option<View<C>>) -> Option<Check> {
 }
 
 /// REQ-CHART-060's stop of a path from `from` to `to`, checked against the chart alone: the value is on the path at
-/// its `λ`; its centre validates; where it stopped, the next f64 above `λ` fails with the check reported, within 62
-/// steps; where it did not, the value is the one asked for.
+/// its `λ`; its centre validates; where it stopped, the next f64 above `λ` fails with the check reported, after 61 or
+/// 62 steps; where it did not, the value is the one asked for.
 fn check_stop<V, C>(what: &str, from: V, to: V, view: impl Fn(V) -> Option<View<C>>, stop: &Stop<V>)
 where
     V: Field + PartialEq + Debug,
@@ -113,8 +114,8 @@ where
                 stop.lambda
             );
             assert!(
-                stop.steps <= MAX_STEPS,
-                "{what}: {} bisection steps",
+                (MAX_STEPS - 1..=MAX_STEPS).contains(&stop.steps),
+                "{what}: {} bisection steps, not the 61 or 62 that halve the bit patterns of [0, 1] to adjacent f64s",
                 stop.steps
             );
         }
