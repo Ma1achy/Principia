@@ -218,9 +218,10 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   run mutates (`mutants.yml` runs on no pull request; the nightly full run and, once proven, the Windows runner's
   per-merge run are where CI mutates), so the local run is the pull request's mutation check. *Was:* "CI's mutants
   gate stays the authority (`mutants.yml`, R-302): a clean local run doesn't replace a green `mutants-check`." The
-  local run gets a target directory of its own (`<target>-mutants`), since a mutants run can leave a mutated build that cargo treats as fresh, deleted straight
-  after. It runs through the job queue (R-658), at the implementer's priority (`build`, or `fix` in a fix round), on
-  the head the implementer is about to push, never on work in progress. A local run uses R-348's two caps, the
+  local run gets a target directory of its own (`<target>-mutants`), since a mutants run can leave a mutated build
+  that cargo treats as fresh, deleted straight after. It runs through the job queue (R-658), at the implementer's
+  priority (`build`, or `fix` in a fix round), on the head the implementer is about to push, never on work in
+  progress. A local run uses R-348's two caps, the
   per-mutant timeout and the memory cap on test processes, at the values CI uses (REQ-VAL-180, REQ-VAL-181), where the
   machine enforces them (applied per R-204, accepted by R-352): on macOS a local run gets the timeout only, and CI's
   Linux runners enforce both caps (R-352). It takes CI's per-test kill limits too, with the baseline outside them (the
@@ -468,8 +469,8 @@ added to the quick tier, the owner, 7 Nov 2026), and `ci-status` closed the full
 pending. The same label started `mutants.yml`'s merge-ready run, the per-PR mutation gate (R-196, R-202, R-302), whose
 `mutants-check`, a job of every run of the workflow (R-678), was the verdict; a push took the label off
 (`merge-ready-off`), and a failed verdict went to qa and a fix round. The owner's CI model ended all of it on the pull
-request's path: the label-triggered full attempt and the per-PR mutants run "no longer exist on the PR path" (item 3),
-and mutation testing moved "off the PR path entirely; nightly/Windows as already agreed" (his order of 8 Nov 2026).
+request's path, the label-triggered full attempt and the per-PR mutants run with it, and mutation testing moved "off
+the PR path entirely; nightly/Windows as already agreed" (his order of 8 Nov 2026).
 `mutants.yml` is kept, unused, for the per-merge work.
 
 **Fix rounds are verified locally first (R-676).** A fix round runs the tests its fixes touch, their controls, and its

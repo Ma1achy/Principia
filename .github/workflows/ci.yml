@@ -35,15 +35,15 @@
 # same check name"): its first step fails when `changes` did not succeed, so a failed classification never passes a
 # skip, and a required check is never a job skipped at job level. No job polls or waits on another run. The per-PR
 # mutation run, the merge-ready label and the full tier it started are gone from the pull request's path (the owner's
-# CI model, item 3): `mutants.yml` runs on no pull request.
+# CI model): `mutants.yml` runs on no pull request.
 #
 # The interim per-merge run, every push to `main` (and to a `measure/` branch, which never has a pull request, R-272):
 # the full suite as it ran before, every job below `gpu-metal`'s smoke set, beside the two smoke sets, until the
-# per-merge workflow takes it (the owner's CI model, item 2; order step 3). It runs everything the PR tier leaves to a merge: the slow tier, the
-# in-depth GPU suites on lavapipe and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xtask
-# golden --all`, `cargo xtask gate decode-agreement`), the golden runner over every suite and the screenshot runner's
-# self-test, the release profile (R-547), `cargo xtask ci`, the controls run among it, and every process test. Its
-# description, kept from R-656's full CI:
+# per-merge workflow takes it (the owner's CI model, item 2; order step 3). It runs everything the PR tier leaves to a
+# merge: the slow tier, the in-depth GPU suites on lavapipe and Metal (the `gpu-kernel` profile, the `--features
+# controls` suites, `cargo xtask golden --all`, `cargo xtask gate decode-agreement`), the golden runner over every
+# suite and the screenshot runner's self-test, the release profile (R-547), `cargo xtask ci`, the controls run among
+# it, and every process test. Its description, kept from R-656's full CI:
 # formatting and lints (R-195), build, test, the crate-graph check (REQ-SYS-004) and, in jobs
 # of their own beside them (R-235), `cargo xtask ci`, the single per-push entry point every later per-commit runner
 # registers into. The GPU kernel build, `cargo xtask build-kernel`, and the tests that need the built kernel run in a

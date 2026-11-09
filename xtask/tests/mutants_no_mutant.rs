@@ -666,7 +666,7 @@ fn events(yml: &str) -> Vec<String> {
 }
 
 /// R-305: no run but a pull request's reports `mutants-check`, never a skipped job's from a `push` run. Since the
-/// owner's CI model (approved 9 Nov 2026, item 3) `mutants.yml` runs on a dispatch alone, kept for the per-merge
+/// owner's CI model (approved 9 Nov 2026) `mutants.yml` runs on a dispatch alone, kept for the per-merge
 /// workflow, and its `mutants-check` job only on a pull request's event, so a dispatch reports none; no other workflow
 /// has a `mutants-check` job.
 fn only_pull_requests_report(workflows: &[(String, String)]) {

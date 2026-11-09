@@ -1,6 +1,6 @@
 //! The PR tier's choice of crates (the owner's CI model, approved 9 Nov 2026: "Product tests: changed crates + reverse
 //! deps (ci_quick_crates.py selection)"), which R-684's quick tier began; the quick tier, its full tier on the
-//! `merge-ready` head and the label's re-run are gone with that model (item 3). What `ci.yml` does on each change, the
+//! `merge-ready` head and the label's re-run are gone with that model. What `ci.yml` does on each change, the
 //! required checks among it, is `xtask/tests/ci_changes.rs`'s. Here:
 //!
 //! - `ci_quick_crates_*`: `.github/scripts/ci_quick_crates.py`, on the real workspace and on a scratch one holding each

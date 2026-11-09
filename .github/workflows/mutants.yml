@@ -1,11 +1,11 @@
-# Off the pull request's path (the owner's CI model, approved 9 Nov 2026, item 3: "Mutation testing: off the PR path
-# entirely; nightly/Windows as already agreed"): this workflow runs on no pull request and reports no `mutants-check`,
-# which the owner drops from the required checks. It is kept, unused, for the per-merge workflow (order step 3) and the
-# Windows runner's in-diff mutants (the model's per-merge item), which may reuse its baseline, shards, fixture and
-# verdict on a merge's diff: its only trigger is `workflow_dispatch`, and every job keeps its `if:` on the
-# `pull_request` event and the `merge-ready` label, `mutants-check` its event alone, so a dispatch runs nothing and
-# nothing polls. The nightly full run is `nightly.yml`'s own and does not use it. Whoever wires it to a merge rewrites
-# those `if:`s. Its description as it ran per pull request, kept for that work:
+# Off the pull request's path (the owner's CI model, approved 9 Nov 2026; his order of 8 Nov 2026: "Mutation testing:
+# off the PR path entirely; nightly/Windows as already agreed"): this workflow runs on no pull request and reports no
+# `mutants-check`, which the owner drops from the required checks. It is kept, unused, for the per-merge workflow
+# (order step 3) and the Windows runner's in-diff mutants (the model's per-merge item), which may reuse its baseline,
+# shards, fixture and verdict on a merge's diff: its only trigger is `workflow_dispatch`, and every job keeps its
+# `if:` on the `pull_request` event and the `merge-ready` label, `mutants-check` its event alone, so a dispatch runs
+# nothing and nothing polls. The nightly full run is `nightly.yml`'s own and does not use it. Whoever wires it to a
+# merge rewrites those `if:`s. Its description as it ran per pull request, kept for that work:
 #
 # The per-PR mutation gate (R-196, R-202, R-302; TASK-M0-23): `cargo mutants --in-diff` on each pull request's diff,
 # sharded, with `mutants-check` its verdict over every shard, a required status check on `main` (R-305). It is a

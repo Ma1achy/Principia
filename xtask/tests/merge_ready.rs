@@ -5,7 +5,7 @@
 //! runs per PR").
 //!
 //! - `merge_ready_mutants_gate_waits_for_the_label`: `mutants.yml` runs on a dispatch alone, off the pull request's
-//!   path (the owner's CI model, approved 9 Nov 2026, item 3), kept for the per-merge workflow; as it ran per pull
+//!   path (the owner's CI model, approved 9 Nov 2026), kept for the per-merge workflow; as it ran per pull
 //!   request, on its new heads and every label change, its shards, fixture and verdict run only on the `merge-ready`
 //!   label's run, the verdict whatever the shards ended in; one job, `mutants-check`, `if: always()`, reports
 //!   `mutants-check` in every run (R-678: GitHub counts only the latest run's check suite, so a check posted into
@@ -428,7 +428,7 @@ const REPORTS: &[(&str, Env, bool, &str)] = &[
 
 fn check_gate(yml: &str) {
     let wf = parse(yml);
-    // Off the pull request's path (the owner's CI model, approved 9 Nov 2026, item 3): only a dispatch runs it, kept
+    // Off the pull request's path (the owner's CI model, approved 9 Nov 2026): only a dispatch runs it, kept
     // for the per-merge workflow, and none of its jobs runs there.
     let triggers: Vec<String> = match &wf["on"] {
         Value::Object(o) => o.keys().cloned().collect(),
