@@ -13,6 +13,20 @@
 //! step of its own, and instead each package it names must have its doctests run by some `cargo test --doc` step of the
 //! workflow (that package's, or the workspace's), so none is dropped (R-231). That is the one change here, R-677's
 //! exception to R-290.
+//!
+//! `--lib`, as `--test`: R-677 (decisions.md, "Tier (b)'s steps have no doctest step"): "Each selects its test
+//! binaries with `--test`, which `cargo test --doc` refuses beside it (\"can't mix --doc with other target selecting
+//! options\"); a `--test` selection runs no doctest under `cargo test` either, so none is dropped (R-231), and every
+//! doctest runs on `main` and on every code head." `--lib` is a target selection of the same kind: cargo refuses
+//! `cargo test -p gui --lib --doc` with the same words, and a `--lib` selection runs no doctest. The smoke sets'
+//! `cargo nextest run -p gui --lib` (the lattice tests REQ-GUI-412 makes block on lavapipe and Metal) therefore pairs
+//! with no doctest step of its own (applied per R-369 on PR #457, R-290's exception: R-909 and REQ-GUI-412 force it).
+//! What stands in for the pairing is held per tier, not workflow-wide: on every tier the selecting step's job runs on
+//! (the pull-request tier, the push tier, or both, read from the job's `if:` and, where that does not say `always()`,
+//! the jobs it needs), some job of that tier runs a whole `cargo test --doc` step (no test-name filter) covering each
+//! package the step names: `--workspace`, `-p <package>`, or the changed crates' `$PACKAGES` list, which covers a
+//! workspace package with a library (`cargo test $PACKAGES --doc` over the changed crates and their reverse
+//! dependencies). A `--lib` or `--test` step whose package has no such step on one of its tiers fails.
 
 use std::path::Path;
 
@@ -54,6 +68,102 @@ fn job_runs(workflow: &str) -> Vec<(String, Vec<String>)> {
         }
     }
     jobs
+}
+
+/// Each job of `workflow` with the tiers it runs on, `(pull_request, push)`: a job-level `if:` naming
+/// `github.event_name == 'pull_request'` leaves out the push tier and one naming `!= 'pull_request'` the pull-request
+/// tier; a job whose `if:` does not say `always()` runs only where every job it `needs:` runs.
+fn job_tiers(workflow: &str) -> Vec<(String, bool, bool)> {
+    let mut jobs: Vec<(String, Option<String>, Vec<String>)> = Vec::new();
+    let mut in_jobs = false;
+    for line in workflow.lines() {
+        if !line.is_empty() && !line.starts_with(' ') && !line.starts_with('#') {
+            in_jobs = line.trim_end() == "jobs:";
+            continue;
+        }
+        if !in_jobs {
+            continue;
+        }
+        let body = line.trim_start();
+        let indent = line.len() - body.len();
+        if indent == 2 && body.ends_with(':') && !body.starts_with('#') {
+            jobs.push((body.trim_end_matches(':').to_owned(), None, Vec::new()));
+        } else if indent == 4 {
+            let Some((_, cond, needs)) = jobs.last_mut() else {
+                continue;
+            };
+            if let Some(c) = body.strip_prefix("if:") {
+                *cond = Some(c.trim().to_owned());
+            } else if let Some(n) = body.strip_prefix("needs:") {
+                *needs = n
+                    .trim()
+                    .trim_start_matches('[')
+                    .trim_end_matches(']')
+                    .split(',')
+                    .map(|w| w.trim().to_owned())
+                    .filter(|w| !w.is_empty())
+                    .collect();
+            }
+        }
+    }
+    let mut out: Vec<(String, bool, bool)> = Vec::new();
+    for (name, cond, needs) in jobs {
+        let cond = cond.unwrap_or_default();
+        let (mut pr, mut push) = (true, true);
+        if cond.contains("github.event_name == 'pull_request'") {
+            push = false;
+        }
+        if cond.contains("github.event_name != 'pull_request'") {
+            pr = false;
+        }
+        if !cond.contains("always()") {
+            for need in &needs {
+                if let Some((_, p, q)) = out.iter().find(|(n, _, _)| n == need) {
+                    pr &= *p;
+                    push &= *q;
+                }
+            }
+        }
+        out.push((name, pr, push));
+    }
+    out
+}
+
+/// Whether workspace package `pkg` has a library, so has doctests a `cargo test --doc` over it can run.
+fn has_library(pkg: &str) -> bool {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let dir = if pkg == "xtask" {
+        root.join("xtask")
+    } else {
+        root.join("crates").join(pkg)
+    };
+    dir.join("src/lib.rs").is_file()
+}
+
+/// Whether `run` is a whole `cargo test --doc` step (no test-name filter) over `pkg`'s doctests: by `--workspace`,
+/// `-p <pkg>`, or the changed crates' `$PACKAGES` when `pkg` has a library.
+fn doc_step_covers(run: &str, pkg: &str) -> bool {
+    let Some(words) = words_after(run, "cargo test") else {
+        return false;
+    };
+    if !words.iter().any(|a| a == "--doc") {
+        return false;
+    }
+    let (mut covers, mut it) = (false, words.iter());
+    while let Some(w) = it.next() {
+        match w.as_str() {
+            "-p" | "--package" => covers |= it.next().is_some_and(|p| p == pkg),
+            "--features" | "-F" => {
+                it.next();
+            }
+            "--workspace" => covers = true,
+            "$PACKAGES" => covers |= has_library(pkg),
+            w if w.starts_with('-') => {}
+            // A test-name filter: the step runs some of the package's doctests, not all.
+            _ => return false,
+        }
+    }
+    covers
 }
 
 /// The words of `command` after `prefix`, without the capture flags and without nextest's `--partition <shard>`, sorted;
@@ -146,6 +256,13 @@ fn archives(jobs: &[(String, Vec<String>)]) -> Vec<(String, Vec<String>)> {
 /// running from an archive has for `<args>` those the archive was built with.
 fn check_nextest_and_doctest_steps(workflow: &str) {
     let jobs = job_runs(workflow);
+    let tiers = job_tiers(workflow);
+    let tier_of = |job: &str| -> (bool, bool) {
+        tiers
+            .iter()
+            .find(|(n, _, _)| n == job)
+            .map_or((true, true), |(_, p, q)| (*p, *q))
+    };
     let archives = archives(&jobs);
     let mut nextest_steps = 0;
     for (job, runs) in &jobs {
@@ -177,8 +294,9 @@ fn check_nextest_and_doctest_steps(workflow: &str) {
                 args.sort();
             }
             nextest_steps += 1;
-            if args.iter().any(|a| a == "--test") {
-                // R-677: a `--test` selection runs no doctest; its packages' doctests run in a `--doc` step elsewhere.
+            if args.iter().any(|a| a == "--test" || a == "--lib") {
+                // R-677: a `--test` (or `--lib`) selection runs no doctest; its packages' doctests run in a whole
+                // `--doc` step elsewhere, on each tier its job runs on.
                 let packages: Vec<&String> = words
                     .windows(2)
                     .filter(|w| w[0] == "-p" || w[0] == "--package")
@@ -186,22 +304,25 @@ fn check_nextest_and_doctest_steps(workflow: &str) {
                     .collect();
                 assert!(
                     !packages.is_empty(),
-                    "job {job} runs `{run}`, a `--test` selection naming no package"
+                    "job {job} runs `{run}`, a `--test` or `--lib` selection naming no package"
                 );
-                for pkg in packages {
-                    let covered = jobs.iter().flat_map(|(_, rs)| rs).any(|r| {
-                        words_after(r, "cargo test").is_some_and(|w| {
-                            w.iter().any(|a| a == "--doc")
-                                && (w.iter().any(|a| a == "--workspace")
-                                    || w.windows(2).any(|p| {
-                                        (p[0] == "-p" || p[0] == "--package") && p[1] == *pkg
-                                    }))
-                        })
-                    });
-                    assert!(
-                        covered,
-                        "job {job} runs `{run}`, whose package {pkg}'s doctests no `cargo test --doc` step runs"
-                    );
+                let (pr, push) = tier_of(job);
+                for (tier, runs_on) in [("pull_request", pr), ("push", push)] {
+                    if !runs_on {
+                        continue;
+                    }
+                    for pkg in &packages {
+                        let covered = jobs.iter().any(|(j, rs)| {
+                            let (p, q) = tier_of(j);
+                            (if tier == "push" { q } else { p })
+                                && rs.iter().any(|r| doc_step_covers(r, pkg))
+                        });
+                        assert!(
+                            covered,
+                            "job {job} runs `{run}`, whose package {pkg}'s doctests no `cargo test --doc` step runs \
+                             on the {tier} tier"
+                        );
+                    }
                 }
                 continue;
             }
@@ -281,6 +402,65 @@ mod test_selection_doctests {
             .collect::<Vec<_>>()
             .join("\n")
         })
+    );
+}
+
+/// A `--lib` selection (the smoke sets' gui lattice step, R-677 read for `--lib`) in a package no `cargo test --doc`
+/// step covers, on a job of both tiers: the changed crates' `$PACKAGES` covers only a workspace package with a library.
+mod lib_selection_doctests {
+    use super::*;
+    negative_control!(
+        qa_m0_33_each_nextest_step_has_its_doctest_step,
+        "CI's workflow with, first among its jobs, a `--lib` selection in a package no `cargo test --doc` step covers",
+        expected = "whose package qa_nodoc's doctests no `cargo test --doc` step runs on the pull_request tier",
+        check_nextest_and_doctest_steps(&{
+            let ci = ci_workflow();
+            assert!(ci.contains("\njobs:\n"));
+            ci.replacen(
+                "\njobs:\n",
+                "\njobs:\n  qa_first:\n    steps:\n      - run: cargo nextest run -p qa_nodoc --lib --no-capture\n",
+                1,
+            )
+        })
+    );
+}
+
+/// The tiers kept apart: a `--lib` selection on both tiers whose package's one whole doctest step is in a job that
+/// needs the push-only `ci-archive`, so runs on the push tier only (no `always()`), has none on the pull-request tier.
+mod pull_request_tier_doctests {
+    use super::*;
+    negative_control!(
+        qa_m0_33_each_nextest_step_has_its_doctest_step,
+        "CI's workflow with a `--lib` selection on both tiers whose doctests run only in a job needing `ci-archive`",
+        expected = "whose package qa_nodoc's doctests no `cargo test --doc` step runs on the pull_request tier",
+        check_nextest_and_doctest_steps(&{
+            let mut ci = ci_workflow();
+            assert!(ci.contains("\n  ci-archive:\n") && ci.ends_with('\n'));
+            ci.push_str(
+                "  qa_doc:\n    needs: ci-archive\n    steps:\n      - run: cargo test -p qa_nodoc --doc\n  \
+                 qa_sel:\n    needs: changes\n    if: always()\n    steps:\n      \
+                 - run: cargo nextest run -p qa_nodoc --lib --no-capture\n",
+            );
+            ci
+        })
+    );
+}
+
+/// The push tier's: without the workspace's `cargo test --workspace … --doc` steps, gui's `--lib` lattice step has none
+/// there; `cargo test -p gui lattice_ --doc` runs only the doctests its filter names, so it does not count.
+mod push_tier_doctests {
+    use super::*;
+    negative_control!(
+        qa_m0_33_each_nextest_step_has_its_doctest_step,
+        "CI's workflow without its `cargo test --workspace … --doc` steps, gui's left only a filtered one",
+        expected = "whose package gui's doctests no `cargo test --doc` step runs on the push tier",
+        check_nextest_and_doctest_steps(
+            &ci_workflow()
+                .lines()
+                .filter(|l| !(l.trim_start().starts_with("run: cargo test --workspace") && l.contains("--doc")))
+                .collect::<Vec<_>>()
+                .join("\n")
+        )
     );
 }
 

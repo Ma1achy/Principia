@@ -154,7 +154,8 @@ fn triggers_on_pull_request(workflow: &str) -> bool {
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
-// The eight required checks report on every pull request.
+// The required checks of ci.yml, pr-check.yml and reviews.yml report on every pull request (no-atlas-params.yml's,
+// the ninth, is `qa_mutants_check_always.rs`'s).
 
 /// Each required check is one job, of a workflow triggered by `pull_request`, whose own `if:` never leaves a pull
 /// request out: a check skipped at job level, or reported by two jobs, cannot be trusted by branch protection.
@@ -957,7 +958,8 @@ negative_control!(
 // The list the owner sets branch protection from.
 
 /// `plan/HUMAN_SETUP.md` §2's required checks, the names in backticks on the "require status checks to pass" item up
-/// to its first parenthesis, are exactly the PR tier's eight: none of the dropped `xtask-ci`, `gpu-kernel` or
+/// to its first parenthesis, are exactly the PR tier's nine (R-909's PR tier: "check_plan.py, reviews-complete,
+/// pr-check, no-atlas-params", `no-atlas-params` beside ci.yml's six): none of the dropped `xtask-ci`, `gpu-kernel` or
 /// `mutants-check`, and none missing.
 fn check_setup_list(setup: &str) {
     let item = setup
@@ -970,28 +972,28 @@ fn check_setup_list(setup: &str) {
     let mut want: Vec<&str> = CI_REQUIRED
         .iter()
         .copied()
-        .chain(["pr-check", "reviews-complete"])
+        .chain(["pr-check", "reviews-complete", "no-atlas-params"])
         .collect();
     want.sort_unstable();
     assert_eq!(
         names, want,
-        "qa pr tier: HUMAN_SETUP.md's required checks are not the PR tier's eight"
+        "qa pr tier: HUMAN_SETUP.md's required checks are not the PR tier's nine"
     );
 }
 
 #[test]
-fn qa_pr_tier_setup_lists_the_eight_required_checks() {
+fn qa_pr_tier_setup_lists_the_nine_required_checks() {
     check_setup_list(&read("plan/HUMAN_SETUP.md"));
 }
 
 negative_control!(
-    qa_pr_tier_setup_lists_the_eight_required_checks,
+    qa_pr_tier_setup_lists_the_nine_required_checks,
     "HUMAN_SETUP.md still requiring `xtask-ci`",
-    expected = "HUMAN_SETUP.md's required checks are not the PR tier's eight",
+    expected = "HUMAN_SETUP.md's required checks are not the PR tier's nine",
     check_setup_list(&swap(
         &read("plan/HUMAN_SETUP.md"),
-        "`pr-check` and\n  `reviews-complete` (",
-        "`pr-check`, `xtask-ci` and\n  `reviews-complete` (",
+        "`reviews-complete` and `no-atlas-params` (",
+        "`reviews-complete`, `xtask-ci` and `no-atlas-params` (",
     ))
 );
 

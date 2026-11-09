@@ -26,10 +26,10 @@
 //! Each has its negative controls (R-176), a workflow differing in the one respect the path turns on.
 //!
 //! The owner's CI model (approved 9 Nov 2026) takes per-PR mutation testing off the pull request's path, and
-//! `mutants-check` off the required checks, which become the PR tier's eight (`plan/HUMAN_SETUP.md` §2). So the second
+//! `mutants-check` off the required checks, which become the PR tier's nine (`plan/HUMAN_SETUP.md` §2). So the second
 //! part of each test, `mutants.yml` run against a stand-in GitHub, is retired with it, and the stand-ins with it; the
 //! first part, the owner's "check that every required check name reports in all paths (label added, removed,
-//! docs-only, plan-data, code)", stands, on the new list: each of the eight is borne by one job of the workflows a pull
+//! docs-only, plan-data, code)", stands, on the new list: each of the nine is borne by one job of the workflows a pull
 //! request runs, unfiltered, on every new head, and skipped by none (R-290's exception, applied per R-369).
 
 use std::path::{Path, PathBuf};
@@ -199,10 +199,10 @@ fn required(setup: &str) -> Vec<String> {
 /// docs say; the assertion names each that does not.
 fn check_reports(workflows: &[(String, String)], setup: &str, action: &str) {
     let names = required(setup);
-    // The PR tier's eight since the owner's CI model (9 Nov 2026), `mutants-check` no longer among them.
+    // The PR tier's nine since the owner's CI model (9 Nov 2026), `mutants-check` no longer among them.
     assert!(
-        names.len() >= 8 && names.iter().any(|n| n == "fmt"),
-        "qa_mca: plan/HUMAN_SETUP.md §2 names {names:?}, not the eight required checks"
+        names.len() >= 9 && names.iter().any(|n| n == "fmt"),
+        "qa_mca: plan/HUMAN_SETUP.md §2 names {names:?}, not the nine required checks"
     );
     let dir = Scratch::new("qa_mca_report");
     std::fs::create_dir_all(&*dir).expect("scratch");
@@ -239,8 +239,9 @@ fn check_reports(workflows: &[(String, String)], setup: &str, action: &str) {
     );
 }
 
-/// The owner's CI model's required checks (9 Nov 2026), as `plan/HUMAN_SETUP.md` §2 must list them.
-const EIGHT: [&str; 8] = [
+/// The owner's CI model's required checks (9 Nov 2026), as `plan/HUMAN_SETUP.md` §2 must list them; R-909's PR tier
+/// names "check_plan.py, reviews-complete, pr-check, no-atlas-params".
+const NINE: [&str; 9] = [
     "fmt",
     "clippy",
     "build",
@@ -249,17 +250,18 @@ const EIGHT: [&str; 8] = [
     "gpu-metal",
     "pr-check",
     "reviews-complete",
+    "no-atlas-params",
 ];
 
-/// §2 lists exactly the eight, and every one reports on each of `actions`.
+/// §2 lists exactly the nine, and every one reports on each of `actions`.
 fn reports_on(workflows: &[(String, String)], setup: &str, actions: &[&str]) {
     let mut names = required(setup);
     names.sort();
-    let mut want: Vec<String> = EIGHT.iter().map(|n| (*n).to_owned()).collect();
+    let mut want: Vec<String> = NINE.iter().map(|n| (*n).to_owned()).collect();
     want.sort();
     assert_eq!(
         names, want,
-        "qa_mca: plan/HUMAN_SETUP.md §2 names other than the PR tier's eight"
+        "qa_mca: plan/HUMAN_SETUP.md §2 names other than the PR tier's nine"
     );
     for action in actions {
         check_reports(workflows, setup, action);
@@ -394,8 +396,8 @@ mod human_setup_list {
             &workflows(),
             &swap(
                 &read("plan/HUMAN_SETUP.md"),
-                "`pr-check` and\n  `reviews-complete` (",
-                "`pr-check`, `mutants-check` and\n  `reviews-complete` ("
+                "`reviews-complete` and `no-atlas-params` (",
+                "`reviews-complete`, `mutants-check` and `no-atlas-params` ("
             ),
             "opened"
         )
@@ -407,7 +409,7 @@ mod human_setup_list_short {
     negative_control!(
         qa_mca_code,
         "plan/HUMAN_SETUP.md §2 without `clippy`",
-        expected = "plan/HUMAN_SETUP.md §2 names other than the PR tier's eight",
+        expected = "plan/HUMAN_SETUP.md §2 names other than the PR tier's nine",
         reports_on(
             &workflows(),
             &swap(
