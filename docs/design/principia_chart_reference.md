@@ -356,7 +356,7 @@ the offset varies with `U`, so a row is no level set of `2K/|U|`, and a readout 
 ratio. **With `Q₀ > 0` the floor sits under the rise only (R-817, ruling RQ-700 (b)):** with `Q_min(U) = L_z²/(I·|U|)`,
 the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, `K*` its `|U|/2` multiple, so the bottom row is the asked
 bottom `Q₀` where `Q₀` is feasible and on the floor elsewhere, and at `Q₀ = 0` this is the additive form above, bit for
-bit. TASK-M8-119 builds it. *Was:* "With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked
+bit. TASK-M2-70 builds it. *Was:* "With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked
 bottom `Q₀` is not drawn even where it is feasible, and `a ≠ 0` on the bottom row." At a held
 `L_z = 0` the floor is 0 and the lines above stand unchanged. The bottom row must not blank on rounding: the floor is
 the least normal float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded, raised one
@@ -967,7 +967,7 @@ Built by TASK-M2-52 on TASK-M2-36's tilt path, the linear option on TASK-M2-37's
 
 *Ruled 8 Nov 2026 (R-875, RQ-745 (b)):* the three acute-angle charts are re-expressed over the full acute range, both
 labellings of each shape shown, the leg swap shown once only by the symmetry filter (R-855); R-27's "shape only" fold
-charts give way. TASK-M8-127 builds it once the filter (TASK-M8-120) exists; until it merges they stand as built, and
+charts give way. TASK-M2-85 builds it once the filter's maths (TASK-M2-84, R-916; *was* TASK-M8-120) exists; until it merges they stand as built, and
 REQ-CHART-045's range comes back to the owner at the M2 gate.
 
 ### 4.6 The central hypothesis

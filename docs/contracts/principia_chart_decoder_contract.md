@@ -489,7 +489,7 @@ For a nonlinear chart, replay $\Phi$ and $D$ on the CPU, or read the GPU buffer 
 action, a navigation edit that brings the pin to the centre, and a setting, off by default, applies it at every lock in
 the same command (render_gui_spec §G4). Where this part reads the anchor as the centre pixel (the anchor-preserving
 class below, "keeps the anchor at centre", and the nonlinear chart's re-centred window), the anchor is at the pin;
-TASK-M8-125 builds it, exactly on nonlinear charts or stating why not, an inexact pin's bound a calibration the owner rules on before merge (R-866, R-71; REQ-GUI-425, REQ-GUI-429). Until it lands the code
+TASK-M2-62 builds it in the engine (R-916; *was* TASK-M2-62), exactly on nonlinear charts or stating why not, an inexact pin's bound a calibration the owner rules on before merge (R-866, R-71; REQ-GUI-425, REQ-GUI-429). Until it lands the code
 re-centres as below. *Was (before R-866):* "Select the pixel at $(s,t)$ and snap the centre to its IC."
 
 The centre pixel has one special property: `z(½,½) = z₀` **regardless of the basis**. That property sorts the operations into two classes:
@@ -508,11 +508,11 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   hidden part of `δ` and leaving the pin where it is on screen, and "centre on pin" (R-866) clears its in-plane part, the
   two together `z₀ ← z_locked`, bitwise by definition: centre on pin after snap-back assigns `z₀ ← z_locked`. On an
   oblique basis the split of `δ` into in-plane and hidden parts is a projection, so snap-back alone is exact to rounding:
-  its rounding bound is derived from the construction TASK-M8-125 defines (of order `ε_R·κ(B)·‖δ‖` for a solve on the
+  its rounding bound is derived from the construction TASK-M2-62 defines (of order `ε_R·κ(B)·‖δ‖` for a solve on the
   basis `B = [q₁ q₂ | hidden]`, or a few ulps if built as `z_locked` plus the in-plane part recomputed from the pin's
   stored chart parameters) and stated by that task, its decoded state within REQ-ENC-024's `ε_phys` only where that bound
   and the decoder's conditioning allow; a bound that can't be derived is a calibration (R-71); the test's fixture names
-  its `κ(B)` and `‖δ‖`; its construction is a definition TASK-M8-125
+  its `κ(B)` and `‖δ‖`; its construction is a definition TASK-M2-62
   writes here under physics review (R-72) (the chart-path brief's Q2 (a), R-899; the auto-snap setting off by
   default); and `δ` has no field of its own that could disagree with `z₀`. *Was:* "snap-back is `z₀ ← z_locked`, bit
   for bit;". Unlock clears the flag and the anchor and leaves
@@ -534,7 +534,7 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   `ε_phys`; where it clamps one, `z_locked` holds the clamp's image and the lock carries `lookup_clamped`, its free
   decode as far from the clicked state as the clamp moved it, and the rebuilt chart's centre pixel still decodes the
   clicked state bit for bit. *(R-866, 8 Nov 2026: locking must not move the view, so this re-centring of the window is
-  replaced; how the pin is held on a nonlinear chart without it, exactly or with the reason it can't be, is TASK-M8-125's
+  replaced; how the pin is held on a nonlinear chart without it, exactly or with the reason it can't be, is TASK-M2-62's
   definition (R-72; REQ-GUI-425), written here. This bullet stands as the built behaviour until then.)* The edits are the
   `SetField` on `z₀ = z_locked` and the lock group's:
   one command, sent in one frame under one history key, so the history keeps one entry and one undo restores both
