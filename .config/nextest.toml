@@ -256,3 +256,581 @@ success-output = "immediate"
 [[profile.gpu-kernel.overrides]]
 filter = "binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu)"
 success-output = "immediate"
+
+# The PR tier (the owner's CI model, approved 9 Nov 2026, item 1): a pull request's product tests, on the changed
+# crates and their reverse dependencies (`.github/scripts/ci_tier.sh`), in `ci.yml`'s `tests` job. Every test but:
+# - the process tests, the split's process class (`process` below), which run only when a pull request changes the
+#   machinery (`scripts/ci_changes.sh`'s `process`);
+# - the in-depth GPU tests, the `gpu-kernel` profile's, which need the built kernel: `ci.yml`'s `gpu-lavapipe` and
+#   `gpu-metal` run one fast test of each GPU stage of them (`gpu-smoke` below), and every one runs on `main`;
+# - the golden runner over every suite and the screenshot runner's self-test, product correctness the owner moved to
+#   each merge (9 Nov 2026: "per merge, never retired");
+# - the slow tier: each test measured over 60 s (the per-test times of 8 Nov 2026, the longer of PR #431's run and
+#   the second measurement), named below with its time, which runs on `main`. A product-tooling test among them is
+#   covered on the pull request by its command, run directly in `ci.yml`'s `build` and `gpu-lavapipe` jobs
+#   (`cargo xtask lint wgsl`, `cargo xtask build-kernel`).
+# `xtask/tests/ci_pr_tier.rs` checks this table against the filter, and the process binaries here against `process`'s.
+# Applied per R-369/R-812.
+# The slow tier of the product and product-tooling tests (seconds, binary, test):
+#      60.2 s  engine::canon_gpu canonicaliser_coincident_inner_pair
+#     179.9 s  engine::canon_gpu canonicaliser_hierarchy
+#      79.5 s  engine::canon_gpu canonicaliser_hierarchy_edge
+#     153.1 s  engine::canon_gpu canonicaliser_scale_invariance
+#     183.6 s  engine::decode_cross_backend decode_cross_backend_continuous
+#     181.3 s  engine::decode_cross_backend decode_cross_backend_energy
+#     179.2 s  engine::decode_cross_backend decode_cross_backend_registry
+#     181.5 s  engine::decode_cross_backend decode_cross_backend_tags
+#     110.6 s  engine::qa_TASK-M2-06_gpu qa_m206_gate_turns_at_threshold
+#      78.3 s  engine::qa_TASK-M2-07_gpu canonicaliser_qa_m207_twice
+#     393.6 s  engine::qa_TASK-M2-24_gpu qa_m224_gpu_eta_switch
+#      73.0 s  engine::qa_TASK-M2-24_gpu qa_m224_gpu_feasibility_tag
+#     407.3 s  engine::qa_TASK-M2-24_gpu qa_m224_gpu_new_charts
+#      60.7 s  engine::qa_TASK-M2-47_gpu canonicaliser_qa_m247_branches_agree
+#      64.7 s  kernel::gallery_sweep gallery_sweep_unit_square
+#      84.9 s  kernel::qa_TASK-M3-03 qa_nsub_bucket_floor_pairs_match_the_specification
+#     111.8 s  ledger::derived current_drift_property_matches_the_reference
+#      70.3 s  render::compaction_ramps field_either_role_every_form_and_ramp_assembles
+#     413.5 s  render::debug_views debug_views_render_far_from_ties
+#      70.7 s  render::decode_preset decode_preset_vs_decode_only
+#     184.0 s  render::embed_survives embed_survives_the_list
+#     315.8 s  render::observation_taps observation_taps_leave_every_bound_buffer_unchanged
+#     621.8 s  render::observation_taps observation_taps_leave_the_payload_unchanged
+#      83.0 s  render::prelude dbg_helpers_match_the_cpu_mirror_on_the_gpu
+#      82.0 s  render::prelude prelude_luts_colour_space_maps
+#     158.5 s  render::presentation_no_hatch presentation_no_hatch_field_ramps
+#     147.9 s  render::presentation_no_hatch presentation_no_hatch_override
+#      81.2 s  render::qa_TASK-M1-03 qa_dbg_helpers_cat
+#     173.7 s  render::qa_TASK-M1-03 qa_prelude_generated_custom_node_compiles
+#      63.3 s  render::qa_TASK-M1-08 qa_tool020_each_view_assembles_reading_only_its_field
+#      79.4 s  render::qa_TASK-M1-15 qa_m1_15_debug_views_bind_the_payload_read_only
+#      63.5 s  render::qa_TASK-M2-34 qa_m2_34_presentation_field_ramps
+#      63.1 s  render::qa_TASK-M2-34 qa_m2_34_presentation_field_ramps_overridden
+#      65.9 s  render::qa_TASK-M7-05 qa_field_either_role_any_field
+#     160.8 s  render::qa_TASK-M7-29 embed_survives_qa_property
+#      61.1 s  render::qa_TASK-M7-30 embed_hybrid_rotation_qa_angles_at_1024
+#     291.7 s  validation::agreement_preset_gpu agreement_preset_gate_runs
+#      78.7 s  validation::agreement_preset_gpu agreement_preset_healthy
+#      95.6 s  validation::agreement_preset_gpu agreement_preset_operands
+#     191.0 s  validation::agreement_preset_gpu agreement_preset_permitted_stores
+#      71.7 s  validation::agreement_preset_gpu agreement_preset_window_gate
+#    1728.3 s  validation::codegen_selftest codegen_selftest_pack_unpack_kernel_gpu
+#     597.5 s  validation::debug_scenes debug_scenes_render_their_references
+#      75.0 s  validation::decode_preset_harness decode_preset_harness_probe
+#     138.7 s  validation::decode_preset_shape_poles decode_preset_shape_poles
+#      70.6 s  validation::expected_message control_panicking_in_setup_fails_and_one_reaching_its_check_passes
+#     165.8 s  validation::golden_scene golden_scene_renders_its_twin
+#      64.2 s  validation::invariant_gradient_gpu invariant_gradient_verdict
+#      68.4 s  validation::oklab_roundtrip_gate oklab_gate_fixtures
+#     102.2 s  validation::qa_TASK-M0-14 qa_toolchain_each_tier_b_field_misbuild_is_seen
+#      70.6 s  validation::qa_TASK-M0-14 qa_toolchain_native_and_gpu_are_payload_s2_bit_for_bit
+#     131.4 s  validation::qa_TASK-M1-13 qa_structural_views_colour_by_the_cpu_struct
+#      64.7 s  validation::qa_TASK-M1-14 qa_m1_14_each_golden_is_its_render_and_can_fail
+#     190.6 s  validation::qa_TASK-M1-14 qa_m1_14_each_tile_shows_its_own_sample
+#      63.8 s  validation::qa_TASK-M1-19 qa_quad_fields_all_9_shown
+#      65.7 s  validation::qa_TASK-M2-25 qa_m225_chart_z_is_the_definition
+#     127.9 s  validation::qa_TASK-M2-25 qa_m225_decode_off_lattice_and_pole
+#      66.5 s  validation::qa_TASK-M2-25_gpu qa_m225_kernel_rho_angle_at_the_lambda_pole
+#      80.3 s  validation::qa_TASK-M2-25_gpu qa_m225_two_swapped_descriptors_show_where_they_are
+#      66.3 s  validation::qa_TASK-M2-25_gpu qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole
+#     154.3 s  xtask::build_kernel build_kernel_listed_in_ci
+#     689.6 s  xtask::build_kernel build_kernel_runs_in_ci
+#     104.1 s  xtask::lint_wgsl_ctx_occupant lint_wgsl_ctx_occupant_structural_occupants_lint_clean
+#      77.4 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_deny_list_member_by_member
+#      96.4 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_fixtures_fire_as_marked
+#      89.5 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_repository_lints_clean
+#      88.2 s  xtask::lint_wgsl_rules lint_wgsl_ci_runner_runs_the_lint
+#     102.3 s  xtask::qa_TASK-M0-06_list qa_m006_ci_list_lists_golden_cases_without_a_device
+#     160.2 s  xtask::qa_TASK-M0-06_runner qa_m006_ci_golden_runner_renders
+#     505.2 s  xtask::qa_TASK-M0-20 qa_cli_screenshot_all_runs_selftest
+#     104.5 s  xtask::qa_TASK-M0-50 qa_lint_wgsl_workspace_passes
+#     104.5 s  xtask::qa_TASK-M1-01 qa_lint_wgsl_repository_read_side_is_clean
+#     103.2 s  xtask::qa_TASK-M1-15 qa_m1_15_exceptions_are_each_to_one_rule
+#     108.6 s  xtask::qa_TASK-M1-15 qa_m1_15_guard_follows_part4
+#     102.7 s  xtask::qa_TASK-M1-15 qa_m1_15_nan_tests_fail_everywhere
+#     105.7 s  xtask::qa_TASK-M1-15 qa_m1_15_seams_5_and_6_follow_part4
+#      89.7 s  xtask::qa_TASK-M1-15 qa_m1_15_shadow_read_only_by_sample_read
+[profile.pr]
+default-filter = """
+    not (
+        binary_id(=validation::qa_TASK-M0-04_controls)
+        | binary_id(=validation::qa_TASK-M0-21)
+        | binary_id(=validation::qa_TASK-M0-21_controls)
+        | binary_id(=validation::qa_TASK-M0-21_r2)
+        | binary_id(=validation::qa_TASK-M0-24)
+        | binary_id(=validation::qa_TASK-M0-25)
+        | binary_id(=validation::qa_TASK-M0-26)
+        | binary_id(=validation::qa_TASK-M0-26_gone)
+        | binary_id(=validation::qa_TASK-M0-26_r217)
+        | binary_id(=validation::qa_TASK-M0-27)
+        | binary_id(=validation::qa_TASK-M0-28)
+        | binary_id(=validation::qa_TASK-M0-33)
+        | binary_id(=validation::qa_TASK-M0-33_lease)
+        | binary_id(=validation::qa_TASK-M0-33_type)
+        | binary_id(=validation::qa_TASK-M0-38)
+        | binary_id(=validation::qa_TASK-M0-39)
+        | binary_id(=validation::qa_TASK-M0-48)
+        | binary_id(=xtask::ai_review_rules)
+        | binary_id(=xtask::ci)
+        | binary_id(=xtask::ci_actions_pinned)
+        | binary_id(=xtask::ci_changes)
+        | binary_id(=xtask::ci_debug_info)
+        | binary_id(=xtask::ci_disk_sampler)
+        | binary_id(=xtask::ci_partition)
+        | binary_id(=xtask::ci_quick_tier)
+        | binary_id(=xtask::ci_release_disk)
+        | binary_id(=xtask::ci_retry)
+        | binary_id(=xtask::ci_runner_watch)
+        | binary_id(=xtask::ci_self_hosted)
+        | binary_id(=xtask::ci_workspace_disk)
+        | binary_id(=xtask::cloud_setup)
+        | binary_id(=xtask::contain)
+        | binary_id(=xtask::controls)
+        | binary_id(=xtask::controls_partition)
+        | binary_id(=xtask::deps)
+        | binary_id(=xtask::gate_provisional)
+        | binary_id(=xtask::gate_report)
+        | binary_id(=xtask::gemini_review)
+        | binary_id(=xtask::jobq)
+        | binary_id(=xtask::merge_ready)
+        | binary_id(=xtask::mutants_check)
+        | binary_id(=xtask::mutants_measured_timeout)
+        | binary_id(=xtask::mutants_no_mutant)
+        | binary_id(=xtask::nextest)
+        | binary_id(=xtask::pages_workflow)
+        | binary_id(=xtask::plan_check)
+        | binary_id(=xtask::pr_check)
+        | binary_id(=xtask::progress_banner)
+        | binary_id(=xtask::qa_R-375)
+        | binary_id(=xtask::qa_R-485_print_graph_coverage)
+        | binary_id(=xtask::qa_R-656_ci_changes)
+        | binary_id(=xtask::qa_R-658)
+        | binary_id(=xtask::qa_R-658_contain)
+        | binary_id(=xtask::qa_R-658_round2)
+        | binary_id(=xtask::qa_R-658_round3)
+        | binary_id(=xtask::qa_R-658_round4)
+        | binary_id(=xtask::qa_R-662_ci_scope)
+        | binary_id(=xtask::qa_R-677_ci_tiers)
+        | binary_id(=xtask::qa_R-790_claude_tier)
+        | binary_id(=xtask::qa_TASK-M0-01)
+        | binary_id(=xtask::qa_TASK-M0-01_controls)
+        | binary_id(=xtask::qa_TASK-M0-01_live)
+        | binary_id(=xtask::qa_TASK-M0-01_live_controls)
+        | binary_id(=xtask::qa_TASK-M0-01_r191)
+        | binary_id(=xtask::qa_TASK-M0-01_r191_controls)
+        | binary_id(=xtask::qa_TASK-M0-01_r193)
+        | binary_id(=xtask::qa_TASK-M0-01_r193_controls)
+        | binary_id(=xtask::qa_TASK-M0-01_r194)
+        | binary_id(=xtask::qa_TASK-M0-01_r194_controls)
+        | binary_id(=xtask::qa_TASK-M0-02)
+        | binary_id(=xtask::qa_TASK-M0-03)
+        | binary_id(=xtask::qa_TASK-M0-14_r335)
+        | binary_id(=xtask::qa_TASK-M0-14_rust_gpu_cache)
+        | binary_id(=xtask::qa_TASK-M0-19)
+        | binary_id(=xtask::qa_TASK-M0-19_r374)
+        | binary_id(=xtask::qa_TASK-M0-22)
+        | binary_id(=xtask::qa_TASK-M0-22_r235)
+        | binary_id(=xtask::qa_TASK-M0-23)
+        | binary_id(=xtask::qa_TASK-M0-23_r305)
+        | binary_id(=xtask::qa_TASK-M0-23_shards)
+        | binary_id(=xtask::qa_TASK-M0-29)
+        | binary_id(=xtask::qa_TASK-M0-29_live)
+        | binary_id(=xtask::qa_TASK-M0-30_r191)
+        | binary_id(=xtask::qa_TASK-M0-30_r193)
+        | binary_id(=xtask::qa_TASK-M0-30_r194)
+        | binary_id(=xtask::qa_TASK-M0-33)
+        | binary_id(=xtask::qa_TASK-M0-34)
+        | binary_id(=xtask::qa_TASK-M0-34_abort)
+        | binary_id(=xtask::qa_TASK-M0-34_abort_plural)
+        | binary_id(=xtask::qa_TASK-M0-36)
+        | binary_id(=xtask::qa_TASK-M0-37)
+        | binary_id(=xtask::qa_TASK-M0-38)
+        | binary_id(=xtask::qa_TASK-M0-42)
+        | binary_id(=xtask::qa_TASK-M0-45)
+        | binary_id(=xtask::qa_TASK-M0-49)
+        | binary_id(=xtask::qa_TASK-M0-52)
+        | binary_id(=xtask::qa_TASK-M0-53)
+        | binary_id(=xtask::qa_TASK-M0-54)
+        | binary_id(=xtask::qa_TASK-M1-18)
+        | binary_id(=xtask::qa_TASK-M1-18_r433)
+        | binary_id(=xtask::qa_TASK-M2-54)
+        | binary_id(=xtask::qa_TASK-M6-53)
+        | binary_id(=xtask::qa_TASK-M8-86_job_condition)
+        | binary_id(=xtask::qa_TASK-M8-96)
+        | binary_id(=xtask::qa_ci_archive_shrink)
+        | binary_id(=xtask::qa_ci_debug_info)
+        | binary_id(=xtask::qa_ci_release_disk)
+        | binary_id(=xtask::qa_ci_retry)
+        | binary_id(=xtask::qa_ci_throughput_a)
+        | binary_id(=xtask::qa_ci_throughput_a_rerun)
+        | binary_id(=xtask::qa_ci_tiers_compose)
+        | binary_id(=xtask::qa_gemini_review_model_list)
+        | binary_id(=xtask::qa_mutants_check_always)
+        | binary_id(=xtask::qa_mutants_check_stall)
+        | binary_id(=xtask::qa_ops_cloud_setup_sigpipe)
+        | binary_id(=xtask::qa_ops_mutants_nextest)
+        | binary_id(=xtask::qa_ops_nextest_cargo_group)
+        | binary_id(=xtask::qa_sampler_cleanup_bound)
+        | binary_id(=xtask::qa_sampler_end_order)
+        | binary_id(=xtask::qa_tooling_ci_free_disk)
+        | binary_id(=xtask::qa_tooling_ci_one_build)
+        | binary_id(=xtask::qa_tooling_ci_quick_tier)
+        | binary_id(=xtask::qa_tooling_ci_workspace_disk)
+        | binary_id(=xtask::qa_tooling_rq_union)
+        | binary_id(=xtask::reviews_check)
+        | binary_id(=xtask::scratch_guard)
+        | binary_id(=validation::toolchain)
+        | binary_id(=validation::qa_TASK-M0-14)
+        | binary_id(=validation::codegen_selftest)
+        | binary_id(=validation::bringup)
+        | binary_id(=engine::decode_stage_gpu)
+        | binary_id(=engine::qa_TASK-M2-06_gpu)
+        | binary_id(=engine::canon_gpu)
+        | binary_id(=engine::qa_TASK-M2-07_gpu)
+        | binary_id(=engine::qa_TASK-M2-47_gpu)
+        | binary_id(=engine::invariant_gpu)
+        | binary_id(=engine::encode_gpu)
+        | binary_id(=engine::qa_TASK-M2-15_gpu)
+        | binary_id(=engine::per_pixel_mass_gpu)
+        | binary_id(=engine::decode_cross_backend)
+        | binary_id(=engine::qa_TASK-M2-24_gpu)
+        | binary_id(=engine::lock_gpu)
+        | binary_id(=engine::arctan_gpu)
+        | binary_id(=validation::decode_f32_eps_gpu)
+        | binary_id(=validation::invariant_gradient_gpu)
+        | binary_id(=validation::agreement_preset_gpu)
+        | binary_id(=validation::qa_TASK-M2-25_gpu)
+        | binary_id(=xtask::build_kernel)
+        | binary_id(=xtask::qa_TASK-M0-14)
+        | binary_id(=xtask::fragment_wgsl)
+        | binary_id(=xtask::qa_TASK-M0-06_list)
+        | binary_id(=xtask::qa_TASK-M0-06_runner)
+        | binary_id(=xtask::qa_TASK-M0-20)
+        | (binary_id(=engine::canon_gpu) & test(=canonicaliser_coincident_inner_pair))
+        | (binary_id(=engine::canon_gpu) & test(=canonicaliser_hierarchy))
+        | (binary_id(=engine::canon_gpu) & test(=canonicaliser_hierarchy_edge))
+        | (binary_id(=engine::canon_gpu) & test(=canonicaliser_scale_invariance))
+        | (binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_continuous))
+        | (binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_energy))
+        | (binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_registry))
+        | (binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_tags))
+        | (binary_id(=engine::qa_TASK-M2-06_gpu) & test(=qa_m206_gate_turns_at_threshold))
+        | (binary_id(=engine::qa_TASK-M2-07_gpu) & test(=canonicaliser_qa_m207_twice))
+        | (binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_eta_switch))
+        | (binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_feasibility_tag))
+        | (binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_new_charts))
+        | (binary_id(=engine::qa_TASK-M2-47_gpu) & test(=canonicaliser_qa_m247_branches_agree))
+        | (binary_id(=kernel::gallery_sweep) & test(=gallery_sweep_unit_square))
+        | (binary_id(=kernel::qa_TASK-M3-03) & test(=qa_nsub_bucket_floor_pairs_match_the_specification))
+        | (binary_id(=ledger::derived) & test(=current_drift_property_matches_the_reference))
+        | (binary_id(=render::compaction_ramps) & test(=field_either_role_every_form_and_ramp_assembles))
+        | (binary_id(=render::debug_views) & test(=debug_views_render_far_from_ties))
+        | (binary_id(=render::decode_preset) & test(=decode_preset_vs_decode_only))
+        | (binary_id(=render::embed_survives) & test(=embed_survives_the_list))
+        | (binary_id(=render::observation_taps) & test(=observation_taps_leave_every_bound_buffer_unchanged))
+        | (binary_id(=render::observation_taps) & test(=observation_taps_leave_the_payload_unchanged))
+        | (binary_id(=render::prelude) & test(=dbg_helpers_match_the_cpu_mirror_on_the_gpu))
+        | (binary_id(=render::prelude) & test(=prelude_luts_colour_space_maps))
+        | (binary_id(=render::presentation_no_hatch) & test(=presentation_no_hatch_field_ramps))
+        | (binary_id(=render::presentation_no_hatch) & test(=presentation_no_hatch_override))
+        | (binary_id(=render::qa_TASK-M1-03) & test(=qa_dbg_helpers_cat))
+        | (binary_id(=render::qa_TASK-M1-03) & test(=qa_prelude_generated_custom_node_compiles))
+        | (binary_id(=render::qa_TASK-M1-08) & test(=qa_tool020_each_view_assembles_reading_only_its_field))
+        | (binary_id(=render::qa_TASK-M1-15) & test(=qa_m1_15_debug_views_bind_the_payload_read_only))
+        | (binary_id(=render::qa_TASK-M2-34) & test(=qa_m2_34_presentation_field_ramps))
+        | (binary_id(=render::qa_TASK-M2-34) & test(=qa_m2_34_presentation_field_ramps_overridden))
+        | (binary_id(=render::qa_TASK-M7-05) & test(=qa_field_either_role_any_field))
+        | (binary_id(=render::qa_TASK-M7-29) & test(=embed_survives_qa_property))
+        | (binary_id(=render::qa_TASK-M7-30) & test(=embed_hybrid_rotation_qa_angles_at_1024))
+        | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_gate_runs))
+        | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_healthy))
+        | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_operands))
+        | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_permitted_stores))
+        | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_window_gate))
+        | (binary_id(=validation::codegen_selftest) & test(=codegen_selftest_pack_unpack_kernel_gpu))
+        | (binary_id(=validation::debug_scenes) & test(=debug_scenes_render_their_references))
+        | (binary_id(=validation::decode_preset_harness) & test(=decode_preset_harness_probe))
+        | (binary_id(=validation::decode_preset_shape_poles) & test(=decode_preset_shape_poles))
+        | (binary_id(=validation::expected_message) & test(=control_panicking_in_setup_fails_and_one_reaching_its_check_passes))
+        | (binary_id(=validation::golden_scene) & test(=golden_scene_renders_its_twin))
+        | (binary_id(=validation::invariant_gradient_gpu) & test(=invariant_gradient_verdict))
+        | (binary_id(=validation::oklab_roundtrip_gate) & test(=oklab_gate_fixtures))
+        | (binary_id(=validation::qa_TASK-M0-14) & test(=qa_toolchain_each_tier_b_field_misbuild_is_seen))
+        | (binary_id(=validation::qa_TASK-M0-14) & test(=qa_toolchain_native_and_gpu_are_payload_s2_bit_for_bit))
+        | (binary_id(=validation::qa_TASK-M1-13) & test(=qa_structural_views_colour_by_the_cpu_struct))
+        | (binary_id(=validation::qa_TASK-M1-14) & test(=qa_m1_14_each_golden_is_its_render_and_can_fail))
+        | (binary_id(=validation::qa_TASK-M1-14) & test(=qa_m1_14_each_tile_shows_its_own_sample))
+        | (binary_id(=validation::qa_TASK-M1-19) & test(=qa_quad_fields_all_9_shown))
+        | (binary_id(=validation::qa_TASK-M2-25) & test(=qa_m225_chart_z_is_the_definition))
+        | (binary_id(=validation::qa_TASK-M2-25) & test(=qa_m225_decode_off_lattice_and_pole))
+        | (binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m225_kernel_rho_angle_at_the_lambda_pole))
+        | (binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m225_two_swapped_descriptors_show_where_they_are))
+        | (binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole))
+        | (binary_id(=xtask::build_kernel) & test(=build_kernel_listed_in_ci))
+        | (binary_id(=xtask::build_kernel) & test(=build_kernel_runs_in_ci))
+        | (binary_id(=xtask::lint_wgsl_ctx_occupant) & test(=lint_wgsl_ctx_occupant_structural_occupants_lint_clean))
+        | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_deny_list_member_by_member))
+        | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_fixtures_fire_as_marked))
+        | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_repository_lints_clean))
+        | (binary_id(=xtask::lint_wgsl_rules) & test(=lint_wgsl_ci_runner_runs_the_lint))
+        | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
+        | (binary_id(=xtask::qa_TASK-M0-06_runner) & test(=qa_m006_ci_golden_runner_renders))
+        | (binary_id(=xtask::qa_TASK-M0-20) & test(=qa_cli_screenshot_all_runs_selftest))
+        | (binary_id(=xtask::qa_TASK-M0-50) & test(=qa_lint_wgsl_workspace_passes))
+        | (binary_id(=xtask::qa_TASK-M1-01) & test(=qa_lint_wgsl_repository_read_side_is_clean))
+        | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_exceptions_are_each_to_one_rule))
+        | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_guard_follows_part4))
+        | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_nan_tests_fail_everywhere))
+        | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_seams_5_and_6_follow_part4))
+        | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_shadow_read_only_by_sample_read))
+    )
+"""
+
+# The process tests (the owner's CI model, approved 9 Nov 2026, item 1: "Process tests only when the PR changes
+# .github/, xtask/, scripts/, plan/, decisions.md, REVIEW_QUEUE.md or docs/"): the test binaries the split of 9 Nov 2026
+# classes process, the tests of CI, the plan checks, the negative-control registry, the job queue, the deps rules'
+# synthetic workspaces and the rest of the machinery that tests the machinery, which `ci.yml`'s `process` job runs.
+# Their own slow tier, each measured over 60 s, runs nightly and on `main`. Applied per R-369/R-812.
+# The slow tier of the process tests (seconds, binary, test):
+#     146.0 s  validation::qa_TASK-M0-21 qa_control_under_another_name_does_not_pair
+#     145.1 s  validation::qa_TASK-M0-21 qa_controls_exist_only_under_the_feature
+#      88.8 s  validation::qa_TASK-M0-21 qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test
+#     167.8 s  validation::qa_TASK-M0-24 qa_m0_24_every_implementer_test_has_a_registered_control
+#     346.7 s  validation::qa_TASK-M0-24 qa_m0_24_every_registered_control_makes_its_test_fail
+#     224.3 s  validation::qa_TASK-M0-25 qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test
+#     130.4 s  validation::qa_TASK-M0-25 qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test
+#     142.3 s  validation::qa_TASK-M0-26 qa_m0_26_a_control_without_an_expected_message_does_not_compile
+#     143.9 s  validation::qa_TASK-M0-26 qa_m0_26_r206_lists_its_five_tests_and_no_child_path
+#     148.2 s  xtask::ci ci_list_runs_no_control
+#      64.6 s  xtask::controls controls_control_leaving_test_passing_fails_naming_it
+#      66.0 s  xtask::controls controls_control_panicking_without_its_message_fails_naming_it
+#      64.7 s  xtask::controls controls_crate_without_feature_is_skipped
+#     320.0 s  xtask::controls controls_on_this_workspace_skips_gui
+#     163.4 s  xtask::controls controls_runs_on_this_workspace_bare_and_in_ci
+#     657.0 s  xtask::nextest nextest_ci_shards_together_list_every_test
+#      75.7 s  xtask::nextest nextest_ci_steps_list_every_test_under_their_profiles
+#     109.4 s  xtask::qa_TASK-M0-01 qa_cargo_xtask_alias_runs_deps
+#     163.4 s  xtask::qa_TASK-M0-01 qa_cargo_xtask_alias_runs_the_deps_check
+#     157.7 s  xtask::qa_TASK-M0-01 qa_xtask_deps_passes_on_the_live_workspace
+#     159.2 s  xtask::qa_TASK-M0-01_live qa_live_deps_sees_every_live_workspace_edge
+#      74.5 s  xtask::qa_TASK-M0-02 qa02_a_failing_plan_check_turns_xtask_ci_red
+#     173.5 s  xtask::qa_TASK-M0-22 qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing
+#     172.0 s  xtask::qa_TASK-M0-22 qa_m022_ci_fails_on_a_test_without_control
+#     170.8 s  xtask::qa_TASK-M0-22 qa_m022_ci_passes_when_every_control_trips
+#     275.2 s  xtask::qa_TASK-M0-22_r235 qa_r235_ci_list_fails_on_a_test_without_control
+#      93.4 s  xtask::qa_TASK-M0-34 qa_m034_control_output_after_a_failures_line_is_in_its_finding
+#      94.4 s  xtask::qa_TASK-M0-34 qa_m034_leaky_control_output_is_in_its_finding
+#     104.3 s  xtask::qa_TASK-M0-38 qa_m038_embedded_note_alone_is_not_the_controls
+#     104.5 s  xtask::qa_TASK-M0-38 qa_m038_note_after_an_embedded_header_is_the_controls_own
+#     159.9 s  xtask::qa_tooling_rq_union a_note_differing_in_each_kind_of_id_is_caught_on_the_real_queue
+[profile.process]
+default-filter = """
+    (
+        binary_id(=validation::qa_TASK-M0-04_controls)
+        | binary_id(=validation::qa_TASK-M0-21)
+        | binary_id(=validation::qa_TASK-M0-21_controls)
+        | binary_id(=validation::qa_TASK-M0-21_r2)
+        | binary_id(=validation::qa_TASK-M0-24)
+        | binary_id(=validation::qa_TASK-M0-25)
+        | binary_id(=validation::qa_TASK-M0-26)
+        | binary_id(=validation::qa_TASK-M0-26_gone)
+        | binary_id(=validation::qa_TASK-M0-26_r217)
+        | binary_id(=validation::qa_TASK-M0-27)
+        | binary_id(=validation::qa_TASK-M0-28)
+        | binary_id(=validation::qa_TASK-M0-33)
+        | binary_id(=validation::qa_TASK-M0-33_lease)
+        | binary_id(=validation::qa_TASK-M0-33_type)
+        | binary_id(=validation::qa_TASK-M0-38)
+        | binary_id(=validation::qa_TASK-M0-39)
+        | binary_id(=validation::qa_TASK-M0-48)
+        | binary_id(=xtask::ai_review_rules)
+        | binary_id(=xtask::ci)
+        | binary_id(=xtask::ci_actions_pinned)
+        | binary_id(=xtask::ci_changes)
+        | binary_id(=xtask::ci_debug_info)
+        | binary_id(=xtask::ci_disk_sampler)
+        | binary_id(=xtask::ci_partition)
+        | binary_id(=xtask::ci_quick_tier)
+        | binary_id(=xtask::ci_release_disk)
+        | binary_id(=xtask::ci_retry)
+        | binary_id(=xtask::ci_runner_watch)
+        | binary_id(=xtask::ci_self_hosted)
+        | binary_id(=xtask::ci_workspace_disk)
+        | binary_id(=xtask::cloud_setup)
+        | binary_id(=xtask::contain)
+        | binary_id(=xtask::controls)
+        | binary_id(=xtask::controls_partition)
+        | binary_id(=xtask::deps)
+        | binary_id(=xtask::gate_provisional)
+        | binary_id(=xtask::gate_report)
+        | binary_id(=xtask::gemini_review)
+        | binary_id(=xtask::jobq)
+        | binary_id(=xtask::merge_ready)
+        | binary_id(=xtask::mutants_check)
+        | binary_id(=xtask::mutants_measured_timeout)
+        | binary_id(=xtask::mutants_no_mutant)
+        | binary_id(=xtask::nextest)
+        | binary_id(=xtask::pages_workflow)
+        | binary_id(=xtask::plan_check)
+        | binary_id(=xtask::pr_check)
+        | binary_id(=xtask::progress_banner)
+        | binary_id(=xtask::qa_R-375)
+        | binary_id(=xtask::qa_R-485_print_graph_coverage)
+        | binary_id(=xtask::qa_R-656_ci_changes)
+        | binary_id(=xtask::qa_R-658)
+        | binary_id(=xtask::qa_R-658_contain)
+        | binary_id(=xtask::qa_R-658_round2)
+        | binary_id(=xtask::qa_R-658_round3)
+        | binary_id(=xtask::qa_R-658_round4)
+        | binary_id(=xtask::qa_R-662_ci_scope)
+        | binary_id(=xtask::qa_R-677_ci_tiers)
+        | binary_id(=xtask::qa_R-790_claude_tier)
+        | binary_id(=xtask::qa_TASK-M0-01)
+        | binary_id(=xtask::qa_TASK-M0-01_controls)
+        | binary_id(=xtask::qa_TASK-M0-01_live)
+        | binary_id(=xtask::qa_TASK-M0-01_live_controls)
+        | binary_id(=xtask::qa_TASK-M0-01_r191)
+        | binary_id(=xtask::qa_TASK-M0-01_r191_controls)
+        | binary_id(=xtask::qa_TASK-M0-01_r193)
+        | binary_id(=xtask::qa_TASK-M0-01_r193_controls)
+        | binary_id(=xtask::qa_TASK-M0-01_r194)
+        | binary_id(=xtask::qa_TASK-M0-01_r194_controls)
+        | binary_id(=xtask::qa_TASK-M0-02)
+        | binary_id(=xtask::qa_TASK-M0-03)
+        | binary_id(=xtask::qa_TASK-M0-14_r335)
+        | binary_id(=xtask::qa_TASK-M0-14_rust_gpu_cache)
+        | binary_id(=xtask::qa_TASK-M0-19)
+        | binary_id(=xtask::qa_TASK-M0-19_r374)
+        | binary_id(=xtask::qa_TASK-M0-22)
+        | binary_id(=xtask::qa_TASK-M0-22_r235)
+        | binary_id(=xtask::qa_TASK-M0-23)
+        | binary_id(=xtask::qa_TASK-M0-23_r305)
+        | binary_id(=xtask::qa_TASK-M0-23_shards)
+        | binary_id(=xtask::qa_TASK-M0-29)
+        | binary_id(=xtask::qa_TASK-M0-29_live)
+        | binary_id(=xtask::qa_TASK-M0-30_r191)
+        | binary_id(=xtask::qa_TASK-M0-30_r193)
+        | binary_id(=xtask::qa_TASK-M0-30_r194)
+        | binary_id(=xtask::qa_TASK-M0-33)
+        | binary_id(=xtask::qa_TASK-M0-34)
+        | binary_id(=xtask::qa_TASK-M0-34_abort)
+        | binary_id(=xtask::qa_TASK-M0-34_abort_plural)
+        | binary_id(=xtask::qa_TASK-M0-36)
+        | binary_id(=xtask::qa_TASK-M0-37)
+        | binary_id(=xtask::qa_TASK-M0-38)
+        | binary_id(=xtask::qa_TASK-M0-42)
+        | binary_id(=xtask::qa_TASK-M0-45)
+        | binary_id(=xtask::qa_TASK-M0-49)
+        | binary_id(=xtask::qa_TASK-M0-52)
+        | binary_id(=xtask::qa_TASK-M0-53)
+        | binary_id(=xtask::qa_TASK-M0-54)
+        | binary_id(=xtask::qa_TASK-M1-18)
+        | binary_id(=xtask::qa_TASK-M1-18_r433)
+        | binary_id(=xtask::qa_TASK-M2-54)
+        | binary_id(=xtask::qa_TASK-M6-53)
+        | binary_id(=xtask::qa_TASK-M8-86_job_condition)
+        | binary_id(=xtask::qa_TASK-M8-96)
+        | binary_id(=xtask::qa_ci_archive_shrink)
+        | binary_id(=xtask::qa_ci_debug_info)
+        | binary_id(=xtask::qa_ci_release_disk)
+        | binary_id(=xtask::qa_ci_retry)
+        | binary_id(=xtask::qa_ci_throughput_a)
+        | binary_id(=xtask::qa_ci_throughput_a_rerun)
+        | binary_id(=xtask::qa_ci_tiers_compose)
+        | binary_id(=xtask::qa_gemini_review_model_list)
+        | binary_id(=xtask::qa_mutants_check_always)
+        | binary_id(=xtask::qa_mutants_check_stall)
+        | binary_id(=xtask::qa_ops_cloud_setup_sigpipe)
+        | binary_id(=xtask::qa_ops_mutants_nextest)
+        | binary_id(=xtask::qa_ops_nextest_cargo_group)
+        | binary_id(=xtask::qa_sampler_cleanup_bound)
+        | binary_id(=xtask::qa_sampler_end_order)
+        | binary_id(=xtask::qa_tooling_ci_free_disk)
+        | binary_id(=xtask::qa_tooling_ci_one_build)
+        | binary_id(=xtask::qa_tooling_ci_quick_tier)
+        | binary_id(=xtask::qa_tooling_ci_workspace_disk)
+        | binary_id(=xtask::qa_tooling_rq_union)
+        | binary_id(=xtask::reviews_check)
+        | binary_id(=xtask::scratch_guard)
+    )
+    & not (
+        (binary_id(=validation::qa_TASK-M0-21) & test(=qa_control_under_another_name_does_not_pair))
+        | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_controls_exist_only_under_the_feature))
+        | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test))
+        | (binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_implementer_test_has_a_registered_control))
+        | (binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_registered_control_makes_its_test_fail))
+        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
+        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
+        | (binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_a_control_without_an_expected_message_does_not_compile))
+        | (binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_lists_its_five_tests_and_no_child_path))
+        | (binary_id(=xtask::ci) & test(=ci_list_runs_no_control))
+        | (binary_id(=xtask::controls) & test(=controls_control_leaving_test_passing_fails_naming_it))
+        | (binary_id(=xtask::controls) & test(=controls_control_panicking_without_its_message_fails_naming_it))
+        | (binary_id(=xtask::controls) & test(=controls_crate_without_feature_is_skipped))
+        | (binary_id(=xtask::controls) & test(=controls_on_this_workspace_skips_gui))
+        | (binary_id(=xtask::controls) & test(=controls_runs_on_this_workspace_bare_and_in_ci))
+        | (binary_id(=xtask::nextest) & test(=nextest_ci_shards_together_list_every_test))
+        | (binary_id(=xtask::nextest) & test(=nextest_ci_steps_list_every_test_under_their_profiles))
+        | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
+        | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_the_deps_check))
+        | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_xtask_deps_passes_on_the_live_workspace))
+        | (binary_id(=xtask::qa_TASK-M0-01_live) & test(=qa_live_deps_sees_every_live_workspace_edge))
+        | (binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_failing_plan_check_turns_xtask_ci_red))
+        | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing))
+        | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_test_without_control))
+        | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_passes_when_every_control_trips))
+        | (binary_id(=xtask::qa_TASK-M0-22_r235) & test(=qa_r235_ci_list_fails_on_a_test_without_control))
+        | (binary_id(=xtask::qa_TASK-M0-34) & test(=qa_m034_control_output_after_a_failures_line_is_in_its_finding))
+        | (binary_id(=xtask::qa_TASK-M0-34) & test(=qa_m034_leaky_control_output_is_in_its_finding))
+        | (binary_id(=xtask::qa_TASK-M0-38) & test(=qa_m038_embedded_note_alone_is_not_the_controls))
+        | (binary_id(=xtask::qa_TASK-M0-38) & test(=qa_m038_note_after_an_embedded_header_is_the_controls_own))
+        | (binary_id(=xtask::qa_tooling_rq_union) & test(=a_note_differing_in_each_kind_of_id_is_caught_on_the_real_queue))
+    )
+"""
+
+# The GPU smoke set (the owner's CI model, approved 9 Nov 2026, item 1: "lavapipe GPU smoke set; Metal smoke set on
+# GPU-path PRs"): one fast test of each GPU stage of the in-depth GPU tests, which `ci.yml`'s `gpu-lavapipe` runs on
+# lavapipe and `gpu-metal` on Metal, each after `cargo xtask build-kernel`, on a pull request with a GPU-path file
+# (`scripts/ci_changes.sh`'s `gpu`). Each is its stage's fastest test that dispatches the stage on the GPU, by the
+# lavapipe and Metal times of `main`'s run 42536974219 (8 Nov 2026), lavapipe's first:
+# - the kernel toolchain, rust-gpu to SPIR-V to naga's WGSL, dispatched: `toolchain_trivial_kernel` (11.2 s, Metal not run);
+# - the bring-up mode's readback of the SPIR-V build: `bringup_pattern_spirv` (5.4 s);
+# - the payload's pack and unpack through the generated WGSL on the GPU: `codegen_selftest_pack_unpack_wgsl_gpu`
+#   (7.9 s, 6.8 s);
+# - the decode stage D, through the `tanh_sat` window Metal's own `tanh` fails without its clamp:
+#   `decode_stage_tanh_range` (9.4 s, 8.6 s);
+# - canonicalisation C, its seam sweep's branches against the CPU's: `canonicaliser_seam_sweep` (5.4 s, 4.1 s);
+# - encode E, `β`'s selects on signed zeros, where Vulkan may drop a zero's sign through `atan2` (R-438):
+#   `encode_beta_signed_zero` (5.4 s, 4.5 s);
+# - the invariant-momentum construction, CPU-f64's seed on the GPU: `invariant_seed_parity` (5.7 s, 5.5 s);
+# - the per-pixel mass decode, its one test: `per_pixel_mass_garbage_uniform` (25.9 s, Metal not run);
+# - the lock's locked-against-free render: `lock_kernel_uniform_identical_gpu` (10.8 s, Metal not run);
+# - the kernel's own f32 `atan2` as the backend compiles it (RQ-628), its one test: `arctan_gpu_is_cpu` (26.6 s, Metal
+#   not run);
+# - the agreement preset's fragment decode against the kernel decode stage: `agreement_preset_twin` (6.6 s, Metal not
+#   run);
+# - decoder test 12 across backends at the M0/M1 crossings: `decode_parity_m01_crossings` (5.8 s, 4.5 s).
+# About 126 s of test time on lavapipe, under a minute of the job's wall time on its four test threads. Beside them, the
+# kernel build's own checks, which read the kernel the job has just built and take under a second: xtask's
+# `build_kernel` tests but its two slow-tier ones, which `cargo xtask build-kernel` itself covers, `fragment_wgsl` and
+# `qa_TASK-M0-14`. On Metal, the GPU harness's, the compute fast-math probe's and the hosted-Metal probe's unit tests in
+# validation, and the compute entry point's in engine (R-297), each under a second. Applied per R-369/R-812.
+[profile.gpu-smoke]
+default-filter = """
+    (binary_id(=validation::toolchain) & test(=toolchain_trivial_kernel))
+    | (binary_id(=validation::bringup) & test(=bringup_pattern_spirv))
+    | (binary_id(=validation::codegen_selftest) & test(=codegen_selftest_pack_unpack_wgsl_gpu))
+    | (binary_id(=engine::decode_stage_gpu) & test(=decode_stage_tanh_range))
+    | (binary_id(=engine::canon_gpu) & test(=canonicaliser_seam_sweep))
+    | (binary_id(=engine::encode_gpu) & test(=encode_beta_signed_zero))
+    | (binary_id(=engine::invariant_gpu) & test(=invariant_seed_parity))
+    | (binary_id(=engine::per_pixel_mass_gpu) & test(=per_pixel_mass_garbage_uniform))
+    | (binary_id(=engine::lock_gpu) & test(=lock_kernel_uniform_identical_gpu))
+    | (binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu))
+    | (binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_twin))
+    | (binary_id(=engine::decode_cross_backend) & test(=decode_parity_m01_crossings))
+    | (binary_id(=xtask::build_kernel) & not test(=build_kernel_runs_in_ci) & not test(=build_kernel_listed_in_ci))
+    | binary_id(=xtask::fragment_wgsl)
+    | binary_id(=xtask::qa_TASK-M0-14)
+    | (binary_id(=validation) & test(/^gpu::tests::(metal_hosted_probe|compute_fast_math_|gpu_harness_)/))
+    | (binary_id(=engine) & test(/^compute::tests::compute_entry_/))
+"""

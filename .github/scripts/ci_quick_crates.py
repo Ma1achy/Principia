@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""The crates a quick-tier head tests (R-684): the changed crates plus their reverse dependencies.
+"""The crates a pull request's product tests cover: the changed crates plus their reverse dependencies (R-684's quick
+tier, which the owner's CI model of 9 Nov 2026 made the PR tier's selection).
 
     ci_quick_crates.py --root <workspace root> [--library] < changed-paths
 
-Reads a pull request's changed paths on stdin, one per line, and prints the workspace packages whose tests the quick
+Reads a pull request's changed paths on stdin, one per line, and prints the workspace packages whose tests the PR
 tier runs, space-separated and sorted. `.github/scripts/ci_tier.sh` calls it, and `xtask/tests/ci_quick_tier.rs` tests
 it. It reads the manifests with the standard library alone, so the `changes` job needs no toolchain.
 
@@ -15,7 +16,7 @@ A path counts for:
 - `xtask`, under `.github/` or `scripts/`: nothing else reads the workflows and the scripts (`xtask/tests/`);
 - nothing, in the corpus, the plan, the workbench, `.claude/` or the root's seven markdown files that
   `scripts/ci_changes.sh` lists, which no build reads: R-677's classifier has already sent a head of those alone to the
-  cheap checks, and the readers of a tier (b) file beside code run in full CI;
+  cheap checks, and the readers of a tier (b) file run in steps of their own, beside code or not;
 - every crate, otherwise: the Cargo files, the toolchain, `.cargo/`, `.config/`, `fixtures/`, `plan/requirements.yaml`
   and any unknown path, another root markdown file among them, as the classifier fails towards full CI.
 
