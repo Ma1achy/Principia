@@ -1851,7 +1851,7 @@
 - file: decisions.md
   section: "R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*"
   reason: informative only
-  note: "the chart design's door; TASK-M2-60 to TASK-M2-65 carry it"
+  note: "the chart design's door; TASK-M2-60, TASK-M2-81, TASK-M8-107, TASK-M8-108, TASK-M2-74, TASK-M2-75, TASK-M2-76, TASK-M2-77, TASK-M8-113 to TASK-M8-116 and TASK-M2-65 carry it (TASK-M8-105 to TASK-M8-117 before R-916)"
 - file: decisions.md
   section: "R-852 — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)*"
   reason: informative only
