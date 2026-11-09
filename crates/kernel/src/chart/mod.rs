@@ -29,6 +29,9 @@
 //! their blocks by latent controls, and those that hold one by a physical construction, whose hidden coordinates are
 //! its physical parameters ([`mod@construction`]; R-633).
 //!
+//! **Navigation stops at the edge** (`nav`; R-469 P2): one generic stop over this trait and `validate`, keeping the
+//! view's centre valid under every navigation edit, which no chart writes for itself. CPU-side, off the SPIR-V build.
+//!
 //! **Saved charts** ([`mod@saved`]; R-475, R-513): a latent view saved as the oblique chart `(z₀, q₁, q₂)`, reopened as
 //! [`Latent`] on the stored vectors; a curved one as its parent, slice centre and tilt, reopened as [`Tilted`] on the
 //! parent under the saved tilt composed after a new one ([`Composed`]), so tilts compose.
@@ -75,6 +78,8 @@ pub mod invariant;
 pub mod latent;
 pub mod mass_simplex;
 pub mod mixed;
+#[cfg(not(target_arch = "spirv"))]
+pub mod nav;
 pub mod physical;
 pub mod saved;
 pub mod shape_sphere;
