@@ -29,6 +29,6 @@ Time-axis chart mode on the real integrator: the column march, its column equal 
 ## Notes
 - **Build order (R-863):** stage 5, time-axis charts and the symmetry filter. It depends on stage 4's task, TASK-M8-108, and merges only with its tests green.
 - RQ-727's ruling amends the caching contract's T row and the temporal note.
-- Waits on its rulings item: RQ-727. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M2-58 in Depends on holds it.
+- Waits on its rulings item: RQ-727. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); R-917's hold holds it, no longer an edge: R-916 took TASK-M2-58 (was TASK-M4-37), the rulings applied, out of Depends on, and no M3 to M9 task starts until M2's gate passes, which waits on TASK-M2-58 as an M2 task. *Was:* "TASK-M4-37 in Depends on holds it."
 - *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Closes: REQ-CHART-123"; "Depends on: TASK-M2-58, TASK-M4-33, TASK-M8-108".
 - *9 Nov 2026 (R-916):* split: the mode's maths through the trajectory interface (REQ-CHART-123, REQ-CHART-174) is TASK-M2-83's; this task keeps the two tests that read the real march (F6). *Was (title):* "Time-axis chart mode"; *was (Acceptance):* the ten-test line, eight of them now at TASK-M2-83.
