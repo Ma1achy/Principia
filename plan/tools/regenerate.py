@@ -17,7 +17,9 @@ committed file alone, but it does write the uncommitted ones into the tree.
 
 A reviewer, who never creates a file in its worktree, runs it with `--out <dir>`, a directory outside the repo tree (its
 target directory's `plan-generated/`): the files go under <dir> at their repo paths, <dir>/plan/CURRENT_RULES.md and so
-on, and nothing is written into the tree. Implementers and the orchestrator regenerate in place.
+on, and nothing is written into the tree: a <dir> in the tree is refused, and so is any file under <dir> that a symlink
+(at any depth, or the file itself) or a second hard link would carry into it. Implementers and the orchestrator
+regenerate in place.
 
 `plan/check_plan.py` runs each generator with `--check`: it fails if one can't generate its file from the sources, if a
 generated file is committed, or if MILESTONES.md's blocks differ from a fresh regeneration.
@@ -27,7 +29,7 @@ Usage: python3 plan/tools/regenerate.py              write the uncommitted files
        python3 plan/tools/regenerate.py --all        and rewrite MILESTONES.md's blocks too (a rulings PR, a conflict)
        python3 plan/tools/regenerate.py --check      write nothing; exit 1 if any generator's check fails
 """
-import os, subprocess, sys
+import os, stat, subprocess, sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -82,13 +84,25 @@ def inside(path, tree):
         path = parent
 
 
-def out_path(out, path):
+def out_path(out, path, root=ROOT):
     """Where a generator writes `path`, relative to the repo root: under `out` if --out named it, its directory made,
-    else in the tree."""
+    else in the tree. Under `out`, exits rather than return a target a write would carry into `root`: one that resolves
+    inside it, through a symlink at any depth below `out` or the file itself being one (a dangling link too, which a
+    write would create), checked before any directory is made; or a file with a second hard link, which may be in the
+    tree. A link that resolves outside the tree is followed, as there the write lands outside too."""
     if out is None:
         return path
-    os.makedirs(os.path.dirname(os.path.join(out, path)), exist_ok=True)
-    return os.path.join(out, path)
+    target = os.path.join(out, path)
+    if inside(target, root):
+        sys.exit(f"--out: {target} is inside the repo tree {root} through a symlink: remove the link")
+    try:
+        st = os.stat(target)
+    except FileNotFoundError:
+        st = None
+    if st is not None and stat.S_ISREG(st.st_mode) and st.st_nlink > 1:
+        sys.exit(f"--out: {target} has another hard link, which may be in the repo tree {root}: remove the file")
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    return target
 
 
 def run(tools, check, out=None):

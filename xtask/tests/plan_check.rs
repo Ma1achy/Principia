@@ -1101,6 +1101,11 @@ fn refuses_out(root: &Path, dir: &Path) {
 /// `<script> --out <dir>` refuses `dir`, naming it inside the tree, and writes nothing there. Run with `-B`, as
 /// `regenerate.py` runs the generators, so Python's bytecode cache for their imports isn't counted as a write.
 fn refuses_out_by(root: &Path, script: &str, dir: &Path) {
+    refuses_out_naming(root, script, dir, OUT_INSIDE);
+}
+
+/// `<script> --out <dir>` fails, naming `fault`, and writes nothing into the tree `root`.
+fn refuses_out_naming(root: &Path, script: &str, dir: &Path, fault: &str) {
     let before = snapshot(root);
     let (passed, out) = python(
         root,
@@ -1109,7 +1114,7 @@ fn refuses_out_by(root: &Path, script: &str, dir: &Path) {
     );
     assert!(!passed, "{script} --out passed:\n{out}");
     assert!(
-        out.contains(OUT_INSIDE),
+        out.contains(fault),
         "{script} --out did not name the fault:\n{out}"
     );
     assert!(
@@ -1138,7 +1143,6 @@ negative_control!(
 );
 
 /// Each script that takes `--out`: `regenerate.py` and the generators it runs, which share its guard.
-#[cfg(unix)]
 const OUT_SCRIPTS: [&str; 4] = [
     "plan/tools/regenerate.py",
     "plan/tools/current_rules.py",
@@ -1177,6 +1181,130 @@ negative_control!(
         fs::create_dir_all(&out).expect("out made");
         let link = link_beside(&root, "regenerate_ctl_out_symlink", &out);
         refuses_out_by(&root, "plan/tools/regenerate.py", &link.join("z"));
+    }
+);
+
+/// An empty `--out` directory for `root`, outside it, holding a symlink `plan` to `to` (code review C3).
+#[cfg(unix)]
+fn out_with_plan_link(root: &Path, name: &str, to: &Path) -> PathBuf {
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}_out"));
+    let _ = fs::remove_dir_all(&out);
+    fs::create_dir_all(&out).expect("out made");
+    std::os::unix::fs::symlink(to, out.join("plan")).expect("symlink made");
+    assert!(
+        !out.starts_with(root),
+        "the --out directory is outside the copy"
+    );
+    out
+}
+
+#[cfg(unix)]
+#[test]
+fn regenerate_out_refuses_a_symlink_under_it_into_the_tree() {
+    let (root, _) = copy_and_out("regenerate_out_link_under");
+    let out = out_with_plan_link(&root, "regenerate_out_link_under", &root.join("plan"));
+    for script in OUT_SCRIPTS {
+        refuses_out_by(&root, script, &out);
+    }
+}
+
+#[cfg(unix)]
+negative_control!(
+    regenerate_out_refuses_a_symlink_under_it_into_the_tree,
+    "a symlink under --out to a directory outside the tree carries the writes outside, and passes, so the refusal \
+     check must fail on it",
+    expected = "--out passed",
+    {
+        let (root, elsewhere) = copy_and_out("regenerate_ctl_out_link_under");
+        fs::create_dir_all(&elsewhere).expect("elsewhere made");
+        let out = out_with_plan_link(&root, "regenerate_ctl_out_link_under", &elsewhere);
+        refuses_out_by(&root, "plan/tools/regenerate.py", &out);
+    }
+);
+
+/// Every file the generators write, relative to the repo root.
+const GENERATED_FILES: [&str; 6] = [
+    "plan/CURRENT_RULES.md",
+    "plan/coverage.md",
+    "plan/reviewers/lists/numerical-gates.md",
+    "plan/reviewers/lists/m9-targets.md",
+    "plan/reviewers/lists/benchmarks.md",
+    "plan/reviewers/lists/gui-screenshots.md",
+];
+
+/// Puts at each generated file's place under `out` a symlink to `to(file)`.
+#[cfg(unix)]
+fn link_each_target(out: &Path, to: impl Fn(&str) -> PathBuf) {
+    let _ = fs::remove_dir_all(out);
+    for file in GENERATED_FILES {
+        let at = out.join(file);
+        fs::create_dir_all(at.parent().expect("has a parent")).expect("dir made");
+        std::os::unix::fs::symlink(to(file), &at).expect("symlink made");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn regenerate_out_refuses_a_target_that_is_a_symlink_into_the_tree() {
+    let (root, out) = copy_and_out("regenerate_out_target_link");
+    // CURRENT_RULES.md's link dangles at a file a write would create in the tree; the others name a source file.
+    link_each_target(&out, |file| match file {
+        "plan/CURRENT_RULES.md" => root.join(file),
+        _ => root.join("plan/requirements.yaml"),
+    });
+    for script in OUT_SCRIPTS {
+        refuses_out_by(&root, script, &out);
+    }
+}
+
+#[cfg(unix)]
+negative_control!(
+    regenerate_out_refuses_a_target_that_is_a_symlink_into_the_tree,
+    "a target linked to a file outside the tree is written there, and passes, so the refusal check must fail on it",
+    expected = "--out passed",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out_target_link");
+        let elsewhere = Path::new(env!("CARGO_TARGET_TMPDIR")).join("regenerate_ctl_out_target_link_elsewhere");
+        let _ = fs::remove_dir_all(&elsewhere);
+        fs::create_dir_all(&elsewhere).expect("elsewhere made");
+        link_each_target(&out, |file| elsewhere.join(file.replace('/', "_")));
+        refuses_out_by(&root, "plan/tools/regenerate.py", &out);
+    }
+);
+
+const HARD_LINK: &str = "has another hard link";
+
+/// `out` after a clean `regenerate.py --out` run, and the run over it again, which passes: a file with one link is
+/// the last run's, and is rewritten.
+fn regenerated_twice(root: &Path, out: &Path) {
+    let dir = out.to_str().expect("utf-8 path");
+    for _ in 0..2 {
+        let (passed, text) = python(root, "plan/tools/regenerate.py", &["--out", dir]);
+        assert!(passed, "regenerate.py --out failed:\n{text}");
+    }
+}
+
+#[test]
+fn regenerate_out_refuses_a_target_with_a_second_hard_link() {
+    let (root, out) = copy_and_out("regenerate_out_hard_link");
+    regenerated_twice(&root, &out);
+    for file in GENERATED_FILES {
+        fs::remove_file(out.join(file)).expect("file removed");
+        fs::hard_link(root.join("plan/requirements.yaml"), out.join(file)).expect("hard link made");
+    }
+    for script in OUT_SCRIPTS {
+        refuses_out_naming(&root, script, &out, HARD_LINK);
+    }
+}
+
+negative_control!(
+    regenerate_out_refuses_a_target_with_a_second_hard_link,
+    "a target the last run wrote has one link, and passes, so the refusal check must fail on it",
+    expected = "--out passed",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out_hard_link");
+        regenerated_twice(&root, &out);
+        refuses_out_naming(&root, "plan/tools/regenerate.py", &out, HARD_LINK);
     }
 );
 
