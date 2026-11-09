@@ -114,8 +114,9 @@ Artboard → governing section:
 - [ ] `docs/gui/design/12_console.png` — Console → `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)"
 
 The GUI-screenshot requirements of M0 to M8 are listed in `plan/reviewers/lists/gui-screenshots.md`: generated from
-`plan/requirements.yaml` and not committed, so run `python3 plan/tools/regenerate.py` before reading it (the owner, 8
-Nov 2026).
+`plan/requirements.yaml` and not committed, so run
+`python3 plan/tools/regenerate.py --out <your target directory>/plan-generated` and read it at
+`<your target directory>/plan-generated/plan/reviewers/lists/gui-screenshots.md` (the owner, 8 Nov 2026).
 
 ## 8. The GUI track on the mock engine (R-390)
 

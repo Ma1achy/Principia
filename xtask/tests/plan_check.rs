@@ -1010,3 +1010,156 @@ negative_control!(
         &["--all"]
     ))
 );
+
+/// Every file under `dir`, relative to it, with its length and modified time.
+fn snapshot(dir: &Path) -> Vec<(PathBuf, u64, std::time::SystemTime)> {
+    let mut out = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(at) = stack.pop() {
+        for entry in fs::read_dir(&at).expect("dir read") {
+            let path = entry.expect("entry read").path();
+            let meta = fs::metadata(&path).expect("metadata read");
+            if meta.is_dir() {
+                stack.push(path);
+            } else {
+                let rel = path.strip_prefix(dir).expect("under dir").to_path_buf();
+                out.push((rel, meta.len(), meta.modified().expect("mtime read")));
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// A copy with no generated file in it, and an empty directory beside it, outside it: (copy, directory).
+fn copy_and_out(name: &str) -> (PathBuf, PathBuf) {
+    let root = copy(name);
+    for file in [
+        "plan/CURRENT_RULES.md",
+        "plan/coverage.md",
+        "plan/reviewers/lists",
+    ] {
+        let path = root.join(file);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_dir_all(&path);
+    }
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}_out"));
+    let _ = fs::remove_dir_all(&out);
+    (root, out)
+}
+
+/// `regenerate.py` with `args` writes every generated file under `out` and leaves `root`'s tree as it was.
+fn writes_only_under(root: &Path, out: &Path, args: &[&str]) {
+    let before = snapshot(root);
+    let (passed, text) = python(root, "plan/tools/regenerate.py", args);
+    assert!(passed, "regenerate.py failed:\n{text}");
+    let after = snapshot(root);
+    let added: Vec<_> = after.iter().filter(|f| !before.contains(f)).collect();
+    assert!(
+        added.is_empty(),
+        "regenerate.py wrote into the tree: {added:?}"
+    );
+    for file in [
+        "plan/CURRENT_RULES.md",
+        "plan/coverage.md",
+        "plan/reviewers/lists/numerical-gates.md",
+        "plan/reviewers/lists/m9-targets.md",
+        "plan/reviewers/lists/benchmarks.md",
+        "plan/reviewers/lists/gui-screenshots.md",
+    ] {
+        assert!(
+            out.join(file).is_file(),
+            "regenerate.py did not write {file} under the --out directory"
+        );
+    }
+}
+
+#[test]
+fn regenerate_out_writes_under_its_directory_and_nothing_into_the_tree() {
+    let (root, out) = copy_and_out("regenerate_out");
+    let dir = out.to_str().expect("utf-8 path");
+    writes_only_under(&root, &out, &["--out", dir]);
+}
+
+negative_control!(
+    regenerate_out_writes_under_its_directory_and_nothing_into_the_tree,
+    "with no --out the files are written into the tree, so the nothing-into-the-tree check must fail on it",
+    expected = "regenerate.py wrote into the tree",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out");
+        writes_only_under(&root, &out, &[]);
+    }
+);
+
+const OUT_INSIDE: &str = "is inside the repo tree";
+
+/// `regenerate.py --out <dir>` refuses `dir`, naming it inside the tree, and writes nothing there.
+fn refuses_out(root: &Path, dir: &Path) {
+    let before = snapshot(root);
+    let (passed, out) = python(
+        root,
+        "plan/tools/regenerate.py",
+        &["--out", dir.to_str().expect("utf-8 path")],
+    );
+    assert!(!passed, "regenerate.py --out passed:\n{out}");
+    assert!(
+        out.contains(OUT_INSIDE),
+        "regenerate.py --out did not name the fault:\n{out}"
+    );
+    assert!(
+        snapshot(root) == before,
+        "regenerate.py --out wrote into the tree"
+    );
+}
+
+#[test]
+fn regenerate_out_refuses_the_tree_and_a_directory_in_it() {
+    let (root, _) = copy_and_out("regenerate_out_inside");
+    refuses_out(&root, &root);
+    refuses_out(&root, &root.join("plan/generated"));
+}
+
+negative_control!(
+    regenerate_out_refuses_the_tree_and_a_directory_in_it,
+    "a sibling whose name starts with the tree's is outside it, and passes, so the refusal check must fail on it",
+    expected = "regenerate.py --out passed",
+    {
+        let (root, _) = copy_and_out("regenerate_ctl_out_inside");
+        let sibling = PathBuf::from(format!("{}-sibling", root.display()));
+        let _ = fs::remove_dir_all(&sibling);
+        refuses_out(&root, &sibling);
+    }
+);
+
+/// A line of `regenerate.py`'s usage, which it prints on arguments it doesn't take.
+const USAGE: &str = "regenerate.py --out <dir>  write them under <dir>";
+
+/// `regenerate.py` with `args` fails and prints `fault`.
+fn refuses_args(root: &Path, args: &[&str], fault: &str) {
+    let (passed, out) = python(root, "plan/tools/regenerate.py", args);
+    assert!(!passed, "regenerate.py {args:?} passed:\n{out}");
+    assert!(
+        out.contains(fault),
+        "regenerate.py {args:?} did not name the fault:\n{out}"
+    );
+}
+
+#[test]
+fn regenerate_out_needs_a_directory_and_goes_alone() {
+    let (root, out) = copy_and_out("regenerate_out_args");
+    let dir = out.to_str().expect("utf-8 path");
+    refuses_args(&root, &["--out"], "--out needs a directory");
+    refuses_args(&root, &["--out", "--all"], "--out needs a directory");
+    refuses_args(&root, &["--out", dir, "--all"], USAGE);
+    refuses_args(&root, &["--check", "--out", dir], USAGE);
+}
+
+negative_control!(
+    regenerate_out_needs_a_directory_and_goes_alone,
+    "--out with its directory and nothing else passes, so the refusal check must fail on it",
+    expected = "passed",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out_args");
+        refuses_args(&root, &["--out", out.to_str().expect("utf-8 path")], USAGE);
+    }
+);

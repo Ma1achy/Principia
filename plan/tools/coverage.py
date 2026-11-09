@@ -10,7 +10,8 @@ and the requirement count per area and per milestone.
 coverage.md is not committed (the owner, 8 Nov 2026): `python3 plan/tools/regenerate.py` writes it, and a reader runs
 that first. --check reads no copy on disk.
 
-Usage: python3 plan/tools/coverage.py [--check]   (--check: don't write, just exit non-zero on errors)
+Usage: python3 plan/tools/coverage.py [--check | --out <dir>]   (--check: don't write, just exit non-zero on errors;
+       --out: write it under <dir>, outside the repo tree, at <dir>/plan/coverage.md; plan/tools/regenerate.py)
 """
 import collections, os, re, sys
 
@@ -19,6 +20,7 @@ import yaml
 sys.path.insert(0, os.path.dirname(__file__))
 from sections import citable_index, corpus_files, section_index, RULINGS_FILE  # noqa: E402
 from rulings import rq_ids  # noqa: E402
+from regenerate import out_dir, out_path  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 REQS = "plan/requirements.yaml"
@@ -30,6 +32,7 @@ AREAS = ["DEC", "ENC", "CHART", "INT", "EVT", "PAY", "GEN", "SCHED", "REF", "REN
 
 
 def main():
+    out = out_dir(sys.argv[1:])
     os.chdir(ROOT)
     all_reqs = yaml.safe_load(open(REQS, encoding="utf-8"))
     retired = [r for r in all_reqs if r.get("retired")]
@@ -113,7 +116,7 @@ def main():
         lines += ["## Errors", ""] + [f"- {e}" for e in errors] + [""]
 
     if "--check" not in sys.argv:
-        with open(OUT, "w", encoding="utf-8") as fh:
+        with open(out_path(out, OUT), "w", encoding="utf-8") as fh:
             fh.write("\n".join(lines))
     for e in errors:
         print("ERROR:", e, file=sys.stderr)

@@ -10,12 +10,16 @@ The lists are not committed (the owner, 8 Nov 2026): `python3 plan/tools/regener
 that before reading one. Each list's checklist (plan/reviewers/<owner>.md) names its path where the list belongs; until
 8 Nov 2026 the list was written into the checklist itself, between `<!-- list:<name> -->` markers.
 
-Usage: python3 plan/tools/reviewer_lists.py [--check]   (--check: write nothing; exit 1 if a checklist doesn't name its
-list, or still holds a list block, a generated copy committed)
+Usage: python3 plan/tools/reviewer_lists.py [--check | --out <dir>]   (--check: write nothing; exit 1 if a checklist
+doesn't name its list, or still holds a list block, a generated copy committed; --out: write the lists under <dir>,
+outside the repo tree, at <dir>/plan/reviewers/lists/; plan/tools/regenerate.py)
 """
 import os, re, sys
 
 import yaml
+
+sys.path.insert(0, os.path.dirname(__file__))
+from regenerate import out_dir, out_path  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 REQS = "plan/requirements.yaml"
@@ -64,16 +68,17 @@ def errors():
 
 
 def main():
+    out = out_dir(sys.argv[1:])
     os.chdir(ROOT)
     reqs = yaml.safe_load(open(REQS, encoding="utf-8"))
     texts = {name: f"# {title}\n\n{block(reqs, method, ms)}\n" for name, (method, ms, _, title) in LISTS.items()}
     errs = errors()
     if "--check" not in sys.argv:
-        os.makedirs(OUT_DIR, exist_ok=True)
+        os.makedirs(out_path(out, OUT_DIR), exist_ok=True)
         for name, text in texts.items():
-            with open(path_of(name), "w", encoding="utf-8", newline="") as fh:
+            with open(out_path(out, path_of(name)), "w", encoding="utf-8", newline="") as fh:
                 fh.write(text)
-        print(f"{OUT_DIR}/: {len(texts)} lists written")
+        print(f"{out_path(out, OUT_DIR)}/: {len(texts)} lists written")
     for e in errs:
         print("ERROR:", e, file=sys.stderr)
     sys.exit(1 if errs else 0)

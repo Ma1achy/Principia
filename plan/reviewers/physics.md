@@ -19,8 +19,9 @@ to M8, the physics review of PR #342, F2).
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 The numerical-gate requirements of M0 to M8 are listed in `plan/reviewers/lists/numerical-gates.md`: generated from
-`plan/requirements.yaml` and not committed, so run `python3 plan/tools/regenerate.py` before reading it (the owner, 8
-Nov 2026).
+`plan/requirements.yaml` and not committed, so run
+`python3 plan/tools/regenerate.py --out <your target directory>/plan-generated` and read it at
+`<your target directory>/plan-generated/plan/reviewers/lists/numerical-gates.md` (the owner, 8 Nov 2026).
 
 ## 2. The load-bearing invariants (canonical_spec §9 — the walls)
 
@@ -182,4 +183,5 @@ Ids are the headings of `docs/read_first/principia_01_pitfalls.md`; a task lists
 
 The M9 targets scored by a numerical comparison (`verify.method: numerical gate`), for the outcome and tier items above
 (never § 1's gate rule), are listed in `plan/reviewers/lists/m9-targets.md`: generated from `plan/requirements.yaml` and
-not committed, so run `python3 plan/tools/regenerate.py` before reading it (the owner, 8 Nov 2026).
+not committed, so run `python3 plan/tools/regenerate.py --out <your target directory>/plan-generated` and read it at
+`<your target directory>/plan-generated/plan/reviewers/lists/m9-targets.md` (the owner, 8 Nov 2026).

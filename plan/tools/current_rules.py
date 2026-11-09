@@ -13,7 +13,8 @@ can't, or if the text lists a ruling superseded or withdrawn outright (R-293).
 
 Fails if an entry of decisions.md is in no group or in two, or if a group names an entry decisions.md lacks.
 
-Usage: python3 plan/tools/current_rules.py [--check]   (--check: don't write, just exit non-zero on an error)
+Usage: python3 plan/tools/current_rules.py [--check | --out <dir>]   (--check: don't write, just exit non-zero on an error;
+       --out: write it under <dir>, outside the repo tree, at <dir>/plan/CURRENT_RULES.md; plan/tools/regenerate.py)
 """
 import os, sys
 
@@ -21,6 +22,7 @@ import yaml
 
 sys.path.insert(0, os.path.dirname(__file__))
 from rulings import RULINGS, entries, forward_notes, left_out, listed_left_out, still_in_force  # noqa: E402
+from regenerate import out_dir, out_path  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 GROUPS = "plan/rule_groups.yaml"
@@ -77,17 +79,18 @@ def build():
 
 
 def main():
+    out = out_dir(sys.argv[1:])
     os.chdir(ROOT)
     text, errors = build()
     if not errors:
         if "--check" in sys.argv:
             errors += listed_left_out(text, entries(), OUT)
         else:
-            with open(OUT, "w", encoding="utf-8") as fh:
+            with open(out_path(out, OUT), "w", encoding="utf-8") as fh:
                 fh.write(text)
     for e in errors:
         print("ERROR:", e, file=sys.stderr)
-    print(f"{OUT}: {text.count(chr(10) + '- **')} rulings listed; {len(errors)} errors")
+    print(f"{out_path(out, OUT)}: {text.count(chr(10) + '- **')} rulings listed; {len(errors)} errors")
     sys.exit(1 if errors else 0)
 
 

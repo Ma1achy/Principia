@@ -106,5 +106,6 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 The benchmark requirements of M0 to M8 are listed in `plan/reviewers/lists/benchmarks.md`: generated from
-`plan/requirements.yaml` and not committed, so run `python3 plan/tools/regenerate.py` before reading it (the owner, 8
-Nov 2026).
+`plan/requirements.yaml` and not committed, so run
+`python3 plan/tools/regenerate.py --out <your target directory>/plan-generated` and read it at
+`<your target directory>/plan-generated/plan/reviewers/lists/benchmarks.md` (the owner, 8 Nov 2026).

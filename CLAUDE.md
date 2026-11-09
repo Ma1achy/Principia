@@ -9,7 +9,9 @@ Read this first; each rule points at its source.
   contract.
 - For the rules in force, read `plan/CURRENT_RULES.md`, which is generated from `decisions.md`. Read `decisions.md` for
   their history and why they were made (R-292). It is not committed (the owner, 8 Nov 2026): run
-  `python3 plan/tools/regenerate.py` first, every time, so the copy you read is current.
+  `python3 plan/tools/regenerate.py` first, every time, so the copy you read is current. A reviewer, who creates no
+  file in its worktree, runs `python3 plan/tools/regenerate.py --out <its target directory>/plan-generated` instead and
+  reads `<its target directory>/plan-generated/plan/CURRENT_RULES.md`; `--out` writes nothing into the tree.
 
 ## Papers and licences (`decisions.md` § R-643)
 - No publisher PDF is committed unless its licence allows redistribution, checked before commit (R-643). A file that
