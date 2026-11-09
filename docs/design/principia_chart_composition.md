@@ -2417,7 +2417,9 @@ to the maths that reads it.
    homothetic members through Kepler's equation, the homothetic collapse from rest a terminal (a triple collision) at its
    closed-form time.
 2. **The figure-eight** (§ 1.2), exactly periodic: its state at `kT_8`, `T_8` its period, is declared equal to the start, its
-   start known to the digits that section gives, so its test asserts the declaration, not the start's digits.
+   start known to the digits that section gives, so its test asserts the declaration, not the start's digits. Its
+   boundaries are the multiples of `T_8`, so every boundary row it gives equals its start: no check that tells boundaries
+   apart can fire on it.
 
 **Two-body Kepler,** in closed form through Kepler's equation, is used only where the interface is generic, a test of the
 interface itself, never as a three-body state. **The constants** of every fixture live in a crate below `engine` and
@@ -2428,7 +2430,10 @@ the same numbers.
 its row at 0 bitwise, by the declaration; the Lagrange states, evaluated in closed form, within the bound derived from that
 evaluation's rounding, or else a calibration (R-71), its criterion written first and set by measurement (R-649, R-650);
 the terminal at its index and kind; two reads in either order, one bit pattern. Controls: a row reading one boundary off,
-a terminal not held, a read that depends on an earlier read.
+a terminal not held, a read that depends on an earlier read. The row-one-boundary-off control, and every check that tells
+boundaries apart, runs on the Lagrange fixture, at a quantum no multiple of its period `2π/ω`, whose rows differ at each
+boundary; on the figure-eight every boundary row is its start, so such a check passes there whatever it reads (physics
+review 5834013503 of PR #465).
 
 ---
 

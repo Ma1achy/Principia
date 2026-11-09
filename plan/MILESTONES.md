@@ -268,7 +268,9 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
     equilateral homographic solution in closed form and the figure-eight, exact by declaration at its period; two-body
     Kepler only where the interface is generic; the fixtures' constants in a crate below `engine` and `validation`
     (R-919). A row reads the provider's state bitwise; the figure-eight's row at `kT` equals its row at 0 bitwise; the
-    Lagrange states within the bound derived from the closed form, else [CAL].
+    Lagrange states within the bound derived from the closed form, else [CAL]. The control "a row reading one boundary
+    off", and every check that tells boundaries apart, runs on the Lagrange fixture: the figure-eight's boundary rows,
+    at `kT`, all equal its start.
   - **G12. The rest of the core:** hold `L_z` on the CPU (TASK-M2-69), `τ` provisional at M2 (R-919, F13 (b));
     tilts into the held `ν₀`, `L_z` and `K` (TASK-M2-63; REQ-CHART-188), their spans as R-920 rules them, RQ-679
     confirmed (R-919, F14; *was:* "per RQ-679, awaiting the owner's confirmation"); the virial pair, curved slices, region D, the primitives, the paper frames, the fixed-`k`

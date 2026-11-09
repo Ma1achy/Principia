@@ -5173,14 +5173,14 @@
     section: 18.7 The trajectory interface (R-918, R-919)
   verify:
     method: unit test
-    detail: "cargo test -p engine trajectory_interface: a row reads the provider's state bitwise; the figure-eight's row at kT₈ equals its row at 0 bitwise; the Lagrange states within the bound derived from the closed form's evaluation, else a calibration (R-71), its criterion written first, set by measurement (R-649/650); the terminal at its index and kind on the homothetic collapse; two reads in either order give one bit pattern; validation's figure_eight() reading the lower crate's constants; controls: a row reading one boundary off fails, a terminal not held fails, a read depending on an earlier read fails"
+    detail: "cargo test -p engine trajectory_interface: a row reads the provider's state bitwise; the figure-eight's row at kT₈ equals its row at 0 bitwise; the Lagrange states within the bound derived from the closed form's evaluation, else a calibration (R-71), its criterion written first, set by measurement (R-649/650); the terminal at its index and kind on the homothetic collapse; two reads in either order give one bit pattern; validation's figure_eight() reading the lower crate's constants; controls: a row reading one boundary off fails, a terminal not held fails, a read depending on an earlier read fails; the row-one-boundary-off control and every check that tells boundaries apart run on the Lagrange fixture, at a quantum no multiple of its period, since the figure-eight's boundary rows, at kT₈, all equal its start"
   rulings:
   - R-72
   - R-649
   - R-918
   - R-919
   milestone: M2
-  note: "Added by R-918 (9 Nov 2026). Closed by TASK-M2-82. On the real integrator after M2: REQ-CHART-177 (TASK-M3-67)."
+  note: "Added by R-918 (9 Nov 2026). Closed by TASK-M2-82. On the real integrator after M2: REQ-CHART-177 (TASK-M3-67). Physics review 5834013503 of PR #465 (9 Nov 2026): the checks that tell boundaries apart run on the Lagrange fixture. *Was (verify, the end):* \"controls: a row reading one boundary off fails, a terminal not held fails, a read depending on an earlier read fails\"."
 - id: REQ-CHART-174
   area: CHART
   kind: definition
