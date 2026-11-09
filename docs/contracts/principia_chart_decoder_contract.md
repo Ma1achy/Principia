@@ -489,7 +489,7 @@ For a nonlinear chart, replay $\Phi$ and $D$ on the CPU, or read the GPU buffer 
 action, a navigation edit that brings the pin to the centre, and a setting, off by default, applies it at every lock in
 the same command (render_gui_spec §G4). Where this part reads the anchor as the centre pixel (the anchor-preserving
 class below, "keeps the anchor at centre", and the nonlinear chart's re-centred window), the anchor is at the pin;
-TASK-M2-62 builds it in the engine (R-916; *was* TASK-M2-62), exactly on nonlinear charts or stating why not, an inexact pin's bound a calibration the owner rules on before merge (R-866, R-71; REQ-GUI-425, REQ-GUI-429). Until it lands the code
+TASK-M2-62 builds it in the engine (R-916; *was* TASK-M8-125), exactly on nonlinear charts or stating why not, an inexact pin's bound a calibration the owner rules on before merge (R-866, R-71; REQ-GUI-425, REQ-GUI-429). Until it lands the code
 re-centres as below. *Was (before R-866):* "Select the pixel at $(s,t)$ and snap the centre to its IC."
 
 The centre pixel has one special property: `z(½,½) = z₀` **regardless of the basis**. That property sorts the operations into two classes:
