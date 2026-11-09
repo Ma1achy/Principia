@@ -11,6 +11,10 @@
 //!   name covers save to different words.
 //! - `saved_chart_same_target` (REQ-CHART-077, R-513): a new tilt into the saved target composes the rotations,
 //!   `R·R′·(u, v, 0)`, at zoom 1 and zoom 4 alike; into a second control the block form; at `τ′ = 0` the saved view.
+//! - `saved_chart_skewed` (REQ-CHART-149, R-895): into the target of a saved Lean each axis view with one target and
+//!   both angles set, `R·R′` with `R = [û₁ û₂ t̂]`, `t̂` the saved plane's unit normal toward `+e_X`: R-895's pixel
+//!   at option (a)'s values (control: option (b)'s), every pixel to one ulp (control: `t̂`'s opposite sign); none at
+//!   RQ-471's corner.
 //!
 //! "To 1 ulp" here: each placed value differs from the reference by at most one ulp of the terms that form it,
 //! `ε·Σ|terms|`, a criterion fixed before the run (R-649). Each test registers its negative control (R-176).
@@ -137,8 +141,14 @@ fn givens(m: &mut M, i: usize, j: usize, deg: f64) {
 
 /// A stored tilt's rotation on `(a, b, h₀ … h₇)`, written out from its closed forms (R-474 K1, J4): two targets, each
 /// axis turned toward its own; Tip as sheet with both angles set, Rodrigues' 3 × 3 rotation about
-/// `k = (τ₂ e_a − τ₁ e_b)/m`; a single angle, its axis's turn.
+/// `k = (τ₂ e_a − τ₁ e_b)/m`; Lean each axis with one target and both angles set, `[û₁ û₂ t̂]` (R-895), no rotation;
+/// a single angle, its axis's turn.
 fn rotation(t: &TiltSpec) -> M {
+    tilt_matrix(t, 1.0)
+}
+
+/// [`rotation`], Lean's `t̂` times `sign` (the opposite sign is a control's).
+fn tilt_matrix(t: &TiltSpec, sign: f64) -> M {
     let mut m = [[0.0; 10]; 10];
     for (k, row) in m.iter_mut().enumerate() {
         row[k] = 1.0;
@@ -147,6 +157,23 @@ fn rotation(t: &TiltSpec) -> M {
     if t.x != t.y {
         givens(&mut m, 0, x, t.tau1);
         givens(&mut m, 1, y, t.tau2);
+    } else if t.tau1 != 0.0 && t.tau2 != 0.0 && t.map == TiltMap::Lean {
+        let (s1, c1) = sc(t.tau1);
+        let (s2, c2) = sc(t.tau2);
+        let cross = [-s1 * c2, -c1 * s2, c1 * c2];
+        let length = Float::sqrt(cross.iter().map(|c| c * c).sum::<f64>());
+        let toward = if cross[2] < 0.0 { -sign } else { sign };
+        let columns = [
+            [c1, 0.0, s1],
+            [0.0, c2, s2],
+            cross.map(|c| toward * c / length),
+        ];
+        let at = [0, 1, x];
+        for r in 0..3 {
+            for q in 0..3 {
+                m[at[r]][at[q]] = columns[q][r];
+            }
+        }
     } else if t.tau1 != 0.0 && t.tau2 != 0.0 {
         let deg = Float::sqrt(t.tau1 * t.tau1 + t.tau2 * t.tau2);
         let k = [t.tau2 / deg, -t.tau1 / deg, 0.0];
@@ -199,6 +226,19 @@ fn reference(
     u: f64,
     v: f64,
 ) -> (Placed, Placed) {
+    reference_signed(saved, new, centre, span, u, v, 1.0)
+}
+
+/// [`reference`], the saved Lean `t̂` times `sign` ([`tilt_matrix`]).
+fn reference_signed(
+    saved: &TiltSpec,
+    new: &TiltSpec,
+    centre: [f64; 2],
+    span: &[f64; 8],
+    u: f64,
+    v: f64,
+    sign: f64,
+) -> (Placed, Placed) {
     let mut x = [0.0; 10];
     x[0] = u - centre[0];
     x[1] = v - centre[1];
@@ -208,7 +248,7 @@ fn reference(
         y[k] += pan;
         size_y[k] += pan.abs() + y[k].abs();
     }
-    let (z, size) = apply(&rotation(saved), &y, &size_y);
+    let (z, size) = apply(&tilt_matrix(saved, sign), &y, &size_y);
     let ab = [CENTRE[0] + z[0], CENTRE[1] + z[1]];
     let tol_ab = [
         f64::EPSILON * (CENTRE[0].abs() + size[0] + ab[0].abs()),
@@ -284,11 +324,23 @@ fn check_composes(
     zoom: f64,
     got: Got,
 ) {
+    check_composes_signed(built, want, centre, zoom, got, 1.0);
+}
+
+/// [`check_composes`], the saved Lean `t̂` of `want` times `sign` ([`tilt_matrix`]).
+fn check_composes_signed(
+    built: (TiltSpec, TiltSpec),
+    want: (TiltSpec, TiltSpec),
+    centre: [f64; 2],
+    zoom: f64,
+    got: Got,
+    sign: f64,
+) {
     let view = reopened(&built.0, &built.1, centre);
     let mut worst = 0.0f64;
     for [u, v] in window(centre, zoom) {
         let have = placed(&view, got, u, v);
-        let (expect, tol) = reference(&want.0, &want.1, centre, &[SPAN[0]; 8], u, v);
+        let (expect, tol) = reference_signed(&want.0, &want.1, centre, &[SPAN[0]; 8], u, v, sign);
         assert!(
             within(&have, &expect, &tol),
             "the saved chart at ({u}, {v}) is not the composition R·R′: {have:?} against {expect:?}"
@@ -371,7 +423,11 @@ negative_control!(
 /// pixel of a 33 × 33 grid are bitwise the saved view's. `lost` reopens with the saved centre lost, `(½, ½)` (the
 /// control).
 fn check_curved(lost: bool) {
-    for saved in [saved_spec(), spec(0.0, 0.0, TiltMap::Sheet, X, X)] {
+    for saved in [
+        saved_spec(),
+        skewed_spec(),
+        spec(0.0, 0.0, TiltMap::Sheet, X, X),
+    ] {
         let view = Tilted::new(sphere(), Tilt::new(&saved, CENTRE, SPAN)).expect("hidden targets");
         let mut def = Saved::curved(&sphere(), saved, CENTRE, SPAN).expect("a curved parent");
         if lost {
@@ -706,11 +762,122 @@ negative_control!(
     }
 );
 
-// ── R's inputs: the third column of a rotation ──────────────────────────────────────────────────────────────────────
+// ── REQ-CHART-149: a saved Lean each axis view, one target and both angles set (R-895, ruling RQ-746 (a)) ───────────
 
-/// Every stored tilt that is a rotation gives `R·e_X` (and with two targets `R·e_Y`) as the reference rotation's
-/// column, to one ulp; Lean each axis with one target and both angles set gives none (RQ-746). `flip` negates the
-/// input, a reflection's (the control).
+/// R-895's saved view: Lean each axis at `τ = (30°, 40°)` into the momentum control `X`.
+fn skewed_spec() -> TiltSpec {
+    spec(30.0, 40.0, TiltMap::Lean, X, X)
+}
+
+/// R-895's new tilt: `τ′ = (20°, 0)` into the saved target.
+fn skewed_new() -> TiltSpec {
+    spec(20.0, 0.0, TiltMap::Sheet, X, X)
+}
+
+/// `(Δa, Δb, d_X)` at R-895's pixel, `(u, v) = (0.3, 0.7)` from the centre, in scaled units: option (a)'s, to the four
+/// decimals the ruling gives.
+const OPTION_A: [f64; 3] = [0.2026, 0.4759, 0.6628];
+
+/// R-895 (REQ-CHART-149): R-895's pixel placed at `at_pixel` to its four decimals, the saved target offered; over a
+/// 33 × 33 grid at zoom 1 and 4, about the saved centre and a panned one, `R·R′` with `R = [û₁ û₂ t̂]` to one ulp, the
+/// decode the sphere's there, at the edge of Lean's range (`τ₁ = 90°`, `t̂` the cross product's own sign) and with the
+/// saved target as a new second target; `t̂` the plane's unit normal; at RQ-471's corner no composition; at `τ′ = 0`
+/// the saved view, bitwise. `sign` multiplies the reference's `t̂` (the opposite sign is a control's).
+fn check_skewed(at_pixel: [f64; 3], sign: f64) {
+    let view = reopened(&skewed_spec(), &skewed_new(), CENTRE);
+    let ([a, b], shift) = view.tilt().place(CENTRE[0] + 0.3, CENTRE[1] + 0.7);
+    let d = offsets(&shift);
+    let got = [a - CENTRE[0], b - CENTRE[1], d[X as usize] / SPAN[0]];
+    assert!(
+        got.iter().zip(at_pixel).all(|(g, w)| (g - w).abs() <= 5e-5)
+            && d.iter()
+                .enumerate()
+                .all(|(k, &o)| k == X as usize || o == 0.0),
+        "the skewed composition at R-895's pixel is {got:?} with offsets {d:?}, not {at_pixel:?}"
+    );
+    eprintln!("R-895's pixel (0.3, 0.7) from the centre: (Δa, Δb, d_X) = {got:?}");
+    let edge = spec(90.0, 40.0, TiltMap::Lean, X, X);
+    let second = spec(15.0, 20.0, TiltMap::Lean, SECOND, X);
+    for (saved, new, centre, zoom) in [
+        (skewed_spec(), skewed_new(), CENTRE, 1.0),
+        (skewed_spec(), skewed_new(), CENTRE, 4.0),
+        (skewed_spec(), skewed_new(), PANNED, 1.0),
+        (
+            spec(-25.0, 70.0, TiltMap::Lean, X, X),
+            skewed_new(),
+            CENTRE,
+            1.0,
+        ),
+        (edge, skewed_new(), CENTRE, 1.0),
+        (skewed_spec(), second, CENTRE, 1.0),
+    ] {
+        check_composes_signed((saved, new), (saved, new), centre, zoom, Got::Kernel, sign);
+    }
+    for t in [skewed_spec(), edge] {
+        let [n, _] = t.inputs().expect("a skewed view's normal");
+        let (s1, c1) = sc(t.tau1);
+        let (s2, c2) = sc(t.tau2);
+        let (u1, u2) = ([c1, 0.0, s1], [0.0, c2, s2]);
+        let cross = [-s1 * c2, -c1 * s2, c1 * c2];
+        let dot = |p: [f64; 3], q: &[f64; 4]| p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+        assert!(
+            (dot([n[0], n[1], n[2]], &n) - 1.0).abs() <= 4.0 * f64::EPSILON
+                && dot(u1, &n).abs() <= 4.0 * f64::EPSILON
+                && dot(u2, &n).abs() <= 4.0 * f64::EPSILON
+                && n[3] == 0.0
+                && sign * dot(cross, &n) > 0.0,
+            "t̂ of {t:?}, {n:?}, is not the saved plane's unit normal with the cross product's sign"
+        );
+    }
+    for corner in [
+        spec(90.0, 90.0, TiltMap::Lean, X, X),
+        spec(90.0, -90.0, TiltMap::Lean, X, X),
+    ] {
+        let Some(Saved::Curved(c)) = Saved::curved(&sphere(), corner, CENTRE, SPAN) else {
+            panic!("a curved parent");
+        };
+        assert!(
+            c.reopen(sphere(), &skewed_new(), CENTRE, SPAN).is_none(),
+            "a new tilt into the target at RQ-471's corner, {corner:?}, is composed"
+        );
+    }
+    check_curved(false);
+}
+
+#[test]
+fn saved_chart_skewed() {
+    check_skewed(OPTION_A, 1.0);
+}
+
+negative_control!(
+    saved_chart_skewed,
+    "option (b)'s values, R-514's frame action, are not R-895's composition at its pixel, so it must fail",
+    expected = "the skewed composition at R-895's pixel",
+    {
+        // Option (b)'s, R-514's frame action, at R-895's pixel.
+        const OPTION_B: [f64; 3] = [0.1598, 0.4307, 0.7099];
+        check_skewed(OPTION_B, 1.0);
+    }
+);
+
+mod skewed_sign {
+    use super::*;
+    negative_control!(
+        saved_chart_skewed,
+        "t̂ with the opposite sign, away from +e_X, is not R-895's composition, so it must fail",
+        expected = "is not the composition R·R′",
+        {
+            check_skewed(OPTION_A, -1.0);
+        }
+    );
+}
+
+// ── R's inputs: its third column ────────────────────────────────────────────────────────────────────────────────────
+
+/// Every stored tilt gives `R·e_X` (and with two targets `R·e_Y`) as the reference's column, to one ulp: a rotation's,
+/// or under Lean each axis with one target and both angles set the saved plane's unit normal toward `+e_X` (R-895),
+/// at the edge of Lean's range and past it too; at RQ-471's corner none. `flip` negates the input, a reflection's
+/// (the control).
 fn check_inputs(flip: f64) {
     let rotations = [
         spec(0.0, 0.0, TiltMap::Sheet, 4, 4),
@@ -720,6 +887,10 @@ fn check_inputs(flip: f64) {
         spec(-120.0, 60.0, TiltMap::Sheet, 4, 4),
         spec(30.0, 40.0, TiltMap::Lean, 4, 6),
         spec(-70.0, 15.0, TiltMap::Sheet, 6, 4),
+        spec(30.0, 40.0, TiltMap::Lean, 4, 4),
+        spec(-25.0, 70.0, TiltMap::Lean, 4, 4),
+        spec(90.0, 40.0, TiltMap::Lean, 4, 4),
+        spec(120.0, 40.0, TiltMap::Lean, 4, 4),
     ];
     for t in rotations {
         let r = rotation(&t);
@@ -745,10 +916,15 @@ fn check_inputs(flip: f64) {
             );
         }
     }
-    assert!(
-        spec(30.0, 40.0, TiltMap::Lean, 4, 4).inputs().is_none(),
-        "R·e_X of a skewed Lean each axis view is defined"
-    );
+    for corner in [
+        spec(90.0, 90.0, TiltMap::Lean, 4, 4),
+        spec(-90.0, 90.0, TiltMap::Lean, 4, 4),
+    ] {
+        assert!(
+            corner.inputs().is_none(),
+            "R·e_X at RQ-471's corner, {corner:?}, is defined"
+        );
+    }
 }
 
 #[test]
@@ -967,9 +1143,10 @@ negative_control!(
 
 // ── Refusals ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// Reopenings that must be refused: a new tilt into the target of a saved Lean view with one target and both angles
-/// set (RQ-746), a composition onto three hidden coordinates, a parent other than the saved one, a target that is not
-/// hidden; and two that must not. `admitted` is checked as refused (the control).
+/// Reopenings that must be refused: a new tilt into the target of a saved Lean view with one target at RQ-471's corner
+/// (R-895), a composition onto three hidden coordinates, a parent other than the saved one, a target that is not
+/// hidden; and those that must not, a new tilt into the target of a saved Lean view with both angles set among them
+/// (R-895). `admitted` is checked as refused (the control).
 fn check_refused(admitted: bool) {
     let lean = spec(30.0, 40.0, TiltMap::Lean, 4, 4);
     let curved = |t: TiltSpec| match Saved::curved(&sphere(), t, CENTRE, SPAN) {
@@ -977,14 +1154,15 @@ fn check_refused(admitted: bool) {
         _ => panic!("a curved parent"),
     };
     let reopen = |c: &Curved, new: TiltSpec| c.reopen(sphere(), &new, CENTRE, SPAN).is_some();
+    let corner = spec(-90.0, 90.0, TiltMap::Lean, 4, 4);
     let refused = [
         (
-            reopen(&curved(lean), spec(10.0, 0.0, TiltMap::Sheet, 4, 4)),
-            "into a skewed R's target",
+            reopen(&curved(corner), spec(10.0, 0.0, TiltMap::Sheet, 4, 4)),
+            "into the target at RQ-471's corner",
         ),
         (
-            reopen(&curved(lean), spec(10.0, 5.0, TiltMap::Lean, 5, 4)),
-            "into a skewed R's target as a second one",
+            reopen(&curved(corner), spec(10.0, 5.0, TiltMap::Lean, 5, 4)),
+            "into the target at RQ-471's corner as a second one",
         ),
         (
             reopen(&curved(saved_spec()), spec(10.0, 5.0, TiltMap::Lean, 5, 6)),
@@ -1017,6 +1195,18 @@ fn check_refused(admitted: bool) {
         (
             reopen(&curved(lean), spec(10.0, 0.0, TiltMap::Sheet, 5, 5)),
             "a skewed R tilted into another target",
+        ),
+        (
+            reopen(&curved(lean), spec(10.0, 0.0, TiltMap::Sheet, 4, 4)),
+            "into a skewed R's target",
+        ),
+        (
+            reopen(&curved(lean), spec(10.0, 5.0, TiltMap::Lean, 5, 4)),
+            "into a skewed R's target as a second one",
+        ),
+        (
+            reopen(&curved(corner), spec(10.0, 0.0, TiltMap::Sheet, 5, 5)),
+            "the corner tilted into another target",
         ),
         (
             reopen(&curved(saved_spec()), spec(10.0, 5.0, TiltMap::Lean, X, 6)),
