@@ -35,6 +35,8 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 
 **Latent controls** `z ∈ ℝ⁸`. These are *controls*, not physical quantities — each is pushed through a smooth decoder (sigmoid / softmax / warp) to reach a physical value. Chart coordinates `(s,t) ∈ [0,1]²` map in via a chart map; the validated region is the unit hypercube `[0,1]⁸`. (Past `[0,1]²`, where the figure fills the window, an extended pixel's `z` may leave `[0,1]⁸`: the hypercube bound is the encode path's check, inverse_encode layer 1 on lookup and lock, and an extended pixel is checked by layers 2 and 3 only, Part 3, R-407.) **No latent coordinate is spent on a gauge direction** (this is why the old z₂, z₃ Cartesian-Jacobi directions were dropped in the 10D→8D cleanup).
 
+*[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β` becomes a periodic angle over the full circle, so the latent space is `ℝ × S¹ × ℝ⁶`, `z_β` on the circle, not `ℝ⁸`, and every stored latent view, saved chart and golden is converted once, under a conversion test in place of R-865's bitwise check. This part stands as written until TASK-M2-57 merges, which rewrites it.]*
+
 **Block ordering (convention — fix once, then hold):**
 
 ```
@@ -275,7 +277,9 @@ a bounded edge, the domain's end; outside a primary range, not counted; rejected
 on what the types give, before `Φ`), forbidden; a `Φ` that fails where layer 2 accepts, the domain's end; a decoded
 state that fails layer 3, forbidden; any other, a counted system. The statistic reads the chart (the types, the
 primary ranges, `validate`, `Φ`), not the payload's `decode_failed` detail, which does not tell the two hatches apart.
-**Inside `[0,1]²` every statistic is unchanged.** The shape sphere has no one-hemisphere view (R-544): its statistics are the whole sphere's, each pixel its own system, and where the mirror symmetry holds (REQ-CHART-082) each fate of a mirror-invariant class is counted twice, equally, so those fractions are equal on a fixture whose pairs stay close over the horizon, and elsewhere differ only by the pairs whose fate a rounding-level difference in the decode flips (a signed class maps to its mirror class; physics reviews 5603309678, P2, and 5603529679, P7, of PR #273) (REQ-CHART-083, REQ-CHART-057; TASK-M8-44). *Was (R-412, withdrawn by R-544):* "With one hemisphere of the shape sphere drawn, φ's span is remapped to run from the pole to the equator; past the equator its formula continues into the mirror hemisphere (real systems, repeated), and its primary range is pole to equator, so that continuation is not counted (R-412, closing RQ-264; built by TASK-M8-44, REQ-CHART-057)."
+**Inside `[0,1]²` every statistic is unchanged.** The shape sphere has no one-hemisphere chart (R-544), and a
+one-hemisphere view is only the symmetry filter's, a display option after rendering that removes nothing (R-855; R-878,
+RQ-738 conflict 1's reading held; *was:* "The shape sphere has no one-hemisphere view (R-544):"): its statistics are the whole sphere's, each pixel its own system, and where the mirror symmetry holds (REQ-CHART-082) each fate of a mirror-invariant class is counted twice, equally, so those fractions are equal on a fixture whose pairs stay close over the horizon, and elsewhere differ only by the pairs whose fate a rounding-level difference in the decode flips (a signed class maps to its mirror class; physics reviews 5603309678, P2, and 5603529679, P7, of PR #273) (REQ-CHART-083, REQ-CHART-057; TASK-M8-44). *Was (R-412, withdrawn by R-544):* "With one hemisphere of the shape sphere drawn, φ's span is remapped to run from the pole to the equator; past the equator its formula continues into the mirror hemisphere (real systems, repeated), and its primary range is pole to equator, so that continuation is not counted (R-412, closing RQ-264; built by TASK-M8-44, REQ-CHART-057)."
 
 **Repeats and the canonical point (R-537).** A pixel in a repeat (past a periodic axis's period, over a pole) is the same system as its **canonical** point, the one inside every axis's primary range, which the
 types give by folding it: its pick, readout, trajectory, outcome and inspector are the canonical system's, the readout
@@ -500,8 +504,18 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
 **The lock's construction, defined** (R-72; REQ-CHART-089; TASK-M2-23):
 
 - **The excursion is held by the stored pair.** `z₀` holds the centre and `z_locked` the anchor, and `δ = z₀ − z_locked`:
-  a slice step or a slider move edits `z₀` alone, so `δ` accumulates it; snap-back is `z₀ ← z_locked`, bit for bit; and
-  `δ` has no field of its own that could disagree with `z₀`. Unlock clears the flag and the anchor and leaves
+  a slice step or a slider move edits `z₀` alone, so `δ` accumulates it; snap-back undoes the slice only, clearing the
+  hidden part of `δ` and leaving the pin where it is on screen, and "centre on pin" (R-866) clears its in-plane part, the
+  two together `z₀ ← z_locked`, bitwise by definition: centre on pin after snap-back assigns `z₀ ← z_locked`. On an
+  oblique basis the split of `δ` into in-plane and hidden parts is a projection, so snap-back alone is exact to rounding:
+  its rounding bound is derived from the construction TASK-M8-125 defines (of order `ε_R·κ(B)·‖δ‖` for a solve on the
+  basis `B = [q₁ q₂ | hidden]`, or a few ulps if built as `z_locked` plus the in-plane part recomputed from the pin's
+  stored chart parameters) and stated by that task, its decoded state within REQ-ENC-024's `ε_phys` only where that bound
+  and the decoder's conditioning allow; a bound that can't be derived is a calibration (R-71); the test's fixture names
+  its `κ(B)` and `‖δ‖`; its construction is a definition TASK-M8-125
+  writes here under physics review (R-72) (the chart-path brief's Q2 (a), R-899; the auto-snap setting off by
+  default); and `δ` has no field of its own that could disagree with `z₀`. *Was:* "snap-back is `z₀ ← z_locked`, bit
+  for bit;". Unlock clears the flag and the anchor and leaves
   `(z₀, q₁, q₂)` as it stands. A basis edit (a tilt, a zoom, a chart-mode switch) turns about the pin
   (render_gui_spec §G4; R-451, "Locked"; R-466 K5): at `δ = 0` the pin is the centre and the edit keeps `z₀`; where `δ`
   has an in-plane part the pin is off-centre, and the edit's `SetField` on `z₀` moves `z₀`, and with it `δ`.

@@ -29,6 +29,13 @@ negative_control!(
 );
 
 negative_control!(
+    gpu_harness_prepared_reload,
+    "a reloaded run whose dispatch is skipped reads back the sentinel and must fail",
+    expected = "identity dispatch is not bit-exact",
+    check_reload(&harness(), |p| p.read())
+);
+
+negative_control!(
     gpu_harness_can_fire,
     "the overloads required to differ on every word, on words with bit 31 clear",
     expected = "i32 and u32 overloads agree on bit-31 words",

@@ -72,7 +72,8 @@
 //! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape the settling window allows,
 //!   at step 40, beside a bounded, a colliding and a running sample, on the outcome palette (colour_composition §1.4):
 //!   the triple ejection `#611597` (R-445), the running sample `#141418` (R-446);
-//! - `energy_drift_ramp`: a ramp in the current energy drift, on the `energy_drift` view, its values literal;
+//! - `energy_drift_ramp`: a ramp in the current energy drift, on the `energy_drift` drift view at its defaults
+//!   (TASK-M3-05);
 //! - `adversarial_state`, `adversarial_detail`, `adversarial_saturated`, `adversarial_dmin_pair`,
 //!   `adversarial_last_symbol`: the bitwise-adversarial descriptor, written whole, on each sub-field view, so each
 //!   field reads true beside neighbours at their extremes;
@@ -84,7 +85,7 @@ use engine::synthetic::Synthetic;
 use kernel::payload::{
     canonical_nan, sim_state_from_ftle, ReadParams, SD_DMIN_PAIR_SENTINEL, STATE_RUNNING,
 };
-use ledger::gen::numeric::{NumericView, Ramp, Shown as ViewShown};
+use ledger::gen::numeric::{non_finite, NumericView, Ramp, Shown as ViewShown};
 use ledger::schema::Storage;
 use render::assemble::{self, Fragment, Kind, Node, Occupant, Stain, Tier, View};
 use render::bind::{self, Context};
@@ -300,9 +301,9 @@ pub struct DebugCase {
 const NUDGES: &[(&str, u32)] = &[
     ("accumulators-drift_max_vs_final", 3),
     ("accumulators-drift_max_vs_final-lz", 2),
-    ("derived-energy_drift", 3),
+    ("generated-Lz_drift", 3),
     ("generated-closure_min", 1),
-    ("generated-energy_drift", 3),
+    ("generated-energy_drift", 6),
     ("generated-r_sh", 1),
     ("generated-rho_angle", 2),
     ("generated-t_dmin_step", 2),
@@ -336,6 +337,15 @@ const EXTRA_CASES: [(&str, &str, &str, f64); 3] = [
     ),
 ];
 
+/// The views whose one case sets a param off its header's default: the registry id, the param and its value. The
+/// derived current-drift view at `COMPACTION` 1, `lin` (R-652). Every drift view computes `H(r, p) − E_0` or
+/// `L_z(r, p) − Lz_0` in the fragment, never reading a stored drift (dd_generation_root §3.8; payload §5), so a fresh
+/// sample's drift is the backend's f32 rounding, a few `1e-8`; `symlog` draws that as 0 by its neutral band (render
+/// contract Part 5; R-652), and on `lin`'s `±1/16`, which has no band, it moves the colour by some `1e-4` of a step, so
+/// the case's one reference holds on every backend. Its `symlog` default is the generated `energy_drift` view's case's
+/// and `derived_views_match_cpu_current_drift`'s (`crates/render/tests/debug_views.rs`).
+const CASE_PARAMS: [(&str, &str, f64); 1] = [("debug/derived/energy_drift", "COMPACTION", 1.0)];
+
 /// The case name of the registry id `id`: the id less `debug/`, each `/` read as `-`.
 pub fn case_name(id: &str) -> String {
     id.strip_prefix("debug/").unwrap_or(id).replace('/', "-")
@@ -348,7 +358,7 @@ pub fn is_structural(id: &str) -> bool {
 }
 
 /// The `debug-views` suite's cases, in name order: one per entry of the render registry tagged debug, its header's
-/// defaults, but the structural views (`render::structural::VIEWS`, `debug/<view>`), which read `ctx.quad` and whose
+/// defaults (but a view of `CASE_PARAMS`, its one param set), but the structural views (`render::structural::VIEWS`, `debug/<view>`), which read `ctx.quad` and whose
 /// cases are the structural scenes of the same name (`crate::structural_scene`; TASK-M1-13), then the `EXTRA_CASES`. An `AUTO_RANGE` case's params are `RANGE_AUTO` 1 and its `u_range` measured
 /// over its scene once, here.
 pub fn debug_cases() -> Result<&'static [DebugCase], String> {
@@ -365,7 +375,11 @@ pub fn debug_cases() -> Result<&'static [DebugCase], String> {
                         nudge: nudge(&name),
                         name,
                         id: e.id.clone(),
-                        params: Vec::new(),
+                        params: CASE_PARAMS
+                            .iter()
+                            .filter(|(id, _, _)| *id == e.id)
+                            .map(|(_, param, value)| ((*param).to_owned(), vec![*value]))
+                            .collect(),
                     }
                 })
                 .collect();
@@ -423,6 +437,18 @@ pub enum Look {
     Background,
     /// The presentation views' invalid colour, `#141418` (R-467 D4): a field ramp's invalid value, not overridden.
     PresentInvalid,
+    /// A drift view at its defaults (render contract Part 5; R-381; TASK-M3-05): the drift `x`, within the neutral band of
+    /// its `reference` drawn as 0, at `symlog`'s place on the `diverging` ramp, its floor `eps` and `lin` range `lin_r`,
+    /// the absence NaN hatched, and the suspect styling
+    /// of the predicates `energy` and `lz` over it.
+    Drift {
+        x: f32,
+        reference: f32,
+        lin_r: f64,
+        eps: f64,
+        energy: bool,
+        lz: bool,
+    },
 }
 
 impl Look {
@@ -449,6 +475,30 @@ impl Look {
             Look::Flat(c) => c,
             Look::Background => present::srgb8(BACKGROUND),
             Look::PresentInvalid => present::present_invalid(),
+            Look::Drift { x, reference, .. } if non_finite(x) || non_finite(reference) => {
+                present::debug_invalid(frag)
+            }
+            Look::Drift {
+                x,
+                reference,
+                lin_r,
+                eps,
+                energy,
+                lz,
+            } => present::dbg_suspect(
+                present::dbg_drift(
+                    present::dbg_drift_shown(x, present::DRIFT_SYMLOG, reference),
+                    present::DRIFT_SYMLOG,
+                    false,
+                    lin_r,
+                    eps,
+                    frag,
+                ),
+                x,
+                energy,
+                lz,
+                frag,
+            ),
         }
     }
 }
@@ -1201,13 +1251,20 @@ impl Scene {
             } else {
                 Look::Invalid
             }),
-            // The current energy drift, a derived field with a ledger floor and no numeric view: its literal value,
-            // `dbg_sentinel`, the absence NaN hatched.
-            Colouring::View("energy_drift") => Ok(if v.to_bits() == present::ABSENT_NAN_BITS {
-                Look::Invalid
-            } else {
-                Look::Literal(f64::from(v))
-            }),
+            // The current energy drift, a derived field with a ledger floor and no numeric view: the drift view at
+            // its defaults (TASK-M3-05), the predicates read from the stored latches at the default `ε_E`.
+            Colouring::View("energy_drift") => {
+                let (energy, lz) = drift_suspects(&read);
+                Ok(Look::Drift {
+                    x: v,
+                    reference: read.E_0,
+                    lin_r: ledger::gen::catalogue::drift_range("energy_drift")
+                        .ok_or("`energy_drift` has no drift range")?,
+                    eps: ledger::constants::EPS_E_DEFAULT.number(),
+                    energy,
+                    lz,
+                })
+            }
             Colouring::Outcome { .. } => Ok(
                 match outcome::shown(read.state, read.detail, self.set.forbidden(i)) {
                     OutcomeShown::Swatch(k) => Look::Flat(present::srgb8(self.swatches()[k])),
@@ -1711,6 +1768,17 @@ impl DebugCounts {
         readback.unmap();
         Ok(out)
     }
+}
+
+/// The drift suspect predicates of `read`'s stored latches at the default floor `eps_e`, `(SUSPECT_ENERGY,
+/// SUSPECT_LZ)`: the read side's `suspect_energy` and `suspect_lz` (TASK-M3-05), as a drift view at its defaults
+/// styles them, the energy predicate unlit on a non-finite `E_0`, tested on its bits first (R-436).
+pub fn drift_suspects(read: &kernel::payload::SimState) -> (bool, bool) {
+    let eps_e = ledger::constants::EPS_E_DEFAULT.number() as f32;
+    (
+        !non_finite(read.E_0) && kernel::payload::suspect_energy(read.dE_max, read.E_0, eps_e),
+        kernel::payload::suspect_lz(read.dLz_max),
+    )
 }
 
 /// The smallest distance, in 8-bit steps, of any channel of `pixels` scaled to 0…255 from a rounding tie (`k + ½`):

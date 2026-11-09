@@ -102,6 +102,14 @@ jobs:
           PRIN_GPU_BACKEND: vulkan
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask --test qa_TASK-M0-06_list
+      # The `ci-workspace` tests the `mutants` profile leaves out of per-mutant runs (`.config/nextest.toml`), run once
+      # here as `ci.yml`'s `ci-workspace` job runs them: xtask's `nextest`, which lists every workspace test under each
+      # CI profile, and `controls_on_this_workspace_skips_gui`, which lists every control in the workspace.
+      - name: cargo nextest run -p xtask --test nextest --test controls
+        env:
+          PRIN_GPU_BACKEND: vulkan
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p xtask --test nextest --test controls
       - name: cargo test --workspace --doc
         run: cargo test --workspace --doc
       - name: cargo xtask deps
@@ -364,11 +372,11 @@ jobs:
       # Debug info: line tables only, set for the whole workflow (R-374); `mutants.yml`'s note gives why.
       - name: cargo run --quiet --package xtask -- build-kernel
         run: cargo run --quiet --package xtask -- build-kernel
-      # This shard's share of its package's mutants, under `.cargo/mutants.toml`'s exclusions and caps. Exit 0: none
-      # survived; 2: some survived; 3: some timed out; all three are a finished run, reported. The step stops at 330
-      # minutes (R-402), so that the upload below still runs inside the job's 360; a stopped step fails the shard, and
-      # `mutants-report` with it. The free disk is logged at the end: on 7 Oct 2026 (run 37604801520) most shards ran
-      # out of disk part-way through a long-running mutant.
+      # This shard's share of its package's mutants, under `.cargo/mutants.toml`'s exclusions and caps, in two steps
+      # below: the baseline alone, then the mutants. Together they stop at 330 minutes (R-402), so that the uploads
+      # still run inside the job's 360; a stopped step fails the shard, and `mutants-report` with it. The free disk is
+      # logged at the end: on 7 Oct 2026 (run 37604801520) most shards ran out of disk part-way through a long-running
+      # mutant.
       # Contained as `mutants.yml`'s shards are, by the step's `shell` (`scripts/contain.sh`, proved first): this run mutates the job queue too.
       # Only xtask's shards, which hold it, post a heartbeat.
       - name: scripts/contain.sh check
@@ -376,12 +384,72 @@ jobs:
           PRIN_CONTAIN: required
         shell: bash scripts/contain.sh check {0}
         run: echo "the containment holds"
-      - name: cargo mutants --package ${{ matrix.package }} --shard ${{ matrix.k }}/${{ matrix.n }} (the full run)
+      # The shard's unmutated baseline alone, as `mutants.yml`'s `mutants-baseline` measures it, under the default
+      # nextest profile, with no per-test kill limit (the owner, 8 Nov 2026: "Baseline with no kill limit; same limits
+      # for nightly and local"), so each test's time is whole. `--build-timeout 0` binds only the mutants, each stopped at
+      # its first poll, its tests unrun; only the baseline's outcome and log are read. Exit 3: the baseline passed; 0: no
+      # mutant in the shard, so no baseline; 4: the unmutated tree fails its tests. The baseline and the mutants share
+      # the 330 minutes the single run had (R-402): the mutants' step takes what the baseline left.
+      - name: cargo mutants --package ${{ matrix.package }} --shard ${{ matrix.k }}/${{ matrix.n }}, the unmutated baseline alone
+        id: baseline
         timeout-minutes: 330
         env:
           PACKAGE: ${{ matrix.package }}
           SHARD: ${{ matrix.k }}/${{ matrix.n }}
           PRIN_CONTAIN: required
+          HEARTBEAT_CONTEXT: ${{ matrix.package == 'xtask' && format('mutants-heartbeat nightly ({0})', matrix.k) || '' }}
+          HEARTBEAT_OUT: ${{ runner.temp }}/baseline/mutants.out
+          HEARTBEAT_SHA: ${{ github.sha }}
+          HEARTBEAT_TOKEN: ${{ github.token }}
+        shell: bash scripts/contain.sh run bash --noprofile --norc -eo pipefail {0}
+        run: |
+          set +e
+          start=$(date +%s)
+          mkdir -p "$RUNNER_TEMP/baseline"
+          cargo mutants --in-place --package "$PACKAGE" --shard "$SHARD" --sharding round-robin --build-timeout 0 \
+            -o "$RUNNER_TEMP/baseline"
+          code=$?
+          spent=$(( $(date +%s) - start ))
+          echo "cargo mutants $PACKAGE shard $SHARD, the baseline alone: exit $code, wall-clock $spent s"
+          left=$(( 330 - (spent + 59) / 60 - 10 ))
+          echo "left=$(( left > 1 ? left : 1 ))" >> "$GITHUB_OUTPUT"
+          case $code in
+            3) echo "measured=true" >> "$GITHUB_OUTPUT" ;;
+            0) echo "cargo mutants: no mutant in this shard, so no baseline to measure" ;;
+            4) echo "::error::the shard's unmutated baseline failed its tests: no mutant is evidence"; exit 4 ;;
+            *) echo "::error::cargo mutants exited $code measuring the baseline"; exit "$code" ;;
+          esac
+      # The baseline against the per-test kill limits, as `mutants.yml`'s is checked: a test that took more than half its
+      # limit is named, with a value regenerated from its time. Then the shard's per-mutant timeout from that baseline,
+      # `.cargo/mutants.toml`'s rule (R-712), as `cargo xtask mutants-timeout` gives the per-PR shards theirs.
+      - name: cargo xtask mutants-limits and mutants-timeout (the shard's baseline)
+        id: timeout
+        timeout-minutes: 5
+        env:
+          MEASURED: ${{ steps.baseline.outputs.measured }}
+        run: |
+          out="$RUNNER_TEMP/mutants-timeout.out"
+          if [ "$MEASURED" = true ]; then
+            cargo xtask mutants-limits "$RUNNER_TEMP/baseline/mutants.out"
+            cargo xtask mutants-timeout "$RUNNER_TEMP/baseline/mutants.out" > "$out"
+          else
+            cargo xtask mutants-timeout --no-mutant > "$out"
+          fi
+          cat "$out"
+          cat "$out" >> "$GITHUB_OUTPUT"
+      # This shard's share of its package's mutants, its baseline skipped and its timeout the measured one, under the
+      # per-test kill limits (`.config/nextest.toml`'s `mutants` profile; the owner, 8 Nov 2026: "same limits for nightly
+      # and local"). Exit 0: none survived; 2: some survived; 3: some timed out; all three are a finished run, reported.
+      # Its own output directory, so `mutants-report` reads the mutants' lists alone.
+      - name: cargo mutants --package ${{ matrix.package }} --shard ${{ matrix.k }}/${{ matrix.n }} (the full run)
+        id: run
+        timeout-minutes: ${{ fromJSON(steps.baseline.outputs.left || '1') }}
+        env:
+          PACKAGE: ${{ matrix.package }}
+          SHARD: ${{ matrix.k }}/${{ matrix.n }}
+          PRIN_CONTAIN: required
+          MUTANT_TIMEOUT: ${{ steps.timeout.outputs.timeout }}
+          NEXTEST_PROFILE: mutants
           HEARTBEAT_CONTEXT: ${{ matrix.package == 'xtask' && format('mutants-heartbeat nightly ({0})', matrix.k) || '' }}
           HEARTBEAT_OUT: ${{ runner.temp }}/mutants.out
           HEARTBEAT_SHA: ${{ github.sha }}
@@ -390,11 +458,21 @@ jobs:
         run: |
           set +e
           start=$(date +%s)
-          cargo mutants --in-place --package "$PACKAGE" --shard "$SHARD" --sharding round-robin -o "$RUNNER_TEMP"
+          cargo mutants --in-place --package "$PACKAGE" --shard "$SHARD" --sharding round-robin --baseline=skip \
+            --timeout "$MUTANT_TIMEOUT" -o "$RUNNER_TEMP"
           code=$?
+          echo "cargo mutants $PACKAGE shard $SHARD: per-mutant timeout $MUTANT_TIMEOUT s"
           echo "cargo mutants $PACKAGE shard $SHARD: exit $code, wall-clock $(( $(date +%s) - start )) s"
           df -h /
           case $code in 0|2|3) ;; *) exit "$code" ;; esac
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: mutants-nightly-baseline-${{ matrix.package }}-${{ matrix.k }}
+          path: |
+            ${{ runner.temp }}/baseline/mutants.out/outcomes.json
+            ${{ runner.temp }}/baseline/mutants.out/log/baseline.log
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:

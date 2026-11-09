@@ -1864,3 +1864,51 @@
   section: "R-869 — The owner's direction for the acute-angle Burrau charts: unfold the leg swap and show both labellings, the reduced view coming from the symmetry filter (R-855) *(on RQ-745, which stays open)*"
   reason: informative only
   note: "the owner's direction, recorded on RQ-745, which stays open; no task until it is ruled"
+- file: decisions.md
+  section: "R-872 — The 2 s start-up limit of the axis cap's criterion is the Mac's; issue #427 sets a Vulkan and Windows budget from its own measurements *(closes RQ-716)*"
+  reason: informative only
+  note: "the axis cap's criterion: the 2 s start-up limit is the Mac's; issue #427 sets the Vulkan and Windows budget from its own measurements; no requirement changes"
+- file: decisions.md
+  section: "R-878 — The symmetry filter's conflicts keep their readings held, conflict 3 as the RQ-714 answer reads it; the model's correction items 2 to 9 are the owner's to correct, from a list sent to them *(on RQ-738, which stays open)*"
+  reason: informative only
+  note: "the symmetry filter's conflicts keep their readings held; RQ-738 stays open for the model's correction items 2 to 11"
+- file: decisions.md
+  section: "R-880 — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-881 — GPU `sin` and `cos` near π/2 stay deferred to M4 *(defers RQ-629)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-882 — The slider span of `ν₀`, the held `L_z` and the held `K` stays deferred to M8 *(defers RQ-679)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-883 — Whether the kernel takes its own f32 `sin` and `cos` stays deferred to M4 *(defers RQ-687)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-884 — Paper frames: presets where the papers are read, each tested against its paper; each remaining gap stays unbuilt, its target \"not scored\" with the gap named *(closes RQ-729)*"
+  reason: informative only
+  note: "paper frames: presets where the papers are read, each tested against its paper, the rest left unbuilt with their targets not scored; carried by the M9 targets' existing requirements and TASK-M4-37"
+- file: decisions.md
+  section: "R-885 — V-11's prograde limit is read from eq. (11) as printed *(closes RQ-737)*"
+  reason: informative only
+  note: "V-11's prograde limit read from eq. (11) as printed; recorded on REQ-VAL-330's note, nothing changes while V-11 is parked"
+- file: decisions.md
+  section: "R-886 — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-887 — The rest of TASK-M9-01's gaps stay deferred to M9 *(defers RQ-681)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-890 — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-893 — RQ-701 closes: R-818 ruled its form and R-833 its energy cap; the build is TASK-M8-48's *(closes RQ-701)*"
+  reason: informative only
+  note: "RQ-701 closes on R-818 and R-833; the build is TASK-M8-48's, whose requirements already carry it"

@@ -4,6 +4,10 @@ Named on every task (`plan/WORKFLOW.md` § "Task files": `code` and `qa` always)
 written from the requirements, not from the code?** The docs are the authority; where a requirement and its source
 disagree, the source wins and the requirement is the bug (`plan/MILESTONES.md` § "Assumptions").
 
+The tests a task, a requirement or this checklist names as `cargo test …` are run locally as their `cargo nextest run`
+equivalents, with `cargo test --doc` where doctests would have run, and the run shows the command actually run beside
+the one it stands for (`plan/WORKFLOW.md` § "Agents' test runs: cargo nextest").
+
 ## 1. Each closed requirement has its test
 
 - [ ] Every requirement id in the task's **Closes** line appears in at least one acceptance line, with its verify method's threshold and fixture, and the PR description gives that command's output. `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR"; `plan/WORKFLOW.md` § "Task files"

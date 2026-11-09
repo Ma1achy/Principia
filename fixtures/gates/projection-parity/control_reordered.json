@@ -1,0 +1,7 @@
+{
+  "description": "Control: judged against another order, P_com = p0 + (p1 + p2) and S with no fma, which must fail the written-order check.",
+  "fuzz": { "seed": 2, "states": 256 },
+  "dt": 0.001,
+  "control": "reordered",
+  "expected": "fail"
+}

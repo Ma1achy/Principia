@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-102, REQ-CHART-111, REQ-CHART-126
-- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52
+- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52, TASK-M8-117
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -37,3 +37,4 @@ The new constraint, the twin of `η_E`: a uniform, off by default and bitwise to
 - RQ-722 is for the rest charts. RQ-715 closes only the held-L_z half of RQ-701.
 - Free charts take no tilt target on L*; a chart holding L_z by construction moves by value (R-720).
 - Waits on its rulings item: RQ-715, RQ-722. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- *8 Nov 2026 (R-873):* **Build order:** stage 3 of R-863's order, after stage 2 (TASK-M8-117), placed by R-873 (RQ-744 (A) (a) and (C)); TASK-M8-106 and TASK-M8-108, stage 4, depend on it. The note above that no stage edge is made is overtaken. *Was:* "- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52"

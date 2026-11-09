@@ -109,7 +109,11 @@ Commands:
                                   `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
                                   naming each one not in the equivalent-mutants list, .cargo/mutants-equivalent.toml
                                   or <file>; a mutant that timed out is no survivor, and every one is listed, with
-                                  a count
+                                  a count, a caught mutant whose tests nextest ended at their per-test limit among
+                                  them, naming the test
+  mutants-limits <mutants.out>    the per-test kill limits (.config/nextest.toml's `mutants` profile): fail naming
+                                  each test that took more than half its limit in that run's baseline
+                                  (log/baseline.log), with a value regenerated from its time
   mutants-timeout <mutants.out> | --no-mutant
                                   the per-mutant timeout (R-348, REQ-VAL-180): print as key=value lines the unmutated
                                   baseline that run measured and the timeout .cargo/mutants.toml's multiplier and floor
@@ -205,6 +209,10 @@ fn main() -> ExitCode {
                 &workspace_root().join(xtask::mutants_check::EQUIVALENT_LIST),
             )
         }
+        ["mutants-limits", out] => xtask::mutants_limits::run(
+            Path::new(out),
+            &workspace_root().join(xtask::mutants_limits::NEXTEST_CONFIG),
+        ),
         ["mutants-timeout", arg] => xtask::mutants_check::run_timeout(
             (*arg != "--no-mutant").then(|| Path::new(arg)),
             &workspace_root().join(xtask::mutants_check::MUTANTS_CONFIG),
