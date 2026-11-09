@@ -380,6 +380,15 @@ reported `mutants-check`, the orchestrator tells the human, and he requires it a
 wait for the merge-ready run's `mutants-check` (§ "Mutants on the merge-ready head") is the only gate on it. The
 required checks are `plan/HUMAN_SETUP.md` §2's list, `mutants-check` among them though `main`'s protection lacks it
 until he re-adds it, which `xtask/tests/ci_changes.rs` checks every required check against on every path (R-678).
+*8 and 9 Nov 2026 (R-904 to R-909):* the owner approved the CI model of R-909: a pull request's required checks become
+fmt, Clippy, the build, the product tests of the changed crates and their reverse dependencies (no slow tier, no
+in-depth GPU tests), a lavapipe GPU smoke set (Metal on GPU-path pull requests), `check_plan.py`, `reviews-complete`,
+`pr-check` and `no-atlas-params`; `mutants-check`, `xtask-ci` and the full-tier GPU jobs leave the required checks, the
+smoke jobs keeping their names where needed. Mutation testing, the slow tier, the in-depth GPU tests and the process
+tests run on each merge to `main` and nightly, advisory: a correctness failure there is a red `main` (R-681, as R-907
+reads it), any other failure files a top-priority task. Branch protection stays the owner's: when the pull-request
+tier's restructure lands, the orchestrator gives them the exact required-check list, old to new, as a copyable list,
+and they change it themselves (R-909). Until then the list above stands.
 
 **What CI runs on a pull request (R-656, R-662, R-677, R-684, R-790).** `ci.yml` runs on a push to `main` (and to a `measure/`
 branch, R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests

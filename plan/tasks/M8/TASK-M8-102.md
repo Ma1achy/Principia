@@ -1,8 +1,8 @@
 # TASK-M8-102 — CPU batch: numerical inverses, their branch rule and seam
 
 - **Milestone:** M8
-- **Closes:** REQ-CHART-107, REQ-CHART-129, REQ-CHART-130, REQ-CHART-145
-- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-100
+- **Closes:** REQ-CHART-107, REQ-CHART-129, REQ-CHART-130, REQ-CHART-145, REQ-CHART-155
+- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-100, TASK-M8-117
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -21,6 +21,7 @@ The third lowering: an unbaked or numerical pair fills the integrator's IC buffe
 - `docs/design/principia_dd_refinement_policy.md` § "6. Decision variants, and the second budget line"
 - `docs/design/principia_dd_generation_root.md` § "3.7 `QuadReduction` — completed ledger"
 - `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy"
+- `decisions.md` § "R-889 — The browser build gets a WASM CPU route too: numerical axes, unbaked closed forms and CPU-only morphs run as CPU batch in the engine's worker, labelled and not live *(closes RQ-735)*"
 
 ## Deliverables
 - `crates/engine/src/chart_batch.rs`.
@@ -33,9 +34,11 @@ The third lowering: an unbaked or numerical pair fills the integrator's IC buffe
 - `cargo test -p engine seam_jitter_flagged` — copies at the sampling note's offsets in `(u, v)`; a footprint across a numerical seam, a closed-form CPU batch row's two-root branch or mask, polar's branch line or a baked chart's mask, flagged, all `E + 1` copies kept, spread and `error_ratio` labelled `seam-contaminated`; controls: a copy dropped at the seam, the flag read from a neighbour (REQ-CHART-129).
 - `cargo test -p engine seam_refinement_masked` — a flagged footprint leaves `n_unresolved`, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes `Seam`, a mixed quad included, `n_seam` counted, no priority from `coherence`; a non-finite copy still fires; an unflagged neighbour still splits; today's registry bitwise; controls: the mask removed, the mask on an unflagged footprint, `Keep` for `Seam`, `Seam` only when every footprint is flagged (REQ-CHART-130).
 - `cargo test -p engine general_numerical_solve` — REQ-CHART-145's arms and controls.
+- The CPU batch route built for `wasm32` and its tests run under the wasm target in CI; a numerical chart's solve run native and wasm on one fixture, compared bit for bit, the result reported in the PR; controls: a numerical chart refused in the browser fails, a CPU batch view not labelled fails (REQ-CHART-155).
 
 ## Notes
 - **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - Shares R-669's Path B batch where that exists.
 - Waits on its rulings item: RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
 - *7 Nov 2026 (R-849, R-839):* RQ-733 is ruled (b), and RQ-719 (a): a labelled CPU-batch view is seam 3's stated exception.
+- *8 Nov 2026 (R-873, R-889):* **Build order:** stage 3 of R-863's order, after stage 2 (TASK-M8-117), placed by R-873 (RQ-744 (A) (a) and (C)); TASK-M8-106 and TASK-M8-108, stage 4, depend on it. R-889 (RQ-735 (b)): in the browser build, numerical axes, closed forms past the cap or unbaked and morphs with a CPU-only end run as CPU batch in the engine's worker, Rust compiled to WebAssembly, labelled, not live (REQ-CHART-155). *Was:* "- **Closes:** REQ-CHART-107, REQ-CHART-129, REQ-CHART-130, REQ-CHART-145"; "- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-100"

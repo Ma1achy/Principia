@@ -24,3 +24,4 @@ The figure's Tier 1: a contour of any registered primitive's forward, display-on
 ## Notes
 - **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - Waits on the owner's ruling of the design doc as a whole, no single item mapping here (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- *8 Nov 2026 (R-873):* **Build order:** stage 3 of R-863's order, released by dispatch after stage 2 (TASK-M8-117), its milestone kept (RQ-744 (A) (b)); no edge to the M8 task is made. TASK-M8-106 and TASK-M8-108, stage 4, depend on it.

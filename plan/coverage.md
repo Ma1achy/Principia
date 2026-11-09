@@ -8,7 +8,7 @@
 |---|---|
 | DEC | 56 |
 | ENC | 38 |
-| CHART | 148 |
+| CHART | 163 |
 | INT | 112 |
 | EVT | 34 |
 | PAY | 111 |
@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 122 |
 | COL | 162 |
-| GUI | 403 |
+| GUI | 404 |
 | TOOL | 224 |
 | VAL | 353 |
 | PERF | 119 |
 | SYS | 97 |
-| **total** | **2179** |
+| **total** | **2195** |
 
-Of these: 242 calibration, 195 definition, 1742 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 245 calibration, 195 definition, 1755 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -34,23 +34,23 @@ Of these: 242 calibration, 195 definition, 1742 obligation. Retired (kept for th
 | M1 | 108 |
 | M2 | 226 |
 | M3 | 235 |
-| M4 | 129 |
+| M4 | 130 |
 | M5 | 183 |
-| M6 | 229 |
+| M6 | 230 |
 | M7 | 263 |
-| M8 | 523 |
+| M8 | 537 |
 | M9 | 156 |
 
 ## Sections
 
-1896 sections in 63 files: 1458 yield at least one requirement; 438 yield none and are listed below with the reason.
+1935 sections in 63 files: 1487 yield at least one requirement; 448 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 321 |
+| informative only | 331 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -269,6 +269,18 @@ Of these: 242 calibration, 195 definition, 1742 obligation. Retired (kept for th
 | R-855 — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only | informative only | carried by REQ-CHART-135 to REQ-CHART-138, REQ-GUI-424 and TASK-M8-120, which design § 10.4 already wrote |
 | R-868 — The chart-space model's wording follows R-474: Tip as sheet is the default tilt, Lean each axis the other map; the owner has corrected the model, and their copy replaces the repo's *(on RQ-738, which stays open)* | informative only | the owner's corrected chart-space model replaces the repo's; RQ-738 carries what is left |
 | R-869 — The owner's direction for the acute-angle Burrau charts: unfold the leg swap and show both labellings, the reduced view coming from the symmetry filter (R-855) *(on RQ-745, which stays open)* | informative only | the owner's direction, recorded on RQ-745, which stays open; no task until it is ruled |
+| R-872 — The 2 s start-up limit of the axis cap's criterion is the Mac's; issue #427 sets a Vulkan and Windows budget from its own measurements *(closes RQ-716)* | informative only | the axis cap's criterion: the 2 s start-up limit is the Mac's; issue #427 sets the Vulkan and Windows budget from its own measurements; no requirement changes |
+| R-878 — The symmetry filter's conflicts keep their readings held, conflict 3 as the RQ-714 answer reads it; the model's correction items 2 to 9 are the owner's to correct, from a list sent to them *(on RQ-738, which stays open)* | informative only | the symmetry filter's conflicts keep their readings held; RQ-738 stays open for the model's correction items 2 to 11 |
+| R-880 — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)* | informative only | a deferral; no requirement changes |
+| R-881 — GPU `sin` and `cos` near π/2 stay deferred to M4 *(defers RQ-629)* | informative only | a deferral; no requirement changes |
+| R-882 — The slider span of `ν₀`, the held `L_z` and the held `K` stays deferred to M8 *(defers RQ-679)* | informative only | a deferral; no requirement changes |
+| R-883 — Whether the kernel takes its own f32 `sin` and `cos` stays deferred to M4 *(defers RQ-687)* | informative only | a deferral; no requirement changes |
+| R-884 — Paper frames: presets where the papers are read, each tested against its paper; each remaining gap stays unbuilt, its target "not scored" with the gap named *(closes RQ-729)* | informative only | paper frames: presets where the papers are read, each tested against its paper, the rest left unbuilt with their targets not scored; carried by the M9 targets' existing requirements and TASK-M4-37 |
+| R-885 — V-11's prograde limit is read from eq. (11) as printed *(closes RQ-737)* | informative only | V-11's prograde limit read from eq. (11) as printed; recorded on REQ-VAL-330's note, nothing changes while V-11 is parked |
+| R-886 — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)* | informative only | a deferral; no requirement changes |
+| R-887 — The rest of TASK-M9-01's gaps stay deferred to M9 *(defers RQ-681)* | informative only | a deferral; no requirement changes |
+| R-890 — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)* | informative only | a deferral; no requirement changes |
+| R-893 — RQ-701 closes: R-818 ruled its form and R-833 its energy cap; the build is TASK-M8-48's *(closes RQ-701)* | informative only | RQ-701 closes on R-818 and R-833; the build is TASK-M8-48's, whose requirements already carry it |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -373,12 +385,10 @@ Of these: 242 calibration, 195 definition, 1742 obligation. Retired (kept for th
 | 5. The chart layer, and where two axes can't be independent | parent heading (obligations are in its subsections) | its subsections |
 | 6. Refusals and labels | parent heading (obligations are in its subsections) | its subsections |
 | 7.1 What runs on the GPU | rationale | how the lowering contract applies; the obligation is in section 7 |
-| 7.5 The browser build: what it gets | informative only | a door, RQ-735; it yields no requirement until ruled |
 | 8. First customer: region D | parent heading (obligations are in its subsections) | its subsections |
 | 8.5 Which M9 target needs which part | informative only | which task needs which part; carried in those tasks' Depends on |
 | 8.7 Where it lands | informative only | the plan's placing |
 | 10. The gaps, each as a builder option | parent heading (obligations are in its subsections) | its subsections |
-| 10.3 Final-condition charts | informative only | a door, RQ-734; it yields no requirement until ruled |
 | 13. Reversible choices: decided, for veto | rationale | the veto list |
 | 15. Plan | informative only | the task list, carried in plan/tasks.yaml |
 | 16. What this does not settle | informative only | what was not settled |
