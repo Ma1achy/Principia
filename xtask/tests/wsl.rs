@@ -337,6 +337,12 @@ fn check_image(build: &str, conf: &str, mutants: &str) {
         url.starts_with("https://") && url.contains("24.04"),
         "the base isn't Ubuntu 24.04 over https: {url}"
     );
+    let old = setting(build, "BASE_OLD_URL");
+    assert!(
+        old.starts_with("https://old-releases.ubuntu.com/releases/noble/")
+            && url.rsplit('/').next() == old.rsplit('/').next(),
+        "the base's fallback isn't the same image on old-releases.ubuntu.com: {old}"
+    );
     for name in ["BASE_SHA256", "RUSTUP_SHA256"] {
         assert!(hex64(setting(build, name)), "{name} isn't a SHA-256");
     }
@@ -435,6 +441,42 @@ mod other_nextest {
                 &read(BUILD),
                 "NEXTEST_VERSION=0.9.146",
                 "NEXTEST_VERSION=0.9.999"
+            ),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod other_fallback {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "a fallback to another point release",
+        expected = "the base's fallback isn't the same image on old-releases.ubuntu.com",
+        check_image(
+            &edited(
+                &read(BUILD),
+                "BASE_OLD_URL=https://old-releases.ubuntu.com/releases/noble/ubuntu-24.04.5-wsl-amd64.wsl",
+                "BASE_OLD_URL=https://old-releases.ubuntu.com/releases/noble/ubuntu-24.04.2-wsl-amd64.wsl"
+            ),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod other_host {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "a fallback on another host",
+        expected = "the base's fallback isn't the same image on old-releases.ubuntu.com",
+        check_image(
+            &edited(
+                &read(BUILD),
+                "BASE_OLD_URL=https://old-releases.ubuntu.com/",
+                "BASE_OLD_URL=https://example.com/"
             ),
             &read(CONF),
             &read(".github/workflows/mutants.yml")

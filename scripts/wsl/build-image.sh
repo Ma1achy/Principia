@@ -21,7 +21,12 @@
 # CI's jobs, so builds inside match hosted CI's.
 set -euo pipefail
 
+# releases.ubuntu.com keeps the latest few point releases of noble's amd64 WSL image (24.04.3 to .5 on 9 Nov 2026);
+# a superseded one moves to old-releases.ubuntu.com, under the same releases/noble/ path, as 24.04.2's has. No host
+# serves 24.04.5 for good (cdimage.ubuntu.com has only arm64's WSL image, cloud-images.ubuntu.com no 24.04.5 build),
+# so the build tries the first, then the second, and checks BASE_SHA256 whichever served it.
 BASE_URL=https://releases.ubuntu.com/noble/ubuntu-24.04.5-wsl-amd64.wsl
+BASE_OLD_URL=https://old-releases.ubuntu.com/releases/noble/ubuntu-24.04.5-wsl-amd64.wsl
 BASE_VERSION=24.04.5
 BASE_SHA256=bb415d824822c4b878125729af451a5d18fb13d1cf5cbed9a7393ad64ac6039e
 SNAPSHOT=20261108T000000Z
@@ -52,8 +57,12 @@ trap cleanup EXIT
 in_root() { sudo chroot "$root" env DEBIAN_FRONTEND=noninteractive LC_ALL=C "$@"; }
 as_ci() { sudo chroot --userspec=1000:1000 "$root" env -i HOME=/home/ci USER=ci PATH=/home/ci/.cargo/bin:/usr/bin:/bin "$@"; }
 
-echo "base: Ubuntu $BASE_VERSION, $BASE_URL"
-curl -fsSL --retry 3 -o "$work/base.tar.gz" "$BASE_URL"
+base_url=$BASE_URL
+curl -fsSL --retry 3 -o "$work/base.tar.gz" "$base_url" || {
+  base_url=$BASE_OLD_URL
+  curl -fsSL --retry 3 -o "$work/base.tar.gz" "$base_url"
+}
+echo "base: Ubuntu $BASE_VERSION, $base_url"
 echo "$BASE_SHA256  $work/base.tar.gz" | sha256sum -c -
 sudo mkdir "$root"
 sudo tar -xzpf "$work/base.tar.gz" -C "$root" --numeric-owner
