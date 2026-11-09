@@ -34934,7 +34934,7 @@ TASK-M4-34, which R-873 (A) (b) releases only after stage 2 has merged. The owne
 
 R-914 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Changes REQ-RENDER-082 (statement, verify, rq, rulings, source, note), REQ-CHART-037 (statement, rulings, source, note)
+Changes REQ-RENDER-082 (statement, verify, rq, rulings, source, note), REQ-CHART-037 (statement, verify, rulings, source, note)
 and REQ-CHART-100 (rulings, source, note); adds REQ-RENDER-123 and REQ-CHART-165.
 
 ## R-915 — Inside WSL, `contain.sh check` proves an unprivileged mode: user and PID namespaces with no sudo and the real `kill -9 -1`, passing only if a ci process outside the namespace and the runner agent and gh-runner's other Windows processes survive; WSL keeps no sudo, no systemd and the owner's exact `wsl.conf`; the mode is selected explicitly, never a fallback, and fails, never skips, without user namespaces; other machines keep the strict mode; proof 4 reworded *(closes RQ-753; amends R-912)*
