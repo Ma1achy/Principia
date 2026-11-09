@@ -1,6 +1,6 @@
-# Per-push CI (R-177), in two halves, the owner's CI model (approved 9 Nov 2026; the owner's order of 8 Nov 2026: "PR
-# feedback in under 30 minutes … Product correctness is what CI protects: physics, numerics, output, GUI behaviour.
-# Machinery that tests the machinery is secondary").
+# Per-push CI (R-177), in two halves, the owner's CI model (R-909, approved 9 Nov 2026; R-907, R-908, his order of
+# 8 Nov 2026: "PR feedback in under 30 minutes … Product correctness is what CI protects: physics, numerics, output,
+# GUI behaviour. Machinery that tests the machinery is secondary").
 #
 # The PR tier, a pull request's every push: a sanity check of product correctness, its jobs in parallel. A push to a
 # pull request runs this workflow through `pull_request` only, once, never twice; the `changes` job classifies the
@@ -39,7 +39,7 @@
 #
 # The interim per-merge run, every push to `main` (and to a `measure/` branch, which never has a pull request, R-272):
 # the full suite as it ran before, every job below `gpu-metal`'s smoke set, beside the two smoke sets, until the
-# per-merge workflow takes it (the owner's CI model, item 2; order step 3). It runs everything the PR tier leaves to a
+# per-merge workflow takes it (R-909's model, item 2; order step 3). It runs everything the PR tier leaves to a
 # merge: the slow tier, the in-depth GPU suites on lavapipe and Metal (the `gpu-kernel` profile, the `--features
 # controls` suites, `cargo xtask golden --all`, `cargo xtask gate decode-agreement`), the golden runner over every
 # suite and the screenshot runner's self-test, the release profile (R-547), `cargo xtask ci`, the controls run among
@@ -228,7 +228,7 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
   # The workspace's build, its docs and the product rules, run as commands rather than through their slow test
-  # wrappers (the owner's CI model, 9 Nov 2026): `cargo build --workspace` builds every binary, which the product
+  # wrappers (the owner's CI model, R-909): `cargo build --workspace` builds every binary, which the product
   # tests, covering only the changed crates, do not; the docs, every rustdoc warning an error (R-387); the crate graph
   # (`cargo xtask deps`, REQ-SYS-004); the constants, WGSL, vocabulary, compute-pipeline and no-alloc lints; the
   # generated files current (`cargo xtask codegen` writes nothing: the checked-in generated WGSL and Rust are the
@@ -317,7 +317,7 @@ jobs:
         if: needs.changes.outputs.docs_only != 'true'
         run: cargo xtask controls --list
 
-  # The product tests (the owner's CI model, 9 Nov 2026), the required check `ci`: on a code change, the tests of the
+  # The product tests (the owner's CI model, R-908, R-909), the required check `ci`: on a code change, the tests of the
   # changed crates and their reverse dependencies (`changes`' `packages`) under the `pr` nextest profile, every test but
   # the process tests, the in-depth GPU tests, the golden and screenshot runners' and the slow tier
   # (`.config/nextest.toml`), and their doctests (R-231); the GPU harness's tests among them run on lavapipe (R-169).
@@ -458,7 +458,7 @@ jobs:
           retention-days: 14
           overwrite: true
 
-  # The process tests (the owner's CI model, 9 Nov 2026: "Process tests only when the PR changes .github/, xtask/,
+  # The process tests (the owner's CI model, R-909: "Process tests only when the PR changes .github/, xtask/,
   # scripts/, plan/, decisions.md, REVIEW_QUEUE.md or docs/"): the split's process class, the `process` nextest profile,
   # less its slow tier, which runs nightly and on `main`. Advisory: its check, `process`, is no required check (the
   # owner, 8 Nov 2026: "A failing process test never makes main red; it files a task"), though the orchestrator's merge
@@ -539,7 +539,7 @@ jobs:
           retention-days: 14
           overwrite: true
 
-  # The lavapipe GPU smoke set, the required check `gpu-lavapipe` (the owner's CI model, 9 Nov 2026), on a change with a
+  # The lavapipe GPU smoke set, the required check `gpu-lavapipe` (R-908, R-909), on a change with a
   # GPU-path file (`gpu`): the kernel built (`cargo xtask build-kernel`, which also fails when a fragment snippet lifted
   # from its translation differs from the checked-in file, R-116), then the `gpu-smoke` nextest profile's one fast test
   # of each GPU stage and the kernel build's own checks (`.config/nextest.toml` names each and why), then every
@@ -701,7 +701,7 @@ jobs:
 
   # ---------------------------------------------------------------------------------------------------------------------
   # The interim per-merge run: on a push only (`main`, `measure/`), the full suite as before, until the per-merge
-  # workflow takes it (the owner's CI model, order step 3). No job here bears a required check.
+  # workflow takes it (the owner's CI model, R-909, order step 3). No job here bears a required check.
 
   # The workspace's tests, built once for the `ci` shards (R-372, REQ-SYS-078): `cargo nextest archive` builds every
   # test binary of the one feature set the shards run, the default, and writes them, with what running them needs (the

@@ -1255,7 +1255,7 @@ slow-timeout = { period = "30s", terminate-after = 3 }
 filter = "binary_id(=xtask::qa_tooling_rq_union) & test(=two_branches_taking_one_id_on_the_real_queue_are_caught)"
 slow-timeout = { period = "30s", terminate-after = 3 }
 
-# The PR tier (the owner's CI model, approved 9 Nov 2026, item 1): a pull request's product tests, on the changed
+# The PR tier (R-909, the owner's CI model, item 1; R-907, R-908): a pull request's product tests, on the changed
 # crates and their reverse dependencies (`.github/scripts/ci_tier.sh`), in `ci.yml`'s `tests` job. Every test but:
 # - the process tests, the split's process class (`process` below), which run only when a pull request changes the
 #   machinery (`scripts/ci_changes.sh`'s `process`);
@@ -1519,7 +1519,7 @@ default-filter = """
     )
 """
 
-# The process tests (the owner's CI model, approved 9 Nov 2026, item 1: "Process tests only when the PR changes
+# The process tests (R-909, the owner's CI model, item 1: "Process tests only when the PR changes
 # .github/, xtask/, scripts/, plan/, decisions.md, REVIEW_QUEUE.md or docs/"): the test binaries the split of 9 Nov 2026
 # classes process, the tests of CI, the plan checks, the negative-control registry, the job queue, the deps rules'
 # synthetic workspaces and the rest of the machinery that tests the machinery, which `ci.yml`'s `process` job runs.
@@ -1721,7 +1721,7 @@ default-filter = """
     )
 """
 
-# The GPU smoke set (the owner's CI model, approved 9 Nov 2026, item 1: "lavapipe GPU smoke set; Metal smoke set on
+# The GPU smoke set (R-909, the owner's CI model, item 1: "lavapipe GPU smoke set; Metal smoke set on
 # GPU-path PRs"): one fast test of each GPU stage of the in-depth GPU tests, which `ci.yml`'s `gpu-lavapipe` runs on
 # lavapipe and `gpu-metal` on Metal, each after `cargo xtask build-kernel`, on a pull request with a GPU-path file
 # (`scripts/ci_changes.sh`'s `gpu`). Each is its stage's fastest test that dispatches the stage on the GPU, by the

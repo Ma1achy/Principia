@@ -9,7 +9,7 @@
 #   (c) docs: the rest of the corpus, the plan's prose and Python, the scripts, the workbench and `.claude/` run only
 #       the cheap checks, the plan checks, the vocabulary lint and the atlas guard (R-662, R-790).
 # A change touching several tiers runs the highest. On a pull request the code tier runs the PR tier (the owner's CI
-# model, approved 9 Nov 2026; `ci.yml`): fmt, clippy, the build, the product tests of the changed crates and their
+# model, R-909; `ci.yml`): fmt, clippy, the build, the product tests of the changed crates and their
 # reverse dependencies (`.github/scripts/ci_tier.sh`, which reads this verdict: this script says what a change touches,
 # that one which crates it tests), the product-rule commands and, where `gpu` holds, the GPU smoke sets. Every required
 # check still reports, under its own name, and concludes success only where its tier allows it (R-656; R-266). A change
@@ -25,7 +25,7 @@
 #                                      (or CI_REQ_FIELDS, naming it) says so; without them it is code.
 #   scripts/ci_changes.sh process      Read changed paths from stdin; print `process=true|false`: some path is the
 #                                      machinery's own, `.github/`, `xtask/`, `scripts/`, `plan/`, `decisions.md`,
-#                                      `REVIEW_QUEUE.md` or `docs/` (the owner's CI model, 9 Nov 2026), so the process
+#                                      `REVIEW_QUEUE.md` or `docs/` (the owner's CI model, R-909), so the process
 #                                      tests run; no path at all runs them. `detect` writes it after the verdict.
 #
 # The verdict, one `key=value` per line:
@@ -36,7 +36,7 @@
 #   plan_data=true|false  some path is the plan's task data (tier b), `plan/requirements.yaml` among it when tier (b);
 #   gui_data=true|false   some path is the GUI's artboards or references (tier b);
 #   mutants=true|false    some path is a `.rs` file under `crates/` (R-677). Read by nothing on the pull-request path
-#                         since the owner's CI model took the per-PR mutants run off it (9 Nov 2026); kept for the
+#                         since the owner's CI model took the per-PR mutants run off it (R-908, R-909); kept for the
 #                         per-merge workflow, which may run mutants on a merge's diff.
 #
 # The change is the pull request's merge commit against its first parent, the base it is merged onto: exactly what the
@@ -173,7 +173,7 @@ is_not_gpu() {
   return 1
 }
 
-# Whether a path is the machinery's own, whose change runs the process tests (the owner's CI model, approved 9 Nov 2026:
+# Whether a path is the machinery's own, whose change runs the process tests (the owner's CI model, R-909:
 # "Process tests only when the PR changes .github/, xtask/, scripts/, plan/, decisions.md, REVIEW_QUEUE.md or docs/"):
 # the tests of CI, the plan checks, the controls registry, the job queue and the rest of the split's process class,
 # which `.config/nextest.toml`'s `process` profile names.

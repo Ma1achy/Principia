@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The PR tier's product tests run on the changed crates and their reverse dependencies (the owner's CI model, approved
+# The PR tier's product tests run on the changed crates and their reverse dependencies (the owner's CI model, R-909,
 # 9 Nov 2026: "Product tests: changed crates + reverse deps (ci_quick_crates.py selection)"). This script names them.
 #
 #   .github/scripts/ci_tier.sh decide   In `ci.yml`'s `changes` job, after `scripts/ci_changes.sh detect`: writes to
