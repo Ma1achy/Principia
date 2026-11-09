@@ -988,7 +988,9 @@ D is not a product of two ranges. Three ways to draw it:
   apex a ray-degenerate edge.
 
 **Recommended (a), as a preset of the third-body pair**, whose own axes are `ξ` bounded and `η` bounded. The lowering
-appendix's "region D bounds" uniform is the mask. **Door** RQ-714.
+appendix's "region D bounds" uniform is the mask. **Door** RQ-714. *Superseded by R-871 (record correction, 9 Nov
+2026, applied per R-369):* no region-D mask uniform is built; the full disc is rendered unmasked, and the appendix's
+Anosova row, region D's pair, is lowered by TASK-M4-34 (R-914, REQ-CHART-165). The sentence before is kept as a *Was*.
 
 **The owner's filter order overtakes this for the presets (RQ-736):** "region D presets render the full disc, with the filter on by default for the paper-frame presets only." So the preset is (b) with the filter of § 10.4, and D is its output; the decode must reach `η < 0` and `ξ < 0` signed. What "the full disc" is, and so the preset's axes, is a choice on RQ-736's list, not made here: the lens `(|ξ| + ½)² + η² ≤ 1` of D's four images with the box's corners masked, the box `ξ ∈ [−½, ½]`, `η ∈ [−√3/2, √3/2]` drawn whole, or any window holding the lens with all three swaps declared, which filters to exactly D (§ 10.4). What TASK-M4-34's preset does before TASK-M8-120 exists is on that list too. *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*
 
@@ -997,6 +999,8 @@ lens with all three swaps declared, which filters to exactly D": no mask is buil
 is not extended. The filter is on by default for the paper-frame presets only (R-855), and its check is the owner's: at
 equal masses and rest, the filtered area is 0.307, D's own (TASK-M8-120). Until TASK-M8-120 lands, TASK-M4-34's preset
 renders that window with D as a contour, and TASK-M4-06's golden reads `in_region_d` (RQ-738 conflict 8's reading held).
+*Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* that GPU reference, the golden that reads region D, is TASK-M4-34's own, not
+TASK-M4-06's; TASK-M4-34 can't close until it reads region D as R-871 requires, and TASK-M4-06 gains no edge to it.
 
 A mask has a cost the ruling must meet: contract Part 3 says "**Inside `[0,1]²` every gallery chart is valid by
 construction** … so a pixel hatched there is a decoder bug", and REQ-CHART-058 sweeps for it. R-554 made the same exception
@@ -1016,7 +1020,7 @@ The "Anosova entry" of the replication rows is three things. Point import exists
 |---|---|---|
 | **Points**: a published start through the import | yes, TASK-M2-20 | LL-1, LL-2, LL-3 (TASK-M9-06, -07), TM-1 (-09), AA-6 (-10), AA-2, AA-3, AA-5, AA-7, AN-1 (-19), BR-1 (-22) |
 | **Samples**: many points in D, drawn, or a small grid of f64 starts through the import; no GPU run (R-671) | the membership test, `in_region_d`; the import | Q-1 (-18), Q-2, L-3, L-4, L-5 (-20), V-9, MT-1 (-21), GG-1's 1/64 grid (-22) |
-| **The plane**: a pixel grid over D, run on the GPU | **no** | L-1 (-26), L-2 (-31), TS-1, V-1/3/7 (-28), and TASK-M4-06's golden (REQ-RENDER-082) |
+| **The plane**: a pixel grid over D, run on the GPU | **no** | L-1 (-26), L-2 (-31), TS-1, V-1/3/7 (-28), and TASK-M4-34's region-D golden (REQ-RENDER-123, R-914; *was* TASK-M4-06's, REQ-RENDER-082) |
 
 Velocities: exact rest for AA-6 and every free-fall map; eq. 3 for AA-2 and AA-7, and AA-3 and AA-5 read paper I, whose runs
 are eq. 3's, though their rows do not say so (flagged for RQ-714). Masses: equal, but AN-1 and the LL unequal sets at a mass
@@ -1055,6 +1059,15 @@ is Proposed** (applied per R-369): TASK-M4-06's golden (REQ-RENDER-082) needs RQ
 Deliverables, to apply when RQ-714 rules, and it would then hold 230 tasks until TASK-M4-34 merges (§ 15). The plane targets of § 8.5 then reach
 TASK-M4-34 through TASK-M4-06 and need no edge of their own; the samples need none. It is not "built ahead of" a target (R-594 item 5): its first
 customer would be M4's own golden.
+
+*Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* the edge is dropped and never applied. With it, TASK-M4-06 would have waited on
+TASK-M4-34, which R-873 releases in stage 3, after stage 2, while stage 2 waits, through TASK-M8-124, TASK-M8-48,
+TASK-M8-18 and TASK-M4-17, on TASK-M4-06: a cycle. The GPU reference that reads region D, the DECODE-preset golden of
+the Anosova physical-frame chart (REQ-RENDER-123), is TASK-M4-34's, which depends on TASK-M4-06 and can't close until
+that reference reads region D as R-871 requires. The appendix's Anosova physical-frame row is this pair, so its
+lowering is TASK-M4-34's too, through `region_d_variant`, unmasked and never folded to `(ξ, −η)` (REQ-CHART-165).
+TASK-M4-06 and the tasks behind it wait on no task of this design.
+The plane targets reach TASK-M4-34 through TASK-M8-112, by R-884's edges.
 
 ### 8.8 Region D must match the papers (order item A5)
 
@@ -1127,7 +1140,7 @@ positions, against the decoded state's, and eq. 4's energy on AA rows. Controls:
 | TS-2 | `D₁₁ ∪ D₁₂` at fixed `k` | **not built** (R-669) | the frame's map only |
 | H-3 | `(Δx, √3 + Δy)` at side 2 | Lagrange apex offset, no D mask | Table III's rows, f64 |
 | PA-1 | `(S₁/S₂, S₁/S₃)` | Parischewsky, through R-798's remap until RQ-713 is ruled | `(0.8498…, 0.7211…) → (0.1, 0.6)` |
-| TASK-M4-06's golden | a grid over D | Agekyan–Anosova | its grid |
+| TASK-M4-34's region-D golden (R-914; *was* TASK-M4-06's) | a grid over D | Agekyan–Anosova | its grid |
 
 ---
 
@@ -1473,7 +1486,7 @@ Each with a control (R-176), named here and owned by a task.
 | `seam_refinement_masked` | a flagged footprint doesn't fire `unresolved`, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes `Seam`, a mixed quad included, with `n_seam` counted, and its `coherence` doesn't raise its priority; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart of today's registry bitwise today's | the mask removed: quads split along the seam at every depth; the mask applied to an unflagged footprint; `Keep` taken for `Seam`; `Seam` taken only when every footprint is flagged | TASK-M8-102 |
 | `statistic_measure` | a statistic over a warped chart is weighted into a named measure or labelled `per pixel of this chart`; a fixture of known fraction recovered through a power warp; a fraction in a paper's own measure equals the flat grid in the paper's coordinates | no weight and no label; the weight inverted; a count of quadtree leaves fed in | TASK-M8-100 |
 | `ftle_chart_independent` | a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one `λ_T` bit for bit, read on copy 0 (§ 6.5) | `δ₀`'s direction taken from a chart tangent, which only the third chart can catch: a warp rescales the tangent and keeps its direction | TASK-M8-100 |
-| Golden | `cargo xtask golden decode-preset`: region D through the DECODE preset, TASK-M4-06's acceptance, unchanged | as that task's | TASK-M4-06 |
+| Golden | `cargo xtask golden decode-preset`: region D through the DECODE preset, TASK-M4-34's acceptance (R-914; *was* TASK-M4-06's), unchanged | as that task's | TASK-M4-34 |
 
 The test names `round_trip_complete` to `ftle_chart_independent`, `trajectory_polar_unfolded`, the `symmetry_filter_` tests and `path_lower_half_stays` (§ 17.14) are this design's proposals; the two the order asks for are the owner's.
 
@@ -1603,7 +1616,7 @@ Nothing below is decided here.
 
 **Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 26 tasks below, and each names the rulings item it waits on, or the design as a whole; R-847's TASK-M8-122 and TASK-M8-123 wait on it too. Only those 28 tasks wait behind it; no other existing task, in M4 or M9, does.
 
-Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold `L_z` or the virial pair, so those two sit in M8. **One edge is named, not made:** TASK-M4-06's golden needs RQ-714's domain, so TASK-M4-06 gains TASK-M4-34 in Depends on when RQ-714 rules, TASK-M4-37's Deliverables say so, and from then until TASK-M4-34 merges it holds 230 tasks: TASK-M4-06 and the 217 other existing open tasks behind it, and 12 of the tasks below. The seven M9 edges an earlier draft made are dropped: TASK-M9-18, -20, -21 and -22 have no GPU run (R-671), and -26, -28 and -31 reach TASK-M4-06 through TASK-M4-17.
+Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold `L_z` or the virial pair, so those two sit in M8. **One edge is named, not made:** TASK-M4-06's golden needs RQ-714's domain, so TASK-M4-06 gains TASK-M4-34 in Depends on when RQ-714 rules, TASK-M4-37's Deliverables say so, and from then until TASK-M4-34 merges it holds 230 tasks: TASK-M4-06 and the 217 other existing open tasks behind it, and 12 of the tasks below. *Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* the edge is never made, since it closed a cycle through stage 2; region D's GPU reference is TASK-M4-34's, and TASK-M4-34 depends on TASK-M4-06 instead. The seven M9 edges an earlier draft made are dropped: TASK-M9-18, -20, -21 and -22 have no GPU run (R-671), and -26, -28 and -31 reach TASK-M4-06 through TASK-M4-17.
 
 | Task | Milestone | What | Waits |
 |---|---|---|---|

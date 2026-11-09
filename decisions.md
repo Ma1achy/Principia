@@ -33377,6 +33377,7 @@ R-870 is in the "design" group of `plan/rule_groups.yaml`.
 Adds REQ-GUI-426, REQ-GUI-427 and REQ-GUI-428; changes no existing requirement.
 
 ## R-871 — Region D's chart is the plane, unmasked: the full disc rendered literally, every mirror and body swap declared, so the symmetry filter leaves exactly region D with no mask, on by default for the paper-frame presets only; its check, the filtered area 0.307 at equal masses and rest *(closes RQ-714; on RQ-738, which stays open)*
+*Applied by TASK-M4-34 per R-914 (9 Nov 2026, RQ-752 (a)): the edge from TASK-M4-06 to TASK-M4-34 is dropped and never applied, and region D's GPU reference, reading `in_region_d`, is TASK-M4-34's own, which can't close until it reads region D as this ruling requires; only which task applies the link changes, this ruling's substance unchanged.*
 *8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-714 moved; RQ-738, a
 dated line), `docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` (status, § 8.4),
 REQ-CHART-100 and REQ-CHART-138 (reqio), TASK-M4-34, TASK-M8-120, TASK-M4-37 and `plan/rule_groups.yaml`;
@@ -34264,7 +34265,8 @@ Changes REQ-VAL-148 and REQ-VAL-150 (statement, verify, source, rulings, note).
 *Amended in part by R-907 (8 Nov 2026: its step 2, a week of the slow tier on lavapipe and the RTX 2080 Super, is withdrawn by the owner's item 4; a slow-tier failure on `main` is red only if it is a correctness failure; the pull-request side goes first, needing no Windows).*
 *Amended in part by R-908 (8 Nov 2026: in-depth GPU tests and the slow tier run on `main` through the Windows runner, or GitHub-hosted until it is up; changes are reported after they are made).*
 *Amended in part by R-909 (9 Nov 2026: the approved CI model governs where they differ).*
-*Still in force: the placement rule, each heavy job placed per job by a side-by-side run on the same commit and re-checked if either side changes; Windows containment by a Job Object with kill-on-close, a process limit and an 8 GiB per-process cap, proven by `contain.sh check`'s kill test, the cap, the 36-hour no-run alert and below-normal priority overnight as prerequisites for any job placed on Windows; the mutants of `xtask/src/jobq.rs` on GitHub-hosted runners until Windows containment is proven; the Windows runner advisory, never required, every runner rule unchanged; mutation survivors not on the equivalents list filing a task and never making `main` red. Not its step 2 (R-907), nor its order where R-907 and R-909 set another.*
+*Amended in part by R-912 (9 Nov 2026: RQ-751 (b): the Job Object proof passes with its two process-visibility gaps accepted; the mutants of `xtask/src/jobq.rs`, the job-queue mutants, stay on GitHub's runners under (b), and may move to Windows only once the WSL2 setup passes `contain.sh check` inside it).*
+*Still in force: the placement rule, each heavy job placed per job by a side-by-side run on the same commit and re-checked if either side changes; Windows containment by a Job Object with kill-on-close, a process limit and an 8 GiB per-process cap, proven by `contain.sh check`'s kill test, with RQ-751's two process-visibility gaps accepted (R-912), the cap, the 36-hour no-run alert and below-normal priority overnight as prerequisites for any job placed on Windows; the mutants of `xtask/src/jobq.rs` on GitHub-hosted runners, under R-912's option (b) for good, moving to Windows only once the WSL2 setup passes `contain.sh check` inside it (R-912, R-915); the Windows runner advisory, never required, every runner rule unchanged; mutation survivors not on the equivalents list filing a task and never making `main` red. Not its step 2 (R-907), nor its order where R-907 and R-909 set another.*
 *8 Nov 2026 · the owner's message of that day, "CI shape, owner's decision"; applied in the forward lines of R-196,
 R-202, R-684, R-859 and R-904, REQ-VAL-148 and REQ-VAL-181 (reqio) and `plan/rule_groups.yaml`; built by #453 (Windows
 containment) and the per-merge workflow; changes REQ-VAL-148 and REQ-VAL-181*
@@ -34701,3 +34703,280 @@ late-review handling stand.
   since R-651's merge check counts every unresolved bot thread.
 
 R-910 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement and no code.
+
+## R-911 — The 34 physics, validation and render tests over 60 s leave the pull-request path for the slow tier on each merge to `main`, each named with its measured time; they stay product tests, never retired, and no other physics or validation test joins them without the owner *(answers R-904's item 2 for these 34; no RQ)*
+*9 Nov 2026 · the owner's reply of that day to the orchestrator's "what do you need me to do?", item 1 ("the 34 slow
+physics/validation/render tests"); applied by PR #457 (the pull-request tier's restructure: `.config/nextest.toml`'s
+`pr` profile and `xtask/tests/ci_pr_tier.rs`), `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no
+requirement*
+
+R-904's item 2 has the slow tier take tests over 60 s off the pull-request path, and "moving any physics or validation
+test into the slow tier comes to me first". The pull-request tier's restructure (PR #457) measured 34 such tests in the
+physics, validation and render crates and brought them to the owner. The owner's words (9 Nov 2026), verbatim:
+
+> 1: move them.
+
+*What it decides:* these 34 tests, 4,981 s together on the restructure's measurement, leave the pull-request tier and
+run in the slow tier on each merge to `main` (R-909's per-merge tier; until the per-merge workflow is built, every push
+to `main`), each named in `.config/nextest.toml` with its measured time:
+
+| Time (s) | Binary | Test |
+|---:|---|---|
+| 621.8 | `render::observation_taps` | `observation_taps_leave_the_payload_unchanged` |
+| 597.5 | `validation::debug_scenes` | `debug_scenes_render_their_references` |
+| 413.5 | `render::debug_views` | `debug_views_render_far_from_ties` |
+| 315.8 | `render::observation_taps` | `observation_taps_leave_every_bound_buffer_unchanged` |
+| 190.6 | `validation::qa_TASK-M1-14` | `qa_m1_14_each_tile_shows_its_own_sample` |
+| 184.0 | `render::embed_survives` | `embed_survives_the_list` |
+| 173.7 | `render::qa_TASK-M1-03` | `qa_prelude_generated_custom_node_compiles` |
+| 165.8 | `validation::golden_scene` | `golden_scene_renders_its_twin` |
+| 160.8 | `render::qa_TASK-M7-29` | `embed_survives_qa_property` |
+| 158.5 | `render::presentation_no_hatch` | `presentation_no_hatch_field_ramps` |
+| 147.9 | `render::presentation_no_hatch` | `presentation_no_hatch_override` |
+| 138.7 | `validation::decode_preset_shape_poles` | `decode_preset_shape_poles` |
+| 131.4 | `validation::qa_TASK-M1-13` | `qa_structural_views_colour_by_the_cpu_struct` |
+| 127.9 | `validation::qa_TASK-M2-25` | `qa_m225_decode_off_lattice_and_pole` |
+| 111.8 | `ledger::derived` | `current_drift_property_matches_the_reference` |
+| 84.9 | `kernel::qa_TASK-M3-03` | `qa_nsub_bucket_floor_pairs_match_the_specification` |
+| 83.0 | `render::prelude` | `dbg_helpers_match_the_cpu_mirror_on_the_gpu` |
+| 82.0 | `render::prelude` | `prelude_luts_colour_space_maps` |
+| 81.2 | `render::qa_TASK-M1-03` | `qa_dbg_helpers_cat` |
+| 79.4 | `render::qa_TASK-M1-15` | `qa_m1_15_debug_views_bind_the_payload_read_only` |
+| 75.0 | `validation::decode_preset_harness` | `decode_preset_harness_probe` |
+| 70.7 | `render::decode_preset` | `decode_preset_vs_decode_only` |
+| 70.6 | `validation::expected_message` | `control_panicking_in_setup_fails_and_one_reaching_its_check_passes` |
+| 70.3 | `render::compaction_ramps` | `field_either_role_every_form_and_ramp_assembles` |
+| 68.4 | `validation::oklab_roundtrip_gate` | `oklab_gate_fixtures` |
+| 65.9 | `render::qa_TASK-M7-05` | `qa_field_either_role_any_field` |
+| 65.7 | `validation::qa_TASK-M2-25` | `qa_m225_chart_z_is_the_definition` |
+| 64.7 | `kernel::gallery_sweep` | `gallery_sweep_unit_square` |
+| 64.7 | `validation::qa_TASK-M1-14` | `qa_m1_14_each_golden_is_its_render_and_can_fail` |
+| 63.8 | `validation::qa_TASK-M1-19` | `qa_quad_fields_all_9_shown` |
+| 63.5 | `render::qa_TASK-M2-34` | `qa_m2_34_presentation_field_ramps` |
+| 63.3 | `render::qa_TASK-M1-08` | `qa_tool020_each_view_assembles_reading_only_its_field` |
+| 63.1 | `render::qa_TASK-M2-34` | `qa_m2_34_presentation_field_ramps_overridden` |
+| 61.1 | `render::qa_TASK-M7-30` | `embed_hybrid_rotation_qa_angles_at_1024` |
+
+- **Moved, not retired.** Each still runs, on every merge to `main`; a correctness failure there makes `main` red
+  (R-681, as R-907 and R-909 read it). None is changed or weakened by the move.
+- **Only these 34.** Any other physics or validation test moved into the slow tier still goes to the owner first
+  (R-904's item 2); the restructure's test pins the list, so none joins it or leaves it silently.
+
+R-911 is in the "ci" group of `plan/rule_groups.yaml`. It changes no requirement.
+
+## R-912 — Windows containment, RQ-751: option (b) now, the Job Object proof passing with its two process-visibility gaps accepted and the job-queue mutants staying on GitHub's runners; option (c), CPU tests and mutants in a WSL2 distro under `contain.sh`, built in parallel and never blocking, replaces (b) only once each of its five requirements is proven, the job-queue mutants then free to move to Windows; GPU tests stay native *(closes RQ-751; amends R-905)*
+*Amended in part by R-915 (9 Nov 2026: inside WSL, `contain.sh check` proves an unprivileged mode, user and PID namespaces with no sudo, in place of "contain.sh unchanged"; the fourth requirement, proof 4, reads as the owner reworded it).*
+*Still in force: option (b) now, the two process-visibility gaps accepted, Windows work proceeding under it; the job-queue mutants on GitHub's runners under (b), moving to Windows only once the WSL2 setup passes `contain.sh check` inside it; option (c) built in parallel, never blocking, replacing (b) only once each requirement is proven: non-interactive as gh-runner, surviving a reboot and a logged-out session; automount and Windows interop off, C: and D: unreachable, shown by test; the firewall reviewed, no inbound; proof 4 in R-915's words; the image pinned, integrity-checked and rebuilt from a script, no Docker; GPU tests native on Windows under (b)'s accepted gap; the owner's admin steps at the PC as one copyable block.*
+*9 Nov 2026 · the owner's reply of that day to the orchestrator's "what do you need me to do?", item 2, with the text the
+owner pasted in the same message, and their follow-up confirming the reading; applied in `REVIEW_QUEUE.md` (RQ-751
+moved), `docs/archive/review_queue/M0.md`, the forward line of R-905, REQ-VAL-148 and REQ-VAL-181 (reqio),
+`plan/OPERATIONS.md` (§ "The Windows runner's work") and `plan/rule_groups.yaml`; option (c) built by PR #460; changes
+REQ-VAL-148 and REQ-VAL-181*
+
+RQ-751 asked whether the Windows containment proof, a Job Object, counts as passed with the two assertions of
+`contain.sh check` it can't make (the outside process unseen, and out of reach of a kill by its id), and for what. The
+owner's words (9 Nov 2026), verbatim, their own:
+
+> 2 (RQ-751): (b). Job-queue mutation testing stays on GitHub's runners permanently. Later and optional, not blocking: propose running CPU tests and mutants on Windows inside WSL2 so contain.sh applies unchanged (GPU tests stay native).
+
+and pasted by the owner in the same message:
+
+> RQ-751: (b) now, (c) built in parallel to replace it.
+> (b): accept the two process-visibility gaps; job-queue mutation testing stays on GitHub's runners. Windows work proceeds under (b) immediately.
+> (c), via WSL2 (Windows Home: no Hyper-V containers or Windows Sandbox): CPU tests and mutants run in a WSL2 distro launched as gh-runner, inside contain.sh unchanged, so PID-namespace isolation holds. Requirements, each proven before (c) replaces (b):
+> - runs non-interactively as gh-runner, never as the owner; show it surviving a reboot and a logged-out session;
+> - automount off (/etc/wsl.conf [automount] enabled=false) and no Windows interop; C: and D: not reachable from inside, shown by test;
+> - firewall reviewed for WSL2's virtual network (Hyper-V firewall / Tailscale-In scope); no inbound to the distro;
+> - contain.sh check passes inside WSL2 with the real kill -9 -1 test, and the job-queue mutants then may move to Windows;
+> - the distro image pinned and integrity-checked like the runner tree, rebuilt from a script, no Docker.
+> GPU tests stay native Windows under (b)'s accepted gap. List the admin steps I must do at the PC (enabling WSL, reboot) as one copyable block; everything else is yours and the Windows session's.
+
+The orchestrator read the two together and asked; the owner's follow-up, verbatim:
+
+> RQ-751 reading: correct as you recorded it — job-queue mutation testing is permanent on GitHub's runners under (b), and may move to Windows only once the WSL2 setup passes contain.sh check inside it.
+
+*What it decides:*
+
+- **Option (b), now.** The Job Object proof (kill-on-close, the process limit, the 8 GiB per-process cap, no breakaway)
+  counts as passed with the two process-visibility gaps accepted: inside the job, an outside process is visible and,
+  being the same user's, can be terminated by its id. Windows work proceeds under (b) at once. GPU tests stay native
+  Windows under that accepted gap.
+- **The job-queue mutants** (the mutants of `xtask/src/jobq.rs`) stay on GitHub's runners, for good under (b). They may
+  move to Windows only once the WSL2 setup passes `contain.sh check` inside it.
+- **Option (c), WSL2, built in parallel** (the PC is Windows Home: no Hyper-V containers or Windows Sandbox): CPU tests
+  and mutants run in a WSL2 distro launched as gh-runner, inside `contain.sh`, so PID-namespace isolation holds. It is
+  later and optional and never blocks anything. It replaces (b) only once each of its requirements is proven: (1) it
+  runs non-interactively as gh-runner, never as the owner, shown surviving a reboot and a logged-out session; (2)
+  automount off (`/etc/wsl.conf` `[automount] enabled=false`) and no Windows interop, C: and D: not reachable from
+  inside, shown by test; (3) the firewall reviewed for WSL2's virtual network (the Hyper-V firewall, Tailscale-In's
+  scope), no inbound to the distro; (4) `contain.sh check` passes inside WSL2 with the real `kill -9 -1` test (its
+  words R-915 gives); (5) the distro image pinned and integrity-checked like the runner tree, rebuilt from a script, no
+  Docker.
+- **At the PC,** the admin steps only the owner can do (enabling WSL, the reboot) are given to them as one copyable
+  block; everything else is the orchestrator's and the Windows session's.
+
+*The reading, flagged:* the owner's own line calls (c) "later and optional, not blocking", and the paste "(c) built in
+parallel to replace it"; read together, (b) applies now and (c) is built alongside without holding anything, replacing
+(b) only once proven. The own line's "stays on GitHub's runners permanently" and the paste's "the job-queue mutants
+then may move to Windows" are read as permanent under (b) and movable under (c). The owner's follow-up confirms both.
+
+*What it amends:* **R-905**: its Windows containment proof, "the same kill test contain.sh check uses", passes for the
+Job Object with the two gaps accepted; its "the mutants of `xtask/src/jobq.rs` stay hosted until containment is
+proven" becomes: they stay on GitHub's runners under (b), and may move to Windows only once the WSL2 setup passes
+`contain.sh check` inside it. The rest of R-905 stands.
+
+R-912 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-148 (statement, rulings, source, note) and REQ-VAL-181 (statement, rulings, source, note).
+
+## R-913 — The macOS XProtect developer-tool exemption, allowed only on a terminal used solely for builds, was tried and failed its criterion written before the run (exempt median 217 s against a 194 s baseline, at most 165 s needed), and is removed; the speed plan is approved: the merge watcher merges on reviewer approval and every required check green, the owner's go-ahead, listing each merge in the morning report and never by admin bypass; reviewers start from a copy of `main`'s build, never the implementer's; no macOS pull-request build, the five macOS slots kept for Metal; the first ten pull requests' times reported *(no RQ)*
+*9 Nov 2026 · the owner's reply of that day to the orchestrator's "what do you need me to do?", item 3; their approval
+of the speed plan that day, and their answers to the two options it left open; applied in `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`; the merge watcher and the reviewers' build copies are the orchestrator's own scripts,
+outside the repository; changes no requirement*
+
+The owner's words (9 Nov 2026), verbatim, on the trial (item 3 of the same reply as R-911 and R-912):
+
+> 3: yes to the trial only if the exemption goes on a separate terminal app used solely for builds, not the terminal agents work in. If that isn't workable, no. 
+
+The trial ran on Ghostty as the build-only terminal, with Terminal left off the Developer Tools list. Its criterion, written before any run: a cold `cargo nextest run -p kernel` (build and run) in a detached worktree
+at `origin/main`, each repetition with a fresh, empty `CARGO_TARGET_DIR`, `CARGO_INCREMENTAL=0`, through the job queue;
+arm E with Ghostty on in Developer Tools, arm B with it off and Ghostty restarted; two repetitions per arm, wall time as
+the queue reports it; pass if median(E) ≤ 0.85 × median(B) with identical test outcomes, otherwise the exemption is
+removed; nothing tuned after seeing results. Its results: E1 and E2 217 s each (run as a concurrent pair, 1,163 passed,
+4 skipped each, load average at the end 67, 42 and 22); B1 194 s (1,163 passed; load 40, 32 and 23); B2 invalid, stopped
+at 168 s by a real test failure, kernel's `qa_m207_gauge_quotient` at seed 3226319670497603969, which reproduces
+deterministically on `main` (the known flake of 4 Nov). Build phase E1 95 s against B1 94 s; test phase E 118 s against
+B1 97 s. Verdict: FAIL, median(E) 217 s against median(B) 194 s, where at most 165 s was needed; no measurable gain on
+the build.
+
+The owner's approval of the speed plan that day, verbatim:
+
+> Plan: approved, with these:
+> - Auto-merge watcher: [A] it merges only PRs that are approved, green, and carry my go-ahead — a `go` label I add — and never otherwise. / [B] reviewer approval plus all required checks green is my go-ahead; the watcher merges those, posts each merge in the morning report, and never uses admin bypass (R-682). (Pick one.)
+> - Reviewers start from CI's build of the PR head (the artefact from the PR's own run), never from a build made on the implementer's machine.
+> - The macOS exemption is dropped; there are no macOS steps for me. What's outstanding at the Windows PC is the WSL script's second run after reboot.
+> - Report the first 10 PRs' push→verdict and approval→merge after the switch, as planned.
+
+and their answers to the two points it left open (the watcher's option, and reviewers' builds, the orchestrator having
+flagged that CI's pull-request build is Linux x86_64, which can't run on the Mac where reviewers work), verbatim:
+
+> 1. Auto-merge watcher: [B]. Reviewer approval plus all required checks green is my go-ahead; the watcher merges those, lists each merge in the morning report, and never uses admin bypass (R-682).
+> 2. Reviewer builds: (2). Reviewers start from a copy of main's build, never the implementer's. No macOS PR build — the 5 macOS slots are kept for Metal.
+
+*What it decides:*
+
+- **The XProtect exemption is dropped and removed.** It failed its criterion; there are no macOS steps for the owner.
+  What is outstanding at the Windows PC is the WSL script's second run after the reboot (R-912's option (c)).
+- **The merge watcher, option [B].** Reviewer approval plus every required check green is the owner's go-ahead; the
+  watcher merges those pull requests, lists each merge in the morning report, and never uses admin bypass (R-682).
+  Option [A], a `go` label the owner adds, is not taken.
+- **Reviewers' builds, option (2).** Reviewers start from a copy of `main`'s build, never the implementer's. The plan's
+  first line, "Reviewers start from CI's build of the PR head", gives way to this answer. There is no macOS
+  pull-request build: the five macOS slots are kept for Metal.
+- **Measured:** push to verdict and approval to merge for the first ten pull requests after the switch, reported, as
+  planned (as R-909 records for push to verdict and merge-ready to merge).
+
+*The reading, flagged:* the owner's go-ahead in [B] takes the place of [A]'s label; it leaves the merge's other
+conditions as they stand, R-651's (every bot finding closed out before merge, no unresolved bot thread) and R-682's (no
+admin bypass) among them, so the watcher checks those too. The saved words hold the owner's choice between the two
+macOS-trial options ("Ghostty is free to be the build-only terminal" or "pick another terminal for builds") unchosen;
+the trial's own record names Ghostty. The exemption is now removed either way.
+
+R-913 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement.
+
+## R-914 — The stage 1 / stage 3 dependency cycle, RQ-752: option (a), the edge from TASK-M4-06 (the GPU compute variants) to TASK-M4-34 (region D) dropped; the GPU reference that reads region D moves into TASK-M4-34, which can't close until that reference reads region D as R-871 requires; R-871's substance unchanged, only the task that applies its link; TASK-M4-06 and the 217 tasks queued behind it released *(closes RQ-752)*
+*9 Nov 2026 · the owner's answer of that day to RQ-752; applied in `REVIEW_QUEUE.md` (RQ-752 filed and moved),
+`docs/archive/review_queue/M0.md`, R-871's forward line, `docs/design/principia_chart_composition.md` (§§ 8.4, 8.5, 8.7,
+8.8, 12 and 15), `docs/design/principia_colour_composition.md` (§ 3), REQ-RENDER-082, REQ-RENDER-123, REQ-CHART-037,
+REQ-CHART-165 and REQ-CHART-100 (reqio), `plan/tasks.yaml`, TASK-M4-06, TASK-M4-34, TASK-M4-37 and
+`plan/rule_groups.yaml`, with a record correction under R-871 in `docs/contracts/principia_lowering_contract.md`'s
+appendix; changes REQ-RENDER-082, REQ-CHART-037 and REQ-CHART-100, adds REQ-RENDER-123 and REQ-CHART-165*
+
+RQ-752, from Codex's finding on PR #455: TASK-M8-117 (stage 2) waits on TASK-M8-124 (stage 1), which waits on
+TASK-M8-48 (R-873 (E) (i)), on TASK-M8-18, on TASK-M4-17, on TASK-M4-06; R-871's edge would have TASK-M4-06 wait on
+TASK-M4-34, which R-873 (A) (b) releases only after stage 2 has merged. The owner's words (9 Nov 2026), verbatim:
+
+> RQ-752: (a). Drop the link from the GPU compute variants (TASK-M4-06) to region D (TASK-M4-34). The GPU reference result that reads region D moves into TASK-M4-34 itself, which can't close until that reference reads region D as R-871 requires. R-871's substance is unchanged; only which task applies the link changes, recorded as such. Release the 217 tasks queued behind TASK-M4-06.
+
+*What it decides:*
+
+- **The edge is dropped.** TASK-M4-06 never gains TASK-M4-34 in its Depends on; TASK-M4-37 doesn't apply it. TASK-M4-06
+  and the 217 other open tasks queued behind it are released, by the plan's own edges.
+- **Region D's GPU reference is TASK-M4-34's.** The GPU reference result that reads region D, the DECODE-preset golden
+  of the Anosova physical-frame chart (the lowering appendix's region-D row), reading `in_region_d` as R-871 has it
+  until the symmetry filter (TASK-M8-120) lands, moves out of TASK-M4-06 into TASK-M4-34. TASK-M4-34 can't close until
+  that reference reads region D as R-871 requires.
+- **R-871's substance is unchanged:** the plane unmasked, the full disc rendered literally, every mirror and body swap
+  declared, no mask, the filter's default and its 0.307 check. Only which task applies the link changes, and R-871's
+  forward line records it as such.
+
+*Applied per R-369:*
+
+- **REQ-RENDER-082 is split, as R-113 split it from REQ-RENDER-027:** its Burrau int lattice half stays TASK-M4-06's;
+  its Anosova physical-frame half, the region-D reference, becomes REQ-RENDER-123, closed by TASK-M4-34, carrying
+  RQ-714's link with it. REQ-CHART-100's note says where the reference now sits.
+- **The Anosova row's lowering goes with it (physics review 5829515661 of this ruling's PR, P1):** the lowering
+  appendix's Anosova physical-frame row is region D's third-body pair (`principia_chart_composition.md` § 8.2), signed
+  canonicalisation and R-871's unmasked domain included, which TASK-M4-34 builds; TASK-M4-06, which runs first, would
+  have nothing correct to lower. So REQ-CHART-037's Anosova clause becomes REQ-CHART-165, closed by TASK-M4-34 through
+  its `region_d_variant`, with no mask and no fold to `(ξ, −η)`; REQ-CHART-037 keeps the other eight rows, and
+  REQ-CHART-100 stands.
+- **A record correction under R-871 (code review 5829649251 of this ruling's PR):** the lowering contract's appendix
+  listed "region D bounds" as the Anosova row's extra uniform, and `principia_chart_composition.md` § 8.4 called that
+  uniform the mask, against R-871's "No mask is built". Both are annotated as superseded by R-871: no region-D mask
+  uniform, the full disc unmasked, the row lowered by TASK-M4-34; the old text is kept as a *Was*.
+- **TASK-M4-34 gains TASK-M4-06 in Depends on:** it renders the reference through TASK-M4-06's variant table and its
+  DECODE-preset golden harness. That closes no cycle, since TASK-M4-06 no longer reaches TASK-M4-34, and holds nothing
+  R-873's dispatch doesn't already hold: stage 3 follows stage 2, which follows TASK-M4-06.
+- **The plane targets need no edge of their own:** TASK-M9-26, -28 and -31 reach TASK-M4-34 through TASK-M8-112 once
+  TASK-M4-37 applies R-884's edges (TASK-M9-28 already does).
+
+R-914 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-RENDER-082 (statement, verify, rq, rulings, source, note), REQ-CHART-037 (statement, verify, rulings, source, note)
+and REQ-CHART-100 (rulings, source, note); adds REQ-RENDER-123 and REQ-CHART-165.
+
+## R-915 — Inside WSL, `contain.sh check` proves an unprivileged mode: user and PID namespaces with no sudo and the real `kill -9 -1`, passing only if a ci process outside the namespace and the runner agent and gh-runner's other Windows processes survive; WSL keeps no sudo, no systemd and the owner's exact `wsl.conf`; the mode is selected explicitly, never a fallback, and fails, never skips, without user namespaces; other machines keep the strict mode; proof 4 reworded *(closes RQ-753; amends R-912)*
+*9 Nov 2026 · the owner's ruling of that day on RQ-753; applied in `REVIEW_QUEUE.md` (RQ-753 filed and moved),
+`docs/archive/review_queue/M0.md`, R-912's forward line, REQ-VAL-181 (reqio) and `plan/rule_groups.yaml`; built by PR
+#460 (the WSL2 containment image and its dispatch-only jobs); changes REQ-VAL-181*
+
+RQ-753: `contain.sh`'s strict mode runs the contained command in a systemd scope through sudo, but the WSL2 distro of
+R-912's option (c) has no sudo and no systemd, and its `wsl.conf` is fixed. The owner's words (9 Nov 2026), verbatim,
+their own: "deleted the repo, granted gh-runner access to E:\wsl"; and then the ruling they pasted, theirs:
+
+> RQ-753 ruling (owner, 9 Nov): Change contain.sh so the real kill -9 -1 test runs without sudo.
+>
+> - WSL stays as set: no sudo, no systemd, and wsl.conf exactly as I gave it. Don't add [boot] systemd=true or any sudoers entry, not even a narrow one. A sudo rule for systemd-run amounts to full root, and root can mount C: and D:.
+> - Inside WSL, check proves the unprivileged mode, meaning user and PID namespaces with no sudo, using the real kill -9 -1. It passes only if both of these survive:
+>   - a ci process outside the namespace;
+>   - the runner agent and gh-runner's other processes on Windows.
+> - Other machines keep the strict mode unchanged: the systemd scope through sudo, with PRIN_CONTAIN=required. The WSL run selects the unprivileged mode explicitly, so nothing falls back to it silently. If user namespaces aren't available, the check fails. It never skips.
+> - The change goes through the normal reviewed PR.
+> - Proof 4 now reads: "contain.sh check passes inside WSL in the unprivileged mode, including the real kill -9 -1, and the runner agent and other gh-runner processes survive it."
+> - Everything else in the brief stands. Resume the WSL work.
+
+*What it decides:*
+
+- **WSL stays as set:** no sudo, no systemd, `wsl.conf` exactly as the owner gave it; no `[boot] systemd=true` and no
+  sudoers entry, not even a narrow one, since a sudo rule for `systemd-run` amounts to full root, and root can mount C:
+  and D:.
+- **The unprivileged mode, inside WSL:** `contain.sh check` proves it, user and PID namespaces with no sudo, using the
+  real `kill -9 -1`. It passes only if both survive: a ci process outside the namespace, and the runner agent and
+  gh-runner's other processes on Windows.
+- **Selected explicitly, never a fallback:** other machines keep the strict mode unchanged, the systemd scope through
+  sudo with `PRIN_CONTAIN=required`; the WSL run selects the unprivileged mode explicitly, so nothing falls back to it
+  silently. If user namespaces aren't available, the check fails; it never skips.
+- **Through the normal reviewed pull request** (PR #460).
+- **Proof 4 now reads,** in the owner's words: "contain.sh check passes inside WSL in the unprivileged mode, including
+  the real kill -9 -1, and the runner agent and other gh-runner processes survive it." Everything else in the
+  orchestrator's WSL brief stands, and the WSL work resumes.
+
+*What it amends:* **R-912**: option (c)'s "inside contain.sh unchanged" becomes, inside WSL, `contain.sh`'s
+unprivileged mode, the strict mode unchanged everywhere else; its fourth requirement, proof 4, reads as above. The
+job-queue mutants still move to Windows only once that check passes inside the WSL2 setup.
+
+R-915 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-181 (statement, rulings, source, note).
