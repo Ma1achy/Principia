@@ -327,6 +327,10 @@ jobs:
           RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
           PRIN_CONTAIN: required
           MUTANT_TIMEOUT: ${{ needs.mutants-baseline.outputs.timeout }}
+          # Each test's kill limit (`.config/nextest.toml`; the owner's order of 8 Nov 2026): a hung mutant is ended in
+          # minutes and counted caught, and `mutants-check` lists it as timed out, naming the test. The baseline job
+          # runs without it.
+          NEXTEST_PROFILE: mutants
           HEARTBEAT_CONTEXT: mutants-heartbeat (${{ matrix.shard }})
           HEARTBEAT_OUT: ${{ runner.temp }}/mutants.out
           HEARTBEAT_SHA: ${{ github.event.pull_request.head.sha }}
@@ -562,6 +566,16 @@ jobs:
           cat "$out"
           cat "$out" >> "$GITHUB_OUTPUT"
           { echo "## Measured baseline"; echo; sed 's/$/  /' "$out"; } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+      # The shards end a test at its per-test kill limit (`.config/nextest.toml`'s `mutants` profile; the owner's order
+      # of 8 Nov 2026). The baseline above ran under the default profile, with no kill limit, so each test's time is
+      # whole: one that took more than half its limit fails the job, named, with a value regenerated from its time, and
+      # no shard runs, so no mutant is ended as hung while its tests still run.
+      - name: cargo xtask mutants-limits (the per-test kill limits against the baseline)
+        if: steps.baseline.outputs.measured == 'true'
+        timeout-minutes: 5
+        env:
+          RUSTFLAGS: -C link-arg=-Wl,--compress-debug-sections=zlib -Zmir-enable-passes=-GVN
+        run: cargo xtask mutants-limits "$RUNNER_TEMP/mutants.out"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         timeout-minutes: 5

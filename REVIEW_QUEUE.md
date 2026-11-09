@@ -181,6 +181,55 @@ here.*
   RQ-696: (c).").
 - **Deferred:** deferred to M4 by owner 8 Nov 2026 (R-881, the owner: "RQ-629: defer:M4").
 
+## RQ-637: Near a zero `E_0` or `L_z`, `symlog`'s neutral band can't give what ruling (d) also asks, an exactly neutral fresh sample: the band is relative to the reference, and the rounding isn't *(physics; R-652, the owner's ruling (d); `docs/contracts/principia_render_contract.md` § "Part 5", "The neutral band"; physics review 5723029285 of PR #360, Q1; REQ-TOOL-149; context: TASK-M3-05)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round. For the owner: yes, it is physics, it changes which real drifts a view
+shows. Code unchanged; TASK-M3-05's PR doesn't wait on it, the ruling's band being built as ruled.*
+
+- **File, section:**
+  - `decisions.md` § R-652, the owner's ruling (d): "give symlog a neutral band of k·f32-ulp relative to |E₀| (and |L| for
+    L_z), with k justified in writing (rounding-level differences aren't physics)".
+  - The same ruling: "add a test that a fresh sample renders exactly neutral on every backend".
+  - `docs/contracts/principia_render_contract.md` Part 5: "At or near a zero reference the band narrows to nothing".
+- **The conflict:** a fresh sample's rounding scales with `K + |V|` for the energy and `S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|)`
+  for `L_z`, not with `|E_0|` or `|Lz_0|`. Near a cancellation the band is narrow while the rounding is not, so both can't
+  hold. `drift_view_neutral_fresh_sample_renders_exactly_neutral` passes on the samples inside its stated domain (R-652,
+  "The test's domain"), at least 4 of 8.
+- **Evidence:**
+  - It errs toward showing a tint: the band never hides more than `k·2⁻²³·|reference|`.
+  - dd test 2's fresh figure-eight has `L_z ≈ 0` with moving bodies, so its band is empty and it is outside "exactly
+    neutral". The physics reviewer's estimate, not a render: a fragment rounding of about 1e-7 at `ε_L = 1e-6` gives
+    `s ≈ 0.1`, `t ≈ 0.54`, a visible tint that depends on the backend.
+  - In the other direction, RK4 at f64 on dd test 7 (ΔE −9.65e-7, relative 5.6e-6) is true truncation drift and now reads
+    neutral under `symlog`; `log` has no band and shows it, and `dE_max` holds it.
+- **The question:** whether the band stays relative to the reference, or scales by the rounding itself.
+- **Options seen:** (a) keep it as ruled, with the limit recorded (render contract Part 5); (b) scale the band by the
+  rounding, `k'·2⁻²³·(K + |V|)` and `k'·2⁻²³·S`, with `k'` from the bound: 15 with a CPU reference, 22 with a GPU one for
+  the energy; 5 and 6 for `L_z`. This closes the gap near zero and hides less at small `K/|E_0|`, where 128 is 8.5 times
+  the bound; it departs from the ruling's words;
+  (c) another, stated by the owner.
+- **Applied meanwhile:** (a). Nothing waits.
+
+## RQ-638: `symlog`'s neutral band is in the three drift debug views; a field ramp on `energy_drift` or `Lz_drift` has none, so a fresh sample's rounding still shows as colour there *(physics; R-652, the owner's ruling (d); `docs/design/principia_colour_composition.md` § "6. Debug views as presets"; code review 5723219417 of PR #360, C2; REQ-TOOL-149; context: TASK-M3-05)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round. For the owner: yes, it changes what a real stain shows. Code unchanged;
+the scope is stated in render contract Part 5 and R-652, applied per R-369, and TASK-M3-05's PR doesn't wait on it.*
+
+- **File, section:**
+  - `decisions.md` § R-652, the owner's ruling (d), its reason: "every t = 0 pixel is a fresh sample, so Metal's ulp noise
+    rendering as colour would appear on real data too. Fix the view."
+  - `docs/design/principia_colour_composition.md` § 6: "A field view *is* `colour = FieldRamp{field, recommended ramp}`",
+    "`f_edrift` = `energy_drift · diverging · symlog`".
+- **The gap in the code:** `render::colour::defaults::default_ramp` gives these fields `Compaction::Diverging { x0 }`,
+  which is `compact_symlog(x, x0)` in `crates/render/shaders/wgsl/lib/compaction.wgsl`, and `qa_field_either_role_any_field`
+  (`crates/render/tests/qa_TASK-M7-05.rs`) renders a field ramp on `energy_drift`. No band is on that path, so a stain's
+  field ramp still draws a fresh sample's rounding as backend-dependent colour at `x₀ = 10⁻⁶`. No golden exercises it.
+- **The question:** whether "Fix the view" reaches the field-ramp path.
+- **Options seen:** (a) extend the band to it, where the drift is read, since `compact_symlog` has no reference and also
+  serves `E_0` and `Lz_0`, with the fresh-sample test extended; (b) leave it there, the band being the debug views' alone,
+  a field ramp showing the rounding; (c) another, stated by the owner.
+- **Applied meanwhile:** (b), the code unchanged, the scope stated. Nothing waits.
+
 ## RQ-679: The slider span of `ν₀`, the held `L_z` and the held `K`, which R-507 U1 divides a hidden offset by, while § G2's Slice centre lists only the eight latent sliders *(a definition requirement, R-72, and a value, R-71; R-507 U1; R-633; render_gui_spec § G2; context: TASK-M8-48, TASK-M2-52)*
 
 *Queued 3 Nov 2026 by the orchestrator's filing task, from the read-only pre-flights. Nothing is chosen.*
@@ -404,3 +453,45 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
 - **Waits:** TASK-M4-34's preset and TASK-M8-120 (conflicts 3 and 4, through RQ-714's open part); the correction list waits for the owner's next revision of the model.
 - **8 Nov 2026 (R-868):** the owner: "4. RQ-738: the model's wording follows R-474 (tip-as-sheet default, lean-each-axis the other map); I'll correct the model." Their corrected model of that day replaces `docs/design/principia_chart_space_model.md` byte for byte. That settles the correction list's item 1, as its option (a): § 0.2 now names R-474's two maps, Tip as sheet the default. **Still open:** the correction list's items 2 to 9, which the owner's copy doesn't change (its other changes are § 0.6, R-865, and a new § 0.7, R-866 and R-867), and all nine conflicts the filter order leaves. The entry stays open for them.
 - **8 Nov 2026 (R-878, R-871):** the owner: "RQ-738: the readings held stand for conflicts 1, 2 and 4 to 9; conflict 3 as in my RQ-714 answer. Items 2 to 9: send me the list and I'll correct the model." Applied: the nine conflicts are settled, 1, 2 and 4 to 9 by their readings held (conflict 1's amends R-544's words and chart_decoder_contract's "no one-hemisphere view", kept as a "Was"), and 3 by RQ-714's answer, its option (c), the full disc read literally (R-871). **Still open:** the correction list's items 2 to 9, which the owner corrects in the model from the list the orchestrator sent on 8 Nov, and two items this port adds to that list: **10.** the model's § 5, "Setting `δ ← 0` restores `φ(0) = a` exactly", and § 7's "Snap-back is exact", against the brief's Q2 (a), snap-back undoing the slice only (R-899); **11.** the model's § 1, "`Z = R^8`", Theorem 1's proof ("`Z = R^8` is convex") and § 4 ("`Z` is convex"), against RQ-750 (c), `z_β` periodic (R-898). Nothing waits on them: the corpus and the rulings stand meanwhile. The entry stays open for items 2 to 11.
+
+## RQ-751: Two of `contain.sh check`'s assertions have no Job Object equivalent: does the Windows proof pass without them? *(a one-way door: what the containment proof claims, and so what may be placed on Windows; the owner's CI shape order of 8 Nov 2026, step 1, and its placement rule; `scripts/contain.sh` § `check`; REQ-VAL-181; context: the tooling PR "Windows containment for tests and mutants (Job Object)")*
+
+*Filed 8 Nov 2026 by the implementer of that PR, which builds `.github/scripts/win_contain.ps1` and its dispatch-only
+job, `win-gpu.yml`'s `win-contain`. Nothing is chosen.*
+
+*In plain English: on Linux, CI's containment hides every outside process from the contained run, so a mutant that
+signals "everything" can't reach the runner. Windows has nothing that hides processes: a Job Object (what the owner
+asked for) kills the whole tree when it closes, caps processes and memory, and stops a process breaking out, but a
+process inside can still see an outside process and kill it by its id. So the Windows proof can show every other
+scenario of the Linux check, not these two. The owner says whether that is enough, and for what.*
+
+- **File, section:**
+  - The owner's CI shape order of 8 Nov 2026, step 1: "Windows containment: run tests and mutants inside a Job Object
+    with kill-on-close, a process limit and an 8 GiB per-process memory cap (REQ-VAL-181's equivalent of prlimit). Prove
+    it with the same kill test contain.sh check uses. Until proven, mutants of xtask/src/jobq.rs stay on GitHub-hosted
+    runners." And its placement rule: "Containment, memory cap and the 36 h no-run alert are prerequisites for any job
+    placed on Windows."
+  - `scripts/contain.sh` § `check`, the probe run inside: `if kill -0 "$1" 2> /dev/null; then exit 42; fi` (the
+    outside process must be unseen) and `kill -9 -1 2> /dev/null`, after which the outside process must be alive.
+- **The conflict:** the Job Object the owner names gives kill-on-close, the process limit, the per-process commit cap,
+  and no breakaway; `win_contain.ps1 check` proves each, and maps `kill -9 -1` to Windows' broadcast, CTRL+C to the
+  whole console, which a console of the job's own keeps inside. It can't give a PID namespace: inside the job, the
+  outside process is visible (contain.sh's 42) and, being the same user's, can be opened and terminated by its id. The
+  check measures both and reports them as gaps, never killing anything; its exit status covers the Job Object's
+  scenarios only. So "the same kill test" passes in full only with these two waived or met another way.
+- **Context for the choice:** `xtask/src/jobq.rs`, the module whose mutants the order names, is `#[cfg(unix)]`
+  (`xtask/src/lib.rs`), as are its tests (`xtask/tests/jobq.rs`): on Windows it isn't compiled, so its mutants can't be
+  killed there whatever the containment, and the process-group signalling that made containment necessary on Linux
+  (`kill(-1)`) has no Windows code path. Nothing in the code base terminates a process by an id it didn't start.
+- **The question:** does the Windows proof count as passed, for placing jobs on Windows, with 42 and the kill by pid
+  as known gaps?
+- **Options seen:**
+  - (a) Yes: the Job Object's scenarios are the proof; 42 and the kill by pid are recorded as gaps of the platform.
+  - (b) Yes for jobs but not for `jobq.rs`'s mutants, which stay hosted for good (they can't run on Windows anyway).
+  - (c) No: stronger isolation first (a separate restricted account or token, or a sandbox), which needs work at the PC
+    and a design of its own.
+- **Recommendation:** (b). A measurable alternative: (c), judged by the same check with 42 and the kill by pid turned
+  into failing scenarios.
+- **Applied meanwhile:** nothing is placed on Windows. The check is built and runs by `workflow_dispatch` only; its
+  first run is the orchestrator's, once the runner accepts jobs.
+- **Waits:** the switch of the slow tier and the mutation run to the Windows runner (the order's steps 2 to 5).

@@ -7,14 +7,16 @@
 //! comparison is of whole values, never masked, and its control shows it can fail (pitfalls §9). CI runs it on
 //! `macos-15` (Metal) and lavapipe on every commit (parity_contract §6; R-110, R-186).
 
+use std::cell::Cell;
 use std::sync::OnceLock;
+use std::time::Instant;
 
 use kernel::payload::*;
 use kernel::toolchain::{pack_unpack, UVec3};
 use ledger::schema::{Entry, Ledger, Location};
 use proptest::collection::vec;
 use proptest::prelude::*;
-use validation::gpu::{first_mismatch, GpuHarness};
+use validation::gpu::{first_mismatch, GpuHarness, Prepared};
 use validation::{negative_control, prop};
 
 /// The generated fragment unpack layer, and the self-test entry point appended to it.
@@ -43,6 +45,9 @@ const T_END_FRACTION: u32 = 11;
 const T_DMIN_FRACTION: u32 = 12;
 /// Samples per property case: one GPU dispatch each.
 const BATCH: usize = 64;
+/// What the kernel's output holds before each case's dispatch: a case whose dispatch writes nothing reads it back, and
+/// fails.
+const SENTINEL: u32 = 0xdead_beef;
 
 fn sel(name: &str) -> usize {
     FIELDS
@@ -148,9 +153,7 @@ fn sample() -> Vec<BoxedStrategy<u32>> {
     FIELDS.iter().map(|n| field_value(n)).collect()
 }
 
-#[cfg(feature = "controls")]
-/// A fixed batch drawn from the same strategy, for the controls.
-#[cfg(feature = "controls")]
+/// A fixed batch drawn from the same strategy, for the controls and the sentinel's test.
 fn fixed_batch() -> Vec<Vec<u32>> {
     use proptest::strategy::ValueTree;
     use proptest::test_runner::TestRunner;
@@ -279,14 +282,25 @@ fn misbuilt_kernel() -> String {
     wgsl.replacen(read, ">> bitcast<u32>(4u)) & 3u)", 1)
 }
 
-/// The kernel path: each sample's `packed_a` at an even index and `times` at an odd one, as the kernel reads them; its
-/// output bit-identical to the native kernel's, and its fields the values packed. The kernel packs the descriptor and
-/// `times`, not `d_min` (TASK-M0-14).
-fn check_kernel(h: &GpuHarness, wgsl: &str, batch: &[Vec<u32>]) {
+/// The kernel's entry in `wgsl`, its pipeline and buffers prepared once for a batch's input, for every case to reuse.
+fn prepare_kernel<'h>(h: &'h GpuHarness, wgsl: &str) -> Prepared<'h> {
+    h.prepare(wgsl, KERNEL_ENTRY, &[&[0; 2 * BATCH]])
+}
+
+/// The kernel path: each sample's `packed_a` at an even index and `times` at an odd one, as the kernel reads them,
+/// loaded into `kernel` with its output filled with [`SENTINEL`], then `dispatch`ed; its output bit-identical to the
+/// native kernel's, and its fields the values packed. The kernel packs the descriptor and `times`, not `d_min`
+/// (TASK-M0-14).
+fn check_kernel<'h>(
+    kernel: &Prepared<'h>,
+    batch: &[Vec<u32>],
+    dispatch: fn(&Prepared<'h>) -> Vec<u32>,
+) {
     let input: Vec<u32> = (batch.iter())
         .flat_map(|s| [word_of(&pack(s), "state"), word_of(&pack(s), "t_end_step")])
         .collect();
-    let gpu = h.run_wgsl(wgsl, KERNEL_ENTRY, &[&input]);
+    kernel.load(&[&input], SENTINEL);
+    let gpu = dispatch(kernel);
     for (s, out) in batch.iter().zip(gpu.chunks(2)) {
         for (k, name) in FIELDS.iter().enumerate().filter(|(_, n)| !F16.contains(n)) {
             let word = match location(name).0 {
@@ -343,20 +357,68 @@ negative_control!(
     )
 );
 
+/// Every case on the one pipeline, prepared once: each loads its input and dispatches. Prints how long the preparation
+/// and the cases took, for CI's timings.
 #[test]
 fn codegen_selftest_pack_unpack_kernel_gpu() {
     let (h, wgsl) = (harness(), kernel_wgsl());
+    let start = Instant::now();
+    let kernel = prepare_kernel(&h, &wgsl);
+    let (prepared, start, cases) = (start.elapsed(), Instant::now(), Cell::new(0));
     prop::run(&vec(sample(), BATCH), |batch| {
-        check_kernel(&h, &wgsl, &batch);
+        check_kernel(&kernel, &batch, Prepared::run);
+        cases.set(cases.get() + 1);
         Ok(())
     });
+    eprintln!(
+        "kernel pipeline prepared once in {prepared:?}; {} cases loaded, dispatched and read back in {:?}",
+        cases.get(),
+        start.elapsed()
+    );
 }
 
 negative_control!(
     codegen_selftest_pack_unpack_kernel_gpu,
     "the kernel built with `detail`'s offset shifted must fail the round trip",
     expected = "kernel on the GPU: pack∘unpack is not the identity for `detail`",
-    check_kernel(&harness(), &misbuilt_kernel(), &fixed_batch())
+    check_kernel(
+        &prepare_kernel(&harness(), &misbuilt_kernel()),
+        &fixed_batch(),
+        Prepared::run
+    )
+);
+
+/// A case loaded again after it has run, so that the output already holds its answer, passes only when `dispatch`
+/// dispatches it: [`Prepared::load`] filled the output with [`SENTINEL`] in between.
+fn check_kernel_rerun<'h>(
+    kernel: &Prepared<'h>,
+    batch: &[Vec<u32>],
+    dispatch: fn(&Prepared<'h>) -> Vec<u32>,
+) {
+    check_kernel(kernel, batch, Prepared::run);
+    check_kernel(kernel, batch, dispatch);
+}
+
+/// The reused pipeline's sentinel: a case run again on the kernel prepared once passes when it is dispatched.
+#[test]
+fn codegen_selftest_kernel_gpu_sentinel() {
+    let h = harness();
+    check_kernel_rerun(
+        &prepare_kernel(&h, &kernel_wgsl()),
+        &fixed_batch(),
+        Prepared::run,
+    );
+}
+
+negative_control!(
+    codegen_selftest_kernel_gpu_sentinel,
+    "a case run again with its dispatch skipped reads back the sentinel, not its earlier answer, and must fail",
+    expected = "kernel on the GPU: pack∘unpack is not the identity for",
+    check_kernel_rerun(
+        &prepare_kernel(&harness(), &kernel_wgsl()),
+        &fixed_batch(),
+        Prepared::read
+    )
 );
 
 /// `times` over every u16 in each half: exact on the host, and the WGSL unpack and the kernel on the GPU bit-identical
