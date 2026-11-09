@@ -106,7 +106,17 @@ impl Constraint {
             Constraint::DecodedMassPositive
             | Constraint::ComAtOrigin
             | Constraint::MomentumZero => 3,
-            _ => 2,
+            Constraint::LzEParabola
+            | Constraint::KNonNegative
+            | Constraint::KAboveLzBound
+            | Constraint::MassPositive
+            | Constraint::MassSum
+            | Constraint::MassBuffer
+            | Constraint::ShapeTheta
+            | Constraint::ShapePhi
+            | Constraint::BurrauNu
+            | Constraint::AxisDomain
+            | Constraint::BurrauTheta => 2,
         }
     }
 }
