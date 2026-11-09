@@ -256,3 +256,993 @@ success-output = "immediate"
 [[profile.gpu-kernel.overrides]]
 filter = "binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu)"
 success-output = "immediate"
+
+# The mutants profile (the owner's order of 8 Nov 2026, amending R-712's basis, not its multiplier): per-test kill
+# limits for mutation test runs. A hung mutant is stopped in minutes, not at cargo-mutants' per-mutant timeout (R-712: 3
+# times the whole baseline's test time, past the 300-minute shard limit on #431's diff, where three hung mutants cut off
+# their shards). Each test is ended at `terminate-after` periods: nextest reports it `TMT`, the run fails (exit 100),
+# and cargo-mutants counts the mutant caught, as a timeout is counted today; `cargo xtask mutants-check` lists it as
+# timed out, not a survivor, naming the test. With `--retries=2` (`.cargo/mutants.toml`) a hung test costs 3 times its
+# limit and nextest's 10 s grace. cargo-mutants' own per-mutant timeout stays, an outer backstop.
+#
+# Selected by NEXTEST_PROFILE=mutants (cargo-mutants' `--profile` is cargo's, and `.cargo/mutants.toml`'s test arguments
+# reach the fixtures' runs too, which have no such profile), on mutation test runs only: the per-PR shards
+# (`mutants.yml`), the nightly full run (`nightly.yml`) and a local run (`plan/OPERATIONS.md` § "Reviewers", its
+# **Mutants** item). Each of those runs measures its baseline first, alone, with no kill limit, under the default
+# profile, so its times are whole (cargo-mutants gives a baseline its mutants' environment, so a run is two invocations:
+# the baseline alone, then the mutants with `--baseline=skip`): `cargo xtask mutants-limits` fails when a test there
+# used more than half its limit, naming it with a regenerated value.
+#
+# The limits: 3 times each test's largest baseline time over 13 runs' logs, the period rounded up to 10 s and
+# `terminate-after = 3` (`slow-timeout`); a test under 20 s takes the profile's 60 s, R-376's floor (REQ-VAL-180).
+# nextest takes each setting from the first override that matches and sets it, this profile's before the default
+# profile's, so the job queue's 120 s x 3 (above) still binds its tests; it is restated here all the same.
+# A test that only #431's or #360's branch adds is named by package and test name: nextest refuses a `binary_id()` that
+# matches no binary, on every run.
+#
+# Excluded from per-mutant runs (the owner, 8 Nov 2026: "The qa control-inventory tests (qa_TASK-M0-22/24/25 and
+# similar, which inspect the whole workspace) run once per CI run as a step, not inside per-mutant test runs"), each
+# already run once in every CI run by `ci.yml` and the nightly `cpu` job, so coverage is unchanged:
+# - validation's `qa_TASK-M0-24`, every test: lists every workspace test (`cargo test -- --list`), every registered
+#   control (`cargo xtask controls --list`) and the workspace's metadata; `ci-workspace` runs it, in `ci.yml` and the
+#   nightly `cpu` job;
+# - validation's `qa_TASK-M0-25`, its two inventories: lists every test of `validation` and `prin` under and without
+#   `controls`, to pair each merged qa test with its control; the `ci` shards and the nightly `cpu` job run them;
+# - xtask's `qa_TASK-M0-22`, its three `xtask ci` runs: every check `xtask ci` makes over the workspace, the golden step
+#   through the real cargo, and the controls' inventory from the stand-in's listing; the `ci` shards and the nightly run
+#   them;
+# - xtask's `qa_TASK-M0-22_r235`, its `xtask ci --list` run: the same checks over the workspace, listing only; the `ci`
+#   shards and the nightly run it;
+# - xtask's `nextest`, every test: lists every workspace test under each CI profile (up to 657 s), and reads only CI's
+#   configuration, no xtask source but a constant; `ci-workspace` runs it, in `ci.yml` and the nightly `cpu` job;
+# - xtask's `controls_on_this_workspace_skips_gui`: lists every control in the workspace through `xtask controls --list`
+#   (up to 320 s); `ci-workspace` runs it, in `ci.yml` and the nightly `cpu` job;
+# - xtask's `controls_runs_on_this_workspace_bare_and_in_ci`: runs `xtask controls` over the workspace (up to 163 s); the
+#   `ci` shards and the nightly `cpu` job run it. `controls.rs`'s tests on fixture crates stay, and catch its mutants.
+[profile.mutants]
+default-filter = """
+    not (
+        binary_id(=validation::qa_TASK-M0-24)
+        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
+        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
+        | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing))
+        | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_test_without_control))
+        | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_passes_when_every_control_trips))
+        | (binary_id(=xtask::qa_TASK-M0-22_r235) & test(=qa_r235_ci_list_fails_on_a_test_without_control))
+        | binary_id(=xtask::nextest)
+        | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
+        | (binary_id(=xtask::controls) & test(=controls_runs_on_this_workspace_bare_and_in_ci))
+    )
+"""
+slow-timeout = { period = "20s", terminate-after = 3 }
+
+# The job queue's own limit, the default profile's override above, restated.
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::jobq) | binary_id(/^xtask::qa_R-658/)"
+slow-timeout = { period = "120s", terminate-after = 3 }
+
+# Each test with a measured baseline of 20 s or more: 3 times its largest, the period rounded up to 10 s.
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::arctan_gpu) & test(=arctan_gpu_is_cpu)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(engine) & test(=branch_read_gpu_every_variant_has_its_entry)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::canon_gpu) & test(=canonicaliser_coincident_inner_pair)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::canon_gpu) & test(=canonicaliser_hierarchy)"
+slow-timeout = { period = "180s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::canon_gpu) & test(=canonicaliser_hierarchy_edge)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::canon_gpu) & test(=canonicaliser_mirror_tie)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::canon_gpu) & test(=canonicaliser_noop_gpu)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::canon_gpu) & test(=canonicaliser_scale_invariance)"
+slow-timeout = { period = "160s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_continuous)"
+slow-timeout = { period = "190s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_energy)"
+slow-timeout = { period = "190s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_registry)"
+slow-timeout = { period = "180s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::decode_cross_backend) & test(=decode_cross_backend_tags)"
+slow-timeout = { period = "190s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::decode_stage_gpu) & test(=decode_stage_descriptor)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::decode_stage_gpu) & test(=decode_stage_identities)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::encode_gpu) & test(=encode_beta_half_axis)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::encode_gpu) & test(=encode_exact_poles)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::lock_gpu) & test(=lock_kernel_uniform_identical_gpu)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::lookup) & test(=lookup_validation_ladder_zero_band_measure)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::lookup) & test(=lookup_validation_ladder_zero_band_measure_moves)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::per_pixel_mass_gpu) & test(=per_pixel_mass_garbage_uniform)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M0-17) & test(=qa_m017_r299_a_cut_off_last_line_is_dropped)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M1-06) & test(=synthetic_upload_renders_qa_adversarial_set_on_both_surfaces)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-06_gpu) & test(=qa_m206_gate_perturbed_fails)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-06_gpu) & test(=qa_m206_gate_turns_at_threshold)"
+slow-timeout = { period = "120s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-06_gpu) & test(=qa_m206_gpu_saturated_controls)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-06_gpu) & test(=qa_m206_gpu_variants_baked)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-07_gpu) & test(=canonicaliser_qa_m207_branches_agree)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-07_gpu) & test(=canonicaliser_qa_m207_twice)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-15_gpu) & test(=encode_qa_m215_gpu_half_axis)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-15_gpu) & test(=encode_qa_m215_gpu_poles)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_eta_switch)"
+slow-timeout = { period = "400s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_feasibility_tag)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_new_charts)"
+slow-timeout = { period = "410s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-24_gpu) & test(=qa_m224_gpu_theta_lz_infeasible)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::qa_TASK-M2-47_gpu) & test(=canonicaliser_qa_m247_branches_agree)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::structural) & test(=structural_presets_assemble)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=engine::validated_chart) & test(=validated_chart_only_from_validate)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=gui::qa_TASK-M6-42) & test(=qa_m6_42_each_edge_and_corner_resizes_and_stops_at_the_minimum)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=kernel::derived) & test(=current_drift_rust_and_wgsl_agree)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=kernel::derived) & test(=read_side_parity_rust_and_wgsl_agree)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=kernel::derived) & test(=shape_twin_rust_and_wgsl_agree)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=kernel::gallery_sweep) & test(=gallery_sweep_unit_square)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=kernel::qa_TASK-M3-03) & test(=qa_nsub_bucket_floor_pairs_match_the_specification)"
+slow-timeout = { period = "90s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=kernel::qa_TASK-M3-03) & test(=qa_nsub_bucket_matches_the_exact_specification)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(kernel) & test(=qa_drift_suspect_euler_on_bound_states)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=ledger::catalogue) & test(=shader_and_test_share_accessor)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=ledger::derived) & test(=current_drift_property_matches_the_reference)"
+slow-timeout = { period = "120s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=ledger::derived) & test(=derived_not_stored_ftle_property_matches_the_finalised_reference)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=ledger::derived) & test(=total_substeps_resume_equals_the_uninterrupted_march)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=ledger::derived) & test(=total_substeps_resume_proxy_property_over_u32)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::compaction_ramps) & test(=compaction_forms_log_styles_the_sentinel)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::compaction_ramps) & test(=field_either_role_every_form_and_ramp_assembles)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::compaction_ramps) & test(=field_either_role_ftle_as_colour_and_brightness)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::compaction_ramps) & test(=ramp_kinds_settings_are_uniforms)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::debug_view_styles) & test(=debug_view_styles_over_the_stains)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::debug_views) & test(=debug_views_live_shape_hatches_undefined)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::debug_views) & test(=debug_views_norm_error_is_flat_zero)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::debug_views) & test(=debug_views_render_far_from_ties)"
+slow-timeout = { period = "420s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::debug_views) & test(=norm_n_views_norm_within_tolerance)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::debug_views) & test(=word_hash_and_symbol_at_k_matches_the_appended_sequence)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::decode_preset) & test(=decode_preset_poles)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::decode_preset) & test(=decode_preset_vs_decode_only)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(render) & test(=drift_suspect_styling_never_styles_the_hatch)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(render) & test(=drift_suspect_styling_predicates_drive_their_styles)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(render) & test(=drift_view_compaction_each_at_its_place_on_its_ramp)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(render) & test(=drift_view_neutral_band_is_drawn)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::embed_hybrid) & test(=embed_hybrid_rotation_by_k)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::embed_hybrid) & test(=embed_hybrid_rotation_uniform_noise_by_k)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::embed_hybrid) & test(=embed_hybrid_rotation_with_the_corners_cut)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::embed_survives) & test(=embed_survives_the_list)"
+slow-timeout = { period = "190s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::numeric_views) & test(=field_ramp_override_changes_only_the_invalid_pixels)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::numeric_views) & test(=golden_scenes_render_their_twins)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::numeric_views) & test(=non_finite_poles_draw_the_hatch_as_nan_does)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::observation_taps) & test(=observation_taps_leave_every_bound_buffer_unchanged)"
+slow-timeout = { period = "320s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::observation_taps) & test(=observation_taps_leave_the_payload_unchanged)"
+slow-timeout = { period = "630s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::prelude) & test(=dbg_helpers_match_the_cpu_mirror_on_the_gpu)"
+slow-timeout = { period = "90s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::prelude) & test(=prelude_luts_colour_space_maps)"
+slow-timeout = { period = "90s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::prelude) & test(=prelude_luts_grey_ramp_and_hue_wheel)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::presentation_no_hatch) & test(=presentation_no_hatch_field_ramps)"
+slow-timeout = { period = "160s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::presentation_no_hatch) & test(=presentation_no_hatch_override)"
+slow-timeout = { period = "150s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::presentation_no_hatch) & test(=presentation_no_hatch_test_stain)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M1-03) & test(=qa_dbg_helpers_cat)"
+slow-timeout = { period = "90s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M1-03) & test(=qa_prelude_generated_custom_node_compiles)"
+slow-timeout = { period = "180s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M1-08) & test(=qa_tool020_each_view_assembles_reading_only_its_field)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M1-10) & test(=qa_col062_each_swatch_is_the_farthest_8_bit_colour)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M1-15) & test(=qa_m1_15_debug_views_bind_the_payload_read_only)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M2-31) & test(=qa_gpu_non_finite_views_draw_the_hatch)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M2-34) & test(=qa_m2_34_debug_view_styles_and_counts)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M2-34) & test(=qa_m2_34_presentation_debug_field_view_hatches)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M2-34) & test(=qa_m2_34_presentation_field_ramps)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M2-34) & test(=qa_m2_34_presentation_field_ramps_overridden)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(render) & test(=qa_drift_hatch_every_mode)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(render) & test(=qa_drift_styling_every_mode)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M7-04) & test(=combiner_replace_l_qa_gpu_range)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M7-05) & test(=qa_field_either_role_any_field)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M7-29) & test(=embed_survives_qa_property)"
+slow-timeout = { period = "170s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M7-29_present) & test(=embed_searches_qa_plain_images_are_none_in_every_view)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M7-30) & test(=embed_hybrid_rotation_qa_angles_at_1024)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::qa_TASK-M7-30) & test(=embed_hybrid_rotation_qa_angles_non_square)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::registry) & test(=generated_views_bake_through_the_entry_point)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::roundtrip_preset) & test(=roundtrip_preset_text)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=render::uv_absolute_banding) & test(=uv_absolute_no_banding_to_l_switch)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_gate_runs)"
+slow-timeout = { period = "300s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_healthy)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_measure_store)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_operands)"
+slow-timeout = { period = "100s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_permitted_stores)"
+slow-timeout = { period = "200s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::agreement_preset_gpu) & test(=agreement_preset_window_gate)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::codegen_selftest) & test(=codegen_selftest_pack_unpack_kernel_gpu)"
+slow-timeout = { period = "1730s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(validation) & test(=cross_backend_gpu_record_holds_its_rows)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::debug_scenes) & test(=debug_scenes_render_their_references)"
+slow-timeout = { period = "600s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::decode_f32_eps_gpu) & test(=decode_f32_eps_fixtures)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::decode_f32_eps_gpu) & test(=decode_f32_eps_verdict)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::decode_preset_harness) & test(=decode_preset_harness_probe)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::decode_preset_shape_poles) & test(=decode_preset_shape_poles)"
+slow-timeout = { period = "140s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::expected_message) & test(=control_panicking_in_setup_fails_and_one_reaching_its_check_passes)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::golden_scene) & test(=golden_scene_binary_writes_the_render)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::golden_scene) & test(=golden_scene_renders_its_twin)"
+slow-timeout = { period = "170s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::inspector_gates) & test(=inspector_fixtures)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::invariant_gradient_gpu) & test(=invariant_gradient_fixtures)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::invariant_gradient_gpu) & test(=invariant_gradient_verdict)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::oklab_roundtrip_gate) & test(=oklab_gate_fixtures)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::part6_catalogue) & test(=part6_contains_ensemble_is_has_ensemble)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-14) & test(=qa_toolchain_each_tier_b_field_misbuild_is_seen)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-14) & test(=qa_toolchain_native_and_gpu_are_payload_s2_bit_for_bit)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-21) & test(=qa_control_under_another_name_does_not_pair)"
+slow-timeout = { period = "150s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-21) & test(=qa_controls_exist_only_under_the_feature)"
+slow-timeout = { period = "150s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-21) & test(=qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test)"
+slow-timeout = { period = "90s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_implementer_test_has_a_registered_control)"
+slow-timeout = { period = "170s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_registered_control_makes_its_test_fail)"
+slow-timeout = { period = "350s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test)"
+slow-timeout = { period = "230s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test)"
+slow-timeout = { period = "140s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_a_control_without_an_expected_message_does_not_compile)"
+slow-timeout = { period = "150s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_lists_its_five_tests_and_no_child_path)"
+slow-timeout = { period = "150s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_test_has_no_child_path_and_qa_child_has_it)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M1-13) & test(=qa_boundary_width_is_constant_across_quad_size_and_depth)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M1-13) & test(=qa_structural_views_colour_by_the_cpu_struct)"
+slow-timeout = { period = "140s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M1-14) & test(=qa_m1_14_each_golden_is_its_render_and_can_fail)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M1-14) & test(=qa_m1_14_each_tile_shows_its_own_sample)"
+slow-timeout = { period = "200s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M1-14) & test(=qa_m1_14_whole_word_renders_as_its_fields)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M1-19) & test(=qa_quad_fields_all_9_shown)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M1-19) & test(=qa_simstate_scalars_shown)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M2-25) & test(=qa_m225_chart_z_is_the_definition)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M2-25) & test(=qa_m225_decode_off_lattice_and_pole)"
+slow-timeout = { period = "130s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m225_kernel_rho_angle_at_the_lambda_pole)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m225_two_swapped_descriptors_show_where_they_are)"
+slow-timeout = { period = "90s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M2-26_fragment) & test(=qa_m226_latent_slices_dark_and_within_eps_phys)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::qa_TASK-M2-29) & test(=qa_m229_collision_windows_flat)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "package(validation) & test(=qa_band_fresh_decoded_sample_is_exactly_neutral)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::roundtrip_preset) & test(=roundtrip_preset_golden_renders_its_reference)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::structural_scene) & test(=structural_scene_renders_its_twin_clear_of_ties)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::structural_scene) & test(=structural_scene_views_render_the_cpu_structs)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=validation::toolchain) & test(=toolchain_trivial_kernel)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::build_kernel) & test(=build_kernel_listed_in_ci)"
+slow-timeout = { period = "160s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::build_kernel) & test(=build_kernel_runs_in_ci)"
+slow-timeout = { period = "690s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::ci) & test(=ci_list_runs_no_control)"
+slow-timeout = { period = "150s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::ci_changes) & test(=ci_changes_data_tier_runs_every_reader)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::controls) & test(=controls_control_leaving_test_passing_fails_naming_it)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::controls) & test(=controls_control_panicking_without_its_message_fails_naming_it)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::controls) & test(=controls_crate_without_feature_is_skipped)"
+slow-timeout = { period = "70s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::controls) & test(=controls_on_this_workspace_skips_gui)"
+slow-timeout = { period = "320s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::controls) & test(=controls_runs_on_this_workspace_bare_and_in_ci)"
+slow-timeout = { period = "170s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::lint_wgsl_ctx_occupant) & test(=lint_wgsl_ctx_occupant_structural_occupants_lint_clean)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::lint_wgsl_debug_views) & test(=lint_wgsl_debug_views_lint_after_the_stain_context)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_deny_list_member_by_member)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_fixtures_fire_as_marked)"
+slow-timeout = { period = "100s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_repository_lints_clean)"
+slow-timeout = { period = "90s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::lint_wgsl_rules) & test(=lint_wgsl_ci_runner_runs_the_lint)"
+slow-timeout = { period = "90s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::lint_wgsl_views) & test(=lint_wgsl_views_lint_after_the_stain_context)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::nextest) & test(=nextest_ci_shards_together_list_every_test)"
+slow-timeout = { period = "660s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::nextest) & test(=nextest_ci_steps_list_every_gpu_harness_test_cargo_test_listed)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::nextest) & test(=nextest_ci_steps_list_every_test_cargo_test_listed_under_metal_hosted_probe)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::nextest) & test(=nextest_ci_steps_list_every_test_cargo_test_listed_without_features)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::nextest) & test(=nextest_ci_steps_list_every_test_under_their_profiles)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_a_requirement_source_into_the_archive)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_a_task_missing_from_tasks_yaml)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_a_task_reference_to_an_archive_brief)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_an_archived_rq_a_union_merge_left_open)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_an_open_item_naming_a_missing_requirement)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_an_open_item_naming_a_retired_requirement)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_an_open_item_naming_an_rq_that_is_not_open)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_an_open_item_naming_neither)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_an_rq_heading_a_union_merge_left_twice)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_passes_on_the_tree)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::plan_check) & test(=plan_check_runs_the_queue_form_check)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_R-662_ci_scope) & test(=qa_r662_every_tracked_path_classifies_as_the_ruling_says)"
+slow-timeout = { period = "40s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_R-677_ci_tiers) & test(=qa_r677_requirements_split_by_field)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_the_deps_check)"
+slow-timeout = { period = "170s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-01) & test(=qa_xtask_deps_passes_on_the_live_workspace)"
+slow-timeout = { period = "160s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-01_live) & test(=qa_live_deps_sees_every_live_workspace_edge)"
+slow-timeout = { period = "160s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_failing_plan_check_turns_xtask_ci_red)"
+slow-timeout = { period = "80s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_lost_requirement_turns_the_check_red)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_missing_section_turns_the_check_red)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_requirement_closed_twice_turns_the_check_red)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_task_file_disagreeing_with_tasks_yaml_turns_the_check_red)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_reference_into_archive_without_archive_prefix_is_refused)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_reference_to_archived_criterion_is_refused)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_reference_to_kernel_build_brief_is_refused)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_reviewer_checklist_citing_archive_is_refused)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_source_into_archive_without_archive_prefix_is_refused)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_source_into_kernel_build_brief_is_refused)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_source_into_nested_archive_dir_is_refused)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_xtask_plan_check_passes_on_the_tree_and_streams)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-06_runner) & test(=qa_m006_ci_golden_runner_renders)"
+slow-timeout = { period = "170s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-20) & test(=qa_cli_screenshot_all_runs_selftest)"
+slow-timeout = { period = "510s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing)"
+slow-timeout = { period = "180s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_test_without_control)"
+slow-timeout = { period = "180s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_passes_when_every_control_trips)"
+slow-timeout = { period = "180s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-22_r235) & test(=qa_r235_ci_list_fails_on_a_test_without_control)"
+slow-timeout = { period = "280s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-29) & test(=qa_m0_29_workspace_deps_check_accepts_xtask_deps_on_the_workspace)"
+slow-timeout = { period = "50s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-29_live) & test(=qa_m0_29_live_default_path_check_accepts_the_live_count)"
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-34) & test(=qa_m034_control_output_after_a_failures_line_is_in_its_finding)"
+slow-timeout = { period = "100s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-34) & test(=qa_m034_leaky_control_output_is_in_its_finding)"
+slow-timeout = { period = "100s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-38) & test(=qa_m038_embedded_note_alone_is_not_the_controls)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-38) & test(=qa_m038_note_after_an_embedded_header_is_the_controls_own)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-38) & test(=qa_m038_note_with_nothing_embedded_is_the_controls_own)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M0-50) & test(=qa_lint_wgsl_workspace_passes)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M1-01) & test(=qa_lint_wgsl_repository_read_side_is_clean)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_exceptions_are_each_to_one_rule)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_guard_follows_part4)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_nan_tests_fail_everywhere)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_seams_5_and_6_follow_part4)"
+slow-timeout = { period = "110s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_shadow_read_only_by_sample_read)"
+slow-timeout = { period = "90s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_tooling_rq_union) & test(=a_note_differing_in_each_kind_of_id_is_caught_on_the_real_queue)"
+slow-timeout = { period = "160s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_tooling_rq_union) & test(=one_branch_archiving_an_entry_the_other_edits_is_caught)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_tooling_rq_union) & test(=one_note_edited_on_two_sides_and_rewrapped_is_caught)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_tooling_rq_union) & test(=one_note_rewrapped_longer_on_the_later_side_is_caught)"
+slow-timeout = { period = "30s", terminate-after = 3 }
+
+[[profile.mutants.overrides]]
+filter = "binary_id(=xtask::qa_tooling_rq_union) & test(=two_branches_taking_one_id_on_the_real_queue_are_caught)"
+slow-timeout = { period = "30s", terminate-after = 3 }
