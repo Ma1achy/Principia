@@ -5,6 +5,10 @@ Named on every task that closes a PERF-area requirement or any `benchmark` verif
 the rule that runs through this checklist is that a failure is a measurement outcome, reported, never a silent
 degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule underneath all of these").
 
+The tests a task, a requirement or this checklist names as `cargo test …` are run locally as their `cargo nextest run`
+equivalents, with `cargo test --doc` where doctests would have run, and the run shows the command actually run beside
+the one it stands for (`plan/WORKFLOW.md` § "Agents' test runs: cargo nextest").
+
 ## 1. Frame budget and the frame record
 
 - [ ] The frame budget is 16.7 ms as the goal, 41.7 ms as the hard floor (not a goal); a solve falls back toward 41.7 ms only when nothing fits, and records that it had to. `docs/design/principia_dd_telemetry_and_tiers.md` § "3. Percentiles, not means — and the specific thresholds"
