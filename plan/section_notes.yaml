@@ -1437,6 +1437,18 @@
   reason: informative only
   note: "the owner's standing rule of 30 Oct 2026 with its two addenda: a fresh advisory review from Codex, Gemini CLI and Copilot before merge on the final head, after substantive pushes and periodically, every bot finding closed out before merge; process, carried by plan/WORKFLOW.md § The review loop, plan/OPERATIONS.md § Merging and the orchestrator's merge script; amends R-635's cadence; changes no requirement"
 - file: decisions.md
+  section: "R-910 — Copilot is dropped from the advisory bot reviews: Codex and Gemini CLI only, and Copilot is never requested *(amends R-651 and R-635: Copilot's place in them)*"
+  reason: informative only
+  note: "the owner's ruling of 9 Nov 2026: Copilot leaves R-651's cadence and R-635's reviewers, Codex and Gemini CLI only; process, carried by CLAUDE.md, AGENTS.md, plan/WORKFLOW.md § The review loop and plan/OPERATIONS.md § Merging; changes no requirement"
+- file: decisions.md
+  section: "R-911 — The 34 physics, validation and render tests over 60 s leave the pull-request path for the slow tier on each merge to `main`, each named with its measured time; they stay product tests, never retired, and no other physics or validation test joins them without the owner *(answers R-904's item 2 for these 34; no RQ)*"
+  reason: informative only
+  note: "the owner's ruling of 9 Nov 2026 under R-904's item 2: the 34 physics, validation and render tests over 60 s move from the pull-request tier to the slow tier on each merge to `main`, named with their measured times, not retired; CI, applied by PR #457 in .config/nextest.toml and xtask/tests/ci_pr_tier.rs; changes no requirement"
+- file: decisions.md
+  section: "R-913 — The macOS XProtect developer-tool exemption, allowed only on a terminal used solely for builds, was tried and failed its criterion written before the run (exempt median 217 s against a 194 s baseline, at most 165 s needed), and is removed; the speed plan is approved: the merge watcher merges on reviewer approval and every required check green, the owner's go-ahead, listing each merge in the morning report and never by admin bypass; reviewers start from a copy of `main`'s build, never the implementer's; no macOS pull-request build, the five macOS slots kept for Metal; the first ten pull requests' times reported *(no RQ)*"
+  reason: informative only
+  note: "the owner's words of 9 Nov 2026: the macOS XProtect developer-tool exemption trial on a build-only terminal failed its pre-written criterion (exempt median 217 s against 194 s) and the exemption is removed; the speed plan approved: the merge watcher merges on reviewer approval and every required check green, never by admin bypass (R-682); reviewers start from a copy of main's build; no macOS pull-request build; the first ten PRs' times reported; process, carried by the orchestrator's scripts; changes no requirement"
+- file: decisions.md
   section: "R-657 — The R-369 decisions listed in the orchestrator's summary of 30 Oct 2026 stand, with no veto"
   reason: informative only
   note: "the owner's words of 30 and 31 Oct 2026: the listed R-369 decisions stand, with no veto; process; changes no requirement"

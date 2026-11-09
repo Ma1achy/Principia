@@ -1124,6 +1124,40 @@ fn check_suite_steps(file: &str, id: &str, steps: &[Yaml]) {
     );
 }
 
+/// A hosted job in a workflow with self-hosted ones. Only the measurement workflow may hold one, and only for the WSL2
+/// distro's jobs, whose image and parity results can come only from a job of the same run: another run's artifact
+/// downloads only with a token, which no job here holds. Such a job runs only when dispatched, carries the runner's
+/// guard, calls no workflow and builds no kernel: the rust-gpu cache check
+/// (`qa_TASK-M0-14_rust_gpu_cache.rs`) doesn't read this file, so a kernel build here would escape it.
+fn check_hosted_beside(file: &str, id: &str, job: &Yaml) {
+    assert!(
+        file == WORKFLOW && job["uses"].is_badvalue(),
+        "{file}/{id} is a hosted job among self-hosted ones, out of reach of the exceptions they hold"
+    );
+    let condition = job["if"].as_str().unwrap_or("");
+    assert!(
+        guarded(condition) && condition.contains(" && github.event_name == 'workflow_dispatch' && "),
+        "{file}/{id} is a hosted job among self-hosted ones that runs other than by a guarded dispatch: `{condition}`"
+    );
+    assert!(
+        !all_strings(job).iter().any(|s| builds_kernel(s)),
+        "{file}/{id} is a hosted job among self-hosted ones that builds the kernel, out of the rust-gpu cache check's reach"
+    );
+}
+
+/// Whether a string builds the kernel, as the rust-gpu cache check counts it (`qa_TASK-M0-14_rust_gpu_cache.rs`,
+/// `builds_kernel`): it names `build-kernel`, or a line of it runs `cargo xtask ci`, whose registry runs build-kernel.
+fn builds_kernel(s: &str) -> bool {
+    s.contains("build-kernel")
+        || s.lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with('#'))
+            .any(|l| {
+                let words: Vec<&str> = l.split_whitespace().collect();
+                words.windows(3).any(|w| w == ["cargo", "xtask", "ci"])
+            })
+}
+
 fn check_shape(files: &[(String, String)]) {
     for (file, _, doc, ids) in self_hosted(files) {
         assert!(
@@ -1131,10 +1165,9 @@ fn check_shape(files: &[(String, String)]) {
             "{file} has a concurrency group across its jobs, so a push would displace a nightly"
         );
         for (id, job) in entries(&doc["jobs"]) {
-            assert!(
-                is_self_hosted(job),
-                "{file}/{id} is a hosted job among self-hosted ones, out of reach of the exceptions they hold"
-            );
+            if !is_self_hosted(job) {
+                check_hosted_beside(file, id, job);
+            }
         }
         for s in all_strings(&doc) {
             assert!(!s.contains("cargo clean"), "{file} runs `cargo clean`");
@@ -1371,11 +1404,69 @@ mod hosted_job {
     use super::*;
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
-        "a hosted job in the file, which the rust-gpu cache check doesn't read",
-        expected = "win-gpu.yml/hosted is a hosted job among self-hosted ones",
+        "a hosted job in the file with no guard, which the rust-gpu cache check doesn't read",
+        expected = "win-gpu.yml/hosted is a hosted job among self-hosted ones that runs other than by a guarded dispatch",
         check_shape(&measured(
             "jobs:\n",
             "jobs:\n  hosted:\n    runs-on: ubuntu-24.04\n    steps: []\n"
+        ))
+    );
+}
+
+/// The WSL2 image's hosted job, run on a push as well as by dispatch.
+mod hosted_job_on_push {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the image's hosted job guarded but not dispatch-only",
+        expected = "win-gpu.yml/wsl-image is a hosted job among self-hosted ones that runs other than by a guarded dispatch",
+        check_shape(&measured(
+            "github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && (inputs.only == 'wsl-register'",
+            "github.actor == 'Ma1achy' && (inputs.only == 'wsl-register'"
+        ))
+    );
+}
+
+/// The guard's `&&` turned into an `||` ahead of the dispatch condition.
+mod hosted_job_bare_or {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the image's hosted job with its guard or'd away",
+        expected = "win-gpu.yml/wsl-image is a hosted job among self-hosted ones that runs other than by a guarded dispatch",
+        check_shape(&measured(
+            "github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && (inputs.only == 'wsl-register'",
+            "github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'x' || (inputs.only == 'wsl-register'"
+        ))
+    );
+}
+
+/// A hosted job that builds the kernel, which the rust-gpu cache check would not see.
+mod hosted_job_kernel {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the parity job building the kernel",
+        expected =
+            "win-gpu.yml/wsl-parity is a hosted job among self-hosted ones that builds the kernel",
+        check_shape(&measured(
+            "        run: rustup toolchain install\n",
+            "        run: rustup toolchain install && cargo xtask build-kernel\n"
+        ))
+    );
+}
+
+/// A hosted job that runs `cargo xtask ci`, whose registry builds the kernel.
+mod hosted_job_xtask_ci {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the parity job running `cargo xtask ci`",
+        expected =
+            "win-gpu.yml/wsl-parity is a hosted job among self-hosted ones that builds the kernel",
+        check_shape(&measured(
+            "        run: rustup toolchain install\n",
+            "        run: |\n          rustup toolchain install\n          cargo xtask ci\n"
         ))
     );
 }

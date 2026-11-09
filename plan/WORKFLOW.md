@@ -216,10 +216,9 @@ crate's test binaries one after another; nextest runs every test of every binary
    stacked; if a stack is ever needed, the child PR is retargeted to `main` before the PR below it merges, because
    merging deletes the lower branch at once and deleting a base branch closes its child PRs (CLAUDE.md § Git, R-362).
 
-**Advisory bot reviews (R-651, a standing rule).** Codex, Gemini CLI and GitHub Copilot review alongside the named
-reviewers, advisory only: they never replace the named reviewers' approvals, and `reviews-complete` doesn't count them.
-The orchestrator asks each bot for a fresh review (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a
-reviewer):
+**Advisory bot reviews (R-651, a standing rule; R-910).** Codex and Gemini CLI review alongside the named reviewers,
+advisory only: they never replace the named reviewers' approvals, and `reviews-complete` doesn't count them. Copilot is
+never requested (R-910). The orchestrator asks each bot for a fresh review (`@codex review`, `@gemini-cli /review`):
 - **before the merge, on the final head:** step 6 waits for a review from each bot on the exact SHA being merged, and
   re-requests a bot whose last review is on an older head;
 - **after every substantive push:** new logic, physics or algebra, a fix responding to review findings (whatever it
@@ -228,7 +227,7 @@ reviewer):
   large one, so problems surface partway through rather than at the end.
 
 Under limits the order is pre-merge, then post-push, then periodic. A bot is unavailable when it hasn't reviewed the
-exact SHA within its limit, counted from the request (Codex 25 minutes, Gemini CLI 30, Copilot 15), errors, or refuses
+exact SHA within its limit, counted from the request (Codex 25 minutes, Gemini CLI 30), errors, or refuses
 on quota or rate limit; it is noted on the PR and the merge goes ahead with the others; the owner is told if pre-merge
 reviews start being skipped. Every bot finding is closed out before the merge: verified against the code, the spec or
 the physics, then fixed (the reply names the commit), answered with why it doesn't apply (wrong, out of scope, already

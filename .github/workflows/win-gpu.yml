@@ -5,7 +5,7 @@
 # here is a measurement, never a required check (R-649): the PC is sometimes off, and nothing on `main` waits for it.
 # No job here is gathered, retried or read by any gate, and a red one is not main red; `xtask/tests/ci_self_hosted.rs`
 # fails if that ever stops holding, or if a rule below is broken. DX12 waits for its opt-in (R-711 item 2). No
-# benchmarks, soak or mutants run here.
+# benchmarks or soak run here, and no mutants outside the WSL2 distro's `wsl-cpu` (below), which is off.
 #
 # The repository is public and this runner is a real PC, so these are the conditions for having it at all (R-711 items
 # 1 and 5, the owner's job rules of 5 Nov 2026). Never add a `pull_request` or `pull_request_target` trigger: only push
@@ -48,6 +48,22 @@
 #
 # The schedule, 05:17 UTC: Windows may restart for updates from 23:00 to 05:00 on this PC.
 #
+# The WSL2 distro `principia-wsl` (RQ-751 option (c), built in parallel to replace (b) and never blocking; the owner's
+# words of 9 Nov 2026), dispatched by hand alone, each job by `only` naming it, never on a push, the schedule or `all`:
+# - `wsl-register` imports the image this run's hosted `wsl-image` job builds (`scripts/wsl/build-image.sh`) to
+#   E:\wsl\principia-wsl\, as gh-runner: `gh workflow run win-gpu.yml --ref main -f only=wsl-register`, with
+#   `-f replace=true` to replace a registered one. It refuses an image whose manifest isn't the one pinned in
+#   `scripts/wsl/manifest.sha256`, and so refuses every image until a reviewed PR pins one.
+# - `wsl-proofs` runs the six proofs, each reported PASS or FAIL with its evidence in its log and in `wsl-proofs.txt` in
+#   its artifact: `gh workflow run win-gpu.yml --ref main -f only=wsl-proofs`. Proof 5 compares this run's rebuild, and
+#   proof 6 this run's hosted `wsl-parity`, with what is in the distro.
+# - `wsl-cpu` runs the CPU tests and the job queue's mutants inside the distro, through `scripts/contain.sh` in its
+#   unprivileged mode, and refuses unless `.github/wsl-cpu-enabled` exists; a reviewed PR adds it once all six proofs
+#   have passed: `gh workflow run win-gpu.yml --ref main -f only=wsl-cpu`.
+# The image can't come from another run: a run's artifact downloads only with a token, and no job here holds one. So
+# each of the first two jobs needs a hosted job of the same run, the only hosted jobs in this file. They carry the
+# runner's guard, run only when dispatched, and build no kernel.
+#
 # The paths: what `scripts/ci_changes.sh` calls a GPU path, written as a filter, less R-692's five paths of `gui`. Docs-only
 # pushes run nothing (R-711 item 5); nor do `gui` and `prin`, which no job here builds. `schedule` and
 # `workflow_dispatch` ignore the filter.
@@ -85,6 +101,13 @@ on:
           - win-tests
           - win-self-check
           - win-contain
+          - wsl-register
+          - wsl-proofs
+          - wsl-cpu
+      replace:
+        description: wsl-register replaces a registered principia-wsl
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -103,6 +126,8 @@ env:
   CARGO_PROFILE_DEV_DEBUG: line-tables-only
   CARGO_PROFILE_TEST_DEBUG: line-tables-only
   CARGO_INCREMENTAL: "0"
+  # Proof 6's commit: `main` when the WSL2 work was built, whose rust-toolchain.toml is the image's.
+  WSL_PARITY_COMMIT: 2a69136e3a45caafa494857200693ccb01abc4b9
 
 jobs:
   # The GPU suites `ci.yml`'s `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` run, on this card under Vulkan. Phase 1 of #390
@@ -448,5 +473,252 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: win-contain-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # The WSL2 image, built on a hosted runner from `scripts/wsl/build-image.sh` for this run's `wsl-register` or
+  # `wsl-proofs` (proof 5's rebuild): the image, and its manifest alone, as this run's artifacts. Hosted, so the
+  # shell is bash; it prints the manifest's hash against the pin, and fails if a pin is set and differs.
+  wsl-image:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && (inputs.only == 'wsl-register' || inputs.only == 'wsl-proofs')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: scripts/wsl/build-image.sh
+        run: scripts/wsl/build-image.sh "$RUNNER_TEMP/wsl-image"
+      - name: The image
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-image-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wsl-image
+          retention-days: 7
+          compression-level: 0
+      - name: The manifest alone
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-manifest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wsl-image/manifest.txt
+          retention-days: 90
+
+  # Proof 6's hosted side: at WSL_PARITY_COMMIT, `cargo nextest run -p kernel --profile ci`, as `scripts/wsl/inside.sh
+  # parity` runs it in the distro, its per-test results as this run's artifact. Kernel's tests: CPU only, deterministic,
+  # needing neither bash nor PyYAML of the test machine, and enough of them to compare one by one.
+  wsl-parity:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-proofs'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Dependencies without debug info, as in the image
+        uses: ./.github/actions/cargo-ci-config
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: Proof 6, the hosted side
+        run: |
+          mkdir -p "$RUNNER_TEMP/wsl-parity"
+          bash scripts/wsl/inside.sh parity "$WSL_PARITY_COMMIT" > "$RUNNER_TEMP/wsl-parity/hosted.tsv"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-parity-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wsl-parity
+          retention-days: 90
+
+  # Registers `principia-wsl` from this run's image (`.github/scripts/wsl.ps1 register`), as gh-runner, its disk under
+  # E:\wsl\principia-wsl\, never C:. The step ends `registered principia-wsl: ...` and exit 0, or exit 125 naming why
+  # it refused.
+  wsl-register:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-register'
+    needs: [wsl-image]
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 60
+    concurrency:
+      group: wsl-register
+      cancel-in-progress: false
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: This run's image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-image-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wsl-image
+      - name: Register principia-wsl
+        env:
+          WSL_IMAGE: ${{ runner.temp }}/wsl-image
+          WSL_REPLACE: ${{ inputs.replace }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run wsl-register powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 register
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-register-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # The six proofs (`.github/scripts/wsl.ps1 proofs`). The step's log, and `wsl-proofs.txt` in the artifact, end with
+  # one line per proof, `proof <n>: PASS|FAIL: <evidence>`, and the job passes only if all six do.
+  wsl-proofs:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-proofs'
+    needs: [wsl-image, wsl-parity]
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 180
+    concurrency:
+      group: wsl-proofs
+      cancel-in-progress: false
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: This run's rebuilt manifest
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-manifest-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wsl-image
+      - name: The hosted runner's parity results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-parity-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/wsl-parity
+      - name: The six proofs
+        env:
+          WSL_IMAGE: ${{ runner.temp }}/wsl-image
+          WSL_HOSTED_PARITY: ${{ runner.temp }}/wsl-parity/hosted.tsv
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run wsl-proofs powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 proofs
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-proofs-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/win-measure
+          retention-days: 90
+
+  # CPU tests and the job queue's mutants inside the distro (`.github/scripts/wsl.ps1 cpu`), through
+  # `scripts/contain.sh` in its unprivileged mode; their results come out as a tar stream into the artifact. Off: it
+  # refuses unless `.github/wsl-cpu-enabled` exists, which this file's tests require absent until a reviewed PR adds it.
+  wsl-cpu:
+    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-cpu'
+    runs-on: [self-hosted, windows, nvidia]
+    timeout-minutes: 330
+    concurrency:
+      group: wsl-cpu
+      cancel-in-progress: false
+    steps:
+      - name: Self-check, first step
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+          exit $LASTEXITCODE
+      - name: Guard the kept checkout
+        run: |
+          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
+          exit $LASTEXITCODE
+      - name: Toolchain on PATH
+        run: |
+          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+          exit 0
+      - name: Clean checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Record the commit, driver and toolchain
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+          exit $LASTEXITCODE
+      - name: CPU tests and the job queue's mutants in WSL
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run wsl-cpu powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 cpu
+          exit $LASTEXITCODE
+      - name: Label the result in the summary
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+          exit $LASTEXITCODE
+      - name: Keep the full output
+        if: ${{ always() && steps.checkout.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: wsl-cpu-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/win-measure
           retention-days: 90
