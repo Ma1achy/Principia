@@ -241,7 +241,8 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
     inverse, their points found to pixel resolution (R-899 Q8; R-919, F11).
   - **G5. Every primitive and warp with its own tests and a control that fires** (REQ-CHART-127): `forward(inverse(x))
     = x` at f64 and f32, each row's `Holds` read back. Region D native within `4ε·max(1, |ξ|, |η|)` (REQ-CHART-121);
-    Table 1 within REQ-VAL-120's `256ε`; every other row's tolerance [CAL] (REQ-CHART-180 to REQ-CHART-187).
+    Table 1 within REQ-VAL-120's tolerance, [CAL] confirmed at this gate; every other row's tolerance [CAL]
+    (REQ-CHART-180 to REQ-CHART-187).
   - **G6. Refusals and labels at their boundaries** (TASK-M2-66): on the adjacent representable values either side of
     an exact boundary the outcome flips exactly there, and a label never becomes a refusal (REQ-CHART-098); the f32
     band's label on the CPU (REQ-CHART-169), its width [CAL] if a number.

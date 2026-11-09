@@ -1523,7 +1523,7 @@ its criterion written first and set by measurement (R-649, R-650), never chosen 
 the M2 gate: REQ-CHART-180 (§ 3's closed rows and pairs), REQ-CHART-181 (warps and pair maps), REQ-CHART-182 (the curved
 slices' targets), REQ-CHART-183 (numerical inverses), REQ-CHART-184 and REQ-CHART-185 (§§ 3.1 and 3.2), REQ-CHART-186
 (paper frames) and REQ-CHART-187 (the virial row). Region D's native read-back keeps § 8.8's `4ε·max(1, |ξ|, |η|)`, and
-Table 1's rows REQ-VAL-120's 256ε.
+Table 1's rows REQ-VAL-120's tolerance, a calibration confirmed at the M2 gate.
 
 **Round trips: every claimed inverse (the owner's review of 7 Nov).** Every primitive with a claimed inverse ships with a
 `forward(inverse(x)) = x` test that can fail, with a mutation control: one inverse made wrong on purpose, the test going
