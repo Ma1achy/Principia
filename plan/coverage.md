@@ -15,16 +15,16 @@
 | GEN | 45 |
 | SCHED | 103 |
 | REF | 52 |
-| RENDER | 122 |
+| RENDER | 123 |
 | COL | 162 |
 | GUI | 404 |
 | TOOL | 224 |
 | VAL | 353 |
 | PERF | 119 |
 | SYS | 97 |
-| **total** | **2195** |
+| **total** | **2196** |
 
-Of these: 245 calibration, 195 definition, 1755 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 245 calibration, 195 definition, 1756 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -34,7 +34,7 @@ Of these: 245 calibration, 195 definition, 1755 obligation. Retired (kept for th
 | M1 | 108 |
 | M2 | 226 |
 | M3 | 235 |
-| M4 | 130 |
+| M4 | 131 |
 | M5 | 183 |
 | M6 | 230 |
 | M7 | 263 |
@@ -43,14 +43,14 @@ Of these: 245 calibration, 195 definition, 1755 obligation. Retired (kept for th
 
 ## Sections
 
-1936 sections in 63 files: 1487 yield at least one requirement; 449 yield none and are listed below with the reason.
+1941 sections in 63 files: 1490 yield at least one requirement; 451 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
 | gap (RQ-577) | 2 |
 | gap (RQ-618) | 1 |
-| informative only | 332 |
+| informative only | 334 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 61 |
@@ -282,6 +282,8 @@ Of these: 245 calibration, 195 definition, 1755 obligation. Retired (kept for th
 | R-890 — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)* | informative only | a deferral; no requirement changes |
 | R-893 — RQ-701 closes: R-818 ruled its form and R-833 its energy cap; the build is TASK-M8-48's *(closes RQ-701)* | informative only | RQ-701 closes on R-818 and R-833; the build is TASK-M8-48's, whose requirements already carry it |
 | R-910 — Copilot is dropped from the advisory bot reviews: Codex and Gemini CLI only, and Copilot is never requested *(amends R-651 and R-635: Copilot's place in them)* | informative only | the owner's ruling of 9 Nov 2026: Copilot leaves R-651's cadence and R-635's reviewers, Codex and Gemini CLI only; process, carried by CLAUDE.md, AGENTS.md, plan/WORKFLOW.md § The review loop and plan/OPERATIONS.md § Merging; changes no requirement |
+| R-911 — The 34 physics, validation and render tests over 60 s leave the pull-request path for the slow tier on each merge to `main`, each named with its measured time; they stay product tests, never retired, and no other physics or validation test joins them without the owner *(answers R-904's item 2 for these 34; no RQ)* | informative only | the owner's ruling of 9 Nov 2026 under R-904's item 2: the 34 physics, validation and render tests over 60 s move from the pull-request tier to the slow tier on each merge to `main`, named with their measured times, not retired; CI, applied by PR #457 in .config/nextest.toml and xtask/tests/ci_pr_tier.rs; changes no requirement |
+| R-913 — The macOS XProtect developer-tool exemption, allowed only on a terminal used solely for builds, was tried and failed its criterion written before the run (exempt median 217 s against a 194 s baseline, at most 165 s needed), and is removed; the speed plan is approved: the merge watcher merges on reviewer approval and every required check green, the owner's go-ahead, listing each merge in the morning report and never by admin bypass; reviewers start from a copy of `main`'s build, never the implementer's; no macOS pull-request build, the five macOS slots kept for Metal; the first ten pull requests' times reported *(no RQ)* | informative only | the owner's words of 9 Nov 2026: the macOS XProtect developer-tool exemption trial on a build-only terminal failed its pre-written criterion (exempt median 217 s against 194 s) and the exemption is removed; the speed plan approved: the merge watcher merges on reviewer approval and every required check green, never by admin bypass (R-682); reviewers start from a copy of main's build; no macOS pull-request build; the first ten PRs' times reported; process, carried by the orchestrator's scripts; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

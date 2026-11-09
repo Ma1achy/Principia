@@ -3879,18 +3879,21 @@
     section: Appendix — worked enumeration of the current chart set
   - file: decisions.md
     section: "R-871 — Region D's chart is the plane, unmasked: the full disc rendered literally, every mirror and body swap declared, so the symmetry filter leaves exactly region D with no mask, on by default for the paper-frame presets only; its check, the filtered area 0.307 at equal masses and rest *(closes RQ-714; on RQ-738, which stays open)*"
+  - file: decisions.md
+    section: "R-914 — The stage 1 / stage 3 dependency cycle, RQ-752: option (a), the edge from TASK-M4-06 (the GPU compute variants) to TASK-M4-34 (region D) dropped; the GPU reference that reads region D moves into TASK-M4-34, which can't close until that reference reads region D as R-871 requires; R-871's substance unchanged, only the task that applies its link; TASK-M4-06 and the 217 tasks queued behind it released *(closes RQ-752)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state within REQ-VAL-120's tolerance; eq. 8's edges; eq. 3's momenta at √ℓ; I = 1; the stereographic identity at random masses; the signed half: on both presets, every pixel with η < 0 decodes to Π of the (ξ, −η) pixel's state to the decode's rounding, λ̃_y < 0 kept, and at eq. 3 with L_z opposite; every pixel with η ≥ 0 is bit-identical to the decode ending in canonicalise; controls: bodies 0 and 1 swapped misses the rows, q not scaled by √ℓ fails, μ_ρ/μ_λ inverted fails, d dropped at unequal masses fails (Table 1's equal masses have d = 0, so this control runs on the stereographic identity's masses), a decode ending in canonicalise (step 3 taken), which lands every η < 0 pixel on its (ξ, −η) partner, fails"
   rulings:
   - R-592
   - R-871
+  - R-914
   milestone: M4
   rq:
   - RQ-711
   - RQ-713
   - RQ-736
-  note: "R-871 (8 Nov 2026, RQ-714 (b) with RQ-738 conflict 3 read as its (c)): the preset is the full disc, unmasked, the symmetry filter (TASK-M8-120) giving exactly D; until it lands D is a contour and TASK-M4-06's golden reads in_region_d. *Was (statement, the clause):* \"with its region-D preset as RQ-714 and RQ-736 rule,\"."
+  note: "R-871 (8 Nov 2026, RQ-714 (b) with RQ-738 conflict 3 read as its (c)): the preset is the full disc, unmasked, the symmetry filter (TASK-M8-120) giving exactly D; until it lands D is a contour and TASK-M4-06's golden reads in_region_d. *Was (statement, the clause):* \"with its region-D preset as RQ-714 and RQ-736 rule,\". R-914 (9 Nov 2026, RQ-752 (a)): that golden, region D's GPU reference, is TASK-M4-34's own (REQ-RENDER-123), and TASK-M4-06 gains no edge to TASK-M4-34."
 - id: REQ-CHART-101
   area: CHART
   statement: "Each closed-form primitive and pair must round-trip, forward(inverse(x)) = x over its domain at f64 and at f32, the interior angles and the side ratios among them, each with its mass-weighted form onto the shape sphere."
@@ -14759,7 +14762,7 @@
   milestone: M7
 - id: REQ-RENDER-082
   area: RENDER
-  statement: "The Burrau int lattice and the Anosova physical-frame chart must decode through the DECODE fragment preset without special-casing."
+  statement: "The Burrau int lattice must decode through the DECODE fragment preset without special-casing."
   source:
   - file: docs/contracts/principia_lowering_contract.md
     section: Appendix — worked enumeration of the current chart set
@@ -14767,15 +14770,16 @@
     section: 6. Debug views as presets
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-914 — The stage 1 / stage 3 dependency cycle, RQ-752: option (a), the edge from TASK-M4-06 (the GPU compute variants) to TASK-M4-34 (region D) dropped; the GPU reference that reads region D moves into TASK-M4-34, which can't close until that reference reads region D as R-871 requires; R-871's substance unchanged, only the task that applies its link; TASK-M4-06 and the 217 tasks queued behind it released *(closes RQ-752)*"
   verify:
     method: golden image
-    detail: "render the DECODE preset for each of the two charts and compare with a CPU-decoded reference image"
+    detail: "render the DECODE preset for the Burrau int lattice and compare with a CPU-decoded reference image"
   rulings:
   - R-113
+  - R-914
   milestone: M4
-  rq:
-  - RQ-714
-  note: Split from REQ-RENDER-027 (R-113, RQ-95).
+  note: "Split from REQ-RENDER-027 (R-113, RQ-95). Split by R-914 (9 Nov 2026, RQ-752 (a)): the Anosova physical-frame chart's half, region D's GPU reference, is REQ-RENDER-123, closed by TASK-M4-34; RQ-714 went with it. *Was (statement):* \"The Burrau int lattice and the Anosova physical-frame chart must decode through the DECODE fragment preset without special-casing.\" *Was (verify):* \"render the DECODE preset for each of the two charts and compare with a CPU-decoded reference image\""
 - id: REQ-RENDER-083
   area: RENDER
   statement: "`cargo xtask lint` must fail, naming the file, the line and the rule, in fragment-stage WGSL (every WGSL file under `crates/render/frag/`, generated or written by hand) on: any use of `isinf` or `isnan`; any comparison against an inf or NaN constant (a constant expression that evaluates to one included); any comparison of a float scalar or vector expression with itself (the same expression, or structurally equal reads of the same `let`, argument, variable or buffer element with no store between), by `==` or `!=` (R-352) or by `<`, `<=`, `>` or `>=`; and any comparison, in either operand order and by any of those six operators, against a finite-max stand-in used as an inf check: 65504 (f16's largest finite value, `f16_finite_max`) or 3.40282347e38 (f32's), of either sign, in any spelling, as a `bitcast<f32>` of its bit pattern or as another constant expression that evaluates to it (R-352; the list, the ordered self-comparisons and the structural reading of \"itself\", over float scalars and vectors, applied per R-204, accepted by R-353). Fast-math (R-297) may optimise those away or fold or break them, so an unset-check on a value read in a fragment shader tests its bit pattern (R-343), the fix the lint names. REQ-RENDER-001's review-checklist grep stays as a backup (R-351)."
@@ -15603,6 +15607,29 @@
   - R-822
   milestone: M4
   note: "Closed by TASK-M4-27. Option (c), the kernel's own sin and cos, is ruled with RQ-687 on M4's cross-backend numbers."
+- id: REQ-RENDER-123
+  area: RENDER
+  statement: "The Anosova physical-frame chart, region D's (TASK-M4-34's third-body pair at the lowering appendix's canonicalise entry), must decode through the DECODE fragment preset without special-casing, its GPU reference reading region D through `in_region_d` as R-871 requires: the full disc rendered literally, unmasked, D drawn as a contour until the symmetry filter (TASK-M8-120) lands; TASK-M4-34 doesn't close until it does (R-914)."
+  source:
+  - file: docs/contracts/principia_lowering_contract.md
+    section: Appendix — worked enumeration of the current chart set
+  - file: docs/design/principia_colour_composition.md
+    section: 6. Debug views as presets
+  - file: decisions.md
+    section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-871 — Region D's chart is the plane, unmasked: the full disc rendered literally, every mirror and body swap declared, so the symmetry filter leaves exactly region D with no mask, on by default for the paper-frame presets only; its check, the filtered area 0.307 at equal masses and rest *(closes RQ-714; on RQ-738, which stays open)*"
+  - file: decisions.md
+    section: "R-914 — The stage 1 / stage 3 dependency cycle, RQ-752: option (a), the edge from TASK-M4-06 (the GPU compute variants) to TASK-M4-34 (region D) dropped; the GPU reference that reads region D moves into TASK-M4-34, which can't close until that reference reads region D as R-871 requires; R-871's substance unchanged, only the task that applies its link; TASK-M4-06 and the 217 tasks queued behind it released *(closes RQ-752)*"
+  verify:
+    method: golden image
+    detail: "`cargo xtask golden decode-preset`: render the DECODE preset for the Anosova physical-frame chart and compare with a CPU-decoded reference image, region D read by `in_region_d` on the unmasked full disc (R-871)"
+  rulings:
+  - R-113
+  - R-871
+  - R-914
+  milestone: M4
+  note: "Split from REQ-RENDER-082 by R-914 (9 Nov 2026, RQ-752 (a)): region D's GPU reference moves from TASK-M4-06 into TASK-M4-34, the edge from TASK-M4-06 to TASK-M4-34 dropped."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -33238,7 +33265,7 @@
   milestone: M0
 - id: REQ-VAL-148
   area: VAL
-  statement: "Mutation testing must run off the pull-request path (R-904, R-908, R-909): on each merge to `main`, once the Windows runner is proven (R-909), `cargo mutants --in-diff` against the previous `main`, placed on the Windows runner or GitHub-hosted runners by R-905's placement rule, the mutants of `xtask/src/jobq.rs` on GitHub-hosted runners until Windows containment is proven; and nightly the full rotation (REQ-VAL-150); best-effort until the nightly fits (R-908). Each run is sharded (`--shard k/n`) within the per-shard limit (REQ-VAL-149), excludes generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing (R-196), and runs the qa control-inventory tests that inspect the whole workspace once per CI run as a step, not inside a mutant's test run (R-906). Mutants in the checked-in list of equivalent mutants, each entry carrying a one-line justification approved by the code and qa reviewers (R-202), are skipped up front in an in-diff run and run by the nightly (R-903). Every surviving mutant not on that list files a task automatically and never makes `main` red (R-905, R-907); no pull-request check runs mutants, and `mutants-check` is not a required check (R-907, R-908, R-909)."
+  statement: "Mutation testing must run off the pull-request path (R-904, R-908, R-909): on each merge to `main`, once the Windows runner is proven (R-909), `cargo mutants --in-diff` against the previous `main`, placed on the Windows runner or GitHub-hosted runners by R-905's placement rule, the mutants of `xtask/src/jobq.rs`, the job-queue mutants, on GitHub's runners under RQ-751's option (b), moving to Windows only once the WSL2 setup passes `contain.sh check` inside it (R-912, R-915); and nightly the full rotation (REQ-VAL-150); best-effort until the nightly fits (R-908). Each run is sharded (`--shard k/n`) within the per-shard limit (REQ-VAL-149), excludes generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing (R-196), and runs the qa control-inventory tests that inspect the whole workspace once per CI run as a step, not inside a mutant's test run (R-906). Mutants in the checked-in list of equivalent mutants, each entry carrying a one-line justification approved by the code and qa reviewers (R-202), are skipped up front in an in-diff run and run by the nightly (R-903). Every surviving mutant not on that list files a task automatically and never makes `main` red (R-905, R-907); no pull-request check runs mutants, and `mutants-check` is not a required check (R-907, R-908, R-909)."
   source:
   - file: decisions.md
     section: R-196 — Mutation testing joins the QA gate
@@ -33270,6 +33297,10 @@
     section: "R-908 — CI: decide and act: pull-request feedback in under 30 minutes and merge-ready to merge in under an hour; the required checks become build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set and reviews; process tests move off the pull-request path, or are retired where history shows high cost and no product catch, each in its own commit; mutation, in-depth GPU tests and the slow tier leave the pull-request path; product-correctness tests are never retired *(amends R-196, R-202, R-302, R-305, R-376, R-678, R-683, R-684, R-904, R-905 and R-907)*"
   - file: decisions.md
     section: "R-909 — The CI model is approved: a required pull-request tier under 30 minutes, an advisory tier on each merge to `main`, and a nightly and Windows background; the golden runner over every suite and the screenshot runner's self-test are product correctness, run per merge and never retired; the 17 retirement candidates are retired, one commit each; branch protection stays the owner's, who changes it from an exact old-to-new list *(amends R-677, R-683, R-684, R-904, R-905, R-907 and R-908)*"
+  - file: decisions.md
+    section: "R-912 — Windows containment, RQ-751: option (b) now, the Job Object proof passing with its two process-visibility gaps accepted and the job-queue mutants staying on GitHub's runners; option (c), CPU tests and mutants in a WSL2 distro under `contain.sh`, built in parallel and never blocking, replaces (b) only once each of its five requirements is proven, the job-queue mutants then free to move to Windows; GPU tests stay native *(closes RQ-751; amends R-905)*"
+  - file: decisions.md
+    section: "R-915 — Inside WSL, `contain.sh check` proves an unprivileged mode: user and PID namespaces with no sudo and the real `kill -9 -1`, passing only if a ci process outside the namespace and the runner agent and gh-runner's other Windows processes survive; WSL keeps no sudo, no systemd and the owner's exact `wsl.conf`; the mode is selected explicitly, never a fallback, and fails, never skips, without user namespaces; other machines keep the strict mode; proof 4 reworded *(closes RQ-753; amends R-912)*"
   verify:
     method: review checklist
     detail: "code: the in-diff mutants job runs on each merge commit pushed to `main`, never on a pull_request event, against the previous `main`, as a matrix of n shards, each `--shard k/n` with its own timeout, the listed equivalent mutants skipped by name before the run; a survivor not on the equivalents list opens a task and does not make `main` red; the control-inventory tests run as one step per CI run, outside the mutants' test runs; each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and files a task, with the test added it reports none, and with that mutant in the equivalent-mutants list it skips it"
@@ -33288,8 +33319,10 @@
   - R-907
   - R-908
   - R-909
+  - R-912
+  - R-915
   milestone: M0
-  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes. R-678: `mutants-check` is a job of every run of `mutants.yml`, never a posted check run: the merge-ready run reports the verdict; a head whose change has no `.rs` file under `crates/` (R-677), with no mutant the gate runs, or that is not merge-ready passes, \"not applicable\"; another label's change on a merge-ready head reports that head's merge-ready verdict. R-903 to R-909 (8 and 9 Nov 2026): mutation testing leaves the pull-request path, the in-diff run on each merge to `main` once the Windows runner is proven and the full rotation nightly, best-effort until the nightly fits; a survivor not on the equivalents list files a task and never makes `main` red; listed equivalents skipped up front in an in-diff run; `mutants-check` leaves the required checks, the owner changing branch protection (R-909). Built by #452, the PR-tier restructure, the per-merge workflow and the Windows and nightly steps, in R-909's order; until they land, the per-PR run stands as built. *Was (statement):* \"Every pull request must run `cargo mutants --in-diff` on its changed code in CI, sharded across parallel CI jobs (`--shard k/n`), each shard within the per-shard time limit (REQ-VAL-149), excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing; every mutant that survives in the PR's diff is a qa finding, killed with a test or justified as equivalent in the review, and if the time limit makes per-PR runs impractical a REVIEW_QUEUE entry is raised rather than the run dropped; the nightly full run (REQ-VAL-150) is the backstop (R-302). The job must fail on any surviving mutant not in a checked-in list of equivalent mutants, each entry carrying a one-line justification approved by the code and qa reviewers (R-202).\" *Was (verify):* \"code: the `mutants.yml` workflow runs `cargo mutants --in-diff` against the PR's base on pull_request events as a matrix of n shards, each `--shard k/n` with its own timeout, and a shard cut off by its timeout fails the job (R-302); each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes\""
+  note: "R-676: a pull request's run is on its merge-ready head, the run the `merge-ready` label starts once every reviewer its task names has approved that head, and again only if the head changes. R-678: `mutants-check` is a job of every run of `mutants.yml`, never a posted check run: the merge-ready run reports the verdict; a head whose change has no `.rs` file under `crates/` (R-677), with no mutant the gate runs, or that is not merge-ready passes, \"not applicable\"; another label's change on a merge-ready head reports that head's merge-ready verdict. R-903 to R-909 (8 and 9 Nov 2026): mutation testing leaves the pull-request path, the in-diff run on each merge to `main` once the Windows runner is proven and the full rotation nightly, best-effort until the nightly fits; a survivor not on the equivalents list files a task and never makes `main` red; listed equivalents skipped up front in an in-diff run; `mutants-check` leaves the required checks, the owner changing branch protection (R-909). Built by #452, the PR-tier restructure, the per-merge workflow and the Windows and nightly steps, in R-909's order; until they land, the per-PR run stands as built. *Was (statement):* \"Every pull request must run `cargo mutants --in-diff` on its changed code in CI, sharded across parallel CI jobs (`--shard k/n`), each shard within the per-shard time limit (REQ-VAL-149), excluding generated code, GPU-only (spirv-gated) paths and xtask's own harness plumbing; every mutant that survives in the PR's diff is a qa finding, killed with a test or justified as equivalent in the review, and if the time limit makes per-PR runs impractical a REVIEW_QUEUE entry is raised rather than the run dropped; the nightly full run (REQ-VAL-150) is the backstop (R-302). The job must fail on any surviving mutant not in a checked-in list of equivalent mutants, each entry carrying a one-line justification approved by the code and qa reviewers (R-202).\" *Was (verify):* \"code: the `mutants.yml` workflow runs `cargo mutants --in-diff` against the PR's base on pull_request events as a matrix of n shards, each `--shard k/n` with its own timeout, and a shard cut off by its timeout fails the job (R-302); each exclusion names which of R-196's three categories it falls in; code and qa: each entry in the equivalent-mutants list carries a one-line justification and both reviewers approve it (R-202); qa: the checklist line (every surviving mutant in the diff is a finding, killed or justified as equivalent); the job can fire: on a fixture crate whose diff adds an untested branch it reports a surviving mutant and fails, with the test added it reports none, and with that mutant in the equivalent-mutants list it passes\" R-912 (9 Nov 2026, RQ-751 (b)): the job-queue mutants stay on GitHub's runners under (b), moving to Windows only once the WSL2 setup passes `contain.sh check` inside it (R-915: its unprivileged mode). *Was (statement, the clause):* \"the mutants of `xtask/src/jobq.rs` on GitHub-hosted runners until Windows containment is proven;\""
 - id: REQ-VAL-149
   area: VAL
   kind: calibration
@@ -33875,7 +33908,7 @@
 - id: REQ-VAL-181
   area: VAL
   kind: calibration
-  statement: "The per-process memory cap on the test processes of every `cargo mutants` run, in CI or local (R-348), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md. CI's Linux runners enforce it; on macOS a local run gets the timeout only, without this cap (R-352). On the Windows runner the same cap is enforced, before any test or mutant job is placed there, by a Job Object with kill-on-close, a process limit and an 8 GiB per-process memory cap, proven by the kill test `contain.sh check` uses; until it is proven, the mutants of `xtask/src/jobq.rs` run on GitHub-hosted runners (R-905)."
+  statement: "The per-process memory cap on the test processes of every `cargo mutants` run, in CI or local (R-348), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md. CI's Linux runners enforce it; on macOS a local run gets the timeout only, without this cap (R-352). On the Windows runner the same cap is enforced, before any test or mutant job is placed there, by a Job Object with kill-on-close, a process limit and an 8 GiB per-process memory cap, proven by the kill test `contain.sh check` uses, with its two process-visibility gaps accepted, an outside process visible and terminable by its id (R-912, RQ-751 (b)); the mutants of `xtask/src/jobq.rs` run on GitHub's runners under (b), and may move to Windows only once a WSL2 distro on the runner, run as gh-runner, passes `contain.sh check` inside it in the unprivileged mode: user and PID namespaces with no sudo, selected explicitly, never a fallback, failing and never skipping without user namespaces, the real `kill -9 -1` leaving a ci process outside the namespace and the runner agent and gh-runner's other Windows processes alive (R-912, R-915)."
   source:
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
@@ -33889,6 +33922,10 @@
     section: "R-376 — The six M0 calibrations are confirmed: REQ-VAL-138, REQ-VAL-149 (8 shards × 300 min, a ceiling, not a target), REQ-VAL-151, REQ-VAL-156 (600 s), REQ-VAL-180 and REQ-VAL-181 *(closes RQ-202; amends R-71, R-203, R-214, R-217, R-233, R-269, R-287, R-296, R-302, R-305, R-348 and R-352 as they apply to these values)*"
   - file: decisions.md
     section: "R-905 — CI shape: pull requests run the normal suite and quick checks only; the slow tier and the mutation run go to pushes to `main` and nightly, advisory, each job placed on the Windows runner or on GitHub-hosted runners by where it measurably finishes fastest with identical results; containment, the 8 GiB cap and a 36-hour no-run alert come first on Windows, and the mutants of `xtask/src/jobq.rs` stay hosted until containment is proven *(amends R-196, R-202, R-684 and R-859; refines R-904)*"
+  - file: decisions.md
+    section: "R-912 — Windows containment, RQ-751: option (b) now, the Job Object proof passing with its two process-visibility gaps accepted and the job-queue mutants staying on GitHub's runners; option (c), CPU tests and mutants in a WSL2 distro under `contain.sh`, built in parallel and never blocking, replaces (b) only once each of its five requirements is proven, the job-queue mutants then free to move to Windows; GPU tests stay native *(closes RQ-751; amends R-905)*"
+  - file: decisions.md
+    section: "R-915 — Inside WSL, `contain.sh check` proves an unprivileged mode: user and PID namespaces with no sudo and the real `kill -9 -1`, passing only if a ci process outside the namespace and the runner agent and gh-runner's other Windows processes survive; WSL keeps no sudo, no systemd and the owner's exact `wsl.conf`; the mode is selected explicitly, never a fallback, and fails, never skips, without user namespaces; other machines keep the strict mode; proof 4 reworded *(closes RQ-753; amends R-912)*"
   verify:
     method: review checklist
     detail: "the proposal states the cap, in the unit `ulimit -v` or `prlimit` takes, and which of the two sets it, with its evidence: the largest peak of the measure the cap limits (virtual size, for `ulimit -v` or `prlimit --as`) over every test process of the unmutated baseline on `ubuntu-latest`, the GPU tests on lavapipe included, and the runner's memory; the baseline passes under it with headroom; every run uses it, marked provisional until the human confirms it at the M0 gate (R-182, R-348)"
@@ -33900,8 +33937,10 @@
   - R-375
   - R-376
   - R-905
+  - R-912
+  - R-915
   milestone: M0
-  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 8 GiB (8589934592 bytes) of virtual memory, set by `prlimit --as` with `--core=1` on Linux. CI runs on ubuntu-24.04, pinned (R-375); moving to Ubuntu 26 re-measures it. R-905 (8 Nov 2026): the Windows runner's equivalent of `prlimit`, a prerequisite for any job placed there; built by #453 (Windows containment). *Was (statement):* \"The per-process memory cap on the test processes of every `cargo mutants` run, in CI or local (R-348), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md. CI's Linux runners enforce it; on macOS a local run gets the timeout only, without this cap (R-352).\""
+  note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 8 GiB (8589934592 bytes) of virtual memory, set by `prlimit --as` with `--core=1` on Linux. CI runs on ubuntu-24.04, pinned (R-375); moving to Ubuntu 26 re-measures it. R-905 (8 Nov 2026): the Windows runner's equivalent of `prlimit`, a prerequisite for any job placed there; built by #453 (Windows containment). *Was (statement):* \"The per-process memory cap on the test processes of every `cargo mutants` run, in CI or local (R-348), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M0 gate and recorded in decisions.md. CI's Linux runners enforce it; on macOS a local run gets the timeout only, without this cap (R-352).\" R-912 and R-915 (9 Nov 2026, RQ-751 (b) and (c), RQ-753): the Job Object proof passes with its two gaps accepted; the job-queue mutants move to Windows only once WSL2's unprivileged `contain.sh check` passes; option (c) built by PR #460. *Was (statement, the clause):* \"proven by the kill test `contain.sh check` uses; until it is proven, the mutants of `xtask/src/jobq.rs` run on GitHub-hosted runners (R-905).\""
 - id: REQ-VAL-182
   area: VAL
   kind: definition
