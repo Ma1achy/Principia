@@ -45,3 +45,4 @@ Port principia_chart_composition.md into the contracts, as the rulings on RQ-712
 - **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - The virial kind's answer (RQ-717) lands in this task if it is ruled by then, else in TASK-M8-119.
 - Waits on its rulings item: RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- *8 Nov 2026 (R-873):* **Build order:** before stage 3 (RQ-744 (C)); TASK-M8-105, which depends on it, is before stage 1.

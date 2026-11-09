@@ -31,3 +31,4 @@ RQ-721's ruling written into the contracts, docs first, so that the build tasks 
 - **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
 - Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
 - *7 Nov 2026 (R-850):* RQ-721 is ruled (a), amended: the written rules against morphing give way, as its option (a) lists, and each operation is tested bitwise against today and against its own path family's formula, never across families. The contracts carry a dated note until this task rewrites them.
+- *8 Nov 2026 (R-873):* **Build order:** before stage 1, docs first (RQ-744 (C)); TASK-M8-124 depends on it.

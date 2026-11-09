@@ -1,7 +1,7 @@
 # TASK-M8-48 — On the real engine: tilt and slice on every chart, the energy axes' mapping control, the navigation stop in the edit path, and Save view as chart on curved views (R-469, R-471, R-473, R-475) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244, REQ-CHART-141
+- **Closes:** REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244, REQ-CHART-141, REQ-CHART-157
 - **Depends on:** TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18, TASK-M2-52
 - **Needs (earlier milestones):** REQ-CHART-060, REQ-CHART-062, REQ-CHART-068, REQ-CHART-073, REQ-CHART-077
 - **Reviewers:** code, qa, gui, physics
@@ -22,6 +22,7 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 - `docs/gui/principia_render_gui_spec.md` § "The compass: look and views (R-451, R-452)"
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
 - `docs/contracts/principia_chart_decoder_contract.md` § "The operation table"
+- `decisions.md` § "R-899 — The chart-path brief's nine questions: the lock test reads the recorded state at the pin; snap-back undoes the slice only, auto-snap off; jumps under a lock kept and labelled until the sliding anchor exists; the pin's screen position stored, "assumed" at the centre where none can be derived; a pivot record in the view, untilt (a1), amending R-473; points of interest one task in stage 3; their star filled within the lock's tolerance, the off-slice distance shown; marks mid-morph to pixel resolution, the filter off, labelled; the block line built in stage 2 *(amends R-473, and the snap-back of chart_decoder_contract Part 4 and design § 17.8)*"
 
 ## Deliverables
 - The edit path's stop in the real engine's contract (`crates/engine/src/contract/`), the Manifold view's sections on every chart, the mapping control, the readout line, Save view as chart for curved views.
@@ -34,6 +35,7 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 - `cargo test -p gui nav_stop_edit_path` — REQ-GUI-243's verify.
 - `cargo test -p gui saved_curved_chart` — REQ-GUI-244's verify (C8).
 - `cargo test -p engine viewstate_roundtrip` — extended with REQ-SYS-011's arms for the chart params this task holds in `SimConfig` on the real engine: a tilted shape-sphere view under Tip as sheet with one target and both angles set (where the two tilt maps differ, R-474), a view with an energy-type axis set linear (R-471 H7), and a view on a saved curved chart (R-475 L8), each exported and reloaded, asserting bitwise-identical z per pixel; control (C6): the same export with the field stripped (the tilt, `tilt_map`, read as Lean when absent, the axis's mapping, the saved chart's definition) fails to reproduce (REQ-SYS-011; R-484 J9; physics review 5678259443 of PR #308; 28 Oct 2026, applied per R-369).
+- `cargo test -p engine curved_pivot` — on a tilted and zoomed curved chart under a lock the pinned pixel decodes the pinned state after each tilt and zoom about it; the pivot record survives a chart switch and back; the untilt re-bases energy once, its change shown; controls: the pivot in chart coordinates across a chart switch, a tilt about the window's centre with an off-centre pin, each failing (REQ-CHART-157).
 
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.
@@ -49,3 +51,4 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 - *4 Nov 2026 (R-708, R-709):* the Burrau charts' tilt targets follow R-471's two modes. The Inspector's label is conditional, as ruled.
 - *6 Nov 2026 (R-708, RQ-710; physics review 5805852854 of #388, P2):* a default view of `Φ_θ,L_z` must wrap the chart in `kernel::chart::HeldK`. The bare `BurrauThetaLz` holds no warp, so `Tilted::new` on it gives the linear arm, R-708's non-default mode. `HeldK` needs the warp's `K_max` and `γ_K`, which RQ-710 asks for.
 - *7 Nov 2026 (R-818, R-833, R-822):* RQ-701 is ruled in form and deferred to this task's start: on a `MixedEnergy` chart the held `L_z` tilts and slices by value on the floor, and the held `K` on a lone `L_z` axis takes the warp line, slicing by value, its `K_max` a calibration of the chart's own as RQ-710's. `Φ_θ,L_z`'s held-`K` `K_max` and `γ_K` are this task's calibration to propose (REQ-CHART-141), `K_max` at the chart's calibrated `K` the value named. RQ-679, the slider spans, is deferred to this task's start as before (R-822).
+- *8 Nov 2026 (R-873, R-895, R-899):* The brief's Q5 (a): a curved chart's view holds a pivot record, the pinned state and the pin's screen position, and the kernel tilt gains the pivot's origin and offset (REQ-CHART-157). RQ-744 (E) (i): this task comes before stage 1; TASK-M8-124 depends on it. RQ-746 is ruled (a) (R-895): the case that waited on it is TASK-M2-56's, which builds R-513's R·R′ with the saved plane's unit normal. *Was:* "- **Closes:** REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244, REQ-CHART-141"

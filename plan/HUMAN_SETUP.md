@@ -30,6 +30,9 @@ In **Settings → Branches → Add branch protection rule** (or a ruleset) for `
   merge-ready verdict. `xtask/tests/ci_changes.rs` checks that this list is the one every required check is tested
   against. The human authorised the agent to
   add it, once TASK-M0-23 merges, and this is the one settings change R-305 allows;
+  *8 and 9 Nov 2026 (R-907 to R-909):* `mutants-check`, `xtask-ci` and the full-tier GPU jobs leave the required checks
+  when the pull-request tier's restructure lands; the owner changes the protection from the orchestrator's old-to-new
+  list (R-909), and this section is rewritten to it then;
 - leave "require branches to be up to date before merging" off (R-266): CI runs on each PR merged with main, and every
   push to main runs CI again;
 - turn on "do not allow bypassing the above settings", so the required checks bind every merge, the agent's included

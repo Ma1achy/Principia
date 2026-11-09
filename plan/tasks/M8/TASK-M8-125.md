@@ -26,6 +26,7 @@ the window to compute the pin, the pin is exact, or the task says why it can't b
 - `docs/contracts/principia_chart_decoder_contract.md` § "The lock (projective microscope)"
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
 - `docs/design/principia_chart_space_model.md` § "0. Revision after #422's review (7 Nov): the corpus wins where it measured"
+- `decisions.md` § "R-899 — The chart-path brief's nine questions: the lock test reads the recorded state at the pin; snap-back undoes the slice only, auto-snap off; jumps under a lock kept and labelled until the sliding anchor exists; the pin's screen position stored, "assumed" at the centre where none can be derived; a pivot record in the view, untilt (a1), amending R-473; points of interest one task in stage 3; their star filled within the lock's tolerance, the off-slice distance shown; marks mid-morph to pixel resolution, the filter off, labelled; the block line built in stage 2 *(amends R-473, and the snap-back of chart_decoder_contract Part 4 and design § 17.8)*"
 
 ## Deliverables
 - The lock as a family of the chart-path object (R-864): locking edits the lock group alone; "centre on pin" one
@@ -54,6 +55,7 @@ the window to compute the pin, the pin is exact, or the task says why it can't b
 - Proposal, only if the pin can't be exact on a nonlinear chart: the bound with its evidence and the reason, checked by
   the physics reviewer and ruled by the owner before this task merges, recorded in decisions.md; never a bound chosen in
   the PR (R-71; REQ-GUI-429). If the pin is exact, the PR shows it bit for bit and proposes no value.
+- `cargo test -p engine lock_moves_no_view` — snap-back after a slice under an off-centre lock clears the hidden excursion bit for bit, the pin's pixel unmoved; snap-back then centre on pin equals `z₀ ← z_locked` bit for bit (R-899 Q2 (a); REQ-GUI-425).
 
 ## Notes
 - Added by R-866 (8 Nov 2026), the owner's reply 2 to the code map of that day: "Confirm this works on nonlinear charts,
@@ -66,3 +68,4 @@ the window to compute the pin, the pin is exact, or the task says why it can't b
 - TASK-M8-07 builds the lock's look on the mock engine and keeps REQ-GUI-099, which R-866 rewords: the reticle at the pin
   and the badge's centre on pin.
 - *Physics review 5817348709 of PR #449, P5:* an inexact pin's bound is a calibration ruled by the owner before merge, not the task's choice. Holding the pin exactly looks achievable: evaluated as pivot + R·(offset), the pin's chart parameters come out bitwise, pin + R·0 = pin.
+- *8 Nov 2026 (R-899):* The brief's Q2 (a): snap-back undoes the slice only, clearing the hidden excursion and leaving the pin where it is on screen; centre on pin clears the in-plane part; the two together are `z₀ ← z_locked` bit for bit. Auto-snap stays off by default (R-866). RQ-749 is ruled (R-897): stage 2 reads the recorded state at the pin; the note above is answered.
