@@ -566,8 +566,11 @@ fn aggregate_runs_after_every_shard(yml: &str) {
             .find_map(|l| l.strip_prefix(&format!("    {k}:")))
             .map(|v| v.trim().to_owned())
     };
+    // The owner's CI model (9 Nov 2026) takes `mutants-check` off the pull request's path and keeps this machinery,
+    // unused, for the per-merge workflow; the job's `if:` now names the event too (it ran on no other before), so what
+    // is held is that it runs whatever the verdict ended in: `always()` first (R-290's exception, applied per R-369).
     assert!(
-        at_job("if").as_deref() == Some("always()")
+        at_job("if").is_some_and(|c| c == "always()" || c.starts_with("always() && "))
             && at_job("needs").is_some_and(|n| n.contains(AGGREGATE))
             && check
                 .iter()
@@ -599,7 +602,7 @@ mod check_skipped_on_a_failed_verdict {
         "a mutants-check job skipped once the aggregate has failed",
         expected = "qa23s: mutants-check does not report the aggregate's verdict whatever happened",
         aggregate_runs_after_every_shard(&mutants_yml().replace(
-            "  mutants-check:\n    if: always()\n",
+            "  mutants-check:\n    if: always() && github.event_name == 'pull_request'\n",
             "  mutants-check:\n    if: success()\n"
         ))
     );

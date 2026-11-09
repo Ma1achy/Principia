@@ -434,7 +434,8 @@ negative_control!(
     expected = "logs the runner's free space",
     {
         let ci = ci_yml();
-        let from = "      - name: Runner disk after the tests\n        if: needs.changes.outputs.docs_only != 'true'\n        run: df -h /\n";
+        // The step has no `if:` of its own since the owner's CI model (9 Nov 2026) made `ci-workspace` a per-merge job.
+        let from = "      - name: Runner disk after the tests\n        run: df -h /\n";
         assert!(ci.contains(from));
         check_sampled(&ci.replacen(from, "", 1))
     }

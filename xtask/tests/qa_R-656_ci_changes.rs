@@ -18,7 +18,8 @@
 //! - `qa_r656_files_real_readers_read_are_code`: a sample of data code loads, qa's readers kept where R-662 keeps them
 //!   (the screenshot artboard, the print-graph catalogue and the golden references, the plan's requirements, tasks and
 //!   gate blocks): each file, touched alone, classifies `docs_only=false gpu=true`, so the build, test and GPU jobs run,
-//!   or, under R-677, as tier (b) data with its flag set, `ci.yml`'s `ci-workspace` then running its reader.
+//!   or, under R-677, as tier (b) data with its flag set, the PR tier's `tests` or `build` then running its reader
+//!   (`ci-workspace` until the owner's CI model of 9 Nov 2026).
 //!   Files a directory walker would pick up if added (a new task file, artboard or catalogue entry) too.
 //! - `qa_r656_unread_docs_stay_docs_only`: real files under `docs/` that no code, plan check or script names (the
 //!   README's images, an incoming data table, the reference sources, an experiment's results) classify
@@ -26,10 +27,11 @@
 //! - `qa_r656_detect_diffs_the_merge_against_its_base`: `detect` on a real merge commit, as GitHub makes a pull
 //!   request's, reads the change against the first parent (the base), not against the pull request's head; a non-pull
 //!   request event, and a commit that is no merge, run everything.
-//! - `qa_r656_required_checks_report_under_always`: the eight required checks are present; `ci.yml`'s five gates are
-//!   `if: always()` jobs; `mutants.yml`'s `mutants-check` is, under R-678 (3 Nov 2026), one `if: always()` job of
-//!   every run, never a check run posted through the Checks API (R-656's merge-ready run had made it a posted one;
-//!   R-678 changed that, its exception to R-290); neither workflow filters `pull_request` by path.
+//! - `qa_r656_required_checks_report_under_always`: the PR tier's eight required checks (the owner's CI model, 9 Nov
+//!   2026) are present; `ci.yml`'s six are `if: always()` jobs, one each; `mutants.yml`, off the pull request's path,
+//!   is triggered by no pull request and posts nothing through the Checks API; `ci.yml` filters no `pull_request` by
+//!   path. (Until 9 Nov 2026 this held `mutants-check` to one `if: always()` job of every run, R-678; the owner's model
+//!   retired it from the PR path, R-290's exception applied per R-369.)
 //! - `qa_r656_push_runs_only_main_and_measure`: `ci.yml`'s `push` names exactly `main` and `measure/**`; no other
 //!   workflow's `push` names a branch other than `main`.
 //!
@@ -161,20 +163,30 @@ fn reader_run(reader: &str) -> (&'static str, String) {
     }
 }
 
-/// Whether `ci.yml`'s `ci-workspace` runs `run` (a package's test, or a step's command) on a verdict whose `flag` is
-/// true: the step's `if:` must hold on a tier (b) verdict with that flag, by this file's own reading of the expression.
+/// Whether the PR tier runs `run` (a package's test, or a step's command) on a verdict whose `flag` is true: a step of
+/// `ci.yml`'s `tests` (the required check `ci`) or `build` whose `if:` holds on a tier (b) verdict with that flag, by
+/// this file's own reading of the expression, or that has no `if:` and so runs on every verdict.
+/// The owner's CI model (9 Nov 2026) moved tier (b)'s readers from `ci-workspace`, a full-tier job no pull request runs
+/// any more, to the PR tier's `tests` and `build`: R-290's exception, applied per R-369 by the orchestrator.
 fn ci_workspace_runs(ci: &Value, flag: &str, run: &(&str, String)) -> bool {
-    let steps = ci["jobs"]["ci-workspace"]["steps"]
-        .as_array()
-        .expect("qa_r656: ci-workspace's steps");
+    let steps: Vec<Value> = ["tests", "build"]
+        .iter()
+        .flat_map(|job| {
+            ci["jobs"][job]["steps"]
+                .as_array()
+                .unwrap_or_else(|| panic!("qa_r656: {job}'s steps"))
+                .clone()
+        })
+        .collect();
     steps.iter().any(|st| {
         let cond = s(&st["if"]);
-        let holds = cond.split("&&").all(|c| {
-            let c = c.trim();
-            c == "needs.changes.outputs.docs_only == 'true'"
-                || c == "needs.changes.outputs.tier == 'data'"
-                || c == format!("needs.changes.outputs.{flag} == 'true'")
-        }) && !cond.is_empty();
+        let holds = cond.is_empty()
+            || cond.split("&&").all(|c| {
+                let c = c.trim();
+                c == "needs.changes.outputs.docs_only == 'true'"
+                    || c == "needs.changes.outputs.tier == 'data'"
+                    || c == format!("needs.changes.outputs.{flag} == 'true'")
+            });
         let cmd = s(&st["run"]);
         let words: Vec<&str> = cmd.split_whitespace().collect();
         let names = match run {
@@ -559,7 +571,11 @@ fn reporting<'a>(wf: &'a Value, name: &str) -> Vec<(&'a String, &'a Value)> {
 
 fn check_required(ci: &str, mutants: &str, pr_check: &str, reviews: &str) {
     let ci = parse(ci);
-    for gate in ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-lavapipe"] {
+    // The owner's CI model (9 Nov 2026) makes the PR tier's checks `ci.yml`'s fmt, clippy, build, ci, gpu-lavapipe and
+    // gpu-metal, each a job of every pull-request run that skips its work inside on the classification (R-656), under
+    // `if: always()`, the GPU smoke sets on a push too, the rest on `pull_request` alone; `xtask-ci` and `gpu-kernel`
+    // left the required checks for each merge. R-290's exception, applied per R-369 by the orchestrator.
+    for gate in ["fmt", "clippy", "build", "ci", "gpu-metal", "gpu-lavapipe"] {
         let jobs = reporting(&ci, gate);
         assert_eq!(
             jobs.len(),
@@ -567,29 +583,21 @@ fn check_required(ci: &str, mutants: &str, pr_check: &str, reviews: &str) {
             "qa_r656: ci.yml has {} jobs reporting the required check `{gate}`",
             jobs.len()
         );
-        // R-684 skips the gates on a quick run alone, this file's exception to R-290, as R-678's below.
-        assert_eq!(
-            s(&jobs[0].1["if"]),
-            "always() && needs.changes.outputs.quick != 'true'",
-            "qa_r656: ci.yml's required check `{gate}` is not `if: always()`"
+        let cond = s(&jobs[0].1["if"]);
+        assert!(
+            cond == "always()" || cond == "always() && github.event_name == 'pull_request'",
+            "qa_r656: ci.yml's required check `{gate}` is not `if: always()`: `{cond}`"
         );
     }
-    // R-678 (3 Nov 2026) replaces R-656's posted check run with a job of every run of `mutants.yml`: exactly one job
-    // bears `mutants-check`, under `if: always()` as `ci.yml`'s gates are, and no step posts it through the Checks API
-    // (a check run posted into another run's suite, which a later run supersedes, is not counted: #384). This is the
-    // one change here, R-678's exception to R-290.
+    // R-678 made `mutants-check` a job of every run of `mutants.yml`. The owner's CI model (9 Nov 2026) takes the
+    // per-PR mutation run, and `mutants-check` with it, off the pull request's path: so `mutants.yml` is triggered by
+    // no pull request, and whatever job keeps the name never posts it through the Checks API, where a later run's
+    // suite supersedes it (#384). The `if: always()` assertion on `mutants-check` is retired with the check.
     let mutants = parse(mutants);
-    let jobs = reporting(&mutants, "mutants-check");
-    assert_eq!(
-        jobs.len(),
-        1,
-        "qa_r656: mutants.yml has {} jobs reporting the required check `mutants-check`",
-        jobs.len()
-    );
-    assert_eq!(
-        s(&jobs[0].1["if"]),
-        "always()",
-        "qa_r656: mutants.yml's required check `mutants-check` is not `if: always()`"
+    assert!(
+        mutants["on"].get("pull_request").is_none()
+            && mutants["on"].get("pull_request_target").is_none(),
+        "qa_r656: mutants.yml runs on a pull request, off which the owner's CI model takes mutants"
     );
     let posts = mutants["jobs"]
         .as_object()
@@ -614,15 +622,13 @@ fn check_required(ci: &str, mutants: &str, pr_check: &str, reviews: &str) {
             "qa_r656: the required check `{check}` is not reported"
         );
     }
-    for (file, wf) in [("ci.yml", &ci), ("mutants.yml", &mutants)] {
-        let pr = &wf["on"]["pull_request"];
-        assert!(
-            wf["on"].get("pull_request").is_some()
-                && pr.get("paths").is_none()
-                && pr.get("paths-ignore").is_none(),
-            "qa_r656: {file} does not run on every pull request"
-        );
-    }
+    let pr = &ci["on"]["pull_request"];
+    assert!(
+        ci["on"].get("pull_request").is_some()
+            && pr.get("paths").is_none()
+            && pr.get("paths-ignore").is_none(),
+        "qa_r656: ci.yml does not run on every pull request"
+    );
 }
 
 fn workflow(name: &str) -> String {
@@ -646,8 +652,8 @@ negative_control!(
     check_required(
         &swap(
             &workflow("ci.yml"),
-            "    needs: [changes, gpu-lavapipe]\n    if: always() && needs.changes.outputs.quick != 'true'\n",
-            "    needs: [changes, gpu-lavapipe]\n    if: success()\n"
+            "    name: gpu-lavapipe\n    needs: changes\n    if: always()\n",
+            "    name: gpu-lavapipe\n    needs: changes\n    if: success()\n"
         ),
         &workflow("mutants.yml"),
         &workflow("pr-check.yml"),
@@ -655,18 +661,20 @@ negative_control!(
     )
 );
 
-mod mutants_check_skippable {
+// `mutants_check_skippable` and `mutants_check_posted`, the controls of `mutants-check`'s `if: always()` and its one
+// bearing job, are retired with the check from the pull request's path (the owner's CI model, 9 Nov 2026).
+mod mutants_on_a_pull_request {
     use super::*;
     negative_control!(
         qa_r656_required_checks_report_under_always,
-        "mutants.yml's `mutants-check` run only when its verdict job passed, so a run skipping it reports it passed",
-        expected = "mutants.yml's required check `mutants-check` is not `if: always()`",
+        "mutants.yml triggered by pull requests again",
+        expected = "mutants.yml runs on a pull request",
         check_required(
             &workflow("ci.yml"),
             &swap(
                 &workflow("mutants.yml"),
-                "  mutants-check:\n    if: always()\n",
-                "  mutants-check:\n    if: success()\n"
+                "on:\n  workflow_dispatch:\n",
+                "on:\n  workflow_dispatch:\n  pull_request:\n"
             ),
             &workflow("pr-check.yml"),
             &workflow("reviews.yml"),
@@ -674,19 +682,19 @@ mod mutants_check_skippable {
     );
 }
 
-mod mutants_check_posted {
+mod a_second_gate {
     use super::*;
     negative_control!(
         qa_r656_required_checks_report_under_always,
-        "mutants.yml's `mutants-check` posted through the Checks API by a renamed job, as #379 had it",
-        expected = "mutants.yml has 0 jobs reporting the required check `mutants-check`",
+        "ci.yml with the interim Metal suites renamed onto the required check `gpu-metal`",
+        expected = "ci.yml has 2 jobs reporting the required check `gpu-metal`",
         check_required(
-            &workflow("ci.yml"),
             &swap(
-                &workflow("mutants.yml"),
-                "  mutants-check:\n    if: always()\n",
-                "  mutants-report:\n    if: always()\n"
+                &workflow("ci.yml"),
+                "    name: gpu-metal suites\n",
+                "    name: gpu-metal\n"
             ),
+            &workflow("mutants.yml"),
             &workflow("pr-check.yml"),
             &workflow("reviews.yml"),
         )

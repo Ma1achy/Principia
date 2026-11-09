@@ -18,7 +18,8 @@
 //! - `qa_m249_ci_runs_the_native_tests_at_release`: `ci.yml` runs on every push; a step builds the whole workspace's
 //!   tests with `--release`, for no `--target` (the host's), with no environment rustflags, no opt-level override
 //!   and nothing excluded; those tests are run (from the step's archive, if it builds one), under a nextest profile
-//!   that does not exclude the kernel's tests; the jobs doing so are not conditional or allowed to fail, and build
+//!   that does not exclude the kernel's tests; the jobs doing so are not conditional (but for skipping pull requests,
+//!   whose release run the owner's CI model of 9 Nov 2026 moves to each merge) or allowed to fail, and build
 //!   nothing at the dev profile (a job of their own). Controls: `--release` dropped, a RUSTFLAGS set on the step, a
 //!   `--target` added, the job made conditional, the release archive never run.
 //!
@@ -483,10 +484,13 @@ fn check_release_job(workflow: &str, nextest: &str) {
                     );
                 }
                 let own = job.own_lines();
-                // R-656: a docs-only pull request skips the release jobs; no other condition does.
+                // R-656: a docs-only pull request skipped the release jobs; no other condition did. The owner's CI
+                // model (9 Nov 2026) runs the release profile on each merge, every push `ci.yml` runs on, and on no
+                // pull request: that condition is the one other allowed (R-290's exception, applied per R-369).
                 assert!(
                     key(&own, "if")
-                        .is_none_or(|c| c == "needs.changes.outputs.docs_only != 'true'"),
+                        .is_none_or(|c| c == "needs.changes.outputs.docs_only != 'true'"
+                            || c == "github.event_name != 'pull_request'"),
                     "the release job `{}` runs only under a condition",
                     job.id
                 );
@@ -659,8 +663,8 @@ negative_control!(
     check_release_job(
         &edited(
             &read(".github/workflows/ci.yml"),
-            "  ci-release-archive:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
-            "  ci-release-archive:\n    needs: changes\n    if: github.ref == 'refs/heads/main'\n"
+            "  ci-release-archive:\n    if: github.event_name != 'pull_request'\n",
+            "  ci-release-archive:\n    if: github.ref == 'refs/heads/main'\n"
         ),
         &read(".config/nextest.toml")
     )
