@@ -243,7 +243,8 @@ fn qa_nav_stop_at_edge_to_the_bit() {
     check_edge_to_the_bit(real_stop);
 }
 
-/// The reading physics review F4 corrected: bisection halving `λ` itself, 64 steps.
+/// The reading physics review F4 corrected: bisection halving `λ` itself, 64 steps. Used only by the control.
+#[cfg(feature = "controls")]
 fn halving_lambda(edit: Edit<f64>, view: &dyn Fn(f64) -> Option<View<Wall>>) -> Stop<f64> {
     let Edit::Path { from, to } = edit else {
         unreachable!()
