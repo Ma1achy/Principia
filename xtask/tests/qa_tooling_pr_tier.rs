@@ -994,3 +994,433 @@ negative_control!(
         "`pr-check`, `xtask-ci` and\n  `reviews-complete` (",
     ))
 );
+
+// ---------------------------------------------------------------------------------------------------------------------
+// REQ-GUI-412: "a value-noise lattice corner shared by adjacent cells must be bitwise equal from each cell, on every
+// backend the regression test runs on: CI's lavapipe and Metal block". With the PR tier's GPU jobs now the smoke sets,
+// the blocking lattice run on a pull request is theirs (`gpu-lavapipe`, `gpu-metal`), on a GPU-path change (R-656).
+
+/// The steps of a job (its lines below the id), each as its lines, split at the six-space `- ` that opens a step.
+fn steps_of(lines: &[String]) -> Vec<Vec<String>> {
+    let mut out: Vec<Vec<String>> = Vec::new();
+    let mut in_steps = false;
+    for line in lines {
+        if line.starts_with("    ") && !line.starts_with("     ") && !line.trim().starts_with('#') {
+            in_steps = line.trim_end() == "    steps:";
+            continue;
+        }
+        if !in_steps {
+            continue;
+        }
+        if line.starts_with("      - ") {
+            out.push(vec![line.clone()]);
+        } else if let Some(step) = out.last_mut() {
+            step.push(line.clone());
+        }
+    }
+    out
+}
+
+/// A step's own key at eight spaces in (its `- ` line counted as the first key), or "".
+fn step_key(step: &[String], key: &str) -> String {
+    let want = format!("{key}:");
+    step.iter()
+        .find_map(|l| {
+            let t = l
+                .strip_prefix("      - ")
+                .or_else(|| l.strip_prefix("        "))?;
+            t.strip_prefix(want.as_str()).map(|v| v.trim().to_owned())
+        })
+        .unwrap_or_default()
+}
+
+/// The job's own `env:` value for `key` (six spaces in), or "".
+fn job_env(lines: &[String], key: &str) -> String {
+    let mut in_env = false;
+    for l in lines {
+        if l.starts_with("    ") && !l.starts_with("     ") {
+            in_env = l.trim_end() == "    env:";
+            continue;
+        }
+        if in_env {
+            if let Some(v) = l.strip_prefix(&format!("      {key}:")) {
+                return v.trim().to_owned();
+            }
+        }
+    }
+    String::new()
+}
+
+/// The step's own `env:` value for `key` (ten spaces in), or "".
+fn step_env(step: &[String], key: &str) -> String {
+    step.iter()
+        .find_map(|l| l.strip_prefix(&format!("          {key}:")))
+        .map(|v| v.trim().to_owned())
+        .unwrap_or_default()
+}
+
+/// The lattice tests gui's library holds, as nextest names them, and whether each is `#[ignore]`d.
+fn lattice_tests(source: &str) -> Vec<(String, bool)> {
+    let mut out = Vec::new();
+    let mut attrs: Vec<&str> = Vec::new();
+    for line in source.lines() {
+        let t = line.trim();
+        if t.starts_with("#[") {
+            attrs.push(t);
+            continue;
+        }
+        if let Some(rest) = t.strip_prefix("fn lattice_") {
+            if attrs.contains(&"#[test]") {
+                let name = rest.split('(').next().unwrap();
+                let ignored = attrs.iter().any(|a| a.starts_with("#[ignore"));
+                out.push((format!("tests::mock_lattice::lattice_{name}"), ignored));
+            }
+        }
+        if !t.is_empty() && !t.starts_with("//") {
+            attrs.clear();
+        }
+    }
+    out
+}
+
+/// Whether a `default-filter`'s clauses select gui-library test `name`: a clause naming `binary_id(=gui)` and either
+/// no `test(...)`, `test(=name)`, or `test(/^prefix/)` with a literal prefix of `name`.
+fn selects(filter: &str, name: &str) -> bool {
+    filter
+        .split('|')
+        .map(str::trim)
+        .filter(|c| c.contains("binary_id(=gui)"))
+        .any(|c| match c.find("test(") {
+            None => !c.contains("not "),
+            Some(at) => {
+                let arg = &c[at + "test(".len()..];
+                let arg = &arg[..arg.find(')').unwrap_or(arg.len())];
+                if let Some(exact) = arg.strip_prefix('=') {
+                    exact == name
+                } else if let Some(re) = arg.strip_prefix("/^").and_then(|r| r.strip_suffix('/')) {
+                    re.chars()
+                        .all(|ch| ch.is_alphanumeric() || ch == '_' || ch == ':')
+                        && name.starts_with(re)
+                } else {
+                    false
+                }
+            }
+        })
+}
+
+/// The GPU-path condition under which a smoke set's steps may skip (R-656); anything else may skip them on a GPU change.
+const RUN_ON_GPU: &str = "env.RUN == 'true'";
+
+/// Each smoke set runs gui's library tests under the `gpu-smoke` profile on its backend, which selects every lattice
+/// test that is not `#[ignore]`d, blocking: no `continue-on-error`, no step condition but the GPU-path one, no filter
+/// or ignored-run that narrows or widens what the profile selects.
+fn check_lattice_smoke(ci: &str, toml: &str, gui_source: &str) {
+    let tests = lattice_tests(gui_source);
+    let blocking: Vec<&String> = tests.iter().filter(|(_, i)| !i).map(|(n, _)| n).collect();
+    assert!(
+        blocking.len() >= 3,
+        "qa pr tier: gui's library has {} lattice tests that are not ignored",
+        blocking.len()
+    );
+    let smoke = filter(toml, "gpu-smoke");
+    for name in &blocking {
+        assert!(
+            selects(&smoke, name),
+            "qa pr tier: the `gpu-smoke` profile does not select gui's {name}"
+        );
+    }
+    for (check, backend) in [("gpu-lavapipe", "vulkan"), ("gpu-metal", "metal")] {
+        let (id, lines) = the_job(ci, "ci.yml", check);
+        assert_eq!(
+            job_env(&lines, "PRIN_GPU_BACKEND"),
+            backend,
+            "qa pr tier: `{check}` ({id}) is not on {backend}"
+        );
+        assert!(
+            !lines
+                .iter()
+                .any(|l| l.starts_with("    continue-on-error:")),
+            "qa pr tier: `{check}` ({id}) can pass with a failing step"
+        );
+        let gui: Vec<Vec<String>> = steps_of(&lines)
+            .into_iter()
+            .filter(|s| {
+                runs(s).iter().any(|r| {
+                    let w: Vec<&str> = r.split_whitespace().collect();
+                    w.starts_with(&["cargo", "nextest", "run"])
+                        && w.windows(2)
+                            .any(|p| p == ["-p", "gui"] || p == ["--package", "gui"])
+                })
+            })
+            .collect();
+        assert_eq!(
+            gui.len(),
+            1,
+            "qa pr tier: `{check}` ({id}) has {} steps running gui's tests",
+            gui.len()
+        );
+        let step = &gui[0];
+        let run = runs(step).remove(0);
+        for word in run.split_whitespace().skip(3) {
+            assert!(
+                ["-p", "--package", "gui", "--lib", "--no-capture", "--no-fail-fast"].contains(&word),
+                "qa pr tier: `{check}` ({id}) runs gui's tests with `{word}`, which can change what the profile selects"
+            );
+        }
+        let profile = match step_env(step, "NEXTEST_PROFILE") {
+            p if p.is_empty() => job_env(&lines, "NEXTEST_PROFILE"),
+            p => p,
+        };
+        assert_eq!(
+            profile, "gpu-smoke",
+            "qa pr tier: `{check}` ({id}) runs gui's tests under another profile"
+        );
+        assert!(
+            step_key(step, "continue-on-error").is_empty(),
+            "qa pr tier: `{check}` ({id}) lets gui's lattice step fail"
+        );
+        let cond = step_key(step, "if");
+        assert!(
+            cond.is_empty() || cond == RUN_ON_GPU,
+            "qa pr tier: `{check}` ({id}) runs gui's lattice step only when `{cond}`"
+        );
+    }
+}
+
+fn gui_lattice_source() -> String {
+    read("crates/gui/src/tests/mock_lattice.rs")
+}
+
+#[test]
+fn qa_pr_tier_lattice_tests_block_on_both_smoke_sets() {
+    check_lattice_smoke(&ci(), &read(".config/nextest.toml"), &gui_lattice_source());
+}
+
+/// `text` without its last `cut` (the Metal smoke set's step follows lavapipe's).
+#[cfg(feature = "controls")]
+fn cut_last(text: &str, cut: &str) -> String {
+    let at = text
+        .rfind(cut)
+        .unwrap_or_else(|| panic!("qa pr tier: control target {cut:?} gone"));
+    format!("{}{}", &text[..at], &text[at + cut.len()..])
+}
+
+negative_control!(
+    qa_pr_tier_lattice_tests_block_on_both_smoke_sets,
+    "ci.yml whose Metal smoke set runs no gui step",
+    expected = "`gpu-metal` (gpu-metal-smoke) has 0 steps running gui's tests",
+    check_lattice_smoke(
+        &cut_last(
+            &ci(),
+            "        run: cargo nextest run -p gui --lib --no-capture\n"
+        ),
+        &read(".config/nextest.toml"),
+        &gui_lattice_source(),
+    )
+);
+
+#[test]
+fn qa_pr_tier_smoke_profile_selects_every_lattice_test() {
+    check_lattice_smoke(&ci(), &read(".config/nextest.toml"), &gui_lattice_source());
+}
+
+negative_control!(
+    qa_pr_tier_smoke_profile_selects_every_lattice_test,
+    "the `gpu-smoke` profile narrowed to one lattice test",
+    expected = "the `gpu-smoke` profile does not select gui's",
+    check_lattice_smoke(
+        &ci(),
+        &swap(
+            &read(".config/nextest.toml"),
+            "(binary_id(=gui) & test(/^tests::mock_lattice::lattice_/))",
+            "(binary_id(=gui) & test(=tests::mock_lattice::lattice_shared_corners_bitwise))",
+        ),
+        &gui_lattice_source(),
+    )
+);
+
+#[test]
+fn qa_pr_tier_lattice_steps_let_no_failure_past() {
+    check_lattice_smoke(&ci(), &read(".config/nextest.toml"), &gui_lattice_source());
+}
+
+negative_control!(
+    qa_pr_tier_lattice_steps_let_no_failure_past,
+    "ci.yml whose lavapipe lattice step is continue-on-error",
+    expected = "`gpu-lavapipe` (gpu-lavapipe-smoke) lets gui's lattice step fail",
+    check_lattice_smoke(
+        &swap(
+            &ci(),
+            "        run: cargo nextest run -p gui --lib --no-capture\n",
+            "        continue-on-error: true\n        run: cargo nextest run -p gui --lib --no-capture\n",
+        ),
+        &read(".config/nextest.toml"),
+        &gui_lattice_source(),
+    )
+);
+
+negative_control!(
+    qa_pr_tier_lattice_steps_run_no_ignored_report,
+    "ci.yml whose lavapipe lattice step runs the ignored reports too",
+    expected = "runs gui's tests with `--run-ignored`",
+    check_lattice_smoke(
+        &swap(
+            &ci(),
+            "        run: cargo nextest run -p gui --lib --no-capture\n",
+            "        run: cargo nextest run -p gui --lib --run-ignored all --no-capture\n",
+        ),
+        &read(".config/nextest.toml"),
+        &gui_lattice_source(),
+    )
+);
+
+#[test]
+fn qa_pr_tier_lattice_steps_run_no_ignored_report() {
+    check_lattice_smoke(&ci(), &read(".config/nextest.toml"), &gui_lattice_source());
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// REQ-TOOL-223 (as R-907..R-909 amend it): "A failure of `ci-release`, a shard or its archive, must fail the run it is
+// in and never be read by eye (R-809): it runs on each merge to `main`, off the pull request's path, a job of the
+// per-merge run conditional on nothing but the event not being a pull request, with no `continue-on-error` on its build
+// or test steps, … no pull-request check gathers it".
+
+/// The jobs a job `needs`, inline (`needs: a` or `needs: [a, b]`) or as a block list.
+fn needs_of(lines: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut block = false;
+    for l in lines {
+        if let Some(v) = l.strip_prefix("    needs:") {
+            let v = v.trim().trim_start_matches('[').trim_end_matches(']');
+            out.extend(
+                v.split(',')
+                    .map(|s| s.trim().to_owned())
+                    .filter(|s| !s.is_empty()),
+            );
+            block = v.is_empty();
+            continue;
+        }
+        if block {
+            match l.strip_prefix("      - ") {
+                Some(v) => out.push(v.trim().to_owned()),
+                None => block = false,
+            }
+        }
+    }
+    out
+}
+
+/// Whether a job's own `if:` keeps it off pull requests.
+fn off_pull_requests(cond: &str) -> bool {
+    cond.contains("github.event_name != 'pull_request'")
+        || cond.contains("github.event_name == 'push'")
+}
+
+fn check_release_blocks(ci: &str) {
+    let all = jobs(ci);
+    let job = |id: &str| -> Vec<String> {
+        all.iter()
+            .find(|(j, _)| j == id)
+            .map(|(_, l)| l.clone())
+            .unwrap_or_else(|| panic!("qa pr tier: ci.yml has no `{id}`"))
+    };
+    let archive = job("ci-release-archive");
+    assert_eq!(
+        job_if(&archive),
+        "github.event_name != 'pull_request'",
+        "qa pr tier: `ci-release-archive` runs under another condition"
+    );
+    let shards = job("ci-release");
+    assert!(
+        needs_of(&shards).iter().any(|n| n == "ci-release-archive"),
+        "qa pr tier: `ci-release` does not need its archive"
+    );
+    let cond = job_if(&shards);
+    assert!(
+        cond.is_empty() || cond == "github.event_name != 'pull_request'",
+        "qa pr tier: `ci-release` runs under `{cond}`"
+    );
+    for (id, lines) in [("ci-release-archive", &archive), ("ci-release", &shards)] {
+        assert!(
+            !lines
+                .iter()
+                .any(|l| l.starts_with("    continue-on-error:")),
+            "qa pr tier: `{id}` can pass with a failing step"
+        );
+        let cargo: Vec<Vec<String>> = steps_of(lines)
+            .into_iter()
+            .filter(|s| runs(s).iter().any(|r| r.contains("cargo ")))
+            .collect();
+        assert!(!cargo.is_empty(), "qa pr tier: `{id}` runs no cargo step");
+        for step in &cargo {
+            assert!(
+                step_key(step, "continue-on-error").is_empty(),
+                "qa pr tier: `{id}` lets its build or test step fail: {}",
+                step[0].trim()
+            );
+        }
+    }
+    for (id, lines) in &all {
+        let needs = needs_of(lines);
+        if needs
+            .iter()
+            .any(|n| n == "ci-release" || n == "ci-release-archive")
+        {
+            assert!(
+                off_pull_requests(&job_if(lines))
+                    || needs
+                        .iter()
+                        .any(|n| n == "ci-release-archive" && id == "ci-release"),
+                "qa pr tier: `{id}`, which runs on a pull request, gathers the release run"
+            );
+        }
+    }
+}
+
+#[test]
+fn qa_pr_tier_release_failure_fails_its_run() {
+    check_release_blocks(&ci());
+}
+
+negative_control!(
+    qa_pr_tier_release_failure_fails_its_run,
+    "ci.yml whose release shards' test step is continue-on-error",
+    expected = "`ci-release` lets its build or test step fail",
+    check_release_blocks(&swap(
+        &ci(),
+        "        run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-release.tar.zst",
+        "        continue-on-error: true\n        run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-release.tar.zst",
+    ))
+);
+
+#[test]
+fn qa_pr_tier_release_archive_failure_fails_its_run() {
+    check_release_blocks(&ci());
+}
+
+negative_control!(
+    qa_pr_tier_release_archive_failure_fails_its_run,
+    "ci.yml whose release archive job is continue-on-error",
+    expected = "`ci-release-archive` can pass with a failing step",
+    check_release_blocks(&swap(
+        &ci(),
+        "  ci-release-archive:\n    if: github.event_name != 'pull_request'\n",
+        "  ci-release-archive:\n    if: github.event_name != 'pull_request'\n    continue-on-error: true\n",
+    ))
+);
+
+#[test]
+fn qa_pr_tier_no_pull_request_check_gathers_the_release_run() {
+    check_release_blocks(&ci());
+}
+
+negative_control!(
+    qa_pr_tier_no_pull_request_check_gathers_the_release_run,
+    "ci.yml whose `ci` check needs the release shards again",
+    expected = "`tests`, which runs on a pull request, gathers the release run",
+    check_release_blocks(&swap(
+        &ci(),
+        "  tests:\n    name: ci\n    needs: changes\n",
+        "  tests:\n    name: ci\n    needs: [changes, ci-release]\n",
+    ))
+);
