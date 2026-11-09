@@ -430,3 +430,7 @@ justification = "the bound's two tests fall together. A third too small to move 
 [[equivalent]]
 mutant = "crates/kernel/src/encode/blocks.rs:279:29: replace | with ^ in <impl SimplexClamp for StickBreaking>::clamps"
 justification = "the two operands are select(first, 1, 0) and select(second, 2, 0), which share no bit, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/tilt.rs:463:25: replace < with <= in lean_normal"
+justification = "cross[2] = cos τ₁·cos τ₂ from f64 sin_cos of to_radians(τ), never exactly 0 (no double's cos is 0, and the product of two such, at least about 1e-38, never underflows), so < 0.0 and <= 0.0 agree on every input"

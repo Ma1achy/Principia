@@ -31,9 +31,14 @@
 //! [`Tilted`] on the parent under the saved tilt, the arithmetic of the view it was saved from; with the saved tilt
 //! itself zero, the parent's own.
 //!
-//! **What is refused** (`None` from [`Composed::new`]): a new tilt into a target of a saved Lean each axis view with one
-//! target and both angles set, whose skewed `R` has no third input (RQ-746; REQ-CHART-149, built by TASK-M2-56 once
-//! ruled); and a composition whose offsets land on more than two hidden coordinates, which one [`Shift`] cannot carry
+//! **A saved Lean each axis view with one target and both angles set** (R-895, ruling RQ-746 (a); REQ-CHART-149): its
+//! columns `û₁`, `û₂` are skewed, no rotation's, and a new offset on its target enters `R`'s third input `t̂`, the
+//! saved plane's unit normal `û₁ × û₂` normalised, its sign toward `+e_X` ([`TiltSpec::inputs`]): R-513's `R·R′`
+//! literally, `R = [û₁ û₂ t̂]`, the composition no rotation, as the saved map is none. So the saved target is offered there too (R-513 Q3).
+//!
+//! **What is refused** (`None` from [`Composed::new`]): a new tilt into the target of a saved Lean each axis view at
+//! RQ-471's corner, `|τ₁| = |τ₂| = 90°` with one target, which has no frame (R-554's `ray-degenerate`; R-895); and a
+//! composition whose offsets land on more than two hidden coordinates, which one [`Shift`] cannot carry
 //! (REQ-CHART-148, built by TASK-M2-55). Saving a saved chart again, the chain `R·R′·R″`, and the composed chart's
 //! area weight and the shape sphere's repeat counting are TASK-M2-55's too (REQ-CHART-148); meanwhile
 //! [`Saved::curved`] refuses a saved or tilted chart as a parent by type ([`SaveParent`]), never saving it without its
@@ -713,8 +718,8 @@ pub struct Composed<P> {
 
 impl Composed<f64> {
     /// The saved tilt `saved` about `saved_centre`, spans `saved_span`, composed after the new tilt `new` about the view's
-    /// centre `centre`, spans `span`. `None` where a new offset enters a saved target whose `R` has no input there
-    /// ([`TiltSpec::inputs`]; RQ-746, TASK-M2-56), or where the offsets land on more than two hidden coordinates
+    /// centre `centre`, spans `span`. `None` where a new offset enters a saved target whose `R` has no input there, at
+    /// RQ-471's corner ([`TiltSpec::inputs`]; R-895), or where the offsets land on more than two hidden coordinates
     /// (TASK-M2-55).
     pub fn new(
         saved: &TiltSpec,
