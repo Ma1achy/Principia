@@ -155,11 +155,12 @@ tier_of() {
 }
 
 # The paths no GPU job builds, reads or runs: the data and docs ones, `prin`, and `gui` but for what the Metal suite's
-# `lattice_` step on `main` reads (R-692): `prin` nothing in the GPU jobs depends on, and of `gui` only that step builds
-# anything (the other GPU jobs build validation, engine, render, kernel, ledger and xtask). On a pull request `gpu`
-# runs the GPU smoke sets (`ci.yml`'s `gpu-lavapipe` and `gpu-metal`); a change to one of those five runs them too,
-# this script having one `gpu` flag, and the gui crate's lattice tests run on lavapipe in `tests`. Everything else, a
-# lockfile, a toolchain, a fixture, a workflow or data only the code tier reads among it, runs the GPU smoke sets.
+# `lattice_` step on `main` and both GPU smoke sets' lattice step read (R-692): `prin` nothing in the GPU jobs depends
+# on, and of `gui` only those steps build anything (the other GPU jobs build validation, engine, render, kernel, ledger
+# and xtask). On a pull request `gpu` runs the GPU smoke sets (`ci.yml`'s `gpu-lavapipe` and `gpu-metal`), the gui
+# crate's lattice tests among them on lavapipe and on Metal (REQ-GUI-412); a change to one of those five runs them,
+# this script having one `gpu` flag. Everything else, a lockfile, a toolchain, a fixture, a workflow or data only the
+# code tier reads among it, runs the GPU smoke sets.
 is_not_gpu() {
   if [ "$(tier_of "$1")" != code ]; then
     return 0

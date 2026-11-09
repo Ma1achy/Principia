@@ -1818,7 +1818,10 @@ default-filter = """
 # `qa_TASK-M0-14`. `gpu-metal` runs the six with a Metal time, the stages the Metal suites ran before, by `--test`; the
 # ones Metal did not run stay lavapipe's, so the smoke set asks nothing of Metal its suites never did. Beside them on
 # Metal, the GPU harness's, the compute fast-math probe's and the hosted-Metal probe's unit tests in validation, and the
-# compute entry point's in engine (R-297), each under a second. Applied per R-369/R-812.
+# compute entry point's in engine (R-297), each under a second. On both, the mock noise's shared-lattice-corner tests in
+# gui's library, `tests::mock_lattice::lattice_` but the three `#[ignore]`d reports, which REQ-GUI-412 has block on
+# "CI's lavapipe and Metal" (R-685, R-692): a GPU-path change to gui (`scripts/ci_changes.sh`'s five paths) runs them
+# here, and the pull request's path keeps them blocking. Applied per R-369/R-812.
 [profile.gpu-smoke]
 default-filter = """
     (binary_id(=validation::toolchain) & test(=toolchain_trivial_kernel))
@@ -1838,4 +1841,5 @@ default-filter = """
     | binary_id(=xtask::qa_TASK-M0-14)
     | (binary_id(=validation) & test(/^gpu::tests::(metal_hosted_probe|compute_fast_math_|gpu_harness_)/))
     | (binary_id(=engine) & test(/^compute::tests::compute_entry_/))
+    | (binary_id(=gui) & test(/^tests::mock_lattice::lattice_/))
 """

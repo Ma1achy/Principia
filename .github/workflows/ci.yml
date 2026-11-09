@@ -617,6 +617,15 @@ jobs:
         env:
           NEXTEST_PROFILE: gpu-smoke
         run: cargo nextest run -p xtask --test build_kernel --test fragment_wgsl --test qa_TASK-M0-14
+      # The mock noise's shared lattice corners, bit-equal from each cell on lavapipe, their controls through `rejects`
+      # included (REQ-GUI-412: "CI's lavapipe and Metal block"; R-685, R-692): the `gpu-smoke` profile's
+      # `tests::mock_lattice::lattice_` tests of gui's library. They claim nothing of the real kernel (ADR-0001 § "Must
+      # not claim").
+      - name: cargo nextest run -p gui (the lattice tests)
+        if: env.RUN == 'true'
+        env:
+          NEXTEST_PROFILE: gpu-smoke
+        run: cargo nextest run -p gui --lib --no-capture
       # Every registered gate has its `fixtures/gates/<gate>/gate.json`; a `gate.json` the runner does not know fails.
       - name: cargo xtask gate (every gate but decode-agreement)
         if: env.RUN == 'true'
@@ -631,7 +640,9 @@ jobs:
   # silicon's paravirtual Metal (R-169, R-186), the `gpu-smoke` profile's tests of the stages the Metal suites ran
   # before (the pack and unpack, decode, canonicalisation, encode, the invariant seed and the cross-backend decode),
   # with the GPU harness's, the fast-math probe's and the compute entry point's unit tests (R-297). The stages only
-  # lavapipe ran (the toolchain, bring-up, per-pixel mass, lock, `atan2` and agreement-preset tests) stay lavapipe's. It skips inside the job like the others, a
+  # lavapipe ran (the toolchain, bring-up, per-pixel mass, lock, `atan2` and agreement-preset tests) stay lavapipe's. The
+# mock noise's lattice tests run on both (REQ-GUI-412: "CI's lavapipe and Metal block"). It skips inside the job like
+# the others, a
   # macOS runner held for its first step alone on a change without a GPU-path file. On a push too, as `gpu-lavapipe`'s,
   # to save its rust-gpu build on `main`.
   gpu-metal-smoke:
@@ -698,6 +709,13 @@ jobs:
         env:
           NEXTEST_PROFILE: gpu-smoke
         run: cargo nextest run -p engine --lib --test decode_stage_gpu --test canon_gpu --test encode_gpu --test invariant_gpu --test decode_cross_backend --no-capture
+      # The mock noise's shared lattice corners, bit-equal from each cell on Metal, as on lavapipe (REQ-GUI-412; R-685,
+      # R-692).
+      - name: cargo nextest run -p gui (the lattice tests)
+        if: env.RUN == 'true'
+        env:
+          NEXTEST_PROFILE: gpu-smoke
+        run: cargo nextest run -p gui --lib --no-capture
 
   # ---------------------------------------------------------------------------------------------------------------------
   # The interim per-merge run: on a push only (`main`, `measure/`), the full suite as before, until the per-merge

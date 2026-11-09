@@ -16,6 +16,9 @@
 //!   9 Nov 2026: "per merge, never retired"), so no binary falls out of both `pr` and `process` unnamed.
 //! - `ci_pr_tier_smoke_tests_exist`: each test the `gpu-smoke` profile names by `test(=…)` is a test of its binary, so a
 //!   renamed test cannot leave a GPU stage silently untested.
+//! - `ci_pr_tier_smoke_sets_run_the_lattice_tests`: the `gpu-smoke` profile selects gui's lattice tests and both GPU
+//!   smoke sets, `gpu-lavapipe` and `gpu-metal`, run them under it with nothing letting a failure through
+//!   (REQ-GUI-412: "CI's lavapipe and Metal block").
 //! - `ci_pr_tier_required_checks_skip_inside_the_job`: in `ci.yml` every job bearing a required check of the PR tier
 //!   runs on every pull request (`if: always() && github.event_name == 'pull_request'`, or `if: always()` for the GPU
 //!   smoke sets, which run on a push too), needs `changes`, and fails at
@@ -447,6 +450,81 @@ negative_control!(
         "test(=decode_stage_tanh_range_renamed)",
     ))
 );
+
+/// The `gpu-smoke` profile's selection of the mock noise's lattice tests in gui's library (REQ-GUI-412).
+const LATTICE: &str = "(binary_id(=gui) & test(/^tests::mock_lattice::lattice_/))";
+
+/// The step both GPU smoke sets run the lattice tests by.
+const LATTICE_STEP: &str = "        run: cargo nextest run -p gui --lib --no-capture";
+
+/// REQ-GUI-412: "on every backend the regression test runs on: CI's lavapipe and Metal block". The `gpu-smoke` profile
+/// selects gui's lattice tests, and each smoke set, a required check, runs them under that profile with nothing letting
+/// a failure through.
+fn check_lattice_smoke(toml: &str, workflow: &str) {
+    assert!(
+        profile(toml, "gpu-smoke").filter.contains(LATTICE),
+        "ci_pr_tier: the gpu-smoke profile does not select gui's lattice tests"
+    );
+    let jobs = jobs(workflow);
+    for check in ["gpu-lavapipe", "gpu-metal"] {
+        let (id, lines) = jobs
+            .iter()
+            .find(|(id, l)| job_name(id, l) == check)
+            .unwrap_or_else(|| panic!("ci_pr_tier: no job bears {check}"));
+        let at = lines
+            .iter()
+            .position(|l| l == LATTICE_STEP)
+            .unwrap_or_else(|| {
+                panic!("ci_pr_tier: {check} ({id}) does not run gui's lattice tests")
+            });
+        let start = lines[..at]
+            .iter()
+            .rposition(|l| l.starts_with("      - "))
+            .unwrap_or_else(|| panic!("ci_pr_tier: {check} ({id})'s lattice step has no start"));
+        let step = &lines[start..=at];
+        assert!(
+            step.iter()
+                .any(|l| l.trim() == "NEXTEST_PROFILE: gpu-smoke"),
+            "ci_pr_tier: {check} ({id}) runs gui's lattice tests outside the gpu-smoke profile"
+        );
+        assert!(
+            !step
+                .iter()
+                .any(|l| l.trim().starts_with("continue-on-error")),
+            "ci_pr_tier: {check} ({id}) lets a lattice failure through"
+        );
+    }
+}
+
+#[test]
+fn ci_pr_tier_smoke_sets_run_the_lattice_tests() {
+    check_lattice_smoke(
+        &read(".config/nextest.toml"),
+        &read(".github/workflows/ci.yml"),
+    );
+}
+
+negative_control!(
+    ci_pr_tier_smoke_sets_run_the_lattice_tests,
+    "The Metal smoke set without its lattice step fails the check.",
+    expected = "gpu-metal (gpu-metal-smoke) does not run gui's lattice tests",
+    check_lattice_smoke(
+        &read(".config/nextest.toml"),
+        &without_last(
+            &read(".github/workflows/ci.yml"),
+            &format!("{LATTICE_STEP}\n")
+        ),
+    )
+);
+
+/// `text` without the last `cut` in it, the Metal smoke set's step coming after lavapipe's.
+#[cfg(feature = "controls")]
+fn without_last(text: &str, cut: &str) -> String {
+    let at = text
+        .rfind(cut)
+        .unwrap_or_else(|| panic!("ci_pr_tier: no {cut:?} to cut"));
+    format!("{}{}", &text[..at], &text[at + cut.len()..])
+}
 
 /// Each job of `ci.yml`, as (id, its lines), from its id (two spaces in, under `jobs:`) to the next job's.
 fn jobs(workflow: &str) -> Vec<(String, Vec<String>)> {
