@@ -835,8 +835,10 @@ slow-timeout = { period = "150s", terminate-after = 3 }
 filter = "binary_id(=validation::qa_TASK-M0-21) & test(=qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test)"
 slow-timeout = { period = "90s", terminate-after = 3 }
 
-# The measured value from run 42553429041 on the hosted runner (R-903): 70.1 s, more than half the profile's 60 s, so
-# `cargo xtask mutants-limits` regenerated it (3 x 70.1 s, the period rounded up to 10 s). Applied per R-369.
+# The measured value from run 42553429041 on the hosted runner, under the owner's order of 8 Nov 2026 (the profile's
+# header, above): 70.1 s, more than half the profile's 60 s, so `cargo xtask mutants-limits`'s half-limit check refused
+# it and regenerated it by the profile's rule (3 x 70.1 s, the period rounded up to 10 s; REQ-VAL-180). Applied per
+# R-369.
 [[profile.mutants.overrides]]
 filter = "binary_id(=validation::qa_TASK-M0-21) & test(=qa_unit_test_in_a_binary_target_pairs_with_its_control_in_tests)"
 slow-timeout = { period = "80s", terminate-after = 3 }
