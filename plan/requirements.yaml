@@ -4759,7 +4759,7 @@
     section: 2.1 Feasibility, and the warp that makes every pixel valid
   verify:
     method: unit test
-    detail: "the GPU edge walk over HeldLz, HeldK and the Burrau charts, run in the GPU job with its criterion written first, its result in the PR: band refusals labelled rounding, no GPU-accepted non-system; controls: a band refusal drawn as the edge fails, an accepted non-system fails"
+    detail: "cargo test -p engine gpu_f32_band_edge_walk: the GPU edge walk over HeldLz, HeldK and the Burrau charts, run in the GPU job with its criterion written first, its result in the PR: band refusals labelled rounding, no GPU-accepted non-system; controls: a band refusal drawn as the edge fails, an accepted non-system fails"
   rulings:
   - R-71
   - R-72
@@ -4768,7 +4768,7 @@
   - R-876
   - R-916
   milestone: M4
-  note: "Added by R-876 (8 Nov 2026). Closed by TASK-M4-06. Physics review 5820410914 of PR #455, P1: the band defined (R-72), its width a calibration if a number (R-71). R-916 (9 Nov 2026), the plan's slip 1: split; the CPU label, the band's definition (R-72) and any width calibration are REQ-CHART-169 (TASK-M2-66, M2); this keeps the GPU edge walk, TASK-M4-06's. *Was (statement):* \"On the f32 charts R-708 covers … a pixel refused inside the band one float wide at the warp's floor … must be labelled as rounding … proposed with its evidence and confirmed by the owner at the M4 gate.\""
+  note: "Added by R-876 (8 Nov 2026). Closed by TASK-M4-06. Physics review 5820410914 of PR #455, P1: the band defined (R-72), its width a calibration if a number (R-71). R-916 (9 Nov 2026), the plan's slip 1: split; the CPU label, the band's definition (R-72) and any width calibration are REQ-CHART-169 (TASK-M2-66, M2); this keeps the GPU edge walk, TASK-M4-06's. *Was (statement):* \"On the f32 charts R-708 covers … a pixel refused inside the band one float wide at the warp's floor … must be labelled as rounding … proposed with its evidence and confirmed by the owner at the M4 gate.\" Code review 5834056023 of PR #465 (9 Nov 2026): the GPU edge walk is named as a command. *Was (verify):* \"the GPU edge walk over HeldLz, HeldK and the Burrau charts, run in the GPU job with its criterion written first, its result in the PR: band refusals labelled rounding, no GPU-accepted non-system; controls: a band refusal drawn as the edge fails, an accepted non-system fails\"."
 - id: REQ-CHART-153
   area: CHART
   statement: "Final-condition charts must be built after the M8 charts, as a CPU batch chart whose axes are state functions at time T (the model's Theorem 11: flip the momenta, integrate forward T, flip back), on the default integrator as an approximate inverse, the round-trip miss measured and reported per pixel and a pixel whose miss exceeds REQ-CHART-154's threshold masked; the standard size I = 1 kept at the chosen state, with a per-pixel horizon as a labelled exception for final-condition charts only; a start found kept in the signed state; and conserved axes shown T-independent (R-879, RQ-734; R-852)."
