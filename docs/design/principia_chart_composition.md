@@ -1673,8 +1673,9 @@ TASK-M8-124, then TASK-M8-107 and TASK-M8-108; **(5)** as above. Three tasks joi
 | TASK-M8-128 | M8 | final-condition charts (R-879, § 10.3) | TASK-M8-102, the M8 charts |
 | TASK-M8-129 | M8 | the consolidation step: one leaf per operation, the GUI routes as adapters, D19 and D23 fixed (R-894) | TASK-M8-124, TASK-M8-125 |
 
-TASK-M8-127 is outside the design's gate: it rebuilds three gallery charts, and waits on TASK-M8-120 alone of the
-design's tasks.
+TASK-M8-127 is not given TASK-M4-37 directly: it rebuilds three gallery charts and waits on TASK-M8-120 alone of the
+design's tasks, so it is behind the gate through TASK-M8-120. *Was:* "TASK-M8-127 is outside the design's gate: it
+rebuilds three gallery charts, and waits on TASK-M8-120 alone of the design's tasks."
 
 ---
 
@@ -1952,7 +1953,9 @@ bitwise check, golden hashes regenerated with a record of why (R-900).
 **Default correspondence:** the anchor, pixel to pixel by offset. **With an excursion** (`δ ≠ 0`): the pin is the current
 `z₀`, as "turns about the pin"; the words are that point's; `z_locked` and `δ` are not touched. Snap-back undoes the
 slice only, clearing the hidden excursion and leaving the pin where it is on screen, and "centre on pin" clears the
-in-plane part; together they are `z₀ ← z_locked`, bit for bit (the brief's Q2 (a), R-899). *Was:* "`z_locked` and `δ` are
+in-plane part; together they are `z₀ ← z_locked`, bitwise by definition, centre on pin after snap-back assigning
+`z₀ ← z_locked`; snap-back alone, a projection on an oblique basis, is exact to rounding, within REQ-ENC-024's
+`ε_phys` on the decoded state, its construction TASK-M8-125's (R-72) (the brief's Q2 (a), R-899). *Was:* "`z_locked` and `δ` are
 not touched, so snap-back, `z₀ ← z_locked`, stays bit for bit." **Deep zoom:** REQ-DEC-033's linearised decoder lands in M6. `J_D` at the anchor doesn't change along the
 path, since the anchor doesn't; what changes is the chart's tangent plane, per frame. At depth a frame is locally a plane
 morph, the same first-order part transported above, so a deep frame is the linearisation of the coarse frame over it. CPU work per

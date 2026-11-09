@@ -1769,7 +1769,7 @@ Standing rule, "so this doesn't recur":
 ## R-196 — Mutation testing joins the QA gate
 *Amended by R-302.*
 *Amended in part by R-904, R-905 and R-908 (8 Nov 2026: no mutation run on the pull-request path; the in-diff run is on `main` and the full run nightly, placed per job on the Windows runner or GitHub-hosted runners (R-905); a survivor not on the equivalents list files a task automatically and never makes `main` red; R-909's model governs).*
-*Still in force: the in-diff run on the changed code, now on each merge to `main` (R-905, R-909), sharded under R-302; nightly, a full run written as a report; the three exclusions. Not per pull request, and a survivor files a task rather than being a qa finding on the pull request (R-904, R-905, R-908).*
+*Still in force: per PR, `cargo mutants --in-diff` on the changed code, sharded under R-302, until the pull-request tier's restructure lands (R-305 and R-678 as R-907 and R-908 leave them), then on each merge to `main` (R-905, R-909); nightly, a full run written as a report; the three exclusions. Once the restructure lands, not per pull request, and a survivor files a task rather than being a qa finding on the pull request (R-904, R-905, R-908).*
 *26 Sep 2026 · given before R-197, recorded with TASK-M0-04*
 
 "mutation testing joins the QA gate.
@@ -6332,6 +6332,11 @@ of ready-next tasks, starting a task off its approved dependency's head, and fas
 - R-388 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+*8 Nov 2026, R-908 and R-909:* with no mutation run on the pull-request path once the pull-request tier's restructure
+lands, this ruling's local `cargo mutants` run before a pull request opens, and its "CI's mutants gate stays the
+authority", are reworded by that restructure's pull request (R-909's step (2)), which brings to the owner any change to
+what this ruling says; until then they stand.
 
 ## R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*
 *Amended in part by R-433 (`r_pole` confirmed at the M1 gate at 0.01, a constants-register entry marked
@@ -30533,7 +30538,13 @@ R-682 is in the "process" group of `plan/rule_groups.yaml`.
 quick and full tiers by R-684's part (A), step (4)'s cache by its part (B), R-656's approved bound applied to R-285,
 built with `actions/cache` or `rust-cache` (target only), not sccache).*
 *Refined by R-906 (8 Nov 2026: paid larger runners, the question this ruling left open: no, the owner's decision).*
-*Still in force: all of it; the series, its order and its before and after numbers; R-285's wording still comes with step (4)'s pull request; paid larger runners not taken (R-906).*
+*Amended in part by R-908 and R-909 (8 and 9 Nov 2026: step (3), `cargo mutants --in-diff` on the merge-ready head,
+gives way, no mutation run on the pull-request path (R-908); step (2)'s "full suite once at merge-ready" gives way to
+the model's pull-request tier, with no full tier on the merge-candidate head and the full product suite on each merge to
+`main` (R-909)).*
+*Still in force: all of it but step (2)'s full suite at merge-ready and step (3), which R-908 and R-909 overtake: the
+series, its order and its before and after numbers for the steps that remain; step (2)'s quick tier; R-285's wording
+still comes with step (4)'s pull request; paid larger runners not taken (R-906).*
 *3 Nov 2026 · the owner's message of that day; ported 3 Nov 2026; applied in `plan/rule_groups.yaml` and
 `plan/section_notes.yaml`; changes no requirement and no ruling in force*
 
@@ -33303,6 +33314,10 @@ gives exactly D with no mask, and the order's words hold as written." So:
 - **Where the swaps aren't exact** (eq. 3's velocities, unequal masses), only the mirror holds; that is RQ-738's
   conflicts 4 and 9, whose readings held R-878 keeps.
 
+*The check's exact value:* D's area is `∫_{1/2}^{1} √(1 − u²) du = π/6 − √3/8 ≈ 0.30709`, the owner's 0.307; "to the
+grid's resolution" is read as a derived bound, the pixels the boundary of D crosses times one pixel's area (applied per
+R-369; REQ-CHART-138).
+
 R-871 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-872 — The 2 s start-up limit of the axis cap's criterion is the Mac's; issue #427 sets a Vulkan and Windows budget from its own measurements *(closes RQ-716)*
@@ -33401,9 +33416,10 @@ labelled "shape only", until it merges.
 
 *What it amends:* **R-27** ("Shape only (the fold) and shape × labelling (the full range) are both kept"): the fold
 charts give way to the full range with the filter; the full-range `ν` charts R-27 keeps are unchanged. REQ-CHART-045,
-the acute-angle range `θ_min`, `θ_max`, a calibration confirmed at the M2 gate, now ranges within `(0, π/2)` once
-TASK-M8-127 merges; until then it stands within `(0, π/4]`, and the value comes back to the owner at the gate as the
-report said.
+the acute-angle range `θ_min`, `θ_max`, a calibration confirmed at the M2 gate, stays within `(0, π/4]`: the M2 gate
+confirms it for the charts as built, which refuse `θ > π/4`. The full-range `θ_min` and `θ_max` within `(0, π/2)` that
+TASK-M8-127 renders are a calibration of their own (R-71; REQ-CHART-162), proposed with its evidence by TASK-M8-127,
+checked by the physics reviewer and confirmed by the owner at the M8 gate (applied per R-369).
 
 R-875 is in the "physics" group of `plan/rule_groups.yaml`.
 
@@ -33421,6 +33437,12 @@ Burrau charts R-708 covers) to refuse a pixel inside the band one float wide at 
 the chart, decides; such a refusal is labelled as rounding, not drawn as the chart's edge. Nothing false is ever shown:
 the f32 view still accepts no pixel that isn't a system. When the shader decodes these charts, the edge walk measured on
 7 Nov is repeated on the GPU, its criterion written first (R-649).
+
+*Left to TASK-M4-06 to state, as a definition (R-72), under physics review:* what "one float wide" is measured in (the row
+coordinate `t`, the held quantity's residual such as `K − L_z²/2I`, or the layer-3 check's operand) and the band's width
+in it, written into chart_reference § 2.1, so that the kernel and the shader can tell a rounding refusal from R-506's
+decoder-bug warning at run time. A width that is a number rather than a derivation is a calibration (R-71), proposed with
+its evidence, checked by the physics reviewer and confirmed by the owner at the M4 gate (REQ-CHART-152).
 
 *Applied per R-369:* TASK-M4-06, which bakes every chart of the lowering appendix into the compute kernels, carries both:
 the label and the GPU edge walk (REQ-CHART-152).
@@ -33499,6 +33521,11 @@ The owner's words (8 Nov 2026), verbatim:
 - **The rejection:** design § 3.1's "anything measured after `t = 0`" narrows to trajectory functionals and event reads,
   so a state function at a fixed `T` can be an axis of this chart. TASK-M4-37 carries it into § 3.1's table.
 - **The check that conserved axes are `T`-independent** (R-852): TASK-M8-128's acceptance carries it.
+
+*Applied per R-369 (P8 of physics review 5820410914):* the owner's "may use a per-pixel horizon" is kept as their word.
+With `I = 1` kept at the chosen state, a single global horizon is inconsistent where the rescale differs per pixel, so
+REQ-CHART-153's control (a single global horizon on such a chart fails) is the port's choice, recorded here as a
+two-way decision open to veto.
 
 R-879 is in the "physics" group of `plan/rule_groups.yaml`.
 
@@ -33833,7 +33860,8 @@ The owner's words (8 Nov 2026), verbatim:
 - **(a), the stored values:** every stored latent view, saved chart and golden is converted once to the new link.
 - **The check, for this deliberate change,** takes the place of R-865's bitwise condition: each converted value decodes to the
   same system to rounding precision; the outcome classes on the goldens are identical; the goldens are regenerated with
-  a record of why.
+  a record of why. "To rounding precision" is read against an existing calibrated bound, not one chosen in the PR:
+  REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state (applied per R-369; REQ-DEC-055).
 - **The saved-file format** is versioned, and old files are converted on load.
 - **Not (b):** "a hidden half-flag is the special case this ruling removes."
 
@@ -33887,7 +33915,10 @@ The owner's words (8 Nov 2026), verbatim:
 - **Q1 (a):** RQ-749's answer (R-897): stage 2's test reads the recorded state, moved to the pin. TASK-M8-117.
 - **Q2 (a), auto-snap off by default:** snap-back undoes the slice only, clearing the hidden excursion and leaving the pin
   where it is on screen; "centre on pin" (R-866) clears the in-plane part; the two together are today's
-  `z₀ ← z_locked`. The auto-snap setting is off by default, as R-866 already reads it. Built by TASK-M8-125 with R-866
+  `z₀ ← z_locked`. On an oblique basis, splitting `δ` into its in-plane and hidden parts is a projection, so snap-back
+  alone is exact only to rounding: its construction is a definition TASK-M8-125 writes into chart_decoder_contract Part 4
+  under physics review (R-72), its residual decoding to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state. The composite is
+  bitwise by definition: centre on pin after snap-back assigns `z₀ ← z_locked` (applied per R-369). The auto-snap setting is off by default, as R-866 already reads it. Built by TASK-M8-125 with R-866
   (REQ-GUI-425).
   *What it amends:* chart_decoder_contract Part 4, "snap-back is `z₀ ← z_locked`, bit for bit", and design § 17.8's
   "snap-back, `z₀ ← z_locked`, stays bit for bit", each keeping its old words as a "Was"; the owner's model (§ 5,
@@ -33901,12 +33932,18 @@ The owner's words (8 Nov 2026), verbatim:
   view, or a reset landing a locked view on one), the pin is the centre, labelled "assumed". Stage 2's record holds it
   (TASK-M8-117, REQ-CHART-115).
 - **Q5 (a), untilt (a1), amending R-473 as stated:** a pivot record lives in the view, stored as the pinned state (the
-  owner's lock-with-morphs message, R-902), not as chart coordinates, so it survives a chart switch; the untilt re-bases
-  energy once, shown. It amends R-473 (tilt and slice on every chart): a curved chart's tilt turns about the recorded
-  pivot, not only the window's centre. TASK-M8-48 builds it, before stage 1 (RQ-744 (E) (i), R-873; REQ-CHART-157).
+  owner's lock-with-morphs message, R-902), not as chart coordinates, so it survives a chart switch. Untilt (a1), in
+  the words of the type sketch the brief was read with (v9, Q5): "fold `d0` into the slice centre at the untilt, then
+  reset `d0` to zero: the pin is kept and J6 stands, and `U₀` re-bases once on Linear energy axes, stated in the
+  readout"; (a2), a zero-angle tilt path, and (a3), a labelled cut, are not taken. It amends R-473 (tilt and
+  slice on every chart): a curved chart's tilt turns about the recorded
+  pivot, not only the window's centre. TASK-M8-48 builds the record and the kernel tilt at a centred pin, before stage 1 (RQ-744 (E) (i), R-873;
+  REQ-CHART-157); the off-centre pin is TASK-M8-125's (REQ-CHART-163) and the record's survival across a chart switch
+  TASK-M8-117's (REQ-CHART-164), applied per R-369.
 - **Q6 (a):** points of interest are one task, TASK-M8-126, in stage 3 (RQ-744 (C), R-873).
-- **Q7 (c):** a point's star is filled where the chart passes through it within the lock's tolerance, and otherwise
-  hollow at the nearest chart point with the off-slice distance shown (R-870). The lock's tolerance is a value the
+- **Q7 (c):** a point's star is filled where the chart passes through it within the lock's tolerance, with its
+  off-slice distance, the residual inside the tolerance, shown on the filled star too: that distance is what (c) adds
+  to (a); otherwise it is hollow at the nearest chart point with the off-slice distance shown (R-870). The lock's tolerance is a value the
   corpus doesn't give: a calibration (R-71; REQ-CHART-158), proposed with its evidence by TASK-M8-117, which first needs
   it, and confirmed by the owner at the M8 gate.
 - **Q8 (a):** on a mid-morph frame, the marks are found "to pixel resolution", the symmetry filter is off, and both are
@@ -33932,6 +33969,8 @@ R-898 handles RQ-750: the saved-file format's version is bumped, old files are c
 replaces the bitwise check (each converted record decodes to the same system to rounding precision, its outcome class
 unchanged), and any golden hash it changes is regenerated with a record of why. TASK-M8-117's acceptance carries it
 (REQ-CHART-159).
+
+*Applied per R-369:* "to rounding precision" is read against REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state, as for R-898 (REQ-CHART-159).
 
 *The same message's first line,* "Reply 2 (locking doesn't move the view; centre-on-pin optional; auto-snap off): record
 it on #445 now so its step isn't blocked.", is already recorded: PR #445 had merged, and reply 2 is R-866 (merged with
@@ -34180,7 +34219,7 @@ R-905 is in the "ci" group of `plan/rule_groups.yaml`.
 Changes REQ-VAL-148 (statement, verify, source, rulings, note) and REQ-VAL-181 (statement, source, rulings, note).
 
 ## R-906 — CI levers: generated plan files are no longer committed, CI regenerating and checking them; lavapipe's GPU tests may run at a smaller size only once it is shown to reach the same branches and stages, the full size running on the RTX nightly; a test killed by its limit is listed as "timed out (not a survivor)"; the control-inventory tests run once per CI run; the nightly mutation run becomes incremental by fingerprint, every mutant re-tested at least weekly; larger runners: no *(amends R-292 and R-402; refines R-683, R-712, R-718 and R-903)*
-*8 Nov 2026 · the owner's message of that day, "CI levers"; applied in the forward lines of R-292, R-402, R-683, R-712,
+*8 Nov 2026 · the owner's message of that day, "CI levers", and their later message of that day (codegen_selftest); applied in the forward lines of R-292, R-402, R-683, R-712,
 R-718 and R-903, REQ-VAL-148, REQ-VAL-150 and REQ-VAL-180 (reqio) and `plan/rule_groups.yaml`; built by #451 (generated
 plan files no longer committed), #452 and the nightly's tooling pull requests; changes REQ-VAL-148, REQ-VAL-150 and
 REQ-VAL-180*
@@ -34196,6 +34235,11 @@ The owner's words (8 Nov 2026), verbatim:
 > - The qa control-inventory tests (qa_TASK-M0-22/24/25 and similar, which inspect the whole workspace) run once per CI run as a step, not inside per-mutant test runs. Coverage unchanged; report which tests move.
 > Nightly cycle: before choosing (a) or (b), add incremental mutation. Record each mutant's outcome against a fingerprint of its crate's source and tests; a mutant whose fingerprint is unchanged since the last completed run keeps its outcome and isn't re-run. Each night tests only changed mutants; a 7-night rotation still re-tests everything weekly, so a stale fingerprint can't hide a survivor for more than a week. Criterion: on one full pass, the fingerprinted outcomes match a from-scratch run. Then size the cycle from the new cost, with Windows as capacity under the placement rule.
 
+The owner's later message (8 Nov 2026, 22:07, after the levers message at 20:31), verbatim, its heading and item 1:
+
+> CI, additions under the standing delegation (criteria first, five runs per arm, before/after in the morning report):
+> 1. First: codegen_selftest_pack_unpack_kernel_gpu (21m 27s of a 22m 01s lavapipe step) prepares a new compute pipeline and buffers in each of 256 cases via run_wgsl. Time pipeline creation vs dispatch/readback, then prepare once per test and update the input per case. Keep all 256 cases, the bit-for-bit comparisons and the negative control. Fill the output buffer with a sentinel before every case so a case that writes nothing fails. This replaces the smaller-lavapipe-size item: try the reuse first; only if the test is still slow does the size change come back to me.
+
 *What it decides:*
 
 - **The two-way trials** (items 1, 2, 4, 5, 7, 8, 9 and 10 of the owner's list) are approved as trials, each with its
@@ -34209,7 +34253,10 @@ The owner's words (8 Nov 2026), verbatim:
   words.
 - **Item 6, smaller GPU tests.** Yes, on its condition: lavapipe's GPU tests run at a smaller size only once the
   smaller size is shown to reach the same code paths, the same branches and stages hit; the full size runs on the RTX
-  nightly. The showing is the condition; the report comes with the change (R-908).
+  nightly. The owner's "Report before switching" stands: the showing and its report come to the owner before any
+  switch, and R-908's report-after does not cover it, the smaller size not being among the moves R-908 lists. The
+  owner's later message of the same day (below) overtakes the smaller size for the test that drove it: the reuse is
+  tried first, and the size change comes back to the owner only if the test is still slow.
 - **A killed test** is recorded by `mutants-check` as "timed out (not a survivor)", completing R-903's Fix 1 and R-712's
   listing. The baseline runs with no kill limit, and the nightly and local runs take the same limits. REQ-VAL-180
   states it.
@@ -34223,6 +34270,13 @@ The owner's words (8 Nov 2026), verbatim:
   full pass, the fingerprinted outcomes match a from-scratch run." Then the cycle is sized from the new cost, with
   Windows as capacity under R-905's placement rule. The cycle's two options shown to the owner, (a) and (b), are not
   chosen here. REQ-VAL-150 states it.
+- **The later message, item 1 (codegen_selftest).** `codegen_selftest_pack_unpack_kernel_gpu` prepares its pipeline
+  and buffers once per test and updates the input per case, after timing pipeline creation against dispatch and
+  readback; all 256 cases, the bit-for-bit comparisons and the negative control kept, the output buffer filled with a
+  sentinel before every case so a case that writes nothing fails. This replaces item 6's smaller lavapipe size for it:
+  only if the test is still slow does the size change come back to the owner. A two-way trial under the owner's
+  standing delegation, its criterion first and five runs per arm, before and after in the morning report (R-812).
+  The message's items 2 to 5 are trials under the same delegation, listed, not ruled.
 - **Larger runners: no.** The owner's decision on the question R-683 left open ("Don't propose paid runners or moving the
   repo to an organisation; I'll decide those later"), and the answer to R-904's item 6.
 
@@ -34362,6 +34416,8 @@ The owner's words (8 Nov 2026), verbatim:
   the in-diff run off the pull-request path.
 - **R-684**: the required checks of a pull request are the list above.
 - **R-904**, **R-905** and **R-907**, as above.
+- **R-683**: this ruling amends R-683 in part: its step (3), `cargo mutants --in-diff` on the merge-ready head, gives
+  way, with no mutation run on the pull-request path.
 
 R-908 is in the "ci" group of `plan/rule_groups.yaml`.
 
@@ -34486,6 +34542,22 @@ without it:
 - **R-677**: a head that changes `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` (its tiers (b) and (c)) also
   runs the process tests; its classifier otherwise stands.
 - **R-904**, **R-905**, **R-907** and **R-908**, as above.
+- **R-683**: this ruling amends R-683 in part: its step (2)'s "full suite once at merge-ready" gives way to the model's
+  pull-request tier, the full product suite running on each merge to `main`.
+
+*To repoint when built (8 Nov 2026, applied per R-369, code review 5820413299 finding 3):* what this model changes
+in the record outside this ruling, and who changes it:
+- **The retired tests in requirements:** REQ-VAL-163 (the controls runner's listing mode) names
+  `qa_m0_24_every_registered_control_makes_its_test_fail`, and REQ-SYS-077 (CI job sizes) names the `qa_TASK-M0-24`,
+  `qa_TASK-M0-25` and `qa_TASK-M0-26` suites. Each retirement commit (this ruling's step (4)) repoints the requirement
+  it touches to the check that stays, through `plan/tools/reqio.py`; each requirement's note says so.
+- **REQ-TOOL-224** (the Windows runner's jobs are named measurements) is amended now (R-905, R-907, R-909); its job list
+  and its verify's control are rebuilt by the per-merge Windows pull request (step (5)).
+- **The qa checklist's mutants line** (`plan/reviewers/qa.md`, "Every mutant that survives `cargo mutants --in-diff` in
+  the PR's diff is a finding"), **R-388's local mutants run** before a pull request opens, and the implementer's brief
+  that names "CI's mutants gate" (`plan/WORKFLOW.md`, `.claude/agents/implementer.md`) stand until the pull-request
+  tier's restructure (step (2)); that pull request rewords them, bringing to the owner any part that changes what a
+  ruling says, and R-388 carries a dated line saying so.
 
 R-909 is in the "ci" group of `plan/rule_groups.yaml`.
 

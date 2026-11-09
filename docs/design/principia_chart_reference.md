@@ -959,7 +959,9 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   `HeldK` and the Burrau charts R-708 covers) to refuse a pixel inside the band one float wide at the warp's floor, where
   f32 rounding, not the chart, decides: such a refusal is labelled as rounding, never drawn as the chart's edge, and no
   pixel that isn't a system is ever accepted. The edge walk is repeated on the GPU when the shader decodes these charts
-  (TASK-M4-06).
+  (TASK-M4-06). What "one float wide" is measured in, and the band's width in it, is a definition TASK-M4-06 writes
+  here under physics review (R-72); a width that is a number rather than a derivation is a calibration (R-71)
+  (REQ-CHART-152).
 
 Built by TASK-M2-52 on TASK-M2-36's tilt path, the linear option on TASK-M2-37's.
 
