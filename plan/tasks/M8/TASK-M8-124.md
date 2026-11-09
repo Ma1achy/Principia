@@ -1,8 +1,8 @@
 # TASK-M8-124 — The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)
 
 - **Milestone:** M8
-- **Closes:** REQ-CHART-147
-- **Depends on:** TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52
+- **Closes:** REQ-CHART-147, REQ-CHART-113, REQ-CHART-160
+- **Depends on:** TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, TASK-M6-49, TASK-M6-51, TASK-M8-48, TASK-M8-105
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -21,6 +21,9 @@ as a fallback (R-864 item 2).
 - `docs/design/principia_chart_composition.md` § "17.3 The constraint: bitwise through the mechanism"
 - `docs/design/principia_chart_composition.md` § "17.4 `s = 0` and `s = 1`"
 - `docs/contracts/principia_chart_decoder_contract.md` § "The lock (projective microscope)"
+- `decisions.md` § "R-873 — The build order's leftovers: the milestones are kept and the order across them kept by dispatch; TASK-M8-106 is split, its stage-1 tests to TASK-M8-124; each unplaced task goes in the stage it serves, points of interest one task in stage 3; and the stage-1 path object depends on the Save view tasks *(closes RQ-744)*"
+- `decisions.md` § "R-899 — The chart-path brief's nine questions: the lock test reads the recorded state at the pin; snap-back undoes the slice only, auto-snap off; jumps under a lock kept and labelled until the sliding anchor exists; the pin's screen position stored, "assumed" at the centre where none can be derived; a pivot record in the view, untilt (a1), amending R-473; points of interest one task in stage 3; their star filled within the lock's tolerance, the off-slice distance shown; marks mid-morph to pixel resolution, the filter off, labelled; the block line built in stage 2 *(amends R-473, and the snap-back of chart_decoder_contract Part 4 and design § 17.8)*"
+- `decisions.md` § "R-901 — Easing and the path curve are a property of each segment of a path, per the chart-space model's Theorems 4 and 5, one representation shared by live morphs, saved paths and export, built with the path object *(amends R-576 and export contract Part 3)*"
 
 ## Deliverables
 - **First, the gate (R-864 item 1):** the type sketch of the core types (Chart, Path and its families, Lock and anchor,
@@ -49,6 +52,9 @@ as a fallback (R-864 item 2).
 - Review: no operation's old route left beside the object, and no special case an if-branch outside a named family
   (R-864 items 2 and 4); no family, pair map or hold beyond today's operations given behaviour (R-863 stage 1)
   (REQ-CHART-147).
+- `cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip` — each against the direct operation's bits; controls: the general geodesic in tilt's place, a triple in a zoom's key, an end through the blend, s at f32 (REQ-CHART-113, moved here from TASK-M8-106 by R-873).
+- `cargo test -p engine -- path_easing_timing_only path_concat_join` — re-timing a segment changes when frames are shown and no frame's content, bitwise; two eased segments concatenate with the join at the shared end; a saved path and an export read the same timing as the live morph; controls: an easing applied to a frame's content fails, a second easing beside the segment's fails (REQ-CHART-160).
+- Review: each edit that jumps the view under a lock (Home, the resets, presets, steers, capture) labelled as a cut, and the PR stating its non-conformance with R-849 until stage 2's sliding anchor (R-899 Q3 (a); REQ-CHART-147).
 
 ## Notes
 - **Build order (R-863):** stage 1, the path object and the bitwise tests, before any new capability. Stage 2,
@@ -68,3 +74,4 @@ as a fallback (R-864 item 2).
   TASK-M8-106's, overlap this task's; which task keeps them is RQ-744 (B).
 - Waits on RQ-721 (chart paths; answered by R-850, with its rider R-849, the owner's reply of 7 Nov 2026) and, like
   every task of the design, on TASK-M4-37.
+- *8 Nov 2026 (R-873, R-899, R-901):* RQ-744 is ruled: (B) (a), REQ-CHART-113's tests are this task's; (E) (i), Save view as chart (TASK-M6-49, TASK-M6-51, TASK-M8-48) and TASK-M8-105 come before stage 1, so they are in Depends on and their routes are in the baseline. The brief's Q3 (a): the edits that jump the view under a lock are kept, labelled as cuts, the non-conformance with R-849 stated. R-901: easing and the path curve are a field of each path segment, built here with the path object, Theorems 4 and 5 stated and tested (REQ-CHART-160). R-894: TASK-M8-129, the consolidation, follows this task and TASK-M8-125, before stage 2. The two notes above on RQ-744 (B) and (E) are overtaken. **Timing:** stage 1 closes when this task and TASK-M8-125 merge with their tests green. *Was:* "- **Closes:** REQ-CHART-147"; "- **Depends on:** TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52"

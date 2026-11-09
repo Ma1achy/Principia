@@ -5,6 +5,10 @@ gate, any R-71 calibration of a physical value, any R-72 definition, or any pitf
 Answer each item yes / no / not applicable on the PR; a "no" is a finding and cites file and line of the diff or the
 section below (`plan/WORKFLOW.md` § "The review loop").
 
+The tests a task, a requirement or this checklist names as `cargo test …` are run locally as their `cargo nextest run`
+equivalents, with `cargo test --doc` where doctests would have run, and the run shows the command actually run beside
+the one it stands for (`plan/WORKFLOW.md` § "Agents' test runs: cargo nextest").
+
 ## 1. Numerical gates
 
 The rule: **every numerical gate of M0 to M8 the task closes is run and its threshold met, or — where the corpus gives no threshold —

@@ -26,6 +26,7 @@ later." For the human: yes, whether there is a Frame stage at all.*
 - **4 Nov 2026 (R-706):** deferred until the exporter is designed, by owner 4 Nov 2026. The entry stays open.
 - **Deferred:** deferred to the exporter's design by owner 5 Nov 2026 (R-803, the owner: "RQ-391: Defer until the exporter is designed.").
 - **7 Nov 2026 (R-825), restated:** the owner: "RQ-391: defer until the exporter is designed." It stays deferred to the exporter's design.
+- **Deferred:** deferred to the exporter's design by owner 8 Nov 2026 (R-890, the owner: "RQ-391: defer until the exporter is designed.").
 
 ## RQ-577: The precision-ladder proposal's seven open questions (§6), and the amendments it proposes to R-265, R-572, R-90, canonical spec §1 item 3, deep zoom §2 and its layer table, and integrator contract Part 2 and Part 2b *(the human's queued questions on the 26 Oct incoming proposal; R-265, R-572, R-90, R-561, R-547, R-33; context: none built)*
 
@@ -108,6 +109,7 @@ here.*
 - **4 Nov 2026 (R-706):** deferred to its own session by owner 4 Nov 2026. The entry stays open.
 - **Deferred:** deferred to M3 by owner 5 Nov 2026 (R-795, the owner: "RQ-577: defer:M3").
 - **7 Nov 2026 (R-821), restated:** the owner: "RQ-577: defer:M3". It stays deferred to M3.
+- **Deferred:** deferred to M3 by owner 8 Nov 2026 (R-880, the owner: "RQ-577: defer:M3").
 
 ## RQ-643: The collinear statistical targets' stops lie past R-610's horizon cap in the integrator's units (proposed OR02-1, OR03-1, MH89-1) *(physics review of the 29 Oct research-batches ingest, finding F4; `docs/incoming/2026-10-29_research_batches/README.md` § 10.3, § 10.5, `horizons_integrator_units.txt`; context: none built)*
 
@@ -135,6 +137,7 @@ here.*
 - **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
 - **Deferred:** deferred to M9, option (a) only, if the cost measurement allows, with option (b) applied now (R-800) by owner 5 Nov 2026 (R-800, the owner: "RQ-643: (b) now. Revisit (a) at M9 if the cost measurement allows.").
 - **Deferred:** deferred to M9 (R-823) by owner 7 Nov 2026 (R-823, the owner: "RQ-643: defer:M9").
+- **8 Nov 2026 (R-886):** deferred to M9 again, the third time; the owner: "RQ-643: defer:M9".
 
 ## RQ-629: WGSL and Vulkan bound `sin` and `cos` only by an absolute error, where the decode's `cos α` near `π/2` needs a relative one *(a note for future backends; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4; dd_decoder §3.2; context: RQ-628, TASK-M2-26, PR #343)*
 
@@ -176,6 +179,56 @@ here.*
   RQ-679: defer:M8
   RQ-687: defer:M4
   RQ-696: (c).").
+- **Deferred:** deferred to M4 by owner 8 Nov 2026 (R-881, the owner: "RQ-629: defer:M4").
+
+## RQ-637: Near a zero `E_0` or `L_z`, `symlog`'s neutral band can't give what ruling (d) also asks, an exactly neutral fresh sample: the band is relative to the reference, and the rounding isn't *(physics; R-652, the owner's ruling (d); `docs/contracts/principia_render_contract.md` § "Part 5", "The neutral band"; physics review 5723029285 of PR #360, Q1; REQ-TOOL-149; context: TASK-M3-05)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round. For the owner: yes, it is physics, it changes which real drifts a view
+shows. Code unchanged; TASK-M3-05's PR doesn't wait on it, the ruling's band being built as ruled.*
+
+- **File, section:**
+  - `decisions.md` § R-652, the owner's ruling (d): "give symlog a neutral band of k·f32-ulp relative to |E₀| (and |L| for
+    L_z), with k justified in writing (rounding-level differences aren't physics)".
+  - The same ruling: "add a test that a fresh sample renders exactly neutral on every backend".
+  - `docs/contracts/principia_render_contract.md` Part 5: "At or near a zero reference the band narrows to nothing".
+- **The conflict:** a fresh sample's rounding scales with `K + |V|` for the energy and `S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|)`
+  for `L_z`, not with `|E_0|` or `|Lz_0|`. Near a cancellation the band is narrow while the rounding is not, so both can't
+  hold. `drift_view_neutral_fresh_sample_renders_exactly_neutral` passes on the samples inside its stated domain (R-652,
+  "The test's domain"), at least 4 of 8.
+- **Evidence:**
+  - It errs toward showing a tint: the band never hides more than `k·2⁻²³·|reference|`.
+  - dd test 2's fresh figure-eight has `L_z ≈ 0` with moving bodies, so its band is empty and it is outside "exactly
+    neutral". The physics reviewer's estimate, not a render: a fragment rounding of about 1e-7 at `ε_L = 1e-6` gives
+    `s ≈ 0.1`, `t ≈ 0.54`, a visible tint that depends on the backend.
+  - In the other direction, RK4 at f64 on dd test 7 (ΔE −9.65e-7, relative 5.6e-6) is true truncation drift and now reads
+    neutral under `symlog`; `log` has no band and shows it, and `dE_max` holds it.
+- **The question:** whether the band stays relative to the reference, or scales by the rounding itself.
+- **Options seen:** (a) keep it as ruled, with the limit recorded (render contract Part 5); (b) scale the band by the
+  rounding, `k'·2⁻²³·(K + |V|)` and `k'·2⁻²³·S`, with `k'` from the bound: 15 with a CPU reference, 22 with a GPU one for
+  the energy; 5 and 6 for `L_z`. This closes the gap near zero and hides less at small `K/|E_0|`, where 128 is 8.5 times
+  the bound; it departs from the ruling's words;
+  (c) another, stated by the owner.
+- **Applied meanwhile:** (a). Nothing waits.
+
+## RQ-638: `symlog`'s neutral band is in the three drift debug views; a field ramp on `energy_drift` or `Lz_drift` has none, so a fresh sample's rounding still shows as colour there *(physics; R-652, the owner's ruling (d); `docs/design/principia_colour_composition.md` § "6. Debug views as presets"; code review 5723219417 of PR #360, C2; REQ-TOOL-149; context: TASK-M3-05)*
+
+*Queued 31 Oct 2026 by TASK-M3-05's fix round. For the owner: yes, it changes what a real stain shows. Code unchanged;
+the scope is stated in render contract Part 5 and R-652, applied per R-369, and TASK-M3-05's PR doesn't wait on it.*
+
+- **File, section:**
+  - `decisions.md` § R-652, the owner's ruling (d), its reason: "every t = 0 pixel is a fresh sample, so Metal's ulp noise
+    rendering as colour would appear on real data too. Fix the view."
+  - `docs/design/principia_colour_composition.md` § 6: "A field view *is* `colour = FieldRamp{field, recommended ramp}`",
+    "`f_edrift` = `energy_drift · diverging · symlog`".
+- **The gap in the code:** `render::colour::defaults::default_ramp` gives these fields `Compaction::Diverging { x0 }`,
+  which is `compact_symlog(x, x0)` in `crates/render/shaders/wgsl/lib/compaction.wgsl`, and `qa_field_either_role_any_field`
+  (`crates/render/tests/qa_TASK-M7-05.rs`) renders a field ramp on `energy_drift`. No band is on that path, so a stain's
+  field ramp still draws a fresh sample's rounding as backend-dependent colour at `x₀ = 10⁻⁶`. No golden exercises it.
+- **The question:** whether "Fix the view" reaches the field-ramp path.
+- **Options seen:** (a) extend the band to it, where the drift is read, since `compact_symlog` has no reference and also
+  serves `E_0` and `Lz_0`, with the fresh-sample test extended; (b) leave it there, the band being the debug views' alone,
+  a field ramp showing the rounding; (c) another, stated by the owner.
+- **Applied meanwhile:** (b), the code unchanged, the scope stated. Nothing waits.
 
 ## RQ-679: The slider span of `ν₀`, the held `L_z` and the held `K`, which R-507 U1 divides a hidden offset by, while § G2's Slice centre lists only the eight latent sliders *(a definition requirement, R-72, and a value, R-71; R-507 U1; R-633; render_gui_spec § G2; context: TASK-M8-48, TASK-M2-52)*
 
@@ -210,6 +263,7 @@ here.*
   RQ-679: defer:M8
   RQ-687: defer:M4
   RQ-696: (c).").
+- **Deferred:** deferred to M8 by owner 8 Nov 2026 (R-882, the owner: "RQ-679: defer:M8").
 
 ## RQ-681: TASK-M9-01: no task builds the scoring runner it calls, AT-D6's twins and slice planes are undefined, and OC-2's state and precision are unsettled *(silence, R-72; R-71; R-649, R-650; REQ-VAL-214 to REQ-VAL-217; dd_replication § 4.3, § 8; context: TASK-M9-01, TASK-M3-27, RQ-660)*
 
@@ -254,6 +308,7 @@ here.*
 - **4 Nov 2026 (R-706):** deferred to M9 by owner 4 Nov 2026. The entry stays open.
 - **Deferred:** deferred to M9, parts (b) and (c), with part (a) ruled, a deliverable of TASK-M3-27 (R-794) by owner 5 Nov 2026 (R-794, the owner: "RQ-681: (a) as a deliverable of TASK-M3-27, the earlier user. Parts (b) and (c) stay deferred to M9.").
 - **Deferred:** deferred to M9, its remaining parts, with part (c) state ruled ref_* (R-824) by owner 7 Nov 2026 (R-824, the owner: "RQ-681: (c) ref_*, rerun the figures at M9; the rest defer:M9.").
+- **Deferred:** deferred to M9 by owner 8 Nov 2026 (R-887, the owner: "RQ-681: defer:M9").
 
 ## RQ-687: Whether the kernel takes its own f32 `sin` and `cos`, as `arctan.rs` does for `atan2` (RQ-628), given that it can change CPU bits *(physics; a decision that changes what is built; R-297, R-649; REQ-DEC-043; RQ-628, RQ-629; issues #390, #393, #401; context: the Windows RTX 2080 Super run, RQ-685)*
 
@@ -354,408 +409,8 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
   RQ-679: defer:M8
   RQ-687: defer:M4
   RQ-696: (c).").
+- **Deferred:** deferred to M4 by owner 8 Nov 2026 (R-883, the owner: "RQ-687: defer:M4").
 
-## RQ-701: Whether and how a `MixedEnergy` chart's held `L_z` or `K` tilts and slices: a hidden coordinate under R-633 that nothing builds or queues *(physics; silence: R-633; the owner's ruling of 4 Nov 2026 on RQ-678 and RQ-683; chart_decoder_contract § "Tilt (basis edit)"; TASK-M2-52's six charts; context: TASK-M2-37)*
-
-*Queued 5 Nov 2026 by TASK-M2-37's fix round, on the orchestrator's decision (applied per R-369), from code review
-5778057939 (F1) and physics review 5778075140 (F4) of PR #387; rewritten from code review 5779819090 (F2) and physics
-review 5779878848 (F1), which found the first entry short of the contract's clause and of the ruling's lines. For the
-owner: yes, it is physics; the tilt changes which systems the chart shows.*
-
-- **File, section:**
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", "Charts that hold a block by a
-    construction": "where it holds a block by a physical construction, its hidden coordinates are that construction's
-    physical parameters, tilted and sliced by value as the shape sphere's `p_λ` targets are, `d` added to the physical
-    value at the slice centre". `MixedEnergy` holds the momentum block by chart_reference §2.2's construction, its
-    `held` the parameter.
-  - The owner's ruling of 4 Nov 2026 on RQ-678, the warped mode: "Held energy-type hidden coordinates (R-633 c2) are
-    tilted in their warp coordinate in this mode, so held K stays ≥ 0. This amends R-633's "by value" for warped mode
-    only."
-  - The same ruling, the linear mode: "Rows keep fixed physical values; infeasible cells are "not a system", blank per
-    R-470; held coordinates tilt by value."
-  - The same ruling, on RQ-683: "RQ-683 (#387): same rule for a single energy axis at held spin."
-  - The same ruling, its last line: "If the warped-coordinate tilt of held K turns out not to be well-defined
-    somewhere, come back with the case."
-  - `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps", the hidden coordinates' table,
-    which names only: "`(ν, K)`, `Φ_θ,K` (and `Φ_strip,K`, the same map) | the held `L_z` (0 untilted), a physical
-    value" and "`Φ_θ,L_z` | the held `K`, a physical value".
-  - `plan/tasks/M2/TASK-M2-52.md` § "Deliverables": "The six charts' hidden coordinates … the held `L_z` of `(ν, K)`
-    and `Φ_θ,K`; the held `K` of `Φ_θ,L_z`."
-  - `crates/kernel/src/chart/physical.rs`, `MixedEnergy`'s `top`: "`K_max` on `K`, `KE` and `E`, `Q_hi`, the top of the
-    asked range, on the virial ratio; not read on `L_z`."
-- **The silence:** the principle makes a lone-axis chart's held `L_z`, or the held `K` on an `L_z` axis, a hidden
-  coordinate, but the table and TASK-M2-52's six charts do not include `MixedEnergy`. So its tilt and its slice are
-  neither built nor queued, and `Hidden::hidden` on the chart lists only the frozen controls. The ruling reaches a
-  lone axis through its RQ-683 line. In the linear mode that settles the form: the held value tilts by value, and the
-  contract's clause slices it by value too; only the build is missing. In the warped mode the ruling amends "by value"
-  for the tilt and does not say what becomes of the slice. Its warp coordinate is not well-defined on these charts as
-  they stand, which is the case its last line asks to have brought back:
-  - **Held `L_z`, on a `K`, `KE`, `E` or virial axis.** `L_z`'s warp coordinate, `(2s − 1)·L_max(K)`, reads a held `K`,
-    and these charts hold none: `K` is what the pixel's axis sets. That rules out that one coordinate, not a tilt: the
-    additive floor takes any real `L_z`. The ruling's reason, "so held K stays ≥ 0", does not speak of `L_z`.
-  - **Held `K`, on an `L_z` axis.** The warp coordinate, `K = K_max·t^γ_K`, `t₀ = (K₀/K_max)^(1/γ_K)`, is well-formed,
-    and is the one the ruling's reason names. It needs a `K_max` this chart does not read: a missing value (R-71), not
-    a missing form. `top` is the field that would hold it.
-
-  These two concern different axes, so no one form has to meet both.
-- **The question:** in the warped mode, how does a tilt move the held `L_z` on a lone `K`, `KE`, `E` or virial axis,
-  and the held `K` on a lone `L_z` axis; and does a slice of the held value move the same way, or by value? In the
-  linear mode the form is the ruling's; only the build is open, and it waits on the warped answer so that both arms
-  come in together.
-- **Options seen, held `L_z`:**
-  - (a) By value on the floor: `L_z = L_z₀ + d`, §2.1's floor at the pixel's own tilted `L_z`. Every pixel stays a
-    system and no `L_max` is needed. Cost: the ruling's warp sentence then reaches held `K` only, and `|L_z|` has no
-    bound but the slider's span.
-  - (b) A warp coordinate on a fixed scale, `L_z = (2s − 1)·√(2·I·K_max)`, `s` bounded. Cost: a scale §2.1 does not
-    write for these charts, which `K`, `KE` and `E` can read through `K_max` and the virial axis cannot, its `top`
-    being `Q_hi`; and `s` needs a rule past its edges.
-  - (c) Another, stated by the owner.
-
-  The ruling's port queues the same question and options (a) to (c) for `(ν, K)`, `Φ_θ,K` and `Φ_strip,K`; the answer
-  there can be this one.
-- **Options seen, held `K`:**
-  - (a) The warp line, `K = K_max·t^γ_K`, with `K_max` supplied to the chart. Cost: a value this chart does not hold,
-    a calibration requirement under R-71 with REQ-CHART-044's placeholder meanwhile.
-  - (b) Another, stated by the owner.
-- **Slicing, in every option above:** by value, the contract's clause as it stands, or in the tilt's own coordinate.
-  The two agree at an offset of 0 and write different held values away from it.
-- **Applied meanwhile:** the held value is neither tilted nor sliced: the chart's hidden coordinates stay its frozen
-  controls, and chart_reference §2.1 says so (PR #387). `d = 0` reproduces the untilted chart in every option.
-- **Waits:** a tilt or a slice of the held value on a lone-axis chart; nothing else.
-- **5 Nov 2026 (R-720, RQ-699 (a)):** the owner has since ruled the same question on `(ν, K)`, `Φ_θ,K` and `Φ_strip,K`: "L_z = L_z0 + d", "R-708's "tilt in the warp coordinate" was meant for held K (which must stay >= 0) and is narrowed to held K only", and "The same rule governs slicing the held L_z as well as tilting it." R-720 names those charts, so it doesn't close this entry, but what it implies here is held `L_z` option (a), tilted and sliced by value. The cost option (a) lists, the warp sentence reaching held `K` only, is now the owner's own reading. Held `K`'s `K_max` on a lone `L_z` axis is still open; its slice is by value (R-720's list).
-- **Deferred:** deferred to M8, the start of TASK-M8-48, its form ruled by R-818 (option (a) for each, slicing by value, K_max as for RQ-710) by owner 7 Nov 2026 (R-818, the owner: "RQ-701: (a) for each, slicing by value; K_max ruled with RQ-710. defer:M8
-  RQ-708: (a).").
-
-## RQ-711: What a saved preset's base point, centre and window are when its chart is not two latent coordinate axes at one scale *(physics; silence; REQ-GUI-108, REQ-GUI-224, REQ-GUI-417, R-466, R-475, R-798; `docs/gui/principia_render_gui_spec.md` § G2, § G7; context: TASK-M8-18)*
-
-*Queued 6 Nov 2026 from physics review 5805243152 of PR #429 (TASK-M6-45), finding F1. Not chosen here. The definition now stops where it is true, and the mock's six presets are all inside it. This entry covers saved presets; R-798's shipped preset is outside it.*
-
-**In plain English:** every chart preset has a home view, built from a starting point, a centre and a zoom scale. Those definitions work when the preset's two axes are plain latent coordinates at the same scale, which all six mock presets are. A user can also save other charts: skewed axes, axes at different scales, axes that are physical quantities, curved charts, or a tilted view. For those, the formula gives no home view, or gives one that differs from the chart that was saved, so Home would change the chart. The saved-presets task needs an answer before it can store these values.
-
-- **File, section:**
-  - `docs/gui/principia_render_gui_spec.md` § G2 "Resets and Home": "The preset's **home view** is `z₀ = b`, `q₁ = σ_h e_a`, `q₂ = σ_h e_b`."
-  - `docs/gui/principia_render_gui_spec.md` § G2, Save view as chart, as R-475 has it, which commits the view as a named chart, storing "a latent view as the oblique chart `(z₀, q₁, q₂)`" and a curved chart as "its parent chart, slice centre and tilt".
-  - `docs/gui/principia_render_gui_spec.md` § G7: "**Each axis has a kind:** latent direction (any mix of the eight `z` components, normalised; a normalise button shows `|q|`), physical quantity (…), or Burrau dimension (…)".
-  - `plan/requirements.yaml` REQ-GUI-108: "a saved preset must store, with its axes, its home values: its base point, its centre and its window"; its verify: "the section resets and Home of the saved preset read back exactly".
-- **The silence, case by case:**
-  - Unequal scales, `|q₁| ≠ |q₂|`: one `σ_h` cannot express the chart, and Home would change it.
-  - Non-orthogonal axes: `u = b·e_a`, `v = b·e_b` are not the base point's coordinates on the axes, and they disagree with Navigate's own row, which inverts the Gram matrix.
-  - A physical-quantity or Burrau axis, or a curved chart: there is no `e_a`, so neither the centre nor the window is defined. R-798's equilateral-point shape-chart preset (REQ-GUI-417) is a curved chart too, but a shipped preset, not a saved one: its map and window are TASK-M9-45's, and it does not wait on this entry.
-  - A tilted view: is the saved pair the new axes, or the parent's? § G2's three sections and R-466 K2's "six dimensions off them" depend on the answer.
-- **The question:** for each of these charts, what are the home view, the centre and the window, and what does the zoom row read against?
-- **Options seen:** (a) a preset stores its whole saved triple `(z₀, q₁, q₂)` as its home view, with the zoom row reading against a scale still to be named; (b) only charts within § G2's formulae store home values, and the resets and Home are dimmed on any other, as with no active preset (R-466 K3); (c) a definition per axis kind.
-- **Applied meanwhile:** § G2 and § G7 bound the formulae to a preset whose axes are two latent coordinate axes at one scale. All six mock presets qualify, so no code changes.
-- **Waits:** REQ-GUI-108's home values for any other chart, in TASK-M8-18; the home values of region D's preset, in TASK-M4-34, and of the paper-frame presets, in TASK-M8-112.
-- **7 Nov 2026 (physics review 5810950891 of PR #422, F1):** this entry also covers the shipped design presets, region D's (TASK-M4-34, REQ-CHART-100) and the paper-frame ones (TASK-M8-112, REQ-CHART-122), which sit on non-latent axes; REQ-GUI-224 asks each chart preset's home values. They are proposed, not built, and they aren't R-798's exception. Only their home values wait on this entry.
-- **7 Nov 2026 (R-820):** the owner: "RQ-711: (a)." Option (a) is applied: a saved preset stores its whole saved triple `(z₀, q₁, q₂)` as its home view (`principia_render_gui_spec.md` § G2, REQ-GUI-108). **Left open:** the option's own "the zoom row's scale still to be named". The entry stays open for that one value.
-
-## RQ-714: Region D's definition as a chart *(a one-way door, order item 7; physics: changes what is drawn and counted; R-592; dd_validation_orbits §1.6; context: TASK-M4-06, REQ-RENDER-082, M9's targets)*
-
-*Queued 7 Nov 2026 from the chart composition design, PR #422, for the owner's rulings report. Nothing is implemented until ruled (the owner's order of 6 Nov, A6).*
-
-*In plain English: region D is the small curved triangle of starting shapes twenty M9 targets use. Its definition as a set of points is settled; what it is as a picture is not: what happens to the pixels outside it, which velocities it starts from, and how a paper's fixed time limit reads when each pixel has been rescaled differently.*
-
-- **Reach (physics note 2, P11):** D is a fundamental domain only at equal masses and `L_z = 0`. At unequal masses the outside is other systems (RQ-728), and under a held `L* ≠ 0` the mirror is lost, so "blank and uncounted" as agreed in principle reaches that case only.
-- **File, section:**
-  - `docs/design/principia_dd_validation_orbits.md` § "1.6": "**Region D** (I, Fig. 1 and eq. 8): `ξ ≥ 0`, `η ≥ 0`, `(ξ + ½)² + η² ≤ 1`. A point outside it is not a region-D start, and the import refuses it."
-  - `docs/contracts/principia_lowering_contract.md`, Appendix, the Anosova row: "physical (m,r,p) construction → **canonicalise entry** → standard pipeline | region D bounds".
-  - `docs/contracts/principia_chart_decoder_contract.md` Part 3: "**Inside `[0,1]²` every gallery chart is valid by construction** … so a pixel hatched there is a decoder bug". And `decisions.md` § R-506: "warped to its feasible range by default".
-  - `decisions.md` § R-554: "inside `[0,1]²` such a pixel is the domain's end by design … it draws blank and logs no decoder-bug warning", the exponential map's exception.
-  - `docs/design/principia_dd_replication.md` § 5.8: "AA-3 | … the Anosova physical-frame entry" with no velocity stated; "AA-2 | … eq. (3) velocities".
-- **The silences, four:**
-  1. D is not a rectangle, so a square chart either masks, shows the outside, or warps. The outside pixels are real systems: relabelled copies at equal masses and `L_z = 0`, other systems otherwise (the Reach line above).
-  2. A mask makes pixels inside the square that are not drawn, which the contract calls a decoder bug on a gallery chart.
-  3. AA-3 and AA-5 don't say which velocities.
-  4. The kernel decodes at `I = 1`, so each pixel has its own rescale `ℓ`, 0.408 to 0.577 over D at equal masses, and one sim-key `T` is a paper time varying by a factor of 1.68 across the chart there; other masses differ, and `T_c`'s `ℓ_min` is taken at the run's masses.
-- **Overtaken for the presets (RQ-736):** the owner's filter order, 7 Nov 2026: "region D presets render the full disc, with the filter on by default for the paper-frame presets only." So (b) with a display filter, and (a) stays the record of what was agreed in principle. The conflict with (a) is listed there.
-- **Options on (1), (2):**
-  - (a) **Recommended.** A mask. Axes `ξ ∈ [0, ½]`, `η ∈ [0, √3/2]`, linear, a preset of the general third-body pair; outside eq. 8 is the domain's end, blank, out of the count and the total, no warning, R-554's exception extended by name. Pixels stay uniform in `(ξ, η)`, as the papers sample, and the picture is theirs. R-506's warp reads as trivial here: every `(ξ, η)` is a system, so the range is its whole range.
-  - (b) The plane, unmasked. D drawn as a contour; statistics filter. No exception needed; the Atlas shows relabelled copies at equal masses and `L_z = 0`, other systems otherwise.
-  - (c) A warp onto the square, polar about the left body. Every pixel in D, no exception, R-506 read literally; the measure is not the papers' and the apex is a ray-degenerate edge.
-- **Options on (3):** (a) **recommended**, AA-3 and AA-5 read paper I's own runs, so eq. 3; (b) exact rest.
-- **Options on (4):** (a) **recommended**, the run reaches the longest pixel's horizon and the comparison cuts each pixel at its own, a tested function (rule 11), the kernel untouched; (b) a per-pixel `T`, a kernel change.
-- **Applied meanwhile:** nothing built. The design's § 8 writes (a) in each case.
-- **Owner, 6 Nov:** outside region D blank and uncounted is agreed in principle. That is not a ruling; this entry stays open.
-- **Waits:** the design's tasks behind TASK-M4-37, and no existing task. TASK-M4-06's golden (REQ-RENDER-082) needs this domain, so its edge to TASK-M4-34 is applied when this is ruled.
-- **7 Nov 2026 (R-845, R-851):** the owner: "RQ-714: outside masked (a); time (a). Velocities: offer what each region-D target uses, as presets,
-  with the default chosen by which most targets use; report the count before fixing it." Applied: time (a); velocities, exact rest the default and eq. 3 the second preset, on the count (R-851, the owner's later order: "Region D default: exact rest, eq. 3 as the second preset, as counted."). **Left open, the outside:** the reply's "outside masked (a)" (12:16) and the owner's later filter order (13:40, R-855), "region D presets render the full disc, with the filter on by default for the paper-frame presets only", differ in what is built, a mask in M4 or none, and nothing says which governs, nor what "full disc" is (RQ-738, from RQ-736's conflict 3). So neither is applied; TASK-M4-06's edge to TASK-M4-34 waits with this, and RQ-728's "labelled mask" is read with it.
-
-## RQ-716: The axis cap, proposed at 4 *(a one-way door, order items 5 and 7; REQ-PERF-006, REQ-PERF-007; lowering Part 4; the start-up object count is issue #427, not this item)*
-
-*Queued 7 Nov 2026 from the chart composition design, PR #422, for the owner's rulings report. Nothing is implemented until ruled (the owner's order of 6 Nov, A6).*
-
-*In plain English: every "axis pair" compiled into the GPU code makes the one compiled module bigger, and every pipeline parses the whole module. The owner asked for a limit on those pairs, suggesting about 4, with the measured cost. It measures at 4 passing and 8 failing on the Mac and on the Windows machine, which agrees. The limit is a one-way door because plans and charts will lean on it. One new question: start-up on the Windows machine already takes 2.7 s with no pairs at all, over the 2 s this design set, so the owner has to say whether that limit was only ever the Mac's. Whether twelve start-up objects against the contract's ten is right is a separate issue, #427.*
-
-- **File, section:**
-  - the owner's order of 6 Nov 2026, item 5: "Cap the number of axis pairs baked into GPU code (propose a number with the measured cost; the owner suggested about 4)."; item 7: "One-way doors (new extension types, any physics or default change, the axis cap, R-798's reading, region D's definition) go to /rulings-report".
-  - `docs/contracts/principia_lowering_contract.md` § "Part 4 — The precompile rule": "**Chart switching must be instant** → the compute variant is already built (SPIR-V); create its pipeline object for the *active* (occupant, tier, links) at startup — ~10 objects."
-  - REQ-PERF-006: "pipeline objects are created from pre-built SPIR-V, eagerly for the active (occupant, tier, links) of every chart at startup and lazily inside the re-integration cost for occupant/tier/link/threshold changes."
-  - REQ-PERF-007: "The build-time monomorphisation set must be bounded to the active/plausible variant set, not the full cross-product."
-  - `docs/design/principia_chart_composition.md` § 11, the criterion and the measurement.
-- **The measurement (criterion written first):** first run, a heavy stand-in: 4 passes, 8 fails. Re-measure, the real region-D pair, interleaved: 4 pairs: module ratio 1.24, one creation 1.23, eager set 1.59 s, gallery 1.23, all within limits; 8 pairs: module 1.48, gallery 1.47, eager 2.35 s, all fail. A pair costs 60 KB of WGSL, so a fifth fails the module test at 1.30: 4 is the ceiling. With the integrator inlined, one pair across 4 occupants fails at 1.43, so the cap holds only with decode as its own entry. That run: one Mac, Metal only, under load.
-- **The Windows Vulkan run (criterion unchanged; RTX 2080 SUPER, run 42270588241, 6543782c, 12 arms; byte-identical modules):**
-
-  | `P` | gallery ratio, Mac / Windows | build ratio, Windows | eager `12 + P`, Mac / Windows | start-up (12 gallery), Mac / Windows |
-  |---|---|---|---|---|
-  | 0 | | | 0.96 s / 2.70 s | 0.96 s / 2.73 s |
-  | 1 | 1.06 / 1.05 | 1.06 | 1.10 s / 3.05 s | 1.02 s / 2.87 s |
-  | 4 | 1.23 / 1.24 | 1.24 | 1.59 s / 4.40 s | 1.18 s / 3.39 s |
-  | 8 | 1.47 / 1.49 | 1.49 | 2.35 s / 6.74 s | 1.41 s / 4.08 s |
-
-  Module ratios are the same exact 1.06, 1.24, 1.48. On every test that moves with `P` the machines agree: 4 passes, 8 fails, so the lower-number rule picks nothing. C1, C2 and C3′ all sit at the limit at 4; C3′'s first repeat alone reads 1.251. **C3's 2 s fails on Windows at every `P`, `P = 0` included.** C3 as written says "on this Mac"; the re-measure also says a criterion isn't relaxed for either machine. On the first reading 4 passes; on the second no count passes and the criterion gives no number. Neither gives a number other than 4.
-- **Cautions on that run:** a measurement only, gating nothing (R-649). The owner reports the card may have faulty cores, so the times are one possibly faulty card's; sizes don't depend on it. The first arm ran cold, so compare eager minus gallery within an arm: per pair 176, 246 and 330 ms at `P` = 1, 4, 8, near one gallery pipeline's 239, 282 and 340 ms, and about nothing at `P = 0`. No cache is hiding a pair's cost.
-- **The link to #427:** pairs made eager fail the 2 s test, so they are created on first use, which reads REQ-PERF-006's "every chart at startup" as not reaching a composed chart. #427 owns the eager set; if it changes, this is re-read.
-- **The questions:** what is the cap, and does it count entries or pairs? Are pair entries created on first use? Does C3's 2 s apply on Vulkan?
-- **Options:**
-  - (a) **Recommended.** 4 baked entries beyond the gallery, counted as entries (a pair under two link sets is two), decode-only, created on first use; the first use of a pair may take a compile, about 0.25 s to 1 s measured under load on the Mac and about 0.37 s on Windows, and that is accepted as an exception to "every chart at startup". Past the cap a pair runs as CPU batch, labelled. `SuvakovPlane` counts as one of the 4.
-  - (b) 3 plus a generic blend entry, if RQ-721 adopts live paths: the blend takes the fourth slot of the module budget. Same module size as (a), a narrower reading of "pairs".
-  - (c) 4 eager: every pair at startup, REQ-PERF-006 untouched; start-up on the Mac rises from about 1 s to about 1.6 s and on Windows from 2.7 s to 4.4 s, and #427's gap widens.
-  - (d) A cap on entries by a module-size budget (1.25 × today's WGSL) rather than a count: more honest to the cost, harder to read in a task.
-- **On the 2 s, recommended:** read it as written, the Mac's number, keep it unchanged, and let #427 set any Vulkan start-up budget, since the gallery fails it with no pairs and the cap can't cure that. This reading is the one under which the proposal passes, so it's flagged as such. If the 2 s applies on Windows, no cap passes, and the gallery itself would have to shrink or go lazy.
-- **Applied meanwhile:** (a), with the value in one ledger constant, so a different ruling changes one number and the test `baked_cap`.
-- **7 Nov 2026 (R-837):** the owner: "RQ-716: (a)." Option (a) is applied: 4 baked entries beyond the gallery, counted as entries, decode-only, created on first use, CPU batch past the cap. **Left open:** whether C3's 2 s start-up limit applies on Vulkan, where the gallery alone takes 2.7 s; the answer doesn't say, and the cap passes only on the reading that the 2 s is the Mac's, which stands meanwhile, #427 owning any Vulkan budget.
-
-## RQ-729: Paper frames the library doesn't settle *(a silence; the owner's latest order part E; RQ-650, open; context: TASK-M8-112)*
-
-*Queued 7 Nov 2026 from the chart composition design, PR #422, for the owner's rulings report. Nothing is implemented until ruled (the owner's order of 6 Nov, A6).*
-
-*In plain English: most targets' coordinate frames can now be written as presets. A few details aren't in anything we hold. Four the order listed turned out to be readable after all. The rest should wait unbuilt rather than be guessed.*
-
-- **File, section:** `docs/design/principia_chart_composition.md` § 20, its gaps table, each with its path; the order's list: "Tanikawa-Mikkola's fixed-k velocity prescription and D12; Hristov 2025's conventions; Valtonen 2005's rotation parameter w; Martynova 2009; Boyd & McMillan 1993; Hut 1983; Heggie & Sweatman 1991's full setup; Henon 1974's A; the L/M/A/H boundary definitions."
-- **The finding for RQ-650:** Tanikawa & Mikkola 2008 prints `D11 = {x ≥ 0, y ≥ 0, (x − 0.5)² + y² ≤ 1}`; its Fig. 3 draws `D₁₁` as Anosova's region and `D₁₂` beside it inside the right circle. So the printed set is exactly `D₁₁ ∪ D₁₂`: neither a mirror nor plainly a typo, a reading RQ-650's record doesn't have. It doesn't rule RQ-650.
-- **Options:**
-  - (a) **Recommended.** Presets where read, tested against the paper. Each remaining gap stays unbuilt, and a target that needs it reads "not scored" with the gap named; no frame is guessed.
-  - (b) Fetch or read the held copies first, then write all the presets at once.
-- **Applied meanwhile:** (a), unbuilt.
-
-## RQ-731: REQ-VAL-326's pointer to the 2015 paper *(a corpus error; `plan/requirements.yaml`, REQ-VAL-326; context: TS-2, TASK-M9-28)*
-
-*Queued 7 Nov 2026 from the chart composition design, PR #422, for the owner's rulings report. Nothing is implemented until ruled (the owner's order of 6 Nov, A6).*
-
-*In plain English: the requirement behind target TS-2 says the fixed-k prescription is read from the 2015 paper. The 2015 paper is free-fall and doesn't have it; the 2008 paper does.*
-
-- **File, section:** REQ-VAL-326's prescription "read from the 2015 PASJ paper"; `docs/design/principia_dd_replication.md` TS-2: "Tanikawa & Mikkola 2008, Fig. 7"; physics note 2 of 6 Nov, RQ-725. Also: TS-2's "virial ratio 0 to 0.7" is `k = T/|U|`, not `Q`; `Q = 2k`.
-- **Options:**
-  - (a) **Recommended.** Change the pointer to Tanikawa & Mikkola 2008 § 3.1 and § 4.2, and note `k` against `Q`. TS-2 stays "not scored" (R-669).
-  - (b) Leave it, since TS-2 isn't scored.
-- **Applied meanwhile:** nothing.
-
-## RQ-732: Older acceptance and verify lines that give `cargo test` two filters: 2 in the invalid form, 5 more in prose, not the 43 a grep finds *(a record correction, a two-way door under R-812; Codex's P2 on PR #422, thread PRRT_kwDOUpUQ5c60yEWq; context: TASK-M6-32, TASK-M6-33, REQ-CHART-070, REQ-PAY-097, REQ-PAY-098, REQ-GUI-178)*
-
-*Queued 7 Nov 2026 from PR #422, for the orchestrator to decide: the correction is reversible, so R-812 doesn't send it to the owner. PR #422 fixed its own 12 lines to `cargo test -p engine -- <a> <b>`.*
-
-**In plain English:** `cargo test` takes one test-name filter before `--`, so a command naming two fails before any test runs. A few older lines in the plan name two. The grep for the form finds 43 lines on `main`, but most of those are sentences that carry on after one test name; the lines to fix are 7.
-
-- **File, section:**
-  - The form, as `cargo test --help` gives it and Codex's P2 quotes it: "`cargo test [OPTIONS] [TESTNAME] [-- [ARGS]...]`"; "invoking the first command produces `unexpected argument 'path_zoom_bitwise' found`".
-  - The count: `grep -rnE 'cargo test -p [a-z_-]+ [a-z0-9_]+ [a-z0-9_]+' plan --include='*.md' --include='*.yaml'` gives 43 lines on `main` at c4dd9d98, and 45 with PR #422's two new lines, both of them the "two commands" kind below. The 43 are:
-    - 2 in the invalid form, both already-merged tasks' acceptance lines: `plan/tasks/M6/TASK-M6-32.md`:59, "`cargo test -p gui mock_keyboard scope_tab_order_mock`", and `plan/tasks/M6/TASK-M6-33.md`:61, "`cargo test -p gui mock_compass_modes mock_compass_keys`".
-    - 5 naming two filters in prose, which fail the same way if run as written: `plan/requirements.yaml`:3223 (REQ-CHART-070), "cargo test -p kernel pe_axis and physical_axis_warps"; `plan/requirements.yaml`:8909 (REQ-PAY-097) and :8929 (REQ-PAY-098), "cargo test -p ledger declared_ranges and numeric_view_template pass with it"; `plan/requirements.yaml`:21351 (REQ-GUI-178), "cargo test -p gui mock_keyboard and scope_tab_order_mock"; and `plan/reviewers/gui.md`:129, its generated copy.
-    - 29 of two separate commands, already valid, as "cargo test -p gui f3_fill_modes and cargo xtask screenshot 01_main".
-    - 7 of one filter and then a sentence, already valid, as "cargo test -p render outcome_palette_separation computes them".
-- **The question:** should the 7 lines become the valid form, `cargo test -p <crate> -- <a> <b>`?
-- **Options seen:**
-  - (a) **Recommended.** Rewrite the 2 task lines and the 4 verify details to that form in a follow-up plan PR, through `plan/tools/reqio.py` for the details, and regenerate the fifth, `plan/reviewers/gui.md`:129. No test changes, and the 36 valid lines stay as they are.
-  - (b) Rewrite only the 2 task lines, and leave the prose, which reads as a description rather than a command.
-- **Applied meanwhile:** nothing. PR #422's own lines are fixed; these older lines are unchanged.
-- **Waits:** nothing. TASK-M6-32 and TASK-M6-33 are merged.
-
-## RQ-734: Final-condition charts: build them, and on what terms? *(a one-way door: what the instrument computes, and the reading of the owner's model; the owner's review of PR #422, 7 Nov 2026; context: `docs/design/principia_chart_composition.md` § 10.3, no task)*
-
-*Queued 7 Nov 2026 from PR #422, for the owner's rulings report. Nothing is built until ruled (the owner's order of 6 Nov, A6).*
-
-*In plain English: the owner's model shows you can pick where a system is at a later time and work backwards to the start that gets there, by flipping the velocities and running forward. That gives a new kind of chart. The theorem is about the equations, and our default integrator doesn't run backwards exactly, so the app measures the miss at each pixel and masks the bad ones; an integrator that does run backwards exactly is an option. Starts also get rescaled to a standard size, and the design currently bars anything "measured after t = 0".*
-
-- **File, section:**
-  - `docs/design/principia_chart_space_model.md` Theorem 11: "A chart whose axes are state functions evaluated at time `T`" and § 0.5: "The scale-free invariant overlap is `L_z²E` and the sign of `E` only"; § 6b: "`E` and `L_z` themselves are independent of `T` only before the `I = 1` rescale."; "Theorem 11 is exact for the true flow; the app's integrators aren't run-reversible."; "That's an option to rule on, not something assumed."
-  - the owner on the model, 7 Nov 2026: "Add "final-condition" charts (Theorem 11, time-reversal: flip momenta, integrate forward T, flip back) as a design item for the rulings report, with the check that conserved axes are T-independent."
-  - `docs/contracts/principia_integrator_contract.md` Part 2, the reversibility flags (R-500): "`run_reversible` says the bound occupant's whole run is time-symmetric, as the reversibility test binds it: only logH's TTL time mode (R-162)"; "The default occupant is Heggie × RK4 (R-560)".
-  - `docs/design/principia_chart_composition.md` § 3.1, the Rejected table: "anything measured after `t = 0` | results, not axes".
-  - `docs/design/principia_chart_composition.md` § 10.3 and § 3.3's flag.
-- **The questions and options:**
-  - **Whether.** (a) **Recommended.** Keep it as a design item and build it after the M8 charts, as a CPU batch chart, `T` on the sim key, a mask for runs that don't survive, and the three checks of § 10.3. (b) Don't build it: the rejection stands as written.
-  - **The occupant.** Theorem 11 is exact for the true flow, and in the app it's an approximate inverse. In both options the round-trip miss is measured per pixel, reported, and masked where it's large. (a) **Recommended. The default occupant, approximate inverse.** Signed `C` of the forward state at `T' = T/I_in^{3/4}` is compared with `D(ψ(u))` (the contract's `C` would mirror a lower-half `ψ(u)` and show a miss the size of the mirror on correct physics), and the miss is the integrator's error amplified by chaos. (b) **An exactly reversible integrator.** A time-symmetric integrator with a reversible step rule for this chart. logH's TTL mode is the only occupant the contract flags `run_reversible`, so this departs from the default (R-560); rounding and chaos still leave a miss.
-  - **The gauge.** `F_{−T}` leaves `I ≠ 1`, and `C` rescales by a per-pixel `s`. (a) **Recommended.** Keep `I = 1`: the chart's start is an ordinary one, the `T`-independence check reads `L_z²E` and the sign of `E` after signed `C` as before it, `E` and `L_z` only before the rescale, and the sign of `L_z` after signed `C` too, flipped only on the `Enc` arm, the time reached on a pixel is per pixel as in § 8.6, and the chart carries `paper scale differs`. (b) Skip the rescale for this chart: `T` is one number across it, and it's an exception to `C` that every later stage must then carry.
-  - **The mirror half.** Applied from the owner's rider to RQ-736: a start found stays in the signed state, taking § 17.2's signed `C`, with no mirror, clamp or `z`, and the chart fills the IC from the state. This item confirms that reading of Theorem 11's `Enc`.
-  - **The rejection.** (a) **Recommended.** Narrow "anything measured after `t = 0`" to event reads and functionals, so a state function at a fixed `T` can be an axis of this chart. (b) Leave it, which goes with option (b) of the first question.
-- **Measured and reasoned:** all of this is reasoned. No such chart has been run, and the extra run's cost, one integration of length `T` per sample, isn't measured. The scaling of `E`, `L` and `L²E` under `C` is algebra.
-- **Applied meanwhile:** the rejection stands; nothing is built.
-- **Waits:** nothing. No task of the design depends on it. Read at TASK-M4-37.
-- **7 Nov 2026 (R-852):** the owner's order on the model's § 6b: "Add "final-condition" charts (Theorem 11, time-reversal: flip momenta, integrate forward T, flip back) as a design item for the rulings report, with the check that conserved axes are T-independent." It stays this design item, for the next rulings report; nothing is built.
-
-## RQ-735: What does the browser build get of chart composition? *(a one-way door: what the product is, and scope under R-571; the owner's review of PR #422, 7 Nov 2026; context: `docs/design/principia_chart_composition.md` § 7.5, TASK-M8-102, TASK-M8-96)*
-
-*Queued 7 Nov 2026 from PR #422, for the owner's rulings report. Nothing is built for either option until ruled (the owner's order of 6 Nov, A6).*
-
-*In plain English: most of the new chart axes have no fast formula for the graphics card, so they run on the main processor, a route called CPU batch. The browser version either leaves those out, or runs the same Rust code compiled to WebAssembly, slower. The owner's rule for the browser says "the whole native app", which points at the second.*
-
-- **File, section:**
-  - `docs/contracts/principia_canonical_spec.md` (R-571): "v1 web: the whole native app, compiled to run in the browser, with the same interface, the same features and the same stains"; "where the browser cannot do something the native app does, v1 web says so in the app, and does not get a different design".
-  - `docs/contracts/principia_caching_contract.md`, "Measured on Pages first (R-627)": "whether SharedArrayBuffer and wasm threads then actually work, in each browser of R-110's pair".
-  - `docs/design/principia_chart_composition.md` § 13, V24: "Every § 3.1 and § 3.2 row is CPU batch"; § 7.5.
-  - the owner's review of PR #422, 7 Nov 2026: "Web: state what the browser build gets. Closed-form GPU charts only, or a WASM CPU route for numerical axes and CPU-only morphs."
-- **The question:** does the browser build run CPU batch?
-- **Options:**
-  - (a) Closed-form GPU charts only. The baked pairs run; every other chart says in the app that the browser can't. Nothing to build, and most of the new primitives aren't in the browser.
-  - (b) **Recommended.** A WASM CPU route too: numerical axes, unbaked closed forms and CPU-only morphs run as CPU batch in the engine's worker, labelled and not live. It's the same code, so it adds a target and its tests, not a design.
-- **Measured and reasoned:** nothing is measured in a browser. § 11's measurements are Metal and Vulkan, not WebGPU; TASK-M8-96's test of wasm threads on Pages hasn't run, so CPU batch's thread count there is unknown; and bit-for-bit agreement of a wasm f64 solve with a native one isn't measured. The recommendation is reasoned from R-571's words and V24. If TASK-M8-96 finds one thread only, (b) stands and is slower.
-- **Applied meanwhile:** nothing: § 7.5 states both, and neither is built.
-- **Waits:** nothing. The native tasks go ahead either way. Read at TASK-M4-37.
-
-## RQ-737: V-11's primary states "f g = 1" at e_in = i = m3 = 0, while its own eq. (11) gives 0.7 there: which holds for the prograde limit? *(conflict inside a source; the owner's 31 Oct request, "V-11 Part I"; `docs/incoming/2026-10-31_research_library/myllari_2018/README.md`; REQ-VAL-330; context: TASK-M9-25 (was TASK-M3-65); V-11 parked by R-668 item 5)*
-
-*Queued 31 Oct 2026 by the library ingest as RQ-639, and filed 7 Nov 2026 as RQ-737, RQ-639 being already taken on
-`main`. For the owner only if the physics review can't settle it: it scales the prograde number by (1/0.7)^(1/3) = 1.126
-at low e_in. It blocks nothing now: V-11 is parked with hierarchical triples by R-668 item 5 (1 Nov 2026).*
-
-**In plain English:** the V-11 stability paper (Mylläri et al. 2018) says in words that its stability factor is 1 for a
-circular, flat, prograde orbit with a light third body, but its own printed formula gives 0.7 there. The printed formula
-matches the paper's own figures, so the sentence looks like the slip. The answer moves V-11's prograde comparison number by
-about 13 %. V-11 is parked for now (R-668, the owner's 1 Nov ruling that parks hierarchical-triple targets), so nothing
-waits on the answer.
-
-- **File, section:**
-  - Mylläri et al. 2018, MNRAS 476, 830 (local only), abstract, p. 830, and p. 836: "At the limit of ein = i = m3 = 0, f g = 1."
-  - The same paper, eq. (11), p. 833, as printed: f(e_in, cos i) = {1 − ⅔e_in[1 − ½e_in²] − 0.3 cos i [1 − ½e_in +
-    2 cos i (1 − (5/2)e_in^(3/2) − cos i)]}, which gives f(0, 1) = 0.7, and f = 1 at cos i = 0 (i = 90°).
-  - `docs/incoming/2026-10-31_research_library/myllari_2018/formula_check.txt`.
-- **The question:** whether V-11 scores against eq. (11) as printed, or treats the stated limit as the paper's intent.
-  Eq. (11) as printed reproduces Fig. 5's curves at cos i = +1 (3.15, 3.97, 4.79 against about 3.2, 4.0, 4.75, by eye), so the
-  sentence looks the likelier slip; it may mean i = 90°.
-  At the limit itself (e_in = 0, cos i = +1), eq. (11) as printed gives 2.37, 2.99, 3.61 at e_out = 0.3 (eq. (13),
-  `formula_check.txt`), against about 2.35, 3.0, 3.6 read by eye from Figs. 7 and 8; the stated limit (a factor of 1.126)
-  would give about 2.67, 3.37, 4.07. Fig. 7's caption says e_out = 0, where eq. (13) gives 2.24, 2.82, 3.40, so the match
-  holds only if Fig. 7's curves are drawn for e_out = 0.3, as Fig. 8's are (`myllari_2018/README.md`).
-- **Options seen:** (a) eq. (11) as printed; (b) the stated limit, f g = 1 at e_in = i = m3 = 0; (c) another, stated by
-  the owner.
-- **Applied meanwhile:** eq. (11) as printed, in the record. Nothing is built; REQ-VAL-330's text and TASK-M9-25 are
-  unchanged. V-11 (REQ-VAL-330, the hierarchical-triple stability target) is parked by R-668 item 5 (1 Nov 2026), the
-  owner's words: "5: hierarchical triples out of scope for now; park them with the v2+ 3D extension; shrink the M9 list
-  accordingly." It reads "not scored: parked" in the M9 report (`decisions.md` § R-668, "Item 5"), so the question
-  blocks nothing now.
-- **Waits:** nothing now: V-11 is parked by R-668 item 5. Its prograde comparison number waits on this only if the
-  parking is lifted and V-11 is scored.
-
-## RQ-744: R-863's build order: the tasks that fit no stage or straddle two, and the stage-3 edges the milestones and the existing edges refuse *(the owner's order of 8 Nov 2026, R-863; a one-way door where an answer moves a task out of its milestone's gate, otherwise a reading of the owner's order; `docs/design/principia_chart_composition.md` § 15; context: TASK-M4-32, TASK-M4-33, TASK-M4-34, TASK-M7-72, TASK-M8-100, TASK-M8-102 to TASK-M8-107, TASK-M8-112, TASK-M8-117, TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-124)*
-
-*Filed 8 Nov 2026 by the rulings PR that ports R-863 and R-864 (PR #445). The orchestrator's instruction: where a task
-fits no stage or straddles two, don't choose. Nothing below is given a stage edge.*
-
-*In plain English: the owner set five stages for building the chart-composition tasks. Most tasks fall into one stage
-and now wait on the stage before. Some fall into none, one falls into three, and three stage-3 tasks can't be made to wait
-on stage 2: two sit in an earlier milestone (M4), which may not wait on M8 work, and all three are already needed by
-stage 2's task through the chain the design drew. And Save view as chart's tasks aren't ordered against stage 1. (Stage
-2's sliding anchor, which had no task when this was filed, now has one: the 7 Nov rulings, merged since, give it to
-stage 2's task.) The owner says where each goes.*
-
-- **File, section:** `decisions.md` § R-863, the owner's words: "build in this order: (1) the path object and the bitwise
-  tests that today's pan, zoom, tilt, slice, lock and Save-view-as-chart reproduce exactly through it, before any new
-  capability; (2) locked paths (based morph, then the sliding anchor) with the test that the centre IC is constant; (3)
-  the primitive registry and composed axes, each primitive with its round-trip test; (4) morph families, easing and
-  Sequence segments; (5) time-axis charts and the symmetry filter. Each stage merges only with the previous stage's tests
-  green."; `docs/design/principia_chart_composition.md` § 15, "Tasks, milestones chosen by what depends on them";
-  `plan/check_plan.py`: a task may not depend "forward across milestones", and the graph may have no cycle.
-- **Applied:** stage 1 TASK-M8-124 (new); stage 2 TASK-M8-117; stage 3 TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101,
-  TASK-M8-109, TASK-M8-110, TASK-M8-111, TASK-M8-119; stage 4 TASK-M8-108; stage 5 TASK-M8-113 to TASK-M8-116 and
-  TASK-M8-120. Edges: TASK-M8-117 on TASK-M8-124; TASK-M8-101, -109, -110, -111 and -119 on TASK-M8-117; TASK-M8-108 on
-  every stage-3 task; every stage-5 task on TASK-M8-108.
-- **(A) Stage-3 tasks with no edge to stage 2.** TASK-M4-33 (the registry) and TASK-M4-34 (region D's pair) are in M4,
-  TASK-M8-117 in M8, so the edge would depend forward across milestones. And TASK-M4-33, TASK-M4-34 and TASK-M8-100 (warps
-  and pair maps) are upstream of TASK-M8-117 already: TASK-M8-117 → TASK-M8-106 → TASK-M8-102 (CPU batch) → TASK-M4-33,
-  TASK-M4-34, TASK-M8-100. So today stage 2 waits on these three stage-3 tasks, against the order. TASK-M4-34 also holds
-  TASK-M4-06 once RQ-714 rules (TASK-M4-37's Deliverables), so moving it behind stage 2 would hold M4's golden behind the
-  path work.
-- **(B) Straddles: TASK-M8-106** (the path type, the line on blocks, export through CPU batch). Its path type and its
-  bitwise tests (`path_tilt_bitwise`, `path_zoom_bitwise`, `path_lock_bitwise`, `path_save_view_bitwise`, REQ-CHART-113)
-  are stage 1, now TASK-M8-124's too; its line on blocks is the morph a based morph (stage 2) needs, or one of stage 4's
-  families; its re-timing, alignment and export are stage 4. Its edge to TASK-M8-102 is what puts (A)'s three tasks
-  before stage 2.
-- **(C) No stage names them:** TASK-M4-32 (the composition in the contracts, docs), TASK-M8-105 (chart paths in the
-  contracts, docs), TASK-M8-102 (CPU batch, numerical inverses), TASK-M8-103 (the builder's panels), TASK-M8-104 (1D
-  charts), TASK-M8-107 (live paths: the blend entry; R-863 names no live stage), TASK-M8-112 (paper frames as presets),
-  TASK-M8-118 (hold `L_z`) and TASK-M7-72 (contours of any primitive).
-  - *8 Nov 2026, on merging `main` (PR #443):* TASK-M8-122 (the fixed-`k` chart) and TASK-M8-123 (the binary-plus-single
-    scattering chart), R-847's, wait behind TASK-M4-37 too. They are not PR #422's tasks, so R-863's words don't name
-    them; both already depend on stage-3 tasks (TASK-M8-109 and TASK-M8-111) and on TASK-M8-102. No stage edge is made;
-    the options below place them with (C)'s tasks.
-  - *8 Nov 2026 (R-870):* TASK-M8-126, points of interest, joins this list: the owner's stages don't name it. It
-    depends on TASK-M8-124 (stage 1) and TASK-M8-108 (stage 4), so it can't be built before stage 4, but no stage edge is
-    made for it.
-- **(D) Stage 2's sliding anchor has no task on `main`.** The owner's stage 2 is "based morph, then the sliding anchor".
-  TASK-M8-117 is the based morph with the *stored* anchor: its `path_lock_centre` asserts "`anchor not in B` labelled
-  and unbased", and design § 17.8 (`docs/design/principia_chart_composition.md`) says "Its sliding anchor (Theorem 8,
-  "the RQ-721 rider") is RQ-721's, not applied here: until then `anchor not in B` stands". The sliding anchor is the
-  owner's RQ-721 rider in the open rulings PR #443 ("no labelled jumps under the lock. Where the anchor can't exist in
-  chart B ... the anchor slides continuously to its nearest point in B"), not yet on `main`. Until that answer is
-  ported, with a task that builds it in stage 2 and replaces TASK-M8-117's `anchor not in B` arm, stage 2 is incomplete,
-  and stage 3 waits only on its based-morph half.
-  - *Moot, 8 Nov 2026, on merging `main` (PR #443):* the rider is R-849, now on `main`, and it gives the sliding anchor
-    to TASK-M8-117 (REQ-CHART-115's acceptance, and REQ-CHART-146, the definition of B's nearest point, under physics
-    review), in place of `anchor not in B`. Stage 2 is that one task; nothing is left for the owner here.
-- **(E) Save view as chart's tasks are not ordered against stage 1.** The owner's stage 1 names "today's ...
-  Save-view-as-chart", and R-864 item 2 says "No parallel code paths". On `main` no Save view as chart code exists: its
-  routes are TASK-M6-49 and TASK-M6-51 (the mock, R-475, R-514) and TASK-M8-48 (the real engine, curved views; R-475),
-  none merged, and TASK-M8-124's Depends on names none of them. If TASK-M8-48 lands after TASK-M8-124, it builds a Save
-  view and tilt and slice route beside the object, and TASK-M8-124's bitwise baseline, "today's code", misses it. Either
-  edge is a choice: TASK-M8-124 after TASK-M8-48 holds stage 1 behind M8's GUI work; TASK-M8-48 after TASK-M8-124 holds
-  TASK-M8-48 behind TASK-M4-37 and the owner's answer to R-864's sketch, and builds Save view as chart as a family of
-  the object. TASK-M6-49 and TASK-M6-51, in M6, can only come before TASK-M8-124 by an edge (an M6 task may not depend
-  forward on an M8 one), or after it by dispatch.
-- **Options:**
-  - (a) Split and re-place: TASK-M8-106 keeps only what is past stage 1 (its line, re-timing, alignment and export),
-    drops REQ-CHART-113's tests to TASK-M8-124, and TASK-M8-117 depends on TASK-M8-124 and TASK-M2-23 and not on it,
-    so stage 2 no longer waits on stage 3; TASK-M4-33 and TASK-M4-34 move to M8 (new ids, their requirements leaving
-    M4's gate, TASK-M4-06's edge then from M8), or stay in M4 under (b); (C)'s tasks placed by the stage they serve:
-    TASK-M4-32 before stage 3 and TASK-M8-105 before stage 1 (docs first), TASK-M8-102 and TASK-M8-118 in stage 3,
-    TASK-M8-107 and TASK-M8-103, TASK-M8-104 and TASK-M8-112 in stage 4 or 5 as the owner says, TASK-M7-72 in stage 3.
-  - (b) Keep the milestones: the stage-3 tasks in M4 keep their place, and the order across M4 and M8 is kept by
-    dispatch, the orchestrator releasing a stage's M4 tasks only once the previous stage has merged, not by edges.
-    (B) and (C) as in (a).
-  - (c) Another, stated by the owner.
-  - For (E): (i) TASK-M8-124 depends on TASK-M6-49, TASK-M6-51 and TASK-M8-48, its baseline covering their routes;
-    (ii) TASK-M8-48 depends on TASK-M8-124 and builds Save view as chart on curved views through the object, TASK-M6-49
-    and TASK-M6-51 before stage 1 by edge; (iii) another, stated by the owner.
-- **Recommendation:** (a) for (B), since it is the split that makes the stage order hold by edges; for (A), (b), since
-  moving TASK-M4-33 and TASK-M4-34 out of M4 changes M4's gate; for (E), (i), since "today's" reads as the routes that
-  exist when stage 1 starts and R-475 is ruled, and stage 1 already waits on TASK-M4-37. A recommendation, not applied.
-- **Applied meanwhile:** the edges above; none for (A), (B), (C) or (E); (D) moot by R-849, recorded in R-863, design
-  § 15 and TASK-M8-117's Notes. Every task here stays behind TASK-M4-37.
-  - *8 Nov 2026 (R-866, applied per R-369):* TASK-M8-125, locking without moving the view, is in stage 1, after
-    TASK-M8-124's bitwise re-expression, and TASK-M8-117 depends on it.
-- **Waits:** nothing can start yet: all of it waits behind TASK-M4-37 and, for TASK-M8-124, the owner's answer to R-864's
-  type sketch.
-
-## RQ-745: The acute-angle Burrau charts show `θ ∈ (0, π/4]` only, one labelling of each shape, the leg swap folded out: does that stand under the symmetry rule and the filter? *(a one-way door: what the instrument shows; R-27 against the owner's symmetry rule and symmetry-filter order of 7 Nov 2026, R-854 and R-855; `crates/kernel/src/chart/burrau_acute.rs`; context: REQ-CHART-024, REQ-CHART-025, REQ-CHART-027, TASK-M8-120)*
-
-*Filed 8 Nov 2026 by the rulings PR that ports R-863 and R-864 (PR #445), from the orchestrator's read of the built
-charts against the 7 Nov rulings.*
-
-*In plain English: three built Burrau charts sweep the triangle's acute angle only up to 45°, because the angle and its
-complement give the same triangle with its two legs swapped. So each shape appears once and its swapped twin never does.
-The owner's 7 Nov symmetry rule says a symmetry may be shown once only by an optional filter after rendering, never by
-removing starting states or shrinking a chart. An older ruling (R-27) keeps these folded charts on purpose, labelled
-"shape only", beside the full-range charts. The owner says which stands for these charts.*
-
-- **File, section:** `crates/kernel/src/chart/burrau_acute.rs`:6-12, the module note: "`θ ∈ (0, π/4]` is horizontal, …
-  `θ` folds out the leg swap (`θ` and `π/2 − θ` are the same triangle with the legs swapped), so each chart covers each
-  shape once: [`SystemImage::Bijective`], the quotient "shape only" ([`ChartLabel`])."; :89-92, `in_fold`, "Layer 2's
-  `θ ∈ (0, π/4]`"; :121-124, `fold_label`, "The acute-angle charts' label: `name`, bijective, "shape only" (the module's note)"; :144,
-  `reject_early`, which rejects a `θ(u)` outside the fold.
-- **Against:** `decisions.md` § R-854, the owner's symmetry rule of 7 Nov 2026, the owner's words: "Where a symmetry is
-  used at all (counting mirror pairs once, the IC constructor showing that a triangle and its flip are mirror images),
-  it is a declared, optional view or statistic, never a removal of starting states or angles. Every chart shows the full
-  range of the angles it sweeps."; and `decisions.md` § R-855, the owner's symmetry-filter order of 7 Nov 2026, the
-  owner's words: "Region D's quarter disc, the Anosova half-disc and the half shape sphere at rest come out of this
-  filter rather than out of reduced chart domains, so the papers' figures are reproducible with the full disc still
-  computed underneath."
-- **For:** `decisions.md` § R-27 (24 Sep 2026): "Shape only (the fold) and shape × labelling (the full range) are both
-  kept."; `docs/design/principia_chart_reference.md` § 4.5.
-- **Options:** (a) keep them as R-27 has them, labelled "shape only", beside the full-range `ν` charts; (b) re-express
-  them as the full chart through the symmetry filter (TASK-M8-120), the leg swap shown once only when the filter is on;
-  (c) another, stated by the owner.
-- **Applied meanwhile:** nothing. The charts stay as built, labelled "shape only" (R-27); no code or doc changes.
-- **Waits:** nothing built waits; under (b) a task re-expresses the three charts once TASK-M8-120's filter exists.
-- **8 Nov 2026, the owner's direction (R-869):** "5. Burrau acute charts: unfold the leg swap; show both labellings, with the reduced view from the symmetry filter (R-855). Add it to the review queue with that as my direction." That is option (b). The owner asks for it to be queued with that as their direction, so the entry stays open for their ruling at the next rulings report, where R-27's "shape only" fold charts would give way. No task is added and nothing changes meanwhile.
 ## RQ-738: RQ-736's correction list and the conflicts the filter order leaves *(carried from RQ-736, closed by R-853 on 7 Nov 2026; the owner's model against the corpus; a one-way door where an item changes what is built; context: TASK-M4-34, TASK-M8-120, TASK-M4-37)*
 
 *Filed 7 Nov 2026 by the rulings PR of that day. RQ-736 closed on what the owner ruled (R-853, R-855); these two lists were not answered by any of it, so they move here unchanged, so they aren't lost. Nothing in them is applied but the "reading held" each states.*
@@ -797,210 +452,46 @@ removing starting states or shrinking a chart. An older ruling (R-27) keeps thes
   9. **Unequal masses.** The ruling: "state what the preset does there (RQ-728 links)". RQ-728 settles the labelling; no document says how a paper's D at a Li & Liao mass set is shown once the mask is gone. Reading held: a contour on the half the mirror leaves (design § 8.8). A gap.
 - **Waits:** TASK-M4-34's preset and TASK-M8-120 (conflicts 3 and 4, through RQ-714's open part); the correction list waits for the owner's next revision of the model.
 - **8 Nov 2026 (R-868):** the owner: "4. RQ-738: the model's wording follows R-474 (tip-as-sheet default, lean-each-axis the other map); I'll correct the model." Their corrected model of that day replaces `docs/design/principia_chart_space_model.md` byte for byte. That settles the correction list's item 1, as its option (a): § 0.2 now names R-474's two maps, Tip as sheet the default. **Still open:** the correction list's items 2 to 9, which the owner's copy doesn't change (its other changes are § 0.6, R-865, and a new § 0.7, R-866 and R-867), and all nine conflicts the filter order leaves. The entry stays open for them.
+- **8 Nov 2026 (R-878, R-871):** the owner: "RQ-738: the readings held stand for conflicts 1, 2 and 4 to 9; conflict 3 as in my RQ-714 answer. Items 2 to 9: send me the list and I'll correct the model." Applied: the nine conflicts are settled, 1, 2 and 4 to 9 by their readings held (conflict 1's amends R-544's words and chart_decoder_contract's "no one-hemisphere view", kept as a "Was"), and 3 by RQ-714's answer, its option (c), the full disc read literally (R-871). **Still open:** the correction list's items 2 to 9, which the owner corrects in the model from the list the orchestrator sent on 8 Nov, and two items this port adds to that list: **10.** the model's § 5, "Setting `δ ← 0` restores `φ(0) = a` exactly", and § 7's "Snap-back is exact", against the brief's Q2 (a), snap-back undoing the slice only (R-899); **11.** the model's § 1, "`Z = R^8`", Theorem 1's proof ("`Z = R^8` is convex") and § 4 ("`Z` is convex"), against RQ-750 (c), `z_β` periodic (R-898). Nothing waits on them: the corpus and the rulings stand meanwhile. The entry stays open for items 2 to 11.
 
-## RQ-739: Remove the decoder's mirror step, letting latent `β` run over the full circle? *(the owner's proposal of 7 Nov 2026 with the symmetry rule, R-854; a one-way door: it changes the decoder; R-82, R-438, R-544, R-408; context: no task)*
+## RQ-751: Two of `contain.sh check`'s assertions have no Job Object equivalent: does the Windows proof pass without them? *(a one-way door: what the containment proof claims, and so what may be placed on Windows; the owner's CI shape order of 8 Nov 2026, step 1, and its placement rule; `scripts/contain.sh` § `check`; REQ-VAL-181; context: the tooling PR "Windows containment for tests and mutants (Job Object)")*
 
-*Filed 7 Nov 2026 by the rulings PR of that day, for the next rulings report. The owner's own words make it one-way, and "Mirror-step removal stays a proposal until ruled: don't apply it, just tag the sections it would touch." Nothing is applied; the sections it would touch carry the marker "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739)]".*
+*Filed 8 Nov 2026 by the implementer of that PR, which builds `.github/scripts/win_contain.ps1` and its dispatch-only
+job, `win-gpu.yml`'s `win-contain`. Nothing is chosen.*
 
-*In plain English: today a starting shape and its mirror image decode through one canonical half, with a special case for the shape sphere. The owner proposes dropping that step, so every chart uses one decode path and a lower-half start gets its own latent coordinates. The owner asked for five things to be reported before deciding.*
-
-- **File, section:** the owner's symmetry rule of 7 Nov 2026, its proposal (R-854, which quotes it whole); `docs/design/principia_chart_composition.md` § 6.6.
-- **The owner's proposal, verbatim (7 Nov 2026):**
-
-  > Proposed change, for the rulings report with a recommendation (it changes the decoder, so
-  > one-way): remove the decoder's mirror step entirely and let the latent beta run over the full
-  > circle, so every chart, the shape sphere included, uses one decode path with no special case.
-  > Report before deciding:
-  > 1. Bitwise check: every existing preset, saved chart and golden test with beta in [0, pi]
-  >    reproduces unchanged (expected, since the mirror step never fires there); list any that don't.
-  > 2. What becomes unnecessary: the mirror step, its deadband rules (R-82, R-438) and the shape
-  >    sphere's separate decode path (R-544's skip).
-  > 3. What needs a new option: R-408's count-each-system-once statistics become "mirror pairs counted
-  >    once" as an optional statistic, never by dropping starts.
-  > 4. Encode: a lower-half state now encodes to beta in (pi, 2 pi) instead of a mirrored state; list
-  >    every stored z, IC save file or test that relied on the old mirrored encode.
-  > 5. Cost: latent charts covering both halves have twice the area in beta; state the effect on
-  >    default windows.
-
-- **Tagged sections (the order's item 4):** `docs/design/principia_dd_decoder.md` § 3.3; `docs/design/principia_dd_encode.md` § 3.2; `docs/contracts/principia_inverse_encode_contract.md` Part 1; `docs/design/principia_chart_reference.md` § 0.4 and § 3; `docs/contracts/principia_chart_decoder_contract.md` Part 2 and Part 5; `docs/contracts/principia_canonical_spec.md` § 3; and `docs/design/principia_chart_composition.md` §§ 3, 6.2, 8.4, 10.3, 10.4, 17.2 and 17.8 (PR #422).
-- **Owed before a recommendation:** the five reports the proposal lists, each measured or read, its criterion written first (R-649): the bitwise check over every preset, saved chart and golden test with `β ∈ [0, π]`; what becomes unnecessary (the mirror step, R-82's and R-438's deadband, R-544's skip); R-408's statistics as an optional "mirror pairs counted once"; every stored `z`, IC save file or test that relied on the mirrored encode; and the default windows' cost of twice the area in `β`.
-- **Options:** (a) remove the mirror step, as proposed, once the five reports are in; (b) keep it, the symmetry rule (R-854) and the filter (R-855) standing on the signed `C` they already read.
-- **A dependency, one-way (7 Nov 2026, the physics review of PR #443, P2):** R-853's answer to RQ-736's first open question, the owner's words: "Colour later states and draw traces in the signed, unfolded state; traces are continuous through syzygies." Against it, `docs/design/principia_dd_decoder.md` § 3.2's link `β = π·σ(z_β)`, with `β ∈ [0, π]`, and `docs/design/principia_lines.md` § "8. Traces", the table row: "`z_β` at a syzygy | It runs to ±∞ and comes back: a jump at infinity, not a sample off the chart". At a syzygy `β` is 0 or π, so `z_β` runs to ±∞, and a signed lower-half state has no `z_β` under the present link; under this entry's `β ∈ (0, 2π)` a crossing at `β = 0` would still wrap. So on any chart showing `z_β` a signed trace can't be continuous through a syzygy; the latent momenta chart can. TASK-M7-52's definition (R-72, how a lower-half state reads on a latent target) needs latent coordinates beyond `β ∈ [0, π]`, which is this entry's item 4. Not resolved here: REQ-COL-163's test is scoped to the latent momenta chart, and the `lines.md` row is tagged as waiting.
-- **Applied meanwhile:** nothing. The decoder and its tests are unchanged.
-- **Waits:** nothing built; no task depends on it.
-- **8 Nov 2026 (R-865):** the owner ruled the removal: "1. RQ-739: remove the decoder's mirror step; latent beta runs over the full circle. Conditional on the bitwise check (every preset, saved chart and golden with beta in [0, pi] reproduces unchanged); if anything doesn't, bring the list back before proceeding. This also fixes the latent-chart traces jumping at syzygies. Add a task for it." That is option (a), built by TASK-M2-57. The entry was moved to the archive by PR #449's first head and is reopened by its fix round (code review 5817349158, F1), since the answer doesn't settle all of it (`.claude/commands/rulings-apply.md` § 2). **Still open:** the proposal's item 3, R-408's count-each-system-once statistics as an optional "mirror pairs counted once" statistic, never by dropping starts; R-408's count spans `β ∈ (π, 2π)` once the step goes, and nothing rules the statistic. Flagged for the next rulings report. The link question the condition meets is RQ-750's.
-
-## RQ-740: Does R-708's "every pixel is a system under every tilt" allow an f32 chart to refuse a pixel inside the band where f32 rounding, not the chart, decides? *(a one-way door: what the instrument computes; R-708, R-471; the report of 7 Nov 2026, "Open from today's merges, to be filed as entries"; context: TASK-M2-52 (PR #388, merged))*
-
-*Filed 7 Nov 2026 by the rulings PR of that day. The report put this to the owner before it had an entry, and the owner's answer asked for a measurement first, so it is filed here as an ask.*
-
-*In plain English: on the tilted held-value charts, the chart is promised to show a real three-body system at every pixel inside its square. The warp puts the feasibility limit on the bottom row, where the held constraint is just met. A pixel on or near that floor never leaves the square, but at f32 (single precision) it can decode to a state just past the constraint (for example `K` just below `L_z²/2I`, or a layer-3 check failing on the f32 decode) and be refused, though at f64 the same pixel is a system. The question is whether such a refusal breaks the promise.*
-
-- **File, section:** `decisions.md` § "R-708 — The tilted Burrau `K` charts follow R-471's two modes: …", the owner's words: "Warped mode (E1, the default): option (a). Every pixel is a system under every tilt."; `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid".
-- **The report's item (7 Nov 2026):** "Whether "every pixel" allows refusing inside the f32 band. R-708 (held energy's warp) has no phrase for that band. Warped invariant charts at f32 refuse 0 of 3.16 million pixels; `HeldLz`, `HeldK` and Burrau at f32 aren't covered."
-- **Needed:** whether a refusal inside the f32 band is allowed under R-708's "every pixel", or such a pixel must be shown; the measurement the owner asked for comes first.
-- **Applied meanwhile:** nothing. `Tilted::validate` on `main` (TASK-M2-52, PR #388) refuses where its f32 checks fail, as built.
-- **Waits:** nothing built; no task depends on it.
-- **Asked, 7 Nov 2026:** the owner: "f32 band: measure HeldLz, HeldK and Burrau at f32 first and report." Flagged for the next report.
-- **7 Nov 2026:** the measurement the owner asked for was run that day, its criterion written before the first run (R-649), on PR #388's head 5e3f45be over `HeldLz`, `HeldK` and Burrau's charts at f32 against f64, and reported to the owner the same day; the criterion and the logs are in the orchestrator's notes (`orch/scratch/f32band/`, outside the repository). The question stays open for the owner's ruling on it.
-
-## RQ-741: What does a warped virial axis at a held `L_z ≠ 0` say it reads when its asked bottom `Q₀ > 0`? *(a one-way door: what the instrument claims; R-817, R-506; Codex on PR #443, 7 Nov 2026; context: TASK-M8-119, REQ-CHART-103)*
-
-*Filed 7 Nov 2026 by the rulings PR of that day, from Codex's finding on PR #443 (`plan/tasks/M8/TASK-M8-119.md`). Nothing is chosen.*
-
-*In plain English: the virial ratio compares kinetic and potential energy. On a spinning chart it can't go below a floor that depends on each pixel's shape. Today the axis is labelled "Q above the floor", because it reads the ratio less that floor. The owner's ruling of 7 Nov (R-817) puts the floor under the rise only, so where the asked bottom of the range is above the floor, the axis now reads the ratio itself. On the other columns it reads the asked bottom plus the excess above the floor. The label "Q above the floor" stays true only when the range starts at 0. What the axis is labelled when it starts above 0 is not said anywhere.*
+*In plain English: on Linux, CI's containment hides every outside process from the contained run, so a mutant that
+signals "everything" can't reach the runner. Windows has nothing that hides processes: a Job Object (what the owner
+asked for) kills the whole tree when it closes, caps processes and memory, and stops a process breaking out, but a
+process inside can still see an outside process and kill it by its id. So the Windows proof can show every other
+scenario of the Linux check, not these two. The owner says whether that is enough, and for what.*
 
 - **File, section:**
-  - `decisions.md` § "R-817 — A warped virial axis with an asked bottom `Q₀ > 0` at a held `L_z ≠ 0` puts the floor under the rise only: …": "the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, so the bottom row is the asked bottom `Q₀` where `Q₀` is feasible and the floor elsewhere, and the rows span the asked range."
-  - `docs/design/principia_chart_composition.md` § "9. Then virial": "the label at `L_z ≠ 0` is `Q above the floor`, with the state's own `Q` in the readout."
-  - `plan/requirements.yaml` REQ-CHART-103, as it stood: "a warped axis at a held L_z ≠ 0 labelled Q above the floor".
-- **The silence:** the axis's coordinate is chart_reference § 2.1's `Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K`, so its forward, the inverse of R-817's decode, is `Q₀ + 2(K − max(Q₀·|U|/2, L_z²/2I))/|U|`: the state's own ratio `2K/|U|` on a column where `Q₀ ≥ Q_min(U) = L_z²/(I·|U|)`, and that ratio less `Q_min(U) − Q₀` on the rest. At `Q₀ = 0` it is `2(K − L_z²/2I)/|U|`, the built axis, and `Q above the floor` is exact. At `Q₀ > 0` no file names the label, and one label can't be exact on both kinds of column.
-- **The question:** on a warped virial axis at a held `L_z ≠ 0` with `Q₀ > 0`, what is the axis labelled?
-- **Options seen:** (a) `Q`, the ratio, with the columns where `Q₀` is infeasible marked (as the floor is) and the state's own ratio in the readout; (b) `Q above the floor` throughout, its meaning stated as `Q₀` plus the excess above the floor; (c) a label per column kind, `Q` where `Q₀` is feasible and `Q above the floor` elsewhere; (d) another, stated by the owner.
-- **Applied meanwhile:** REQ-CHART-103 and TASK-M8-119 take R-817's forward and its round trip, and `Q above the floor` at `Q₀ = 0` only, both settled by R-817 and § 2.1; they name this entry for the label at `Q₀ > 0`.
-- **Waits:** TASK-M8-119's label at `Q₀ > 0` only; its descriptor, forward and decode go ahead.
-
-## RQ-747: Where are the latent chart's tilt angles stored, when R-474 says "angles are stored as set" and TASK-M6-48 adds no angle field? *(a one-way door: what the instrument computes and records; R-474 R3, K3, K15; REQ-GUI-233; `docs/contracts/principia_gui_state_contract.md` § 2; context: TASK-M6-48, TASK-M6-49, TASK-M6-56, TASK-M8-124)*
-
-*Filed 8 Nov 2026 by the rulings PR of that day, from the physics review of the chart-path design work. Nothing is
-chosen.*
-
-*In plain English: under the new default tilt map, "Tip as sheet", each of the two tilt angles can go to ±180°, and
-the owner's ruling says the angles are stored as set. But the task that builds it adds nowhere to store them: the GUI
-works the angles out again from the view's axes each time. Past a total tip of 180° that gives back different, wrapped
-angles from the ones set, so the sliders show other numbers, and the next keyboard step tilts to a different plane from
-the one that stepping the set angles would give. Where the angles live also decides whether undo, saved views and the
-chart-path object see them.*
-
-- **File, section:**
-  - `decisions.md` § "R-474 — RQ-340 is ruled: two tilt maps, …": R3, "Angles are stored as set and **wrapped only in
-    total tip, at 360°** … This is the same rotation, so nothing changes."; K3, "the stored angles are as set, and the
-    rotation is computed from them, wrapped internally"; K15, "Under Tip as sheet an angle may be stored past ±90°, which
-    Lean each axis's range does not hold. Choosing Lean each axis clamps each such angle to ±90°, its sign kept, in the
-    same history entry as the map change".
-  - `plan/requirements.yaml` REQ-GUI-233, verify: "at τ = (100°, 30°) under Sheet the readout holds "same plane as
-    (−72.4°, −21.7°), mirrored" and the stored angles are bit-identical after it".
-  - `plan/tasks/M6/TASK-M6-48.md` § Deliverables: "`SimConfig`'s `tilt_map` in the contract
-    (`crates/engine/src/contract/sim_config.rs`), default Sheet, its absence read as Lean." No angle field.
-  - `docs/contracts/principia_gui_state_contract.md` § 2: "`SimConfig`'s slice frame gains `tilt_map: Sheet | Lean`
-    (`SliceFrame { normal, tilt_x, tilt_y, tilt_map }`)", where `tilt_x` and `tilt_y` are the targets
-    (`crates/engine/src/contract/sim_config.rs`, `SliceFrame`); § 2's heading, "The editable state is the entire coupling
-    surface", with "every knob is a typed field on the state"; and § 2, "A curved chart's tilt (R-473) is part of
-    `SimConfig`'s chart params: the angles, the targets (indices of its hidden coordinates) and the map".
-- **The silence:** with no angle field, the angles are read back from the basis (`View::framed`,
-  `crates/gui/src/explore/manifold_view/mod.rs`). A view with total tip `m > 180°` reads back as its wrapped angles:
-  `(150°, 150°)` reads back as `(−104.6°, −104.6°)`. The sliders show those, and a +1° keyboard step gives
-  `(−103.6°, −104.6°)`, a different plane from that of `(151°, 150°)`, which wraps to `(−104.4°, −103.7°)`. So R3's
-  "computed from the stored angles" does not hold, and at `m = 180°` the read-back also loses the split between the tip
-  axis and the in-plane turn `γ`. No file says where the stored angles live.
-- **The question:** where are the latent chart's tilt angles stored?
+  - The owner's CI shape order of 8 Nov 2026, step 1: "Windows containment: run tests and mutants inside a Job Object
+    with kill-on-close, a process limit and an 8 GiB per-process memory cap (REQ-VAL-181's equivalent of prlimit). Prove
+    it with the same kill test contain.sh check uses. Until proven, mutants of xtask/src/jobq.rs stay on GitHub-hosted
+    runners." And its placement rule: "Containment, memory cap and the 36 h no-run alert are prerequisites for any job
+    placed on Windows."
+  - `scripts/contain.sh` § `check`, the probe run inside: `if kill -0 "$1" 2> /dev/null; then exit 42; fi` (the
+    outside process must be unseen) and `kill -9 -1 2> /dev/null`, after which the outside process must be alive.
+- **The conflict:** the Job Object the owner names gives kill-on-close, the process limit, the per-process commit cap,
+  and no breakaway; `win_contain.ps1 check` proves each, and maps `kill -9 -1` to Windows' broadcast, CTRL+C to the
+  whole console, which a console of the job's own keeps inside. It can't give a PID namespace: inside the job, the
+  outside process is visible (contain.sh's 42) and, being the same user's, can be opened and terminated by its id. The
+  check measures both and reports them as gaps, never killing anything; its exit status covers the Job Object's
+  scenarios only. So "the same kill test" passes in full only with these two waived or met another way.
+- **Context for the choice:** `xtask/src/jobq.rs`, the module whose mutants the order names, is `#[cfg(unix)]`
+  (`xtask/src/lib.rs`), as are its tests (`xtask/tests/jobq.rs`): on Windows it isn't compiled, so its mutants can't be
+  killed there whatever the containment, and the process-group signalling that made containment necessary on Linux
+  (`kill(-1)`) has no Windows code path. Nothing in the code base terminates a process by an id it didn't start.
+- **The question:** does the Windows proof count as passed, for placing jobs on Windows, with 42 and the kill by pid
+  as known gaps?
 - **Options seen:**
-  - (a) In `SimConfig`, beside `tilt_map`, always written: chart construction, undone in the same entry as the basis,
-    in saved views and exports (R-474 R5). It amends TASK-M6-48's Deliverables and gui_state_contract § 2's `SliceFrame`
-    line, and changes the canonical text and its `qa_TASK-M0-18` pins once more (TASK-M6-48 changes them already). The
-    chart-path object's starting point carries them, since it holds `SimConfig`. Its precedent: § 2 already puts a curved
-    chart's angles in `SimConfig`'s chart params; only the latent chart lacks the field. Its cost: every route that
-    writes the basis other than through the angles needs a rule for the stored angles, or the two disagree. Those routes
-    are the typed basis (TASK-M6-56), the compass steers and picks, the presets, the Tilt reset and Home; the rule could
-    be "re-derive by the read-back" or "reset to the preset's".
-  - (b) In the GUI's own scratch state, outside `SimConfig`. No schema change, but undo, saved views and exports don't
-    carry them; it conflicts with § 2's "every knob is a typed field on the state"; and the chart-path object's starting
-    point would miss them, so a path's starting point would be incomplete. K15's "one Ctrl+Z restores the map and the
-    angles together" presumes the angles are in the undoable state, which (b) leaves them out of.
-  - (c) The status quo, TASK-M6-48 as its file stands: no stored angles, the read-back standing under either map. R3's,
-    K3's and REQ-GUI-233's "stored angles" are then read as the read-back's, which amends R3's wording and accepts the
-    divergence above past `m = 180°`.
-  - (d) Another, stated by the owner.
-- **Recommended:** (a). It is the one option under which R3 holds as worded and every path sees the angles the user
-  set. A recommendation, not applied.
-- **Applied meanwhile:** none. The chart-path stage 1 (TASK-M8-124) decides nothing on it: its baseline freezes
-  whichever behaviour lands, and the task that stores the angles re-freezes it.
-- **Waits:** TASK-M6-48 (its file's Waits line), and through it TASK-M6-49's Save view, which records the view, and
-  TASK-M8-124's baseline.
-
-## RQ-749: Once locking leaves the pin off the view's centre (R-866), what does stage 2's "the centre IC is constant" test read: the centre pixel or the pin? *(a one-way door: what the lock's test claims; R-863 item 2 against R-866; `docs/design/principia_chart_composition.md` § 17.8; REQ-CHART-115; context: TASK-M8-117, TASK-M8-125)*
-
-*Filed 8 Nov 2026 by the rulings PR that ports R-865 to R-870, where porting R-866 met R-863's words. Nothing is
-chosen.*
-
-*In plain English: the owner's build order says the locked-paths stage is proved by a test that the centre's starting
-state stays constant along the path. The owner's new lock rule leaves the view where it is when you lock, so the locked
-point is usually not at the centre of the view but wherever you clicked. The test as written reads the centre. The owner
-says whether it should read the locked point instead.*
-
-- **File, section:**
-  - `decisions.md` § R-863, the owner's words: "(2) locked paths (based morph, then the sliding anchor) with the test
-    that the centre IC is constant".
-  - `docs/design/principia_chart_composition.md` § "17.8 Lock: a based homotopy": "The test reads a probe at `(½, ½)`,
-    since an even grid has no pixel there."; and "**With an excursion** (`δ ≠ 0`): the pin is the current `z₀`, as
-    "turns about the pin"; the words are that point's".
-  - `plan/requirements.yaml` REQ-CHART-115, which reads the centre three times: its statement has the anchor's IC words
-    "taken at the centre on every frame", "the centre pixel follow it" for the sliding anchor, and "the area factor at
-    the centre within 0.5 of the ends'"; its verify has "a probe at (½, ½) reads one set of words on every frame, ends
-    included, affine and nonlinear, δ = 0 and δ ≠ 0".
-- **Against:** `decisions.md` § R-866, the owner's words: "The pin is set at the clicked pixel with an initial in-plane
-  excursion equal to that pixel's offset from the view centre; tilt and zoom turn about the pin, so the pinned pixel
-  stays fixed on screen."; and `docs/contracts/principia_chart_decoder_contract.md` § "The lock (projective microscope)":
-  "where `δ` has an in-plane part the pin is off-centre".
-- **The conflict:** after R-866 a fresh lock has an in-plane excursion wherever the click was off the centre, so the
-  anchor sits at the pin, not at `(½, ½)`. § 17.8 reads the anchor's words at the centre and calls the current `z₀` the
-  pin under an excursion; the contract and R-866 put the pin at the clicked pixel. Which the stage-2 test holds constant
-  changes what TASK-M8-117 builds and asserts.
-- **Options seen** (each settles all three of REQ-CHART-115's centre reads; *added 8 Nov 2026, physics review
-  5817348709 of PR #449, P3*):
-  - (a) The test reads the pin: the anchor's stored state at the pin's pixel, constant on every frame; R-863's "centre"
-    read as the lock's centre, the pin. The sliding anchor's follower is the pin's pixel, and the area factor is taken
-    at the pin.
-  - (b) The test reads the view's centre, as written: constant where the pin is at the centre (after "centre on pin", or
-    a click at the centre); an off-centre lock is tested by R-866's pin staying fixed on screen instead. The slide and
-    the area factor are tested at the centre on centred locks only, and an off-centre lock has neither tested.
-  - (c) Both: the pin's state constant on every frame, and the centre's too where the pin is centred; the slide and the
-    area factor at the pin, and also at the centre where the pin is centred.
-  - (d) Another, stated by the owner.
-- **Recommended:** (a), since R-866 puts the anchor at the pin and a based homotopy is based at the anchor. A
-  recommendation, not applied.
-- **Applied meanwhile:** nothing. REQ-CHART-115 and § 17.8 stand as written; TASK-M8-125 builds R-866 either way.
-- **Waits:** TASK-M8-117's `path_lock_centre`, for what it reads off the centre (REQ-CHART-115 carries `rq: RQ-749`).
-
-## RQ-750: R-865's bitwise condition can't hold under any full-circle link for latent `β`: migrate the stored `z`, carry the lower half in another coordinate, or make `z_β` periodic? *(a one-way door: what the instrument computes and every stored latent view; R-865 against `docs/design/principia_dd_decoder.md` § 3.2; physics review 5817348709 of PR #449, P1; context: TASK-M2-57, REQ-DEC-055, REQ-DEC-056, TASK-M8-126)*
-
-*Filed 8 Nov 2026 by the fix round of the rulings PR that ports R-865 (PR #449), from its physics review. Nothing is
-chosen: it is the owner's "bring the list back" case, found before the task starts.*
-
-*In plain English: the owner ruled that the decoder stops folding mirror images, with the shape angle β running round
-the whole circle, on condition that every existing preset, saved chart and golden image comes out bit for bit the same.
-But the latent coordinate already maps every value onto half the circle, so any way of stretching it to the whole circle
-moves every stored latent view. The condition fails on all of them before anything is built. The owner says which way
-out to take.*
-
-- **File, section:**
-  - `decisions.md` § R-865, the owner's words: "remove the decoder's mirror step; latent beta runs over the full circle.
-    Conditional on the bitwise check (every preset, saved chart and golden with beta in [0, pi] reproduces unchanged); if
-    anything doesn't, bring the list back before proceeding. This also fixes the latent-chart traces jumping at
-    syzygies."; and the owner's proposal of 7 Nov 2026 (RQ-739, item 1): "every existing preset, saved chart and golden
-    test with beta in [0, pi] reproduces unchanged (expected, since the mirror step never fires there)".
-  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi": the link
-    `β = π·σ(z_β)`, which maps all of ℝ onto `(0, π)`.
-- **The conflict:** the owner's premise holds of the mirror step: on canonical-frame decodes with `β ∈ [0, π]` step 3
-  never fires (dd_decoder § 3.3; its no-op test, § 5.5), so removing the step alone changes no bit. It doesn't hold of
-  the link "full circle" needs. Since `π·σ` already uses all of ℝ for `(0, π)`, no link reaching `(π, 2π)` agrees with it
-  on every `z_β`: `2π·σ(z_β)`, a periodic `z_β`, or any other moves the decoded state of every stored latent `z`, so the
-  check fails on each latent preset's `z₀`, each saved latent chart and each latent golden's image hash.
-- **Traces at syzygies (the owner's "this also fixes"):** under a σ-type link only the syzygies at `β = π` become
-  continuous; a syzygy at the link's seam, `β = 0` with `z_β → −∞`, still jumps on any chart showing `z_β`, unless
-  `z_β` is made periodic (option (c)). *(This corrects RQ-739's physics note of 7 Nov, which had a crossing at `β = 0`
-  wrapping under `β ∈ (0, 2π)`, and folds it here.)*
-- **The question:** which way out, given that the check as worded fails on every latent item?
-- **Options seen:**
-  - (a) Migrate the stored `z` to the new link. That isn't "unchanged": IC words stay bitwise only where a migrated `z′`
-    happens to land on the old `β`.
-  - (b) Keep `β = π·σ(z_β)` and carry the lower half in another coordinate. Every stored `z` is unchanged, but it isn't
-    "β runs over the full circle".
-  - (c) Make `z_β` periodic. Every syzygy is continuous, but it changes the latent chart's premise of a convex `ℝ⁸`, and
-    the stored `z` change as under (a).
-  - (d) Another, stated by the owner.
-- **Recommended:** none. The owner's words send this case back to them.
-- **Applied meanwhile:** nothing. The decoder and its tests are unchanged; TASK-M2-57 records its baseline only once
-  this is ruled.
-- **Waits:** TASK-M2-57 (its link definition, REQ-DEC-056, and so the task; `rq: RQ-750` on REQ-DEC-055 and
-  REQ-DEC-056), and through it TASK-M8-126's latent points.
+  - (a) Yes: the Job Object's scenarios are the proof; 42 and the kill by pid are recorded as gaps of the platform.
+  - (b) Yes for jobs but not for `jobq.rs`'s mutants, which stay hosted for good (they can't run on Windows anyway).
+  - (c) No: stronger isolation first (a separate restricted account or token, or a sandbox), which needs work at the PC
+    and a design of its own.
+- **Recommendation:** (b). A measurable alternative: (c), judged by the same check with 42 and the kill by pid turned
+  into failing scenarios.
+- **Applied meanwhile:** nothing is placed on Windows. The check is built and runs by `workflow_dispatch` only; its
+  first run is the orchestrator's, once the runner accepts jobs.
+- **Waits:** the switch of the slow tier and the mutation run to the Windows runner (the order's steps 2 to 5).

@@ -240,11 +240,16 @@ fn queue_tests() -> Vec<String> {
     names
 }
 
-/// The filter in front of the wrapper must select `xtask::jobq` and every `xtask::qa_R-658*`.
+/// The filter in front of the wrapper must select `xtask::jobq` and every `xtask::qa_R-658*`. Only the default
+/// profile's scripts section counts, up to the next table: the mutants profile restates the same filter in an
+/// override, and inherits the default profile's scripts.
 fn check_nextest(config: &str) {
     let scripts = config
         .split("[[profile.default.scripts]]")
         .nth(1)
+        .unwrap_or_default()
+        .split("\n[")
+        .next()
         .unwrap_or_default();
     assert!(
         scripts.contains("filter = \"binary_id(=xtask::jobq) | binary_id(/^xtask::qa_R-658/)\"")

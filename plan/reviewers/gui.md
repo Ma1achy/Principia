@@ -4,6 +4,10 @@ Named on every task that closes a GUI-area requirement or any `GUI screenshot` v
 authority order is: rulings in `decisions.md`, then `GUI_DESIGN_NOTES.md`, then the twelve artboards; the notes win over
 the pictures and a ruling wins over both (`docs/gui/design/GUI_DESIGN_NOTES.md` § "Dev GUI (egui) — design notes for the artboards"; `docs/gui/principia_render_gui_spec.md` § "Principia — Dev GUI (egui / F3)").
 
+The tests a task, a requirement or this checklist names as `cargo test …` are run locally as their `cargo nextest run`
+equivalents, with `cargo test --doc` where doctests would have run, and the run shows the command actually run beside
+the one it stands for (`plan/WORKFLOW.md` § "Agents' test runs: cargo nextest").
+
 ## 1. Rules that hold everywhere
 
 - [ ] egui is a debug layer toggled with F3 over the wgpu render, natively sharing the engine's `wgpu` context and surface, and in v1 web running in its own wasm context on the main thread with its own canvas above the figure's `OffscreenCanvas` (R-620; *was:* "sharing the engine's `wgpu` context and surface;", gui review 5661813927 of PR #293, G5); it is the native app's and v1 web's UI, with every feature, a separate final UI being v2 web's if there ever is one (R-571; *was:* "it has the final UI's structure and every feature"). `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold everywhere"; `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere"

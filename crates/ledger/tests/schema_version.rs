@@ -611,6 +611,16 @@ const WINDOW: [&str; 2] = ["window_square_centre", "window_square_half"];
 /// hashed.
 const SLICE: [&str; 1] = ["slice_axis_z_q3"];
 
+/// The invariant monitor's and the drift views' entries (TASK-M3-05; dd_integrator §3.5, render contract Part 5): the
+/// drift suspect predicates' thresholds (REQ-INT-085) and the drift views' `lin` ranges (REQ-TOOL-150). The predicates
+/// are read at read time and the views draw, so they decide what a read shows, never what a stored bit means (no suspect bit is stored, payload §5), and they are not hashed.
+const MONITOR: [&str; 4] = [
+    "suspect_energy_threshold",
+    "suspect_lz_threshold",
+    "drift_lin_r_E",
+    "drift_lin_r_Lz",
+];
+
 /// The wrapper's loop parameters (TASK-M3-06; integrator_contract Part 3): `SimUniforms`' defaults, the horizon's cap
 /// and the macro-step's floor, sim-key values that decide which run is computed, never what a stored bit means (the
 /// step indices' limit, `horizon_steps_max`, is hashed), so they are not hashed.
@@ -638,6 +648,14 @@ const TILT: [&str; 3] = ["tilt_right_angle", "tilt_half_turn", "tilt_turn"];
 /// never what a stored bit means, so they are not hashed.
 const HIDDEN: [&str; 3] = ["hidden_nu0", "hidden_held_lz", "hidden_held_k"];
 
+/// A saved chart's word counts (TASK-M2-40; R-475 L4, L5, R-483 H3): a curved chart's header and parent, and an oblique
+/// chart, which lay out a saved chart's definition, never what a payload's stored bit means, so they are not hashed.
+const SAVED: [&str; 3] = [
+    "saved_header_words",
+    "saved_parent_words",
+    "saved_oblique_words",
+];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -653,8 +671,9 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // invariant charts' warp defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10), or the march's crossing
     // capacity (TASK-M3-15), or the steppers' coefficients (TASK-M3-02), or the curve projection's search
     // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21), or the slice
-    // frame's default axis (TASK-M6-38), or the wrapper's loop parameters (TASK-M3-06), or the tilt's angles (TASK-M2-36), or the construction charts' hidden indices
-    // (TASK-M2-52).
+    // frame's default axis (TASK-M6-38), or the wrapper's loop parameters (TASK-M3-06), or the tilt's angles
+    // (TASK-M2-36), or the construction charts' hidden indices (TASK-M2-52), or a saved chart's word counts
+    // (TASK-M2-40), or the invariant monitor's and the drift views' (TASK-M3-05).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -672,7 +691,9 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || SLICE.contains(&k.name)
                 || WRAPPER.contains(&k.name)
                 || TILT.contains(&k.name)
-                || HIDDEN.contains(&k.name),
+                || HIDDEN.contains(&k.name)
+                || MONITOR.contains(&k.name)
+                || SAVED.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -737,6 +758,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
             "the slice frame's entry `{name}` is not an unhashed register entry"
         );
     }
+    for name in MONITOR {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the monitor's entry `{name}` is not an unhashed register entry"
+        );
+    }
     for name in WRAPPER {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
@@ -753,6 +780,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the hidden index `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in SAVED {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the saved chart's word count `{name}` is not an unhashed register entry"
         );
     }
 }
