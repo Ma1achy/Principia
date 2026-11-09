@@ -1062,7 +1062,9 @@ customer would be M4's own golden.
 TASK-M4-34, which R-873 releases in stage 3, after stage 2, while stage 2 waits, through TASK-M8-124, TASK-M8-48,
 TASK-M8-18 and TASK-M4-17, on TASK-M4-06: a cycle. The GPU reference that reads region D, the DECODE-preset golden of
 the Anosova physical-frame chart (REQ-RENDER-123), is TASK-M4-34's, which depends on TASK-M4-06 and can't close until
-that reference reads region D as R-871 requires. TASK-M4-06 and the tasks behind it wait on no task of this design.
+that reference reads region D as R-871 requires. The appendix's Anosova physical-frame row is this pair, so its
+lowering is TASK-M4-34's too, through `region_d_variant`, unmasked and never folded to `(ξ, −η)` (REQ-CHART-165).
+TASK-M4-06 and the tasks behind it wait on no task of this design.
 The plane targets reach TASK-M4-34 through TASK-M8-112, by R-884's edges.
 
 ### 8.8 Region D must match the papers (order item A5)

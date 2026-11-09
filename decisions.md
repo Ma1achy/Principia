@@ -34769,8 +34769,9 @@ R-911 is in the "ci" group of `plan/rule_groups.yaml`. It changes no requirement
 *Still in force: option (b) now, the two process-visibility gaps accepted, Windows work proceeding under it; the job-queue mutants on GitHub's runners under (b), moving to Windows only once the WSL2 setup passes `contain.sh check` inside it; option (c) built in parallel, never blocking, replacing (b) only once each requirement is proven: non-interactive as gh-runner, surviving a reboot and a logged-out session; automount and Windows interop off, C: and D: unreachable, shown by test; the firewall reviewed, no inbound; proof 4 in R-915's words; the image pinned, integrity-checked and rebuilt from a script, no Docker; GPU tests native on Windows under (b)'s accepted gap; the owner's admin steps at the PC as one copyable block.*
 *9 Nov 2026 · the owner's reply of that day to the orchestrator's "what do you need me to do?", item 2, with the text the
 owner pasted in the same message, and their follow-up confirming the reading; applied in `REVIEW_QUEUE.md` (RQ-751
-moved), `docs/archive/review_queue/M0.md`, the forward line of R-905, REQ-VAL-148 and REQ-VAL-181 (reqio) and
-`plan/rule_groups.yaml`; option (c) built by PR #460; changes REQ-VAL-148 and REQ-VAL-181*
+moved), `docs/archive/review_queue/M0.md`, the forward line of R-905, REQ-VAL-148 and REQ-VAL-181 (reqio),
+`plan/OPERATIONS.md` (§ "The Windows runner's work") and `plan/rule_groups.yaml`; option (c) built by PR #460; changes
+REQ-VAL-148 and REQ-VAL-181*
 
 RQ-751 asked whether the Windows containment proof, a Job Object, counts as passed with the two assertions of
 `contain.sh check` it can't make (the outside process unseen, and out of reach of a kill by its id), and for what. The
@@ -34887,9 +34888,9 @@ R-913 is in the "process" group of `plan/rule_groups.yaml`. It changes no requir
 ## R-914 — The stage 1 / stage 3 dependency cycle, RQ-752: option (a), the edge from TASK-M4-06 (the GPU compute variants) to TASK-M4-34 (region D) dropped; the GPU reference that reads region D moves into TASK-M4-34, which can't close until that reference reads region D as R-871 requires; R-871's substance unchanged, only the task that applies its link; TASK-M4-06 and the 217 tasks queued behind it released *(closes RQ-752)*
 *9 Nov 2026 · the owner's answer of that day to RQ-752; applied in `REVIEW_QUEUE.md` (RQ-752 filed and moved),
 `docs/archive/review_queue/M0.md`, R-871's forward line, `docs/design/principia_chart_composition.md` (§§ 8.4, 8.5, 8.7,
-8.8, 12 and 15), `docs/design/principia_colour_composition.md` (§ 3), REQ-RENDER-082, REQ-RENDER-123 and REQ-CHART-100
-(reqio), `plan/tasks.yaml`, TASK-M4-06, TASK-M4-34, TASK-M4-37 and `plan/rule_groups.yaml`; changes REQ-RENDER-082 and
-REQ-CHART-100, adds REQ-RENDER-123*
+8.8, 12 and 15), `docs/design/principia_colour_composition.md` (§ 3), REQ-RENDER-082, REQ-RENDER-123, REQ-CHART-037,
+REQ-CHART-165 and REQ-CHART-100 (reqio), `plan/tasks.yaml`, TASK-M4-06, TASK-M4-34, TASK-M4-37 and
+`plan/rule_groups.yaml`; changes REQ-RENDER-082, REQ-CHART-037 and REQ-CHART-100, adds REQ-RENDER-123 and REQ-CHART-165*
 
 RQ-752, from Codex's finding on PR #455: TASK-M8-117 (stage 2) waits on TASK-M8-124 (stage 1), which waits on
 TASK-M8-48 (R-873 (E) (i)), on TASK-M8-18, on TASK-M4-17, on TASK-M4-06; R-871's edge would have TASK-M4-06 wait on
@@ -34912,8 +34913,14 @@ TASK-M4-34, which R-873 (A) (b) releases only after stage 2 has merged. The owne
 *Applied per R-369:*
 
 - **REQ-RENDER-082 is split, as R-113 split it from REQ-RENDER-027:** its Burrau int lattice half stays TASK-M4-06's;
-  its Anosova physical-frame half, the region-D reference, becomes REQ-RENDER-123, closed by TASK-M4-34. REQ-CHART-100's
-  note says where the reference now sits.
+  its Anosova physical-frame half, the region-D reference, becomes REQ-RENDER-123, closed by TASK-M4-34, carrying
+  RQ-714's link with it. REQ-CHART-100's note says where the reference now sits.
+- **The Anosova row's lowering goes with it (physics review 5829515661 of this ruling's PR, P1):** the lowering
+  appendix's Anosova physical-frame row is region D's third-body pair (`principia_chart_composition.md` § 8.2), signed
+  canonicalisation and R-871's unmasked domain included, which TASK-M4-34 builds; TASK-M4-06, which runs first, would
+  have nothing correct to lower. So REQ-CHART-037's Anosova clause becomes REQ-CHART-165, closed by TASK-M4-34 through
+  its `region_d_variant`, with no mask and no fold to `(ξ, −η)`; REQ-CHART-037 keeps the other eight rows, and
+  REQ-CHART-100 stands.
 - **TASK-M4-34 gains TASK-M4-06 in Depends on:** it renders the reference through TASK-M4-06's variant table and its
   DECODE-preset golden harness. That closes no cycle, since TASK-M4-06 no longer reaches TASK-M4-34, and holds nothing
   R-873's dispatch doesn't already hold: stage 3 follows stage 2, which follows TASK-M4-06.
@@ -34922,8 +34929,8 @@ TASK-M4-34, which R-873 (A) (b) releases only after stage 2 has merged. The owne
 
 R-914 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Changes REQ-RENDER-082 (statement, verify, rq, rulings, source, note) and REQ-CHART-100 (rulings, source, note); adds
-REQ-RENDER-123.
+Changes REQ-RENDER-082 (statement, verify, rq, rulings, source, note), REQ-CHART-037 (statement, rulings, source, note)
+and REQ-CHART-100 (rulings, source, note); adds REQ-RENDER-123 and REQ-CHART-165.
 
 ## R-915 — Inside WSL, `contain.sh check` proves an unprivileged mode: user and PID namespaces with no sudo and the real `kill -9 -1`, passing only if a ci process outside the namespace and the runner agent and gh-runner's other Windows processes survive; WSL keeps no sudo, no systemd and the owner's exact `wsl.conf`; the mode is selected explicitly, never a fallback, and fails, never skips, without user namespaces; other machines keep the strict mode; proof 4 reworded *(closes RQ-753; amends R-912)*
 *9 Nov 2026 · the owner's ruling of that day on RQ-753; applied in `REVIEW_QUEUE.md` (RQ-753 filed and moved),
