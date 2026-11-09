@@ -35,7 +35,7 @@ reproduction is stage 1's safety net, not a permanent rule to keep per-route ari
 
 ## Acceptance tests
 - `cargo test -p engine --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_pin_kept path_control_`
-  — merged pairs bitwise; each changed case listed old against new with its largest difference in ulps, decoding to the same system within REQ-ENC-024's `ε_phys` on the decoded state, its outcome class unchanged; controls: a reordered operation fails (REQ-CHART-156).
+  — merged pairs bitwise; each changed case listed old against new with its largest difference in ulps, within the count derived from the two formulas, and, on the cases whose `n̂` lies farther than a stated `δ` from each binary-collision landmark (`ulp/δ ≤ ε_phys`; R-544's mirror-test precision rule), decoding to the same system within REQ-ENC-024's `ε_phys`, its outcome class unchanged, `δ` and the excluded set stated; controls: a reordered operation fails (REQ-CHART-156).
 - `cargo test -p gui --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_adapter_same_leaf path_frame_batch_running path_drag_running path_pin_kept path_control_`
   — each adapter's output equals its leaf's constructor's bitwise; a frame's keyboard tilt and wheel zoom both land (D19);
   a drag's fold on the current state (D23); controls: an adapter holding a formula fails (REQ-CHART-156).
@@ -45,3 +45,4 @@ reproduction is stage 1's safety net, not a permanent rule to keep per-route ari
 ## Notes
 - Added by R-894 (8 Nov 2026): between stages 1 and 2 of R-863's order; TASK-M8-117 (stage 2) depends on it.
 - A difference that isn't rounding is not merged and not patched around: stop and bring it back (R-864 item 4).
+- *Round 2 of PR #455 (physics review 5820482634, code review 5820497276):* P11: R-544's mirror-test precision rule carried in; a rounding difference near a landmark is not brought back as a real one. *Was (acceptance, the clause):* "decoding to the same system within REQ-ENC-024's `ε_phys` on the decoded state, its outcome class unchanged;".

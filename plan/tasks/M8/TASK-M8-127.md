@@ -25,13 +25,15 @@ that chart's symmetry. R-27's "shape only" fold gives way for these charts.
 - The full-range `θ_min`, `θ_max` proposed with their evidence (REQ-CHART-162).
 - The three charts' decode over `θ ∈ (0, π/2)` in `crates/kernel`, the leg swap declared as each chart's symmetry for the
   filter (TASK-M8-120), the fold removed.
-- REQ-CHART-024, REQ-CHART-025 and REQ-CHART-045 restated to the built charts through `plan/tools/reqio.py`, each keeping
-  a "Was" (their notes say so).
+- REQ-CHART-024 and REQ-CHART-025 restated to the built charts through `plan/tools/reqio.py`, each keeping a "Was"
+  (their notes say so); REQ-CHART-045 is not restated: it stays the M2 value for the fold-era charts, superseded for
+  the full range by REQ-CHART-162 (its note says so).
 
 ## Acceptance tests
 - `cargo test -p kernel burrau_acute_full_range` — each of the three charts decodes `θ` and `π/2 − θ` to the same
-  triangle with its legs swapped, both drawn; each drawn pixel decodes bit for bit to today's decode at the same `θ`
-  (pointwise, the pixel centres differing from today's chart); with the filter on the leg swap is shown once; controls: the fold left in, the swap undeclared, each failing (REQ-CHART-151).
+  triangle with its legs swapped, both drawn; each drawn pixel with `θ ≤ π/4` decodes bit for bit to today's decode at the
+  same `θ` (pointwise, the pixel centres differing from today's chart; today's charts refuse `θ > π/4`, whose pixels
+  the leg-swap clause covers); with the filter on the leg swap is shown once; controls: the fold left in, the swap undeclared, each failing (REQ-CHART-151).
 - Proposal: the full-range `θ_min` and `θ_max` within `(0, π/2)` with their evidence, checked by the physics reviewer,
   confirmed by the owner at the M8 gate and recorded in decisions.md; never a value chosen in the PR (R-71;
   REQ-CHART-162).
@@ -46,3 +48,4 @@ that chart's symmetry. R-27's "shape only" fold gives way for these charts.
   TASK-M8-120 alone, whose filter shows the swap once." and "The range comes back to the owner at the M2 gate within
   `(0, π/2)` (REQ-CHART-045's note)."; *was (acceptance, the clause):* "with the filter on the drawn half reproduces
   today's shape-only chart bit for bit".
+- *Round 2 of PR #455 (physics review 5820482634, code review 5820497276):* P13: the bitwise clause holds for `θ ≤ π/4`; P14: REQ-CHART-045 is superseded, not restated; P15: REQ-CHART-162's proposal says whether the range is symmetric about `π/4` and how it relates to the M2 value. *Was (Deliverables):* "REQ-CHART-024, REQ-CHART-025 and REQ-CHART-045 restated to the built charts"; *was (acceptance, the clause):* "each drawn pixel decodes bit for bit to today's decode at the same `θ`".
