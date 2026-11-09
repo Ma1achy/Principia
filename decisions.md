@@ -35178,14 +35178,15 @@ R-918 is in the "process" group of `plan/rule_groups.yaml`.
 
 Adds REQ-CHART-173 and REQ-CHART-177; moves REQ-CHART-132 to M3.
 
-## R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*
+## R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered (RQ-754): one periodic `β` link, the presets and goldens along `z_β` redefined, an unpinned saved chart converted from `sigmoid_beta` with a notice; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(closes RQ-754; supersedes R-882; refines R-864 and R-902)*
 *Refined by R-920 (9 Nov 2026: the owner confirmed F14's proposal, all six points; RQ-679 is closed and REQ-CHART-188 states the spans).*
 *Still in force: all of it, F14's "awaiting the owner's confirmation" answered by R-920.*
 *9 Nov 2026 · the owner's answers that late evening to the chart plan (chart-plan.pdf, the report written from the plan of
 R-916 to R-918); applied in R-882's forward line, `REVIEW_QUEUE.md` (RQ-679, a dated line with the physics reviewer's
 proposal), the forward lines of R-864 and R-902, REQ-CHART-161, REQ-CHART-156 and REQ-CHART-188 (reqio),
 `plan/MILESTONES.md` (G9, G11 and G13), TASK-M2-61, TASK-M2-63, TASK-M2-64, TASK-M2-65, TASK-M2-69, TASK-M2-82 and the
-calibration tasks, and `plan/rule_groups.yaml`*
+calibration tasks, and `plan/rule_groups.yaml`; and, once PR #462 had filed RQ-754 on `main`, `REVIEW_QUEUE.md` (RQ-754
+moved with its ruling), REQ-GEN-013 and REQ-GEN-014 (reqio, a note each), TASK-M2-57 and `plan/tasks.yaml`*
 
 The owner's words (9 Nov 2026), verbatim:
 
@@ -35195,7 +35196,7 @@ The owner's words (9 Nov 2026), verbatim:
 > F11: G4's reading.
 > F13: (b).
 > F14: answer RQ-679 now. Physics proposes the slider spans for held ν0, Lz and K, with reasoning, in the same rulings PR; forward R-882. Tilts into those coordinates are in M2.
-> [The line on PR #462's entry, Q1 (c), Q2 (b), Q3 (a), is quoted here once #462, which files that entry, has merged.]
+> RQ-754: Q1 (c); Q2 (b); Q3 (a).
 > R-864 type sketch: approve when TASK-M2-61 brings it, before its baseline commit (start from type-sketch v10).
 > F18 steer: the trajectory interface's three-body fixtures are the Lagrange equilateral homographic solution (exact, closed form) and the figure-eight; two-body Kepler only where the interface is generic. Constants in a lower crate.
 > Mechanical frictions F2–F20 otherwise stand. Every [CAL] value is set by measurement with the criterion written first, never chosen to make a test pass (R-649/650).
@@ -35220,8 +35221,20 @@ The owner's words (9 Nov 2026), verbatim:
   owner confirms on this PR.** Its six points for the owner are in RQ-679's dated line and the pull request; until the
   owner answers, the spans are "per RQ-679, awaiting the owner's confirmation", RQ-679 stays open, and REQ-CHART-188
   carries it.
-- **TASK-M2-57's three questions** (the entry PR #462 files): answered as the owner's line says; applied when that entry
-  is on `main`.
+- **TASK-M2-57's three questions (RQ-754, filed by PR #462):** answered by the owner's line "RQ-754: Q1 (c); Q2 (b);
+  Q3 (a).", each the option RQ-754 states:
+  - **Q1 (c), the `β` links:** one periodic link on `β` now, the one TASK-M2-57 defines (REQ-DEC-056); a second `β`
+    density waits for a study that needs it (R-519), and REQ-GEN-014's two links per block is not met on `β` meanwhile,
+    by this ruling. `sigmoid_beta`, `tanh_beta` and `softsign_beta`, written onto the bounded `β ∈ [0, π]`, are not that
+    link: TASK-M2-57 rewrites dd_generation_root § 3.9's `β` rows and REQ-GEN-013's `β` codomain to the one periodic
+    link, each keeping its *Was*, and lists what the single `β` link changes in built code (REQ-VAL-024's 54 link
+    selections become 18).
+  - **Q2 (b), presets and goldens whose plane runs along `z_β`:** redefined, not converted. Each becomes an affine plane in
+    the new coordinates, a deliberate change exempt from the conversion test and recorded with why, the goldens
+    regenerated as R-898 allows; no non-affine latent chart kind is defined for them, and the default views show the
+    lower half R-865 opens. The conversion test still holds for stored latent views and saved charts.
+  - **Q3 (a), the link an unpinned saved chart was made under:** an old saved chart converts from the `β` link it pins
+    where it pins one (R-516), else from `sigmoid_beta`, the default, with a notice on load naming the assumption.
 - **The R-864 type sketch:** approved when TASK-M2-61 brings it, before its baseline commit, starting from type-sketch
   v10. R-864 item 1's gate stands; the approval is given on TASK-M2-61's pull request.
 - **F18:** the trajectory interface's three-body fixtures are the Lagrange equilateral homographic solution (exact, closed
@@ -35236,7 +35249,8 @@ TASK-M2-61 brings it; **R-902**, its gate test's "the round trip returns the sam
 
 R-919 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Changes REQ-CHART-161 and REQ-CHART-156; adds REQ-CHART-188 (with R-916).
+Changes REQ-CHART-161 and REQ-CHART-156; adds REQ-CHART-188 (with R-916); a note on REQ-GEN-013 and on REQ-GEN-014
+(RQ-754).
 
 ## R-920 — RQ-679, the slider spans, confirmed as physics proposed: each hidden coordinate's span fixed per chart from its home window ((a′)); `ν₀` over `[1/32, 31/32]`; the held `L_z` over `2√(2·K_max)`; the held `K` tilted in its warp coordinate `t` with span 1 (`K_max` on a linear axis), the handle in `t`, the number box in `K`, the slider drawn evenly in `t`; a latent slider's span 2, written into § G2 as a definition; the virial axis's `K_max` left to RQ-701 at M8 *(closes RQ-679; amends R-720; refines R-507 and R-919)*
 *9 Nov 2026 · the owner's confirmation that late evening of the physics reviewer's proposal on RQ-679, put to them on
