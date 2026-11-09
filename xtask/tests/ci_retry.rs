@@ -225,6 +225,19 @@ fn low_disk() -> Run {
     Run::saved(DISK_RUN).passing(CI_3)
 }
 
+/// The workflow file a saved run is classified against. The saved runs under `fixtures/ci_retry/` are runs of `ci.yml`
+/// as it stood before the owner's CI model of 9 Nov 2026, with its gates named by a one-value matrix, so `ci.yml` is
+/// read from the copy beside them, `fixtures/ci_retry/ci.yml`: the classifier reads the run's own workflow file, as
+/// `retry.yml` reads it from the run, and a run's jobs are those of the workflow it ran. Any other workflow is the
+/// live one.
+fn workflow_path(workflow: &str) -> PathBuf {
+    if workflow == "ci.yml" {
+        root().join("fixtures/ci_retry/ci.yml")
+    } else {
+        root().join(".github/workflows").join(workflow)
+    }
+}
+
 /// `run`, classified by `script` against the workflow `workflow`: what it printed.
 fn classified_on(script: &str, run: &Run, workflow: &str) -> String {
     let dir = Scratch::new("ci_retry_classify");
@@ -237,7 +250,7 @@ fn classified_on(script: &str, run: &Run, workflow: &str) -> String {
         .arg(&file)
         .arg("classify")
         .arg(&*dir)
-        .arg(root().join(".github/workflows").join(workflow))
+        .arg(workflow_path(workflow))
         .timed_output()
         .expect("ci_retry: python3 ran");
     assert!(out.status.success(), "ci_retry: the classifier failed");
@@ -1138,7 +1151,7 @@ fn decide(script: &str, run: &Run, env: &[(&str, &str)]) -> Decided {
         )
         .env("STUB_CALLS", &calls)
         .env("STUB_DATA", &data)
-        .env("STUB_WORKFLOW", root().join(".github/workflows/ci.yml"))
+        .env("STUB_WORKFLOW", workflow_path("ci.yml"))
         .env("GH_REPO", "o/r")
         .env("RUN_ID", "42")
         .env(
@@ -1422,7 +1435,7 @@ fn ids_on_ci(script: &str, names: &[&str]) -> Vec<String> {
              print(' '.join(str(m.id_of(n, ids)) for n in sys.argv[3:]))",
         ])
         .arg(&file)
-        .arg(root().join(".github/workflows/ci.yml"))
+        .arg(workflow_path("ci.yml"))
         .args(names)
         .timed_output()
         .expect("python3 ran");

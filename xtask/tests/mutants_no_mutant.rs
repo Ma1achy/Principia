@@ -665,8 +665,10 @@ fn events(yml: &str) -> Vec<String> {
         .collect()
 }
 
-/// R-305: `mutants.yml` runs on `pull_request` alone, and no other workflow has a `mutants-check` job, so the only
-/// `mutants-check` on a commit is a pull request's run's, never a skipped job's from a `push` run.
+/// R-305: no run but a pull request's reports `mutants-check`, never a skipped job's from a `push` run. Since the
+/// owner's CI model (approved 9 Nov 2026, item 3) `mutants.yml` runs on a dispatch alone, kept for the per-merge
+/// workflow, and its `mutants-check` job only on a pull request's event, so a dispatch reports none; no other workflow
+/// has a `mutants-check` job.
 fn only_pull_requests_report(workflows: &[(String, String)]) {
     let (_, mutants) = workflows
         .iter()
@@ -674,8 +676,14 @@ fn only_pull_requests_report(workflows: &[(String, String)]) {
         .expect("mutants.yml");
     let on = events(mutants);
     assert!(
-        on == ["pull_request"],
-        "mutants.yml runs on events other than pull_request: {on:?}"
+        on == ["workflow_dispatch"],
+        "mutants.yml runs on events other than a dispatch: {on:?}"
+    );
+    assert!(
+        mutants.contains(
+            "  mutants-check:\n    if: always() && github.event_name == 'pull_request'\n"
+        ),
+        "mutants.yml's mutants-check runs on a dispatch"
     );
     for (name, yml) in workflows {
         assert!(
@@ -708,7 +716,7 @@ fn mutants_check_is_reported_by_pull_request_runs_only() {
 negative_control!(
     mutants_check_is_reported_by_pull_request_runs_only,
     "mutants.yml also run on push",
-    expected = "mutants.yml runs on events other than pull_request",
+    expected = "mutants.yml runs on events other than a dispatch",
     only_pull_requests_report(
         &workflows()
             .into_iter()
@@ -723,6 +731,32 @@ negative_control!(
             .collect::<Vec<_>>()
     )
 );
+
+mod on_a_dispatch {
+    use super::*;
+    negative_control!(
+        mutants_check_is_reported_by_pull_request_runs_only,
+        "mutants.yml's mutants-check run on every event",
+        expected = "mutants.yml's mutants-check runs on a dispatch",
+        only_pull_requests_report(
+            &workflows()
+                .into_iter()
+                .map(|(n, y)| {
+                    let y = if n == "mutants.yml" {
+                        y.replacen(
+                            "  mutants-check:\n    if: always() && github.event_name == 'pull_request'\n",
+                            "  mutants-check:\n    if: always()\n",
+                            1,
+                        )
+                    } else {
+                        y
+                    };
+                    (n, y)
+                })
+                .collect::<Vec<_>>()
+        )
+    );
+}
 
 mod in_ci {
     use super::*;

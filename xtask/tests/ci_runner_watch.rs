@@ -971,8 +971,8 @@ negative_control!(
     expected = "upload is not unconditional and harmless",
     check_wired(&edit(
         &ci_yml(),
-        "        if: always() && needs.changes.outputs.docs_only != 'true'\n",
-        "        if: needs.changes.outputs.docs_only != 'true'\n"
+        "        if: always()\n        continue-on-error: true\n        timeout-minutes: 5\n        with:\n          name: runner-disk-ci-workspace\n",
+        "        if: success()\n        continue-on-error: true\n        timeout-minutes: 5\n        with:\n          name: runner-disk-ci-workspace\n"
     ))
 );
 
