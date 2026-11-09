@@ -543,3 +543,155 @@ mod qa_hosted {
         )
     );
 }
+
+// ---- Created in its own job, or not run at all -------------------------------------------------------------------
+//
+// The command is created in the job (PROC_THREAD_ATTRIBUTE_JOB_LIST) and stays suspended until IsProcessInJob confirms
+// it is in that job. On a host that doesn't honour the attribute, the attribute's setup or the start fails, or the
+// command comes up outside the job; each must end in Fail (125, tested above) with the command never resumed.
+
+/// The body of the C# method whose declaration starts `signature`, up to its closing brace at four spaces.
+fn method<'a>(script: &'a str, signature: &str) -> &'a str {
+    let start = script
+        .find(signature)
+        .unwrap_or_else(|| panic!("{SCRIPT} has no `{signature}`"));
+    let end = script[start..]
+        .find("\n    }\n")
+        .unwrap_or_else(|| panic!("{SCRIPT}'s `{signature}` has no end"));
+    &script[start..start + end]
+}
+
+fn check_in_job_or_failed(script: &str) {
+    let run = method(script, "public static int Run(");
+    assert!(
+        run.contains("IsProcessInJob(pi.Process, job, out inJob)"),
+        "{SCRIPT}'s Run asks whether its command is in any job, not in its own"
+    );
+    let gate_at = run
+        .find("if (!asked || !inJob) {")
+        .unwrap_or_else(|| panic!("{SCRIPT}'s Run runs on when its command isn't in its job"));
+    let gate_len = run[gate_at..]
+        .find("\n        }\n")
+        .expect("the in-job gate has no end");
+    let gate = &run[gate_at..gate_at + gate_len];
+    assert!(
+        gate.contains("TerminateProcess(pi.Process") && gate.trim_end().ends_with("throw e;"),
+        "{SCRIPT}'s Run resumes a command that isn't in its job"
+    );
+    let resume = run
+        .find("ResumeThread(pi.Thread)")
+        .expect("Run never resumes its command");
+    assert!(
+        resume > gate_at + gate_len,
+        "{SCRIPT}'s Run resumes its command before the in-job gate"
+    );
+    let start_call = run
+        .find("pi = Start(")
+        .expect("Run never starts its command");
+    let start_catch = &run[start_call..gate_at];
+    assert!(
+        start_catch.contains("} catch {") && start_catch.contains("throw;"),
+        "{SCRIPT}'s Run swallows a failed start in its job"
+    );
+    let start = method(script, "static ProcessInformation Start(");
+    for call in [
+        "if (!InitializeProcThreadAttributeList(list",
+        "if (!UpdateProcThreadAttribute(",
+        "if (!CreateProcessW(",
+    ] {
+        let at = start
+            .find(call)
+            .unwrap_or_else(|| panic!("{SCRIPT}'s Start has no `{call}`"));
+        let statement = &start[at..at + start[at..].find(';').expect("no statement end")];
+        assert!(
+            statement.contains("throw Error("),
+            "{SCRIPT}'s Start runs on when `{call}` fails"
+        );
+    }
+}
+
+#[test]
+fn qa_win_contain_created_in_its_job_or_not_run() {
+    check_in_job_or_failed(&read(SCRIPT));
+}
+
+negative_control!(
+    qa_win_contain_created_in_its_job_or_not_run,
+    "the gate asks about any job, which the runner's own would satisfy",
+    expected = "asks whether its command is in any job",
+    check_in_job_or_failed(&edited(
+        &read(SCRIPT),
+        "IsProcessInJob(pi.Process, job, out inJob)",
+        "IsProcessInJob(pi.Process, IntPtr.Zero, out inJob)"
+    ))
+);
+
+mod qa_gate_ignores_answer {
+    use super::*;
+    negative_control!(
+        qa_win_contain_created_in_its_job_or_not_run,
+        "the gate fails only when the question fails, not on a no",
+        expected = "runs on when its command isn't in its job",
+        check_in_job_or_failed(&edited(
+            &read(SCRIPT),
+            "if (!asked || !inJob) {",
+            "if (!asked) {"
+        ))
+    );
+}
+
+mod qa_gate_falls_through {
+    use super::*;
+    negative_control!(
+        qa_win_contain_created_in_its_job_or_not_run,
+        "the gate cleans up and falls through to the resume",
+        expected = "resumes a command that isn't in its job",
+        check_in_job_or_failed(&edited(
+            &read(SCRIPT),
+            "            throw e;\n        }\n        if (ResumeThread",
+            "        }\n        if (ResumeThread"
+        ))
+    );
+}
+
+mod qa_start_fallback {
+    use super::*;
+    negative_control!(
+        qa_win_contain_created_in_its_job_or_not_run,
+        "an older host's refusal of the job list falls back to a start outside the job",
+        expected = "swallows a failed start in its job",
+        check_in_job_or_failed(&edited(
+            &read(SCRIPT),
+            "            CloseHandle(job);\n            throw;\n",
+            "            pi = Start(line.ToString(), CreateSuspended | CreateNewConsole, true, IntPtr.Zero);\n"
+        ))
+    );
+}
+
+mod qa_attribute_ignored {
+    use super::*;
+    negative_control!(
+        qa_win_contain_created_in_its_job_or_not_run,
+        "a refused PROC_THREAD_ATTRIBUTE_JOB_LIST ignored",
+        expected = "runs on when `if (!UpdateProcThreadAttribute(` fails",
+        check_in_job_or_failed(&edited(
+            &read(SCRIPT),
+            "throw Error(\"UpdateProcThreadAttribute PROC_THREAD_ATTRIBUTE_JOB_LIST\");",
+            ";"
+        ))
+    );
+}
+
+mod qa_list_ignored {
+    use super::*;
+    negative_control!(
+        qa_win_contain_created_in_its_job_or_not_run,
+        "a failed attribute list initialisation ignored",
+        expected = "runs on when `if (!InitializeProcThreadAttributeList(list` fails",
+        check_in_job_or_failed(&edited(
+            &read(SCRIPT),
+            "throw Error(\"InitializeProcThreadAttributeList\");",
+            ";"
+        ))
+    );
+}
