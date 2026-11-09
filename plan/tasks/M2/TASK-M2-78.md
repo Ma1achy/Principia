@@ -1,8 +1,8 @@
-# TASK-M8-122 — The fixed-k chart: rigid rotation at a chosen virial coefficient over D₁₁ ∪ D₁₂, a chart and builder axes (R-847)
+# TASK-M2-78 — The fixed-k chart: rigid rotation at a chosen virial coefficient over D₁₁ ∪ D₁₂, a chart and builder axes (R-847)
 
-- **Milestone:** M8
+- **Milestone:** M2
 - **Closes:** REQ-CHART-143
-- **Depends on:** TASK-M4-37, TASK-M8-109, TASK-M8-102, TASK-M8-117
+- **Depends on:** TASK-M2-58, TASK-M2-74, TASK-M2-73, TASK-M2-65
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -24,6 +24,7 @@ The owner's reversal of R-669 (R-847, RQ-725 (b)): fixed-`k` becomes a chart and
 - `cargo test -p engine fixed_k_chart` — REQ-CHART-143's arms and controls.
 
 ## Notes
-- Nothing here is built until TASK-M4-37 has carried the rulings into the design (its Depends on). REQ-VAL-326's pointer to the 2008 paper is RQ-731's, the record PR's.
-- *8 Nov 2026 (R-873):* **Build order:** stage 3 of R-863's order, after stage 2 (TASK-M8-117), placed by R-873 (RQ-744 (A) (a) and (C)); TASK-M8-106 and TASK-M8-108, stage 4, depend on it. The note above that no stage edge is made is overtaken. *Was:* "- **Depends on:** TASK-M4-37, TASK-M8-109, TASK-M8-102"
+- Nothing here is built until TASK-M2-58 has carried the rulings into the design (its Depends on). REQ-VAL-326's pointer to the 2008 paper is RQ-731's, the record PR's.
+- *8 Nov 2026 (R-873):* **Build order:** stage 3 of R-863's order, after stage 2 (TASK-M2-65), placed by R-873 (RQ-744 (A) (a) and (C)); TASK-M2-81 and TASK-M8-108, stage 4, depend on it. The note above that no stage edge is made is overtaken. *Was:* "- **Depends on:** TASK-M2-58, TASK-M2-74, TASK-M8-102"
 - *8 Nov 2026 (R-891):* RQ-731 is ruled (a): REQ-VAL-326's pointer is Tanikawa & Mikkola 2008, § 3.1 and § 4.2, its virial ratio k = T/|U|, Q = 2k.
+- *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-122; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Depends on: TASK-M2-58, TASK-M2-74, TASK-M8-102, TASK-M2-65".

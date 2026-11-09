@@ -1,8 +1,8 @@
-# TASK-M8-124 — The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)
+# TASK-M2-61 — The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)
 
-- **Milestone:** M8
+- **Milestone:** M2
 - **Closes:** REQ-CHART-147, REQ-CHART-113, REQ-CHART-160
-- **Depends on:** TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, TASK-M6-49, TASK-M6-51, TASK-M8-48, TASK-M8-105
+- **Depends on:** TASK-M2-58, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, TASK-M2-38, TASK-M2-39, TASK-M2-56, TASK-M2-60
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -52,13 +52,13 @@ as a fallback (R-864 item 2).
 - Review: no operation's old route left beside the object, and no special case an if-branch outside a named family
   (R-864 items 2 and 4); no family, pair map or hold beyond today's operations given behaviour (R-863 stage 1)
   (REQ-CHART-147).
-- `cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip` — each against the direct operation's bits; controls: the general geodesic in tilt's place, a triple in a zoom's key, an end through the blend, s at f32 (REQ-CHART-113, moved here from TASK-M8-106 by R-873).
+- `cargo test -p engine -- path_tilt_bitwise path_zoom_bitwise path_lock_bitwise path_save_view_bitwise path_keyframe_bitwise path_ends_bitwise path_record_round_trip` — each against the direct operation's bits; controls: the general geodesic in tilt's place, a triple in a zoom's key, an end through the blend, s at f32 (REQ-CHART-113, moved here from TASK-M2-81 by R-873).
 - `cargo test -p engine -- path_easing_timing_only path_concat_join` — re-timing a segment changes when frames are shown and no frame's content, bitwise; two eased segments concatenate with the join at the shared end; a saved path and an export read the same timing as the live morph; controls: an easing applied to a frame's content fails, a second easing beside the segment's fails (REQ-CHART-160).
 - Review: each edit that jumps the view under a lock (Home, the resets, presets, steers, capture) labelled as a cut, and the PR stating its non-conformance with R-849 until stage 2's sliding anchor (R-899 Q3 (a); REQ-CHART-147).
 
 ## Notes
 - **Build order (R-863):** stage 1, the path object and the bitwise tests, before any new capability. Stage 2,
-  TASK-M8-117, depends on this task and merges only with its tests green.
+  TASK-M2-65, depends on this task and merges only with its tests green.
 - **Gate (R-864 item 1):** dispatched first for the sketch only. No implementation commit lands before the owner has
   approved the sketch, the answer recorded as a ruling; the rest of the task then goes ahead on the same branch.
 - **Routes covered.** The bitwise baseline and the deletion cover every route of the seven operations on `main` when
@@ -71,7 +71,9 @@ as a fallback (R-864 item 2).
 - If an operation can't reproduce bitwise as a family of the object, or seems to need a special case outside one, stop
   and bring it back (R-864 item 4): never patch around it.
 - REQ-CHART-113's tests (`path_tilt_bitwise`, `path_zoom_bitwise`, `path_lock_bitwise`, `path_save_view_bitwise`),
-  TASK-M8-106's, overlap this task's; which task keeps them is RQ-744 (B).
+  TASK-M2-81's, overlap this task's; which task keeps them is RQ-744 (B).
 - Waits on RQ-721 (chart paths; answered by R-850, with its rider R-849, the owner's reply of 7 Nov 2026) and, like
-  every task of the design, on TASK-M4-37.
-- *8 Nov 2026 (R-873, R-899, R-901):* RQ-744 is ruled: (B) (a), REQ-CHART-113's tests are this task's; (E) (i), Save view as chart (TASK-M6-49, TASK-M6-51, TASK-M8-48) and TASK-M8-105 come before stage 1, so they are in Depends on and their routes are in the baseline. The brief's Q3 (a): the edits that jump the view under a lock are kept, labelled as cuts, the non-conformance with R-849 stated. R-901: easing and the path curve are a field of each path segment, built here with the path object, Theorems 4 and 5 stated and tested (REQ-CHART-160). R-894: TASK-M8-129, the consolidation, follows this task and TASK-M8-125, before stage 2. The two notes above on RQ-744 (B) and (E) are overtaken. **Timing:** stage 1 closes when this task and TASK-M8-125 merge with their tests green. *Was:* "- **Closes:** REQ-CHART-147"; "- **Depends on:** TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52"
+  every task of the design, on TASK-M2-58.
+- *8 Nov 2026 (R-873, R-899, R-901):* RQ-744 is ruled: (B) (a), REQ-CHART-113's tests are this task's; (E) (i), Save view as chart (TASK-M6-49, TASK-M6-51, TASK-M8-48) and TASK-M2-60 come before stage 1, so they are in Depends on and their routes are in the baseline. The brief's Q3 (a): the edits that jump the view under a lock are kept, labelled as cuts, the non-conformance with R-849 stated. R-901: easing and the path curve are a field of each path segment, built here with the path object, Theorems 4 and 5 stated and tested (REQ-CHART-160). R-894: TASK-M8-129, the consolidation, follows this task and TASK-M8-125, before stage 2. The two notes above on RQ-744 (B) and (E) are overtaken. **Timing:** stage 1 closes when this task and TASK-M8-125 merge with their tests green. *Was:* "- **Closes:** REQ-CHART-147"; "- **Depends on:** TASK-M2-58, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52"
+- *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-124; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Depends on: TASK-M2-58, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, TASK-M6-49, TASK-M6-51, TASK-M8-48, TASK-M2-60".
+- *9 Nov 2026 (R-916, R-919):* R-916 supersedes R-873 (E) (i) (F2): this task no longer depends on TASK-M6-49, TASK-M6-51 or TASK-M8-48, which would be forward edges out of M2; Save view as chart on curved views is built through the object by TASK-M2-63, so the "Routes covered" note's wait on RQ-744 (E) is overtaken. TASK-M2-38, TASK-M2-39 and TASK-M2-56 merge before the baseline commit and are in Depends on. R-919: the type sketch (R-864 item 1) is approved when this task brings it, before its baseline commit, starting from type-sketch v10; the owner sees it then, and the gate above reads with that. The baseline writes `fixtures/chart_composition/digest.json`, which TASK-M2-66 is held to (applied per R-369).

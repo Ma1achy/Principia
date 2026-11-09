@@ -1743,7 +1743,7 @@
 - file: decisions.md
   section: "R-816 — A virial-ratio axis is kind 3: it solves into the momenta, reading the configuration and the masses as fixed upstream; R-471 H3's \"not kind 3\" is read as about B1's extension only *(closes RQ-682)*"
   reason: informative only
-  note: "carried by the decoder contract's kinds table and TASK-M8-119"
+  note: "carried by the decoder contract's kinds table and TASK-M2-70"
 - file: decisions.md
   section: "R-818 — A `MixedEnergy` chart's held `L_z` tilts and slices by value on the floor and its held `K` on the warp line, with `K_max` ruled as RQ-710's, built in M8; and a triple ejection waits behind `E_rel > 0` *(on RQ-701, which stays open, deferred to M8; closes RQ-708)*"
   reason: informative only
@@ -1795,11 +1795,11 @@
 - file: decisions.md
   section: "R-834 — Four axis kinds stay: a new capability is a registry entry under one of them, \"no new chart type\" is the rule from now on for anything not already ruled, and `SuvakovPlane` stands as R-669 ruled it *(closes RQ-712)*"
   reason: informative only
-  note: "the chart design's door; TASK-M4-37 carries it into the design"
+  note: "the chart design's door; TASK-M2-58 carries it into the design"
 - file: decisions.md
   section: "R-835 — A side-ratio axis in the builder and R-798's \"no `SideRatio` chart\" both stand: the axis is a registered closed pair, and PA-1 keeps its remap *(closes RQ-713)*"
   reason: informative only
-  note: "the chart design's door; TASK-M4-37 carries it into the design"
+  note: "the chart design's door; TASK-M2-58 carries it into the design"
 - file: decisions.md
   section: "R-836 — Hold `L_z` adds the rigid rotation, the scale taking only the part orthogonal to it when both are held, and outcomes 4 and 5 test `rigid(v, Jr)`, an exact predicate against a dyadic `τ` *(closes RQ-715)*"
   reason: informative only
@@ -1807,7 +1807,7 @@
 - file: decisions.md
   section: "R-837 — The axis cap is 4 baked entries beyond the gallery, counted as entries, decode-only, created on first use, a pair past the cap running as CPU batch *(on RQ-716, which stays open)*"
   reason: informative only
-  note: "the chart design's door; TASK-M4-37 carries it, TASK-M4-33's baked_cap tests it; RQ-716 stays open on the 2 s"
+  note: "the chart design's door; TASK-M2-58 carries it, TASK-M4-33's baked_cap tests it; RQ-716 stays open on the 2 s"
 - file: decisions.md
   section: "R-838 — The virial-ratio axis's kind is RQ-682's answer: kind 3 *(closes RQ-717)*"
   reason: informative only
@@ -1819,11 +1819,11 @@
 - file: decisions.md
   section: "R-840 — R-594 item 5 governs charts built for a target; the builder's general options are the owner's own order and built in M8, last *(closes RQ-720)*"
   reason: informative only
-  note: "the chart design's door; TASK-M4-37 carries it"
+  note: "the chart design's door; TASK-M2-58 carries it"
 - file: decisions.md
   section: "R-841 — A chart at rest under hold `L_z` is labelled \"not at rest\", not refused *(closes RQ-722)*"
   reason: informative only
-  note: "the chart design's door; TASK-M4-37 carries it"
+  note: "the chart design's door; TASK-M2-58 carries it"
 - file: decisions.md
   section: "R-842 — Time as an axis is a chart mode, not a fifth kind: `T` on the sim key and the window off it, a cache per column of at most one screen height of rows, re-integrating from `t = 0` past it; it amends the temporal note and the caching contract's `T` row *(closes RQ-727)*"
   reason: informative only
@@ -1831,11 +1831,11 @@
 - file: decisions.md
   section: "R-843 — Region D at unequal masses: the plane is geometric at every mass, D is labelled, one sector, AN-1 is its own preset, a half-disc of radius 10, and a statistic over D says \"one labelling\" *(closes RQ-728)*"
   reason: informative only
-  note: "the chart design's door; TASK-M4-37 and TASK-M8-110 carry it"
+  note: "the chart design's door; TASK-M2-58 and TASK-M2-75 carry it"
 - file: decisions.md
   section: "R-844 — Hill's threshold at unequal masses is the labelled pair's: pair `(i, j)` is cut off from the third iff `c > max(f_i, f_j)`, blank at `E ≥ 0` and `ε ≠ 0` *(closes RQ-730)*"
   reason: informative only
-  note: "the chart design's door; TASK-M8-109 builds it"
+  note: "the chart design's door; TASK-M2-74 builds it"
 - file: decisions.md
   section: "R-845 — Region D as a chart: a paper's fixed horizon is read by running to the longest pixel's horizon and cutting each pixel at its own; the default velocities are each target's, offered as presets *(on RQ-714, which stays open)*"
   reason: informative only
@@ -1847,11 +1847,11 @@
 - file: decisions.md
   section: "R-848 — The Saari split's `h` is a builder axis, its range under physics review; R-793 stands *(closes RQ-724)*"
   reason: informative only
-  note: "the chart design's door; TASK-M8-109 builds the axis"
+  note: "the chart design's door; TASK-M2-74 builds the axis"
 - file: decisions.md
   section: "R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*"
   reason: informative only
-  note: "the chart design's door; TASK-M8-105 to TASK-M8-117 carry it"
+  note: "the chart design's door; TASK-M2-60 to TASK-M2-65 carry it"
 - file: decisions.md
   section: "R-852 — Every registry primitive is classed as a state function, a conserved quantity (exact or approximate, labelled) or a trajectory functional, never an axis; final-condition charts stay a design item for the rulings report, with the check that conserved axes are `T`-independent *(on RQ-734, which stays open)*"
   reason: informative only
@@ -1899,7 +1899,7 @@
 - file: decisions.md
   section: "R-884 — Paper frames: presets where the papers are read, each tested against its paper; each remaining gap stays unbuilt, its target \"not scored\" with the gap named *(closes RQ-729)*"
   reason: informative only
-  note: "paper frames: presets where the papers are read, each tested against its paper, the rest left unbuilt with their targets not scored; carried by the M9 targets' existing requirements and TASK-M4-37"
+  note: "paper frames: presets where the papers are read, each tested against its paper, the rest left unbuilt with their targets not scored; carried by the M9 targets' existing requirements and TASK-M2-58"
 - file: decisions.md
   section: "R-885 — V-11's prograde limit is read from eq. (11) as printed *(closes RQ-737)*"
   reason: informative only

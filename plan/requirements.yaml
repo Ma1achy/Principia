@@ -2260,7 +2260,7 @@
   - R-71
   - R-875
   milestone: M2
-  note: "θ_min and θ_max: REQ-CHART-045 (calibration); Φ_θ,L_z's fixed K and L_z range: REQ-CHART-046 (calibration). R-875 (8 Nov 2026, RQ-745 (b)): once TASK-M8-127 merges the acute-angle charts run over the full acute range, both labellings shown, the leg swap shown once only by the symmetry filter (REQ-CHART-151); this requirement's statement changes then, and stands as written until it does."
+  note: "θ_min and θ_max: REQ-CHART-045 (calibration); Φ_θ,L_z's fixed K and L_z range: REQ-CHART-046 (calibration). R-875 (8 Nov 2026, RQ-745 (b)): once TASK-M2-85 merges the acute-angle charts run over the full acute range, both labellings shown, the leg swap shown once only by the symmetry filter (REQ-CHART-151); this requirement's statement changes then, and stands as written until it does."
 - id: REQ-CHART-025
   area: CHART
   statement: "Both Burrau shape charts — the folded acute-angle chart (shape only) and the full-range Euclid chart (shape × labelling) — must be kept, each labelled via system_image with the quotient it covers (the full-range chart DoubleCover, replacing has_redundant_hemisphere), and shape fractions must not be taken from the full-range chart."
@@ -2290,7 +2290,7 @@
   - R-157
   - R-875
   milestone: M2
-  note: "R-27 settles 'pending change 2, open' (canonical_spec §11 records it as ruled; chart_reference §4.5's paragraph still calls it open). Applied before any Burrau statistic. R-104 names the value DoubleCover (chart_reference §4.5 now says so). R-875 (8 Nov 2026, RQ-745 (b)): once TASK-M8-127 merges the acute-angle charts run over the full acute range, both labellings shown, the leg swap shown once only by the symmetry filter (REQ-CHART-151); this requirement's statement changes then, and stands as written until it does."
+  note: "R-27 settles 'pending change 2, open' (canonical_spec §11 records it as ruled; chart_reference §4.5's paragraph still calls it open). Applied before any Burrau statistic. R-104 names the value DoubleCover (chart_reference §4.5 now says so). R-875 (8 Nov 2026, RQ-745 (b)): once TASK-M2-85 merges the acute-angle charts run over the full acute range, both labellings shown, the leg swap shown once only by the symmetry filter (REQ-CHART-151); this requirement's statement changes then, and stands as written until it does."
 - id: REQ-CHART-026
   area: CHART
   statement: "The ternary mass plot must fix geometry at ν₀ and map x = u, y = (1−u)v, m₀ = 1−x−y, m₁ = x, m₂ = y, shrunk toward the barycentre by ε_m (default 10⁻⁴) as m ← (1 − 3ε_m)m + ε_m(1,1,1), with rest momenta and the Burrau point (c,b,a)/(a+b+c) as an overlay marker."
@@ -2685,7 +2685,7 @@
   - R-71
   - R-875
   milestone: M2
-  note: "R-875 (8 Nov 2026, RQ-745 (b)): once TASK-M8-127 merges the acute-angle charts run over the full acute range, both labellings shown, the leg swap shown once only by the symmetry filter (REQ-CHART-151); this requirement's statement does not change: it stays the record of the M2 value, within (0, π/4], for the fold-era charts, and is superseded for the full range by REQ-CHART-162 when TASK-M8-127 merges, so there are never two calibrations of one value (P14 of physics review 5820482634, PR #455). *Was (the clause):* \"this requirement's statement changes then, and stands as written until it does.\" The M2 gate confirms this range within (0, π/4], for the charts as built; the full range within (0, π/2) is REQ-CHART-162's, confirmed at the M8 gate (P4 of physics review 5820410914, PR #455). *Was (this note's last sentence):* \"The range comes back to the owner at the M2 gate within (0, π/2).\""
+  note: "R-875 (8 Nov 2026, RQ-745 (b)): once TASK-M2-85 merges the acute-angle charts run over the full acute range, both labellings shown, the leg swap shown once only by the symmetry filter (REQ-CHART-151); this requirement's statement does not change: it stays the record of the M2 value, within (0, π/4], for the fold-era charts, and is superseded for the full range by REQ-CHART-162 when TASK-M2-85 merges, so there are never two calibrations of one value (P14 of physics review 5820482634, PR #455). *Was (the clause):* \"this requirement's statement changes then, and stands as written until it does.\" The M2 gate confirms this range within (0, π/4], for the charts as built; the full range within (0, π/2) is REQ-CHART-162's, confirmed at the M8 gate (P4 of physics review 5820410914, PR #455). *Was (this note's last sentence):* \"The range comes back to the owner at the M2 gate within (0, π/2).\""
 - id: REQ-CHART-046
   area: CHART
   kind: calibration
@@ -3758,15 +3758,9 @@
   - R-407
   - R-471
   - R-506
-  milestone: M4
-  rq:
-  - RQ-712
-  - RQ-713
-  - RQ-714
-  - RQ-715
-  - RQ-716
-  - RQ-719
-  note: "Applied per the chart composition design; waits on its rulings items."
+  - R-916
+  milestone: M2
+  note: "Applied per the chart composition design; waits on its rulings items. R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-59; the stale rq fields (RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719, each ruled) cleared."
 - id: REQ-CHART-095
   area: CHART
   kind: definition
@@ -3788,14 +3782,9 @@
   rulings:
   - R-72
   - R-592
-  milestone: M4
-  rq:
-  - RQ-712
-  - RQ-713
-  - RQ-714
-  - RQ-715
-  - RQ-716
-  - RQ-719
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-59; the stale rq fields (RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719, each ruled) cleared."
 - id: REQ-CHART-096
   area: CHART
   statement: "Every primitive must be one row of one CPU-side registry declaring its forward formula, its inverse class (closed, numerical or none), its axis kind, its natural extension type, whether it is angle-like, and its scale behaviour; a combination must be classed closed or numerical only by a registered inverse of that class, a numerical one naming what it solves for and its branch rule, and none otherwise, whatever its parts' classes; a size-only primitive must be refused as an axis by name; and no row with an inverse may name a binary phase, eccentricity, impact parameter or fixed k, forward-only overlay rows being free to (R-669)."
@@ -3808,11 +3797,9 @@
   rulings:
   - R-407
   - R-408
-  milestone: M4
-  rq:
-  - RQ-716
-  - RQ-722
-  - RQ-733
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66; the stale rq fields (RQ-716, RQ-722, RQ-733, each ruled) cleared."
 - id: REQ-CHART-097
   area: CHART
   statement: "Any axis must pair with any other of any kind, and the validator must refuse only genuine contradictions (an axis and a constraint on one quantity, two axes fixing one quantity, a pair with no joint inverse, a size-only axis, and, if RQ-722 so rules, a hold on a chart declared at rest), each a named Refusal variant the Domain preview shows."
@@ -3829,10 +3816,9 @@
   rulings:
   - R-25
   - R-670
-  milestone: M4
-  rq:
-  - RQ-716
-  - RQ-722
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66; the stale rq fields (RQ-716, RQ-722, each ruled) cleared."
 - id: REQ-CHART-098
   area: CHART
   statement: "A validated chart must carry its lowering (uniform affine, baked entry or CPU batch) and each reduced capability as a label, never a refusal, and resolve must return the baked entry for a baked (H, V, M) and CPU batch for any other."
@@ -3846,10 +3832,9 @@
     detail: "cargo test -p engine lowering_labels: a latent pair lowers uniform, a baked pair to its entry, an unbaked closed pair to CPU batch with its label, a numerical pair to CPU batch with its label; control: an unbaked pair returning a refusal fails"
   rulings:
   - R-369
-  milestone: M4
-  rq:
-  - RQ-716
-  - RQ-722
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66; the stale rq fields (RQ-716, RQ-722, each ruled) cleared."
 - id: REQ-CHART-099
   area: CHART
   statement: "Every existing chart, gallery preset and saved chart must reopen bitwise under the composition: decode bits against a digest fixture written before the first change, and SimConfig's canonical form unchanged with every new field at its default."
@@ -3864,10 +3849,9 @@
   rulings:
   - R-475
   - R-484
-  milestone: M4
-  rq:
-  - RQ-716
-  - RQ-722
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66; the stale rq fields (RQ-716, RQ-722, each ruled) cleared."
 - id: REQ-CHART-100
   area: CHART
   statement: "The third-body pair (ξ, η) must be a closed-form baked pair through the explicit-configuration path, with its region-D preset the full disc rendered literally, unmasked (any window holding the lens (|ξ| + ½)² + η² ≤ 1, the mirror and all three body swaps declared, region D drawn as a contour, no mask built; R-871), at exact rest and, at equal masses, at eq. 3's velocities, at other masses q̄ being the Jacobi form of p̂ at those masses, after C's boost, ending in the signed canonicalisation, C with its step 3, the mirror, not taken (canonicalise_signed, R-544's path), at the lowering appendix's canonicalise entry: a pixel at η < 0 must decode to its own system, the mirror image of the pixel at (ξ, −η) where the held velocities are their own mirror image, never folded onto it; and on η ≥ 0, D included, the decode must be bit-identical to C with the mirror step."
@@ -3886,17 +3870,14 @@
     section: "R-914 — The stage 1 / stage 3 dependency cycle, RQ-752: option (a), the edge from TASK-M4-06 (the GPU compute variants) to TASK-M4-34 (region D) dropped; the GPU reference that reads region D moves into TASK-M4-34, which can't close until that reference reads region D as R-871 requires; R-871's substance unchanged, only the task that applies its link; TASK-M4-06 and the 217 tasks queued behind it released *(closes RQ-752)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state within REQ-VAL-120's tolerance; eq. 8's edges; eq. 3's momenta at √ℓ; I = 1; the stereographic identity at random masses; the signed half: on both presets, every pixel with η < 0 decodes to Π of the (ξ, −η) pixel's state to the decode's rounding, λ̃_y < 0 kept, and at eq. 3 with L_z opposite; every pixel with η ≥ 0 is bit-identical to the decode ending in canonicalise; controls: bodies 0 and 1 swapped misses the rows, q not scaled by √ℓ fails, μ_ρ/μ_λ inverted fails, d dropped at unequal masses fails (Table 1's equal masses have d = 0, so this control runs on the stereographic identity's masses), a decode ending in canonicalise (step 3 taken), which lands every η < 0 pixel on its (ξ, −η) partner, fails"
+    detail: "cargo test -p engine region_d_variant: the baked entry decodes every pixel of both presets bit for bit as REQ-CHART-171's CPU decode does at f32, the signed half included; controls: the variant decoding through canonicalise (step 3 taken), which lands every η < 0 pixel on its (ξ, −η) partner, fails, and a mantissa bit flipped in its uniform fails"
   rulings:
   - R-592
   - R-871
   - R-914
+  - R-916
   milestone: M4
-  rq:
-  - RQ-711
-  - RQ-713
-  - RQ-736
-  note: "R-871 (8 Nov 2026, RQ-714 (b) with RQ-738 conflict 3 read as its (c)): the preset is the full disc, unmasked, the symmetry filter (TASK-M8-120) giving exactly D; until it lands D is a contour and TASK-M4-06's golden reads in_region_d. *Was (statement, the clause):* \"with its region-D preset as RQ-714 and RQ-736 rule,\". R-914 (9 Nov 2026, RQ-752 (a)): that golden, region D's GPU reference, is TASK-M4-34's own (REQ-RENDER-123), and TASK-M4-06 gains no edge to TASK-M4-34."
+  note: "R-871 (8 Nov 2026, RQ-714 (b) with RQ-738 conflict 3 read as its (c)): the preset is the full disc, unmasked, the symmetry filter (TASK-M8-120) giving exactly D; until it lands D is a contour and TASK-M4-06's golden reads in_region_d. *Was (statement, the clause):* \"with its region-D preset as RQ-714 and RQ-736 rule,\". R-914 (9 Nov 2026, RQ-752 (a)): that golden, region D's GPU reference, is TASK-M4-34's own (REQ-RENDER-123), and TASK-M4-06 gains no edge to TASK-M4-34. R-916 (9 Nov 2026): the pair's CPU decode, its presets and region_d_plane are REQ-CHART-171 (TASK-M2-68, M2); this requirement keeps the baked entry, TASK-M4-34's; the stale rq fields cleared. *Was (verify):* \"cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state …\", now REQ-CHART-171's."
 - id: REQ-CHART-101
   area: CHART
   statement: "Each closed-form primitive and pair must round-trip, forward(inverse(x)) = x over its domain at f64 and at f32, the interior angles and the side ratios among them, each with its mass-weighted form onto the shape sphere."
@@ -3910,10 +3891,9 @@
     detail: "cargo test -p kernel closed_inverse_round_trip: every closed row of the registry, the virial row by its mapping's forward at a held L_z ≠ 0; each case reads back the row's Holds; control: a named mutation per row that fires there (design § 12: a factor or exponent on a scale solve) fails"
   rulings:
   - R-72
-  milestone: M4
-  rq:
-  - RQ-713
-  - RQ-714
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-68; the stale rq fields (RQ-713, RQ-714, each ruled) cleared."
 - id: REQ-CHART-102
   area: CHART
   statement: "Hold L_z must be offered on any chart beside energy normalisation, off by default and bitwise today's when off, by the rigid rotation, both held by RQ-715's form, as a uniform with no new variant, refused where L_z is an axis, every Some(L*) including Some(0), and, if RQ-722 so rules, against a rest convention."
@@ -3923,16 +3903,15 @@
   - file: docs/design/principia_chart_composition.md
     section: 5.4 What the constraints do to a momentum axis
   verify:
-    detail: "cargo test -p kernel hold_lz, cargo test -p kernel hold_outcomes, cargo nextest run -p engine --test hold_cross_backend, cargo test -p engine hold_encode and cargo test -p engine constraint_axis_refused: L_z = L* to tolerance on every chart allowing it, Σp = 0, both held E* too; off, bitwise; the outcomes in order, at f32 the state the second projection leaves at K̂ = 0, above the floor and on it; under RQ-715's option (i) the outcome tags bit-identical at f32 and f64, Metal and lavapipe beside the CPU, on identical (m, r, v) across a fixture grid on both sides of τ, that state and exactly rigid draws included, no NaN on any arm; under (ii) rigid draws exempt from test 12's tag equality, each float's outcome finite; inverse_encode_contract Part 6's step 4 reads the held decode and a state off {L_z = L*} gets the stated outcome; every row of the refusal table by name; controls: η_E alone with both on fails L_z, under (i) a tag from s = 0 and K̂ = 0 differs on the rigid draws, under (ii) the K̂ = 0 test removed gives NaN, step 4 on the unheld decode lands on a wrong pixel, the flag cleared on (L_z, E) fails"
+    detail: "cargo test -p kernel hold_lz, cargo test -p kernel hold_outcomes, cargo test -p engine hold_encode and cargo test -p engine constraint_axis_refused: L_z = L* to tolerance on every chart allowing it, Σp = 0, both held E* too; off, bitwise; the outcomes in order, at f32 the state the second projection leaves at K̂ = 0, above the floor and on it; under RQ-715's option (i) the outcome tags bit-identical at f32 and f64 on the CPU (the GPU's, REQ-CHART-179), on identical (m, r, v) across a fixture grid on both sides of τ, that state and exactly rigid draws included, no NaN on any arm; under (ii) rigid draws exempt from test 12's tag equality, each float's outcome finite; inverse_encode_contract Part 6's step 4 reads the held decode and a state off {L_z = L*} gets the stated outcome; every row of the refusal table by name; controls: η_E alone with both on fails L_z, under (i) a tag from s = 0 and K̂ = 0 differs on the rigid draws, under (ii) the K̂ = 0 test removed gives NaN, step 4 on the unheld decode lands on a wrong pixel, the flag cleared on (L_z, E) fails"
     method: unit test
   rulings:
   - R-25
   - R-471
   - R-670
-  milestone: M8
-  rq:
-  - RQ-715
-  - RQ-722
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-69; the stale rq fields (RQ-715, RQ-722, each ruled) cleared. Its Metal and lavapipe arm is REQ-CHART-179 (TASK-M8-118). τ (REQ-CHART-126) is provisional at M2 (R-919 F13 (b), R-182): the CPU outcomes read the provisional value. *Was (verify, the clauses):* \"cargo nextest run -p engine --test hold_cross_backend,\" and \"Metal and lavapipe beside the CPU\"."
 - id: REQ-CHART-103
   area: CHART
   statement: "The virial ratio must be a registered axis of the kind RQ-717 rules, with its authoring descriptor, and the pair (configuration axis, Q) must be offered, the kernel's AxisVirial unchanged but for REQ-CHART-139's floor under the rise, the row's forward stated per mapping: a warped axis at a held L_z ≠ 0 reads its own coordinate Q(t) = Q₀ + (Q_hi − Q₀)·t^γ_K under R-817's floor, labelled Q above the floor at Q₀ = 0, and at Q₀ > 0 labelled Q, the ratio, the columns where Q₀ is infeasible (Q_min(U) > Q₀) marked as the floor is, the state's own ratio in the readout (R-877)."
@@ -3948,10 +3927,9 @@
   - R-506
   - R-817
   - R-877
-  milestone: M8
-  rq:
-  - RQ-717
-  note: "R-817 (7 Nov 2026, RQ-700 (b)) moves the floor under the rise at Q₀ > 0; the forward is the inverse of its decode, returning the axis's coordinate Q(t) of chart_reference § 2.1. The label at Q₀ > 0, where the axis reads the state's own ratio on a column with Q₀ ≥ Q_min(U) and Q₀ plus the excess above the floor on the rest, is RQ-741's. R-877 (8 Nov 2026, RQ-741 (a)): the label at Q₀ > 0. *Was (statement, the clause):* \"its label at Q₀ > 0 is RQ-741's.\""
+  - R-916
+  milestone: M2
+  note: "R-817 (7 Nov 2026, RQ-700 (b)) moves the floor under the rise at Q₀ > 0; the forward is the inverse of its decode, returning the axis's coordinate Q(t) of chart_reference § 2.1. The label at Q₀ > 0, where the axis reads the state's own ratio on a column with Q₀ ≥ Q_min(U) and Q₀ plus the excess above the floor on the rest, is RQ-741's. R-877 (8 Nov 2026, RQ-741 (a)): the label at Q₀ > 0. *Was (statement, the clause):* \"its label at Q₀ > 0 is RQ-741's.\" R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-70; the stale rq fields (RQ-717, each ruled) cleared."
 - id: REQ-CHART-104
   area: CHART
   statement: "Each axis must take a warp of the closed four (linear, power, log, feasibility), bitwise today's on the linear arm, and a chart must take a pair map (affine, polar about a point, log-polar), each declared type under physics review."
@@ -3962,14 +3940,14 @@
     section: 5.1 Pair maps
   verify:
     method: unit test
-    detail: "cargo test -p kernel warps_and_pair_maps: forward(inverse(x)) = x for each warp and each pair map; polar's period and its pole-crossing partner; the linear arm bit-for-bit today's; decode time recorded, past +2% the warp becomes baked (V1); controls: a warp not offered on an energy-type axis is refused, a named mutation per inverse fails"
+    detail: "cargo test -p kernel warps_and_pair_maps: forward(inverse(x)) = x for each warp and each pair map; polar's period and its pole-crossing partner; the linear arm bit-for-bit today's; controls: a warp not offered on an energy-type axis is refused, a named mutation per inverse fails"
   rulings:
   - R-407
   - R-471
   - R-506
-  milestone: M8
-  rq:
-  - RQ-720
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-71; the stale rq fields (RQ-720, each ruled) cleared. *Was (verify, the clause):* \"decode time recorded, past +2% the warp becomes baked (V1);\", now REQ-PERF-116's, a GPU measurement (R-916)."
 - id: REQ-CHART-105
   area: CHART
   kind: definition
@@ -3983,9 +3961,9 @@
   rulings:
   - R-72
   - R-82
-  milestone: M8
-  rq:
-  - RQ-720
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-72; the stale rq fields (RQ-720, each ruled) cleared."
 - id: REQ-CHART-106
   area: CHART
   statement: "The exponential map must generalise to ExpMap<Target>, the shape sphere's bits unchanged, with the momentum and mass targets as REQ-CHART-105 defines."
@@ -3997,9 +3975,9 @@
     detail: "cargo test -p kernel exp_map_targets: on the momentum sphere L_z and K hold at every pixel; on a wide mass chart every unblanked pixel has all components positive and √mᵢ = nᵢ, each outside pixel is blank and uncounted, and no two unblanked pixels give one mass set; the shape target bit-for-bit today's; forward(inverse(x)) = x on each target; controls: a frame not orthonormal fails, squaring with the mask removed fails, a named mutation per target fails"
   rulings:
   - R-82
-  milestone: M8
-  rq:
-  - RQ-720
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-72; the stale rq fields (RQ-720, each ruled) cleared."
 - id: REQ-CHART-107
   area: CHART
   statement: "A pair with a numerical inverse must run as CPU batch in f64, each start rounded once to f32, in the integrator's IC layout, its branch rule a pure function of the pixel, its branch recorded per sample and its seam reported; a failed solve must be decode_failed and blank."
@@ -4014,9 +3992,9 @@
   rulings:
   - R-82
   - R-470
-  milestone: M8
-  rq:
-  - RQ-719
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-73; the stale rq fields (RQ-719, each ruled) cleared."
 - id: REQ-CHART-108
   area: CHART
   kind: definition
@@ -4030,14 +4008,9 @@
   rulings:
   - R-25
   - R-72
-  milestone: M4
-  rq:
-  - RQ-712
-  - RQ-713
-  - RQ-714
-  - RQ-715
-  - RQ-716
-  - RQ-719
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-59; the stale rq fields (RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719, each ruled) cleared."
 - id: REQ-CHART-109
   area: CHART
   kind: definition
@@ -4051,14 +4024,9 @@
   rulings:
   - R-25
   - R-72
-  milestone: M4
-  rq:
-  - RQ-712
-  - RQ-713
-  - RQ-714
-  - RQ-715
-  - RQ-716
-  - RQ-719
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-59; the stale rq fields (RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719, each ruled) cleared."
 - id: REQ-CHART-110
   area: CHART
   kind: definition
@@ -4071,14 +4039,9 @@
     detail: "inverse_encode_contract Part 6 carries it, approved by the physics reviewer; the test is REQ-CHART-102's hold_encode at M8, step 4 on the held decode, control: step 4 on the unheld decode lands on a wrong pixel"
   rulings:
   - R-72
-  milestone: M4
-  rq:
-  - RQ-712
-  - RQ-713
-  - RQ-714
-  - RQ-715
-  - RQ-716
-  - RQ-719
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-59; the stale rq fields (RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719, each ruled) cleared."
 - id: REQ-CHART-111
   area: CHART
   statement: "A momentum-momentum plane must report ray-degenerate where it contains Jr under hold L_z, alone or with hold E; where it passes through rest under hold E alone; or where it passes through a point with δv = 0, rest or a rigid rotation, with both held."
@@ -4092,10 +4055,9 @@
     detail: "cargo test -p kernel hold_rank: a plane containing Jr, one through rest under hold E alone, and one through rest and one through a rigid rotation with both held report it, a generic plane doesn't; controls: the label removed fails; a plane through a rigid rotation under hold E alone reports no rank loss, and reporting it fails"
   rulings:
   - R-369
-  milestone: M8
-  rq:
-  - RQ-715
-  - RQ-722
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-69; the stale rq fields (RQ-715, RQ-722, each ruled) cleared."
 - id: REQ-CHART-112
   area: CHART
   kind: definition
@@ -4115,9 +4077,9 @@
   rulings:
   - R-72
   - R-576
-  milestone: M8
-  rq:
-  - RQ-721
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-60; the stale rq fields (RQ-721, each ruled) cleared."
 - id: REQ-CHART-113
   area: CHART
   statement: "Tilt, zoom, lock and Save view as chart must reproduce bitwise through the path type, each by a test; s = 0.0 and s = 1.0 must take A's and B's own path, never the blend; a frame must record (A, B, path, s) by value, and a tilt or zoom frame must be the plain view."
@@ -4137,10 +4099,9 @@
   - R-309
   - R-484
   - R-873
-  milestone: M8
-  rq:
-  - RQ-721
-  note: "R-873 (8 Nov 2026, RQ-744 (B) (a)): TASK-M8-106 is split, and these tests are stage 1's, closed by TASK-M8-124, not TASK-M8-106."
+  - R-916
+  milestone: M2
+  note: "R-873 (8 Nov 2026, RQ-744 (B) (a)): TASK-M2-81 is split, and these tests are stage 1's, closed by TASK-M2-61, not TASK-M2-81. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-61; the stale rq fields (RQ-721, each ruled) cleared."
 - id: REQ-CHART-114
   area: CHART
   statement: "A path frame must flag seams and degenerate frames by the Gram area factor, tag infeasible pixels and never drop them, keep a pixel blank or tagged at either end blank mid-path, report what each held quantity means, take one colour window for the segment, admit no statistic, and keep a changed link id a cut."
@@ -4158,9 +4119,9 @@
   - R-467
   - R-470
   - R-649
-  milestone: M8
-  rq:
-  - RQ-721
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-81; the stale rq fields (RQ-721, each ruled) cleared."
 - id: REQ-CHART-115
   area: CHART
   statement: "Under a lock a path must be a based homotopy: the anchor stored as the signed starting state, its mirror half kept, not as a latent point (R-867), its recorded state at the pin stored at the path's start and taken at the pin's pixel on every frame (R-897, RQ-749 (a)), ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the pin's pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the pin within 0.5 of the ends' on swapped and orthogonal planes, snap-back as REQ-GUI-425 defines it, a chart-mode switch under a lock recording the words. What `z_locked` still serves beside the stored state (the sliders' re-basing, snap-back, a chart-mode switch) must be written into chart_composition § 17.8 and approved by the physics reviewer (R-72). The pin's screen position must be stored in the lock's record, the centre labelled \"assumed\" where no pixel can be derived (an old lock on a degenerate view, or a reset landing a locked view on one) (R-899, Q4 (a) with (a-i)); the line on blocks must be built here as the locked path's carrier (R-899, Q9 (a))."
@@ -4182,8 +4143,9 @@
   - R-867
   - R-897
   - R-899
-  milestone: M8
-  note: "R-867 (8 Nov 2026): the anchor is the signed starting state, not a latent point. Where the test reads once the pin is off the centre (R-866) is RQ-749's. *Was (statement):* \"Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words.\" R-897 (8 Nov 2026, RQ-749 (a)): the test reads the recorded state at the pin; R-899: Q4 (a), (a-i) and Q9 (a). *Was (statement):* \"Under a lock a path must be a based homotopy: the anchor stored as the signed starting state, its mirror half kept, not as a latent point (R-867), its IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words. What `z_locked` still serves beside the stored state (the sliders' re-basing, snap-back, a chart-mode switch) must be written into chart_composition § 17.8 and approved by the physics reviewer (R-72).\" *Was (verify):* \"cargo test -p engine path_lock_centre: where the anchor stays in B, a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B (a region D, a rest and a Burrau B), the probe reads the stored words at s = 0 and B's nearest point to the anchor at s = 1, the slide continuous between (the largest step in the probe's state between frames falling to at most 0.6 of the previous largest step each time the frame step is halved, twice over), with no label and no jump; a time-axis chart to an IC-only chart keeps its labelled jump; controls: the select removed fails, offsets blended linearly fails, a labelled jump where the anchor can't exist in B fails, an unlabelled snap to B's nearest point at one mid-path frame fails\" P5 of physics review 5820410914 (PR #455): \"snap-back bit for bit\" reads as REQ-GUI-425 defines snap-back under Q2 (a). *Was:* \"snap-back bit for bit\"."
+  - R-916
+  milestone: M2
+  note: "R-867 (8 Nov 2026): the anchor is the signed starting state, not a latent point. Where the test reads once the pin is off the centre (R-866) is RQ-749's. *Was (statement):* \"Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words.\" R-897 (8 Nov 2026, RQ-749 (a)): the test reads the recorded state at the pin; R-899: Q4 (a), (a-i) and Q9 (a). *Was (statement):* \"Under a lock a path must be a based homotopy: the anchor stored as the signed starting state, its mirror half kept, not as a latent point (R-867), its IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words. What `z_locked` still serves beside the stored state (the sliders' re-basing, snap-back, a chart-mode switch) must be written into chart_composition § 17.8 and approved by the physics reviewer (R-72).\" *Was (verify):* \"cargo test -p engine path_lock_centre: where the anchor stays in B, a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B (a region D, a rest and a Burrau B), the probe reads the stored words at s = 0 and B's nearest point to the anchor at s = 1, the slide continuous between (the largest step in the probe's state between frames falling to at most 0.6 of the previous largest step each time the frame step is halved, twice over), with no label and no jump; a time-axis chart to an IC-only chart keeps its labelled jump; controls: the select removed fails, offsets blended linearly fails, a labelled jump where the anchor can't exist in B fails, an unlabelled snap to B's nearest point at one mid-path frame fails\" P5 of physics review 5820410914 (PR #455): \"snap-back bit for bit\" reads as REQ-GUI-425 defines snap-back under Q2 (a). *Was:* \"snap-back bit for bit\". R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65."
 - id: REQ-CHART-116
   area: CHART
   statement: "A path must offer control charts built from each arm's own interpolation, alignment that reaches the identity at s = 1, and re-timing for constant visual speed by a recorded table pinned at both ends, easing untouched."
@@ -4197,9 +4159,9 @@
     method: unit test
   rulings:
   - R-576
-  milestone: M8
-  rq:
-  - RQ-721
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-81; the stale rq fields (RQ-721, each ruled) cleared."
 - id: REQ-CHART-117
   area: CHART
   kind: definition
@@ -4212,12 +4174,9 @@
     detail: "the chart reference carries each row, reviewed by the physics reviewer; RQ-723 to RQ-725 and RQ-730 applied"
   rulings:
   - R-72
-  milestone: M8
-  rq:
-  - RQ-723
-  - RQ-724
-  - RQ-725
-  - RQ-730
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-74; the stale rq fields (RQ-723, RQ-724, RQ-725, RQ-730, each ruled) cleared."
 - id: REQ-CHART-118
   area: CHART
   statement: "Each closed row of the primitives of 6 Nov must round-trip, the aliases must equal their rows, pair table rows 19 and 20 must be refused and rows 17 and 18 refused only under a hold, with (L_z, E), (K_ρ, K_λ) and (L_ρ, L_z) accepted, and the rejected list must have no axis."
@@ -4234,12 +4193,9 @@
   rulings:
   - R-369
   - R-669
-  milestone: M8
-  rq:
-  - RQ-723
-  - RQ-724
-  - RQ-725
-  - RQ-730
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-74; the stale rq fields (RQ-723, RQ-724, RQ-725, RQ-730, each ruled) cleared."
 - id: REQ-CHART-119
   area: CHART
   kind: definition
@@ -4252,12 +4208,9 @@
     detail: "the chart reference carries each row, reviewed by the physics reviewer"
   rulings:
   - R-72
-  milestone: M8
-  rq:
-  - RQ-723
-  - RQ-725
-  - RQ-726
-  - RQ-730
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-76; the stale rq fields (RQ-723, RQ-725, RQ-726, RQ-730, each ruled) cleared."
 - id: REQ-CHART-120
   area: CHART
   statement: "Each closed row of the full order's primitives must round-trip, each alias must equal its row, the scattering rows must have no inverse while R-669 stands, and the longer rejected list must have no axis."
@@ -4272,12 +4225,9 @@
   rulings:
   - R-369
   - R-669
-  milestone: M8
-  rq:
-  - RQ-723
-  - RQ-725
-  - RQ-726
-  - RQ-730
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-76; the stale rq fields (RQ-723, RQ-725, RQ-726, RQ-730, each ruled) cleared."
 - id: REQ-CHART-121
   area: CHART
   statement: "The third-body plane must read back xi + i eta = d + lambda/rho at any masses, geometric and midpoint-centred, and every target of the region-D table must reproduce its native coordinates to 4 eps max(1, |xi|, |eta|) read from the blocks rho-tilde and lambda-tilde; a read from particle positions takes a measured tolerance (R-71)."
@@ -4290,9 +4240,9 @@
   rulings:
   - R-369
   - R-592
-  milestone: M8
-  rq:
-  - RQ-728
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-75; the stale rq fields (RQ-728, each ruled) cleared."
 - id: REQ-CHART-122
   area: CHART
   statement: "Each paper frame of the preset table must be a preset over the registry with no new machinery, reproduce the paper's coordinates, and leave every listed gap unbuilt; catalogue energy normalisations must be a unit conversion, never an axis."
@@ -4305,14 +4255,12 @@
   rulings:
   - R-369
   - R-669
-  milestone: M8
-  rq:
-  - RQ-650
-  - RQ-711
-  - RQ-729
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-77; the stale rq fields (RQ-650, RQ-711, RQ-729, each ruled) cleared."
 - id: REQ-CHART-123
   area: CHART
-  statement: "A time-axis chart must be a chart mode with no fifth axis kind, with T on the sim key and the window off it, run each column once from t = 0, read rows as integer boundary indices per occupant, floor time zoom at one boundary, hold terminal states, jitter the IC axis only, keep one colour window, anchor at (IC, t), refuse a second time axis by name, and cut to an IC-only chart."
+  statement: "A time-axis chart must be a chart mode with no fifth axis kind, with T on the sim key and the window off it, run each column once from t = 0 through the trajectory interface (§ 18.7), read rows as integer boundary indices per occupant, floor time zoom at one boundary, hold terminal states, jitter the IC axis only, keep one colour window, anchor at (IC, t), refuse a second time axis by name, and cut to an IC-only chart."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "18.1 Verdict: a chart mode, no fifth axis kind"
@@ -4324,16 +4272,18 @@
     section: 18.6 Tests
   - file: docs/design/principia_chart_composition.md
     section: "18.3 Stored rows and dense output: the conflict, plainly"
+  - file: docs/design/principia_chart_composition.md
+    section: 18.7 The trajectory interface (R-918, R-919)
   verify:
-    detail: "cargo test -p engine -- time_column_matches_playhead time_rows_on_boundaries time_zoom_floor time_extend_continues time_terminal_holds time_jitter_ic_only time_two_axes_refused time_window_frozen time_morph_rules time_anchor: each with its control, the first with unregularised and regularised arms and a column whose later crossing cancels symbols, control: a row reading a prefix of the final word"
+    detail: "cargo test -p engine -- time_rows_on_boundaries time_zoom_floor time_terminal_holds time_jitter_ic_only time_two_axes_refused time_window_frozen time_morph_rules time_anchor: each with its control, on § 18.7's exact fixtures"
     method: unit test
   rulings:
   - R-66
   - R-369
   - R-565
-  milestone: M8
-  rq:
-  - RQ-727
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-83; the stale rq fields (RQ-727, each ruled) cleared. The real march's tests, time_column_matches_playhead and time_extend_continues, are REQ-CHART-178 (TASK-M8-113, after M2). *Was (verify):* \"cargo test -p engine -- time_column_matches_playhead time_rows_on_boundaries time_zoom_floor time_extend_continues time_terminal_holds … each with its control, the first with unregularised and regularised arms and a column whose later crossing cancels symbols, control: a row reading a prefix of the final word\"."
 - id: REQ-CHART-124
   area: CHART
   kind: definition
@@ -4348,9 +4298,9 @@
     detail: "the chart reference states the metric, reviewed by the physics reviewer"
   rulings:
   - R-72
-  milestone: M8
-  rq:
-  - RQ-721
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-81; the stale rq fields (RQ-721, each ruled) cleared."
 - id: REQ-CHART-125
   area: CHART
   kind: definition
@@ -4363,8 +4313,9 @@
     detail: "DEFINITION (R-72): every one of RQ-712 to RQ-731 closed by a ruling in decisions.md, each carried into the design doc, its status no longer Proposed; python3 plan/check_plan.py green"
   rulings:
   - R-72
-  milestone: M4
-  note: "The gate of the design's 24 tasks: they name its task in Depends on, the field the ready list reads. Only those tasks wait behind it; no existing task does."
+  - R-916
+  milestone: M2
+  note: "The gate of the design's 24 tasks: they name its task in Depends on, the field the ready list reads. Only those tasks wait behind it; no existing task does. R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-58."
 - id: REQ-CHART-126
   area: CHART
   kind: calibration
@@ -4379,9 +4330,9 @@
     detail: "against a criterion written before measuring (R-649), the proposal shows τ at masses log-uniform to 10⁻³, on the two GPU backends, and the kernel routine's cost"
   rulings:
   - R-71
+  - R-919
   milestone: M8
-  rq:
-  - RQ-715
+  note: "R-919 (9 Nov 2026, F13 (b)): τ stays with TASK-M8-118 and the GPU evidence, provisional at M2 (R-182), where the CPU hold outcomes read it; the stale rq field cleared."
 - id: REQ-CHART-127
   area: CHART
   statement: "Every primitive with a claimed inverse must ship with a forward(inverse(x)) = x test that can fail and a named mutation control, and the registry must fail by name a row with an inverse and no such case; identities alone do not satisfy this."
@@ -4393,7 +4344,9 @@
     detail: "cargo test -p engine round_trip_complete: every registered row with an inverse, closed or numerical, has a round-trip case, a read-back of its Holds column and a named mutation control that fires on that row; forward-only rows and combinations classed none need none; controls: a case removed fails, an inverse added with no case fails, a K case with its momentum direction wrong fails"
   rulings:
   - R-176
-  milestone: M4
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66."
 - id: REQ-CHART-128
   area: CHART
   statement: "Every registry row must carry its class: state function, conserved (exact or approximate, labelled) or trajectory functional, or unclassified while its definition is unread, and a trajectory functional must be refused as an axis by name."
@@ -4407,8 +4360,9 @@
     detail: "cargo test -p engine primitive_class: every row has its class; a row declared conserved and exact holds along a short run within the run's drift, at ε = 0, the softened and Newtonian energies being R-791's and R-819's; a row declared approximate shows the label; a functional is refused as an axis; controls: a state row declared conserved fails, a functional accepted fails"
   rulings:
   - R-852
-  milestone: M4
-  note: "R-852 (7 Nov 2026, the owner's model § 6b): the class is a rule of the registry. RQ-709 is ruled by R-819 (the reviews of PR #443, physics P3, code 5). *Was (verify):* \"R-791's and RQ-709's\"."
+  - R-916
+  milestone: M2
+  note: "R-852 (7 Nov 2026, the owner's model § 6b): the class is a rule of the registry. RQ-709 is ruled by R-819 (the reviews of PR #443, physics P3, code 5). *Was (verify):* \"R-791's and RQ-709's\". R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66."
 - id: REQ-CHART-129
   area: CHART
   statement: "Ensemble jitter on a composed chart must stay in the chart's own coordinates; a footprint whose copies straddle a declared seam, a branch or a composed chart's mask must be flagged per pixel, in the resolve pass, every copy kept; its spread and error_ratio must be reported as seam-contaminated; a chart of today's registry must be unchanged."
@@ -4444,7 +4398,9 @@
     detail: "cargo test -p engine statistic_measure: a statistic over a warped chart is weighted into a named measure or labelled; a fixture of known fraction is recovered through a power warp; a fraction in a paper's own measure equals the flat grid in the paper's coordinates; controls: no weight and no label fails, the weight inverted fails, a count of quadtree leaves fed in fails"
   rulings:
   - R-408
-  milestone: M8
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-71."
 - id: REQ-CHART-132
   area: CHART
   statement: "FTLE and Lyapunov exponents must be computed in physical phase space, never in chart coordinates, so that a chart's warp cannot change a system's exponent; the Benettin shadow's offset must be a function of the state, never of the chart."
@@ -4454,8 +4410,10 @@
   verify:
     method: unit test
     detail: "cargo test -p engine ftle_chart_independent: a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one lambda_T bit for bit, read on copy 0; control: delta_0's direction taken from a chart tangent fails"
-  rulings: []
-  milestone: M8
+  rulings:
+  - R-918
+  milestone: M3
+  note: "R-918 (9 Nov 2026): moved from M8 to M3, closed by TASK-M3-14 once it is re-queued after M2's gate; its test needs the Benettin shadow's initialisation and TASK-M2-71's warps (F4). TASK-M8-100 is retired."
 - id: REQ-CHART-133
   area: CHART
   statement: "The mirror half of the shape sphere must never be dropped or folded by a path: a path between two lower-half views must stay in the lower half, at every pixel of every frame (R-544; the owner's rider to RQ-736)."
@@ -4470,7 +4428,9 @@
   rulings:
   - R-544
   - R-853
-  milestone: M8
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-81."
 - id: REQ-CHART-134
   area: CHART
   statement: "A shape-sphere trajectory's polar angle must never be folded: read from the signed n̂ it must cross 90° at syzygies and lie on both sides of it (R-544; the owner's second rider to RQ-736)."
@@ -4500,7 +4460,9 @@
   rulings:
   - R-408
   - R-855
-  milestone: M8
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-84."
 - id: REQ-CHART-136
   area: CHART
   statement: "A pixel must be drawn transparent only if its starting state is the image of another start present in the same chart, one canonical representative of each pair kept, so that on a rest chart the filtered chart and its mirror reproduce the full chart bitwise, outcome fields equal and signed fields flipped (the owner's test, RQ-736)."
@@ -4513,7 +4475,9 @@
   rulings:
   - R-544
   - R-855
+  - R-916
   milestone: M8
+  note: "R-916 (9 Nov 2026): the mask's reconstruction on a synthetic payload is REQ-CHART-175 (TASK-M2-84, M2); this, on real runs, stays TASK-M8-120's after M2's gate (F7)."
 - id: REQ-CHART-137
   area: CHART
   statement: "A pixel must be blanked only if its partner is actually in the chart's domain, checked through the chart's own map after signed C (translation, rotation and scale removed, the mirror step not taken) and never through the contract's C or Enc; on a chart holding something that breaks the symmetry nothing must be blanked and the toggle must read \"no duplicates in this chart\" (the owner's order, RQ-736)."
@@ -4528,7 +4492,9 @@
   rulings:
   - R-544
   - R-855
-  milestone: M8
+  - R-916
+  milestone: M2
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-84."
 - id: REQ-CHART-138
   area: CHART
   statement: "The canonical choice must be stated in the legend and the export sidecar (for example \"mirror pairs shown once: eta >= 0\"), and the filter must default on for the paper-frame presets only, so that region D's quarter disc, the Anosova half-disc and the half shape sphere at rest are its output with the full domain computed underneath, and a replication target must score what is computed, never what the filter drew (the owner's order, RQ-736)."
@@ -4539,13 +4505,14 @@
     section: 8.1 The definition
   verify:
     method: unit test
-    detail: "cargo test -p engine symmetry_filter_statement: the legend and the sidecar state the canonical choice; a paper-frame preset opens with the filter on, any other chart with it off; a target's score is one with the filter on or off; on region D's preset at equal masses and exact rest, the full disc filtered leaves region D's own area (eq. 8), π/6 − √3/8 ≈ 0.30709 (the owner's 0.307), within the derived bound of the pixels the boundary of D crosses times one pixel's area (R-871, the owner's check); controls: the statement dropped fails, the default on for every chart fails"
+    detail: "cargo test -p engine symmetry_filter_statement: the legend and the sidecar state the canonical choice; a paper-frame preset opens with the filter on, any other chart with it off; a target's score is one with the filter on or off; controls: the statement dropped fails, the default on for every chart fails"
   rulings:
   - R-649
   - R-855
   - R-871
+  - R-916
   milestone: M8
-  note: "R-871 (8 Nov 2026): the owner's check, the filtered area 0.307 at equal masses and rest, added to the verify. *Was (verify, the clause):* \"a target's score is one with the filter on or off;\". P10 of physics review 5820410914 (PR #455): the exact area and a derived bound."
+  note: "R-871 (8 Nov 2026): the owner's check, the filtered area 0.307 at equal masses and rest, added to the verify. *Was (verify, the clause):* \"a target's score is one with the filter on or off;\". P10 of physics review 5820410914 (PR #455): the exact area and a derived bound. R-916 (9 Nov 2026): the owner's 0.307 check is the filter's maths, REQ-CHART-176 (TASK-M2-84, M2). *Was (verify, the clause):* \"on region D's preset at equal masses and exact rest, the full disc filtered leaves region D's own area (eq. 8), π/6 − √3/8 ≈ 0.30709 (the owner's 0.307), within the derived bound of the pixels the boundary of D crosses times one pixel's area (R-871, the owner's check);\"."
 - id: REQ-CHART-139
   area: CHART
   statement: "On a warped virial-ratio axis with an asked bottom Q₀ > 0 at a held L_z ≠ 0, the floor must sit under the rise only: with Q_min(U) = L_z²/(I·|U|), the pixel's ratio must be max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K, so the bottom row is Q₀ where Q₀ is feasible and the floor elsewhere, and at Q₀ = 0 the built additive form must hold bit for bit (R-817)."
@@ -4560,8 +4527,9 @@
   rulings:
   - R-708
   - R-817
-  milestone: M8
-  note: "Closed by TASK-M8-119, which gives the virial axis its descriptor; the built form is the additive one until then, and no chart offers the axis. Physics review is required."
+  - R-916
+  milestone: M2
+  note: "Closed by TASK-M2-70, which gives the virial axis its descriptor; the built form is the additive one until then, and no chart offers the axis. Physics review is required. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-70."
 - id: REQ-CHART-140
   area: CHART
   statement: "At ε ≠ 0 every axis that reads U, the lone, mixed and Chart-builder E axes and the virial ratio, must read the Newtonian U, so no pixel's start depends on ε; each must be labelled as Newtonian whenever softening is on, with the softened value beside it in the Inspector, and on the virial ratio the Inspector must show the axis's disagreement with the stored, softened virial_ratio (R-819)."
@@ -4581,7 +4549,7 @@
 - id: REQ-CHART-141
   area: CHART
   kind: calibration
-  statement: "The K_max and γ_K of Φ_θ,L_z's held-K warp must be calibrated, a value of this chart's own (R-71): proposed with its evidence by the task that needs it, K_max at the chart's calibrated K (REQ-CHART-046), so t₀ = 1, with REQ-CHART-044's γ_K, as the proposal the owner named, and whether K_max follows a slice of the held K stated; checked by a reviewer, confirmed by the owner at the gate and recorded in decisions.md (R-833)."
+  statement: "The K_max and γ_K of Φ_θ,L_z's held-K warp must be calibrated, a value of this chart's own (R-71): proposed with its evidence by the task that needs it, K_max at the chart's calibrated K (REQ-CHART-046), so t₀ = 1, with REQ-CHART-044's γ_K, as the proposal the owner named, and whether K_max follows a slice of the held K stated; checked by a reviewer, confirmed by the owner at the M2 gate, its criterion written first, set by measurement (R-649/650) and recorded in decisions.md (R-833)."
   source:
   - file: decisions.md
     section: "R-833 — `Φ_θ,L_z`'s held `K` warp takes a `K_max` and `γ_K` of its own, a calibration (R-71), with `K_max` at the chart's calibrated `K` proposed at the gate *(closes RQ-710)*"
@@ -4594,8 +4562,9 @@
   - R-71
   - R-708
   - R-833
-  milestone: M8
-  note: "Closed by TASK-M8-48, whose sliders give the default tilted view. HeldK takes both values as inputs meanwhile."
+  - R-916
+  milestone: M2
+  note: "Closed by TASK-M8-48, whose sliders give the default tilted view. HeldK takes both values as inputs meanwhile. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-63. *Was (statement, the clause):* \"confirmed by the owner at the gate\" (R-916, R-919). Its spans are RQ-679's (REQ-CHART-188)."
 - id: REQ-CHART-142
   area: CHART
   statement: "Region D's preset must offer exact rest as its default velocities and eq. 3 as a second preset; eq. 3 must reproduce Agekyan & Anosova's velocities in their own units before canonicalising, as a tested function, and the preset must state beside itself that at I = 1 eq. 3's start varies by about 19% over D at equal masses (ℓ from 0.408 to 0.577), never correcting it (R-851)."
@@ -4612,8 +4581,9 @@
   rulings:
   - R-845
   - R-851
-  milestone: M4
-  note: "Closed by TASK-M4-34. The preset's domain waits on RQ-714's open part."
+  - R-916
+  milestone: M2
+  note: "Closed by TASK-M4-34. The preset's domain waits on RQ-714's open part. R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-68."
 - id: REQ-CHART-143
   area: CHART
   statement: "A fixed-k chart must be built as a chart and builder axes like any other: the rigid rotation v = ωJr, ω² = 2k|U|/I, over D₁₁ ∪ D₁₂, with its rotation sense, which the source doesn't print, defined at build under physics review (R-72), never guessed (R-847)."
@@ -4627,8 +4597,9 @@
     detail: "cargo test -p engine fixed_k_chart: every pixel's decoded start is a rigid rotation, its K/|U| equal to the pixel's k to f64 rounding, its sense the defined one; the chart round-trips through its registered inverse; controls: a non-rigid velocity fails the rigid arm; the sense flipped fails"
   rulings:
   - R-847
-  milestone: M8
-  note: "Closed by TASK-M8-122. TS-2 (REQ-VAL-326) scores on it in M9."
+  - R-916
+  milestone: M2
+  note: "Closed by TASK-M2-78. TS-2 (REQ-VAL-326) scores on it in M9. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-78."
 - id: REQ-CHART-144
   area: CHART
   statement: "A binary-plus-single scattering chart must be built as a chart and builder axes like any other, with Heggie & Sweatman 1991's planar set-up alongside where its set-up is read, its missing definitions (b_max, the pericentre phase, the pull-in distance from infinity to a finite start with a stated tidal error) written at build under physics review (R-72), never guessed (R-847)."
@@ -4642,8 +4613,9 @@
     detail: "cargo test -p engine scattering_chart: a pixel's start pulled in from infinity by the hyperbolic Kepler solution reaches the stated distance with its tidal error within the stated bound; b and the phase read back from the decoded state; controls: a start not pulled in fails the tidal arm; the phase taken from t = 0 rather than pericentre passage fails"
   rulings:
   - R-847
-  milestone: M8
-  note: "Closed by TASK-M8-123. TR-1, MK-1 and SL-1 score on it in M9 (TASK-M9-23)."
+  - R-916
+  milestone: M2
+  note: "Closed by TASK-M2-79. TR-1, MK-1 and SL-1 score on it in M9 (TASK-M9-23). R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-79."
 - id: REQ-CHART-145
   area: CHART
   statement: "A builder expression with no registered inverse must be offered as an axis through a general numerical solve on the CPU: it must record the branch rule it uses where several solutions exist, mark seams where that rule flips, be labelled CPU-only (live allowed but slow), report convergence per pixel, and tag every failure, never dropping it (R-849)."
@@ -4657,8 +4629,9 @@
     detail: "cargo test -p engine general_numerical_solve: a typed expression with two solutions takes the recorded branch at every pixel and marks the seam where the rule flips; each pixel carries its convergence; a non-converging pixel is tagged and present in the payload; the view is labelled CPU-only; controls: a failure dropped fails; a seam left unmarked fails"
   rulings:
   - R-849
-  milestone: M8
-  note: "Closed by TASK-M8-102. Speeding the solve up is a future goal with no task, as for morphs."
+  - R-916
+  milestone: M2
+  note: "Closed by TASK-M8-102. Speeding the solve up is a future goal with no task, as for morphs. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-73."
 - id: REQ-CHART-146
   area: CHART
   kind: definition
@@ -4675,8 +4648,9 @@
   - R-72
   - R-849
   - R-850
-  milestone: M8
-  note: "R-849 (7 Nov 2026): \"define 'nearest'\". Closed by TASK-M8-117."
+  - R-916
+  milestone: M2
+  note: "R-849 (7 Nov 2026): \"define 'nearest'\". Closed by TASK-M2-65. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65."
 - id: REQ-CHART-147
   area: CHART
   statement: "The chart-path work must be one object in `engine` (R-864): a view is a point in chart space and every edit a path through it, its core types (Chart, Path and its families, Lock and anchor, Axis and primitive, PairMap, Hold) one module, designed first; a type sketch with a one-page rationale, reviewed by physics and code against the chart-space model, goes to the owner before any implementation. Today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart must each become a constructor of that object, a path of a named family, reproducing today's result bitwise through it, every existing preset and saved chart included, before any new capability (R-863 stage 1); once an operation runs through the object its old route is deleted, with no fallback; no special case is an if-branch outside a named family; chart maps and decode stay in `kernel`. Until stage 2's sliding anchor exists, the edits that jump the view under a lock (Home, the resets, presets, steers, capture) are kept, each labelled as a cut under a lock, and each stage-1 task states its non-conformance with R-849 (R-899, the brief's Q3 (a))."
@@ -4695,8 +4669,9 @@
   - R-864
   - R-873
   - R-899
-  milestone: M8
-  note: "Closed by TASK-M8-124, stage 1 of R-863's build order, with REQ-CHART-113's tests (R-873, RQ-744 (B) (a)). R-899 (8 Nov 2026): the labelled cuts under a lock, Q3 (a). *Was (note):* \"Closed by TASK-M8-124, stage 1 of R-863's build order. Which task keeps REQ-CHART-113's overlapping tests is RQ-744's (B).\""
+  - R-916
+  milestone: M2
+  note: "Closed by TASK-M2-61, stage 1 of R-863's build order, with REQ-CHART-113's tests (R-873, RQ-744 (B) (a)). R-899 (8 Nov 2026): the labelled cuts under a lock, Q3 (a). *Was (note):* \"Closed by TASK-M2-61, stage 1 of R-863's build order. Which task keeps REQ-CHART-113's overlapping tests is RQ-744's (B).\" R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-61."
 - id: REQ-CHART-148
   area: CHART
   statement: "A saved curved chart (R-475, R-513) must carry every route its rulings name beyond what REQ-CHART-073 and REQ-CHART-077 build: (a) a new tilt whose offsets, with the saved tilt's, land on three or four hidden coordinates (a saved one-target tilt re-tilted into two other targets, a saved two-target tilt re-tilted into one or two others), each offset on its own target as R-513 Q1 rules, none dropped or refused (R-513 Q1, \"one rule for every new target\"; R-475 S5, planes in which an axis mixes several hidden coordinates reached by saving and tilting again); (b) a saved curved chart saved again, its definition the chain of saved tilts, reopened at zero tilt bitwise and a further tilt composing R·R′·R″ as R-513 rules (R-475 S1, \"tilted, sliced and saved like any other\"); (c) the composed chart's area weight and statistics, as a single tilted chart has them: under Lean each axis the Gram factor of its composed axes (R-474 R7), weight 0 and `ray-degenerate` at the rank-losing corner (R-554), and on the shape sphere the repeat counting of `system_image`, `pixel` and `counted_total` (R-554 L3, R-655)."
@@ -4753,8 +4728,9 @@
   - R-408
   - R-854
   - R-874
-  milestone: M8
-  note: "Added by R-874 (8 Nov 2026, RQ-739 item 3). Closed by TASK-M8-120."
+  - R-916
+  milestone: M2
+  note: "Added by R-874 (8 Nov 2026, RQ-739 item 3). Closed by TASK-M8-120. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-84."
 - id: REQ-CHART-151
   area: CHART
   statement: "The three acute-angle Burrau charts must be re-expressed over the full acute range, θ ∈ (0, π/2), both labellings of each shape shown, the leg swap (θ and π/2 − θ) shown once only when the symmetry filter is on, declared as that chart's symmetry (R-875, RQ-745 (b)), R-27's \"shape only\" fold giving way."
@@ -4770,11 +4746,12 @@
   - R-27
   - R-855
   - R-875
-  milestone: M8
-  note: "Added by R-875 (8 Nov 2026). Closed by TASK-M8-127, behind TASK-M4-37 through TASK-M8-120; REQ-CHART-024 and REQ-CHART-025 change when it merges; REQ-CHART-045 is superseded for the full range by REQ-CHART-162. P3 of physics review 5820410914 (PR #455): the bitwise clause made pointwise. *Was (verify, the clause):* \"with the filter on the drawn half reproduces today's shape-only chart bit for bit;\". The full-range θ_min and θ_max are REQ-CHART-162's. P13 of physics review 5820482634: the bitwise clause restricted to θ ≤ π/4."
+  - R-916
+  milestone: M2
+  note: "Added by R-875 (8 Nov 2026). Closed by TASK-M2-85, behind TASK-M2-58 through TASK-M8-120; REQ-CHART-024 and REQ-CHART-025 change when it merges; REQ-CHART-045 is superseded for the full range by REQ-CHART-162. P3 of physics review 5820410914 (PR #455): the bitwise clause made pointwise. *Was (verify, the clause):* \"with the filter on the drawn half reproduces today's shape-only chart bit for bit;\". The full-range θ_min and θ_max are REQ-CHART-162's. P13 of physics review 5820482634: the bitwise clause restricted to θ ≤ π/4. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-85."
 - id: REQ-CHART-152
   area: CHART
-  statement: "On the f32 charts R-708 covers (HeldLz, HeldK and the Burrau charts), a pixel refused inside the band one float wide at the warp's floor, where f32 rounding and not the chart decides, must be labelled as rounding, never drawn as the chart's edge, and no pixel that isn't a system accepted; when the shader decodes these charts the edge walk must be repeated on the GPU, its criterion written before the first run (R-876, RQ-740; R-649). What \"one float wide\" is measured in (the row coordinate t, the held quantity's residual such as K − L_z²/2I, or the layer-3 check's operand) and the band's width in it must be defined in chart_reference § 2.1 by this requirement's task under physics review (R-72); a width that is a number rather than a derivation is a calibration (R-71), proposed with its evidence and confirmed by the owner at the M4 gate."
+  statement: "On the f32 charts R-708 covers (HeldLz, HeldK and the Burrau charts), when the shader decodes these charts the edge walk of REQ-CHART-169 must be repeated on the GPU, its criterion written before the first run (R-876, RQ-740; R-649): a pixel the GPU refuses inside REQ-CHART-169's band labelled as rounding, never drawn as the chart's edge, and no GPU-accepted pixel that isn't a system."
   source:
   - file: decisions.md
     section: "R-876 — An f32 chart may refuse a pixel inside the float-wide band at the warp's floor, the refusal labelled as rounding; the edge walk is repeated on the GPU when the shader decodes these charts *(closes RQ-740; refines R-708)*"
@@ -4782,15 +4759,16 @@
     section: 2.1 Feasibility, and the warp that makes every pixel valid
   verify:
     method: unit test
-    detail: "cargo test -p kernel f32_band_label: a pixel on the floor that the f32 decode refuses is labelled rounding, and its f64 decode is a system; no f32-accepted pixel fails its f64 check; and the GPU edge walk over the three charts, run in the GPU job with its criterion written first, its result in the PR; controls: a band refusal drawn as the edge fails, an accepted non-system fails; plus review: the band's quantity and width in chart_reference § 2.1, approved by the physics reviewer, and, if a number, its proposal with evidence confirmed at the M4 gate"
+    detail: "the GPU edge walk over HeldLz, HeldK and the Burrau charts, run in the GPU job with its criterion written first, its result in the PR: band refusals labelled rounding, no GPU-accepted non-system; controls: a band refusal drawn as the edge fails, an accepted non-system fails"
   rulings:
   - R-71
   - R-72
   - R-649
   - R-708
   - R-876
+  - R-916
   milestone: M4
-  note: "Added by R-876 (8 Nov 2026). Closed by TASK-M4-06. Physics review 5820410914 of PR #455, P1: the band defined (R-72), its width a calibration if a number (R-71)."
+  note: "Added by R-876 (8 Nov 2026). Closed by TASK-M4-06. Physics review 5820410914 of PR #455, P1: the band defined (R-72), its width a calibration if a number (R-71). R-916 (9 Nov 2026), the plan's slip 1: split; the CPU label, the band's definition (R-72) and any width calibration are REQ-CHART-169 (TASK-M2-66, M2); this keeps the GPU edge walk, TASK-M4-06's. *Was (statement):* \"On the f32 charts R-708 covers … a pixel refused inside the band one float wide at the warp's floor … must be labelled as rounding … proposed with its evidence and confirmed by the owner at the M4 gate.\""
 - id: REQ-CHART-153
   area: CHART
   statement: "Final-condition charts must be built after the M8 charts, as a CPU batch chart whose axes are state functions at time T (the model's Theorem 11: flip the momenta, integrate forward T, flip back), on the default integrator as an approximate inverse, the round-trip miss measured and reported per pixel and a pixel whose miss exceeds REQ-CHART-154's threshold masked; the standard size I = 1 kept at the chosen state, with a per-pixel horizon as a labelled exception for final-condition charts only; a start found kept in the signed state; and conserved axes shown T-independent (R-879, RQ-734; R-852)."
@@ -4840,20 +4818,22 @@
   note: Added by R-889 (8 Nov 2026). Closed by TASK-M8-102.
 - id: REQ-CHART-156
   area: CHART
-  statement: "Right after stage 1 and before stage 2, the chart-path leaves must collapse to one per operation: one pan, one zoom, one tilt per R-474 map (each in its X = Y and X ≠ Y forms), one slice, one lock, each cut kind once; a pair measuring bitwise-equal under D2's criterion merged with no bit change; routes differing only in rounding resolved to one canonical formula, the bit change deliberate and documented, with a conversion test (each changed case its difference in z (or n̂) within the ulp count derived from the two formulas, and its decoded state within REQ-ENC-024's ε_phys and its outcome class unchanged on the cases whose n̂ lies farther than a stated δ from each of the three binary-collision landmarks, with ulp/δ ≤ ε_phys (R-544's mirror-test precision rule), δ and the excluded set stated; a rounding difference inside it not brought back as a real one); a difference that isn't rounding not merged but brought back; the GUI routes (keys, panel, compass step, compass drag) thin input adapters feeding the same leaf; the same-frame slips D19 and D23 fixed; the dispatch classes in crates/gui/src/dispatch.rs, the GUI's app layer, and the path in chart_space (R-894)."
+  statement: "Right after stage 1 and before stage 2, the chart-path leaves must collapse to one per operation: one pan, one zoom, one tilt per R-474 map (each in its X = Y and X ≠ Y forms), one slice, one lock, each cut kind once; a pair measuring bitwise-equal under D2's criterion merged with no bit change; routes differing only in rounding resolved to one canonical formula, the bit change deliberate and documented, with a conversion test (each changed case its difference in z (or n̂) within the ulp count derived from the two formulas, and its decoded state within REQ-ENC-024's ε_phys on the cases whose n̂ lies farther than a stated δ from each of the three binary-collision landmarks, with ulp/δ ≤ ε_phys (R-544's mirror-test precision rule), δ and the excluded set stated; a rounding difference inside it not brought back as a real one); a difference that isn't rounding not merged but brought back; the merged GUI routes (keys, panel, compass step, compass drag) thin input adapters feeding the same leaf (R-919, F1 (a)), the same-frame slips D19 and D23 REQ-GUI-431's; the dispatch classes in crates/gui/src/dispatch.rs, the GUI's app layer, and the path in chart_space (R-894)."
   source:
   - file: decisions.md
     section: "R-894 — Right after stage 1 and before stage 2, a consolidation step collapses the chart-path leaves to one per operation: bitwise-equal pairs merged with no bit change, rounding-only differences resolved to one canonical formula with a documented bit change and a conversion test, the GUI routes thin input adapters, the same-frame slips fixed; bit-for-bit reproduction is stage 1's safety net, not a permanent rule; the dispatch classes sit in the GUI's `dispatch.rs`, the path in `chart_space` *(the report's D-43, which stands; refines R-863 and R-864)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_pin_kept path_control_ and cargo test -p gui --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_adapter_same_leaf path_frame_batch_running path_drag_running path_pin_kept path_control_: merged pairs bitwise; each changed case listed old against new with its largest difference in ulps, within the count derived from the two formulas, and, farther than the stated δ from the binary-collision landmarks (ulp/δ ≤ ε_phys), decoding to the same system within ε_phys, its outcome class unchanged; each adapter's output equals its leaf's constructor's bitwise; a frame's keyboard tilt and wheel zoom both land (D19); a drag's fold on the current state (D23); controls: a reordered operation fails, an adapter holding a formula fails; plus review: the merged-away leaf names gone by a word-bounded git grep"
+    detail: "cargo test -p engine --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_pin_kept path_control_ and cargo test -p gui --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_adapter_same_leaf path_pin_kept path_control_: merged pairs bitwise; each changed case listed old against new with its largest difference in ulps, within the count derived from the two formulas, and, farther than the stated δ from the binary-collision landmarks (ulp/δ ≤ ε_phys), decoding to the same system within ε_phys; each adapter's output equals its leaf's constructor's bitwise; controls: a reordered operation fails, an adapter holding a formula fails; plus review: the merged-away leaf names gone by a word-bounded git grep"
   rulings:
   - R-544
   - R-863
   - R-864
   - R-894
-  milestone: M8
-  note: "Added by R-894 (8 Nov 2026). Closed by TASK-M8-129. P2 of physics review 5820410914 (PR #455), applied per R-369: \"to rounding precision\" bounded by REQ-ENC-024's ε_phys. *Was:* \"to the same system to rounding precision\". P11 of physics review 5820482634 (PR #455): R-544's mirror-test precision rule carried in; near a landmark a rounding-level difference turns the state by O(1). *Was (statement, the clause):* \"decoding to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state, its outcome class unchanged\"."
+  - R-916
+  - R-919
+  milestone: M2
+  note: "Added by R-894 (8 Nov 2026). Closed by TASK-M8-129. P2 of physics review 5820410914 (PR #455), applied per R-369: \"to rounding precision\" bounded by REQ-ENC-024's ε_phys. *Was:* \"to the same system to rounding precision\". P11 of physics review 5820482634 (PR #455): R-544's mirror-test precision rule carried in; near a landmark a rounding-level difference turns the state by O(1). *Was (statement, the clause):* \"decoding to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state, its outcome class unchanged\". R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-64. R-916, R-919 (9 Nov 2026): D19 and D23 are REQ-GUI-431 (TASK-M8-129); the outcome class of each changed case is REQ-CHART-177 (TASK-M3-67, after M2: it needs integrated outcomes, F5). *Was (statement, the clauses):* \"its decoded state within REQ-ENC-024's ε_phys and its outcome class unchanged on the cases\" and \"the GUI routes (keys, panel, compass step, compass drag) thin input adapters feeding the same leaf; the same-frame slips D19 and D23 fixed;\"."
 - id: REQ-CHART-157
   area: CHART
   statement: "A curved chart's view must hold a pivot record, stored as the pinned state and the pin's screen position, not as chart coordinates, the kernel tilt gaining the pivot's origin and offset; the pin exact on tilted or zoomed curved charts at a centred pin; on a view never pinned off-centre, all this requirement's task can build, a centred pin leaves the offset d0 zero, so the untilt (a1) has nothing to act on there; d0 first becomes nonzero through an off-centre pin, which REQ-CHART-163's task builds, and persists through unlock, so (a1)'s test is REQ-CHART-163's (R-899, the brief's Q5 (a); R-902; amends R-473). The off-centre pin is REQ-CHART-163's and the record's survival across a chart switch REQ-CHART-164's."
@@ -4869,12 +4849,13 @@
   - R-473
   - R-899
   - R-902
-  milestone: M8
-  note: "Added by R-899 (8 Nov 2026). Closed by TASK-M8-48, before stage 1 (RQ-744 (E) (i)). Split by code review 5820413299 of PR #455, finding 4, applied per R-369: the off-centre pin (REQ-CHART-163, TASK-M8-125) and the chart-switch survival (REQ-CHART-164, TASK-M8-117) need tasks after this one; (a1) and \"on Linear energy axes\" from P9 of physics review 5820410914. *Was (statement):* \"A curved chart's view must hold a pivot record, stored as the pinned state and the pin's screen position, not as chart coordinates, so it survives a chart switch, the kernel tilt gaining the pivot's origin and offset; the pin exact on tilted or zoomed curved charts; the untilt (a1) folding the offset into the slice centre and re-basing energy once, shown (R-899, the brief's Q5 (a); R-902; amends R-473).\" *Was (verify):* \"cargo test -p engine curved_pivot: on a tilted and zoomed curved chart under a lock the pinned pixel decodes the pinned state after each tilt and zoom about it; the record survives a chart switch and back; the untilt re-bases energy once, its change shown; controls: the pivot in chart coordinates fails across a chart switch, a tilt about the window's centre with an off-centre pin fails\" Code review 5820497276 of PR #455, item 3: at a centred pin d0 is zero, so the untilt (a1) and its control move to REQ-CHART-163 (TASK-M8-125). *Was (verify, the clauses):* \"the untilt folds the offset into the slice centre and leaves it zero, U₀ re-based once on Linear energy axes, the change shown in the readout;\" and \", an untilt that jumps by the offset fails\". P17 of physics review 5820540415 and code review 5820545754 (PR #455): the claim scoped to a view never pinned off-centre, d0 checked by value. *Was (statement, the clause):* \"the offset d0 is [−0, −0] at a centred pin, so the untilt (a1) acts only under an off-centre lock and is REQ-CHART-163's\"; *was (verify, the clause):* \"the pin's screen position, d0 = [−0, −0];\"."
+  - R-916
+  milestone: M2
+  note: "Added by R-899 (8 Nov 2026). Closed by TASK-M8-48, before stage 1 (RQ-744 (E) (i)). Split by code review 5820413299 of PR #455, finding 4, applied per R-369: the off-centre pin (REQ-CHART-163, TASK-M8-125) and the chart-switch survival (REQ-CHART-164, TASK-M2-65) need tasks after this one; (a1) and \"on Linear energy axes\" from P9 of physics review 5820410914. *Was (statement):* \"A curved chart's view must hold a pivot record, stored as the pinned state and the pin's screen position, not as chart coordinates, so it survives a chart switch, the kernel tilt gaining the pivot's origin and offset; the pin exact on tilted or zoomed curved charts; the untilt (a1) folding the offset into the slice centre and re-basing energy once, shown (R-899, the brief's Q5 (a); R-902; amends R-473).\" *Was (verify):* \"cargo test -p engine curved_pivot: on a tilted and zoomed curved chart under a lock the pinned pixel decodes the pinned state after each tilt and zoom about it; the record survives a chart switch and back; the untilt re-bases energy once, its change shown; controls: the pivot in chart coordinates fails across a chart switch, a tilt about the window's centre with an off-centre pin fails\" Code review 5820497276 of PR #455, item 3: at a centred pin d0 is zero, so the untilt (a1) and its control move to REQ-CHART-163 (TASK-M8-125). *Was (verify, the clauses):* \"the untilt folds the offset into the slice centre and leaves it zero, U₀ re-based once on Linear energy axes, the change shown in the readout;\" and \", an untilt that jumps by the offset fails\". P17 of physics review 5820540415 and code review 5820545754 (PR #455): the claim scoped to a view never pinned off-centre, d0 checked by value. *Was (statement, the clause):* \"the offset d0 is [−0, −0] at a centred pin, so the untilt (a1) acts only under an off-centre lock and is REQ-CHART-163's\"; *was (verify, the clause):* \"the pin's screen position, d0 = [−0, −0];\". R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-63."
 - id: REQ-CHART-158
   area: CHART
   kind: calibration
-  statement: "The lock's tolerance, within which a locked path holds the pinned state (R-902's gate test) and within which a chart passes through a point of interest (R-899, Q7 (c)), which the corpus does not give, must be calibrated (R-71): proposed with its evidence by the task that first needs it, checked by the physics reviewer, confirmed by the owner at the M8 gate and recorded in decisions.md."
+  statement: "The lock's tolerance, within which a locked path holds the pinned state (R-902's gate test) and within which a chart passes through a point of interest (R-899, Q7 (c)), which the corpus does not give, must be calibrated (R-71): proposed with its evidence by the task that first needs it, checked by the physics reviewer, confirmed by the owner at the M2 gate, its criterion written first, set by measurement (R-649/650) and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-902 — The lock is a property of the path: any locked path, blend segments and chart switches included, keeps the pinned state fixed, sliding per the RQ-721 rider where the target can't hold it; the pivot record is stored as the state; a tilt or slice mid-morph goes to both endpoint charts, each in its own hidden coordinates and tilt map, about the pinned state, the morph continuing from its parameter; the gate test closes stage 2"
@@ -4885,23 +4866,25 @@
   - R-71
   - R-899
   - R-902
-  milestone: M8
-  note: "Added by R-899 and R-902 (8 Nov 2026). Closed by TASK-M8-117."
+  - R-916
+  milestone: M2
+  note: "Added by R-899 and R-902 (8 Nov 2026). Closed by TASK-M2-65. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65. *Was (statement, the clause):* \"confirmed by the owner at the M8 gate\" (R-916, R-919)."
 - id: REQ-CHART-159
   area: CHART
-  statement: "Stage 2's rewrite of every saved record's text must be handled as RQ-750 (R-900, R-898): the saved-file format's version bumped, old files converted on load, a conversion test in place of the bitwise check (each converted record decoding to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state, its outcome class unchanged), and any golden hash it changes regenerated with a recorded reason."
+  statement: "Stage 2's rewrite of every saved record's text must be handled as RQ-750 (R-900, R-898): the saved-file format's version bumped, old files converted on load, a conversion test in place of the bitwise check (each converted record decoding to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state; its outcome class REQ-CHART-177's), and any golden hash it changes regenerated with a recorded reason."
   source:
   - file: decisions.md
     section: "R-900 — Stage 2's saved-file rewrite is handled as RQ-750: a versioned format, old files converted on load, a conversion test in place of the bitwise check, and any golden hashes regenerated with a record of why *(refines R-864)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine saved_file_stage2_conversion: every saved record of the old version converts on load and decodes to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state, its outcome class unchanged; a record of the new version reads back bitwise; the PR lists every regenerated golden hash with its reason; controls: an old record read as the new version fails, an unknown version accepted fails"
+    detail: "cargo test -p engine saved_file_stage2_conversion: every saved record of the old version converts on load and decodes to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state; a record of the new version reads back bitwise; the PR lists every regenerated golden hash with its reason; controls: an old record read as the new version fails, an unknown version accepted fails"
   rulings:
   - R-864
   - R-898
   - R-900
-  milestone: M8
-  note: "Added by R-900 (8 Nov 2026). Closed by TASK-M8-117. P2 of physics review 5820410914 (PR #455), applied per R-369: \"to rounding precision\" bounded by REQ-ENC-024's ε_phys. *Was:* \"to the same system to rounding precision\"."
+  - R-916
+  milestone: M2
+  note: "Added by R-900 (8 Nov 2026). Closed by TASK-M2-65. P2 of physics review 5820410914 (PR #455), applied per R-369: \"to rounding precision\" bounded by REQ-ENC-024's ε_phys. *Was:* \"to the same system to rounding precision\". R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65. R-916 (F5): the outcome class unchanged needs integrated outcomes, so it is REQ-CHART-177 (TASK-M3-67). *Was (statement, the clause):* \"on the decoded state, its outcome class unchanged),\"."
 - id: REQ-CHART-160
   area: CHART
   statement: "Easing and the path curve must be a property of each segment of a path, one representation shared by live morphs, saved paths and export, with the chart-space model's Theorem 4 (concatenation of eased segments) and Theorem 5 (re-timing changes no frame's content) stated and tested, built with the path object so no later stage adds easing beside it (R-901)."
@@ -4916,29 +4899,34 @@
   rulings:
   - R-576
   - R-901
-  milestone: M8
-  note: Added by R-901 (8 Nov 2026). Closed by TASK-M8-124.
+  - R-916
+  milestone: M2
+  note: "Added by R-901 (8 Nov 2026). Closed by TASK-M2-61. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-61."
 - id: REQ-CHART-161
   area: CHART
-  statement: "The lock must be a property of the path (R-902): any path under a lock, blend segments and chart switches included, keeps the pinned state fixed, the anchor sliding per R-849 where the target can't hold it (a labelled jump until the sliding anchor exists); the pivot record stored as the state; a tilt or slice mid-morph applied to both endpoint charts, each in its own hidden coordinates and its own R-474 map, about the pinned state, the morph continuing from its current parameter between the tilted ends, an endpoint that can't take the tilt holding while the anchor slides; and the owner's gate test passing: lock → morph A → B → tilt → slice → morph back, the pinned state within the lock's tolerance (REQ-CHART-158) throughout and the round trip returning the same view."
+  statement: "The lock must be a property of the path (R-902): any path under a lock, blend segments and chart switches included, keeps the pinned state fixed, the anchor sliding per R-849 where the target can't hold it (a labelled jump until the sliding anchor exists); the pivot record stored as the state; a tilt or slice mid-morph applied to both endpoint charts, each in its own hidden coordinates and its own R-474 map, about the pinned state, the morph continuing from its current parameter between the tilted ends, an endpoint that can't take the tilt holding while the anchor slides; and the owner's gate test passing: lock → morph A → B → tilt → slice → morph back, the pinned state within the lock's tolerance (REQ-CHART-158) throughout and the round trip returning the same view, read as R-919's R1: after the mid-morph tilt and slice, the return to s = 0 equals the same tilt and slice applied directly to A about the pin, bitwise, the same leaf with the same inputs (A's basis, p0, x*), a measured reason that prevents bitwise brought to the owner, never loosened to the lock's tolerance; R2, recovering the start by undo, tested only where an undo feature exists."
   source:
   - file: decisions.md
     section: "R-902 — The lock is a property of the path: any locked path, blend segments and chart switches included, keeps the pinned state fixed, sliding per the RQ-721 rider where the target can't hold it; the pivot record is stored as the state; a tilt or slice mid-morph goes to both endpoint charts, each in its own hidden coordinates and tilt map, about the pinned state, the morph continuing from its parameter; the gate test closes stage 2"
   - file: docs/design/principia_chart_composition.md
     section: "17.8 Lock: a based homotopy"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine -- path_lock_round_trip path_mid_morph_tilt: the owner's gate test on affine and nonlinear charts, the pinned state within the lock's tolerance on every frame and the round trip's view equal to the start's; a tilt and a slice mid-morph reach both endpoints in their own hidden coordinates, the pin holding, the morph resuming from its parameter; an endpoint with no free hidden coordinate holds and the anchor slides; controls: the lock dropped on a blend segment fails, a hidden coordinate invented for the blend fails, a morph restarted from s = 0 fails"
+    detail: "cargo test -p engine -- path_lock_round_trip path_mid_morph_tilt: the owner's gate test on affine and nonlinear charts, on the chart pairs latent to latent, latent to the shape sphere's exponential map, a mixed or invariant chart to a rest chart and to Burrau (the anchor sliding), region D (TASK-M2-68) and a time-axis pair (REQ-CHART-174), the pinned state within the lock's tolerance on every frame; the return to s = 0 after the mid-morph tilt and slice bitwise equal to the same tilt and slice applied directly to A about the pin (R1); undo's return to the start (R2) only where an undo feature exists; a tilt and a slice mid-morph reach both endpoints in their own hidden coordinates, the pin holding, the morph resuming from its parameter; an endpoint with no free hidden coordinate holds and the anchor slides; controls: the lock dropped on a blend segment fails, a hidden coordinate invented for the blend fails, a morph restarted from s = 0 fails"
   rulings:
   - R-849
   - R-899
   - R-902
-  milestone: M8
-  note: "Added by R-902 (8 Nov 2026). Closed by TASK-M8-117, the task that closes stage 2."
+  - R-916
+  - R-919
+  milestone: M2
+  note: "Added by R-902 (8 Nov 2026). Closed by TASK-M2-65, the task that closes stage 2. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65. R-919 (9 Nov 2026, F10): R1 gates bitwise; R2 is undo. *Was (verify, the clause):* \"the pinned state within the lock's tolerance on every frame and the round trip's view equal to the start's;\"."
 - id: REQ-CHART-162
   area: CHART
   kind: calibration
-  statement: "The full-range acute-angle Burrau axis range θ_min and θ_max (θ(u) = θ_min + (θ_max − θ_min)u within (0, π/2)), which TASK-M8-127's charts use once R-875 unfolds them, must be calibrated (R-71): proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the owner at the M8 gate and recorded in decisions.md."
+  statement: "The full-range acute-angle Burrau axis range θ_min and θ_max (θ(u) = θ_min + (θ_max − θ_min)u within (0, π/2)), which TASK-M2-85's charts use once R-875 unfolds them, must be calibrated (R-71): proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the owner at the M2 gate, its criterion written first, set by measurement (R-649/650) and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-875 — The acute-angle Burrau charts are re-expressed over the full acute range, both labellings of each shape shown, the leg swap shown once only by the symmetry filter; R-27's \"shape only\" fold charts give way *(closes RQ-745; amends R-27)*"
@@ -4949,8 +4937,9 @@
   - R-71
   - R-855
   - R-875
-  milestone: M8
-  note: "Added by P4 of physics review 5820410914 of PR #455 (R-875). Closed by TASK-M8-127. REQ-CHART-045 stays within (0, π/4] at the M2 gate. P15 of physics review 5820482634 (PR #455): the evidence covers the leg swap's partner domain."
+  - R-916
+  milestone: M2
+  note: "Added by P4 of physics review 5820410914 of PR #455 (R-875). Closed by TASK-M2-85. REQ-CHART-045 stays within (0, π/4] at the M2 gate. P15 of physics review 5820482634 (PR #455): the evidence covers the leg swap's partner domain. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-85. *Was (statement, the clause):* \"confirmed by the owner at the M8 gate\" (R-916, R-919)."
 - id: REQ-CHART-163
   area: CHART
   statement: "On a tilted or zoomed curved chart, a lock at an off-centre pixel must keep the pivot record at the pin, tilt and zoom turning about it so the pinned pixel decodes the pinned state after each (R-899 Q5 (a), R-866); and the untilt under such a lock on a tilted view, where the record's hidden offset d0 ≠ 0, must follow (a1): d0 folded into the slice centre, then reset to [−0, −0], the pin kept, J6 standing, and U₀ re-basing once on Linear energy axes, stated in the readout (R-899 Q5 (a1); amends R-473). The pivot must persist through unlock, a later free tilt re-basing it about the view centre (origin = c, centre = place(c), d0 = d(c)), so a later centred lock inherits d0 ≠ 0 and (a1) acts on it; this persistence, the sketch's design applied per R-369, must be written into chart_decoder_contract Part 4 by the task that builds it, approved by the physics reviewer (R-72)."
@@ -4965,8 +4954,9 @@
   - R-473
   - R-866
   - R-899
-  milestone: M8
-  note: "Split from REQ-CHART-157 (code review 5820413299 of PR #455, finding 4; applied per R-369). Closed by TASK-M8-125. Code review 5820497276 of PR #455, item 3: the (a1) untilt moved here from REQ-CHART-157, where d0 is nonzero. P17 of physics review 5820540415 (PR #455): the arm where a centred lock inherits d0 ≠ 0 after an off-centre lock is released, and the persistence written into the contract (R-72)."
+  - R-916
+  milestone: M2
+  note: "Split from REQ-CHART-157 (code review 5820413299 of PR #455, finding 4; applied per R-369). Closed by TASK-M8-125. Code review 5820497276 of PR #455, item 3: the (a1) untilt moved here from REQ-CHART-157, where d0 is nonzero. P17 of physics review 5820540415 (PR #455): the arm where a centred lock inherits d0 ≠ 0 after an off-centre lock is released, and the persistence written into the contract (R-72). R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-62."
 - id: REQ-CHART-164
   area: CHART
   statement: "A curved chart's pivot record, stored as the pinned state and the pin's screen position, must survive a chart switch and back, the new chart's pivot derived from the record (R-899 Q5 (a), R-902, R-867); where the target chart can't hold the pinned state, the anchor slides to B's nearest point, labelled per R-849 (R-902)."
@@ -4981,8 +4971,9 @@
   - R-867
   - R-899
   - R-902
-  milestone: M8
-  note: "Split from REQ-CHART-157 (code review 5820413299 of PR #455, finding 4; applied per R-369). Closed by TASK-M8-117. P16 of physics review 5820482634 (PR #455): a holding fixture pair named, and the slide's arm for a target that can't hold the state."
+  - R-916
+  milestone: M2
+  note: "Split from REQ-CHART-157 (code review 5820413299 of PR #455, finding 4; applied per R-369). Closed by TASK-M2-65. P16 of physics review 5820482634 (PR #455): a holding fixture pair named, and the slide's arm for a target that can't hold the state. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65."
 - id: REQ-CHART-165
   area: CHART
   statement: "The lowering appendix's Anosova physical-frame row must lower as region D's third-body pair (ξ, η) (TASK-M4-34): Φ constructs (m, r, p) and enters at the canonicalise entry with the signed canonicalisation, C with its step 3, the mirror, not taken (canonicalise_signed, R-544's path), so a pixel at η < 0 decodes to its own system and is never folded onto (ξ, −η), on R-871's unmasked domain with no region-D mask uniform, ending in canonicalise → (m, r, p) → wrapper(occupant) like every row (R-914)."
@@ -5006,6 +4997,527 @@
   - R-914
   milestone: M4
   note: "Split from REQ-CHART-037 by R-914 (9 Nov 2026, RQ-752 (a); physics review 5829515661 of the rulings PR, P1): the Anosova row's lowering goes with region D's GPU reference (REQ-RENDER-123) to TASK-M4-34."
+- id: REQ-CHART-166
+  area: CHART
+  statement: "Locking must not move the view (R-866) in the engine: a lock must edit neither z₀, the basis nor a nonlinear chart's window; the pin must be the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre; tilt and zoom must turn about the pin; on nonlinear charts the pin must be exact, or the task must state why it can't be, an inexact pin's bound REQ-GUI-429's calibration, how the pin is held written into chart_decoder_contract Part 4 (R-72) and approved by the physics reviewer; snap-back must undo the slice only, centre on pin clearing the in-plane part, the two together z₀ ← z_locked bitwise by assignment, snap-back alone exact to the rounding bound derived from its construction and stated by the task, a bound that can't be derived a calibration (R-71) (R-899, Q2 (a))."
+  source:
+  - file: decisions.md
+    section: "R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G4. Lock — the reticle and the pin (`08_lock.png`)
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The lock (projective microscope)
+  - file: decisions.md
+    section: "R-899 — The chart-path brief's nine questions: the lock test reads the recorded state at the pin; snap-back undoes the slice only, auto-snap off; jumps under a lock kept and labelled until the sliding anchor exists; the pin's screen position stored, \"assumed\" at the centre where none can be derived; a pivot record in the view, untilt (a1), amending R-473; points of interest one task in stage 3; their star filled within the lock's tolerance, the off-slice distance shown; marks mid-morph to pixel resolution, the filter off, labelled; the block line built in stage 2 *(amends R-473, and the snap-back of chart_decoder_contract Part 4 and design § 17.8)*"
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine lock_moves_no_view: a lock at an off-centre pixel on the latent chart, a mixed chart and an invariant chart leaves z₀, the basis and the window bit for bit, its z_locked equal to today's point at that pixel bit for bit on the latent chart; the pinned pixel decodes the clicked state after tilts and zooms about it, bit for bit, or within REQ-GUI-429's calibrated bound where the task states why it can't be; snap-back after a slice under an off-centre lock clears the hidden excursion within the construction's stated rounding bound, on a fixture that names its κ(B) and ‖δ‖, the pin's pixel unmoved, and snap-back then centre on pin equals z₀ ← z_locked bit for bit; cargo test -p engine -- path_lock_bitwise path_tilt_bitwise re-run, the lock's baseline re-recorded only where R-866 changes it, each change listed in the PR; plus review: the nonlinear construction and snap-back's construction in chart_decoder_contract Part 4, approved by the physics reviewer; controls: a lock that re-centres fails, a tilt about the centre with an off-centre pin fails"
+  rulings:
+  - R-69
+  - R-71
+  - R-72
+  - R-473
+  - R-866
+  - R-899
+  - R-916
+  milestone: M2
+  note: "Split by R-916 (9 Nov 2026) from REQ-GUI-425, its engine half. Closed by TASK-M2-62. REQ-GUI-425 keeps the badge, the setting and the gui test (TASK-M8-125)."
+- id: REQ-CHART-167
+  area: CHART
+  statement: "Save view as chart on a curved view must, in the engine, save its parent chart, slice centre and tilt (angles, targets, map) as a saved chart that reopened at zero tilt reproduces the view bitwise, sim key and decode bits, and a further tilt into its saved target must compose with the saved one as R·R′ applied to (u, v, 0) (R-513, REQ-CHART-077), through the chart-path object's Save view family (R-864)."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-568 — RQ-378 is parked again, a deferral by ruling with no target: the entry stays open, its option (a) stays applied, nothing waits, and it returns when the human raises it *(amends R-510)*"
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine saved_curved_view: a shape-sphere view tilted into a mass logit saved and reopened at zero tilt: the sim key equal and every pixel's decode bit for bit; a 20° tilt into its saved target decodes as R·R′ applied to (u, v, 0), to 1 ulp; controls: a saved curved chart that drops the slice centre differs, a tilt into the saved target decoded as the offsets added fails"
+  rulings:
+  - R-475
+  - R-477
+  - R-513
+  - R-916
+  milestone: M2
+  note: "Split by R-916 (9 Nov 2026) from REQ-GUI-244, its engine half. Closed by TASK-M2-63. REQ-GUI-244 keeps the GUI's offer, provenance and screenshot (TASK-M8-48)."
+- id: REQ-CHART-168
+  area: CHART
+  statement: "In the engine, every navigation edit (pan, slice, zoom, tilt, lock, a chart-parameter edit) must pass through REQ-CHART-060's stop, one leaf per operation (R-894), before it is recorded: the history's after holds the clamped value, not the requested one, and a drag's edit is clamped every frame, motion beyond the clamp producing no new edit (R-469)."
+  source:
+  - file: decisions.md
+    section: "R-469 — A chart never leaves the manifold: every pixel it draws is a valid three-body system or explicitly \"not a system\", and pan, slice, zoom, tilt and lock are accepted only while the chart's centre passes `validate`, an edit that would cross stopping at the last valid value, by one generic rule in the edit path; undo and the contract record the clamped value, the slider stops and the readout names the check"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine nav_stop_edit_path: on (L_z, E) under linear, a pan past the feasible edge through the leaf: the recorded after equals the clamped z₀ bit for bit, the stop's reason names layer 2 and the constraint; a drag past the clamp emits nothing new and back inside emits the value; controls: the requested value recorded, a stop applied after the edit is recorded, each fail"
+  rulings:
+  - R-458
+  - R-469
+  - R-894
+  - R-916
+  milestone: M2
+  note: "Split by R-916 (9 Nov 2026) from REQ-GUI-243, its engine half. Closed by TASK-M2-64. REQ-GUI-243 keeps the slider and the readout (TASK-M8-48)."
+- id: REQ-CHART-169
+  area: CHART
+  statement: "On the f32 charts R-708 covers (HeldLz, HeldK and the Burrau charts), a pixel the CPU's f32 decode refuses inside the band one float wide at the warp's floor, where f32 rounding and not the chart decides, must be labelled as rounding, never drawn as the chart's edge, and no pixel that isn't a system accepted (R-876, RQ-740). What \"one float wide\" is measured in and the band's width in it must be defined in chart_reference § 2.1 under physics review (R-72); a width that is a number rather than a derivation is a calibration (R-71), its criterion written first, set by measurement (R-649/650), confirmed by the owner at the M2 gate."
+  source:
+  - file: decisions.md
+    section: "R-876 — An f32 chart may refuse a pixel inside the float-wide band at the warp's floor, the refusal labelled as rounding; the edge walk is repeated on the GPU when the shader decodes these charts *(closes RQ-740; refines R-708)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel f32_band_label: a pixel on the floor that the f32 decode refuses is labelled rounding, and its f64 decode is a system; no f32-accepted pixel fails its f64 check; controls: a band refusal drawn as the edge fails, an accepted non-system fails; plus review: the band's quantity and width in chart_reference § 2.1, approved by the physics reviewer, and, if a number, its proposal with evidence confirmed at the M2 gate"
+  rulings:
+  - R-71
+  - R-72
+  - R-649
+  - R-708
+  - R-876
+  - R-916
+  milestone: M2
+  note: "Split by R-916 (9 Nov 2026) from REQ-CHART-152 (the plan's slip 1), its CPU arm and the definition. Closed by TASK-M2-66. REQ-CHART-152 keeps the GPU edge walk (TASK-M4-06)."
+- id: REQ-CHART-170
+  area: CHART
+  statement: "CPU decode and encode must be routed through the composition (R-916): every chart decodes through the registry's resolve, and every inverse (encode, lookup exact and partial, ingest) through the registry's rows, no chart-specific route beside them; each chart round-trips encode then decode within REQ-ENC-024's ε_phys at f64 and f32, the decode sanity within 16·ε_R (REQ-ENC-027) and the shape sphere's round trip within 10⁻¹³ (REQ-CHART-053) holding through the composition, every result bit for bit TASK-M2-61's baseline where no ruled change applies."
+  source:
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  - file: decisions.md
+    section: "R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, \"fully working and tested\", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 3. The primitive registry
+  - file: docs/design/principia_chart_composition.md
+    section: "7. Lowering: three ways a pair runs"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine composed_decode_encode: every chart of kernel::chart::REGISTRY and the gallery decodes through resolve and encodes, looks up (exact and partial) and ingests through the registry's rows, bit for bit the baseline (fixtures/chart_composition/digest.json); the encode-eps-phys gate's interior set extended to every composed chart, T2 within ε_phys at f64 and f32; controls: a chart decoded by its old route beside resolve fails, an inverse dispatched outside the registry fails, a mantissa bit flipped in a digest fails; plus review: a word-bounded git grep finds no deleted route's name"
+  rulings:
+  - R-864
+  - R-916
+  - R-917
+  milestone: M2
+  note: "Added by R-916 (9 Nov 2026), G3 of M2's gate (R-917). Closed by TASK-M2-67."
+- id: REQ-CHART-171
+  area: CHART
+  statement: "The third-body pair (ξ, η) must decode on the CPU through the explicit-configuration path at any masses, with its region-D preset the full disc rendered literally, unmasked (R-871), at exact rest and, at equal masses, at eq. 3's velocities, ending in the signed canonicalisation (canonicalise_signed, R-544's path): a pixel at η < 0 decodes to its own system, never folded onto (ξ, −η); on η ≥ 0, D included, bit-identical to C with the mirror step."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 8.2 The closed form
+  - file: docs/design/principia_chart_composition.md
+    section: "8.4 What the chart is: the domain"
+  - file: docs/design/principia_chart_composition.md
+    section: 8.6 The momentum, and the rescale per pixel
+  - file: docs/contracts/principia_lowering_contract.md
+    section: Appendix — worked enumeration of the current chart set
+  - file: decisions.md
+    section: "R-871 — Region D's chart is the plane, unmasked: the full disc rendered literally, every mirror and body swap declared, so the symmetry filter leaves exactly region D with no mask, on by default for the paper-frame presets only; its check, the filtered area 0.307 at equal masses and rest *(closes RQ-714; on RQ-738, which stays open)*"
+  - file: decisions.md
+    section: "R-914 — The stage 1 / stage 3 dependency cycle, RQ-752: option (a), the edge from TASK-M4-06 (the GPU compute variants) to TASK-M4-34 (region D) dropped; the GPU reference that reads region D moves into TASK-M4-34, which can't close until that reference reads region D as R-871 requires; R-871's substance unchanged, only the task that applies its link; TASK-M4-06 and the 217 tasks queued behind it released *(closes RQ-752)*"
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel region_d_plane: every Table 1 row's pixel decodes to the import's canonical state within REQ-VAL-120's tolerance; eq. 8's edges; eq. 3's momenta at √ℓ; I = 1; the stereographic identity at random masses; the signed half: on both presets, every pixel with η < 0 decodes to Π of the (ξ, −η) pixel's state to the decode's rounding, λ̃_y < 0 kept, and at eq. 3 with L_z opposite; every pixel with η ≥ 0 is bit-identical to the decode ending in canonicalise; and stage 2's region-D slide (REQ-CHART-115's arm, F9); controls: bodies 0 and 1 swapped misses the rows, q not scaled by √ℓ fails, μ_ρ/μ_λ inverted fails, d dropped at unequal masses fails, a decode ending in canonicalise (step 3 taken) fails"
+  rulings:
+  - R-592
+  - R-871
+  - R-916
+  milestone: M2
+  note: "Split by R-916 (9 Nov 2026) from REQ-CHART-100, its CPU arms. Closed by TASK-M2-68. REQ-CHART-100 keeps the baked entry (TASK-M4-34)."
+- id: REQ-CHART-172
+  area: CHART
+  statement: "The maths of points of interest (R-870) must be engine functions: a point stored as the signed state; for a chart, or a frame of a path, whether the chart passes through the point within the lock's tolerance (REQ-CHART-158; R-899 Q7 (c)), the nearest chart point and the off-slice distance in REQ-GUI-427's metric, and the \"similar systems\" match of a pixel on one, two, or three or more properties within REQ-GUI-428's tolerance, from the primitive registry's forward formulas; on a mid-morph frame the point found to pixel resolution (R-899 Q8 (a)); none of it on the sim key."
+  source:
+  - file: decisions.md
+    section: "R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional \"similar systems\" overlays; display only, never scored, distinct from the lock"
+  - file: docs/design/principia_chart_composition.md
+    section: 10.5 Points of interest
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine points_of_interest_maths: a point lying in the chart is found at the pixel that decodes to it, within the lock's tolerance, with its off-slice distance; a point off the chart gets the nearest chart point and its distance; a one-property match passes through the point's pixel; across a morph's frames the match is consistent, mid-morph found to pixel resolution; saving a point changes no sim key, payload or statistic; controls: a point one pixel off fails, another property's value fails to pass through it, a point in the sim key fails"
+  rulings:
+  - R-870
+  - R-899
+  - R-916
+  milestone: M2
+  note: "Split by R-916 (9 Nov 2026) from REQ-GUI-426, its maths. Closed by TASK-M2-80. REQ-GUI-426 keeps the drawing (TASK-M8-126)."
+- id: REQ-CHART-173
+  area: CHART
+  statement: "M2's maths that reads a trajectory must read it through the trajectory interface of chart_composition § 18.7 (R-918): for a signed start state and a horizon, the boundary grid as integer indices per occupant at the quantum the provider declares, the state at a boundary, and the terminal (index and kind) if any, the same bits for the same inputs; with two exact three-body fixtures (R-919, F18), the Lagrange equilateral homographic solution in closed form and the figure-eight, exact by declaration at its period, two-body Kepler only where the interface is generic, the fixtures' constants in a crate below engine and validation."
+  source:
+  - file: decisions.md
+    section: "R-918 — R-917's follow-ups: TASK-M3-14 (the Benettin FTLE shadow) stops and is re-queued after M2's gate; M2's maths that seems to need the integrator is tested against exactly known trajectories through a trajectory interface the real integrator plugs into after M2, flagging only what can't be tested so; CI work outside the order, TASK-M2-38 and TASK-M2-56 finishing, and the gate checklist first are agreed *(no RQ)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 18.7 The trajectory interface (R-918, R-919)
+  verify:
+    method: unit test
+    detail: "cargo test -p engine trajectory_interface: a row reads the provider's state bitwise; the figure-eight's row at kT₈ equals its row at 0 bitwise; the Lagrange states within the bound derived from the closed form's evaluation, else a calibration (R-71), its criterion written first, set by measurement (R-649/650); the terminal at its index and kind on the homothetic collapse; two reads in either order give one bit pattern; validation's figure_eight() reading the lower crate's constants; controls: a row reading one boundary off fails, a terminal not held fails, a read depending on an earlier read fails"
+  rulings:
+  - R-72
+  - R-649
+  - R-918
+  - R-919
+  milestone: M2
+  note: "Added by R-918 (9 Nov 2026). Closed by TASK-M2-82. On the real integrator after M2: REQ-CHART-177 (TASK-M3-67)."
+- id: REQ-CHART-174
+  area: CHART
+  kind: definition
+  statement: "What a tilt and a slice mean on a time-axis chart, for G9's time arm of the owner's lock-with-morphs test (R-902), must be defined in chart_composition § 18.4 (R-72): the tilt on the IC axis only, time never a tilt target, the slice moving the IC axis's hidden coordinates, the anchor at (IC, t) held across them, and time to an IC-only chart a labelled jump (R-849)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 18.4 Interactions
+  - file: decisions.md
+    section: "R-902 — The lock is a property of the path: any locked path, blend segments and chart switches included, keeps the pinned state fixed, sliding per the RQ-721 rider where the target can't hold it; the pivot record is stored as the state; a tilt or slice mid-morph goes to both endpoint charts, each in its own hidden coordinates and tilt map, about the pinned state, the morph continuing from its parameter; the gate test closes stage 2"
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72): § 18.4's tilt and slice on a time-axis chart and G9's time arm written there, approved by the physics reviewer; backed by cargo test -p engine time_anchor and REQ-CHART-161's time-axis pair"
+  rulings:
+  - R-72
+  - R-849
+  - R-902
+  - R-916
+  milestone: M2
+  note: "Added by R-916 (9 Nov 2026), the plan's F19. Closed by TASK-M2-83."
+- id: REQ-CHART-175
+  area: CHART
+  statement: "On a synthetic payload, the symmetry filter's mask must keep one canonical representative of each pair present in the chart, so that on a rest chart the filtered chart and its mirror reproduce the full chart bitwise, outcome fields equal and signed fields flipped (the owner's test, read on a synthetic payload, R-916)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_mask_synthetic: a third-body rest chart declaring the mirror only, one copy, on a synthetic payload whose pairs carry mirrored fields, filtered, plus its mirror, is the full chart bitwise, outcome fields equal, signed fields flipped; mutations: a signed field not flipped fails, the canonical side off by one row fails"
+  rulings:
+  - R-544
+  - R-855
+  - R-916
+  milestone: M2
+  note: "Split by R-916 (9 Nov 2026) from REQ-CHART-136, its maths on a synthetic payload. Closed by TASK-M2-84. REQ-CHART-136, on real runs, stays TASK-M8-120's (F7)."
+- id: REQ-CHART-176
+  area: CHART
+  statement: "On region D's preset at equal masses and exact rest, the symmetry filter's mask over the full disc must leave region D's own area (eq. 8), π/6 − √3/8 ≈ 0.30709 (the owner's 0.307), within the derived bound of the pixels the boundary of D crosses times one pixel's area (R-871, the owner's check)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 10.4 The symmetry filter
+  - file: docs/design/principia_chart_composition.md
+    section: 8.1 The definition
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine symmetry_region_d_area: the filtered area at equal masses and exact rest within the derived pixel bound of π/6 − √3/8; control: the mask with one body swap undeclared fails"
+  rulings:
+  - R-855
+  - R-871
+  - R-916
+  milestone: M2
+  note: "Split by R-916 (9 Nov 2026) from REQ-CHART-138, its area check. Closed by TASK-M2-84."
+- id: REQ-CHART-177
+  area: CHART
+  statement: "After M2, the trajectory interface (REQ-CHART-173) must take the real integrator as a provider, at R-565's fixed sync quantum, and the outcome-class arms M2 can't read must pass on integrated outcomes: each changed case of R-894's consolidation (REQ-CHART-156) and each converted record of R-900's saved-file rewrite (REQ-CHART-159) keeps its outcome class, away from the binary-collision landmarks as R-544's precision rule states."
+  source:
+  - file: decisions.md
+    section: "R-918 — R-917's follow-ups: TASK-M3-14 (the Benettin FTLE shadow) stops and is re-queued after M2's gate; M2's maths that seems to need the integrator is tested against exactly known trajectories through a trajectory interface the real integrator plugs into after M2, flagging only what can't be tested so; CI work outside the order, TASK-M2-38 and TASK-M2-56 finishing, and the gate checklist first are agreed *(no RQ)*"
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  - file: decisions.md
+    section: "R-894 — Right after stage 1 and before stage 2, a consolidation step collapses the chart-path leaves to one per operation: bitwise-equal pairs merged with no bit change, rounding-only differences resolved to one canonical formula with a documented bit change and a conversion test, the GUI routes thin input adapters, the same-frame slips fixed; bit-for-bit reproduction is stage 1's safety net, not a permanent rule; the dispatch classes sit in the GUI's `dispatch.rs`, the path in `chart_space` *(the report's D-43, which stands; refines R-863 and R-864)*"
+  - file: decisions.md
+    section: "R-900 — Stage 2's saved-file rewrite is handled as RQ-750: a versioned format, old files converted on load, a conversion test in place of the bitwise check, and any golden hashes regenerated with a record of why *(refines R-864)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine trajectory_interface_integrator and cargo test -p engine -- path_canonical_conversion_outcome saved_file_stage2_outcome: the interface's tests re-run with the default integrator as provider; every changed or converted case's outcome class equal on integrated runs, the excluded set near the landmarks stated; controls: a provider whose row reads between boundaries fails, a conversion that flips a class fails"
+  rulings:
+  - R-544
+  - R-894
+  - R-900
+  - R-916
+  - R-918
+  milestone: M3
+  note: "Split by R-916 (9 Nov 2026) from the outcome-class arms of REQ-CHART-156 and REQ-CHART-159 (F5), with R-918's wiring. Closed by TASK-M3-67, after M2's gate."
+- id: REQ-CHART-178
+  area: CHART
+  statement: "On the real integrator, a time-axis chart's column must equal a normal render of that IC at playhead t under the same T, bitwise, and raising T or moving the window past a column's front must continue the march bitwise where the exception holds (chart_composition § 18.2, § 18.3)."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "18.1 Verdict: a chart mode, no fifth axis kind"
+  - file: docs/design/principia_chart_composition.md
+    section: 18.2 Against the core
+  - file: docs/design/principia_chart_composition.md
+    section: 18.4 Interactions
+  - file: docs/design/principia_chart_composition.md
+    section: 18.6 Tests
+  - file: docs/design/principia_chart_composition.md
+    section: "18.3 Stored rows and dense output: the conflict, plainly"
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine -- time_column_matches_playhead time_extend_continues: each with its control, the first with unregularised and regularised arms and a column whose later crossing cancels symbols, control: a row reading a prefix of the final word"
+  rulings:
+  - R-66
+  - R-565
+  - R-916
+  milestone: M8
+  note: "Split by R-916 (9 Nov 2026) from REQ-CHART-123, its integrator arms (F6). Closed by TASK-M8-113."
+- id: REQ-CHART-179
+  area: CHART
+  statement: "Under RQ-715's option (i), hold L_z's outcome tags must be bit-identical on the GPU, Metal and lavapipe beside the CPU, on identical (m, r, v) across a fixture grid on both sides of τ, the state the second projection leaves at K̂ = 0 and exactly rigid draws included, no NaN on any arm."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: "5.3 Constraints: hold `E`, and new: hold `L_z`"
+  - file: docs/design/principia_chart_composition.md
+    section: 5.4 What the constraints do to a momentum axis
+  - file: decisions.md
+    section: "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+  verify:
+    method: unit test
+    detail: "cargo nextest run -p engine --test hold_cross_backend hold_outcomes_cross_backend and hold_rigid_tau_tags, in CI's gpu-metal suites and gpu-lavapipe suites jobs: the tags bit-identical across backends; control: a tag from s = 0 and K̂ = 0 differs on the rigid draws"
+  rulings:
+  - R-670
+  - R-916
+  milestone: M8
+  note: "Split by R-916 (9 Nov 2026) from REQ-CHART-102, its GPU arm. Closed by TASK-M8-118."
+- id: REQ-CHART-180
+  area: CHART
+  kind: calibration
+  statement: "The forward(inverse(x)) = x tolerance of § 3's closed-form rows and pairs (closed_inverse_round_trip), at f64 and f32, which chart_composition § 12 gives only as measured worsts, must be calibrated (R-71): proposed with its evidence by the task that needs it, its criterion written first, set by measurement (R-649/650), never chosen to make REQ-CHART-101's test pass, checked by the physics reviewer, confirmed by the owner at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  - file: decisions.md
+    section: "R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, \"fully working and tested\", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance at f64 and f32 with its criterion, written before the run, and the measured worst over a stated sample (`cargo test -p kernel closed_inverse_round_trip`); checked by the physics reviewer; confirmed at the M2 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-649
+  - R-650
+  - R-917
+  - R-919
+  milestone: M2
+  note: "Added by R-916 and R-917 (9 Nov 2026), G5 of M2's gate. Closed by TASK-M2-68, with REQ-CHART-101."
+- id: REQ-CHART-181
+  area: CHART
+  kind: calibration
+  statement: "The forward(inverse(x)) = x tolerance of each warp and pair map (warps_and_pair_maps), at f64 and f32, which chart_composition § 12 gives only as measured worsts, must be calibrated (R-71): proposed with its evidence by the task that needs it, its criterion written first, set by measurement (R-649/650), never chosen to make REQ-CHART-104's test pass, checked by the physics reviewer, confirmed by the owner at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  - file: docs/design/principia_chart_composition.md
+    section: "4. The axis layer: warps"
+  - file: decisions.md
+    section: "R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, \"fully working and tested\", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance at f64 and f32 with its criterion, written before the run, and the measured worst over a stated sample (`cargo test -p kernel warps_and_pair_maps`); checked by the physics reviewer; confirmed at the M2 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-649
+  - R-650
+  - R-917
+  - R-919
+  milestone: M2
+  note: "Added by R-916 and R-917 (9 Nov 2026), G5 of M2's gate. Closed by TASK-M2-71, with REQ-CHART-104."
+- id: REQ-CHART-182
+  area: CHART
+  kind: calibration
+  statement: "The forward(inverse(x)) = x tolerance of each curved slice's target (exp_map_targets), at f64 and f32, which chart_composition § 12 gives only as measured worsts, must be calibrated (R-71): proposed with its evidence by the task that needs it, its criterion written first, set by measurement (R-649/650), never chosen to make REQ-CHART-106's test pass, checked by the physics reviewer, confirmed by the owner at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  - file: docs/design/principia_chart_composition.md
+    section: 5.2 Curved slices off the shape sphere
+  - file: decisions.md
+    section: "R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, \"fully working and tested\", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance at f64 and f32 with its criterion, written before the run, and the measured worst over a stated sample (`cargo test -p kernel exp_map_targets`); checked by the physics reviewer; confirmed at the M2 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-649
+  - R-650
+  - R-917
+  - R-919
+  milestone: M2
+  note: "Added by R-916 and R-917 (9 Nov 2026), G5 of M2's gate. Closed by TASK-M2-72, with REQ-CHART-106."
+- id: REQ-CHART-183
+  area: CHART
+  kind: calibration
+  statement: "The forward(inverse(x)) = x tolerance of a numerical inverse's written samples (numerical_branch_seam), at f64 and f32, which chart_composition § 12 gives only as measured worsts, must be calibrated (R-71): proposed with its evidence by the task that needs it, its criterion written first, set by measurement (R-649/650), never chosen to make REQ-CHART-107's test pass, checked by the physics reviewer, confirmed by the owner at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  - file: docs/design/principia_chart_composition.md
+    section: "7.3 A numerical inverse: branch and seam"
+  - file: decisions.md
+    section: "R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, \"fully working and tested\", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance at f64 and f32 with its criterion, written before the run, and the measured worst over a stated sample (`cargo test -p engine numerical_branch_seam`); checked by the physics reviewer; confirmed at the M2 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-649
+  - R-650
+  - R-917
+  - R-919
+  milestone: M2
+  note: "Added by R-916 and R-917 (9 Nov 2026), G5 of M2's gate. Closed by TASK-M2-73, with REQ-CHART-107."
+- id: REQ-CHART-184
+  area: CHART
+  kind: calibration
+  statement: "The forward(inverse(x)) = x tolerance of § 3.1's closed rows (prim_round_trip), at f64 and f32, which chart_composition § 12 gives only as measured worsts, must be calibrated (R-71): proposed with its evidence by the task that needs it, its criterion written first, set by measurement (R-649/650), never chosen to make REQ-CHART-118's test pass, checked by the physics reviewer, confirmed by the owner at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  - file: docs/design/principia_chart_composition.md
+    section: 3.1 The primitives of 6 Nov
+  - file: decisions.md
+    section: "R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, \"fully working and tested\", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance at f64 and f32 with its criterion, written before the run, and the measured worst over a stated sample (`cargo test -p engine prim_round_trip`); checked by the physics reviewer; confirmed at the M2 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-649
+  - R-650
+  - R-917
+  - R-919
+  milestone: M2
+  note: "Added by R-916 and R-917 (9 Nov 2026), G5 of M2's gate. Closed by TASK-M2-74, with REQ-CHART-118."
+- id: REQ-CHART-185
+  area: CHART
+  kind: calibration
+  statement: "The forward(inverse(x)) = x tolerance of § 3.2's closed rows (prim_round_trip), at f64 and f32, which chart_composition § 12 gives only as measured worsts, must be calibrated (R-71): proposed with its evidence by the task that needs it, its criterion written first, set by measurement (R-649/650), never chosen to make REQ-CHART-120's test pass, checked by the physics reviewer, confirmed by the owner at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  - file: docs/design/principia_chart_composition.md
+    section: 3.2 The primitives of the full order
+  - file: decisions.md
+    section: "R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, \"fully working and tested\", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance at f64 and f32 with its criterion, written before the run, and the measured worst over a stated sample (`cargo test -p engine prim_round_trip`); checked by the physics reviewer; confirmed at the M2 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-649
+  - R-650
+  - R-917
+  - R-919
+  milestone: M2
+  note: "Added by R-916 and R-917 (9 Nov 2026), G5 of M2's gate. Closed by TASK-M2-76, with REQ-CHART-120."
+- id: REQ-CHART-186
+  area: CHART
+  kind: calibration
+  statement: "The forward(inverse(x)) = x tolerance of each paper frame's preset (preset_paper_coords), at f64 and f32, which chart_composition § 12 gives only as measured worsts, must be calibrated (R-71): proposed with its evidence by the task that needs it, its criterion written first, set by measurement (R-649/650), never chosen to make REQ-CHART-122's test pass, checked by the physics reviewer, confirmed by the owner at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  - file: docs/design/principia_chart_composition.md
+    section: 20. Paper frames as presets (order part E)
+  - file: decisions.md
+    section: "R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, \"fully working and tested\", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance at f64 and f32 with its criterion, written before the run, and the measured worst over a stated sample (`cargo test -p engine preset_paper_coords`); checked by the physics reviewer; confirmed at the M2 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-649
+  - R-650
+  - R-917
+  - R-919
+  milestone: M2
+  note: "Added by R-916 and R-917 (9 Nov 2026), G5 of M2's gate. Closed by TASK-M2-77, with REQ-CHART-122."
+- id: REQ-CHART-187
+  area: CHART
+  kind: calibration
+  statement: "The forward(inverse(x)) = x tolerance of the virial row (virial_descriptor), at f64 and f32, which chart_composition § 12 gives only as measured worsts, must be calibrated (R-71): proposed with its evidence by the task that needs it, its criterion written first, set by measurement (R-649/650), never chosen to make REQ-CHART-103's test pass, checked by the physics reviewer, confirmed by the owner at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_chart_composition.md
+    section: 12. Tests that can fail
+  - file: docs/design/principia_chart_composition.md
+    section: 9. Then virial
+  - file: decisions.md
+    section: "R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, \"fully working and tested\", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance at f64 and f32 with its criterion, written before the run, and the measured worst over a stated sample (`cargo test -p engine virial_descriptor`); checked by the physics reviewer; confirmed at the M2 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-649
+  - R-650
+  - R-917
+  - R-919
+  milestone: M2
+  note: "Added by R-916 and R-917 (9 Nov 2026), G5 of M2's gate. Closed by TASK-M2-70, with REQ-CHART-103."
+- id: REQ-CHART-188
+  area: CHART
+  kind: definition
+  statement: "The slider span of the held ν₀, L_z and K, which R-507 U1 divides a hidden offset by, so that a tilt into those coordinates is defined in M2 (R-919, F14), must be defined per RQ-679, awaiting the owner's confirmation: written into render_gui_spec § G2 and chart_reference § 2.1 as the owner rules it (R-72), and used by the engine's tilt into each held coordinate."
+  source:
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  verify:
+    method: review checklist
+    detail: "DEFINITION (R-72), per RQ-679, awaiting the owner's confirmation: the spans as the owner rules them written into § G2 and § 2.1, approved by the physics reviewer; backed by cargo test -p engine held_span_tilt, the predicates RQ-679's answer sets (the physics reviewer's proposal, § 4: at a single 90° tilt the tilted axis's hidden values equal the sibling axis's at the same u; a pan at fixed τ leaves each span bitwise unchanged; a saved tilted chart reopens bitwise with its stored span), each with its control"
+  rulings:
+  - R-72
+  - R-507
+  - R-919
+  milestone: M2
+  rq:
+  - RQ-679
+  note: "Added by R-919 (9 Nov 2026, F14). Closed by TASK-M2-63. The physics reviewer's proposal is on RQ-679, for the owner to confirm on the rulings PR; until then the spans are per RQ-679, awaiting the owner's confirmation."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -23427,7 +23939,7 @@
   note: "R-471 E2, H8. Closed by TASK-M8-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Gui review 5586902228 of PR #255, G7 and G9 (R-471 H10): KE added, the keyboard place. *Was:* \"with an energy-type axis (E, L_z, K) the Chart section must offer each such axis's mapping\". gui review 5587650119 of PR #255, G14 (applied per R-369): a Chart-builder arm added to the verify."
 - id: REQ-GUI-243
   area: GUI
-  statement: "On the real engine, every navigation SetField (pan, slice, zoom, tilt, lock, a chart-parameter edit) must pass through REQ-CHART-060's stop before it is recorded: the history's after holds the clamped value, not the requested one; a drag's edit is clamped every frame, motion beyond the clamp sending nothing new and motion back inside sending the value again; the slider's handle stops at the clamped value; and the compass's readout shows \"stopped at the edge: <check> (validate layer <n>)\" (or \"stopped at the edge: Φ fails\") until the next edit."
+  statement: "On the real engine, the GUI must show REQ-CHART-168's stop: the slider's handle stops at the clamped value; a drag's edit is clamped every frame, motion beyond the clamp sending nothing new and motion back inside sending the value again; and the compass's readout shows \"stopped at the edge: <check> (validate layer <n>)\" (or \"stopped at the edge: Φ fails\") until the next edit."
   source:
   - file: decisions.md
     section: "R-469 — A chart never leaves the manifold: every pixel it draws is a valid three-body system or explicitly \"not a system\", and pan, slice, zoom, tilt and lock are accepted only while the chart's centre passes `validate`, an edit that would cross stopping at the last valid value, by one generic rule in the edit path; undo and the contract record the clamped value, the slider stops and the readout names the check"
@@ -23443,11 +23955,12 @@
   rulings:
   - R-458
   - R-469
+  - R-916
   milestone: M8
-  note: "R-469 P2, A4 to A6. Closed by TASK-M8-48. On the mock no edit stops (R-469 A6)."
+  note: "R-469 P2, A4 to A6. Closed by TASK-M8-48. On the mock no edit stops (R-469 A6). R-916 (9 Nov 2026): split; the engine's edit path, every navigation SetField through REQ-CHART-060's stop before it is recorded, the history holding the clamped value, is REQ-CHART-168 (TASK-M2-64, M2). *Was (statement, its opening):* \"On the real engine, every navigation SetField (pan, slice, zoom, tilt, lock, a chart-parameter edit) must pass through REQ-CHART-060's stop before it is recorded: the history's after holds the clamped value, not the requested one;\"."
 - id: REQ-GUI-244
   area: GUI
-  statement: "On the real engine, Save view as chart on a curved view must save its parent chart, slice centre and tilt (angles, targets, map), shown as provenance, and reopened at zero tilt must reproduce the view bitwise; a further tilt composes with the saved one (REQ-CHART-073)."
+  statement: "On the real engine, Save view as chart on a curved view must be offered and shown in the GUI: its provenance (parent chart, slice centre and tilt) shown, its target dropdowns listing the saved target, the figure reopened at zero tilt pixel-identical; the save and its bitwise reopening are REQ-CHART-167's."
   source:
   - file: decisions.md
     section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
@@ -23466,8 +23979,9 @@
   - R-510
   - R-513
   - R-568
+  - R-916
   milestone: M8
-  note: "R-475 S2, S3, L5, L10; R-477 C8. Closed by TASK-M8-48. RQ-378 (a flattened version) was parked until RQ-341 (R-510); RQ-341 is ruled (R-550, 21 Oct 2026), and the human parked RQ-378 again with no target (R-568): it stays open, its option (a) applied, and returns when he raises it; nothing waits on it. *Was (before R-568):* \"RQ-341 is ruled (R-550, 21 Oct 2026), so RQ-378 is with the human again and stays open (the 21 Oct batch leaves it open), its option (a) applied; nothing waits on it.\" *Was (PR #277 before the merge of main, R-550 not yet on main):* \"RQ-341 is ruled (the 21 Oct batch, PR #274) and the human parked it again with no target (R-568)\". Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-513 (RQ-403 ruled): the target dropdowns offer the saved target too, a new tilt into it composing the rotations as REQ-CHART-077 says. *Was:* \"A new tilt into the saved target is RQ-403 (not offered meanwhile).\" Code review 5591496358 of PR #255, C1: the verify gains the saved-target arm and its control (R-513 Q3). *Was:* \"control: a saved curved chart that drops the slice centre differs\". *Was (before R-550):* \"RQ-378 (a flattened version) is parked until RQ-341 (R-510); nothing waits on it.\""
+  note: "R-475 S2, S3, L5, L10; R-477 C8. Closed by TASK-M8-48. RQ-378 (a flattened version) was parked until RQ-341 (R-510); RQ-341 is ruled (R-550, 21 Oct 2026), and the human parked RQ-378 again with no target (R-568): it stays open, its option (a) applied, and returns when he raises it; nothing waits on it. *Was (before R-568):* \"RQ-341 is ruled (R-550, 21 Oct 2026), so RQ-378 is with the human again and stays open (the 21 Oct batch leaves it open), its option (a) applied; nothing waits on it.\" *Was (PR #277 before the merge of main, R-550 not yet on main):* \"RQ-341 is ruled (the 21 Oct batch, PR #274) and the human parked it again with no target (R-568)\". Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-513 (RQ-403 ruled): the target dropdowns offer the saved target too, a new tilt into it composing the rotations as REQ-CHART-077 says. *Was:* \"A new tilt into the saved target is RQ-403 (not offered meanwhile).\" Code review 5591496358 of PR #255, C1: the verify gains the saved-target arm and its control (R-513 Q3). *Was:* \"control: a saved curved chart that drops the slice centre differs\". *Was (before R-550):* \"RQ-378 (a flattened version) is parked until RQ-341 (R-510); nothing waits on it.\" R-916 (9 Nov 2026): split; the engine's save of a curved view and its bitwise reopening, and a further tilt composing as R·R′, are REQ-CHART-167 (TASK-M2-63, M2). *Was (statement):* \"On the real engine, Save view as chart on a curved view must save its parent chart, slice centre and tilt (angles, targets, map), shown as provenance, and reopened at zero tilt must reproduce the view bitwise; a further tilt composes with the saved one (REQ-CHART-073).\""
 - id: REQ-GUI-245
   area: GUI
   statement: "The hover, pinned and kept traces must be drawn by the line system (principia_lines.md §8): each computeIC state projected through the chart's forward map into its own coordinates, breaking where the path leaves the chart and never joined across a pixel that is not a system, with time ticks, colour, arrows, animation, length and the incomplete-run mark as §8 has them (its markers and icon sets, R-538's, are REQ-GUI-272); the same Trace and renderer must serve the orbit viewer (the Inspector window and the Trajectory panel's views), nothing specific to the slice view."
@@ -26585,7 +27099,7 @@
   - RQ-736
 - id: REQ-GUI-425
   area: GUI
-  statement: "Locking (K, or right-click → lock here) must not move the view (R-866): it must edit neither `z₀`, the basis nor a nonlinear chart's window; the pin must be the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre; tilt and zoom must turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action must bring the pin to the centre as one undoable navigation edit, and a setting, off by default, must apply it at every lock in the same command, one history entry. On nonlinear charts, where locking re-centred the window to compute the pin, the pin must be exact, or the task must state why it can't be, and an inexact pin's bound is REQ-GUI-429's calibration, ruled by the owner before anything inexact merges; how the pin is held there is written into chart_decoder_contract Part 4 (R-72) and approved by the physics reviewer. Snap-back must undo the slice only, clearing the hidden excursion and leaving the pin where it is on screen, \"centre on pin\" clearing the in-plane part, the two together z₀ ← z_locked, bitwise by definition, centre on pin after snap-back assigning z₀ ← z_locked; snap-back alone, a projection on an oblique basis, exact to rounding, its rounding bound derived from its construction (of order ε_R·κ(B)·‖δ‖ for a solve on the basis B = [q₁ q₂ | hidden], or a few ulps if built as z_locked plus the in-plane part recomputed from the pin's stored chart parameters) and stated by the task, its decoded state within ε_phys only where that bound and the decoder's conditioning allow, a bound that can't be derived a calibration (R-71), its construction defined in chart_decoder_contract Part 4 by the task that builds it, approved by the physics reviewer (R-72); the auto-snap setting off by default (R-899, the brief's Q2 (a))."
+  statement: "Locking (K, or right-click → lock here) must not move the view (R-866) in the GUI: the lock badge must offer \"centre on pin\", one undoable navigation edit, and a setting, Centre on pin when locking, off by default and outside SimConfig and RenderState, must apply it at every lock in the same command, one history entry; the GUI's lock routes feed REQ-CHART-166's engine leaf and hold no formula of their own."
   source:
   - file: decisions.md
     section: "R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*"
@@ -26597,7 +27111,7 @@
     section: "R-899 — The chart-path brief's nine questions: the lock test reads the recorded state at the pin; snap-back undoes the slice only, auto-snap off; jumps under a lock kept and labelled until the sliding anchor exists; the pin's screen position stored, \"assumed\" at the centre where none can be derived; a pivot record in the view, untilt (a1), amending R-473; points of interest one task in stage 3; their star filled within the lock's tolerance, the off-slice distance shown; marks mid-morph to pixel resolution, the filter off, labelled; the block line built in stage 2 *(amends R-473, and the snap-back of chart_decoder_contract Part 4 and design § 17.8)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine lock_moves_no_view and cargo test -p gui lock_moves_no_view: a lock at an off-centre pixel on the latent chart, a mixed chart and an invariant chart leaves z₀, the basis and the window bit for bit, its z_locked equal to today's point at that pixel bit for bit on the latent chart; the pinned pixel decodes the clicked state after tilts and zooms about it (bit for bit, or, where the task states why it can't be, within the bound REQ-GUI-429 calibrates, proposed with its evidence and ruled by the owner before merge, never chosen in the PR); centre on pin brings the pin to (½, ½) as one undoable edit; the setting on gives the same state as lock then centre on pin, in one history entry, and off by default; snap-back after a slice under an off-centre lock clears the hidden excursion within the construction's stated rounding bound, on a fixture that names its κ(B) and ‖δ‖, the pin's pixel unmoved, and snap-back then centre on pin equals z₀ ← z_locked bit for bit, by assignment (R-899); plus review: snap-back's construction in chart_decoder_contract Part 4, approved by the physics reviewer; controls: a lock that re-centres fails, a tilt about the centre with an off-centre pin fails; plus review: the nonlinear chart's construction in chart_decoder_contract Part 4, exact or with its reason, approved by the physics reviewer"
+    detail: "cargo test -p gui lock_moves_no_view: a lock at an off-centre pixel through the GUI leaves z₀, the basis and the window bit for bit, the engine's REQ-CHART-166 arms read through the GUI; centre on pin brings the pin to (½, ½) as one undoable edit; the setting on gives the same state as lock then centre on pin, in one history entry, and is off by default; controls: a lock that re-centres fails, a GUI route holding its own formula fails"
   rulings:
   - R-69
   - R-71
@@ -26605,11 +27119,12 @@
   - R-473
   - R-866
   - R-899
+  - R-916
   milestone: M8
-  note: "Added by R-866 (8 Nov 2026). Closed by TASK-M8-125, in R-863's stage 1 after TASK-M8-124. Physics review 5817348709 of PR #449, P5: the inexact branch's bound is a calibration (R-71; REQ-GUI-429). *Was (verify, the clause):* \"(bit for bit, or within the bound and with the reason the task states)\". R-899 (8 Nov 2026, Q2 (a)): snap-back undoes the slice only. P5 of physics review 5820410914 (PR #455): snap-back alone is a projection, exact to rounding; the composite bitwise by assignment. *Was (statement, the clause):* \"the two together z₀ ← z_locked bit for bit;\". P12 of physics review 5820482634 (PR #455): the flat ε_phys on snap-back alone removed; its bound is derived from the construction, or a calibration."
+  note: "Added by R-866 (8 Nov 2026). Closed by TASK-M8-125, in R-863's stage 1 after TASK-M2-61. Physics review 5817348709 of PR #449, P5: the inexact branch's bound is a calibration (R-71; REQ-GUI-429). *Was (verify, the clause):* \"(bit for bit, or within the bound and with the reason the task states)\". R-899 (8 Nov 2026, Q2 (a)): snap-back undoes the slice only. P5 of physics review 5820410914 (PR #455): snap-back alone is a projection, exact to rounding; the composite bitwise by assignment. *Was (statement, the clause):* \"the two together z₀ ← z_locked bit for bit;\". P12 of physics review 5820482634 (PR #455): the flat ε_phys on snap-back alone removed; its bound is derived from the construction, or a calibration. R-916 (9 Nov 2026): split; the engine's lock that doesn't move the view, the nonlinear construction and snap-back are REQ-CHART-166 (TASK-M2-62, M2); this keeps the badge, the setting and the gui test, TASK-M8-125's. *Was (statement):* \"Locking (K, or right-click → lock here) must not move the view (R-866): it must edit neither `z₀`, the basis nor a nonlinear chart's window; … the auto-snap setting off by default (R-899, the brief's Q2 (a)).\", now REQ-CHART-166's but for the badge and the setting."
 - id: REQ-GUI-426
   area: GUI
-  statement: "Points of interest (R-870): any pixel's starting state must be savable as a point, any number of them, each named and stored as the signed state; on every chart and every frame of every path (morph, tilt, slice, zoom, chart change) each point must be shown as a filled star where the chart passes through it within the lock's tolerance (REQ-CHART-158; R-899, Q7 (c)), its off-slice distance, the residual inside the tolerance, shown on the filled star too, otherwise as a hollow star at the nearest chart point labelled with the off-slice distance in a stated metric; optional \"similar systems\" overlays must draw where each property the user picks from the primitive registry equals the point's value (one property a contour line, two their intersection points, three or more near-matches within a stated tolerance), reusing the Tier 1 contour overlays and forward formulas only; display only, never scored, outside the sim key, and distinct from the lock. On a mid-morph frame the marks are found to pixel resolution, the symmetry filter off, both labelled (R-899, Q8 (a))."
+  statement: "Points of interest (R-870) must be drawn: any pixel's starting state savable as a point from the GUI, any number, each named; on every chart and every frame of every path a filled star where REQ-CHART-172's maths finds the chart passing through it, its off-slice distance shown on it, otherwise a hollow star at REQ-CHART-172's nearest chart point labelled with the off-slice distance; optional \"similar systems\" overlays drawn through the Tier 1 contour overlays; display only, outside the sim key; on a mid-morph frame the marks labelled \"to pixel resolution\" and the filter off (R-899, Q8 (a))."
   source:
   - file: decisions.md
     section: "R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional \"similar systems\" overlays; display only, never scored, distinct from the lock"
@@ -26621,8 +27136,9 @@
   rulings:
   - R-870
   - R-899
+  - R-916
   milestone: M8
-  note: "Added by R-870 (8 Nov 2026). Closed by TASK-M8-126. R-899 (8 Nov 2026): Q7 (c), \"exactly\" read as within the lock's tolerance with the off-slice distance shown; Q8 (a). *Was (statement, the clause):* \"shown as a filled star where the chart passes through it exactly,\". P6 of physics review 5820410914 (PR #455): Q7 (c) adds the distance on the filled star."
+  note: "Added by R-870 (8 Nov 2026). Closed by TASK-M8-126. R-899 (8 Nov 2026): Q7 (c), \"exactly\" read as within the lock's tolerance with the off-slice distance shown; Q8 (a). *Was (statement, the clause):* \"shown as a filled star where the chart passes through it exactly,\". P6 of physics review 5820410914 (PR #455): Q7 (c) adds the distance on the filled star. R-916 (9 Nov 2026): split; the maths, the nearest chart point, the off-slice distance, the filled-or-hollow decision and the near-match, is REQ-CHART-172 (TASK-M2-80, M2); this keeps the drawing, TASK-M8-126's. *Was (statement, its opening):* \"Points of interest (R-870): any pixel's starting state must be savable as a point, any number of them, each named and stored as the signed state;\"."
 - id: REQ-GUI-427
   area: GUI
   kind: definition
@@ -26641,12 +27157,13 @@
   - R-72
   - R-870
   - R-899
-  milestone: M8
-  note: "Added by R-870 (8 Nov 2026). Closed by TASK-M8-126. Physics review 5817348709 of PR #449, P4: the gauge added. *Was (statement, the clause):* \"and which state group holds the saved points, off the sim key;\". R-899 (8 Nov 2026, Q7 (c)): \"exactly\" is the owner's, within the lock's tolerance (REQ-CHART-158), so it is no longer a definition owed here. *Was (statement, the clause):* \"when a chart passes through a point \"exactly\", \"."
+  - R-916
+  milestone: M2
+  note: "Added by R-870 (8 Nov 2026). Closed by TASK-M8-126. Physics review 5817348709 of PR #449, P4: the gauge added. *Was (statement, the clause):* \"and which state group holds the saved points, off the sim key;\". R-899 (8 Nov 2026, Q7 (c)): \"exactly\" is the owner's, within the lock's tolerance (REQ-CHART-158), so it is no longer a definition owed here. *Was (statement, the clause):* \"when a chart passes through a point \"exactly\", \". R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-80."
 - id: REQ-GUI-428
   area: GUI
   kind: calibration
-  statement: "The near-match tolerance of R-870's \"similar systems\" overlays, within which a pixel matches a point on three or more properties, in REQ-GUI-427's measure, which the owner's words call \"a stated tolerance\" and the corpus does not give, must be calibrated (R-71): proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the owner at the M8 gate and recorded in decisions.md."
+  statement: "The near-match tolerance of R-870's \"similar systems\" overlays, within which a pixel matches a point on three or more properties, in REQ-GUI-427's measure, which the owner's words call \"a stated tolerance\" and the corpus does not give, must be calibrated (R-71): proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the owner at the M2 gate, its criterion written first, set by measurement (R-649/650) and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional \"similar systems\" overlays; display only, never scored, distinct from the lock"
@@ -26658,12 +27175,13 @@
   rulings:
   - R-71
   - R-870
-  milestone: M8
-  note: Added by R-870 (8 Nov 2026). Closed by TASK-M8-126.
+  - R-916
+  milestone: M2
+  note: "Added by R-870 (8 Nov 2026). Closed by TASK-M8-126. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-80. *Was (statement, the clause):* \"confirmed by the owner at the M8 gate\" (R-916, R-919)."
 - id: REQ-GUI-429
   area: GUI
   kind: calibration
-  statement: "The bound within which an inexact pin on a nonlinear chart holds the clicked state after tilts and zooms about it (R-866), which the corpus does not give, must be calibrated (R-71) unless the pin is exact: proposed with its evidence by the task that needs it, with its stated reason the pin can't be exact, checked by the physics reviewer, and ruled by the owner before that task merges, never chosen in its PR."
+  statement: "The bound within which an inexact pin on a nonlinear chart holds the clicked state after tilts and zooms about it (R-866), which the corpus does not give, must be calibrated (R-71) unless the pin is exact: proposed with its evidence by the task that needs it, with its stated reason the pin can't be exact, checked by the physics reviewer, and ruled by the owner before that task merges, never chosen in its PR, its criterion written first, set by measurement (R-649/650)."
   source:
   - file: decisions.md
     section: "R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*"
@@ -26675,8 +27193,9 @@
   rulings:
   - R-71
   - R-866
-  milestone: M8
-  note: "Added by R-866 (8 Nov 2026), physics review 5817348709 of PR #449, P5. Closed by TASK-M8-125."
+  - R-916
+  milestone: M2
+  note: "Added by R-866 (8 Nov 2026), physics review 5817348709 of PR #449, P5. Closed by TASK-M8-125. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-62."
 - id: REQ-GUI-430
   area: GUI
   statement: "The latent chart's two tilt angles must be stored as set in SimConfig's slice frame beside tilt_map (R-896, RQ-747 (a)), always written: chart construction, undone in the same history entry as the basis, carried in saved views and exports (R-474 R5), the rotation computed from them and wrapped only in total tip at 360° (R-474 R3, K3), the sliders showing the angles set, never a read-back; the canonical text and its qa_TASK-M0-18 pins changing once. The rule for every route that writes the basis other than through the angles (the typed basis, the compass steers and picks, the presets, the Tilt reset, Home), so the stored angles and the basis never disagree, must be defined in gui_state_contract § 2 by the task that needs it and approved by the physics reviewer before merge (R-72)."
@@ -26694,6 +27213,23 @@
   - R-896
   milestone: M6
   note: "Added by R-896 (8 Nov 2026, RQ-747 (a)). Closed by TASK-M6-48."
+- id: REQ-GUI-431
+  area: GUI
+  statement: "The same-frame slips D19 and D23 must be fixed in the GUI's adapters onto TASK-M2-64's leaves (R-894, R-919 F1 (a)): a frame's keyboard tilt and wheel zoom both land (D19); a drag folds on the current state (D23)."
+  source:
+  - file: decisions.md
+    section: "R-894 — Right after stage 1 and before stage 2, a consolidation step collapses the chart-path leaves to one per operation: bitwise-equal pairs merged with no bit change, rounding-only differences resolved to one canonical formula with a documented bit change and a conversion test, the GUI routes thin input adapters, the same-frame slips fixed; bit-for-bit reproduction is stage 1's safety net, not a permanent rule; the dispatch classes sit in the GUI's `dispatch.rs`, the path in `chart_space` *(the report's D-43, which stands; refines R-863 and R-864)*"
+  - file: decisions.md
+    section: "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui --test chart_path_consolidate -- path_frame_batch_running path_drag_running: a frame's keyboard tilt and wheel zoom both land; a drag's fold on the current state; controls: the second edit of a frame dropped fails, a drag folded on the press state fails"
+  rulings:
+  - R-894
+  - R-916
+  - R-919
+  milestone: M8
+  note: "Split by R-916 and R-919 (9 Nov 2026) from REQ-CHART-156, its D19 and D23 arms. Closed by TASK-M8-129."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -39705,8 +40241,9 @@
     detail: "cargo test -p engine f_col: on a fixture of known neighbourhoods f_col reads the fraction of the 12 nearest neighbours sharing the outcome, regular above 2/3; control: 11 neighbours fails"
   rulings:
   - R-847
-  milestone: M8
-  note: Closed by TASK-M8-123. R-669 had not built it.
+  - R-916
+  milestone: M2
+  note: "Closed by TASK-M2-79. R-669 had not built it. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-79."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -41602,13 +42139,15 @@
     section: 11. The axis cap
   verify:
     method: unit test
-    detail: "cargo test -p engine baked_cap: the count of baked pairs in the variant table at or under the ledger constant; control: one entry over fails; a chart switch to a baked pair creates its pipeline once, inside the re-integration"
+    detail: "cargo test -p engine baked_cap: the count of baked pairs in the variant table at or under the ledger constant; control: one entry over fails; a chart switch to a baked pair creates its pipeline once, inside the re-integration; and V1's decode time: a warped axis's decode against the linear arm on the GPU, recorded, past +2% the warp becomes baked (§ 13 V1)"
   rulings:
   - R-369
+  - R-916
   milestone: M4
   rq:
   - RQ-716
   - RQ-722
+  note: "R-916 (9 Nov 2026): § 13's V1, the warp word's decode time on the GPU, moved here from REQ-CHART-104; the virial pair's baked entry is TASK-M4-33's deliverable."
 - id: REQ-PERF-117
   area: PERF
   statement: "A path between two baked closed-form ends must run live under the two-regime policy by one generic blend entry and no baked (A, B) entry, its chart side measured against the design's target on one coarse cover on the human's Mac, the Windows runner's arm a separate labelled measurement that closes nothing; a CPU-only end must run in export and run labelled live."

@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-CHART-148
-- **Depends on:** TASK-M2-40
+- **Depends on:** TASK-M2-40, TASK-M2-65
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -32,3 +32,4 @@ TASK-M2-40 builds the saved chart and its composition up to two hidden offsets a
 - Split from TASK-M2-40 by the orchestrator (code review 5816802860 of PR #447, C1; physics review 5816819537, F3), applied per R-369 (task scoping, open to veto): TASK-M2-40 refuses (a) (`Composed::new` returns `None`) and (b) (`Saved::curved` takes no tilted chart), and gives the composed chart no weight or repeat counting, meanwhile. Nothing ruled is dropped.
 - Widening `Shift` changes the qa files of earlier tasks that build one by its fields; such an `M` on a qa file is an exception the ruling forces, named in the PR (R-290, R-369).
 - The case RQ-746 asks about (a saved Lean each axis tilt with one target and both angles set, tilted again into its target) is TASK-M2-56's, not this task's.
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M2-40".

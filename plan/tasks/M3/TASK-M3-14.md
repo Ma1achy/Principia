@@ -1,8 +1,8 @@
 # TASK-M3-14 — The Benettin FTLE shadow
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038
-- **Depends on:** TASK-M3-05, TASK-M3-06
+- **Closes:** REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-CHART-132
+- **Depends on:** TASK-M3-05, TASK-M3-06, TASK-M2-71
 - **Needs (earlier milestones):** REQ-PAY-021, REQ-PAY-026, REQ-PAY-032
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -36,8 +36,11 @@ Every sample carries its own Benettin shadow (FTLE tier): one shadow renormalise
 - `cargo xtask gate benettin-calibration` — the proposal shows dd test 10 at the proposed ‖δ₀‖ and n_renorm at f32 and f64; the human confirms the values at the M3 gate and they are recorded in decisions.md (REQ-INT-076).
 - §3.8 fixes δ₀'s direction deterministically (same on CPU and GPU); physics reviewer approved (REQ-INT-077).
 - `cargo xtask gate shadow-form` — FTLE error vs the known exponent for both shadow forms on the periodic-orbit set; the switch to displacement is made only if accuracy meaningfully improves, the result recorded (REQ-VAL-038).
+- `cargo test -p engine ftle_chart_independent` — a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one lambda_T bit for bit, read on copy 0; control: delta_0's direction taken from a chart tangent fails (REQ-CHART-132).
 
 ## Notes
 - 'Within tolerance' for dd test 10 is set by the REQ-INT-076 proposal (calibrated).
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-INT-076.
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-077.
+- *9 Nov 2026 (R-916):* REQ-CHART-132 (the FTLE field's chart independence) added, and this task re-queued after M2's gate (R-918); the header follows plan/tasks.yaml. *Was:* "Closes: REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038"; "Depends on: TASK-M3-05, TASK-M3-06".
+- *9 Nov 2026 (R-918):* stopped and re-queued after M2's gate; it gains REQ-CHART-132 (the FTLE field's chart independence, from the retired TASK-M8-100), since that needs the Benettin shadow's initialisation (F4), and TASK-M2-71 in Depends on.

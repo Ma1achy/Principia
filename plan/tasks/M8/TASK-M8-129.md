@@ -1,17 +1,15 @@
-# TASK-M8-129 — Consolidating the chart path: one leaf per operation, the GUI routes as input adapters, D19 and D23 fixed (R-894)
+# TASK-M8-129 — The same-frame slips D19 and D23, fixed in the GUI's adapters onto the chart-path leaves (R-894, R-916)
 
 - **Milestone:** M8
-- **Closes:** REQ-CHART-156
-- **Depends on:** TASK-M4-37, TASK-M8-124, TASK-M8-125
+- **Closes:** REQ-GUI-431
+- **Depends on:** TASK-M2-64
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
 - **Size:** ~600 lines, the tests included
 
 ## Goal
-R-894: right after stage 1 and before stage 2, the chart-path leaves collapse to one per operation: one pan, one zoom,
-one tilt per R-474 map (each in its `X = Y` and `X ≠ Y` forms), one slice, one lock, each cut kind once. Bit-for-bit
-reproduction is stage 1's safety net, not a permanent rule to keep per-route arithmetic (R-864 as R-894 refines it).
+The same-frame slips D19 and D23, fixed in the GUI's adapters onto TASK-M2-64's leaves (R-894, R-919 F1 (a)): a frame's keyboard tilt and wheel zoom both land, and a drag folds on the current state.
 
 ## References
 - `decisions.md` § "R-894 — Right after stage 1 and before stage 2, a consolidation step collapses the chart-path leaves to one per operation: bitwise-equal pairs merged with no bit change, rounding-only differences resolved to one canonical formula with a documented bit change and a conversion test, the GUI routes thin input adapters, the same-frame slips fixed; bit-for-bit reproduction is stage 1's safety net, not a permanent rule; the dispatch classes sit in the GUI's `dispatch.rs`, the path in `chart_space` *(the report's D-43, which stands; refines R-863 and R-864)*"
@@ -22,27 +20,14 @@ reproduction is stage 1's safety net, not a permanent rule to keep per-route ari
 - `docs/design/principia_chart_space_model.md` § "3. The existing operations are paths of named families"
 
 ## Deliverables
-- One leaf per operation in `crates/engine`'s chart-path module; a pair measuring bitwise-equal under D2's criterion merged
-  with no bit change.
-- Routes differing only in rounding resolved to one canonical formula, the bit change deliberate and documented, with a
-  conversion test; a difference that isn't rounding not merged but brought back to the owner.
-- The GUI routes (keys, panel, compass step, compass drag) as thin input adapters feeding the same leaf, holding no
-  formula.
-- The same-frame slips D19 (a frame's keyboard tilt and wheel zoom both land) and D23 (a drag folds on the current state)
-  fixed.
-- The dispatch classes stay in `crates/gui/src/dispatch.rs`, the GUI's app layer, and the path in `chart_space` (R-894,
-  the owner's placement as standing).
+- D19 (a frame's keyboard tilt and wheel zoom both land) and D23 (a drag folds on the current state) fixed in `crates/gui`'s adapters, holding no formula.
 
 ## Acceptance tests
-- `cargo test -p engine --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_pin_kept path_control_`
-  — merged pairs bitwise; each changed case listed old against new with its largest difference in ulps, within the count derived from the two formulas, and, on the cases whose `n̂` lies farther than a stated `δ` from each binary-collision landmark (`ulp/δ ≤ ε_phys`; R-544's mirror-test precision rule), decoding to the same system within REQ-ENC-024's `ε_phys`, its outcome class unchanged, `δ` and the excluded set stated; controls: a reordered operation fails (REQ-CHART-156).
-- `cargo test -p gui --test chart_path_consolidate -- path_merge_bitwise path_canonical_conversion path_adapter_same_leaf path_frame_batch_running path_drag_running path_pin_kept path_control_`
-  — each adapter's output equals its leaf's constructor's bitwise; a frame's keyboard tilt and wheel zoom both land (D19);
-  a drag's fold on the current state (D23); controls: an adapter holding a formula fails (REQ-CHART-156).
-- Review: the merged-away leaf names gone by a word-bounded `git grep`, and each documented bit change approved by the
-  physics reviewer (REQ-CHART-156).
+- `cargo test -p gui --test chart_path_consolidate -- path_frame_batch_running path_drag_running` — a frame's keyboard tilt and wheel zoom both land; a drag's fold on the current state; controls: the second edit of a frame dropped fails, a drag folded on the press state fails (REQ-GUI-431).
 
 ## Notes
-- Added by R-894 (8 Nov 2026): between stages 1 and 2 of R-863's order; TASK-M8-117 (stage 2) depends on it.
+- Added by R-894 (8 Nov 2026): between stages 1 and 2 of R-863's order; TASK-M2-65 (stage 2) depends on it.
 - A difference that isn't rounding is not merged and not patched around: stop and bring it back (R-864 item 4).
 - *Round 2 of PR #455 (physics review 5820482634, code review 5820497276):* P11: R-544's mirror-test precision rule carried in; a rounding difference near a landmark is not brought back as a real one. *Was (acceptance, the clause):* "decoding to the same system within REQ-ENC-024's `ε_phys` on the decoded state, its outcome class unchanged;".
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Closes: REQ-CHART-156"; "Depends on: TASK-M2-58, TASK-M2-61, TASK-M8-125".
+- *9 Nov 2026 (R-916):* split: the consolidation, one leaf per operation, and the GUI routes as thin adapters (REQ-CHART-156) are TASK-M2-64's (R-919, F1 (a)); this task keeps D19 and D23 (REQ-GUI-431). *Was (Goal):* the R-894 consolidation; *was (Deliverables, Acceptance):* the leaves, the canonical formula, the adapters and their tests, now at TASK-M2-64.

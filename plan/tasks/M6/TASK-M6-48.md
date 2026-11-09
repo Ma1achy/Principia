@@ -2,7 +2,7 @@
 
 - **Milestone:** M6
 - **Closes:** REQ-GUI-231, REQ-GUI-232, REQ-GUI-233, REQ-GUI-234, REQ-GUI-235, REQ-GUI-236, REQ-GUI-237, REQ-GUI-238, REQ-GUI-430
-- **Depends on:** TASK-M6-38, TASK-M6-39, TASK-M6-40, TASK-M6-45
+- **Depends on:** TASK-M6-38, TASK-M6-39, TASK-M6-40, TASK-M6-45, TASK-M2-64
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -53,3 +53,4 @@ On the mock: `View::basis` gains Tip as sheet (Rodrigues about `k = (τ₂e_a �
 - **Waits on RQ-747** (`rq: RQ-747` on REQ-GUI-233): where the latent chart's tilt angles are stored, R-474 R3's "Angles are stored as set" against this task's Deliverables, which add no angle field. Not dispatched until it is ruled.
 - *8 Nov 2026, a record correction (applied per R-369):* the Deliverables named `slice_tilt.rs`, which TASK-M6-38 renamed `crates/gui/src/explore/manifold_view/tilt.rs` (R-457, "Slice & tilt" renamed "Tilt"); they now name `tilt.rs`. *Was:* "`slice_tilt.rs` (the selector, the ranges: `TILT_RANGE` ±180° under Sheet)".
 - *8 Nov 2026 (R-896):* RQ-747 is ruled (a): the angles are stored beside `tilt_map`, and the storage is this task's; the wait above is over. The canonical text and its qa_TASK-M0-18 pins change once, here. *Was:* "- **Closes:** REQ-GUI-231, REQ-GUI-232, REQ-GUI-233, REQ-GUI-234, REQ-GUI-235, REQ-GUI-236, REQ-GUI-237, REQ-GUI-238"
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M6-38, TASK-M6-39, TASK-M6-40, TASK-M6-45".

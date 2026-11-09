@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-404, REQ-GUI-092, REQ-GUI-155
-- **Depends on:** TASK-M8-07, TASK-M8-89, TASK-M6-21, TASK-M6-22
+- **Depends on:** TASK-M8-07, TASK-M8-89, TASK-M6-21, TASK-M6-22, TASK-M2-64
 - **Needs (earlier milestones):** REQ-TOOL-046, REQ-TOOL-047, REQ-SCHED-036, REQ-SCHED-016
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -44,3 +44,4 @@ TASK-M8-07 built the lock, compass and time controls on the mock engine (R-627; 
 - The scrubber's "refining · N%" needs a progress fraction in the snapshot; what it is a fraction of is not stated.
 - Closes, for gaps the corpus leaves open: REQ-GUI-155 (R-72 definition) (classification accepted by R-132).
 - R-627, physics review 5664187570 (F1, applied per R-369): REQ-GUI-155, the definition of the scrub's progress percentage, moved here from TASK-M8-07 with its acceptance line and the two notes above, since it is the real engine's re-integration; physics joins the reviewers, and `scrub_progress_real` checks the definition on the real engine. *Was:* "- **Closes:** REQ-GUI-404, REQ-GUI-092"; "- **Reviewers:** code, qa, gui".
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M8-07, TASK-M8-89, TASK-M6-21, TASK-M6-22".

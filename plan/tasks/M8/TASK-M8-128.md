@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-153, REQ-CHART-154
-- **Depends on:** TASK-M4-37, TASK-M8-102, TASK-M8-108, TASK-M8-118, TASK-M8-122, TASK-M8-123
+- **Depends on:** TASK-M2-58, TASK-M8-102, TASK-M8-108, TASK-M8-118, TASK-M2-78, TASK-M2-79, TASK-M2-69, TASK-M2-73
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -43,3 +43,4 @@ charts only; a start found kept in the signed state; conserved axes shown `T`-in
 - The owner wrote "this chart may use a per-pixel horizon"; the control that a single global horizon fails where the
   rescale differs per pixel is applied per R-369 (P8 of physics review 5820410914 of PR #455), `I = 1` being kept at the
   chosen state.
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M2-58, TASK-M8-102, TASK-M8-108, TASK-M8-118, TASK-M2-78, TASK-M2-79".

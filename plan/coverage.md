@@ -8,7 +8,7 @@
 |---|---|
 | DEC | 56 |
 | ENC | 38 |
-| CHART | 164 |
+| CHART | 187 |
 | INT | 112 |
 | EVT | 34 |
 | PAY | 111 |
@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 123 |
 | COL | 162 |
-| GUI | 404 |
+| GUI | 405 |
 | TOOL | 224 |
 | VAL | 353 |
 | PERF | 119 |
 | SYS | 97 |
-| **total** | **2197** |
+| **total** | **2221** |
 
-Of these: 245 calibration, 195 definition, 1757 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 253 calibration, 197 definition, 1771 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -32,18 +32,18 @@ Of these: 245 calibration, 195 definition, 1757 obligation. Retired (kept for th
 |---|---|
 | M0 | 127 |
 | M1 | 108 |
-| M2 | 226 |
-| M3 | 235 |
-| M4 | 132 |
+| M2 | 306 |
+| M3 | 237 |
+| M4 | 118 |
 | M5 | 183 |
 | M6 | 230 |
 | M7 | 263 |
-| M8 | 537 |
+| M8 | 493 |
 | M9 | 156 |
 
 ## Sections
 
-1941 sections in 63 files: 1490 yield at least one requirement; 451 yield none and are listed below with the reason.
+1946 sections in 63 files: 1495 yield at least one requirement; 451 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -237,7 +237,7 @@ Of these: 245 calibration, 195 definition, 1757 obligation. Retired (kept for th
 | R-813 — A margin node's two field inputs sit on a `colour` or `post` occupant declaring two `// @input`s; render_gui_spec § 5's example is reworded and a `source` keeps no input *(closes RQ-675)* | informative only | carried by TASK-M7-12 and REQ-GUI-024's rulings |
 | R-814 — TASK-M7-12 extends `assemble.rs` and `codegen/` with no second walk, its edit-sequence proptest runs under `cargo test -p engine`, and the fallback must differ from `#141418` too *(closes RQ-676)* | informative only | carried by TASK-M7-12, REQ-RENDER-072 and REQ-RENDER-081 |
 | R-815 — An untransformed slot input's default domain is "inherits", resolved per wire at assembly, an unbounded field taking `(0, 1)`; TASK-M7-13's scan is decided by the written relocated-binary and wasm criterion *(closes RQ-677)* | informative only | carried by TASK-M7-13 and REQ-GEN-019 |
-| R-816 — A virial-ratio axis is kind 3: it solves into the momenta, reading the configuration and the masses as fixed upstream; R-471 H3's "not kind 3" is read as about B1's extension only *(closes RQ-682)* | informative only | carried by the decoder contract's kinds table and TASK-M8-119 |
+| R-816 — A virial-ratio axis is kind 3: it solves into the momenta, reading the configuration and the masses as fixed upstream; R-471 H3's "not kind 3" is read as about B1's extension only *(closes RQ-682)* | informative only | carried by the decoder contract's kinds table and TASK-M2-70 |
 | R-818 — A `MixedEnergy` chart's held `L_z` tilts and slices by value on the floor and its held `K` on the warp line, with `K_max` ruled as RQ-710's, built in M8; and a triple ejection waits behind `E_rel > 0` *(on RQ-701, which stays open, deferred to M8; closes RQ-708)* | informative only | carried by REQ-EVT-006, TASK-M3-12 and TASK-M8-48; RQ-701 deferred to M8 |
 | R-820 — A saved preset whose chart is not two latent axes at one scale stores its whole saved triple `(z₀, q₁, q₂)` as its home view; the zoom row's scale is still to be named *(on RQ-711, which stays open)* | informative only | carried by REQ-GUI-108 and TASK-M8-18; RQ-711 stays open for the zoom row's scale |
 | R-821 — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)* | informative only | a deferral; no requirement changes |
@@ -250,21 +250,21 @@ Of these: 245 calibration, 195 definition, 1757 obligation. Retired (kept for th
 | R-830 — RQ-688 closes: `stand-in-soak`'s cause was the cold first run on the slow runner band, the timer untouched, and the entry's own criterion is met *(closes RQ-688)* | informative only | closes a CI entry; no requirement changes |
 | R-831 — RQ-689 closes: the job-queue test's flaky control was fixed test-only by #410 *(closes RQ-689)* | informative only | closes a test-only entry; no requirement changes |
 | R-832 — RQ-703 closes, overtaken: the quick tier merged by #414, and what remains of the CI series follows R-684's order, step (1) next *(closes RQ-703)* | informative only | closes an overtaken entry; plan/OPERATIONS.md follows |
-| R-834 — Four axis kinds stay: a new capability is a registry entry under one of them, "no new chart type" is the rule from now on for anything not already ruled, and `SuvakovPlane` stands as R-669 ruled it *(closes RQ-712)* | informative only | the chart design's door; TASK-M4-37 carries it into the design |
-| R-835 — A side-ratio axis in the builder and R-798's "no `SideRatio` chart" both stand: the axis is a registered closed pair, and PA-1 keeps its remap *(closes RQ-713)* | informative only | the chart design's door; TASK-M4-37 carries it into the design |
+| R-834 — Four axis kinds stay: a new capability is a registry entry under one of them, "no new chart type" is the rule from now on for anything not already ruled, and `SuvakovPlane` stands as R-669 ruled it *(closes RQ-712)* | informative only | the chart design's door; TASK-M2-58 carries it into the design |
+| R-835 — A side-ratio axis in the builder and R-798's "no `SideRatio` chart" both stand: the axis is a registered closed pair, and PA-1 keeps its remap *(closes RQ-713)* | informative only | the chart design's door; TASK-M2-58 carries it into the design |
 | R-836 — Hold `L_z` adds the rigid rotation, the scale taking only the part orthogonal to it when both are held, and outcomes 4 and 5 test `rigid(v, Jr)`, an exact predicate against a dyadic `τ` *(closes RQ-715)* | informative only | the chart design's door; dd_decoder § 2 takes its row; TASK-M8-118 builds it under REQ-CHART-108 to REQ-CHART-110 and REQ-CHART-126 |
-| R-837 — The axis cap is 4 baked entries beyond the gallery, counted as entries, decode-only, created on first use, a pair past the cap running as CPU batch *(on RQ-716, which stays open)* | informative only | the chart design's door; TASK-M4-37 carries it, TASK-M4-33's baked_cap tests it; RQ-716 stays open on the 2 s |
+| R-837 — The axis cap is 4 baked entries beyond the gallery, counted as entries, decode-only, created on first use, a pair past the cap running as CPU batch *(on RQ-716, which stays open)* | informative only | the chart design's door; TASK-M2-58 carries it, TASK-M4-33's baked_cap tests it; RQ-716 stays open on the 2 s |
 | R-838 — The virial-ratio axis's kind is RQ-682's answer: kind 3 *(closes RQ-717)* | informative only | restates R-816 for RQ-717 |
 | R-839 — Core seam 3 holds for live views; a labelled CPU-batch view is the stated exception, writing the IC buffer the decode stage writes, never reached by a gesture *(closes RQ-719)* | informative only | the chart design's door; TASK-M8-102 builds it |
-| R-840 — R-594 item 5 governs charts built for a target; the builder's general options are the owner's own order and built in M8, last *(closes RQ-720)* | informative only | the chart design's door; TASK-M4-37 carries it |
-| R-841 — A chart at rest under hold `L_z` is labelled "not at rest", not refused *(closes RQ-722)* | informative only | the chart design's door; TASK-M4-37 carries it |
+| R-840 — R-594 item 5 governs charts built for a target; the builder's general options are the owner's own order and built in M8, last *(closes RQ-720)* | informative only | the chart design's door; TASK-M2-58 carries it |
+| R-841 — A chart at rest under hold `L_z` is labelled "not at rest", not refused *(closes RQ-722)* | informative only | the chart design's door; TASK-M2-58 carries it |
 | R-842 — Time as an axis is a chart mode, not a fifth kind: `T` on the sim key and the window off it, a cache per column of at most one screen height of rows, re-integrating from `t = 0` past it; it amends the temporal note and the caching contract's `T` row *(closes RQ-727)* | informative only | the chart design's door; the temporal note and the caching contract carry a dated note; TASK-M8-113 to TASK-M8-116 build it |
-| R-843 — Region D at unequal masses: the plane is geometric at every mass, D is labelled, one sector, AN-1 is its own preset, a half-disc of radius 10, and a statistic over D says "one labelling" *(closes RQ-728)* | informative only | the chart design's door; TASK-M4-37 and TASK-M8-110 carry it |
-| R-844 — Hill's threshold at unequal masses is the labelled pair's: pair `(i, j)` is cut off from the third iff `c > max(f_i, f_j)`, blank at `E ≥ 0` and `ε ≠ 0` *(closes RQ-730)* | informative only | the chart design's door; TASK-M8-109 builds it |
+| R-843 — Region D at unequal masses: the plane is geometric at every mass, D is labelled, one sector, AN-1 is its own preset, a half-disc of radius 10, and a statistic over D says "one labelling" *(closes RQ-728)* | informative only | the chart design's door; TASK-M2-58 and TASK-M2-75 carry it |
+| R-844 — Hill's threshold at unequal masses is the labelled pair's: pair `(i, j)` is cut off from the third iff `c > max(f_i, f_j)`, blank at `E ≥ 0` and `ε ≠ 0` *(closes RQ-730)* | informative only | the chart design's door; TASK-M2-74 builds it |
 | R-845 — Region D as a chart: a paper's fixed horizon is read by running to the longest pixel's horizon and cutting each pixel at its own; the default velocities are each target's, offered as presets *(on RQ-714, which stays open)* | informative only | the chart design's door; RQ-714 stays open on its outside; REQ-CHART-142 carries the velocities |
 | R-846 — RQ-718 closes on R-669's reversal: a user-built plane is the user's chart and is never scored *(closes RQ-718)* | informative only | the chart design's door; a user's plane is never scored |
-| R-848 — The Saari split's `h` is a builder axis, its range under physics review; R-793 stands *(closes RQ-724)* | informative only | the chart design's door; TASK-M8-109 builds the axis |
-| R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)* | informative only | the chart design's door; TASK-M8-105 to TASK-M8-117 carry it |
+| R-848 — The Saari split's `h` is a builder axis, its range under physics review; R-793 stands *(closes RQ-724)* | informative only | the chart design's door; TASK-M2-74 builds the axis |
+| R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)* | informative only | the chart design's door; TASK-M2-60 to TASK-M2-65 carry it |
 | R-854 — Symmetry reductions apply only to how a starting state is described at `t = 0`: trajectories evolve and are shown in full physical space, nothing is folded during a run, and the only operation besides the step is the per-step centre-of-mass projection, energy and `L_z` monitored, never corrected | informative only | the owner's symmetry rule: the integrator contract, state map and lines carry it; its proposal is ruled by R-865, on RQ-739, which stays open; TASK-M2-57 waits on RQ-750 |
 | R-855 — The symmetry filter: an optional display option after rendering, never a change to what is computed, blanking a start only where its partner is in the chart's domain, its canonical choice stated, on by default for the paper-frame presets only | informative only | carried by REQ-CHART-135 to REQ-CHART-138, REQ-GUI-424 and TASK-M8-120, which design § 10.4 already wrote |
 | R-868 — The chart-space model's wording follows R-474: Tip as sheet is the default tilt, Lean each axis the other map; the owner has corrected the model, and their copy replaces the repo's *(on RQ-738, which stays open)* | informative only | the owner's corrected chart-space model replaces the repo's; RQ-738 carries what is left |
@@ -275,7 +275,7 @@ Of these: 245 calibration, 195 definition, 1757 obligation. Retired (kept for th
 | R-881 — GPU `sin` and `cos` near π/2 stay deferred to M4 *(defers RQ-629)* | informative only | a deferral; no requirement changes |
 | R-882 — The slider span of `ν₀`, the held `L_z` and the held `K` stays deferred to M8 *(defers RQ-679)* | informative only | a deferral; no requirement changes |
 | R-883 — Whether the kernel takes its own f32 `sin` and `cos` stays deferred to M4 *(defers RQ-687)* | informative only | a deferral; no requirement changes |
-| R-884 — Paper frames: presets where the papers are read, each tested against its paper; each remaining gap stays unbuilt, its target "not scored" with the gap named *(closes RQ-729)* | informative only | paper frames: presets where the papers are read, each tested against its paper, the rest left unbuilt with their targets not scored; carried by the M9 targets' existing requirements and TASK-M4-37 |
+| R-884 — Paper frames: presets where the papers are read, each tested against its paper; each remaining gap stays unbuilt, its target "not scored" with the gap named *(closes RQ-729)* | informative only | paper frames: presets where the papers are read, each tested against its paper, the rest left unbuilt with their targets not scored; carried by the M9 targets' existing requirements and TASK-M2-58 |
 | R-885 — V-11's prograde limit is read from eq. (11) as printed *(closes RQ-737)* | informative only | V-11's prograde limit read from eq. (11) as printed; recorded on REQ-VAL-330's note, nothing changes while V-11 is parked |
 | R-886 — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)* | informative only | a deferral; no requirement changes |
 | R-887 — The rest of TASK-M9-01's gaps stay deferred to M9 *(defers RQ-681)* | informative only | a deferral; no requirement changes |
