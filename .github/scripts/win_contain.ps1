@@ -6,9 +6,10 @@
 #   win_contain.ps1 run <command> <arg>...  With PRIN_CONTAIN=required: runs the command in a Job Object of its own, with
 #                                           JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, an active-process limit and
 #                                           JOB_OBJECT_LIMIT_PROCESS_MEMORY at 8 GiB, read back before the command
-#                                           starts. The command starts suspended and is in the job before it runs a
-#                                           line, in a process group and a hidden console of its own, so a console
-#                                           broadcast from it reaches nothing outside. When it ends, whatever it left
+#                                           starts. The command is created in the job (PROC_THREAD_ATTRIBUTE_JOB_LIST),
+#                                           so there is no moment it is outside it, and stays suspended until that is
+#                                           read back; it gets a hidden console of its own, so a console broadcast from
+#                                           it reaches nothing outside. When it ends, whatever it left
 #                                           ends with it; if this script is killed, the job's last handle closes and the
 #                                           kernel ends the lot. If any of that can't be had, it fails (125): nothing
 #                                           runs uncontained where containment is required. Without PRIN_CONTAIN, it
@@ -24,7 +25,7 @@
 #            the process limit and the 8 GiB cap, at the nesting depth asked for.
 #   42       contain.sh: the outside process is unseen.  No Job Object equivalent: Windows has no PID namespace. Measured
 #            and reported as a gap, never killed (RQ-751).
-#   43       contain.sh: the command's process group is one it can see.  Here: a process group and a console of its own,
+#   43       contain.sh: the command's process group is one it can see.  Here: a console of its own (CREATE_NEW_CONSOLE),
 #            which its parent isn't on; it then broadcasts CTRL+C to its whole console, Windows' `kill -1`.
 #   44       contain.sh: `prlimit --as=8589934592` works inside.  Here: a commit just under the cap is granted and one
 #            over it refused.
@@ -74,10 +75,16 @@ public static class PrinContain {
     const int AccountingClass = 1;
     const int ExtendedLimitClass = 9;
     const uint CreateSuspended = 0x4;
-    const uint CreateNewProcessGroup = 0x200;
-    const uint CreateNoWindow = 0x08000000;
+    // A console of its own, which CREATE_NO_WINDOW doesn't promise ("the console handle for the application is not
+    // set"); its window is hidden by STARTF_USESHOWWINDOW with SW_HIDE.
+    const uint CreateNewConsole = 0x10;
+    const uint ExtendedStartupInfoPresent = 0x80000;
     public const uint CreateBreakawayFromJob = 0x01000000;
+    const int UseShowWindow = 0x1;
     const int UseStdHandles = 0x100;
+    const short HideWindow = 0;
+    // ProcThreadAttributeValue(13, FALSE, TRUE, FALSE): the jobs a process is created in.
+    static readonly IntPtr JobListAttribute = new IntPtr(0x2000D);
 
     [StructLayout(LayoutKind.Sequential)]
     public struct BasicLimit {
@@ -104,6 +111,8 @@ public static class PrinContain {
         public IntPtr Reserved2, StdInput, StdOutput, StdError;
     }
     [StructLayout(LayoutKind.Sequential)]
+    struct StartupInfoEx { public StartupInfo Info; public IntPtr AttributeList; }
+    [StructLayout(LayoutKind.Sequential)]
     struct ProcessInformation { public IntPtr Process, Thread; public int ProcessId, ThreadId; }
     [StructLayout(LayoutKind.Sequential)]
     struct SecurityAttributes { public int Length; public IntPtr Descriptor; public int Inherit; }
@@ -117,7 +126,12 @@ public static class PrinContain {
     [DllImport("kernel32.dll", SetLastError = true, EntryPoint = "QueryInformationJobObject")]
     static extern bool QueryAccounting(IntPtr job, int cls, out Accounting info, int length, IntPtr returned);
     [DllImport("kernel32.dll", SetLastError = true)]
-    static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
+    static extern bool InitializeProcThreadAttributeList(IntPtr list, int count, int flags, ref IntPtr size);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool UpdateProcThreadAttribute(IntPtr list, uint flags, IntPtr attribute, IntPtr value, IntPtr size,
+        IntPtr previous, IntPtr returnSize);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern void DeleteProcThreadAttributeList(IntPtr list);
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern bool TerminateJobObject(IntPtr job, uint code);
     [DllImport("kernel32.dll", SetLastError = true)]
@@ -125,7 +139,7 @@ public static class PrinContain {
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     static extern bool CreateProcessW(string application, StringBuilder commandLine, IntPtr processAttributes,
         IntPtr threadAttributes, bool inheritHandles, uint flags, IntPtr environment, string directory,
-        ref StartupInfo startup, out ProcessInformation info);
+        ref StartupInfoEx startup, out ProcessInformation info);
     [DllImport("kernel32.dll", SetLastError = true)]
     static extern uint ResumeThread(IntPtr thread);
     [DllImport("kernel32.dll", SetLastError = true)]
@@ -236,31 +250,52 @@ public static class PrinContain {
         return h;
     }
 
-    // Starts `commandLine` with `flags`; with `std`, on this process's output and error and NUL's input.
-    static ProcessInformation Start(string commandLine, uint flags, bool std) {
-        StartupInfo si = new StartupInfo();
-        si.cb = Marshal.SizeOf(typeof(StartupInfo));
-        IntPtr nul = IntPtr.Zero;
-        if (std) {
-            nul = Nul();
-            si.Flags = UseStdHandles;
-            si.StdInput = nul;
-            si.StdOutput = Inheritable(GetStdHandle(-11));
-            si.StdError = Inheritable(GetStdHandle(-12));
-        }
+    // Starts `commandLine` with `flags`; with `std`, hidden, on this process's output and error and NUL's input; with
+    // a `job`, created in it, so that it is never outside it.
+    static ProcessInformation Start(string commandLine, uint flags, bool std, IntPtr job) {
+        StartupInfoEx si = new StartupInfoEx();
+        si.Info.cb = Marshal.SizeOf(typeof(StartupInfo));
+        IntPtr nul = IntPtr.Zero, list = IntPtr.Zero, jobs = IntPtr.Zero;
+        bool listMade = false;
         try {
+            if (std) {
+                nul = Nul();
+                si.Info.Flags = UseStdHandles | UseShowWindow;
+                si.Info.ShowWindow = HideWindow;
+                si.Info.StdInput = nul;
+                si.Info.StdOutput = Inheritable(GetStdHandle(-11));
+                si.Info.StdError = Inheritable(GetStdHandle(-12));
+            }
+            if (job != IntPtr.Zero) {
+                IntPtr size = IntPtr.Zero;
+                InitializeProcThreadAttributeList(IntPtr.Zero, 1, 0, ref size);
+                list = Marshal.AllocHGlobal(size);
+                if (!InitializeProcThreadAttributeList(list, 1, 0, ref size)) throw Error("InitializeProcThreadAttributeList");
+                listMade = true;
+                jobs = Marshal.AllocHGlobal(IntPtr.Size);
+                Marshal.WriteIntPtr(jobs, job);
+                if (!UpdateProcThreadAttribute(list, 0, JobListAttribute, jobs, new IntPtr(IntPtr.Size), IntPtr.Zero,
+                    IntPtr.Zero))
+                    throw Error("UpdateProcThreadAttribute PROC_THREAD_ATTRIBUTE_JOB_LIST");
+                si.Info.cb = Marshal.SizeOf(typeof(StartupInfoEx));
+                si.AttributeList = list;
+                flags |= ExtendedStartupInfoPresent;
+            }
             ProcessInformation pi;
             if (!CreateProcessW(null, new StringBuilder(commandLine), IntPtr.Zero, IntPtr.Zero, std, flags, IntPtr.Zero,
                 null, ref si, out pi))
                 throw Error("CreateProcess " + commandLine);
             return pi;
         } finally {
-            // The child has its own copy of NUL's handle by now; this one, on every path, is closed.
+            // The child has its own copy of NUL's handle by now, and its jobs; these, on every path, are freed.
             if (nul != IntPtr.Zero) CloseHandle(nul);
+            if (listMade) DeleteProcThreadAttributeList(list);
+            if (list != IntPtr.Zero) Marshal.FreeHGlobal(list);
+            if (jobs != IntPtr.Zero) Marshal.FreeHGlobal(jobs);
         }
     }
 
-    // Runs `argv` in a new job, suspended until it is in it, and returns its exit code once it and all it left have ended.
+    // Runs `argv` in a new job, created in it and suspended until that is read back, and returns its exit code once it and all it left have ended.
     public static int Run(string[] argv, uint processLimit, ulong memoryCap) {
         StringBuilder line = new StringBuilder();
         foreach (string arg in argv) {
@@ -270,13 +305,16 @@ public static class PrinContain {
         IntPtr job = NewJob(processLimit, memoryCap);
         ProcessInformation pi;
         try {
-            pi = Start(line.ToString(), CreateSuspended | CreateNewProcessGroup | CreateNoWindow, true);
+            pi = Start(line.ToString(), CreateSuspended | CreateNewConsole, true, job);
         } catch {
             CloseHandle(job);
             throw;
         }
-        if (!AssignProcessToJobObject(job, pi.Process)) {
-            Exception e = Error("AssignProcessToJobObject");
+        bool inJob;
+        bool asked = IsProcessInJob(pi.Process, job, out inJob);
+        if (!asked || !inJob) {
+            Exception e = !asked ? (Exception)Error("IsProcessInJob")
+                : new InvalidOperationException("the command was created outside its job");
             TerminateProcess(pi.Process, 125);
             CloseHandle(pi.Thread);
             CloseHandle(pi.Process);
@@ -313,7 +351,7 @@ public static class PrinContain {
     // The probe's: starts `commandLine` on this console with `flags`, returning its pid, or the refusal's error, negated.
     public static int Spawn(string commandLine, uint flags) {
         try {
-            ProcessInformation pi = Start(commandLine, flags, false);
+            ProcessInformation pi = Start(commandLine, flags, false, IntPtr.Zero);
             CloseHandle(pi.Thread);
             CloseHandle(pi.Process);
             return pi.ProcessId;
@@ -464,8 +502,8 @@ switch ($verb) {
                     }
                 }
                 if (-not $held) { "probe: 45: the limit of $limit was never reached"; exit 45 }
-                # Its children give their slots back before 43 and 46, ended by pid: the probe's process group ignores
-                # CTRL+C, and they inherit that, so the broadcast wouldn't end them.
+                # Its children give their slots back before 43 and 46, ended by pid and waited for: 43's broadcast
+                # isn't waited for, and a slot must be free before 46 starts.
                 foreach ($c in $started) { [PrinContain]::Kill($c) | Out-Null }
                 $until = (Get-Date).AddSeconds(30)
                 while (($active = [PrinContain]::ActiveProcesses([IntPtr]::Zero)) -gt $base) {
@@ -488,7 +526,7 @@ switch ($verb) {
             $broke = [PrinContain]::Spawn((Ping-Line $LeakMark), [PrinContain]::CreateBreakawayFromJob)
             if ($broke -gt 0) { [PrinContain]::Kill($broke) | Out-Null; "probe: 46: a start broke away from the job: $broke"; exit 46 }
             if ($broke -ne -$BreakawayRefused) { "probe: 46: the breakaway start refused, not as a breakaway ($(-$broke)), at $active of $limit active"; exit 46 }
-            # A console of its own, as `setsid` gives a session of its own; 0x08000000 is CREATE_NO_WINDOW.
+            # Off the probe's console, as `setsid` leaves its session; 0x08000000 is CREATE_NO_WINDOW.
             $left = [PrinContain]::Spawn((Ping-Line $LeakMark), 0x08000000)
             Start-Sleep -Seconds 1
             if ($left -le 0 -or -not (Get-Process -Id $left -ErrorAction Ignore)) { "probe: 46: the child to leave behind isn't running ($left)"; exit 46 }

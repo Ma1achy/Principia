@@ -158,6 +158,17 @@ fn run_body(script: &str) -> &str {
     &script[start..start + end]
 }
 
+/// The body of the C# `Start`.
+fn start_body(script: &str) -> &str {
+    let start = script
+        .find("static ProcessInformation Start(")
+        .unwrap_or_else(|| panic!("{SCRIPT} has no Start"));
+    let end = script[start..]
+        .find("\n    }\n")
+        .unwrap_or_else(|| panic!("{SCRIPT}'s Start has no end"));
+    &script[start..start + end]
+}
+
 fn check_start_order(script: &str) {
     let body = run_body(script);
     // Whether `a` comes before `b` in Run, both being there.
@@ -166,13 +177,36 @@ fn check_start_order(script: &str) {
         _ => false,
     };
     assert!(
-        body.contains("CreateSuspended | CreateNewProcessGroup | CreateNoWindow"),
-        "{SCRIPT} doesn't start its command suspended, in a group and a console of its own"
+        body.contains("Start(line.ToString(), CreateSuspended | CreateNewConsole, true, job)"),
+        "{SCRIPT} doesn't start its command suspended, in its job, on a console of its own"
+    );
+    // Created in the job: PROC_THREAD_ATTRIBUTE_JOB_LIST, so there is no moment the command is outside it.
+    let start = start_body(script);
+    assert!(
+        script.contains("static readonly IntPtr JobListAttribute = new IntPtr(0x2000D);")
+            && script.contains("const uint ExtendedStartupInfoPresent = 0x80000;")
+            && start.contains("Marshal.WriteIntPtr(jobs, job);")
+            && start.contains("UpdateProcThreadAttribute(list, 0, JobListAttribute, jobs,")
+            && start.contains("si.AttributeList = list;")
+            && start.contains("flags |= ExtendedStartupInfoPresent;"),
+        "{SCRIPT} doesn't create its command in the job"
+    );
+    // A console that exists, which CREATE_NO_WINDOW doesn't promise, with its window hidden.
+    assert!(
+        script.contains("const uint CreateNewConsole = 0x10;")
+            && script.contains("const short HideWindow = 0;")
+            && start.contains("si.Info.Flags = UseStdHandles | UseShowWindow;")
+            && start.contains("si.Info.ShowWindow = HideWindow;"),
+        "{SCRIPT} doesn't give its command a hidden console of its own"
     );
     assert!(
         before("NewJob(", "Start(")
-            && before("Start(", "AssignProcessToJobObject(")
-            && before("AssignProcessToJobObject(", "ResumeThread("),
+            && before("Start(", "IsProcessInJob(pi.Process, job, out inJob)")
+            && before(
+                "IsProcessInJob(pi.Process, job, out inJob)",
+                "ResumeThread("
+            )
+            && body.contains("if (!asked || !inJob) {"),
         "{SCRIPT} lets its command run before it is in the job"
     );
     assert!(
@@ -189,16 +223,16 @@ fn win_contain_starts_its_command_inside_the_job() {
 
 negative_control!(
     win_contain_starts_its_command_inside_the_job,
-    "the command resumed before it is assigned to the job",
+    "the command resumed before its job is read back",
     expected = "lets its command run before it is in the job",
     check_start_order(&{
         let script = read(SCRIPT);
         let body = run_body(&script).to_owned();
-        let assign = "        if (!AssignProcessToJobObject(job, pi.Process)) {";
+        let check = "        bool asked = IsProcessInJob(pi.Process, job, out inJob);";
         let resume = "        if (ResumeThread(pi.Thread) == 0xFFFFFFFF) {";
-        let swapped = edited(&edited(&body, assign, "@@ASSIGN@@"), resume, "@@RESUME@@")
-            .replacen("@@ASSIGN@@", resume, 1)
-            .replacen("@@RESUME@@", assign, 1);
+        let swapped = edited(&edited(&body, check, "@@CHECK@@"), resume, "@@RESUME@@")
+            .replacen("@@CHECK@@", resume, 1)
+            .replacen("@@RESUME@@", check, 1);
         script.replacen(&body, &swapped, 1)
     })
 );
@@ -211,8 +245,64 @@ mod suspended {
         expected = "doesn't start its command suspended",
         check_start_order(&edited(
             &read(SCRIPT),
-            "CreateSuspended | CreateNewProcessGroup | CreateNoWindow",
-            "CreateNewProcessGroup | CreateNoWindow"
+            "CreateSuspended | CreateNewConsole, true, job",
+            "CreateNewConsole, true, job"
+        ))
+    );
+}
+
+mod job_list {
+    use super::*;
+    negative_control!(
+        win_contain_starts_its_command_inside_the_job,
+        "the attribute list built and never passed",
+        expected = "doesn't create its command in the job",
+        check_start_order(&edited(
+            &read(SCRIPT),
+            "flags |= ExtendedStartupInfoPresent;",
+            ""
+        ))
+    );
+}
+
+mod job_list_value {
+    use super::*;
+    negative_control!(
+        win_contain_starts_its_command_inside_the_job,
+        "the wrong attribute, 0x2000C, set",
+        expected = "doesn't create its command in the job",
+        check_start_order(&edited(
+            &read(SCRIPT),
+            "new IntPtr(0x2000D)",
+            "new IntPtr(0x2000C)"
+        ))
+    );
+}
+
+mod no_window {
+    use super::*;
+    negative_control!(
+        win_contain_starts_its_command_inside_the_job,
+        "CREATE_NO_WINDOW in place of a console of its own",
+        expected = "doesn't give its command a hidden console of its own",
+        check_start_order(&edited(
+            &read(SCRIPT),
+            "const uint CreateNewConsole = 0x10;",
+            "const uint CreateNewConsole = 0x08000000;"
+        ))
+    );
+}
+
+mod shown {
+    use super::*;
+    negative_control!(
+        win_contain_starts_its_command_inside_the_job,
+        "the console's window not hidden",
+        expected = "doesn't give its command a hidden console of its own",
+        check_start_order(&edited(
+            &read(SCRIPT),
+            "si.Info.Flags = UseStdHandles | UseShowWindow;",
+            "si.Info.Flags = UseStdHandles;"
         ))
     );
 }
@@ -459,13 +549,11 @@ mod no_free_slot {
 /// Run's failure paths after the start close the process and thread handles; NUL's handle is checked and closed.
 fn check_handles(script: &str) {
     let body = run_body(script);
-    for what in ["AssignProcessToJobObject", "ResumeThread"] {
-        let path = between(
-            body,
-            &format!("Exception e = Error(\"{what}\");"),
-            "throw e;",
-        )
-        .unwrap_or("");
+    for (from, what) in [
+        ("if (!asked || !inJob) {", "IsProcessInJob"),
+        ("Exception e = Error(\"ResumeThread\");", "ResumeThread"),
+    ] {
+        let path = between(body, from, "throw e;").unwrap_or("");
         assert!(
             path.contains("CloseHandle(pi.Thread);") && path.contains("CloseHandle(pi.Process);"),
             "{SCRIPT}'s Run leaves the handles open when {what} fails"
