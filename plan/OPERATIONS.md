@@ -1025,7 +1025,29 @@ The owner's ruling of 8 Nov 2026 on what R-711's runner, `malachys-pc-rtx2080s`,
     kill by pid; the check reports them as gaps (RQ-751). Until the proof has passed and RQ-751 is ruled, mutants of
     `xtask/src/jobq.rs` and every job that would be placed on Windows stay on GitHub-hosted runners;
   - the heavy-work comparison: the GPU suites and one GPU-heavy mutant shard on a task branch, against hosted runners
-    (TASK-M0-56).
+    (TASK-M0-56);
+  - the WSL2 distro `principia-wsl` (RQ-751 option (c); the owner's words of 9 Nov 2026: "(b) now, (c) built in
+    parallel to replace it", later and optional, never blocking). `win-gpu.yml`'s `wsl-register`, `wsl-proofs` and
+    `wsl-cpu`, each by `workflow_dispatch` naming it alone, never on a push, the schedule or `all`, never required. The
+    image is built from `scripts/wsl/build-image.sh` on a hosted runner, in the same run (another run's artifact
+    downloads only with a token, which no job on the PC holds), and registered as gh-runner under
+    `E:\wsl\principia-wsl\`, never C:, only if its manifest matches the hash pinned in `scripts/wsl/manifest.sha256`.
+    Inside: one ordinary user, `ci`, no sudo, no sudoers entry, no systemd, and `/etc/wsl.conf` exactly as the owner
+    gave it, automount and interop off (the owner's ruling of 9 Nov 2026 on RQ-751's follow-up: "Don't add [boot]
+    systemd=true or any sudoers entry, not even a narrow one"). `scripts/contain.sh` runs there in its unprivileged mode,
+    `PRIN_CONTAIN=unprivileged`, user and PID namespaces with no sudo, selected by name only; every other machine keeps
+    the strict mode, `PRIN_CONTAIN=required`, unchanged; where user namespaces can't be had the mode fails, never skips.
+    `wsl-proofs` runs the six proofs, each reported: (1) non-interactive as gh-runner, never the owner, again after a
+    reboot and with nobody signed in; (2) no drive and no Windows program reachable from inside; (3) nothing gets in,
+    nothing gets out to the LAN; (4) "contain.sh check passes inside WSL in the unprivileged mode, including the real
+    kill -9 -1, and the runner agent and other gh-runner processes survive it" (the owner's words), the Windows side's
+    survival recorded from outside the distro, before and after; (5) a rebuild's manifest equals the pin; (6) one pinned
+    commit's `cargo nextest run -p kernel --profile ci`, in WSL and on a hosted runner, the same test by test.
+    `wsl-cpu`, the CPU tests and the job queue's mutants inside, refuses until `.github/wsl-cpu-enabled` exists, which a
+    reviewed PR adds once all six proofs have passed; until then mutants of `xtask/src/jobq.rs` stay on GitHub-hosted
+    runners. **WSL contains accidents, not attacks:** it keeps a mutant's `kill(-1)`, its runaway memory and its stray
+    processes inside the distro's VM, and it is not a security boundary, since any native gh-runner process can run
+    `wsl -u root`, and root inside can mount C:. What stops malicious code reaching the PC is the signed-commit gate.
   TASK-M0-55 builds the measurements on `main`. The list is not exhaustive (R-860): `win-gpu.yml`'s nightly
   `win-tests` and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, the
   benchmarks' the separate Windows series.
