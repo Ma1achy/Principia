@@ -1695,80 +1695,80 @@ integrated outcomes (TASK-M3-67); the time-axis column against the playhead and 
 
 **Before R-916, for the record.**
 
-**Nothing here starts until ruled.** TASK-M2-58, the owner's rulings applied, sits in the Depends on of all 26 tasks below, and each names the rulings item it waits on, or the design as a whole; R-847's TASK-M2-78 and TASK-M2-79 wait on it too. Only those 28 tasks wait behind it; no other existing task, in M4 or M9, does.
+**Nothing here starts until ruled.** TASK-M4-37, the owner's rulings applied, sits in the Depends on of all 26 tasks below, and each names the rulings item it waits on, or the design as a whole; R-847's TASK-M8-122 and TASK-M8-123 wait on it too. Only those 28 tasks wait behind it; no other existing task, in M4 or M9, does.
 
-Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold `L_z` or the virial pair, so those two sit in M8. **One edge is named, not made:** TASK-M4-06's golden needs RQ-714's domain, so TASK-M4-06 gains TASK-M4-34 in Depends on when RQ-714 rules, TASK-M2-58's Deliverables say so, and from then until TASK-M4-34 merges it holds 230 tasks: TASK-M4-06 and the 217 other existing open tasks behind it, and 12 of the tasks below. *Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* the edge is never made, since it closed a cycle through stage 2; region D's GPU reference is TASK-M4-34's, and TASK-M4-34 depends on TASK-M4-06 instead. The seven M9 edges an earlier draft made are dropped: TASK-M9-18, -20, -21 and -22 have no GPU run (R-671), and -26, -28 and -31 reach TASK-M4-06 through TASK-M4-17.
+Tasks, milestones chosen by what depends on them. Nothing in M4 depends on hold `L_z` or the virial pair, so those two sit in M8. **One edge is named, not made:** TASK-M4-06's golden needs RQ-714's domain, so TASK-M4-06 gains TASK-M4-34 in Depends on when RQ-714 rules, TASK-M4-37's Deliverables say so, and from then until TASK-M4-34 merges it holds 230 tasks: TASK-M4-06 and the 217 other existing open tasks behind it, and 12 of the tasks below. *Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* the edge is never made, since it closed a cycle through stage 2; region D's GPU reference is TASK-M4-34's, and TASK-M4-34 depends on TASK-M4-06 instead. The seven M9 edges an earlier draft made are dropped: TASK-M9-18, -20, -21 and -22 have no GPU run (R-671), and -26, -28 and -31 reach TASK-M4-06 through TASK-M4-17.
 
 | Task | Milestone | What | Waits |
 |---|---|---|---|
-| TASK-M2-59 | M4 | the docs: contract, reference, lowering, §G7, §4.1; § 5.3's three definitions | RQ-712 to RQ-716, RQ-719 |
-| TASK-M4-33 | M4 | registry, classes, round-trip completeness, refusals, labels, bitwise digest, cap test | TASK-M2-59, RQ-716, RQ-722 |
+| TASK-M4-32 | M4 | the docs: contract, reference, lowering, §G7, §4.1; § 5.3's three definitions | RQ-712 to RQ-716, RQ-719 |
+| TASK-M4-33 | M4 | registry, classes, round-trip completeness, refusals, labels, bitwise digest, cap test | TASK-M4-32, RQ-716, RQ-722 |
 | TASK-M4-34 | M4 | the third-body pair, region D's preset, angles and side ratios | TASK-M4-33, RQ-713, RQ-714, RQ-736 for the preset's domain |
 | TASK-M8-118 | M8 | hold `L_z` | TASK-M4-33, RQ-715, RQ-722 |
-| TASK-M2-70 | M8 | the virial pair's descriptor and entry | TASK-M4-33, RQ-717; RQ-700 at `L_z ≠ 0` |
-| TASK-M2-71 | M8 | warps, polar and log pair maps; a statistic's measure; FTLE's independence of the chart | TASK-M4-33, TASK-M3-14, RQ-720 |
-| TASK-M2-72 | M8 | curved slices: momentum and mass | TASK-M2-71, RQ-720 |
-| TASK-M8-102 | M8 | CPU batch, numerical inverses; seam flags and masking | TASK-M4-33, TASK-M4-06, TASK-M4-34, TASK-M6-03, TASK-M2-71, RQ-719 |
+| TASK-M8-119 | M8 | the virial pair's descriptor and entry | TASK-M4-33, RQ-717; RQ-700 at `L_z ≠ 0` |
+| TASK-M8-100 | M8 | warps, polar and log pair maps; a statistic's measure; FTLE's independence of the chart | TASK-M4-33, TASK-M3-14, RQ-720 |
+| TASK-M8-101 | M8 | curved slices: momentum and mass | TASK-M8-100, RQ-720 |
+| TASK-M8-102 | M8 | CPU batch, numerical inverses; seam flags and masking | TASK-M4-33, TASK-M4-06, TASK-M4-34, TASK-M6-03, TASK-M8-100, RQ-719 |
 | TASK-M7-72 | M7 | contours of any primitive | TASK-M7-43, TASK-M4-33; the design as a whole |
-| TASK-M8-103 | M8 | the builder's panels | TASK-M8-18, TASK-M4-34, TASK-M8-118, TASK-M2-71, TASK-M8-102; the design as a whole |
+| TASK-M8-103 | M8 | the builder's panels | TASK-M8-18, TASK-M4-34, TASK-M8-118, TASK-M8-100, TASK-M8-102; the design as a whole |
 | TASK-M8-104 | M8 | 1D charts | TASK-M8-18, TASK-M4-33; the design as a whole |
-| TASK-M2-60 | M8 | chart paths in the contracts | RQ-721, TASK-M2-59 |
-| TASK-M2-81 | M8 | the path type, the line, export through CPU batch | TASK-M2-60, TASK-M8-102, TASK-M8-31, RQ-721 |
-| TASK-M8-107 | M8 | live: the blend entry, the coarse cover | TASK-M2-81, RQ-721 |
-| TASK-M8-108 | M8 | the Sequence's morph segment | TASK-M2-81, TASK-M8-77, TASK-M8-78, RQ-721 |
-| TASK-M2-65 | M8 | paths under a lock: the stored anchor | TASK-M2-81, TASK-M2-23, RQ-721 |
-| TASK-M2-74 | M8 | the primitives of 6 Nov, axes and overlays | TASK-M4-33, TASK-M2-71, TASK-M7-72, RQ-723 to RQ-725, RQ-730 |
-| TASK-M2-75 | M8 | region D's exact map, every target's native coordinates | TASK-M4-34, RQ-728 |
-| TASK-M2-76 | M8 | the primitives of the full order | TASK-M2-74, RQ-723, RQ-725, RQ-726, RQ-730 |
-| TASK-M2-77 | M8 | paper frames as presets | TASK-M2-75, RQ-729, RQ-650 |
+| TASK-M8-105 | M8 | chart paths in the contracts | RQ-721, TASK-M4-32 |
+| TASK-M8-106 | M8 | the path type, the line, export through CPU batch | TASK-M8-105, TASK-M8-102, TASK-M8-31, RQ-721 |
+| TASK-M8-107 | M8 | live: the blend entry, the coarse cover | TASK-M8-106, RQ-721 |
+| TASK-M8-108 | M8 | the Sequence's morph segment | TASK-M8-106, TASK-M8-77, TASK-M8-78, RQ-721 |
+| TASK-M8-117 | M8 | paths under a lock: the stored anchor | TASK-M8-106, TASK-M2-23, RQ-721 |
+| TASK-M8-109 | M8 | the primitives of 6 Nov, axes and overlays | TASK-M4-33, TASK-M8-100, TASK-M7-72, RQ-723 to RQ-725, RQ-730 |
+| TASK-M8-110 | M8 | region D's exact map, every target's native coordinates | TASK-M4-34, RQ-728 |
+| TASK-M8-111 | M8 | the primitives of the full order | TASK-M8-109, RQ-723, RQ-725, RQ-726, RQ-730 |
+| TASK-M8-112 | M8 | paper frames as presets | TASK-M8-110, RQ-729, RQ-650 |
 | TASK-M8-113 | M8 | time-axis chart mode | TASK-M4-33, RQ-727 |
 | TASK-M8-114 | M8 | time-axis storage and column cost | TASK-M8-113, RQ-727 |
 | TASK-M8-115 | M8 | time-axis mode in the GUI | TASK-M8-113, RQ-727 |
 | TASK-M8-116 | M8 | time-axis mode in Sequence and sidecars | TASK-M8-115, TASK-M8-77, RQ-727 |
-| TASK-M8-120 | M8 | the symmetry filter | TASK-M2-77, TASK-M8-103, TASK-M8-32, RQ-736 |
-| TASK-M2-61 | M8 | the path object; pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864) | TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, RQ-721; the owner's answer to R-864's type sketch |
+| TASK-M8-120 | M8 | the symmetry filter | TASK-M8-112, TASK-M8-103, TASK-M8-32, RQ-736 |
+| TASK-M8-124 | M8 | the path object; pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864) | TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, RQ-721; the owner's answer to R-864's type sketch |
 
-**The build order (R-863, the owner's order of 8 Nov 2026).** Once TASK-M2-58 releases them, the tasks are built in five
+**The build order (R-863, the owner's order of 8 Nov 2026).** Once TASK-M4-37 releases them, the tasks are built in five
 stages, each merging only with the previous stage's tests green. Applied per R-369 (R-863), each stage's tasks depend on
-the previous stage's, placed so: (1) TASK-M2-61; (2) TASK-M2-65, the based morph with the stored anchor and then the
+the previous stage's, placed so: (1) TASK-M8-124; (2) TASK-M8-117, the based morph with the stored anchor and then the
 sliding anchor, which R-849 gives it in place of § 17.8's `anchor not in B` (RQ-744 (D), filed before R-849 merged, is
 moot); stage 2's test that the centre's IC is constant applies where the anchor stays in B, and on a sliding path, where
 the centre follows the anchor (R-849), it checks R-849's slide instead: the stored words at `s = 0`, B's nearest point
-at `s = 1`, continuous between, with no label and no jump; (3) TASK-M4-33, TASK-M4-34, TASK-M2-71, TASK-M2-72,
-TASK-M2-74, TASK-M2-75, TASK-M2-76 and TASK-M2-70; (4) TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and
-TASK-M8-120. TASK-M2-61 is the 26th of this section's tasks behind TASK-M2-58, and with R-847's TASK-M2-78 and
-TASK-M2-79 (R-863 names neither) 28 tasks wait on it. What the order leaves open, the tasks that fit no stage or
+at `s = 1`, continuous between, with no label and no jump; (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101,
+TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119; (4) TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and
+TASK-M8-120. TASK-M8-124 is the 26th of this section's tasks behind TASK-M4-37, and with R-847's TASK-M8-122 and
+TASK-M8-123 (R-863 names neither) 28 tasks wait on it. What the order leaves open, the tasks that fit no stage or
 straddle two and the stage-3 edges that would point forward across milestones or close a cycle, is RQ-744's.
 
-*8 Nov 2026 (R-866, R-870):* two tasks join, each behind TASK-M2-58, so 30 tasks now wait on it:
+*8 Nov 2026 (R-866, R-870):* two tasks join, each behind TASK-M4-37, so 30 tasks now wait on it:
 
 | Task | Milestone | What | Waits |
 |---|---|---|---|
-| TASK-M8-125 | M8 | locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, "centre on pin" and the auto-snap setting, exact on nonlinear charts or saying why (R-866) | TASK-M2-61 |
-| TASK-M8-126 | M8 | points of interest, their marks and "similar systems" overlays (R-870, § 10.5) | TASK-M7-43, TASK-M7-72, TASK-M4-33, TASK-M2-61, TASK-M8-108, TASK-M2-57 |
+| TASK-M8-125 | M8 | locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, "centre on pin" and the auto-snap setting, exact on nonlinear charts or saying why (R-866) | TASK-M8-124 |
+| TASK-M8-126 | M8 | points of interest, their marks and "similar systems" overlays (R-870, § 10.5) | TASK-M7-43, TASK-M7-72, TASK-M4-33, TASK-M8-124, TASK-M8-108, TASK-M2-57 |
 
-TASK-M8-125 is in stage 1, after TASK-M2-61's bitwise re-expression, which records today's lock as its baseline, and
-TASK-M2-65 (stage 2) depends on it (applied per R-369, R-866). TASK-M8-126 is in no stage: the owner's stages don't name
+TASK-M8-125 is in stage 1, after TASK-M8-124's bitwise re-expression, which records today's lock as its baseline, and
+TASK-M8-117 (stage 2) depends on it (applied per R-369, R-866). TASK-M8-126 is in no stage: the owner's stages don't name
 it, and it joins RQ-744 (C)'s list.
 
 *8 Nov 2026, the owner's reply to that day's report (R-873, R-894, R-875, R-879).* RQ-744 is ruled, and this section's
-order now reads: **before stage 1**, TASK-M2-60 (docs first), and, by (E) (i), TASK-M6-49, TASK-M6-51 and TASK-M8-48,
-on which TASK-M2-61 depends; **(1)** TASK-M2-61, then TASK-M8-125; **between (1) and (2)**, TASK-M8-129, the
-consolidation step (R-894); **(2)** TASK-M2-65, which no longer depends on TASK-M2-81 and builds the line on blocks as
-the locked path's carrier (Q9 (a), R-899); **(3)** as above, with TASK-M8-102, TASK-M8-103, TASK-M8-104, TASK-M2-77,
-TASK-M8-118, TASK-M2-78, TASK-M2-79, TASK-M8-126 (one task, its across-a-morph test on stage 2's line) and TASK-M7-72
-added, TASK-M2-59 before them; the M4 and M7 tasks of stage 3 are released by dispatch, the milestones kept (A) (b);
-**(4)** TASK-M2-81, now its re-timing, alignment and export only, its stage-1 tests (REQ-CHART-113) moved to
-TASK-M2-61, then TASK-M8-107 and TASK-M8-108; **(5)** as above. Three tasks join, each behind TASK-M2-58 but the first:
+order now reads: **before stage 1**, TASK-M8-105 (docs first), and, by (E) (i), TASK-M6-49, TASK-M6-51 and TASK-M8-48,
+on which TASK-M8-124 depends; **(1)** TASK-M8-124, then TASK-M8-125; **between (1) and (2)**, TASK-M8-129, the
+consolidation step (R-894); **(2)** TASK-M8-117, which no longer depends on TASK-M8-106 and builds the line on blocks as
+the locked path's carrier (Q9 (a), R-899); **(3)** as above, with TASK-M8-102, TASK-M8-103, TASK-M8-104, TASK-M8-112,
+TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-126 (one task, its across-a-morph test on stage 2's line) and TASK-M7-72
+added, TASK-M4-32 before them; the M4 and M7 tasks of stage 3 are released by dispatch, the milestones kept (A) (b);
+**(4)** TASK-M8-106, now its re-timing, alignment and export only, its stage-1 tests (REQ-CHART-113) moved to
+TASK-M8-124, then TASK-M8-107 and TASK-M8-108; **(5)** as above. Three tasks join, each behind TASK-M4-37 but the first:
 
 | Task | Milestone | What | Waits |
 |---|---|---|---|
-| TASK-M2-85 | M8 | the acute-angle Burrau charts over the full acute range through the filter (R-875) | TASK-M8-120 |
+| TASK-M8-127 | M8 | the acute-angle Burrau charts over the full acute range through the filter (R-875) | TASK-M8-120 |
 | TASK-M8-128 | M8 | final-condition charts (R-879, § 10.3) | TASK-M8-102, the M8 charts |
-| TASK-M8-129 | M8 | the consolidation step: one leaf per operation, the GUI routes as adapters, D19 and D23 fixed (R-894) | TASK-M2-61, TASK-M8-125 |
+| TASK-M8-129 | M8 | the consolidation step: one leaf per operation, the GUI routes as adapters, D19 and D23 fixed (R-894) | TASK-M8-124, TASK-M8-125 |
 
-TASK-M2-85 is not given TASK-M2-58 directly: it rebuilds three gallery charts and waits on TASK-M8-120 alone of the
-design's tasks, so it is behind the gate through TASK-M8-120. *Was:* "TASK-M2-85 is outside the design's gate: it
+TASK-M8-127 is not given TASK-M4-37 directly: it rebuilds three gallery charts and waits on TASK-M8-120 alone of the
+design's tasks, so it is behind the gate through TASK-M8-120. *Was:* "TASK-M8-127 is outside the design's gate: it
 rebuilds three gallery charts, and waits on TASK-M8-120 alone of the design's tasks."
 
 ---
