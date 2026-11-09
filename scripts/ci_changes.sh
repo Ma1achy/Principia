@@ -93,6 +93,8 @@ reads_code() {
     # The containment: the `shell:` of the mutants steps (`mutants.yml`, `nightly.yml`), and nextest's wrapper of the
     # job queue's tests (.config/nextest.toml), so every run of them goes through it.
     scripts/contain.sh) return 0 ;;
+    # The WSL2 distro's image, inside and parity scripts and its wsl.conf, which `xtask/tests/wsl.rs` reads and runs.
+    scripts/wsl/*) return 0 ;;
   esac
   return 1
 }

@@ -675,6 +675,10 @@ const CODE_READ: &[(&str, &[&str])] = &[
     ("scripts/ci_req_fields.py", &["scripts/ci_req_fields.py"]),
     ("scripts/ci_changes.sh", &["scripts/ci_changes.sh"]),
     ("scripts/contain.sh", &["scripts/contain.sh"]),
+    (
+        "scripts/wsl/*",
+        &["scripts/wsl/wsl.conf", "scripts/wsl/build-image.sh"],
+    ),
 ];
 
 fn check_code_read(script: &str) {
