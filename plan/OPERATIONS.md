@@ -375,8 +375,9 @@ its branch at once. So if a stack is ever needed, per PR n: `gh pr edit n+1 --ba
 
 **Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it.
 The owner's CI model (R-908 and R-909; his order of 8 Nov 2026: "PR required checks become: build, fmt, Clippy, the
-product test suite, a lavapipe GPU smoke set, reviews") makes them `fmt`, `clippy`, `build`, `ci`, `gpu-lavapipe`,
-`gpu-metal`, `pr-check` and `reviews-complete`, which `plan/HUMAN_SETUP.md` §2 lists and `xtask/tests/ci_changes.rs`
+product test suite, a lavapipe GPU smoke set, reviews"; R-909's PR tier: "check_plan.py, reviews-complete, pr-check,
+no-atlas-params") makes them `fmt`, `clippy`, `build`, `ci`, `gpu-lavapipe`, `gpu-metal`, `pr-check`,
+`reviews-complete` and `no-atlas-params`, which `plan/HUMAN_SETUP.md` §2 lists and `xtask/tests/ci_changes.rs`
 checks every required check against on every path; the owner switches branch protection to them himself, from the
 copyable list, old to new, the orchestrator gives him when the PR-tier restructure lands (R-909). *Was:* `ci`,
 `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-kernel`, `gpu-metal`, `gpu-lavapipe` and `mutants-check`, which

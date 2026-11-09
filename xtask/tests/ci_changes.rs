@@ -94,9 +94,10 @@ mod scratch;
 use scratch::Scratch;
 
 /// The checks branch protection requires on `main`, the owner's CI model (his order of 8 Nov 2026: "PR required checks
-/// become: build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set, reviews"), as `plan/HUMAN_SETUP.md` §2
-/// records them (`ci_changes_every_required_check_reports_on_every_path` checks it).
-const REQUIRED: [&str; 8] = [
+/// become: build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set, reviews"; R-909: "check_plan.py,
+/// reviews-complete, pr-check, no-atlas-params"), as `plan/HUMAN_SETUP.md` §2 records them
+/// (`ci_changes_every_required_check_reports_on_every_path` checks it).
+const REQUIRED: [&str; 9] = [
     "fmt",
     "clippy",
     "build",
@@ -105,6 +106,7 @@ const REQUIRED: [&str; 8] = [
     "gpu-metal",
     "pr-check",
     "reviews-complete",
+    "no-atlas-params",
 ];
 
 fn root() -> PathBuf {

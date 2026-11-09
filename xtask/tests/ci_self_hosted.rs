@@ -82,7 +82,7 @@ const LABEL: &str = "possibly faulty hardware (owner-reported)";
 /// Branch protection's required checks on `main`, and those it required before the owner's CI model of 9 Nov 2026,
 /// which a run on an older head can still report. A self-hosted job bearing one of these names would report under it.
 /// `plan/HUMAN_SETUP.md` §2 lists the current ones, which the test reads.
-const REQUIRED: [&str; 11] = [
+const REQUIRED: [&str; 12] = [
     "fmt",
     "clippy",
     "build",
@@ -91,6 +91,7 @@ const REQUIRED: [&str; 11] = [
     "gpu-metal",
     "pr-check",
     "reviews-complete",
+    "no-atlas-params",
     "xtask-ci",
     "gpu-kernel",
     "mutants-check",

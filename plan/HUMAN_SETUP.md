@@ -20,12 +20,14 @@ one self-hosted runner, in place of R-174's same-repository `if:` guard; the app
 
 In **Settings → Branches → Add branch protection rule** (or a ruleset) for `main`:
 - require a pull request before merging;
-- require status checks to pass: `fmt`, `clippy`, `build`, `ci`, `gpu-lavapipe`, `gpu-metal`, `pr-check` and
-  `reviews-complete` (R-908 and R-909, the owner's CI model approved on 9 Nov 2026; his order of 8 Nov 2026: "PR
-  required checks become: build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set, reviews"; `gpu-metal`,
-  the Metal smoke set on a GPU-path change, keeps its name; each appears in the list after its workflow has run once).
+- require status checks to pass: `fmt`, `clippy`, `build`, `ci`, `gpu-lavapipe`, `gpu-metal`, `pr-check`,
+  `reviews-complete` and `no-atlas-params` (R-908 and R-909, the owner's CI model approved on 9 Nov 2026; his order of
+  8 Nov 2026: "PR required checks become: build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set,
+  reviews"; R-909's PR tier: "check_plan.py, reviews-complete, pr-check, no-atlas-params"; `gpu-metal`, the Metal smoke
+  set on a GPU-path change, keeps its name; each appears in the list after its workflow has run once).
   `ci.yml` bears the first six, each a job of every pull-request run that skips its work inside the job on the
-  classification's verdict (R-656), so each reports on every pull request. The owner sets branch protection himself,
+  classification's verdict (R-656), so each reports on every pull request; `no-atlas-params.yml`, the atlas guard,
+  runs on every pull request with no path filter. The owner sets branch protection himself,
   from the orchestrator's old-to-new list (R-909); `xtask/tests/ci_changes.rs` checks that this list is the one every
   required check is tested against.
   *Was, until the owner switches it (R-907 to R-909):* `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-kernel`,
