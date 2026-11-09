@@ -515,8 +515,17 @@ const XTASK: Option<&[&str]> = Some(&["xtask/src/main.rs"]);
 const PRIN: Option<&[&str]> = Some(&["crates/prin/src/main.rs"]);
 const LOCKFILE: Option<&[&str]> = Some(&["Cargo.lock"]);
 
-/// Each run of `decide`: what it is, the event, the changed paths, and the `packages` and `doc_packages` it must give.
-const DECIDES: [(&str, &str, Option<&[&str]>, &str, &str); 7] = [
+/// A run of `decide`: what it is, the event, the changed paths, and the `packages` and `doc_packages` it must give.
+type DecideCase = (
+    &'static str,
+    &'static str,
+    Option<&'static [&'static str]>,
+    &'static str,
+    &'static str,
+);
+
+/// Each run of `decide`.
+const DECIDES: [DecideCase; 7] = [
     ("a change to gui", "pull_request", GUI, "-p gui", "-p gui"),
     (
         "a change to xtask",

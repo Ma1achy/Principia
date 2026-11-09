@@ -2727,8 +2727,11 @@ fn pr_outputs(script: &str, paths: &[&str]) -> std::collections::BTreeMap<String
     .collect()
 }
 
-/// The work each required check of `ci.yml` owes a change: (check, command, owed when).
-const OWED: [(&str, &str, fn(&PrChange) -> bool); 11] = [
+/// A check's work: (check, command, whether a change owes it).
+type Owed = (&'static str, &'static str, fn(&PrChange) -> bool);
+
+/// The work each required check of `ci.yml` owes a change.
+const OWED: [Owed; 11] = [
     ("fmt", "cargo fmt --all --check", |c| c.code),
     (
         "clippy",
