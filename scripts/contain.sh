@@ -25,6 +25,15 @@
 #                                         `kill -9 -1` inside each; fails if the containment doesn't hold. Then runs
 #                                         the script, if one is given.
 #
+# PRIN_CONTAIN=unprivileged, the WSL2 distro's mode (the owner's ruling of 9 Nov 2026: "Change contain.sh so the real
+# kill -9 -1 test runs without sudo"; the distro has no sudo and no systemd). `run` runs the command, as this user, in a
+# user namespace and a PID namespace of its own, with no sudo, no cgroup scope and no heartbeat: signals reach only the
+# namespace, so `kill(-1)` ends the run, not what runs beside it, and all of it dies with the namespace; a signal to
+# this script ends it. Memory, tasks and disk are bounded by the WSL2 VM around it, not here. `check` proves it with the
+# same real `kill -9 -1` inside each of `run` and `run ... test`, against a process of this user outside. The mode is
+# chosen only by name: `required` never falls back to it, and where user namespaces can't be had it fails, never
+# skips. Any other value of PRIN_CONTAIN fails, so that a misspelt mode can't run a command uncontained.
+#
 # The heartbeat survives the runner's death: while a run lasts, every 2 minutes, it sets a commit status (context
 # HEARTBEAT_CONTEXT on HEARTBEAT_SHA, with HEARTBEAT_TOKEN) to the memory, disk, copy-on-write store, tasks, out-of-memory
 # kills, the number of logs and the newest log under HEARTBEAT_OUT/log, the mutant under test (`baseline.log` while the
@@ -79,6 +88,17 @@ require_tools() {
   sudo -n true 2> /dev/null || die "containment required, and sudo needs a password"
   # ubuntu-24.04 refuses unprivileged user namespaces by default, which `test` needs. Absent on other kernels.
   sudo -n sysctl -q -w kernel.apparmor_restrict_unprivileged_userns=0 2> /dev/null || true
+}
+
+# The unprivileged mode's needs: Linux, an ordinary user, and user and PID namespaces this user may make, tried for real.
+require_userns() {
+  [ "$(uname -s)" = Linux ] || die "unprivileged containment selected, and this is not Linux: no user namespaces"
+  [ "$(id -u)" != 0 ] || die "unprivileged containment selected, and this is root: it runs as an ordinary user"
+  for tool in unshare setsid; do
+    command -v "$tool" > /dev/null || die "unprivileged containment selected, and there is no $tool"
+  done
+  unshare --user --map-current-user --pid --fork --kill-child --mount-proc true > /dev/null 2>&1 ||
+    die "unprivileged containment selected, and user and PID namespaces can't be had here: failing, not skipping"
 }
 
 # One sample of the machine, in a status description's 140 characters.
@@ -164,7 +184,46 @@ last_oom() {
   fi
 }
 
+# A signal to the unprivileged run: its namespace's init dies with `unshare` (`--kill-child`), and all of it with that.
+stop_unprivileged() {
+  halted=$((128 + $1))
+  echo "::error::contain.sh: stopped by signal $1: ending the namespace"
+  kill -KILL "${namespace:-}" 2> /dev/null || true
+}
+
+run_unprivileged() {
+  require_userns
+  local code
+  halted=""
+  namespace=""
+  unset HEARTBEAT_TOKEN PRIN_CONTAIN
+  export PRIN_TEST_PIDNS=1
+  trap 'stop_unprivileged 15' TERM
+  trap 'stop_unprivileged 2' INT
+  trap 'stop_unprivileged 1' HUP
+  set +e
+  unshare --user --map-current-user --pid --fork --kill-child --mount-proc \
+    bash -c "$INIT" contain-init "$@" < /dev/null &
+  # In the background, so that a signal is acted on now, not when the command ends.
+  namespace=$!
+  wait "$namespace"
+  code=$?
+  # A signal that came as `unshare` started found nothing to kill: until it has gone, kill it again.
+  while [ -n "$halted" ] && job_running "$namespace"; do
+    kill -KILL "$namespace" 2> /dev/null || true
+    wait "$namespace" 2> /dev/null
+  done
+  set -e
+  trap - TERM INT HUP
+  code=${halted:-$code}
+  if [ "$code" -eq 137 ]; then
+    echo "::error::contain.sh: the contained run was killed (SIGKILL): a kill(-1) inside it, or the out-of-memory killer"
+  fi
+  return "$code"
+}
+
 run_contained() {
+  [ "${PRIN_CONTAIN:-}" != unprivileged ] || { run_unprivileged "$@"; return; }
   [ "${PRIN_CONTAIN:-}" = required ] || exec "$@"
   require_tools
   local began uid gid rc limits limit contained tries=20 final_oom=""
@@ -236,11 +295,14 @@ run_test() {
 # Each containment: `kill -9 -1` inside must leave a process of this user outside alive, must not see it, and what the
 # command leaves behind must end with it. The control: the same look from outside must see that process.
 check() {
-  if [ "${PRIN_CONTAIN:-}" != required ]; then
-    echo "contain.sh check: containment not required here"
-    return 0
-  fi
-  require_tools
+  case "${PRIN_CONTAIN:-}" in
+    required) require_tools ;;
+    unprivileged) require_userns ;;
+    *)
+      echo "contain.sh check: containment not required here"
+      return 0
+      ;;
+  esac
   sleep 600 > /dev/null 2>&1 &
   local outer=$! self=$0 mark=299.7531 leak
   kill -0 "$outer" || die "check: the control can't see its own process $outer"
@@ -259,11 +321,15 @@ check() {
     kill -0 "$outer" 2> /dev/null || die "check: \`kill -9 -1\` inside \`$mode\` reached a process outside"
     leak=$(pgrep -fc "sleep $mark" || true)
     [ "$leak" -eq 0 ] || die "check: $leak process(es) outlived \`$mode\`"
-    echo "contain.sh check: \`$mode\` holds: kill -9 -1 stayed inside, outside unseen, nothing left"
+    echo "contain.sh check: \`$mode\` holds (${PRIN_CONTAIN}): kill -9 -1 stayed inside, outside unseen, nothing left"
   done
   kill "$outer"
 }
 
+case "${PRIN_CONTAIN:-}" in
+  "" | required | unprivileged) ;;
+  *) die "PRIN_CONTAIN=$PRIN_CONTAIN names no mode: required, unprivileged, or unset" ;;
+esac
 mode=${1:-}
 [ "$#" -gt 0 ] && shift
 case "$mode" in
