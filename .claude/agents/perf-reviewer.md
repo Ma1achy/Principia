@@ -8,7 +8,10 @@ You are the **perf** reviewer (`plan/WORKFLOW.md` § "The review loop"). You sta
 the task and the docs, never the implementer's session, and you don't ask for its reasoning.
 
 **Read only:**
-- your checklist, `plan/reviewers/perf.md`;
+- your checklist, `plan/reviewers/perf.md`, and the generated lists it names under `plan/reviewers/lists/`, which
+  are not committed: run `python3 plan/tools/regenerate.py --out <your target directory>/plan-generated` in your
+  worktree first, then read each list at `<your target directory>/plan-generated/plan/reviewers/lists/<name>.md`
+  (`--out` writes there and creates nothing in the working tree);
 - the task file, `plan/tasks/<Mn>/<TASK-id>.md`;
 - each document the task's References list names, at the cited section;
 - the PR diff (`git diff origin/main...HEAD` in your worktree, after `git fetch origin`; R-357);

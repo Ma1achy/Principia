@@ -306,5 +306,16 @@ reviewer. A requirement leaves a gate only by a ruling (retired with `retired: <
   permanent.
 - `plan/coverage.md` and the MILESTONES gate blocks are generated (`plan/tools/coverage.py`, `plan/tools/milestones.py`)
   and checked in CI.
+- The generated files `plan/CURRENT_RULES.md`, `plan/coverage.md` and `plan/reviewers/lists/` are not committed (the
+  owner, 8 Nov 2026: "Generated plan files (plan/coverage.md etc.) stop being committed; CI regenerates and checks
+  them."). `python3 plan/tools/regenerate.py` writes them; run it before reading one, every time, since a copy on disk is
+  only as fresh as its last run. It leaves committed files alone. A reviewer, who creates no file in its worktree, runs
+  `python3 plan/tools/regenerate.py --out <its target directory>/plan-generated` and reads each file at the same path
+  under that directory (`<its target directory>/plan-generated/plan/CURRENT_RULES.md` and so on); `--out` refuses a
+  directory inside the repo tree and writes nothing into it. The MILESTONES gate blocks stay committed, as
+  `cargo xtask gate-report` and tests read them: a merge conflict inside one is resolved by
+  `python3 plan/tools/regenerate.py --all`, never by hand (R-718). `plan/check_plan.py` fails if a generated file is
+  committed, if a generator can't build its file from the sources, or if the gate blocks differ from a fresh
+  regeneration.
 - Every commit that changes `docs/`, `decisions.md` or `plan/` ends with its "Removed lines" note: each removed line
   is "reworded, kept at <file:line>" or "stale value, replaced by <ruling>".

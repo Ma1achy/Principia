@@ -1,6 +1,7 @@
 # The group each decisions.md entry falls under in plan/CURRENT_RULES.md (R-292). plan/tools/current_rules.py reads
-# this file with decisions.md and rebuilds CURRENT_RULES.md; `python3 plan/check_plan.py` fails if an entry is in no
-# group or in two, if a group names an entry decisions.md lacks, or if CURRENT_RULES.md is stale.
+# this file with decisions.md and rebuilds CURRENT_RULES.md, which is not committed (`python3 plan/tools/regenerate.py`
+# writes it; the owner, 8 Nov 2026); `python3 plan/check_plan.py` fails if an entry is in no group or in two, or if a
+# group names an entry decisions.md lacks.
 #
 # A new ruling is added to one group here, in the same commit that records it. The groups, in the order the file
 # lists them:

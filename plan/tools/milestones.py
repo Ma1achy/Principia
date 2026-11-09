@@ -12,6 +12,11 @@ of those targets, the requirements of its build tasks, which are not scored (R-6
 definition that follows it, which are not targets; no gate tool reads it, and the gate blocks stay M0 to M8,
 `ledger::constants::MILESTONES`.
 
+The blocks stay committed, the one generated part of the plan that does (the owner's order of 8 Nov 2026 takes the
+rest out of git): `cargo xtask gate-report` reads them from the committed file, and so do tests. `.gitattributes` marks
+the file (R-718): a merge conflict inside a block is resolved by running this, which rewrites every block whole, conflict
+markers and all, never by hand. A conflict marker left outside the blocks, in the hand-written text, fails the run.
+
 Usage: python3 plan/tools/milestones.py [--check]   (--check: exit 1 if MILESTONES.md is out of date)
 """
 import collections, os, re, sys
@@ -110,6 +115,10 @@ def gate_block(reqs, m, report=False, built=(), reporting=(), targets=()):
     return "\n".join(lines)
 
 
+# A line git writes around a conflict: seven of <, = or >, then a space and a label, or nothing.
+CONFLICT = re.compile(r"^(<{7}|={7}|>{7})( |$)", re.M)
+
+
 def main():
     os.chdir(ROOT)
     reqs = yaml.safe_load(open(REQS, encoding="utf-8"))
@@ -135,7 +144,12 @@ def main():
     unknown = sorted({r["milestone"] for r in reqs} - set(MILESTONES) - set(REPORTS))
     if unknown:
         sys.exit(f"{REQS}: unknown milestones {unknown}")
+    if CONFLICT.search(new):
+        sys.exit(f"{DOC}: a merge conflict outside the generated blocks, in the hand-written text: resolve it by hand, "
+                 "then run plan/tools/milestones.py")
     if "--check" in sys.argv:
+        if CONFLICT.search(doc):
+            sys.exit(f"{DOC}: a merge conflict inside a generated block: run plan/tools/regenerate.py --all")
         if new != doc:
             sys.exit(f"{DOC} is out of date: run plan/tools/milestones.py")
         print(f"{DOC}: gates up to date")
