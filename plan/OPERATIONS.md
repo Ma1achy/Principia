@@ -1021,8 +1021,10 @@ The owner's ruling of 8 Nov 2026 on what R-711's runner, `malachys-pc-rtx2080s`,
     `win_contain.ps1 check: contained: ...` and exits 0 when every Job Object scenario held, exit 125 naming the one
     that didn't otherwise, and its artifact keeps the output. Two of
     `contain.sh check`'s assertions have no Job Object equivalent: the outside process unseen, and out of reach of a
-    kill by pid; the check reports them as gaps (RQ-751). Until the proof has passed and RQ-751 is ruled, mutants of
-    `xtask/src/jobq.rs` and every job that would be placed on Windows stay on GitHub-hosted runners;
+    kill by pid; the check reports them as gaps, accepted by R-912 (RQ-751's option (b)). Until the proof has passed,
+    every job that would be placed on Windows stays on GitHub-hosted runners. The mutants of `xtask/src/jobq.rs`, the
+    job-queue mutants, stay on GitHub's runners under (b), and may move to Windows only once the WSL2 setup passes
+    `contain.sh check` inside it, in its unprivileged mode (R-912, R-915);
   - the heavy-work comparison: the GPU suites and one GPU-heavy mutant shard on a task branch, against hosted runners
     (TASK-M0-56).
   TASK-M0-55 builds the measurements on `main`. The list is not exhaustive (R-860): `win-gpu.yml`'s nightly

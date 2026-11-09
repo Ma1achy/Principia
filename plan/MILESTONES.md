@@ -276,9 +276,9 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
   a Windows run posts them (the builder is TASK-M4-27's). That row is what carries the outstanding run after its task closes; it blocks nothing (R-649).
 
 <!-- gate:M4 -->
-**Exit gate — 131 requirements** (and every earlier gate still green):
+**Exit gate — 132 requirements** (and every earlier gate still green):
 
-- CHART (19): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-094…101, REQ-CHART-108…110, REQ-CHART-125, REQ-CHART-127…128, REQ-CHART-142, REQ-CHART-152
+- CHART (20): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-094…101, REQ-CHART-108…110, REQ-CHART-125, REQ-CHART-127…128, REQ-CHART-142, REQ-CHART-152, REQ-CHART-165
 - INT (18): REQ-INT-057…071, REQ-INT-083, REQ-INT-112…113
 - EVT (1): REQ-EVT-021
 - PAY (2): REQ-PAY-074, REQ-PAY-085

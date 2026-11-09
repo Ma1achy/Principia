@@ -1443,7 +1443,7 @@
   title: "Region D: the third-body pair, its preset, and the angles and side ratios it carries"
   depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-20, TASK-M4-06]  # R-914
   needs: []
-  requirements: [REQ-CHART-100, REQ-CHART-101, REQ-CHART-142, REQ-RENDER-123]  # R-914
+  requirements: [REQ-CHART-100, REQ-CHART-101, REQ-CHART-142, REQ-RENDER-123, REQ-CHART-165]  # R-914
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M4-37

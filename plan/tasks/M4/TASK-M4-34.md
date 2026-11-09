@@ -1,7 +1,7 @@
 # TASK-M4-34 — Region D: the third-body pair, its preset, and the angles and side ratios it carries
 
 - **Milestone:** M4
-- **Closes:** REQ-CHART-100, REQ-CHART-101, REQ-CHART-142, REQ-RENDER-123
+- **Closes:** REQ-CHART-100, REQ-CHART-101, REQ-CHART-142, REQ-RENDER-123, REQ-CHART-165
 - **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-20, TASK-M4-06
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
@@ -31,12 +31,14 @@ The first registered closed-form pair: `(ξ, η)` through the explicit-configura
 - The registry's rows and the preset.
 - Choice V5 decided, with its evidence in the PR.
 - Region D's velocity presets: exact rest the default, eq. 3 the second, eq. 3 reproducing Agekyan & Anosova's velocities in their own units before canonicalising, and the 19% spread at `I = 1` stated beside the preset (R-851; REQ-CHART-142).
+- The lowering appendix's Anosova physical-frame row lowered as this pair, through `region_d_variant`: canonicalise entry with the signed canonicalisation, no region-D mask uniform, no fold to `(ξ, −η)` (R-871, R-914; REQ-CHART-165), and a per-chart checklist row in the PR mapping it to its registry entry and kernel variant.
 - Region D's GPU reference: the DECODE-preset golden of the Anosova physical-frame chart in `fixtures/golden/decode_preset/`, rendered with native wgpu offscreen (R-110), reading region D through `in_region_d` on the unmasked full disc as R-871 requires (R-914; REQ-RENDER-123).
 
 ## Acceptance tests
 - `cargo test -p kernel region_d_plane` and `cargo test -p engine region_d_variant` — Table 1's pixels against the import; edges; √ℓ; I = 1; the stereographic identity; controls: bodies swapped, q unscaled, the mass ratio inverted, d dropped at unequal masses, where Table 1's equal masses can't see it (REQ-CHART-100).
 - `cargo test -p kernel closed_inverse_round_trip` — `forward(inverse(x)) = x`, every closed row at f64 and f32, each reading back its `Holds`; mutation: named per row, firing there (§ 12) (REQ-CHART-101).
 - `cargo test -p engine region_d_velocity_presets` — REQ-CHART-142's arms and controls.
+- Physics + code reviewers: the PR's checklist row for the lowering appendix's Anosova physical-frame row against the chart registry and the kernel variant, no mask uniform; backed by `cargo test -p engine region_d_variant` (REQ-CHART-165).
 - `cargo xtask golden decode-preset` — the DECODE preset for the Anosova physical-frame chart matches a CPU-decoded reference image, without special-casing, region D read through `in_region_d` on the unmasked full disc (R-871); this task doesn't close until it does (R-914; REQ-RENDER-123).
 
 ## Notes
@@ -49,4 +51,4 @@ The first registered closed-form pair: `(ξ, η)` through the explicit-configura
 - *7 Nov 2026 (R-845, R-851, R-843):* RQ-714's time and velocities are ruled; its outside, a mask or the full disc under the filter order, is still open, so the preset's domain waits on it, and RQ-728's labelled D is read with it.
 - *8 Nov 2026 (R-873):* **Build order:** stage 3, released by dispatch after stage 2 (TASK-M8-117), the milestone kept (RQ-744 (A) (b)); still no edge to the M8 task.
 - *8 Nov 2026 (R-871):* RQ-714 is ruled (b), with RQ-738 conflict 3 read as its (c): the preset is the full disc rendered literally, unmasked, the window holding the lens, the mirror and the three body swaps declared, region D drawn as a contour, no mask built; at equal masses and rest the symmetry filter (TASK-M8-120) leaves 0.307, D's own. REQ-CHART-100 says so. R-888 (RQ-711): the zoom row reads 1× at the preset's saved view.
-- *9 Nov 2026 (R-914, RQ-752 (a)):* the edge from TASK-M4-06 to this task is dropped, since it closed a cycle through stage 2 (TASK-M8-117 waits, through TASK-M8-124, TASK-M8-48, TASK-M8-18 and TASK-M4-17, on TASK-M4-06). Region D's GPU reference, which reads region D, moves from TASK-M4-06 into this task, which can't close until it reads region D as R-871 requires (REQ-RENDER-123, split from REQ-RENDER-082). This task gains TASK-M4-06 in Depends on, whose variant table and golden harness the reference renders through (applied per R-369); stage 3's release after stage 2 (R-873) is unchanged. *Was (Goal, the last sentence):* "TASK-M4-06 lowers its row and renders its golden once RQ-714 rules, by the edge TASK-M4-37 applies then." *Was:* "- **Closes:** REQ-CHART-100, REQ-CHART-101, REQ-CHART-142"; "- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-20".
+- *9 Nov 2026 (R-914, RQ-752 (a)):* the edge from TASK-M4-06 to this task is dropped, since it closed a cycle through stage 2 (TASK-M8-117 waits, through TASK-M8-124, TASK-M8-48, TASK-M8-18 and TASK-M4-17, on TASK-M4-06). Region D's GPU reference, which reads region D, moves from TASK-M4-06 into this task, which can't close until it reads region D as R-871 requires (REQ-RENDER-123, split from REQ-RENDER-082), and with it the lowering appendix's Anosova physical-frame row, which is this pair (REQ-CHART-165, split from REQ-CHART-037; physics review 5829515661, P1, applied per R-369). This task gains TASK-M4-06 in Depends on, whose variant table and golden harness the reference renders through (applied per R-369); stage 3's release after stage 2 (R-873) is unchanged. *Was (Goal, the last sentence):* "TASK-M4-06 lowers its row and renders its golden once RQ-714 rules, by the edge TASK-M4-37 applies then." *Was:* "- **Closes:** REQ-CHART-100, REQ-CHART-101, REQ-CHART-142"; "- **Depends on:** TASK-M4-37, TASK-M4-33, TASK-M2-20".
