@@ -25,3 +25,9 @@ atlas-params.json
 
 # The web skeleton's browser runner: `npm ci` installs it from its lock (TASK-M8-86).
 /web/skeleton/runner/node_modules/
+
+# The plan's generated files, not committed (the owner, 8 Nov 2026): `python3 plan/tools/regenerate.py` writes them, and
+# CI regenerates and checks them through plan/check_plan.py. MILESTONES.md's gate blocks stay committed (.gitattributes).
+/plan/CURRENT_RULES.md
+/plan/coverage.md
+/plan/reviewers/lists/
