@@ -243,11 +243,9 @@ negative_control!(
     check_own_masses(|_, _| [1.0 / 3.0; 3])
 );
 
-/// The `debug-views` cases whose references are one image by definition: the derived drift view and the drift
-/// field's generated view both draw `H(r, p) − E_0` by `dbg_sentinel`, the live shape view's mode 0 is `n`'s
+/// The `debug-views` cases whose references are one image by definition: the live shape view's mode 0 is `n`'s
 /// direction cosines, and its mode 1 and `theta`'s generated view both draw `ramp_twilight` at `fract(θ̃ / 2π)` (R-423).
-const SAME_BY_DEFINITION: [[&str; 2]; 3] = [
-    ["derived-energy_drift", "generated-energy_drift"],
+const SAME_BY_DEFINITION: [[&str; 2]; 2] = [
     ["live_shape", "reductions-n_dircos"],
     ["generated-theta", "live_shape-twilight"],
 ];
@@ -297,9 +295,8 @@ fn debug_scenes_references_are_distinct() {
 
 negative_control!(
     debug_scenes_references_are_distinct,
-    "no pair allowed, so the drift views' shared image fails",
-    expected =
-        "the references of `derived-energy_drift` and `generated-energy_drift` are one image",
+    "no pair allowed, so the shared image of `theta`'s view and the live shape's mode 1 fails",
+    expected = "the references of `generated-theta` and `live_shape-twilight` are one image",
     check_distinct(&[])
 );
 
