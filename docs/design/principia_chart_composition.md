@@ -67,7 +67,8 @@ merged GUI routes made adapters in TASK-M2-64 (F1 (a)); the gate test's round tr
 trips across paths" read as G4 (F11); `τ` provisional at M2 (F13 (b)); RQ-679's spans answered now, proposed by physics for
 the owner to confirm, tilts into `ν₀`, `L_z` and `K` in M2 (F14); R-864's sketch approved when TASK-M2-61 brings it; the
 trajectory fixtures the Lagrange equilateral homographic solution and the figure-eight (F18, § 18.7); every calibration set
-by measurement with its criterion written first (R-649, R-650). The status above, Proposed, stands until TASK-M2-58 (was
+by measurement with its criterion written first (R-649, R-650). R-920: the owner confirmed RQ-679's spans as physics
+proposed (`principia_chart_reference.md` § 4.5). The status above, Proposed, stands until TASK-M2-58 (was
 TASK-M4-37) carries the rulings into the body.
 
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
@@ -614,7 +615,7 @@ step goes, and the fragment decode calls it. "No new variant" holds only with no
   target, like R-554's `p_λ`, and `d` doesn't reach the decode stage: `Shift` targets control indices and is consumed in
   `Tiltable::decode_shifted`, while the hold sits after it.
 - **RQ-715 closes the held-`L_z` half of RQ-701 only.** RQ-701's held-`K` half, `K_max` on a lone `L_z` axis, is
-  untouched; RQ-679, the slider span, stays as it is.
+  untouched; RQ-679, the slider span, stays as it is (answered since by R-920, 9 Nov 2026).
 - Infeasible pixels under a tilt are labels, per pixel. No hold is a warped axis, so R-708's "every pixel a system" doesn't
   bind here.
 

@@ -16607,6 +16607,8 @@ Changes REQ-GUI-228 (statement, verify, rulings, `rq` removed, note), REQ-CHART-
 (statement, verify, rulings, note) and REQ-CHART-040, REQ-CHART-056 and REQ-GUI-109 (notes).
 
 ## R-507 — T4's units: the screen axis in units of the axis's full range at zoom 1, the hidden coordinate in its slider span, so no unit depends on zoom; the latent chart's tilt stays the decoder's basis edit; the human's half-width proposal is withdrawn *(closes RQ-375; amends R-473)*
+*Refined by R-920 (9 Nov 2026, RQ-679: U1's slider span defined: a latent slider's span 2, the held `ν₀`, `L_z` and `K`'s each fixed per chart from its home window).*
+*Still in force: all of it.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (RQ-375's sentence
 reworded, with its earlier words kept), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
 (`01_main.png`)" (Tilt, a clause), R-473's heading block, `docs/archive/review_queue/M0.md` (RQ-375, moved with its
@@ -31404,7 +31406,8 @@ R-719 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-720 — The held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` tilts and slices by value, `L_z = L_z0 + d`; R-708's warp-coordinate tilt is narrowed to held `K` only; a column above `K_max` at large tilt is accepted, the practical bound the slider span, RQ-679, still deferred to TASK-M8-48 *(closes RQ-699; amends R-708)*
 *Extended by R-818 (7 Nov 2026; RQ-701 (a): the same by-value tilt and slice for a `MixedEnergy` chart's held `L_z`, built in M8).*
-*Still in force: all of it.*
+*Amended in part by R-920 (9 Nov 2026, RQ-679: the slider span is no longer deferred to TASK-M8-48; the held `L_z`'s span is `2√(2·K_max)`, the practical bound this ruling names).*
+*Still in force: all of it but "still deferred to TASK-M8-48", which R-920 answers.*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-508, R-633 and R-708, R-708's "case that came back" passage, `docs/archive/review_queue/M0.md` (RQ-699 moved), `REVIEW_QUEUE.md` (with dated lines on RQ-679 and RQ-701), `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps" and § 5.4, REQ-CHART-062 and REQ-CHART-065 (reqio), TASK-M2-52 and `plan/rule_groups.yaml`; built by TASK-M2-52*
 
 The owner's words, 5 Nov 2026, verbatim:
@@ -35176,6 +35179,8 @@ R-918 is in the "process" group of `plan/rule_groups.yaml`.
 Adds REQ-CHART-173 and REQ-CHART-177; moves REQ-CHART-132 to M3.
 
 ## R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(supersedes R-882; refines R-864 and R-902)*
+*Refined by R-920 (9 Nov 2026: the owner confirmed F14's proposal, all six points; RQ-679 is closed and REQ-CHART-188 states the spans).*
+*Still in force: all of it, F14's "awaiting the owner's confirmation" answered by R-920.*
 *9 Nov 2026 · the owner's answers that late evening to the chart plan (chart-plan.pdf, the report written from the plan of
 R-916 to R-918); applied in R-882's forward line, `REVIEW_QUEUE.md` (RQ-679, a dated line with the physics reviewer's
 proposal), the forward lines of R-864 and R-902, REQ-CHART-161, REQ-CHART-156 and REQ-CHART-188 (reqio),
@@ -35232,3 +35237,66 @@ TASK-M2-61 brings it; **R-902**, its gate test's "the round trip returns the sam
 R-919 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes REQ-CHART-161 and REQ-CHART-156; adds REQ-CHART-188 (with R-916).
+
+## R-920 — RQ-679, the slider spans, confirmed as physics proposed: each hidden coordinate's span fixed per chart from its home window ((a′)); `ν₀` over `[1/32, 31/32]`; the held `L_z` over `2√(2·K_max)`; the held `K` tilted in its warp coordinate `t` with span 1 (`K_max` on a linear axis), the handle in `t`, the number box in `K`, the slider drawn evenly in `t`; a latent slider's span 2, written into § G2 as a definition; the virial axis's `K_max` left to RQ-701 at M8 *(closes RQ-679; amends R-720; refines R-507 and R-919)*
+*9 Nov 2026 · the owner's confirmation that late evening of the physics reviewer's proposal on RQ-679, put to them on
+PR #465 under R-919 (F14); applied in `REVIEW_QUEUE.md` (RQ-679 moved), `docs/archive/review_queue/M0.md` (RQ-679 moved
+with its ruling; a dated line on RQ-701), the forward lines of R-507, R-720 and R-919,
+`docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md`
+§ "4.5 The Burrau-family chart maps", `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" (Slice centre), `docs/design/principia_chart_composition.md` (the status block),
+REQ-CHART-188 (reqio), `plan/MILESTONES.md` (G12), TASK-M2-63, TASK-M8-48 and `plan/rule_groups.yaml`; changes
+REQ-CHART-188*
+
+RQ-679 asked for the slider span of the held `ν₀`, `L_z` and `K`, the length R-507 U1 divides a hidden offset by. R-919
+(F14) brought it forward to M2 and put the physics reviewer's proposal to the owner on this ruling's pull request; the
+proposal is RQ-679's dated line of 9 Nov 2026, verbatim, its §§ 0 to 5. The owner's words (9 Nov 2026), verbatim:
+
+> RQ-679: confirm all six as proposed — (a′) range fixed per chart from its home window; ν0 over [1/32, 31/32]; held Lz over 2√(2·K_max); held K tilted in its warp coordinate t with range 1 (K_max on a linear axis), handle in t, number box in K; the slider drawn evenly in t; the latent slider range 2 written into the GUI spec as a definition, and the mixed-energy virial K_max left to RQ-701 at M8.
+
+*What it decides, the proposal's six points, all confirmed as proposed:*
+
+- **(a′), principle P.** A hidden coordinate's slider span is the full range at zoom 1 of the screen axis that carries
+  the same coordinate on the registry's own charts, read at that chart's home window (the preset's window), not at the
+  view's centre. So a 90° tilt turns a screen axis into that sibling axis at its home extent, and a given `τ` is the same
+  fraction of a home window on every coordinate, latent or physical. Each span is a length, fixed per chart, the same
+  under pan, zoom, slice centre and lock (R-507; a saved chart stores it, R-507 U3), and invariant under the scale gauge
+  (`principia_chart_reference.md` § 0.5). Option (a) read at the view's centre, which changes on a pan, and option (b),
+  a measured span, are not taken.
+- **`ν₀`, the held shape of the mass simplex:** span `Δν = ν_max − ν_min`, the `ν` axis's zoom-1 range over
+  `[ν_min, ν_max] = [1/32, 31/32]` (REQ-CHART-023), `15/16`; rail `[ν_min, ν_max]`, centred on the default `ν₀ = 1/2`;
+  under a lock the anchor `± Δν/2`. Linear along the rail. A tilted `ν₀ + d` outside `(0, 1)` is refused per cell, as
+  § 4.5 refuses it, never clamped by the rail; REQ-CHART-060's stop holds the slice.
+- **The held `L_z`** (on `(ν, K)`, `Φ_θ,K` and `Φ_strip,K`, by value, R-720): span `2√(2·I·K_max)`, `I = 1` after the
+  scale gauge, `K_max` the chart's own `K` axis's (REQ-CHART-044), read at the window's top, `K = K_max`: the `(L_z, K)`
+  chart's top row. Rail `[−√(2K_max), +√(2K_max)]`, centred on 0; under a lock the anchor `± √(2K_max)`. This is the
+  practical bound R-720 left to the slider span.
+- **The held `K`** (on `Φ_θ,L_z`): tilted in its warp coordinate `t`, `K = K_max·t^γ_K` (R-708 as R-720 narrows it),
+  with span 1 in `t`, the warped axis's zoom-1 range; `K_max` and `γ_K` the chart's own held-`K` warp (REQ-CHART-141,
+  R-833). The rail is `t ∈ [t₀ − ½, t₀ + ½]`, shifted to `[0, 1]` if `t₀ < ½`; under a lock the anchor `± ½` in `t`. On a
+  linear axis the span is `K_max` in `K`, the axis's `[0, K_max]`. **One slider, two units:** its handle is in `t`, its
+  number box shows `K`; a slice writes `K₀` by value (R-720) and `t₀ = (K₀/K_max)^(1/γ_K)` is recomputed; a tilt reads
+  the rail's length, 1 in `t`.
+- **The slider is drawn evenly in `t`**, the proposal's recommendation: "slice by value" does not require a rail drawn
+  evenly in `K`, which would move only the handle's mid-rail position.
+- **A latent slider's span is 2:** rail `[−1, 1]` free, anchor `± 1` locked, the value the GUI already builds, written
+  into `principia_render_gui_spec.md` § G2 as a definition (R-72).
+- **A `MixedEnergy` chart's held `L_z` on a lone virial axis** has no chart-constant `K_max` (`K = Q·|U|/2`, R-817), so
+  the span above doesn't define it. It is left to RQ-701 at M8: RQ-701's form is ruled (R-818, R-893) and built by
+  TASK-M8-48, which writes that span when it starts. R-818's other lone axes (`K`, `KE`, `E`), where the proposal notes
+  the same formula with that axis's `K_max`, are not RQ-679's either, and are TASK-M8-48's with it.
+
+*The checks,* the proposal's § 4, written before any run, predicates and not tolerances: at a single 90° tilt in the
+zoom-1 window the tilted axis's hidden values equal the sibling axis's at the same `u`, to rounding (`ν₀` the Euclid
+plane's `ν(v)`, the held `L_z` `±√(2K_max)·(2s − 1)`, the held `K` `K_max·t^γ_K` over `t₀ ± ½`), with a span of 2 or a
+span read at the view's centre failing; a pan at fixed `τ` leaves every span bitwise unchanged, a centre-read span
+moving; a saved tilted chart reopens bitwise with its stored span (R-507 U3). REQ-CHART-188's verify carries them.
+
+*What it amends:* **R-720**, its "the practical bound the slider span, RQ-679, still deferred to TASK-M8-48": the span
+is now this ruling's. *What it refines:* **R-507**, U1's "that coordinate's slider span, the Slice centre slider's
+range", now defined for the latent sliders and the held `ν₀`, `L_z` and `K`; **R-919**, F14's "until the owner answers,
+the spans are per RQ-679, awaiting the owner's confirmation": the owner has answered. It closes **RQ-679**.
+
+R-920 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-188 (statement, verify, rulings, source, note, rq).
