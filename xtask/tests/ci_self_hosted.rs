@@ -1102,9 +1102,22 @@ fn check_hosted_beside(file: &str, id: &str, job: &Yaml) {
         "{file}/{id} is a hosted job among self-hosted ones that runs other than by a guarded dispatch: `{condition}`"
     );
     assert!(
-        !all_strings(job).iter().any(|s| s.contains("build-kernel")),
+        !all_strings(job).iter().any(|s| builds_kernel(s)),
         "{file}/{id} is a hosted job among self-hosted ones that builds the kernel, out of the rust-gpu cache check's reach"
     );
+}
+
+/// Whether a string builds the kernel, as the rust-gpu cache check counts it (`qa_TASK-M0-14_rust_gpu_cache.rs`,
+/// `builds_kernel`): it names `build-kernel`, or a line of it runs `cargo xtask ci`, whose registry runs build-kernel.
+fn builds_kernel(s: &str) -> bool {
+    s.contains("build-kernel")
+        || s.lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with('#'))
+            .any(|l| {
+                let words: Vec<&str> = l.split_whitespace().collect();
+                words.windows(3).any(|w| w == ["cargo", "xtask", "ci"])
+            })
 }
 
 fn check_shape(files: &[(String, String)]) {
@@ -1401,6 +1414,21 @@ mod hosted_job_kernel {
         check_shape(&measured(
             "        run: rustup toolchain install\n",
             "        run: rustup toolchain install && cargo xtask build-kernel\n"
+        ))
+    );
+}
+
+/// A hosted job that runs `cargo xtask ci`, whose registry builds the kernel.
+mod hosted_job_xtask_ci {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the parity job running `cargo xtask ci`",
+        expected =
+            "win-gpu.yml/wsl-parity is a hosted job among self-hosted ones that builds the kernel",
+        check_shape(&measured(
+            "        run: rustup toolchain install\n",
+            "        run: |\n          rustup toolchain install\n          cargo xtask ci\n"
         ))
     );
 }
