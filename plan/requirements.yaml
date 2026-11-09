@@ -63,7 +63,7 @@
   - R-547
   - R-544
   milestone: M2
-  note: "R-544 (21 Oct 2026): C stays the one function and its section conditions stand for encode and for every chart's decode; the shape sphere chart's decode calls it with step 3, the mirror, not taken, so its λ̃_y keeps its sign (REQ-CHART-081, TASK-M2-43).R-547 (RQ-296 (d) + (a), RQ-298 (a), 21 Oct 2026). TASK-M2-07 merged with this requirement held (rq: RQ-296, RQ-298); its fma-built CoM and I_in are rewritten and re-proved by TASK-M2-47, to which it moves (applied per R-369). The mirror decision and guard stand as TASK-M2-07 built them except the pair differences that feed them (`ρ = r₁ − r₀`, `d02`, `d12`, canon.rs:350-351), plain float subtractions that can be subnormal between normal coordinates; they are rebuilt by TASK-M2-47 to R-547's rule. *Was:* \"The mirror decision and guard already take the corrected form (TASK-M2-07, applied meanwhile).\" Fix round 1 of PR #274 (physics P1, qa Q5, applied per R-369). *Was (verify):* \"on random physical states the output satisfies all four section conditions and canonicalise is idempotent; at ρ = 0, with each component +0 or −0, φ is 0 and R(−φ) the identity on CPU-f64 and GPU-f32, chosen by a select on ρ_x = 0 and ρ_y = 0, never atan2(0, 0) (R-437); canonicaliser_seam_sweep: the guard, the mirror decision, the I_in = 0 select and the τ_I skip agree bit for bit between CPU-f32 and the GPU on Metal and lavapipe over the seam states, hierarchical states at inner/outer ratios down to 1e-8 included; each input's form is listed with its proof that it rounds alike fused or not, flushing or not (physics)\""
+  note: "R-544 (21 Oct 2026): C stays the one function and its section conditions stand for encode and for every chart's decode; the shape sphere chart's decode calls it with step 3, the mirror, not taken, so its λ̃_y keeps its sign (REQ-CHART-081, TASK-M2-43).R-547 (RQ-296 (d) + (a), RQ-298 (a), 21 Oct 2026). TASK-M2-07 merged with this requirement held (rq: RQ-296, RQ-298); its fma-built CoM and I_in are rewritten and re-proved by TASK-M2-47, to which it moves (applied per R-369). The mirror decision and guard stand as TASK-M2-07 built them except the pair differences that feed them (`ρ = r₁ − r₀`, `d02`, `d12`, canon.rs:350-351), plain float subtractions that can be subnormal between normal coordinates; they are rebuilt by TASK-M2-47 to R-547's rule. *Was:* \"The mirror decision and guard already take the corrected form (TASK-M2-07, applied meanwhile).\" Fix round 1 of PR #274 (physics P1, qa Q5, applied per R-369). *Was (verify):* \"on random physical states the output satisfies all four section conditions and canonicalise is idempotent; at ρ = 0, with each component +0 or −0, φ is 0 and R(−φ) the identity on CPU-f64 and GPU-f32, chosen by a select on ρ_x = 0 and ρ_y = 0, never atan2(0, 0) (R-437); canonicaliser_seam_sweep: the guard, the mirror decision, the I_in = 0 select and the τ_I skip agree bit for bit between CPU-f32 and the GPU on Metal and lavapipe over the seam states, hierarchical states at inner/outer ratios down to 1e-8 included; each input's form is listed with its proof that it rounds alike fused or not, flushing or not (physics)\" R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, C's section condition λ̃_y ≥ −δ_λ goes, and with it the shape sphere's call with step 3 not taken; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-DEC-003
   area: DEC
   statement: "The latent vector must be ordered z[0:2] = configuration controls (z_α, z_β), z[2:6] = momentum controls (z_q0..z_q3), z[6:8] = mass controls (z_μ1, z_μ2), and this block ordering must be fixed once and held."
@@ -342,7 +342,7 @@
   rulings:
   - R-437
   milestone: M2
-  note: "R-437: φ = atan2(ρ_y, ρ_x) takes the defined 0 at ρ = 0, chosen by a select, not obtained from atan2."
+  note: "R-437: φ = atan2(ρ_y, ρ_x) takes the defined 0 at ρ = 0, chosen by a select, not obtained from atan2. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the mirror diag(1,−1) leaves C's rigid operations; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-DEC-017
   area: DEC
   statement: "The mirror must be the one test in encode's frame — mirror iff λ̃_y < −δ_λ, with λ̃ = √μ_λ·λ and δ_λ = 10⁻¹² — and |λ̃_y| ≤ δ_λ must resolve to no mirror, deterministically, on every backend."
@@ -368,7 +368,7 @@
   - R-82
   - R-547
   milestone: M2
-  note: "R-547 (RQ-298 (a), 21 Oct 2026): the mirror decision TASK-M2-07 built, mantissas in [1, 2) with integer exponents and IeeeBits::product with no fma, is the corrected rule's pattern, so it no longer departs from R-34, and stands except the pair differences that feed it (canon.rs:350-351, plain float subtractions that can be subnormal between normal coordinates), rebuilt by TASK-M2-47 under REQ-DEC-002; TASK-M2-07's proof and seam sweep stand for the rest (applied per R-369). *Was:* \"is the corrected rule's pattern, so it no longer departs from R-34; the hold is lifted and TASK-M2-07's proof and seam sweep stand (applied per R-369, physics-reviewed on the batch PR).\" Fix round 1 of PR #274 (physics P1, applied per R-369)."
+  note: "R-547 (RQ-298 (a), 21 Oct 2026): the mirror decision TASK-M2-07 built, mantissas in [1, 2) with integer exponents and IeeeBits::product with no fma, is the corrected rule's pattern, so it no longer departs from R-34, and stands except the pair differences that feed it (canon.rs:350-351, plain float subtractions that can be subnormal between normal coordinates), rebuilt by TASK-M2-47 under REQ-DEC-002; TASK-M2-07's proof and seam sweep stand for the rest (applied per R-369). *Was:* \"is the corrected rule's pattern, so it no longer departs from R-34; the hold is lifted and TASK-M2-07's proof and seam sweep stand (applied per R-369, physics-reviewed on the batch PR).\" Fix round 1 of PR #274 (physics P1, applied per R-369). R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the one mirror test goes with the mirror step; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-DEC-018
   area: DEC
   statement: "The canonicaliser must be implemented for charts that bypass the canonical-frame decode, and for canonical-frame decodes, saturated controls included, it must be a no-op (rotation angle ≈ 0, mirror not taken) away from the λ̃_y = 0 seam; an exception covers only a case the task measuring the no-op has measured and listed in dd_decoder §5 test 5, with its z, precision and measurement (R-417)."
@@ -390,7 +390,7 @@
   - R-82
   - R-417
   milestone: M2
-  note: "R-417 (RQ-270): the f32 images of π/2 and π are generated rounded toward zero (TASK-M2-30, REQ-GEN-034), so f32 saturation no longer passes α = π/2 or β = π, and §3.3's half turn and mirror no longer fire there; no blanket exception at the poles. This task reaches TASK-M2-30 through TASK-M2-06, TASK-M2-05 and TASK-M2-03."
+  note: "R-417 (RQ-270): the f32 images of π/2 and π are generated rounded toward zero (TASK-M2-30, REQ-GEN-034), so f32 saturation no longer passes α = π/2 or β = π, and §3.3's half turn and mirror no longer fire there; no blanket exception at the poles. This task reaches TASK-M2-30 through TASK-M2-06, TASK-M2-05 and TASK-M2-03. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the no-op test at the λ̃_y = 0 seam loses its mirror half; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-DEC-019
   area: DEC
   statement: "The free momentum block must decode qₖ = q_max·(2σ(z_qk) − 1), p_ρ = (q₀, q₁), p_λ = (q₂, q₃), and p₀ = −p_ρ − (m₀/M₀₁)p_λ, p₁ = p_ρ − (m₁/M₀₁)p_λ, p₂ = p_λ, with no √μ mass unweighting of the momenta."
@@ -1054,6 +1054,43 @@
   - R-696
   milestone: M2
   note: R-696, applied per R-369. TASK-M2-53.
+- id: REQ-DEC-055
+  area: DEC
+  statement: "The decoder's mirror step must be removed and latent `β` must run over the full circle, so that every chart, the shape sphere included, uses one decode path with no special case, a lower-half state encoding to `β ∈ (π, 2π)` in place of a mirrored state (R-865); conditional on the owner's bitwise check: every existing preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, bit for bit, through the new decoder, and if any doesn't, the removal stops and the list goes back to the owner before it proceeds, nothing re-baselined or loosened to pass. Latent-chart traces must pass through syzygies without the jump, or the task states why they can't, on that list."
+  source:
+  - file: decisions.md
+    section: "R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(on RQ-739, which stays open)*"
+  - file: docs/design/principia_dd_decoder.md
+    section: 3.3 Canonicalise
+  verify:
+    method: unit test
+    detail: "first, before the decoder changes, the baseline on its own commit: every preset, saved chart and golden with β in [0, π] recorded through today's decoder (IC words, sim key and, for a golden, its image hash), the PR listing every one; then cargo test -p kernel mirror_step_removed (a lower-half state encodes to β in (π, 2π) and decodes back to itself, not its mirror image; a latent-chart trace through a syzygy continuous, or the reason it can't be on the list; controls: the mirror step left in fails, one golden's β moved by one ulp fails the check); cargo test -p gui mirror_step_presets and cargo test -p engine mirror_step_presets (every chart preset each crate holds, against the baseline, bit for bit); cargo test -p kernel saved_chart (the saved charts, against the baseline); the golden suites re-run with their goldens unchanged: cargo test -p render --test debug_views, cargo test -p render --test qa_TASK-M2-32, cargo test -p validation --test decode_preset_golden and cargo test -p validation --test qa_TASK-M2-28, in the GPU jobs that run them; cargo test -p kernel --test roundtrip with T1 asserted as the equivariance E(Π·x) = the mirrored z (β → 2π − β, momentum controls reflected, L_z negated) and t3_half_mirror removed under REQ-ENC-005's change; any item that doesn't reproduce stops the task and goes to the owner; plus the PR lists every stored z, IC save file or test that relied on the mirrored encode, and the effect on default windows of twice the area in β"
+  rulings:
+  - R-854
+  - R-865
+  milestone: M2
+  rq:
+  - RQ-750
+  note: "Added by R-865 (8 Nov 2026), on RQ-739, which stays open on its item 3. Closed by TASK-M2-57. The proposal's optional \"mirror pairs counted once\" statistic is not ruled, and not built here. Waits on RQ-750: as worded the check fails on every latent item, β = π·σ(z_β) already covering (0, π) (physics review 5817348709 of PR #449, P1). *Was (verify):* \"cargo test -p kernel mirror_step_removed: first, before the decoder changes, every preset, saved chart and golden with β in [0, π] recorded through today's decoder on its own commit; then each reproduces …\", a kernel-only command (code review 5817349158, F2)."
+- id: REQ-DEC-056
+  area: DEC
+  kind: definition
+  statement: "Latent `β`'s link over the full circle, which replaces `β = π·σ(z_β)` with `β ∈ [0, π]` (R-865), and the signed encode it pairs with must be defined: the link and its inverse, where its seam lies and how a trajectory crossing `β = 0` or `β = π` at a syzygy reads on a latent chart, how a `β ∈ [0, π]` start keeps its bits, and the pole value at `λ̃ = 0`; written into dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 by the task that needs it and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: decisions.md
+    section: "R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(on RQ-739, which stays open)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 state the full-circle link and its inverse, the seam and how a syzygy crossing reads on a latent chart, why a β in [0, π] start keeps its bits, and the λ̃ = 0 pole value; the physics reviewer approved"
+  rulings:
+  - R-72
+  - R-865
+  milestone: M2
+  rq:
+  - RQ-750
+  note: "Added by R-865 (8 Nov 2026). Closed by TASK-M2-57. Waits on RQ-750: which link (migrate the stored z, another coordinate for the lower half, or a periodic z_β) is the owner's choice; this definition is written to their answer, never chosen by the task."
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
@@ -1100,6 +1137,7 @@
   - R-75
   - R-82
   milestone: M2
+  note: "R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, C's section condition λ̃_y ≥ −δ_λ under the R-82 mirror tie goes; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-ENC-003
   area: ENC
   statement: "Encode must be gauge-invariant (T1): E(g·x) = E(x) for every g = (translation a, boost u, rotation θ, scale s, mirror Π) acting as rᵢ' = s·R(θ)·Π·rᵢ + a, pᵢ' = s^(−1/2)·R(θ)·Π·pᵢ + mᵢ·u, off the mirror band; on |λ̃_y| ≤ δ_λ, collinear states included, for every g that translates, boosts, rotates and scales, x and Π·x there encoding as two distinct z (R-547; R-82 unchanged)."
@@ -1123,7 +1161,7 @@
   - R-82
   - R-547
   milestone: M2
-  note: "R-547 (RQ-360 (a), 21 Oct 2026): T1 is restricted on the mirror band, the code unchanged; TASK-M2-15's encode_t1_gauge sweeps exactly this (applied meanwhile), so it stands as built. *Was:* \"E(g·x) = E(x) for every g = (…, mirror Π) …\" with no band, and the verify's \"random g per §3.3 including deadband-straddling rotations\" (reworded, kept in this statement and verify)."
+  note: "R-547 (RQ-360 (a), 21 Oct 2026): T1 is restricted on the mirror band, the code unchanged; TASK-M2-15's encode_t1_gauge sweeps exactly this (applied meanwhile), so it stands as built. *Was:* \"E(g·x) = E(x) for every g = (…, mirror Π) …\" with no band, and the verify's \"random g per §3.3 including deadband-straddling rotations\" (reworded, kept in this statement and verify). R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, T1 becomes an equivariance: E(Π·x) is the mirrored z, β → 2π − β, the momentum controls reflected and L_z negated, in place of E(Π·x) = E(x); the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-ENC-004
   area: ENC
   statement: "Encode must be a right inverse on the interior (T2), asserted per chart in physical units as ‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys over interior z, with clamp-adjacent samples asserting lookup_clamped instead of a tight residual; on the shape sphere chart, whose decode at a lower-hemisphere pixel is off C's section (R-544), the reference is C(D(z)), as T3's: ‖C(D(z)) − D(E(D(z)))‖_phys ≤ ε_phys."
@@ -1172,7 +1210,7 @@
   rulings:
   - R-544
   milestone: M2
-  note: "R-544 (21 Oct 2026): on the shape sphere chart the lookup is the signed n̂ (REQ-ENC-034), so D(E(x)) there is C(x) with step 3's mirror undone where lookup_mirrored is set, the same system up to the mirror Π of T1's gauge group; T3 stands as written for every other chart (TASK-M2-43)."
+  note: "R-544 (21 Oct 2026): on the shape sphere chart the lookup is the signed n̂ (REQ-ENC-034), so D(E(x)) there is C(x) with step 3's mirror undone where lookup_mirrored is set, the same system up to the mirror Π of T1's gauge group; T3 stands as written for every other chart (TASK-M2-43). R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, T3's \"sign consistent with lookup_mirrored\", and roundtrip.rs's t3_half_mirror, no longer apply; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-ENC-006
   area: ENC
   statement: "The scale step must be skipped where |I_in − 1| ≤ τ_I (λ = 1, r and p unchanged, no notice; τ_I is REQ-ENC-035's calibration); elsewhere it must rescale in two steps, first by a power of two (exact), then by the remainder, so that I_in neither underflows nor overflows for any finite state with the bodies apart, setting λ = I_in^(−1/2), r ← r/√I_in, p ← I_in^(1/4)·p, recording λ, surfacing lookup_rescaled carrying λ exactly when step 0 ran, and transforming E_canon = √I_in·E_in, L_z,canon = L_z,in/I_in^(1/4), t_canon = t_in/I_in^(3/4), with timing outputs convertible back by I_in^(3/4); where I_in = 0, which then happens only when the bodies coincide, it must keep the select: divisor 1, λ = 1, p = 0, lookup_clamped, φ = +0."
@@ -1219,7 +1257,7 @@
   - R-437
   - R-438
   milestone: M2
-  note: "R-437: β takes the defined 0 at λ̃ = 0; α = atan2(‖λ̃‖, ‖ρ̃‖) has no pole once I = 1. R-438 (RQ-287): β reads |λ̃_y|, the mirror's quotient for β only, so a deadband λ̃_y ∈ [−δ_λ, 0] with λ̃_x < 0 gives β near π, not −π; R-82's mirror test and deadband are unchanged. Round 3 (physics review 5532062124): β selects π̂ on the −x half-axis, since WGSL may ignore a zero's sign through atan2; the ruling's round trip within the deadband is defined as the verify detail states (R-72), because the ε_z clamp keeps an exactly collinear λ̃_y from coming back."
+  note: "R-437: β takes the defined 0 at λ̃ = 0; α = atan2(‖λ̃‖, ‖ρ̃‖) has no pole once I = 1. R-438 (RQ-287): β reads |λ̃_y|, the mirror's quotient for β only, so a deadband λ̃_y ∈ [−δ_λ, 0] with λ̃_x < 0 gives β near π, not −π; R-82's mirror test and deadband are unchanged. Round 3 (physics review 5532062124): β selects π̂ on the −x half-axis, since WGSL may ignore a zero's sign through atan2; the ruling's round trip within the deadband is defined as the verify detail states (R-72), because the ε_z clamp keeps an exactly collinear λ̃_y from coming back. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π] (R-438) gives way to the signed encode, a lower-half state to β ∈ (π, 2π) (REQ-DEC-056); the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-ENC-008
   area: ENC
   statement: "Encode into the active chart must dispatch by axis kind: kind 1 reads the component exactly; kind 2 applies the block inverse plus the axis's own residual convention; kind 3 evaluates L_z(x), E(x), K(x) directly for chart coordinates; annotation axes have nothing to invert; otherwise encode falls back to latent z, which is always available."
@@ -1351,7 +1389,7 @@
   rulings:
   - R-547
   milestone: M2
-  note: "R-547 (RQ-295 (c), 21 Oct 2026): lookup_rescaled fires exactly when step 0 ran. TASK-M2-15 merged with this requirement held (rq: RQ-295); it moves to TASK-M2-47, with REQ-ENC-006 (applied per R-369)."
+  note: "R-547 (RQ-295 (c), 21 Oct 2026): lookup_rescaled fires exactly when step 0 ran. TASK-M2-15 merged with this requirement held (rq: RQ-295); it moves to TASK-M2-47, with REQ-ENC-006 (applied per R-369). R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the lookup_mirrored notice goes with the mirror step; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-ENC-015
   area: ENC
   statement: "Canonicalisation must run in the order 1a subtract CoM → 0 rescale (I computed in the CoM frame) → 1b remove the boost (pᵢ ← pᵢ − mᵢP_tot/M) → 2 rotate ρ̃ to +x → 3 mirror iff λ̃_y < −δ_λ, pinned in the shared source so both precisions run the identical sequence."
@@ -1379,7 +1417,7 @@
   - R-23
   - R-82
   milestone: M2
-  note: "R-23's order is now the normative numbering of inverse_encode_contract Part 6 and dd_encode §3.2; R-82 fixes the mirror test."
+  note: "R-23's order is now the normative numbering of inverse_encode_contract Part 6 and dd_encode §3.2; R-82 fixes the mirror test. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, step 3, the mirror, leaves the order; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-ENC-016
   area: ENC
   statement: "An exactly coincident inner pair (ρ̃ = 0) must not be represented and must be caught with lookup_clamped (not a separate coincident-bodies rejection), taking the same branch at both precisions."
@@ -1705,7 +1743,7 @@
   rulings:
   - R-544
   milestone: M2
-  note: "R-544, the R-369 decision \"The lookup\". Closed by TASK-M2-43. Physics review 5603309678 of PR #273, P1 (applied per R-369): the landing test on the shape sphere chart, without which the signed point is never used below the equator."
+  note: "R-544, the R-369 decision \"The lookup\". Closed by TASK-M2-43. Physics review 5603309678 of PR #273, P1 (applied per R-369): the landing test on the shape sphere chart, without which the signed point is never used below the equator. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the shape sphere's \"step 3 mirror undone\" path goes, one decode path for every chart; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-ENC-035
   area: ENC
   kind: calibration
@@ -1834,7 +1872,7 @@
   - R-141
   - R-544
   milestone: M2
-  note: "R-59 D5: has_redundant_hemisphere is replaced by system_image (inverse_encode_contract's flag table and chart_reference §3.3 now say so); R-104 names the shape sphere's value DoubleCover. R-113 (RQ-95): verified at M2 by golden image; the hemisphere toggle is a separate M8 GUI requirement. The n-to-1 value here is the untilted chart's. Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics; accepted by R-559). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold; accepted by R-559): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\". R-544 (21 Oct 2026): the shape sphere chart is the whole sphere; R-141's 2-to-1 cover, the hemisphere label and the redundancy flag go for it, and the hemisphere toggle with them (REQ-GUI-161). With no mirror pair to fold, the tilted fold above no longer applies to the shape sphere: the tilted view is one-to-one (R-544; RQ-508 queues the human's RQ-472 (a) equator clause). Closed by TASK-M2-28, re-scoped; the descriptor is TASK-M2-43's. R-613 (25 Oct 2026) rules RQ-508 as meanwhile: no fold anywhere on the shape sphere chart."
+  note: "R-59 D5: has_redundant_hemisphere is replaced by system_image (inverse_encode_contract's flag table and chart_reference §3.3 now say so); R-104 names the shape sphere's value DoubleCover. R-113 (RQ-95): verified at M2 by golden image; the hemisphere toggle is a separate M8 GUI requirement. The n-to-1 value here is the untilted chart's. Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics; accepted by R-559). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold; accepted by R-559): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\". R-544 (21 Oct 2026): the shape sphere chart is the whole sphere; R-141's 2-to-1 cover, the hemisphere label and the redundancy flag go for it, and the hemisphere toggle with them (REQ-GUI-161). With no mirror pair to fold, the tilted fold above no longer applies to the shape sphere: the tilted view is one-to-one (R-544; RQ-508 queues the human's RQ-472 (a) equator clause). Closed by TASK-M2-28, re-scoped; the descriptor is TASK-M2-43's. R-613 (25 Oct 2026) rules RQ-508 as meanwhile: no fold anywhere on the shape sphere chart. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the shape sphere's separate path (R-544's skip) goes, one decode path for every chart; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-CHART-003
   area: CHART
   statement: "A chart must be a map Φ : [0,1]² → Y followed by the shared decoder D and canonicaliser C, with the affine slice z(s,t) = z₀ + (2s−1)q₁ + (2t−1)q₂ as one implementation of Φ — its scale living in q (zoom a common scale on q₁, q₂, no per-axis factors) — and nonlinear charts using the general Φ."
@@ -2164,7 +2202,7 @@
   - R-437
   - R-544
   milestone: M2
-  note: "R-544 (21 Oct 2026): no canonical fold on the shape sphere; R-178's round trip composing Φ alone stands. Closed by TASK-M2-08 (merged); TASK-M2-43 replaces its fold test and re-runs this verify."
+  note: "R-544 (21 Oct 2026): no canonical fold on the shape sphere; R-178's round trip composing Φ alone stands. Closed by TASK-M2-08 (merged); TASK-M2-43 replaces its fold test and re-runs this verify. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the shape sphere's \"mirror undone\" path goes, one decode path for every chart; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-CHART-021
   area: CHART
   statement: "The Burrau family must use Euclid's parametrisation (a = m²−n², b = 2mn, c = m²+n² for coprime m > n > 0, m − n odd), right angle at the origin normalised by hypotenuse with each mass equal to its opposite side (r₀ = 0, r₁ = (a/c, 0), r₂ = (0, b/c); m = (c, b, a)/(a+b+c)), and state whether the normalised or historical (3,4,5)-mass convention is in use."
@@ -3285,7 +3323,7 @@
   - R-475
   - R-513
   milestone: M2
-  note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\"."
+  note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\". Code review 5816802860 of PR #447, C1, and physics review 5816819537, F3: saving a saved curved chart again, compositions onto three or four hidden coordinates, and the composed chart's area weight and shape-sphere repeat counting are REQ-CHART-148 (TASK-M2-55); TASK-M2-40 refuses the first two meanwhile (applied per R-369: the remainder is a follow-up task)."
 - id: REQ-CHART-074
   area: CHART
   statement: "A link parameter change must move the result where it acts: `mu_max = 4` against 5 must give different payloads on a latent configuration view at the fixed non-zero mass logit z_μ = (0.5, −0.3), whose masses softmax(0, μ_max·tanh z_μ) go through the mass link (R-626; the mass simplex chart, which sets its masses directly, cannot show it), and identical payloads on a latent configuration view with both mass logits at 0."
@@ -3374,7 +3412,7 @@
   - R-507
   - R-513
   milestone: M2
-  note: "R-475 L5 (physics review 5586890917 of PR #255, F3); R-513 (RQ-403 ruled, option (b)), Q1 to Q5. Closed by TASK-M2-40 with REQ-CHART-073 (applied per R-369, R-513 Q4: the composition is built once). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered.\", the verify's \"decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs\", and \"Waits for RQ-403; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P3: non-parallel tilts, so the R′·R control can fail. *Was:* \"a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control,\"."
+  note: "R-475 L5 (physics review 5586890917 of PR #255, F3); R-513 (RQ-403 ruled, option (b)), Q1 to Q5. Closed by TASK-M2-40 with REQ-CHART-073 (applied per R-369, R-513 Q4: the composition is built once). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered.\", the verify's \"decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs\", and \"Waits for RQ-403; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P3: non-parallel tilts, so the R′·R control can fail. *Was:* \"a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control,\". Physics review 5816819537 of PR #447, F2: a new tilt into the saved target of a saved Lean each axis view with one target and both angles set waits on RQ-746, split to REQ-CHART-149 (TASK-M2-56); TASK-M2-40 refuses it meanwhile. Code review 5816802860 of PR #447, C1, and physics F3: a composition onto three or four hidden coordinates (Q1's \"one rule for every new target\" past two) is REQ-CHART-148 (TASK-M2-55); TASK-M2-40 refuses it meanwhile (applied per R-369: the remainder is a follow-up task)."
 - id: REQ-CHART-078
   area: CHART
   kind: definition
@@ -3618,6 +3656,7 @@
   rulings:
   - R-72
   milestone: M2
+  note: "R-866 (8 Nov 2026): locking must not move the view, so the re-centring of a nonlinear chart's window this definition wrote (TASK-M2-23, merged) is replaced; TASK-M8-125 rewrites that part of the definition under REQ-GUI-425, exact or with its reason. This requirement's record stands as closed."
 - id: REQ-CHART-090
   area: CHART
   kind: definition
@@ -4102,10 +4141,12 @@
   - RQ-721
 - id: REQ-CHART-115
   area: CHART
-  statement: "Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words."
+  statement: "Under a lock a path must be a based homotopy: the anchor stored as the signed starting state, its mirror half kept, not as a latent point (R-867), its IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words. What `z_locked` still serves beside the stored state (the sliders' re-basing, snap-back, a chart-mode switch) must be written into chart_composition § 17.8 and approved by the physics reviewer (R-72)."
   source:
   - file: docs/design/principia_chart_composition.md
     section: "17.8 Lock: a based homotopy"
+  - file: decisions.md
+    section: "R-867 — The lock's anchor is stored as the signed starting state, not as a latent point; approved as TASK-M8-117"
   verify:
     detail: "cargo test -p engine path_lock_centre: where the anchor stays in B, a probe at (½, ½) reads one set of words on every frame, ends included, affine and nonlinear, δ = 0 and δ ≠ 0; snap-back bit for bit; the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B (a region D, a rest and a Burrau B), the probe reads the stored words at s = 0 and B's nearest point to the anchor at s = 1, the slide continuous between (the largest step in the probe's state between frames falling to at most 0.6 of the previous largest step each time the frame step is halved, twice over), with no label and no jump; a time-axis chart to an IC-only chart keeps its labelled jump; controls: the select removed fails, offsets blended linearly fails, a labelled jump where the anchor can't exist in B fails, an unlabelled snap to B's nearest point at one mid-path frame fails"
     method: unit test
@@ -4114,7 +4155,11 @@
   - R-92
   - R-849
   - R-850
+  - R-867
   milestone: M8
+  rq:
+  - RQ-749
+  note: "R-867 (8 Nov 2026): the anchor is the signed starting state, not a latent point. Where the test reads once the pin is off the centre (R-866) is RQ-749's. *Was (statement):* \"Under a lock a path must be a based homotopy: the anchor's IC words stored at the path's start and taken at the centre on every frame, ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the centre pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the centre within 0.5 of the ends' on swapped and orthogonal planes, snap-back bit for bit, a chart-mode switch under a lock recording the words.\""
 - id: REQ-CHART-116
   area: CHART
   statement: "A path must offer control charts built from each arm's own interpolation, alignment that reaches the identity at s = 1, and re-timing for constant visual speed by a recorded table pinned at both ends, easing untouched."
@@ -4624,6 +4669,48 @@
   - R-864
   milestone: M8
   note: "Closed by TASK-M8-124, stage 1 of R-863's build order. Which task keeps REQ-CHART-113's overlapping tests is RQ-744's (B)."
+- id: REQ-CHART-148
+  area: CHART
+  statement: "A saved curved chart (R-475, R-513) must carry every route its rulings name beyond what REQ-CHART-073 and REQ-CHART-077 build: (a) a new tilt whose offsets, with the saved tilt's, land on three or four hidden coordinates (a saved one-target tilt re-tilted into two other targets, a saved two-target tilt re-tilted into one or two others), each offset on its own target as R-513 Q1 rules, none dropped or refused (R-513 Q1, \"one rule for every new target\"; R-475 S5, planes in which an axis mixes several hidden coordinates reached by saving and tilting again); (b) a saved curved chart saved again, its definition the chain of saved tilts, reopened at zero tilt bitwise and a further tilt composing R·R′·R″ as R-513 rules (R-475 S1, \"tilted, sliced and saved like any other\"); (c) the composed chart's area weight and statistics, as a single tilted chart has them: under Lean each axis the Gram factor of its composed axes (R-474 R7), weight 0 and `ray-degenerate` at the rank-losing corner (R-554), and on the shape sphere the repeat counting of `system_image`, `pixel` and `counted_total` (R-554 L3, R-655)."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: decisions.md
+    section: "R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel saved_chart_wide: a shape-sphere view saved at τ = (25°, −30°) into two momentum controls and re-tilted τ′ = (20°, 40°) into two others places every pixel of a 33 × 33 grid as (R ⊕ 1)·(1 ⊕ R′) to 1 ulp, all four offsets on their controls, and a saved one-target view re-tilted into two others likewise; a saved chart of a saved chart reopens at zero tilt bitwise and a further tilt into its target composes R·R′·R″ to 1 ulp; a saved Lean each axis view at the corner |τ₁| = |τ₂| = 90° with one target reports area weight 0 and `ray-degenerate`, a composed Lean view's weight is its composed axes' Gram factor, and a composed shape-sphere view counts each repeat once; controls: an offset dropped, the chain composed in the reverse order, and the weight of the new tilt alone, each fail; review (physics)"
+  rulings:
+  - R-474
+  - R-475
+  - R-513
+  - R-554
+  - R-655
+  milestone: M2
+  note: "Split from TASK-M2-40 (code review 5816802860 of PR #447, C1; physics review 5816819537, F3; applied per R-369, task scoping: the remainder is a follow-up task, nothing ruled dropped). Closed by TASK-M2-55. TASK-M2-40 refuses (a) (`Composed::new` returns None) and (b) by type (`Saved::curved` takes no tilted chart), and gives (c) no weight or repeat counting meanwhile."
+- id: REQ-CHART-149
+  area: CHART
+  statement: "A new tilt of a saved curved chart into its own saved target, where the saved tilt is Lean each axis with one target and both angles set (its axes skewed, so R has no third column for R-513 Q1's input), must compose as RQ-746 rules; until then the kernel refuses that composition (`kernel::chart::saved::Composed::new` returns None) and the saved target is not offered in that one case (R-513 Q3 holding everywhere else)."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: decisions.md
+    section: "R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel saved_chart_skewed: a shape-sphere view saved under Lean each axis at τ = (30°, 40°) into one momentum control, then tilted τ′ = (20°, 0) into the same control, places the pixel (0.3, 0.7) from the centre, and every pixel of a 33 × 33 grid, as RQ-746's ruling composes it, to 1 ulp; at τ′ = 0 bit-identical to the saved view; control: the other option's composition (RQ-746's options (a) and (b) give (0.2026, 0.4759, 0.6628) and (0.1598, 0.4307, 0.7099) at that pixel) fails; at the edge of Lean's range, a saved tilt at τ = (90°, 40°) (R-474 R8's dead zone) composes, or is not offered, as RQ-746's ruling states (option (a): `t̂` the cross product's own sign, `e_X` fixing none; option (b): the saved target vanishes under R-514 I2 and is not offered), and at τ = (90°, 90°) no composition is made (R-554's `ray-degenerate`, no frame under either option); review (physics)"
+  rulings:
+  - R-474
+  - R-475
+  - R-513
+  milestone: M2
+  rq:
+  - RQ-746
+  note: "Split from REQ-CHART-077 (physics review 5816819537 of PR #447, F2; R-473 J12's precedent: a requirement waiting on an RQ carries the key). Closed by TASK-M2-56, which waits on RQ-746. TASK-M8-48's target dropdowns don't offer the saved target in this case until it is ruled."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -15388,7 +15475,7 @@
   - R-628
   - R-670
   milestone: M2
-  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them. R-628: the descriptor's rho_angle is read from the configuration block's own (ρ̃, λ̃), so the pole test holds it strictly. Verify *Was:* \"… and agrees with the CPU there, ±0 operands included (R-438)\". R-670 (2 Nov 2026, RQ-656 (5)(i)): the ε ≠ 0 sentence is added, verified by TASK-M9-39's ε ≠ 0 arm of cargo xtask gate decode-agreement, on gpu-metal, gpu-lavapipe and the CPU twin, the zero-separation pixel included (physics review 5771183527 of PR #408, F5), since no softened run exists before it; the statement and verify at ε = 0 are unchanged."
+  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them. R-628: the descriptor's rho_angle is read from the configuration block's own (ρ̃, λ̃), so the pole test holds it strictly. Verify *Was:* \"… and agrees with the CPU there, ±0 operands included (R-438)\". R-670 (2 Nov 2026, RQ-656 (5)(i)): the ε ≠ 0 sentence is added, verified by TASK-M9-39's ε ≠ 0 arm of cargo xtask gate decode-agreement, on gpu-metal, gpu-lavapipe and the CPU twin, the zero-separation pixel included (physics review 5771183527 of PR #408, F5), since no softened run exists before it; the statement and verify at ε = 0 are unchanged. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the β = π̂ select on the −x half-axis changes with the full-circle link; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-COL-007
   area: COL
   statement: "A category must never be interpolated: mixed categorical pixels must be resolved by per-sample colour then SSAA resolve, never by averaging state indices or by majority + desaturation."
@@ -20273,7 +20360,7 @@
   note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-409 (10 Oct 2026): the ring's colour shows the keyboard's mode. TASK-M6-25 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the two colours (REQ-GUI-182) and re-checks this requirement on the mock, and TASK-M8-13 re-runs it on the real engine as now worded. R-460 (18 Oct 2026): the ring shows only while keyboard navigation is on, which starts only on keyboard input; a window opened with the mouse takes the focus with no ring (REQ-GUI-210, TASK-M6-41). R-464 (18 Oct 2026): after any mouse click or drag the ring is hidden until the next key press, which shows it where the focus is (REQ-GUI-210, TASK-M6-41). R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: the re-run of its acceptance on the real engine is TASK-M8-91's, which wires TASK-M8-13's keyboard; TASK-M8-13 builds on the mock engine (code review 5664955153 of R-627's port, applied per R-369)."
 - id: REQ-GUI-099
   area: GUI
-  statement: "Locking (K, or right-click → lock here) must recentre the view on that point and mark it with a gold reticle at the centre and a gold pin on the compass, and the lock badge must read '● locked at z_locked' and offer unlock and open in Inspector."
+  statement: "Locking (K, or right-click → lock here) must not move the view (R-866): it must mark the clicked pixel, the pin, with a gold reticle where it is on screen and with a gold pin on the compass, and the lock badge must read '● locked at z_locked' and offer unlock, centre on pin and open in Inspector."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G4. Lock — the reticle and the pin (`08_lock.png`)
@@ -20285,14 +20372,17 @@
     section: 01 Explore — the everyday view
   - file: decisions.md
     section: "R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*"
+  - file: decisions.md
+    section: "R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*"
   verify:
     method: GUI screenshot
     detail: screenshot against 08_lock.png after K over a point
   rulings:
   - R-390
   - R-627
+  - R-866
   milestone: M8
-  note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: TASK-M8-07 keeps it, building the badge and reticle on the mock engine's lock; the real engine's lock is TASK-M8-90's, which re-runs its acceptance there (code review 5664955153 of R-627's port, applied per R-369)."
+  note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock. R-627 (27 Oct 2026), a correction beside the note above, which stands as its record: TASK-M8-07 keeps it, building the badge and reticle on the mock engine's lock; the real engine's lock is TASK-M8-90's, which re-runs its acceptance there (code review 5664955153 of R-627's port, applied per R-369). R-866 (8 Nov 2026): locking doesn't move the view; the reticle sits at the pin and the badge gains centre on pin. *Was (statement):* \"Locking (K, or right-click → lock here) must recentre the view on that point and mark it with a gold reticle at the centre and a gold pin on the compass, and the lock badge must read '● locked at z_locked' and offer unlock and open in Inspector.\""
 - id: REQ-GUI-100
   area: GUI
   statement: "Present mode must hide all chrome and Esc must return from it; with the chrome hidden the figure must fill the window as with F3 (REQ-GUI-180), in the mode View › F3 fills by sets (R-468): in Extend past the chart's [0,1]² each axis extending by its declared type with R-407's fallback, a forbidden pixel drawn as the canvas background (R-467); in Fit the view's square scaled to the window's shorter side, the rest the canvas background."
@@ -22828,6 +22918,8 @@
   - R-92
   - R-474
   milestone: M6
+  rq:
+  - RQ-747
   note: "R-474 R4, K5. Closed by TASK-M6-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-GUI-234
   area: GUI
@@ -26147,6 +26239,93 @@
   milestone: M8
   rq:
   - RQ-736
+- id: REQ-GUI-425
+  area: GUI
+  statement: "Locking (K, or right-click → lock here) must not move the view (R-866): it must edit neither `z₀`, the basis nor a nonlinear chart's window; the pin must be the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre; tilt and zoom must turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action must bring the pin to the centre as one undoable navigation edit, and a setting, off by default, must apply it at every lock in the same command, one history entry. On nonlinear charts, where locking re-centred the window to compute the pin, the pin must be exact, or the task must state why it can't be, and an inexact pin's bound is REQ-GUI-429's calibration, ruled by the owner before anything inexact merges; how the pin is held there is written into chart_decoder_contract Part 4 (R-72) and approved by the physics reviewer."
+  source:
+  - file: decisions.md
+    section: "R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G4. Lock — the reticle and the pin (`08_lock.png`)
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The lock (projective microscope)
+  verify:
+    method: unit test
+    detail: "cargo test -p engine lock_moves_no_view and cargo test -p gui lock_moves_no_view: a lock at an off-centre pixel on the latent chart, a mixed chart and an invariant chart leaves z₀, the basis and the window bit for bit, its z_locked equal to today's point at that pixel bit for bit on the latent chart; the pinned pixel decodes the clicked state after tilts and zooms about it (bit for bit, or, where the task states why it can't be, within the bound REQ-GUI-429 calibrates, proposed with its evidence and ruled by the owner before merge, never chosen in the PR); centre on pin brings the pin to (½, ½) as one undoable edit; the setting on gives the same state as lock then centre on pin, in one history entry, and off by default; controls: a lock that re-centres fails, a tilt about the centre with an off-centre pin fails; plus review: the nonlinear chart's construction in chart_decoder_contract Part 4, exact or with its reason, approved by the physics reviewer"
+  rulings:
+  - R-69
+  - R-473
+  - R-866
+  milestone: M8
+  note: "Added by R-866 (8 Nov 2026). Closed by TASK-M8-125, in R-863's stage 1 after TASK-M8-124. Physics review 5817348709 of PR #449, P5: the inexact branch's bound is a calibration (R-71; REQ-GUI-429). *Was (verify, the clause):* \"(bit for bit, or within the bound and with the reason the task states)\"."
+- id: REQ-GUI-426
+  area: GUI
+  statement: "Points of interest (R-870): any pixel's starting state must be savable as a point, any number of them, each named and stored as the signed state; on every chart and every frame of every path (morph, tilt, slice, zoom, chart change) each point must be shown as a filled star where the chart passes through it exactly, otherwise as a hollow star at the nearest chart point labelled with the off-slice distance in a stated metric; optional \"similar systems\" overlays must draw where each property the user picks from the primitive registry equals the point's value (one property a contour line, two their intersection points, three or more near-matches within a stated tolerance), reusing the Tier 1 contour overlays and forward formulas only; display only, never scored, outside the sim key, and distinct from the lock."
+  source:
+  - file: decisions.md
+    section: "R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional \"similar systems\" overlays; display only, never scored, distinct from the lock"
+  - file: docs/design/principia_chart_composition.md
+    section: 10.5 Points of interest
+  verify:
+    method: unit test
+    detail: "cargo test -p gui points_of_interest: a point lying in the chart draws a filled star at the pixel that decodes to it; a one-property overlay passes through the star; overlays redraw consistently across a morph's frames (the owner's three tests); a point off the chart draws a hollow star at the nearest chart point labelled with its distance; saving or showing a point changes no sim key, payload or statistic; controls: a star drawn one pixel off fails, an overlay of another property's value fails to pass through the star, a point in the sim key fails"
+  rulings:
+  - R-870
+  milestone: M8
+  note: Added by R-870 (8 Nov 2026). Closed by TASK-M8-126.
+- id: REQ-GUI-427
+  area: GUI
+  kind: definition
+  statement: "What the points of interest of R-870 leave unstated must be defined: when a chart passes through a point \"exactly\", \"the nearest chart point\", the metric of the off-slice distance, how a near-match of three or more properties is measured, how marks are found on a path frame with no inverse, which state group holds the saved points, off the sim key, and the gauge in which property values and the off-slice distance are compared: chart pixels decode in the I = 1 gauge, where of the conserved quantities only the scale-free L_z²E and the signs hold, so \"equals the point's value\" is undefined for a scale-dependent primitive (E, L_z, …) until the gauge is stated, and whether the off-slice distance is taken on canonical representatives (centre of mass, rotation and scale quotiented) with the mirror not quotiented, the point being a signed state (R-854); written into chart_composition § 10.5 by the task that needs it and approved by the physics reviewer before merge (R-72)."
+  source:
+  - file: decisions.md
+    section: "R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional \"similar systems\" overlays; display only, never scored, distinct from the lock"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 10.5 Points of interest
+  verify:
+    method: review checklist
+    detail: "chart_composition § 10.5 states each definition: \"exactly\", the nearest chart point, the off-slice metric, the near-match measure, marks on a frame with no inverse, the state group holding the points, and the gauge of the property values and the off-slice distance, mirror not quotiented; the physics reviewer approved"
+  rulings:
+  - R-72
+  - R-870
+  milestone: M8
+  note: "Added by R-870 (8 Nov 2026). Closed by TASK-M8-126. Physics review 5817348709 of PR #449, P4: the gauge added. *Was (statement, the clause):* \"and which state group holds the saved points, off the sim key;\"."
+- id: REQ-GUI-428
+  area: GUI
+  kind: calibration
+  statement: "The near-match tolerance of R-870's \"similar systems\" overlays, within which a pixel matches a point on three or more properties, in REQ-GUI-427's measure, which the owner's words call \"a stated tolerance\" and the corpus does not give, must be calibrated (R-71): proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the owner at the M8 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional \"similar systems\" overlays; display only, never scored, distinct from the lock"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tolerance and its evidence (how many pixels match at it on a stated set of charts and points, against one tighter and one looser value); recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-870
+  milestone: M8
+  note: Added by R-870 (8 Nov 2026). Closed by TASK-M8-126.
+- id: REQ-GUI-429
+  area: GUI
+  kind: calibration
+  statement: "The bound within which an inexact pin on a nonlinear chart holds the clicked state after tilts and zooms about it (R-866), which the corpus does not give, must be calibrated (R-71) unless the pin is exact: proposed with its evidence by the task that needs it, with its stated reason the pin can't be exact, checked by the physics reviewer, and ruled by the owner before that task merges, never chosen in its PR."
+  source:
+  - file: decisions.md
+    section: "R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional \"centre on pin\" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "either the pin shown exact, bit for bit, on every nonlinear chart, and no value proposed; or the proposal gives the bound, the measured error of the pinned pixel's decode after tilts and zooms on the mixed and invariant charts, and the reason it can't be exact, ruled by the owner before merge and recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-866
+  milestone: M8
+  note: "Added by R-866 (8 Nov 2026), physics review 5817348709 of PR #449, P5. Closed by TASK-M8-125."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -30465,7 +30644,7 @@
   - R-549
   - R-551
   milestone: M2
-  note: "Uses μ_max = 5, q_max = 2, ε = 1e-6, α_min = 0 (R-10, R-21). Bounds are the reference tool's measured values; the Rust Inspector's gate: REQ-VAL-121 (calibration). R-549 (RQ-355): the pole at equal masses. R-551 (RQ-475 (a) + (c), RQ-476 (a), 21 Oct 2026): \"exactly\" is the chart's clamp image, bit for bit, at the equator, and a calibrated bound on |w − 1| and |w|; |z| < 4 is the ball. TASK-M2-27 merged with this requirement held (rq: RQ-355, RQ-475, RQ-476), its gate drawing in the ball and reporting the shape checks unjudged (applied meanwhile); it moves to TASK-M2-50, which judges them (applied per R-369). *Was:* \"over 2×10⁴ random z with |z| < 4, with the canonical CoM at the origin, equilateral configurations at a shape-sphere pole and collinear ones on the equator exactly\" and the verify's \"equilateral → pole and collinear → w = 0 exactly\" (stale value, replaced by R-551). Fix round 1 of PR #274 (physics P3, applied per R-369). *Was (verify):* \"cargo xtask gate inspector-roundtrip: over the fixed, recorded seed's 2×10⁴ z in the ball ‖z‖ < 4, max ‖z − E(D(z))‖ ≤ 1.2×10⁻¹³ and the canonical CoM ≤ 1.7×10⁻¹⁶ from the origin; over RQ-475's families through random gauge elements (scale 2^[−4, 4), any turn, either parity, offsets and boosts on [−2, 2)²), equal-mass equilateral triangles at rest (L⁺ and L⁻) and collinear states on the x-axis with masses from z_μ on [−4, 4)²: every collinear state's z_β at its clamp image with lookup_clamped set and no equilateral state's set, judged bit for bit; max |w − 1| and max |w| within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴); each check with a registered negative control (R-176)\" RQ-624 (decided by the orchestrator per R-369, 30 Oct 2026; TASK-M2-50): |w − 1| and |w| are read on C(x), the state R-551's evidence was measured on; on D(E(x)) a collinear state's z_β sits at its clamp image, so its |w| is sin2α·sin(π·ε_z), up to about π·10⁻⁶, by design (inverse_encode_contract Parts 3 and 4), reported unjudged. *Was (verify):* \"cargo xtask gate inspector-roundtrip: over the fixed, recorded seed's 2×10⁴ z in the ball ‖z‖ < 4, max ‖z − E(D(z))‖ ≤ 1.2×10⁻¹³ and the canonical CoM ≤ 1.7×10⁻¹⁶ from the origin; over RQ-475's families through random gauge elements (scale 2^[−4, 4), any turn, either parity, offsets and boosts on [−2, 2)²), equal-mass equilateral triangles at rest (L⁺ and L⁻) and collinear states on the x-axis with masses from z_μ on [−4, 4)²: every collinear state's z_β at its clamp image with lookup_clamped set and no equilateral state's set, judged bit for bit; max |w − 1| and max |w|, read on the canonical state D(E(x)) (where C's mirror puts L⁻ at w = +1), within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴); each check with a registered negative control (R-176)\" (reworded per RQ-624's decision, applied per R-369)."
+  note: "Uses μ_max = 5, q_max = 2, ε = 1e-6, α_min = 0 (R-10, R-21). Bounds are the reference tool's measured values; the Rust Inspector's gate: REQ-VAL-121 (calibration). R-549 (RQ-355): the pole at equal masses. R-551 (RQ-475 (a) + (c), RQ-476 (a), 21 Oct 2026): \"exactly\" is the chart's clamp image, bit for bit, at the equator, and a calibrated bound on |w − 1| and |w|; |z| < 4 is the ball. TASK-M2-27 merged with this requirement held (rq: RQ-355, RQ-475, RQ-476), its gate drawing in the ball and reporting the shape checks unjudged (applied meanwhile); it moves to TASK-M2-50, which judges them (applied per R-369). *Was:* \"over 2×10⁴ random z with |z| < 4, with the canonical CoM at the origin, equilateral configurations at a shape-sphere pole and collinear ones on the equator exactly\" and the verify's \"equilateral → pole and collinear → w = 0 exactly\" (stale value, replaced by R-551). Fix round 1 of PR #274 (physics P3, applied per R-369). *Was (verify):* \"cargo xtask gate inspector-roundtrip: over the fixed, recorded seed's 2×10⁴ z in the ball ‖z‖ < 4, max ‖z − E(D(z))‖ ≤ 1.2×10⁻¹³ and the canonical CoM ≤ 1.7×10⁻¹⁶ from the origin; over RQ-475's families through random gauge elements (scale 2^[−4, 4), any turn, either parity, offsets and boosts on [−2, 2)²), equal-mass equilateral triangles at rest (L⁺ and L⁻) and collinear states on the x-axis with masses from z_μ on [−4, 4)²: every collinear state's z_β at its clamp image with lookup_clamped set and no equilateral state's set, judged bit for bit; max |w − 1| and max |w| within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴); each check with a registered negative control (R-176)\" RQ-624 (decided by the orchestrator per R-369, 30 Oct 2026; TASK-M2-50): |w − 1| and |w| are read on C(x), the state R-551's evidence was measured on; on D(E(x)) a collinear state's z_β sits at its clamp image, so its |w| is sin2α·sin(π·ε_z), up to about π·10⁻⁶, by design (inverse_encode_contract Parts 3 and 4), reported unjudged. *Was (verify):* \"cargo xtask gate inspector-roundtrip: over the fixed, recorded seed's 2×10⁴ z in the ball ‖z‖ < 4, max ‖z − E(D(z))‖ ≤ 1.2×10⁻¹³ and the canonical CoM ≤ 1.7×10⁻¹⁶ from the origin; over RQ-475's families through random gauge elements (scale 2^[−4, 4), any turn, either parity, offsets and boosts on [−2, 2)²), equal-mass equilateral triangles at rest (L⁺ and L⁻) and collinear states on the x-axis with masses from z_μ on [−4, 4)²: every collinear state's z_β at its clamp image with lookup_clamped set and no equilateral state's set, judged bit for bit; max |w − 1| and max |w|, read on the canonical state D(E(x)) (where C's mirror puts L⁻ at w = +1), within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴); each check with a registered negative control (R-176)\" (reworded per RQ-624's decision, applied per R-369). R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, its gate, read on C(x) \"where C's mirror puts L⁻ at w = +1\", measures something else once L⁻ reads w = −1 on C(x); its restatement is proposed by TASK-M2-57 under physics review and recorded by a ruling before it merges, never changed silently; the statement stands as written until then (physics review 5817348709 of PR #449, P2)."
 - id: REQ-VAL-023
   area: VAL
   statement: "The shape-sphere dot must land on a binary-collision landmark exactly when two bodies coincide, at any mass ratio."

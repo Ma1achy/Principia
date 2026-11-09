@@ -610,6 +610,10 @@ render_gui_spec §G2, §G5, §G13.
 ## R-69 — What is undoable *(closes the step-6 open question)*
 *Read by R-466 (18 Oct 2026; the section resets and Home edit `z₀` and the basis, so they are undoable, each one
 command).*
+*Amended in part by R-866 (8 Nov 2026, the owner: "locking must not move the view"; locking edits no navigation field,
+"centre on pin" is a navigation edit, and the auto-snap setting is a preference, not undoable).*
+*Still in force: all of it, locking and unlocking undoable as chart construction, read with R-866: a lock edits the
+lock group alone, never `z₀`, the basis or a nonlinear chart's window.*
 *25 Sep 2026 · applied in step 6*
 
 `SimConfig` and `RenderState` edits are undoable, including navigation (it edits `z₀` and the basis) and lock / unlock (chart
@@ -706,6 +710,9 @@ Rewrite the embedded record against the contract names and the 8-D latent. Drop 
 offsets, R-80). Bump the embedding version.
 
 ## R-82 — One mirror test, one seed rule *(closes RQ-33)*
+*Amended in part by R-865 (8 Nov 2026, conditionally: the decoder's mirror step is removed and latent `β` runs over the
+full circle once TASK-M2-57 has passed the owner's bitwise check and merged; its mirror test then goes).*
+*Still in force: all of it until TASK-M2-57 merges; then the seed rule, the mirror test going with the mirror step.*
 *25 Sep 2026 · applied in step 7*
 
 One mirror test, in encode's frame: mirror iff λ̃_y < −δ_λ (λ̃ = √μ_λ·λ), δ_λ = 1e-12; |λ̃_y| ≤ δ_λ → no mirror. Seed:
@@ -7915,6 +7922,8 @@ Adds REQ-CHART-054 and REQ-CHART-055; REQ-GUI-180's statement, verify, rulings, 
 and REQ-GUI-100's statements, verify, rulings, sources and notes, and REQ-GUI-070's note change.
 
 ## R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*
+*Read with R-865 (8 Nov 2026: once TASK-M2-57 merges, latent `β` runs over the full circle and this count spans
+`β ∈ (π, 2π)` too; the optional "mirror pairs counted once" statistic of RQ-739's item 3 is unruled, RQ-739 open on it).*
 *Read by R-467 (20 Oct 2026; the counting is unchanged; the outcome legend's forbidden share leaves the
 presentation legends, the Domain preview's "forbidden in view: N%" standing).*
 *Superseded in part by R-471 (20 Oct 2026; port B1 as the default: an energy-type axis is warped by default, every
@@ -9943,6 +9952,10 @@ Changes REQ-COL-006, REQ-DEC-002, REQ-DEC-014, REQ-DEC-016, REQ-ENC-016 (holds, 
 (rulings, verify, the hold RQ-287) and REQ-CHART-020 (rulings, verify).
 
 ## R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*
+*Amended in part by R-865 (8 Nov 2026, conditionally: once TASK-M2-57 has passed the owner's bitwise check and merged,
+latent `β` runs over the full circle and a lower-half state encodes to `β ∈ (π, 2π)`, not through `|λ̃_y|`).*
+*Still in force: all of it until TASK-M2-57 merges; then what TASK-M2-57's definition of the signed encode
+(REQ-DEC-056) keeps of it.*
 *15 Oct 2026 · applied in `docs/design/principia_dd_encode.md` § "3.1 Forward ↔ inverse pairing table — closures
 verified" (the Config row's cells and a paragraph reworded, a paragraph added), § "3.2 Canonicalisation `C` — the exact ordered
 procedure" (a paragraph added) and § "5. Unit tests" (test 10), `docs/contracts/principia_inverse_encode_contract.md`
@@ -14102,9 +14115,13 @@ components, tilted by their physical value; RQ-474 closed).*
 physical construction, its hidden coordinates are that construction's physical parameters, tilted and sliced by value
 as R-554 L5's `p_λ`: the mass simplex's `ν₀`, a rest start's four momentum controls from 0, and the held `L_z` or
 `K` of the `(ν, K)` chart, `Φ_θ,K` and `Φ_θ,L_z`; T1's "every chart" holds as written).*
+*Amended in part by R-866 (8 Nov 2026; J7: under a lock the tilt turns about the pin, set at the clicked pixel and in
+general off the view's centre, so the pinned pixel stays fixed on screen; TASK-M8-125 builds it on curved charts, exact
+or saying why).*
 *Still in force: all of it but T4's proposal and J3's meanwhile, which R-507 replaces; R-513 says how J9's
 composition runs into the saved target; R-554 adds the physical `p_λ` targets, and R-633 adds J1's principle for the
-charts that hold a block by a physical construction, J2's latent-control rule holding for every other target.*
+charts that hold a block by a physical construction, J2's latent-control rule holding for every other target; J7's
+"the locked IC fixed under a tilt" holds about the pin, not the view's centre (R-866).*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (a paragraph added,
 "Tilt on every chart"), § "Directions are axis kinds — the unifying rule" (a paragraph added, the curve-axis lock rule
 as it applies to GUI tilt), § "What the GPU knows about all of this: nothing" (a sentence) and § "Part 5 —
@@ -20686,7 +20703,10 @@ Adds REQ-COL-136 to REQ-COL-138; amends REQ-COL-129, REQ-COL-130, REQ-GUI-337, R
 
 ## R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*
 *Extended by R-854 (7 Nov 2026: the owner's symmetry rule carries "no fold" from the shape sphere to every chart and trajectory display; R-853 and R-855 read it, the filter a declared optional view).*
-*Still in force: all of it.*
+*Amended in part by R-865 (8 Nov 2026, conditionally: once TASK-M2-57 has passed the owner's bitwise check and merged,
+every chart uses one decode path, so the shape sphere's separate path, its skip of the mirror step, goes).*
+*Still in force: all of it; once TASK-M2-57 merges, all of it but the separate decode path, the whole sphere and every
+pixel its own system standing.*
 *21 Oct 2026 · applied in `docs/incoming/2026-10-21_shape_sphere_whole/` (the instruction as delivered, its two
 addenda, the plain summary's two versions, the reply, and `checks/r544_check.py`, the port's check),
 `docs/design/principia_chart_reference.md` § "3. Shape-sphere chart `(θ, φ)`" (the held values), § "3.3 The chart map"
@@ -32927,3 +32947,278 @@ them.
 R-864 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-CHART-147 (with R-863); changes no existing requirement.
+
+## R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(on RQ-739, which stays open)*
+*8 Nov 2026 · the owner's reply 1 to the code map of that day, pasted as their own; applied in
+`REVIEW_QUEUE.md` (RQ-739, a dated line, open on its item 3; RQ-750, new), the mirror-step markers of `docs/contracts/principia_canonical_spec.md`
+§ 3, `docs/contracts/principia_chart_decoder_contract.md` Part 2 and Part 5,
+`docs/contracts/principia_inverse_encode_contract.md` Part 1, `docs/design/principia_chart_reference.md` § 0.4 and § 3,
+`docs/design/principia_dd_decoder.md` § 3.3, `docs/design/principia_dd_encode.md` § 3.2,
+`docs/design/principia_chart_composition.md` §§ 3, 6.2, 6.6, 8.4, 10.3, 10.4, 17.2 and 17.8 and
+`docs/design/principia_lines.md` § 8, the owner's model (`docs/design/principia_chart_space_model.md` § 0.6, R-868), the
+forward lines of R-82, R-438 and R-544, R-408's "Read with" line, TASK-M8-120's Notes, `plan/tasks.yaml` and TASK-M2-57
+(new), REQ-DEC-055 and REQ-DEC-056 (reqio, new), the conditional notes of the fifteen requirements below (reqio),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-57, which waits on RQ-750*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> 1. RQ-739: remove the decoder's mirror step; latent beta runs over the full circle. Conditional on
+>    the bitwise check (every preset, saved chart and golden with beta in [0, pi] reproduces
+>    unchanged); if anything doesn't, bring the list back before proceeding. This also fixes the
+>    latent-chart traces jumping at syzygies. Add a task for it.
+
+*What it decides:* RQ-739's option (a), the owner's proposal of 7 Nov 2026 (R-854, quoted whole in the entry):
+the decoder's mirror step goes, and latent `β` runs over the full circle, so every chart, the shape sphere included,
+uses one decode path with no special case.
+
+- **The condition.** Before the removal lands, every existing preset, saved chart and golden test whose `β` lies in
+  `[0, π]` is run through the new decoder and must reproduce unchanged, bit for bit. If any doesn't, the task stops and
+  brings the list back to the owner before proceeding: nothing is re-baselined, loosened or excused to pass.
+- **What follows from it, in the proposal's words:** the mirror step, its deadband rules (R-82's mirror test, R-438's
+  `|λ̃_y|`) and the shape sphere's separate decode path (R-544's skip) become unnecessary; a lower-half state encodes to
+  `β ∈ (π, 2π)` in place of a mirrored state; latent charts covering both halves have twice the area in `β`. The task
+  lists every stored `z`, IC save file or test that relied on the old mirrored encode, and the effect on default windows,
+  in its PR. The proposal's optional "mirror pairs counted once" statistic (its item 3) is not ruled here, and no task
+  builds it: RQ-739 stays open on it (`.claude/commands/rulings-apply.md` § 2, an entry closes only on an answer that
+  settles all of it; code review 5817349158 of PR #449, F1).
+- **Latent-chart traces at syzygies.** The owner's words say this also fixes the traces' jump at syzygies
+  (`docs/design/principia_lines.md` § 8, the `z_β` row, which waited on RQ-739). Under a σ-type link only the syzygies
+  at `β = π` become continuous; one at the link's seam, `β = 0` with `z_β → −∞`, still jumps on any chart showing `z_β`
+  unless `z_β` is made periodic. That is part of RQ-750's question.
+- **A task, as the owner asks:** TASK-M2-57 (REQ-DEC-055, the removal under the bitwise check; REQ-DEC-056, the
+  full-circle link and the signed encode, a definition under physics review).
+- **What changes with it, conditionally.** Without the mirror step the encode is no longer mirror-invariant. Inverse
+  encode's T1 becomes an equivariance: `E(Π·x)` is the mirrored `z`, `β → 2π − β`, the momentum controls reflected and
+  `L_z` negated, in place of `E(Π·x) = E(x)`. These requirements change when TASK-M2-57 merges, each carrying a note
+  now and its statement left as it stands until then: REQ-ENC-003 (T1), REQ-ENC-005 (T3's `lookup_mirrored` sign),
+  REQ-ENC-014 (the `lookup_mirrored` notice), REQ-ENC-007 (`β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π]`), REQ-ENC-002,
+  REQ-ENC-015, REQ-DEC-002, REQ-DEC-016, REQ-DEC-017 and REQ-DEC-018 (C's section condition `λ̃_y ≥ −δ_λ`, step 3 in
+  the order, the mirror on full phase space, the one mirror test, the no-op test at the seam), REQ-ENC-034,
+  REQ-CHART-002 and REQ-CHART-020 (the shape sphere's "step 3 not taken" or "mirror undone" path), REQ-COL-006 (the
+  `β = π̂` select on the `−x` half-axis) and REQ-VAL-022, a numerical gate read on `C(x)` "where C's mirror puts L⁻ at
+  w = +1". The gate's restatement is proposed by the task under physics review and recorded by a ruling before it
+  merges, never changed silently in the task's PR. The qa files that assert the mirror change in the task's qa commit
+  as the exception a ruling forces (R-369; the task file lists them).
+
+*Held for the owner,* **RQ-750:** the condition meets the link. dd_decoder § 3.2's `β = π·σ(z_β)` already maps all of
+ℝ onto `(0, π)`, so any link reaching the full circle changes the decoded state of every stored latent `z`, and the
+check fails on every latent preset, saved latent chart and latent golden. The owner's premise ("expected, since the
+mirror step never fires there") holds of the mirror step, not of the link. The ways out (migrate the stored `z`, carry
+the lower half in another coordinate, or make `z_β` periodic) are the owner's: it is their "bring the list back" case,
+found before the task starts (physics review 5817348709 of PR #449, P1). TASK-M2-57's link definition, and so the
+task, waits on it.
+
+*Applied per R-369:*
+
+- **TASK-M2-57 in M2,** the milestone of the decoder and its mirror deadband (`plan/MILESTONES.md` § M2), by the plan's
+  rule that a requirement joins the earliest milestone at which what it constrains exists. It depends on TASK-M2-40, so
+  that the saved charts it builds are among those the check covers.
+- **The markers.** The 7 Nov sweep tagged each section the proposal would touch with "[mirror-step proposal, 7 Nov 2026
+  (R-854; RQ-739)]"; each marker now reads that the removal is ruled, conditional on the bitwise check, and that the
+  section changes when TASK-M2-57 lands, standing as written until then. The sections are not rewritten here: what they
+  become depends on the check.
+
+*What it amends, conditionally:* **R-82** (its mirror test), **R-438** (`β` read through `|λ̃_y|`, `β ∈ [0, π]`) and
+**R-544** (the shape sphere's skip of the mirror step), once TASK-M2-57 has passed the check and merged; each carries a
+forward line. Until then all three stand as written.
+
+R-865 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-DEC-055 and REQ-DEC-056; changes REQ-ENC-002, REQ-ENC-003, REQ-ENC-005, REQ-ENC-007, REQ-ENC-014,
+REQ-ENC-015, REQ-ENC-034, REQ-DEC-002, REQ-DEC-016, REQ-DEC-017, REQ-DEC-018, REQ-CHART-002, REQ-CHART-020,
+REQ-COL-006 and REQ-VAL-022 conditionally: a note on each now, their statements when TASK-M2-57 merges.
+
+## R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional "centre on pin" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*
+*8 Nov 2026 · the owner's reply 2 to the code map of that day, pasted as their own, "one-way, ruled here"; applied in
+the forward lines of R-69 and R-473, `docs/gui/principia_render_gui_spec.md` § G4 and § G2 (the Lock bullet),
+`docs/design/principia_chart_composition.md` (the 8 Nov status paragraph, § 15's TASK-M8-125 row and § 17.8),
+`docs/gui/design/GUI_DESIGN_NOTES.md` § "08 Lock — the reticle and the pin",
+`docs/contracts/principia_chart_decoder_contract.md` Part 4 § "The lock (projective microscope)", the owner's model
+(`docs/design/principia_chart_space_model.md` § 0.7, R-868), REQ-GUI-099 and REQ-CHART-089 (reqio, a statement and a
+note), REQ-GUI-425 and REQ-GUI-429 (reqio, new), `plan/tasks.yaml`, TASK-M8-125 (new), TASK-M8-07, TASK-M8-117, `REVIEW_QUEUE.md` (RQ-744, a dated line;
+RQ-749, new) and `plan/rule_groups.yaml`; built by TASK-M8-125*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> 2. Lock and viewport: locking must not move the view. The pin is set at the clicked pixel with an
+>    initial in-plane excursion equal to that pixel's offset from the view centre; tilt and zoom turn
+>    about the pin, so the pinned pixel stays fixed on screen. Add an optional "centre on pin" action
+>    (and a setting to snap automatically). Confirm this works on nonlinear charts, where locking
+>    currently re-centres the window to compute the pin; if it can't be exact there, say why.
+>    Amend R-69 / render_gui_spec §G4 accordingly (one-way, ruled here).
+
+*What it decides:*
+
+- **Locking moves no view field.** Locking (K, or right-click → lock here) sets the anchor at the clicked pixel and
+  edits neither `z₀`, the basis nor a nonlinear chart's window. The pin is that pixel: the gold reticle and the compass's
+  gold pin mark it where it is on screen, not at the centre. The excursion starts at the pixel's in-plane offset from the
+  view's centre (the contract's `δ = z₀ − z_locked`, which already allows an in-plane part).
+- **Tilt and zoom turn about the pin,** so the pinned pixel stays fixed on screen through them.
+- **"Centre on pin"** is an optional action: one navigation edit that brings the pin to the view's centre, undoable as
+  any navigation is (R-69).
+- **A setting to snap automatically:** with it on, a lock is followed by "centre on pin" in the same command, one
+  history entry (gui_state_contract § 2, "A command of several edits is one history entry"). *Read from the owner's
+  words, not chosen:* the setting is off by default, since "locking must not move the view" is the rule and the snap is
+  the optional part.
+- **Nonlinear charts.** The owner asks for confirmation that this works where locking today re-centres the window to
+  compute the pin (chart_decoder_contract Part 4, "Setting the lock on a nonlinear chart"), and for the reason if it
+  can't be exact there. TASK-M8-125's acceptance carries it: exact there, or the task says why, in its PR and to the owner,
+  before anything inexact merges. An inexact pin's bound is never the task's choice: it is a calibration (R-71;
+  REQ-GUI-429), proposed with its evidence and ruled by the owner before merge (physics review 5817348709 of PR #449,
+  P5).
+
+*What it amends:*
+
+- **R-69** (lock and unlock undoable as chart construction): locking is still chart construction and undoable, but
+  edits no navigation field; "centre on pin" is a navigation edit, undoable; the auto-snap setting is a preference,
+  outside `SimConfig` and `RenderState`, not undoable (applied per R-369, as R-69 puts `ViewUI`-only state).
+- **R-473 J7** ("The view's centre has `(u, v) = (0, 0)`, so `d = 0` and `(a, b) = (0, 0)` there: T2 is
+  anchor-preserving"): under a lock the tilt turns about the pin, which is in general off the centre; how a curved
+  chart's tilt, whose rotation is about the window's centre, turns about an off-centre pin is TASK-M8-125's to build
+  (exact, or the task says why).
+- **render_gui_spec § G4** ("recentres the view on that point and marks it with a gold reticle at the centre"), with
+  the design notes' § 08 and § G2's Lock bullet conformed; chart_decoder_contract Part 4's "Setting the lock" ("snap the
+  centre to its IC") and its nonlinear bullet ("The window is re-centred") likewise. Each keeps its old words as a "Was".
+
+*Applied per R-369:*
+
+- **TASK-M8-125, in M8, in R-863's stage 1, after TASK-M8-124.** It changes one of today's operations, the lock, so it
+  comes after stage 1's bitwise re-expression has recorded today's lock as its baseline, and before stage 2: TASK-M8-117
+  depends on it. The chart-path design work places it the same way, after the bit-exact stage-1 steps.
+- **REQ-GUI-099** (the lock's look, TASK-M8-07's, unbuilt) is reworded to this ruling, its old statement kept in its
+  note; REQ-CHART-089 (the lock's construction, M2, closed by TASK-M2-23) is unchanged, with a note that TASK-M8-125
+  rewrites the re-centring part of the definition it closed.
+
+*Held for the owner,* **RQ-749:** R-863's stage-2 test, "the centre IC is constant", and design § 17.8's probe at
+`(½, ½)` read the anchor at the view's centre, while this ruling puts the pin at the clicked pixel, in general off the
+centre. Which the test holds constant changes what TASK-M8-117 asserts, so it is not chosen here.
+
+R-866 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-425 and REQ-GUI-429; changes REQ-GUI-099 (its statement) and REQ-CHART-089 (a note).
+
+## R-867 — The lock's anchor is stored as the signed starting state, not as a latent point; approved as TASK-M8-117
+*8 Nov 2026 · the owner's reply 3 to the code map of that day, pasted as their own; applied in
+`docs/design/principia_chart_composition.md` § 17.8, REQ-CHART-115 (reqio), TASK-M8-117 and `plan/rule_groups.yaml`;
+built by TASK-M8-117*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> 3. Lock anchor stored as the signed starting state, not a latent point: approved, as TASK-M8-117.
+
+*What it decides:* the anchor a lock stores is the starting state itself, signed: the IC as the clicked pixel decodes
+it, its mirror half kept and never folded (R-854), not a latent point `z_locked` re-derived through inverse-encode.
+TASK-M8-117 builds it.
+
+*What was already recorded, and what this adds.* PR #445 recorded TASK-M8-117 as R-863's stage 2 (R-863; RQ-744's
+Applied line), with R-849's sliding anchor and its definition of B's nearest point (REQ-CHART-146); design § 17.8 already
+has the anchor recorded as the centre's IC words, and `SimConfig`'s lock group gaining an IC outside the sim key. This
+ruling adds the two things those leave open: the stored state is **signed**, and it is the anchor's authority **in
+place of a latent point**. What `z_locked` still serves beside it (the sliders' re-basing, snap-back, a chart-mode
+switch) is a definition TASK-M8-117 writes into § 17.8 under physics review (R-72), the anchor itself being the stored
+state.
+
+*What it refines:* REQ-CHART-115's statement and verify, which now say so. R-92 ("the lock changes neither" key) stands:
+the stored state is outside the sim key, as § 17.8 already has it.
+
+R-867 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-115; adds no requirement.
+
+## R-868 — The chart-space model's wording follows R-474: Tip as sheet is the default tilt, Lean each axis the other map; the owner has corrected the model, and their copy replaces the repo's *(on RQ-738, which stays open)*
+*8 Nov 2026 · the owner's reply 4 to the code map of that day, pasted as their own, with their corrected model of that
+day; applied in `docs/design/principia_chart_space_model.md` (replaced, byte for byte, by the owner's copy),
+`REVIEW_QUEUE.md` (RQ-738, a dated line), `plan/section_notes.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> 4. RQ-738: the model's wording follows R-474 (tip-as-sheet default, lean-each-axis the other map);
+>    I'll correct the model.
+
+*What it decides:* RQ-738's correction list, item 1, option (a): the model's § 0.2 reads R-474's two tilt maps,
+Tip as sheet the default and Lean each axis the other, each its own named path family tested against its own formula.
+R-474 stands unamended. The owner has made the correction: their model of 8 Nov 2026 replaces
+`docs/design/principia_chart_space_model.md` byte for byte. Against the repo's copy it changes four places:
+
+1. § 0.2 now reads "Affine tilt is R-474's tilt maps, not a Grassmannian geodesic", naming Tip as sheet as the default
+   and Lean each axis as the other map, with the line "*(Wording corrected 8 Nov, RQ-738: an earlier version named
+   lean-each-axis as the tilt; the default is tip-as-sheet.)*".
+2. § 0.6's mirror-step paragraph reads "*Ruled 8 Nov (RQ-739), conditional on the bitwise check*" in place of
+   "*Proposed (rulings report, one-way)*", and adds that latent-chart traces pass smoothly through syzygies (R-865).
+3. A new § 0.7, "The lock doesn't move the view (owner, 8 Nov)": the lock at the clicked pixel, Theorem 6 generalised to
+   turn about the pin, "centre on pin" optional, the anchor stored as the signed starting state (R-866, R-867). The old
+   item 7 ("Everything else stands") becomes item 8.
+4. § 3's list names "the latent plane geodesic (an idealised tilt; Principia's tilt is R-474's two maps, §0.2)" in place
+   of "(affine tilt)".
+
+*Why RQ-738 stays open:* the reply settles item 1 of its correction list only. Items 2 to 9 (the body text § 0 overrides
+but doesn't rewrite, `L_z`'s sign, held values mid-morph, `E`'s discontinuities, physics B6 to B9) are not changed by the
+owner's copy, and the nine conflicts the filter order leaves are not answered. The entry carries a dated line saying so.
+
+R-868 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.
+
+## R-869 — The owner's direction for the acute-angle Burrau charts: unfold the leg swap and show both labellings, the reduced view coming from the symmetry filter (R-855) *(on RQ-745, which stays open)*
+*8 Nov 2026 · the owner's reply 5 to the code map of that day, pasted as their own; applied in `REVIEW_QUEUE.md` (RQ-745,
+a dated line), `plan/section_notes.yaml` and `plan/rule_groups.yaml`*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> 5. Burrau acute charts: unfold the leg swap; show both labellings, with the reduced view from the
+>    symmetry filter (R-855). Add it to the review queue with that as my direction.
+
+*What it records:* the owner's direction on RQ-745, which `main` already holds: its option (b), the three acute-angle
+Burrau charts re-expressed over the full acute range, both labellings of each shape shown, and the one-labelling view
+given by the symmetry filter (R-855, TASK-M8-120) rather than by the chart's domain. The owner asks for it to go on the
+review queue with that as their direction, so it is recorded there as a direction, and RQ-745 stays open for their
+ruling at the next rulings report: under (b) R-27's "shape only" fold charts give way, which is the owner's to rule. No
+task is added and nothing built changes meanwhile.
+
+R-869 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.
+
+## R-870 — Points of interest: any pixel's starting state saved as a named point, shown on every chart and every frame of every path as a filled star where the chart passes through it exactly, otherwise a hollow star at the nearest chart point labelled with its off-slice distance, with optional "similar systems" overlays; display only, never scored, distinct from the lock
+*8 Nov 2026 · the owner's feature of that day, pasted as their own, "design item for #422 and the next rulings report";
+applied in `docs/design/principia_chart_composition.md` § 10.5 (new) and § 15, `REVIEW_QUEUE.md` (RQ-744, a dated
+line), REQ-GUI-426, REQ-GUI-427 and REQ-GUI-428 (reqio, new), `plan/tasks.yaml`, TASK-M8-126 (new) and
+`plan/rule_groups.yaml`; built by TASK-M8-126*
+
+The owner's words (8 Nov 2026), verbatim:
+
+> Feature: points of interest (owner, 8 Nov), design item for #422 and the next rulings report.
+> - Save any pixel's starting state as a point (any number, named, stored as the signed state).
+> - On every chart and every frame of every path (morph, tilt, slice, zoom, chart change), show:
+>   (a) a filled star where the chart passes through the point exactly; otherwise a hollow star at
+>   the nearest chart point, labelled with the off-slice distance in a stated metric;
+>   (b) optional "similar systems" overlays: the user picks properties from the primitive registry,
+>   and the chart draws where each property equals the point's value. One property gives a contour
+>   line, two give intersection points, three or more give near-matches within a stated tolerance.
+>   These reuse the Tier 1 contour-overlay machinery (TASK-M7-43) and need forward formulas only.
+> - Display only, never scored. Distinct from the lock: points mark, the lock constrains.
+> - Tests: a point lying in the chart draws a filled star at the pixel that decodes to it; a
+>   one-property overlay passes through the star; overlays redraw consistently across a morph's
+>   frames.
+
+*What it decides:* the feature as the owner states it, written into the chart-composition design as § 10.5, beside
+§ 10.2's Tier 1 overlays, and built by TASK-M8-126 with the owner's three tests as its acceptance (REQ-GUI-426).
+
+*What the owner's words leave to be stated, and how:*
+
+- **Definitions (R-72; REQ-GUI-427):** "exactly" (when the chart passes through a point), "the nearest chart point",
+  "the off-slice distance in a stated metric", how a near-match of three or more properties is measured, how marks are
+  found on a path frame with no inverse, and which state group holds the saved points (off the sim key, since they are
+  display only). TASK-M8-126 writes them into § 10.5, approved by the physics reviewer before merge.
+- **A value (R-71; REQ-GUI-428):** the near-match tolerance for three or more properties, proposed by TASK-M8-126 with
+  its evidence, checked by the physics reviewer and confirmed by the owner at the M8 gate.
+
+*Applied per R-369:* TASK-M8-126 is in M8, behind TASK-M4-37 like every task of the design, and depends on the work its
+tests need: the contour machinery (TASK-M7-43, TASK-M7-72), the primitive registry (TASK-M4-33), the path object
+(TASK-M8-124) and the morph families (TASK-M8-108, for its across-a-morph test), and TASK-M2-57, since a point's signed
+state on the latent chart needs the full-circle `β`. Its stage in R-863's order is not chosen here: the owner's stages
+don't name it, so it joins RQ-744 (C)'s list.
+
+R-870 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-426, REQ-GUI-427 and REQ-GUI-428; changes no existing requirement.

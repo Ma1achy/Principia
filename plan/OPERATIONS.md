@@ -221,9 +221,16 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   the head the implementer is about to push, never on work in progress. A local run uses R-348's two caps, the
   per-mutant timeout and the memory cap on test processes, at the values CI uses (REQ-VAL-180, REQ-VAL-181), where the
   machine enforces them (applied per R-204, accepted by R-352): on macOS a local run gets the timeout only, and CI's
-  Linux runners enforce both caps (R-352). The `mutants::skip` marker doesn't compile without the `mutants` crate as a
-  dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite
-  (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
+  Linux runners enforce both caps (R-352). It takes CI's per-test kill limits too, with the baseline outside them (the
+  owner, 8 Nov 2026: "Baseline with no kill limit; same limits for nightly and local"), in the two steps CI's runs take:
+  the baseline alone, `cargo mutants --in-diff <diff> --build-timeout 0 -o <dir>/baseline` (exit 3: measured), under the
+  default nextest profile; then `cargo xtask mutants-limits <dir>/baseline/mutants.out`, which fails on a test past half
+  its limit, and `cargo xtask mutants-timeout <dir>/baseline/mutants.out`, which gives the per-mutant timeout; then the
+  mutants, `cargo mutants --in-diff <diff> --baseline=skip --timeout <that timeout> -o <dir>`, with `--env
+  NEXTEST_PROFILE=mutants` on its job (`.config/nextest.toml`'s `mutants` profile), so a hung mutant is ended in minutes
+  and counted caught. The `mutants::skip` marker doesn't compile without the `mutants` crate as a dependency (E0433) and
+  skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite (R-197), or a justified entry
+  in `.cargo/mutants-equivalent.toml` (R-202).
   - **A local run that mutates the gui crate uses hard limits (R-439, amending R-388).** A local gui-crate run crashed
     the Mac twice (two kernel watchdog panics, 15 Oct 2026): a mutant made a gui test process allocate about 10 GB,
     with 14 to 20 copies under nextest on an 18 GB machine. So where the diff touches `crates/gui/`, the gui crate's

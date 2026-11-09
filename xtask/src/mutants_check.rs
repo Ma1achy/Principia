@@ -3,7 +3,9 @@
 //! surviving (missed) mutant, and fails naming each one that is not in the checked-in equivalent-mutants list. Each
 //! entry of that list names one mutant, as cargo-mutants prints it, and carries a one-line justification the code and
 //! qa reviewers approve (R-202). A mutant that timed out is no survivor: it counts as caught, and every one is listed
-//! by name, with a count, 0 included (the owner's order of 5 Nov, R-712).
+//! by name, with a count, 0 included (the owner's order of 5 Nov, R-712). So is a caught mutant whose log shows nextest
+//! ending a test at its per-test kill limit (the `mutants` profile, the owner's order of 8 Nov), naming the test:
+//! cargo-mutants counts it caught, as before, and the listing says it timed out.
 //!
 //! `cargo xtask mutants-timeout` sets the shards' per-mutant timeout from the one measured baseline, by the rule
 //! `.cargo/mutants.toml` gives every other run (R-348, REQ-VAL-180, as that order amends them).
@@ -72,6 +74,8 @@ pub struct Outcomes {
     pub missed: Vec<String>,
     /// Each mutant whose tests exceeded cargo-mutants' per-mutant timeout (`Timeout`).
     pub timeouts: Vec<String>,
+    /// Each caught mutant (`CaughtMutant`) with its log's path in the run's output directory, where it has one.
+    pub caught: Vec<(String, Option<String>)>,
 }
 
 /// Reads `outcomes.json`'s text. A run whose unmutated baseline did not pass is refused: its mutants prove nothing.
@@ -99,6 +103,9 @@ pub fn outcomes(json: &str) -> Result<Outcomes, String> {
         match summary {
             "MissedMutant" => found.missed.push(name),
             "Timeout" => found.timeouts.push(name),
+            "CaughtMutant" => found
+                .caught
+                .push((name, outcome["log_path"].as_str().map(str::to_owned))),
             _ => {}
         }
     }
@@ -133,20 +140,28 @@ pub fn run_shards(outs: &[&Path], list_path: &Path) -> Result<(), String> {
         return Err("mutants-check: no `cargo mutants` output directory given".to_owned());
     }
     let mut found = Outcomes::default();
+    let mut killed = Vec::new();
     for out in outs {
         let shard = outcomes(&read(&out.join("outcomes.json"))?)
             .map_err(|e| format!("{}: {e}", out.display()))?;
         found.missed.extend(shard.missed);
         found.timeouts.extend(shard.timeouts);
+        killed.extend(ended_at_their_limit(out, &shard.caught));
     }
     let list = equivalents(&read(list_path)?)?;
     println!(
         "mutants-check: {} timed out over {} shard(s): each counts as caught, not as a survivor",
-        found.timeouts.len(),
+        found.timeouts.len() + killed.len(),
         outs.len()
     );
     for name in &found.timeouts {
         println!("mutants-check: timed out (not a survivor): {name}");
+    }
+    for (name, tests) in &killed {
+        println!(
+            "mutants-check: timed out (not a survivor): {name} (nextest ended {} at its per-test limit)",
+            tests.join(", ")
+        );
     }
     for name in &found.missed {
         match list.iter().find(|e| e.mutant == *name) {
@@ -174,6 +189,23 @@ pub fn run_shards(outs: &[&Path], list_path: &Path) -> Result<(), String> {
         list_path.display(),
         findings.join("\n  ")
     ))
+}
+
+/// Each of `caught`, the caught mutants of the run whose output directory is `out`, whose log shows nextest ending a test
+/// at its per-test limit, with the tests it ended. A mutant with no log, or one that cannot be read, is not among them:
+/// it stays caught, as cargo-mutants counted it.
+pub fn ended_at_their_limit(
+    out: &Path,
+    caught: &[(String, Option<String>)],
+) -> Vec<(String, Vec<String>)> {
+    caught
+        .iter()
+        .filter_map(|(name, log)| {
+            let text = std::fs::read_to_string(out.join(log.as_deref()?)).ok()?;
+            let tests = crate::mutants_limits::timed_out_tests(&text);
+            (!tests.is_empty()).then(|| (name.clone(), tests))
+        })
+        .collect()
 }
 
 /// A run's `timeout_multiplier` and `minimum_test_timeout`, from the text of `.cargo/mutants.toml`.
