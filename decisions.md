@@ -33948,13 +33948,15 @@ The owner's words (8 Nov 2026), verbatim:
   owner's lock-with-morphs message, R-902), not as chart coordinates, so it survives a chart switch. Untilt (a1), in
   the words of the type sketch the brief was read with (v9, Q5): "fold `d0` into the slice centre at the untilt, then
   reset `d0` to zero: the pin is kept and J6 stands, and `U₀` re-bases once on Linear energy axes, stated in the
-  readout"; (a2), a zero-angle tilt path, and (a3), a labelled cut, are not taken. `d0`, in the same sketch's words, is the record's
-  hidden offset: "the kernel tilt gains `origin` and `d0` … `d0` is in hidden-coordinate units, one per target", the
-  pin's hidden offset, so a Window lock placed off-centre on a tilted view has `d0 ≠ 0`, and a never-pinned view has
-  `d0 = [−0, −0]`. The untilt (a1) therefore acts only under an off-centre lock: its test is TASK-M8-125's
-  (REQ-CHART-163), not TASK-M8-48's (code review 5820497276, item 3). It amends R-473 (tilt and
-  slice on every chart): a curved chart's tilt turns about the recorded
-  pivot, not only the window's centre. TASK-M8-48 builds the record and the kernel tilt at a centred pin, before stage 1 (RQ-744 (E) (i), R-873;
+  readout"; (a2), a zero-angle tilt path, and (a3), a labelled cut, are not taken. `d0`, in the same sketch's words,
+  is the record's hidden offset: "the kernel tilt gains `origin` and `d0` … `d0` is in hidden-coordinate units, one
+  per target", the pin's hidden offset. In the sketch a never-pinned view has `d0 = [−0, −0]`; `d0` first becomes
+  nonzero through a Window lock placed off-centre on a tilted view, which TASK-M8-125 builds; and the pivot persists
+  through unlock ("unlock doesn't touch it"), a later free tilt re-basing it with `d0 = d(c)`, so a later lock at the
+  centre can carry `d0 ≠ 0` and (a1) acts there too. The untilt (a1) has something to act on only once TASK-M8-125's
+  off-centre pin exists, so its test is TASK-M8-125's (REQ-CHART-163), not TASK-M8-48's (code review 5820497276, item
+  3; physics review 5820540415, P17; code review 5820545754). It amends R-473 (tilt and slice on every chart): a
+  curved chart's tilt turns about the recorded pivot, not only the window's centre. TASK-M8-48 builds the record and the kernel tilt at a centred pin, before stage 1 (RQ-744 (E) (i), R-873;
   REQ-CHART-157); the off-centre pin is TASK-M8-125's (REQ-CHART-163) and the record's survival across a chart switch
   TASK-M8-117's (REQ-CHART-164), applied per R-369.
 - **Q6 (a):** points of interest are one task, TASK-M8-126, in stage 3 (RQ-744 (C), R-873).
