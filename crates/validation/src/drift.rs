@@ -39,12 +39,13 @@ use kernel::payload::{
     pb_dE_max, pb_dLz_max, sd_saturated, sd_state, tm_t_end_step, SimStateBaseOf,
 };
 
-/// The figure-eight's published initial conditions in `G = 1`, `mᵢ = 1` (Chenciner & Montgomery 2000; Simó's
-/// digits): `x₁`, and `v₃`; `x₂ = −x₁`, `x₃ = 0`, `v₁ = v₂ = −v₃/2`.
-pub const FIGURE_EIGHT_X1: [f64; 2] = [0.970_004_36, -0.243_087_53];
+/// The figure-eight's published `x₁` in `G = 1`, `mᵢ = 1` (Chenciner & Montgomery 2000; Simó's digits), read from
+/// `ledger::fixtures`, where `engine`'s trajectory fixture reads it too (chart_composition § 18.7; R-919);
+/// `x₂ = −x₁`, `x₃ = 0`.
+pub const FIGURE_EIGHT_X1: [f64; 2] = ledger::fixtures::figure_eight().x1;
 
-/// The figure-eight's `v₃` (the module's note).
-pub const FIGURE_EIGHT_V3: [f64; 2] = [-0.932_407_37, -0.864_731_46];
+/// The figure-eight's `v₃`, read from `ledger::fixtures` as [`FIGURE_EIGHT_X1`] is; `v₁ = v₂ = −v₃/2`.
+pub const FIGURE_EIGHT_V3: [f64; 2] = ledger::fixtures::figure_eight().v3;
 
 /// The sim's default horizon `T` (integrator_contract Part 5).
 pub const T_DEFAULT: f64 = 50.0;
@@ -70,6 +71,7 @@ fn canonical(ic: &Ic<f64>) -> Ic<f64> {
 }
 
 /// dd_integrator §5 test 2's long bounded orbit: the figure-eight in the sim's units (the module's note), to `T_CAP`.
+/// Its published initial conditions are read from `ledger::fixtures` ([`FIGURE_EIGHT_X1`], [`FIGURE_EIGHT_V3`]).
 pub fn figure_eight() -> Fixture {
     let third: f64 = 1.0 / 3.0;
     let s = third.sqrt();
