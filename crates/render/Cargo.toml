@@ -22,6 +22,21 @@ pollster = "1"
 # The image export writes the headless readback as a PNG (TASK-M1-07, REQ-SYS-080), with the png crate xtask already
 # builds with.
 png = "0.18"
+# The Print graph (TASK-M7-54) is data: its graphs, presets and registry entries are JSON, read with serde_json
+# (`float_roundtrip`, so a number read back is the number written and the canonical serialisation round-trips bitwise),
+# and written in JCS, its numbers in ECMAScript's form from ryu's shortest digits, as engine's canonical writer's are.
+serde_json = { version = "1", features = ["float_roundtrip"] }
+ryu = "1"
+# The WGSL lexer (`lex`) reads a name as naga's lexer does, Unicode's XID_Start and XID_Continue, with the crate naga
+# lexes it with (already in the build through naga's `wgsl-in`).
+unicode-ident = "1"
+
+# The build script runs the Print graph's registry check on the shipped entries and presets (principia_print_graph.md
+# §4.3, §11 test 8), compiling the library's own `print::{graph, ports, registry}`, so it takes their dependencies.
+[build-dependencies]
+serde_json = { version = "1", features = ["float_roundtrip"] }
+ryu = "1"
+unicode-ident = "1"
 
 # Controls reach render's tests through a dev-dependency on validation, whose GPU harness draws the prelude's fragment
 # tests (R-176; systems_architecture §7.1: any crate but gui may take validation as a dev-dependency). Most are

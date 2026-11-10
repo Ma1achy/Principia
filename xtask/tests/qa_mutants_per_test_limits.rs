@@ -486,8 +486,8 @@ fn limits_hold(toml: &str) -> Result<usize, String> {
 fn limits_are_sized_and_floored(toml: &str) {
     match limits_hold(toml) {
         Ok(measured) => assert!(
-            measured >= 231,
-            "qa-mpl: the mutants profile names {measured} measured tests, not the brief's 231"
+            measured >= 214,
+            "qa-mpl: the mutants profile names {measured} measured tests, not the brief's 231 less the 17 R-909 retired"
         ),
         Err(e) => panic!("qa-mpl: {e}"),
     }
@@ -639,10 +639,10 @@ negative_control!(
 // ---------------------------------------------------------------------------------------------------------------
 // The control inventories: out of per-mutant runs, still run once by every CI run and nightly.
 
-/// The binaries the owner names, qa_TASK-M0-22/24/25 (with M0-22's r235 file).
-const INVENTORIES: [&str; 4] = [
+/// The binaries the owner names, qa_TASK-M0-22/24/25 (with M0-22's r235 file), but qa_TASK-M0-25, whose two
+/// inventories R-909 retired, its one remaining test no inventory.
+const INVENTORIES: [&str; 3] = [
     "validation::qa_TASK-M0-24",
-    "validation::qa_TASK-M0-25",
     "xtask::qa_TASK-M0-22",
     "xtask::qa_TASK-M0-22_r235",
 ];
@@ -804,7 +804,7 @@ fn every_exclusion_still_runs(toml: &str, ci: &str, nightly: &str) {
     let doc: toml_edit::DocumentMut = toml.parse().expect("qa-mpl: nextest.toml is TOML");
     let excluded = terms(&default_filter(&doc, "mutants"));
     assert!(
-        excluded.len() >= 10,
+        excluded.len() >= 8,
         "qa-mpl: the mutants profile's exclusions did not parse as one term a line: {excluded:?}"
     );
     let ci_out = terms(&default_filter(&doc, "ci"));

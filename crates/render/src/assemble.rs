@@ -49,6 +49,7 @@ use std::fmt::{self, Write as _};
 use std::sync::OnceLock;
 
 use crate::codegen;
+use crate::lex::{is_space, lines, tokens, Tok};
 use ledger::gen::{self as generate, prelude, read};
 use ledger::schema::{Entry, Scale, Word};
 use naga::valid::{Capabilities, FunctionInfo, ModuleInfo, ValidationFlags, Validator};
@@ -358,12 +359,14 @@ pub struct Declaration {
 }
 
 impl Declaration {
-    /// The declarations in `source`: each line whose text, leading whitespace removed, starts `// @`. Any word after
-    /// `@` but `uniform` and `input` is refused, as is a malformed line or a name declared twice.
+    /// The declarations in `source`: each line whose text, leading WGSL white space (`is_space`) removed, starts
+    /// `// @`, its lines split at WGSL's line breaks (`lines`), where naga ends the declaration's comment. The text
+    /// before `//` is WGSL source, so its white space is WGSL's, not Unicode's. Any word after `@` but `uniform` and
+    /// `input` is refused, as is a malformed line or a name declared twice.
     pub fn parse(source: &str) -> Result<Declaration, AssembleError> {
         let mut out = Declaration::default();
-        for (k, line) in source.lines().enumerate() {
-            let Some(rest) = line.trim_start().strip_prefix("// @") else {
+        for (k, line) in lines(source).into_iter().enumerate() {
+            let Some(rest) = line.trim_start_matches(is_space).strip_prefix("// @") else {
                 continue;
             };
             let bad = |why: &str| AssembleError::Declaration {
@@ -1237,75 +1240,12 @@ fn shade(
 
 // ── Node functions: one per node, its names prefixed ──────────────────────────────────────────────────────────────
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Tok {
-    Ident,
-    Number,
-    Comment,
-    Space,
-    Punct,
-}
-
-/// `s` as tokens, each its kind and byte range: comments (`//` to the line's end, `/* */` nested), identifiers,
-/// numbers (a digit and the letters and digits after it), white space and single punctuation characters.
+/// `s` as [`tokens`]: refused where a block comment is never closed.
 fn lex(s: &str) -> Result<Vec<(Tok, usize, usize)>, AssembleError> {
-    let b = s.as_bytes();
-    let mut out = Vec::new();
-    let mut i = 0;
-    while i < b.len() {
-        let start = i;
-        let c = b[i];
-        // The comment branches compare bytes, never slice `s`: inside a comment `i` steps a byte at a time, through
-        // the middle of a multi-byte character, and a `/`, `*` or newline byte is never part of one (UTF-8).
-        let tok = if b[i..].starts_with(b"//") {
-            i = b[i..]
-                .iter()
-                .position(|&x| x == b'\n')
-                .map_or(b.len(), |k| i + k);
-            Tok::Comment
-        } else if b[i..].starts_with(b"/*") {
-            let mut depth = 0;
-            loop {
-                if b[i..].starts_with(b"/*") {
-                    depth += 1;
-                    i += 2;
-                } else if b[i..].starts_with(b"*/") {
-                    depth -= 1;
-                    i += 2;
-                    if depth == 0 {
-                        break;
-                    }
-                } else if i >= b.len() {
-                    return Err(AssembleError::Compile("an unclosed `/*` comment".into()));
-                } else {
-                    i += 1;
-                }
-            }
-            Tok::Comment
-        } else if c.is_ascii_whitespace() {
-            while i < b.len() && b[i].is_ascii_whitespace() {
-                i += 1;
-            }
-            Tok::Space
-        } else if c.is_ascii_alphabetic() || c == b'_' {
-            while i < b.len() && (b[i].is_ascii_alphanumeric() || b[i] == b'_') {
-                i += 1;
-            }
-            Tok::Ident
-        } else if c.is_ascii_digit() {
-            // A number's letters — its suffix, hex digits and exponent letter — are its own, never a name; a `.`, an
-            // exponent's sign and the digits after them lex as punctuation and numbers, which nothing renames.
-            while i < b.len() && b[i].is_ascii_alphanumeric() {
-                i += 1;
-            }
-            Tok::Number
-        } else {
-            i += s[i..].chars().next().map_or(1, char::len_utf8);
-            Tok::Punct
-        };
-        out.push((tok, start, i));
+    match tokens(s) {
+        (toks, true) => Ok(toks),
+        (_, false) => Err(AssembleError::Compile("an unclosed `/*` comment".into())),
     }
-    Ok(out)
 }
 
 /// The names of the functions `text` defines, in order: each name after `fn`, comments skipped (the registry reads
