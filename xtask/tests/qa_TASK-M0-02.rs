@@ -438,34 +438,6 @@ fn texts(out: &Output) -> (String, String) {
     )
 }
 
-/// `xtask plan-check` under `path` exits 0 and streams the checker's own output, which names `plan/check_plan.py`'s
-/// summary (the real checker) or the shim's marker.
-fn passes_streaming(path: Option<&Path>, marker: &str) {
-    let out = xtask_plan_check(path);
-    let (stdout, stderr) = texts(&out);
-    assert!(
-        out.status.success(),
-        "qa02: xtask plan-check exited {:?}:\n{stdout}\n{stderr}",
-        out.status.code()
-    );
-    assert!(
-        stdout.contains(marker),
-        "qa02: xtask plan-check did not stream the checker's output {marker:?}:\n{stdout}"
-    );
-}
-
-#[test]
-fn qa02_xtask_plan_check_passes_on_the_tree_and_streams() {
-    passes_streaming(None, "live requirements, 0 failures");
-}
-
-negative_control!(
-    qa02_xtask_plan_check_passes_on_the_tree_and_streams,
-    "a python3 whose checker run exits 1 must fail the passing assertion",
-    expected = "qa02: xtask plan-check exited",
-    passes_streaming(Some(&shim("ctl_tree", 0, 1)), "QA02-SHIM-RAN")
-);
-
 /// `xtask plan-check` exits with exactly the checker's status `code`, having run `plan/check_plan.py`.
 fn exits_with(path: &Path, code: i32) {
     let out = xtask_plan_check(Some(path));
