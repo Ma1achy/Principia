@@ -12,9 +12,10 @@
 //! decoded configuration finite at the stop and not past it, and one large but short of the overflow is taken whole;
 //! the shape sphere's inertia edited to `10³⁰⁸`, −1 or 0 stops on `Φ`, what it builds finite at the stop and not past
 //! it; and a pan on the invariant charts past the overflow edge of `K(t)` stops on `Φ` with the edge between the stop
-//! and the next value along the path, a lock on the edge taken and one f64 past it refused. Controls: a stop that keeps
-//! the requested value, a stop one bisection step short, a per-chart override, and a centre check that reads `map`
-//! alone, the shape sphere's point alone, or an invariant chart's frozen controls alone.
+//! and the next value along the path, a lock on the edge taken and one f64 past it refused; `RestStart` and `HeldLz`
+//! keep the `Φ` check of the chart they wrap. Controls: a stop that keeps the requested value, a stop one bisection
+//! step short, a per-chart override, a centre check that reads `map` alone, the shape sphere's point alone, or an
+//! invariant chart's frozen controls alone, and a wrapper that drops the wrapped chart's `Φ` check.
 //!
 //! **`nav_fuzz_never_leaves*`** (REQ-CHART-061): on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
 //! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts and
@@ -1139,6 +1140,153 @@ negative_control!(
     "a centre check that reads an invariant chart's frozen controls alone takes the pan past the overflow edge whole",
     expected = "past the overflow edge, whole",
     check_invariant_overflow(true)
+);
+
+// ── REQ-CHART-060: a wrapped chart's own `Φ` check ───────────────────────────────────────────────────────────────
+
+/// Where [`Gate`]'s `Φ` check fails: past `u = 0.4`.
+const GATE: f64 = 0.4;
+
+/// A registered chart, the mass simplex or the Burrau `(ν, K)` chart, whose `Chart::phi_finite` is its own: false
+/// past `u =` [`GATE`], as an override that reads a block built outside `map` would be. Everything else is the chart's.
+#[derive(Clone, Copy)]
+struct Gate<C>(C);
+
+impl<C: Chart<Param = f64>> Chart for Gate<C> {
+    type Param = f64;
+
+    fn map<F: Float + From<f64>>(&self, u: F, v: F) -> ChartOut<F> {
+        self.0.map(u, v)
+    }
+
+    fn name(&self) -> &str {
+        "Gate"
+    }
+
+    fn phi_finite(&self, u: f64, _v: f64) -> bool {
+        u <= GATE
+    }
+
+    fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.validate(u, v)
+    }
+}
+
+impl RestChart for Gate<MassSimplex<f64>> {
+    fn decode_moving<S, R>(
+        &self,
+        u: R,
+        v: R,
+        z_mom: [R; 4],
+        shift: &kernel::chart::tilt::Shift<R>,
+        p: &LinkParams<R>,
+    ) -> kernel::decode::Decoded<R>
+    where
+        S: kernel::generated::links::Selection,
+        R: kernel::generated::links::LinkReal + kernel::payload::PayloadReal + From<f64>,
+    {
+        self.0.decode_moving::<S, R>(u, v, z_mom, shift, p)
+    }
+}
+
+impl LzChart for Gate<Burrau<f64>> {
+    fn kinetic_at<F: Float + From<f64>>(&self, v: F) -> F {
+        self.0.kinetic_at(v)
+    }
+
+    fn k_max_at<F: Float + From<f64>>(&self) -> F {
+        self.0.k_max_at()
+    }
+
+    fn check_axes(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.check_axes(u, v)
+    }
+
+    fn refused_axes(&self, a: f64, b: f64) -> Option<Constraint> {
+        self.0.refused_axes(a, b)
+    }
+
+    fn decode_lz<R>(&self, u: R, lz: R, k: R) -> kernel::decode::Decoded<R>
+    where
+        R: kernel::generated::links::LinkReal + kernel::payload::PayloadReal + From<f64>,
+    {
+        self.0.decode_lz(u, lz, k)
+    }
+}
+
+/// A wrapper that forwards `map` and `validate` but not `Chart::phi_finite`, so the wrapped chart's own check is lost
+/// (the control).
+#[derive(Clone, Copy)]
+struct Dropping<C>(C);
+
+impl<C: Chart<Param = f64>> Chart for Dropping<C> {
+    type Param = f64;
+
+    fn map<F: Float + From<f64>>(&self, u: F, v: F) -> ChartOut<F> {
+        self.0.map(u, v)
+    }
+
+    fn name(&self) -> &str {
+        self.0.name()
+    }
+
+    fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.validate(u, v)
+    }
+}
+
+/// A pan along `u` from `C` to `u = 0.43`, across [`GATE`], on a wrapper of a [`Gate`]d chart: it stops on `Φ` at the
+/// gate, the wrapper keeping the chart's own `Φ` check. `drop` puts the wrapper inside [`Dropping`] (the control).
+fn check_wrapped_pan<W: Chart<Param = f64> + Copy>(name: &str, wrapper: W, drop: bool) {
+    let to = [0.43, C[1]];
+    if drop {
+        let view = |c: [f64; 2]| at(Dropping(wrapper), c);
+        let stop = nav_stop(Edit::Path { from: C, to }, view, &P);
+        assert_eq!(
+            stop.stopped,
+            Some(Check::Phi),
+            "{name}: the wrapper drops the chart's own Φ check"
+        );
+    }
+    let view = |c: [f64; 2]| at(wrapper, c);
+    let stop = nav_stop(Edit::Path { from: C, to }, view, &P);
+    assert_eq!(
+        stop.stopped,
+        Some(Check::Phi),
+        "{name}: the wrapper drops the chart's own Φ check"
+    );
+    check_stop(name, C, to, view, &stop);
+    assert!(
+        stop.value[0] <= GATE && C.along(to, stop.lambda.next_up())[0] > GATE,
+        "{name}: the stop {:?} is not at the gate u = {GATE}",
+        stop.value
+    );
+}
+
+/// REQ-CHART-060's `Φ` at the centre through the wrapping charts: `RestStart` over a gated mass simplex and `HeldLz`,
+/// warped and linear, over a gated `(ν, K)` chart, each forwarding the chart's own `Chart::phi_finite`. `drop` reads
+/// it through a wrapper that does not (the control).
+fn check_wrapped_phi(drop: bool) {
+    check_wrapped_pan("RestStart", RestStart::new(Gate(simplex(0.5))), drop);
+    let held = HeldLz::new(Gate(nu_k()));
+    check_wrapped_pan("HeldLz, warped", held, drop);
+    let linear = HeldLz {
+        mapping: Mapping::Linear,
+        ..held
+    };
+    check_wrapped_pan("HeldLz, linear", linear, drop);
+}
+
+#[test]
+fn nav_stop_at_edge_wrapped_phi() {
+    check_wrapped_phi(false);
+}
+
+negative_control!(
+    nav_stop_at_edge_wrapped_phi,
+    "a wrapper that does not forward the chart's own Φ check takes the pan across it whole",
+    expected = "drops the chart's own Φ check",
+    check_wrapped_phi(true)
 );
 
 /// The report's layer: 3 for decode sanity, 2 for every other constraint, none for `Φ`. `swap` reads `ComAtOrigin` as
