@@ -40,8 +40,10 @@ that chart's symmetry. R-27's "shape only" fold gives way for these charts.
 
 ## Notes
 - Added by R-875 (8 Nov 2026), applied per R-369 for its placement: it rebuilds three gallery charts and waits on
-  TASK-M8-120 alone, whose filter shows the swap once, so it is behind TASK-M2-58 (the design's gate) through
-  TASK-M8-120, not given it directly.
+  TASK-M8-120 alone, whose filter shows the swap once, so it is behind TASK-M4-37 (now TASK-M2-58; the design's gate)
+  through TASK-M8-120, not given it directly.
+- *9 Nov 2026 (R-916):* the line above is a record: this task depends on TASK-M2-84, the filter's maths in M2, not on
+  TASK-M8-120, and reaches TASK-M2-58 through it.
 - The M2 gate confirms REQ-CHART-045's range within `(0, π/4]` for the charts as built; the full range within
   `(0, π/2)` is this task's proposal, REQ-CHART-162, confirmed at the M2 gate (P4 of physics review 5820410914).
 - *Fix round of PR #455:* *Was (Notes):* "outside TASK-M4-37's gate, since it rebuilds three gallery charts, it waits on

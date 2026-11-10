@@ -26,7 +26,8 @@ The same-frame slips D19 and D23, fixed in the GUI's adapters onto TASK-M2-64's 
 - `cargo test -p gui --test chart_path_consolidate -- path_frame_batch_running path_drag_running` — a frame's keyboard tilt and wheel zoom both land; a drag's fold on the current state; controls: the second edit of a frame dropped fails, a drag folded on the press state fails (REQ-GUI-431).
 
 ## Notes
-- Added by R-894 (8 Nov 2026): between stages 1 and 2 of R-863's order; TASK-M2-65 (stage 2) depends on it.
+- Added by R-894 (8 Nov 2026): between stages 1 and 2 of R-863's order; TASK-M8-117 (stage 2, now TASK-M2-65) depends on it.
+- *9 Nov 2026 (R-916):* the line above is a record: the consolidation moved to TASK-M2-64, which TASK-M2-65 depends on; TASK-M2-65 no longer depends on this task, which keeps D19 and D23, depends on TASK-M2-64 and is no longer between stages 1 and 2.
 - A difference that isn't rounding is not merged and not patched around: stop and bring it back (R-864 item 4).
 - *Round 2 of PR #455 (physics review 5820482634, code review 5820497276):* P11: R-544's mirror-test precision rule carried in; a rounding difference near a landmark is not brought back as a real one. *Was (acceptance, the clause):* "decoding to the same system within REQ-ENC-024's `ε_phys` on the decoded state, its outcome class unchanged;".
 - *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Closes: REQ-CHART-156"; "Depends on: TASK-M4-37, TASK-M8-124, TASK-M8-125".

@@ -38,8 +38,9 @@ or the reason it can't be, is TASK-M2-62's (R-916); this task is the GUI's adapt
 ## Notes
 - Added by R-866 (8 Nov 2026), the owner's reply 2 to the code map of that day: "Confirm this works on nonlinear charts,
   where locking currently re-centres the window to compute the pin; if it can't be exact there, say why."
-- **Build order (R-863), applied per R-369 (R-866):** stage 1, after TASK-M2-61's bitwise re-expression, which records
-  today's lock as its baseline; TASK-M2-65, stage 2, depends on this task.
+- **Build order (R-863), applied per R-369 (R-866):** stage 1, after TASK-M8-124's (now TASK-M2-61's) bitwise re-expression, which records
+  today's lock as its baseline; TASK-M8-117 (now TASK-M2-65), stage 2, depends on this task.
+- *9 Nov 2026 (R-916):* the line above is a record: the lock's engine half is TASK-M2-62's, which TASK-M2-65 depends on; TASK-M2-65 no longer depends on this task, the GUI's adapter, which depends on TASK-M2-62 and so comes after TASK-M2-61.
 - The shape sphere becomes lockable once the anchor is a stored signed state (R-867, TASK-M2-65) or the mirror step is
   gone (R-865, TASK-M2-57); until then this task doesn't owe a shape-sphere lock.
 - What stage 2's test reads once the pin is off the centre is RQ-749's; this task builds R-866 either way.

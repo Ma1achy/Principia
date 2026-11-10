@@ -23,7 +23,8 @@ A chart-change segment offers morph beside cut and dissolve, with a band on the 
 - `cargo test -p gui morph_segment` — the band, the row, an old spec bitwise, a link-id change still a cut; controls: a mark on a morph, no flag (REQ-GUI-421).
 
 ## Notes
-- **Build order (R-863):** stage 4, morph families, easing and Sequence segments. It depends on stage 3's tasks (TASK-M4-33, TASK-M4-34, TASK-M2-71, TASK-M2-72, TASK-M2-74, TASK-M2-75, TASK-M2-76 and TASK-M2-70) and merges only with their tests green.
+- **Build order (R-863):** stage 4, morph families, easing and Sequence segments. It depends on stage 3's tasks (TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119; now TASK-M2-71, TASK-M2-72, TASK-M2-74, TASK-M2-75, TASK-M2-76 and TASK-M2-70, TASK-M8-100 retired, its maths TASK-M2-71's) and merges only with their tests green.
+- *9 Nov 2026 (R-916):* the line above is a record: none of those is in Depends on now. This task reaches M2's stage-3 tasks through TASK-M2-81, and TASK-M4-33 and TASK-M4-34 through TASK-M8-102.
 - What to try: on `cargo run -p gui --features mock`, set a chart-change segment to morph, open the planner and read its row. The default for a new segment is RQ-721's.
 - Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); R-917's hold holds it, no longer an edge: R-916 took TASK-M2-58 (was TASK-M4-37), the rulings applied, out of Depends on, and no M3 to M9 task starts until M2's gate passes, which waits on TASK-M2-58 as an M2 task. *Was:* "TASK-M4-37 in Depends on holds it."
 - *8 Nov 2026 (R-873):* **Build order:** stage 4; every stage-3 task added to Depends on (RQ-744 (A) (a)). *Was:* "- **Depends on:** TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78, TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111, TASK-M8-119"
