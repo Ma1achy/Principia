@@ -137,6 +137,11 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   cited section exists and that no value, definition or decision it needs is missing or in conflict. The agent writes
   nothing; run the read-only check on it as on a reviewer (§ "Reviewers"). File each gap in `REVIEW_QUEUE.md` then,
   with file, section and quoted text, rather than when the implementer reaches it.
+- **R-917's hold (9 Nov 2026).** Until M2's gate passes (`plan/MILESTONES.md`, G1 to G14), dispatch only M2's tasks,
+  in chart_composition § 15's stages, and R-917's and R-918's exceptions: work in flight or approved finishing (TASK-M2-38,
+  TASK-M2-56 and the open PRs), fixes, CI and tooling work, and what M2's own tests need. No new integrator (M3) or
+  visual (M4 to M8) task is dispatched, the GUI track's included (R-390, R-627 as R-917 amends them), nor TASK-M3-14,
+  TASK-M4-06 and the 217 tasks R-914 released; the ready list may offer them, and the hold is the dispatcher's.
 - **What every dispatch names:**
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
@@ -625,6 +630,9 @@ summary:
 - free disk and the memory-pressure level at each checkpoint (R-252, R-295).
 
 ## The GUI track (R-390)
+
+*9 Nov 2026 (R-917):* the track's exception doesn't hold for new dispatch: a track task not yet started waits for
+M2's gate (§ "Dispatching", R-917's hold); a running one finishes.
 
 The human's ruling of 6 Oct 2026 (R-390): a dev GUI the human runs on the Mac with `cargo run -p gui --features mock`,
 built on a mock engine, in six tasks, TASK-M6-24 to TASK-M6-29, one per ORDER item, each its own PR, reviewed by code,

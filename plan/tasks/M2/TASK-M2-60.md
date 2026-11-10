@@ -1,8 +1,8 @@
-# TASK-M8-105 — Chart paths in the contracts
+# TASK-M2-60 — Chart paths in the contracts
 
-- **Milestone:** M8
+- **Milestone:** M2
 - **Closes:** REQ-CHART-112
-- **Depends on:** TASK-M4-37, TASK-M4-32
+- **Depends on:** TASK-M2-58, TASK-M2-59
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -29,6 +29,7 @@ RQ-721's ruling written into the contracts, docs first, so that the build tasks 
 
 ## Notes
 - **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
-- Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- Waits on its rulings item: RQ-721. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M2-58 in Depends on holds it.
 - *7 Nov 2026 (R-850):* RQ-721 is ruled (a), amended: the written rules against morphing give way, as its option (a) lists, and each operation is tested bitwise against today and against its own path family's formula, never across families. The contracts carry a dated note until this task rewrites them.
-- *8 Nov 2026 (R-873):* **Build order:** before stage 1, docs first (RQ-744 (C)); TASK-M8-124 depends on it.
+- *8 Nov 2026 (R-873):* **Build order:** before stage 1, docs first (RQ-744 (C)); TASK-M2-61 depends on it.
+- *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-105; the header follows plan/tasks.yaml. *Was:* "Milestone: M8".

@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-DEC-055, REQ-DEC-056
-- **Depends on:** TASK-M2-40
+- **Depends on:** TASK-M2-40, TASK-M2-65
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -13,8 +13,10 @@ R-865, on RQ-739: the decoder's mirror step goes, and latent `β` runs over the 
 sphere included, uses one decode path with no special case, and a lower-half state encodes to `β ∈ (π, 2π)` in place
 of a mirrored state. It is conditional on the owner's bitwise check: every existing preset, saved chart and golden with
 `β ∈ [0, π]` reproduces unchanged through the new decoder. If anything doesn't, the task stops and brings the list back
-to the owner before proceeding. **It waits on RQ-750:** `β = π·σ(z_β)` already covers `(0, π)`, so any full-circle
-link changes every stored latent `z`, and the owner chooses the way out before the link is defined or anything is built.
+to the owner before proceeding. **It waited on RQ-750:** `β = π·σ(z_β)` already covers `(0, π)`, so any full-circle
+link changes every stored latent `z`, and the owner chooses the way out before the link is defined or anything is built. R-898 answered it, and R-919
+answers RQ-754: one periodic `β` link, the presets and goldens whose plane runs along `z_β` redefined in the new
+coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with a notice.
 
 ## References
 - `decisions.md` § "R-865 — The decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the bitwise check: every preset, saved chart and golden with `β ∈ [0, π]` reproduces unchanged, and if anything doesn't, the list comes back to the owner before the removal proceeds *(on RQ-739, which stays open)*"
@@ -27,6 +29,8 @@ link changes every stored latent `z`, and the owner chooses the way out before t
 - `docs/design/principia_chart_reference.md` § "3. Shape-sphere chart `(θ, φ)`"
 - `docs/design/principia_lines.md` § "8. Traces"
 - `decisions.md` § "R-898 — Latent `β` becomes a periodic angle over the full circle; every stored latent view, saved chart and golden is converted once, the bitwise check replaced for this change by a conversion test; the saved-file format is versioned, old files converted on load; not a hidden half-flag *(closes RQ-750; amends R-865)*"
+- `decisions.md` § "R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered (RQ-754): one periodic `β` link, the presets and goldens along `z_β` redefined, an unpinned saved chart converted from `sigmoid_beta` with a notice; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(closes RQ-754; supersedes R-882; refines R-864 and R-902)*"
+- `docs/design/principia_dd_generation_root.md` § "3.9 The link registry (consolidated from chart contract Part 2.5)"
 
 ## Deliverables
 - **First, on its own commit, before the decoder changes:** the baseline, every existing preset, saved chart and golden
@@ -43,6 +47,19 @@ link changes every stored latent `z`, and the owner chooses the way out before t
   chart_composition's markers (§ 6.6's list) read with it.
 - In the PR: every stored `z`, IC save file or test that relied on the old mirrored encode, and the effect on default
   windows of twice the area in `β` (the proposal's items 4 and 5).
+- **One periodic `β` link (R-919, RQ-754 Q1 (c)):** the full-circle link is the `β` block's only link. dd_generation_root
+  § 3.9's `sigmoid_beta`, `tanh_beta` and `softsign_beta` rows and its `β ∈ [0, π]` codomain, and REQ-GEN-013's `β`
+  codomain and default, rewritten to it, each keeping its *Was*; the registry in `crates/ledger` to match. The three
+  bounded maps are not deleted: they stay as conversion sources only, their forward maps kept for Q3 (a)'s conversion
+  and the `latent_conversion` control "a value converted by the wrong link fails", not selectable on any block and not
+  counted as `β` links (physics review 5834538186 of PR #465). The PR lists
+  what the single `β` link changes in built code (REQ-VAL-024's 54 link selections become 18). REQ-GEN-014's two `β`
+  densities are not met meanwhile, by R-919: no second `β` link is added (R-519).
+- **Presets and goldens whose plane runs along `z_β` redefined, not converted (R-919, RQ-754 Q2 (b)):** each an affine
+  plane in the new coordinates, a deliberate change exempt from the conversion test, the PR recording each with why;
+  the goldens among them regenerated (R-898). No non-affine latent chart kind is defined for them.
+- **An old saved chart's `β` link (R-919, RQ-754 Q3 (a)):** converted from the `β` link it pins where it pins one
+  (R-516), else from `sigmoid_beta`, the default, with a notice on load naming the assumption.
 
 ## Acceptance tests
 - Before the decoder changes, on its own commit: the baseline of every preset, saved chart and golden with
@@ -53,21 +70,24 @@ link changes every stored latent `z`, and the owner chooses the way out before t
   step left in fails, a σ-type link that jumps at `β = 0` fails (REQ-DEC-055).
 - `cargo test -p kernel latent_conversion` — every converted `z` decodes to the same system as its old `z`
   within REQ-ENC-024's `ε_phys` on the decoded state; a saved file of the old version converted on load, one of an unknown kind refused by `Saved::from_words`;
-  the converted words marked with a new kind value; control: a value converted by the wrong link fails (R-898;
-  REQ-DEC-055).
+  the converted words marked with a new kind value; an old saved chart converted from the `β` link it pins, an unpinned
+  one from `sigmoid_beta` with the assumption reported for the notice on load; controls: a value converted by the wrong
+  link fails, an unpinned chart converted with no assumption reported fails (R-898; R-919; REQ-DEC-055).
 - `cargo test -p gui mirror_step_presets` and `cargo test -p engine mirror_step_presets` — every chart preset each crate
-  holds (the gui's in `crates/gui/src/explore/manifold_view/chart.rs`), converted, against the baseline by the
-  conversion test (R-898; REQ-DEC-055).
+  holds (the gui's in `crates/gui/src/explore/manifold_view/chart.rs`) whose plane doesn't run along `z_β`, converted,
+  against the baseline by the conversion test; each whose plane runs along `z_β` an affine plane in the new
+  coordinates, listed in the PR with why (R-898; R-919; REQ-DEC-055).
 - `cargo test -p kernel saved_chart` — the saved charts, converted, against the baseline by the conversion test (R-898;
   REQ-DEC-055).
 - `cargo test -p render --test debug_views`, `cargo test -p render --test qa_TASK-M2-32`, `cargo test -p validation --test
   decode_preset_golden` and `cargo test -p validation --test qa_TASK-M2-28` — the golden suites re-run with every
-  golden's outcome classes identical and its regenerated hash recorded with the reason, in the GPU jobs that run them
-  (R-898; REQ-DEC-055).
+  golden's outcome classes identical and its regenerated hash recorded with the reason, in the GPU jobs that run them;
+  a golden whose plane runs along `z_β` (the latent decode golden's `q₁[1]`, `q₂[1]`) redefined in the new coordinates,
+  exempt, its regenerated hash recorded with why (R-898; R-919; REQ-DEC-055).
 - `cargo test -p kernel --test roundtrip` — with the assertions the ruling changes: T1 as the equivariance `E(Π·x)` = the
   mirrored `z` (`β → 2π − β`, the momentum controls reflected, `L_z` negated) in place of `E(Π·x) = E(x)`, and
   `t3_half_mirror` removed under REQ-ENC-005's change (REQ-DEC-055).
-- Any preset, saved chart or golden whose converted value doesn't decode to the same system within REQ-ENC-024's `ε_phys` on the decoded state, or
+- Any preset, saved chart or golden (other than a preset or golden redefined under R-919) whose converted value doesn't decode to the same system within REQ-ENC-024's `ε_phys` on the decoded state, or
   whose outcome classes change, stops the task: the list goes to the owner (REQ-DEC-055).
 - Review: the full-circle link and the signed encode in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2, written to the
   owner's answer to RQ-750 (R-898: `z_β` a periodic angle, each stored value converted once) and approved by the physics
@@ -108,3 +128,20 @@ link changes every stored latent `z`, and the owner chooses the way out before t
 - *8 Nov 2026 (R-898):* RQ-750 is ruled (a) + (c): `z_β` is a periodic angle over the full circle, every stored latent view, saved chart and golden converted once, and for this deliberate change R-865's bitwise check is replaced by a conversion test (each converted value decoding to the same system to rounding precision, the goldens' outcome classes identical and regenerated with a record of why). The wait above is over, and the Goal's bitwise condition reads with R-898. The saved-file format: no version field, a new kind value instead, `Saved::from_words` refusing unknown kinds (applied per R-369). The curved form is recommended for oblique latent charts whose `q₁[1]` or `q₂[1]` is nonzero; the PR lists the affected charts. Whether a converted `z_β` is stored reduced or unreduced is a definition this task writes (R-72). *Was (acceptance):* "- `cargo test -p kernel mirror_step_removed` — a lower-half state encodes to `β ∈ (π, 2π)` and decodes back to itself, not its mirror image; a latent-chart trace through a syzygy continuous, or the reason it can't be on the list brought back; controls: the mirror step left in fails, one golden's `β` moved by one ulp fails the check (REQ-DEC-055)." "holds (the gui's in `crates/gui/src/explore/manifold_view/chart.rs`), through the new decoder against the baseline, bit for bit (REQ-DEC-055)." "- `cargo test -p kernel saved_chart` — the saved charts, against the baseline, bit for bit (REQ-DEC-055)." "decode_preset_golden` and `cargo test -p validation --test qa_TASK-M2-28` — the golden suites re-run with every golden unchanged, in the GPU jobs that run them (REQ-DEC-055)." "- Any preset, saved chart or golden that doesn't reproduce stops the task: the list goes to the owner, nothing re-baselined (REQ-DEC-055)." "owner's answer to RQ-750 and approved by the physics reviewer (REQ-DEC-056)."
 - *Fix round of PR #455 (P2 of physics review 5820410914; code review 5820413299 finding 5):* "to rounding precision" is bounded by REQ-ENC-024's `ε_phys`, applied per R-369; brief item 15 is an acceptance line. *Was (acceptance, the clauses):* "decodes to the same system as its old `z` to rounding precision;" and "doesn't decode to the same system to rounding precision, or".
 - *9 Nov 2026:* **Waits on RQ-754**, filed from this task's implementer's stop report: R-898's periodic `z_β` against the `β` link registry (`sigmoid_beta`, `tanh_beta`, `softsign_beta` onto `β ∈ [0, π]`; REQ-GEN-013, REQ-GEN-014), the presets and goldens whose plane runs along `z_β` (flat, they fail the conversion test; curved, no chart kind defines them), and the `β` link an unpinned saved chart was made under (R-478, R-516). Not dispatched past its baseline commit until it is ruled; the baseline commit is not blocked.
+- *9 Nov 2026 (R-919):* **RQ-754 is ruled,** the owner: "RQ-754: Q1 (c); Q2 (b); Q3 (a)." Q1 (c), one periodic `β` link,
+  the second `β` density waiting for a study (R-519), REQ-GEN-014 not met on `β` meanwhile; Q2 (b), the presets and
+  goldens whose plane runs along `z_β` redefined as affine planes in the new coordinates, exempt from the conversion
+  test and recorded with why; Q3 (a), an unpinned old saved chart converted from `sigmoid_beta` with a notice on load.
+  The wait is over; the deliverables and acceptance above carry it. The conversion test still holds for every other
+  preset, stored latent view and saved chart, and the Review line on saved oblique latent charts stands. **Depends on
+  gains TASK-M2-65** (applied per R-369): R-916 puts this task in stage 3, after stage 2's TASK-M2-65, as TASK-M2-55
+  is. *Was (Depends on):* "TASK-M2-40". *Was (Goal):* "**It waits on RQ-750:**". *Was (acceptance):* "holds (the gui's
+  in `crates/gui/src/explore/manifold_view/chart.rs`), converted, against the baseline by the
+  conversion test (R-898; REQ-DEC-055)." "golden's outcome classes identical and its regenerated hash recorded with the
+  reason, in the GPU jobs that run them (R-898; REQ-DEC-055)." "- Any preset, saved chart or golden whose converted value". "the converted words marked with a new kind value; control:
+  a value converted by the wrong link fails (R-898; REQ-DEC-055)."
+- *9 Nov 2026 (physics review 5834538186 of PR #465):* Q3 (a) needs the old forward maps (`sigmoid_beta`, and
+  `tanh_beta` and `softsign_beta` for charts that pin them), as does the `latent_conversion` control "a value converted
+  by the wrong link fails", so the one-periodic-link deliverable keeps the three as conversion sources only: not
+  selectable, not counted as `β` links (R-919's Q1 (c) bullet; dd_generation_root § 3.9's R-919 line).
+  *Was (Deliverables):* "the registry in `crates/ledger` to match; the PR lists".

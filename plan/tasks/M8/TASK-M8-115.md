@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-422
-- **Depends on:** TASK-M4-37, TASK-M8-113, TASK-M8-108
+- **Depends on:** TASK-M2-58, TASK-M8-113, TASK-M8-108
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -24,4 +24,4 @@ Every bullet of the GUI table, with its mock-up.
 ## Notes
 - **Build order (R-863):** stage 5, time-axis charts and the symmetry filter. It depends on stage 4's task, TASK-M8-108, and merges only with its tests green.
 - The time-zoom binding is checked against G3's table.
-- Waits on its rulings item: RQ-727. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
+- Waits on its rulings item: RQ-727. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M2-58 in Depends on holds it.

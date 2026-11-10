@@ -1,0 +1,35 @@
+# TASK-M2-62 — Locking doesn't move the view, in the engine: the pin at the clicked pixel, tilt and zoom about it, snap-back, exact on nonlinear charts or saying why (R-866, R-916)
+
+- **Milestone:** M2
+- **Closes:** REQ-CHART-166, REQ-CHART-163, REQ-GUI-429
+- **Depends on:** TASK-M2-61
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics, gui
+- **Pitfalls:** none
+- **Size:** ~300 lines, the tests included
+
+## Goal
+R-866, the owner's words: "locking must not move the view." This task builds that in the engine, through TASK-M2-61's chart-path object: a lock pins the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and edits neither `z₀`, the basis nor a nonlinear chart's window; tilt and zoom turn about the pin; snap-back undoes the slice only (R-899 Q2 (a)); on nonlinear charts the pin is exact, or the task says why it can't be. The lock badge's **centre on pin**, the setting and the GUI test stay TASK-M8-125's (REQ-GUI-425), a thin adapter onto this.
+
+## References
+- `decisions.md` § "R-866 — Locking must not move the view: the pin is set at the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre, and tilt and zoom turn about the pin, so the pinned pixel stays fixed on screen; an optional "centre on pin" action and a setting to snap automatically; exact on nonlinear charts, or the task says why *(amends R-69, R-473 J7 and render_gui_spec §G4)*"
+- `docs/gui/principia_render_gui_spec.md` § "G4. Lock — the reticle and the pin (`08_lock.png`)"
+- `docs/contracts/principia_chart_decoder_contract.md` § "The lock (projective microscope)"
+- `decisions.md` § "R-899 — The chart-path brief's nine questions: the lock test reads the recorded state at the pin; snap-back undoes the slice only, auto-snap off; jumps under a lock kept and labelled until the sliding anchor exists; the pin's screen position stored, "assumed" at the centre where none can be derived; a pivot record in the view, untilt (a1), amending R-473; points of interest one task in stage 3; their star filled within the lock's tolerance, the off-slice distance shown; marks mid-morph to pixel resolution, the filter off, labelled; the block line built in stage 2 *(amends R-473, and the snap-back of chart_decoder_contract Part 4 and design § 17.8)*"
+- `decisions.md` § "R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+
+## Deliverables
+- The lock as a family of the chart-path object (R-864) in `crates/engine`: locking edits the lock group alone; centre on pin one navigation edit; tilt and zoom turning about the pin on the latent chart and on curved charts (R-473 J7 as R-866 amends it).
+- On nonlinear charts (mixed and invariant): the pin held without re-centring the window, its construction written into chart_decoder_contract Part 4 in place of "The window is re-centred", under physics review (R-72); exact, or the reason it can't be stated in the PR and taken to the owner before anything inexact merges, its bound an R-71 calibration (REQ-GUI-429), its criterion written first, set by measurement (R-649/650).
+- Snap-back's construction (the split of `δ` into in-plane and hidden parts on an oblique basis) and the curved pivot's persistence through unlock, written into chart_decoder_contract Part 4 under physics review (R-72; REQ-CHART-166, REQ-CHART-163).
+
+## Acceptance tests
+- `cargo test -p engine lock_moves_no_view` — a lock at an off-centre pixel on the latent chart, a mixed chart and an invariant chart leaves z₀, the basis and the window bit for bit, its z_locked equal to today's point at that pixel bit for bit on the latent chart; the pinned pixel decodes the clicked state after tilts and zooms about it, bit for bit, or within REQ-GUI-429's calibrated bound where the task states why it can't be; snap-back after a slice under an off-centre lock clears the hidden excursion within the construction's stated rounding bound, on a fixture that names its κ(B) and ‖δ‖, the pin's pixel unmoved, and snap-back then centre on pin equals z₀ ← z_locked bit for bit; cargo test -p engine -- path_lock_bitwise path_tilt_bitwise re-run, the lock's baseline re-recorded only where R-866 changes it, each change listed in the PR; plus review: the nonlinear construction and snap-back's construction in chart_decoder_contract Part 4, approved by the physics reviewer; controls: a lock that re-centres fails, a tilt about the centre with an off-centre pin fails (REQ-CHART-166).
+- `cargo test -p engine curved_pivot_off_centre` — on a tilted and zoomed curved chart locked at an off-centre pixel, the pinned pixel decodes the pinned state after each tilt and zoom about it; the untilt under the off-centre lock on a tilted view folds d0 into the slice centre and leaves d0 = [−0, −0] bitwise, the pin kept, U₀ re-based once on Linear energy axes and the change shown in the readout; after an off-centre lock on a tilted view is placed and released, a centred lock inherits d0 ≠ 0 and its untilt follows (a1) as above; plus review: the pivot's persistence through unlock and its re-base in chart_decoder_contract Part 4, approved by the physics reviewer; controls: a tilt about the window's centre with an off-centre pin fails, an untilt that jumps by d0 fails, a later pinned tilt that starts from the old d0 fails (REQ-CHART-163).
+- Review: either the pin shown exact, bit for bit, on every nonlinear chart, and no value proposed; or the proposal gives the bound, the measured error of the pinned pixel's decode after tilts and zooms on the mixed and invariant charts, and the reason it can't be exact, ruled by the owner before merge and recorded in decisions.md (REQ-GUI-429).
+
+## Notes
+- Split from TASK-M8-125 by R-916 (9 Nov 2026): the engine half of REQ-GUI-425 is REQ-CHART-166; REQ-GUI-429 and REQ-CHART-163 move here with it. TASK-M8-125 keeps the badge, the setting and `cargo test -p gui lock_moves_no_view`.
+- **Build order (R-916, § 15 of the design):** stage 1, after TASK-M2-61's bitwise re-expression; TASK-M2-64 and TASK-M2-65 depend on it.
+- Physics review 5817348709 of PR #449, P5, carried from TASK-M8-125: holding the pin exactly looks achievable, evaluated as pivot + R·(offset), so pin + R·0 = pin.

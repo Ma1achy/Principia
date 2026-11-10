@@ -330,6 +330,13 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
   masses on the shape-sphere chart, applied per R-369); the stop (below) holds. The sliders of the coordinates a curved
   chart's axes set (on the shape sphere `z_α`, `z_β`) stay in the section and the keyboard order, read-only and
   dimmed, each showing the centre's value, with the tooltip "set by the chart's axes: pan to move it" (R-473, J11).
+  **The slider span (R-920, ruling RQ-679; a definition, R-72):** a latent slider's span is 2: rail `[−1, 1]` free,
+  anchor `± 1` locked. A held physical coordinate's slider spans its sibling axis's full range at the chart's home
+  window (`principia_chart_reference.md` §4.5): the held `ν₀` over `[1/32, 31/32]`; the held `L_z` over
+  `2√(2·K_max)`, rail `[−√(2K_max), +√(2K_max)]`; the held `K` 1 in its warp coordinate `t` (`K_max` on a linear axis),
+  its handle in `t` and the rail, fixed per preset, drawn evenly in `t`, its number box in `K`; a slice moves the handle, not the rail. Under a lock each anchor runs over `±` half
+  its span. The span is fixed per chart; a pan, a zoom or a slice never changes it. It is what R-507 divides a tilt's
+  hidden offset by.
 - **Tilt** (named "Slice & tilt" before R-457): "tilt `τ₁` into [X]" and "tilt `τ₂` into [Y]", each a slider with its
   number box and a dropdown that picks the latent dimension the angle tilts into, and the rotation `γ`. `τ₁` tilts the
   horizontal axis `q₁` toward `e_X` and `τ₂` the vertical axis `q₂` toward `e_Y`: `u₁ = cos τ₁ e_a + sin τ₁ e_X`,
@@ -1020,7 +1027,7 @@ right-click → lock here) recentres the view on that point and marks it with a 
 - **The point:** affine charts compute `z_locked = z₀ + (2s−1)q₁ + (2t−1)q₂` directly (chart_decoder_contract Part 3, the
   affine chart); nonlinear charts replay Φ and D on the CPU. On a nonlinear chart, where locking re-centred the window to
   compute the pin, the pin is held without moving the view, exactly, or with the reason stated and its bound a
-  calibration the owner rules on before merge (R-866, R-71; TASK-M8-125).
+  calibration the owner rules on before merge (R-866, R-71; TASK-M2-62, R-916; *was* TASK-M8-125).
 - The lock badge offers **unlock**, **centre on pin** (R-866) and **open in Inspector** (§G8). *Was (before R-866):* "The
   lock badge offers **unlock** and **open in Inspector** (§G8)."
 
