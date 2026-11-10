@@ -5850,7 +5850,7 @@
   - R-561
   - R-567
   milestone: M3
-  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39, whose `regularisation_compose` re-run shows every pair including Heggie's, the measured-bad cells' warnings and note 4; TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type (qa review 5607548278 of PR #277, Q8, applied per R-369; *was:* closed by TASK-M3-07). Qa re-check 5607645188 of PR #277, Q10 (applied per R-369): the status and warning are the cell's for the time transformation in force, with its arm and control. *Was (statement):* \"and the pairs measured not to work must carry a warning, never a block (R-561).\""
+  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39, whose `regularisation_compose` re-run shows every pair including Heggie's, the measured-bad cells' warnings and note 4; TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type (qa review 5607548278 of PR #277, Q8, applied per R-369; *was:* closed by TASK-M3-07). Qa re-check 5607645188 of PR #277, Q10 (applied per R-369): the status and warning are the cell's for the time transformation in force, with its arm and control. *Was (statement):* \"and the pairs measured not to work must carry a warning, never a block (R-561).\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split; its arm covers the table's data type and the `none` pairs, and TASK-M3-68's the Aarseth–Zare pairs. *Was:* \"TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type\"."
 - id: REQ-INT-018
   area: INT
   statement: "The regularisation's re-registration count must be visible downstream, as a `re_registrations: u32` profile field or at minimum a per-trajectory count in the payload."
@@ -5949,12 +5949,16 @@
     section: The table gains two rows
   - file: decisions.md
     section: R-162 — The reversible occupant is logH's TTL time mode
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: review checklist
     detail: "AZ+RK4 profile has symplectic=false and reversible=false; the stepper slot under AZ accepts a Mikkola–Tanikawa leapfrog occupant"
   rulings:
   - R-162
   milestone: M3
+  rq:
+  - RQ-756
   note: "R-162: Aarseth–Zare with Mikkola–Tanikawa isn't required; the slot is specified, and the reversible occupant is logH's TTL time mode (REQ-VAL-044)."
 - id: REQ-INT-025
   area: INT
@@ -6341,12 +6345,16 @@
   source:
   - file: docs/design/principia_dd_predictability_horizon.md
     section: "7.3 The f32 horizon is falsified — and the cause is AZ, not precision"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: numerical gate
     detail: "at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form"
   rulings:
   - R-35
   milestone: M3
+  rq:
+  - RQ-756
   note: applies to the AZ occupant
 - id: REQ-INT-045
   area: INT
@@ -6421,11 +6429,15 @@
     section: 0.1 The mechanism, and the fix — measured, not proposed
   - file: docs/design/principia_dd_validation_orbits.md
     section: 5. Immediate action
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: numerical gate
     detail: "figure-eight closure after one period: ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-756
 - id: REQ-INT-050
   area: INT
   statement: "A regularisation-free occupant must be kept permanently, sharing no coordinate machinery with the others, as the arm that adjudicates when regularised occupants disagree."
@@ -6508,12 +6520,16 @@
   source:
   - file: decisions.md
     section: R-19 — Change 8 landed in full *(closes RQ-17)*
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: property test
     detail: "Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound computed on the fixed τ-schedule."
   rulings:
   - R-19
   milestone: M3
+  rq:
+  - RQ-756
 - id: REQ-INT-055
   area: INT
   statement: The inspector's CPU reference integration must be RK45.
@@ -7509,12 +7525,12 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B (TASK-M3-07), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it"
+    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B (TASK-M3-68), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it"
   rulings:
   - R-71
   - R-563
   milestone: M3
-  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\""
+  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split, and Aarseth–Zare's proposal is TASK-M3-68's. *Was (verify):* \"Aarseth–Zare's pre-floor A and B (TASK-M3-07)\"; *was (this note):* TASK-M3-07 proposes it."
 - id: REQ-INT-106
   area: INT
   statement: "The energy-suspect threshold proposed under REQ-INT-085 must be measured against the default occupant, Heggie × RK4 (R-560), whose regularised energy SUSPECT_ENERGY reads (R-566): its regularised drift, final and max, on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and which suspect predicates it lights on each under the proposed thresholds, recorded with REQ-INT-085's proposal before the M3 gate confirms it."
@@ -16151,7 +16167,7 @@
   rulings:
   - R-822
   milestone: M4
-  note: "Closed by TASK-M4-27. Option (c), the kernel's own sin and cos, is ruled with RQ-687 on M4's cross-backend numbers."
+  note: "Closed by TASK-M4-38, split from TASK-M4-27 (applied per R-369, 10 Nov 2026). Option (c), the kernel's own sin and cos, is ruled with RQ-687 on M4's cross-backend numbers."
 - id: REQ-RENDER-123
   area: RENDER
   statement: "The Anosova physical-frame chart, region D's (TASK-M4-34's third-body pair at the lowering appendix's canonicalise entry), must decode through the DECODE fragment preset without special-casing, its GPU reference reading region D through `in_region_d` as R-871 requires: the full disc rendered literally, unmasked, D drawn as a contour until the symmetry filter (TASK-M8-120) lands; TASK-M4-34 doesn't close until it does (R-914)."
@@ -30119,7 +30135,7 @@
   note: "R-483 X4, H4 (a), (c) and (b) (20 Oct 2026). R-521 (RQ-385 ruled): the schema-version refusal holds only for a record with no per-link entry hashes; one that has them is REQ-TOOL-172's. *Was:* \"and a record whose schema version differs from the reader's must be refused the same way, naming both versions\", the verify's \"a record with another schema version is refused naming both\" and the note's \"and meanwhile (b)\"."
 - id: REQ-TOOL-172
   area: TOOL
-  statement: "Each recorded link must carry its registry entry's own hash (dd_generation_root §3.9, \"Each entry's own hash\"), and a record whose block's entry hash differs from the reading build's entry of that id must be refused as \"state present, cannot recreate\", naming exactly that link; when every block's hash matches, a schema version other than the reader's must not refuse the record on the links' account, a stored payload then being re-integrated, not reused."
+  statement: "Each recorded link must carry its registry entry's own hash (dd_generation_root §3.9, \"Each entry's own hash\"), and a record whose block's entry hash differs from the reading build's entry of that id must be refused as \"state present, cannot recreate\", naming exactly that link; when every block's hash matches, a schema version other than the reader's must not refuse the record on the links' account, a stored payload then being re-integrated, not reused. A record made before TASK-M2-57 whose β link is one R-919 retired as a link (sigmoid_beta, tanh_beta or softsign_beta), every block's hash matching, must recreate by decoding its stored latent coordinates through that exact retired link to the original physical starting state, bitwise, labelled \"made under a retired link\", never converting z_β to the periodic link on recreation (R-921)."
   source:
   - file: decisions.md
     section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
@@ -30129,16 +30145,20 @@
     section: "R-521 — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*"
   - file: docs/design/principia_dd_generation_root.md
     section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  - file: decisions.md
+    section: "R-921 — RQ-755, a record made under a retired `β` link: option (c), the owner's own; records store latent coordinates only, so recreation decodes the record's stored latent coordinates through that exact retired link, kept for conversion, to the original physical starting state, bitwise, and runs from there, labelled \"made under a retired link\", its hashes checked as usual; nothing is converted on recreation; conversion into the periodic `β` only when the record is opened as an editable view, once, with a notice, as R-919 Q3 (a); a record made before TASK-M2-57 recreates bitwise after it lands, an acceptance line on REQ-TOOL-172 *(closes RQ-755; refines R-919)*"
   verify:
+    detail: "cargo test -p engine decoder_identity_per_link: a record whose masses entry hash differs from the build's is refused naming the masses' link and no other; a record whose four entry hashes match but whose schema version differs because a payload-ledger entry no decode reads changed (the f16 pack clamp) recreates, re-integrating rather than reusing its stored payload; a record made before tanh_sat changed, and one made before δ_λ changed, are each refused, naming the links whose hashes those constants reach (every tanh-bearing link for tanh_sat, every link for δ_λ), never recreated silently; control: an unchanged record recreates and reuses its payload; a reader that refuses every schema change fails the payload-only arm, one that ignores the entry hashes fails the first, and an entry hash that leaves out tanh_sat or δ_λ fails the constants' arm; constants' scope, on the build's generated entry hashes: changing ε_M01 moves the hash of every mass entry and of no α, β or momenta (q) entry; changing ε_w moves every entry's hash; changing tanh_sat moves every tanh-bearing entry's hash and leaves every sigmoid_* and softsign_* entry's unchanged; each refusal of a constant's change names the link and the constants its hash covers; controls: an entry hash that leaves out ε_M01 fails the ε_M01 arm, one that leaves out ε_w fails the ε_w arm, one that hashes tanh_sat into every entry fails the tanh_sat arm, and a refusal that names the link alone fails the naming arm; the all-blocks lead: a record made before ε_w changed has all four blocks mismatched and is refused leading with the constants all four hashes cover (δ_λ and ε_w); on a record whose four links are all tanh-bearing (stick_breaking masses, tanh_alpha, tanh_beta, tanh_q), a tanh_sat change mismatches all four and the refusal leads with tanh_sat among the shared constants; on a record with a non-tanh link, the same ε_w change leads with δ_λ and ε_w and not tanh_sat; controls: a refusal with no lead fails, and one whose lead is fixed to δ_λ and ε_w fails the all-tanh arm; the retired-link recreate arm (R-921), read from fixtures/retired_beta_links/pre_m2_57.json, every bit of which TASK-M2-57 writes through its baseline commit's decoder, before any link changes: a record made before TASK-M2-57, its latent coordinates and links the fixture's, its β link sigmoid_beta (and one each with tanh_beta and softsign_beta), every entry hash matching, recreates bitwise after TASK-M2-57 lands, each pixel's starting state decoded through the named retired link equal bit for bit to the fixture's decoded starting state, the state the writing build decoded, labelled \"made under a retired link\"; controls: a reader that refuses such a record fails, and one that converts its z_β to the periodic link before decoding fails the bitwise arm, on the fixture's pixels where that conversion changes at least one bit of the decoded state (at least one per retired link, checked by TASK-M2-57 within a bounded search; a link with none within that budget is listed by TASK-M2-57 as not exercisable, with a REVIEW_QUEUE entry for the owner, and this control is not run for it)"
     method: unit test
-    detail: "cargo test -p engine decoder_identity_per_link: a record whose masses entry hash differs from the build's is refused naming the masses' link and no other; a record whose four entry hashes match but whose schema version differs because a payload-ledger entry no decode reads changed (the f16 pack clamp) recreates, re-integrating rather than reusing its stored payload; a record made before tanh_sat changed, and one made before δ_λ changed, are each refused, naming the links whose hashes those constants reach (every tanh-bearing link for tanh_sat, every link for δ_λ), never recreated silently; control: an unchanged record recreates and reuses its payload; a reader that refuses every schema change fails the payload-only arm, one that ignores the entry hashes fails the first, and an entry hash that leaves out tanh_sat or δ_λ fails the constants' arm; constants' scope, on the build's generated entry hashes: changing ε_M01 moves the hash of every mass entry and of no α, β or momenta (q) entry; changing ε_w moves every entry's hash; changing tanh_sat moves every tanh-bearing entry's hash and leaves every sigmoid_* and softsign_* entry's unchanged; each refusal of a constant's change names the link and the constants its hash covers; controls: an entry hash that leaves out ε_M01 fails the ε_M01 arm, one that leaves out ε_w fails the ε_w arm, one that hashes tanh_sat into every entry fails the tanh_sat arm, and a refusal that names the link alone fails the naming arm; the all-blocks lead: a record made before ε_w changed has all four blocks mismatched and is refused leading with the constants all four hashes cover (δ_λ and ε_w); on a record whose four links are all tanh-bearing (stick_breaking masses, tanh_alpha, tanh_beta, tanh_q), a tanh_sat change mismatches all four and the refusal leads with tanh_sat among the shared constants; on a record with a non-tanh link, the same ε_w change leads with δ_λ and ε_w and not tanh_sat; controls: a refusal with no lead fails, and one whose lead is fixed to δ_λ and ε_w fails the all-tanh arm"
   rulings:
   - R-483
   - R-521
+  - R-919
+  - R-921
   milestone: M7
   rq:
   - RQ-755
-  note: "R-483 X4's per-link arm; R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026); no longer waits. The writing side is REQ-TOOL-186. Physics review is required (⚑): which records recreate. *Was:* \"A record whose link's registry entry content differs from the writer's must be refused as \\\"state present, cannot recreate\\\", naming exactly the changed link.\", the verify's \"a record whose recorded entry hash for the masses differs from the build's is refused naming the masses' link; control: an unchanged entry recreates\", and \"waits on RQ-385 (meanwhile the schema-version refusal of REQ-TOOL-171, 20 Oct 2026).\" Physics review P2 of PR #265 (applied per R-369): an entry's hash also covers the registry constants its decode reaches (tanh_sat, ε_M01, δ_λ, ε_w; dd_generation_root §3.9), the recreate arm names a payload-only ledger change, and a control refuses a tanh_sat or δ_λ change. *Was:* the verify's \"(an unrelated ledger entry changed)\" and its controls without the constants' arm. Physics review P6 and P7 of PR #265 (applied per R-369): δ_λ and ε_w go into every entry as a conservative choice (δ_λ is read only by dd_decoder §3.3, ε_w only by §3.4), the refusal names the constants as well as the link, and the verify gains the constants' scope arms (ε_M01, ε_w, tanh_sat) and their controls; added, nothing removed. Physics review P8 and P9 of PR #265 (applied per R-369): when all four blocks mismatch, the refusal leads with the constants all four hashes cover, computed from the record's links (tanh_sat too when every link is tanh-bearing), and the verify gains the lead's arms and controls; added, nothing removed. R-919 (RQ-754 Q1 (c), 9 Nov 2026) and physics review 5834538186 of PR #465 (applied per R-369): latent β takes one periodic link, and tanh_beta stays only as a conversion source, not selectable. The verify's all-tanh arm (stick_breaking masses, tanh_alpha, tanh_beta, tanh_q) keeps tanh_beta, read as the β link of a record written before TASK-M2-57 merged, the kind of old record this requirement exists to refuse correctly, checked against the conversion source's entry, which the registry keeps with its forward map and so with its hash. That reading tests what the arm always tested, the refusal's lead computed from the record's links with tanh_sat in it when all four are tanh-bearing. The other reading, the periodic link in tanh_beta's place, would test the same thing only if that link is tanh-bearing, which TASK-M2-57 has not yet defined, so it is not taken. RQ-755 (9 Nov 2026): whether such a record, every hash matching, recreates through the conversion source or is refused is open; the recreate side for it waits on RQ-755."
+  note: "R-483 X4's per-link arm; R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026); no longer waits. The writing side is REQ-TOOL-186. Physics review is required (⚑): which records recreate. *Was:* \"A record whose link's registry entry content differs from the writer's must be refused as \\\"state present, cannot recreate\\\", naming exactly the changed link.\", the verify's \"a record whose recorded entry hash for the masses differs from the build's is refused naming the masses' link; control: an unchanged entry recreates\", and \"waits on RQ-385 (meanwhile the schema-version refusal of REQ-TOOL-171, 20 Oct 2026).\" Physics review P2 of PR #265 (applied per R-369): an entry's hash also covers the registry constants its decode reaches (tanh_sat, ε_M01, δ_λ, ε_w; dd_generation_root §3.9), the recreate arm names a payload-only ledger change, and a control refuses a tanh_sat or δ_λ change. *Was:* the verify's \"(an unrelated ledger entry changed)\" and its controls without the constants' arm. Physics review P6 and P7 of PR #265 (applied per R-369): δ_λ and ε_w go into every entry as a conservative choice (δ_λ is read only by dd_decoder §3.3, ε_w only by §3.4), the refusal names the constants as well as the link, and the verify gains the constants' scope arms (ε_M01, ε_w, tanh_sat) and their controls; added, nothing removed. Physics review P8 and P9 of PR #265 (applied per R-369): when all four blocks mismatch, the refusal leads with the constants all four hashes cover, computed from the record's links (tanh_sat too when every link is tanh-bearing), and the verify gains the lead's arms and controls; added, nothing removed. R-919 (RQ-754 Q1 (c), 9 Nov 2026) and physics review 5834538186 of PR #465 (applied per R-369): latent β takes one periodic link, and tanh_beta stays only as a conversion source, not selectable. The verify's all-tanh arm (stick_breaking masses, tanh_alpha, tanh_beta, tanh_q) keeps tanh_beta, read as the β link of a record written before TASK-M2-57 merged, the kind of old record this requirement exists to refuse correctly, checked against the conversion source's entry, which the registry keeps with its forward map and so with its hash. That reading tests what the arm always tested, the refusal's lead computed from the record's links with tanh_sat in it when all four are tanh-bearing. The other reading, the periodic link in tanh_beta's place, would test the same thing only if that link is tanh-bearing, which TASK-M2-57 has not yet defined, so it is not taken. RQ-755 (9 Nov 2026): whether such a record, every hash matching, recreates through the conversion source or is refused is open; the recreate side for it waits on RQ-755. R-921 (10 Nov 2026, closes RQ-755): the owner's option (c). Records store latent coordinates only (dd_image_embedding §6, tier 1; gui_state_contract §2), so a record made under a retired β link recreates by decoding its stored latent coordinates through that exact link, bitwise, with no conversion on recreation; conversion into the periodic β happens only when it is opened as an editable view (R-919 Q3 (a)). The recreate side no longer waits; the statement gains its last sentence and the verify the retired-link recreate arm, nothing removed. *Was:* the statement and verify without them. Physics review 5836519618 of PR #469, P1 and P2 (applied per R-369: the pre-M2-57 fixture): the record writer is built in M7, after TASK-M2-57, so the retired-link arm's expected bits are a fixture captured from a pre-TASK-M2-57 build, fixtures/retired_beta_links/pre_m2_57.json, written on TASK-M2-57's baseline commit: for each of sigmoid_beta, tanh_beta and softsign_beta, the latent coordinates, the four blocks' links and each decoded starting state as bits, with pixels where converting z_β to the periodic link changes at least one bit, so the retained forward maps are not checked against themselves and the converting reader's control cannot pass trivially; TASK-M7-45 depends on TASK-M2-57 for it; added, nothing removed. *Was:* the verify's \"the retired-link recreate arm (R-921): a record made before TASK-M2-57, its β link\", \"equal bit for bit to the state the writing build decoded,\" and \"fails the bitwise arm\". Physics review 5836599062 of PR #469, P3 (applied per R-369: the fixture's bounded search): TASK-M2-57's search for pixels where conversion changes a bit has a fixed budget (257 pixels per link, one extension to 4097); a link with none within it is reported to the owner and its converting-reader control marked not exercisable, never looped on; every bit of the fixture, a rewrite included, comes from the baseline commit's decoder. *Was:* the verify's \"which TASK-M2-57's baseline commit writes through the decoder before any link changes:\" and \"(at least one per retired link, checked by TASK-M2-57)\"."
 - id: REQ-TOOL-173
   area: TOOL
   statement: "A record or export whose links are `{}` (written before Links was filled) must be read with its links unrecorded: under the same build hash it recreates under this build's defaults, labelled so; under another it is \"state present, links unrecorded\", recreated only when the user accepts \"Recreate with this build's default links\" and then badged \"links assumed\"; the embedded record's layout version must be 4."
@@ -34203,18 +34223,18 @@
   milestone: M0
 - id: REQ-VAL-163
   area: VAL
-  statement: "Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) and `qa_m0_24_every_registered_control_makes_its_test_fail` (`crates/validation/tests/qa_TASK-M0-24.rs`) must check only what they claim, through a listing-only mode, without re-running every control in the workspace (R-226)."
+  statement: "Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) must check only what it claims, through a listing-only mode, without re-running every control in the workspace (R-226); what qa's retired `qa_m0_24_every_registered_control_makes_its_test_fail` claimed, that `cargo xtask controls` pairs every test with a control `cargo xtask ci` runs, is checked by the CI steps that stay (R-909)."
   source:
   - file: decisions.md
     section: "R-226 — The suite stops re-running every control; folded into TASK-M0-22"
   verify:
+    detail: "code and qa: `controls_on_this_workspace_skips_gui` runs none of the workspace's controls and still fails when what it claims is false (its control); the pull request's CI step `cargo xtask controls --list` fails on a test without a control, and `cargo xtask controls`, in `cargo xtask ci` on each merge to `main`, on a missing or non-tripping control; qa's merged file changes only as far as this needs"
     method: review checklist
-    detail: "code and qa: neither test runs the workspace's controls; each still fails when what it claims is false (its control); the CI step `cargo xtask controls` fails on a missing or non-tripping control; qa's merged file changes only as far as this needs"
   rulings:
   - R-226
   - R-909
   milestone: M0
-  note: "R-909 (9 Nov 2026): `qa_m0_24_every_registered_control_makes_its_test_fail` is among the 17 retired tests; its retirement commit (R-909's step (4)) repoints this requirement to the check that stays, through reqio."
+  note: "R-909 (9 Nov 2026): `qa_m0_24_every_registered_control_makes_its_test_fail` is among the 17 retired tests; its retirement commit (R-909's step (4)) repoints this requirement to the checks that stay, the CI steps `cargo xtask controls --list` and `cargo xtask controls`, through reqio. *Was (statement):* \"Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) and `qa_m0_24_every_registered_control_makes_its_test_fail` (`crates/validation/tests/qa_TASK-M0-24.rs`) must check only what they claim, through a listing-only mode, without re-running every control in the workspace (R-226).\" *Was (verify):* \"code and qa: neither test runs the workspace's controls; each still fails when what it claims is false (its control); the CI step `cargo xtask controls` fails on a missing or non-tripping control; qa's merged file changes only as far as this needs\""
 - id: REQ-VAL-164
   area: VAL
   statement: "No test may rebuild a binary that sibling tests spawn (`cargo build -p xtask` in `qa_m0_21_fixture.rs`), and parallel copies of one fixture must not build into a shared target directory (`xtask/tests/controls.rs`, `qa_m0_21_fixture.rs`, `support/qa_m0_21.rs`, `expected_message.rs`); each is fixed at its cause, and the whole workspace suite then passes 5 times in a row under normal load, with CI green on the head (R-227, R-230)."
@@ -43574,7 +43594,7 @@
   - R-697
   - R-909
   milestone: M0
-  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is. *Was (statement):* \"… every control run exactly once across the shards (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684). R-697 (4 Nov 2026): the owner accepts RQ-684's move and amends R-360 to match. R-909 (9 Nov 2026): tests of the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites are among the 17 retired; each retirement commit (R-909's step (4)) repoints this requirement to what stays, through reqio."
+  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is. *Was (statement):* \"… every control run exactly once across the shards (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684). R-697 (4 Nov 2026): the owner accepts RQ-684's move and amends R-360 to match. R-909 (9 Nov 2026): tests of the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites are among the 17 retired; each retirement commit (R-909's step (4)) repoints this requirement to what stays, through reqio. Retired under R-909: `qa_m0_24_every_registered_control_makes_its_test_fail`, of the split `qa_TASK-M0-24` suite; what stays of the suite is split as before, and the pairing it checked is the CI step `cargo xtask controls --list`. Retired under R-909: `qa_m0_24_every_implementer_test_has_a_registered_control`, of the same suite, whose pairing the same CI step checks. Retired under R-909: `qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test`, validation's half of the split `qa_TASK-M0-25` inventory, whose pairing the CI step `cargo xtask controls --list` checks. Retired under R-909: `qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test`, prin's half, checked by the same step. Retired under R-909: `qa_m0_26_r206_lists_its_five_tests_and_no_child_path`, of the split `qa_TASK-M0-26` suite, a one-off check of R-213's migration; a child path made a `#[test]` again, with no control, fails the CI step `cargo xtask controls --list`. Retired under R-909: `qa_m0_26_r206_test_has_no_child_path_and_qa_child_has_it`, the suite's other check of that migration, on the same terms. Retired under R-909: `qa_cargo_xtask_alias_runs_the_deps_check`, the `cargo xtask deps` half split from `qa_cargo_xtask_alias_runs_deps`, which stays with its listing-only `cargo xtask ci --list`; CI's `cargo xtask deps` step runs the same command through the same alias."
 - id: REQ-SYS-078
   area: SYS
   statement: "The `ci` CI job's test binaries must be built once per feature set its shards run, as a nextest archive (`cargo nextest archive`) that every `ci` shard runs its `--partition hash:<k>/4` slice from (`--archive-file`), so no shard compiles the tests; the shards together still run every test the unsharded run did, and ~10.5 min per job stays the target (R-372, R-325)."

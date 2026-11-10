@@ -59,7 +59,7 @@
 //! inputs only (PIT-10): `M₀₁` is then compared on the masses each emitted (REQ-VAL-079; dd_decoder §3.1, "Its
 //! premise").
 
-use crate::canon::{to_float, wide, wide_add, wide_greater};
+use crate::canon::{to_float, wide, wide_add, wide_greater, Wide};
 use crate::decode::degenerate::Degenerate;
 use crate::generated::links::{Link, LinkParams, LinkReal, Selection};
 use crate::real::IeeeBits;
@@ -83,21 +83,33 @@ pub fn m01_epsilon<R: LinkReal>() -> R {
     R::EPS_M01
 }
 
+/// The tag's branch input on the emitted masses `m₀`, `m₁`: `M₀₁`, the one rounded sum, and `ε`, as `Wide`s.
+#[inline]
+pub fn m01_input<R: LinkReal + IeeeBits>(m0: R, m1: R) -> [Wide<R>; 2] {
+    [wide_add(wide(m0), wide(m1)), wide(m01_epsilon::<R>())]
+}
+
+/// The tag's decision on [`m01_input`]'s sides: `ε > M₀₁`.
+#[inline]
+pub fn m01_tiny<R: LinkReal + IeeeBits>(sides: [Wide<R>; 2]) -> bool {
+    wide_greater(sides[1], sides[0])
+}
+
 /// The mass block's output for the simplex point `m`, however it was produced: `M₀₁ = m₀ + m₁` and its tag. `M₀₁` is the
 /// one rounded sum, formed in `Wide` arithmetic, and the tag is `ε > M₀₁` decided on it, so every IEEE backend that
 /// keeps its additions and multiplications correctly rounded takes one branch on one pair of masses, fusing,
 /// contracting or flushing or not (R-547; the module's note).
 #[inline]
 pub fn from_masses<R: LinkReal + IeeeBits>(m: [R; 3]) -> Masses<R> {
-    let sum = wide_add(wide(m[0]), wide(m[1]));
-    let degenerate = if wide_greater(wide(m01_epsilon::<R>()), sum) {
+    let sides = m01_input(m[0], m[1]);
+    let degenerate = if m01_tiny(sides) {
         Some(Degenerate::M01Tiny)
     } else {
         None
     };
     Masses {
         m,
-        m01: to_float(sum),
+        m01: to_float(sides[0]),
         degenerate,
     }
 }

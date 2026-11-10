@@ -17,7 +17,6 @@ filter = """
     binary_id(validation::qa_TASK-M0-24)
     | (binary_id(xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
     | (binary_id(xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
-    | (binary_id(xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
     | binary_id(xtask::nextest)
     | (binary_id(xtask::screenshot) & test(/^screenshot_gui_surface/))
 """
@@ -114,6 +113,20 @@ filter = """
 """
 priority = 75
 
+# The tests that catch the mutants of TASK-M4-27's source run first, ahead of their packages' slower tests. It is for
+# the mutants gate again (R-302; REQ-VAL-149, R-376): the diff has 1895 mutants, 1332 of them in
+# `validation::cross_backend`, whose every test takes under 7 s, while a survivor of its builders took 25-47 min (run
+# 42342356065, all 8 shards cut at 300 min). Only the schedule changes: the same tests, under the same limits, and a
+# survivor still runs every one. Applied per R-369.
+[[profile.default.overrides]]
+filter = """
+    binary_id(=validation::cross_backend_inputs)
+    | binary_id(=validation::cross_backend)
+    | binary_id(=validation::qa_TASK-M4-27)
+    | binary_id(=kernel::branch_read)
+"""
+priority = 80
+
 # Each of the job queue's test processes in a PID namespace of its own during a mutants run (`scripts/contain.sh test`;
 # a pass-through unless the run sets PRIN_TEST_PIDNS): nothing a mutant of the queue starts outlives its test, and nothing
 # it signals is outside it. `within-wrapper`: the memory cap, the target runner `.cargo/mutants.toml` sets, stays around
@@ -140,7 +153,8 @@ xtask-cargo = { max-threads = 1 }
 # them, the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13) and decoder test 12 across backends
 # (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24), the lock's locked-against-free render
 # (`engine`'s `lock_gpu`, TASK-M2-23), the kernel's own f32 `atan2` as the backend compiles it (`engine`'s `arctan_gpu`,
-# RQ-628), and the agreement preset's against the decode stage (validation's
+# RQ-628), the read-back's dispatchers and the cross-backend record (`engine`'s `branch_read_gpu`, validation's
+# `cross_backend_gpu`, TASK-M4-27), and the agreement preset's against the decode stage (validation's
 # `agreement_preset_gpu` and `qa_TASK-M2-25_gpu`) and the fragment snippets' check against the kernel's translation
 # (xtask's `fragment_wgsl`, TASK-M2-25); the xtask tests that run cargo on
 # the workspace's own target directory, and validation's `qa_TASK-M0-24`, run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
@@ -148,7 +162,9 @@ xtask-cargo = { max-threads = 1 }
 # NEXTEST_PROFILE. The three filters are disjoint and together select every test, so the jobs run every test once, as
 # `xtask/tests/nextest.rs` checks. Locally, the default profile runs them all. The `ci` job runs its profile as 4
 # parallel shards, each with `--partition hash:<k>/4`, which together run every test the profile selects, once (R-336,
-# R-366, REQ-SYS-077); `xtask/tests/nextest.rs` lists each shard.
+# R-366, REQ-SYS-077); `xtask/tests/nextest.rs` lists each shard. Each of the three runs every test it selects whatever
+# another one did (`fail-fast = false`): on a push to `main` they are the per-merge tier's product suite, which a failing
+# process test must never leave part-run (R-909; `.github/scripts/ci_per_merge.py`).
 [profile.ci]
 default-filter = """
     not (
@@ -169,6 +185,8 @@ default-filter = """
         | binary_id(=engine::qa_TASK-M2-24_gpu)
         | binary_id(=engine::lock_gpu)
         | binary_id(=engine::arctan_gpu)
+        | binary_id(=engine::branch_read_gpu)
+        | binary_id(=validation::cross_backend_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=validation::agreement_preset_gpu)
@@ -180,34 +198,35 @@ default-filter = """
         | binary_id(=validation::qa_TASK-M0-24)
         | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
         | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
-        | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
         | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
         | (binary_id(=xtask::screenshot) & test(/^screenshot_gui_surface/))
     )
 """
+fail-fast = false
 
 # The tests that run cargo on the workspace's own target directory from xtask (the override above), among them the
 # screenshot runner's `gui` surface tests, which run gui's capture mode through `cargo run` (RQ-252), which CI's
 # `ci-workspace` job runs on a build of its own, beside the `ci` shards (R-372, REQ-SYS-078): the shards run from an
 # archive, which carries no cargo build state, so in a shard each would rebuild the workspace while holding every
-# test thread. Validation's `qa_TASK-M0-24` joins them: it runs `cargo test` on the workspace and `cargo xtask controls
-# --list`, the same `--features controls` build the alias test's `cargo xtask ci --list` makes here; in a `ci` shard
-# that rebuild left `ci (4)` 13 MiB free on a 72 GB runner (run 41756812074). It is not in xtask, so each job that runs
+# test thread. Validation's `qa_TASK-M0-24` joins them: it runs `cargo test --doc` and `cargo tree` on the workspace; when
+# it still listed the workspace with `--features controls` (until R-909), in a `ci` shard that rebuild left `ci (4)`
+# 13 MiB free on a 72 GB runner (run 41756812074). It is not in xtask, so each job that runs
 # this profile has a step that names validation. `xtask ci --list`'s test in `qa_TASK-M0-06_list` joins them, that one
 # test, as its binary's others build nothing: the same listing in a `ci` shard took `ci (3)`'s `target/debug/deps` from
 # 17 GB to 42 GB (run 41775231980). Applied per R-369.
 [profile.ci-workspace]
+fail-fast = false
 default-filter = """
     binary_id(=xtask::nextest)
     | binary_id(=validation::qa_TASK-M0-24)
     | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
     | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
-    | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
     | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
     | (binary_id(=xtask::screenshot) & test(/^screenshot_gui_surface/))
 """
 
 [profile.gpu-kernel]
+fail-fast = false
 default-filter = """
     binary_id(=validation::toolchain)
     | binary_id(=validation::qa_TASK-M0-14)
@@ -226,6 +245,8 @@ default-filter = """
     | binary_id(=engine::qa_TASK-M2-24_gpu)
     | binary_id(=engine::lock_gpu)
     | binary_id(=engine::arctan_gpu)
+    | binary_id(=engine::branch_read_gpu)
+    | binary_id(=validation::cross_backend_gpu)
     | binary_id(=validation::decode_f32_eps_gpu)
     | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=validation::agreement_preset_gpu)
@@ -283,11 +304,8 @@ success-output = "immediate"
 # Excluded from per-mutant runs (the owner, 8 Nov 2026: "The qa control-inventory tests (qa_TASK-M0-22/24/25 and
 # similar, which inspect the whole workspace) run once per CI run as a step, not inside per-mutant test runs"), each
 # already run once in every CI run by `ci.yml` and the nightly `cpu` job, so coverage is unchanged:
-# - validation's `qa_TASK-M0-24`, every test: lists every workspace test (`cargo test -- --list`), every registered
-#   control (`cargo xtask controls --list`) and the workspace's metadata; `ci-workspace` runs it, in `ci.yml` and the
-#   nightly `cpu` job;
-# - validation's `qa_TASK-M0-25`, its two inventories: lists every test of `validation` and `prin` under and without
-#   `controls`, to pair each merged qa test with its control; the `ci` shards and the nightly `cpu` job run them;
+# - validation's `qa_TASK-M0-24`, every test: lists validation's doctests (`cargo test --doc -- --list`) and reads the
+#   workspace's metadata (`cargo tree`); `ci-workspace` runs it, in `ci.yml` and the nightly `cpu` job;
 # - xtask's `qa_TASK-M0-22`, its three `xtask ci` runs: every check `xtask ci` makes over the workspace, the golden step
 #   through the real cargo, and the controls' inventory from the stand-in's listing; the `ci` shards and the nightly run
 #   them;
@@ -303,8 +321,6 @@ success-output = "immediate"
 default-filter = """
     not (
         binary_id(=validation::qa_TASK-M0-24)
-        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
-        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_test_without_control))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_passes_when_every_control_trips))
@@ -844,32 +860,8 @@ filter = "binary_id(=validation::qa_TASK-M0-21) & test(=qa_unit_test_in_a_binary
 slow-timeout = { period = "80s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_implementer_test_has_a_registered_control)"
-slow-timeout = { period = "170s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_registered_control_makes_its_test_fail)"
-slow-timeout = { period = "350s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test)"
-slow-timeout = { period = "230s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test)"
-slow-timeout = { period = "140s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_a_control_without_an_expected_message_does_not_compile)"
 slow-timeout = { period = "150s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_lists_its_five_tests_and_no_child_path)"
-slow-timeout = { period = "150s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_test_has_no_child_path_and_qa_child_has_it)"
-slow-timeout = { period = "30s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
 filter = "binary_id(=validation::qa_TASK-M1-13) & test(=qa_boundary_width_is_constant_across_quad_size_and_depth)"
@@ -984,10 +976,6 @@ filter = "binary_id(=xtask::controls) & test(=controls_runs_on_this_workspace_ba
 slow-timeout = { period = "170s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::lint_wgsl_ctx_occupant) & test(=lint_wgsl_ctx_occupant_structural_occupants_lint_clean)"
-slow-timeout = { period = "110s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::lint_wgsl_debug_views) & test(=lint_wgsl_debug_views_lint_after_the_stain_context)"
 slow-timeout = { period = "30s", terminate-after = 3 }
 
@@ -998,10 +986,6 @@ slow-timeout = { period = "80s", terminate-after = 3 }
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_fixtures_fire_as_marked)"
 slow-timeout = { period = "100s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_repository_lints_clean)"
-slow-timeout = { period = "90s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::lint_wgsl_rules) & test(=lint_wgsl_ci_runner_runs_the_lint)"
@@ -1068,10 +1052,6 @@ filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_an_rq_headin
 slow-timeout = { period = "60s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::plan_check) & test(=plan_check_passes_on_the_tree)"
-slow-timeout = { period = "60s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::plan_check) & test(=plan_check_runs_the_queue_form_check)"
 slow-timeout = { period = "60s", terminate-after = 3 }
 
@@ -1088,20 +1068,8 @@ filter = "binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_dep
 slow-timeout = { period = "110s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_the_deps_check)"
-slow-timeout = { period = "170s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-01) & test(=qa_xtask_deps_passes_on_the_live_workspace)"
-slow-timeout = { period = "160s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-01_live) & test(=qa_live_deps_sees_every_live_workspace_edge)"
 slow-timeout = { period = "160s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_failing_plan_check_turns_xtask_ci_red)"
-slow-timeout = { period = "80s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_lost_requirement_turns_the_check_red)"
@@ -1148,10 +1116,6 @@ filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_source_into_nested_archi
 slow-timeout = { period = "60s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_xtask_plan_check_passes_on_the_tree_and_streams)"
-slow-timeout = { period = "60s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device)"
 slow-timeout = { period = "110s", terminate-after = 3 }
 
@@ -1180,14 +1144,6 @@ filter = "binary_id(=xtask::qa_TASK-M0-22_r235) & test(=qa_r235_ci_list_fails_on
 slow-timeout = { period = "280s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-29) & test(=qa_m0_29_workspace_deps_check_accepts_xtask_deps_on_the_workspace)"
-slow-timeout = { period = "50s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-29_live) & test(=qa_m0_29_live_default_path_check_accepts_the_live_count)"
-slow-timeout = { period = "60s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-34) & test(=qa_m034_control_output_after_a_failures_line_is_in_its_finding)"
 slow-timeout = { period = "100s", terminate-after = 3 }
 
@@ -1206,14 +1162,6 @@ slow-timeout = { period = "110s", terminate-after = 3 }
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-38) & test(=qa_m038_note_with_nothing_embedded_is_the_controls_own)"
 slow-timeout = { period = "30s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-50) & test(=qa_lint_wgsl_workspace_passes)"
-slow-timeout = { period = "110s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M1-01) & test(=qa_lint_wgsl_repository_read_side_is_clean)"
-slow-timeout = { period = "110s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_exceptions_are_each_to_one_rule)"
@@ -1337,16 +1285,12 @@ slow-timeout = { period = "30s", terminate-after = 3 }
 #      66.3 s  validation::qa_TASK-M2-25_gpu qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole
 #     154.3 s  xtask::build_kernel build_kernel_listed_in_ci
 #     689.6 s  xtask::build_kernel build_kernel_runs_in_ci
-#     104.1 s  xtask::lint_wgsl_ctx_occupant lint_wgsl_ctx_occupant_structural_occupants_lint_clean
 #      77.4 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_deny_list_member_by_member
 #      96.4 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_fixtures_fire_as_marked
-#      89.5 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_repository_lints_clean
 #      88.2 s  xtask::lint_wgsl_rules lint_wgsl_ci_runner_runs_the_lint
 #     102.3 s  xtask::qa_TASK-M0-06_list qa_m006_ci_list_lists_golden_cases_without_a_device
 #     160.2 s  xtask::qa_TASK-M0-06_runner qa_m006_ci_golden_runner_renders
 #     505.2 s  xtask::qa_TASK-M0-20 qa_cli_screenshot_all_runs_selftest
-#     104.5 s  xtask::qa_TASK-M0-50 qa_lint_wgsl_workspace_passes
-#     104.5 s  xtask::qa_TASK-M1-01 qa_lint_wgsl_repository_read_side_is_clean
 #     103.2 s  xtask::qa_TASK-M1-15 qa_m1_15_exceptions_are_each_to_one_rule
 #     108.6 s  xtask::qa_TASK-M1-15 qa_m1_15_guard_follows_part4
 #     102.7 s  xtask::qa_TASK-M1-15 qa_m1_15_nan_tests_fail_everywhere
@@ -1379,6 +1323,8 @@ default-filter = """
         | binary_id(=xtask::ci_debug_info)
         | binary_id(=xtask::ci_disk_sampler)
         | binary_id(=xtask::ci_partition)
+        | binary_id(=xtask::ci_per_merge)
+        | binary_id(=xtask::qa_ci_per_merge)
         | binary_id(=xtask::ci_quick_tier)
         | binary_id(=xtask::ci_release_disk)
         | binary_id(=xtask::ci_retry)
@@ -1498,6 +1444,8 @@ default-filter = """
         | binary_id(=engine::qa_TASK-M2-24_gpu)
         | binary_id(=engine::lock_gpu)
         | binary_id(=engine::arctan_gpu)
+        | binary_id(=engine::branch_read_gpu)
+        | binary_id(=validation::cross_backend_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=validation::agreement_preset_gpu)
@@ -1570,16 +1518,12 @@ default-filter = """
         | (binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole))
         | (binary_id(=xtask::build_kernel) & test(=build_kernel_listed_in_ci))
         | (binary_id(=xtask::build_kernel) & test(=build_kernel_runs_in_ci))
-        | (binary_id(=xtask::lint_wgsl_ctx_occupant) & test(=lint_wgsl_ctx_occupant_structural_occupants_lint_clean))
         | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_deny_list_member_by_member))
         | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_fixtures_fire_as_marked))
-        | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_repository_lints_clean))
         | (binary_id(=xtask::lint_wgsl_rules) & test(=lint_wgsl_ci_runner_runs_the_lint))
         | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
         | (binary_id(=xtask::qa_TASK-M0-06_runner) & test(=qa_m006_ci_golden_runner_renders))
         | (binary_id(=xtask::qa_TASK-M0-20) & test(=qa_cli_screenshot_all_runs_selftest))
-        | (binary_id(=xtask::qa_TASK-M0-50) & test(=qa_lint_wgsl_workspace_passes))
-        | (binary_id(=xtask::qa_TASK-M1-01) & test(=qa_lint_wgsl_repository_read_side_is_clean))
         | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_exceptions_are_each_to_one_rule))
         | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_guard_follows_part4))
         | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_nan_tests_fail_everywhere))
@@ -1597,12 +1541,7 @@ default-filter = """
 #     146.0 s  validation::qa_TASK-M0-21 qa_control_under_another_name_does_not_pair
 #     145.1 s  validation::qa_TASK-M0-21 qa_controls_exist_only_under_the_feature
 #      88.8 s  validation::qa_TASK-M0-21 qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test
-#     167.8 s  validation::qa_TASK-M0-24 qa_m0_24_every_implementer_test_has_a_registered_control
-#     346.7 s  validation::qa_TASK-M0-24 qa_m0_24_every_registered_control_makes_its_test_fail
-#     224.3 s  validation::qa_TASK-M0-25 qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test
-#     130.4 s  validation::qa_TASK-M0-25 qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test
 #     142.3 s  validation::qa_TASK-M0-26 qa_m0_26_a_control_without_an_expected_message_does_not_compile
-#     143.9 s  validation::qa_TASK-M0-26 qa_m0_26_r206_lists_its_five_tests_and_no_child_path
 #     148.2 s  xtask::ci ci_list_runs_no_control
 #      64.6 s  xtask::controls controls_control_leaving_test_passing_fails_naming_it
 #      66.0 s  xtask::controls controls_control_panicking_without_its_message_fails_naming_it
@@ -1612,10 +1551,7 @@ default-filter = """
 #     657.0 s  xtask::nextest nextest_ci_shards_together_list_every_test
 #      75.7 s  xtask::nextest nextest_ci_steps_list_every_test_under_their_profiles
 #     109.4 s  xtask::qa_TASK-M0-01 qa_cargo_xtask_alias_runs_deps
-#     163.4 s  xtask::qa_TASK-M0-01 qa_cargo_xtask_alias_runs_the_deps_check
-#     157.7 s  xtask::qa_TASK-M0-01 qa_xtask_deps_passes_on_the_live_workspace
 #     159.2 s  xtask::qa_TASK-M0-01_live qa_live_deps_sees_every_live_workspace_edge
-#      74.5 s  xtask::qa_TASK-M0-02 qa02_a_failing_plan_check_turns_xtask_ci_red
 #     173.5 s  xtask::qa_TASK-M0-22 qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing
 #     172.0 s  xtask::qa_TASK-M0-22 qa_m022_ci_fails_on_a_test_without_control
 #     170.8 s  xtask::qa_TASK-M0-22 qa_m022_ci_passes_when_every_control_trips
@@ -1652,6 +1588,8 @@ default-filter = """
         | binary_id(=xtask::ci_debug_info)
         | binary_id(=xtask::ci_disk_sampler)
         | binary_id(=xtask::ci_partition)
+        | binary_id(=xtask::ci_per_merge)
+        | binary_id(=xtask::qa_ci_per_merge)
         | binary_id(=xtask::ci_quick_tier)
         | binary_id(=xtask::ci_release_disk)
         | binary_id(=xtask::ci_retry)
@@ -1759,12 +1697,7 @@ default-filter = """
         (binary_id(=validation::qa_TASK-M0-21) & test(=qa_control_under_another_name_does_not_pair))
         | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_controls_exist_only_under_the_feature))
         | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test))
-        | (binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_implementer_test_has_a_registered_control))
-        | (binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_registered_control_makes_its_test_fail))
-        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
-        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
         | (binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_a_control_without_an_expected_message_does_not_compile))
-        | (binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_lists_its_five_tests_and_no_child_path))
         | (binary_id(=xtask::ci) & test(=ci_list_runs_no_control))
         | (binary_id(=xtask::controls) & test(=controls_control_leaving_test_passing_fails_naming_it))
         | (binary_id(=xtask::controls) & test(=controls_control_panicking_without_its_message_fails_naming_it))
@@ -1774,10 +1707,7 @@ default-filter = """
         | (binary_id(=xtask::nextest) & test(=nextest_ci_shards_together_list_every_test))
         | (binary_id(=xtask::nextest) & test(=nextest_ci_steps_list_every_test_under_their_profiles))
         | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
-        | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_the_deps_check))
-        | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_xtask_deps_passes_on_the_live_workspace))
         | (binary_id(=xtask::qa_TASK-M0-01_live) & test(=qa_live_deps_sees_every_live_workspace_edge))
-        | (binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_failing_plan_check_turns_xtask_ci_red))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_test_without_control))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_passes_when_every_control_trips))

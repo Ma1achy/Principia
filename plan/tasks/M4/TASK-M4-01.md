@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-SYS-020, REQ-SYS-023, REQ-SYS-025, REQ-INT-058, REQ-INT-060, REQ-INT-062, REQ-INT-063, REQ-INT-067
-- **Depends on:** TASK-M3-07
+- **Depends on:** TASK-M3-68
 - **Needs (earlier milestones):** REQ-INT-004, REQ-INT-008, REQ-INT-016, REQ-SYS-015, REQ-SYS-004, REQ-GEN-015, REQ-INT-028, REQ-INT-038, REQ-TOOL-039
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9
@@ -51,3 +51,4 @@ The whole M3 physics kernel — decode, canonicalise, the wrapper with its detec
 - REQ-SYS-025's check is by inspection, never by agreement of results (parity contract Tier L, part 1); the reviewer records the inspection in the PR.
 - The lint is the installed check for the review-checklist requirements it covers; it stays in CI for every later task.
 - RQ-97 ruled: R-113 — the GPU legs dropped from the M3 verifies (REQ-INT-007, 028, 029, 030, 031) are covered by M4's REQ-VAL-059, REQ-VAL-061 and REQ-VAL-072 on this build; the WGSL → browser-compiler leg is REQ-VAL-144 (M8).
+- Depends on TASK-M3-68, not TASK-M3-07 (applied per R-369, 10 Nov 2026: TASK-M3-07 was split, and Aarseth–Zare is TASK-M3-68): it compiles every M3 occupant, Aarseth–Zare among them. *Was:* "TASK-M3-07" in Depends on.

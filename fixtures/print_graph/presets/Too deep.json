@@ -1,0 +1,1 @@
+{"format":"principia.print/1","name":"Too deep","nodes":{"cut":{"in":{"in":"img"},"params":{"depth":7},"type":"linocut"},"img":{"type":"render"},"out":{"in":{"in":"cut"},"type":"output"}},"out":"out","settings":{}}

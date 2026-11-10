@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035, REQ-VAL-146, REQ-CHART-059
-- **Depends on:** TASK-M3-24, TASK-M3-07, TASK-M2-35
+- **Depends on:** TASK-M3-24, TASK-M3-68, TASK-M2-35
 - **Needs (earlier milestones):** REQ-CHART-015, REQ-CHART-028, REQ-CHART-029
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -54,3 +54,4 @@ The BodyPlane chart (today's slice) is kept and reproduces the Python reference'
 - R-467 D11 (physics review 5585225466 of PR #253, P3; applied per R-369): BodyPlane is not built at M2, so TASK-M2-35's
   sweep leaves it out and this task, which builds it, adds it to that sweep (REQ-CHART-059); its `Φ` (REQ-VAL-119) must
   honour R-468 clause 4, affine past `[0,1]²` and never forbidden.
+- Depends on TASK-M3-68, not TASK-M3-07 (applied per R-369, 10 Nov 2026: TASK-M3-07 was split, and Aarseth–Zare is TASK-M3-68): its change-10 re-run drives the Rust Aarseth–Zare. *Was:* "TASK-M3-07" in Depends on.

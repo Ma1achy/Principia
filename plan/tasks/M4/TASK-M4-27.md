@@ -1,7 +1,7 @@
 # TASK-M4-27 — The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)
 
 - **Milestone:** M4
-- **Closes:** REQ-VAL-347, REQ-RENDER-122
+- **Closes:** REQ-VAL-347
 - **Depends on:** TASK-M2-07, TASK-M2-24, TASK-M2-25
 - **Needs (earlier milestones):** REQ-DEC-017, REQ-DEC-008
 - **Reviewers:** code, qa, physics
@@ -56,8 +56,9 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   `branch_inputs.rs` isn't used: it lists the march's inputs and this task must not wait for it. The list gives each input of the first kind
   the kernel function the arbiter evaluates, called at f32 with no second copy. The comparison gives each such row its level (Notes).
 - The read-back, `crates/kernel/src/stage/branch_read.rs`, the source of a row's bits: one compute entry for canon and one for each decode variant the
-  inputs run, built into `target/spirv/kernel.wgsl` as `stage_branch_read_*`, with a dispatcher beside `canonicalise_gpu` in
-  `crates/engine/src/decode_dispatch.rs`. It is a module of its own because `decode_cross_backend_registry` takes every `stage_decode_` entry for a decode
+  inputs run, `stage_branch_read_*`, with a dispatcher beside `canonicalise_gpu` in
+  `crates/engine/src/decode_dispatch.rs`. There is one rust-gpu build; `xtask/src/build_kernel.rs` parts its entries through naga, as `xtask/src/fragment_wgsl.rs` does: `target/spirv/kernel.wgsl`
+  stays the production module, without them, and `target/spirv/branch_read.wgsl` holds them alone, the file every read-back dispatch and any later comparison loads (applied per R-369, code review of PR #431: no runtime path runs these entries, and a pipeline's cost follows the module's size). It is a module of its own because `decode_cross_backend_registry` takes every `stage_decode_` entry for a decode
   variant it must run. No parity-only physics: each branch's input and decision move into a function that its production site and the
   entry both call, with no change of behaviour, and CPU f32's record calls the same functions at f32. For each branch the entry emits
   the outcome, and for kind `+ and ×` the expression's own operands and the input's bits, both sides of a comparison, a `Wide`'s
@@ -71,7 +72,7 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
   - **Where the records run.** Metal's on the Mac, through the job queue. Lavapipe's and CPU f32's in a step `cross-backend records` of `.github/workflows/gate.yml`'s `gpu-lavapipe` job, right after `cargo xtask build-kernel`, which uploads them as the artifact `cross-backend-records`. `--record` asserts nothing, so that step can't fail on a rate (R-649). Each record is posted to #390, since an artifact expires before NVIDIA's record may arrive.
   - **The comparison in M4's report.** `--compare` writes `comparison.md` in the gate's directory, committed with the run, and `render` prints it beside the outstanding lines. It is no `Outcome` either.
 - Negative controls for this task's tests (R-176).
-- A per-backend check of `cos` near `π/2` against f64, relative to its value, in the GPU suite (R-822, RQ-629 (b) at M4; REQ-RENDER-122).
+- *Was:* "A per-backend check of `cos` near `π/2` against f64, relative to its value, in the GPU suite (R-822, RQ-629 (b) at M4; REQ-RENDER-122)." Moved to TASK-M4-38 (applied per R-369, 10 Nov 2026): it was added here after this task's PR was approved.
 
 ## Acceptance tests
 - `cargo test -p validation cross_backend_compare` (no GPU) — the comparison over synthetic records: a record against itself
@@ -96,10 +97,13 @@ that. It is the first test of R-690's driver condition, on fixed inputs.
 - `cargo xtask build-kernel`, then `PRIN_GPU_BACKEND=metal cargo xtask gate cross-backend-branches --record metal.json`, on the Mac through the job queue; `gh workflow run gate.yml --ref <branch> -f milestone=M4`, its `cross-backend records` step giving `lavapipe.json` and `cpu-f32.json`, fetched with `gh run download`; then `cargo xtask gate cross-backend-branches --compare metal.json lavapipe.json cpu-f32.json` on the Mac through the job queue, `comparison.md` committed. In the PR:
   each pair's rate, the adapter lines and each driver's standing under R-690's condition; the header states the domain; every backend pair is listed, NVIDIA's as "not run"
   until its record is posted (REQ-VAL-347).
+- `cargo xtask build-kernel` — `target/spirv/kernel.wgsl` holds no `stage_branch_read_*` entry and, the numbers in generated names aside, the same lines as before this task, its size moving only with those digits; `target/spirv/branch_read.wgsl` holds those entries alone, in `xtask/tests/build_kernel.rs`, and the PR shows both sizes (REQ-VAL-347).
 - `python3 plan/check_plan.py`.
-- `cargo test -p engine gpu_cos_near_half_pi` — REQ-RENDER-122's arm on each backend in the suite, with its control.
+- *Was:* "`cargo test -p engine gpu_cos_near_half_pi` — REQ-RENDER-122's arm on each backend in the suite, with its control." Moved to TASK-M4-38 with its deliverable.
 
 ## Notes
+- **Split, 10 Nov 2026 (applied per R-369).** *Was:* "**Closes:** REQ-VAL-347, REQ-RENDER-122". REQ-RENDER-122, its deliverable and its acceptance line moved to
+  TASK-M4-38: the arm was added to this task after its PR (#431) was approved, and the PR doesn't build it.
 - **R-690's driver condition is about bits, not forks.** An ulp moved in a branch input forks only within about an ulp of a threshold,
   so a test of outcomes alone would read a failing driver as clean. Every row has identical stage inputs, but the kind is the
   expression's own, read at its own operands (`decode/mass.rs`'s block is built on the emitted masses, not on `z`). Three levels, on a row of kind `+ and ×`:

@@ -3,6 +3,11 @@
 //! [`WGSL`], which `validation`'s `toolchain_trivial_kernel` dispatches through the harness. The native build is
 //! ordinary `rustc`.
 //!
+//! One rust-gpu build gives two WGSL files, parted through naga as `crate::fragment_wgsl` lifts its entries: [`WGSL`] is
+//! the production module, and [`READ_WGSL`] holds the `stage_branch_read_*` entries alone, which no runtime path runs. A
+//! pipeline's cost follows its module's size, so they stay out of what a shipped build loads (TASK-M4-27, applied per
+//! R-369).
+//!
 //! In `cargo xtask ci` it runs as a process of its own, through the cargo that runs xtask ([`run_in_ci`]), as the gate
 //! runner does.
 //!
@@ -32,6 +37,12 @@ pub const SPV: &str = "target/spirv/kernel.spv";
 
 /// The WGSL naga translates it to, relative to the workspace root.
 pub const WGSL: &str = "target/spirv/kernel.wgsl";
+
+/// The WGSL of the read-back's entries, relative to the workspace root.
+pub const READ_WGSL: &str = "target/spirv/branch_read.wgsl";
+
+/// The entries [`READ_WGSL`] holds and [`WGSL`] doesn't: `kernel::stage::branch_read`'s, as naga names them.
+pub const READ_ENTRIES: &str = "stage_branch_read_";
 
 /// rust-gpu's target: Vulkan 1.1 SPIR-V, the version naga's SPIR-V front end reads.
 pub const TARGET: &str = "spirv-unknown-vulkan1.1";
@@ -219,11 +230,27 @@ pub fn check_channel(pinned: &str, backend: &str) -> Result<(), String> {
     }
 }
 
-/// `spv`, a SPIR-V module, translated to WGSL by naga and validated on the way.
+/// The production module of `spv`, a SPIR-V module: every entry but the read-back's, translated to WGSL by naga and
+/// validated on the way.
 pub fn to_wgsl(spv: &[u8]) -> Result<String, String> {
+    part(spv, false)
+}
+
+/// The read-back's module of `spv`: its [`READ_ENTRIES`] alone, translated as [`to_wgsl`] translates the rest.
+pub fn to_read_wgsl(spv: &[u8]) -> Result<String, String> {
+    part(spv, true)
+}
+
+/// The WGSL of `spv`'s entries that are the read-back's, or of those that aren't, with what those entries don't reach
+/// compacted away.
+fn part(spv: &[u8], read: bool) -> Result<String, String> {
     let options = naga::front::spv::Options::default();
-    let module = naga::front::spv::parse_u8_slice(spv, &options)
+    let mut module = naga::front::spv::parse_u8_slice(spv, &options)
         .map_err(|e| format!("naga could not read the SPIR-V: {e}"))?;
+    module
+        .entry_points
+        .retain(|e| e.name.replace("::", "_").starts_with(READ_ENTRIES) == read);
+    naga::compact::compact(&mut module, naga::compact::KeepUnused::No);
     let info = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
         naga::valid::Capabilities::default(),
@@ -234,7 +261,7 @@ pub fn to_wgsl(spv: &[u8]) -> Result<String, String> {
         .map_err(|e| format!("naga could not write WGSL: {e}"))
 }
 
-/// Builds `crates/kernel` of the workspace whose `Cargo.toml` is `manifest` to [`SPV`] and [`WGSL`] under its root, and
+/// Builds `crates/kernel` of the workspace whose `Cargo.toml` is `manifest` to [`SPV`], [`WGSL`] and [`READ_WGSL`] under its root, and
 /// checks the fragment snippets against their translation ([`run_with`] without `bless`).
 pub fn run(manifest: &Path) -> Result<(), String> {
     run_with(manifest, false)
@@ -284,7 +311,12 @@ pub fn run_with(manifest: &Path, bless: bool) -> Result<(), String> {
     let module: PathBuf = built.module.unwrap_single().to_path_buf();
     let spv = std::fs::read(&module).map_err(|e| format!("{}: {e}", module.display()))?;
     let wgsl = to_wgsl(&spv)?;
-    for (path, bytes) in [(SPV, spv.as_slice()), (WGSL, wgsl.as_bytes())] {
+    let read = to_read_wgsl(&spv)?;
+    for (path, bytes) in [
+        (SPV, spv.as_slice()),
+        (WGSL, wgsl.as_bytes()),
+        (READ_WGSL, read.as_bytes()),
+    ] {
         let out = root.join(path);
         if let Some(dir) = out.parent() {
             std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;

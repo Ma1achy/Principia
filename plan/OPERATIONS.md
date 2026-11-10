@@ -144,6 +144,13 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   (FTLE's chart independence, split from TASK-M3-14 per R-369, following R-924), TASK-M4-06 and the 217 tasks R-914 released; the ready
   list may offer them, and the hold is the dispatcher's. TASK-M3-14, the Benettin FTLE shadow, resumes now (R-924),
   work in flight under R-917's exception. *Was (R-918):* "nor TASK-M3-14, TASK-M4-06".
+- **R-923 (10 Nov 2026): R-917's order set aside for now.** Integrator tasks that don't depend on the points the owner
+  hasn't decided may be dispatched before M2's gate: the physics itself (steppers, regularisation, step control,
+  conservation and convergence tests, the CPU reference) and TASK-M2-82. A task that fixes how starting states reach the
+  integrator on the GPU, or fixes the horizon as one value per dispatch, stops and is queued. GUI work may go ahead too
+  (the owner's reply about 05:00). No new chart task starts, nothing else from TASK-M2-57 to TASK-M2-85 (TASK-M2-82,
+  named above as fine, excepted), while the owner reworks the chart design; TASK-M3-14 stays stopped (R-918). M2's gate
+  and G1 to G14 are unchanged, and no edge moves.
 - **What every dispatch names:**
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
@@ -320,7 +327,7 @@ merge:
    on two lines meant alike: reword one.
 
    `ci` on `main` catches what slips through: every job runs on a push to `main` (§ "What CI runs on a pull request"),
-   `plan_check_passes_on_the_tree` among them; a pull request's own CI runs on its merge ref, so it sees only what was on
+   `cargo xtask ci`'s plan-check among them; a pull request's own CI runs on its merge ref, so it sees only what was on
    `main` at its last push. The check can't see everything a merge leaves. These still pass:
    two lines differing only in a plain number, a date or value among them, which read as a list's siblings; lines
    under 30 characters; runs over eight lines; an interleaving that moves no required field and repeats no
@@ -351,6 +358,22 @@ stuck check is cleared by re-running only the job that reports it, never a whole
 one that changes what CI runs or checks, shows its own run of what it changes passing on its head before it merges
 (its `process` check, the process tests, since the owner's CI model of 9 Nov 2026, R-907 and R-909; *was:* "its own `xtask-ci` run"):
 #381 merged and broke `main`.
+What is red `main` (R-907: "a correctness failure (physics, validation, bit-for-bit, golden) is red main under R-681;
+any other failure files a top-priority task without freezing PR work"): `ci.yml`'s `per-merge` job failing on `main`'s
+head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose summary names each failed job and why. A
+run of `ci` on `main` that failed with `per-merge` passing is not red `main`: its failures are outside correctness (a
+process test, the lints and build beside the tests, `cargo xtask ci`, the web skeleton, a runner or setup step), filed
+as one issue labelled `per-merge`, a top-priority task the orchestrator works without stopping pull-request work. The
+run's own conclusion can't carry this: the jobs that run the product suite run process tests too, and none of them may
+pass with a failing step (REQ-TOOL-223, R-235, R-335). Applied per R-369/R-812.
+The verdict reads each failed test step in its own part of the job's log, and is red whenever part of the product
+suite did not run: a test step skipped after a failed one (but a step of process tests alone), or nextest counting
+fewer tests run than it selected. The `ci`, `ci-workspace` and `gpu-kernel` profiles run every test after a failure
+(`fail-fast = false`), and each later product test step of their jobs runs whatever an earlier one ended in, but for
+one: in `ci`'s first shard the doctests run before the shard's nextest run, which a failing doctest skips, leaving that
+shard's quarter of the product suite unrun. That `main` is red already, the doctest's failure being a product
+failure. So a failing process test leaves no product test unrun (R-909; the owner, 8 Nov 2026: product-correctness
+tests are never retired). Applied per R-369/R-812.
 
 **Advisory bot reviews before the merge (R-651, a standing rule; R-910).** Before step 3, the orchestrator's merge
 script checks, for Codex and Gemini CLI each (Copilot is never requested, R-910):
@@ -455,9 +478,9 @@ On a code change the jobs run in parallel:
   class: CI's own tests, the plan checks', the negative-control registry's, the job queue's, the deps rules' synthetic
   workspaces' and the like), less their own slow tier, only when the change touches `.github/`, `xtask/`, `scripts/`,
   `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` (`scripts/ci_changes.sh`'s `process`). A failing process test
-  is read and fixed in its pull request. On `main`, the per-merge workflow (order step 3) brings the owner's "A failing
-  process test never makes main red; it files a task" (8 Nov 2026); until it lands, a failing process test on `main`
-  turns the interim run's `ci` or `xtask-ci` job red and is handled as a red `main`. The orchestrator's merge script
+  is read and fixed in its pull request. On `main`, the per-merge tier's verdict brings the owner's "A failing
+  process test never makes main red; it files a task" (8 Nov 2026): a process test failing there is filed as a task,
+  and `per-merge` passes (§ "Merging", what is red `main`). The orchestrator's merge script
   refuses a merge with a red `process` job on the head, though branch protection does not require it;
 - `web-skeleton`, advisory: the v1 web skeleton's wasm build.
 Every job bearing a required check runs on every pull request, `if: always()`, and skips its work inside the job on the
@@ -469,9 +492,10 @@ a required check is never a job skipped at job level. No job polls or waits on a
 What a pull request leaves to a merge runs on every push to `main`: the slow tier, the in-depth GPU suites on lavapipe
 and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xtask golden --all`, `cargo xtask gate
 decode-agreement`), the golden and screenshot runners' self-tests, the release profile (R-547), `cargo xtask ci`, the
-controls run among it, and every process test. Until the per-merge workflow takes them (the owner's CI model, R-909, order
-step 3), they are `ci.yml`'s interim per-merge run, the full suite's jobs as they ran before, on a push only, bearing
-no required check. A head that changes only prose a test reads does not run that test unless it changes the
+controls run among it, and every process test. They are `ci.yml`'s per-merge tier (the owner's CI model, R-909 item 2,
+order step 3), the full suite's jobs, on a push only, each merge commit in a run of its own, bearing no required check,
+and last `per-merge`, their verdict: a correctness failure fails it, a red `main`; any other failure is filed as a
+top-priority task, an issue labelled `per-merge` (§ "Merging"). A head that changes only prose a test reads does not run that test unless it changes the
 machinery, so a contract's renamed heading can turn `main` red after a green pull request (R-662). New code that loads
 a data file for behaviour adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a
 literal data path missing from it.
@@ -635,6 +659,11 @@ summary:
 
 *9 Nov 2026 (R-917):* the track's exception doesn't hold for new dispatch: a track task not yet started waits for
 M2's gate (§ "Dispatching", R-917's hold); a running one finishes.
+*10 Nov 2026 (R-923):* R-917's order and its hold on the track are set aside for now, on the owner's say: integrator
+tasks that don't depend on the points the owner hasn't decided may be dispatched, and GUI work may go ahead (§
+"Dispatching", R-923's line). Chart work stays paused: no new chart task starts, nothing else from TASK-M2-57 to
+TASK-M2-85 (TASK-M2-82, the trajectory interface, which the same message names as fine, excepted). M2's gate and G1 to
+G14 are unchanged.
 
 The human's ruling of 6 Oct 2026 (R-390): a dev GUI the human runs on the Mac with `cargo run -p gui --features mock`,
 built on a mock engine, in six tasks, TASK-M6-24 to TASK-M6-29, one per ORDER item, each its own PR, reviewed by code,
