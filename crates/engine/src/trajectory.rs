@@ -37,6 +37,9 @@ pub enum Refused {
     Grid,
     /// The boundary `k` lies past the horizon's last boundary `last`.
     PastHorizon { k: u64, last: u64 },
+    /// A fixture's inputs are not one: a mass not finite and positive, an elliptic member's `e` outside `(0, 1)`, or
+    /// the divisions of its period not finite and positive.
+    Inputs,
 }
 
 /// A terminal: the boundary index at which the trajectory latches, and its kind, a payload `state` and `detail` (the
@@ -259,8 +262,12 @@ fn bodies(m: [f64; 3], c: [[f64; 2]; 3], z: [f64; 2], zdot: [f64; 2]) -> Ic<f64>
 /// The eccentric anomaly `E` with `E − e·sin E = M`, `e ∈ (0, 1]`, by bisection of the bracket `[M − e, M + e]`,
 /// which holds the root (`f(E) = E − e·sin E − M` is monotone, `f(M − e) ≤ 0 ≤ f(M + e)`), to adjacent floats: the
 /// upper end, `f ≥ 0`, within one ulp of where the float `f` changes sign, or a float at which `f` is exactly 0. Pure
-/// in its arguments and the same bits everywhere (the soft-float `libm`).
+/// in its arguments and the same bits everywhere (the soft-float `libm`). NaN where `e` or `M` is not finite, which no
+/// bracket holds.
 pub fn eccentric_anomaly(e: f64, mean: f64) -> f64 {
+    if !(e.is_finite() && mean.is_finite()) {
+        return f64::NAN;
+    }
     let (mut lo, mut hi) = (mean - e, mean + e);
     loop {
         let mid = 0.5 * (lo + hi);
@@ -281,8 +288,23 @@ pub fn eccentric_anomaly(e: f64, mean: f64) -> f64 {
 
 impl Lagrange {
     /// The member `member` at the masses `m` (`Σmᵢ = 1`), at the quantum its period, or its collapse time, over
-    /// `divisions`.
+    /// `divisions`; panics where [`Lagrange::try_new`] refuses.
     pub fn new(m: [f64; 3], member: Member, divisions: f64) -> Self {
+        Self::try_new(m, member, divisions)
+            .unwrap_or_else(|e| panic!("the Lagrange fixture's inputs are refused: {e:?}"))
+    }
+
+    /// As [`Lagrange::new`], refused ([`Refused::Inputs`]) where a mass is not finite and positive, an elliptic
+    /// member's `e` lies outside `(0, 1)`, or `divisions` is not finite and positive.
+    pub fn try_new(m: [f64; 3], member: Member, divisions: f64) -> Result<Self, Refused> {
+        let positive = |x: f64| x.is_finite() && x > 0.0;
+        let elliptic = match member {
+            Member::Elliptic { e } => e > 0.0 && e < 1.0,
+            _ => true,
+        };
+        if !(m.iter().all(|&x| positive(x)) && positive(divisions) && elliptic) {
+            return Err(Refused::Inputs);
+        }
         let total = m[0] + m[1] + m[2];
         let pairs = m[0] * m[1] + m[1] * m[2] + m[2] * m[0];
         let a = (total / pairs).sqrt();
@@ -304,7 +326,7 @@ impl Lagrange {
         };
         let span = fixture.period().or(fixture.collapse()).unwrap_or(0.0);
         fixture.quantum = span / divisions;
-        fixture
+        Ok(fixture)
     }
 
     /// Its one start.
@@ -336,6 +358,8 @@ impl Lagrange {
         (self.mu / (big_a * big_a * big_a)).sqrt()
     }
 
+    /// `A`: `1/(1 − e)` for an elliptic member, whose `e < 1` [`Lagrange::try_new`] holds, and `1/2` for the
+    /// homothetic one, which passes `e = 1`.
     fn semi_major(e: f64) -> f64 {
         if e < 1.0 {
             1.0 / (1.0 - e)

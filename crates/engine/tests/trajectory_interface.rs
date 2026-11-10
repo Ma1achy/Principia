@@ -13,6 +13,8 @@
 //! - `_reads_order_free`: two reads in either order, and after other reads, give one bit pattern;
 //! - `_grid`: the last boundary at the horizon, by products of indices, and the refusals;
 //! - `_kepler_equation`: the eccentric anomaly solves Kepler's equation, the bracket's bisection included;
+//! - `_kepler_not_finite`, `_lagrange_refuses_inputs`: non-finite input gives NaN, and the fixture refuses inputs that are
+//!   not one;
 //! - `_validation_reads_ledger_constants`: `validation`'s `figure_eight()` is the start built from `ledger::fixtures`.
 
 use std::f64::consts::TAU;
@@ -681,6 +683,85 @@ fn trajectory_interface_kepler_equation() {
         "M = 0: the exact root 0"
     );
 }
+
+/// `eccentric_anomaly` at non-finite input is NaN, returned, never a loop.
+fn check_kepler_not_finite(e: f64, mean: f64) {
+    assert!(
+        eccentric_anomaly(e, mean).is_nan(),
+        "E at e = {e}, M = {mean} is not NaN"
+    );
+}
+
+#[test]
+fn trajectory_interface_kepler_not_finite() {
+    for (e, mean) in [
+        (f64::NAN, 1.0),
+        (0.5, f64::NAN),
+        (f64::INFINITY, 1.0),
+        (0.5, f64::NEG_INFINITY),
+    ] {
+        check_kepler_not_finite(e, mean);
+    }
+}
+
+negative_control!(
+    trajectory_interface_kepler_not_finite,
+    "a finite input, whose anomaly is a number, fails",
+    expected = "is not NaN",
+    check_kepler_not_finite(0.5, 1.0)
+);
+
+/// `Lagrange::try_new` refuses `(m, member, divisions)`.
+fn check_refused(m: [f64; 3], member: Member, divisions: f64) {
+    assert_eq!(
+        Lagrange::try_new(m, member, divisions).err(),
+        Some(Refused::Inputs),
+        "the inputs {m:?}, {member:?}, {divisions} are not refused"
+    );
+}
+
+#[test]
+fn trajectory_interface_lagrange_refuses_inputs() {
+    let m = fixture().masses;
+    for e in [0.0, 1.0, -0.5, 1.5, f64::NAN, f64::INFINITY] {
+        check_refused(m, Member::Elliptic { e }, 8.0);
+    }
+    for divisions in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+        for member in [
+            Member::Circular,
+            Member::Homothetic,
+            Member::Elliptic { e: 0.5 },
+        ] {
+            check_refused(m, member, divisions);
+        }
+    }
+    for bad in [0.0, -0.25, f64::NAN, f64::INFINITY] {
+        for i in 0..3 {
+            let mut m = m;
+            m[i] = bad;
+            check_refused(m, Member::Circular, 8.0);
+        }
+    }
+    for e in [f64::MIN_POSITIVE, 0.5, 1.0 - f64::EPSILON] {
+        assert!(
+            Lagrange::try_new(m, Member::Elliptic { e }, 8.0).is_ok(),
+            "e = {e} is elliptic"
+        );
+    }
+    assert!(Lagrange::try_new(m, Member::Homothetic, f64::MIN_POSITIVE).is_ok());
+    let refused = std::panic::catch_unwind(|| Lagrange::new(m, Member::Circular, f64::NAN));
+    assert!(
+        refused.is_err(),
+        "Lagrange::new panics where try_new refuses"
+    );
+}
+
+negative_control!(
+    trajectory_interface_lagrange_refuses_inputs,
+    "admissible inputs are not refused",
+    expected = "are not refused",
+    check_refused(fixture().masses, Member::Elliptic { e: 0.5 }, 8.0)
+);
 
 negative_control!(
     trajectory_interface_kepler_equation,
