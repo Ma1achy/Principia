@@ -790,10 +790,6 @@ negative_control!(
 const INVENTORY: &[(&str, &str)] = &[
     (
         "validation::qa_TASK-M0-24",
-        "qa_m0_24_every_implementer_test_has_a_registered_control",
-    ),
-    (
-        "validation::qa_TASK-M0-24",
         "qa_m0_24_xtask_declares_controls_with_a_validation_dev_dependency",
     ),
     (

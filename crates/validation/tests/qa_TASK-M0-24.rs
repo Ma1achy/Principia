@@ -1,11 +1,9 @@
 //! QA tests for TASK-M0-24, written from REQ-VAL-152's statement and verify detail, not from `xtask controls`:
 //!
 //! - "Every test the implementer merged before TASK-M0-22 must have a registered negative control that makes it fail
-//!   (R-199): validation's `gpu` and `prop` unit tests and xtask's `ci`, `controls` and `deps` tests." Checked by
-//!   listing those tests with plain `cargo test -- --list`, so the check does not go through the command under
-//!   review. That each control makes its test fail is judged by `cargo xtask controls` in `cargo xtask ci`, and that
-//!   each test is paired with a control by `cargo xtask controls --list`, a CI step of its own on every pull request;
-//!   R-909 retired the test that read that listing here (R-226).
+//!   (R-199): validation's `gpu` and `prop` unit tests and xtask's `ci`, `controls` and `deps` tests." R-909 retired
+//!   the two tests that checked it here: each test is paired with a control by the CI step `cargo xtask controls
+//!   --list`, and each control is judged by `cargo xtask controls` in `cargo xtask ci` (R-226).
 //! - "xtask must declare the `controls` feature with a dev-dependency on `crates/validation` (R-176)." Checked on
 //!   `cargo metadata`.
 //! - "The example in `crates/validation/src/control.rs` must be a non-test block, since a doctest in a controls crate
@@ -13,7 +11,6 @@
 //!
 //! Each test registers its own negative control (R-176, R-199): the same check on an input it must reject.
 
-use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Mutex, PoisonError};
@@ -97,133 +94,6 @@ fn listed(stdout: &str) -> Vec<String> {
         .map(str::to_owned)
         .collect()
 }
-
-/// The last path segment of a test name: the name a `negative_control!` call gives (R-199).
-fn short(name: &str) -> &str {
-    name.rsplit("::").next().unwrap()
-}
-
-/// The test a control `<...>::<test>::negative_control` is registered for, if `name` is a control.
-fn controlled(name: &str) -> Option<&str> {
-    name.strip_suffix("::negative_control").map(short)
-}
-
-/// One crate's scope under REQ-VAL-152: the implementer's tests in it (full names) and every test the crate lists
-/// with the `controls` feature on, across all its test targets (R-201).
-struct Scope {
-    krate: &'static str,
-    tests: Vec<String>,
-    all: Vec<String>,
-}
-
-/// The implementer's tests merged before TASK-M0-22, as REQ-VAL-152 names them: validation's `gpu` and `prop` unit
-/// tests; xtask's `ci`, `controls` and `deps` test targets. `features` is the feature list the listing is built with.
-fn scopes(features: &[&str]) -> Vec<Scope> {
-    let manifest = workspace_manifest();
-    let validation_units = listed(&cargo_test(
-        &manifest,
-        "validation",
-        &[&["--lib"], features].concat(),
-        &["--list"],
-    ));
-    let validation_all = listed(&cargo_test(
-        &manifest,
-        "validation",
-        &[&["--tests"], features].concat(),
-        &["--list"],
-    ));
-    let mut xtask_tests = Vec::new();
-    for target in ["ci", "controls", "deps"] {
-        let names = listed(&cargo_test(
-            &manifest,
-            "xtask",
-            &[&["--test", target], features].concat(),
-            &["--list"],
-        ));
-        assert!(!names.is_empty(), "xtask's tests/{target}.rs lists no test");
-        xtask_tests.extend(names);
-    }
-    let xtask_all = listed(&cargo_test(
-        &manifest,
-        "xtask",
-        &[&["--tests"], features].concat(),
-        &["--list"],
-    ));
-    let is_test = |n: &String| controlled(n).is_none();
-    vec![
-        Scope {
-            krate: "validation",
-            tests: validation_units
-                .into_iter()
-                .filter(|n| n.starts_with("gpu::tests::") || n.starts_with("prop::tests::"))
-                .filter(is_test)
-                .collect(),
-            all: validation_all,
-        },
-        Scope {
-            krate: "xtask",
-            tests: xtask_tests.into_iter().filter(is_test).collect(),
-            all: xtask_all,
-        },
-    ]
-}
-
-/// Each test in `scope.tests` has its own control: at least as many `<name>::negative_control` in the crate as
-/// tests named `<name>` (a control covers one test, R-208's applied rule). Returns the tests' short names.
-fn assert_each_has_a_control(scope: &Scope) -> Vec<String> {
-    let mut controls: BTreeMap<&str, usize> = BTreeMap::new();
-    let mut named: BTreeMap<&str, usize> = BTreeMap::new();
-    for name in &scope.all {
-        match controlled(name) {
-            Some(test) => *controls.entry(test).or_default() += 1,
-            None => *named.entry(short(name)).or_default() += 1,
-        }
-    }
-    let missing: Vec<&String> = scope
-        .tests
-        .iter()
-        .filter(|t| controls.get(short(t)).copied().unwrap_or(0) < named[short(t)])
-        .collect();
-    assert!(
-        missing.is_empty(),
-        "{}: tests without a registered control of their own: {missing:?}",
-        scope.krate
-    );
-    scope.tests.iter().map(|t| short(t).to_owned()).collect()
-}
-
-#[test]
-fn qa_m0_24_every_implementer_test_has_a_registered_control() {
-    let mut total = 0;
-    for scope in scopes(&["--features", "controls"]) {
-        let tests = assert_each_has_a_control(&scope);
-        assert!(
-            !tests.is_empty(),
-            "{}: no implementer test in scope",
-            scope.krate
-        );
-        eprintln!(
-            "{}: {} test(s), each with a registered control",
-            scope.krate,
-            tests.len()
-        );
-        total += tests.len();
-    }
-    // R-209 counts 55; a smaller listing means the scope was read short, not that the controls are complete.
-    assert!(
-        total >= 55,
-        "only {total} implementer tests in scope; R-209 counts 55"
-    );
-}
-
-validation::negative_control!(
-    qa_m0_24_every_implementer_test_has_a_registered_control,
-    "the same tests listed without the `controls` feature, where no control compiles",
-    expected = "tests without a registered control of their own",
-    for scope in scopes(&[]) {
-        assert_each_has_a_control(&scope);
-    }
-);
 
 /// `package` declares the `controls` feature (cargo refuses a feature a package does not declare) and has a direct
 /// dev-dependency on the workspace's `crates/validation`, by `cargo tree`'s dev edges.

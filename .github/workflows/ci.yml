@@ -999,9 +999,8 @@ jobs:
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask
         shell: bash .github/scripts/disk_sampler.sh {0}
-      # Validation's `qa_TASK-M0-24`: it lists the workspace's tests with `--features controls`, whose build the step
-      # above has made, and from the shards' archive it rebuilt that in its shard (`.config/nextest.toml`'s
-      # `ci-workspace` profile).
+      # Validation's `qa_TASK-M0-24`: it runs `cargo test --doc` and `cargo tree` on the workspace, which from the shards'
+      # archive rebuilt the workspace in its shard (`.config/nextest.toml`'s `ci-workspace` profile).
       - name: cargo nextest run -p validation --test qa_TASK-M0-24
         env:
           NEXTEST_PROFILE: ci-workspace
