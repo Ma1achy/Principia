@@ -35487,10 +35487,10 @@ R-923 is in the "process" group of `plan/rule_groups.yaml`.
 Changes no requirement.
 
 ## R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 and R-923 in part)*
-*10 Nov 2026 · the owner's message of that morning; applied in R-918's forward line, `plan/tasks.yaml`, TASK-M3-14,
-TASK-M3-17 and TASK-M3-69 (new), REQ-CHART-132 and REQ-PAY-058 (reqio, a note each), `plan/MILESTONES.md`,
-`plan/OPERATIONS.md` § "Dispatching", `docs/design/principia_chart_composition.md` (its R-918 line in the preamble,
-§ 12's test table and § 15's after-the-gate list) and `plan/rule_groups.yaml`*
+*10 Nov 2026 · the owner's message of that morning; applied in R-918's forward line, R-923's forward and "Still in
+force" lines, `plan/tasks.yaml`, TASK-M3-14, TASK-M3-17 and TASK-M3-69 (new), REQ-CHART-132 and REQ-PAY-058 (reqio,
+a note each), `plan/MILESTONES.md`, `plan/OPERATIONS.md` § "Dispatching", `docs/design/principia_chart_composition.md`
+(its R-918 line in the preamble, § 12's test table and § 15's after-the-gate list) and `plan/rule_groups.yaml`*
 
 The owner's words (10 Nov 2026), verbatim:
 
