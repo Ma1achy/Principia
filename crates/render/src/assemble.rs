@@ -29,6 +29,11 @@
 //! post None passes its colour on. A post's or `OUT`'s absent colour input reads the combiner: the chain before it is
 //! empty. So every graph renders.
 //!
+//! **The fallback** (render_gui_spec §13; REQ-RENDER-072). A node list that is no graph ([`Stain::new`] refuses it)
+//! still renders: [`assemble_or_fallback`] gives it the defined fallback, the same template with no node function and
+//! a `shade()` that returns one flat error tint ([`codegen::fallback`]), and the reason it was refused. The walk is
+//! the one walk: the fallback is its `shade()` with no node to visit, never a second path (REQ-RENDER-010; R-814).
+//!
 //! **The read side (R-378).** The assembler derives the stain's field set from its IR ([`field_set`]), every member
 //! of the read-side `SimState` the live nodes read, the word as `word` or as only the components `word.x` … `word.w`
 //! it reads, and generates the unpack layer and read side at its tier for that set through
@@ -80,10 +85,11 @@ const PALETTE: &str = crate::colour::palette::WGSL;
 
 /// The built-in occupants, each its slot, id and WGSL file (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): the
 /// combiners pass-through (M1's), Replace-L and Multiply (dd_colouring §3.5); the colour `outcome_state`, the
-/// outcome palette of colour_composition §1.4 (TASK-M1-10); and the structural overlays, post occupants
+/// outcome palette of colour_composition §1.4 (TASK-M1-10); the colour `margin`, a multi-source occupant with two
+/// field inputs (render_gui_spec Part II §5; R-813; TASK-M7-12); and the structural overlays, post occupants
 /// (TASK-M1-13): the Tier-1 boundary overlay `edge_line` (render_gui_spec §12.1), the fallback ancestor tint and the
 /// pending hatch (debug_tooling_plan §F; RQ-239), so a graph names them by id.
-const BUILTINS: [(Kind, &str, &str); 7] = [
+const BUILTINS: [(Kind, &str, &str); 8] = [
     (
         Kind::Combiner,
         "pass_through",
@@ -103,6 +109,11 @@ const BUILTINS: [(Kind, &str, &str); 7] = [
         Kind::Colour,
         crate::colour::outcome::ID,
         crate::colour::outcome::WGSL,
+    ),
+    (
+        Kind::Colour,
+        "margin",
+        include_str!("../shaders/wgsl/frag/colour/margin.wgsl"),
     ),
     (
         Kind::Post,
@@ -493,26 +504,31 @@ pub fn builtin(kind: Kind, id: &str) -> Option<&'static str> {
         .map(|(.., source)| *source)
 }
 
-/// The read-side fields a built-in source may read: the scalar members, `f32`, `u32` or `bool` (lowering Part 3a).
+/// The WGSL types of the read-side members a built-in source may read (lowering Part 3a): the scalars, `f32`, `u32`
+/// and `bool`, and the vector `vec3<f32>`, which a `Field` carries in `.xyz` (render_gui_spec Part II §3, §5: the
+/// shape n̂ source).
+const SOURCE_TYPES: [&str; 4] = ["f32", "u32", "bool", "vec3<f32>"];
+
+/// The read-side fields a built-in source may read: the scalar members, `f32`, `u32` or `bool`, and the vector
+/// members, `vec3<f32>` (lowering Part 3a; render_gui_spec Part II §5).
 pub fn source_fields() -> Result<Vec<String>, AssembleError> {
     let (words, entries) = ledger()?;
     Ok(read::members(words, entries)
         .into_iter()
-        .filter(|m| matches!(m.wgsl, "f32" | "u32" | "bool"))
+        .filter(|m| SOURCE_TYPES.contains(&m.wgsl))
         .map(|m| m.name)
         .collect())
 }
 
-/// The subtype of a built-in source's field (render_gui_spec Part II §5): categorical for a `bool` or a field the
-/// ledger scales as categorical or as a flag (dd_generation_root §3.8 `scale`), scalar otherwise; or the field is none.
+/// The subtype of a built-in source's field (render_gui_spec Part II §5: "picking the field sets the out-port's
+/// subtype"): vector for a `vec3<f32>`; categorical for a `bool` or a field the ledger scales as categorical or as a
+/// flag (dd_generation_root §3.8 `scale`); scalar otherwise; or the field is none.
 pub fn field_subtype(field: &str) -> Result<Subtype, AssembleError> {
-    let (words, entries) = ledger()?;
-    let member = read::members(words, entries)
-        .into_iter()
-        .find(|m| m.name == field && matches!(m.wgsl, "f32" | "u32" | "bool"))
-        .ok_or_else(|| AssembleError::Occupant(format!("`{field}` is no field a source reads")))?;
+    let (_, entries) = ledger()?;
+    let wgsl = field_type(field)?;
     let scale = entries.iter().find(|e| e.name == field).map(|e| e.scale);
-    Ok(match (member.wgsl, scale) {
+    Ok(match (wgsl, scale) {
+        ("vec3<f32>", _) => Subtype::Vector,
         ("bool", _) | (_, Some(Scale::Categorical(_) | Scale::Flag)) => Subtype::Categorical,
         _ => Subtype::Scalar,
     })
@@ -534,6 +550,12 @@ fn occupant_source(kind: Kind, occupant: &Occupant) -> Result<Option<String>, As
         (_, Occupant::None) => Ok(None),
         (Kind::Source, Occupant::Field(f)) => {
             let ty = field_type(f)?;
+            if ty == "vec3<f32>" {
+                return Ok(Some(format!(
+                    "// The built-in source of `{f}`: the vector field in `.xyz` (render_gui_spec Part II §3.1, §5).\n\
+                     fn source(ctx: Ctx) -> Field {{ return Field(ctx.sample.{f}, 0.0); }}\n"
+                )));
+            }
             let value = match ty {
                 "bool" => format!("select(0.0, 1.0, ctx.sample.{f})"),
                 _ => format!("f32(ctx.sample.{f})"),
@@ -556,7 +578,7 @@ fn field_type(field: &str) -> Result<&'static str, AssembleError> {
     let (words, entries) = ledger()?;
     read::members(words, entries)
         .into_iter()
-        .find(|m| m.name == field && matches!(m.wgsl, "f32" | "u32" | "bool"))
+        .find(|m| m.name == field && SOURCE_TYPES.contains(&m.wgsl))
         .map(|m| m.wgsl)
         .ok_or_else(|| AssembleError::Occupant(format!("`{field}` is no field a source reads")))
 }
@@ -965,6 +987,56 @@ pub fn assemble_view(stain: &Stain, tier: Tier, view: View) -> Result<Fragment, 
     )
 }
 
+/// What a node list renders as ([`assemble_or_fallback`]): its fragment, and, where the list is no graph and the
+/// fragment is the fallback's, why it was refused.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Rendered {
+    pub fragment: Fragment,
+    pub invalid: Option<AssembleError>,
+}
+
+/// `nodes` as a fragment, whatever they are (render_gui_spec §13, "Always-renderable"; REQ-RENDER-072): a graph
+/// ([`Stain::new`] takes it) assembles as `view` ([`assemble_view`]); a node list that is no graph, which the editor's
+/// fixed `OUT` and combiner and the identity rules leave unreachable, renders the defined fallback ([`fallback`]) and
+/// carries the refusal. An error is returned only where a graph's assembly fails, an occupant's WGSL that does not
+/// compile among them: that is a node's failure, not an invalid graph, and the runtime keeps that node's last valid
+/// occupant ([`crate::pipeline_cache`]; gui_state_contract §5).
+pub fn assemble_or_fallback(
+    nodes: Vec<Node>,
+    tier: Tier,
+    view: View,
+) -> Result<Rendered, AssembleError> {
+    match Stain::new(nodes) {
+        Ok(stain) => Ok(Rendered {
+            fragment: assemble_view(&stain, tier, view)?,
+            invalid: None,
+        }),
+        Err(why) => Ok(Rendered {
+            fragment: fallback(tier)?,
+            invalid: Some(why),
+        }),
+    }
+}
+
+/// The invalid-graph fallback's fragment at `tier` (render_gui_spec §13; [`codegen::fallback`]): the template with no
+/// node function, its `shade()` returning the fallback's flat colour at every pixel. It reads no field and has no
+/// uniform block; it has no debug arm in either view, so it is flat there too and binds no counts.
+pub fn fallback(tier: Tier) -> Result<Fragment, AssembleError> {
+    let mut source = head(tier, &[])?;
+    source.push_str(&shade_functions(
+        &format!("    {}\n", codegen::fallback::statement()),
+        false,
+    ));
+    source.push_str(PRESENTATION_HOOK);
+    compile(&source)?;
+    Ok(Fragment {
+        source,
+        fields: Vec::new(),
+        uniforms: Vec::new(),
+        debug_arm: false,
+    })
+}
+
 /// [`assemble`] with the debug arm `arm`, WGSL defining
 /// `debug_view(forbidden: bool, s: SimState, frag_xy: vec2<f32>, rgb: vec3<f32>) -> vec3<f32>` and `note_non_finite()`, or none, the presentation variant: [`assemble_view`]'s step, open so a test's control can
 /// assemble an altered arm.
@@ -1067,6 +1139,18 @@ fn ledger() -> Result<(&'static [Word], &'static [Entry]), AssembleError> {
 /// [`MAX_INPUTS`] long: a file of its own, so `cargo xtask lint wgsl` lints the generated debug views after it.
 pub const CONTEXT: &str = include_str!("../shaders/wgsl/stain/context.wgsl");
 
+/// What precedes the node functions at `tier`: the prelude, the maps and layers that follow it, the read side filling
+/// `fields`, and the stain's context.
+fn head(tier: Tier, fields: &[&str]) -> Result<String, AssembleError> {
+    let (words, entries) = ledger()?;
+    let read_side = read::assemble(words, entries, tier, fields).map_err(AssembleError::Field)?;
+    Ok(format!(
+        "{}\n{COLOUR_SPACE}\n{PRESENT}\n{COMPACTION}\n{RAMP}\n{DRIFT}\n{PALETTE}\n{read_side}\n// ── The stain (TASK-M1-04): context, node functions, shade() ──\n{}",
+        prelude::wgsl(tier),
+        CONTEXT
+    ))
+}
+
 /// `stain`'s WGSL at `tier`, its read side filling `fields`, with the debug arm `arm` or the presentation variant's
 /// hook, and its uniform blocks.
 fn source(
@@ -1075,13 +1159,7 @@ fn source(
     fields: &[&str],
     arm: Option<&str>,
 ) -> Result<(String, Vec<UniformBlock>), AssembleError> {
-    let (words, entries) = ledger()?;
-    let read_side = read::assemble(words, entries, tier, fields).map_err(AssembleError::Field)?;
-    let mut out = format!(
-        "{}\n{COLOUR_SPACE}\n{PRESENT}\n{COMPACTION}\n{RAMP}\n{DRIFT}\n{PALETTE}\n{read_side}\n// ── The stain (TASK-M1-04): context, node functions, shade() ──\n{}",
-        prelude::wgsl(tier),
-        CONTEXT
-    );
+    let mut out = head(tier, fields)?;
     // The canonical form's stain: its live nodes only, numbered in canonical order, so two wirings of one graph
     // assemble to one source.
     let canonical = stain.canonical();
@@ -1159,11 +1237,8 @@ fn label(occupant: &Occupant) -> String {
 }
 
 /// `shade(ctx)`, which walks the graph in backbone order: the sources, the colour and the brightness, the combiner, the
-/// post chain, `OUT`; `shade_at`, which reads sample `i` into a context with its screen, quad, tile and validity lanes
-/// and shades it; and `shade_sample`, the same with the screen, quad and tile lanes absent (the absence NaN) and the
-/// validity lane unclassified, no sample forbidden, for a pass that places no quad (REQ-COL-102). With `debug`,
-/// `shade_at` returns the debug view's arm over the walk's colour,
-/// `debug_view(ctx.validity.forbidden, ctx.sample, ctx.frag_xy, shade(ctx))` (REQ-COL-109).
+/// post chain in declaration order (colour_composition §4.2), `OUT`; with `shade_at` and `shade_sample`
+/// ([`shade_functions`]).
 fn shade(
     stain: &Stain,
     sources: &[usize],
@@ -1173,10 +1248,7 @@ fn shade(
     chain: &[usize],
     debug: bool,
 ) -> String {
-    let mut out = String::from(
-        "\n// The generated walk of the graph, in backbone order (render contract Part 2): sources → colour / brightness \
-         → combiner → (post)* → OUT.\nfn shade(ctx: Ctx) -> vec3<f32> {\n",
-    );
+    let mut out = String::new();
     for &s in sources {
         let _ = writeln!(out, "    let f{s} = n{s}_source(ctx);");
     }
@@ -1204,6 +1276,21 @@ fn shade(
         context(p, &mut out);
         let _ = writeln!(out, "    out = n{p}_post(c{p}, out);");
     }
+    shade_functions(&out, debug)
+}
+
+/// `shade(ctx)` with the body `walk`, the statements that leave the graph's colour in `out`, a graph's walk ([`shade`])
+/// or the fallback's one statement ([`fallback`]); `shade_at`, which reads sample `i` into a context with its screen,
+/// quad, tile and validity lanes and shades it; and `shade_sample`, the same with the screen, quad and tile lanes
+/// absent (the absence NaN) and the validity lane unclassified, no sample forbidden, for a pass that places no quad
+/// (REQ-COL-102). With `debug`, `shade_at` returns the debug view's arm over the walk's colour,
+/// `debug_view(ctx.validity.forbidden, ctx.sample, ctx.frag_xy, shade(ctx))` (REQ-COL-109).
+fn shade_functions(walk: &str, debug: bool) -> String {
+    let mut out = String::from(
+        "\n// The generated walk of the graph, in backbone order (render contract Part 2): sources → colour / brightness \
+         → combiner → (post)* → OUT.\nfn shade(ctx: Ctx) -> vec3<f32> {\n",
+    );
+    out.push_str(walk);
     out.push_str(
         "    return out; // OUT\n}\n\n\
          // Sample `i` read through the generated read side into a context at pixel `frag_xy`, its `ICDescriptor` too\n\

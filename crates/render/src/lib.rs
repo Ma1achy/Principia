@@ -30,6 +30,10 @@
 //! one function per node, its parameters uniforms clamped to their adopted ranges ([`codegen`], [`codegen::schema`];
 //! colour_composition §1, §5, §8), which reaches the GPU through the one assembler.
 //!
+//! The stain graph's remaining wiring (TASK-M7-12; render_gui_spec Part II §5, §13): a built-in source of a vector
+//! field, the multi-source colour `margin`, and the defined fallback an invalid graph renders
+//! ([`assemble::assemble_or_fallback`], [`codegen::fallback`]).
+//!
 //! The presentation views and View › Debug view (TASK-M2-34; R-467, R-511): a presentation view draws no hatch, a
 //! pixel that is not a system and a `decode_failed` sample the canvas background, the uniform its caller sets, and
 //! every other failure and non-finite value `#141418` ([`present::present_invalid`]); the debug view, a baked variant

@@ -19,8 +19,12 @@
 //!
 //! **`None` is the identity of `combine`** ([`combine`]): the statement the generated `shade()` gives the combiner's
 //! output by, per colour_composition §4.1's truth table.
+//!
+//! **An invalid graph's `shade()`** ([`fallback`]): the one statement that gives the defined fallback, a flat error
+//! tint (render_gui_spec §13; REQ-RENDER-072, REQ-RENDER-081).
 
 pub mod combine;
+pub mod fallback;
 pub mod schema;
 
 use std::collections::BTreeSet;
