@@ -359,8 +359,8 @@ pub struct Declaration {
 }
 
 impl Declaration {
-    /// The declarations in `source`: each line whose text, leading WGSL white space ([`is_space`]) removed, starts
-    /// `// @`, its lines split at WGSL's line breaks ([`lines`]), where naga ends the declaration's comment. The text
+    /// The declarations in `source`: each line whose text, leading WGSL white space (`is_space`) removed, starts
+    /// `// @`, its lines split at WGSL's line breaks (`lines`), where naga ends the declaration's comment. The text
     /// before `//` is WGSL source, so its white space is WGSL's, not Unicode's. Any word after `@` but `uniform` and
     /// `input` is refused, as is a malformed line or a name declared twice.
     pub fn parse(source: &str) -> Result<Declaration, AssembleError> {
