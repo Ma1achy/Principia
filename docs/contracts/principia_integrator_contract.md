@@ -330,11 +330,15 @@ disagree, the reference code's choice stands, the reference code being `driver.r
 re-measured under that same code (REQ-INT-114, a calibration). So, of the marks below: the reference body is the body
 not in the longest pair, and the Part 2b table's wording reads so; the unstable form's loss at 179.9° is `tb_lc.py`'s,
 `4.0e-12` at f64 and `2.2e-2` at f32; `Γ`'s coupling is the two-pair one given here; the landing secant is part of the
-step control, and its stop is `driver.rs`'s (step 6), not `tb_az.py`'s; REQ-INT-049's gate runs under step 3's per-step
-rule; and REQ-INT-054's bound per sync interval is the step budget over one interval, `max(N_min,
-step_budget_rate·Δ_sync)` (Part 3, R-604). Three marks stay open in RQ-756, each needing a Rust file that is not in the
-imported set: whether `V₁, V₂` are velocities or conjugate momenta (step 4); what the inverse map tests against in place
-of the literal `1e-300`; and the selector's tie-break, the `argmax` order standing meanwhile.
+step control, and its stop is `driver.rs`'s (step 6), not `tb_az.py`'s; and REQ-INT-049's gate runs under step 3's
+per-step rule. REQ-INT-054's bound per sync interval is not settled: the option the owner chose for it, the step budget
+over one interval, `max(N_min, step_budget_rate·Δ_sync)`, is not a bound Part 3's budget gives, that budget being
+cumulative since `t = 0` (R-604: the running total against `max(N_min, step_budget_rate · t_elapsed)`), so R-927 flags
+it and applies nothing; Part 3 stands as written, and the bound's formula waits on RQ-756 (4). Three marks stay open in
+RQ-756, each needing a Rust file that is not in the imported set: whether `V₁, V₂` are velocities or conjugate momenta
+(step 4); what the inverse map tests against in place of the literal `1e-300`; and the order in which the selector takes
+the three pairs, its first-maximum `argmax` being the driver's own stated convention and the order given here standing
+meanwhile.
 
 **The reference body (re-chosen at every sync boundary).** From the Cartesian state at the boundary, the three pair
 distances are taken in the order `(0,1), (0,2), (1,2)` (`tb.py:15`, `tb.py:41-47`). The longest is found by `argmax`,

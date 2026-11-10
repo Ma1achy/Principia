@@ -187,7 +187,10 @@ is no edge's default, and is drawn only for a validity failure or an edge switch
 is inside the primary range and counted, a clamped pixel is not, a saturated pixel only where its system is not shown
 inside the square. The choice lives in the registry row, with a per-edge override in the view state; the centre may
 cross onto an unfold sheet and stops at a clamped or saturated area; an optional Overlays › Chart toggle, off by
-default, marks clamped and saturated pixels. The section below is the text in force for what is built today; the chart
+default, marks clamped and saturated pixels. Under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` (R-597)
+saturates, the physics reviewer's call under this rule, in place of drawing as not a system; whether the rule reaches a
+pixel whose target energy cannot be reached with η_E on (R-598) is RQ-784, R-598 standing meanwhile. The section below
+is the text in force for what is built today; the chart
 addendum's N12 rewrites it from these rulings, each replaced line kept as *Was*, and N14 builds it
 (`plan/charts/m2-chart-addendum-extensions-axes.md`).
 

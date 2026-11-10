@@ -13914,8 +13914,11 @@ axis bounded; RQ-376 closed).*
 pixel whose own `(a, b)` leave it past the edge, blank past a bounded one).*
 *Refined by R-708 (4 Nov 2026: on the tilted Burrau charts E3 holds in warped mode through the floor at the pixel's own held `L_z`, and E2's infeasible cells are the linear arm).*
 *Amended in part by R-816 (7 Nov 2026; RQ-682 (a): H3's "not kind 3" is read as about B1's extension only; the virial ratio is kind 3).*
-*Still in force: all of it but H3's "not kind 3" as it reaches the virial ratio (R-816); R-506 carries E1 and E2 to every physical-quantity axis, R-508 declares the `t > 1`
-side and R-512 reads E3 over the chart's square, H9's meanwhile becoming the rule.*
+*Amended in part by R-932 (10 Nov 2026; E2 and H5: the linear option's infeasible pixels are no longer "not a system", blank, by default: each takes its edge's declared kind, blank only for an edge switched to blank).*
+*Amended in part by R-937 (10 Nov 2026; RQ-771 (a), E2 on the energy charts: past the spin edges the linear mapping unfolds onto the time-reversed sheet, and below the floor at a non-zero spin it draws the rigid rotation at the pixel's own spin).*
+*Still in force: all of it but H3's "not kind 3" as it reaches the virial ratio (R-816), and E2's and H5's "not a system", blank, for the linear option's infeasible pixels, which take their edge's declared kind
+(R-932; on the energy charts R-937's unfold and floor clamp); the linear option itself, its record in the view state and the sidecar, and E3's per-pixel evaluation stand; R-506 carries E1 and E2 to every
+physical-quantity axis, R-508 declares the `t > 1` side and R-512 reads E3 over the chart's square, H9's meanwhile becoming the rule.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "The four axis kinds — a closed set"
 (the kind-3 row) and § "Past the unit square — each axis's extension type (R-407)" (the affine row) and § "Tilt (basis
 edit)" (a sentence), `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel
@@ -26166,7 +26169,8 @@ R-596 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-GUI-266 (statement, verify, rq removed, rulings, source, note); adds REQ-GUI-400.
 
 ## R-597 — "No blank" on latent and flat charts holds at the default links with `μ_max` inside REQ-GEN-038's range, which is capped at 10; under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely degenerate and draws as not a system, with the reason in the readout *(closes RQ-536; qualifies R-570 item 3; caps REQ-GEN-038's `μ_max` range)*
-*Read with R-932 (10 Nov 2026: an edge saturates wherever the edge system itself is not a valid system, such as a zero mass; which mechanism this ruling's degenerate-mass pixels take is physics review's call).*
+*Amended in part by R-932 (10 Nov 2026; the owner's rule 2: an edge saturates wherever the edge system itself is not a valid system, such as a zero mass; under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` takes its edge's declared kind in place of "not a system", and physics review's call on the mechanism is saturate, not clamp).*
+*Still in force: the guarantee at the default links, `μ_max` inside REQ-GEN-038's range, and that range's cap at 10; under the edge-reaching simplex link the `M₀₁ < 10⁻⁵` pixels no longer draw as not a system: they saturate (R-932), the definition written by the chart addendum's N12.*
 *25 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Three hard requirements on any
 registered link" (Tunable parameters) and Part 4 ("Latent and flat charts: no limit on pan or zoom-out"),
 `docs/design/principia_chart_reference.md` §5.4, `docs/design/principia_dd_generation_root.md` §3.9 (Tunable
@@ -35747,13 +35751,13 @@ Changes no requirement here: the requirements it contradicts (REQ-INT-070's in-k
 "time never a tilt target" among them) and `plan/tasks.yaml` change once the one-way items are answered, as
 `plan/charts/m2-chart-system-replan.md` § A lists them (applied per R-369: task scoping).
 
-## R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; REQ-INT-054's bound per sync interval is the step budget over one interval; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; three points whose Rust files are not in the imported set stay open *(on RQ-756, which stays open)*
+## R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*
 *10 Nov 2026 · the owner's reply to the report of 10 Nov 2026, and their confirmation in session that day; applied in
 `REVIEW_QUEUE.md` (RQ-756, a dated line), `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the
 equations, the reference body, the Levi-Civita inverse and the step control (transcribed)" (a dated paragraph),
 `docs/design/principia_dd_predictability_horizon.md` § 7.3 (a dated note), REQ-INT-044, REQ-INT-049 and REQ-INT-054
-(reqio), a new calibration requirement (reqio), TASK-M3-68, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
-changes REQ-INT-044, REQ-INT-049 and REQ-INT-054, and adds REQ-INT-114*
+(reqio), a new calibration requirement (reqio), TASK-M3-68 and `plan/rule_groups.yaml`; changes REQ-INT-044 and
+REQ-INT-049, marks REQ-INT-054's bound as waiting, and adds REQ-INT-114*
 
 The owner's words (10 Nov 2026), verbatim, from the reply:
 
@@ -35772,8 +35776,28 @@ and, the same day, confirming the orchestrator's reading of "the reference code"
   under the fixed rule and no longer binds: the figure is re-measured under the rule in force, with the step control as
   the reference code has it (below), on the gate's grid `T/n`, `n = 32`, and proposed as a calibration (R-71) by
   TASK-M3-68, the owner's at the M3 gate (REQ-INT-114).
-- **(4)(a): REQ-INT-054's bound per sync interval** is the step budget over one interval, `max(N_min,
-  step_budget_rate·Δ_sync)`, its values REQ-INT-103's and REQ-INT-108's calibrations.
+- **(4)(a): flagged, not applied** (`CLAUDE.md` § "Rulings": a ruling that contradicts the corpus is flagged, and what
+  was applied is recorded). The option the owner chose reads, in RQ-756's own words: "(4)(a) the step budget over one
+  interval, `max(N_min, step_budget_rate·Δ_sync)`", as the bound REQ-INT-054's property test holds the substep count
+  per sync interval to. The step control in force does not guarantee that bound:
+  - R-604, the owner's words: "Check the running total every step against max(N_min, rate·t_elapsed). N_min protects
+    early close encounters and is an M3 calibration."
+  - Integrator contract Part 3, the `step_budget_rate` row: "a copy's running total of steps is checked at every step
+    against `max(N_min, step_budget_rate · t_elapsed)`, `t_elapsed` its physical time since `t = 0`, and the copy is
+    exhausted when it exceeds it".
+
+  So the budget is cumulative since `t = 0`, not per interval. A copy that is quiet for many intervals and then has a
+  close encounter may rightly spend, inside one interval, everything its running total has left: under R-604 the count
+  inside the interval ending at `t_k` is bounded by `max(N_min, step_budget_rate·t_k)` less what was already spent, and
+  by `max(N_min, step_budget_rate·Δ_sync)` only in the first interval. A property test written to (4)(a) as worded
+  would either fail on correct trajectories or pass only by adding a new cap per interval, which is new behaviour (more
+  copies ending undetermined at an encounter) that nothing ruled (physics review 5851141196 of PR #478, F1). Neither
+  reading is chosen here. **Applied meanwhile:** what stood before this ruling: REQ-INT-054's verify is as it was, its
+  bound's formula waiting on RQ-756 (4); TASK-M3-68's `tau_schedule_bound` arm waits; R-604 and Part 3 stand untouched.
+  **The question, put to the owner on RQ-756 (4):** a new cap per sync interval, `max(N_min,
+  step_budget_rate·Δ_sync)`, beside R-604's cumulative budget; or R-604's cumulative budget read at each boundary, the
+  running total at boundary `t_k` at most `max(N_min, step_budget_rate·t_k)`, with no cap per interval. The measurable
+  alternative for the report: the fuzz run's largest count in one interval, beside both bounds.
 - **(5): the reference code's choice on each point, and the reference code is the Rust driver**
   (`docs/reference/prin-rs/src/integrate/az/driver.rs`), reference and not authority (R-159): what it does is written
   into the contract, and the contract is cited. Point by point, as RQ-756 numbers them:
@@ -35786,23 +35810,27 @@ and, the same day, confirming the orchestrator's reading of "the reference code"
   4. **What couples `Γ`:** the two-pair `Γ` couples through `B|p₁|²/(8μ₁) + A|p₂|²/(8μ₂) + (L₁p₁)·(L₂p₂)/(4m_a)`, as
      transcribed; Part 2a's `|u|²|p_λ|²` term is the single-pair Levi-Civita `Γ`'s. Not separable either way.
   5. **The reference body is the body not in the longest side,** as transcribed; Part 2b's table cell "from the longest
-     side" reads so.
+     side" reads so. The Rust driver's choice was read at `docs/reference/prin-rs/src/integrate/az/driver.rs:180`, "the
+     reference is `THIRD[argmax d]`" (where the reference code's choice was read, as the owner's words direct; the rule
+     cited is the contract's, R-159).
   9. **Where the landing secant stops:** the driver's stop (`driver.rs:1086`), retaking up to `land_max_iters` times
      until `|got − want| ≤ tol`, `got` is not finite or `got ≤ 0`; `tb_az.py`'s stop on a short landing is not the rule.
-- **What it does not settle, so RQ-756 stays open:** points (5) 6, 7 and 8 ask for the choice of Rust files that are not
-  in the imported set, so "the reference code's choice" can't be read from the corpus, and nothing is guessed. (5) 6:
-  whether the predictive limit's `V₁, V₂` are velocities or conjugate momenta (`src/integrate/az/system.rs` is not
-  imported; the NumPy source returns momenta). (5) 7: what the Rust inverse map tests against in place of the NumPy
-  literal `1e-300` (the map is not imported; `driver.rs` floors `A` and `B` at `TINY`, as Part 6 does, and that part is
-  settled). (5) 8: the Rust selector's tie-break (`reference_body.rs` is not imported; the transcribed tie-break is
-  `tb_az.py:148`'s `argmax`). Each waits for the file to be imported or for the owner's word; the transcription's marks
-  on those three stand.
+- **What it does not settle, so RQ-756 stays open:** (4), as flagged above; and points (5) 6, 7 and 8, which ask for the
+  choice of Rust files that are not in the imported set, so "the reference code's choice" can't be read from the corpus,
+  and nothing is guessed. (5) 6: whether the predictive limit's `V₁, V₂` are velocities or conjugate momenta
+  (`src/integrate/az/system.rs` is not imported; the NumPy source returns momenta). (5) 7: what the Rust inverse map
+  tests against in place of the NumPy literal `1e-300` (the map is not imported; `driver.rs` floors `A` and `B` at
+  `TINY`, as Part 6 does, and that part is settled). (5) 8, narrowed: the driver itself says the selector takes the
+  first maximum (`driver.rs:1671`, "Exact argmax, first maximum — `choose_reference`'s own convention"), which is the
+  transcribed rule (`tb_az.py:148`'s `argmax`); only the order in which the Rust selector's `longest_index` takes the
+  three pairs is unread (`reference_body.rs` is not imported; the transcription takes them as `(0,1), (0,2), (1,2)`).
+  Each of the three waits for the file to be imported or for the owner's word; the transcription's marks on them stand.
 
 R-927 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Changes REQ-INT-044 (verify, rulings), REQ-INT-049 (verify, rulings) and REQ-INT-054 (verify, rulings), and adds
-REQ-INT-114 (the re-measured threshold, a calibration), each through `plan/tools/reqio.py`. The parse printed R-927 for
-this answer.
+Changes REQ-INT-044 (verify, rulings), REQ-INT-049 (verify, rulings) and REQ-INT-054 (rulings, source and a note that
+its bound waits on RQ-756 (4); its verify's test is as it was), and adds REQ-INT-114 (the re-measured threshold, a
+calibration), each through `plan/tools/reqio.py`. The parse printed R-927 for this answer.
 
 ## R-928 — RQ-637, `symlog`'s neutral band near a zero reference: option (b), the band scales by the rounding itself, `k'·2⁻²³·(K + |V|)` for the energy and `k'·2⁻²³·S` for `L_z`, `k'` from the bound *(closes RQ-637; amends R-652)*
 *10 Nov 2026 · the owner's reply to the report of 10 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-637 moved),
@@ -35917,19 +35945,19 @@ R-931 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
 
-## R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-472, R-503, R-506, R-508, R-512, R-537, R-554 and R-708; refines R-408)*
+## R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*
 *10 Nov 2026 · the owner's reply to the report of 10 Nov 2026, "NEW GENERAL RULES, in my words", rule 2, and its line on
 RQ-773; applied in `REVIEW_QUEUE.md` (RQ-773 moved), `docs/archive/review_queue/M0.md` (RQ-773 with its ruling),
 `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)" (a
 dated note), `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type
 (R-407)" (a dated note), `docs/design/principia_chart_composition.md` (the status block), the forward and "Still in
-force" lines of R-407, R-408, R-470, R-472, R-503, R-506, R-508, R-512, R-537, R-554 and R-708, "Read with" lines on
-R-469 and R-597, `plan/charts/m2-chart-addendum-extensions-axes.md`, `plan/section_notes.yaml` and
-`plan/rule_groups.yaml`; changes no requirement here*
+force" lines of R-407, R-408, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708, a "Read
+with" line on R-469, `REVIEW_QUEUE.md` (RQ-784, new: whether the rule reaches R-598's pixels),
+`plan/charts/m2-chart-addendum-extensions-axes.md`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no
+requirement here*
 
-The owner's words (10 Nov 2026), verbatim, the rule:
+The owner's words (10 Nov 2026), verbatim, item 2 under their heading "NEW GENERAL RULES, in my words":
 
-> NEW GENERAL RULES, in my words
 > 2. Chart edges. No blank areas. Past every true edge the chart saturates. Where there is a second sheet it
 >    unfolds onto it. Where the coordinate repeats it wraps. Smearing and saturating are the same idea to me:
 >    which mechanism is used on a given edge is physics review's call (saturate wherever the edge system
@@ -35970,22 +35998,34 @@ and on RQ-773 (amending the blank-area rulings):
 declares a kind, the kinds now seven, and bounded is no edge's default; clause 3's "No invented continuations" and its
 physics review stand, each new kind a declaration under it; its applied text's "P4 (a clamped extension) does not arise,
 since no axis is clamped" no longer holds. **R-470**: a blank pixel is a validity failure or an edge switched to blank,
-never an edge's default extension. **R-472**: "past a bounded edge a pixel blank" holds only for an edge switched to
-blank. **R-503**, **R-554**: the exponential map past `r = π` is no longer "the domain's end, blank"; its kind is
+never an edge's default extension. **R-471**: E2's linear option, "the infeasible pixels in the window are "not a
+system"", and H5's "in-square failures draw blank", give way to the edge's declared kind (R-937 on the energy charts);
+the linear option itself and E3's per-pixel evaluation stand. **R-472**: "past a bounded edge a pixel blank" holds only
+for an edge switched to blank. **R-503**, **R-554**: the exponential map past `r = π` is no longer "the domain's end, blank"; its kind is
 physics review's call under this rule (R-938 lists it). **R-506**, **R-708**: the linear option's "non-systems blank"
 and "an infeasible cell blank" give way to the edge's declared kind (R-937 for the energy charts' floor). **R-508**,
 **R-512**: the warp's `s` edges and `t < 0`, and a Tip-as-sheet pixel past a bounded edge, take the edge's kind and are
 not blank. **R-537**: its "Never any gaps" is read as this rule; EX2's and EX4's "the only blank pixels are not-a-system
-pixels" holds, a not-a-system pixel now being a validity failure only.
+pixels" holds, a not-a-system pixel now being a validity failure only. **R-597**: under the edge-reaching simplex link a
+pixel with `M₀₁ < 10⁻⁵` no longer "draws as not a system": the owner's rule names this case ("saturate wherever the edge
+system itself is not a valid system, such as a zero mass"), and blank is not among the mechanisms the rule leaves to
+physics review. The mechanism there is physics review's call under this rule, and the call is made (physics review
+5851141196 of PR #478, F3): saturate, not clamp, because the edge system at zero mass is not a valid system to smear;
+N12 writes the definition. R-597's guarantee at the default links and its cap, `μ_max ≤ 10`, stand.
+
+*What it does not decide:* **R-598** (with energy normalisation on, a latent pixel whose target energy cannot be reached
+"draws as not a system") is a blank region on a latent chart. Whether "No blank areas" reaches it is a reading of the
+owner's words that neither the implementer nor a reviewer may choose (physics review 5851141196 of PR #478, F3): it is
+queued as **RQ-784**, and R-598 stands as written meanwhile.
 
 *What it refines:* **R-408**: the new kinds' primary ranges, as "the count" above.
 
-*Read with* **R-469** (a clamped or saturated pixel is a valid system that is not the one its coordinates name; where the centre may go is R-942's) and **R-597** (a degenerate-mass pixel under the edge-reaching simplex link is the kind of edge system this rule saturates; which mechanism is physics review's call).
+*Read with* **R-469** (a clamped or saturated pixel is a valid system that is not the one its coordinates name; where the centre may go is R-942's).
 
 R-932 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Changes no requirement here: REQ-CHART-054, REQ-CHART-056, REQ-GUI-180 and REQ-GUI-268 change, and N12's and N14's
-requirements are added, with the chart plans' tasks in `plan/tasks.yaml`, as
+Changes no requirement here: REQ-CHART-054, REQ-CHART-056, REQ-CHART-087 (R-597's arm), REQ-GUI-180, REQ-GUI-268 and
+REQ-GUI-357 (R-597's arm) change, and N12's and N14's requirements are added, with the chart plans' tasks in `plan/tasks.yaml`, as
 `plan/charts/m2-chart-addendum-extensions-axes.md` § A.2 lists them (applied per R-369: task scoping; the owner's reply
 of 10 Nov 2026 to the addition's draft puts the chart plans' `plan/tasks.yaml` changes in the addition's own plan PR,
 and only there).
@@ -35996,9 +36036,8 @@ and only there).
 line at the `t = 0` terminals), TASK-M3-10 (a reference and a note), `plan/section_notes.yaml` and
 `plan/rule_groups.yaml`; changes no requirement*
 
-The owner's words (10 Nov 2026), verbatim:
+The owner's words (10 Nov 2026), verbatim, item 3 under their heading "NEW GENERAL RULES, in my words":
 
-> NEW GENERAL RULES, in my words
 > 3. Starting collided. If bodies start already collided, double or triple, it is a collision at t = 0, and
 >    we record the least separation and the pair.
 
@@ -36204,14 +36243,14 @@ R-936 is in the "design" group of `plan/rule_groups.yaml`.
 Changes no requirement here: REQ-CHART-112 and REQ-CHART-131 change with the chart plans' tasks in `plan/tasks.yaml`
 (applied per R-369: task scoping, as R-932).
 
-## R-937 — RQ-771, the invariant charts' second sheet: option (a), the spin edges unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ`, on the warped and the linear mapping, its meaning read from the seed R-934 rules; below the floor at a non-zero spin, where the lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin, everywhere there, on the linear `(L_z, E)` and `(L_z, K)` charts and on Burrau `Φ_θ,L_z`, physics review agreeing with conditions C1 to C7; REQ-ENC-030's class rule binds lookups and the lock, never a drawn extension *(closes RQ-771; amends R-508)*
+## R-937 — RQ-771, the invariant charts' second sheet: option (a), the spin edges unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ`, on the warped and the linear mapping, its meaning read from the seed R-934 rules; below the floor at a non-zero spin, where the lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin, everywhere there, on the linear `(L_z, E)` and `(L_z, K)` charts and on Burrau `Φ_θ,L_z`, physics review agreeing with conditions C1 to C7; REQ-ENC-030's class rule binds lookups and the lock, never a drawn extension *(closes RQ-771; amends R-471 and R-508)*
 *10 Nov 2026 · the owner's reply to the report of 10 Nov 2026 and their two messages on the re-plan's addition that day;
 the physics reviewer's consult of 10 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-771 moved),
 `docs/archive/review_queue/M0.md` (RQ-771 with its ruling), `docs/contracts/principia_inverse_encode_contract.md` §
 "Chart-aware validation" (the contract sentence), `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the
 warp that makes every pixel valid" and § "2.2 Deterministic momentum construction" (dated notes),
-`docs/design/principia_chart_composition.md` (the status block), R-508's forward and "Still in force" lines, REQ-ENC-030
-(reqio: rulings, note), `plan/charts/m2-chart-addendum-extensions-axes.md` (N12 to N14), `plan/section_notes.yaml` and
+`docs/design/principia_chart_composition.md` (the status block), R-471's and R-508's forward and "Still in force" lines,
+REQ-ENC-030 (reqio: rulings, note), `plan/charts/m2-chart-addendum-extensions-axes.md` (N12 to N14), `plan/section_notes.yaml` and
 `plan/rule_groups.yaml`; changes REQ-ENC-030 (rulings and note only)*
 
 The owner's words (10 Nov 2026), verbatim, from the reply:
@@ -36294,7 +36333,10 @@ and, replying to the addition's draft:
 - **Built by** the addendum's N12 (the definitions), N13 (the sheet) and N14 (the kinds in the evaluator), each
   physics-reviewed.
 
-*What it amends:* **R-508**: "the `s` axis past either edge, the warp stays bounded" gives way to the unfold onto sheet
+*What it amends:* **R-471**: E2's linear option, "the infeasible pixels in the window are "not a system"": on the
+energy charts' linear mapping the pixels past the spin edges are the unfold's sheet 2, and those below the floor at a
+non-zero spin draw the rigid rotation at the pixel's own spin; E3's per-pixel `U` and `I` are what both read. **R-508**:
+"the `s` axis past either edge, the warp stays bounded" gives way to the unfold onto sheet
 2; past `t < 0` the warp clamps to the rest start by REQ-ENC-030's projection (R-932); `t > 1` continues as ruled.
 
 R-937 is in the "physics" group of `plan/rule_groups.yaml`.

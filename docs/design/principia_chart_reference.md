@@ -1138,7 +1138,10 @@ across charts, not which chart looks best.
 edges are built now: each edge in the table below takes a declared extension (saturate past a true edge, unfold onto a
 second sheet, wrap where the coordinate repeats; the mechanism per edge is the physics reviewer's call), the invariant
 charts' spin edges unfolding onto the time-reversed sheet (R-937, § 2.1, § 2.2), the mass simplex's sides saturating
-(R-941), the time axis before 0 showing the starting state. The table is the text in force for what is built today; the
+(R-941), the time axis before 0 showing the starting state. Under the edge-reaching simplex link a pixel with
+`M₀₁ < 10⁻⁵` (R-597) saturates in place of drawing as not a system, the physics reviewer's call under the rule; whether
+the rule reaches η_E's unreachable pixels (R-598) is RQ-784, R-598 standing meanwhile. The table is the text in force
+for what is built today; the
 chart addendum's N12 rewrites it per edge, each replaced line kept as *Was*
 (`plan/charts/m2-chart-addendum-extensions-axes.md` § A.11).
 

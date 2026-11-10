@@ -544,17 +544,38 @@ older way of stepping that later rulings replaced.*
   reference code's choice on each point of (5)."; and, in session the same day, that "the reference code" is the Rust
   driver, the gate threshold re-measured under that same code (both quoted in full in R-927). Settled: (2)(a),
   REQ-INT-049's gate under Part 6's per-step rule, its threshold re-measured by TASK-M3-68 under that code and proposed
-  as a calibration (REQ-INT-114, R-71); (4)(a), REQ-INT-054's bound the step budget over one interval, `max(N_min,
-  step_budget_rate·Δ_sync)`; (5) 1, 2 and 9 by `driver.rs` (the landing secant is part of the step control, its figures
-  the reference's, its stop the driver's); (5) 3, 4 and 5 by the imported reference, as transcribed (4.0e-12 at f64 for
-  179.9°; the two-pair `Γ`'s coupling; the reference body the one not in the longest side). **Still open, so the entry
-  stays:** (5) 6 (whether the predictive limit's `V₁, V₂` are velocities or conjugate momenta), (5) 7 (what the Rust
-  inverse map tests against in place of the literal `1e-300`; `A` and `B` floored at `TINY` is settled) and (5) 8 (the
-  Rust selector's tie-break): each asks for the choice of a Rust file that is not in the imported set
-  (`src/integrate/az/system.rs`, the Levi-Civita map, `reference_body.rs`), so the reference code's choice can't be
-  read, and nothing is guessed. For the owner: import those three files, or rule the three points. Meanwhile the
-  transcription's marks on them stand, and TASK-M3-68's arms that touch them wait (the predictive limit on (5) 6,
-  REQ-INT-044's guard on (5) 7); (5) 8 holds nothing, the transcribed `argmax` standing meanwhile.
+  as a calibration (REQ-INT-114, R-71); (5) 1, 2 and 9 by `driver.rs` (the landing secant is part of the step control,
+  its figures the reference's, its stop the driver's); (5) 3, 4 and 5 by the imported reference, as transcribed (4.0e-12
+  at f64 for 179.9°; the two-pair `Γ`'s coupling; the reference body the one not in the longest side, which is the
+  driver's own "the reference is `THIRD[argmax d]`", `driver.rs:180`). **Still open, so the entry stays:**
+  - **(4), flagged, not applied.** The owner chose (4)(a), "the step budget over one interval, `max(N_min,
+    step_budget_rate·Δ_sync)`", as the bound on the substep count per sync interval. The step control in force does not
+    guarantee that bound: R-604, the owner's words, "Check the running total every step against max(N_min,
+    rate·t_elapsed)", and integrator contract Part 3, the `step_budget_rate` row, "`t_elapsed` its physical time since
+    `t = 0`", make the budget cumulative. A copy that is quiet for many intervals and then meets a close encounter may
+    rightly take, in that one interval, all its running total has left, far more than `step_budget_rate·Δ_sync`; the
+    formula holds only in the first interval. So a test of (4)(a) as worded fails on correct runs, or passes only with
+    a new cap that would end more copies undetermined at encounters (physics review 5851141196 of PR #478, F1).
+    **For the owner, which is meant:** (4)(a-1) a new cap per sync interval, `max(N_min, step_budget_rate·Δ_sync)`,
+    added beside R-604's cumulative budget, so a copy that spends more than that inside one interval ends undetermined
+    (new behaviour, amending R-604 and Part 3); or (4)(a-2) R-604's cumulative budget, read at each boundary: the
+    running total at boundary `t_k` is at most `max(N_min, step_budget_rate·t_k)`, with no cap per interval (no new
+    behaviour; REQ-INT-054's test checks the budget already in force). Recommended: (4)(a-2), since it adds nothing to
+    what R-604 rules and the entry's own reason for (4)(a) was that "R-604 already accounts the budget every step".
+    Measurable alternative: TASK-M3-68's fuzz run reports its largest count in one interval beside both bounds.
+    Applied meanwhile: what stood before; REQ-INT-054's verify is unchanged and TASK-M3-68's `tau_schedule_bound` arm
+    waits.
+  - **(5) 6, 7 and 8,** each asking for the choice of a Rust file that is not in the imported set, so the reference
+    code's choice can't be read, and nothing is guessed. (5) 6: whether the predictive limit's `V₁, V₂` are velocities
+    or conjugate momenta (`src/integrate/az/system.rs`). (5) 7: what the Rust inverse map tests against in place of the
+    literal `1e-300` (the Levi-Civita map; `A` and `B` floored at `TINY` is settled). (5) 8, narrowed: `driver.rs:1671`
+    already says "Exact argmax, first maximum — `choose_reference`'s own convention", which is the transcribed
+    tie-break, so only the order in which `longest_index` takes the three pairs is unread (`reference_body.rs`).
+    **For the owner:** import those three files, or rule the three points: (5) 6, velocities or conjugate momenta;
+    (5) 7, the value the inverse map tests against; (5) 8, whether the pairs are taken in the order `(0,1), (0,2),
+    (1,2)`, as transcribed. Meanwhile the transcription's marks on them stand, and TASK-M3-68's arms that touch them
+    wait (the predictive limit on (5) 6, REQ-INT-044's guard on (5) 7); (5) 8 holds nothing, the transcribed order
+    standing meanwhile.
 
 ## RQ-779: The default extension kind of each edge, for the owner to confirm by eye *(the owner's call by looking; a one-way door, defaults; the owner's direction of 10 Nov; R-407, R-508, R-898; context: N14)*
 
@@ -680,3 +701,63 @@ the old way is kept for it.*
   lists the item in § A (REQ-TOOL-172 and TASK-M7-45, "waits on RQ-783") and § C, and recommends (a).
 - **Waits:** TASK-M7-45's retired-link arm; N2's record contract (whether a record carries its decode route);
   TASK-M4-05's switch to records.
+
+## RQ-784: Whether the owner's "No blank areas" reaches a latent pixel that energy normalisation cannot reach, which R-598 draws as not a system *(a reading of the owner's words; a one-way door, it changes what a chart draws; R-932, R-598, R-937, R-570; REQ-CHART-087, REQ-GUI-357; physics review 5851141196 of PR #478, F3; context: the chart addendum's N12 and N14, TASK-M8-57)*
+
+*Queued 10 Nov 2026 by the fix round on the rulings PR #478, from its physics review 5851141196, finding F3; each quote
+below re-read on the PR's branch. Nothing is chosen here.*
+
+*In plain English: the owner's new rule says a chart has no blank areas. One blank area was put there by an earlier
+ruling of the owner's own. With energy normalisation switched on (every pixel's system rescaled to one chosen energy;
+it is off by default), some pixels of a latent chart have no system at that energy, because their shape needs more
+energy than the target even to stand still, and the earlier ruling draws them as "not a system". The new rule doesn't
+name this case, and its words can be read either way. On the energy charts the same physics, a pixel below the least
+energy its shape allows, was just given a drawn stand-in by the owner. Nobody but the owner may pick the reading.*
+
+- **File, section:**
+  - `decisions.md` § R-932 (chart edges: no blank areas), the owner's words: "2. Chart edges. No blank areas. Past every
+    true edge the chart saturates. Where there is a second sheet it unfolds onto it. Where the coordinate repeats it
+    wraps. Smearing and saturating are the same idea to me: which mechanism is used on a given edge is physics review's
+    call (saturate wherever the edge system itself is not a valid system, such as a zero mass)."
+  - `decisions.md` § R-598 (energy normalisation's unreachable pixels), the owner's words: "RQ-552: (a). The rule holds
+    with normalisation off. With it on, a pixel whose target energy cannot be reached has no system at that energy:
+    draw it as not a system and give the reason in the readout. Not (c): drawing it unnormalised would put a different
+    energy on the same chart."
+  - `docs/contracts/principia_chart_decoder_contract.md` Part 4, "Latent and flat charts: no limit on pan or
+    zoom-out": "with η_E on a pixel whose target energy cannot be reached has no system at that energy; each draws as
+    not a system".
+  - `docs/design/principia_dd_decoder.md` § 2's table: "`ENERGY_INFEASIBLE` | `η_E`: `E* < U` (§3.7)" and
+    "`ENERGY_UNSCALABLE` | `η_E`: the rest start at `E* > U`, or the collision pole `U = −∞` (§3.7)".
+  - `decisions.md` § R-937 (the energy charts' floor), its heading: "below the floor at a non-zero spin, where the
+    lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin", a drawn clamp where the
+    same condition, a pixel's energy below what its shape allows, holds on the linear `(L_z, E)` chart.
+  - `decisions.md` § R-932, *What it decides*: "a validity failure stays "not a system", drawn blank (R-470)", the
+    reading this PR applied to the edges, which is silent on R-598.
+- **The silence:** rule 2 speaks of edges ("Past every true edge"). R-598's pixels are not past an edge of the chart's
+  coordinates: they lie inside the latent plane, wherever `E* < U` at the pixel's own shape, or the momenta cannot be
+  scaled to the target. They are a blank area all the same, and "No blank areas" is unqualified. R-932 amends the
+  rulings that left an edge blank and does not name R-598.
+- **The question:** with energy normalisation on, does a latent pixel whose target energy cannot be reached still draw
+  as not a system (R-598), or does it take a drawn extension under rule 2?
+- **Options seen:**
+  - (a) R-598 stands. Such a pixel has no system at the chart's energy; it is a validity failure, not an edge, and
+    stays "not a system" with the reason in the readout. "No blank areas" is read as about edges and their
+    extensions. Changes nothing built or planned.
+  - (b) Rule 2 reaches it. The pixel draws a declared extension, the mechanism the physics reviewer's call under
+    R-932: for `E* < U`, a clamp to the pixel's own least energy (the rest start at `E = U`), disclosed as R-937's C6
+    discloses the energy charts' clamp (the readout shows the drawn system's own energy and a "clamped" flag, and the
+    pixel stays out of the area statistics); for the rest start at `E* > U` and the collision pole, a kind the
+    physics reviewer declares. R-598 is amended in part: its own reason against option (c) of RQ-552, "a different
+    energy on the same chart", then holds only as far as the disclosure answers it.
+  - (c) Another, stated by the owner.
+- **Recommended:** (a). R-598 is the owner's own ruling on exactly these pixels, and its stated reason, that the chart
+  must not show a different energy from the one it names, is one any drawn stand-in would cut against; the pixels are
+  not at an edge, which is what rule 2's mechanisms are about; and normalisation is off by default, so no chart is
+  blank anywhere unless the user turns it on. Against it: the owner has just chosen a drawn clamp for the same physics
+  on the energy charts (R-937). The measurable alternative: on each gallery latent chart at its home view, with
+  normalisation on at a bound target energy, the share of pixels R-598 blanks, and one screenshot each of (a) and of
+  (b)'s clamp, for the owner to judge by eye.
+- **Applied meanwhile:** R-598 as it stands: such a pixel draws as not a system, with the reason in the readout.
+  R-932 names this entry and amends nothing in R-598.
+- **Waits:** nothing built waits. The chart addendum's N12 (the kinds in the contracts) and N14 (the kinds in the
+  evaluator) and TASK-M8-57 build R-598's arm as it stands until this is answered.
