@@ -24,6 +24,7 @@
 //! **Determinism** (REQ-INT-007, REQ-INT-023): the number and size of the steps are a function of the integer span, the
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.
 
+use super::substep::{d2_quantised, Quantise};
 use crate::occupant::{Geom, State, StepReal, Stepper};
 use crate::payload::{PayloadReal, SimStateBaseOf};
 
@@ -62,6 +63,19 @@ pub trait Cadence<R> {
 
     /// Whether the run is done: a terminal has fired, so no further step is taken (Part 1, R-103).
     fn done(&self) -> bool;
+
+    /// The position-quantised `d²` of the closest pair at the positions `r`, the state the cadence last saw (its run's
+    /// IC, or the state its last [`Cadence::after_step`] left), which the wrapper's `N_sub` bucket reads
+    /// (dd_integrator §3.3). A cadence that formed it there returns its own, so the step's one computation serves the
+    /// bucket too (integrator_contract Part 7; REQ-EVT-004); one that did not forms it from `r`
+    /// ([`d2_quantised`]).
+    #[inline]
+    fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32
+    where
+        R: Quantise,
+    {
+        d2_quantised(r)
+    }
 
     /// The stored state `out` of the finished run, with what this cadence kept written into it. A cadence that keeps
     /// nothing leaves it; the wrapper's writes its monitored fields ([`super::wrapper::monitored`]).
