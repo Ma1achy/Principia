@@ -1006,10 +1006,27 @@ anything outside the repository and its build and scratch directories without as
 - A recorded run on R-711's runner takes a clean target only where it is filed as evidence, as the Paper 2 parity run
   is; every other recorded run keeps the runner's target, as now (R-856).
 - Once the DX12 opt-in lands, the same card is the second discriminator: the same failure points at the card or our code, a different one at the Vulkan driver path.
+- *10 Nov 2026 (R-946):* the four failing steps on the PC (the validation, xtask and engine tests; the fast-math check;
+  the full golden-image comparison; the halfway-rounding golden test) are sorted by running each on the PC under
+  lavapipe as well as on the RTX, on the same commit, since a faulty card can fail the same way every time and so
+  re-running is not enough. Passing on lavapipe and failing on the RTX is the card or its driver: record it as a
+  measurement, don't file it. Failing on both is a Windows code-path defect: fix it or file an issue. Failing on
+  lavapipe only, or differing between runs, is reported to the owner and not classified. Nothing is tuned or loosened to
+  make a step pass (R-649). For these four, "deterministically on Windows" in the first bullet no longer files a code
+  bug by itself. The PC's GPU results stay measurements until each of the four is explained.
 
 ## The Windows runner's work (R-859)
 
 The owner's ruling of 8 Nov 2026 on what R-711's runner, `malachys-pc-rtx2080s`, may run:
+
+*10 Nov 2026 (R-946):* "Windows once proven" (R-909) is met tier by tier. The PC's CPU-only tiers (the slow tier, the
+mutation runs and the process tests) may move to its per-merge run without waiting for the card, on two conditions.
+Containment first, unchanged: the hash run, the pin PR, the register run and the six proofs all pass before anything
+per-merge moves to the PC (R-912, RQ-751 option (b)). And the CPU results repeat: the tiers are run three times on one
+commit of `main` on the PC, and they count only if all three runs give the same pass or fail result for every test and
+every test that passes on the hosted Linux run of that commit passes on all three; the numbers are reported, and if they
+differ the tier does not move and the owner is told which tests differed. The RTX's GPU tests wait on § "Windows GPU
+results (R-719)"'s sorting of the four failing steps.
 
 - **From the anchor move** (the owner's move of the PC hook's signing-gate anchor; before it the hook refuses `main`'s
   merges), it may run, each as a named measurement reporting under its own name and never a required check, gathered

@@ -32,6 +32,75 @@ fragment; no refusals; three slope tiers; table debug views; the one-cell patch)
 **R-925** is the ruling of the owner's six prototype decisions; and the re-plan's queue entries are cited by id, each
 with its topic ("RQ-762, the window's per-coordinate scale").
 
+## The owner's answers of 10 Nov 2026 (R-931 to R-946)
+
+**Status, 10 Nov 2026, after the owner's reply of that day:** the two directions are now rulings, and every question of
+§ D but RQ-779 (the default behaviour of each edge) is closed. This document still builds and dispatches nothing. N12 to
+N18 are not in `plan/tasks.yaml` yet: the owner's reply to the draft of the re-plan's addition puts the chart plans'
+`tasks.yaml` changes in that addition's own PR and nowhere else, so they land there, with their requirements (applied
+per R-369: task scoping). The body below is kept as proposed, with a dated note where an answer changes it; where it
+says "only under RQ-n", "directions, not rulings" or "waits on RQ-n", read the row here.
+
+| Question | Answer | Ruling |
+|---|---|---|
+| Direction 1, chart edges | No blank areas: past every true edge the chart saturates, unfolds onto a second sheet where there is one, and wraps where the coordinate repeats; which mechanism an edge uses is physics review's call, saturating wherever the edge system is not a valid system | R-932 (the rule on chart edges) |
+| RQ-771, the second sheet | (a): the spin edges unfold onto the time-reversed sheet. (ii): below the floor at a non-zero spin the drawn extension is the rigid rotation at the pixel's own spin, option (ii-2), everywhere there; (iii): the same on Burrau `Φ_θ,L_z`. Physics review agrees, with conditions C1 to C7 | R-937 (the second sheet) |
+| RQ-772, which edges | Every chart's edges now, not a first few; time before zero shows the starting state now, the backward run later, reusing R-879's (the backward run designed for the final-condition charts) | R-938 |
+| RQ-773, the blank-area rulings | (a): unfold, clamp and saturate are declared kinds per edge; an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system isn't shown inside the square | R-932 |
+| RQ-774, marking | (b): a toggle, off by default | R-939 |
+| RQ-775, where the per-edge choice lives | (a): the registry row and, as an override, the view state; a re-addressing kind off the sim key, a kind that shows new systems on it | R-942 (the addendum's five remaining answers) |
+| RQ-776, the backwards table on two sheets | (a): the table holds sheet 1 only; a state is looked up as itself and as its time reverse | R-942 |
+| RQ-777, mixed axis numbers | Not the summed number. In a blend, a dual ruler: one axis line, the starting chart's real ticks on one side and the target chart's on the other, each fading with its share. On a tilt or rotation within one chart, one number in window units. Hover gives every true value | R-940 (the dual ruler) |
+| RQ-778, an axis's name | (a): no small term is dropped; read with the dual ruler | R-942 |
+| RQ-779, each edge's default | Per R-932; the mass simplex saturates, like the latent mass plane; the rest confirmed by eye when the real charts render. **Stays open** | R-941 |
+| RQ-780, the computed axis and the line system's scale | (a): the computed axis is the primary scale on every chart and frame; the no-ticks rule mid-morph is withdrawn; read with the dual ruler | R-942 |
+| RQ-781, the view's centre | (a): it may cross onto an unfold sheet and stops at a clamped or saturated area | R-942 |
+
+What the answers change in § C's tasks:
+
+- **N12** (the extension kinds in the contracts) writes R-932's kinds and R-937's definitions: the sheet, and the clamp
+  below the floor with its metric `|ΔE|` at fixed `L_z`, beside REQ-ENC-030's metric and never as it. It covers every
+  chart's edges (R-938), not a first few.
+- **N13** (the second sheet) is built: RQ-771 (a). It starts from the construction as N10 (the seed conversion, R-934)
+  leaves it, with the seed `w = r/√I`.
+- **N14** (the kinds in the CPU evaluator, and the count) builds every chart's edges now, each row of RQ-779's table to
+  R-932, the mass simplex saturating; which mechanism a row uses where the rule leaves a choice is physics review's
+  call, and the owner confirms the rest by eye when the charts render (R-941). Time before zero shows the starting
+  state; the backward run comes later, R-879's.
+- **N12 to N14 must meet the physics reviewer's conditions on the clamp below the floor** (R-937 records them in full;
+  the physics reviewer's words, not the owner's): **C1** the clamp arm selects `a = 0` directly, takes no sheet input,
+  and its momenta are bitwise the existing infeasible arm's at f32 and f64 (controls that must fail: a rest-start clamp,
+  and a fixed-`E` horizontal clamp); **C2** chart_reference § 2.2's three checks to machine precision on clamped pixels;
+  **C3** the `L_z = 0` column decodes to `p = 0`, equal to REQ-ENC-030's apex projection, and the decoded `sign(L_z)`
+  matches the pixel's own through REQ-ENC-036's zero band; **C4** membership decided on the computed `K*`'s sign
+  together with the existing exact test, one branch per input at each precision and on each backend; **C5** under a tilt
+  that moves the shape a clamped pixel equals the construction at its own configuration (control: the window centre's
+  configuration fails); **C6** the Inspector and hover show the drawn system's own `E' = U + L_z²/2I` and its class with
+  a "clamped to the floor" flag, the debug view shows the clamp kind, clamped pixels stay out of `energy::count`, and
+  the test output reports the share of clamped pixels with `E' ≥ 0`; **C7** a click or re-centre on a clamped pixel
+  never locks the drawn `E ≥ 0` system while showing the row's `E < 0`, and under RQ-781 (a) the lock is refused there.
+  The seam along `E = U` is declared in the per-edge table and shown in the debug kind map; no pixel is averaged across
+  sheets; a pixel whose `L_z²` has no finite float at the chart's precision stays not a system.
+- **N15** (the backwards table on an extended chart): sheet 1 only, each state looked up as itself and as its time
+  reverse (RQ-776 (a)).
+- **N16 and N17** (computed axes) draw the dual ruler in a blend and one number in window units on a tilt or rotation
+  within one chart, never a summed number, with every true value on hover (R-940); no small term is dropped from a name,
+  and the computed axis is the primary scale on every chart and frame (R-942). The tick-placement tolerance, if the
+  build needs one, is a calibration (R-71) filed with N16's task.
+- **N18** (marking) is built, after M2's gate: a toggle, off by default (R-939). Dim or hatch isn't ruled; N18 shows the
+  owner both as a screenshot pair and they choose.
+
+**The quadtree.** The owner's review point (their reply of 10 Nov 2026, verbatim):
+
+> - Neither plan changes the quadtree design. Keep it that way: the prototype's quadtree is an illustration.
+
+Stated here once for the whole document: **this addendum changes nothing in the quadtree design.** The rows of § A that
+read REQ-SCHED-101, REQ-REF-054 and TASK-M8-56 as CHANGE under RQ-775 name how a clamped or unfolded pixel is addressed
+within the existing design (which quads an extended pixel reads), never a change to how the quadtree tiles, refines or
+schedules. The prototype is now version 24 by the owner's account (since version 21: the dual ruler and window-unit tilt
+axes behind an "Axis numbers" selector, resolution up to 1024, a morph that draws every frame as one chart); it is still
+an illustration, cited by path, never copied, and its quadtree is not the design.
+
 ## 0. The owner's direction, verbatim (not a ruling)
 
 From the addendum, each "Direction (owner):" sentence as written:
@@ -152,7 +221,7 @@ recommendation. "Direction 1" is extensions on every edge, "direction 2" compute
 | NEW (N13) | The invariant construction's second sheet, defined (R-72) and tested | NEW | RQ-771 |
 | NEW (N14) | Per-edge extensions in the CPU evaluator and the count | NEW | Direction 1 |
 | NEW (N15) | The backwards table on an extended chart, measured | NEW | RQ-776 |
-| NEW (N18) | Marking clamped and saturated areas, only if ruled | NEW | RQ-774 |
+| NEW (N18) | Marking clamped and saturated areas: a toggle, off by default (R-939, 10 Nov 2026; *was:* "only if ruled") | NEW | RQ-774 (b) |
 
 ### A.3 Extensions: tasks
 
@@ -396,8 +465,8 @@ the rest is non-visual and so M2's (R-916).
    metric named as the clamp's; REQ-CHART-054 and REQ-CHART-056 changed and the NEW requirements of § A.2 added through
    `plan/tools/reqio.py`. *Measurement:* none. *Door:* one-way, RQ-771, RQ-772, RQ-773, RQ-775, RQ-779, RQ-781.
 
-2. **N13, the invariant construction's second sheet.** *Slot:* § B.4, after item 12 (TASK-M2-66, TASK-M2-67), only under
-   RQ-771 (a) or (b). *Order with the re-plan's N10* (the seed conversion, built only under (a) or (b) of RQ-764, the
+2. **N13, the invariant construction's second sheet.** *Slot:* § B.4, after item 12 (TASK-M2-66, TASK-M2-67); built,
+   RQ-771 (a) (R-937, 10 Nov 2026; *was:* "only under RQ-771 (a) or (b)"), under RQ-764 (a) (R-934). *Order with the re-plan's N10* (the seed conversion, built only under (a) or (b) of RQ-764, the
    momentum seed): N10 sits in that plan's § B.1, before TASK-M2-61's baseline, so N13 comes after it. Under RQ-764 (a)
    or (b), N13's "sheet 1 bitwise today's" baseline is the construction as N10 leaves it, with the seed `w = r/√I` on
    the charts N10 converts; under its (c), R-82's construction as `main` has it now. Either way the baseline is `main`'s
@@ -499,7 +568,8 @@ the rest is non-visual and so M2's (R-916).
    unfolded; a morph paused part-way; a long mixed name never overlaps the Home button's rect (R-466; control: the name
    drawn untruncated does). *Measurement:* none. *Door:* one-way where RQ-777 and RQ-780 decide; the rest two-way.
 
-7. **N18, marking clamped and saturated areas** (only under RQ-774 (b) or (c)). *Slot:* § B.6, after N14 and M2's gate.
+7. **N18, marking clamped and saturated areas** (built: RQ-774 (b), R-939, 10 Nov 2026; *was:* "only under RQ-774 (b)
+   or (c)"). *Slot:* § B.6, after N14 and M2's gate.
    *Acceptance:* an Overlays › Chart toggle, off by default under (b), dimming or hatching exactly the pixels N14
    classes clamped or saturated, drawn over the field as R-470's forbidden-region overlay is (control: a toggle that
    also dims a system pixel inside the square fails). *Measurement:* none. *Door:* one-way, RQ-774.

@@ -22,6 +22,58 @@ charts (R-649): nothing here rests on one until § C and § B re-measure it on t
 **Where this lives.** `plan/charts/` is a new folder; `python3 plan/check_plan.py` accepts it (it reads plan documents
 for references only).
 
+## The owner's answers of 10 Nov 2026 (R-927 to R-946)
+
+**Status, 10 Nov 2026, after the owner's reply of that day:** every one-way item of § E but RQ-783 (whether a record
+made before the new decode route recreates bit for bit) is answered, and the answers are rulings in `decisions.md`. This
+document still builds and dispatches nothing. Its N1 to N11 are not in `plan/tasks.yaml` yet: the owner's reply to the
+draft of this plan's addition (the plan that closes each stated mid-morph limitation, R-944) puts the chart plans'
+`tasks.yaml` changes in that addition's own PR and nowhere else, so they land there, with their requirements (applied
+per R-369: task scoping). The body below is kept as proposed, with a dated note where an answer changes it; where the
+body says "waits on RQ-n" or "under RQ-n (a)", read the row here.
+
+| Question | Answer | Ruling |
+|---|---|---|
+| RQ-758, slopes against central differences | (a): exact or implicit slopes are the linearised decoder's `J_D`; central differences are only the check | R-935 (the chart re-plan's eleven answers) |
+| RQ-759, what the lock's re-solve guarantees | (a): it follows its local minimiser continuously and stops where that ends; the offered re-centre, the navigation stop and the stored-words select stay | R-935 |
+| RQ-760, what a state blend leaves open | (i-a) the other path arms are maps, not morphs; (ii-a) the mass block blends the logs of the mass ratios; (iii-a) no area statistics on a mid-morph frame, **not** (iii-b); (iv-a) no true copy at a fold, the nearest answer labelled | R-936 (the blend's open points) |
+| RQ-761, time on the integrator's grid | (a) and (a-i): a per-sample stop index, the new label "reached its time", the zoom along time floored at one boundary | R-935 |
+| RQ-762, the window's per-coordinate scale | (a): R-507's and R-920's unit; time's is the home time window | R-935 |
+| RQ-763, how much of stage 1 stays bitwise | (b): measure each operation against its generic edit first; a bitwise-equal one is one leaf at once, a differing one is converted in stage 1 with a recorded bit change | R-935 |
+| RQ-764, the momentum seed | (a): the seed `w = r/√I` everywhere; R-82's rule a named option; changed images updated under R-931 (the goldens rule) | R-934 (the seed) |
+| RQ-765, the GPU decode entries | (a): they stay as test entries; R-837's cap is retired once measured | R-935 |
+| RQ-766, a large quad's forward table | (a): one exact node per sample; R-90's trigger read on the narrowed f32 records | R-935 |
+| RQ-767, the table route's accuracy outside a morph | (a): the table seeds a refinement on the chart's forward code; the criterion as merged | R-935 |
+| RQ-768, `ctx.chart.z` | (a): the forward value, carried in the table | R-935 |
+| RQ-769, stage 3 beside stages 1 and 2 | (a): yes | R-935 |
+| RQ-770, pan and zoom and the cache | (a): an in-plane pan or zoom still re-addresses the cache | R-935 |
+| RQ-783, pre-switch records | not answered; stays open | none |
+
+Four more rulings of the same day bear on this plan. **R-943 (the general rule for a morph):** a morph is its pairing
+(the same pixel on both charts), its path (by default the shortest in each block's natural geometry) and its easing
+(timing only); N5 builds the default path per block, and another path is allowed, not built now and not designed out.
+**R-944 (the principle):** a morph frame is a chart and every chart feature works on it, area statistics the one
+exception; each place where this plan says a mid-morph frame can't do something is a gap the addition closes, item by
+item. **R-945:** R-926 item 7's list of what the backwards direction serves was not exhaustive; it serves anything that
+places a running or saved state on a chart, so N7 isn't limited to that list. **R-931 (the goldens rule):** a provably
+wrong golden is fixed and its dependents updated; N10's images are updated under it.
+
+**The owner's review points for the plans** (their reply of 10 Nov 2026, verbatim):
+
+> - The first slice needs the (L_z, E) chart as well as the two smooth ones. Its kinks are where a narrowed
+>   or interpolated table is most likely to fail.
+> - The whole-screen CPU rate has no criterion. Exact per-sample evaluation and a morph with time running
+>   both depend on it, so say what happens if it falls short.
+
+> - Neither plan changes the quadtree design. Keep it that way: the prototype's quadtree is an illustration.
+
+Applied: § C's charts gain the kernel's `(L_z, E)` chart; § B.4 item 14's measurement M-A gains a criterion on the
+whole-screen rate and says what follows a shortfall; and, stated here once for the whole document: **this plan changes
+nothing in the quadtree design.** It works against the repo's own scheduler and quadtree contracts, and the prototype's
+quadtree is an illustration, never the design. The prototype is now version 24 by the owner's account (the dual ruler
+and window-unit tilt axes behind an "Axis numbers" selector, resolution up to 1024, a morph that draws every frame as
+one chart); it stays an illustration, cited by path and never copied.
+
 ## 0. Ids used here, each with a plain-English gloss (R-693)
 
 **Rulings.** R-82, one seed rule for momentum on energy charts; R-90, when the deep-zoom decoder switches to its
@@ -110,7 +162,7 @@ plan's recommendation.
 | N7 | **NEW:** the backwards table on the CPU | NEW | R-926 item 7: bake, key, fold flag, search, built and measured on the CPU before any shader |
 | N8 | **NEW:** the table debug views | NEW | R-925 item 6, R-926 item 10: five views; visual, so after M2's gate (R-917) |
 | N9 | **NEW:** the fragment table route | NEW | R-925 items 1, 2: the GPU side of N7 for Chart position and the presets; visual, after M2's gate |
-| N10 | **NEW:** the seed conversion | NEW | Only if RQ-764 (a) or (b): before TASK-M2-61's baseline |
+| N10 | **NEW:** the seed conversion | NEW | RQ-764 (a), ruled by R-934 (10 Nov 2026), so no longer conditional: before TASK-M2-61's baseline, its images updated under R-931. *Was:* "Only if RQ-764 (a) or (b): before TASK-M2-61's baseline" |
 | N11 | **NEW:** the lock's solver core | NEW | TASK-M2-73's core, moved before TASK-M2-65 for R-926 item 4 |
 
 ### A.2 Requirements
@@ -271,7 +323,10 @@ integrator work (TASK-M4-05) carries on as agreed.
 2. **N1, the first slice (NEW).** § C. Door: two-way; its outcome decides nothing the owner has ruled.
 3. **TASK-M2-57, `β` periodic (KEEP).** Acceptance: as its task file. Its edge to TASK-M2-65 dropped so it lands before
    TASK-M2-61's baseline: two-way, task scoping.
-4. **N10, the seed conversion (NEW, only under RQ-764 (a) or (b)).** Acceptance: the conversion test of every invariant
+4. **N10, the seed conversion (NEW; RQ-764 (a), R-934 of 10 Nov 2026, so it is built; *was:* "only under RQ-764 (a)
+   or (b)").** Every golden and reference image the seed changes is rebuilt as a recorded conversion under R-931 (the
+   goldens rule: a provably wrong golden is fixed, its dependents updated, tests run against the fixed version), the
+   proof stated in the PR and the `BASELINES.md` row. Acceptance: the conversion test of every invariant
    and mixed-energy chart image where `K* > K_min`; the legacy rule a named option. Measurement: the seam jump in the
    decoded velocity across `z_α = 0` on the kernel's `(L_z, E)` chart; criterion: after the change no neighbouring pair
    of pixels across the line differs in decoded velocity by more than the largest neighbouring difference within 8
@@ -279,7 +334,7 @@ integrator work (TASK-M4-05) carries on as agreed.
    R-82's legacy rule, the named option, must fail the same criterion; if it passes, the criterion cannot see the seam
    and the result is void. Under the legacy rule the decoded velocity is predicted to jump by `2√(K*−K_min)` at each
    pixel on the line, 1.9545 at the chart review's one point (`orch/charts/prototype-2026-11-10/chart-review-2026-11-10.md`
-   § 2, a prototype figure, R-649); no threshold depends on that number. Door: one-way, RQ-764.
+   § 2, a prototype figure, R-649); no threshold depends on that number. Door: one-way, RQ-764, answered (a) by R-934.
 
 ### B.2 Stage 1: the object, today's operations through it
 
@@ -333,8 +388,20 @@ integrator work (TASK-M4-05) carries on as agreed.
     1920 × 1080 samples per chart, 5 warm runs, every run's rate reported with their median and the slowest; PASS if
     the slowest of the 5 runs on one thread reaches 8.1·10⁶ samples a second (composition § 17.12's in-motion coarse
     cover, 32,400 samples in 4 ms) on every chart of § C, never read off the median alone; the all-core rate, every run
-    and the slowest, reported against 4.97·10⁸ a second (the whole screen at High, N = 16, E = 3, 16.7 ms) as
-    information. Door: two-way.
+    and the slowest, read against 4.97·10⁸ a second (the whole screen at High, N = 16, E = 3, 16.7 ms). *Was:* "…
+    reported against 4.97·10⁸ a second … as information."
+    **The whole-screen criterion, written before any run** (the owner's review point of 10 Nov 2026, quoted in the
+    answers section above; R-649): PASS if the slowest of the 5 all-core runs reaches 4.97·10⁸ samples a second on every
+    chart of § C; otherwise SHORT, reported with every run's rate and the factor short per chart. Nothing is tuned to
+    pass, and the criterion isn't changed after the run.
+    **If it falls short, this plan's proposal** (the owner's to accept): exact per-sample evaluation stays the rule for
+    a still frame, which is built over as many frames as it needs and is exact when done; while the view moves, or a
+    morph runs with time running, the frame shows composition § 17.12's in-motion coarse cover, the cover the one-thread
+    criterion above is sized for, and refines to exact when the motion stops. No sample is ever interpolated in place of
+    an exact one in a finished frame (RQ-766 (a), R-935). The plan gives no number for the coarse cover beyond §
+    17.12's, nor for how many frames a still frame may take: each value a shortfall needs is a calibration requirement
+    (R-71), proposed with M-A's numbers and confirmed by the owner, never chosen here.
+    Door: two-way for the measurement; a fallback other than the one proposed is the owner's.
 15. **TASK-M2-68 to TASK-M2-72, TASK-M2-74 to TASK-M2-79 (KEEP), TASK-M2-73 (CHANGE).** As their task files, each map
     with its slope tier.
 16. **N7, the backwards table on the CPU (NEW).** Acceptance: for each kernel chart of § C, a baked backwards table and
@@ -391,7 +458,13 @@ today's decode, so that § 12's forward numbers are re-measured on a kernel char
 chart tasks are paused (R-923), and N1 waits for the owner to lift the pause or let it through as a measurement.
 
 **Charts.** The latent chart first (`crates/kernel/src/chart/latent.rs`, the one chart that bakes its window in), then
-the shape sphere's exponential map (`chart/shape_sphere.rs`, with its `r = 0` centre and its poles).
+the shape sphere's exponential map (`chart/shape_sphere.rs`, with its `r = 0` centre and its poles), then the kernel's
+`(L_z, E)` chart (`chart/energy.rs`), added on the owner's review point of 10 Nov 2026 (quoted above), its kinks being
+where a narrowed or interpolated table is most likely to fail. On it the slice reports every measure below split by
+whether the pixel's neighbourhood crosses one of the chart's kinks (the feasibility edge, the floor and `z_α = 0`), and
+the branch selects compared include its feasibility and sheet selects. It runs under the seed in force when the slice
+runs, named in the result; after N10 that is `w = r/√I` (R-934). *Was:* "The latent chart first … then the shape
+sphere's exponential map (`chart/shape_sphere.rs`, with its `r = 0` centre and its poles)."
 
 **The path, per sample.** `decode_only_with` (`crates/engine/src/decode_dispatch.rs:781`) evaluates the chart in f64 at
 each sample's `(u, v)`; the per-quad forward table is the `Ic<f64>` of each sample of the quad (one node per sample,
@@ -429,8 +502,8 @@ alone: a rate at or below it says the conversion moves outcomes no more than rou
 - **PASS:** predicates 1 to 4 hold; no branch select differs between today's f32 decode and the narrowed f64 records;
   every record where the two differ is listed with its size (that none of the narrowed records is farther from the f64
   value than the f32 decode follows from predicate 3 and is not a separate criterion); one thread reaches
-  8.1·10⁶ samples a second (M-A's in-motion figure, read on the slowest of five warm runs as M-A reads it) on both
-  charts.
+  8.1·10⁶ samples a second (M-A's in-motion figure, read on the slowest of five warm runs as M-A reads it) on all
+  three charts (*was:* "on both charts", before the `(L_z, E)` chart joined).
 - **EXPLAINED DIVERGENCE:** a predicate fails, or a branch select differs, with a named cause (for example the f32
   `atan2`'s integer path, `arctan.rs`, at a pole select, R-437); or the rate falls short with a named cost.
 - **UNEXPLAINED:** anything else.
