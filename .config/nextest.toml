@@ -162,7 +162,9 @@ xtask-cargo = { max-threads = 1 }
 # NEXTEST_PROFILE. The three filters are disjoint and together select every test, so the jobs run every test once, as
 # `xtask/tests/nextest.rs` checks. Locally, the default profile runs them all. The `ci` job runs its profile as 4
 # parallel shards, each with `--partition hash:<k>/4`, which together run every test the profile selects, once (R-336,
-# R-366, REQ-SYS-077); `xtask/tests/nextest.rs` lists each shard.
+# R-366, REQ-SYS-077); `xtask/tests/nextest.rs` lists each shard. Each of the three runs every test it selects whatever
+# another one did (`fail-fast = false`): on a push to `main` they are the per-merge tier's product suite, which a failing
+# process test must never leave part-run (R-909; `.github/scripts/ci_per_merge.py`).
 [profile.ci]
 default-filter = """
     not (
@@ -200,6 +202,7 @@ default-filter = """
         | (binary_id(=xtask::screenshot) & test(/^screenshot_gui_surface/))
     )
 """
+fail-fast = false
 
 # The tests that run cargo on the workspace's own target directory from xtask (the override above), among them the
 # screenshot runner's `gui` surface tests, which run gui's capture mode through `cargo run` (RQ-252), which CI's
@@ -212,6 +215,7 @@ default-filter = """
 # test, as its binary's others build nothing: the same listing in a `ci` shard took `ci (3)`'s `target/debug/deps` from
 # 17 GB to 42 GB (run 41775231980). Applied per R-369.
 [profile.ci-workspace]
+fail-fast = false
 default-filter = """
     binary_id(=xtask::nextest)
     | binary_id(=validation::qa_TASK-M0-24)
@@ -222,6 +226,7 @@ default-filter = """
 """
 
 [profile.gpu-kernel]
+fail-fast = false
 default-filter = """
     binary_id(=validation::toolchain)
     | binary_id(=validation::qa_TASK-M0-14)
@@ -1318,6 +1323,8 @@ default-filter = """
         | binary_id(=xtask::ci_debug_info)
         | binary_id(=xtask::ci_disk_sampler)
         | binary_id(=xtask::ci_partition)
+        | binary_id(=xtask::ci_per_merge)
+        | binary_id(=xtask::qa_ci_per_merge)
         | binary_id(=xtask::ci_quick_tier)
         | binary_id(=xtask::ci_release_disk)
         | binary_id(=xtask::ci_retry)
@@ -1581,6 +1588,8 @@ default-filter = """
         | binary_id(=xtask::ci_debug_info)
         | binary_id(=xtask::ci_disk_sampler)
         | binary_id(=xtask::ci_partition)
+        | binary_id(=xtask::ci_per_merge)
+        | binary_id(=xtask::qa_ci_per_merge)
         | binary_id(=xtask::ci_quick_tier)
         | binary_id(=xtask::ci_release_disk)
         | binary_id(=xtask::ci_retry)
