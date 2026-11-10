@@ -656,26 +656,53 @@ sheet, and what "the nearest system on the edge" means on the real chart, need d
   - `docs/contracts/principia_inverse_encode_contract.md` § "Chart-aware validation", "The nearest valid point" (R-72;
     REQ-ENC-030): "The nearest valid point is the one at the same `K*`, and so at the same `E`, on the parabola, on the
     side of the entered `L_z`" and "Where `K* < 0` … The nearest feasible point is then the parabola's apex, `L_z = 0`
-    at `K* = 0`, `E = U`: the rest start."
+    at `K* = 0`, `E = U`: the rest start."; § "A qualitatively different IC": "At `K* = 0` with `L_z ≠ 0` the
+    parabola's only point is `L_z = 0`, so the pair is rejected (`L_z`'s class would change). At `K* < 0` the apex keeps
+    `L_z`'s class only where `L_z = 0`. … So that pair is projected to the rest start, and every other pair there is
+    rejected." and "A chart point below the invariant charts' apex, `t < 0`, has no entered `L_z`: `L_z(s, t)` has no
+    real value there. So projecting it to `t = 0` changes no class, and the projection stands."
+  - PR #473's momentum-seed entry (unmerged; does the expansion seed `w = r/√I` replace R-82's rule), with its N10,
+    "the seed conversion", and its § D item 24, "The seed `w = r/√I`".
 - **The gap:** the kernel's exact feasibility test (`invariant.rs:273`, `2·I·K* < L_z²` decided exactly) is binary:
   feasible or not. It gives no second sheet: `a` is always the non-negative root (`invariant.rs:532`), so the
   construction always takes `+a·w`. The prototype's "contracting sheet" is `−a·w`, a new definition (R-72) and a new
-  extension type under R-407 clause 3's physics review. Its "radial rate" is the seed's: `w` is the inner pair's
-  dilation `(ρ̇, λ̇) = (ρ, 0)` where `z_α ≤ 0` and the third body's `(0, λ)` elsewhere (R-82; `invariant.rs:455`), so
-  "contracting" names a different pair on either side of `z_α = 0`. Two facts frame the answer: on the default warped
-  chart the edges are straight (`s = 0, 1` at every `t`, `L_z = (2s − 1)·L_max(t)`, chart_reference §2.1), and the
-  `t = 0` row is the one rest start, `L_max(0) = 0`; only under the linear option (R-471 E2) is the edge the curved
-  parabola `|L_z| = √(2I(E − U))`, read per pixel with that pixel's own `U` and `I` (R-471 E3). And the sheet `−a·w`
-  at `L_z` is exactly the time reversal (`p → −p`) of the chart's own system at `−L_z`, since `vᵢ^(L)` is linear in
-  `L_z` and `a` depends on `L_z²`: the unfolded side shows the time-reversed chart, shifted by one in `s`.
+  extension type under R-407 clause 3's physics review. Its "radial rate" is the seed's. Under R-82's seed `w` is the
+  inner pair's dilation `(ρ̇, λ̇) = (ρ, 0)` where `z_α ≤ 0` and the third body's `(0, λ)` elsewhere (`invariant.rs:455`),
+  so "contracting" names a different pair on either side of `z_α = 0`; under PR #473's momentum-seed entry's (a) or
+  (b), with its N10 built, `w = r/√I` and "contracting" names the whole system's dilation, `I` decreasing. N13 comes
+  after N10, and its "sheet 1 bitwise today's" baseline is `main`'s construction at N13's start: N10's under the seed
+  entry's (a) or (b), R-82's under its (c). Three facts frame the answer. On the default warped chart the edges are
+  straight (`s = 0, 1` at every `t`, `L_z = (2s − 1)·L_max(t)`, chart_reference §2.1), and the `t = 0` row is the rest
+  start, `L_max(0) = 0`: one system on an untilted, unsliced chart, a line of different rest systems, one per pixel,
+  under a tilt or slice that moves the configuration or masses (R-471 E3); only under the linear option (R-471 E2) is
+  the edge the curved parabola `|L_z| = √(2I(E − U))`, read per pixel with that pixel's own `U` and `I`. REQ-ENC-030
+  defines the nearest edge system on every pixel of the warped charts (past `s = 0, 1` the rigid rotation at
+  `±L_max(t)`, keeping the sign; below `t = 0` the rest start, "the projection stands"), but not everywhere under the
+  linear option or on `Φ_θ,L_z`: there it rejects `K* ≤ 0` with `L_z ≠ 0`, since the rest start's `L_z = 0` is
+  another class, the only one that can reach a triple collision (Sundman). And the sheet `−a·w` at `L_z` is exactly
+  the time reversal (`p → −p`) of the chart's own system at `−L_z`, since `vᵢ^(L)` is linear in `L_z` and `a` depends on
+  `L_z²`, for any seed `w` that does not depend on `L_z` (both seed rules): the unfolded side shows the time-reversed
+  chart, shifted by one in `s`.
 - **The question:** (i) is the second sheet `−a·w` adopted as the invariant charts' unfold, and on which mapping; (ii)
-  what does "the nearest edge system" mean for a clamp there; (iii) on the Burrau `Φ_θ,L_z` chart, which uses the same
-  construction (chart_reference §4.5), the same?
+  what does "the nearest edge system" mean for a clamp where REQ-ENC-030 rejects, that is under the linear option and
+  on `Φ_θ,L_z`, below the parabola's floor at a non-zero `L_z` (`K* ≤ 0`, `L_z ≠ 0`); (iii) on the Burrau `Φ_θ,L_z`
+  chart, which uses the same construction (chart_reference §4.5), the same?
+- **Options seen for (ii)**, below the floor at `L_z ≠ 0` (elsewhere the clamp is REQ-ENC-030's projection):
+  - (ii-1) The rest start, in spite of REQ-ENC-030's reject. One system per pixel's configuration; it draws the
+    `L_z = 0` class (the only one that can reach a triple collision) over pixels whose own `L_z` is not zero, so the
+    clamp changes the class the pixel's coordinates name, which lookup itself refuses.
+  - (ii-2) A vertical clamp at the pixel's own `L_z` to `E = U + L_z²/(2I)` (`K = L_z²/(2I)` on `(L_z, K)`), the rigid
+    rotation at that `L_z`, as § A.11's held-`L_z` row has it. It keeps `L_z`'s class, and on the linear chart it is a
+    line of systems, one per column. It moves `E`, so it is not REQ-ENC-030's metric (fixed `E`) but a new definition
+    (R-72) under R-407 clause 3's review; and where `L_z² ≥ −2IU` it lifts `E` to `0` or above, changing `E`'s class,
+    which REQ-ENC-030's second classifier forbids for a projection.
+  - (ii-3) Blank there: no new definition; the linear option then has a blank region the direction does not want.
 - **Options seen:**
   - (a) Sheet 2 is `vᵢ = vᵢ^(L) − a·wᵢ`. Warped: past `s = 1`, `s' = 2 − s` on sheet 2, period 2 in `s` (4 in
     `L_z/L_max`, the prototype's figure); linear option: at the pixel's own `E`, `L_z` reflected about the parabola, the
-    sheet flipped, the same period in `L_z/L_max(E)`. Clamp: REQ-ENC-030's nearest valid point (fixed `E`, `L_z` onto the
-    parabola; `E < U` the rest start). `Φ_θ,L_z` the same. Consequences: real, distinct systems, each the time reverse of
+    sheet flipped, the same period in `L_z/L_max(E)`. Clamp: REQ-ENC-030's nearest valid point where it projects (fixed
+    `E`, `L_z` onto the parabola where `K* > 0`; the rest start where `K* < 0` and `L_z = 0`, and on the warp below
+    `t = 0`), (ii)'s answer where it rejects. `Φ_θ,L_z` the same. Consequences: real, distinct systems, each the time reverse of
     one in the square; a sheet word in the record and in the decode's inputs; R-408's primary range for `s` becomes two
     sheets; the backwards table must tell the sheets apart (RQ-776).
   - (b) As (a) on the warped mapping only (the default, straight edges); under the linear option the parabola clamps by
@@ -683,11 +710,15 @@ sheet, and what "the nearest system on the edge" means on the real chart, need d
   - (c) No second sheet: the spin edges clamp by REQ-ENC-030 or stay blank. No new physics definition; the prototype's
     unfold is not built.
 - **Recommended:** (a), with physics review of the sheet's definition (R-407 clause 3): it is the only kind past this
-  edge that shows real, distinct systems, and its time-reversal identity gives an exact test (the addendum's N13) and a
-  backwards-table shortcut. (b) is the measurable fallback if the per-pixel reflection under a tilt misbehaves.
+  edge that shows real, distinct systems, and its time-reversal identity gives an exact, bitwise test (the addendum's
+  N13) and a backwards-table shortcut. (b) is the measurable fallback if the per-pixel reflection under a tilt
+  misbehaves. For (ii), (ii-2) where it keeps both classes (`L_z² < −2IU`) and (ii-3) elsewhere, since it is the only
+  choice that never draws a system of another class; the owner's to choose, after physics review.
 - **Measurement:** N13's distinctness measurement on `InvariantLE` at the register's defaults (256 × 256 over `s ∈ [1,
-  2]`): the share of pixels whose decoded state equals, to 10⁻¹² relative, a state of the square on the same grid;
-  predicted only the fold columns and the `t = 0` row; its control, sheet 1 mirrored in `s` (a repeat), matches 100%.
+  2]`): the share of pixels whose decoded state equals a state of the square on the same grid, positions being the held
+  configuration on both and momenta matching when `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂` over all six components (a zero `p` only
+  exactly); predicted only the fold columns and the `t = 0` row; its control, sheet 1 mirrored in `s` (a repeat),
+  matches 100%; void if the default configuration's seed is degenerate (`a = 0`, the sheets equal by construction).
   Criterion written in the addendum before any run.
 - **Applied meanwhile:** nothing. The charts stay as chart_reference §5.4 has them: `s` bounded, `t` bounded below 0.
 - **Waits:** the addendum's N12 (the definitions) and N13 (the sheet).
@@ -728,7 +759,8 @@ empty?*
     `r ↦ 2π − r` in the opposite direction, no new systems); the invariant charts' and `Φ_θ,L_z`'s spin edges (RQ-771's
     sheet); the Burrau `ν` and `θ` edges up to the domain's end (twins past the leg-swap point repeat, R-27); the time
     axis before 0 (the trajectory's past, by a backward run, new compute; R-879's final-condition charts run backward
-    already). True ends: the invariant `t < 0` (the rest start, one system), the floor of a held `L_z`, the mass
+    already). True ends: the invariant `t < 0` (the rest start: one system untilted and unsliced, a line of rest
+    systems under a tilt or slice that moves the configuration or masses), the floor of a held `L_z`, the mass
     simplex's sides and the δm strip's zero-mass end, the Burrau `K` below 0.
   - (b) Only the invariant spin edges and the time axis get a continuation; every other bounded edge clamps.
   - (c) Keep today's types; the direction's extension on every edge is met by clamp alone where the type is bounded.
@@ -855,7 +887,8 @@ point. With two sheets, a state could belong to either; which one does the looku
 - **The question:** does the key carry the sheet, does the search span both sheets, or does a state fold onto sheet 1?
 - **Options seen:**
   - (a) The table holds sheet 1 only; a state is looked up as itself and as its time reverse, the better match kept and
-    its sheet recorded. Half the table; exact by the reversal identity.
+    its sheet recorded. Half the table; exact by the reversal identity, provided the table's state metric is invariant
+    under `p → −p` (a mass-weighted Euclidean metric is; a metric that is not would make the two lookups disagree).
   - (b) A table per sheet, searched both.
   - (c) Sheet 1 only, the second sheet never returned: Chart position is then wrong on the unfolded side.
 - **Recommended:** (a).
@@ -884,9 +917,13 @@ how should units appear?*
 - **The question:** is the summed value shown, and in what units?
 - **Options seen:**
   - (a) The prototype's: `Σ coef_k·value_k` in each term's own units, the name listing each term with its unit; the
-    hover readout gives each term's own value, the exact numbers.
+    hover readout gives each term's own value, the exact numbers. The coefficients are dimensionless, but `value_k` is
+    not, so the axis's numbers depend on the unit chosen for each coordinate: `β` in radians and `β ÷ π` (the
+    addendum's own example) give different tick values, and different places for the round values, in the same window.
+    The number on a mixed axis is then a definition fixed by those unit choices, not only a label.
   - (b) Each term divided by its window scale (the unit of PR #473's window-scale entry, unmerged), so the sum is
-    dimensionless "window units"; the name says so.
+    dimensionless "window units"; the name says so. `Σ coef_k·value_k/scale_k` does not depend on the unit chosen for
+    any coordinate, since `scale_k` carries the same unit as `value_k`.
   - (c) No sum: the edge carries the dominant term's own ticks, the others listed in the name with their coefficients.
 - **Recommended:** (a), with the readout carrying the exact per-term values; (c) is the measurable alternative, judged
   by the owner on N16's sweep.
@@ -941,7 +978,7 @@ has seen and not objected to (to be confirmed as defaults)"; it is not decided.*
   | Edge | Prototype now | Today (§ 5.4) | Proposed default |
   |---|---|---|---|
   | `(L_z, E)`, `(L_z, K)`: spin at ±max (`s` edges) | unfold | bounded, blank | unfold (RQ-771 (a)) |
-  | `(L_z, E)`, `(L_z, K)`: below `K = 0` (`t < 0`) | clamp to `K = 0` | bounded, blank | clamp: on the warp the rest start, one system |
+  | `(L_z, E)`, `(L_z, K)`: below `K = 0` (`t < 0`) | clamp to `K = 0` | bounded, blank | clamp: on the warp the rest start, one system untilted and unsliced; under a tilt or slice that moves the configuration or masses, a line of different rest systems smeared downward (the addendum's "streaks") |
   | latent masses, shape `z_α`, momenta | saturate | affine; the links saturate (REQ-CHART-087) | unchanged: affine, saturating by the links |
   | latent `β`, sphere longitude θ | wrap | `β` periodic (R-898); θ periodic | unchanged |
   | sphere polar angle φ | unfold over the pole | pole-crossing | unchanged |
@@ -980,7 +1017,10 @@ included. Which rule wins, and where do they combine?*
   numbers rise and fall, which § 8b's monotonic rule refuses for a secondary scale.
 - **The question:** (i) does the computed axis become § 8b's primary scale on every chart and every frame, § 17's
   no-ticks rule withdrawn; (ii) are warped and per-pixel quantities placed by § 8b's solve; (iii) may a primary scale
-  be non-monotonic at an unfold?
+  be non-monotonic at an unfold; (iv) the solve's tolerance, which § 8b does not state: a missing value, so a
+  calibration requirement (R-71), "N16's tick tolerance", one-way and the owner's, never the implementer's.
+  Proposed form, for the owner: a tick's position error in base px (R-583), the unit its mark is drawn in; the owner
+  sets the value at the milestone gate's calibration batch, or ties it to an existing calibrated tolerance.
 - **Options seen:**
   - (a) Yes to all three: the computed axis is the primary scale; coordinates linear in the window get exact
     arithmetic, the rest § 8b's solve; an unfold's turning point is a marked fold, not a refusal; secondary scales stay
@@ -989,7 +1029,8 @@ included. Which rule wins, and where do they combine?*
   - (c) Keep both texts as they are.
 - **Recommended:** (a).
 - **Measurement:** N16's tests (ends exact; ticks at round values to 4 ulps on linear coordinates; solved ticks within
-  the solver's stated tolerance; the contour-on-ticks exactness test of lines § 12).
+  N16's tick tolerance once (iv) sets it, the test waiting until then; the contour-on-ticks exactness test of lines
+  § 12).
 - **Applied meanwhile:** nothing.
 - **Waits:** N16, N17.
 
