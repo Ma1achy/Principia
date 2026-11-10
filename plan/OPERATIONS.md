@@ -142,6 +142,12 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   TASK-M2-56 and the open PRs), fixes, CI and tooling work, and what M2's own tests need. No new integrator (M3) or
   visual (M4 to M8) task is dispatched, the GUI track's included (R-390, R-627 as R-917 amends them), nor TASK-M3-14,
   TASK-M4-06 and the 217 tasks R-914 released; the ready list may offer them, and the hold is the dispatcher's.
+- **R-923 (10 Nov 2026): R-917's order set aside for now.** Integrator tasks that don't depend on the points the owner
+  hasn't decided may be dispatched before M2's gate: the physics itself (steppers, regularisation, step control,
+  conservation and convergence tests, the CPU reference) and TASK-M2-82. A task that fixes how starting states reach the
+  integrator on the GPU, or fixes the horizon as one value per dispatch, stops and is queued. GUI work may go ahead too
+  (the owner's reply about 05:00). No new chart task starts, nothing from TASK-M2-57 to TASK-M2-85, while the owner
+  reworks the chart design; TASK-M3-14 stays stopped (R-918). M2's gate and G1 to G14 are unchanged, and no edge moves.
 - **What every dispatch names:**
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
