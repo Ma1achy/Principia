@@ -43,7 +43,7 @@ The fixed shared wrapper exists: it owns the loop (two `while` loops exiting onl
 - `cargo test -p kernel same_spec_twice` — property test: the same spec rendered twice gives bit-identical CPU output (fixed dt, count-bound, never wall-clock) (REQ-INT-007).
 - `cargo test -p kernel seam4_occupant_swap` — property test: swapping Euler, KDK, Yoshida-4, Yoshida-6 and RK4 on the same IC set changes only the §3.2 arithmetic; the wrapper code path and branch trace are shared (no occupant-specific branch in wrapper code) (REQ-INT-008).
 - `cargo test -p kernel cadence_callback_count` — property test: for every occupant, callback invocations == internal steps taken; an occupant that omits the call fails (REQ-INT-009).
-- `cargo test -p kernel advance_equals_nsub_steps` — for KDK/Yoshida, ADVANCE(t, t+dt_macro) equals N_sub STEP calls bit-for-bit (the AZ arm is TASK-M3-07's) (REQ-INT-020).
+- `cargo test -p kernel advance_equals_nsub_steps` — for KDK/Yoshida, ADVANCE(t, t+dt_macro) equals N_sub STEP calls bit-for-bit (the AZ arm is TASK-M3-68's; *was:* TASK-M3-07's, split 10 Nov 2026, applied per R-369) (REQ-INT-020).
 - `cargo test -p kernel total_substeps_honest` — property test over fuzzed ICs: reported `total_substeps` equals the per-substep callback invocations for every occupant (REQ-INT-022).
 - Review (code): no wall-clock or timer read on any path that affects the number or size of steps (REQ-INT-023).
 - `cargo test -p kernel seam3_every_chart` — property test: every chart in the lowering appendix drives the same kernel unmodified; the occupant signature takes no chart identifier (REQ-INT-025).
