@@ -79,19 +79,27 @@ const REFUSAL_LOG: &str = "WIN_REFUSAL_LOG";
 /// The exact path: `[AppendOnly]::Add` prefixes `\\??\\` to it as it stands (#390).
 const REFUSAL_LOG_PATH: &str = "E:\\runner-tools\\refusal-log\\refusals.log";
 const LABEL: &str = "possibly faulty hardware (owner-reported)";
-/// Branch protection's required checks on `main`. A self-hosted job bearing one of these names would report under it.
-/// The first five are `FULL_ONLY` in `.github/scripts/ci_tier.sh`, which the test reads.
-const REQUIRED: [&str; 8] = [
+/// Branch protection's required checks on `main`, and those it required before the owner's CI model of 9 Nov 2026,
+/// which a run on an older head can still report. A self-hosted job bearing one of these names would report under it.
+/// `plan/HUMAN_SETUP.md` §2 lists the current ones, which the test reads.
+const REQUIRED: [&str; 12] = [
+    "fmt",
+    "clippy",
+    "build",
     "ci",
-    "xtask-ci",
-    "gpu-kernel",
-    "gpu-metal",
     "gpu-lavapipe",
+    "gpu-metal",
     "pr-check",
     "reviews-complete",
+    "no-atlas-params",
+    "xtask-ci",
+    "gpu-kernel",
     "mutants-check",
 ];
+/// A script that reads CI's results, as the controls give it a line naming a self-hosted job.
+#[cfg(feature = "controls")]
 const TIER_SCRIPT: &str = ".github/scripts/ci_tier.sh";
+const SETUP: &str = "plan/HUMAN_SETUP.md";
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..")
@@ -589,13 +597,39 @@ fn consumers() -> Vec<(String, String)> {
     out
 }
 
-fn check_not_gathered(files: &[(String, String)], others: &[(String, String)], tier: &str) {
-    let full_only = tier
-        .lines()
-        .find_map(|l| l.strip_prefix("FULL_ONLY=\""))
-        .and_then(|l| l.strip_suffix('"'))
-        .expect("no FULL_ONLY in the tier script");
-    for name in full_only.split(' ') {
+/// The checks `plan/HUMAN_SETUP.md` §2 (`setup`) says branch protection requires: the names in backticks in its bullet
+/// "require status checks to pass: …", before its first parenthesis.
+fn required_in(setup: &str) -> Vec<String> {
+    let mut bullet = String::new();
+    for line in setup.lines() {
+        if let Some(rest) = line.strip_prefix("- require status checks to pass:") {
+            bullet = rest.to_owned();
+        } else if !bullet.is_empty() && line.starts_with("  ") && !bullet.contains('(') {
+            bullet.push(' ');
+            bullet.push_str(line.trim());
+        } else if !bullet.is_empty() {
+            break;
+        }
+    }
+    let names: Vec<String> = bullet
+        .split('(')
+        .next()
+        .unwrap_or("")
+        .split('`')
+        .skip(1)
+        .step_by(2)
+        .map(str::to_owned)
+        .collect();
+    assert!(
+        !names.is_empty(),
+        "no required checks in plan/HUMAN_SETUP.md §2"
+    );
+    names
+}
+
+fn check_not_gathered(files: &[(String, String)], others: &[(String, String)], setup: &str) {
+    for name in required_in(setup) {
+        let name = name.as_str();
         assert!(
             REQUIRED.contains(&name),
             "the required check {name} isn't in this test's list"
@@ -646,7 +680,7 @@ fn check_not_gathered(files: &[(String, String)], others: &[(String, String)], t
 
 #[test]
 fn self_hosted_jobs_are_never_required_or_gathered() {
-    check_not_gathered(&workflows(), &consumers(), &read(TIER_SCRIPT));
+    check_not_gathered(&workflows(), &consumers(), &read(SETUP));
 }
 
 negative_control!(
@@ -659,7 +693,7 @@ negative_control!(
             "jobs:\n  gather:\n    runs-on: ubuntu-24.04\n    needs: [win-tests]\n    steps: []\n"
         ),
         &consumers(),
-        &read(TIER_SCRIPT)
+        &read(SETUP)
     )
 );
 
@@ -676,7 +710,7 @@ mod retried {
                 "[ci, mutants, gate, win-gpu]"
             ),
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -690,7 +724,7 @@ mod required_name {
         check_not_gathered(
             &measured("  win-tests:\n", "  win-tests:\n    name: gpu-lavapipe\n"),
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -715,7 +749,7 @@ mod required_id {
                     )
             )],
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -735,7 +769,7 @@ mod by_a_script {
                     read(TIER_SCRIPT)
                 )
             )],
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -752,7 +786,7 @@ mod by_a_gate {
                 "xtask/src/x.rs".to_owned(),
                 "const RUNS: &str = \"actions/workflows/win-gpu.yml/runs\";".to_owned()
             )],
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -766,7 +800,11 @@ mod new_required {
         check_not_gathered(
             &workflows(),
             &consumers(),
-            &read(TIER_SCRIPT).replacen("gpu-lavapipe\"", "gpu-lavapipe gpu-new\"", 1)
+            &read(SETUP).replacen(
+                "`gpu-metal`, `pr-check`",
+                "`gpu-metal`, `gpu-new`, `pr-check`",
+                1
+            )
         )
     );
 }
@@ -1086,6 +1124,40 @@ fn check_suite_steps(file: &str, id: &str, steps: &[Yaml]) {
     );
 }
 
+/// A hosted job in a workflow with self-hosted ones. Only the measurement workflow may hold one, and only for the WSL2
+/// distro's jobs, whose image and parity results can come only from a job of the same run: another run's artifact
+/// downloads only with a token, which no job here holds. Such a job runs only when dispatched, carries the runner's
+/// guard, calls no workflow and builds no kernel: the rust-gpu cache check
+/// (`qa_TASK-M0-14_rust_gpu_cache.rs`) doesn't read this file, so a kernel build here would escape it.
+fn check_hosted_beside(file: &str, id: &str, job: &Yaml) {
+    assert!(
+        file == WORKFLOW && job["uses"].is_badvalue(),
+        "{file}/{id} is a hosted job among self-hosted ones, out of reach of the exceptions they hold"
+    );
+    let condition = job["if"].as_str().unwrap_or("");
+    assert!(
+        guarded(condition) && condition.contains(" && github.event_name == 'workflow_dispatch' && "),
+        "{file}/{id} is a hosted job among self-hosted ones that runs other than by a guarded dispatch: `{condition}`"
+    );
+    assert!(
+        !all_strings(job).iter().any(|s| builds_kernel(s)),
+        "{file}/{id} is a hosted job among self-hosted ones that builds the kernel, out of the rust-gpu cache check's reach"
+    );
+}
+
+/// Whether a string builds the kernel, as the rust-gpu cache check counts it (`qa_TASK-M0-14_rust_gpu_cache.rs`,
+/// `builds_kernel`): it names `build-kernel`, or a line of it runs `cargo xtask ci`, whose registry runs build-kernel.
+fn builds_kernel(s: &str) -> bool {
+    s.contains("build-kernel")
+        || s.lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with('#'))
+            .any(|l| {
+                let words: Vec<&str> = l.split_whitespace().collect();
+                words.windows(3).any(|w| w == ["cargo", "xtask", "ci"])
+            })
+}
+
 fn check_shape(files: &[(String, String)]) {
     for (file, _, doc, ids) in self_hosted(files) {
         assert!(
@@ -1093,10 +1165,9 @@ fn check_shape(files: &[(String, String)]) {
             "{file} has a concurrency group across its jobs, so a push would displace a nightly"
         );
         for (id, job) in entries(&doc["jobs"]) {
-            assert!(
-                is_self_hosted(job),
-                "{file}/{id} is a hosted job among self-hosted ones, out of reach of the exceptions they hold"
-            );
+            if !is_self_hosted(job) {
+                check_hosted_beside(file, id, job);
+            }
         }
         for s in all_strings(&doc) {
             assert!(!s.contains("cargo clean"), "{file} runs `cargo clean`");
@@ -1333,11 +1404,69 @@ mod hosted_job {
     use super::*;
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
-        "a hosted job in the file, which the rust-gpu cache check doesn't read",
-        expected = "win-gpu.yml/hosted is a hosted job among self-hosted ones",
+        "a hosted job in the file with no guard, which the rust-gpu cache check doesn't read",
+        expected = "win-gpu.yml/hosted is a hosted job among self-hosted ones that runs other than by a guarded dispatch",
         check_shape(&measured(
             "jobs:\n",
             "jobs:\n  hosted:\n    runs-on: ubuntu-24.04\n    steps: []\n"
+        ))
+    );
+}
+
+/// The WSL2 image's hosted job, run on a push as well as by dispatch.
+mod hosted_job_on_push {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the image's hosted job guarded but not dispatch-only",
+        expected = "win-gpu.yml/wsl-image is a hosted job among self-hosted ones that runs other than by a guarded dispatch",
+        check_shape(&measured(
+            "github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && (inputs.only == 'wsl-register'",
+            "github.actor == 'Ma1achy' && (inputs.only == 'wsl-register'"
+        ))
+    );
+}
+
+/// The guard's `&&` turned into an `||` ahead of the dispatch condition.
+mod hosted_job_bare_or {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the image's hosted job with its guard or'd away",
+        expected = "win-gpu.yml/wsl-image is a hosted job among self-hosted ones that runs other than by a guarded dispatch",
+        check_shape(&measured(
+            "github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && (inputs.only == 'wsl-register'",
+            "github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'x' || (inputs.only == 'wsl-register'"
+        ))
+    );
+}
+
+/// A hosted job that builds the kernel, which the rust-gpu cache check would not see.
+mod hosted_job_kernel {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the parity job building the kernel",
+        expected =
+            "win-gpu.yml/wsl-parity is a hosted job among self-hosted ones that builds the kernel",
+        check_shape(&measured(
+            "        run: rustup toolchain install\n",
+            "        run: rustup toolchain install && cargo xtask build-kernel\n"
+        ))
+    );
+}
+
+/// A hosted job that runs `cargo xtask ci`, whose registry builds the kernel.
+mod hosted_job_xtask_ci {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the parity job running `cargo xtask ci`",
+        expected =
+            "win-gpu.yml/wsl-parity is a hosted job among self-hosted ones that builds the kernel",
+        check_shape(&measured(
+            "        run: rustup toolchain install\n",
+            "        run: |\n          rustup toolchain install\n          cargo xtask ci\n"
         ))
     );
 }
@@ -5378,7 +5507,7 @@ mod proof_retried {
                 "[ci, mutants, gate, runner-proof]"
             ),
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -5398,7 +5527,7 @@ mod proof_gathered_by_a_script {
                     read(TIER_SCRIPT)
                 )
             )],
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -5412,7 +5541,7 @@ mod proof_required_name {
         check_not_gathered(
             &proved("  runner-proof:\n", "  runner-proof:\n    name: ci\n"),
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }

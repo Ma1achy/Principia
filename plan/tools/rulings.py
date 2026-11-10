@@ -22,6 +22,8 @@ superseded or withdrawn rulings CURRENT_RULES.md lists, and the references that 
 """
 import glob, os, re, sys
 
+from regenerate import is_generated  # plan/tools/ is on the path: run from here or imported by its neighbours
+
 RULINGS = "decisions.md"
 QUEUE = "REVIEW_QUEUE.md"
 QUEUE_ARCHIVE = "docs/archive/review_queue"
@@ -183,9 +185,14 @@ def still_in_force_errors(es=None):
     return errors
 
 
-def superseded_listed(path="plan/CURRENT_RULES.md", es=None):
-    """One message per ruling superseded or withdrawn outright that the digest still lists (R-293)."""
+def superseded_listed(path=None, es=None):
+    """One message per ruling superseded or withdrawn outright that the digest still lists (R-293). With no `path`, the
+    digest is the one plan/tools/current_rules.py builds now: CURRENT_RULES.md is not committed (the owner, 8 Nov
+    2026), so a copy on disk may be stale or missing, and only the built text is what a reader gets."""
     es = es if es is not None else entries()
+    if path is None:
+        from current_rules import OUT, build  # here, not at the top: current_rules imports this module
+        return listed_left_out(build()[0], es, OUT)
     if not os.path.exists(path):
         return []
     return listed_left_out(open(path, encoding="utf-8").read(), es, path)
@@ -253,9 +260,12 @@ def rq_ids(queue=QUEUE, archive=QUEUE_ARCHIVE):
 
 
 def ref_files():
+    """The files REF_GLOBS names, less the generated ones (plan/tools/regenerate.py): they are not committed, so a copy
+    on disk is whatever the last run left, and their references are their sources', which are scanned."""
     out = []
     for g in REF_GLOBS:
-        out += [p for p in sorted(glob.glob(g, recursive=True)) if os.path.isfile(p) and p not in out]
+        out += [p for p in sorted(glob.glob(g, recursive=True))
+                if os.path.isfile(p) and p not in out and not is_generated(p.replace(os.sep, "/"))]
     return out
 
 

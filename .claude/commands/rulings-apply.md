@@ -178,15 +178,14 @@ It reads every branch's queue and archive, and the file's `RQ-n` lines.
 Then regenerate and check:
 
 ```
-python3 plan/tools/current_rules.py
-python3 plan/tools/coverage.py
-python3 plan/tools/milestones.py
-python3 plan/tools/reviewer_lists.py
+python3 plan/tools/regenerate.py --all
 python3 plan/check_plan.py
 python3 plan/check_plan.py --queue REVIEW_QUEUE.md
 ```
 
 Every one must pass. If one can't pass without a choice no ruling made, take that line out, as in step 2.
+`regenerate.py --all` writes `plan/CURRENT_RULES.md`, `plan/coverage.md` and `plan/reviewers/lists/`, which are not
+committed (the owner, 8 Nov 2026), and rewrites `plan/MILESTONES.md`'s gate blocks, which are; commit only the latter.
 
 ## 6. Commit
 

@@ -19,6 +19,7 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - `decisions.md` § "R-466 — Slice centre, Tilt and Navigate each have a "reset" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
+- `decisions.md` § "R-888 — A saved preset's zoom row reads 1× at the saved view, so zoom is relative to what was saved *(closes RQ-711)*"
 
 ## Deliverables
 - `crates/gui/src/windows/chart_builder/{axes,presets,domain_preview,quick_render,footer}.rs`.
@@ -52,3 +53,6 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - R-478 W3, R-480 P3 (20 Oct 2026): the read-only links and the warp previews are TASK-M8-52's, after this task.
 - R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-06 by TASK-M8-89 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37".
 - R-627, physics review 5664187570 (F2, applied per R-369): TASK-M8-87 is named in Depends on, since it now builds the area-statistics classifier (REQ-CHART-056) forbidden_fraction uses. *Was:* "- **Depends on:** TASK-M8-89, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37".
+- Chart composition (6 Nov 2026): TASK-M8-103 extends these panels; nothing here changes.
+- *7 Nov 2026 (R-820, RQ-711 (a)):* a saved preset whose chart isn't two latent axes at one scale stores its whole saved triple `(z₀, q₁, q₂)` as its home view (REQ-GUI-108). The scale the zoom row reads against on such a preset is still open in RQ-711; until it rules, the zoom row on such a preset follows § G2's no-preset reading.
+- *8 Nov 2026 (R-888):* RQ-711 is ruled: on a saved non-latent or unequal-scale preset the zoom row reads 1× at the saved view, zoom relative to what was saved (render_gui_spec § G2; REQ-GUI-108's verify).

@@ -123,6 +123,11 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
     Part 4), default `Sheet`. It is chart construction, as the targets are: undoable, one history entry, sending the
     basis with it where the basis changes; serialised as `tilt_map=sheet|lean`; a state, saved view or export with no
     such field, from before R-474, reads as `Lean`, the map it was made with.
+  - *8 Nov 2026 (R-896, RQ-747 (a)):* the slice frame also stores the latent chart's two tilt angles as set, beside
+    `tilt_map` (`SliceFrame` gains the two angles; their field names are TASK-M6-48's), always written: chart construction,
+    undone in the same history entry as the basis, carried in saved views and exports (R-474 R5); the rotation is computed
+    from them (R-474 R3, K3). The rule for a route that writes the basis other than through the angles is a definition
+    TASK-M6-48 writes here (R-72; REQ-GUI-430).
   - A curved chart's tilt (R-473) is part of `SimConfig`'s chart params: the angles, the targets (indices of its hidden
     coordinates) and the map, from which the CPU computes the rotation `R` the kernel reads. A sim key.
   - Each energy-type axis's mapping, `warped | linear` (R-471), is part of `SimConfig`'s chart params, a sim key,
@@ -240,7 +245,10 @@ kernel/  (Φ maps · decode · canonicalise · wrapper · occupants KDK/Yoshida/
          — chart & occupant are type parameters; the "registry" is the set of compiled variants
 ```
 
-The scanner produces registry entries `{id, slot, source, category, uniformSchema, inputDomains}` keyed by directory (slot) — an occupant is valid only in its slot (its signature). **`inputDomains` (R-53):** each node declares the domain of each input it maps from; by default it inherits the manifest's per-field domain (the fixed `[lo, hi]` of `range_norm`, render_gui_spec §10.1), and a node that transforms its field declares its own. The generated legend samples each node over these domains (render_gui_spec §G6). The slot dropdowns read this registry; the assembler splices from it. **A file appearing in `frag/colour/` is the act of registering a shader.**
+The scanner produces registry entries `{id, slot, source, category, uniformSchema, inputDomains}` keyed by directory (slot) — an occupant is valid only in its slot (its signature). **`inputDomains` (R-53):** each node declares the domain of each input it maps from; by default it inherits the manifest's per-field domain (the fixed `[lo, hi]` of `range_norm`, render_gui_spec §10.1), and a node that transforms its field declares its own. *7 Nov 2026 (R-815, RQ-677 (b)):* an untransformed input's
+registry entry records "inherits", and its domain is resolved per wire at assembly from the wired field's manifest
+range; a field whose range is unbounded (`Range::UNBOUNDED`) takes `range_norm`'s `(0, 1)`, as the generator's fallback
+does. The generated legend samples each node over these domains (render_gui_spec §G6). The slot dropdowns read this registry; the assembler splices from it. **A file appearing in `frag/colour/` is the act of registering a shader.**
 
 **The declaration format (R-72; REQ-GEN-027; TASK-M1-04).** An occupant's `.wgsl` file declares its `uniformSchema`
 and `inputDomains` in line comments, so the file stays plain WGSL; the scanner and the assembler read the same lines.

@@ -1042,9 +1042,11 @@ negative_control!(
     qa_m014_the_parser_reads_a_push_trigger_on_a_pr_only_workflow,
     "mutants.yml with a push trigger on `main` added",
     expected = "mutants.yml runs on a push to `main`",
+    // `mutants.yml`'s only trigger is `workflow_dispatch` since the owner's CI model (9 Nov 2026), which took it off
+    // the pull request's path; the control adds the push beside it.
     check_pr_only(&edited(
         "mutants.yml",
-        "on:\n  pull_request:\n",
-        "on:\n  push:\n    branches: [main]\n  pull_request:\n"
+        "on:\n  workflow_dispatch:\n",
+        "on:\n  push:\n    branches: [main]\n  workflow_dispatch:\n"
     ))
 );

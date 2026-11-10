@@ -46,9 +46,17 @@ there have clippy and fmt, and `~/.cargo/bin`'s cargo has neither. For example:
 ```
 export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
 "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority build --label <TASK-id> \
-  --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+  --env CARGO_TARGET_DIR=<target> -- cargo nextest run -p kernel --test roundtrip
 "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
 ```
+
+**Tests run under nextest** (`plan/WORKFLOW.md` § "Agents' test runs: cargo nextest"). Run tests with `cargo nextest
+run`, not `cargo test`, with the same package, target, feature and filter arguments, plus `cargo test --doc -p <crate>`
+where `cargo test` would have run the crate's doctests. A task's `cargo test …` acceptance command is run as its
+nextest equivalent; the PR or review shows the command actually run, with its output, beside the task's command it
+stands for. The tests that read the built kernel (`.config/nextest.toml`'s `gpu-kernel` list) need `cargo xtask
+build-kernel` first, through the queue, in your worktree: it writes the gitignored `target/spirv/kernel.wgsl` there.
+That section lists what stays on `cargo test`.
 
 A mutants run goes through the queue too, with R-439's limits as its flags and `--env RUST_TEST_THREADS=1` for a gui
 run.

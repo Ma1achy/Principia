@@ -131,6 +131,16 @@ pub const HIDDEN_HELD_LZ: u32 = 9;
 /// The register's `hidden_held_k`: the held `K`'s index as a hidden coordinate (R-633).
 pub const HIDDEN_HELD_K: u32 = 10;
 
+/// The register's `saved_header_words`: a saved curved chart's header, in doubles (R-475 L5).
+pub const SAVED_HEADER_WORDS: usize = 11;
+
+/// The register's `saved_parent_words`: a saved curved chart's parent, its form and params, in doubles
+/// (R-475 L5).
+pub const SAVED_PARENT_WORDS: usize = 20;
+
+/// The register's `saved_oblique_words`: a saved oblique chart, in doubles (R-475 L4).
+pub const SAVED_OBLIQUE_WORDS: usize = 25;
+
 /// The register's `sinc_cut` = 0.25 squared: at `r² <` this the shape sphere's f32 sinc takes its series (R-696).
 pub const SINC_CUT2_F32: f32 = 0.0625;
 

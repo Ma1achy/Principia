@@ -93,6 +93,8 @@ p2 =  p_λ
 
 ### 0.4 Canonicalisation `C`
 
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
+
 With the canonical-frame decode both steps are no-ops away from the seam. Implement anyway, for
 charts that bypass it:
 
@@ -148,6 +150,10 @@ z = ( z_α, z_β | z_q0, z_q1, z_q2, z_q3 | z_μ1, z_μ2 ) ∈ ℝ⁸
       config       momentum                 mass
 ```
 
+*[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β` becomes a periodic angle over the full circle, so the latent space
+is `ℝ × S¹ × ℝ⁶`, `z_β` on the circle, not `ℝ⁸`; every stored latent view, saved chart and golden is converted once.
+This section stands as written until TASK-M2-57 merges, which rewrites it.]*
+
 **No latent coordinate is spent on gauge.** Rotation and scale are fixed by the canonical-frame
 decode, which is why the chart is 8D and not 10D.
 
@@ -195,6 +201,10 @@ offered with the others (R-513). A latent view saved at a tilt offers as its tar
 its first parent's axes, each projected off the saved plane and normalised, the vanishing ones dropped; both tilt maps
 act in the orthonormal frame `(q̂₁, q̂₂⊥, t̂)` that Gram–Schmidt makes of the stored pair and the target, and carry the
 stored pair itself, so it is kept and the view reopens bitwise (R-514).
+*Ruled 8 Nov 2026 (R-895, RQ-746 (a)):* where the saved tilt is Lean each axis with one target and both angles set, its
+axes skewed, `R`'s third input is the saved plane's unit normal, `t̂ = û₁ × û₂` normalised, its sign toward `+e_X`, and
+the composition is R-513's `R·R′` literally, not a rotation (the cross product's own sign at Lean's edge, no frame at
+`|τ₁| = |τ₂| = 90°`). TASK-M2-56 builds it; until it merges the kernel refuses that one case.
 
 ### 1.2 Geometry + momentum in a fundamental domain
 
@@ -263,7 +273,10 @@ energy: `U` here, in the feasible set, the warp and §2.2's `K*`, is `V` at `ε 
 physics. The run's own `E₀` is softened, so it isn't the axis value: the axis is labelled as Newtonian energy whenever
 softening is on, and the Inspector shows the softened energy beside it (`principia_render_gui_spec.md` §G2, §G8). Encode
 reads the same Newtonian `U` on this chart, so entering a pixel's `(Lz, E)` returns that pixel's `z` at any `ε`. Whether
-this reaches the other axes that read `U`, the lone, mixed and Chart-builder `E` axes and the virial ratio, is RQ-709.
+this reaches the other axes that read `U`, the lone, mixed and Chart-builder `E` axes and the virial ratio, was RQ-709.
+*7 Nov 2026 (R-819, RQ-709 (a)):* it reaches all of them. Every axis that reads `U` reads the Newtonian `U` at `ε ≠ 0`,
+each labelled, the softened value beside it in the Inspector; on the virial ratio the axis's Newtonian ratio differs
+from the stored, softened `virial_ratio`, and the Inspector shows that disagreement. TASK-M9-39 builds it.
 
 For `(Lz, K)`: identical, with `K* = K(t)` directly. Simpler, since `K ≥ 0` is the natural
 constraint.
@@ -340,8 +353,11 @@ rotation with `a = 0`. The top row exceeds `K_max` on `K`, `KE` and `E`, and `Q_
 range, and `K_max` is passed past `t = 1` too (R-508). The pixel's own virial ratio `2K*/|U|` is
 `Q(t) + L_z²/(I·|U|)`. On `K`, at `I = 1`, the floor is constant, so a row is a level set of `K`. On the virial ratio
 the offset varies with `U`, so a row is no level set of `2K/|U|`, and a readout of the axis shows the pixel's own
-ratio. With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked bottom `Q₀` is not drawn
-even where it is feasible, and `a ≠ 0` on the bottom row. At a held
+ratio. **With `Q₀ > 0` the floor sits under the rise only (R-817, ruling RQ-700 (b)):** with `Q_min(U) = L_z²/(I·|U|)`,
+the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, `K*` its `|U|/2` multiple, so the bottom row is the asked
+bottom `Q₀` where `Q₀` is feasible and on the floor elsewhere, and at `Q₀ = 0` this is the additive form above, bit for
+bit. TASK-M8-119 builds it. *Was:* "With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked
+bottom `Q₀` is not drawn even where it is feasible, and `a ≠ 0` on the bottom row." At a held
 `L_z = 0` the floor is 0 and the lines above stand unchanged. The bottom row must not blank on rounding: the floor is
 the least normal float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded, raised one
 float where it rounded below, and never subnormal, so a backend that flushes subnormals keeps it; adding a non-negative
@@ -477,6 +493,8 @@ all three exactly.
 ---
 
 ## 3. Shape-sphere chart `(θ, φ)`
+
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
 
 The quotient of configuration space by translation, rotation and scale. `Φ_S²(u,v) = (n(θ,φ),
 m_fixed, p_fixed)` — masses and momenta held, only the **shape** varies.
@@ -916,7 +934,9 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
 - **Warped mode, the default.** Every pixel inside the chart's square is a system under every tilt, no cell refused.
   `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` floor the axis at the pixel's own held `L_z`, $K = L_z^2/2I + K_{\max} t^{\gamma_K}$,
   which may pass `K_max` at the top, a range as R-508's side continues. `Φ_θ,L_z`'s held `K` is tilted in its warp
-  coordinate, `K = K_max·t^γ_K`, `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)`, `d` in units of `t`, so it stays ≥ 0; it takes
+  coordinate, `K = K_max·t^γ_K`, `t = t₀ + d`, `t₀ = (K₀/K_max)^(1/γ_K)`, `d` in units of `t`, so it stays ≥ 0, its
+  `K_max` and `γ_K` a calibration of this chart's own (R-71), with `K_max` at the chart's calibrated `K` (REQ-CHART-046),
+  so `t₀ = 1`, the value proposed at the gate (R-833, ruling RQ-710 (c) with (b) proposed); it takes
   no floor, the band above giving `L_z²/2I ≤ K` at every `K ≥ 0`. Rounding at the floor must not blank the bottom row,
   as §2.1 holds `L_max² ≤ 2K`. The held `L_z` moves by value, tilted and sliced alike, `L_z = L_z₀ + d`, with no sign
   constraint: the floor keeps every pixel a system at any `L_z` (§2.1's one exception), and a column above `K_max` at large
@@ -935,8 +955,20 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   output reports the clamped-pixel share. There is no mirror.
 - **Linear mode, the option per axis (R-471 E2).** Rows keep fixed physical values, a held coordinate tilts by value,
   and a cell with no construction there (`K < L_z²/2I`) is no system, area weight 0, blank (R-470).
+- **The f32 band at the floor (R-876, 8 Nov 2026, RQ-740).** "Every pixel is a system" allows an f32 chart (`HeldLz`,
+  `HeldK` and the Burrau charts R-708 covers) to refuse a pixel inside the band one float wide at the warp's floor, where
+  f32 rounding, not the chart, decides: such a refusal is labelled as rounding, never drawn as the chart's edge, and no
+  pixel that isn't a system is ever accepted. The edge walk is repeated on the GPU when the shader decodes these charts
+  (TASK-M4-06). What "one float wide" is measured in, and the band's width in it, is a definition TASK-M4-06 writes
+  here under physics review (R-72); a width that is a number rather than a derivation is a calibration (R-71)
+  (REQ-CHART-152).
 
 Built by TASK-M2-52 on TASK-M2-36's tilt path, the linear option on TASK-M2-37's.
+
+*Ruled 8 Nov 2026 (R-875, RQ-745 (b)):* the three acute-angle charts are re-expressed over the full acute range, both
+labellings of each shape shown, the leg swap shown once only by the symmetry filter (R-855); R-27's "shape only" fold
+charts give way. TASK-M8-127 builds it once the filter (TASK-M8-120) exists; until it merges they stand as built, and
+REQ-CHART-045's range comes back to the owner at the M2 gate.
 
 ### 4.6 The central hypothesis
 

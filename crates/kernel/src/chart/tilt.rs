@@ -65,6 +65,8 @@
 //! R-613): its tilted view is bijective, each of its system pixels counted once and its pixels on `r = π` once per
 //! distinct hidden offset (REQ-CHART-090; [`Tilted::counted_total`]).
 
+use core::marker::PhantomData;
+
 use spirv_std::num_traits::{Float, FloatConst};
 
 use super::burrau_acute::decoded_sanity;
@@ -139,6 +141,46 @@ impl TiltSpec {
             tip_as_sheet(self.tau1, self.tau2)
         } else {
             lean(self.tau1, self.tau2, self.two_targets())
+        }
+    }
+
+    /// `R·e_X` and `R·e_Y` in `(a, b, d_X, d_Y)`: where the tilt sends an offset on each target, the inputs a saved
+    /// chart's new tilt feeds it (R-513 Q1; `super::saved`).
+    /// - With two targets, each axis turned toward its own: `(−sin τ₁, 0, cos τ₁, 0)` and `(0, −sin τ₂, 0, cos τ₂)`.
+    /// - Tip as sheet with one target and both angles set, Rodrigues' image of `e_X`: `(k_b sin m, −k_a sin m, cos m, 0)`,
+    ///   its first two entries read off the columns, `R_aX = −R_Xa` and `R_bX = −R_Xb` exactly (the axis `k` lies in the
+    ///   plane, `k_X = 0`), and `cos m` at the total tip, which a wrap by 360° leaves unchanged.
+    /// - Lean each axis with one target and both angles set, whose skewed columns are no rotation's: the saved plane's
+    ///   unit normal `t̂ = (û₁ × û₂)/|û₁ × û₂|`, its sign toward `+e_X`, so `R = [û₁ û₂ t̂]` (R-895, ruling RQ-746 (a)).
+    ///   The cross product is `(−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)` and its length the Gram factor; where
+    ///   its `e_X` entry is not negative, at the edge of Lean's range (`|τ₁|` or `|τ₂|` = 90° with the other set)
+    ///   included, `t̂` takes the cross product's own sign. At RQ-471's corner, `|τ₁| = |τ₂| = 90°`, there is no frame
+    ///   (R-554's `ray-degenerate`): `None`.
+    /// - A single angle under either map, the turn in its own axis's plane: `(−sin τ₁, 0, cos τ₁, 0)` for `τ₁`,
+    ///   `(0, −sin τ₂, cos τ₂, 0)` for `τ₂`; untilted, `e_X`.
+    ///
+    /// With one target `d_Y` is unused, and `R·e_Y` is `e_Y`.
+    pub fn inputs(&self) -> Option<[[f64; 4]; 2]> {
+        let (s1, c1) = Float::sin_cos(Float::to_radians(self.tau1));
+        let (s2, c2) = Float::sin_cos(Float::to_radians(self.tau2));
+        let e_y = [0.0, 0.0, 0.0, 1.0];
+        if self.two_targets() {
+            Some([[-s1, 0.0, c1, 0.0], [0.0, -s2, 0.0, c2]])
+        } else if self.tau1 != 0.0 && self.tau2 != 0.0 {
+            if self.map == TiltMap::Sheet {
+                let [r1, r2] = self.columns();
+                let total = Float::sqrt(self.tau1 * self.tau1 + self.tau2 * self.tau2);
+                let cm = Float::cos(Float::to_radians(total));
+                Some([[-r1[2], -r2[2], cm, 0.0], e_y])
+            } else if self.rank_loss() {
+                None
+            } else {
+                Some([lean_normal(self.columns()), e_y])
+            }
+        } else if self.tau2 == 0.0 {
+            Some([[-s1, 0.0, c1, 0.0], e_y])
+        } else {
+            Some([[0.0, -s2, c2, 0.0], e_y])
         }
     }
 
@@ -409,6 +451,18 @@ fn gram([u1, u2]: [[f64; 4]; 2]) -> f64 {
     let y = u1[0] * u2[2];
     let z = u1[0] * u2[1];
     Float::sqrt(x * x + y * y + z * z)
+}
+
+/// One-target Lean's unit normal `t̂ = (û₁ × û₂)/|û₁ × û₂|` in `(a, b, d_X, d_Y)`, its sign toward `+e_X` (R-895):
+/// the cross product's components as [`gram`] forms them, divided by [`gram`]'s length, and negated where the `e_X`
+/// entry is negative. The columns must not be RQ-471's corner, where the length is no frame's.
+fn lean_normal(columns: [[f64; 4]; 2]) -> [f64; 4] {
+    let [u1, u2] = columns;
+    let cross = [-(u1[2] * u2[1]), -(u1[0] * u2[2]), u1[0] * u2[1]];
+    let length = gram(columns);
+    let flip = cross[2] < 0.0;
+    let unit = |x: f64| if flip { -x / length } else { x / length };
+    [unit(cross[0]), unit(cross[1]), unit(cross[2]), 0.0]
 }
 
 /// A share of an area statistic: `part` of `total`, undefined (`None`) where the total is 0, never 0 (R-554 L2).
@@ -731,11 +785,43 @@ pub trait Tiltable: Hidden {
     }
 }
 
+/// Where a view places each pixel: the chart point `(a, b)` and the hidden offsets of the pixel at `(u, v)`. A
+/// [`Tilt`] is one; a saved chart's composed tilts are another (`super::saved`; R-475, R-513).
+pub trait Placement<P> {
+    /// Whether a tilt path is taken: false where the view is the chart's own, with no arithmetic of the tilt's (J6).
+    fn on(&self) -> bool;
+
+    /// The chart point `(a, b)` of the pixel at `(u, v)` and its hidden offsets, on the tilt path.
+    fn place<R: Float + From<P>>(&self, u: R, v: R) -> ([R; 2], Shift<R>);
+
+    /// The hidden coordinates the offsets name, `[x, y]`, and whether `y` is a second one.
+    fn targets(&self) -> ([u32; 2], bool);
+}
+
+impl<P: Copy> Placement<P> for Tilt<P> {
+    #[inline]
+    fn on(&self) -> bool {
+        self.on
+    }
+
+    #[inline]
+    fn place<R: Float + From<P>>(&self, u: R, v: R) -> ([R; 2], Shift<R>) {
+        Tilt::place(self, u, v)
+    }
+
+    #[inline]
+    fn targets(&self) -> ([u32; 2], bool) {
+        ([self.x, self.y], self.two)
+    }
+}
+
 /// A chart and its tilt (the module's note): pixel `(u, v)` decodes at the tilted `(a, b)` with the hidden offsets.
+/// The tilt is a [`Tilt`] unless a [`Placement`] of another kind is named.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Tilted<C, P> {
+pub struct Tilted<C, P, T = Tilt<P>> {
     chart: C,
-    tilt: Tilt<P>,
+    tilt: T,
+    precision: PhantomData<P>,
 }
 
 /// Whether the index `k` names a mass control.
@@ -747,8 +833,21 @@ fn mass(k: u32) -> bool {
 impl<C: Tiltable<Param = P>, P: Copy> Tilted<C, P> {
     /// `chart` under `tilt`; `None` where a tilt is on and a target is not one of the chart's hidden coordinates.
     pub fn new(chart: C, tilt: Tilt<P>) -> Option<Self> {
-        let targets = chart.hidden(tilt.x) && chart.hidden(tilt.y);
-        (!tilt.on || targets).then_some(Tilted { chart, tilt })
+        Tilted::placed(chart, tilt)
+    }
+}
+
+impl<C: Tiltable<Param = P>, P: Copy, T: Placement<P>> Tilted<C, P, T> {
+    /// `chart` under the placement `tilt`; `None` where it is on and a target is not one of the chart's hidden
+    /// coordinates.
+    pub fn placed(chart: C, tilt: T) -> Option<Self> {
+        let ([x, y], _) = tilt.targets();
+        let targets = chart.hidden(x) && chart.hidden(y);
+        (!tilt.on() || targets).then_some(Tilted {
+            chart,
+            tilt,
+            precision: PhantomData,
+        })
     }
 
     /// The untilted chart.
@@ -759,7 +858,7 @@ impl<C: Tiltable<Param = P>, P: Copy> Tilted<C, P> {
 
     /// The tilt.
     #[inline]
-    pub fn tilt(&self) -> &Tilt<P> {
+    pub fn tilt(&self) -> &T {
         &self.tilt
     }
 
@@ -767,7 +866,7 @@ impl<C: Tiltable<Param = P>, P: Copy> Tilted<C, P> {
     /// untilted.
     #[inline]
     pub fn at<R: Float + From<P>>(&self, u: R, v: R) -> ([R; 2], Option<Shift<R>>) {
-        if self.tilt.on {
+        if self.tilt.on() {
             let (ab, shift) = self.tilt.place(u, v);
             (ab, Some(shift))
         } else {
@@ -776,7 +875,7 @@ impl<C: Tiltable<Param = P>, P: Copy> Tilted<C, P> {
     }
 }
 
-impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal, T: Placement<P>> Tilted<C, P, T>
 where
     f64: From<P>,
 {
@@ -817,7 +916,7 @@ where
     }
 }
 
-impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> Chart for Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal, T: Placement<P>> Chart for Tilted<C, P, T>
 where
     f64: From<P>,
 {
@@ -844,8 +943,9 @@ where
 
     /// The chart's, or true where a tilt moves a mass control, so the masses vary per pixel.
     fn requires_per_pixel_mass(&self) -> bool {
-        let tilted = mass(self.tilt.x) || (self.tilt.two && mass(self.tilt.y));
-        self.chart.requires_per_pixel_mass() || (self.tilt.on && tilted)
+        let ([x, y], two) = self.tilt.targets();
+        let tilted = mass(x) || (two && mass(y));
+        self.chart.requires_per_pixel_mass() || (self.tilt.on() && tilted)
     }
 
     /// The chart's check on the tilted `(a, b)` with the pixel's hidden offsets ([`Tiltable::validate_shifted`]), where
@@ -880,7 +980,7 @@ where
         S: Selection,
         R: LinkReal + PayloadReal + From<P>,
     {
-        if self.tilt.on {
+        if self.tilt.on() {
             self.decode_params::<S, R>(u, v, &LinkParams::DEFAULT)
         } else {
             self.chart.decode::<S, R>(u, v)
@@ -921,7 +1021,12 @@ where
             None => f64::from(self.tilt.weight),
         }
     }
+}
 
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal, T: Placement<P>> Tilted<C, P, T>
+where
+    f64: From<P>,
+{
     /// Whether the pixel at `(u, v)` is a system whose held energy is clamped at its floor, "held at floor" in the
     /// Inspector and the sidecar (R-709): a clamped offset alone is no pixel to flag past the chart's edge, which no
     /// system draws. The pixel comes in the type it was decoded at: `R` places it and reads the clamp, as
@@ -939,7 +1044,8 @@ where
     }
 }
 
-impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal> ChartDecode for Tilted<C, P>
+impl<C: Tiltable<Param = P>, P: LinkReal + PayloadReal, T: Placement<P>> ChartDecode
+    for Tilted<C, P, T>
 where
     f64: From<P>,
 {

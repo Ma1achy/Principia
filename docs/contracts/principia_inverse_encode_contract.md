@@ -6,6 +6,8 @@
 
 ## Part 1 — What encode is: a quotient map onto a section
 
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
+
 The forward decode `D: z → (m, r, p)` lands on a **canonical section** of physical state space: CoM at origin, total momentum zero, `ρ̃` on +x, `λ̃_y ≥ 0`, `I = 1`. Encode `E` is the composition
 
 ```
@@ -333,7 +335,8 @@ coordinates and checks each shown axis on its own (R-538 TF2.1; `principia_lines
    within $r_{\mathrm{coll}}$ give a $t = 0$ collision outcome, which is a real outcome. Exactly coincident bodies
    can't be represented, and layer 1's range check catches them with `lookup_clamped`.
 
-**Layer 1's space and bounds** (R-72; REQ-ENC-023; TASK-M2-19). The controls `z ∈ ℝ⁸` are unbounded: each is a
+**Layer 1's space and bounds** (R-72; REQ-ENC-023; TASK-M2-19). *[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β`
+becomes a periodic angle, the controls' space `ℝ × S¹ × ℝ⁶`; this stands as written until TASK-M2-57 merges.]* The controls `z ∈ ℝ⁸` are unbounded: each is a
 logit or an artanh, and every real `z` decodes. "$z_k \in [0,1]$" is read in the space each control's link maps it
 into before its affine scale, Part 3's clamp space: `s_α = 2α/π`, `s_β = β/π` and `s_qk = ½(q_k/q_max + 1)`, each
 `σ(z_k)` under the default links, and for the masses `μ_k/μ_max = tanh(z_μk)`. The bounds are the clamps', not the

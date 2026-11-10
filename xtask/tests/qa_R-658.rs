@@ -321,8 +321,18 @@ fn dead_pid() -> i32 {
         .expect("a pid")
 }
 
+/// The process group of `pid`, if it exists.
+fn pgid_of(pid: i32) -> Option<i32> {
+    let out = Command::new("ps")
+        .args(["-o", "pgid=", "-p", &pid.to_string()])
+        .output_within(Duration::from_secs(30))
+        .ok()?;
+    String::from_utf8_lossy(&out.stdout).trim().parse().ok()
+}
+
 /// Starts `program args...` detached from this test, in `cwd`, returning its pid; with `own_group`, in a process
-/// group of its own (perl's `setpgrp`, then exec).
+/// group of its own (perl's `setpgrp`, then exec), returned only once it leads that group: the fork exists before
+/// perl has run `setpgrp`, and a group nobody is in yet looks already gone.
 fn start_stray(cwd: &Path, own_group: bool, program: &str, args: &[&str]) -> i32 {
     let script = if own_group {
         "perl -e 'setpgrp(0,0); exec @ARGV' \"$@\" >/dev/null 2>&1 & echo $!"
@@ -338,10 +348,17 @@ fn start_stray(cwd: &Path, own_group: bool, program: &str, args: &[&str]) -> i32
         .current_dir(cwd)
         .output_within(Duration::from_secs(30))
         .expect("stray started");
-    String::from_utf8_lossy(&out.stdout)
+    let pid = String::from_utf8_lossy(&out.stdout)
         .trim()
         .parse()
-        .expect("a pid")
+        .expect("a pid");
+    if own_group {
+        assert!(
+            until(30, || pgid_of(pid) == Some(pid)),
+            "stray {pid} never led a group of its own"
+        );
+    }
+    pid
 }
 
 /// A job file to plant, running or queued, in `worktree`.

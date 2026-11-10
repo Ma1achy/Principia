@@ -390,6 +390,14 @@ adds three unequal-mass sets.
 | AA-8 | REQ-VAL-277 | R / B | Agekyan & Anosova I Table 1, II Tables 1 and 3 | Latent with one momentum axis, or two runs per start | M9 | statistical | REQ-VAL-278 (calibration, R-71) | TASK-M9-19 |
 | AN-1 | REQ-VAL-279 | R / B | Anosova 1969 (Astrophysics 5, 81), its tables | the Anosova physical-frame entry at a mass point; MassSimplex | M9 | statistical | REQ-VAL-280 (calibration, R-71) | TASK-M9-19 |
 
+*7 Nov 2026 (R-851, the owner's region D default; RQ-714):* region D's default velocities are **exact rest**, with
+**eq. 3** as the second preset, the default chosen by which most region-D targets use, as counted. AA-2, AA-3, AA-5 and
+AA-7 read paper I's or II's eq. 3 runs, so their rows run the eq. 3 preset: AA-3's and AA-5's "the Anosova
+physical-frame entry" means that entry under eq. 3, which their rows did not say. AA-8 runs under both presets. Eq. 3
+must reproduce Agekyan & Anosova's velocities in their own units before canonicalising, a tested function (rule 11).
+At `I = 1` eq. 3's start is not uniform: the import's rescale scales it by `√ℓ`, and over D at equal masses that is a
+spread of about 19% (`ℓ` from 0.408 to 0.577); it is expected, stated beside the preset, never "fixed".
+
 ### 5.9 Region D: maps and statistics
 
 Lehto et al. 2008 (*MNRAS* 388, 965) and Valtonen et al. 2016 (*The Three-body Problem from Pythagoras to Hawking*),
@@ -448,6 +456,11 @@ against Fig. 1), is UNEXPLAINED (`docs/verification/peek_log.md`; RQ-612 holds i
 
 *4 Nov 2026 (R-701):* GG-1's eight neighbours of (3, 43) run as a peek, TASK-M9-42, ours staying labelled ours meanwhile. Brutus runs at `p_max` = 4, `L_w` set explicitly. No ε = 10⁻⁷⁰ cost is quoted until the authors answer. The NVM trajectories stay local, and BR-1's converged fraction reports both readings of "< 0.1" until Breen answers. The questions are in `docs/incoming/2026-10-28_rq598_data/QUESTIONS_for_authors.md`; RQ-696 holds the seeded draw.
 
+*7 Nov 2026 (R-822, RQ-696 (c)):* BR-1 runs both arms, each labelled: runs from the authors' own starts, for the 180
+they cover, and R-638's seeded draw from a fixed recorded seed. They answer different questions, one trajectory by
+trajectory and one the stated set-up's distribution. The authors' starts stay local (R-641, R-701); only the seeded arm
+can be committed. TASK-M9-22 scores both.
+
 | Target | Requirement | L / T | Reproduces | Chart | Milestone | Compare | Tolerance | Task |
 |---|---|---|---|---|---|---|---|---|
 | GG-1 (the 25 Oct tier B's converged lifetime grid) | REQ-VAL-295 (scored in M9, R-650; its per-point reference panel is RQ-620's; *was:* "waits: RQ-592, RQ-598", both closed, by R-636 and R-637) | R / B | Boekholt, Portegies Zwart & Valtonen 2020 (MNRAS 493, 3932): 1,212 points at spacing 1/64, converged with Brutus to t = 10⁴; lifetime to the last close approach | the Anosova physical-frame entry | M9 | per point where reliable (rule 8: a converged code); KS otherwise | REQ-VAL-296 (calibration, R-71) | TASK-M9-22 |
@@ -501,6 +514,13 @@ kept. TR-1, MK-1 and SL-1 are binary-plus-single scatterings, not hierarchical t
 - **The binary-plus-single chart** (RQ-593 (c)): not built. TR-1, MK-1 and SL-1 stay in M9, each "not scored: no
   chart". Heggie & Sweatman 1991 (planar binary-single scattering, 50,000 runs, printed counts) joins them, in M9 and
   not scored, with no requirement.
+  *7 Nov 2026 (R-847, the owner's reply on RQ-725 and RQ-726):* R-669 is reversed here, its recorded reason being cost
+  and scope only. Binary-plus-single (scattering) and fixed-`k` become charts and builder axes like any other, built
+  when their turn comes (TASK-M8-123 and TASK-M8-122), with Heggie & Sweatman 1991 alongside; the targets that use
+  them, TR-1, MK-1, SL-1 and TS-2, score in M9 once the charts exist. The missing definitions (`b_max`, the pericentre
+  phase, the pull-in distance with a stated tidal error, fixed-`k`'s rotation sense) are filled at build under physics
+  review. f_col is built with the scattering chart, so TR-1's colouring is scored with it. MK-1 stays, labelled as a
+  planar re-run of a 3D experiment, not a direct replication.
 - **The symbol-sequence field** (RQ-595 (b)): the per-pixel syzygy-symbol field only, defined (R-72) and built by
   TASK-M9-28 (REQ-VAL-342). TS-1 runs on it; V-7 once Chernin et al.'s definitions are in hand; TS-2 "not scored: no
   fixed-k velocity chart".

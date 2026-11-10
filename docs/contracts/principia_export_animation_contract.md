@@ -39,6 +39,11 @@ Mixed animations decompose per keyframe segment into (a)/(b)/(c); the export pla
 
 ## Part 3 — The keyframe system (retained)
 
+*7 Nov 2026 (R-850, ruling RQ-721 (a), amended):* a chart change may morph, live and in export, as one arm of the
+chart-path type of `docs/design/principia_chart_composition.md` § 17; cut and dissolve are still offered, a changed link
+id is still a cut (R-520), and the lines below that say a chart switch is only a cut or a dissolve give way. TASK-M8-105
+carries the change into this Part, REQ-TOOL-075 and REQ-GUI-376.
+
 Keyframes are unchanged in *what they describe*, changed only in *how frames are produced*:
 
 - **What interpolates:** `z₀` eased componentwise; zoom **log-lerped**; basis pairs by **Grassmannian interpolation** (geodesic between planes, re-orthonormalised per frame — never naive vector lerp, which leaves the manifold of frames); slice values eased; render uniforms lerped per their scale metadata; chart *switches* are cuts or dissolves (two renders composited), never parameter interpolation across chart types.
@@ -48,7 +53,11 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
   keyframes, each with its own easing curve, which gives that segment's progress `s ∈ [0, 1]` at each frame for every
   eased field, and its transition at a chart change, a cut or a dissolve with its length. The playhead policy is one of
   hold, advance with wall time, or set to a value. The curves offered, the default curve and the playhead policies'
-  semantics are a definition (R-72, REQ-TOOL-197), written here by TASK-M8-31. The screen that makes a spec is
+  semantics are a definition (R-72, REQ-TOOL-197), written here by TASK-M8-31. *8 Nov 2026 (R-901):* easing and the
+  path curve are a property of each path segment, shared by live morphs, saved paths and export. Where a segment's
+  path is one path segment, the segment's easing is that segment's timing; where a keyframe pair is joined by several
+  path segments (a tilt, then a morph), each carries its own timing, concatenated, and REQ-TOOL-197's one `s` per frame is
+  read per path segment. The screen that makes a spec is
   `principia_sequence.md` (R-577). *Was:* "A keyframe animation serialises as `{keyframes: [(t_wall, ViewState,
   RenderState, playhead policy)], easing, fps, duration}`" (stale value, replaced by R-576).
   **The frame grid, the progress and the playhead (fix round 6 of PR #286, physics review 5631678451, P1; applied per

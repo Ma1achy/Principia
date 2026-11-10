@@ -64,10 +64,14 @@ fn job<'a>(yml: &'a str, name: &str) -> Vec<&'a str> {
 /// REQ-VAL-148: on pull_request events (the merge-ready run, R-656), on ubuntu-24.04 (R-186, pinned by R-375), `cargo
 /// mutants --in-diff` reads the diff written by `git diff origin/<base>...HEAD`, the checked-in list decides, and the
 /// report is uploaded.
+/// The owner's CI model (approved 9 Nov 2026; his order of 8 Nov: "Mutation testing: off the PR path entirely") takes
+/// this run off pull requests: `mutants.yml` keeps its machinery, unused, for the per-merge workflow, and no pull request
+/// triggers it. So the trigger assertion, "runs on pull_request events", is turned round; the job's own diff, verdict
+/// and report, which a merge's run would reuse, stay held (R-290's exception, applied per R-369 by the orchestrator).
 fn checks_job(yml: &str) {
     assert!(
-        yml.lines().any(|l| l.trim_end() == "  pull_request:"),
-        "qa23: the workflow does not run on pull_request events"
+        !yml.lines().any(|l| l.trim_end() == "  pull_request:"),
+        "qa23: the workflow runs on pull_request events, off which the owner's CI model takes mutants"
     );
     let lines = job(yml, "mutants");
     let has = |s: &str| lines.iter().any(|l| l.contains(s));
@@ -126,6 +130,20 @@ negative_control!(
         "--in-diff \"$RUNNER_TEMP/other.diff\""
     ))
 );
+
+mod back_on_pull_requests {
+    use super::*;
+    negative_control!(
+        qa23_mutants_job_runs_in_diff_against_the_base_on_pull_requests,
+        "mutants.yml triggered by pull requests again",
+        expected = "qa23: the workflow runs on pull_request events",
+        checks_job(&read(".github/workflows/mutants.yml").replacen(
+            "on:\n  workflow_dispatch:\n",
+            "on:\n  workflow_dispatch:\n  pull_request:\n",
+            1
+        ))
+    );
+}
 
 /// The minutes of a `timeout-minutes:` line, when it is one with a positive whole number.
 fn limit_of(line: &str) -> Option<u32> {

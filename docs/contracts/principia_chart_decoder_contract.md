@@ -31,7 +31,11 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 
 ## Part 2 — The decoder
 
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
+
 **Latent controls** `z ∈ ℝ⁸`. These are *controls*, not physical quantities — each is pushed through a smooth decoder (sigmoid / softmax / warp) to reach a physical value. Chart coordinates `(s,t) ∈ [0,1]²` map in via a chart map; the validated region is the unit hypercube `[0,1]⁸`. (Past `[0,1]²`, where the figure fills the window, an extended pixel's `z` may leave `[0,1]⁸`: the hypercube bound is the encode path's check, inverse_encode layer 1 on lookup and lock, and an extended pixel is checked by layers 2 and 3 only, Part 3, R-407.) **No latent coordinate is spent on a gauge direction** (this is why the old z₂, z₃ Cartesian-Jacobi directions were dropped in the 10D→8D cleanup).
+
+*[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β` becomes a periodic angle over the full circle, so the latent space is `ℝ × S¹ × ℝ⁶`, `z_β` on the circle, not `ℝ⁸`, and every stored latent view, saved chart and golden is converted once, under a conversion test in place of R-865's bitwise check. This part stands as written until TASK-M2-57 merges, which rewrites it.]*
 
 **Block ordering (convention — fix once, then hold):**
 
@@ -161,6 +165,10 @@ z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂        (s,t) ∈ [0,1]²
 | **3. Cross-block invariant** | `E`, `L_z`, `K`, `KE`, `PE` | *solves* into a downstream sector, upstream sectors read as fixed | must sit **downstream** of every block it depends on; brings **feasibility boundaries** (infeasible pixels tagged, not dropped); two coupled invariants → joint solve; **warped by default** (`principia_chart_reference.md` §2.1, evaluated per pixel), every pixel of `[0,1]²` feasible, a linear mapping an option per axis whose infeasible pixels are not a system (R-471) |
 | **4. Coupled curve** | one scalar `ν` slaving *several* blocks via a fixed nonlinear embed (Burrau/Euclid: `ν → (α,β,μ₁,μ₂)`) | the embed pins config + mass together | tilt is only well-posed **at a point** (Part 4); decouple the coupling → decomposes back to a plain block axis |
 
+*7 Nov 2026 (R-816, ruling RQ-682 (a), and R-838, RQ-717):* the **virial ratio** `Q = 2K/|U|` is kind 3: it solves
+into the momenta and reads the configuration and the masses as fixed upstream. R-471 H3's "not kind 3" is read as about
+B1's extension only, which R-506 has superseded. The set stays closed at four (R-834, RQ-712 (a)).
+
 Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop the mass coupling is the signal the taxonomy is at the right level.
 
 **Residual conventions (kind 2)** are a first-class chart property. "The `m₀` axis" is ambiguous until you declare the fate of the other mass DOF: hold `m₁ = m₂`, hold the `m₁:m₂` ratio, or pin `z₇`. Different conventions give genuinely different one-parameter families — all valid, all must be *labelled*.
@@ -269,7 +277,9 @@ a bounded edge, the domain's end; outside a primary range, not counted; rejected
 on what the types give, before `Φ`), forbidden; a `Φ` that fails where layer 2 accepts, the domain's end; a decoded
 state that fails layer 3, forbidden; any other, a counted system. The statistic reads the chart (the types, the
 primary ranges, `validate`, `Φ`), not the payload's `decode_failed` detail, which does not tell the two hatches apart.
-**Inside `[0,1]²` every statistic is unchanged.** The shape sphere has no one-hemisphere view (R-544): its statistics are the whole sphere's, each pixel its own system, and where the mirror symmetry holds (REQ-CHART-082) each fate of a mirror-invariant class is counted twice, equally, so those fractions are equal on a fixture whose pairs stay close over the horizon, and elsewhere differ only by the pairs whose fate a rounding-level difference in the decode flips (a signed class maps to its mirror class; physics reviews 5603309678, P2, and 5603529679, P7, of PR #273) (REQ-CHART-083, REQ-CHART-057; TASK-M8-44). *Was (R-412, withdrawn by R-544):* "With one hemisphere of the shape sphere drawn, φ's span is remapped to run from the pole to the equator; past the equator its formula continues into the mirror hemisphere (real systems, repeated), and its primary range is pole to equator, so that continuation is not counted (R-412, closing RQ-264; built by TASK-M8-44, REQ-CHART-057)."
+**Inside `[0,1]²` every statistic is unchanged.** The shape sphere has no one-hemisphere chart (R-544), and a
+one-hemisphere view is only the symmetry filter's, a display option after rendering that removes nothing (R-855; R-878,
+RQ-738 conflict 1's reading held; *was:* "The shape sphere has no one-hemisphere view (R-544):"): its statistics are the whole sphere's, each pixel its own system, and where the mirror symmetry holds (REQ-CHART-082) each fate of a mirror-invariant class is counted twice, equally, so those fractions are equal on a fixture whose pairs stay close over the horizon, and elsewhere differ only by the pairs whose fate a rounding-level difference in the decode flips (a signed class maps to its mirror class; physics reviews 5603309678, P2, and 5603529679, P7, of PR #273) (REQ-CHART-083, REQ-CHART-057; TASK-M8-44). *Was (R-412, withdrawn by R-544):* "With one hemisphere of the shape sphere drawn, φ's span is remapped to run from the pole to the equator; past the equator its formula continues into the mirror hemisphere (real systems, repeated), and its primary range is pole to equator, so that continuation is not counted (R-412, closing RQ-264; built by TASK-M8-44, REQ-CHART-057)."
 
 **Repeats and the canonical point (R-537).** A pixel in a repeat (past a periodic axis's period, over a pole) is the same system as its **canonical** point, the one inside every axis's primary range, which the
 types give by folding it: its pick, readout, trajectory, outcome and inspector are the canonical system's, the readout
@@ -470,9 +480,17 @@ tangent-vector targets.
 
 Every chart has a centre; point-dependent directions are always evaluated there. **The lock is simply the gesture that sets the centre to a chosen IC and pins it.** It is CPU-side chart construction, held in `SimConfig` (R-69) — nothing about the chart maths changes.
 
-**Setting the lock.** Select the pixel at $(s,t)$ and snap the centre to its IC. For an affine chart,
+**Setting the lock.** Select the pixel at $(s,t)$ and pin its IC there, **without moving the view** (R-866, the owner's
+reply of 8 Nov 2026: "locking must not move the view"): no edit of `z₀`, the basis or a nonlinear chart's window. The pin
+is the clicked pixel; its initial in-plane excursion is that pixel's offset from the view's centre, and tilt and zoom
+turn about it, so the pinned pixel stays fixed on screen. For an affine chart,
 $\mathbf z_{\mathrm{locked}} = \mathbf z_0 + (2s-1)\mathbf q_1 + (2t-1)\mathbf q_2$: CPU arithmetic, with no GPU readback.
-For a nonlinear chart, replay $\Phi$ and $D$ on the CPU, or read the GPU buffer back.
+For a nonlinear chart, replay $\Phi$ and $D$ on the CPU, or read the GPU buffer back. **Centre on pin** is an optional
+action, a navigation edit that brings the pin to the centre, and a setting, off by default, applies it at every lock in
+the same command (render_gui_spec §G4). Where this part reads the anchor as the centre pixel (the anchor-preserving
+class below, "keeps the anchor at centre", and the nonlinear chart's re-centred window), the anchor is at the pin;
+TASK-M8-125 builds it, exactly on nonlinear charts or stating why not, an inexact pin's bound a calibration the owner rules on before merge (R-866, R-71; REQ-GUI-425, REQ-GUI-429). Until it lands the code
+re-centres as below. *Was (before R-866):* "Select the pixel at $(s,t)$ and snap the centre to its IC."
 
 The centre pixel has one special property: `z(½,½) = z₀` **regardless of the basis**. That property sorts the operations into two classes:
 
@@ -486,8 +504,18 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
 **The lock's construction, defined** (R-72; REQ-CHART-089; TASK-M2-23):
 
 - **The excursion is held by the stored pair.** `z₀` holds the centre and `z_locked` the anchor, and `δ = z₀ − z_locked`:
-  a slice step or a slider move edits `z₀` alone, so `δ` accumulates it; snap-back is `z₀ ← z_locked`, bit for bit; and
-  `δ` has no field of its own that could disagree with `z₀`. Unlock clears the flag and the anchor and leaves
+  a slice step or a slider move edits `z₀` alone, so `δ` accumulates it; snap-back undoes the slice only, clearing the
+  hidden part of `δ` and leaving the pin where it is on screen, and "centre on pin" (R-866) clears its in-plane part, the
+  two together `z₀ ← z_locked`, bitwise by definition: centre on pin after snap-back assigns `z₀ ← z_locked`. On an
+  oblique basis the split of `δ` into in-plane and hidden parts is a projection, so snap-back alone is exact to rounding:
+  its rounding bound is derived from the construction TASK-M8-125 defines (of order `ε_R·κ(B)·‖δ‖` for a solve on the
+  basis `B = [q₁ q₂ | hidden]`, or a few ulps if built as `z_locked` plus the in-plane part recomputed from the pin's
+  stored chart parameters) and stated by that task, its decoded state within REQ-ENC-024's `ε_phys` only where that bound
+  and the decoder's conditioning allow; a bound that can't be derived is a calibration (R-71); the test's fixture names
+  its `κ(B)` and `‖δ‖`; its construction is a definition TASK-M8-125
+  writes here under physics review (R-72) (the chart-path brief's Q2 (a), R-899; the auto-snap setting off by
+  default); and `δ` has no field of its own that could disagree with `z₀`. *Was:* "snap-back is `z₀ ← z_locked`, bit
+  for bit;". Unlock clears the flag and the anchor and leaves
   `(z₀, q₁, q₂)` as it stands. A basis edit (a tilt, a zoom, a chart-mode switch) turns about the pin
   (render_gui_spec §G4; R-451, "Locked"; R-466 K5): at `δ = 0` the pin is the centre and the edit keeps `z₀`; where `δ`
   has an in-plane part the pin is off-centre, and the edit's `SetField` on `z₀` moves `z₀`, and with it `δ`.
@@ -505,7 +533,10 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   the ladder clamps none of the controls the chart's axes set, `z_locked` decodes the clicked state within lookup's
   `ε_phys`; where it clamps one, `z_locked` holds the clamp's image and the lock carries `lookup_clamped`, its free
   decode as far from the clicked state as the clamp moved it, and the rebuilt chart's centre pixel still decodes the
-  clicked state bit for bit. The edits are the `SetField` on `z₀ = z_locked` and the lock group's:
+  clicked state bit for bit. *(R-866, 8 Nov 2026: locking must not move the view, so this re-centring of the window is
+  replaced; how the pin is held on a nonlinear chart without it, exactly or with the reason it can't be, is TASK-M8-125's
+  definition (R-72; REQ-GUI-425), written here. This bullet stands as the built behaviour until then.)* The edits are the
+  `SetField` on `z₀ = z_locked` and the lock group's:
   one command, sent in one frame under one history key, so the history keeps one entry and one undo restores both
   (gui_state_contract §2, "A command of several edits is one history entry"; R-466); a re-centre's edits likewise. The
   window is chart construction, held in `SimConfig` (R-69) among "chart id and params"; `SimConfig`'s chart group has no
@@ -545,6 +576,8 @@ The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in fre
 ---
 
 ## Part 5 — Well-posedness and the validation contract
+
+*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
 
 A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**: no block over- or under-determined. The usual case is 2 swept + 6 frozen. The exception is **annotation axes** (below): a chart may sweep only 1 physical DOF and render it across a 2D canvas, giving 1 swept + 7 frozen, provided the other axis is declared annotation-only.
 

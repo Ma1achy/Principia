@@ -21,10 +21,12 @@
 //!   is code; the reason line names the requirement and the field. One case runs on a copy of the real file.
 //! - `qa_r677_detect_reads_the_requirements_at_base_and_head`: `detect` on real merge commits, the base's and the
 //!   head's copies taken from git.
-//! - `qa_r677_required_checks_on_every_tier`: `ci.yml`'s jobs walked as GitHub would on each tier's verdict, each
-//!   gate's own script run under bash: every required check of `ci.yml` concludes success on every tier; a data or docs
-//!   verdict runs no shard, build or GPU suite; `ci-workspace` runs, on tier (b), the readers' tests R-677 names (each
-//!   one's test file real), and on tier (c) no test at all; a failing reader turns `ci` red.
+//! - `qa_r677_required_checks_on_every_tier`: `ci.yml`'s jobs walked as GitHub would on each tier's verdict of a pull
+//!   request, each required job's classification check run under bash: every required check of `ci.yml` (the PR
+//!   tier's six since the owner's CI model of 9 Nov 2026) concludes success on every tier; a data or docs verdict runs
+//!   no product suite, build or GPU smoke set; the PR tier runs, on tier (b), the readers' tests R-677 names (each one's
+//!   test file real), and on tier (c) no test at all; every reader runs under a required check, so a failing one is
+//!   red (`ci-workspace` held the readers until that model, R-290's exception applied per R-369).
 //! - `qa_r677_mutants_fixture_skips_only_on_docs`: `mutants.yml`'s `mutants-fixture`, the gate's self-test, skips its
 //!   work only on a docs verdict (`tier=docs`) and runs all of it on code, with or without Rust under `crates/`, on
 //!   tier (b)'s data and on a classification that says nothing; the classifier gives each of the gate's own files
@@ -892,15 +894,20 @@ fn needs_of(job: &Value) -> Vec<String> {
     }
 }
 
-/// A finished run: each job's result, and each job's outputs.
-#[derive(Default)]
+/// A finished run: each job's result, and each job's outputs; `env`, a job's own `env:` while its steps are read.
+/// The owner's CI model (9 Nov 2026) put the required checks' skips inside each job's steps, behind job `env:` values
+/// and the event, so the walk reads `github.event_name`, `github.ref` and `env.<key>` too, as a pull request's run on
+/// its merge ref (R-290's exception, applied per R-369 by the orchestrator).
+#[derive(Default, Clone)]
 struct Walk {
     results: BTreeMap<String, String>,
     outputs: BTreeMap<String, BTreeMap<String, String>>,
+    env: BTreeMap<String, String>,
 }
 
 impl Walk {
-    /// One operand: `needs.<job>.result`, `needs.<job>.outputs.<key>` or a quoted string. Anything else stops the test.
+    /// One operand: `needs.<job>.result`, `needs.<job>.outputs.<key>`, `github.event_name`, `github.ref`, `env.<key>`
+    /// or a quoted string. Anything else stops the test.
     fn term(&self, term: &str) -> String {
         let t = term.trim();
         if let Some(q) = t.strip_prefix('\'') {
@@ -915,6 +922,10 @@ impl Walk {
                 .and_then(|o| o.get(*key))
                 .cloned()
                 .unwrap_or_default(),
+            // A pull request's run, the one the required checks are read on.
+            ["github", "event_name"] => "pull_request".to_owned(),
+            ["github", "ref"] => "refs/pull/1/merge".to_owned(),
+            ["env", key] => self.env.get(*key).cloned().unwrap_or_default(),
             // A step's status functions, in a run with no failed step, which is the run this walk is of.
             ["always()"] => "true".to_owned(),
             ["failure()"] => "false".to_owned(),
@@ -955,7 +966,8 @@ impl Walk {
 
 /// `ci.yml` walked as GitHub runs it, `changes` outputting `verdict` (or failing, when it is in `fail`); each job in
 /// `fail` fails. A job whose `needs` didn't all succeed is skipped unless its `if` holds `always()`; a matrix job counts
-/// as one. A gate (a job of one step with `RESULTS` in its env) has its own script run under bash.
+/// as one. A job whose first step checks the classification (`CHANGES` in its env, the owner's CI model of 9 Nov 2026)
+/// has that step's script run under bash, as a gate (a job of one step with `RESULTS` in its env) has its own.
 fn walk(yml: &Value, verdict: &[(&str, &str)], fail: &[&str]) -> Walk {
     let jobs = yml["jobs"].as_object().expect("qa_r677: jobs");
     let mut w = Walk::default();
@@ -980,6 +992,21 @@ fn walk(yml: &Value, verdict: &[(&str, &str)], fail: &[&str]) -> Walk {
                 "skipped"
             } else if fail.contains(&id.as_str()) {
                 "failure"
+            } else if let Some(env) = job["steps"][0]
+                .get("env")
+                .filter(|e| e.get("CHANGES").is_some())
+            {
+                let mut cmd = Command::new("bash");
+                cmd.args(["-e", "-c", &s(&job["steps"][0]["run"])]);
+                for (k, v) in env.as_object().expect("env") {
+                    cmd.env(k, w.eval(&s(v)));
+                }
+                let out = cmd.timed_output().expect("qa_r677: bash ran");
+                if out.status.success() {
+                    "success"
+                } else {
+                    "failure"
+                }
             } else if let Some(env) = job["steps"][0]
                 .get("env")
                 .filter(|e| e.get("RESULTS").is_some())
@@ -1055,8 +1082,9 @@ fn check_result(yml: &Value, w: &Walk, name: &str) -> String {
     w.results[by[0]].clone()
 }
 
-/// `ci.yml`'s required checks.
-const GATES: [&str; 5] = ["ci", "xtask-ci", "gpu-kernel", "gpu-metal", "gpu-lavapipe"];
+/// `ci.yml`'s required checks: the PR tier's six, the owner's CI model (9 Nov 2026), in place of the full tier's gates
+/// `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe`.
+const GATES: [&str; 6] = ["fmt", "clippy", "build", "ci", "gpu-metal", "gpu-lavapipe"];
 
 /// The status functions a step's `if` holds read as a run with no failed step, and any other expression still stops
 /// the walk: it must not read as a false that hides a step.
@@ -1095,24 +1123,35 @@ negative_control!(
     check_walk_reads_status(&Walk::default(), &["failure()"])
 );
 
-/// The commands `ci-workspace` runs on `verdict`, each step's `if:` evaluated.
-fn workspace_runs(yml: &Value, verdict: &[(&str, &str)]) -> Vec<String> {
-    let mut w = Walk::default();
-    w.outputs.insert(
-        "changes".to_owned(),
-        verdict
-            .iter()
-            .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
-            .collect(),
-    );
-    yml["jobs"]["ci-workspace"]["steps"]
-        .as_array()
-        .expect("qa_r677: ci-workspace's steps")
-        .iter()
-        .filter(|step| step.get("run").is_some())
-        .filter(|step| step.get("if").is_none_or(|c| w.eval(&s(c)) == "true"))
-        .map(|step| s(&step["run"]))
-        .collect()
+/// The commands the jobs that ran in `w` run, as (job id, command): each step's `if:` evaluated with its job's own
+/// `env:`. Until the owner's CI model (9 Nov 2026) this read `ci-workspace` alone, which ran tier (b)'s readers and the
+/// cheap checks; they run in the PR tier's `tests` and `build` now (R-290's exception, applied per R-369).
+fn pr_runs(yml: &Value, w: &Walk) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for (id, job) in yml["jobs"].as_object().expect("qa_r677: jobs") {
+        if w.results.get(id).is_none_or(|r| r == "skipped") {
+            continue;
+        }
+        let mut jw = w.clone();
+        if let Some(env) = job["env"].as_object() {
+            for (k, v) in env {
+                let raw = s(v);
+                let value = if raw.contains("${{") {
+                    jw.eval(&raw)
+                } else {
+                    raw
+                };
+                jw.env.insert(k.clone(), value);
+            }
+        }
+        for step in job["steps"].as_array().expect("qa_r677: steps") {
+            if step.get("run").is_some() && step.get("if").is_none_or(|c| jw.eval(&s(c)) == "true")
+            {
+                out.push((id.clone(), s(&step["run"])));
+            }
+        }
+    }
+    out
 }
 
 /// The `(package, test)` pairs the `cargo nextest run` commands of `runs` select with `-p` and `--test`.
@@ -1212,23 +1251,26 @@ fn check_required(ci: &str) {
             );
         }
         let tier = verdict[0].1;
-        let runs = workspace_runs(&yml, &verdict);
+        let by_job = pr_runs(&yml, &w);
+        let runs: Vec<String> = by_job.iter().map(|(_, r)| r.clone()).collect();
         let picked = selected(&runs);
         for (pkg, test) in &picked {
             assert!(
                 test_file(pkg, test).is_file(),
-                "qa_r677: on {what}, `ci-workspace` selects `-p {pkg} --test {test}`, which is no test file"
+                "qa_r677: on {what}, the PR tier selects `-p {pkg} --test {test}`, which is no test file"
             );
         }
         if tier == "code" {
+            // "(a) CODE … full CI as now": on a pull request, the PR tier's product tests of the changed crates (the
+            // owner's CI model, 9 Nov 2026), the full suite on `main`.
             assert!(
-                runs.iter()
-                    .any(|r| r.trim() == "cargo nextest run -p xtask"),
-                "qa_r677: on {what}, `ci-workspace` does not run xtask's suite:\n{runs:#?}"
+                runs.iter().any(|r| r.trim() == "cargo nextest run $PACKAGES"),
+                "qa_r677: on {what}, the PR tier does not run the changed crates' tests:\n{runs:#?}"
             );
             continue;
         }
-        // No full CI: nothing but the classification, `ci-workspace` and the gates runs.
+        // No build, no product suite, no GPU smoke set: nothing but the classification and the PR tier's required jobs,
+        // which skip their work inside, runs.
         let ran: Vec<&str> = w
             .results
             .iter()
@@ -1238,20 +1280,20 @@ fn check_required(ci: &str) {
         assert_eq!(
             ran,
             vec![
+                "build",
                 "changes",
-                "ci-gate",
-                "ci-workspace",
-                "gpu-kernel-gate",
-                "gpu-lavapipe-gate",
-                "gpu-metal-gate",
-                "xtask-ci-gate"
+                "clippy",
+                "fmt",
+                "gpu-lavapipe-smoke",
+                "gpu-metal-smoke",
+                "tests"
             ],
             "qa_r677: {what} ran other jobs"
         );
         for want in ["python3 plan/check_plan.py", "cargo xtask lint vocab"] {
             assert!(
                 runs.iter().any(|r| r.trim() == want),
-                "qa_r677: on {what}, `ci-workspace` does not run `{want}`:\n{runs:#?}"
+                "qa_r677: on {what}, the PR tier does not run `{want}`:\n{runs:#?}"
             );
         }
         // Only the readers, each test binary alone: no workspace, no package's whole suite, no build or doctest.
@@ -1261,18 +1303,21 @@ fn check_required(ci: &str) {
                 "cargo test",
                 "cargo build",
                 "clippy",
+                "cargo fmt",
                 "cargo doc",
                 "cargo xtask ci",
+                "build-kernel",
+                "$PACKAGES",
             ] {
                 assert!(
                     !run.contains(never),
-                    "qa_r677: on {what}, `ci-workspace` runs `{run}`"
+                    "qa_r677: on {what}, the PR tier runs `{run}`"
                 );
             }
             if run.starts_with("cargo nextest run") {
                 assert!(
                     run.contains("--test "),
-                    "qa_r677: on {what}, `ci-workspace` runs a whole suite: `{run}`"
+                    "qa_r677: on {what}, the PR tier runs a whole suite: `{run}`"
                 );
             }
         }
@@ -1288,22 +1333,27 @@ fn check_required(ci: &str) {
         for (pkg, test) in &want {
             assert!(
                 picked.iter().any(|(p, t)| p == pkg && t == test),
-                "qa_r677: on {what}, `ci-workspace` does not run `-p {pkg} --test {test}`:\n{runs:#?}"
+                "qa_r677: on {what}, the PR tier does not run `-p {pkg} --test {test}`:\n{runs:#?}"
             );
         }
         if !plan && !gui {
             assert!(
                 picked.is_empty() && !runs.iter().any(|r| r.contains("nextest")),
-                "qa_r677: on {what}, `ci-workspace` runs tests:\n{runs:#?}"
+                "qa_r677: on {what}, the PR tier runs tests:\n{runs:#?}"
             );
         }
-        // A failing reader is a red `ci`, never hidden by the skips.
-        let red = walk(&yml, &verdict, &["ci-workspace"]);
-        assert_eq!(
-            check_result(&yml, &red, "ci"),
-            "failure",
-            "qa_r677: `ci` passes a failed `ci-workspace` on {what}"
-        );
+        // A failing reader is a red required check, never hidden by the skips: every reader's run is in a job that
+        // bears one (`ci-workspace`'s failure turned `ci` red before the owner's CI model).
+        for (id, run) in by_job
+            .iter()
+            .filter(|(_, r)| r.starts_with("cargo nextest run"))
+        {
+            let job = &yml["jobs"][id.as_str()];
+            assert!(
+                GATES.contains(&reported_name(id, job).as_str()),
+                "qa_r677: on {what}, `{run}` runs in `{id}`, which bears no required check"
+            );
+        }
     }
     // A classification that failed is no data verdict: every gate is red.
     let lost = walk(&yml, &verdicts()[2].1, &["changes"]);
@@ -1324,11 +1374,11 @@ fn qa_r677_required_checks_on_every_tier() {
 negative_control!(
     qa_r677_required_checks_on_every_tier,
     "ci.yml running the plan's task data's xtask readers only on code",
-    expected = "on the plan's task data, `ci-workspace` does not run `-p xtask --test gate_report`",
+    expected = "on the plan's task data, the PR tier does not run `-p xtask --test gate_report`",
     check_required(
         &swap(
             &read(".github/workflows/ci.yml"),
-            "        if: needs.changes.outputs.tier == 'data' && needs.changes.outputs.plan_data == 'true'\n        env:\n          NEXTEST_PROFILE: ci\n        run: cargo nextest run -p xtask",
+            "        if: needs.changes.outputs.plan_data == 'true'\n        env:\n          NEXTEST_PROFILE: ci\n        run: cargo nextest run -p xtask",
             "        if: needs.changes.outputs.tier == 'code' && needs.changes.outputs.plan_data == 'true'\n        env:\n          NEXTEST_PROFILE: ci\n        run: cargo nextest run -p xtask"
     ))
 );
@@ -1337,12 +1387,12 @@ mod checks_on_data {
     use super::*;
     negative_control!(
         qa_r677_required_checks_on_every_tier,
-        "ci.yml running `ci-checks`, the build and lints, on every tier",
-        expected = "the plan's task data ran other jobs",
+        "ci.yml running the workspace's build, a code verdict's, on every tier",
+        expected = "on the plan's task data, the PR tier runs `cargo build --workspace`",
         check_required(&swap(
             &read(".github/workflows/ci.yml"),
-            "  ci-checks:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
-            "  ci-checks:\n    needs: changes\n"
+            "      - name: cargo build --workspace\n        if: needs.changes.outputs.docs_only != 'true'\n",
+            "      - name: cargo build --workspace\n"
         ))
     );
 }

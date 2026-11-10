@@ -2,7 +2,8 @@
 
 The build plan's milestones, in dependency order. Each has a scope, the build order it comes from, and an exit
 gate stated as requirement ids from `plan/requirements.yaml`. The gate blocks are generated
-(`plan/tools/milestones.py`); the prose is not.
+(`plan/tools/milestones.py`); the prose is not. The blocks stay committed, and a merge conflict inside one is resolved
+by `python3 plan/tools/regenerate.py --all`, never by hand (R-718; `.gitattributes`).
 
 *30 Oct 2026 (R-649, R-650):* M9, external replication, follows M8 and has no exit gate: its targets are measurements,
 never gates, and it exits on its report (§ "M9 — External replication"). Its block is a report block, generated the
@@ -86,15 +87,15 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 123 requirements** (and every earlier gate still green):
+**Exit gate — 127 requirements** (and every earlier gate still green):
 
 - PAY (22): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091…092
 - GEN (13): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029, REQ-GEN-031…032
 - SCHED (1): REQ-SCHED-001
 - RENDER (3): REQ-RENDER-001…002, REQ-RENDER-083
-- TOOL (21): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223
+- TOOL (24): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223…226
 - VAL (38): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167, REQ-VAL-169, REQ-VAL-175…176, REQ-VAL-178…181
-- SYS (25): REQ-SYS-001…008, REQ-SYS-063…079
+- SYS (26): REQ-SYS-001…008, REQ-SYS-063…079, REQ-SYS-097
 <!-- /gate:M0 -->
 
 ## M1 — The synthetic payload and the eyes
@@ -202,11 +203,11 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 222 requirements** (and every earlier gate still green):
+**Exit gate — 226 requirements** (and every earlier gate still green):
 
-- DEC (43): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048, REQ-DEC-050, REQ-DEC-053…054
+- DEC (45): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048, REQ-DEC-050, REQ-DEC-053…056
 - ENC (34): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031, REQ-ENC-034…038
-- CHART (68): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089…090
+- CHART (70): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089…090, REQ-CHART-148…149
 - INT (2): REQ-INT-002…003
 - PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
 - GEN (15): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034, REQ-GEN-036…042, REQ-GEN-044…045
@@ -229,6 +230,8 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The full `SimState` accumulator fill on the CPU.
 - The validation orbits and ground truth. The independent convergence reference. The Inspector's RK45
   reference (R-33).
+- R-652 (closing RQ-625): the four drift goldens are re-baselined by TASK-M3-05; the M3 gate confirms them, with
+  REQ-TOOL-150's `lin` range.
 - The physics measurements the corpus leaves to the build:
   - re-validating escape precision and recall against check 2's independent ground truth, with the legacy
     t = 30 set as a comparison (R-95);
@@ -242,11 +245,11 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 234 requirements** (and every earlier gate still green):
+**Exit gate — 235 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
-- INT (83): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…109
+- INT (84): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110
 - EVT (26): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032…033
 - PAY (33): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…113
 - GEN (1): REQ-GEN-016
@@ -274,17 +277,17 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
   a Windows run posts them (the builder is TASK-M4-27's). That row is what carries the outstanding run after its task closes; it blocks nothing (R-649).
 
 <!-- gate:M4 -->
-**Exit gate — 112 requirements** (and every earlier gate still green):
+**Exit gate — 132 requirements** (and every earlier gate still green):
 
-- CHART (3): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074
+- CHART (20): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-094…101, REQ-CHART-108…110, REQ-CHART-125, REQ-CHART-127…128, REQ-CHART-142, REQ-CHART-152, REQ-CHART-165
 - INT (18): REQ-INT-057…071, REQ-INT-083, REQ-INT-112…113
 - EVT (1): REQ-EVT-021
 - PAY (2): REQ-PAY-074, REQ-PAY-085
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
-- RENDER (11): REQ-RENDER-029…036, REQ-RENDER-078, REQ-RENDER-082, REQ-RENDER-099
+- RENDER (13): REQ-RENDER-029…036, REQ-RENDER-078, REQ-RENDER-082, REQ-RENDER-099, REQ-RENDER-122…123
 - TOOL (9): REQ-TOOL-040…045, REQ-TOOL-126…127, REQ-TOOL-221
 - VAL (33): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177, REQ-VAL-347…349
-- PERF (13): REQ-PERF-005…013, REQ-PERF-077, REQ-PERF-081, REQ-PERF-086, REQ-PERF-094
+- PERF (14): REQ-PERF-005…013, REQ-PERF-077, REQ-PERF-081, REQ-PERF-086, REQ-PERF-094, REQ-PERF-116
 - SYS (10): REQ-SYS-020…029
 <!-- /gate:M4 -->
 
@@ -338,14 +341,14 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 229 requirements** (and every earlier gate still green):
+**Exit gate — 230 requirements** (and every earlier gate still green):
 
 - DEC (6): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042, REQ-DEC-049
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (93): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…226, REQ-GUI-229, REQ-GUI-231…240, REQ-GUI-251…252, REQ-GUI-254…260, REQ-GUI-262, REQ-GUI-265, REQ-GUI-346…347, REQ-GUI-410…412, REQ-GUI-414…415, REQ-GUI-418
+- GUI (94): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…226, REQ-GUI-229, REQ-GUI-231…240, REQ-GUI-251…252, REQ-GUI-254…260, REQ-GUI-262, REQ-GUI-265, REQ-GUI-346…347, REQ-GUI-410…412, REQ-GUI-414…415, REQ-GUI-418, REQ-GUI-430
 - TOOL (5): REQ-TOOL-055…058, REQ-TOOL-159
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090
@@ -387,14 +390,14 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   REQ-RENDER-110 (TASK-M7-69, a leaf), and so this gate, until it is ruled."
 
 <!-- gate:M7 -->
-**Exit gate — 261 requirements** (and every earlier gate still green):
+**Exit gate — 263 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
 - PAY (10): REQ-PAY-099…108
 - GEN (5): REQ-GEN-019…022, REQ-GEN-043
 - SCHED (1): REQ-SCHED-072
-- RENDER (45): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096, REQ-RENDER-101…115, REQ-RENDER-118, REQ-RENDER-120
-- COL (126): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…134, REQ-COL-136…159, REQ-COL-162
+- RENDER (46): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096, REQ-RENDER-101…115, REQ-RENDER-118, REQ-RENDER-120…121
+- COL (127): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…134, REQ-COL-136…159, REQ-COL-162…163
 - GUI (23): REQ-GUI-016…031, REQ-GUI-151…152, REQ-GUI-335…338, REQ-GUI-340
 - TOOL (30): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151, REQ-TOOL-171…174, REQ-TOOL-179…181, REQ-TOOL-186
 - VAL (11): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…189
@@ -444,20 +447,20 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both are recorded".
 
 <!-- gate:M8 -->
-**Exit gate — 470 requirements** (and every earlier gate still green):
+**Exit gate — 537 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
-- CHART (11): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088
+- CHART (63): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088, REQ-CHART-102…107, REQ-CHART-111…124, REQ-CHART-126, REQ-CHART-129…139, REQ-CHART-141, REQ-CHART-143…147, REQ-CHART-150…151, REQ-CHART-153…164
 - INT (3): REQ-INT-093, REQ-INT-096, REQ-INT-107
 - GEN (1): REQ-GEN-023
 - SCHED (5): REQ-SCHED-073, REQ-SCHED-101…102, REQ-SCHED-104…105
 - REF (1): REQ-REF-054
 - RENDER (8): REQ-RENDER-073…074, REQ-RENDER-097…098, REQ-RENDER-100, REQ-RENDER-116…117, REQ-RENDER-119
 - COL (7): REQ-COL-047…048, REQ-COL-111, REQ-COL-121, REQ-COL-135, REQ-COL-160…161
-- GUI (264): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…409
+- GUI (275): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…409, REQ-GUI-419…429
 - TOOL (83): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146, REQ-TOOL-167…170, REQ-TOOL-175…178, REQ-TOOL-182…183, REQ-TOOL-185, REQ-TOOL-190…218, REQ-TOOL-220
-- VAL (23): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194, REQ-VAL-196…200
-- PERF (29): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092, REQ-PERF-098…112, REQ-PERF-114…115
+- VAL (24): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194, REQ-VAL-196…200, REQ-VAL-354
+- PERF (32): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092, REQ-PERF-098…112, REQ-PERF-114…115, REQ-PERF-117…119
 - SYS (32): REQ-SYS-039…062, REQ-SYS-086…093
 <!-- /gate:M8 -->
 
@@ -501,9 +504,9 @@ and tightens the GPU path (`docs/design/principia_dd_replication.md` § 12).
 
 - VAL (57): REQ-VAL-202, REQ-VAL-204, REQ-VAL-206, REQ-VAL-208, REQ-VAL-210, REQ-VAL-212, REQ-VAL-215, REQ-VAL-217, REQ-VAL-219, REQ-VAL-224, REQ-VAL-226, REQ-VAL-229, REQ-VAL-231, REQ-VAL-233, REQ-VAL-235, REQ-VAL-237, REQ-VAL-239, REQ-VAL-241, REQ-VAL-243, REQ-VAL-245, REQ-VAL-247, REQ-VAL-249, REQ-VAL-253, REQ-VAL-255, REQ-VAL-258, REQ-VAL-260, REQ-VAL-263, REQ-VAL-265, REQ-VAL-267, REQ-VAL-269, REQ-VAL-271, REQ-VAL-274, REQ-VAL-276, REQ-VAL-278, REQ-VAL-280, REQ-VAL-282, REQ-VAL-284, REQ-VAL-287, REQ-VAL-289, REQ-VAL-292, REQ-VAL-296, REQ-VAL-298, REQ-VAL-300, REQ-VAL-302, REQ-VAL-304, REQ-VAL-307, REQ-VAL-310, REQ-VAL-315, REQ-VAL-317, REQ-VAL-320, REQ-VAL-322, REQ-VAL-324, REQ-VAL-328, REQ-VAL-331…332, REQ-VAL-334, REQ-VAL-353
 
-**Built, not scored — 14 requirements** (TASK-M9-39, TASK-M9-40, TASK-M9-41, TASK-M9-42, TASK-M9-43, TASK-M9-45, R-654, R-669, R-679, R-798; no outcome and no row in the report, each task's tests blocking its own merge):
+**Built, not scored — 15 requirements** (TASK-M9-39, TASK-M9-40, TASK-M9-41, TASK-M9-42, TASK-M9-43, TASK-M9-45, R-654, R-669, R-679, R-798; no outcome and no row in the report, each task's tests blocking its own merge):
 
-- CHART (3): REQ-CHART-091…093
+- CHART (4): REQ-CHART-091…093, REQ-CHART-140
 - INT (1): REQ-INT-111
 - EVT (1): REQ-EVT-034
 - GUI (2): REQ-GUI-416…417

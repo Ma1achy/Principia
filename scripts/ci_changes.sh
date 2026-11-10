@@ -1,47 +1,53 @@
 #!/usr/bin/env bash
 # What a CI run's change touches, for the in-job skips R-656 allows, R-662 scopes and R-677 splits into three tiers:
-#   (a) code: full CI runs when a pull request changes Principia's code (the owner, 31 Oct 2026: "Only the actual
-#       Principia CODE matters in ci"), or data code loads that only full CI's jobs read;
+#   (a) code: the build and test jobs run when a pull request changes Principia's code (the owner, 31 Oct 2026: "Only
+#       the actual Principia CODE matters in ci"), or data code loads that only those jobs read;
 #   (b) data: a change to the plan's task data (`plan/tasks/`, `plan/tasks.yaml`, `plan/MILESTONES.md`, and
 #       `plan/requirements.yaml` when only fields no code reads change, as `scripts/ci_req_fields.py` decides) or the
 #       GUI's artboards and references (`docs/gui/design/`, `docs/gui/reference/`) runs only the cheap checks and the
-#       tests that read what it changed (R-677; `ci.yml`'s `ci-workspace`): no build, no test shard, no GPU suite, no
-#       mutants;
+#       tests that read what it changed (R-677; `ci.yml`'s `tests`): no build, no product suite, no GPU smoke set;
 #   (c) docs: the rest of the corpus, the plan's prose and Python, the scripts, the workbench and `.claude/` run only
-#       the cheap checks, plan-check, the vocabulary lint and the atlas guard (R-662, R-790).
-# A change touching several tiers runs the highest. Tier (a)'s full CI is on the merge-candidate head and on `main`, and
-# every other code head runs the quick tier (R-684; `.github/scripts/ci_tier.sh`, which reads this verdict: this script
-# says what a change touches, that one what the run does with it). One that touches no `.rs` file under `crates/` has no
-# mutant to run (R-677). Every required check still reports, under its own name, and concludes success only where its
-# tier allows it (R-656; R-266, R-305).
+#       the cheap checks, the plan checks, the vocabulary lint and the atlas guard (R-662, R-790).
+# A change touching several tiers runs the highest. On a pull request the code tier runs the PR tier (the owner's CI
+# model, R-909; `ci.yml`): fmt, clippy, the build, the product tests of the changed crates and their
+# reverse dependencies (`.github/scripts/ci_tier.sh`, which reads this verdict: this script says what a change touches,
+# that one which crates it tests), the product-rule commands and, where `gpu` holds, the GPU smoke sets. Every required
+# check still reports, under its own name, and concludes success only where its tier allows it (R-656; R-266). A change
+# to the machinery (`process`, below) runs the process tests too, on any tier.
 #
 #   scripts/ci_changes.sh detect       In a workflow step: classify this run's change and write its verdict to
 #                                      $GITHUB_OUTPUT (and print it, with the changed paths).
-#   scripts/ci_changes.sh paths        Print the pull request's changed paths, for the quick tier's crates (R-684;
-#                                      `.github/scripts/ci_tier.sh`); nothing if they can't be found.
+#   scripts/ci_changes.sh paths        Print the pull request's changed paths, for the PR tier's crates
+#                                      (`.github/scripts/ci_tier.sh`); nothing if they can't be found.
 #   scripts/ci_changes.sh classify     Read changed paths from stdin, one per line; print the verdict. With
 #                                      CI_REQS_BASE and CI_REQS_HEAD naming the base's and the head's copies of
 #                                      `plan/requirements.yaml`, that file is tier (b) when `scripts/ci_req_fields.py`
 #                                      (or CI_REQ_FIELDS, naming it) says so; without them it is code.
+#   scripts/ci_changes.sh process      Read changed paths from stdin; print `process=true|false`: some path is the
+#                                      machinery's own, `.github/`, `xtask/`, `scripts/`, `plan/`, `decisions.md`,
+#                                      `REVIEW_QUEUE.md` or `docs/` (the owner's CI model, R-909), so the process
+#                                      tests run; no path at all runs them. `detect` writes it after the verdict.
 #
 # The verdict, one `key=value` per line:
 #   tier=code|data|docs   the highest tier of any path;
-#   docs_only=true|false  true when the tier is data or docs: no full CI. The name is R-656's, kept so the jobs' skips,
-#                         the gates and R-335's `if:` stand; R-662 read it "changes no Principia code", R-677 reads it
-#                         "runs no full CI";
+#   docs_only=true|false  true when the tier is data or docs: no build and no product suite. The name is R-656's, kept
+#                         so the jobs' skips and the gates stand; R-662 read it "changes no Principia code";
 #   gpu=true|false        false when no path is a GPU path, as on every data or docs change;
 #   plan_data=true|false  some path is the plan's task data (tier b), `plan/requirements.yaml` among it when tier (b);
 #   gui_data=true|false   some path is the GUI's artboards or references (tier b);
-#   mutants=true|false    some path is a `.rs` file under `crates/`, so the merge-ready head's mutants run (R-677).
+#   mutants=true|false    some path is a `.rs` file under `crates/` (R-677). Read by nothing on the pull-request path
+#                         since the owner's CI model took the per-PR mutants run off it (R-908, R-909); kept for the
+#                         per-merge workflow, which may run mutants on a merge's diff.
 #
 # The change is the pull request's merge commit against its first parent, the base it is merged onto: exactly what the
 # pull request adds to that base. Any other event (a push to `main`, a `measure/` branch, a dispatch) is no pull
-# request, and runs everything. It fails towards full CI: a path is data or docs only if the allowlist below names it
-# and the list of data only full CI reads does not, so an unknown top-level path, `.github/`, `.cargo/` or a new folder
-# runs everything, and every code path the GPU list doesn't exempt runs the GPU suites. A diff that can't be computed,
-# or is empty, runs everything too, its mutants among it, with a warning. `plan/requirements.yaml` is code unless
-# `scripts/ci_req_fields.py` finds both copies and says only fields no code reads changed (R-677): an added or removed
-# requirement, a field code reads, an unknown field, a parse error or a missing copy runs everything.
+# request, and runs everything. It fails towards running everything: a path is data or docs only if the allowlist below
+# names it and the list of data only the code tier's jobs read does not, so an unknown top-level path, `.github/`,
+# `.cargo/` or a new folder runs everything, and every code path the GPU list doesn't exempt runs the GPU smoke sets. A
+# diff that can't be computed, or is empty, runs everything too, its mutants among it, with a warning.
+# `plan/requirements.yaml` is code unless `scripts/ci_req_fields.py` finds both copies and says only fields no code
+# reads changed (R-677): an added or removed requirement, a field code reads, an unknown field, a parse error or a
+# missing copy runs everything.
 set -euo pipefail
 
 # Whether this change's `plan/requirements.yaml` is tier (b): set once by `classify`, from CI_REQS_BASE and
@@ -72,8 +78,8 @@ on_allowlist() {
 }
 
 # The files on that allowlist that are data code loads for behaviour, or scripts CI's and the tests' runs go through,
-# which only full CI's jobs read, so they count as code (R-662, narrowing R-656's list of every file any test reads;
-# R-677 moving the rest to tier b). Each pattern names its readers. A `case` pattern's `*` matches `/` too.
+# which only the code tier's jobs read, so they count as code (R-662, narrowing R-656's list of every file any test
+# reads; R-677 moving the rest to tier b). Each pattern names its readers. A `case` pattern's `*` matches `/` too.
 # `xtask/tests/ci_changes.rs` checks that each pattern classifies as code, and scans the sources for a data file they
 # name that classifies as docs.
 reads_code() {
@@ -98,8 +104,9 @@ reads_code() {
 }
 
 # Tier (b), the plan's task data, which only xtask's gate-report, reviews-check, plan-check and progress banner and
-# validation's Part 6 catalogue read: `ci-workspace` runs those readers' tests on it (R-677). Each pattern names its
-# readers. `xtask/tests/ci_changes.rs` checks that every reader the sources show is among the tests that step runs.
+# validation's Part 6 catalogue read: `ci.yml`'s `tests` job runs validation's reader on it (R-677), and the process
+# tests, which a change under `plan/` runs (`is_process`), hold xtask's. Each pattern names its readers.
+# `xtask/tests/ci_changes.rs` checks that every reader the sources show is among the tests one of those runs.
 plan_data() {
   case "$1" in
     # `cargo xtask reviews-check`: the `Reviewers` field decides `reviews-complete` (xtask/src/reviews_check.rs); every
@@ -118,8 +125,8 @@ plan_data() {
 }
 
 # Tier (b), the GUI's artboards and references, which only the screenshot tests and the tests comparing with a
-# reference read: `ci-workspace` runs those tests on it (R-677), and `screenshot.yml` runs every screenshot suite on a
-# pull request touching `docs/gui/`.
+# reference read: `ci.yml`'s `tests` job runs those tests on it (R-677), and `screenshot.yml` runs every screenshot
+# suite on a pull request touching `docs/gui/`.
 gui_data() {
   case "$1" in
     # The artboards: `cargo xtask screenshot` through the cases' `artboard` paths (fixtures/screenshot/*/cases.json);
@@ -147,12 +154,13 @@ tier_of() {
   fi
 }
 
-# The paths no GPU job builds, reads or runs: the data and docs ones, `prin`, and `gui` but for what `gpu-metal`'s
-# `lattice_` step reads (R-692): `prin` nothing in the GPU jobs depends on, and of `gui` only that step builds anything
-# (the other GPU jobs build validation, engine, render, kernel, ledger and xtask). A change to one of those five runs
-# all three GPU suites, this script having one `gpu` flag; a change to the rest of `gui` that breaks the step first
-# shows on `main`. Everything else, a lockfile, a toolchain, a fixture, a workflow or data only full CI reads among it,
-# runs the GPU suites.
+# The paths no GPU job builds, reads or runs: the data and docs ones, `prin`, and `gui` but for what the Metal suite's
+# `lattice_` step on `main` and both GPU smoke sets' lattice step read (R-692): `prin` nothing in the GPU jobs depends
+# on, and of `gui` only those steps build anything (the other GPU jobs build validation, engine, render, kernel, ledger
+# and xtask). On a pull request `gpu` runs the GPU smoke sets (`ci.yml`'s `gpu-lavapipe` and `gpu-metal`), the gui
+# crate's lattice tests among them on lavapipe and on Metal (REQ-GUI-412); a change to one of those five runs them,
+# this script having one `gpu` flag. Everything else, a lockfile, a toolchain, a fixture, a workflow or data only the
+# code tier reads among it, runs the GPU smoke sets.
 is_not_gpu() {
   if [ "$(tier_of "$1")" != code ]; then
     return 0
@@ -166,7 +174,19 @@ is_not_gpu() {
   return 1
 }
 
-# Whether a path is Rust source under `crates/`, the only code the merge-ready head's mutants run on (R-677).
+# Whether a path is the machinery's own, whose change runs the process tests (the owner's CI model, R-909:
+# "Process tests only when the PR changes .github/, xtask/, scripts/, plan/, decisions.md, REVIEW_QUEUE.md or docs/"):
+# the tests of CI, the plan checks, the controls registry, the job queue and the rest of the split's process class,
+# which `.config/nextest.toml`'s `process` profile names.
+is_process() {
+  case "$1" in
+    .github/* | xtask/* | scripts/* | plan/* | docs/*) return 0 ;;
+    decisions.md | REVIEW_QUEUE.md) return 0 ;;
+  esac
+  return 1
+}
+
+# Whether a path is Rust source under `crates/`, the only code mutants run on (R-677).
 has_mutants() {
   case "$1" in
     crates/*.rs) return 0 ;;
@@ -204,6 +224,22 @@ classify() {
   echo "plan_data=$plan"
   echo "gui_data=$gui"
   echo "mutants=$mutants"
+}
+
+# Reads paths on stdin; prints `process=true|false`, whether the change runs the process tests. No path at all runs
+# them, as it runs everything. Apart from `classify`, whose verdict R-656's, R-677's and R-790's checks read line by
+# line, so a flag no tier reads stays out of it.
+process() {
+  local process=false n=0 path
+  while IFS= read -r path || [ -n "$path" ]; do
+    [ -n "$path" ] || continue
+    n=$((n + 1))
+    if is_process "$path"; then process=true; fi
+  done
+  if [ "$n" -eq 0 ]; then
+    process=true
+  fi
+  echo "process=$process"
 }
 
 # The paths the pull request changes, against the base its merge commit is merged onto. Fetches the merge commit's
@@ -248,6 +284,8 @@ detect() {
     echo "${GITHUB_EVENT_NAME:-no event}: not a pull request; running everything"
   fi
   verdict=$(printf '%s' "$paths" | classify)
+  verdict="$verdict
+$(printf '%s' "$paths" | process)"
   echo "$verdict"
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
     echo "$verdict" >> "$GITHUB_OUTPUT"
@@ -258,8 +296,9 @@ case "${1:-}" in
   detect) detect ;;
   paths) changed_paths ;;
   classify) classify ;;
+  process) process ;;
   *)
-    echo "usage: scripts/ci_changes.sh detect | paths | classify" >&2
+    echo "usage: scripts/ci_changes.sh detect | paths | classify | process" >&2
     exit 2
     ;;
 esac

@@ -98,7 +98,7 @@ fn rotation<R: Q>(pair: [usize; 2], far: f64, anticlockwise: bool) -> Ic<R> {
 type RotationMarch<R> = fn(&Ic<R>, &WrapperUniforms<R>, &mut [FreeGroupWord]) -> u32;
 
 fn wired<R: Q>(ic: &Ic<R>, u: &WrapperUniforms<R>, words: &mut [FreeGroupWord]) -> u32 {
-    let mut cadence = WrapperCadence::default();
+    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
     integrate_word::<Rk4, R, _, _>(ic, u, &mut cadence, 0, words).total_substeps
 }
 
@@ -234,7 +234,7 @@ fn at_slot<O: Advance>(
     u: &WrapperUniforms<f64>,
     words: &mut [FreeGroupWord],
 ) -> kernel::payload::SimStateBaseOf<f64> {
-    let mut cadence = WrapperCadence::default();
+    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
     integrate_word::<O, f64, _, _>(ic, u, &mut cadence, SLOT, words)
 }
 
@@ -304,7 +304,7 @@ fn wrong_slot(
     u: &WrapperUniforms<f64>,
     words: &mut [FreeGroupWord],
 ) -> kernel::payload::SimStateBaseOf<f64> {
-    let mut cadence = WrapperCadence::default();
+    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
     integrate_word::<Rk4, f64, _, _>(ic, u, &mut cadence, SLOT + 1, words)
 }
 
@@ -435,7 +435,7 @@ fn check_published(dt: f64, middle: usize) {
         p[middle] = [-2.0 * vx, -2.0 * vy];
         let ic = Ic { m: [1.0; 3], r, p };
         let mut words = [FreeGroupWord::default()];
-        let mut cadence = WrapperCadence::default();
+        let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
         integrate_word::<Rk4, f64, _, _>(
             &ic,
             &uniforms(dt, (t / dt).ceil() as u32),

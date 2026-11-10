@@ -266,7 +266,8 @@ from the demos in `docs/incoming/2026-10-21_trace_playback/demo/`:
 view the manifold. **No trace controls** (R-541 G3): nothing about a trajectory is in the left panel, which is about
 the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'s list.
 - **Chart:** the preset, named by its axes (e.g. "z_α × z_β", never a nickname); the two basis vectors `q₁`, `q₂`, each with
-  an edit button; **Chart builder…** (§G7); the chart's kind (affine or nonlinear). When the chart is the shape sphere,
+  an edit button, a basis the user types kept as typed, a mirrored tilt on its own target included: the app never
+  rewrites it (R-858); **Chart builder…** (§G7); the chart's kind (affine or nonlinear). When the chart is the shape sphere,
   the section also shows the **projection selector** (equirectangular, or an equal-area alternative) —
   `principia_chart_reference.md` §3.3 (R-113). There is no hemisphere toggle: the shape sphere chart is the whole sphere,
   always (R-544). *Was (R-113, R-412, the toggle removed by R-544):* "and the **hemisphere toggle** (one hemisphere, or
@@ -318,7 +319,8 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
   sample points being distinct, neither event raises it, the bands along the axes included; the genuine floor still
   does (REQ-GUI-012)." *Was:* "at a quad where f64 `J_D`'s columns along the view's plane are 0 while its f64 sample points
   are distinct, neither event raises it; the genuine floor still does (REQ-GUI-012)."
-- **Lock:** a "● locked at z_locked" badge with **unlock**. Sliders are **re-based to the anchor, not frozen** (§G4).
+- **Lock:** a "● locked at z_locked" badge with **unlock** and **centre on pin** (§G4, R-866). Sliders are **re-based to the anchor, not frozen** (§G4).
+  *Was (before R-866):* "a "● locked at z_locked" badge with **unlock**".
 - **Slice centre** (named "Centre z₀" before R-457): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its
   number box beside it. Moving the slice along its normal is the slider of the normal's dimension, the cube's D axis
   (R-457, R-459). Its **reset**, beside its heading, returns every out-of-plane coordinate of `z₀` to the chart preset's
@@ -361,7 +363,11 @@ can never disagree (the definition R-466 allows); its **window** is a scale `σ_
 `z₀ = b`, `q₁ = σ_h e_a`, `q₂ = σ_h e_b`. These formulae hold for a preset whose axes are two of the eight latent
 coordinate axes at one scale, as all six of the mock's are (§G7). What the three values are for any other chart a
 preset can hold (an oblique or unequal-scale pair, an axis of another kind, a curved chart) and for a view saved
-tilted is not yet defined: RQ-711, for TASK-M8-18. R-798's equilateral-point preset is the exception, its map and
+tilted is not yet defined: RQ-711, for TASK-M8-18. *7 Nov 2026 (R-820, RQ-711 (a)):* a saved preset stores its whole
+saved triple `(z₀, q₁, q₂)` as its home view, so Home returns the chart that was saved. *8 Nov 2026 (R-888, RQ-711):* the
+saved view itself reads 1×, so on such a preset the zoom row reads × 1.00 at the saved view and zoom is relative to what
+was saved. *Was:* "the scale the zoom row reads against on such a preset is still to be named, and RQ-711 stays open for
+it." R-798's equilateral-point preset is the exception, its map and
 window being TASK-M9-45's (R-798). The zoom row reads `log₂(σ_h / σ)` and its magnification `σ_h / σ`, so it
 reads 0 and × 1.00 at the window whatever `σ_h` is; with no active preset there is no window, and the row reads
 `−log₂ σ` and `1 / σ`, `σ_h = 1` (applied per R-369). The depth readout stays absolute, `−log₂ σ` (§G2's depth readout):
@@ -995,17 +1001,28 @@ steps are confirmed as #174 built them, and recorded in R-404.
 ## G4. Lock — the reticle and the pin (`08_lock.png`)
 
 Locking (K, a shortcut with the focus in the Figure, in either keyboard mode (§G3, R-409); or right-click → lock
-here) recentres the view on that point and marks it with a gold reticle at the centre.
-Every tilted plane passes through it, so it's the one point that stays still while the picture turns. The compass shows the
-same point as a gold pin.
+here) **does not move the view** (R-866): it pins the clicked pixel where it is on screen and marks it with a gold
+reticle there. The pin's initial in-plane excursion is that pixel's offset from the view's centre.
+Every tilted plane passes through it, so it's the one point that stays still while the picture turns: tilt and zoom turn
+about the pin, and the pinned pixel stays fixed on screen. The compass shows the same point as a gold pin.
+*Was (before R-866):* "Locking (K, a shortcut with the focus in the Figure, in either keyboard mode (§G3, R-409); or
+right-click → lock here) recentres the view on that point and marks it with a gold reticle at the centre."
+- **Centre on pin** (R-866): an optional action, on the lock badge, that brings the pin to the view's centre; a
+  navigation edit, a `SetField` on `z₀` (or, on a nonlinear chart, its window), undoable as any navigation (R-69). A
+  setting, **Centre on pin when locking**, off by default, snaps automatically: with it on, a lock and its centre on pin
+  are one command, one history entry. The setting is a preference, not undoable.
 - **Sliders are re-based, not frozen:** each shows the anchor plus an offset, and moving one is a deliberate excursion from
   the anchor. The lock flag, the anchor and the excursion `δ` are `SimConfig` — lock is chart construction, so locking and unlocking
-  are undoable (R-69; gui_state_contract §2); recentring is a `SetField` on `z₀`.
+  are undoable (R-69; gui_state_contract §2); the lock itself edits no view field (R-866), and centring on the pin is a
+  `SetField` on `z₀`. *Was (before R-866):* "recentring is a `SetField` on `z₀`".
 - **Still works:** tilt, rotation, zoom and chart changes all turn about the pin.
 - **Unlocking:** the view as it stands becomes the new free start.
 - **The point:** affine charts compute `z_locked = z₀ + (2s−1)q₁ + (2t−1)q₂` directly (chart_decoder_contract Part 3, the
-  affine chart); nonlinear charts replay Φ and D on the CPU.
-- The lock badge offers **unlock** and **open in Inspector** (§G8).
+  affine chart); nonlinear charts replay Φ and D on the CPU. On a nonlinear chart, where locking re-centred the window to
+  compute the pin, the pin is held without moving the view, exactly, or with the reason stated and its bound a
+  calibration the owner rules on before merge (R-866, R-71; TASK-M8-125).
+- The lock badge offers **unlock**, **centre on pin** (R-866) and **open in Inspector** (§G8). *Was (before R-866):* "The
+  lock badge offers **unlock** and **open in Inspector** (§G8)."
 
 ## G5. Windows (`04_windows.png`)
 
@@ -2092,9 +2109,11 @@ combiner's two inputs.
   drives both hue and lightness* — a single `shape n̂` source wired into both a `colour` node and a
   `brightness` node is a **visible wire**, not a coincidence. (Bivariate `n̂ × ⟨field⟩` is authored
   exactly this way — see §11 presets.)
-- **Multi-source mappings expose multiple input ports** on the consuming node (e.g. a derived source
-  taking two `field` ins for a `top1 − top2` margin, or a `gradient-magnitude` node). This is
-  distinct from multi-wire-per-port (which is disallowed, §6).
+- **Multi-source mappings expose multiple input ports** on the consuming node (e.g. a `colour` or `post` node
+  declaring two `field` ins for a `top1 − top2` margin, or a `gradient-magnitude` node). This is
+  distinct from multi-wire-per-port (which is disallowed, §6). A `source` keeps no input (§3.1): the margin is a
+  `colour` (or `post`) occupant declaring two `// @input`s (R-813, ruling RQ-675 (a); *was:* "e.g. a derived source
+  taking two `field` ins for a `top1 − top2` margin").
 - **Chart position (R-542).** Shape n̂ and Chart position are two sources; on the shape sphere chart both are offered.
   A brightness field that compares two times (Displacement, Left its starting tile) takes two Chart position sources,
   one at the playhead and one at `t = 0` (state map SM15).

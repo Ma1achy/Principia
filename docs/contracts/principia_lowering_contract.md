@@ -213,7 +213,7 @@ The rules above, applied. Columns: axis kinds → which Φ map the chart monomor
 | **Euclid ν plane** | curve × **annotation** | `ν(v)` → embed `γ: ν→(α,β,μ₁,μ₂)`; u-axis emits nothing | landmark params (display) | `annotation_axis`; 1-swept + 7-frozen; per-ν statistics only |
 | **θ × K strip** | curve (or derived-config if decoupled) × invariant | `θ(s)` → embed (or config-only) + K solve | `γ_K`, coupling flag | curve tilt requires lock (tangent uniform `γ'` supplied at resolution) |
 | **Burrau int lattice** | quantised curve × quantised curve | cell quantiser → validity check → `γ(n/m)` | `m_max` | `quantised`: **per-cell dispatch** (one decode+integrate per cell, broadcast), floor-guard exempt, counting measure, no tilt — lock-and-exit |
-| **Anosova physical-frame** | physical × physical | physical (m,r,p) construction → **canonicalise entry** → standard pipeline | region D bounds | enters through the one seam; integrator unaware, as always |
+| **Anosova physical-frame** | physical × physical | physical (m,r,p) construction → **canonicalise entry** → standard pipeline | — (R-871: no region-D mask uniform, the full disc unmasked; *was:* "region D bounds") | enters through the one seam; integrator unaware, as always; region D's third-body pair, lowered by TASK-M4-34 through `region_d_variant` with the signed canonicalisation, never folded to `(ξ, −η)` (R-914; REQ-CHART-165) |
 
 Every row ends in the same `canonicalise → (m,r,p) → wrapper(occupant)`. The rows differ only in the Φ map and its uniforms — which is the whole point.
 

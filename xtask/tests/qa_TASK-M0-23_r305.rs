@@ -27,6 +27,10 @@
 //! - `mutants-check` is reported only by `pull_request` runs, on every pull request (no path filter), every new head
 //!   and every label change, by one job bearing its name that no run skips and none posting it; the verdict it
 //!   reports on the merge-ready run holds whatever the shards' result, and fails on a failed or cancelled shard.
+//!   The owner's CI model (approved 9 Nov 2026) takes mutants off the pull request's path and `mutants-check` off the
+//!   required checks: `qa23r_mutants_check_is_created_only_by_pull_request_runs` now holds that no workflow a pull
+//!   request triggers bears it and none posts it; the verdict's own logic, kept unused for the per-merge workflow, is
+//!   still held as before (R-290's exception, applied per R-369 by the orchestrator).
 //!
 //! The workflows are parsed as YAML (PyYAML, as xtask's plan_check tests use), and each job is run here step by step
 //! as a runner would: `if:` conditions evaluated (with the implicit `success()`), `${{ … }}` substituted, `run:`
@@ -845,29 +849,25 @@ fn posts_it(job: &Value) -> bool {
     })
 }
 
-/// A pull request's events (R-678: every one and every label change): its action, and the label it names.
-const PR_ACTIONS: [(&str, &str); 7] = [
-    ("opened", ""),
-    ("synchronize", ""),
-    ("reopened", ""),
-    ("labeled", "merge-ready"),
-    ("labeled", "design"),
-    ("unlabeled", "merge-ready"),
-    ("unlabeled", "design"),
-];
-
-/// Over every workflow `(file, text)`: no job posts `mutants-check` through the Checks API (R-678); each job bearing
-/// the name runs on every event its workflow's triggers start, whatever the jobs it needs ended in (a run that skips
-/// it reports it passed), in a workflow only `pull_request` starts, with no filter that skips some pull requests, some
-/// new head or some label change; and there is exactly one.
+/// Over every workflow `(file, text)`: no job posts `mutants-check` through the Checks API (R-678), and no job bearing
+/// the name is in a workflow a pull request triggers.
+///
+/// Until the owner's CI model (approved 9 Nov 2026) this held R-305's required check: exactly one `mutants-check` job,
+/// in a workflow only `pull_request` starts, unfiltered, on every event and label change (R-678), run whatever its needs
+/// ended in. The model takes per-PR mutation testing off the pull request's path ("Mutation testing: off the PR path
+/// entirely", the owner's order of 8 Nov 2026) and drops `mutants-check` from the required checks, so those assertions
+/// are retired with the check; what stays is that no pull request reports a mutants verdict, stale or skipped-as-passed,
+/// and that none is ever posted into another run's suite (R-290's exception, applied per R-369 by the orchestrator).
 fn only_pull_requests_create_it(workflows: &[(String, String)]) {
-    let mut bearers: Vec<Value> = Vec::new();
     for (file, yml) in workflows {
         let wf = parse(yml);
         let Some(jobs) = wf["jobs"].as_object() else {
             continue;
         };
         let on = triggers(&wf);
+        let on_prs = on
+            .iter()
+            .any(|(k, _)| k == "pull_request" || k == "pull_request_target");
         for (id, job) in jobs {
             assert!(
                 !posts_it(job),
@@ -875,76 +875,13 @@ fn only_pull_requests_create_it(workflows: &[(String, String)]) {
                  suite supersedes (R-678)"
             );
             let check = job.get("name").map(text).unwrap_or_else(|| id.clone());
-            if check != "mutants-check" {
-                continue;
-            }
-            let needs = match job.get("needs") {
-                Some(Value::Array(a)) => a.iter().map(text).collect(),
-                Some(v) => vec![text(v)],
-                None => Vec::new(),
-            };
-            for (event, _) in &on {
-                let actions: &[(&str, &str)] = if event == "pull_request" {
-                    &PR_ACTIONS
-                } else {
-                    &[("", "")]
-                };
-                for (action, label) in actions {
-                    for result in ["success", "failure", "cancelled", "skipped"] {
-                        let mut ctx = Ctx::without_label(event, action);
-                        ctx.label = (*label).to_owned();
-                        for n in &needs {
-                            ctx.needs.insert(n.clone(), result.to_owned());
-                        }
-                        assert!(
-                            ctx.job_holds(job.get("if")),
-                            "qa23r: a mutants-check job ({file}: {id}) is reported by a run that can skip it \
-                             ({event} {action} {label}, its needs {result})"
-                        );
-                    }
-                }
-            }
-            bearers.push(job.clone());
-            let names: Vec<&str> = on.iter().map(|(k, _)| k.as_str()).collect();
             assert!(
-                names == ["pull_request"],
-                "qa23r: mutants-check is reported ({file}: {id}) by a run a trigger other than pull_request starts: \
-                 {names:?}"
+                !(check == "mutants-check" && on_prs),
+                "qa23r: a mutants-check job ({file}: {id}) runs on a pull request, off which the owner's CI model \
+                 takes mutants"
             );
-            let filters = &on[0].1;
-            for key in ["paths", "paths-ignore", "branches-ignore"] {
-                assert!(
-                    filters.get(key).is_none(),
-                    "qa23r: {file}'s pull_request trigger does not run on every pull request ({key})"
-                );
-            }
-            if let Some(branches) = filters.get("branches") {
-                assert!(
-                    branches
-                        .as_array()
-                        .is_some_and(|b| b.iter().any(|x| x == "main" || x == "**")),
-                    "qa23r: {file}'s pull_request trigger does not run on every pull request to main"
-                );
-            }
-            let types = filters
-                .get("types")
-                .and_then(Value::as_array)
-                .cloned()
-                .unwrap_or_default();
-            for t in ["opened", "synchronize", "reopened", "labeled", "unlabeled"] {
-                assert!(
-                    types.iter().any(|x| x == t),
-                    "qa23r: {file}'s pull_request trigger does not run on every pull request event ({t})"
-                );
-            }
         }
     }
-    assert_eq!(
-        bearers.len(),
-        1,
-        "qa23r: {} jobs bear mutants-check, not one",
-        bearers.len()
-    );
 }
 
 fn workflows() -> Vec<(String, String)> {
@@ -976,12 +913,11 @@ fn qa23r_mutants_check_is_created_only_by_pull_request_runs() {
 
 negative_control!(
     qa23r_mutants_check_is_created_only_by_pull_request_runs,
-    "mutants.yml also started by push",
-    expected =
-        "qa23r: mutants-check is reported (mutants.yml: mutants-check) by a run a trigger other",
+    "mutants.yml started by pull requests again",
+    expected = "qa23r: a mutants-check job (mutants.yml: mutants-check) runs on a pull request",
     only_pull_requests_create_it(&with("mutants.yml", |t| t.replacen(
-        "on:\n  pull_request:\n",
-        "on:\n  push:\n  pull_request:\n",
+        "on:\n  workflow_dispatch:\n",
+        "on:\n  workflow_dispatch:\n  pull_request:\n",
         1
     )))
 );
@@ -990,8 +926,8 @@ mod in_ci_yml {
     use super::*;
     negative_control!(
         qa23r_mutants_check_is_created_only_by_pull_request_runs,
-        "a mutants-check job in ci.yml, which push starts",
-        expected = "qa23r: a mutants-check job (ci.yml: mutants-check) is reported by a run that can skip it",
+        "a mutants-check job in ci.yml, which pull requests start",
+        expected = "qa23r: a mutants-check job (ci.yml: mutants-check) runs on a pull request",
         only_pull_requests_create_it(&with("ci.yml", |t| {
             format!(
             "{t}\n  mutants-check:\n    if: github.event_name == 'pull_request'\n    runs-on: ubuntu-latest\n    \
@@ -1001,32 +937,8 @@ mod in_ci_yml {
     );
 }
 
-mod path_filtered {
-    use super::*;
-    negative_control!(
-        qa23r_mutants_check_is_created_only_by_pull_request_runs,
-        "mutants.yml skipped on docs-only pull requests",
-        expected = "qa23r: mutants.yml's pull_request trigger does not run on every pull request (paths-ignore)",
-        only_pull_requests_create_it(&with("mutants.yml", |t| t.replacen(
-            "on:\n  pull_request:\n",
-            "on:\n  pull_request:\n    paths-ignore: ['**.md']\n",
-            1
-        )))
-    );
-}
-
-mod skipped_after_a_failed_shard {
-    use super::*;
-    negative_control!(
-        qa23r_mutants_check_is_created_only_by_pull_request_runs,
-        "mutants-check without always()",
-        expected = "qa23r: a mutants-check job (mutants.yml: mutants-check) is reported by a run that can skip it",
-        only_pull_requests_create_it(&with("mutants.yml", |t| t.replace(
-            "  mutants-check:\n    if: always()\n",
-            "  mutants-check:\n    if: github.event_name == 'pull_request'\n"
-        )))
-    );
-}
+// `path_filtered`, `skipped_after_a_failed_shard`, `skipped_on_a_label_taken_off` and `no_unlabeled`, the controls of
+// R-305's and R-678's per-PR `mutants-check`, are retired with it (the owner's CI model, 9 Nov 2026).
 
 mod posted_again {
     use super::*;
@@ -1037,42 +949,13 @@ mod posted_again {
             "qa23r: mutants-check is posted through the Checks API (mutants.yml: mutants-report)",
         only_pull_requests_create_it(&with("mutants.yml", |t| {
             t.replacen(
-            "  mutants-check:\n    if: always()\n    needs: mutants-verdict\n    runs-on: ubuntu-24.04\n",
+            "  mutants-check:\n    if: always() && github.event_name == 'pull_request'\n    needs: mutants-verdict\n    runs-on: ubuntu-24.04\n",
             "  mutants-report:\n    if: always()\n    needs: mutants-verdict\n    runs-on: ubuntu-24.04\n    \
              steps:\n      - run: gh api repos/o/r/check-runs -f name=mutants-check -f head_sha=abc\n  \
              mutants-check-unused:\n    if: always()\n    needs: mutants-verdict\n    runs-on: ubuntu-24.04\n",
             1
         )
         }))
-    );
-}
-
-mod skipped_on_a_label_taken_off {
-    use super::*;
-    negative_control!(
-        qa23r_mutants_check_is_created_only_by_pull_request_runs,
-        "mutants-check skipped when a label is taken off",
-        expected = "qa23r: a mutants-check job (mutants.yml: mutants-check) is reported by a run that can skip it \
-                    (pull_request unlabeled merge-ready",
-        only_pull_requests_create_it(&with("mutants.yml", |t| t.replacen(
-            "  mutants-check:\n    if: always()\n",
-            "  mutants-check:\n    if: always() && github.event.action != 'unlabeled'\n",
-            1
-        )))
-    );
-}
-
-mod no_unlabeled {
-    use super::*;
-    negative_control!(
-        qa23r_mutants_check_is_created_only_by_pull_request_runs,
-        "mutants.yml not run when a label is taken off",
-        expected = "qa23r: mutants.yml's pull_request trigger does not run on every pull request event (unlabeled)",
-        only_pull_requests_create_it(&with("mutants.yml", |t| t.replacen(
-            "types: [opened, synchronize, reopened, labeled, unlabeled]",
-            "types: [opened, synchronize, reopened, labeled]",
-            1
-        )))
     );
 }
 

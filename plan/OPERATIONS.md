@@ -91,6 +91,7 @@ milestone waits on it, and no CI workflow runs it.
    - The script warns, and does not fail, when the machine's `python3` is another minor version than the one CI sets
      up (R-347): `plan/check_plan.py` and the xtask tools need only Python 3 with PyYAML.
 2. **Read** `CLAUDE.md`, `plan/WORKFLOW.md`, `plan/CURRENT_RULES.md`, this file and `REVIEW_QUEUE.md` (everything open).
+   `plan/CURRENT_RULES.md` is not committed: run `python3 plan/tools/regenerate.py` first (the owner, 8 Nov 2026).
    Then `gh pr list --repo Ma1achy/Principia` for the PRs in flight (in a cloud session, its REST form, § "Where the
    build loop runs"). The loop needs `gh`, signed in to GitHub
    (`gh auth status`); CI's runner images have it, so the setup script doesn't install it.
@@ -214,16 +215,26 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   it (R-369).
 - **Mutants.** The implementer runs `cargo mutants --in-diff` on its own diff against `origin/main` before it requests
   review (opens the PR), and again before it pushes fixes for survivors (R-388). It tests the boundary of every
-  comparison and match arm it adds. Reviewers don't run it, and CI's mutants gate stays the authority (`mutants.yml`,
-  R-302): a clean local run doesn't replace a green `mutants-check`. The local run gets a target directory of its own
-  (`<target>-mutants`), since a mutants run can leave a mutated build that cargo treats as fresh, deleted straight
-  after. It runs through the job queue (R-658), at the implementer's priority (`build`, or `fix` in a fix round), on
-  the head the implementer is about to push, never on work in progress. A local run uses R-348's two caps, the
+  comparison and match arm it adds. Reviewers don't run it. Since the owner's CI model (R-908, R-909) no pull-request
+  run mutates (`mutants.yml` runs on no pull request; the nightly full run and, once proven, the Windows runner's
+  per-merge run are where CI mutates), so the local run is the pull request's mutation check. *Was:* "CI's mutants
+  gate stays the authority (`mutants.yml`, R-302): a clean local run doesn't replace a green `mutants-check`." The
+  local run gets a target directory of its own (`<target>-mutants`), since a mutants run can leave a mutated build
+  that cargo treats as fresh, deleted straight after. It runs through the job queue (R-658), at the implementer's
+  priority (`build`, or `fix` in a fix round), on the head the implementer is about to push, never on work in
+  progress. A local run uses R-348's two caps, the
   per-mutant timeout and the memory cap on test processes, at the values CI uses (REQ-VAL-180, REQ-VAL-181), where the
   machine enforces them (applied per R-204, accepted by R-352): on macOS a local run gets the timeout only, and CI's
-  Linux runners enforce both caps (R-352). The `mutants::skip` marker doesn't compile without the `mutants` crate as a
-  dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite
-  (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
+  Linux runners enforce both caps (R-352). It takes CI's per-test kill limits too, with the baseline outside them (the
+  owner, 8 Nov 2026: "Baseline with no kill limit; same limits for nightly and local"), in the two steps CI's runs take:
+  the baseline alone, `cargo mutants --in-diff <diff> --build-timeout 0 -o <dir>/baseline` (exit 3: measured), under the
+  default nextest profile; then `cargo xtask mutants-limits <dir>/baseline/mutants.out`, which fails on a test past half
+  its limit, and `cargo xtask mutants-timeout <dir>/baseline/mutants.out`, which gives the per-mutant timeout; then the
+  mutants, `cargo mutants --in-diff <diff> --baseline=skip --timeout <that timeout> -o <dir>`, with `--env
+  NEXTEST_PROFILE=mutants` on its job (`.config/nextest.toml`'s `mutants` profile), so a hung mutant is ended in minutes
+  and counted caught. The `mutants::skip` marker doesn't compile without the `mutants` crate as a dependency (E0433) and
+  skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite (R-197), or a justified entry
+  in `.cargo/mutants-equivalent.toml` (R-202).
   - **A local run that mutates the gui crate uses hard limits (R-439, amending R-388).** A local gui-crate run crashed
     the Mac twice (two kernel watchdog panics, 15 Oct 2026): a mutant made a gui test process allocate about 10 GB,
     with 14 to 20 copies under nextest on an 18 GB machine. So where the diff touches `crates/gui/`, the gui crate's
@@ -330,17 +341,17 @@ merge:
 required check on a pull request is stuck, no agent opens or updates any other pull request, and no other pull request
 merges, until `main` is green again or the check reports; the owner is told in one message what is red or stuck. A
 stuck check is cleared by re-running only the job that reports it, never a whole pipeline. A CI-tooling pull request,
-one that changes what CI runs or checks, shows its own `xtask-ci` run passing on its head before it merges: #381
-merged and broke `main`.
+one that changes what CI runs or checks, shows its own run of what it changes passing on its head before it merges
+(its `process` check, the process tests, since the owner's CI model of 9 Nov 2026, R-907 and R-909; *was:* "its own `xtask-ci` run"):
+#381 merged and broke `main`.
 
-**Advisory bot reviews before the merge (R-651, a standing rule).** Before step 3, the orchestrator's merge script
-checks, for Codex, Gemini CLI and Copilot each:
+**Advisory bot reviews before the merge (R-651, a standing rule; R-910).** Before step 3, the orchestrator's merge
+script checks, for Codex and Gemini CLI each (Copilot is never requested, R-910):
 - **A review on the exact head SHA being merged.** Where a bot's last review is on an older head, it re-requests that
-  bot (`@codex review`, `@gemini-cli /review`, Copilot re-requested as a reviewer) and waits for it. A bot that hasn't
-  reviewed the exact SHA within its limit, counted from the request (Codex 25 minutes; Gemini CLI 30 minutes, its job's
-  25-minute timeout, PR #339, plus start-up; Copilot 15 minutes), errors, or refuses on quota or rate limit counts as
-  unavailable: the PR notes "no <bot> review on <sha>: <reason>", and the merge goes ahead on the others, never blocked
-  by a bot.
+  bot (`@codex review`, `@gemini-cli /review`) and waits for it. A bot that hasn't reviewed the exact SHA within its
+  limit, counted from the request (Codex 25 minutes; Gemini CLI 30 minutes, its job's 25-minute timeout, PR #339, plus
+  start-up), errors, or refuses on quota or rate limit counts as unavailable: the PR notes "no <bot> review on <sha>:
+  <reason>", and the merge goes ahead on the others, never blocked by a bot.
 - **No unresolved bot thread.** Every finding has been verified against the code, the spec or the physics and closed
   out with a reply: fixed (the commit named), not applicable (wrong, out of scope or already covered, with the reason),
   or moved to a tracked task or RQ; then resolved. A thread resolved without a reply is reopened and answered. A wrong
@@ -362,145 +373,129 @@ its branch at once. So if a stack is ever needed, per PR n: `gh pr edit n+1 --ba
 (CLAUDE.md § Git, R-345, R-362). To recover a closed child: push its branch back at the merged PR's `headRefOid`,
 `gh pr reopen`, then `gh pr edit --base main`.
 
-**Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it,
-except for adding `mutants-check`, the one change R-305 allows. The human removed `gpu-kernel` from the required
-checks until #96 (TASK-M0-14) merged, since PRs off `main` never reported it, and required it again since. The human
-removed `mutants-check` from the required checks on 3 Nov 2026 (R-678): "`mutants-check` is no longer a required check
-on main: I removed it from branch protection because it was hanging merges." His condition for requiring it again:
-"When it's merged and verified on one real PR, tell me and I'll re-add `mutants-check` as required." So once R-678's
-fix (`mutants-check` a job of every `mutants.yml` run) has merged and a real pull request's merge-ready run has
-reported `mutants-check`, the orchestrator tells the human, and he requires it again; until then the merge watcher's
-wait for the merge-ready run's `mutants-check` (§ "Mutants on the merge-ready head") is the only gate on it. The
-required checks are `plan/HUMAN_SETUP.md` §2's list, `mutants-check` among them though `main`'s protection lacks it
-until he re-adds it, which `xtask/tests/ci_changes.rs` checks every required check against on every path (R-678).
+**Required checks.** Branch protection is the human's (`plan/HUMAN_SETUP.md` §2); the orchestrator never changes it.
+The owner's CI model (R-908 and R-909; his order of 8 Nov 2026: "PR required checks become: build, fmt, Clippy, the
+product test suite, a lavapipe GPU smoke set, reviews"; R-909's PR tier: "check_plan.py, reviews-complete, pr-check,
+no-atlas-params") makes them `fmt`, `clippy`, `build`, `ci`, `gpu-lavapipe`, `gpu-metal`, `pr-check`,
+`reviews-complete` and `no-atlas-params`, which `plan/HUMAN_SETUP.md` §2 lists and `xtask/tests/ci_changes.rs`
+checks every required check against on every path; the owner switches branch protection to them himself, from the
+copyable list, old to new, the orchestrator gives him when the PR-tier restructure lands (R-909). *Was:* `ci`,
+`pr-check`, `reviews-complete`, `xtask-ci`, `gpu-kernel`, `gpu-metal`, `gpu-lavapipe` and `mutants-check`, which
+`mutants-check`, `xtask-ci` and the full-tier GPU jobs leave (R-907 to R-909). The history kept: the human removed
+`gpu-kernel` from the required checks until #96 (TASK-M0-14) merged, since PRs off `main` never reported it, and
+required it again since; he removed `mutants-check` on 3 Nov 2026 (R-678), "because it was hanging merges", and
+required it again once R-678's fix had reported on a real pull request; R-305 allowed the orchestrator one settings
+change, adding `mutants-check`, which lapses with it (R-907).
 
-**What CI runs on a pull request (R-656, R-662, R-677, R-684, R-790).** `ci.yml` runs on a push to `main` (and to a `measure/`
-branch, R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests
-keeps one `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is
+**What CI runs on a pull request: the PR tier (the owner's CI model, R-909, approved 9 Nov 2026; R-907, R-908, his order of 8 Nov 2026:
+"PR feedback in under 30 minutes … Product correctness is what CI protects: physics, numerics, output, GUI behaviour.
+Machinery that tests the machinery is secondary").** `ci.yml` runs on a push to `main` (and to a `measure/` branch,
+R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps
+one `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is
 never cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one
 group per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs
-the `pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job,
-`mutants-check` and `mutants-fixture` classify the change with `scripts/ci_changes.sh` (the pull request's merge
-commit against the base it merges onto; any other run runs everything) into three tiers, a change touching several
-taking the highest (R-677):
+the `pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job
+classifies the change with `scripts/ci_changes.sh` (the pull request's merge commit against the base it merges onto)
+into three tiers, a change touching several taking the highest (R-677):
 - **code**, tier (a): `crates/`, `xtask/`, `fixtures/`, the Cargo files, the toolchain, `.github/`, `.cargo/`, the one
-  datum only full CI reads (`plan/requirements.yaml`, which every numerical gate and the gpu-kernel tests check their
-  thresholds against, when a requirement is added or removed, a field code reads changes, or the field check cannot
-  tell), the classifier `scripts/ci_changes.sh` and its field check `scripts/ci_req_fields.py`, the containment
-  `scripts/contain.sh`, and any path the allowlist doesn't name, so an unknown top-level path fails towards full CI:
-  full CI on the merge-candidate head, and the quick tier before it (R-684, below);
+  datum only the code tier reads (`plan/requirements.yaml`, which every numerical gate and the gpu-kernel tests check
+  their thresholds against, when a requirement is added or removed, a field code reads changes, or the field check
+  cannot tell), the classifier `scripts/ci_changes.sh` and its field check `scripts/ci_req_fields.py`, the containment
+  `scripts/contain.sh`, and any path the allowlist doesn't name, so an unknown top-level path fails towards the code
+  tier;
 - **data**, tier (b): the plan's task data, `plan/tasks/`, `plan/tasks.yaml` and `plan/MILESTONES.md`, and
   `plan/requirements.yaml` when only fields no code reads change (`statement`, `note`, `source`, `rulings`, `area`,
   `rq`; `scripts/ci_req_fields.py` decides, printing one reason line in the `changes` job's log, and
   `xtask/tests/ci_changes.rs` checks its list of the fields code reads against the loaders), and the GUI's
   artboards and references, `docs/gui/design/` and `docs/gui/reference/`, each with its readers named in the script:
-  the build, test, release and controls jobs and the GPU suites' jobs are skipped, and `ci-workspace` runs the cheap
-  checks and the tests of the code that reads what changed, each test binary built alone (`gate-report`'s,
-  `gate-provisional`'s, `reviews-check`'s, the plan checks' and the progress banner's in xtask and validation's Part 6
-  catalogue for the task data; the screenshot tests and the HTML references' tests for the GUI's), in place of its own
-  tests; `xtask/tests/ci_changes.rs` checks that every reader its scan finds is among them;
+  no build and no product suite; the `ci` check runs the tests of the code that reads what changed, beside code or not,
+  each test binary built alone (`gate-report`'s, `gate-provisional`'s, `reviews-check`'s, the plan checks' and the
+  progress banner's in xtask and validation's Part 6 catalogue for the task data; the screenshot tests and the HTML
+  references' tests for the GUI's), and `xtask/tests/ci_changes.rs` checks that every reader its scan finds is among
+  them;
 - **docs**, tier (c), meaning it changes none of Principia's code (R-662; the owner, 31 Oct 2026: "Only the actual
   Principia CODE matters in ci"): every other path on the script's allowlist, `docs/`, `plan/` (its prose and Python),
-  `scripts/`, `workbench/`, `.claude/` (its commands, agents and settings; R-790) and the root's markdown: as tier (b),
-  but `ci-workspace` runs only the cheap checks, plan-check and the vocabulary lint, beside `no-atlas-params.yml`, the
-  atlas guard;
-- **no GPU-path file** (only data and docs paths, `crates/prin/` and `crates/gui/`, but for the five paths of
-  `crates/gui/` that `gpu-metal`'s `lattice_` step reads, R-692: `crates/gui/src/mock/*.wgsl`,
-  `crates/gui/src/mock/canvas.rs`, `crates/gui/src/tests/mock_lattice.rs`, `crates/gui/src/tests/lattice_controls.wgsl`
-  and `crates/gui/Cargo.toml`): the GPU suites' jobs (`gpu-kernel suites`, `gpu-metal suites`, `gpu-lavapipe suites`)
-  are skipped; everything else runs;
-- **no `.rs` file under `crates/`** (`mutants=false`; the owner, 2 Nov 2026: "Mutants run only when crates/ source
-  changes, on the merge-ready head"): `mutants-check` passes at once, "not applicable", and `mutants`' shards find no
-  `.rs` file under `crates/` and pass. xtask's own code is mutated by the nightly full run. `mutants-fixture`, the gate's
-  self-test on its fixtures, skips its steps only on a docs change, tier (c) (`tier=docs`), so a change to the gate's
-  configuration (`.cargo/mutants.toml`, `fixtures/mutants/`, `scripts/contain.sh`, `mutants.yml`) runs it.
-`docs_only`, the name R-656 gave the verdict, is true on a tier (b) or (c) change, so the skips and gates kept it.
+  `scripts/`, `workbench/`, `.claude/` (its commands, agents and settings; R-790) and the root's markdown: only the
+  plan checks and the vocabulary lint, in `build`, beside `no-atlas-params.yml`, the atlas guard.
+On a code change the jobs run in parallel:
+- `fmt`, first and on its own: `cargo fmt --all --check`;
+- `clippy`: `cargo clippy --workspace --all-targets -- -D warnings` (R-195);
+- `build`: `cargo build --workspace`, which builds every binary the product tests' crates may not; `cargo doc`, every
+  rustdoc warning an error (R-387); the product rules as commands, not through their slow test wrappers: `cargo xtask
+  deps` (REQ-SYS-004), `lint constants`, `lint wgsl`, `lint vocab`, `lint compute-pipelines`, `lint no-alloc`, the
+  generated files current (`cargo xtask codegen` writes nothing) and the static listing that every test has a
+  registered negative control (`cargo xtask controls --list`, which runs no control); and the plan checks
+  (`plan/check_plan.py`, `plan/tools/current_rules.py --check`);
+- `ci`: the product tests of the changed crates and their reverse dependencies (`.github/scripts/ci_tier.sh`, from
+  `.github/scripts/ci_quick_crates.py`, which names how paths map to crates; only a change to `gui`, `prin`, or `xtask`,
+  `.github/` and `scripts/` narrows the set, since `validation`, every other crate's dev-dependency, links the rest),
+  under the `pr` nextest profile, and their doctests. The `pr` profile runs every test but four kinds, each named in
+  `.config/nextest.toml`: the process tests; the in-depth GPU tests (the `gpu-kernel` profile's, which need the built
+  kernel); the golden runner over every suite and the screenshot runner's self-test (R-909; the owner, 9 Nov 2026:
+  "product correctness — per merge, never retired"); and the slow tier, each test measured over 60 s (the per-test
+  times of 8 Nov 2026), named with its time (R-904, R-908). A product-tooling test in the slow tier is covered on the
+  pull request by its command (`lint wgsl` in `build`, `build-kernel` in `gpu-lavapipe`). The slow tier holds 34
+  physics, validation and render tests (4,981 s measured) by the owner's ruling of 9 Nov 2026, "1: move them.", in
+  answer to R-904's "moving any physics or validation test into the slow tier comes to me first";
+  `xtask/tests/ci_pr_tier.rs` pins exactly that list, so no other physics, validation or render test enters the slow
+  tier without a ruling;
+- `gpu-lavapipe` and `gpu-metal`, on a change with a GPU-path file (`gpu`; R-692's rule unchanged): `cargo xtask
+  build-kernel`, then the GPU smoke set, one fast test of each GPU stage (the `gpu-smoke` profile, which names each and
+  why), and the mock noise's shared-lattice-corner tests, bit-equal on every backend (REQ-GUI-412, R-685, R-692), on
+  lavapipe and on Metal, and on lavapipe every numerical gate but `decode-agreement`. They run on a push to
+  `main` too, to save their own rust-gpu builds there (REQ-SYS-075);
+- `process`, advisory, no required check: the process tests (the `process` profile, the split of 9 Nov 2026's process
+  class: CI's own tests, the plan checks', the negative-control registry's, the job queue's, the deps rules' synthetic
+  workspaces' and the like), less their own slow tier, only when the change touches `.github/`, `xtask/`, `scripts/`,
+  `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` (`scripts/ci_changes.sh`'s `process`). A failing process test
+  is read and fixed in its pull request. On `main`, the per-merge workflow (order step 3) brings the owner's "A failing
+  process test never makes main red; it files a task" (8 Nov 2026); until it lands, a failing process test on `main`
+  turns the interim run's `ci` or `xtask-ci` job red and is handled as a red `main`. The orchestrator's merge script
+  refuses a merge with a red `process` job on the head, though branch protection does not require it;
+- `web-skeleton`, advisory: the v1 web skeleton's wasm build.
+Every job bearing a required check runs on every pull request, `if: always()`, and skips its work inside the job on the
+classification's verdict (R-656: "Do the GPU and mutants skips inside the job … then skip as success under the same
+check name"); its first step fails when `changes` did not succeed, so a failed classification never passes a skip, and
+a required check is never a job skipped at job level. No job polls or waits on another run. `merge-batch.sh`'s
+`gh pr checks --required` reads `pass` for each.
 
-**The code tier's two levels (R-684).** The classifier applies first, so a data or docs head runs neither. Full CI (the
-unit, property, numerical-gate and native golden suites, the controls, the release profile and the GPU suites where
-the GPU-path rule applies) runs on the merge-candidate head, the one carrying `merge-ready`, and on every push to
-`main`. Every other code pull-request head runs the quick tier, one job, `ci-quick` (`ci-quick.yml`, which `ci.yml`
-calls): fmt, clippy and the build over the workspace, then the tests of the changed crates and their reverse dependencies, the `ci` and `ci-workspace` nextest
-profiles' and the doctests (`.github/scripts/ci_quick_crates.py`, which names how paths map to crates; only a change
-to `gui`, `prin`, or `xtask`, `.github/` and `scripts/` narrows the set, since `validation`, every other crate's
-dev-dependency, links the rest). So before the label:
-- "CI green on the head" means `ci-quick`, `pr-check` and `reviews-complete` pass, the full-only checks still pending;
-- `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` read pending: `changes` posts each as a pending commit
-  status, and no job reports it, its gate skipping as `matrix.check` (run 41972273540), never a required name.
-  A skip therefore cannot pass one, and no pull request merges until the full suite has passed on its exact head.
-  `required-guard.sh` passes a check only on `pass`, so it reads neither a skip nor a pending status as one;
-- the watcher puts `merge-ready` on as § "Mutants on the merge-ready head" says, with no need for a full run first. That
-  starts two things on the head, without a push: `mutants.yml`'s merge-ready run, and, through `ci-full.yml`, a new
-  attempt of the head's `pull_request` run of `ci.yml`. `ci.yml` runs on no label change, because of each workflow's
-  runs on a head branch protection counts only the latest run's check suite (R-678): a re-run keeps the suite, and
-  its `changes` job reads the live label and says full. A run still going is cancelled first. `ci-status` closes the
-  five statuses from their gates;
-- a push makes the next head quick, its label having come off; taking `merge-ready` off cancels a full attempt still
-  going, and a full tier that has passed stands, having passed on that exact head. Putting it back re-runs the full
-  tier only if some full-only check has not passed. The automatic retry (`retry.yml`) counts attempts, and the full tier
-  starts at attempt 2, so it has one retry to the quick tier's two.
-The rationale, R-684's: since R-676 fix rounds are verified locally through the job queue, so full CI on intermediate
-heads duplicated that work; the guarantee that `main` only receives fully-tested heads is unchanged.
+What a pull request leaves to a merge runs on every push to `main`: the slow tier, the in-depth GPU suites on lavapipe
+and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xtask golden --all`, `cargo xtask gate
+decode-agreement`), the golden and screenshot runners' self-tests, the release profile (R-547), `cargo xtask ci`, the
+controls run among it, and every process test. Until the per-merge workflow takes them (the owner's CI model, R-909, order
+step 3), they are `ci.yml`'s interim per-merge run, the full suite's jobs as they ran before, on a push only, bearing
+no required check. A head that changes only prose a test reads does not run that test unless it changes the
+machinery, so a contract's renamed heading can turn `main` red after a green pull request (R-662). New code that loads
+a data file for behaviour adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a
+literal data path missing from it.
 
-Every required check reports under its own name on a full, data or docs run and concludes success, so the merge step
-is unchanged: `merge-batch.sh`'s `gh pr checks --required` reads `pass` for each. A skipped job never bears a required
-name: the required checks `ci`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and `gpu-lavapipe` are gates that run whatever their
-jobs ended in, but on a quick run, and pass a skipped one only on the classification's verdict, and matrix jobs are
-named `<id> (<shard>)`, or for a gate, the one value of its matrix.
-`mutants-check` is a job of every run of `mutants.yml`, `if: always()` (R-678): the merge-ready run's verdict
-(below), and success, "not applicable", on a head whose change has no `.rs` file under `crates/`, which has no mutant
-the gate runs (R-677), or that is not merge-ready. What a pull request skips runs on `main` after
-it merges, where every job runs. A superseded head's cancelled run leaves its gates failed or cancelled, as before:
-the owner kept them as they are, TASK-M0-45's checks and R-266 standing (30 Oct 2026, on #351, no ruling). A
-head that changes only prose a test reads does not run that test, which runs on `main` once it merges, so a contract's
-renamed heading can turn `main` red after a green pull request (R-662). New code that loads a data file for behaviour
-adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a literal data path missing
-from it.
-
-**Mutants on the merge-ready head (R-656, R-676).** The mutants gate (`mutants.yml`: the shards, `mutants-fixture` and
-the verdict) runs once per approved head, not on every push:
-- **The `merge-ready` label.** The orchestrator's merge watcher puts it on a pull request once every reviewer its task
-  names has approved the current head, with the user's own token, not a workflow's (a label a workflow's
-  `GITHUB_TOKEN` puts on starts no run):
-  `gh api --method POST repos/Ma1achy/Principia/issues/<N>/labels -f 'labels[]=merge-ready'`. It puts it on only
-  where it is absent; adding it again starts nothing. That starts the merge-ready run, whose `mutants-check` is the
-  verdict, success or failure. Before the label a code head's `mutants-check` passes "not applicable" (R-678), so the
-  merge waits for the merge-ready run's `mutants-check` to pass with the notice "no surviving mutant", not for any
-  pass. The watcher reads that notice from the check run's annotations
-  (`gh api repos/Ma1achy/Principia/check-runs/<id>/annotations`, the message of the one titled `mutants-check`): a
-  job's step summary never reaches its check run, whose `output` title, summary and text are null.
-- **It starts the full tier too (R-684).** `ci-full.yml` re-runs the head's `ci.yml` run, whose new attempt is full CI;
-  § "What CI runs on a pull request". The merge waits for both.
-- **A push takes it off.** On every push to the pull request, `merge-ready-off` removes the label, and that run's
-  `mutants-check` passes "not applicable", so the gate runs again only once the new head is approved and labelled
-  again, and the push cancels a merge-ready run still going on the old head. Another label put on or taken off runs
-  only `mutants-check`, which reports the head's merge-ready verdict while the label is on, waiting for a merge-ready
-  run still going. Taking `merge-ready` off cancels its run. To re-run the gate on the same head (a flaky shard), take
-  the label off and put it back.
-- **A failed verdict.** Every approval comes before any mutant has run, so a survivor first shows after them, and it is
-  still a qa finding (R-196; `plan/reviewers/qa.md`'s mutants item). The orchestrator reads the failed
-  `mutants-check`: the verdict run's log and each shard's report of survivors (a shard that failed flakily, with no
-  survivor, is re-labelled as above). It dispatches qa to judge the survivors, a review of the head that names each
-  one, and then the implementer for a fix round: a test that kills each survivor, or an entry in
-  `.cargo/mutants-equivalent.toml` with its one-line justification, which the code and qa reviewers approve (R-202).
-  The fix round's push takes the label off, every reviewer the task names approves the new head again, and only then
-  does the watcher put the label back on, starting the new head's merge-ready run.
-- **What branch protection sees (R-678).** Of each workflow's runs on a head, branch protection counts only the latest
-  run's check suite, and a check run posted through the Checks API joins a suite GitHub picks: #379's posted
-  `mutants-check` sat in a superseded suite on #384's head and read "expected". So `mutants-check` is a job of every
-  run of `mutants.yml`, which runs on every new head and every label change, `if: always()`, never skipped, and the
-  latest run always carries it. A head whose change has no `.rs` file under `crates/` passes it at once (R-677), the
-  verdict the shards would reach.
+*Was (R-656, R-676, R-677, R-678, R-684, until the owner's CI model of 9 Nov 2026, R-907 to R-909):* a code pull request's head ran
+the quick tier, one job, `ci-quick` (fmt, clippy, the build and the tests of the changed crates and their reverse
+dependencies under the `ci` and `ci-workspace` profiles), and full CI (the unit, property, numerical-gate and native
+golden suites, the controls, the release profile and the GPU suites) ran on the merge-candidate head, the one carrying
+the `merge-ready` label, which the merge watcher put on once every reviewer had approved the head, with the user's own
+token. `ci-full.yml` re-ran the head's `ci.yml` run on the label, waiting for a quick run still going (the full tier
+added to the quick tier, the owner, 7 Nov 2026), and `ci-status` closed the full-only checks `changes` had posted
+pending. The same label started `mutants.yml`'s merge-ready run, the per-PR mutation gate (R-196, R-202, R-302), whose
+`mutants-check`, a job of every run of the workflow (R-678), was the verdict; a push took the label off
+(`merge-ready-off`), and a failed verdict went to qa and a fix round. The owner's CI model ended all of it on the pull
+request's path, the label-triggered full attempt and the per-PR mutants run with it, and mutation testing moved "off
+the PR path entirely; nightly/Windows as already agreed" (his order of 8 Nov 2026, R-908).
+`mutants.yml` is kept, unused, for the per-merge work.
 
 **Fix rounds are verified locally first (R-676).** A fix round runs the tests its fixes touch, their controls, and its
 mutants run where R-388 asks for one, through the job queue (R-658) on the head it is about to push, before it pushes;
 CI then confirms that head. A push is never how a fix round finds out whether its fix compiles or passes.
 
-**Merging `main` into an open pull request, in batches (R-676).** Each push to a pull request re-runs its CI and takes
-its `merge-ready` label off, so `main` is not merged into open pull requests after every merge to `main`. It is merged
-in only when the pull request conflicts with `main`, when a merged change it depends on must be in its tree, or once,
-right before the `merge-ready` label, after the reviewers' approvals and before § "Merging" step 2's merged-tree check.
-Approvals are of a head, so the reviewers approve the merged head again before the watcher labels it.
+**Merging `main` into an open pull request, in batches (R-676).** Each push to a pull request re-runs its CI, so `main`
+is not merged into open pull requests after every merge to `main`. It is merged in only when the pull request
+conflicts with `main`, or when a merged change it depends on must be in its tree; then the reviewers approve the merged
+head again. *Was (until the owner's CI model of 9 Nov 2026, R-909, which ended the label):* "Each push … takes its
+`merge-ready` label off", and the reviewers approved the merged head again "before the watcher labels it". An early
+start's merge of `main` before its pull request opens stays (R-388). *7 Nov 2026 (R-827, RQ-704 (b)):* the merge "once, right before the `merge-ready` label"
+lapses where there is no conflict; § "Merging" step 2's merged-tree check stands in for it. *Was:* "or once, right
+before the `merge-ready` label, after the reviewers' approvals and before § "Merging" step 2's merged-tree check.
+Approvals are of a head, so the reviewers approve the merged head again before the watcher labels it."
 
 **CI demand (R-713).** A head not ready for review is not pushed, and pushes go in order of what is closest to merging.
 
@@ -508,11 +503,12 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 **Measuring CI (R-715).** A speed-up is claimed or rejected only on medians over at least 5 runs per arm, with per-step durations and `cargo build --timings` totals. `ci-workspace` red on a test timer is diagnosed first, as disk pressure, runner load or a slow test; the retry doesn't cover it, the timeout isn't raised, and the cause is fixed or the shard split.
 
-**CI candidates (R-716).** The ten candidates are worked one pull request each, measured before and after, negative results reported. Items 3 and 4 and the order against R-683 are held in RQ-703, RQ-705 and RQ-706.
+**CI candidates (R-716).** The ten candidates are worked one pull request each, measured before and after, negative results reported. Item 4's strip half is dropped, R-374 standing (R-828); item 3's cache is not taken, the kernel's output shared as an in-run artifact only if a measurement shows it saves time, R-285 unchanged (R-829); what remains of R-683's series follows R-684's order, step (1) next (R-832). *Was:* "Items 3 and 4 and the order against R-683 are held in RQ-703, RQ-705 and RQ-706."
 
-**No refresh merges (R-717).** `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch with no conflict. RQ-704 holds this against R-676's paragraph in this section and R-388.
+**No refresh merges (R-717).** `main` is not merged into a pull request, and CI is not re-run, just to refresh a branch with no conflict. R-827 settles it against R-676's paragraph in this section and R-388 (*was:* "RQ-704 holds this against R-676's paragraph in this section and R-388.").
 
 **Generated files (R-718).** A generated plan file is not committed if nothing needs it in git. Otherwise it is marked in `.gitattributes`, a conflict in it is resolved by regenerating, never by hand, and a check shows the committed copy matches a fresh regeneration.
+Applied, by the owner's order of 8 Nov 2026 ("Generated plan files (plan/coverage.md etc.) stop being committed; CI regenerates and checks them."): `plan/CURRENT_RULES.md`, `plan/coverage.md` and the reviewers' lists, `plan/reviewers/lists/`, are not committed (`.gitignore`); `python3 plan/tools/regenerate.py` writes them, and every reader runs it first; a reviewer, who creates no file in its worktree, runs it with `--out <its target directory>/plan-generated` and reads each file at its repo path under that directory (`.../plan-generated/plan/CURRENT_RULES.md`), as `--out` writes nothing into the tree. The gate and report blocks of `plan/MILESTONES.md` stay committed, as `cargo xtask gate-report` and tests read them from git: `.gitattributes` marks the file, and a conflict inside a block is resolved by `python3 plan/tools/regenerate.py --all`, which rewrites every block whole; a conflict in its hand-written text is resolved by hand. `plan/check_plan.py`, which CI runs on every plan and docs change, fails if a generated file is committed, if a generator can't build its file from the sources, or if the committed blocks differ from a fresh regeneration.
 
 **Numbers.**
 - **An RQ's form.** A heading `## RQ-n: <question>`, a `- **File, section:**` field and a `- **Applied meanwhile:**`
@@ -697,6 +693,8 @@ a split moves every requirement to a named task (R-264).
 - **When to ask** is R-369's as R-812 amends it, applying from 7 Nov 2026 (CLAUDE.md § "When to ask the human", which
   lists both kinds of door). If the answer would be a rubber stamp, don't ask; if running something could answer the
   question, run it instead. Correcting the record is two-way; changing what a ruling or requirement says is one-way.
+  Correcting a requirement's statement to match a ruling is two-way only where it restates the ruling's words
+  faithfully; otherwise it is one-way (R-857).
   When unsure which door it is, treat it as one-way, with a recommendation and a measurable alternative in the report.
   Never size, never what a ruling already settles, and once a one-way door is open it stays open for that work, unless
   it turns out different: more at stake, a check failing, something the human didn't know.
@@ -704,6 +702,9 @@ a split moves every requirement to a named task (R-264).
   tooling among them: write the criterion before running, run it, decide, and report the numbers, and never adjust the
   criterion after seeing results (R-649). Each goes in the veto list of the next `/rulings-report`, and in the morning
   report with its numbers, as "decided, open to veto". Reverting on the human's veto must be possible without loss.
+  The morning report is the dated report file in `orch/` (R-857). A change of the mutants job's shard count
+  (REQ-VAL-149), decided by measurement, is one of these, under R-812's CI rider (R-857); lint configuration is not:
+  changing `clippy.toml` or a `[lints]` table still needs a ruling (R-197, R-857).
 - **One-way doors** go to `/rulings-report` only, never as a blocking prompt: physics where the choice changes results
   and the docs genuinely don't settle it, and R-812's other kinds of what the instrument claims or computes; calibration
   values (batched at milestone gates); passing a milestone gate; dropping or deferring a requirement; the words of the
@@ -776,9 +777,14 @@ the local job queue, `cargo xtask job` (`xtask/src/jobq.rs`), and waits for it.
   ```
   export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
   "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority fix --label TASK-M2-36 \
-    --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+    --env CARGO_TARGET_DIR=<target> -- cargo nextest run -p kernel --test roundtrip
   "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
   ```
+
+  Tests run as `cargo nextest run`, not `cargo test`, with `cargo test --doc` beside it where doctests would have run,
+  and a task's `cargo test …` acceptance command is run as its nextest equivalent, shown in the PR beside the command
+  it stands for (applied per R-369 and R-812, 9 Nov 2026; `plan/WORKFLOW.md` § "Agents' test runs: cargo nextest",
+  which lists what stays on `cargo test` and the `cargo xtask build-kernel` the built kernel's tests need first).
 
   `submit` prints the job id; `wait` blocks until the job ends, prints how it ended and its log path, and exits with
   the job's status (its exit code; 124 timed out, 125 lost, 126 not started, 130 cancelled). The job doesn't belong to
@@ -787,7 +793,7 @@ the local job queue, `cargo xtask job` (`xtask/src/jobq.rs`), and waits for it.
   jobs; `job cancel <id>` drops a queued job or ends a running one with its process group. After a merge that changes
   `xtask/src/jobq.rs`, the orchestrator builds xtask from `main` through the queue and runs `<target>/debug/xtask job
   install`, which copies it to the client's path.
-- **Priorities,** highest first, first in, first out within each: `merge`, merge-ready verification of a final head (a
+- **Priorities,** highest first, first in, first out within each: `merge`, verification of a final head (a
   reviewer's check of the PR head, the orchestrator's pre-merge checks); `fix`, fix-round tests; `build`, a new task's
   builds; `peek`, exploratory runs and measurements.
 - **The runner** runs two heavy jobs at a time (`concurrency` in the config; measured, below). Each job gets
@@ -949,12 +955,83 @@ anything outside the repository and its build and scratch directories without as
 - Benchmarks and performance gates run on the human's Mac via `prin profile` (R-186), never on a hosted runner or a
   cloud machine. A cloud session never reports a performance number of its own: it asks the human for the run, and its
   PR says it waits for it (`plan/WORKFLOW.md`).
+- Benchmarks of record stay on the owner's Mac (R-186, as R-859 confirms). Windows benchmark numbers are a separate
+  named series, labelled by machine, never mixed with the Mac's and never read against its performance gates (R-711
+  item 3, R-859).
 
 ## Windows GPU results (R-719)
 
 - A Windows-only, non-reproducing GPU result is hardware-suspect: record it, and file it as a code bug only if it reproduces on Metal or lavapipe, or deterministically on Windows.
 - A result that reproduces is checked against Metal and lavapipe. Failing everywhere is our bug. Passing elsewhere is NVIDIA Vulkan specific: file it as a platform finding, with no re-baselining.
+- A recorded run on R-711's runner takes a clean target only where it is filed as evidence, as the Paper 2 parity run
+  is; every other recorded run keeps the runner's target, as now (R-856).
 - Once the DX12 opt-in lands, the same card is the second discriminator: the same failure points at the card or our code, a different one at the Vulkan driver path.
+
+## The Windows runner's work (R-859)
+
+The owner's ruling of 8 Nov 2026 on what R-711's runner, `malachys-pc-rtx2080s`, may run:
+
+- **From the anchor move** (the owner's move of the PC hook's signing-gate anchor; before it the hook refuses `main`'s
+  merges), it may run, each as a named measurement reporting under its own name and never a required check, gathered
+  or read by any gate (R-649, R-711 item 1):
+  - the GPU suites, nightly and on pushes to `main`: Vulkan now, DX12 from Phase 2, once its opt-in lands (R-862: a
+    cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default, "local testing only, untested in CI", in no required or
+    hosted job; TASK-M0-57 builds it, TASK-M0-58 the runner's DX12 run);
+  - gpu-idle, the read-only GPU sample taken while nobody is signed in to the PC, dispatched from the Mac;
+  - the weekly proof, `runner-proof.yml`;
+  - the containment proof, `win-gpu.yml`'s `win-contain` job (the owner's CI shape order of 8 Nov 2026, step 1): by
+    `workflow_dispatch` naming it alone, never on a push, the schedule or `all`, until it has passed. It runs
+    `.github/scripts/win_contain.ps1 check`, Windows' counterpart of `scripts/contain.sh check`: a Job Object with
+    kill-on-close, a process limit (1024, applied per R-369) and REQ-VAL-181's 8 GiB per-process commit cap, each
+    scenario against a live process outside. Trigger it with
+    `gh workflow run win-gpu.yml --ref main -f only=win-contain`; the step "Containment check" ends
+    `win_contain.ps1 check: contained: ...` and exits 0 when every Job Object scenario held, exit 125 naming the one
+    that didn't otherwise, and its artifact keeps the output. Two of
+    `contain.sh check`'s assertions have no Job Object equivalent: the outside process unseen, and out of reach of a
+    kill by pid; the check reports them as gaps, accepted by R-912 (RQ-751's option (b)). Until the proof has passed,
+    every job that would be placed on Windows stays on GitHub-hosted runners. The mutants of `xtask/src/jobq.rs`, the
+    job-queue mutants, stay on GitHub's runners under (b), and may move to Windows only once the WSL2 setup passes
+    `contain.sh check` inside it, in its unprivileged mode (R-912, R-915);
+  - the heavy-work comparison: the GPU suites and one GPU-heavy mutant shard on a task branch, against hosted runners
+    (TASK-M0-56);
+  - the WSL2 distro `principia-wsl` (RQ-751 option (c); the owner's words of 9 Nov 2026: "(b) now, (c) built in
+    parallel to replace it", later and optional, never blocking). `win-gpu.yml`'s `wsl-register`, `wsl-proofs` and
+    `wsl-cpu`, each by `workflow_dispatch` naming it alone, never on a push, the schedule or `all`, never required. The
+    image is built from `scripts/wsl/build-image.sh` on a hosted runner, in the same run (another run's artifact
+    downloads only with a token, which no job on the PC holds), and registered as gh-runner under
+    `E:\wsl\principia-wsl\`, never C:, only if its manifest matches the hash pinned in `scripts/wsl/manifest.sha256`.
+    Inside: one ordinary user, `ci`, no sudo, no sudoers entry, no systemd, and `/etc/wsl.conf` exactly as the owner
+    gave it, automount and interop off (the owner's ruling of 9 Nov 2026 on RQ-751's follow-up: "Don't add [boot]
+    systemd=true or any sudoers entry, not even a narrow one"). `scripts/contain.sh` runs there in its unprivileged mode,
+    `PRIN_CONTAIN=unprivileged`, user and PID namespaces with no sudo, selected by name only; every other machine keeps
+    the strict mode, `PRIN_CONTAIN=required`, unchanged; where user namespaces can't be had the mode fails, never skips.
+    `wsl-proofs` runs the six proofs, each reported: (1) non-interactive as gh-runner, never the owner, again after a
+    reboot and with nobody signed in; (2) no drive and no Windows program reachable from inside; (3) nothing gets in,
+    nothing gets out to the LAN; (4) "contain.sh check passes inside WSL in the unprivileged mode, including the real
+    kill -9 -1, and the runner agent and other gh-runner processes survive it" (the owner's words), the Windows side's
+    survival recorded from outside the distro, before and after; (5) a rebuild's manifest equals the pin; (6) one pinned
+    commit's `cargo nextest run -p kernel --profile ci`, in WSL and on a hosted runner, the same test by test.
+    `wsl-cpu`, the CPU tests and the job queue's mutants inside, refuses until `.github/wsl-cpu-enabled` exists, which a
+    reviewed PR adds once all six proofs have passed; until then mutants of `xtask/src/jobq.rs` stay on GitHub-hosted
+    runners. **WSL contains accidents, not attacks:** it keeps a mutant's `kill(-1)`, its runaway memory and its stray
+    processes inside the distro's VM, and it is not a security boundary, since any native gh-runner process can run
+    `wsl -u root`, and root inside can mount C:. What stops malicious code reaching the PC is the signed-commit gate.
+  TASK-M0-55 builds the measurements on `main`. The list is not exhaustive (R-860): `win-gpu.yml`'s nightly
+  `win-tests` and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, the
+  benchmarks' the separate Windows series.
+- **Required or heavy CI work stays on hosted runners.** Moving mutants, or the GPU suites as gating checks, to the PC
+  is not approved. It returns as a one-way question through `/rulings-report`, with the comparison's numbers and the
+  fallback design (hosted runners take over if the PC hasn't answered in time). Until then nothing on `main` waits for
+  the PC, and a red job there is not main red.
+- **The comparison** (TASK-M0-56) writes its criterion, "clearly faster" with identical results, and commits it before
+  the first run, never adjusting it after (R-649, R-812). It starts by `workflow_dispatch` on the task branch, never a
+  push trigger there (R-861).
+- **The security rules stand unchanged:** R-174 as R-711 woke it, R-711 items 1, 5 and 6 and the owner's job rules of 5
+  Nov 2026: push to `main`, schedule and `workflow_dispatch` only, never a `pull_request` trigger; the repository and
+  actor guard; the job-started hook on the PC, with its allow-listed events and the self-check first in every job; the
+  signed-commit gate; no credential, pinned actions; never approve a fork run. A GPU job runs on an idle runner, with
+  nothing alongside it.
+- **The at-the-PC items** (`31 -Prove`, the lock undo rehearsal, the GlobalProtect uninstall) don't block deployment.
 
 ## `measure/` branches (R-272)
 

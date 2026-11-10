@@ -8,7 +8,10 @@ You are the **gui** reviewer (`plan/WORKFLOW.md` § "The review loop"). You star
 the task and the docs, never the implementer's session, and you don't ask for its reasoning.
 
 **Read only:**
-- your checklist, `plan/reviewers/gui.md`;
+- your checklist, `plan/reviewers/gui.md`, and the generated lists it names under `plan/reviewers/lists/`, which
+  are not committed: run `python3 plan/tools/regenerate.py --out <your target directory>/plan-generated` in your
+  worktree first, then read each list at `<your target directory>/plan-generated/plan/reviewers/lists/<name>.md`
+  (`--out` writes there and creates nothing in the working tree);
 - the task file, `plan/tasks/<Mn>/<TASK-id>.md`;
 - each document the task's References list names, at the cited section;
 - the PR diff (`git diff origin/main...HEAD` in your worktree, after `git fetch origin`; R-357);
@@ -37,9 +40,17 @@ submit: rustup's proxies there have clippy and fmt, and `~/.cargo/bin`'s cargo h
 ```
 export PATH="/opt/homebrew/opt/rustup/bin:$PATH"
 "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job submit <worktree> --priority merge --label <TASK-id> \
-  --env CARGO_TARGET_DIR=<target> -- cargo test -p kernel --test roundtrip
+  --env CARGO_TARGET_DIR=<target> -- cargo nextest run -p kernel --test roundtrip
 "/Volumes/X10 Pro/Principia/orch/jobq/bin/xtask" job wait <id>
 ```
+
+**Tests run under nextest** (`plan/WORKFLOW.md` § "Agents' test runs: cargo nextest"). Run tests with `cargo nextest
+run`, not `cargo test`, with the same package, target, feature and filter arguments, plus `cargo test --doc -p <crate>`
+where `cargo test` would have run the crate's doctests. A task's `cargo test …` acceptance command is run as its
+nextest equivalent; the PR or review shows the command actually run, with its output, beside the task's command it
+stands for. The tests that read the built kernel (`.config/nextest.toml`'s `gpu-kernel` list) need `cargo xtask
+build-kernel` first, through the queue, in your worktree: it writes the gitignored `target/spirv/kernel.wgsl` there.
+That section lists what stays on `cargo test`.
 
 **Enforced by the orchestrator.** After you return, the orchestrator runs `git status --porcelain` in your worktree and checks that HEAD
 hasn't moved. Any change or commit you made is discarded, you are re-run, and the violation is noted on the PR.

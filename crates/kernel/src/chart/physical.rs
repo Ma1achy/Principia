@@ -57,6 +57,7 @@ use spirv_std::num_traits::Float;
 use super::energy::{centre_potential, decode_rule, sides, Mapping, Quantity, Rule, Sides};
 use super::invariant::{self, WarpReal};
 use super::mixed::{axis_check, lerp, place, Quantity as Coordinate};
+use super::saved::{axis_code, quantity_code, Form, ParentParams, Reader, Writer};
 use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{Chart, ChartDecode, ChartOut, Constraint, ValidationResult};
 use crate::decode::invariant::{infeasible, Outcome};
@@ -638,6 +639,66 @@ impl<A: Coordinate, S, P: fmt::Debug> fmt::Debug for MixedMassRatio<A, S, P> {
             .field("held", &self.held)
             .field("mapping", &self.mapping)
             .finish()
+    }
+}
+
+/// A saved chart's parent ([`ParentParams`]), `Mixed`'s second form: the axes' codes ([`axis_code`],
+/// [`quantity_code`]), then `frozen`, `a_range`, `top`, `bottom`, `γ_K`, `held`, the mapping. The link selection `S`
+/// is not written: a saved chart carries no links (R-478).
+impl<A: Coordinate, Q: EnergyAxis, S: Selection> ParentParams for MixedEnergy<A, Q, S, f64> {
+    const FORM: Form = Form::Second;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.code(axis_code::<A>());
+        w.code(quantity_code(Q::QUANTITY));
+        w.all(&self.frozen);
+        w.all(&self.a_range);
+        w.all(&[self.top, self.bottom, self.gamma_k, self.held]);
+        w.mapping(self.mapping);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        let () = Self::UPSTREAM;
+        r.expect(axis_code::<A>())?;
+        r.expect(quantity_code(Q::QUANTITY))?;
+        Some(MixedEnergy {
+            frozen: r.array()?,
+            a_range: r.array()?,
+            top: r.take()?,
+            bottom: r.take()?,
+            gamma_k: r.take()?,
+            held: r.take()?,
+            mapping: r.mapping()?,
+            axes: PhantomData,
+        })
+    }
+}
+
+/// A saved chart's parent ([`ParentParams`]), `Mixed`'s third form: the axis's code ([`axis_code`]), then `frozen`,
+/// `a_range`, `ratio`, `bodies` (each a body, below 3), `held`, the mapping. The link selection `S` is not written: a
+/// saved chart carries no links (R-478).
+impl<A: Coordinate, S: Selection> ParentParams for MixedMassRatio<A, S, f64> {
+    const FORM: Form = Form::Third;
+    fn write(&self, w: &mut Writer<'_>) {
+        w.code(axis_code::<A>());
+        w.all(&self.frozen);
+        w.all(&self.a_range);
+        w.all(&self.ratio);
+        w.code(self.bodies[0]);
+        w.code(self.bodies[1]);
+        w.put(self.held);
+        w.mapping(self.mapping);
+    }
+    fn read(r: &mut Reader<'_>) -> Option<Self> {
+        let () = Self::APART;
+        r.expect(axis_code::<A>())?;
+        Some(MixedMassRatio {
+            frozen: r.array()?,
+            a_range: r.array()?,
+            ratio: r.array()?,
+            bodies: [r.code(3)?, r.code(3)?],
+            held: r.take()?,
+            mapping: r.mapping()?,
+            axes: PhantomData,
+        })
     }
 }
 

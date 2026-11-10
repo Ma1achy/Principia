@@ -22,10 +22,15 @@
 //!   leaves the test to run without it (no `prlimit` there);
 //! - every `cargo mutants` call in CI's workflows reads that one file: none points it at another config, turns the
 //!   config off or overrides the timeout, and none runs on another directory (whose own `.cargo/mutants.toml` it
-//!   would read) without `--config .cargo/mutants.toml`. The one exception is the owner's order of 5 Nov 2026 (R-712),
-//!   the one change here, R-290's exception by that order: a run of `mutants.yml` with `--baseline=skip`
+//!   would read) without `--config .cargo/mutants.toml`. Two exceptions, each R-290's exception by the owner's order
+//!   that forces it. The owner's order of 5 Nov 2026 (R-712): a run of `mutants.yml` with `--baseline=skip`
 //!   has no baseline for the file's multiplier to read, so it takes `--timeout "$MUTANT_TIMEOUT"`, that file's rule
-//!   applied to the one measured baseline (`cargo xtask mutants-timeout`).
+//!   applied to the one measured baseline (`cargo xtask mutants-timeout`). The owner's order of 8 Nov 2026 ("Baseline
+//!   with no kill limit; same limits for nightly and local"; granted for PR #452): a shard of `nightly.yml` measures its
+//!   baseline alone, outside the per-test kill limits, then runs its mutants with `--baseline=skip --timeout
+//!   "$MUTANT_TIMEOUT"`, allowed only where that timeout is a step's output from `cargo xtask mutants-timeout` on the
+//!   output of that shard's own baseline: an earlier `cargo mutants` run in the same job, of the same package and
+//!   shard, run with no `mutants` nextest profile.
 //!
 //! The values themselves are calibrations (REQ-VAL-180, REQ-VAL-181), which the human confirmed at the M0 gate as they
 //! stood (R-376); no test here pins them. Each test's control (R-176) feeds the same assertion an input differing in the one respect the
@@ -400,13 +405,126 @@ fn invocations(yml: &str) -> Vec<String> {
     out
 }
 
+/// A step's `cargo mutants` command line, its continuation lines joined, as words without their quotes.
+fn mutants_command(step: &yaml_rust2::Yaml) -> Option<Vec<String>> {
+    let run = step["run"].as_str()?.replace("\\\n", " ");
+    let line = run
+        .lines()
+        .map(str::trim)
+        .find(|l| l.starts_with("cargo mutants "))?;
+    Some(
+        line.split_whitespace()
+            .map(|w| w.trim_matches('"').to_owned())
+            .collect(),
+    )
+}
+
+/// The value after `flag` in `cmd`, a `$VAR` read from the step's environment.
+fn flag_value(step: &yaml_rust2::Yaml, cmd: &[String], flag: &str) -> Option<String> {
+    let v = cmd
+        .windows(2)
+        .find(|w| w[0] == flag)
+        .map(|w| w[1].clone())?;
+    Some(match v.strip_prefix('$') {
+        Some(var) => step["env"][var.trim_matches(|c| c == '{' || c == '}')]
+            .as_str()
+            .map_or(v.clone(), str::to_owned),
+        None => v,
+    })
+}
+
+/// Where `nightly.yml` gives a run `--baseline=skip --timeout "$MUTANT_TIMEOUT"`, `Ok` when, in that run's own job
+/// (its shard), the timeout is an earlier step's output from `cargo xtask mutants-timeout` read from the output of an
+/// earlier `cargo mutants` run of the same package and shard, its baseline, run with no `mutants` nextest profile (the
+/// owner, 8 Nov 2026: "Baseline with no kill limit"). `Err` names the first link that does not hold.
+fn nightly_timeout_measured(yml: &str) -> Result<(), String> {
+    let docs = yaml_rust2::YamlLoader::load_from_str(yml).map_err(|e| format!("not YAML: {e}"))?;
+    let doc = docs.first().ok_or("an empty workflow")?;
+    let top = doc["env"]["NEXTEST_PROFILE"].as_str();
+    let jobs = doc["jobs"].as_hash().ok_or("no jobs")?;
+    for (name, job) in jobs {
+        let name = name.as_str().unwrap_or("?");
+        let steps = job["steps"].as_vec().map_or(&[][..], Vec::as_slice);
+        let job_profile = job["env"]["NEXTEST_PROFILE"].as_str().or(top);
+        for (i, step) in steps.iter().enumerate() {
+            let Some(cmd) = mutants_command(step) else {
+                continue;
+            };
+            if !cmd.iter().any(|w| w == "--baseline=skip") {
+                continue;
+            }
+            let from = step["env"]["MUTANT_TIMEOUT"].as_str().unwrap_or("");
+            let id = from
+                .trim()
+                .strip_prefix("${{ steps.")
+                .and_then(|s| s.strip_suffix(".outputs.timeout }}"))
+                .ok_or(format!(
+                    "job `{name}`: MUTANT_TIMEOUT is `{from}`, no earlier step's measured output"
+                ))?;
+            let at = steps[..i]
+                .iter()
+                .position(|s| s["id"].as_str() == Some(id))
+                .ok_or(format!(
+                    "job `{name}`: no earlier step `{id}` gives the timeout"
+                ))?;
+            let timing = steps[at]["run"].as_str().unwrap_or("");
+            let reads: Vec<String> = timing
+                .lines()
+                .filter_map(|l| l.trim().strip_prefix("cargo xtask mutants-timeout "))
+                .filter(|rest| !rest.starts_with("--no-mutant"))
+                .filter_map(|rest| rest.split_whitespace().next())
+                .map(|w| w.trim_matches('"').to_owned())
+                .collect();
+            if reads.is_empty() || !timing.contains("$GITHUB_OUTPUT") {
+                return Err(format!(
+                    "job `{name}`: step `{id}` gives no output from `cargo xtask mutants-timeout` on a baseline"
+                ));
+            }
+            for read in &reads {
+                let baseline = steps[..at]
+                    .iter()
+                    .filter_map(|s| mutants_command(s).map(|c| (s, c)))
+                    .filter(|(_, c)| !c.iter().any(|w| w == "--baseline=skip"))
+                    .find(|(s, c)| {
+                        flag_value(s, c, "-o").is_some_and(|o| format!("{o}/mutants.out") == *read)
+                    });
+                let Some((b, bcmd)) = baseline else {
+                    return Err(format!(
+                        "job `{name}`: `cargo xtask mutants-timeout {read}` reads no earlier baseline run's output in the job"
+                    ));
+                };
+                let profile = b["env"]["NEXTEST_PROFILE"].as_str().or(job_profile);
+                if profile == Some("mutants") || bcmd.iter().any(|w| w.starts_with("--profile")) {
+                    return Err(format!(
+                        "job `{name}`: the baseline the timeout is read from runs under the per-test kill limits"
+                    ));
+                }
+                for flag in ["--package", "--shard", "--sharding", "--in-diff"] {
+                    let (ours, theirs) = (flag_value(step, &cmd, flag), flag_value(b, &bcmd, flag));
+                    if ours != theirs {
+                        return Err(format!(
+                            "job `{name}`: the baseline is not the shard's own ({flag} {theirs:?}, the mutants' {ours:?})"
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn every_run_reads_the_caps(workflows: &[(String, String)]) {
     let mut found = 0;
     for (file, yml) in workflows {
+        let nightly = (file == "nightly.yml").then(|| nightly_timeout_measured(yml));
+        let why = match &nightly {
+            Some(Err(e)) => format!("; {e}"),
+            _ => String::new(),
+        };
         for cmd in invocations(yml) {
             found += 1;
             let words: Vec<&str> = cmd.split_whitespace().collect();
-            let measured = file == "mutants.yml"
+            let measured = (file == "mutants.yml" || matches!(nightly, Some(Ok(()))))
                 && words.contains(&"--baseline=skip")
                 && words
                     .windows(2)
@@ -422,7 +540,7 @@ fn every_run_reads_the_caps(workflows: &[(String, String)]) {
                 }
                 assert!(
                     !words.iter().any(|w| *w == banned || w.starts_with(&format!("{banned}="))),
-                    "qa49: a cargo mutants run does not read the caps from .cargo/mutants.toml ({file}: `{banned}`): {cmd}"
+                    "qa49: a cargo mutants run does not read the caps from .cargo/mutants.toml ({file}: `{banned}`{why}): {cmd}"
                 );
             }
             let config = words
@@ -516,6 +634,70 @@ mod measured_with_its_baseline {
             "mutants.yml".to_owned(),
             "      - run: |\n          cargo mutants --in-diff pr.diff --timeout \"$MUTANT_TIMEOUT\" -o out\n".to_owned()
         )])
+    );
+}
+
+/// `nightly.yml` with `from`, which must be in it, replaced by `to`: a control's one edit.
+#[cfg(feature = "controls")]
+fn nightly_edited(from: &str, to: &str) -> Vec<(String, String)> {
+    let yml = std::fs::read_to_string(root().join(".github/workflows/nightly.yml"))
+        .expect("qa49: nightly.yml");
+    assert!(
+        yml.contains(from),
+        "qa49 control: the edit target is gone: {from}"
+    );
+    vec![("nightly.yml".to_owned(), yml.replacen(from, to, 1))]
+}
+
+mod nightly_fixed {
+    use super::*;
+    negative_control!(
+        qa49_every_cargo_mutants_run_in_ci_reads_the_caps,
+        "a nightly shard given a fixed timeout, not one measured from its baseline",
+        expected = "qa49: a cargo mutants run does not read the caps from .cargo/mutants.toml (nightly.yml: `--timeout`; job `mutants`: MUTANT_TIMEOUT",
+        every_run_reads_the_caps(&nightly_edited(
+            "MUTANT_TIMEOUT: ${{ steps.timeout.outputs.timeout }}",
+            "MUTANT_TIMEOUT: \"10000\""
+        ))
+    );
+}
+
+mod nightly_limited_baseline {
+    use super::*;
+    negative_control!(
+        qa49_every_cargo_mutants_run_in_ci_reads_the_caps,
+        "a nightly shard's timeout read from a baseline run under the per-test kill limits",
+        expected = "the baseline the timeout is read from runs under the per-test kill limits",
+        every_run_reads_the_caps(&nightly_edited(
+            "PRIN_CONTAIN: required\n          HEARTBEAT_CONTEXT",
+            "PRIN_CONTAIN: required\n          NEXTEST_PROFILE: mutants\n          HEARTBEAT_CONTEXT"
+        ))
+    );
+}
+
+mod nightly_other_output {
+    use super::*;
+    negative_control!(
+        qa49_every_cargo_mutants_run_in_ci_reads_the_caps,
+        "a nightly shard's timeout read from a directory no baseline in its job wrote",
+        expected = "reads no earlier baseline run's output in the job",
+        every_run_reads_the_caps(&nightly_edited(
+            "cargo xtask mutants-timeout \"$RUNNER_TEMP/baseline/mutants.out\"",
+            "cargo xtask mutants-timeout \"$RUNNER_TEMP/elsewhere/mutants.out\""
+        ))
+    );
+}
+
+mod nightly_other_shard {
+    use super::*;
+    negative_control!(
+        qa49_every_cargo_mutants_run_in_ci_reads_the_caps,
+        "a nightly shard's timeout read from a baseline of another package",
+        expected = "the baseline is not the shard's own (--package",
+        every_run_reads_the_caps(&nightly_edited(
+            "--package \"$PACKAGE\" --shard \"$SHARD\" --sharding round-robin --build-timeout 0",
+            "--package xtask --shard \"$SHARD\" --sharding round-robin --build-timeout 0"
+        ))
     );
 }
 
