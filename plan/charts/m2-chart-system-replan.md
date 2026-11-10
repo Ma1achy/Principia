@@ -325,9 +325,11 @@ integrator work (TASK-M4-05) carries on as agreed.
     norm is at least 100 times that bound, and must fail. Door: one-way, RQ-758.
 14. **N4, the forward-table builder (NEW).** Acceptance: a quad's table built from `decode_only_with` on threads,
     narrowed once, bitwise equal to the per-sample evaluation. Measurement M-A, criterion written now: on the Mac,
-    1920 × 1080 samples per chart, median of 5 warm runs; PASS if one thread reaches 8.1·10⁶ samples a second
-    (composition § 17.12's in-motion coarse cover, 32,400 samples in 4 ms) on every chart of § C, the all-core rate
-    reported against 4.97·10⁸ a second (the whole screen at High, N = 16, E = 3, 16.7 ms) as information. Door: two-way.
+    1920 × 1080 samples per chart, 5 warm runs, every run's rate reported with their median and the slowest; PASS if
+    the slowest of the 5 runs on one thread reaches 8.1·10⁶ samples a second (composition § 17.12's in-motion coarse
+    cover, 32,400 samples in 4 ms) on every chart of § C, never read off the median alone; the all-core rate, every run
+    and the slowest, reported against 4.97·10⁸ a second (the whole screen at High, N = 16, E = 3, 16.7 ms) as
+    information. Door: two-way.
 15. **TASK-M2-68 to TASK-M2-72, TASK-M2-74 to TASK-M2-79 (KEEP), TASK-M2-73 (CHANGE).** As their task files, each map
     with its slope tier.
 16. **N7, the backwards table on the CPU (NEW).** Acceptance: for each kernel chart of § C, a baked backwards table and
@@ -422,7 +424,8 @@ alone: a rate at or below it says the conversion moves outcomes no more than rou
 - **PASS:** predicates 1 to 4 hold; no branch select differs between today's f32 decode and the narrowed f64 records;
   every record where the two differ is listed with its size (that none of the narrowed records is farther from the f64
   value than the f32 decode follows from predicate 3 and is not a separate criterion); one thread reaches
-  8.1·10⁶ samples a second (M-A's in-motion figure) on both charts.
+  8.1·10⁶ samples a second (M-A's in-motion figure, read on the slowest of five warm runs as M-A reads it) on both
+  charts.
 - **EXPLAINED DIVERGENCE:** a predicate fails, or a branch select differs, with a named cause (for example the f32
   `atan2`'s integer path, `arctan.rs`, at a pole select, R-437); or the rate falls short with a named cost.
 - **UNEXPLAINED:** anything else.
