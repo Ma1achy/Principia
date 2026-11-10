@@ -22,10 +22,12 @@ Each recorded link carries its own registry-entry hash beside the build hash and
 ## Deliverables
 - The generated entry hashes (dd_generation_root §3.9, "Each entry's own hash"), written per block beside the build hash and the schema version in the M7 destinations (tier 1, the `tEXt` chunk, the profiler header; *was:* "in every destination"), and the per-link refusal (R-521).
 - The recreate path for a record made under a retired `β` link (R-921): its stored latent coordinates decoded through that exact link, bitwise, labelled "made under a retired link", never converted on recreation; REQ-TOOL-172's retired-link arm.
-- That arm's expected bits read from `fixtures/retired_beta_links/pre_m2_57.json`, which TASK-M2-57's baseline commit
-  writes through the decoder before any link changes: the records' latent coordinates and links the fixture's, each
-  pixel's recreated starting state equal bit for bit to the fixture's, and the converting reader's control run on the
-  fixture's pixels where conversion changes a bit (R-921; physics review 5836519618 of PR #469).
+- That arm's expected bits read from `fixtures/retired_beta_links/pre_m2_57.json`, every bit of which TASK-M2-57 writes
+  through its baseline commit's decoder, before any link changes: the records' latent coordinates and links the
+  fixture's, each pixel's recreated starting state equal bit for bit to the fixture's, and the converting reader's
+  control run on the fixture's pixels where conversion changes a bit, for each link TASK-M2-57 does not list as not
+  exercisable with its REVIEW_QUEUE entry (R-921; physics review 5836519618 of PR #469; physics review 5836599062 of
+  PR #469, P3).
 - Tests `decoder_identity_per_link` and `entry_hashes_written`.
 
 ## Acceptance tests
@@ -48,3 +50,10 @@ Each recorded link carries its own registry-entry hash beside the build hash and
   TASK-M2-57's baseline commit, so the retained forward maps are checked against a pre-TASK-M2-57 decode, not against
   themselves. This task depends on TASK-M2-57 for it. The Deliverables gain the fixture's line; nothing removed.
   *Was (Depends on):* "TASK-M7-31, TASK-M7-32".
+- *10 Nov 2026 (physics review 5836599062 of PR #469, P3; applied per R-369):* TASK-M2-57's search for pixels where
+  conversion changes a bit is bounded; a link with none within its budget is listed there as not exercisable, with a
+  REVIEW_QUEUE entry for the owner, and this task's converting-reader control is not run for it. The fixture's bits all
+  come from TASK-M2-57's baseline commit's decoder, a rewrite included. *Was (Deliverables):* "which TASK-M2-57's
+  baseline commit" "writes through the decoder before any link changes: the records' latent coordinates and links the
+  fixture's, each" "pixel's recreated starting state equal bit for bit to the fixture's, and the converting reader's
+  control run on the" "fixture's pixels where conversion changes a bit (R-921; physics review 5836519618 of PR #469)."
