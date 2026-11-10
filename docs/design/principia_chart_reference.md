@@ -356,7 +356,7 @@ the offset varies with `U`, so a row is no level set of `2K/|U|`, and a readout 
 ratio. **With `Q₀ > 0` the floor sits under the rise only (R-817, ruling RQ-700 (b)):** with `Q_min(U) = L_z²/(I·|U|)`,
 the pixel's ratio is `max(Q₀, Q_min(U)) + (Q_hi − Q₀)·t^γ_K`, `K*` its `|U|/2` multiple, so the bottom row is the asked
 bottom `Q₀` where `Q₀` is feasible and on the floor elsewhere, and at `Q₀ = 0` this is the additive form above, bit for
-bit. TASK-M8-119 builds it. *Was:* "With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked
+bit. TASK-M2-70 builds it. *Was:* "With `Q₀ > 0` the additive form is applied until the owner answers RQ-700: the asked
 bottom `Q₀` is not drawn even where it is feasible, and `a ≠ 0` on the bottom row." At a held
 `L_z = 0` the floor is 0 and the lines above stand unchanged. The bottom row must not blank on rounding: the floor is
 the least normal float §2.2's exact test finds feasible at the held `L_z`, `L_z²/2` at `I = 1` rounded, raised one
@@ -962,12 +962,40 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
   (TASK-M4-06). What "one float wide" is measured in, and the band's width in it, is a definition TASK-M4-06 writes
   here under physics review (R-72); a width that is a number rather than a derivation is a calibration (R-71)
   (REQ-CHART-152).
+- **The slider spans of the held coordinates (R-920, ruling RQ-679; a definition, R-72, REQ-CHART-188).** R-507 U1
+  divides a hidden offset by the coordinate's slider span. A span is the full range at zoom 1 of the screen axis that
+  carries the same coordinate on the registry's own charts, read at that chart's home window, the preset's: a length,
+  fixed per chart, the same under pan, zoom, slice centre and lock, stored with a saved chart (R-507 U3), and invariant
+  under the scale gauge (§0.5). So a 90° tilt turns a screen axis into that sibling axis at its home extent.
+  - *`ν₀`* (the ternary mass plot): `Δν = ν_max − ν_min`, the `ν` axis's range on the Euclid plane and the `(ν, K)`
+    chart, `[1/32, 31/32]` (REQ-CHART-023), so `15/16`; rail `[ν_min, ν_max]`, centred on the default `ν₀ = 1/2`,
+    linear; under a lock the anchor `± Δν/2`. Not `(0, 1)`, whose ends are no systems. A tilted `ν₀ + d` outside
+    `(0, 1)` is refused per cell, as above (blank, R-470; area weight 0), never clamped by the rail; REQ-CHART-060's stop
+    holds the slice.
+  - *The held `L_z`* (`(ν, K)`, `Φ_θ,K`, `Φ_strip,K`; by value, R-720): `2√(2·I·K_max)`, `I = 1` after the scale gauge,
+    `K_max` the chart's own `K` axis's (REQ-CHART-044), read at the window's top, `K = K_max`: the `(L_z, K)` chart's top
+    row, `L_z = (2s − 1)·√(2IK)` at `t = 1` (§2.1). Rail `[−√(2K_max), +√(2K_max)]`, centred on 0; under a lock the anchor
+    `± √(2K_max)`. Warped, the floor keeps every pixel a system, and inside the zoom-1 window `L_z²/2` stays at most
+    `K_max` under a single 90° tilt; linear, a single 90° tilt draws the `(L_z, K)` chart's feasible parabola.
+  - *The held `K`* (`Φ_θ,L_z`): warped, 1 in its warp coordinate `t`, the warped axis's zoom-1 range, `K = K_max·t^γ_K`,
+    `K_max` and `γ_K` this chart's own (REQ-CHART-141, R-833); the rail fixed per preset at `t ∈ [t₀ − ½, t₀ + ½]`, `t₀`
+    the preset's, shifted to `[0, 1]` if `t₀ < ½`, never below `t = 0`; under a lock the anchor `± ½` in `t`. Linear,
+    `K_max` in `K`, the axis's `[0, K_max]`. One slider, two units: the handle is in `t`, the rail drawn evenly in `t`, the
+    number box shows `K = K_max·t^γ_K`; a slice writes `K₀` by value (R-720) and `t₀ = (K₀/K_max)^(1/γ_K)` is recomputed,
+    which moves the handle, not the rail; a tilt reads the rail's length, 1 in `t`, `ΔK = K_max·[(t₀ + Δt)^γ_K − t₀^γ_K]`.
+  - *A `MixedEnergy` chart's held `L_z`* (R-818) on a lone virial axis has no chart-constant `K_max` (`K = Q·|U|/2`,
+    R-817): its span is RQ-701's, written by TASK-M8-48 at M8 (R-920), as are R-818's other lone axes.
+  - *The checks* (written before any run): at a single 90° tilt in the zoom-1 window the tilted axis's hidden values
+    equal the sibling axis's at the same `u`, to rounding (`ν₀` the Euclid plane's `ν(v)`; the held `L_z`
+    `±√(2K_max)·(2s − 1)`; the held `K` `K_max·t^γ_K` over `t₀ ± ½`), a span of 2 or one read at the view's centre
+    failing; a pan at fixed `τ` leaves every span bitwise unchanged, a centre-read span moving; a saved tilted chart
+    reopens bitwise with its stored span.
 
 Built by TASK-M2-52 on TASK-M2-36's tilt path, the linear option on TASK-M2-37's.
 
 *Ruled 8 Nov 2026 (R-875, RQ-745 (b)):* the three acute-angle charts are re-expressed over the full acute range, both
 labellings of each shape shown, the leg swap shown once only by the symmetry filter (R-855); R-27's "shape only" fold
-charts give way. TASK-M8-127 builds it once the filter (TASK-M8-120) exists; until it merges they stand as built, and
+charts give way. TASK-M2-85 builds it once the filter's maths (TASK-M2-84, R-916; *was* TASK-M8-120) exists; until it merges they stand as built, and
 REQ-CHART-045's range comes back to the owner at the M2 gate.
 
 ### 4.6 The central hypothesis

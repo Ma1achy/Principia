@@ -261,6 +261,12 @@ R-627 (27 Oct 2026) extends the exception to M8's GUI-track tasks (TASK-M8-05, T
 web skeleton and its measurements): each merges once its reviews pass and CI is green without waiting for the gates of M3 to M6; the gates of M2
 and M7, which R-627 does not name, by R-415's test above, recorded in the PR. Their wiring tasks, TASK-M8-88 to
 TASK-M8-95, run on the real engine and wait for the gates as any other task does.
+*9 Nov 2026 (R-917, R-918):* M2 is the whole non-visual chart system (R-916), and its gate, "fully working and
+tested", is the checklist G1 to G14 in `plan/MILESTONES.md` § "M2 — The chart system: charts, decode and encode, and the
+non-visual chart core", the owner's lock-with-morphs test among it. Until it passes, no new integrator or visual task
+is dispatched: work in flight or approved finishes, and fixes, CI and tooling work and what M2's own tests need go
+ahead. The GUI track's exception above (R-390, R-627) doesn't hold for new dispatch; a track task already started
+finishes. R-415's test doesn't bring forward a task R-917 holds.
 *30 Oct 2026 (R-649, R-650):* a replication or verification target is a measurement, never a gate: an external
 target's outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED) blocks no merge and no milestone. The internal
 correctness tests, the GPU-vs-CPU agreement checks within their stated f32 tolerances and the anchor smoke tests

@@ -3,11 +3,12 @@
 //! and a control can both call, so a control in a new target trips the test's own assertion and shares its inputs" —
 //! not from the implementation.
 //!
-//! This file is such a new target for `support/qa_m0_01_live.rs`: it uses every item of the module, and runs each
-//! check on an input it must accept (the test) and on one it must reject, tripping the check's own assertion by its
-//! message (the control, R-176, R-212). The inputs are the real `cargo metadata` document with one edge injected, as
-//! in `qa_TASK-M0-01_live.rs`; the allowed and forbidden edges are §7.1's and R-187's. Documents are written under
-//! tags `qa29_*`, apart from that file's.
+//! This file is such a new target for `support/qa_m0_01_live.rs`: it uses every item of the module but
+//! `check_the_default_path_sees_every_edge`, whose test here R-909 retired (`qa_TASK-M0-01_live.rs` still calls it),
+//! and runs each check on an input it must accept (the test) and on one it must reject, tripping the check's own
+//! assertion by its message (the control, R-176, R-212). The inputs are the real `cargo metadata` document with one
+//! edge injected, as in `qa_TASK-M0-01_live.rs`; the allowed and forbidden edges are §7.1's and R-187's. Documents are
+//! written under tags `qa29_*`, apart from that file's.
 // The file name `qa_TASK-M0-29_live` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -16,9 +17,7 @@ mod qa_m0_01_live;
 
 use qa_m0_01_live::*;
 use serde_json::Value;
-use std::process::{Command, Output};
 use validation::negative_control;
-use validation::spawn::Spawn;
 
 /// The real metadata plus `from → to`, a normal path dependency on the member's directory.
 fn live_plus(from: &str, to: &str) -> Value {
@@ -32,15 +31,6 @@ fn live_plus_kind(from: &str, to: &str, kind: &str) -> Value {
     let doc = live_metadata();
     let dep = with_kind(&doc, to, kind);
     with_dep_on(&doc, from, dep)
-}
-
-/// `xtask deps` in the workspace root, reading cargo metadata itself.
-fn default_path_run() -> Output {
-    Command::new(env!("CARGO_BIN_EXE_xtask"))
-        .arg("deps")
-        .current_dir(workspace_root())
-        .timed_output()
-        .expect("run xtask deps")
 }
 
 // --- The independent count and the default path --------------------------------------------------------------
@@ -88,22 +78,6 @@ negative_control!(
     check_the_count_is_unchanged(
         independent_edge_count(&live_metadata()),
         &live_plus("kernel", "engine"),
-    )
-);
-
-#[test]
-fn qa_m0_29_live_default_path_check_accepts_the_live_count() {
-    let want = independent_edge_count(&live_metadata());
-    check_the_default_path_sees_every_edge(&default_path_run(), want);
-}
-
-negative_control!(
-    qa_m0_29_live_default_path_check_accepts_the_live_count,
-    "one edge more than the live count is not what xtask deps reports, so the default-path check must reject it",
-    expected = "xtask deps does not see every live workspace edge",
-    check_the_default_path_sees_every_edge(
-        &default_path_run(),
-        independent_edge_count(&live_metadata()) + 1,
     )
 );
 

@@ -1,12 +1,14 @@
-//! `cargo xtask plan-check` (REQ-SYS-007, REQ-SYS-008): the checker passes on this tree, and fails, naming the fault,
-//! on a copy of `plan/` + the corpus with a task dropped from `tasks.yaml`, a requirement source into `docs/archive/`,
-//! or a task reference to an `ARCHIVE_` brief (R-184: "cites archived file", not "doesn't exist"). It also fails on a
-//! still-open item of `open-questions.md` that names neither a requirement nor an open REVIEW_QUEUE entry, or names a
-//! missing or retired requirement, or an RQ that isn't open (R-334). It fails too on an RQ heading that a union merge
-//! of `REVIEW_QUEUE.md` left twice, or left open though it is archived, and on what else that merge leaves in the
-//! queue: two entries with one question, two versions of a field or a text, an entry with no body or short of a required
-//! field, a heading out of form, or a fragment. `--queue` checks a queue at any path, so a would-be merge's
-//! (`.gitattributes`; `plan/OPERATIONS.md` § "Merging" step 2).
+//! `cargo xtask plan-check` (REQ-SYS-007, REQ-SYS-008): the checker fails, naming the fault, on a copy of `plan/` + the
+//! corpus with a task dropped from `tasks.yaml`, a requirement source into `docs/archive/`, or a task reference to an
+//! `ARCHIVE_` brief (R-184: "cites archived file", not "doesn't exist"). It also fails on a still-open item of
+//! `open-questions.md` that names neither a requirement nor an open REVIEW_QUEUE entry, or names a missing or retired
+//! requirement, or an RQ that isn't open (R-334). It fails too on an RQ heading that a union merge of `REVIEW_QUEUE.md`
+//! left twice, or left open though it is archived, and on what else that merge leaves in the queue: two entries with
+//! one question, two versions of a field or a text, an entry with no body or short of a required field, a heading out
+//! of form, or a fragment. `--queue` checks a queue at any path, so a would-be merge's (`.gitattributes`;
+//! `plan/OPERATIONS.md` § "Merging" step 2). That it passes on this tree is CI's `python3 plan/check_plan.py` step on
+//! every pull request, and `cargo xtask plan-check` in `cargo xtask ci` on each merge (R-909 retired the test of it
+//! here).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -102,12 +104,6 @@ fn fails_naming(root: &Path, fault: &str) {
     );
 }
 
-#[test]
-fn plan_check_passes_on_the_tree() {
-    let (passed, out) = check(&repo_root());
-    assert!(passed, "plan-check failed on the tree:\n{out}");
-}
-
 /// Drops `TASK-M0-35`'s entry from `tasks.yaml`.
 fn drop_task(root: &Path) {
     let path = root.join("plan/tasks.yaml");
@@ -174,18 +170,6 @@ fn plan_check_fails_on_a_task_reference_to_an_archive_brief() {
         &format!("plan/tasks/M0/TASK-M0-02.md: reference cites archived file {ARCHIVED_BRIEF}"),
     );
 }
-
-negative_control!(
-    plan_check_passes_on_the_tree,
-    "a copy with a task dropped from tasks.yaml must fail the passing check",
-    expected = "plan-check failed on the tree",
-    {
-        let root = copy("plan_check_ctl_tree");
-        drop_task(&root);
-        let (passed, out) = check(&root);
-        assert!(passed, "plan-check failed on the tree:\n{out}");
-    }
-);
 
 negative_control!(
     plan_check_fails_on_a_task_missing_from_tasks_yaml,

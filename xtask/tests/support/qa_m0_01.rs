@@ -1,8 +1,10 @@
 //! The helpers, inputs and checks of `qa_TASK-M0-01.rs`, in a module so the controls TASK-M0-22 registers in a target
 //! of their own run the test's own check on the test's own inputs, not a copy of them (REQ-VAL-160; R-215, R-218). A
 //! `tests/*.rs` file is a crate of its own, so each includes this file with `#[path]`; every item here is used by each
-//! file that includes it. The `_live` module's helpers of the same names differ (its metadata has the dependencies,
-//! its runs return stderr apart), so the two stay apart and qa's calls stay as they are (R-215).
+//! file that includes it, but the two marked `allow(dead_code)`, which `qa_TASK-M0-01.rs` calls no more since R-909
+//! retired its test of `cargo xtask deps` through the alias. The `_live` module's helpers of the same names differ
+//! (its metadata has the dependencies, its runs return stderr apart), so the two stay apart and qa's calls stay as they
+//! are (R-215).
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -436,17 +438,10 @@ pub fn check_the_live_edges_are_all_allowed(edges: Vec<(String, String, Kind)>) 
     );
 }
 
-/// `qa_xtask_deps_passes_on_the_live_workspace`'s check: the run `out` of `xtask deps` on the workspace passes.
-pub fn check_xtask_deps_passes_on_the_workspace(out: &Output) {
-    assert!(
-        out.status.success(),
-        "cargo xtask deps fails on the workspace:\n{}{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr)
-    );
-}
-
 /// Runs `cargo <args>` in the workspace root. A separate target dir avoids the lock held by the running `cargo test`.
+// Called by `qa_TASK-M0-01_controls.rs` and `qa_TASK-M0-29.rs`, not by `qa_TASK-M0-01.rs`, which includes this module
+// too: R-909 retired its one caller there, `qa_cargo_xtask_alias_runs_the_deps_check`.
+#[allow(dead_code)]
 pub fn run_cargo_in_the_workspace(args: &[&str]) -> Output {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let target = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("qa_TASK-M0-01-alias-target");
@@ -459,6 +454,9 @@ pub fn run_cargo_in_the_workspace(args: &[&str]) -> Output {
 }
 
 /// `qa_cargo_xtask_alias_runs_deps`'s check: the run `out` of `cargo xtask deps` passes.
+// Called by `qa_TASK-M0-01_controls.rs` and `qa_TASK-M0-29.rs`, not by `qa_TASK-M0-01.rs`, which includes this module
+// too: R-909 retired its one caller there, `qa_cargo_xtask_alias_runs_the_deps_check`.
+#[allow(dead_code)]
 pub fn check_the_alias_runs_deps(out: &Output) {
     assert!(
         out.status.success(),

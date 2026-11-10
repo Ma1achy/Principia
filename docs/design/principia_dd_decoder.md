@@ -77,7 +77,7 @@ decode makes that test 12 compares bit for bit across backends, with the value i
 | `ENERGY_UNSCALABLE` and the rotation-only outcome, hold `L_z` | `rigid(v, Jr)`: with `w = Jr`, `p` the first index of the largest `\|wᵢ\|`, `V` the largest `\|vᵢ\|`, `\|v_b w_p − v_p w_b\| ≤ τ·V·\|w_p\|` for every component `b`; `τ` a dyadic constant (REQ-CHART-126); each comparison decided exactly from the bits, as `infeasible`, no division, no mass, no intermediate that can be subnormal (R-547) | `kernel::decode::invariant::rigid` |
 
 *7 Nov 2026 (R-836, ruling RQ-715 (a) with (i)):* the last row is RQ-715's option (i), the text the queue entry gave
-for this table, entered now that it is ruled; hold `L_z` is built by TASK-M8-118.
+for this table, entered now that it is ruled; hold `L_z` is built by TASK-M2-69 on the CPU and TASK-M8-118 on the GPU (R-916; *was:* "by TASK-M8-118").
 
 The selects that choose a pole's value (§3.2's `atan2` poles, §3.6's `rho_angle` cases and R-436's pole values) read
 comparisons against the constant 0 or `±π̂` of values already computed; they choose a stored value, not a tag.

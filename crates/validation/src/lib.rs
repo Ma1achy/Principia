@@ -7,6 +7,7 @@ pub mod bench;
 pub mod bringup;
 pub mod control;
 pub mod convergence;
+pub mod cross_backend;
 pub mod decode_agreement;
 pub mod decode_f32_eps;
 pub mod decode_preset;

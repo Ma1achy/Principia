@@ -138,16 +138,6 @@ fn qa_live_workspace_edges_are_all_allowed() {
     check_the_live_edges_are_all_allowed(edges);
 }
 
-#[test]
-fn qa_xtask_deps_passes_on_the_live_workspace() {
-    let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
-        .arg("deps")
-        .current_dir(workspace_root())
-        .timed_output()
-        .expect("run xtask deps");
-    check_xtask_deps_passes_on_the_workspace(&out);
-}
-
 /// Runs `cargo <args>` in the workspace root on the workspace's own target directory, the one the running tests were
 /// built in, whose `--features controls` build `ci --list` reuses, as `qa_TASK-M0-06_list`'s listing does. A target
 /// directory of its own was cold in every CI run, and its full `--features controls` build outlasted the child's 600 s
@@ -166,9 +156,10 @@ fn run_cargo_on_the_workspace_target(args: &[&str]) -> std::process::Output {
 #[test]
 fn qa_cargo_xtask_alias_runs_deps() {
     // The acceptance command itself, through the `.cargo/config.toml` alias, on the workspace's own target directory
-    // (`run_cargo_on_the_workspace_target`). Its `cargo xtask deps` run is the test below, split out so that
-    // neither holds a CI shard over its target (R-336, REQ-SYS-077); this one keeps the listing-only
-    // `cargo xtask ci --list` (R-235, REQ-VAL-166).
+    // (`run_cargo_on_the_workspace_target`). Its `cargo xtask deps` run was split out so that neither held a CI
+    // shard over its target (R-336, REQ-SYS-077), and R-909 retired that test: CI's own `cargo xtask deps` step runs
+    // the same command through the same alias. This one keeps the listing-only `cargo xtask ci --list` (R-235,
+    // REQ-VAL-166).
     // Control, run first: the alias reaches xtask's own argument handling, which refuses an unknown command. Run
     // first, its child builds xtask, so the `ci --list` child below, under its own timeout (R-214), only lists.
     let out = run_cargo_on_the_workspace_target(&["xtask", "qa-no-such-command"]);
@@ -176,23 +167,6 @@ fn qa_cargo_xtask_alias_runs_deps() {
     let out = run_cargo_on_the_workspace_target(&["xtask", "ci", "--list"]);
     check_the_alias_runs_ci(&out);
 }
-
-/// `qa_cargo_xtask_alias_runs_deps`'s `cargo xtask deps` run, through the alias, as a test of its own (R-336).
-#[test]
-fn qa_cargo_xtask_alias_runs_the_deps_check() {
-    let out = run_cargo_in_the_workspace(&["xtask", "deps"]);
-    check_the_alias_runs_deps(&out);
-}
-
-validation::negative_control!(
-    qa_cargo_xtask_alias_runs_the_deps_check,
-    "the `cargo xtask deps` run replaced by an unknown command's, which fails",
-    expected = "cargo xtask deps: ",
-    check_the_alias_runs_deps(&run_cargo_in_the_workspace(&[
-        "xtask",
-        "m045-no-such-command"
-    ]))
-);
 
 #[test]
 fn qa_kernel_is_no_std() {
