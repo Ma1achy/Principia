@@ -9,9 +9,10 @@
 //! (R-720's reading); a tilt and a zoom with no centre edit pass unchanged; a lock on a forbidden pixel is refused; a
 //! parameter edit whose boundary lies at `λ ≈ 10⁻⁶` stops at adjacent f64s within 62 steps; on the latent chart nothing
 //! stops; a pan on the shape sphere's exponential map far enough that its point `n` overflows stops on `Φ`, the
-//! decoded configuration finite at the stop and not past it, and one large but short of the overflow is taken whole.
-//! Controls: a stop that keeps the requested value, a stop one bisection step short, a per-chart override, and a centre
-//! check that reads `map` alone.
+//! decoded configuration finite at the stop and not past it, and one large but short of the overflow is taken whole;
+//! the shape sphere's inertia edited to `10³⁰⁸`, −1 or 0 stops on `Φ`, what it builds finite at the stop and not past
+//! it. Controls: a stop that keeps the requested value, a stop one bisection step short, a per-chart override, and a
+//! centre check that reads `map` alone or the shape sphere's point alone.
 //!
 //! **`nav_fuzz_never_leaves*`** (REQ-CHART-061): on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
 //! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts and
@@ -847,6 +848,160 @@ negative_control!(
     "a centre check that reads the shape sphere's map alone takes the overflowed pan whole",
     expected = "takes the overflowed pan",
     check_shape_overflow(true)
+);
+
+/// The shape sphere with its centre check reading `map` and its point `n` alone, not the configuration [`place`]
+/// builds from `n` at the chart's inertia, nor the momenta: the stop without the chart's own `Chart::phi_finite` on a
+/// chart-parameter edit (the control).
+///
+/// [`place`]: kernel::chart::shape_sphere::place
+#[derive(Clone, Copy)]
+struct PointOnly(ShapeSphere<f64>);
+
+impl Chart for PointOnly {
+    type Param = f64;
+
+    fn map<F: Float + From<f64>>(&self, u: F, v: F) -> ChartOut<F> {
+        self.0.map(u, v)
+    }
+
+    fn name(&self) -> &str {
+        "PointOnly"
+    }
+
+    fn decode<S, R>(&self, u: R, v: R) -> kernel::decode::Decoded<R>
+    where
+        S: kernel::generated::links::Selection,
+        R: kernel::generated::links::LinkReal + kernel::payload::PayloadReal + From<f64>,
+    {
+        self.0.decode::<S, R>(u, v)
+    }
+
+    fn phi_finite(&self, u: f64, v: f64) -> bool {
+        let map = self.0.map::<f64>(u, v).z.z;
+        map.iter().chain(&self.0.point(u, v)).all(|x| x.is_finite())
+    }
+
+    fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.validate(u, v)
+    }
+}
+
+/// Whether the shape sphere's decode at a view's centre is finite in what it builds: the configuration it places (`ρ̃`,
+/// `λ̃`, `r`), the momenta it gauges by `I^{−1/4}`, and the decoded state. At inertia 0 the state's three bodies sit at
+/// the origin and its momenta are infinite before the state is formed.
+fn builds_finite<C: Chart<Param = f64>>(view: Option<View<C>>) -> bool {
+    let View {
+        chart,
+        centre: [u, v],
+    } = view.expect("a view");
+    let d = chart.decode::<Defaults, f64>(u, v);
+    let c = &d.config;
+    let config = c
+        .rho_t
+        .iter()
+        .chain(&c.lambda_t)
+        .chain(c.r.iter().flatten());
+    decodes_finite(Some(View {
+        chart,
+        centre: [u, v],
+    })) && config
+        .chain(d.momentum.p.iter().flatten())
+        .all(|x| x.is_finite())
+}
+
+/// An edit of the shape sphere's inertia from 1 to `to`, its centre held at `c`, through the stop, on the chart `wrap`
+/// builds. Where `to` decodes finite it is taken whole; where it does not, the stop is on `Φ`, its decode finite, and
+/// the next f64 of `λ` past it decodes non-finite. Returns whether `to` decoded finite.
+fn check_inertia_edit<C: Chart<Param = f64>>(
+    name: &str,
+    base: ShapeSphere<f64>,
+    c: [f64; 2],
+    to: f64,
+    wrap: impl Fn(ShapeSphere<f64>) -> C,
+) -> bool {
+    let view = |inertia: f64| at(wrap(ShapeSphere { inertia, ..base }), c);
+    let stop = nav_stop(Edit::Path { from: 1.0, to }, view, &P);
+    let finite = builds_finite(view(to));
+    if finite {
+        assert_eq!(
+            stop.stopped, None,
+            "{name}: the inertia edit 1 → {to:e} at {c:?}, finite, stops"
+        );
+    } else {
+        assert_eq!(
+            stop.stopped,
+            Some(Check::Phi),
+            "{name}: the stop takes the inertia edit 1 → {to:e} at {c:?} whole"
+        );
+        assert!(
+            builds_finite(view(stop.value)),
+            "{name}: the stop at inertia {:e} decodes non-finite",
+            stop.value
+        );
+        let past = 1.0.along(to, stop.lambda.next_up());
+        assert!(
+            !builds_finite(view(past)),
+            "{name}: inertia {past:e}, past the stop, decodes finite"
+        );
+        println!(
+            "{name}: inertia 1 → {to:e} at {c:?} stopped at {:e} after {} steps",
+            stop.value, stop.steps
+        );
+    }
+    check_stop(name, 1.0, to, view, &stop);
+    finite
+}
+
+/// REQ-CHART-060's `Φ` at the centre under a chart-parameter edit: the shape sphere's inertia edited from 1 to `10³⁰⁸`,
+/// which overflows `inverse`'s `inertia·(1 + |n₀|)` where `|n₀|` is near 1, to −1, which has no `√a`, and to 0, where the
+/// momenta's `I^{−1/4}` is infinite, on the spherical map at three centres and the exponential at `(½, ½)`, and to
+/// `10²⁰⁰`, finite, taken whole. `point_only` checks the centre by `map` and the point alone (the control).
+fn check_shape_inertia(point_only: bool) {
+    let spherical = shape(ShapeMap::Spherical, std::f64::consts::FRAC_PI_4);
+    let exponential = shape(ShapeMap::Exponential, std::f64::consts::FRAC_PI_4);
+    let cases = [
+        (spherical, [0.0, 0.5]),
+        (spherical, [0.5, 0.5]),
+        (spherical, [0.3, 0.7]),
+        (exponential, [0.5, 0.5]),
+    ];
+    for (base, c) in cases {
+        let name = format!("{:?} at {c:?}", base.map);
+        for to in [1e308, -1.0, 0.0, 1e200] {
+            let finite = if point_only {
+                check_inertia_edit(&name, base, c, to, PointOnly)
+            } else {
+                check_inertia_edit(&name, base, c, to, |s| s)
+            };
+            if to <= 0.0 {
+                assert!(!finite, "{name}: inertia {to:e} decodes finite");
+            }
+            if to == 1e200 {
+                assert!(finite, "{name}: inertia 1e200 decodes non-finite");
+            }
+        }
+    }
+    let probe = ShapeSphere {
+        inertia: 1e308,
+        ..spherical
+    };
+    assert!(
+        !builds_finite(at(probe, [0.0, 0.5])),
+        "inertia 1e308 at (0, ½) decodes finite: the overflow arm does not bind"
+    );
+}
+
+#[test]
+fn nav_stop_at_edge_shape_inertia() {
+    check_shape_inertia(false);
+}
+
+negative_control!(
+    nav_stop_at_edge_shape_inertia,
+    "a centre check that reads the shape sphere's point alone takes a non-finite inertia whole",
+    expected = "the stop takes the inertia edit",
+    check_shape_inertia(true)
 );
 
 /// The report's layer: 3 for decode sanity, 2 for every other constraint, none for `Φ`. `swap` reads `ComAtOrigin` as
