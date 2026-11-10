@@ -59,16 +59,15 @@ pub trait Provider {
 }
 
 /// The greatest `k` with `k·Δ ≤ t`, both finite, `Δ > 0`, `t ≥ 0`: the division only guesses, the products decide.
-/// Refused past `2⁵²`, where `k·Δ` no longer tells neighbouring indices apart.
+/// Below `2⁵²` the rounded quotient's floor is within one of that `k` (the division and the product `k·Δ` each round
+/// once, by at most half a unit of the quotient's last place), so the search starts two below it and only climbs,
+/// `fl(k·Δ)` being monotone in `k`. Refused past `2⁵²`, where `k·Δ` no longer tells neighbouring indices apart.
 fn last_at_or_before(dt: f64, t: f64) -> Result<u64, Refused> {
     let guess = (t / dt).floor();
     if guess >= (1u64 << 52) as f64 {
         return Err(Refused::Grid);
     }
-    let mut k = guess as u64;
-    while k > 0 && k as f64 * dt > t {
-        k -= 1;
-    }
+    let mut k = (guess as u64).saturating_sub(2);
     while (k + 1) as f64 * dt <= t {
         k += 1;
     }
