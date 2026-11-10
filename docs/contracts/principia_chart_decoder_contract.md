@@ -489,7 +489,7 @@ For a nonlinear chart, replay $\Phi$ and $D$ on the CPU, or read the GPU buffer 
 action, a navigation edit that brings the pin to the centre, and a setting, off by default, applies it at every lock in
 the same command (render_gui_spec §G4). Where this part reads the anchor as the centre pixel (the anchor-preserving
 class below, "keeps the anchor at centre", and the nonlinear chart's re-centred window), the anchor is at the pin;
-TASK-M2-62 builds it in the engine (R-916; *was* TASK-M8-125), exactly on nonlinear charts or stating why not, an inexact pin's bound a calibration the owner rules on before merge (R-866, R-71; REQ-GUI-425, REQ-GUI-429). Until it lands the code
+TASK-M2-62 builds it in the engine (R-916; *was* TASK-M8-125), exactly on nonlinear charts or stating why not, an inexact pin's bound a calibration the owner rules on before merge (R-866, R-71; REQ-CHART-166, REQ-GUI-429; *was* "REQ-GUI-425, REQ-GUI-429", REQ-GUI-425 being the GUI's badge, TASK-M8-125's). Until it lands the code
 re-centres as below. *Was (before R-866):* "Select the pixel at $(s,t)$ and snap the centre to its IC."
 
 The centre pixel has one special property: `z(½,½) = z₀` **regardless of the basis**. That property sorts the operations into two classes:
@@ -535,7 +535,7 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
   decode as far from the clicked state as the clamp moved it, and the rebuilt chart's centre pixel still decodes the
   clicked state bit for bit. *(R-866, 8 Nov 2026: locking must not move the view, so this re-centring of the window is
   replaced; how the pin is held on a nonlinear chart without it, exactly or with the reason it can't be, is TASK-M2-62's
-  definition (R-72; REQ-GUI-425), written here. This bullet stands as the built behaviour until then.)* The edits are the
+  definition (R-72; REQ-CHART-166; *was* "REQ-GUI-425", the GUI's badge, TASK-M8-125's), written here. This bullet stands as the built behaviour until then.)* The edits are the
   `SetField` on `z₀ = z_locked` and the lock group's:
   one command, sent in one frame under one history key, so the history keeps one entry and one undo restores both
   (gui_state_contract §2, "A command of several edits is one history entry"; R-466); a re-centre's edits likewise. The
