@@ -57,6 +57,18 @@ pub(crate) fn is_line_break(c: char) -> bool {
     matches!(c, '\n'..='\r' | '\u{85}' | '\u{2028}' | '\u{2029}')
 }
 
+/// Whether `c` opens a WGSL name: `_` or a character of Unicode's XID_Start (WGSL, "Identifiers"), as naga 30.0.1
+/// lexes a word's first character.
+pub(crate) fn is_word_start(c: char) -> bool {
+    c == '_' || unicode_ident::is_xid_start(c)
+}
+
+/// Whether `c` continues a WGSL name: a character of Unicode's XID_Continue, `_` and the digits among them, as naga
+/// 30.0.1 lexes a word's other characters.
+pub(crate) fn is_word_part(c: char) -> bool {
+    unicode_ident::is_xid_continue(c)
+}
+
 /// `s`'s lines, split at each line break ([`is_line_break`]), a carriage return then a line feed one break, as WGSL
 /// counts them; like [`str::lines`], a final line break ends the last line and opens none.
 pub(crate) fn lines(s: &str) -> Vec<&str> {
@@ -77,8 +89,8 @@ pub(crate) fn lines(s: &str) -> Vec<&str> {
     out
 }
 
-/// `s` as tokens, each its kind and byte range: comments (`//` to the line break, [`is_line_break`], `/* */` nested), identifiers,
-/// numbers (a digit and the letters and digits after it), white space ([`is_space`]) and single punctuation
+/// `s` as tokens, each its kind and byte range: comments (`//` to the line break, [`is_line_break`], `/* */` nested), identifiers
+/// ([`is_word_start`], [`is_word_part`]), numbers (a digit and the letters and digits after it), white space ([`is_space`]) and single punctuation
 /// characters; and whether every block comment is closed: one never closed is a comment to the end.
 pub(crate) fn tokens(s: &str) -> (Vec<(Tok, usize, usize)>, bool) {
     let b = s.as_bytes();
@@ -106,10 +118,12 @@ pub(crate) fn tokens(s: &str) -> (Vec<(Tok, usize, usize)>, bool) {
         } else if s[i..].starts_with(is_space) {
             i += s[i..].find(|c: char| !is_space(c)).unwrap_or(b.len() - i);
             Tok::Space
-        } else if c.is_ascii_alphabetic() || c == b'_' {
-            while i < b.len() && (b[i].is_ascii_alphanumeric() || b[i] == b'_') {
-                i += 1;
-            }
+        } else if s[i..].starts_with(is_word_start) {
+            // A name steps by characters, `π` one name as `pi` is: a name beyond ASCII lexed as punctuation would
+            // leave the next name read as the one a declaration declares.
+            i += s[i..]
+                .find(|c: char| !is_word_part(c))
+                .unwrap_or(b.len() - i);
             Tok::Ident
         } else if c.is_ascii_digit() {
             // A number's letters — its suffix, hex digits and exponent letter — are its own, never a name; a `.`, an

@@ -14,7 +14,9 @@
 //! in WGSL, and any helpers it declares at module level (a `fn`, `const`, `struct`, …), which the module names
 //! `print_n<k>_pass<j>_h_<name>`, so they are the pass's own. It is written with the lab's names, which the generated
 //! module renames: `in_<port>`, `prev`, `p_<param>`, `res`
-//! and `px` (the target's size in pixels, and one pixel in UV), and `tex(t, uv)`, a texture read. `uv` is the
+//! and `px` (the target's size in pixels, and one pixel in UV), and `tex(t, uv)`, a texture read. They are reserved:
+//! a pass declares none of them but `fn run`, and opens with no directive (`enable`, `requires`, `diagnostic`), which
+//! the module's declarations would precede; the registry refuses either ([`super::registry::Registry::register`]). `uv` is the
 //! coordinate convention's, bottom-left origin, Y-up (`shaders/wgsl/lib/coords.wgsl`), as the lab's is.
 //!
 //! **Bindings.** Group [`FRAME_GROUP`] holds the frame (`res`, `px`) at 0 and the sampler at 1; group
@@ -310,11 +312,15 @@ fn uniform_value(value: &Value) -> Vec<f32> {
 }
 
 /// A pass's WGSL with the lab's names renamed into node `base`'s namespace (the module docs): every identifier but
-/// those in comments. The lab's names are reserved in a pass: a local named `res` or `p_x` is renamed too. The pass's
+/// those in comments. The lab's names are reserved in a pass: the registry refuses a pass declaring one but `fn run`
+/// ([`super::registry::is_lab_name`]). The pass's
 /// own module-level declarations ([`declarations`]: a helper `fn`, a `const`, `override`, `var`, `struct` or `alias`)
 /// are its pass's, `<function>_h_<name>`, so two nodes of one type, or two passes declaring one name, never declare it
-/// twice in the module; their every use is renamed with them, but a member (after `.`, or declared in a struct's
-/// body), which never names a declaration. A literal's suffix is its number's, never a name. The scan reads the
+/// twice in the module; their every use is renamed with them. A member (after `.`, or declared in a struct's body)
+/// never names a declaration or one of the lab's names, so keeps its own: `s.res` is `s`'s member. Nor does an
+/// attribute's name (after `@`: `@size`, with a helper named `size`), nor the enumerants an attribute takes in place
+/// of expressions (`@builtin`, `@interpolate`, `@diagnostic`); an attribute's expressions (`@size(N)`) are renamed as
+/// any. A literal's suffix is its number's, never a name. The scan reads the
 /// pass's tokens ([`pass_tokens`]), a comment between two of them trivia, as white space is: a block comment ends at
 /// the `*/` closing it, its nested comments closed first, as WGSL's do; `None` where one is never closed.
 fn rename(wgsl: &str, base: &str, function: &str) -> Option<String> {
@@ -330,15 +336,24 @@ fn rename(wgsl: &str, base: &str, function: &str) -> Option<String> {
     let mut struct_body = false;
     // The previous token that is not trivia.
     let mut prev = "";
+    // Whether an attribute taking enumerants has just been named, and whether the scan is in its arguments, which
+    // hold no parentheses.
+    let mut enumerants_next = false;
+    let mut enumerants = false;
     for (k, t) in toks.iter().enumerate() {
         match t.kind {
             Tok::Ident => {
                 let word = t.text;
+                let attribute = prev == "@";
                 let member = prev == "." || (struct_body && next_text(&toks[k + 1..]) == Some(":"));
                 prev = word;
+                if attribute {
+                    enumerants_next = matches!(word, "builtin" | "interpolate" | "diagnostic");
+                }
                 match renamed(word, base, function) {
+                    _ if attribute || enumerants || member => out.push_str(word),
                     Some(name) => out.push_str(&name),
-                    None if own.contains(word) && !member => {
+                    None if own.contains(word) => {
                         let _ = write!(out, "{function}_h_{word}");
                     }
                     None => out.push_str(word),
@@ -346,6 +361,11 @@ fn rename(wgsl: &str, base: &str, function: &str) -> Option<String> {
                 struct_next |= word == "struct";
                 continue;
             }
+            _ if t.text == "(" => {
+                enumerants = enumerants_next;
+                enumerants_next = false;
+            }
+            _ if t.text == ")" => enumerants = false,
             _ if t.text == "{" => {
                 struct_body = struct_next;
                 struct_next = false;
@@ -398,7 +418,8 @@ fn declarations<'a>(toks: &[Token<'a>]) -> BTreeSet<&'a str> {
     names
 }
 
-/// The module's name for the lab's name `word` in node `base`'s pass `function`, if it is one.
+/// The module's name for the lab's name `word` in node `base`'s pass `function`, if it is one: the names
+/// [`super::registry::is_lab_name`] holds.
 fn renamed(word: &str, base: &str, function: &str) -> Option<String> {
     match word {
         "run" => Some(function.to_owned()),

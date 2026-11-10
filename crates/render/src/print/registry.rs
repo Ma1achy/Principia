@@ -327,7 +327,8 @@ impl Registry {
     /// Registers the entry declared by `decl`, its pass files read through `wgsl`; refused, naming the entry and the
     /// member, where a member of [`FIELDS`] is missing or not of its kind, a member is one no entry has, the id is
     /// taken, not an identifier or a preset's, an input has no type or default, a number parameter has no range, step
-    /// or unit, or a default outside its range, or a pass file is missing or defines no `run`.
+    /// or unit, or a default outside its range, or a pass file is missing, defines no `run`, holds a directive or
+    /// declares one of the lab's names (`run`, `tex`, `res`, `px`, `prev`, `in_<port>`, `p_<param>`) but `fn run`.
     pub fn register(
         &mut self,
         decl: &str,
@@ -413,6 +414,9 @@ fn entry(json: &Json, wgsl: &dyn Fn(&str) -> Option<String>) -> Result<Entry, Re
         };
         if !defines_run(&text) {
             return refuse(format!("the pass `{file}` defines no `fn run`"));
+        }
+        if let Some(why) = pass_refusal(&text) {
+            return refuse(format!("the pass `{file}` {why}"));
         }
         loaded.push(Pass { file, wgsl: text });
     }
@@ -636,6 +640,81 @@ fn defines_run(wgsl: &str) -> bool {
     let (toks, _) = pass_tokens(wgsl);
     let sig: Vec<&str> = toks.iter().filter(|t| !t.trivia).map(|t| t.text).collect();
     sig.windows(3).any(|w| w == ["fn", "run", "("])
+}
+
+/// Whether `word` is one of the lab's names a pass reads, which the codegen renames into its node's namespace
+/// ([`super::codegen`]): `run`, `tex`, `res`, `px`, `prev`, `in_<port>` and `p_<param>`.
+pub(crate) fn is_lab_name(word: &str) -> bool {
+    matches!(word, "run" | "tex" | "res" | "px" | "prev")
+        || word.starts_with("in_")
+        || word.starts_with("p_")
+}
+
+/// Why the codegen could not place pass `wgsl` in a module, read from its tokens outside comments ([`pass_tokens`]),
+/// if it could not:
+/// - a directive (`enable`, `requires`, or `diagnostic` not after `@`, each a WGSL keyword) would follow the
+///   module's declarations, which WGSL refuses, and a `diagnostic` filter would reach every node's passes;
+/// - a declaration of one of the lab's names ([`is_lab_name`]) but `fn run` at module level would be renamed with
+///   every read of it, into a name the module already declares or no name at all (`print_frame.res`): the name after
+///   `fn`, `const`, `override`, `struct`, `alias`, `let`, or `var` and its `<…>`, and a function's parameter. A
+///   struct's member keeps its name, so may be one.
+fn pass_refusal(wgsl: &str) -> Option<String> {
+    let (toks, _) = pass_tokens(wgsl);
+    let sig: Vec<&str> = toks.iter().filter(|t| !t.trivia).map(|t| t.text).collect();
+    let mut parens = 0usize;
+    // The parenthesis depth of the parameter list the scan is in, and whether a `fn` awaits its list's `(`.
+    let mut params: Option<usize> = None;
+    let mut fn_next = false;
+    // Whether a `var`'s template is open, and the index of the token after its `>`, the name it declares.
+    let mut template = false;
+    let mut after_template = None;
+    for (k, &w) in sig.iter().enumerate() {
+        let before = k.checked_sub(1).map(|j| sig[j]);
+        match w {
+            "enable" | "requires" | "diagnostic" if before != Some("@") => {
+                return Some(format!(
+                    "holds the directive `{w}`: a pass's directive would follow the module's declarations, which \
+                     WGSL refuses, and a `diagnostic` would filter every node's passes"
+                ));
+            }
+            "fn" => fn_next = true,
+            "var" => template = sig.get(k + 1) == Some(&"<"),
+            ">" if template => {
+                template = false;
+                after_template = Some(k + 1);
+            }
+            "(" => {
+                parens += 1;
+                if fn_next {
+                    params = Some(parens);
+                    fn_next = false;
+                }
+            }
+            ")" => {
+                if params == Some(parens) {
+                    params = None;
+                }
+                parens = parens.saturating_sub(1);
+            }
+            _ => {}
+        }
+        // `fn` declares a function at module level only, so `fn run` is the pass's `run`.
+        if !is_lab_name(w) || (w == "run" && before == Some("fn")) {
+            continue;
+        }
+        let keyword = matches!(
+            before,
+            Some("fn" | "const" | "override" | "struct" | "alias" | "let" | "var")
+        );
+        let parameter = params == Some(parens) && sig.get(k + 1) == Some(&":");
+        if keyword || parameter || after_template == Some(k) {
+            return Some(format!(
+                "declares `{w}`, one of the lab's names (`run`, `tex`, `res`, `px`, `prev`, `in_<port>`, \
+                 `p_<param>`), which the module renames: a pass declares none of them but `fn run`"
+            ));
+        }
+    }
+    None
 }
 
 // ── The build-time check ────────────────────────────────────────────────────────────────────────────────────────

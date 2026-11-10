@@ -5,8 +5,10 @@
 //! to register; a pass's nested block comments are skipped whole, and one never closed is refused; a comment between
 //! a pass's tokens is trivia, as white space is; WGSL's white space is Unicode's Pattern_White_Space, as naga reads it,
 //! never Unicode's White_Space; a `//` comment ends at each of WGSL's line breaks, as naga ends it, in a pass and in an
-//! occupant's declaration lines; and the stain's codegen given a Print graph node refuses it. Each test registers its
-//! negative control (R-176).
+//! occupant's declaration lines; an attribute's name, and its enumerants, keep their own; a name beyond ASCII is one
+//! name, as naga lexes it; a pass holding a directive, or declaring one of the lab's names but `fn run`, fails to
+//! register, while a struct's member named as one keeps its name; and the stain's codegen given a Print graph node
+//! refuses it. Each test registers its negative control (R-176).
 
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use render::assemble::{AssembleError, Declaration};
@@ -1169,4 +1171,250 @@ negative_control!(
     "a stain occupant's own library function",
     expected = "the stain's codegen took the node `oklch_to_linear`",
     check_stain_refuses("oklch_to_linear")
+);
+
+// ----- attributes, names beyond ASCII, directives and the lab's names -----
+
+/// A pass whose text ends in a name, through its last character: the name is lexed whole, and the codegen renames it
+/// as the pass's helper. (The module is no WGSL, a `const_assert` wanting its `;`; the lexer reads it all the same.)
+fn check_final_name(emit: fn(String) -> String) {
+    let pass = "fn run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }\nconst ok = true;\nconst_assert ok";
+    let g = commented(pass).unwrap_or_else(|e| panic!("a pass ending in a name is refused: {e}"));
+    let source = emit(g.source);
+    assert!(
+        source.contains("const_assert print_n1_pass0_h_ok\n"),
+        "a name ending the text is not lexed whole: {source}"
+    );
+}
+
+#[test]
+fn print_registry_entries_name_ends_text() {
+    check_final_name(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_name_ends_text,
+    "the final name cut short",
+    expected = "a name ending the text is not lexed whole",
+    check_final_name(|s| s.replace(
+        "const_assert print_n1_pass0_h_ok",
+        "const_assert print_n1_pass0_h_o"
+    ))
+);
+
+/// The commented pass `pass` registers and generates; its module, as `emit` writes it, holds each of `needles` for
+/// both nodes (`{k}` the node's number) and compiles under naga. `what` names the defect a missing needle shows.
+fn check_placed(pass: &str, needles: &[&str], emit: fn(String) -> String, what: &str) {
+    let g = commented(pass).unwrap_or_else(|e| panic!("{what}: the pass is refused: {e}"));
+    let source = emit(g.source);
+    let missing: Vec<String> = [1, 2]
+        .into_iter()
+        .flat_map(|k| {
+            needles
+                .iter()
+                .map(move |n| n.replace("{k}", &k.to_string()))
+        })
+        .filter(|needle| !source.contains(needle.as_str()))
+        .collect();
+    assert!(missing.is_empty(), "{what}: no {missing:?} in {source}");
+    compile(&source);
+}
+
+/// Helpers named as the attributes they stand beside are: `size` and `off`. The attribute's name keeps its own, an
+/// expression in its arguments (`@size(size)`) is the helper, and an enumerant (`@diagnostic(off, …)`) keeps its own.
+const ATTRIBUTE_PASS: &str = "const size: u32 = 16u;
+const off: f32 = 0.5;
+struct S { @size(size) v: f32, w: f32 }
+@diagnostic(off, derivative_uniformity) fn shade(c: f32) -> f32 { return c * off; }
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let s = S(uv.x, uv.y);
+    return vec4<f32>(shade(s.v), s.w, 0.0, 1.0);
+}";
+
+fn check_attributes(emit: fn(String) -> String) {
+    check_placed(
+        ATTRIBUTE_PASS,
+        &[
+            "struct print_n{k}_pass0_h_S { @size(print_n{k}_pass0_h_size) v: f32, w: f32 }",
+            "@diagnostic(off, derivative_uniformity) fn print_n{k}_pass0_h_shade(c: f32) -> f32 { return c * print_n{k}_pass0_h_off; }",
+        ],
+        emit,
+        "an attribute's name or enumerant is renamed",
+    );
+}
+
+#[test]
+fn print_registry_entries_attribute_names_kept() {
+    check_attributes(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_attribute_names_kept,
+    "the attribute's name renamed as the helper it shares its name with is",
+    expected = "an attribute's name or enumerant is renamed",
+    check_attributes(|s| s.replace("@size(", "@print_n1_pass0_h_size("))
+);
+
+/// A helper named beyond ASCII, `π`: one name, as naga lexes it (XID_Start, then XID_Continue), so the type after it,
+/// `f32`, is no declaration of the pass's.
+const UNICODE_PASS: &str = "const π: f32 = 3.14159;
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let r: f32 = π * uv.x;
+    return vec4<f32>(r, 0.0, 0.0, 1.0);
+}";
+
+fn check_unicode(emit: fn(String) -> String) {
+    check_placed(
+        UNICODE_PASS,
+        &[
+            "const print_n{k}_pass0_h_π: f32 = 3.14159;",
+            "let r: f32 = print_n{k}_pass0_h_π * uv.x;",
+        ],
+        emit,
+        "a name beyond ASCII is not one name",
+    );
+}
+
+#[test]
+fn print_registry_entries_names_beyond_ascii() {
+    check_unicode(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_names_beyond_ascii,
+    "`π` lexed as punctuation, so `f32` read as the name the `const` declares",
+    expected = "a name beyond ASCII is not one name",
+    check_unicode(|s| s.replace("let r: f32", "let r: print_n1_pass0_h_f32"))
+);
+
+/// A pass's `fn run`, which the cases below add to.
+const RUN: &str = "fn run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }";
+
+/// Each pass of `cases` fails to register, the refusal naming the pass's file and saying its reason.
+fn check_refused(cases: &[(String, &str)]) {
+    for (pass, why) in cases {
+        match commented(pass) {
+            Ok(g) => panic!("a pass the module cannot hold generated: {}", g.source),
+            Err(e) => assert!(
+                e.contains("entry `commented`: the pass `commented.wgsl` ") && e.contains(why),
+                "{e} does not say {why:?}"
+            ),
+        }
+    }
+}
+
+#[test]
+fn print_registry_entries_directive_refused() {
+    let with = |head: &str| format!("{head}\n{RUN}");
+    check_refused(&[
+        (with("enable f16;"), "holds the directive `enable`"),
+        (
+            with("requires readonly_and_readwrite_storage_textures;"),
+            "holds the directive `requires`",
+        ),
+        (
+            with("diagnostic(off, derivative_uniformity);"),
+            "holds the directive `diagnostic`",
+        ),
+        (
+            with("/* first */ diagnostic /* a filter */ (off, derivative_uniformity);"),
+            "holds the directive `diagnostic`",
+        ),
+    ]);
+    // The attribute is no directive.
+    check_placed(
+        &with("@diagnostic(off, derivative_uniformity) fn f(c: f32) -> f32 { return c; }"),
+        &["@diagnostic(off, derivative_uniformity) fn print_n{k}_pass0_h_f("],
+        |s| s,
+        "the `@diagnostic` attribute is refused",
+    );
+}
+
+negative_control!(
+    print_registry_entries_directive_refused,
+    "a pass whose `diagnostic` is an attribute, after `@`, which the module holds",
+    expected = "a pass the module cannot hold generated",
+    check_refused(&[(
+        format!(
+            "@diagnostic(off, derivative_uniformity) fn f(c: f32) -> f32 {{ return c; }}\n{RUN}"
+        ),
+        "",
+    )])
+);
+
+#[test]
+fn print_registry_entries_lab_name_declarations_refused() {
+    let with = |head: &str| format!("{head}\n{RUN}");
+    let body = |stmt: &str| {
+        format!("fn run(uv: vec2<f32>) -> vec4<f32> {{ {stmt} return vec4<f32>(uv, 0.0, 1.0); }}")
+    };
+    check_refused(&[
+        (
+            with("fn shade(res: f32) -> f32 { return res; }"),
+            "declares `res`",
+        ),
+        (
+            with("fn shade(@location(0) p_q: f32) -> f32 { return 1.0; }"),
+            "declares `p_q`",
+        ),
+        (body("let px = uv;"), "declares `px`"),
+        (body("var p_v = uv;"), "declares `p_v`"),
+        (body("var<function> in_w: f32;"), "declares `in_w`"),
+        (with("const p_k: f32 = 1.0;"), "declares `p_k`"),
+        (with("override p_o: f32 = 1.0;"), "declares `p_o`"),
+        (
+            with("var /* scratch */ <private> prev: f32;"),
+            "declares `prev`",
+        ),
+        (
+            with("fn tex(x: f32) -> f32 { return x; }"),
+            "declares `tex`",
+        ),
+        (with("struct in_s { v: f32 }"), "declares `in_s`"),
+        (with("alias run = f32;"), "declares `run`"),
+    ]);
+}
+
+negative_control!(
+    print_registry_entries_lab_name_declarations_refused,
+    "a pass declaring only `fn run` of the lab's names, its struct's members named as them",
+    expected = "a pass the module cannot hold generated",
+    check_refused(&[(MEMBER_NAMES_PASS.to_owned(), "")])
+);
+
+/// A struct whose members are named as the lab's names are: each keeps its name, declared and after `.`, while the
+/// lab's own `res` and `px` are the frame's, read after a `>` that closes no `var`'s template.
+const MEMBER_NAMES_PASS: &str = "struct S { res: f32, p_x: f32, px: f32 }
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let wide = uv.x > px.x;
+    let s = S(uv.x, uv.y, px.x);
+    return vec4<f32>(s.res * res.x, s.p_x, s.px, 1.0);
+}";
+
+fn check_member_names(emit: fn(String) -> String) {
+    check_placed(
+        MEMBER_NAMES_PASS,
+        &[
+            "struct print_n{k}_pass0_h_S { res: f32, p_x: f32, px: f32 }",
+            "let s = print_n{k}_pass0_h_S(uv.x, uv.y, print_frame.px.x);",
+            "vec4<f32>(s.res * print_frame.res.x, s.p_x, s.px, 1.0)",
+        ],
+        emit,
+        "a member named as the lab's names is renamed",
+    );
+}
+
+#[test]
+fn print_registry_entries_members_named_as_lab_names() {
+    check_member_names(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_members_named_as_lab_names,
+    "the members renamed as the lab's names are, before the member guard",
+    expected = "a member named as the lab's names is renamed",
+    check_member_names(|s| s.replace(
+        "{ res: f32, p_x: f32",
+        "{ print_frame.res: f32, print_n1.p_x: f32"
+    ))
 );
