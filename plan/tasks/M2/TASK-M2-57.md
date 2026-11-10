@@ -49,7 +49,10 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   windows of twice the area in `β` (the proposal's items 4 and 5).
 - **One periodic `β` link (R-919, RQ-754 Q1 (c)):** the full-circle link is the `β` block's only link. dd_generation_root
   § 3.9's `sigmoid_beta`, `tanh_beta` and `softsign_beta` rows and its `β ∈ [0, π]` codomain, and REQ-GEN-013's `β`
-  codomain and default, rewritten to it, each keeping its *Was*; the registry in `crates/ledger` to match; the PR lists
+  codomain and default, rewritten to it, each keeping its *Was*; the registry in `crates/ledger` to match. The three
+  bounded maps are not deleted: they stay as conversion sources only, their forward maps kept for Q3 (a)'s conversion
+  and the `latent_conversion` control "a value converted by the wrong link fails", not selectable on any block and not
+  counted as `β` links (physics review 5834538186 of PR #465). The PR lists
   what the single `β` link changes in built code (REQ-VAL-024's 54 link selections become 18). REQ-GEN-014's two `β`
   densities are not met meanwhile, by R-919: no second `β` link is added (R-519).
 - **Presets and goldens whose plane runs along `z_β` redefined, not converted (R-919, RQ-754 Q2 (b)):** each an affine
@@ -137,3 +140,8 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   conversion test (R-898; REQ-DEC-055)." "golden's outcome classes identical and its regenerated hash recorded with the
   reason, in the GPU jobs that run them (R-898; REQ-DEC-055)." "- Any preset, saved chart or golden whose converted value". "the converted words marked with a new kind value; control:
   a value converted by the wrong link fails (R-898; REQ-DEC-055)."
+- *9 Nov 2026 (physics review 5834538186 of PR #465):* Q3 (a) needs the old forward maps (`sigmoid_beta`, and
+  `tanh_beta` and `softsign_beta` for charts that pin them), as does the `latent_conversion` control "a value converted
+  by the wrong link fails", so the one-periodic-link deliverable keeps the three as conversion sources only: not
+  selectable, not counted as `β` links (R-919's Q1 (c) bullet; dd_generation_root § 3.9's R-919 line).
+  *Was (Deliverables):* "the registry in `crates/ledger` to match; the PR lists".

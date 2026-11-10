@@ -10733,7 +10733,7 @@
   rulings:
   - R-919
   milestone: M2
-  note: "R-479 E1: the Momenta row sets the four momentum slots to one link; R-481 G7: the parameters are values, not variants (20 Oct 2026). R-919 (RQ-754 Q1 (c), 9 Nov 2026): latent `β` is a periodic angle (R-898) with one periodic link, not a bounded-interval sigmoid; TASK-M2-57 restates this requirement's `β` codomain and default to the built link, keeping a *Was*."
+  note: "R-479 E1: the Momenta row sets the four momentum slots to one link; R-481 G7: the parameters are values, not variants (20 Oct 2026). R-919 (RQ-754 Q1 (c), 9 Nov 2026): latent `β` is a periodic angle (R-898) with one periodic link, not a bounded-interval sigmoid; TASK-M2-57 restates this requirement's `β` codomain and default to the built link, keeping a *Was*. Physics review 5834538186 of PR #465 (9 Nov 2026): sigmoid_beta, tanh_beta and softsign_beta are not deleted; they stay as conversion sources only (R-919 Q3 (a) and TASK-M2-57's latent_conversion control need their forward maps), not selectable on any block and not counted as β links."
 - id: REQ-GEN-014
   area: GEN
   statement: "The link registry must span genuinely different sampling densities (e.g. softmax vs an edge-reaching simplex map, t^γ at spread-apart γ, sigmoid vs a heavier-tailed bounded map) so a robustness sweep can test whether a finding survives a link swap."
