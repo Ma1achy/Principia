@@ -261,7 +261,9 @@ negative_control!(
 
 // ---------------------------------------------------------------------------------------------------------------------
 // REQ-VAL-155, R-213: `qa_r206_harness_opens_the_selected_backend` is a test only; its child path is the `qa_child`
-// bin's.
+// bin's. R-909 retired the check that `qa_R-206.rs` lists its five tests and nothing else: the CI step `cargo xtask
+// controls --list` fails on a test there without a control, a child path made a `#[test]` again, with no
+// control of its own, among them.
 
 fn cargo() -> Command {
     let mut cmd = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned()));
@@ -269,60 +271,6 @@ fn cargo() -> Command {
         .env("CARGO_TARGET_DIR", target_dir());
     cmd
 }
-
-/// The names `cargo test -p validation --test qa_R-206 -- --list` lists, with or without `controls`.
-fn r206_listing(controls: bool) -> Vec<String> {
-    let mut cmd = cargo();
-    cmd.args(["test", "-q", "-p", "validation", "--test", "qa_R-206"]);
-    if controls {
-        cmd.args(["--features", "controls"]);
-    }
-    let o = cmd
-        .args(["--", "--list", "--format", "terse"])
-        .timed_output()
-        .expect("run cargo test --list");
-    let out = String::from_utf8_lossy(&o.stdout).into_owned();
-    assert!(
-        o.status.success(),
-        "cargo test --list failed:\n{out}\n{}",
-        String::from_utf8_lossy(&o.stderr)
-    );
-    let mut names: Vec<String> = out
-        .lines()
-        .filter_map(|l| l.strip_suffix(": test"))
-        .map(str::to_owned)
-        .collect();
-    names.sort();
-    names
-}
-
-/// `qa_R-206.rs`'s five tests, from TASK-M0-25's list (none of them a child body).
-const R206_TESTS: [&str; 5] = [
-    "qa_r206_harness_explicit_value_overrides_the_default",
-    "qa_r206_harness_logs_the_backend_it_ran_on",
-    "qa_r206_harness_opens_the_selected_backend",
-    "qa_r206_unknown_value_is_still_an_error",
-    "qa_r206_unset_defaults_by_platform_and_explicit_overrides",
-];
-
-fn check_lists_only_the_tests(names: &[String]) {
-    assert_eq!(
-        names, R206_TESTS,
-        "qa_R-206.rs lists more than its five tests"
-    );
-}
-
-#[test]
-fn qa_m0_26_r206_lists_its_five_tests_and_no_child_path() {
-    check_lists_only_the_tests(&r206_listing(false));
-}
-
-negative_control!(
-    qa_m0_26_r206_lists_its_five_tests_and_no_child_path,
-    "the listing under `controls`, which adds a control per test, required to be the five tests alone",
-    expected = "qa_R-206.rs lists more than its five tests",
-    check_lists_only_the_tests(&r206_listing(true))
-);
 
 /// The marker the child path prints.
 const OPENED: &str = "QA_R206_OPENED backend=";

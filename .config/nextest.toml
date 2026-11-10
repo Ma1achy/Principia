@@ -1593,7 +1593,6 @@ default-filter = """
 #     145.1 s  validation::qa_TASK-M0-21 qa_controls_exist_only_under_the_feature
 #      88.8 s  validation::qa_TASK-M0-21 qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test
 #     142.3 s  validation::qa_TASK-M0-26 qa_m0_26_a_control_without_an_expected_message_does_not_compile
-#     143.9 s  validation::qa_TASK-M0-26 qa_m0_26_r206_lists_its_five_tests_and_no_child_path
 #     148.2 s  xtask::ci ci_list_runs_no_control
 #      64.6 s  xtask::controls controls_control_leaving_test_passing_fails_naming_it
 #      66.0 s  xtask::controls controls_control_panicking_without_its_message_fails_naming_it
@@ -1751,7 +1750,6 @@ default-filter = """
         | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_controls_exist_only_under_the_feature))
         | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test))
         | (binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_a_control_without_an_expected_message_does_not_compile))
-        | (binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_lists_its_five_tests_and_no_child_path))
         | (binary_id(=xtask::ci) & test(=ci_list_runs_no_control))
         | (binary_id(=xtask::controls) & test(=controls_control_leaving_test_passing_fails_naming_it))
         | (binary_id(=xtask::controls) & test(=controls_control_panicking_without_its_message_fails_naming_it))
