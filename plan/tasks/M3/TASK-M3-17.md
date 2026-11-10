@@ -42,7 +42,7 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-253 — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*"
 - `decisions.md` § "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
-- `decisions.md` § "R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now; its chart-independence arm (REQ-CHART-132), which needs TASK-M2-71's warped chart, moves to a new task that waits on TASK-M2-71 *(amends R-918 in part)*"
+- `decisions.md` § "R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 in part)*"
 
 ## Deliverables
 - `crates/kernel/src/detect/label.rs` — the precedence function and the single write of `state` + `detail`.

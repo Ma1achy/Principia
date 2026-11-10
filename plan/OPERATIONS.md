@@ -141,7 +141,7 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   in chart_composition § 15's stages, and R-917's and R-918's exceptions: work in flight or approved finishing (TASK-M2-38,
   TASK-M2-56 and the open PRs), fixes, CI and tooling work, and what M2's own tests need. No new integrator (M3) or
   visual (M4 to M8) task is dispatched, the GUI track's included (R-390, R-627 as R-917 amends them), nor TASK-M3-69
-  (FTLE's chart independence, split from TASK-M3-14 by R-924), TASK-M4-06 and the 217 tasks R-914 released; the ready
+  (FTLE's chart independence, split from TASK-M3-14 per R-369, following R-924), TASK-M4-06 and the 217 tasks R-914 released; the ready
   list may offer them, and the hold is the dispatcher's. TASK-M3-14, the Benettin FTLE shadow, resumes now (R-924),
   work in flight under R-917's exception. *Was (R-918):* "nor TASK-M3-14, TASK-M4-06".
 - **What every dispatch names:**

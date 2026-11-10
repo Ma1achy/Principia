@@ -333,7 +333,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
   - the Yoshida-6 coefficient check before Yoshida-6 enters the shared source.
 - The CPU-side parity suite (`computeIC`).
 - **After M2's gate (R-917, R-918, R-924):** TASK-M3-69, the FTLE field's chart independence (REQ-CHART-132), split from
-  TASK-M3-14 by R-924, which resumes TASK-M3-14, the Benettin FTLE shadow, now; TASK-M3-67, the real integrator as the
+  TASK-M3-14 per R-369 following R-924, which resumes TASK-M3-14, the Benettin FTLE shadow, now; TASK-M3-67, the real integrator as the
   trajectory interface's provider and the outcome-class arms of M2's conversions. *Was (R-918):* "TASK-M3-14, the
   Benettin FTLE shadow, re-queued, with REQ-CHART-132;".
 

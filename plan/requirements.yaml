@@ -4414,7 +4414,7 @@
   - R-918
   - R-924
   milestone: M3
-  note: "R-918 (9 Nov 2026): moved from M8 to M3, closed by TASK-M3-14 once it is re-queued after M2's gate; its test needs the Benettin shadow's initialisation and TASK-M2-71's warps (F4). TASK-M8-100 is retired. R-924 (10 Nov 2026): TASK-M3-14 resumes now, and this requirement moves to TASK-M3-69, split from it, which waits on TASK-M3-14, TASK-M2-71 and M2's gate; its verify is unchanged. Was: \"closed by TASK-M3-14 once it is re-queued after M2's gate\"."
+  note: "R-918 (9 Nov 2026): moved from M8 to M3, closed by TASK-M3-14 once it is re-queued after M2's gate; its test needs the Benettin shadow's initialisation and TASK-M2-71's warps (F4). TASK-M8-100 is retired. R-924 (10 Nov 2026): TASK-M3-14 resumes now; applied per R-369 following it, this requirement moves to TASK-M3-69, split from it, which waits on TASK-M3-14, TASK-M2-71 and M2's gate; its verify is unchanged. Was: \"closed by TASK-M3-14 once it is re-queued after M2's gate\"."
 - id: REQ-CHART-133
   area: CHART
   statement: "The mirror half of the shape sphere must never be dropped or folded by a path: a path between two lower-half views must stay in the lower half, at every pixel of every frame (R-544; the owner's rider to RQ-736)."

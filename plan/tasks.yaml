@@ -1400,9 +1400,9 @@
 - id: TASK-M3-14
   milestone: M3
   title: The Benettin FTLE shadow
-  depends_on: [TASK-M3-05, TASK-M3-06]  # R-924: TASK-M2-71 (R-918) dropped with REQ-CHART-132
+  depends_on: [TASK-M3-05, TASK-M3-06]  # R-369, following R-924: TASK-M2-71 (R-918) dropped with REQ-CHART-132
   needs: [REQ-PAY-021, REQ-PAY-026, REQ-PAY-032]
-  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038]  # R-924: REQ-CHART-132 to TASK-M3-69
+  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038]  # R-369, following R-924: REQ-CHART-132 to TASK-M3-69
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-15
@@ -1639,10 +1639,10 @@
   pitfalls: []
 - id: TASK-M3-69
   milestone: M3
-  title: "The FTLE field's chart independence (R-924)"
-  depends_on: [TASK-M3-14, TASK-M2-71]  # R-924; after M2's gate (R-918)
+  title: "The FTLE field's chart independence (R-369, following R-924)"
+  depends_on: [TASK-M3-14, TASK-M2-71]  # R-369, following R-924; after M2's gate (R-918)
   needs: []
-  requirements: [REQ-CHART-132]  # R-924, from TASK-M3-14 (R-918)
+  requirements: [REQ-CHART-132]  # R-369, following R-924, from TASK-M3-14 (R-918)
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M4-01
