@@ -388,7 +388,8 @@ the rest is non-visual and so M2's (R-916).
 1. **N12, the extension kinds in the contracts.** *Slot:* § B.2 item 5, with TASK-M2-59 and TASK-M2-60 (chart paths in
    the contracts), after TASK-M2-58 has carried the answers to RQ-771 to RQ-781. *Acceptance:*
    `principia_chart_decoder_contract.md` Part 3 and `principia_chart_reference.md` § 5.4 rewritten from the answers,
-   each replaced line kept as *Was*: the kinds (affine, periodic, pole-crossing, unfold, clamp, saturate, bounded, and,
+   each replaced line kept as *Was*: the kinds (affine, periodic, pole-crossing, unfold, clamp, saturate, blank, which
+   is R-407's "bounded" and has the one name "blank" here, in N14 and in RQ-773, and,
    where RQ-772 declares one, a reflection or a new repeat map, each a new kind under R-407's clause 3), declared per
    edge, each with its primary range and its place in R-408's classification order; each shipped chart's per-edge table
    (§ A.11 as ruled), physics-reviewed under R-407's clause 3; the second sheet defined (R-72) in § 2.2; REQ-ENC-030's
