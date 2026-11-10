@@ -1075,9 +1075,18 @@ where a chart has no shader code, or a new backwards value.*
 - **The question:** which reading the owner means.
 - **Options seen:**
   - (a) Item 7 lists the fragment side's chart needs: `ctx.chart.z` stays forward, from the generated code where the
-    chart has it and from the quad's forward table where it has none.
+    chart has it and from the quad's forward table where it has none. R-926 item 6's forward table maps window
+    position to state, and `ctx.chart.z` is the controls `Φ` hands the decoder, not the state, so on a table-route
+    chart (a) needs one of two sources:
+    - (a-table) the forward table carries `z` beside the state at each node (eight more f32 words a node), the
+      fragment interpolating it as it does the state, with the table's spacing its error; `z` keeps
+      colour_composition § 3's meaning;
+    - (a-window) `z` is the flat window's output, `c + Q·u`, affine and exact with no table, which is the map's named
+      coordinates at the pixel; it equals the decoder's controls only on a chart whose map takes the controls as its
+      named coordinates, so on any other chart it changes what `ctx.chart.z` means.
   - (b) `ctx.chart.z` becomes, or gains a sibling that is, the running state's chart position, read backwards.
-- **Recommended:** (a), which changes nothing in colour_composition § 3 but the table fallback.
+- **Recommended:** (a-table), which changes nothing in colour_composition § 3 but the table fallback; (a-window) is
+  cheaper and exact, and is the alternative if the owner reads `ctx.chart.z` as the window's coordinates.
 - **Measurement:** none needed; a reading.
 - **Applied meanwhile:** the plan reads (a) and marks it "reading, open".
 - **Waits:** the colour work that builds `ctx.chart.z` on a table-route chart.
