@@ -1930,8 +1930,10 @@ mod a_test_in_no_profile {
             &read(CI),
             &edit(
                 &read(CONFIG),
-                "    | binary_id(=engine::lock_gpu)\n    | binary_id(=engine::arctan_gpu)\n    | binary_id(=validation::decode_f32_eps_gpu)\n    | binary_id(=validation::invariant_gradient_gpu)\n    | binary_id(=validation::agreement_preset_gpu)\n    | binary_id(=validation::qa_TASK-M2-25_gpu)\n    | binary_id(=xtask::build_kernel)\n",
-                "    | binary_id(=engine::arctan_gpu)\n    | binary_id(=validation::decode_f32_eps_gpu)\n    | binary_id(=validation::invariant_gradient_gpu)\n    | binary_id(=validation::agreement_preset_gpu)\n    | binary_id(=validation::qa_TASK-M2-25_gpu)\n    | binary_id(=xtask::build_kernel)\n"
+                // The gpu-kernel filter's one line for the lock's binary: its terms sit four spaces in, the ci and
+                // pr profiles' eight, so this is the first match and the only edit.
+                "\n    | binary_id(=engine::lock_gpu)\n",
+                "\n"
             )
         )
     );

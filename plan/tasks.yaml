@@ -2915,7 +2915,7 @@
 - id: TASK-M7-45
   milestone: M7
   title: "The decoder's identity per link: each recorded link's own entry hash, refusing exactly the changed link (R-483 X4)"
-  depends_on: [TASK-M7-31, TASK-M7-32]  # R-521 ruled RQ-385; no longer waits; TASK-M7-32 builds the tEXt chunk (code review F8 of PR #265, applied per R-369)
+  depends_on: [TASK-M7-31, TASK-M7-32, TASK-M2-57]  # R-521 ruled RQ-385; no longer waits; TASK-M7-32 builds the tEXt chunk (code review F8 of PR #265, applied per R-369); TASK-M2-57 writes the pre-M2-57 fixture REQ-TOOL-172's retired-link arm reads (R-921; physics review 5836519618 of PR #469, applied per R-369)
   needs: []
   requirements: [REQ-TOOL-172, REQ-TOOL-186]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
