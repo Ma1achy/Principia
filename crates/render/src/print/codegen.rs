@@ -29,7 +29,7 @@ use std::fmt::{self, Write as _};
 use super::graph::{Expanded, Value, RENDER};
 use super::ports::{validate, Feed, InputDefault};
 use super::registry::{check_params, Entry, ParamKind, Registry};
-use crate::lex::{pass_tokens, Tok, Token};
+use crate::lex::{is_space, pass_tokens, Tok, Token};
 
 /// The namespace of every name the Print graph's module declares; the stain's codegen refuses it.
 pub const PREFIX: &str = "print_";
@@ -274,7 +274,7 @@ fn node_module(
              @location(0) vec4<f32> {{\n    return {function}(frag_uv(frag.xy, print_frame.res));\n}}\n",
             entry.id,
             pass.file,
-            wgsl.trim_end()
+            wgsl.trim_end_matches(is_space)
         );
         out.passes.push(PassEntry {
             node: id.to_owned(),

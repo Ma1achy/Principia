@@ -37,9 +37,21 @@ fn block_comment_len(b: &[u8]) -> Option<usize> {
     None
 }
 
+/// Whether `c` is WGSL's white space, Unicode's Pattern_White_Space (WGSL, "Blankspace and line breaks"): the
+/// space, the tab, the line feed, vertical tab, form feed and carriage return, U+0085 (next line), U+200E and U+200F
+/// (the left-to-right and right-to-left marks), U+2028 (line separator) and U+2029 (paragraph separator), the set
+/// naga 30.0.1 lexes as blankspace. Unicode's White_Space differs ([`char::is_whitespace`]): it holds the no-break
+/// space U+00A0 and others WGSL refuses, and not the marks U+200E and U+200F.
+pub(crate) fn is_space(c: char) -> bool {
+    matches!(
+        c,
+        ' ' | '\t'..='\r' | '\u{85}' | '\u{200E}' | '\u{200F}' | '\u{2028}' | '\u{2029}'
+    )
+}
+
 /// `s` as tokens, each its kind and byte range: comments (`//` to the line's end, `/* */` nested), identifiers,
-/// numbers (a digit and the letters and digits after it), white space and single punctuation characters; and whether
-/// every block comment is closed: one never closed is a comment to the end.
+/// numbers (a digit and the letters and digits after it), white space ([`is_space`]) and single punctuation
+/// characters; and whether every block comment is closed: one never closed is a comment to the end.
 pub(crate) fn tokens(s: &str) -> (Vec<(Tok, usize, usize)>, bool) {
     let b = s.as_bytes();
     let mut out = Vec::new();
@@ -65,10 +77,8 @@ pub(crate) fn tokens(s: &str) -> (Vec<(Tok, usize, usize)>, bool) {
                 }
             }
             Tok::Comment
-        } else if c.is_ascii_whitespace() {
-            while i < b.len() && b[i].is_ascii_whitespace() {
-                i += 1;
-            }
+        } else if s[i..].starts_with(is_space) {
+            i += s[i..].find(|c: char| !is_space(c)).unwrap_or(b.len() - i);
             Tok::Space
         } else if c.is_ascii_alphabetic() || c == b'_' {
             while i < b.len() && (b[i].is_ascii_alphanumeric() || b[i] == b'_') {
@@ -98,16 +108,15 @@ pub(crate) struct Token<'a> {
     pub(crate) trivia: bool,
 }
 
-/// `wgsl`'s tokens ([`tokens`]), each trivia or not, white space WGSL admits beyond ASCII trivia too (a Print graph
-/// pass's scanners read it so), and whether every block comment is closed: one never closed is a comment to the end.
+/// `wgsl`'s tokens ([`tokens`]), each trivia or not (a comment or white space, [`is_space`]: a Print graph pass's
+/// scanners read it so), and whether every block comment is closed: one never closed is a comment to the end.
 pub(crate) fn pass_tokens(wgsl: &str) -> (Vec<Token<'_>>, bool) {
     let (toks, closed) = tokens(wgsl);
     let toks = toks
         .into_iter()
         .map(|(kind, a, b)| {
             let text = &wgsl[a..b];
-            let trivia =
-                matches!(kind, Tok::Comment | Tok::Space) || text.chars().all(char::is_whitespace);
+            let trivia = matches!(kind, Tok::Comment | Tok::Space);
             Token { kind, text, trivia }
         })
         .collect();

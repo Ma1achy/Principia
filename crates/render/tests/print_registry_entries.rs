@@ -3,8 +3,9 @@
 //! source" and no Print graph category reads "Source" or "post"; the generated WGSL of a two-node graph compiles under
 //! naga and holds each node's passes; an entry without a motion policy, and one without `temporally_stable`, each fail
 //! to register; a pass's nested block comments are skipped whole, and one never closed is refused; a comment between
-//! a pass's tokens is trivia, as white space is; and the stain's codegen given a Print graph node refuses it. Each
-//! test registers its negative control (R-176).
+//! a pass's tokens is trivia, as white space is; WGSL's white space is Unicode's Pattern_White_Space, as naga reads it,
+//! never Unicode's White_Space; and the stain's codegen given a Print graph node refuses it. Each test registers its
+//! negative control (R-176).
 
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use render::codegen::{generate as stain_generate, Arg, Call, Node as StainNode, Slot, ValueType};
@@ -858,6 +859,79 @@ negative_control!(
         "/* fn run(uv: vec2<f32>) -> vec4<f32> */\nfn runner(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }",
         "fn print_n{k}_pass0(",
     )])
+);
+
+// ----- WGSL's white space -----
+
+/// The characters the white-space test tries: WGSL's white space, Unicode's Pattern_White_Space (the marks U+200E and
+/// U+200F among it, which Unicode's White_Space lacks), then White_Space characters WGSL refuses (the no-break space
+/// U+00A0 among them).
+const SPACES: [char; 14] = [
+    ' ', '\t', '\n', '\u{B}', '\u{C}', '\r', '\u{85}', '\u{200E}', '\u{200F}', '\u{2028}',
+    '\u{2029}', '\u{A0}', '\u{2000}', '\u{3000}',
+];
+
+/// Whether naga reads `c` as white space: `fn{c}f() {}` parses.
+fn naga_space(c: char) -> bool {
+    naga::front::wgsl::parse_str(&format!("fn{c}f() {{}}")).is_ok()
+}
+
+/// A pass with `c` between `fn` and `run`, and between `.` and a member named as a helper is.
+fn spaced_pass(c: char) -> String {
+    format!(
+        "struct S {{ shade: f32 }}
+fn shade(v: f32) -> f32 {{ return v; }}
+fn{c}run(uv: vec2<f32>) -> vec4<f32> {{
+    let s = S(uv.x);
+    return vec4<f32>(shade(s.{c}shade), uv.y, 0.0, 1.0);
+}}"
+    )
+}
+
+/// Each character of [`SPACES`] is read as `is_space` says, and `is_space` agrees with naga: where it holds, the pass
+/// with it ([`spaced_pass`]) registers, `run` is its pass's function, the member keeps its name and the module
+/// compiles; where it does not, the pass defines no `fn run` and is refused.
+fn check_spaces(is_space: fn(char) -> bool) {
+    for c in SPACES {
+        let pass = spaced_pass(c);
+        if is_space(c) {
+            check_commented(
+                &pass,
+                &[
+                    &format!("fn{c}print_n{{k}}_pass0(uv"),
+                    &format!("print_n{{k}}_pass0_h_shade(s.{c}shade)"),
+                ],
+                |s| s,
+            );
+        } else {
+            match commented(&pass) {
+                Ok(g) => panic!(
+                    "{c:?} is not WGSL's white space, yet the pass registered: {}",
+                    g.source
+                ),
+                Err(e) => assert!(e.contains("defines no `fn run`"), "{c:?}: {e}"),
+            }
+        }
+        assert_eq!(
+            is_space(c),
+            naga_space(c),
+            "{c:?}: the white space disagrees with naga"
+        );
+    }
+}
+
+#[test]
+fn print_registry_entries_wgsl_white_space() {
+    // The marks are WGSL's white space and the no-break space is not, as naga reads them.
+    assert!(naga_space('\u{200E}') && naga_space('\u{200F}') && !naga_space('\u{A0}'));
+    check_spaces(naga_space);
+}
+
+negative_control!(
+    print_registry_entries_wgsl_white_space,
+    "Unicode's White_Space for WGSL's, as `char::is_whitespace` reads it",
+    expected = "yet the pass registered",
+    check_spaces(char::is_whitespace)
 );
 
 // ----- registration refusals -----
