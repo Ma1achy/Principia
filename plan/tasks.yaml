@@ -1387,7 +1387,7 @@
   title: "The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)"
   depends_on: [TASK-M2-07, TASK-M2-24, TASK-M2-25]
   needs: [REQ-DEC-017, REQ-DEC-008]
-  requirements: [REQ-VAL-347, REQ-RENDER-122]
+  requirements: [REQ-VAL-347]  # REQ-RENDER-122 moved to TASK-M4-38 (applied per R-369, 10 Nov 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M4-28
@@ -1452,6 +1452,15 @@
   depends_on: []
   needs: []
   requirements: [REQ-CHART-125]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+# TASK-M4-38: split from TASK-M4-27 (applied per R-369, 10 Nov 2026); TASK-M4-35 and -36 became TASK-M8-118 and -119 and are not reused
+- id: TASK-M4-38
+  milestone: M4
+  title: "Per-backend accuracy of cos near π/2 against f64 (REQ-RENDER-122)"
+  depends_on: [TASK-M4-27]
+  needs: []
+  requirements: [REQ-RENDER-122]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M5-01

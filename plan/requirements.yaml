@@ -15632,7 +15632,7 @@
   rulings:
   - R-822
   milestone: M4
-  note: "Closed by TASK-M4-27. Option (c), the kernel's own sin and cos, is ruled with RQ-687 on M4's cross-backend numbers."
+  note: "Closed by TASK-M4-38, split from TASK-M4-27 (applied per R-369, 10 Nov 2026). Option (c), the kernel's own sin and cos, is ruled with RQ-687 on M4's cross-backend numbers."
 - id: REQ-RENDER-123
   area: RENDER
   statement: "The Anosova physical-frame chart, region D's (TASK-M4-34's third-body pair at the lowering appendix's canonicalise entry), must decode through the DECODE fragment preset without special-casing, its GPU reference reading region D through `in_region_d` as R-871 requires: the full disc rendered literally, unmasked, D drawn as a contour until the symmetry filter (TASK-M8-120) lands; TASK-M4-34 doesn't close until it does (R-914)."
