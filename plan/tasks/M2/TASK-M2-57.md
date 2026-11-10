@@ -36,6 +36,15 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
 - **First, on its own commit, before the decoder changes:** the baseline, every existing preset, saved chart and golden
   with `β ∈ [0, π]` recorded through today's decoder (IC words, sim key and, for a golden, its image hash), the PR
   listing each.
+- **On the same baseline commit, before any link changes: the retired-link fixture (R-921; physics review 5836519618
+  of PR #469, applied per R-369),** `fixtures/retired_beta_links/pre_m2_57.json`, written through today's decoder: for
+  each of `sigmoid_beta`, `tanh_beta` and `softsign_beta` as the `β` link, the pixels' latent coordinates, the four
+  blocks' links and each pixel's decoded starting state as bits, with the commit and the command that wrote it recorded
+  in the file and its row in `fixtures/README.md`. Its pixels span `z_β`: for each link, 257 values, `z_β` the link's
+  inverse of `β = π·k/258`, `k = 1 … 257`, at the fixture's other latent coordinates. Every bit in it comes from the
+  baseline commit's decoder and none is edited by hand: it may be written again only by running the baseline commit's
+  decoder, never through any later decoder, and only as the bounded extension the acceptance line gives.
+  REQ-TOOL-172's retired-link arm (TASK-M7-45) reads it.
 - The full-circle link and the signed encode, defined in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 (R-72;
   REQ-DEC-056), under physics review: the link and its inverse, its seam, how a syzygy crossing reads on a latent chart,
   why a `β ∈ [0, π]` start keeps its bits, and the pole value at `λ̃ = 0`.
@@ -65,6 +74,27 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
 - Before the decoder changes, on its own commit: the baseline of every preset, saved chart and golden with
   `β ∈ [0, π]`, recorded through today's decoder (IC words, sim key and, for a golden, its image hash), the PR listing
   each (REQ-DEC-055).
+- On the same baseline commit: `fixtures/retired_beta_links/pre_m2_57.json` written through today's decoder, before
+  any link changes, for `sigmoid_beta`, `tanh_beta` and `softsign_beta`: latent coordinates, the four blocks' links and
+  decoded starting states as bits, the writing commit and command recorded, every bit from the baseline commit's
+  decoder and none edited by hand (R-921; REQ-TOOL-172's retired-link arm).
+- `cargo test -p kernel retired_link_fixture` — once the periodic link and the conversion exist: every fixture pixel
+  decoded through its retained retired link equals the fixture's starting state bit for bit; and, for each of the three
+  links, at least one fixture pixel whose `z_β`, converted to the periodic link and decoded, differs from the fixture's
+  state in at least one bit. **The search is bounded, its budget fixed here and never raised after seeing results.**
+  If a link has none among its 257 pixels, the fixture is written once more, by running the baseline commit's decoder,
+  with that link's pixels extended to 4097 (`z_β` the link's inverse of `β = π·k/4098`, `k = 1 … 4097`), never
+  edited by hand; that is the whole budget. Why these sizes: if conversion moves a bit at even 1 value in 250, 4097
+  evenly spread values miss it only by chance well under one in a million, and 3 × 4097 states as bits keep the fixture
+  a few megabytes; 257 is the first write, a sixteenth of it. If a link still has no bit-changing pixel within the
+  budget, the task does not loop: the PR lists the link; TASK-M7-45's converting-reader control is marked not
+  exercisable for it, with the evidence (the pixel count and the conversion's largest difference over the budget, in
+  units in the last place of each state word); and a REVIEW_QUEUE entry goes to the owner as a report against R-921's
+  premise that conversion "can change the starting state's last bits" (R-812). The second arm then checks such a link,
+  listed in the test with its queue entry, the other way: no budget pixel changes a bit. It is reported, never counted
+  as passing. Controls: a fixture state with one bit flipped fails the first arm; a fixture holding only pixels where
+  conversion is exact, for a link not so listed, fails the second; and a listed link with a pixel where conversion
+  changes a bit fails the second (R-921; REQ-TOOL-172).
 - `cargo test -p kernel mirror_step_removed` — a lower-half state encodes to `β ∈ (π, 2π)` and decodes back to itself,
   not its mirror image; a latent-chart trace through a syzygy at `β = 0` and at `β = π` continuous; controls: the mirror
   step left in fails, a σ-type link that jumps at `β = 0` fails (REQ-DEC-055).
@@ -145,3 +175,22 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   by the wrong link fails", so the one-periodic-link deliverable keeps the three as conversion sources only: not
   selectable, not counted as `β` links (R-919's Q1 (c) bullet; dd_generation_root § 3.9's R-919 line).
   *Was (Deliverables):* "the registry in `crates/ledger` to match; the PR lists".
+- *10 Nov 2026 (R-921; physics review 5836519618 of PR #469, P1 and P2; applied per R-369: the pre-M2-57 fixture):*
+  REQ-TOOL-172's retired-link arm (TASK-M7-45) needs the starting states a pre-TASK-M2-57 build decodes from a record
+  made under `sigmoid_beta`, `tanh_beta` or `softsign_beta`; the record writer is built in M7, so the only independent
+  source is a fixture written here, on the baseline commit, before any link changes. The Deliverables and acceptance
+  tests gain its lines, and `retired_link_fixture` checks that the fixture has, for each link, pixels where converting
+  `z_β` moves a bit, so the converting reader's control cannot pass trivially. Added, nothing removed. Paused under
+  R-923 like the rest of this task; this edits its plan text only.
+- *10 Nov 2026 (physics review 5836599062 of PR #469, P3; applied per R-369: the fixture's bounded search):* the
+  second arm of `retired_link_fixture` had no exit if conversion is exact for a link, as it could be for a periodic
+  link, still undefined, whose round trip is exact on `[0, π]`. The search is now bounded, 257 pixels per link and one
+  extension to 4097, written before running; a link with none is reported to the owner, its converting-reader control
+  marked not exercisable, never looped on. The Deliverables and the acceptance line now say the same thing about
+  rewriting: every bit from the baseline commit's decoder, none edited by hand. *Was (Deliverables):* "Its pixels span
+  `z_β`, and include, for each link, pixels where converting `z_β` to the periodic link before decoding changes at
+  least one bit of the decoded state. It is never regenerated after the baseline commit;". *Was (acceptance):*
+  "decoded starting states as bits, the writing commit and command recorded (R-921; REQ-TOOL-172's retired-link arm)."
+  "state in at least one bit; if a link has none, the fixture is written again through the baseline commit's decoder
+  with more pixels, never edited by hand; controls: a fixture state with one bit flipped fails the first arm, and a
+  fixture holding only pixels where conversion is exact fails the second (R-921; REQ-TOOL-172)."
