@@ -41,6 +41,7 @@
 
 use core::fmt;
 
+use kernel::detect::collision::CollisionRadius;
 use kernel::driver::nsub_table::{thresholds, NsubTableError};
 use kernel::driver::wrapper::WrapperUniforms;
 use ledger::constants::{G, HORIZON_STEPS_MAX, M_TOTAL, T_HORIZON_MAX};
@@ -276,6 +277,14 @@ impl Validated {
             n_max: self.uniforms.n_max,
             thresholds: self.uniforms.thresholds,
         }
+    }
+
+    /// The kernel's collision threshold for the accepted `r_coll` (integrator_contract Part 7): `r_coll²` rounded once
+    /// to f32 (`kernel::detect::collision::CollisionRadius::from_r_coll`), the same at f64 and f32, so the collision
+    /// branch reads the sim key's value on every pipeline. `r_coll` itself stays on the sim key
+    /// ([`SimUniforms::sim_key_bytes`]), which every output is keyed by.
+    pub fn collision_radius(&self) -> CollisionRadius {
+        CollisionRadius::from_r_coll(self.uniforms.r_coll)
     }
 }
 

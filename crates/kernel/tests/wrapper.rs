@@ -24,8 +24,8 @@
 //! - `wrapper_cadence_hooks`: the wrapper's own cadence counts one call per substep, is never done while detection finds
 //!   nothing, and its hooks project the state (TASK-M3-05), so its march differs from an empty cadence's.
 //!
-//! **Domain** (pitfalls §10): the wrapper's loop with its detection hook empty (TASK-M3-09, -12 fill it), over short
-//! horizons; what it shows is the loop's and the seam's, not a trajectory's physics. The projection and the monitor the
+//! **Domain** (pitfalls §10): the wrapper's loop at `r_coll = 0`, where its collision detector never fires
+//! (`collision.rs` has the detector), over short horizons; what it shows is the loop's and the seam's, not a trajectory's physics. The projection and the monitor the
 //! cadence runs (TASK-M3-05) are `monitor.rs`'s.
 
 use std::any::Any;
@@ -43,7 +43,7 @@ use kernel::chart::{
 };
 use kernel::decode::{self, Ic};
 use kernel::driver::advance::{Advance, AdvanceParams, AdvanceReal, Advanced, Cadence};
-use kernel::driver::cadence::{self, WrapperCadence};
+use kernel::driver::cadence::WrapperCadence;
 use kernel::driver::nsub_table::{thresholds, NsubConfig};
 use kernel::driver::substep::{d2_quantised, n_sub, NsubThresholds};
 use kernel::driver::wrapper::{integrate, integrate_with, monitored, WrapperReal, WrapperUniforms};
@@ -1231,10 +1231,7 @@ fn wrapper_cadence_hooks() {
     let mut g = Geom::new(&s.m, &s.r);
     let before = state_bits(&s, &g);
     own.project(&mut s, &mut g);
-    assert!(
-        !cadence::detect(&s, &g),
-        "detect fired with nothing to detect"
-    );
+    assert!(!own.detector().fired(), "the detector fired at r_coll = 0");
     assert_ne!(
         state_bits(&s, &g),
         before,

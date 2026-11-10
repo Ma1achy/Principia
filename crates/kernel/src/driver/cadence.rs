@@ -4,13 +4,18 @@
 //! **In order, after each `STEP`** (Part 1's loop): the COM projection ([`WrapperCadence::project`], with the force
 //! evaluation re-formed at the projected positions), the invariant accumulation on the projected state
 //! ([`WrapperCadence::monitor`]; TASK-M3-05), and terminal detection, which sets the `done` flag on collision
-//! (TASK-M3-09) or escape (TASK-M3-12) and never breaks ([`detect`]). Until those land detection finds nothing, so a
-//! run ends only at its horizon.
+//! ([`Detector`]; TASK-M3-09) or escape (TASK-M3-12) and never breaks. Escape's detector is not built yet, so a run
+//! ends at its horizon or at a collision.
 //!
-//! **Built from the run's IC** ([`WrapperCadence::new`]): the projection's `M` and weights are formed once, there
-//! ([`ComProjection`]; Part 1, "with `M` constant (computed once and cached)"), and `E₀`, `L_{z,0}` are evaluated and
-//! stored, before the loop ([`Monitor`]). The wrapper writes the monitor's references and maxima into the run's
-//! `SimState` when the loop ends (`super::wrapper`).
+//! **Built from the run's IC** ([`WrapperCadence::with_radius`]): the projection's `M` and weights are formed once,
+//! there ([`ComProjection`]; Part 1, "with `M` constant (computed once and cached)"), `E₀`, `L_{z,0}` are evaluated
+//! and stored, before the loop ([`Monitor`]), and the detectors run on the IC, before the first step, so a run that
+//! begins inside `r_coll` is done at step 0, a collision (integrator_contract Part 5, "t=0 terminals are real
+//! outcomes"). The wrapper writes the monitor's references and maxima, and the detector's label and `dmin_pair`, into
+//! the run's `SimState` when the loop ends (`super::wrapper`).
+//!
+//! **One `d²` per step** (Part 7; REQ-EVT-004): the detector forms the projected state's pair separations once, and
+//! the collision test, the `dmin_pair` latch and the next macro-step's bucket ([`Cadence::bucket_d2`]) all read them.
 //!
 //! **Instrumented** (REQ-INT-009, REQ-INT-022): the cadence counts its own invocations
 //! ([`WrapperCadence::invocations`]), so a test compares them with the internal steps an occupant took and with the
@@ -24,37 +29,59 @@
 use super::advance::Cadence;
 use super::monitor::Monitor;
 use super::project::ComProjection;
+use super::substep::Quantise;
 use super::wrapper::{monitored, WrapperReal};
+use crate::detect::collision::{CollisionRadius, Detector};
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{sd_last_symbol, set_last_symbol, PayloadReal, SimStateBaseOf};
 use crate::real::IeeeBits;
 use crate::word::{state_cuts, CrossingDetector, CrossingHook, WordBuffer};
 
-/// The wrapper's per-substep callback: the projection and the monitor, the hooks in Part 1's order, the run's `done`
-/// flag and the count of its calls. A run starts from [`WrapperCadence::new`]: no call made, not done.
+/// The wrapper's per-substep callback: the projection, the monitor and the detector, the hooks in Part 1's order, the
+/// run's `done` flag and the count of its calls. A run starts from [`WrapperCadence::with_radius`]: no call made, done
+/// only if its IC is inside `r_coll`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct WrapperCadence<R> {
     /// The COM projection, its `M` cached.
     projection: ComProjection<R>,
     /// The invariant monitor, its `E₀` and `L_{z,0}` stored.
     monitor: Monitor<R>,
+    /// The collision detector and the `dmin_pair` latch.
+    detector: Detector,
     /// The calls so far.
     invocations: u32,
     /// Whether a terminal has fired.
     done: bool,
 }
 
-impl<R: IeeeBits> WrapperCadence<R> {
-    /// The cadence of a run from masses `m`, positions `r` and momenta `p`, before its first step: the projection's
-    /// `M` formed from `m` and cached, `E₀` and `L_{z,0}` evaluated on the state and stored.
+impl<R: IeeeBits + Quantise> WrapperCadence<R> {
+    /// The cadence of a run from masses `m`, positions `r` and momenta `p` at `r_coll = 0`
+    /// ([`CollisionRadius::none`], Part 7's "refuse to regularise"), so no collision fires:
+    /// [`WrapperCadence::with_radius`].
     #[inline]
     pub fn new(m: &[R; 3], r: &[[R; 2]; 3], p: &[[R; 2]; 3]) -> Self {
+        Self::with_radius(m, r, p, CollisionRadius::none())
+    }
+
+    /// The cadence of a run from masses `m`, positions `r` and momenta `p` under the sim key's collision threshold
+    /// `radius`, before its first step: the projection's `M` formed from `m` and cached, `E₀` and `L_{z,0}` evaluated
+    /// on the state and stored, and the detector run on the IC, which makes the cadence done where a pair is already
+    /// inside `r_coll`.
+    #[inline]
+    pub fn with_radius(
+        m: &[R; 3],
+        r: &[[R; 2]; 3],
+        p: &[[R; 2]; 3],
+        radius: CollisionRadius,
+    ) -> Self {
+        let detector = Detector::new(radius, r);
         WrapperCadence {
             projection: ComProjection::new(m),
             monitor: Monitor::new(m, r, p, &Geom::new(m, r)),
+            detector,
             invocations: 0,
-            done: false,
+            done: detector.fired(),
         }
     }
 
@@ -74,6 +101,12 @@ impl<R: IeeeBits> WrapperCadence<R> {
     #[inline]
     pub fn monitor_state(&self) -> &Monitor<R> {
         &self.monitor
+    }
+
+    /// The detector: the collision verdict, the `dmin_pair` latch and the last state's separations.
+    #[inline]
+    pub fn detector(&self) -> &Detector {
+        &self.detector
     }
 
     /// The COM projection after a `STEP` (integrator_contract Part 1, "COM projection and invariant monitoring"):
@@ -102,12 +135,18 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
         self.invocations += 1;
         self.project(state, geom);
         self.monitor(state, geom);
-        self.done = detect(state, geom);
+        self.detector.observe(&state.r);
+        self.done = self.detector.fired();
     }
 
     #[inline]
     fn done(&self) -> bool {
         self.done
+    }
+
+    #[inline]
+    fn bucket_d2(&self, _r: &[[R; 2]; 3]) -> f32 {
+        self.detector.last_d2()
     }
 
     #[inline]
@@ -117,13 +156,6 @@ impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
     {
         monitored(out, self)
     }
-}
-
-/// Terminal detection on the projected state (Part 7; dd_integrator §3.6): whether a terminal fired, which sets the
-/// run's `done` flag. The hook TASK-M3-09 fills for collision and TASK-M3-12 for escape; until then nothing fires.
-#[inline]
-pub fn detect<R>(_state: &State<R>, _geom: &Geom<R>) -> bool {
-    false
 }
 
 /// A cadence with crossing detection added: after `inner`'s work on each accepted substep, the substep's crossings are
@@ -177,5 +209,13 @@ impl<R: LinkReal + IeeeBits, C: Cadence<R>, B: WordBuffer + ?Sized> Cadence<R>
     #[inline]
     fn done(&self) -> bool {
         self.inner.done()
+    }
+
+    #[inline]
+    fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32
+    where
+        R: Quantise,
+    {
+        self.inner.bucket_d2(r)
     }
 }
