@@ -5,8 +5,8 @@
 //!   decode output (any one of its fifteen values) or a `DEGENERATE` tag (REQ-EVT-002).
 //! - `collision_detector_*`: dd test 6, a head-on pair collides with its 0-based pair id, the side opposite the third
 //!   body, for each of the three pairs; two pairs inside `r_coll` in one step is `detail = 3`, never a binary label;
-//!   the test is strict at `d² = r_coll²`; the threshold is `r_coll²` rounded once to f32, a subnormal square written 0
-//!   (REQ-EVT-003).
+//!   the test is strict at `d² = r_coll²`; the threshold is `r_coll²` rounded once to f32, and for `r_coll > 0` a square
+//!   below f32's least normal raised to it, so coincident bodies collide under every positive `r_coll` (REQ-EVT-003).
 //! - `collision_shared_separation`: the bucket reads the detector's `d²` of the step, the same bits as the substep law's
 //!   own form, so one computation serves both (REQ-EVT-004).
 //! - `collision_t0_lookup`: a decoded IC with a pair inside `r_coll` is `COLLISION_T0` with the opposite-side pair id
@@ -522,8 +522,9 @@ negative_control!(
     check_boundary(|r2, r| Separations::of(r).d2.iter().any(|&d| d <= r2))
 );
 
-/// The threshold of an `r_coll`: `r_coll²` in f64 rounded once to f32; a square at f32's least normal kept, and one
-/// below it written 0, so it decides `d² = 0` alike on every backend.
+/// The threshold of an `r_coll`: `r_coll²` in f64 rounded once to f32; for `r_coll > 0`, a square at f32's least
+/// normal kept, and one below it, subnormal or rounded to 0, raised to that least normal, never written as a subnormal
+/// or 0; `r_coll = 0`, 0.
 fn check_threshold(of: fn(f64) -> f32) {
     assert_eq!(of(0.5), 0.25, "r_coll 0.5");
     assert_eq!(of(R_COLL_DEFAULT), 1e-6f64 as f32, "r_coll 10⁻³");
@@ -532,31 +533,68 @@ fn check_threshold(of: fn(f64) -> f32) {
     let least_normal = 2f64.powi(-63);
     assert_eq!(of(least_normal), f32::MIN_POSITIVE, "r_coll² = 2⁻¹²⁶ kept");
     assert_eq!(
+        of(least_normal.next_up()),
+        ((least_normal.next_up() * least_normal.next_up()) as f32),
+        "r_coll² just above 2⁻¹²⁶ not its own square"
+    );
+    assert_eq!(
         of(2f64.powi(-64)),
-        0.0,
-        "r_coll² = 2⁻¹²⁸, subnormal, not written 0"
+        f32::MIN_POSITIVE,
+        "r_coll² = 2⁻¹²⁸, subnormal, not raised to 2⁻¹²⁶"
+    );
+    assert_eq!(
+        of(f64::MIN_POSITIVE),
+        f32::MIN_POSITIVE,
+        "r_coll² rounded to 0 not raised to 2⁻¹²⁶"
     );
 }
 
 #[test]
 fn collision_detector_threshold() {
     check_threshold(|r| CollisionRadius::from_r_coll(r).squared());
-    let coincident = [[0.5, 0.5], [0.5, 0.5], [10.0, 10.0]];
-    assert!(
-        !classify(
-            &Separations::of(&coincident),
-            &CollisionRadius::from_r_coll(2f64.powi(-64))
-        )
-        .fired,
-        "a flushed threshold collided at d² = 0"
-    );
 }
 
 negative_control!(
     collision_detector_threshold,
     "a threshold that keeps a subnormal square",
-    expected = "subnormal, not written 0",
+    expected = "subnormal, not raised",
     check_threshold(|r| (r * r) as f32)
+);
+
+/// Bodies whose f32 positions coincide (`d² = 0`) collide under every positive `r_coll`, those whose square is
+/// subnormal or rounds to 0 included (integrator_contract Part 5, "t=0 terminals are real outcomes"), and not under
+/// `r_coll = 0`.
+fn check_coincident(radius: fn(f64) -> CollisionRadius) {
+    let coincident = [[0.5, 0.5], [0.5, 0.5], [10.0, 10.0]];
+    let fires = |r_coll: f64| classify(&Separations::of(&coincident), &radius(r_coll)).fired;
+    for r_coll in [
+        2f64.powi(-63),
+        2f64.powi(-63).next_down(),
+        2f64.powi(-64),
+        1e-30,
+        f64::MIN_POSITIVE,
+    ] {
+        assert!(
+            fires(r_coll),
+            "coincident bodies did not collide at r_coll = {r_coll:e}"
+        );
+    }
+    assert!(!fires(0.0), "coincident bodies collided at r_coll = 0");
+}
+
+#[test]
+fn collision_detector_threshold_coincident() {
+    check_coincident(CollisionRadius::from_r_coll);
+}
+
+negative_control!(
+    collision_detector_threshold_coincident,
+    "a threshold that writes a square below f32's least normal as 0",
+    expected = "coincident bodies did not collide",
+    check_coincident(|r| {
+        let r2 = (r * r) as f32;
+        CollisionRadius::from_squared(if r2 < f32::MIN_POSITIVE { 0.0 } else { r2 })
+    })
 );
 
 /// A cadence that keeps nothing: no projection, no detector, never done; its bucket `d²` is the trait's default.

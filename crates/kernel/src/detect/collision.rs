@@ -16,10 +16,15 @@
 //!
 //! **The threshold** ([`CollisionRadius::from_r_coll`]). `r_coll` is a length on the sim key, the same value on every
 //! pipeline (Part 7). The host squares it in f64 and rounds the square once to f32, as the substep law's thresholds are
-//! formed (R-502), so every backend compares the same `d²` with the same bits. A square below f32's least normal value
-//! is written 0, as a backend that flushes subnormals reads it (gpu_determinism_note rule 6, R-547): the quantised
-//! `d²` is 0 or at least `2⁻⁸⁰` (`square`'s floor), so such a threshold decides only `d² = 0`, and a flushed 0 decides
-//! it alike everywhere. `r_coll = 0` is Part 7's "refuse to regularise": no pair is below it ([`CollisionRadius::none`]).
+//! formed (R-502), so every backend compares the same `d²` with the same bits. For `r_coll > 0` a square below f32's
+//! least normal value, subnormal or rounded to 0, is raised to that least normal, `2⁻¹²⁶`, never written as a
+//! subnormal a backend may flush (gpu_determinism_note rule 6, R-547) nor as 0, which would turn a positive `r_coll`
+//! into `r_coll = 0`. The quantised `d²` is 0 or at least `2⁻⁸⁰` (`square`'s floor), so against `2⁻¹²⁶` exactly
+//! `d² = 0` fires, the decision `d² < r_coll²` makes for every such `r_coll` on every `d²` the detector can meet: bodies
+//! whose f32 positions coincide collide under any positive `r_coll`, at `t = 0` too (Part 5, "t=0 terminals are real
+//! outcomes"). Dispatch refuses an `r_coll` whose f32 square is not finite (`engine::dispatch::validate`), so the
+//! threshold is never `+∞` (rule 4). `r_coll = 0` is Part 7's "refuse to regularise": its threshold is 0, and no pair is
+//! below it ([`CollisionRadius::none`]).
 //!
 //! **The latch** ([`DminLatch`]; payload §2, REQ-PAY-047): the least quantised `d²` the run has met, the IC's
 //! included, since `d_min = min_t |separation|` runs over the trajectory from `t = 0`, and the R-22 id of the pair that
@@ -103,17 +108,17 @@ impl CollisionRadius {
         self.r_coll2
     }
 
-    /// The threshold of the sim key's `r_coll` (the module's note): `r_coll²` formed in f64 and rounded once to f32,
-    /// and 0 where that is below f32's least normal value. Dispatch has refused an `r_coll` that is not finite or is
-    /// negative (`engine::dispatch::validate`).
+    /// The threshold of the sim key's `r_coll` (the module's note): for `r_coll > 0`, `r_coll²` formed in f64 and
+    /// rounded once to f32, raised to f32's least normal value where it is below it; for `r_coll = 0`, 0. Dispatch has
+    /// refused an `r_coll` that is not finite or is negative, or whose f32 square is not finite
+    /// (`engine::dispatch::validate`), so the threshold is finite and never subnormal.
     #[cfg(not(target_arch = "spirv"))]
     pub fn from_r_coll(r_coll: f64) -> Self {
-        let r_coll2 = (r_coll * r_coll) as f32;
         CollisionRadius {
-            r_coll2: if r_coll2 < f32::MIN_POSITIVE {
-                0.0
+            r_coll2: if r_coll > 0.0 {
+                ((r_coll * r_coll) as f32).max(f32::MIN_POSITIVE)
             } else {
-                r_coll2
+                0.0
             },
         }
     }
