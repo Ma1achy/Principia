@@ -267,12 +267,14 @@ integrator work (TASK-M4-05) carries on as agreed.
 3. **TASK-M2-57, `β` periodic (KEEP).** Acceptance: as its task file. Its edge to TASK-M2-65 dropped so it lands before
    TASK-M2-61's baseline: two-way, task scoping.
 4. **N10, the seed conversion (NEW, only under RQ-764 (a) or (b)).** Acceptance: the conversion test of every invariant
-   and mixed-energy chart image where `K* > K_min`; the legacy rule a named option. Measurement: the seam jump across
-   `z_α = 0` on the kernel's `(L_z, E)` chart; criterion: after the change no neighbouring pair of pixels across the line
-   differs by more than the largest neighbouring difference within 8 pixels of it on either side. Control (pitfalls
-   § 3, the measurement shown able to fire): the same measurement under R-82's legacy rule, the named option, whose
-   jump across the line the review predicts at 1.9545, must fail the same criterion; if it passes, the criterion
-   cannot see the seam and the result is void. Door: one-way, RQ-764.
+   and mixed-energy chart image where `K* > K_min`; the legacy rule a named option. Measurement: the seam jump in the
+   decoded velocity across `z_α = 0` on the kernel's `(L_z, E)` chart; criterion: after the change no neighbouring pair
+   of pixels across the line differs in decoded velocity by more than the largest neighbouring difference within 8
+   pixels of it on either side. Control (pitfalls § 3, the measurement shown able to fire): the same measurement under
+   R-82's legacy rule, the named option, must fail the same criterion; if it passes, the criterion cannot see the seam
+   and the result is void. Under the legacy rule the decoded velocity is predicted to jump by `2√(K*−K_min)` at each
+   pixel on the line, 1.9545 at the chart review's one point (`orch/charts/prototype-2026-11-10/chart-review-2026-11-10.md`
+   § 2, a prototype figure, R-649); no threshold depends on that number. Door: one-way, RQ-764.
 
 ### B.2 Stage 1: the object, today's operations through it
 
