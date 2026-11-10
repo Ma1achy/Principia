@@ -692,21 +692,29 @@ an edit stops at the last valid value. Least squares from a few starting guesses
     and "nearest" can't both hold everywhere: at a cut locus of the nearest-point map, where two points of B are
     equally near, a continuous anchor stops being the global nearest (the prototype's generic note § 5: a sliding
     anchor needs a contractible constraint set). Under (a) continuity wins: the anchor follows the local minimiser
-    through a cut locus, labelled "not nearest" while another point is nearer, and never jumps.
+    through a cut locus, labelled "not nearest" while another point is nearer, and does not jump there. The followed
+    local minimiser can also end: it merges with a saddle and disappears (a fold of the minimiser, likely further
+    along once the anchor has passed a cut locus onto the branch that is not the global one). There no continuous
+    anchor exists, and under (a) the path **stops** at the last frame where the followed minimiser exists, labelled
+    "the followed system ends here", as R-469's stop does for window edits; it never jumps silently, and going on is
+    the user's choice, which re-pins (a new lock, not a jump under the old one).
   - (a′) As (a), but nearest wins at a cut locus: the anchor jumps to the new global nearest point there, a labelled
     jump, as R-849's "no labelled jumps under the lock" does not allow.
   - (b) As (a) but R-593 becomes automatic: the re-solve itself moves the centre to the nearest feasible point, with
     the one notice.
   - (c) The prototype's rule: an unweighted least squares from seeds each time, the pin becoming the nearest system it
     finds; no continuity promise, a jump labelled when the basin changes.
-- **Recommended:** (a). It keeps R-849's "never jumps", gives up global nearness only at a cut locus and says so,
+- **Recommended:** (a). It keeps R-849's "never jumps" by stopping where the followed minimiser ends, gives up
+  global nearness only at a cut locus and says so,
   and reads item 4 as the solve's method, not its guarantees; (b) is the smaller change to R-593 if the owner prefers fewer prompts.
 - **Measurement:** G8's slide check, written before the run (`plan/MILESTONES.md`, G8): along a morph into rest and
   Burrau charts, halve the frame step twice; the largest anchor step must fall to at most 0.6 of the previous each
   time; plus the share of frames where a four-seed solve changes basin against the continued solve; and a fixture
   that crosses a cut locus (a path whose target B holds two equally near points to the anchor at one frame, for example
   a rest chart reached from a state symmetric under the swap of bodies 1 and 2), on which (a) must stay continuous and
-  label "not nearest", and (a′) must jump once, labelled.
+  label "not nearest", and (a′) must jump once, labelled; and a fixture that ends the followed minimiser (the same path
+  continued past the cut locus until the followed branch merges with a saddle), on which (a) must stop at the last
+  frame where the branch exists, labelled, with no anchor step larger than the slide check allows before it.
 - **Applied meanwhile:** nothing; TASK-M2-62 and TASK-M2-65 are paused with the other chart tasks (PR #469).
 - **Waits:** TASK-M2-62, TASK-M2-65 and the solver core of TASK-M2-73, as the plan places them.
 
