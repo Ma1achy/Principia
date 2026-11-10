@@ -481,3 +481,66 @@ old saved chart is, or refused as too old.*
 - **Applied meanwhile:** nothing. REQ-TOOL-172's verify is unchanged, and its note reads only the refusal side.
 - **Waits:** TASK-M7-45, which builds the per-link refuse-or-recreate path on read (REQ-TOOL-172), on its recreate
   arm for a pre-R-919 record. TASK-M2-57 does not wait: it keeps the three forward maps either way.
+
+## RQ-756: Aarseth–Zare's equations of motion, its Levi-Civita inverse, its reference-body rule and its step control are not in the corpus; and the figure-eight gate and the Law 18 bound assume a schedule R-565 and Part 6 replaced *(silence and conflict; R-160, R-159, R-565, R-563, R-19, R-72; REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-021, REQ-INT-024; context: TASK-M3-07)*
+
+*Queued 10 Nov 2026 by TASK-M3-07's implementer, before any code; each quote re-read on `origin/main` 3338e336.
+Nothing is chosen here. In plain English: the task builds the Aarseth–Zare regularisation (a way of integrating
+through close encounters by changing coordinates and time), but the rules it would implement are written only in the
+imported prin-rs reference files, which are reference and not authority; and two of its tests were measured under an
+older way of stepping that later rulings replaced.*
+
+- **File, section:**
+  1. **The equations are not in the corpus.** `plan/tasks/M3/TASK-M3-07.md` § Notes: "AZ's reference code, including
+     the predictive step limit (`predictive_dtau`) and the landing clamp, is
+     `docs/reference/prin-rs/src/integrate/az/driver.rs` (reference, not authority, R-159); the equations are
+     integrator_contract Part 2b's (R-160, REQ-INT-084)." But `decisions.md` § R-160: "The Heggie, logH and TTL
+     equations, the step control, and the predictive step limit … are written into integrator_contract Part 2b", and
+     REQ-INT-084: "Part 2b must carry the Heggie, logH and TTL equations of motion" — Aarseth–Zare is not named.
+     `docs/contracts/principia_integrator_contract.md` § "Part 2b", § "The equations and the step control (R-160,
+     R-161)" gives none of: the two-pair Hamiltonian (`Γ = A·B·(H − E)` is quoted only as a withdrawn mechanism,
+     `docs/design/principia_dd_predictability_horizon.md` § 7.3, and Part 2a's "the `|u|^2 |p_lambda|^2` term"), its
+     derivatives, the mass factors `μ₁, μ₂`, the reference-body rule beyond Part 2b's table cell "two pairs, reference
+     body from the longest side" (which body, and the tie rule), or the conditioned Levi-Civita inverse (§ 7.3 gives
+     only the unstable `u0 = sqrt((|rho| + rho.x)/2)`, `u1 = rho.y/(2 u0)`, and "the conditioned branch", not its
+     form or which sign branch it takes). The task's Deliverables say "AZ transcribed from the reference
+     (`workbench/tb_az.py`, with the overshoot fix of `workbench/tb_az_overshoot_fix.py`)", which is not normative
+     (R-159; `CLAUDE.md` § Authority). The imported set holds all of it (`docs/reference/prin-rs/reference/tb_az.py`,
+     `tb_lc.py`, `src/integrate/az/driver.rs`), but nothing rules it into the contract, as R-160 did for Heggie and
+     logH.
+  2. **Which `dτ` rule the gate figures were measured under.** `docs/design/principia_dd_validation_orbits.md` § 0.1:
+     "`dtau = eta·dt_left/(A·B)` is fixed per sub-interval", and its table (4.232e-09 at `eta = 0.001`) is REQ-INT-049's
+     threshold. Integrator contract Part 6 (R-563), the entry-cap bullet: "the step-size rule in force sizes each step
+     as `η·Δ_sync / (dt/dτ)` from the current state and caps it at the interval's entry size", with Part 2b's predictive
+     limit after it — a different schedule from the one the threshold was measured on.
+  3. **"After one period" against the grid.** REQ-INT-049's verify: "figure-eight closure after one period"
+     (`T = 6.32591398`, § 0). Integrator contract Part 2a § "The sync grid is a fixed quantum of physical time
+     (R-565)": "`ADVANCE(state, t_now, t_target, params)` advances to the latest boundary at or before `t_target`; it
+     never stops between boundaries", boundaries `t = k·Δ_sync`. Unless `Δ_sync` divides the period, ADVANCE cannot
+     end on it; § 0.1's runs used `dt_left = T/n_sync`.
+  4. **The Law 18 bound has no formula.** REQ-INT-054's verify: "the substep count per sync interval never exceeds the
+     Law 18 bound computed on the fixed τ-schedule"; `docs/contracts/principia_canonical_spec.md` § 9 item 18 and
+     R-19 say only "the count bound is on a fixed `tau`-schedule". Under Part 6's per-step rule with the predictive
+     limit (`dτ ≤ f·d_min / (|v_rel|_max·A·B)`), a step can be cut without a lower limit, so the count per interval is
+     bounded only by the step budget (Part 3's `step_budget_rate`, `N_min`), whose values are calibrations not yet
+     proposed (REQ-INT-103, REQ-INT-108).
+- **The question:** (1) may TASK-M3-07 transcribe Aarseth–Zare's Hamiltonian and equations of motion, its conditioned
+  Levi-Civita inverse, its reference-body rule and its step control from the imported set into integrator contract
+  Part 2b, cited (Aarseth & Zare 1974; the prin-rs files), physics-reviewed and confirmed at the M3 gate, as R-160 did
+  for Heggie and logH? (2) is REQ-INT-049's gate run under Part 6's per-step rule with the threshold re-measured, or
+  under § 0.1's fixed `dτ`? (3) does the closure gate run with `dt_left = T/n` (a gate-only grid) or on the `Δ_sync`
+  grid with the period's remainder handled how? (4) what is the Law 18 bound per sync interval: the step budget's
+  share of the interval, an entry-cap count (`⌈1/η⌉` plus the cuts), or another?
+- **Options seen:** (1)(a) yes, a ruling like R-160 naming TASK-M3-07 and a requirement for it (or REQ-INT-084
+  widened); (1)(b) another task transcribes them first and TASK-M3-07 waits. (2)(a) Part 6's rule, the 4.232e-09
+  figure re-measured and proposed per R-71; (2)(b) § 0.1's fixed rule as a gate-only mode. (3)(a) the gate's own
+  `dt_left = T/n`; (3)(b) the `Δ_sync` grid, closure read at the last boundary at or before `T` against the reference
+  trajectory there. (4)(a) the step budget over one interval, `max(N_min, step_budget_rate·Δ_sync)`; (4)(b) an
+  occupant-declared count.
+- **Recommended:** (1)(a), since the imported set was brought in to be transcribed (R-159) and R-160 is the
+  precedent; (2)(a) with (3)(a), so the landing clamp is tested on its own and the threshold is the rule in force's; and
+  (4)(a), since R-604 already accounts the budget every step. Measurable alternative for (2): run the figure-eight
+  ladder under both rules and record both.
+- **Applied meanwhile:** none. TASK-M3-07 waits; nothing is built.
+- **Waits:** TASK-M3-07 (REQ-INT-044, REQ-INT-049, REQ-INT-054, and the Aarseth–Zare arms of REQ-INT-021 and
+  REQ-INT-024).

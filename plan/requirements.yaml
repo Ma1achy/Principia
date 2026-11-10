@@ -6346,6 +6346,8 @@
   rulings:
   - R-35
   milestone: M3
+  rq:
+  - RQ-756
   note: applies to the AZ occupant
 - id: REQ-INT-045
   area: INT
@@ -6425,6 +6427,8 @@
     detail: "figure-eight closure after one period: ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-756
 - id: REQ-INT-050
   area: INT
   statement: "A regularisation-free occupant must be kept permanently, sharing no coordinate machinery with the others, as the arm that adjudicates when regularised occupants disagree."
@@ -6513,6 +6517,8 @@
   rulings:
   - R-19
   milestone: M3
+  rq:
+  - RQ-756
 - id: REQ-INT-055
   area: INT
   statement: The inspector's CPU reference integration must be RK45.
