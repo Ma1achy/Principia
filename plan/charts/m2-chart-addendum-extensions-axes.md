@@ -445,8 +445,18 @@ the rest is non-visual and so M2's (R-916).
    both sheets returns to its own cell or, where cells decode to equal states, to a cell whose state equals its own by
    M-C's match rule (positions bitwise equal, `==` per component, the held configuration; `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂`),
    criterion written now: the untilted `t = 0` row (every cell the rest start) and the fold columns (sheet 2 at
-   `s = 2` equal to sheet 1 at `s = 0`, `s = −1` to `s = 1`), M-C's predicted matches, only there: an equal-state
-   return outside those cells fails; the round-trip error in cells below is measured to the nearest such cell.
+   `s = 2` equal to sheet 1 at `s = 0`, `s = −1` to `s = 1`), M-C's predicted matches, and the period-equivalent
+   cells. The unfold has a declared period, RQ-771 (a)'s "period 2 in `s`" on the warped mapping and "the same period
+   in `L_z/L_max(E)`" under the linear option, so the sampled interval `s ∈ [−1, 2]`, three units, holds sheet 2 twice
+   (`s = −0.4` and `s = 1.6` both decode to sheet 2 at `s′ = 0.4`, at every held `t`, away from both folds and the rest
+   row), and a cell whose `s` differs from the sampled cell's by a whole number of that period is the same system on
+   the same sheet, which no sheet word tells apart. A return is correct if it is the sampled cell or a
+   period-equivalent cell; an equal-state return outside the fold cells, the rest row and the period-equivalent cells
+   fails; the round-trip error in cells below is measured to the nearest representative, the nearest of the sampled
+   cell, its period-equivalent cells and, on the rest row and the fold columns, the equal-state cells there. The
+   period is read off the declared extension: a mapping whose spin edges declare no unfold (the linear option under
+   RQ-771 (b), both mappings under (c)) has no period and no period-equivalent cells, and the rule there is the
+   sampled cell, the rest row and the fold cells alone.
    *Measurement*,
    criterion written now: N7's set-up (256 × 256 samples, table 64, scan 16) over `s ∈ [−1, 2]`, at `t = 0` of the run
    and after it: the wrong share (a worse match than an exhaustive search of the same table) and the round-trip error
