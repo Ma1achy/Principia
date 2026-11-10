@@ -7,7 +7,17 @@
 //! affine chart `(½, ½)`, where `z(½, ½) = z₀`; on a curved one the centre of the chart's own parameters, with the
 //! slice centre's hidden coordinates. The caller names it beside the chart ([`View`]). A centre whose `Φ` fails counts
 //! as failing ([`Check::Phi`]): a view that cannot be built at the edited value, or a `Φ` there that is not finite,
-//! the chart's output or a block it builds outside it, the shape sphere's point ([`Chart::phi_finite`]).
+//! the chart's output or a block it builds outside it ([`Chart::phi_finite`]).
+//!
+//! **Where a chart that builds `Φ` outside `map` checks it.** In `validate`, as layer 3, decode sanity on its f64
+//! decode, the stop naming that constraint: the Burrau `(ν, K)` chart, the Euclidean plane and the acute-angle charts,
+//! their held-`L_z` and held-`K` forms, the linear `Mapped` energy charts, the mixed charts' physical axes, and a tilted
+//! chart's shifted decode. In [`Chart::phi_finite`], the stop naming `Φ`: the shape sphere, whose `validate` holds at
+//! every `(u, v)`, its point, the configuration it places and its momenta; and the invariant `(L_z, E)` and `(L_z, K)`
+//! charts and their warped `Mapped` forms, whose `validate` does not decode, the f64 decode at a point layer 2 accepts
+//! passing layer 3 (past `K(t)` of half the greatest float the construction is infeasible). A tilt, the rest-start and
+//! held wrappers forward `phi_finite` to the chart they wrap, and `Mapped` does where its decode is the chart's. Either
+//! way it is the one edge, the last centre that is a system, reported by the check that finds it.
 //!
 //! **The path** (A3). The edited field moves along the straight line from the accepted value to the requested one,
 //! `from + λ·(to − from)` for `λ ∈ [0, 1]`, `to` itself at `λ = 1`, so a component the edit leaves alone keeps its
@@ -84,7 +94,9 @@ pub struct View<C> {
 pub enum Check {
     /// The centre fails `validate` on this constraint.
     Failed(Constraint),
-    /// The centre's `Φ` fails.
+    /// The centre's `Φ` fails: there is no view, or [`Chart::phi_finite`] fails there, the shape sphere's point,
+    /// configuration or momenta not finite, or the invariant charts' decode failing layer 3. The charts whose `validate`
+    /// decodes report a construction that fails as layer 3 instead ([`Check::Failed`]; the module's note).
     Phi,
 }
 

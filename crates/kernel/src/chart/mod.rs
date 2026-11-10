@@ -225,8 +225,10 @@ pub trait Chart {
     }
 
     /// Whether `Φ` at `(u, v)` is finite, a CPU-side f64 check: the navigation stop's (`nav`), a centre whose `Φ` is
-    /// not finite failing (R-469 A1). By default `map`'s output; a chart that builds a block outside `map`, an explicit
-    /// configuration, overrides it to check that block too ([`ShapeSphere`]).
+    /// not finite failing (R-469 A1). By default `map`'s output; a chart that builds a block outside `map` and whose
+    /// `validate` does not decode overrides it to check that block too: the shape sphere's explicit configuration and
+    /// momenta ([`ShapeSphere`]), the invariant charts' construction, read through layer 3 on the f64 decode
+    /// ([`InvariantLE`], `crate::chart::nav`'s note).
     fn phi_finite(&self, u: f64, v: f64) -> bool
     where
         f64: From<Self::Param>,
