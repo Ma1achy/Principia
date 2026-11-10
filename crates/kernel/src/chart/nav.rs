@@ -11,11 +11,12 @@
 //!
 //! **Where a chart that builds `Φ` outside `map` checks it.** In `validate`, as layer 3, decode sanity on its f64
 //! decode, the stop naming that constraint: the Burrau `(ν, K)` chart, the Euclidean plane and the acute-angle charts,
-//! their held-`L_z` and held-`K` forms, the linear `Mapped` energy charts, the mixed charts' physical axes, and a tilted
-//! chart's shifted decode. In [`Chart::phi_finite`], the stop naming `Φ`: the shape sphere, whose `validate` holds at
-//! every `(u, v)`, its point, the configuration it places and its momenta; and the invariant `(L_z, E)` and `(L_z, K)`
-//! charts and their warped `Mapped` forms, whose `validate` does not decode, the f64 decode at a point layer 2 accepts
-//! passing layer 3 (past `K(t)` of half the greatest float the construction is infeasible). A tilt, the rest-start and
+//! their held-`L_z` and held-`K` forms, the linear `Mapped` Burrau `K` charts, the mixed charts' physical axes, and a
+//! tilted chart's shifted decode. In [`Chart::phi_finite`], the stop naming `Φ`: the shape sphere, whose `validate`
+//! holds at every `(u, v)`, its point, the configuration it places and its momenta; and the invariant `(L_z, E)` and
+//! `(L_z, K)` charts and their `Mapped` forms, warped, linear or mixed, whose untilted `validate` does not decode, the
+//! f64 decode at a point layer 2 accepts passing layer 3 (past `K(t)` of half the greatest float the construction is
+//! infeasible), the chart's own decode where every axis is warped and the rule's otherwise. A tilt, the rest-start and
 //! held wrappers forward `phi_finite` to the chart they wrap, and `Mapped` does where its decode is the chart's. Either
 //! way it is the one edge, the last centre that is a system, reported by the check that finds it.
 //!

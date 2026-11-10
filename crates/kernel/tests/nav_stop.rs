@@ -12,10 +12,12 @@
 //! decoded configuration finite at the stop and not past it, and one large but short of the overflow is taken whole;
 //! the shape sphere's inertia edited to `10³⁰⁸`, −1 or 0 stops on `Φ`, what it builds finite at the stop and not past
 //! it; and a pan on the invariant charts past the overflow edge of `K(t)` stops on `Φ` with the edge between the stop
-//! and the next value along the path, a lock on the edge taken and one f64 past it refused; `RestStart` and `HeldLz`
-//! keep the `Φ` check of the chart they wrap. Controls: a stop that keeps the requested value, a stop one bisection
-//! step short, a per-chart override, a centre check that reads `map` alone, the shape sphere's point alone, or an
-//! invariant chart's frozen controls alone, and a wrapper that drops the wrapped chart's `Φ` check.
+//! and the next value along the path, a lock on the edge taken and one f64 past it refused, and on their linear and
+//! mixed `Mapped` forms, whose `validate` does not decode, a pan to `v = f64::MAX` stops on `Φ` likewise; `RestStart`
+//! and `HeldLz` keep the `Φ` check of the chart they wrap. Controls: a stop that keeps the requested value, a stop one
+//! bisection step short, a per-chart override, a centre check that reads `map` alone, the shape sphere's point alone,
+//! an invariant chart's frozen controls alone, or a linear mapped invariant chart's `map` alone, and a wrapper that
+//! drops the wrapped chart's `Φ` check.
 //!
 //! **`nav_fuzz_never_leaves*`** (REQ-CHART-061): on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
 //! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts and
@@ -1140,6 +1142,114 @@ negative_control!(
     "a centre check that reads an invariant chart's frozen controls alone takes the pan past the overflow edge whole",
     expected = "past the overflow edge, whole",
     check_invariant_overflow(true)
+);
+
+/// A mapped invariant chart with its centre check reading `map` alone, the frozen controls, not the rule's decode: the
+/// stop without the linear option's own `Chart::phi_finite` (the control).
+#[derive(Clone, Copy)]
+struct ControlsOnly<C>(C);
+
+impl<C: Chart<Param = f64>> Chart for ControlsOnly<C> {
+    type Param = f64;
+
+    fn map<F: Float + From<f64>>(&self, u: F, v: F) -> ChartOut<F> {
+        self.0.map(u, v)
+    }
+
+    fn name(&self) -> &str {
+        "ControlsOnly"
+    }
+
+    fn decode<S, R>(&self, u: R, v: R) -> kernel::decode::Decoded<R>
+    where
+        S: kernel::generated::links::Selection,
+        R: kernel::generated::links::LinkReal + kernel::payload::PayloadReal + From<f64>,
+    {
+        self.0.decode::<S, R>(u, v)
+    }
+
+    fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.validate(u, v)
+    }
+
+    fn validate_params(&self, u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult {
+        self.0.validate_params(u, v, p)
+    }
+}
+
+/// A pan of the view's centre along `v` from `(½, ½)` to `(½, f64::MAX)` on a mapped invariant chart whose vertical
+/// axis is linear: it stops on `Φ`, a system at the stop and, at the next value along the path, a centre `validate`
+/// accepts whose decode is `INVARIANT_INFEASIBLE`: the overflow edge, which the linear `validate` does not decode.
+fn check_linear_overflow_pan<C: Chart<Param = f64>>(
+    name: &str,
+    view: impl Fn([f64; 2]) -> Option<View<C>>,
+) {
+    let from = [0.5, 0.5];
+    let to = [0.5, f64::MAX];
+    let stop = nav_stop(Edit::Path { from, to }, &view, &P);
+    assert_eq!(
+        stop.stopped,
+        Some(Check::Phi),
+        "{name}: the stop takes the linear pan to v = f64::MAX, past the overflow edge, whole"
+    );
+    check_stop(name, from, to, &view, &stop);
+    assert!(
+        decodes_system(view(stop.value)),
+        "{name}: the stop {:?} decodes degenerate",
+        stop.value
+    );
+    let past = from.along(to, stop.lambda.next_up());
+    let View {
+        chart,
+        centre: [u, v],
+    } = view(past).expect("a view");
+    assert_eq!(
+        chart.validate_params(u, v, &P),
+        ValidationResult::Valid,
+        "{name}: the next value along the path {past:?} fails validate, not Φ"
+    );
+    assert_eq!(
+        chart.decode::<Defaults, f64>(u, v).degenerate,
+        Some(Degenerate::InvariantInfeasible),
+        "{name}: the next value along the path {past:?} is not INVARIANT_INFEASIBLE"
+    );
+    println!(
+        "{name}: stopped at v = {:?} (λ = {:?}), the next value along the path {:?}",
+        stop.value[1], stop.lambda, past[1]
+    );
+}
+
+/// REQ-CHART-060's `Φ` at the centre on the mapped invariant charts under the linear option past the overflow edge:
+/// `(L_z, E)` and `(L_z, K)` linear on both axes, and `(L_z, E)` warped in `L_z`, linear in `E`; `map_only` checks
+/// each centre by `map` alone (the control).
+fn check_linear_overflow(map_only: bool) {
+    let mixed: LeMapped = Mapped::new(InvariantLE(invariant()), [Mapping::Warped, Mapping::Linear]);
+    if map_only {
+        check_linear_overflow_pan("(L_z, E) linear, map alone", |c| {
+            at(ControlsOnly(le_linear()), c)
+        });
+        check_linear_overflow_pan("(L_z, K) linear, map alone", |c| {
+            at(ControlsOnly(lk_linear()), c)
+        });
+        check_linear_overflow_pan("(L_z, E) warped L_z, linear E, map alone", |c| {
+            at(ControlsOnly(mixed), c)
+        });
+    }
+    check_linear_overflow_pan("(L_z, E) linear", le_view);
+    check_linear_overflow_pan("(L_z, K) linear", |c| at(lk_linear(), c));
+    check_linear_overflow_pan("(L_z, E) warped L_z, linear E", |c| at(mixed, c));
+}
+
+#[test]
+fn nav_stop_at_edge_linear_overflow() {
+    check_linear_overflow(false);
+}
+
+negative_control!(
+    nav_stop_at_edge_linear_overflow,
+    "a centre check that reads a linear mapped invariant chart's map alone takes the pan past the overflow edge whole",
+    expected = "past the overflow edge, whole",
+    check_linear_overflow(true)
 );
 
 // ── REQ-CHART-060: a wrapped chart's own `Φ` check ───────────────────────────────────────────────────────────────
