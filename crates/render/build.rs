@@ -5,6 +5,11 @@
 //! value outside its range. Then it writes the files it checked into `$OUT_DIR/print_shipped.rs`, which the library
 //! embeds (`print::NODES`, `print::WGSL`, `print::PRESETS`): a preset is data, so adding a medium needs no code when
 //! its nodes exist.
+//!
+//! The fragment registry is scanned at build time too (gui_state_contract §3; REQ-GEN-020; R-815, RQ-677 (e)): the
+//! script runs the library's own scan (`registry::scan::occupant_files`) on this crate and writes each occupant file
+//! it finds into `$OUT_DIR/frag_registry.rs`, which the library embeds (`registry::SHIPPED`), so `registry()` reads
+//! no file at run time. Adding a `.wgsl` file under a scanned directory reruns the script.
 
 use std::fs;
 use std::path::PathBuf;
@@ -24,6 +29,10 @@ mod ports;
 #[allow(dead_code)]
 #[path = "src/print/registry.rs"]
 mod registry;
+// The fragment registry's scan, compiled here as in the library: `std` only.
+#[allow(dead_code)]
+#[path = "src/registry/scan.rs"]
+mod scan;
 
 /// The node entries' folder: each entry's declaration, `<id>.json`, and its passes' WGSL files.
 const NODES: &str = "src/print/nodes";
@@ -49,6 +58,22 @@ fn main() {
     let presets = files(PRESETS, "json");
     check_or_exit(&nodes, &wgsl, &presets);
     write_table(&nodes, &wgsl, &presets);
+    write_frag_registry();
+}
+
+/// `$OUT_DIR/frag_registry.rs`: the occupant files of this crate, as the registry's scan finds them, each embedded.
+fn write_frag_registry() {
+    println!("cargo:rerun-if-changed=src/registry/scan.rs");
+    for (root, _) in scan::ROOTS {
+        println!("cargo:rerun-if-changed={root}");
+    }
+    let render = std::env::var_os("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR");
+    let found = scan::occupant_files(&PathBuf::from(render))
+        .unwrap_or_else(|e| panic!("cannot read {}: {}", e.path.display(), e.why));
+    let dir = std::env::var_os("OUT_DIR").expect("cargo sets OUT_DIR for a build script");
+    let file = PathBuf::from(dir).join("frag_registry.rs");
+    fs::write(&file, scan::shipped_table(&found))
+        .unwrap_or_else(|e| panic!("cannot write {}: {e}", file.display()));
 }
 
 /// The files of `dir` ending `.ext`, sorted by name.
