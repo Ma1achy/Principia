@@ -798,8 +798,12 @@ areas. That needs the rulings changed, and a rule for whether the smeared or squ
   - (c) The direction stands only for presentation: blank pixels draw the clamp's colour, the classification and
     statistics unchanged.
 - **Recommended:** (a): it keeps R-408's "each system once" exactly and gives the unfold's new systems their count.
-- **Measurement:** REQ-CHART-079's test extended: panning by one period, or across a clamp edge, changes neither
-  "forbidden in view" nor W7's counts; an unfold adds exactly its sheet's systems.
+- **Measurement:** REQ-CHART-079's test extended: panning by one period changes neither "forbidden in view" nor W7's
+  counts (exact for a pan of a whole number of periods, which leaves every pixel's canonical address, where its system
+  is counted once, as it was: R-537 EX7(g)); with the visible primary-range region held fixed, adding clamped pixels
+  to the view, or saturated pixels whose edge declares them not counted, changes no count and no total; a pan across a
+  clamp edge lowers each count and the total by exactly what the primary-range pixels that left the view contributed,
+  the clamped pixels that replace them contributing zero; an unfold adds exactly its sheet's systems.
 - **Applied meanwhile:** nothing; R-407, R-408, R-470 and R-554 stand as written.
 - **Waits:** N12, N14, and through them TASK-M8-87 and TASK-M8-55.
 
