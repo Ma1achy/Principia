@@ -1,0 +1,15 @@
+{
+  "id": "output",
+  "label": "Output",
+  "category": "out",
+  "doc": "What the canvas shows.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [],
+  "params": [],
+  "passes": ["output.wgsl"],
+  "cost": "light",
+  "motion": "full",
+  "temporally_stable": true,
+  "screen_medium": false,
+  "deviations": []
+}

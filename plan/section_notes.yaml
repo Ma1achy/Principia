@@ -1920,3 +1920,11 @@
   section: "R-893 — RQ-701 closes: R-818 ruled its form and R-833 its energy cap; the build is TASK-M8-48's *(closes RQ-701)*"
   reason: informative only
   note: "RQ-701 closes on R-818 and R-833; the build is TASK-M8-48's, whose requirements already carry it"
+- file: decisions.md
+  section: "R-922 — Shader features work on every chart, with no refusals: where a chart has closed-form code the fragment shader uses the generated WGSL as today; where it has none, the CPU evaluates the chart and uploads the result as a lookup texture the shader reads, the approximate form labelled; ruled, not built yet *(refines R-116 and R-558; no RQ)*"
+  reason: "ruled, not built yet (R-922)"
+  note: "the owner: \"Record this as a ruling. Do not build it yet.\" No requirement or task until the owner says build; REQ-COL-006 stands for every chart with closed-form code, every chart built today"
+- file: decisions.md
+  section: "R-923 — Integrator work before charts, for now: R-917's order (charts first, then integrator, then visuals) is set aside for now, on the owner's say; only integrator tasks that don't depend on the points the owner hasn't decided are taken, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; TASK-M3-14 stays stopped under R-918; no new chart task starts meanwhile *(amends R-917 in part, for now; no RQ)*"
+  reason: informative only
+  note: "a dispatch order, set for now; recorded in plan/OPERATIONS.md § Dispatching; no requirement, task or edge changes"

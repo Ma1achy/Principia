@@ -283,6 +283,19 @@ hash** it means "this build's defaults at the time", and recreates, labelled so.
 "state present, links unrecorded": it recreates only if the user explicitly accepts the current defaults, and the
 result is labelled as assumed. The record's `version` is bumped (§2, "Version 4").
 
+**A record made under a retired `β` link (R-921, closing RQ-755).** A record written before TASK-M2-57 names
+`sigmoid_beta`, `tanh_beta` or `softsign_beta` as its `β` link: links R-919 retired as links and keeps as conversion
+sources, each with its forward map and its entry hash. A record stores no physical starting state: tier 1 is the build
+hash, the schema version, the entry hashes and `SimConfig` (below), whose chart holds latent coordinates, `z₀`, `q₁`,
+`q₂` and the slice values (the `slice` line above; `principia_gui_state_contract.md` §2), so each pixel's start is
+decoded on read through the record's links. With every entry hash matching, such a record recreates by decoding its
+stored latent coordinates through that exact retired link to the original physical starting state, bitwise, and running
+from there, labelled "made under a retired link"; its hashes are checked as for any record, a mismatch refused as
+above. Nothing is converted on recreation: converting `z_β` into the periodic link "to rounding" can change the
+starting state's last bits, and a chaotic run then won't reproduce. Conversion into the periodic `β` happens only when
+the record is opened as an editable view, once, with a notice, as R-919 Q3 (a) converts a saved chart. REQ-TOOL-172's
+verify carries the test: a record made before TASK-M2-57 recreates bitwise after it lands.
+
 **Tiers (R-484).** The record is the one channel whose capacity the image sets, so it degrades by tier, and only it
 does. When the record does not fit, the writer drops whole tiers from the bottom:
 

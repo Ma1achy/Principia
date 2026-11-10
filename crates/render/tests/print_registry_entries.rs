@@ -1,0 +1,1420 @@
+//! The Print graph's registry entries and codegen (TASK-M7-54; principia_print_graph.md §4.3; render_gui_spec §12;
+//! REQ-RENDER-103): every registered entry carries each declared field; the Render node's category reads "Print
+//! source" and no Print graph category reads "Source" or "post"; the generated WGSL of a two-node graph compiles under
+//! naga and holds each node's passes; an entry without a motion policy, and one without `temporally_stable`, each fail
+//! to register; a pass's nested block comments are skipped whole, and one never closed is refused; a comment between
+//! a pass's tokens is trivia, as white space is; WGSL's white space is Unicode's Pattern_White_Space, as naga reads it,
+//! never Unicode's White_Space; a `//` comment ends at each of WGSL's line breaks, as naga ends it, in a pass and in an
+//! occupant's declaration lines; an attribute's name, and its enumerants, keep their own; a name beyond ASCII is one
+//! name, as naga lexes it; a pass holding a directive, or declaring one of the lab's names but `fn run`, fails to
+//! register, while a struct's member named as one keeps its name; and the stain's codegen given a Print graph node
+//! refuses it. Each test registers its negative control (R-176).
+
+use naga::valid::{Capabilities, ValidationFlags, Validator};
+use render::assemble::{AssembleError, Declaration};
+use render::codegen::{generate as stain_generate, Arg, Call, Node as StainNode, Slot, ValueType};
+use render::print::codegen::{
+    generate, Generated, Reads, FRAME_GROUP, PREFIX, TEXTURE_GROUP, UNIFORM_GROUP,
+};
+use render::print::graph::{expand, Graph};
+use render::print::ports::InputDefault;
+use render::print::registry::{Category, CostClass, MotionPolicy, Registry, Unit, FIELDS};
+use render::print::{shipped, NODES};
+use validation::negative_control;
+
+#[path = "support/print_fixtures.rs"]
+mod support;
+
+// ----- every field -----
+
+/// Each declaration of `decls` carries every member [`FIELDS`] lists, and registers.
+fn check_fields(decls: &[(&str, &str)]) {
+    for (file, decl) in decls {
+        let json: serde_json::Value = serde_json::from_str(decl).expect("a declaration is JSON");
+        for (key, what) in FIELDS {
+            assert!(json.get(key).is_some(), "{file} lacks `{key}` ({what})");
+        }
+        Registry::new()
+            .register(decl, &support::wgsl)
+            .unwrap_or_else(|e| panic!("{file}: {e}"));
+    }
+}
+
+#[test]
+fn print_registry_entries_carry_every_field() {
+    check_fields(NODES);
+    let registry = &shipped().registry;
+    let ids: Vec<&str> = registry.entries().map(|e| e.id.as_str()).collect();
+    assert_eq!(
+        ids,
+        ["output", "render"],
+        "the shipped registry is not Render and Output"
+    );
+    for e in registry.entries() {
+        assert!(
+            !e.label.is_empty() && !e.doc.is_empty(),
+            "{} has no label or doc",
+            e.id
+        );
+        assert_eq!(e.cost, CostClass::Light, "{}", e.id);
+        assert_eq!(e.motion, MotionPolicy::Full, "{}", e.id);
+        assert!(e.temporally_stable && !e.screen_medium, "{}", e.id);
+    }
+    let render = registry.get("render").expect("render");
+    assert!(render.inputs.is_empty() && render.passes.is_empty() && render.params.is_empty());
+    assert_eq!(render.outputs.len(), 1);
+    assert_eq!(
+        render.deviations.len(),
+        1,
+        "render lists its id and category"
+    );
+    let output = registry.get("output").expect("output");
+    assert!(output.outputs.is_empty() && output.deviations.is_empty());
+    assert_eq!(
+        (output.inputs[0].name.as_str(), output.inputs[0].default),
+        ("in", InputDefault::Render)
+    );
+    assert_eq!(output.passes[0].file, "output.wgsl");
+    // Every field read from a fixture entry: its kinds, ranges, steps and units.
+    let all = support::registry();
+    let lino = all.get("linocut").expect("the fixture linocut");
+    assert_eq!(lino.category, Category::Print);
+    assert_eq!(
+        (lino.cost, lino.motion),
+        (CostClass::Medium, MotionPolicy::Reduced)
+    );
+    assert_eq!(
+        lino.param("gouge").map(|p| p.kind.clone()),
+        Some(render::print::registry::ParamKind::Number {
+            min: 0.5,
+            max: 4.0,
+            step: 0.05,
+            unit: Unit::RefPx,
+        })
+    );
+    for u in Unit::ALL {
+        assert!(!u.name().is_empty());
+    }
+}
+
+negative_control!(
+    print_registry_entries_carry_every_field,
+    "a declaration without its motion policy",
+    expected = "lacks `motion`",
+    check_fields(&[(
+        "output.json",
+        &NODES[0].1.replace("\"motion\": \"full\",", "")
+    )])
+);
+
+// ----- categories -----
+
+/// Render's category reads "Print source", and none of `labels` reads "Source" or holds "post".
+fn check_categories(render: &str, labels: &[&str]) {
+    assert_eq!(
+        render, "Print source",
+        "the Render node's category does not read \"Print source\""
+    );
+    for label in labels {
+        assert!(
+            *label != "Source" && !label.to_lowercase().contains("post"),
+            "a Print graph category reads {label:?}"
+        );
+    }
+}
+
+#[test]
+fn print_registry_entries_render_is_print_source() {
+    let registry = &shipped().registry;
+    let render = registry.get("render").expect("render").category;
+    assert_eq!(render, Category::PrintSource);
+    let mut labels: Vec<&str> = Category::ALL.iter().map(|c| c.label()).collect();
+    labels.extend(registry.entries().map(|e| e.category.label()));
+    check_categories(render.label(), &labels);
+    for c in Category::ALL {
+        assert_eq!(Category::parse(c.key()), Some(c));
+        assert!(
+            !c.key().contains("post") && c.key() != "source",
+            "{}",
+            c.key()
+        );
+    }
+    assert_eq!(
+        Category::parse("source"),
+        None,
+        "the lab's key `source` is read"
+    );
+}
+
+negative_control!(
+    print_registry_entries_render_is_print_source,
+    "the lab's own label, \"Source\", among the categories",
+    expected = "a Print graph category reads \"Source\"",
+    check_categories("Print source", &["Generate", "Source"])
+);
+
+// ----- codegen -----
+
+fn compile(source: &str) {
+    let module = naga::front::wgsl::parse_str(source).unwrap_or_else(|e| {
+        panic!(
+            "the generated WGSL does not parse: {}",
+            e.emit_to_string(source)
+        )
+    });
+    Validator::new(ValidationFlags::all(), Capabilities::default())
+        .validate(&module)
+        .unwrap_or_else(|e| {
+            panic!(
+                "the generated WGSL does not validate: {}",
+                e.emit_to_string(source)
+            )
+        });
+}
+
+fn generated(text: &str) -> Generated {
+    let graph = Graph::parse(text).expect("the graph parses");
+    let presets = support::presets();
+    let e = expand(&graph, &|n: &str| presets.get(n).cloned()).expect("the graph expands");
+    generate(&e, &support::registry())
+        .unwrap_or_else(|e| panic!("the graph does not generate: {e}"))
+}
+
+/// `source` compiles under naga and holds each of `passes`, each a function and its fragment entry point.
+fn check_module(source: &str, passes: &[&str]) {
+    compile(source);
+    for p in passes {
+        assert!(
+            source.contains(&format!("fn {p}(uv: vec2<f32>) -> vec4<f32>"))
+                && source.contains(&format!("@fragment\nfn {p}_main(")),
+            "the generated WGSL does not hold the pass {p}"
+        );
+    }
+}
+
+const BLURRED: &str = r#"{"format":"principia.print/1","name":"Blurred","nodes":{"img":{"type":"render"},
+  "b":{"type":"blur","params":{"sigma":3},"in":{"in":"img"}},"out":{"type":"output","in":{"in":"b"}}},"out":"out"}"#;
+
+#[test]
+fn print_registry_entries_two_node_graph_compiles() {
+    // Plain, the two shipped nodes: Render has no pass (the stain's colours are its texture), Output one.
+    let plain = generated(&shipped().presets["Plain"].canonical().expect("canonical"));
+    assert_eq!(plain.order, ["render", "out"]);
+    check_module(&plain.source, &["print_n1_pass0"]);
+    assert!(
+        plain
+            .source
+            .contains("return print_tex(print_n1_in_in, uv);"),
+        "{}",
+        plain.source
+    );
+    assert_eq!(plain.passes.len(), 1);
+    assert_eq!(
+        (
+            plain.passes[0].node.as_str(),
+            plain.passes[0].ty.as_str(),
+            plain.passes[0].entry_point.as_str()
+        ),
+        ("out", "output", "print_n1_pass0_main")
+    );
+    assert_eq!(plain.textures.len(), 1);
+    assert_eq!(
+        (plain.textures[0].binding, plain.textures[0].reads.clone()),
+        (0, Reads::Source)
+    );
+    assert!(plain.uniforms.is_empty());
+    assert!(plain.source.contains(&format!(
+        "@group({FRAME_GROUP}) @binding(0) var<uniform> print_frame"
+    )));
+    // A two-pass node between them: its passes in order, the second reading the first through `prev`.
+    let blurred = generated(BLURRED);
+    check_module(
+        &blurred.source,
+        &["print_n1_pass0", "print_n1_pass1", "print_n2_pass0"],
+    );
+    assert!(
+        blurred.source.contains("print_tex(print_n1_prev, uv - d)"),
+        "{}",
+        blurred.source
+    );
+    assert!(
+        blurred
+            .source
+            .contains("print_frame.px.x * print_n1.p_sigma"),
+        "{}",
+        blurred.source
+    );
+    // Comments keep the lab's names as written.
+    for comment in [
+        "// A test fixture's second pass: down, reading the first through prev, not in_in.\nfn print_n1_pass1(",
+        "print_n1.p_sigma); /* the lab's names, kept in a comment: p_sigma, px*/\n",
+    ] {
+        assert!(blurred.source.contains(comment), "the comment is not kept as written: {}", blurred.source);
+    }
+    let reads: Vec<(u32, &str, Reads)> = blurred
+        .textures
+        .iter()
+        .map(|t| (t.binding, t.name.as_str(), t.reads.clone()))
+        .collect();
+    assert_eq!(
+        reads,
+        [
+            (0, "print_n1_in_in", Reads::Source),
+            (1, "print_n1_prev", Reads::Previous { node: "b".into() }),
+            (
+                2,
+                "print_n2_in_in",
+                Reads::Node {
+                    node: "b".into(),
+                    port: "out".into()
+                }
+            ),
+        ]
+    );
+    assert_eq!(blurred.uniforms.len(), 1);
+    assert_eq!(blurred.uniforms[0].binding, 1);
+    assert_eq!(
+        blurred.uniforms[0].values,
+        [("sigma".to_owned(), vec![3.0])]
+    );
+    assert!(blurred.source.contains(&format!(
+        "@group({UNIFORM_GROUP}) @binding(1) var<uniform> print_n1: PrintN1;"
+    )));
+    assert!(blurred.source.contains(&format!(
+        "@group({TEXTURE_GROUP}) @binding(1) var print_n1_prev"
+    )));
+}
+
+negative_control!(
+    print_registry_entries_two_node_graph_compiles,
+    "the module with its output pass taken out",
+    expected = "the generated WGSL does not hold the pass print_n1_pass0",
+    {
+        let plain = generated(&shipped().presets["Plain"].canonical().expect("canonical"));
+        let cut = plain
+            .source
+            .replace("fn print_n1_pass0(", "fn print_n1_gone(")
+            .replace(
+                "return print_n1_pass0(frag_uv",
+                "return print_n1_gone(frag_uv",
+            );
+        check_module(&cut, &["print_n1_pass0"])
+    }
+);
+
+/// The fixture linocut's uniforms, textures and renamed pass.
+#[test]
+fn print_registry_entries_codegen_binds_inputs_and_params() {
+    let g = generated(
+        r##"{"format":"principia.print/1","name":"L","settings":{"s":3},"nodes":{"img":{"type":"render"},
+          "cut":{"type":"linocut","params":{"seed":"$s+2","ink":"#ff8000","cut":1},"in":{"in":"img"}},
+          "out":{"type":"output","in":{"in":"cut"}}},"out":"out"}"##,
+    );
+    check_linocut(&g);
+}
+
+fn check_linocut(g: &Generated) {
+    compile(&g.source);
+    let reads: Vec<Reads> = g.textures.iter().map(|t| t.reads.clone()).collect();
+    assert_eq!(
+        reads,
+        [
+            Reads::Source,
+            Reads::Default(InputDefault::Black),
+            Reads::Default(InputDefault::Paper),
+            Reads::Default(InputDefault::Paper),
+            Reads::Default(InputDefault::White),
+            Reads::Node {
+                node: "cut".into(),
+                port: "out".into()
+            },
+        ],
+        "the linocut's textures do not read their wires and defaults"
+    );
+    let values = &g.uniforms[0].values;
+    let want: Vec<(String, Vec<f32>)> = vec![
+        ("depth".into(), vec![0.7]),
+        ("gouge".into(), vec![1.1]),
+        ("seed".into(), vec![5.0]),
+        ("ink".into(), vec![1.0, 128.0 / 255.0, 0.0]),
+        ("cut".into(), vec![1.0]),
+    ];
+    assert_eq!(
+        values, &want,
+        "the linocut's uniform does not hold its parameters"
+    );
+    assert!(g.source.contains("struct PrintN1 {\n    p_depth: f32,\n    p_gouge: f32,\n    p_seed: f32,\n    p_ink: vec3<f32>,\n    p_cut: f32,\n}"));
+    assert!(
+        g.source
+            .contains("mix(print_n1.p_ink, print_tex(print_n1_in_ground, uv).rgb, cut)"),
+        "{}",
+        g.source
+    );
+    assert!(
+        g.source.contains("print_frame.px.x * print_frame.res.x"),
+        "{}",
+        g.source
+    );
+    assert!(
+        !g.source.contains("print_n1_prev"),
+        "a one-pass node has no `prev`"
+    );
+}
+
+negative_control!(
+    print_registry_entries_codegen_binds_inputs_and_params,
+    "the linocut's ink left at its default",
+    expected = "the linocut's uniform does not hold its parameters",
+    check_linocut(&generated(
+        r#"{"format":"principia.print/1","name":"L","settings":{"s":3},"nodes":{"img":{"type":"render"},
+          "cut":{"type":"linocut","params":{"seed":"$s+2","cut":1},"in":{"in":"img"}},
+          "out":{"type":"output","in":{"in":"cut"}}},"out":"out"}"#,
+    ))
+);
+
+/// Codegen refuses what it cannot run: a parameter out of range or not its type's, and nodes reading in a cycle.
+fn check_codegen_refusals(cases: &[(&str, &str)]) {
+    for (text, why) in cases {
+        let graph = Graph::parse(text).expect("parses");
+        let e = expand(&graph, &|_: &str| None).expect("expands");
+        match generate(&e, &support::registry()) {
+            Ok(_) => panic!("a graph codegen cannot run generated: {text}"),
+            Err(err) => {
+                assert!(err.0.contains(why), "{err} does not say {why:?}");
+                assert_eq!(err.to_string(), err.0);
+            }
+        }
+    }
+}
+
+const CYCLE: &str = r#"{"format":"principia.print/1","name":"C","nodes":{"a":{"type":"blur","in":{"in":"b"}},
+  "b":{"type":"blur","in":{"in":"a"}},"out":{"type":"output","in":{"in":"b"}}},"out":"out"}"#;
+
+const ACYCLIC: &str = r#"{"format":"principia.print/1","name":"A","nodes":{"a":{"type":"blur"},
+  "out":{"type":"output","in":{"in":"a"}}},"out":"out"}"#;
+
+#[test]
+fn print_registry_entries_codegen_refusals() {
+    let with = |params: &str| {
+        ACYCLIC.replace(
+            r#"{"type":"blur"}"#,
+            &format!(r#"{{"type":"blur","params":{params}}}"#),
+        )
+    };
+    check_codegen_refusals(&[
+        (
+            CYCLE,
+            "the nodes [\"a\", \"b\", \"out\"] read each other in a cycle",
+        ),
+        (
+            &with(r#"{"sigma":9}"#),
+            "`sigma` = 9 is outside its range [0.5, 8]",
+        ),
+        (
+            &with(r#"{"sigma":0.25}"#),
+            "`sigma` = 0.25 is outside its range [0.5, 8]",
+        ),
+        (&with(r#"{"sgma":1}"#), "`sgma` is no parameter of `blur`"),
+        (&with(r#"{"sigma":"x"}"#), "is no value of its kind"),
+        (&ACYCLIC.replace("\"blur\"", "\"blurr\""), "not registered"),
+    ]);
+    // Its range's ends are in it.
+    for sigma in ["0.5", "8"] {
+        let g = Graph::parse(&with(&format!(r#"{{"sigma":{sigma}}}"#))).expect("parses");
+        let e = expand(&g, &|_: &str| None).expect("expands");
+        generate(&e, &support::registry()).unwrap_or_else(|e| panic!("sigma {sigma}: {e}"));
+    }
+}
+
+negative_control!(
+    print_registry_entries_codegen_refusals,
+    "a graph codegen can run",
+    expected = "a graph codegen cannot run generated",
+    check_codegen_refusals(&[(ACYCLIC, "")])
+);
+
+// ----- parameters named as WGSL reserved words -----
+
+/// An entry whose parameters are named `type`, `smooth`, `from` (as the lab's `ground`, `stereogram` and `unfinished`
+/// name theirs), `_` and `__x`, none of them a WGSL identifier.
+const RESERVED: &str = r##"{
+  "id": "reserved", "label": "Reserved", "category": "photo",
+  "doc": "A test entry: parameters named as WGSL reserved words.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [
+    { "name": "type", "kind": "number", "default": 0, "min": 0, "max": 1, "step": 1, "unit": "none" },
+    { "name": "smooth", "kind": "number", "default": 0.5, "min": 0, "max": 1, "step": 0.01, "unit": "fraction" },
+    { "name": "from", "kind": "choice", "default": 0, "options": ["a", "b"] },
+    { "name": "_", "kind": "colour", "default": "#808080" },
+    { "name": "__x", "kind": "number", "default": 1, "min": 0, "max": 2, "step": 1, "unit": "none" }
+  ],
+  "passes": ["reserved.wgsl"], "cost": "light", "motion": "full", "temporally_stable": true,
+  "screen_medium": false, "deviations": ["A test entry."]
+}"##;
+
+const RESERVED_PASS: &str = "fn run(uv: vec2<f32>) -> vec4<f32> {
+    let k = p_type + p_smooth + p_from + p___x;
+    return vec4<f32>(tex(in_in, uv).rgb * p__ * k, 1.0);
+}";
+
+/// The reserved entry's module, as `emit` writes it, compiles under naga.
+fn check_reserved(emit: fn(String) -> String) {
+    let mut registry = support::registry();
+    registry
+        .register(RESERVED, &|f: &str| {
+            (f == "reserved.wgsl").then(|| RESERVED_PASS.to_owned())
+        })
+        .expect("the reserved entry registers");
+    let graph = Graph::parse(
+        r#"{"format":"principia.print/1","name":"R","nodes":{"img":{"type":"render"},
+          "r":{"type":"reserved","params":{"smooth":0.25},"in":{"in":"img"}},
+          "out":{"type":"output","in":{"in":"r"}}},"out":"out"}"#,
+    )
+    .expect("parses");
+    let e = expand(&graph, &|_: &str| None).expect("expands");
+    let g = generate(&e, &registry).unwrap_or_else(|e| panic!("does not generate: {e}"));
+    assert!(
+        g.source.contains("    p_type: f32,") && g.source.contains("print_n1.p_from"),
+        "the members are not prefixed: {}",
+        g.source
+    );
+    compile(&emit(g.source));
+}
+
+#[test]
+fn print_registry_entries_reserved_parameter_names_compile() {
+    check_reserved(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_reserved_parameter_names_compile,
+    "the members written by the bare parameter names",
+    expected = "the generated WGSL does not parse",
+    // The module with each parameter's member and its reads written by the bare parameter name.
+    check_reserved(|source| ["type", "smooth", "from", "__x", "_"]
+        .iter()
+        .fold(source, |s, n| s.replace(&format!("p_{n}"), n)))
+);
+
+// ----- a pass's own helpers -----
+
+/// An entry of two passes, each declaring helpers at module level, some of one name in both.
+const HELPER: &str = r##"{
+  "id": "helper", "label": "Helper", "category": "photo",
+  "doc": "A test entry: passes declaring helpers.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [],
+  "passes": ["helper_a.wgsl", "helper_b.wgsl"], "cost": "light", "motion": "full", "temporally_stable": true,
+  "screen_medium": false, "deviations": ["A test entry."]
+}"##;
+
+/// The first pass: a `const`, an `override`, an `alias`, a `struct` with a member named as a helper, a `var<private>`
+/// and two `fn`s, one named `f`, as a literal's suffix is, a `const` named `x`, as a swizzle is, and a `<` comparing
+/// two of them, no template.
+const HELPER_A: &str = "// Helpers, some named as the second pass names its own.
+const K: f32 = 0.5;
+const x: f32 = 2.0;
+const B: bool = K < x;
+override gain: f32 = 1.0;
+alias V = vec3<f32>;
+struct S { shade: f32, v: vec2<f32> }
+var<private> seen: f32;
+fn f(a: f32) -> f32 { return a * 1.0f; }
+fn shade(c: V) -> V {
+    let s = S(K, vec2<f32>(x, 0.0));
+    // Count the shade.
+    seen = s.shade + s.v.x;
+    /* Again. */ seen = seen + K + s. /* a member */ shade;
+    return c * f(s.shade) * gain + seen;
+}
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    return vec4<f32>(shade(tex(in_in, uv).rgb), 1.0);
+}";
+
+/// The second pass: a `const`, a `struct` and a `fn` of the first pass's names, a comment ending in `fn` before the
+/// first, a local named as a helper, which shadows it, and a local `var`, which keeps its name.
+const HELPER_B: &str = "/*fn*/const K: f32 = 0.25;
+const W: f32 = 2.0;
+struct S { k: f32 }
+fn shade(c: vec3<f32>) -> vec3<f32> {
+    let W: f32 = S(K).k;
+    var t = W;
+    return c * t;
+}
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    return vec4<f32>(shade(tex(prev, uv).rgb), 1.0);
+}";
+
+/// A graph of two helper nodes in a chain: the module, as `emit` writes it, compiles under naga, each pass's helpers
+/// its own, a use after a comment ending in `.`, and a member after a `.` and a comment, among them.
+fn check_helpers(emit: fn(String) -> String) {
+    let mut registry = support::registry();
+    registry
+        .register(HELPER, &|f: &str| match f {
+            "helper_a.wgsl" => Some(HELPER_A.to_owned()),
+            "helper_b.wgsl" => Some(HELPER_B.to_owned()),
+            _ => None,
+        })
+        .expect("the helper entry registers");
+    let graph = Graph::parse(
+        r#"{"format":"principia.print/1","name":"H","nodes":{"img":{"type":"render"},
+          "a":{"type":"helper","in":{"in":"img"}},"b":{"type":"helper","in":{"in":"a"}},
+          "out":{"type":"output","in":{"in":"b"}}},"out":"out"}"#,
+    )
+    .expect("parses");
+    let e = expand(&graph, &|_: &str| None).expect("expands");
+    let g = generate(&e, &registry).unwrap_or_else(|e| panic!("does not generate: {e}"));
+    for k in [1, 2] {
+        for needle in [
+            format!("fn print_n{k}_pass0_h_shade(c: print_n{k}_pass0_h_V) -> print_n{k}_pass0_h_V {{"),
+            format!("let s = print_n{k}_pass0_h_S(print_n{k}_pass0_h_K, vec2<f32>(print_n{k}_pass0_h_x, 0.0));"),
+            format!("struct print_n{k}_pass0_h_S {{ shade: f32, v: vec2<f32> }}"),
+            format!("// Count the shade.\n    print_n{k}_pass0_h_seen = s.shade + s.v.x;"),
+            format!("/* Again. */ print_n{k}_pass0_h_seen = print_n{k}_pass0_h_seen + print_n{k}_pass0_h_K + s. /* a member */ shade;"),
+            "return a * 1.0f; }".to_owned(),
+            format!("var<private> print_n{k}_pass0_h_seen: f32;"),
+            format!("const print_n{k}_pass0_h_B: bool = print_n{k}_pass0_h_K < print_n{k}_pass0_h_x;\noverride print_n{k}_pass0_h_gain"),
+            format!("/*fn*/const print_n{k}_pass1_h_K: f32 = 0.25;"),
+            format!("fn print_n{k}_pass1_h_shade(c: vec3<f32>) -> vec3<f32> {{"),
+            format!("    let print_n{k}_pass1_h_W: f32 = print_n{k}_pass1_h_S(print_n{k}_pass1_h_K).k;\n    var t = print_n{k}_pass1_h_W;\n    return c * t;"),
+        ] {
+            assert!(g.source.contains(&needle), "the helpers are not the pass's own: no {needle} in {}", g.source);
+        }
+    }
+    compile(&emit(g.source));
+}
+
+#[test]
+fn print_registry_entries_pass_helpers_compile() {
+    check_helpers(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_pass_helpers_compile,
+    "the helpers declared by their bare names, as the pass writes them",
+    expected = "the generated WGSL does not parse",
+    check_helpers(|source| ["n1_pass0", "n1_pass1", "n2_pass0", "n2_pass1"]
+        .iter()
+        .fold(source, |s, p| s.replace(&format!("print_{p}_h_"), "")))
+);
+
+// ----- nested block comments -----
+
+/// An entry of one pass, `nested.wgsl`.
+const NESTED: &str = r##"{
+  "id": "nested", "label": "Nested", "category": "photo",
+  "doc": "A test entry: a pass with nested block comments.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [],
+  "passes": ["nested.wgsl"], "cost": "light", "motion": "full", "temporally_stable": true,
+  "screen_medium": false, "deviations": ["A test entry."]
+}"##;
+
+/// A pass whose block comments nest, as WGSL's do, each holding text that is code once the comment ends at its first
+/// `*/`: a retired `fn max`, an open brace before a helper's declaration, and a member after a `.`.
+const NESTED_PASS: &str = "const K: f32 = 0.5;
+struct S { shade: f32 }
+fn shade(c: f32) -> f32 { return c * K; }
+/* retired: /* v1 */ fn max(a: f32, b: f32) -> f32 { return a; } */
+/* an open brace: /* v1 */ { */
+fn lift(c: f32) -> f32 { return max(c, K); }
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let s = S(shade(uv.x));
+    return vec4<f32>(lift(s. /* see /* v1 */ notes */ shade), 0.0, 0.0, 1.0);
+}";
+
+/// The generated module of one node of the nested entry, its pass `pass`.
+fn nested(pass: &'static str) -> Result<Generated, String> {
+    let mut registry = support::registry();
+    registry
+        .register(NESTED, &|f: &str| {
+            (f == "nested.wgsl").then(|| pass.to_owned())
+        })
+        .expect("the nested entry registers");
+    let graph = Graph::parse(
+        r#"{"format":"principia.print/1","name":"N","nodes":{"img":{"type":"render"},
+          "n":{"type":"nested","in":{"in":"img"}},"out":{"type":"output","in":{"in":"n"}}},"out":"out"}"#,
+    )
+    .expect("parses");
+    let e = expand(&graph, &|_: &str| None).expect("expands");
+    generate(&e, &registry).map_err(|e| e.0)
+}
+
+/// The nested pass's module, as `emit` writes it, skips each block comment through the `*/` closing it: the member
+/// keeps its name, the builtin `max` is not the pass's, the helper after the open brace is, and it compiles.
+fn check_nested(emit: fn(String) -> String) {
+    let g = nested(NESTED_PASS).unwrap_or_else(|e| panic!("does not generate: {e}"));
+    let source = emit(g.source);
+    let missing: Vec<&str> = [
+        "/* retired: /* v1 */ fn max(a: f32, b: f32) -> f32 { return a; } */\n/* an open brace: /* v1 */ { */\n",
+        "fn print_n1_pass0_h_lift(c: f32) -> f32 {",
+        "return max(c, print_n1_pass0_h_K); }",
+        "(s. /* see /* v1 */ notes */ shade)",
+    ]
+    .into_iter()
+    .filter(|needle| !source.contains(needle))
+    .collect();
+    assert!(
+        missing.is_empty(),
+        "a nested comment ends at its first `*/`: no {missing:?} in {source}"
+    );
+    compile(&source);
+}
+
+#[test]
+fn print_registry_entries_nested_comments_skipped() {
+    check_nested(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_nested_comments_skipped,
+    "the helper after the open brace left unrenamed, as a scan ending the comment at its first `*/` leaves it",
+    expected = "a nested comment ends at its first `*/`",
+    check_nested(|s| s.replace("print_n1_pass0_h_lift", "lift"))
+);
+
+/// A pass whose block comment, `/* /* v1 */ open`, is never closed is refused, the refusal naming it.
+fn check_unclosed(pass: &'static str) {
+    match nested(pass) {
+        Ok(g) => panic!("a pass with an unclosed comment generated: {}", g.source),
+        Err(e) => assert_eq!(
+            e,
+            "node `n`'s pass `nested.wgsl` has an unclosed `/*` comment"
+        ),
+    }
+}
+
+#[test]
+fn print_registry_entries_unclosed_comment_refused() {
+    check_unclosed(
+        "fn run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }\n/* /* v1 */ open",
+    );
+}
+
+negative_control!(
+    print_registry_entries_unclosed_comment_refused,
+    "the comment closed",
+    expected = "a pass with an unclosed comment generated",
+    check_unclosed(
+        "fn run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }\n/* /* v1 */ open */"
+    )
+);
+
+// ----- comments between tokens -----
+
+/// An entry of one pass, `commented.wgsl`.
+const COMMENTED: &str = r##"{
+  "id": "commented", "label": "Commented", "category": "photo",
+  "doc": "A test entry: a pass with comments between its tokens.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [],
+  "passes": ["commented.wgsl"], "cost": "light", "motion": "full", "temporally_stable": true,
+  "screen_medium": false, "deviations": ["A test entry."]
+}"##;
+
+/// The module of two commented nodes in a chain, its pass `pass`: nodes 1 and 2 of the module, so a helper the
+/// module does not namespace is declared twice. The registration's refusal, or the codegen's, else.
+fn commented(pass: &str) -> Result<Generated, String> {
+    let mut registry = support::registry();
+    registry
+        .register(COMMENTED, &|f: &str| {
+            (f == "commented.wgsl").then(|| pass.to_owned())
+        })
+        .map_err(|e| e.0)?;
+    let graph = Graph::parse(
+        r#"{"format":"principia.print/1","name":"C","nodes":{"img":{"type":"render"},
+          "a":{"type":"commented","in":{"in":"img"}},"b":{"type":"commented","in":{"in":"a"}},
+          "out":{"type":"output","in":{"in":"b"}}},"out":"out"}"#,
+    )
+    .expect("parses");
+    let e = expand(&graph, &|_: &str| None).expect("expands");
+    generate(&e, &registry).map_err(|e| e.0)
+}
+
+/// The commented pass `pass` registers and generates; its module, as `emit` writes it, holds each of `needles` for
+/// both nodes (`{k}` the node's number) and compiles.
+fn check_commented(pass: &str, needles: &[&str], emit: fn(String) -> String) {
+    let g = commented(pass)
+        .unwrap_or_else(|e| panic!("a pass with comments between its tokens is refused: {e}"));
+    let source = emit(g.source);
+    let missing: Vec<String> = [1, 2]
+        .into_iter()
+        .flat_map(|k| {
+            needles
+                .iter()
+                .map(move |n| n.replace("{k}", &k.to_string()))
+        })
+        .filter(|needle| !source.contains(needle.as_str()))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "a comment between tokens is not trivia: no {missing:?} in {source}"
+    );
+    compile(&source);
+}
+
+/// A struct's member with a comment before its colon, named as a helper is, and one with white space beyond ASCII
+/// (U+2029) before it: each member keeps its name, as its use after `.` does.
+const MEMBER_PASS: &str = "struct S { shade /* units */: f32, tone\u{2029}: f32 }
+fn shade(c: f32) -> f32 { return c; }
+fn tone(c: f32) -> f32 { return c; }
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let s = S(uv.x, uv.y);
+    return vec4<f32>(shade(s.shade), tone(s.tone), 0.0, 1.0);
+}";
+
+fn check_member(emit: fn(String) -> String) {
+    check_commented(
+        MEMBER_PASS,
+        &[
+            "struct print_n{k}_pass0_h_S { shade /* units */: f32, tone\u{2029}: f32 }",
+            "print_n{k}_pass0_h_shade(s.shade), print_n{k}_pass0_h_tone(s.tone)",
+        ],
+        emit,
+    );
+}
+
+#[test]
+fn print_registry_entries_comment_before_member_colon() {
+    check_member(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_comment_before_member_colon,
+    "the member namespaced as the helper is, as a whitespace-only lookahead for its colon leaves it",
+    expected = "a comment between tokens is not trivia",
+    check_member(|s| s.replace("{ shade /* units */", "{ print_n1_pass0_h_shade /* units */"))
+);
+
+/// Two `var<private>`s: one with a comment before its template, one with comments inside it, one of them holding a
+/// `>`: each name after the template's own `>` is the pass's, and the address space keeps its name.
+const TEMPLATE_PASS: &str = "var /* scratch */<private> seen: f32;
+var</* the */ private /* x > y */> kept: f32;
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    seen = uv.x;
+    kept = uv.y;
+    return vec4<f32>(seen, kept, 0.0, 1.0);
+}";
+
+fn check_template(emit: fn(String) -> String) {
+    check_commented(
+        TEMPLATE_PASS,
+        &[
+            "var /* scratch */<private> print_n{k}_pass0_h_seen: f32;",
+            "var</* the */ private /* x > y */> print_n{k}_pass0_h_kept: f32;",
+            "print_n{k}_pass0_h_seen = uv.x;\n    print_n{k}_pass0_h_kept = uv.y;",
+        ],
+        emit,
+    );
+}
+
+#[test]
+fn print_registry_entries_comment_in_var_template() {
+    check_template(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_comment_in_var_template,
+    "the address space namespaced, as a whitespace-only lookahead for the template leaves it",
+    expected = "a comment between tokens is not trivia",
+    check_template(|s| s.replace("<private> print_n1", "<print_n1_pass0_h_private> print_n1"))
+);
+
+/// `fn run` with a comment between `fn` and `run`, and one with a line comment between `run` and `(`, each registers
+/// and generates as its pass's function; a pass whose only `fn run` is in a comment defines none, and is refused.
+fn check_run(passes: &[(&str, &str)]) {
+    for (pass, needle) in passes {
+        check_commented(pass, &[needle], |s| s);
+    }
+    let commented_out = "/* fn run(uv: vec2<f32>) -> vec4<f32> */
+fn runner(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }";
+    match commented(commented_out) {
+        Ok(g) => panic!(
+            "a pass whose `fn run` is commented out registered: {}",
+            g.source
+        ),
+        Err(e) => assert!(e.contains("defines no `fn run`"), "{e}"),
+    }
+}
+
+#[test]
+fn print_registry_entries_comment_around_run() {
+    check_run(&[
+        (
+            "fn /* entry */ run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }",
+            "fn /* entry */ print_n{k}_pass0(uv: vec2<f32>)",
+        ),
+        (
+            "fn run // entry\n(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }",
+            "fn print_n{k}_pass0 // entry\n(uv: vec2<f32>)",
+        ),
+    ]);
+}
+
+negative_control!(
+    print_registry_entries_comment_around_run,
+    "a pass whose `run` is commented out, its only function `runner`",
+    expected = "a pass with comments between its tokens is refused",
+    check_run(&[(
+        "/* fn run(uv: vec2<f32>) -> vec4<f32> */\nfn runner(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }",
+        "fn print_n{k}_pass0(",
+    )])
+);
+
+// ----- WGSL's white space -----
+
+/// The characters the white-space test tries: WGSL's white space, Unicode's Pattern_White_Space (the marks U+200E and
+/// U+200F among it, which Unicode's White_Space lacks), then White_Space characters WGSL refuses (the no-break space
+/// U+00A0 among them).
+const SPACES: [char; 14] = [
+    ' ', '\t', '\n', '\u{B}', '\u{C}', '\r', '\u{85}', '\u{200E}', '\u{200F}', '\u{2028}',
+    '\u{2029}', '\u{A0}', '\u{2000}', '\u{3000}',
+];
+
+/// Whether naga reads `c` as white space: `fn{c}f() {}` parses.
+fn naga_space(c: char) -> bool {
+    naga::front::wgsl::parse_str(&format!("fn{c}f() {{}}")).is_ok()
+}
+
+/// A pass with `c` between `fn` and `run`, and between `.` and a member named as a helper is.
+fn spaced_pass(c: char) -> String {
+    format!(
+        "struct S {{ shade: f32 }}
+fn shade(v: f32) -> f32 {{ return v; }}
+fn{c}run(uv: vec2<f32>) -> vec4<f32> {{
+    let s = S(uv.x);
+    return vec4<f32>(shade(s.{c}shade), uv.y, 0.0, 1.0);
+}}"
+    )
+}
+
+/// Each character of [`SPACES`] is read as `is_space` says, and `is_space` agrees with naga: where it holds, the pass
+/// with it ([`spaced_pass`]) registers, `run` is its pass's function, the member keeps its name and the module
+/// compiles; where it does not, the pass defines no `fn run` and is refused.
+fn check_spaces(is_space: fn(char) -> bool) {
+    for c in SPACES {
+        let pass = spaced_pass(c);
+        if is_space(c) {
+            check_commented(
+                &pass,
+                &[
+                    &format!("fn{c}print_n{{k}}_pass0(uv"),
+                    &format!("print_n{{k}}_pass0_h_shade(s.{c}shade)"),
+                ],
+                |s| s,
+            );
+        } else {
+            match commented(&pass) {
+                Ok(g) => panic!(
+                    "{c:?} is not WGSL's white space, yet the pass registered: {}",
+                    g.source
+                ),
+                Err(e) => assert!(e.contains("defines no `fn run`"), "{c:?}: {e}"),
+            }
+        }
+        assert_eq!(
+            is_space(c),
+            naga_space(c),
+            "{c:?}: the white space disagrees with naga"
+        );
+    }
+}
+
+#[test]
+fn print_registry_entries_wgsl_white_space() {
+    // The marks are WGSL's white space and the no-break space is not, as naga reads them.
+    assert!(naga_space('\u{200E}') && naga_space('\u{200F}') && !naga_space('\u{A0}'));
+    check_spaces(naga_space);
+}
+
+negative_control!(
+    print_registry_entries_wgsl_white_space,
+    "Unicode's White_Space for WGSL's, as `char::is_whitespace` reads it",
+    expected = "yet the pass registered",
+    check_spaces(char::is_whitespace)
+);
+
+// ----- WGSL's line breaks -----
+
+/// The characters the line-break test puts after a `//` comment: WGSL's line breaks, then characters that are none:
+/// white space ([`SPACES`]) that is no line break, the control character after the carriage return, and Unicode
+/// White_Space that WGSL refuses (U+00A0, U+2000).
+const AFTER_COMMENT: [char; 13] = [
+    '\n', '\u{B}', '\u{C}', '\r', '\u{85}', '\u{2028}', '\u{2029}', ' ', '\t', '\u{200E}', '\u{E}',
+    '\u{A0}', '\u{2000}',
+];
+
+/// Whether naga ends a `//` comment at `c`: the function after it is defined.
+fn naga_ends_comment(c: char) -> bool {
+    naga::front::wgsl::parse_str(&format!("// note{c}fn f() {{}}"))
+        .is_ok_and(|m| m.functions.len() == 1)
+}
+
+/// Each character of [`AFTER_COMMENT`], placed after a `//` comment before `fn run(`, is read as `ends` says, and
+/// `ends` agrees with naga: where it ends the comment, the pass registers, `run` is its pass's function and the module
+/// compiles; where it does not, the pass defines no `fn run` and is refused.
+fn check_comment_ends(ends: fn(char) -> bool) {
+    for c in AFTER_COMMENT {
+        let pass = format!(
+            "// the pass{c}fn run(uv: vec2<f32>) -> vec4<f32> {{ return vec4<f32>(uv, 0.0, 1.0); }}"
+        );
+        if ends(c) {
+            check_commented(&pass, &[&format!("{c}fn print_n{{k}}_pass0(uv")], |s| s);
+        } else {
+            match commented(&pass) {
+                Ok(g) => panic!(
+                    "{c:?} ends no WGSL comment, yet the pass registered: {}",
+                    g.source
+                ),
+                Err(e) => assert!(e.contains("defines no `fn run`"), "{c:?}: {e}"),
+            }
+        }
+        assert_eq!(
+            ends(c),
+            naga_ends_comment(c),
+            "{c:?}: the comment's end disagrees with naga"
+        );
+    }
+}
+
+#[test]
+fn print_registry_entries_line_comment_ends() {
+    // Every line break naga reads ends the comment, and nothing else does.
+    assert!(naga_ends_comment('\u{2028}') && naga_ends_comment('\r') && !naga_ends_comment('\t'));
+    check_comment_ends(naga_ends_comment);
+}
+
+negative_control!(
+    print_registry_entries_line_comment_ends,
+    "a comment ending at a line feed only",
+    expected = "ends no WGSL comment, yet the pass registered",
+    check_comment_ends(|c| c == '\n')
+);
+
+/// The input names an occupant's declarations give, or its refusal.
+fn inputs(source: &str) -> Result<Vec<String>, AssembleError> {
+    Declaration::parse(source).map(|d| d.inputs.into_iter().map(|i| i.name).collect())
+}
+
+/// Each character of [`AFTER_COMMENT`] between two declaration lines is read as `ends` says: where it ends the first
+/// line's comment, two inputs are declared, as naga reads two comments; where it does not, the line is one, and not
+/// those two inputs.
+fn check_declaration_lines(ends: fn(char) -> bool) {
+    for c in AFTER_COMMENT {
+        let two = inputs(&format!("// @input a{c}// @input b"));
+        if ends(c) {
+            assert_eq!(
+                two.as_ref().ok(),
+                Some(&vec!["a".to_owned(), "b".to_owned()]),
+                "{c:?}: the declaration lines are not split there: {two:?}"
+            );
+        } else {
+            assert!(
+                two.as_ref().ok() != Some(&vec!["a".to_owned(), "b".to_owned()]),
+                "{c:?} ends no WGSL comment, yet two declaration lines were read"
+            );
+        }
+    }
+}
+
+/// The line `source`'s declaration refusal names.
+fn refused_line(source: &str) -> usize {
+    match Declaration::parse(source) {
+        Err(AssembleError::Declaration { line, .. }) => line,
+        other => panic!("{source:?}: no declaration refusal: {other:?}"),
+    }
+}
+
+#[test]
+fn print_registry_entries_declaration_line_breaks() {
+    check_declaration_lines(naga_ends_comment);
+    // A carriage return then a line feed is one line break; a carriage return alone is one; U+2028 is one character.
+    assert_eq!(refused_line("// @input a\r\n// @bad"), 2);
+    assert_eq!(refused_line("\r\r// @bad"), 3);
+    assert_eq!(refused_line("\u{2028}\n// @bad"), 3);
+    assert_eq!(refused_line("// @bad\u{2029}"), 1);
+    assert_eq!(
+        inputs("// @input a\r\n\r\n// @input b\u{85}").expect("declares"),
+        ["a", "b"]
+    );
+}
+
+negative_control!(
+    print_registry_entries_declaration_line_breaks,
+    "a declaration line ending at a line feed only",
+    expected = "ends no WGSL comment, yet two declaration lines were read",
+    check_declaration_lines(|c| c == '\n')
+);
+
+/// Each character of [`SPACES`] before a declaration line is read as `is_space` says: where it is white space, the
+/// text before `//` is blank and `a` is declared, as naga reads the line as a comment; where it is not, the line is no
+/// declaration, and `a` is not declared.
+fn check_declaration_spaces(is_space: fn(char) -> bool) {
+    for c in SPACES {
+        let one = inputs(&format!("{c}// @input a"));
+        if is_space(c) {
+            assert_eq!(
+                one.as_ref().ok(),
+                Some(&vec!["a".to_owned()]),
+                "{c:?}: the declaration after it is not read: {one:?}"
+            );
+        } else {
+            assert!(
+                one.as_ref().ok() != Some(&vec!["a".to_owned()]),
+                "{c:?} is not WGSL's white space, yet the declaration after it was read"
+            );
+        }
+    }
+}
+
+#[test]
+fn print_registry_entries_declaration_leading_space() {
+    // naga reads a line opening with a mark as a comment, and refuses one opening with the no-break space.
+    let comment = |c: char| {
+        naga::front::wgsl::parse_str(&format!("{c}// @input a\nfn f() {{}}"))
+            .is_ok_and(|m| m.functions.len() == 1)
+    };
+    assert!(comment('\u{200E}') && comment('\u{200F}') && !comment('\u{A0}'));
+    check_declaration_spaces(naga_space);
+}
+
+negative_control!(
+    print_registry_entries_declaration_leading_space,
+    "Unicode's White_Space before a declaration, as `char::is_whitespace` reads it",
+    expected = "is not WGSL's white space, yet the declaration after it was read",
+    check_declaration_spaces(char::is_whitespace)
+);
+
+// ----- registration refusals -----
+
+/// The output entry's declaration with `member` taken out.
+fn without(member: &str) -> String {
+    let mut json: serde_json::Value = serde_json::from_str(NODES[0].1).expect("JSON");
+    json.as_object_mut().expect("an object").remove(member);
+    json.to_string()
+}
+
+/// The declaration `decl` fails to register, the refusal naming `member`.
+fn check_unregistered(decl: &str, member: &str) {
+    match Registry::new().register(decl, &support::wgsl) {
+        Ok(e) => panic!("the entry `{}` registered without `{member}`", e.id),
+        Err(e) => assert!(
+            e.0.contains(&format!("`{member}`")),
+            "{e} does not name `{member}`"
+        ),
+    }
+}
+
+#[test]
+fn print_registry_entries_without_motion_policy_refused() {
+    assert_eq!(NODES[0].0, "output.json");
+    check_unregistered(&without("motion"), "motion");
+}
+
+negative_control!(
+    print_registry_entries_without_motion_policy_refused,
+    "the entry with its motion policy",
+    expected = "registered without `motion`",
+    check_unregistered(NODES[0].1, "motion")
+);
+
+#[test]
+fn print_registry_entries_without_temporally_stable_refused() {
+    check_unregistered(&without("temporally_stable"), "temporally_stable");
+}
+
+negative_control!(
+    print_registry_entries_without_temporally_stable_refused,
+    "the entry with `temporally_stable`",
+    expected = "registered without `temporally_stable`",
+    check_unregistered(NODES[0].1, "temporally_stable")
+);
+
+// ----- the stain's codegen never sees a Print graph node -----
+
+/// The stain's codegen, given `function` as a colour occupant's node, refuses it as a Print graph node's.
+fn check_stain_refuses(function: &str) {
+    let node = StainNode {
+        id: 0,
+        output: ValueType::Vec3,
+        call: Call {
+            name: "output".into(),
+            function: function.into(),
+            args: vec![Arg::Ctx],
+            params: vec![],
+        },
+        inputs: vec![],
+    };
+    match stain_generate(Slot::Colour, &node) {
+        Ok(_) => panic!("the stain's codegen took the node `{function}`"),
+        Err(e) => assert!(e.0.contains("Print graph"), "{e}"),
+    }
+}
+
+#[test]
+fn print_registry_entries_stain_codegen_refuses_print_node() {
+    let plain = generated(&shipped().presets["Plain"].canonical().expect("canonical"));
+    for pass in &plain.passes {
+        assert!(pass.function.starts_with(PREFIX) && pass.entry_point.starts_with(PREFIX));
+        check_stain_refuses(&pass.function);
+        check_stain_refuses(&pass.entry_point);
+    }
+    check_stain_refuses("print_tex");
+}
+
+negative_control!(
+    print_registry_entries_stain_codegen_refuses_print_node,
+    "a stain occupant's own library function",
+    expected = "the stain's codegen took the node `oklch_to_linear`",
+    check_stain_refuses("oklch_to_linear")
+);
+
+// ----- attributes, names beyond ASCII, directives and the lab's names -----
+
+/// A pass whose text ends in a name, through its last character: the name is lexed whole, and the codegen renames it
+/// as the pass's helper. (The module is no WGSL, a `const_assert` wanting its `;`; the lexer reads it all the same.)
+fn check_final_name(emit: fn(String) -> String) {
+    let pass = "fn run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }\nconst ok = true;\nconst_assert ok";
+    let g = commented(pass).unwrap_or_else(|e| panic!("a pass ending in a name is refused: {e}"));
+    let source = emit(g.source);
+    assert!(
+        source.contains("const_assert print_n1_pass0_h_ok\n"),
+        "a name ending the text is not lexed whole: {source}"
+    );
+}
+
+#[test]
+fn print_registry_entries_name_ends_text() {
+    check_final_name(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_name_ends_text,
+    "the final name cut short",
+    expected = "a name ending the text is not lexed whole",
+    check_final_name(|s| s.replace(
+        "const_assert print_n1_pass0_h_ok",
+        "const_assert print_n1_pass0_h_o"
+    ))
+);
+
+/// The commented pass `pass` registers and generates; its module, as `emit` writes it, holds each of `needles` for
+/// both nodes (`{k}` the node's number) and compiles under naga. `what` names the defect a missing needle shows.
+fn check_placed(pass: &str, needles: &[&str], emit: fn(String) -> String, what: &str) {
+    let g = commented(pass).unwrap_or_else(|e| panic!("{what}: the pass is refused: {e}"));
+    let source = emit(g.source);
+    let missing: Vec<String> = [1, 2]
+        .into_iter()
+        .flat_map(|k| {
+            needles
+                .iter()
+                .map(move |n| n.replace("{k}", &k.to_string()))
+        })
+        .filter(|needle| !source.contains(needle.as_str()))
+        .collect();
+    assert!(missing.is_empty(), "{what}: no {missing:?} in {source}");
+    compile(&source);
+}
+
+/// Helpers named as the attributes they stand beside are: `size` and `off`. The attribute's name keeps its own, an
+/// expression in its arguments (`@size(size)`) is the helper, and an enumerant (`@diagnostic(off, …)`) keeps its own.
+const ATTRIBUTE_PASS: &str = "const size: u32 = 16u;
+const off: f32 = 0.5;
+struct S { @size(size) v: f32, w: f32 }
+@diagnostic(off, derivative_uniformity) fn shade(c: f32) -> f32 { return c * off; }
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let s = S(uv.x, uv.y);
+    return vec4<f32>(shade(s.v), s.w, 0.0, 1.0);
+}";
+
+fn check_attributes(emit: fn(String) -> String) {
+    check_placed(
+        ATTRIBUTE_PASS,
+        &[
+            "struct print_n{k}_pass0_h_S { @size(print_n{k}_pass0_h_size) v: f32, w: f32 }",
+            "@diagnostic(off, derivative_uniformity) fn print_n{k}_pass0_h_shade(c: f32) -> f32 { return c * print_n{k}_pass0_h_off; }",
+        ],
+        emit,
+        "an attribute's name or enumerant is renamed",
+    );
+}
+
+#[test]
+fn print_registry_entries_attribute_names_kept() {
+    check_attributes(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_attribute_names_kept,
+    "the attribute's name renamed as the helper it shares its name with is",
+    expected = "an attribute's name or enumerant is renamed",
+    check_attributes(|s| s.replace("@size(", "@print_n1_pass0_h_size("))
+);
+
+/// A helper named beyond ASCII, `π`: one name, as naga lexes it (XID_Start, then XID_Continue), so the type after it,
+/// `f32`, is no declaration of the pass's.
+const UNICODE_PASS: &str = "const π: f32 = 3.14159;
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let r: f32 = π * uv.x;
+    return vec4<f32>(r, 0.0, 0.0, 1.0);
+}";
+
+fn check_unicode(emit: fn(String) -> String) {
+    check_placed(
+        UNICODE_PASS,
+        &[
+            "const print_n{k}_pass0_h_π: f32 = 3.14159;",
+            "let r: f32 = print_n{k}_pass0_h_π * uv.x;",
+        ],
+        emit,
+        "a name beyond ASCII is not one name",
+    );
+}
+
+#[test]
+fn print_registry_entries_names_beyond_ascii() {
+    check_unicode(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_names_beyond_ascii,
+    "`π` lexed as punctuation, so `f32` read as the name the `const` declares",
+    expected = "a name beyond ASCII is not one name",
+    check_unicode(|s| s.replace("let r: f32", "let r: print_n1_pass0_h_f32"))
+);
+
+/// A pass's `fn run`, which the cases below add to.
+const RUN: &str = "fn run(uv: vec2<f32>) -> vec4<f32> { return vec4<f32>(uv, 0.0, 1.0); }";
+
+/// Each pass of `cases` fails to register, the refusal naming the pass's file and saying its reason.
+fn check_refused(cases: &[(String, &str)]) {
+    for (pass, why) in cases {
+        match commented(pass) {
+            Ok(g) => panic!("a pass the module cannot hold generated: {}", g.source),
+            Err(e) => assert!(
+                e.contains("entry `commented`: the pass `commented.wgsl` ") && e.contains(why),
+                "{e} does not say {why:?}"
+            ),
+        }
+    }
+}
+
+#[test]
+fn print_registry_entries_directive_refused() {
+    let with = |head: &str| format!("{head}\n{RUN}");
+    check_refused(&[
+        (with("enable f16;"), "holds the directive `enable`"),
+        (
+            with("requires readonly_and_readwrite_storage_textures;"),
+            "holds the directive `requires`",
+        ),
+        (
+            with("diagnostic(off, derivative_uniformity);"),
+            "holds the directive `diagnostic`",
+        ),
+        (
+            with("/* first */ diagnostic /* a filter */ (off, derivative_uniformity);"),
+            "holds the directive `diagnostic`",
+        ),
+    ]);
+    // The attribute is no directive.
+    check_placed(
+        &with("@diagnostic(off, derivative_uniformity) fn f(c: f32) -> f32 { return c; }"),
+        &["@diagnostic(off, derivative_uniformity) fn print_n{k}_pass0_h_f("],
+        |s| s,
+        "the `@diagnostic` attribute is refused",
+    );
+}
+
+negative_control!(
+    print_registry_entries_directive_refused,
+    "a pass whose `diagnostic` is an attribute, after `@`, which the module holds",
+    expected = "a pass the module cannot hold generated",
+    check_refused(&[(
+        format!(
+            "@diagnostic(off, derivative_uniformity) fn f(c: f32) -> f32 {{ return c; }}\n{RUN}"
+        ),
+        "",
+    )])
+);
+
+#[test]
+fn print_registry_entries_lab_name_declarations_refused() {
+    let with = |head: &str| format!("{head}\n{RUN}");
+    let body = |stmt: &str| {
+        format!("fn run(uv: vec2<f32>) -> vec4<f32> {{ {stmt} return vec4<f32>(uv, 0.0, 1.0); }}")
+    };
+    check_refused(&[
+        (
+            with("fn shade(res: f32) -> f32 { return res; }"),
+            "declares `res`",
+        ),
+        (
+            with("fn shade(@location(0) p_q: f32) -> f32 { return 1.0; }"),
+            "declares `p_q`",
+        ),
+        (body("let px = uv;"), "declares `px`"),
+        (body("var p_v = uv;"), "declares `p_v`"),
+        (body("var<function> in_w: f32;"), "declares `in_w`"),
+        (with("const p_k: f32 = 1.0;"), "declares `p_k`"),
+        (with("override p_o: f32 = 1.0;"), "declares `p_o`"),
+        (
+            with("var /* scratch */ <private> prev: f32;"),
+            "declares `prev`",
+        ),
+        (
+            with("fn tex(x: f32) -> f32 { return x; }"),
+            "declares `tex`",
+        ),
+        (with("struct in_s { v: f32 }"), "declares `in_s`"),
+        (with("alias run = f32;"), "declares `run`"),
+    ]);
+}
+
+negative_control!(
+    print_registry_entries_lab_name_declarations_refused,
+    "a pass declaring only `fn run` of the lab's names, its struct's members named as them",
+    expected = "a pass the module cannot hold generated",
+    check_refused(&[(MEMBER_NAMES_PASS.to_owned(), "")])
+);
+
+/// A struct whose members are named as the lab's names are: each keeps its name, declared and after `.`, while the
+/// lab's own `res` and `px` are the frame's, read after a `>` that closes no `var`'s template.
+const MEMBER_NAMES_PASS: &str = "struct S { res: f32, p_x: f32, px: f32 }
+fn run(uv: vec2<f32>) -> vec4<f32> {
+    let wide = uv.x > px.x;
+    let s = S(uv.x, uv.y, px.x);
+    return vec4<f32>(s.res * res.x, s.p_x, s.px, 1.0);
+}";
+
+fn check_member_names(emit: fn(String) -> String) {
+    check_placed(
+        MEMBER_NAMES_PASS,
+        &[
+            "struct print_n{k}_pass0_h_S { res: f32, p_x: f32, px: f32 }",
+            "let s = print_n{k}_pass0_h_S(uv.x, uv.y, print_frame.px.x);",
+            "vec4<f32>(s.res * print_frame.res.x, s.p_x, s.px, 1.0)",
+        ],
+        emit,
+        "a member named as the lab's names is renamed",
+    );
+}
+
+#[test]
+fn print_registry_entries_members_named_as_lab_names() {
+    check_member_names(|s| s);
+}
+
+negative_control!(
+    print_registry_entries_members_named_as_lab_names,
+    "the members renamed as the lab's names are, before the member guard",
+    expected = "a member named as the lab's names is renamed",
+    check_member_names(|s| s.replace(
+        "{ res: f32, p_x: f32",
+        "{ print_frame.res: f32, print_n1.p_x: f32"
+    ))
+);

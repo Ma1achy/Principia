@@ -2,7 +2,8 @@
 //! `?measure` in the browser and by `PRIN_MEASURE=1` natively, it reports what TASK-M8-96 measures with. It is beside the
 //! figure, never over it (render_gui_spec G1): the app runs in the window less the panel's strip. It is not R-467's
 //! View › Debug view: opening it sends no `SetField` and adds no undo entry. A run is the scripted pan or idle (no
-//! input), repainting every frame throughout, for the warm-up and the window of [`stats`].
+//! input), repainting every frame throughout, for the warm-up and the window of [`stats`]. A browser run started from the
+//! panel's button reads the rate measured at page load, so its report marks it as not a measurement (R-826).
 //!
 //! The panel joins both keyboard trees (render_gui_spec §G3; R-390, R-409) while it is open: a big scope after the
 //! footer, its two buttons inside it, Enter on a button acting as its click. The app's frame clears the scopes' places
@@ -268,6 +269,12 @@ pub struct Session {
     pub display_changed: Option<bool>,
     /// The run a button or a flag asked for, starting at the next step.
     pending: Option<Run>,
+    /// Whether the panel's button, not a flag, asked for the pending run.
+    pending_from_button: bool,
+    /// Whether the current or last run is not a measurement (R-826): its button started it, and no rate was read as it
+    /// started, so its figures read the rate measured at page load. A browser run from the button, then; a `?run=` run,
+    /// and a native run, whose rate [`Session::watch_display`] reads at its start, are measurements.
+    not_a_measurement: bool,
     /// The window's outer rect as the run started.
     outer_at_start: Option<egui::Rect>,
     frames: Vec<Frame>,
@@ -279,6 +286,8 @@ impl Session {
     pub fn new(env: Environment) -> Self {
         Self {
             pending: env.run,
+            pending_from_button: false,
+            not_a_measurement: false,
             env,
             phase: Phase::Ready,
             app_size: None,
@@ -302,10 +311,11 @@ impl Session {
         matches!(self.phase, Phase::Running { .. })
     }
 
-    /// Asks for a run, unless one is under way.
+    /// Asks for a run from the panel's button, unless one is under way.
     pub fn request(&mut self, run: Run) {
         if !self.running() {
             self.pending = Some(run);
+            self.pending_from_button = true;
         }
     }
 
@@ -350,6 +360,7 @@ impl Session {
         let mut step = Step::default();
         if let Some(run) = self.pending.take() {
             self.frames.clear();
+            self.not_a_measurement = std::mem::take(&mut self.pending_from_button);
             self.phase = Phase::Running {
                 run,
                 start_ms: now_ms,
@@ -386,6 +397,7 @@ impl Session {
     ) {
         if step.started {
             self.env.refresh_hz = read();
+            self.not_a_measurement = false;
             self.outer_at_start = outer;
             self.display_changed = Some(false);
         } else if step.finished {
@@ -406,6 +418,11 @@ impl Session {
             Phase::Done { stats, .. } => stats,
             _ => None,
         }
+    }
+
+    /// Whether the current or last run is not a measurement: `None` before the first run.
+    fn not_a_measurement(&self) -> Option<bool> {
+        (self.phase != Phase::Ready).then_some(self.not_a_measurement)
     }
 
     /// The name of the phase, and of the run.
@@ -433,6 +450,7 @@ impl Session {
             "fallback_reason": env.fallback_reason,
             "refresh_hz": env.refresh_hz,
             "display_changed": self.display_changed,
+            "not_a_measurement": self.not_a_measurement(),
             "frame_delay_ms": env.frame_delay_ms,
             "app_width": self.app_size.map(|s| s.x),
             "app_height": self.app_size.map(|s| s.y),
@@ -487,6 +505,7 @@ impl Session {
                     .map_or("–".to_owned(), |hz| format!("{hz:.1} Hz")),
             ),
             ("display changed", yes_no(self.display_changed)),
+            ("not a measurement", yes_no(self.not_a_measurement())),
             ("frame delay", format!("{:.0} ms", env.frame_delay_ms)),
             (
                 "app size",
