@@ -9414,14 +9414,14 @@
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
   verify:
+    detail: "on a fixture escaper, the production loop ends at the firing step; state, t_end_step, S and the other stored accumulators and latches are unchanged by later dispatches; the derived FTLE (REQ-PAY-021: S_final/(step_count·dt_macro), the partial renorm interval finalised from the shadow's δ at the firing step) is frozen at t_esc (asserted in TASK-M3-14, which builds the shadow that advances S); running the harness's §2.4 march leaves the payload buffer byte-identical"
     method: unit test
-    detail: "on a fixture escaper, the production loop ends at the firing step; state, t_end_step, S and the other stored accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc (asserted in TASK-M3-14, which builds the shadow that advances S); running the harness's §2.4 march leaves the payload buffer byte-identical"
   rulings:
   - R-31
   - R-95
   - R-103
   milestone: M3
-  note: "Applied per R-369 (10 Nov 2026): the derived-FTLE arm is asserted in TASK-M3-14 (ftle_frozen_at_escape), so that TASK-M3-17, which closes this requirement, does not wait for the Benettin shadow; the harness byte-identity arm is TASK-M3-33's. Was (verify detail): \"on a fixture escaper, the production loop ends at the firing step; state, t_end_step, S and the other stored accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc; running the harness's §2.4 march leaves the payload buffer byte-identical\"."
+  note: "Applied per R-369 (10 Nov 2026): the derived-FTLE arm is asserted in TASK-M3-14 (ftle_frozen_at_escape), so that TASK-M3-17, which closes this requirement, does not wait for the Benettin shadow; the harness byte-identity arm is TASK-M3-33's. Was (verify detail): \"on a fixture escaper, the production loop ends at the firing step; state, t_end_step, S and the other stored accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc; running the harness's §2.4 march leaves the payload buffer byte-identical\". Applied per R-369 (10 Nov 2026): record correction, the shorthand named REQ-PAY-021's formula; physics review 5836486519. Was (verify detail): \"on a fixture escaper, the production loop ends at the firing step; state, t_end_step, S and the other stored accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc (asserted in TASK-M3-14, which builds the shadow that advances S); running the harness's §2.4 march leaves the payload buffer byte-identical\"."
 - id: REQ-PAY-059
   area: PAY
   statement: "The n̂ from one window earlier must be held in a lagged register updated at the window's sampling points — macro-step boundaries for unregularised occupants, sync boundaries for regularised ones — and the payload/SimState widths must include it."
