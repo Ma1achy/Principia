@@ -486,8 +486,8 @@ fn limits_hold(toml: &str) -> Result<usize, String> {
 fn limits_are_sized_and_floored(toml: &str) {
     match limits_hold(toml) {
         Ok(measured) => assert!(
-            measured >= 231,
-            "qa-mpl: the mutants profile names {measured} measured tests, not the brief's 231"
+            measured >= 214,
+            "qa-mpl: the mutants profile names {measured} measured tests, not the brief's 231 less the 17 R-909 retired"
         ),
         Err(e) => panic!("qa-mpl: {e}"),
     }

@@ -836,32 +836,8 @@ filter = "binary_id(=validation::qa_TASK-M0-21) & test(=qa_unit_test_in_a_binary
 slow-timeout = { period = "80s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_implementer_test_has_a_registered_control)"
-slow-timeout = { period = "170s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_registered_control_makes_its_test_fail)"
-slow-timeout = { period = "350s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test)"
-slow-timeout = { period = "230s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test)"
-slow-timeout = { period = "140s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_a_control_without_an_expected_message_does_not_compile)"
 slow-timeout = { period = "150s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_lists_its_five_tests_and_no_child_path)"
-slow-timeout = { period = "150s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_test_has_no_child_path_and_qa_child_has_it)"
-slow-timeout = { period = "30s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
 filter = "binary_id(=validation::qa_TASK-M1-13) & test(=qa_boundary_width_is_constant_across_quad_size_and_depth)"
@@ -976,10 +952,6 @@ filter = "binary_id(=xtask::controls) & test(=controls_runs_on_this_workspace_ba
 slow-timeout = { period = "170s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::lint_wgsl_ctx_occupant) & test(=lint_wgsl_ctx_occupant_structural_occupants_lint_clean)"
-slow-timeout = { period = "110s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::lint_wgsl_debug_views) & test(=lint_wgsl_debug_views_lint_after_the_stain_context)"
 slow-timeout = { period = "30s", terminate-after = 3 }
 
@@ -990,10 +962,6 @@ slow-timeout = { period = "80s", terminate-after = 3 }
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_fixtures_fire_as_marked)"
 slow-timeout = { period = "100s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_repository_lints_clean)"
-slow-timeout = { period = "90s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::lint_wgsl_rules) & test(=lint_wgsl_ci_runner_runs_the_lint)"
@@ -1060,10 +1028,6 @@ filter = "binary_id(=xtask::plan_check) & test(=plan_check_fails_on_an_rq_headin
 slow-timeout = { period = "60s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::plan_check) & test(=plan_check_passes_on_the_tree)"
-slow-timeout = { period = "60s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::plan_check) & test(=plan_check_runs_the_queue_form_check)"
 slow-timeout = { period = "60s", terminate-after = 3 }
 
@@ -1080,20 +1044,8 @@ filter = "binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_dep
 slow-timeout = { period = "110s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_the_deps_check)"
-slow-timeout = { period = "170s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-01) & test(=qa_xtask_deps_passes_on_the_live_workspace)"
-slow-timeout = { period = "160s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-01_live) & test(=qa_live_deps_sees_every_live_workspace_edge)"
 slow-timeout = { period = "160s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_failing_plan_check_turns_xtask_ci_red)"
-slow-timeout = { period = "80s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_lost_requirement_turns_the_check_red)"
@@ -1140,10 +1092,6 @@ filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_source_into_nested_archi
 slow-timeout = { period = "60s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_xtask_plan_check_passes_on_the_tree_and_streams)"
-slow-timeout = { period = "60s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device)"
 slow-timeout = { period = "110s", terminate-after = 3 }
 
@@ -1172,14 +1120,6 @@ filter = "binary_id(=xtask::qa_TASK-M0-22_r235) & test(=qa_r235_ci_list_fails_on
 slow-timeout = { period = "280s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-29) & test(=qa_m0_29_workspace_deps_check_accepts_xtask_deps_on_the_workspace)"
-slow-timeout = { period = "50s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-29_live) & test(=qa_m0_29_live_default_path_check_accepts_the_live_count)"
-slow-timeout = { period = "60s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-34) & test(=qa_m034_control_output_after_a_failures_line_is_in_its_finding)"
 slow-timeout = { period = "100s", terminate-after = 3 }
 
@@ -1198,14 +1138,6 @@ slow-timeout = { period = "110s", terminate-after = 3 }
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M0-38) & test(=qa_m038_note_with_nothing_embedded_is_the_controls_own)"
 slow-timeout = { period = "30s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M0-50) & test(=qa_lint_wgsl_workspace_passes)"
-slow-timeout = { period = "110s", terminate-after = 3 }
-
-[[profile.mutants.overrides]]
-filter = "binary_id(=xtask::qa_TASK-M1-01) & test(=qa_lint_wgsl_repository_read_side_is_clean)"
-slow-timeout = { period = "110s", terminate-after = 3 }
 
 [[profile.mutants.overrides]]
 filter = "binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_exceptions_are_each_to_one_rule)"
