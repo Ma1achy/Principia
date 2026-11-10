@@ -601,6 +601,38 @@ older way of stepping that later rulings replaced.*
   REQ-INT-024's profile on (5) 4, the predictive limit on (5) 6). *Was:* "TASK-M3-07 (REQ-INT-044, REQ-INT-049, REQ-INT-054, and the
   Aarseth–Zare arms of REQ-INT-021 and REQ-INT-024)."
 
+## RQ-748: REQ-RENDER-102 and REQ-RENDER-104 test a `linocut` with a `depth` parameter and `ground` and `field` inputs, which the lab's linocut does not have *(record conflict between a verify and the reference; TASK-M7-54, PR for REQ-RENDER-101 to REQ-RENDER-104; context: the task that ports the lab's linocut)*
+
+*Queued 8 Nov 2026 by TASK-M7-54. A record correction, two-way under R-369 (§ "When to ask the human"): the orchestrator
+and the reviewers can settle it. It blocks nothing now: no linocut ships in TASK-M7-54, and its tests use a fixture.*
+
+**In plain English:** two Print graph tests describe a "linocut" node with a depth setting and two inputs called
+`ground` and `field`, and say its defaults are the lab's. The lab's real linocut has none of those: its knobs are ink,
+gouge, amount and seed, its inputs are `in`, `flow` and `paper`, and the `{ ground: "paper", field: "white" }` defaults
+belong to the lab's "Unfinished" node. TASK-M7-54 tests against a stand-in linocut built to the tests' description, so
+nothing is wrong today; but the task that ports the real linocut must follow the lab (R-486), not these tests.
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-RENDER-102's verify: "an unconnected `ground` input of `linocut` takes `paper` and an
+    unconnected `field` input `white`, as the lab's defaults declare"; REQ-RENDER-104's verify: "a fixture setting
+    `linocut.depth` outside its range".
+  - `docs/design/principia_print_graph.md` § "4.1 A graph is data", its example: `"cut": { "type": "linocut",
+    "params": { "depth": "$depth", "seed": "$seed" }, "in": { "in": "img", "flow": "fl", "paper": "pap" } }`; § "4.2
+    Port types": "An unconnected input takes the default its node type declares (the lab's `defaults: { ground:
+    "paper", field: "white" }`)."
+  - The reference, `docs/gui/reference/print_graph/catalogue/node_catalogue.json`, `linocut`: inputs `in`, `flow`,
+    `paper`; params `ink`, `gouge`, `amount`, `seed`; and the lab (`reference/print_graph_lab/index.html`), `linocut`:
+    `defaults: { paper: "paper" }`, the `{ ground: "paper", field: "white" }` defaults being `unfinished`'s.
+- **The question:** whether the two verifies are reworded to name a stand-in (or `unfinished`, whose defaults they
+  quote), so the linocut port is not read as needing a `depth` or `ground` and `field`.
+- **Options seen:** (a) reword the verifies to "a fixture node" with those ports and that parameter, as TASK-M7-54
+  built them; (b) name `unfinished` for the defaults and a node the lab gives a ranged parameter for the range; (c) leave
+  the text, with this entry as the record.
+- **Applied meanwhile:** TASK-M7-54's tests use `fixtures/print_graph/nodes/linocut.json`, a stand-in with the shape the
+  verifies ask of it (§4.1's `depth` and `seed`, §4.2's `ground` and `field` with the quoted defaults), stated in it and
+  in `fixtures/README.md` not to be the lab's linocut. Nothing ships from it.
+- **Waits:** nothing now. The linocut port task reads this entry.
+
 ## RQ-758: Do central-difference slopes survive R-926's three slope tiers: as the linearised decoder's `J_D`, as a fourth tier, or only as a test's check? *(conflict; a one-way door; R-926 item 9 and item 11, R-633, R-113; REQ-DEC-034, REQ-DEC-036, REQ-DEC-042, REQ-GEN-018; context: TASK-M6-07, TASK-M5-04)*
 
 *Queued 10 Nov 2026 by the M2 chart re-plan (`plan/charts/m2-chart-system-replan.md`); each quote re-read on

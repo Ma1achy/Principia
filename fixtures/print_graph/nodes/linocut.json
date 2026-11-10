@@ -1,0 +1,27 @@
+{
+  "id": "linocut",
+  "label": "Linocut",
+  "category": "print",
+  "doc": "A test fixture: a relief print's shape, with the design doc's depth and seed and the lab's ground and field defaults.",
+  "inputs": [
+    { "name": "in", "type": "image", "default": "render" },
+    { "name": "flow", "type": "direction", "default": "black" },
+    { "name": "paper", "type": "ground", "default": "paper" },
+    { "name": "ground", "type": "ground", "default": "paper" },
+    { "name": "field", "type": "scalar", "default": "white" }
+  ],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [
+    { "name": "depth", "kind": "number", "default": 0.7, "min": 0, "max": 1, "step": 0.01, "unit": "none" },
+    { "name": "gouge", "kind": "number", "default": 1.1, "min": 0.5, "max": 4, "step": 0.05, "unit": "ref_px" },
+    { "name": "seed", "kind": "number", "default": 0, "min": 0, "max": 99, "step": 1, "unit": "none" },
+    { "name": "ink", "kind": "colour", "default": "#171414" },
+    { "name": "cut", "kind": "choice", "default": 0, "options": ["v", "u"] }
+  ],
+  "passes": ["linocut.wgsl"],
+  "cost": "medium",
+  "motion": "reduced",
+  "temporally_stable": true,
+  "screen_medium": false,
+  "deviations": ["A test fixture, not the lab's linocut."]
+}

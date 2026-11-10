@@ -280,7 +280,7 @@ fn measure_begin_frame_spends_the_delay() {
 }
 
 /// The fields every report and the panel carry, in every phase.
-const REPORT_KEYS: [&str; 22] = [
+const REPORT_KEYS: [&str; 23] = [
     "status",
     "run",
     "build",
@@ -291,6 +291,7 @@ const REPORT_KEYS: [&str; 22] = [
     "fallback_reason",
     "refresh_hz",
     "display_changed",
+    "not_a_measurement",
     "frame_delay_ms",
     "app_width",
     "app_height",
@@ -304,7 +305,7 @@ const REPORT_KEYS: [&str; 22] = [
     "acquire_mean_ms",
     "work_less_wait_p95_ms",
 ];
-const ROW_LABELS: [&str; 18] = [
+const ROW_LABELS: [&str; 19] = [
     "status",
     "build",
     "crossOriginIsolated",
@@ -314,6 +315,7 @@ const ROW_LABELS: [&str; 18] = [
     "fallback reason",
     "refresh rate",
     "display changed",
+    "not a measurement",
     "frame delay",
     "app size",
     "frames",
@@ -351,6 +353,101 @@ fn measure_report_carries_every_field() {
         let mut report = s.report();
         report.as_object_mut().unwrap().remove("p5_fps_capped");
         check_fields(&report, &s.rows());
+    });
+}
+
+/// A browser session from the loader's JSON, `run` its `?run=`.
+fn browser(run: Option<&str>) -> Session {
+    let run = run.map_or(String::new(), |run| format!(r#","run":"{run}""#));
+    let text = format!(r#"{{"layout":"worker","idleLoopMs":[0,16,32,48]{run}}}"#);
+    Session::new(Environment::browser(&text).expect("the loader's JSON"))
+}
+
+/// `s`'s reports and its "not a measurement" row through a run: before it, as it starts, mid-run (the panel's button
+/// pressed again, which a run under way ignores) and at its end. The button starts the run when `button`, else the
+/// flag did; `rate` reads the monitor as the native frame does ([`Session::watch_display`]), and `None` is the browser,
+/// which reads none.
+fn mark_through_run(
+    mut s: Session,
+    button: bool,
+    rate: Option<f64>,
+) -> Vec<(serde_json::Value, String)> {
+    let mut seen = Vec::new();
+    let mut look = |s: &Session| {
+        let row = s.rows().into_iter().find(|r| r.0 == "not a measurement");
+        let row = row.expect("the row").1;
+        seen.push((s.report()["not_a_measurement"].clone(), row));
+    };
+    look(&s);
+    if button {
+        s.request(Run::Idle);
+    }
+    for (now, press) in [
+        (0.0, false),
+        (WARM_UP_MS, true),
+        (WARM_UP_MS + WINDOW_MS, false),
+    ] {
+        if press {
+            s.request(Run::Pan);
+        }
+        let step = s.step(now);
+        if let Some(hz) = rate {
+            s.watch_display(step, None, &|| Some(hz));
+        }
+        look(&s);
+    }
+    assert_eq!(s.report()["status"], "done", "the run ran to its end");
+    assert_eq!(s.report()["run"], "idle", "the run asked for first");
+    assert!(
+        !s.step(WARM_UP_MS + WINDOW_MS + 1.0).started,
+        "the press mid-run was ignored"
+    );
+    seen
+}
+
+/// No mark before a run; after, `marked` in the report and the row, as the run starts, during it and at its end.
+fn check_mark(seen: &[(serde_json::Value, String)], marked: bool) {
+    assert_eq!(seen[0].0, serde_json::Value::Null, "no run yet, no mark");
+    assert_eq!(seen[0].1, "n/a", "no run yet, no mark in the row");
+    for (report, row) in &seen[1..] {
+        assert_eq!(
+            *report,
+            serde_json::Value::Bool(marked),
+            "the report's mark"
+        );
+        assert_eq!(row, if marked { "yes" } else { "no" }, "the row's mark");
+    }
+    assert_eq!(seen.len(), 4, "ready, started, mid-run, done");
+}
+
+/// REQ-PERF-119 (R-826): a browser run started from the panel's button reads the rate measured at page load, so its
+/// report says it is not a measurement. A `?run=` run, in either build, and a native run from the button, whose rate is
+/// read as it starts, are unmarked. Controls: the mark dropped from the button's run, or put on a `?run=` run.
+#[test]
+fn measure_button_run_marked() {
+    let button = mark_through_run(browser(None), true, None);
+    check_mark(&button, true);
+    let flag = mark_through_run(browser(Some("idle")), false, None);
+    check_mark(&flag, false);
+    let native = mark_through_run(session(None), true, Some(60.0));
+    check_mark(&native, false);
+    let native_flag = mark_through_run(session(Some(Run::Idle)), false, Some(60.0));
+    check_mark(&native_flag, false);
+    rejects("the mark dropped from the button's run", || {
+        let mut dropped = button.clone();
+        dropped[3].0 = serde_json::Value::Bool(false);
+        check_mark(&dropped, true);
+    });
+    rejects("the row's mark dropped", || {
+        let mut dropped = button.clone();
+        dropped[2].1 = "no".to_owned();
+        check_mark(&dropped, true);
+    });
+    rejects("a ?run= run marked", || check_mark(&button, false));
+    rejects("a mark before any run", || {
+        let mut early = button.clone();
+        early[0].0 = serde_json::Value::Bool(true);
+        check_mark(&early, true);
     });
 }
 
