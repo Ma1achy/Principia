@@ -5849,7 +5849,7 @@
   - R-561
   - R-567
   milestone: M3
-  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39, whose `regularisation_compose` re-run shows every pair including Heggie's, the measured-bad cells' warnings and note 4; TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type (qa review 5607548278 of PR #277, Q8, applied per R-369; *was:* closed by TASK-M3-07). Qa re-check 5607645188 of PR #277, Q10 (applied per R-369): the status and warning are the cell's for the time transformation in force, with its arm and control. *Was (statement):* \"and the pairs measured not to work must carry a warning, never a block (R-561).\""
+  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39, whose `regularisation_compose` re-run shows every pair including Heggie's, the measured-bad cells' warnings and note 4; TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type (qa review 5607548278 of PR #277, Q8, applied per R-369; *was:* closed by TASK-M3-07). Qa re-check 5607645188 of PR #277, Q10 (applied per R-369): the status and warning are the cell's for the time transformation in force, with its arm and control. *Was (statement):* \"and the pairs measured not to work must carry a warning, never a block (R-561).\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split; its arm covers the table's data type and the `none` pairs, and TASK-M3-68's the Aarseth–Zare pairs. *Was:* \"TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type\"."
 - id: REQ-INT-018
   area: INT
   statement: "The regularisation's re-registration count must be visible downstream, as a `re_registrations: u32` profile field or at minimum a per-trajectory count in the payload."
@@ -5948,12 +5948,16 @@
     section: The table gains two rows
   - file: decisions.md
     section: R-162 — The reversible occupant is logH's TTL time mode
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: review checklist
     detail: "AZ+RK4 profile has symplectic=false and reversible=false; the stepper slot under AZ accepts a Mikkola–Tanikawa leapfrog occupant"
   rulings:
   - R-162
   milestone: M3
+  rq:
+  - RQ-756
   note: "R-162: Aarseth–Zare with Mikkola–Tanikawa isn't required; the slot is specified, and the reversible occupant is logH's TTL time mode (REQ-VAL-044)."
 - id: REQ-INT-025
   area: INT
@@ -6340,12 +6344,16 @@
   source:
   - file: docs/design/principia_dd_predictability_horizon.md
     section: "7.3 The f32 horizon is falsified — and the cause is AZ, not precision"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: numerical gate
     detail: "at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form"
   rulings:
   - R-35
   milestone: M3
+  rq:
+  - RQ-756
   note: applies to the AZ occupant
 - id: REQ-INT-045
   area: INT
@@ -6420,11 +6428,15 @@
     section: 0.1 The mechanism, and the fix — measured, not proposed
   - file: docs/design/principia_dd_validation_orbits.md
     section: 5. Immediate action
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: numerical gate
     detail: "figure-eight closure after one period: ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-756
 - id: REQ-INT-050
   area: INT
   statement: "A regularisation-free occupant must be kept permanently, sharing no coordinate machinery with the others, as the arm that adjudicates when regularised occupants disagree."
@@ -6507,12 +6519,16 @@
   source:
   - file: decisions.md
     section: R-19 — Change 8 landed in full *(closes RQ-17)*
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: property test
     detail: "Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound computed on the fixed τ-schedule."
   rulings:
   - R-19
   milestone: M3
+  rq:
+  - RQ-756
 - id: REQ-INT-055
   area: INT
   statement: The inspector's CPU reference integration must be RK45.
@@ -7508,12 +7524,12 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B (TASK-M3-07), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it"
+    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B (TASK-M3-68), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it"
   rulings:
   - R-71
   - R-563
   milestone: M3
-  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\""
+  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split, and Aarseth–Zare's proposal is TASK-M3-68's. *Was (verify):* \"Aarseth–Zare's pre-floor A and B (TASK-M3-07)\"; *was (this note):* TASK-M3-07 proposes it."
 - id: REQ-INT-106
   area: INT
   statement: "The energy-suspect threshold proposed under REQ-INT-085 must be measured against the default occupant, Heggie × RK4 (R-560), whose regularised energy SUSPECT_ENERGY reads (R-566): its regularised drift, final and max, on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and which suspect predicates it lights on each under the proposed thresholds, recorded with REQ-INT-085's proposal before the M3 gate confirms it."

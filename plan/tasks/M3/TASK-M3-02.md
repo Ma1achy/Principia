@@ -35,7 +35,7 @@ The five stepper occupants — Euler (debug only), KDK, Yoshida-4, Yoshida-6 and
 ## Deliverables
 - `crates/kernel/src/occupant/mod.rs` — the `Stepper` trait (`fn step(state, dt, geom)`), `CapabilityProfile` struct, and the closed, build-time occupant set (an enum of monomorphised types; no runtime compilation or interpretation path).
 - `crates/kernel/src/occupant/{euler,kdk,yoshida4,yoshida6,rk4}.rs` — §3.2's rules; Yoshida-4 and -6 as KDK compositions with the printed drift/kick sequences.
-- `crates/kernel/src/occupant/table.rs` — the Part 2 / Part 2a profile table, including the two AZ rows' profiles (filled by TASK-M3-07), and the default tier binding per occupant; Euler reachable only from a debug selection.
+- `crates/kernel/src/occupant/table.rs` — the Part 2 / Part 2a profile table, including the two AZ rows' profiles (filled by TASK-M3-68; *was:* TASK-M3-07, split 10 Nov 2026, applied per R-369), and the default tier binding per occupant; Euler reachable only from a debug selection.
 - Doc change: `docs/contracts/principia_integrator_contract.md` Part 2 — the mapping from profile `order` to the interpretation of `total_substeps_log2` and to FTLE confidence (definition, REQ-INT-078).
 - The coefficient blocks in `yoshida4.rs` and `yoshida6.rs` carry the citation dd §3.2 prints (R-501). The doc changes R-57 asked for here were made by R-500's and R-501's port (dd §3.2, §5 test 1a, §6; integrator contract Part 6). *Was:* "Doc change: `docs/design/principia_dd_integrator.md` §3.2 / §6 — the Yoshida-6 transcription check recorded (the digits compared with Yoshida 1990 Table 1 solution A) and the `w₂ < 0` label corrected, per R-57."
 

@@ -311,6 +311,157 @@ physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
 - **TTL is a prior finding, not an open build:** it is built and validated in prin-rs, and it loses on accuracy,
   monotonically worse with mass ratio (prin-rs `NOTES.md:2573`; R-162).
 
+#### Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)
+
+*Transcribed from docs/reference per CLAUDE.md § Authority, applied per R-369 (10 Nov 2026); physics-reviewed;
+confirmed at the M3 gate.* The precedent is R-160, which put Heggie, logH and TTL in the section above; this one does
+the same for Aarseth–Zare (RQ-756). Citation: Aarseth & Zare 1974, Celest. Mech. 10, 185, doi:10.1007/BF01227619. Each
+equation is written as the prin-rs reference set computes it (reference, not authority, R-159), each checked line by
+line against the cited file: `docs/reference/prin-rs/reference/tb_az.py` (`tb_az.py` below),
+`docs/reference/prin-rs/reference/tb_lc.py` (`tb_lc.py`), `docs/reference/prin-rs/reference/tb.py` (`tb.py`) and
+`docs/reference/prin-rs/src/integrate/az/driver.rs` (`driver.rs`). The Rust AZ system, its Levi-Civita map and its
+reference-body selector (`src/integrate/az/system.rs`, `hamiltonian.rs`, `reference_body.rs`) are not in the imported
+set, so the equations of motion, the inverse map and the reference-body rule are the NumPy reference's, which
+`driver.rs:4` names as the source it was transcribed from. Planar, `G = 1` (`tb.py:10`). Where the reference and the
+rest of the corpus disagree, nothing is chosen here: each such point is in RQ-756 and is marked *(RQ-756)* below.
+
+**The reference body (re-chosen at every sync boundary).** From the Cartesian state at the boundary, the three pair
+distances are taken in the order `(0,1), (0,2), (1,2)` (`tb.py:15`, `tb.py:41-47`). The longest is found by `argmax`,
+and the reference body `a` is **the body not in the longest pair**: `a = [2, 1, 0][argmax]` (`tb_az.py:145-150`). On a
+tie for the longest, `argmax` returns the first maximum in that order, so the earlier pair wins: a tie between `(0,1)`
+and `(0,2)` gives `a = 2`, and any tie involving `(0,1)` gives `a = 2`; a tie between `(0,2)` and `(1,2)` alone gives
+`a = 1`. The other two bodies are `b < c` in index order: `(a, b, c)` is `(0,1,2)`, `(1,0,2)` or `(2,0,1)`
+(`tb_az.py:39`, the triple taken at `tb_az.py:259-263`). The regularised pairs are `(a,b)` and `(a,c)`; the side
+`(b,c)` is not regularised. At the boundary where `a` is chosen, `(b,c)` is the longest side, `|R₃| ≥ max(|R₁|, |R₂|)`,
+so it can then close only at a triple collision (`tb_az.py:8-15`). Within an interval `a` is not re-chosen: the side
+can shorten and close with `a` at a finite distance, and that approach enters through the unregularised term
+`−A·B·m_b m_c/|R₃|` until the next boundary re-chooses `a`. Hence the floor on `|R₃|` (`tb_az.py:118`) and `|R₂ − R₁|`
+in the predictive limit's `d_min` (`driver.rs:620`). A switch is
+counted when `a` differs from the previous boundary's (`tb_az.py:255-257`; `driver.rs:955-961`). `driver.rs` also
+carries a hysteresis on this choice, default `0`, which at `0` is the plain `argmax` bitwise (`driver.rs:433-445`,
+`driver.rs:937-952`), and a forced-reference override for a shared policy (`driver.rs:499-500`, `driver.rs:933-935`);
+neither is part of the rule. The Part 2b table's "reference body from the longest side" is this rule *(RQ-756, the
+wording)*.
+
+**Coordinates and mass factors.** With `m_a, m_b, m_c` the three masses and `M = m_a + m_b + m_c`
+(`tb_az.py:46-51`):
+
+- relative positions and velocities `R₁ = r_b − r_a`, `R₂ = r_c − r_a`, `V₁ = v_b − v_a`, `V₂ = v_c − v_a`, and the
+  unregularised side `R₃ = R₂ − R₁ = r_c − r_b` (`tb_az.py:11`, `tb_az.py:62-66`);
+- the mass factors `μ₁ = m_a m_b / (m_a + m_b)` and `μ₂ = m_a m_c / (m_a + m_c)` (`tb_az.py:52-53`; `1/μ₁ = 1/m_a +
+  1/m_b`, `1/μ₂ = 1/m_a + 1/m_c`, `tb_az.py:20`);
+- the momenta conjugate to `R₁, R₂`, from the velocity-space mass matrix `K` (`tb_az.py:54-58`, `tb_az.py:67-68`):
+  `P₁ = K₁₁V₁ + K₁₂V₂`, `P₂ = K₁₂V₁ + K₂₂V₂`, with `K₁₁ = m_b(m_a + m_c)/M`, `K₂₂ = m_c(m_a + m_b)/M`,
+  `K₁₂ = −m_b m_c/M`;
+- the physical energy, held fixed through the interval as `E` (`tb_az.py:72`, `tb_az.py:85-94`):
+  `E = |P₁|²/(2μ₁) + P₁·P₂/m_a + |P₂|²/(2μ₂) − m_a m_b/|R₁| − m_a m_c/|R₂| − m_b m_c/|R₃|`, the kinetic part with its
+  cross term `P₁·P₂/m_a` because `R₁, R₂` share the body `a` rather than being Jacobi coordinates (`tb_az.py:17-22`).
+  Each `|Rᵢ|` in it is floored at `1e-300` (`tb_az.py:86-89`).
+
+**The Levi-Civita map on each pair** (`tb_lc.py:11-13`, `tb_lc.py:31-44`). For `u = (u₀, u₁)`,
+`L(u) = [[u₀, −u₁], [u₁, u₀]]`, and
+
+- `R = L(u)u = (u₀² − u₁², 2u₀u₁)` (`tb_lc.py:43-44`), so `|R| = |u|²`, and `dR = 2L(u)du` (`tb_lc.py:13`);
+- `L(u)w = (u₀w₀ − u₁w₁, u₁w₀ + u₀w₁)` and `L(u)ᵀw = (u₀w₀ + u₁w₁, −u₁w₀ + u₀w₁)` (`tb_lc.py:31-40`).
+
+On both pairs, `R₁ = L(u₁)u₁`, `R₂ = L(u₂)u₂`, `A = |u₁|² = |R₁|`, `B = |u₂|² = |R₂|` (`tb_az.py:24`). Below,
+`L₁ = L(u₁)`, `L₂ = L(u₂)`. The regularised momenta are `p₁ = 2L₁ᵀP₁`, `p₂ = 2L₂ᵀP₂` (`tb_az.py:70-71`), and back,
+`P₁ = L₁p₁/(2A)`, `P₂ = L₂p₂/(2B)`, with `A` and `B` floored at `1e-300` there (`tb_az.py:76-83`).
+
+**The conditioned inverse, `u` from `R`** (`tb_lc.py:80-106`; the default, `USE_STABLE_LC = True`, `tb_lc.py:55` and
+`tb_lc.py:109-111`; in `driver.rs` the field `lc_stable`, default `true`, `driver.rs:285-286`, `driver.rs:483`). With
+`r = |R|`, `x = R.x`, `y = R.y`, `a = sqrt(max((r + x)/2, 0))` (`= |u₀|`) and `b = sqrt(max((r − x)/2, 0))`
+(`= |u₁|`) (`tb_lc.py:89-94`):
+
+- **`x ≥ 0`:** `u₀ = a`; `u₁ = y/(2a)` if `a > 1e-300`, otherwise `u₁ = b` (`tb_lc.py:96-98`).
+- **`x < 0`:** `u₁ = −b` if `y < 0`, otherwise `u₁ = b` (so `+b` at `y = 0`); `u₀ = y/(2u₁)` if `|u₁| > 1e-300`,
+  otherwise `u₀ = a` (`tb_lc.py:100-103`).
+
+The larger component is computed directly and the smaller derived from it: `u₀` is the larger when `x ≥ 0`, `u₁` when
+`x < 0` (`tb_lc.py:83-85`). **The sign choice:** both branches give `u₀ ≥ 0` (on `x < 0`, `u₁` takes the sign of `y`,
+so `y/(2u₁) = |y|/(2b) ≥ 0`), the same half-plane as the unstable form, and the other root `−u` maps to the same `R`
+(`tb_lc.py:85-86`). **The unstable form** it replaces, kept only to reproduce earlier results (`tb_lc.py:58-77`):
+`u₀ = sqrt(max((r + x)/2, 0))`, then `u₁ = y/(2u₀)` if `u₀ > 1e-300`, otherwise `sqrt(max((r − x)/2, 0))`; it cancels
+catastrophically as `R` turns towards `−x` (relative round-trip loss at 179.9°: `4.0e-12` at f64 and `2.2e-2` at f32,
+`tb_lc.py:65-69`; *RQ-756: § 7.3 and REQ-INT-044 give `3.5e-9` at f64 for 179.9°, the figure `tb_lc.py` gives for
+179.99°*). The guards `1e-300` are literals in branch conditions *(RQ-756, against Part 2c rule 1 and `TINY`)*.
+
+**The regularised Hamiltonian** `Γ = A·B·(H − E)` (`tb_az.py:27-30`):
+
+`Γ = B|p₁|²/(8μ₁) + A|p₂|²/(8μ₂) + (L₁p₁)·(L₂p₂)/(4m_a) − m_a m_b B − m_a m_c A − A·B·m_b m_c/|R₃| − E·A·B`
+
+The two regularised singular terms, `−m_a m_b/|R₁|` and `−m_a m_c/|R₂|`, have become `−m_a m_b B` and `−m_a m_c A`;
+`Γ` is singular only as `|R₃| → 0` (`tb_az.py:32-33`). It couples positions and momenta through its first three terms,
+so it is not separable *(RQ-756, against Part 2a's "the `|u|^2 |p_lambda|^2` term")*. The derivation of the kinetic
+terms: `|L₁p₁|² = A|p₁|²`, so `A·B·|P₁|²/(2μ₁) = B|p₁|²/(8μ₁)`, and `A·B·P₁·P₂/m_a = (L₁p₁)·(L₂p₂)/(4m_a)`.
+
+**The equations of motion in fictitious time `τ`** (`tb_az.py:112-142`), on the state `(u₁, p₁, u₂, p₂, t)` with `E`
+held, `A` and `B` here not floored and `|R₃|` floored at `1e-300` (`tb_az.py:114-118`):
+
+- `du₁/dτ = ∂Γ/∂p₁ = B·p₁/(4μ₁) + L₁ᵀ(L₂p₂)/(4m_a)` (`tb_az.py:125`)
+- `du₂/dτ = ∂Γ/∂p₂ = A·p₂/(4μ₂) + L₂ᵀ(L₁p₁)/(4m_a)` (`tb_az.py:126`)
+- `dp₁/dτ = −∂Γ/∂u₁`, with (`tb_az.py:129-133`)
+  `∂Γ/∂u₁ = u₁|p₂|²/(4μ₂) + L(p₁)ᵀ(L₂p₂)/(4m_a) − 2m_a m_c u₁ − m_b m_c (2u₁B/|R₃| + 2(A·B/|R₃|³) L₁ᵀR₃) − 2E·B·u₁`
+- `dp₂/dτ = −∂Γ/∂u₂`, with (`tb_az.py:135-139`)
+  `∂Γ/∂u₂ = u₂|p₁|²/(4μ₁) + L(p₂)ᵀ(L₁p₁)/(4m_a) − 2m_a m_b u₂ − m_b m_c (2u₂A/|R₃| − 2(A·B/|R₃|³) L₂ᵀR₃) − 2E·A·u₂`
+- `dt/dτ = A·B` (`tb_az.py:25`, `tb_az.py:141`).
+
+`L(p₁)ᵀ(L₂p₂)` is the gradient in `u₁` of `(L₁p₁)·(L₂p₂)`, since `L(u₁)p₁ = L(p₁)u₁`; the `R₃` terms carry opposite
+signs because `∂R₃/∂u₁ = −2L₁` and `∂R₃/∂u₂ = +2L₂`.
+
+**Registration and return.** At each boundary the Cartesian state is mapped to `(u₁, p₁, u₂, p₂)` with the interval
+clock `t = 0` and `E` computed as above (`tb_az.py:61-74`); at the end of the interval it is mapped back
+(`tb_az.py:96-109`): `V₁ = (K₂₂P₁ − K₁₂P₂)/det`, `V₂ = (K₁₁P₂ − K₁₂P₁)/det`, `det = K₁₁K₂₂ − K₁₂²`; `r_a = 0`,
+`r_b = R₁`, `r_c = R₂`, `v_a = 0`, `v_b = V₁`, `v_c = V₂`; then positions and velocities are shifted to the centre of
+mass.
+
+**The step control within one sync interval**, `driver.rs`'s defaults (`driver.rs:472-497`): the per-step interval
+rule (`DtauMode::PerStepInterval`, `driver.rs:110-126`), the landing clamp on (`clamp_final_step`), the landing secant
+on with at most 4 retakes (`land_iterate`, `land_max_iters`), the hard minimum (`StepBlend::Min`), and no per-step limit
+(`StepLimit::None`); the predictive limit is R-160's, above, and enters as the third constraint. `tb_az.py` mirrors
+these defaults (`tb_az.py:153-238`, the march at `tb_az.py:253-331`), flooring at `1e-300` where `driver.rs` floors at
+`TINY` (Part 6), except for the landing secant, which stops differently (step 6).
+
+1. **The interval.** `dt_left = t_target − t` (`driver.rs:975`), `Δ_sync` on the grid (R-565, Part 2a). An interval
+   whose `t ≥ t_target − SYNC_EPS` is skipped (`driver.rs:963-966`).
+2. **The entry size.** `dτ_entry = η·dt_left / (max(A₀, TINY)·max(B₀, TINY))`, from the registered state
+   (`driver.rs:985-987`).
+3. **Each step's size** (`driver.rs:699-758`): `ab = max(A, TINY)·max(B, TINY)` from the current state; the
+   constraints `c₀ = η·dt_left/ab`, `c₁ = dτ_entry`, `c₂` the per-step limit (`+∞` when none); the entry-cap hit is
+   counted when `c₀ > c₁` (`driver.rs:730-734`, Part 6); `dτ` is the least of the finite, positive constraints
+   (`driver.rs:639-642`); then the landing clamp, `dτ = min(dτ, max(dt_left − t_s, 0)/ab)`, `t_s` the interval clock
+   and `ab` the same floored product (`driver.rs:752-756`). The floor signal fires when `A < TINY` or `B < TINY`
+   (`driver.rs:716`, Part 6).
+4. **The predictive limit** (`driver.rs:614-632`): `c₂ = f·d_min/(v_max·ab)` with `d_min = min(|R₁|, |R₂|, |R₂ − R₁|)`
+   and `v_max = max(|V₁|, |V₂|, |V₂ − V₁|)`, the pair `(V₁, V₂)` being the second half of the system's
+   `phys_from_state` (`driver.rs:619-621`), and `+∞` when `f ≤ 0`, the denominator is not positive, or `d_min` or the
+   denominator is not finite (`driver.rs:627-631`). `f = 0.02` (R-160). *(RQ-756: whether `V₁, V₂` are velocities or
+   the conjugate momenta `P₁, P₂`.)*
+5. **The step.** One classical RK4 step of the equations above, on `(u₁, p₁, u₂, p₂, t)` with `E` held, from the
+   saved state (`driver.rs:1044-1049`; `tb_az.py:288-292`).
+6. **The landing secant** (`driver.rs:1065-1095`). When the step just taken
+   reaches the boundary (`t_s ≥ dt_left − dt_left·LAND_EPS_REL`): `want = dt_left − t_before`, `cur = h`, and up to
+   `land_max_iters` (4) times, `got = t_s − t_before`; stop if `got` is not finite, `got ≤ 0`, or
+   `|got − want| ≤ dt_left·LAND_EPS_REL`; otherwise `cur = cur·want/got` and the step is retaken from the saved
+   state at `cur`, each retake a counted step. The clamp predicts the landing step from `A·B` before the step, a
+   first-order predictor, and the secant on `t(dτ)` with the exact point `t(0) = 0` removes that residual
+   (`driver.rs:417-424`, `driver.rs:1065-1069`) *(RQ-756: the corpus names the clamp only)*. `tb_az.py`'s secant
+   (`tb_az.py:196-210`, `tb_az.py:294-316`) stops differently: on every retake it re-tests the landing,
+   `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, and the finiteness of the whole state (`tb_az.py:303-306`), so a retake that
+   lands short of the boundary ends the secant and the march takes another clamped step; `driver.rs` does not re-test
+   the landing, and retakes until `|got − want| ≤ dt_left·LAND_EPS_REL`, `got` is not finite or `got ≤ 0`, or the 4
+   tries are used (`driver.rs:1084-1094`). The two trajectories differ *(RQ-756: which stop is the rule)*.
+7. **The exit.** The march ends when `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, or the state is not finite, or the
+   budget is spent (`driver.rs:997-1012`; here the step budget of Part 6, R-604). On a landing the clock is set to the
+   boundary exactly, `t += dt_left`; otherwise `t += min(t_s, dt_left)` (`driver.rs:1186-1194`). A step that carries
+   `t_s` past `2·dt_left` is counted as an overshoot (`driver.rs:1101-1114`).
+8. **The largest physical step**, recorded only: `dt_took = t_s − t_before` after the secant, folded into `dt_max`
+   when finite (`driver.rs:1097-1100`); `driver.rs` seeds it at `0` (`driver.rs:885`), which the kernel does not
+   (Part 2c, rule 4; REQ-TOOL-039).
+
+`SYNC_EPS` and `LAND_EPS_REL` are the reference's precision-dependent constants that Part 2c rule 1 forbids in a branch;
+their values are not part of this transcription.
+
 #### Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)
 
 **The user chooses the regularisation and the stepper freely, and no pair is forbidden.** The regularisation (`none`,
