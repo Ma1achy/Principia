@@ -418,3 +418,66 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
 - **Waits:** TASK-M4-34's preset and TASK-M8-120 (conflicts 3 and 4, through RQ-714's open part); the correction list waits for the owner's next revision of the model.
 - **8 Nov 2026 (R-868):** the owner: "4. RQ-738: the model's wording follows R-474 (tip-as-sheet default, lean-each-axis the other map); I'll correct the model." Their corrected model of that day replaces `docs/design/principia_chart_space_model.md` byte for byte. That settles the correction list's item 1, as its option (a): § 0.2 now names R-474's two maps, Tip as sheet the default. **Still open:** the correction list's items 2 to 9, which the owner's copy doesn't change (its other changes are § 0.6, R-865, and a new § 0.7, R-866 and R-867), and all nine conflicts the filter order leaves. The entry stays open for them.
 - **8 Nov 2026 (R-878, R-871):** the owner: "RQ-738: the readings held stand for conflicts 1, 2 and 4 to 9; conflict 3 as in my RQ-714 answer. Items 2 to 9: send me the list and I'll correct the model." Applied: the nine conflicts are settled, 1, 2 and 4 to 9 by their readings held (conflict 1's amends R-544's words and chart_decoder_contract's "no one-hemisphere view", kept as a "Was"), and 3 by RQ-714's answer, its option (c), the full disc read literally (R-871). **Still open:** the correction list's items 2 to 9, which the owner corrects in the model from the list the orchestrator sent on 8 Nov, and two items this port adds to that list: **10.** the model's § 5, "Setting `δ ← 0` restores `φ(0) = a` exactly", and § 7's "Snap-back is exact", against the brief's Q2 (a), snap-back undoing the slice only (R-899); **11.** the model's § 1, "`Z = R^8`", Theorem 1's proof ("`Z = R^8` is convex") and § 4 ("`Z` is convex"), against RQ-750 (c), `z_β` periodic (R-898). Nothing waits on them: the corpus and the rulings stand meanwhile. The entry stays open for items 2 to 11.
+
+## RQ-755: A record written before R-919 names `sigmoid_beta`, `tanh_beta` or `softsign_beta` as its `β` link and every entry hash matches: does it recreate through the conversion source, or is it refused? *(silence; a one-way door; R-919 Q1 (c) and Q3 (a), R-898, R-483, R-516, R-521; REQ-TOOL-172, REQ-TOOL-173, REQ-GEN-013; context: TASK-M7-45, TASK-M2-57)*
+
+*Queued 9 Nov 2026 by the chart-core rulings PR (#465), from its physics review 5834538186, item 4, and the
+implementer's report on it; each quote below re-read on the PR's head. Nothing is chosen, and nothing in #465 decides
+it.*
+
+*In plain English: the owner ruled that the triangle's shape angle β gets one round-the-circle link, and that the three
+old half-circle links stay only to convert old saved charts (R-919). Old exported records (the data embedded in an
+image or a share link) also name one of those three links, usually the default `sigmoid_beta`. When such a record is
+opened and its link's fingerprint still matches, nothing says whether it is converted to the new link and opened, as an
+old saved chart is, or refused as too old.*
+
+- **File, section:**
+  - `decisions.md` § R-919, Q1 (c): "`sigmoid_beta`, `tanh_beta` and `softsign_beta`, written onto the bounded
+    `β ∈ [0, π]`, are not that link: TASK-M2-57 rewrites dd_generation_root § 3.9's `β` rows and REQ-GEN-013's `β`
+    codomain to the one periodic link … The three stay as conversion sources only, their forward maps kept for Q3 (a)
+    and its control "a value converted by the wrong link fails": not selectable, not counted as `β` links".
+  - `decisions.md` § R-919, Q3 (a): "an old saved chart converts from the `β` link it pins where it pins one (R-516),
+    else from `sigmoid_beta`, the default, with a notice on load naming the assumption." It names saved charts, not
+    records.
+  - `decisions.md` § R-898's heading: "every stored latent view, saved chart and golden is converted once … the
+    saved-file format is versioned, old files converted on load". It names no record.
+  - `decisions.md` § R-516's heading: "A chart preset or a saved chart may optionally pin the links it was designed
+    under; loading one whose pin differs from the active links applies the pin with the chart, one command and one
+    undo entry, with a notice naming the blocks changed".
+  - `decisions.md` § R-483's heading: "a record's decoder is the build's registry plus its links, an unknown or changed
+    link refused and never substituted; an old record reads under its own build's defaults".
+  - `decisions.md` § R-521's heading: "a mismatch refuses, naming exactly that link, and a match recreates across an
+    unrelated schema change".
+  - `docs/design/principia_dd_image_embedding.md` § "6. What travels", "The decoder's identity is the build plus the
+    config (R-483, X4)": "**An unknown link id**, one the reading build does not have, is "state present, cannot
+    recreate""; "when all four match, a schema version other than the reader's refuses nothing on the links' account";
+    "**Never substitute.** No default link stands in for one the record names".
+  - `plan/requirements.yaml`, REQ-TOOL-172: "a record whose block's entry hash differs from the reading build's entry of
+    that id must be refused as "state present, cannot recreate", naming exactly that link; when every block's hash
+    matches, a schema version other than the reader's must not refuse the record on the links' account". Its note (9
+    Nov 2026, this PR) reads the verify's all-tanh arm with `tanh_beta` as an old record's `β` link checked against
+    the conversion source's entry hash: the refusal side only.
+- **The silence:** after TASK-M2-57 the reading build still holds an entry for each of the three, with its hash, so a
+  pre-R-919 record naming one is neither an unknown link nor, when the hashes match, a changed one. R-521 then says it
+  recreates; R-919 says the link isn't selectable, and the record's `z_β` is in the old half-circle coordinates, so it
+  can't be decoded as it stands. R-919 Q3 (a) and R-898 convert saved charts and stored views on load, and name no
+  record. This touches every record written before TASK-M2-57 merges, since each names some `β` link, by default
+  `sigmoid_beta`.
+- **The question:** when a record written before R-919 names one of the three conversion sources as its `β` link and
+  every entry hash matches, does the reader recreate it, and how?
+- **Options seen:**
+  - (a) Recreate through the conversion source, with a notice: `z_β` converted from the named link to the periodic link
+    once on read (`z_β,new = link_new⁻¹(link_old(z_β,old))`, TASK-M2-57's conversion), the decoded system the same
+    within REQ-ENC-024's `ε_phys`, the result labelled converted, as R-919 Q3 (a) treats a saved chart. The record names
+    its link, so nothing is assumed or substituted.
+  - (b) Refuse as a pre-R-919 record: "state present, cannot recreate", naming the `β` link as retired as a link, the
+    conversion sources serving saved charts only.
+  - (c) Another, stated by the owner.
+- **Recommended:** (a). The record names its link exactly, so the conversion is the one R-919 Q3 (a) already applies
+  to a pinned saved chart, with no assumption, and refusing would make every existing shared image unopenable over a
+  change R-898 meant to be converted. The measurable alternative is (b), whose cost is every record written before
+  TASK-M2-57 merges; the check for (a) is the conversion test (`latent_conversion`'s criterion) run on a recorded
+  fixture per conversion source.
+- **Applied meanwhile:** nothing. REQ-TOOL-172's verify is unchanged, and its note reads only the refusal side.
+- **Waits:** TASK-M7-45, which builds the per-link refuse-or-recreate path on read (REQ-TOOL-172), on its recreate
+  arm for a pre-R-919 record. TASK-M2-57 does not wait: it keeps the three forward maps either way.
