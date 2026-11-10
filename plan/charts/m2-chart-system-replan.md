@@ -3,8 +3,8 @@
 **Status: proposed, 10 Nov 2026.** This document plans; it builds nothing and dispatches nothing. It answers the owner's
 re-plan task of 10 Nov (R-926), on the owner's decisions R-925 and R-926. `plan/tasks.yaml` and the task files are
 **not** edited here: the task list in § B is proposed, and `tasks.yaml` follows once the one-way items of § E are
-answered (applied per R-369: task scoping). The chart tasks TASK-M2-57 to TASK-M2-85, but TASK-M2-82, are paused by the
-owner's instruction of 10 Nov (R-925 quotes it; PR #469, not merged when this was written, records the pause), so
+answered (applied per R-369: task scoping). The owner's instruction of 10 Nov (R-925 quotes it) holds new chart
+tasks, TASK-M2-57 to TASK-M2-85; PR #469, not merged when this was written, records the pause and its exceptions, so
 every task below, the first slice of § C included, is proposed and waits for the pause to lift. Integrator work carries
 on as agreed.
 
