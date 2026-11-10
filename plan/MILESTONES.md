@@ -228,14 +228,15 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
     operation of `engine/nav`, `engine/lock.rs`, the kernel tilt, the chart switch, Save view as chart, the saved
     re-tilt, the navigation stop, the zoom row, the typed basis and the GUI routes. Pass: the sim key and IC words,
     and the image hash where the DECODE preset renders the chart, match a baseline recorded on its own commit before
-    the re-expression; each old route deleted (REQ-CHART-099, REQ-CHART-113, REQ-CHART-147). The only exceptions are
-    R-894's consolidation and R-898's latent `β` change (TASK-M2-57), each with a conversion test; their outcome-class
-    arm is TASK-M3-67's (R-918, F5).
+    the re-expression; each old route deleted (REQ-CHART-113, REQ-CHART-147; the digest held by TASK-M2-66,
+    REQ-CHART-099). Easing and the path curve a property of each path segment, built with the path object (R-901;
+    REQ-CHART-160). The only exceptions are R-894's consolidation and R-898's latent `β` change (TASK-M2-57), each with
+    a conversion test; their outcome-class arm is TASK-M3-67's (R-918, F5).
   - **G2. No parallel routes, no special-case if-branches** (R-864 items 2 and 4): a word-bounded `git grep` finds no
     deleted route's name; the merged GUI routes are thin adapters onto the leaves (R-919, F1 (a); TASK-M2-64).
   - **G3. CPU decode and encode through the composition** (TASK-M2-67; REQ-CHART-170): T2 per chart within `ε_phys`
-    at f64 and f32, T1 as REQ-DEC-055 restates it, the decode sanity within `16·ε_R` (REQ-ENC-027), the shape
-    sphere's round trip within `10⁻¹³` (REQ-CHART-053).
+    at f64 and f32, T1 as REQ-DEC-055 restates it (TASK-M2-57's), the decode sanity within `16·ε_R` (REQ-ENC-027's
+    bound, TASK-M2-19's), the shape sphere's round trip within `10⁻¹³` (REQ-CHART-053's bound, TASK-M2-08's).
   - **G4. Round trips across chart switches and paths:** decode on A, encode on B, decode on B within `ε_phys` where
     B holds the state, otherwise the stated outcome (REQ-ENC-030, or R-849's slide); path ends bitwise; tilt, zoom,
     pan and slice frames plain views (REQ-CHART-113); a frame record round-tripping bitwise; blend frames have no
@@ -254,17 +255,17 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
     REQ-CHART-158 [CAL]; the slide continuous, its largest step falling to at most 0.6 of the previous each time the
     frame step halves, twice; the area factor within 0.5 of the ends'.
   - **G9. The owner's lock-with-morphs test** (R-902: "lock → morph A→B → tilt → slice → morph back; the pinned state
-    holds to the lock's tolerance throughout, and the round trip returns the same view"; REQ-CHART-161,
+    holds to the lock's tolerance throughout, and the round trip returns the same view"; TASK-M2-65; REQ-CHART-161,
     `path_lock_round_trip`, `path_mid_morph_tilt`). Chart pairs: latent to latent; latent to the shape sphere's
     exponential map; a mixed or invariant chart to a rest chart and to Burrau, the anchor sliding; region D
-    (TASK-M2-68); a time-axis pair (REQ-CHART-174). Every frame's decode at the pin within REQ-CHART-158 of the
+    (TASK-M2-68); a time-axis pair (TASK-M2-83's, REQ-CHART-174). Every frame's decode at the pin within REQ-CHART-158 of the
     pinned state; a tilt and a slice mid-morph reach both endpoint charts in their own hidden coordinates and tilt
     maps. "The same view" is R1, gating: the return to `s = 0` bitwise equal to the same tilt and slice applied
     directly to A about the pin; R2, undo's return to the start, is tested only where an undo feature exists (R-919,
     F10). Controls: the lock dropped on a blend segment, a hidden coordinate invented for the blend, a morph
     restarted from `s = 0`.
   - **G10. Morph-path maths** (TASK-M2-81): REQ-CHART-114, REQ-CHART-116 (re-timing spread ≤ 1.25), REQ-CHART-124,
-    REQ-CHART-133, REQ-CHART-160.
+    REQ-CHART-133. REQ-CHART-160 (easing per path segment) is TASK-M2-61's, in G1.
   - **G11. Time-axis paths through the trajectory interface** (R-918; TASK-M2-82, TASK-M2-83; REQ-CHART-173,
     REQ-CHART-123): the interface of chart_composition § 18.7 on two exact three-body fixtures, the Lagrange
     equilateral homographic solution in closed form and the figure-eight, exact by declaration at its period; two-body
