@@ -481,3 +481,34 @@ old saved chart is, or refused as too old.*
 - **Applied meanwhile:** nothing. REQ-TOOL-172's verify is unchanged, and its note reads only the refusal side.
 - **Waits:** TASK-M7-45, which builds the per-link refuse-or-recreate path on read (REQ-TOOL-172), on its recreate
   arm for a pre-R-919 record. TASK-M2-57 does not wait: it keeps the three forward maps either way.
+
+## RQ-756: Which state the Lagrange homothetic collapse's terminal holds, the closed form's own state at the triple collision having every body at the centre of mass and unbounded momenta *(silence; a definition (R-72); chart_composition § 18.7 and § 18.2, R-918, R-919 F18; REQ-CHART-173; context: TASK-M2-82)*
+
+*Filed by TASK-M2-82's implementer, 10 Nov 2026.*
+
+- **File, section:** `docs/design/principia_chart_composition.md` § "18.7 The trajectory interface (R-918, R-919)":
+  the terminal is "none, or the boundary index at which the trajectory latches and its kind (Part 6's classes); every
+  later boundary reads the terminal state (§ 18.2)", and item 1, "the homothetic collapse from rest a terminal (a
+  triple collision) at its closed-form time"; § "18.2 Against the core", row "Terminal states": "A terminal latches
+  at its step, between boundaries or not; every later row holds that state, as the playhead past `t_end` does."
+- **The silence:** the index and the kind are settled: the collapse latches at `t_c = π/√(8μ)` (`μ = G·M/a³`, the
+  radial Kepler orbit from rest at `|z| = 1`), so the first boundary at or after `t_c`, `⌈t_c/Δ⌉` by products of
+  indices, and the kind `collision`, `detail` 3, a triple collision. Which state it holds is not: an integrator latches
+  the state at its step, before the bodies meet, but the closed form's state at `t_c` has every `rᵢ` at the centre of
+  mass and every `pᵢ` unbounded, not a state an `Ic<f64>` carries, and § 18.7 names no other.
+- **The question:** what state does the fixture's terminal hold from its index on?
+- **Options seen:**
+  - (a) The state at the last boundary before `t_c`, `⌈t_c/Δ⌉ − 1`: the last finite state the closed form gives on
+    the grid; the terminal's boundary then reads the same bits as the one before it.
+  - (b) The closed form's state where the sides reach a collision radius (the register's `r_coll`, read as a pair
+    distance), the analogue of where an integrator would latch; it needs that radius's definition in these units, and
+    moves the latch from `t_c` to that earlier closed-form time.
+  - (c) The closed form at `t_c` itself: `rᵢ = 0`, `pᵢ` written as infinities along each `cᵢ` (NaN where a
+    component of `cᵢ` is zero).
+- **Recommended:** (a). It keeps the latch at `t_c`, as § 18.7 says, holds only finite states, and needs no new
+  constant; no test reads the held state's content, only that it is held (TASK-M2-82's acceptance: "the terminal at
+  its index and kind", "a terminal not held fails"). The alternative, (b), is the measurable one: it would put the
+  fixture's held state where TASK-M3-67's integrator latches, to be compared once that lands.
+- **Applied meanwhile:** (a), in `engine::trajectory::Lagrange` (TASK-M2-82), marked with this entry.
+- **Waits:** TASK-M2-82's merge, until this is ruled or the reviewers decide it as a two-way door (a fixture's held
+  state changes no result of the instrument).
