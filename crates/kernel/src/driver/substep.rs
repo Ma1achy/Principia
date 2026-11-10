@@ -34,6 +34,7 @@
 
 use spirv_std::glam::UVec4;
 
+use crate::detect::collision::Separations;
 use crate::generated::nsub_thresholds::{bucket_tree, NSUB_TABLE_ROWS};
 use crate::payload::set_saturated;
 use crate::real::IeeeBits;
@@ -111,31 +112,30 @@ fn pair_d2(a: [f32; 2], b: [f32; 2]) -> f32 {
     square(b[0] - a[0]) + square(b[1] - a[1])
 }
 
-/// The lesser of `a` and `b` by comparison: `b` where `b < a`, else `a` (a NaN `a` is kept).
+/// The position-quantised `d²` of each R-22 pair of the positions `r` (pair `k` the side opposite body `k`): each
+/// position cast to f32 ([`Quantise`]), then each pair's by `pair_d2`. The collision detector reads all three
+/// ([`crate::detect::collision::Separations`]); the bucket reads their least ([`d2_quantised`]).
 #[inline]
-fn least(a: f32, b: f32) -> f32 {
-    if b < a {
-        b
-    } else {
-        a
-    }
-}
-
-/// The position-quantised `d²` of the closest pair of the positions `r`, the one float the bucket reads (the module's
-/// note): each position cast to f32 ([`Quantise`]), then each R-22 pair's (`pair_d2`; pair `k` the side opposite
-/// body `k`), the least of the three. The f64 and the f32 kernels give the same value for positions whose f32 casts
-/// agree.
-#[inline]
-pub fn d2_quantised<R: Quantise>(r: &[[R; 2]; 3]) -> f32 {
+pub fn pair_d2_quantised<R: Quantise>(r: &[[R; 2]; 3]) -> [f32; 3] {
     let q = [
         [r[0][0].quantise(), r[0][1].quantise()],
         [r[1][0].quantise(), r[1][1].quantise()],
         [r[2][0].quantise(), r[2][1].quantise()],
     ];
-    least(
-        least(pair_d2(q[1], q[2]), pair_d2(q[2], q[0])),
+    [
+        pair_d2(q[1], q[2]),
+        pair_d2(q[2], q[0]),
         pair_d2(q[0], q[1]),
-    )
+    ]
+}
+
+/// The position-quantised `d²` of the closest pair of the positions `r`, the one float the bucket reads (the module's
+/// note): the least of the three pairs' ([`pair_d2_quantised`]), by comparison, pair 0 against pair 1 and then the
+/// lesser against pair 2 ([`Separations::min`]). The f64 and the f32 kernels give the same value for positions whose
+/// f32 casts agree.
+#[inline]
+pub fn d2_quantised<R: Quantise>(r: &[[R; 2]; 3]) -> f32 {
+    Separations::of(r).min()
 }
 
 /// The substepper's record of a run (integrator_contract Part 3; payload §2): the live `N_sub` of the current

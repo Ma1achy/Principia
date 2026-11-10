@@ -994,22 +994,26 @@ pub fn state_codes() -> String {
             name.to_uppercase()
         );
     }
-    out.push_str(&decode_failed_details());
+    out.push_str(&details("collision"));
+    out.push_str(&details("decode_failed"));
     out
 }
 
-/// Payload §2's `detail` codes under `decode_failed`, its failure enum, as constants `DETAIL_DECODE_FAILED_<MEANING>`,
-/// each meaning at its code in the ledger's table ([`crate::payload::detail_meanings`]): the decode's `DEGENERATE`
-/// reasons map onto them (dd_decoder §2, "The `DEGENERATE` cause set"), never onto a literal code.
-fn decode_failed_details() -> String {
+/// Payload §2's `detail` codes under `state`, as constants `DETAIL_<STATE>_<MEANING>`, each meaning at its code in the
+/// ledger's table ([`crate::payload::detail_meanings`]). Two states take them: `collision`, whose pair ids and
+/// triple-collision code the collision detector writes (integrator_contract Part 7), and `decode_failed`, its failure
+/// enum, onto which the decode's `DEGENERATE` reasons map (dd_decoder §2, "The `DEGENERATE` cause set"); neither is
+/// written as a literal code.
+fn details(state: &str) -> String {
     let mut out = String::new();
-    let failed = crate::payload::detail_meanings()
+    let meanings = crate::payload::detail_meanings()
         .into_iter()
-        .find(|(state, _)| *state == "decode_failed");
-    for (code, meaning) in failed.into_iter().flat_map(|(_, m)| m).enumerate() {
+        .find(|(name, _)| *name == state);
+    for (code, meaning) in meanings.into_iter().flat_map(|(_, m)| m).enumerate() {
         let _ = write!(
             out,
-            "\n/// `decode_failed`'s `detail` code {code}: {meaning} (payload §2).\npub const DETAIL_DECODE_FAILED_{}: u32 = {code};\n",
+            "\n/// `{state}`'s `detail` code {code}: {meaning} (payload §2).\npub const DETAIL_{}_{}: u32 = {code};\n",
+            slug(state),
             slug(meaning)
         );
     }
