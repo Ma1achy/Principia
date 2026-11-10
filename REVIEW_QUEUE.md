@@ -541,18 +541,21 @@ older way of stepping that later rulings replaced.*
   precedent; (2)(a) with (3)(a), so the landing clamp is tested on its own and the threshold is the rule in force's; and
   (4)(a), since R-604 already accounts the budget every step. Measurable alternative for (2): run the figure-eight
   ladder under both rules and record both.
-- **Narrowed 10 Nov 2026:** transcription done in this PR per CLAUDE.md § Authority (applied per R-369, R-160 the
-  precedent; the owner, 10 Nov 2026: integrator work "is fine: physics (steppers, regularisation, step control,
-  conservation and convergence tests, the CPU reference)"): integrator contract Part 2b § "Aarseth–Zare: the equations,
-  the reference body, the Levi-Civita inverse and the step control (transcribed)", physics-reviewed in the PR and
-  confirmed at the M3 gate. Question (1) is answered by it. Question (3) is decided, applied per R-369 as test
-  mechanics: the figure-eight closure gate runs on its own sync interval `T/n`, so `ADVANCE` lands on the period under
-  R-565's rule that it stops only on a boundary; the gate's grid is a fixture's, and the march's `Δ_sync` is untouched.
-  TASK-M3-07 is split: the regularisation axis stays TASK-M3-07, and Aarseth–Zare is TASK-M3-68. Open:
+- **Narrowed 10 Nov 2026:** transcription done in PR #471 per CLAUDE.md § Authority (applied per R-369, R-160 the
+  precedent; the owner, 10 Nov 2026, of the integrator tasks to take: "Fine: the physics itself. Steppers,
+  regularisation, step control, conservation and convergence tests, the CPU reference, and TASK-M2-82 (the trajectory
+  interface with its exact fixtures, the Lagrange solution and the figure-eight, R-918), which has no dependencies."):
+  integrator contract Part 2b § "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step
+  control (transcribed)", physics-reviewed in PR #471 and confirmed at the M3 gate. Question (1) is answered by it.
+  Question (3) is decided, applied per R-369 as test mechanics: the figure-eight closure gate runs on its own sync
+  interval `T/n` with `n = 32`, the reference's comparable figure (`driver.rs:399`, "measured over one period at
+  `n_sync = 32`"), so `ADVANCE` lands on the period under R-565's rule that it stops only on a boundary, and the gate
+  reports its re-registration count with its result (PIT-4); the gate's grid is a fixture's, and the march's `Δ_sync`
+  is untouched. TASK-M3-07 is split: the regularisation axis stays TASK-M3-07, and Aarseth–Zare is TASK-M3-68. Open:
   - (2) REQ-INT-049's threshold, 4.232e-09 at `η = 0.001`, was measured under § 0.1's fixed `dτ`, not Part 6's per-step
-    rule (R-563). Recommended: TASK-M3-68 re-measures it under the rule in force and proposes it as a calibration
-    (R-71); the value is the owner's at the M3 gate. Measurable alternative: run the ladder under both rules and record
-    both.
+    rule (R-563). Recommended: TASK-M3-68 re-measures it under the rule in force, at the gate's `n = 32`, and proposes
+    it as a calibration (R-71); the value is the owner's at the M3 gate. Measurable alternative: run the ladder under
+    both rules and record both.
   - (4) REQ-INT-054's bound per sync interval has no formula. Recommended: the step budget over one interval,
     `max(N_min, step_budget_rate·Δ_sync)`, a recommendation only, its values REQ-INT-103's and REQ-INT-108's.
   - (5) Found in the transcription, where the reference and the corpus disagree; nothing is chosen:
@@ -587,8 +590,13 @@ older way of stepping that later rulings replaced.*
        is not imported, so what it tests against is unknown.
     8. **The tie-break's source.** The Rust selector (`src/integrate/az/reference_body.rs`) is not imported; the
        tie-break transcribed is `tb_az.py:148`'s `np.argmax`, first maximum in `(0,1), (0,2), (1,2)` order.
+    9. **Where the landing secant stops.** `tb_az.py:303-306` re-tests the landing on every retake: "need =
+       (np.isfinite(s).all(axis=1) & (~done) / & (s[:, 8] >= dt_left - tol) / & np.isfinite(got) & (got > 0.0) / &
+       (np.abs(got - want) > tol))", so a retake that lands short ends the secant. `driver.rs:1086` does not: "if
+       !got.is_finite() || got <= T::zero() || (got - want).abs() <= tol_abs { break; }", retaking up to
+       `land_max_iters` times. Which stop is the rule? It moves the landing step and REQ-INT-049's measurement.
 - **Applied meanwhile:** the transcription and the split above (10 Nov 2026, applied per R-369). TASK-M3-07 builds the
   axis, which needs none of it. *Was:* "none. TASK-M3-07 waits; nothing is built."
-- **Waits:** TASK-M3-68 (REQ-INT-049 on (2) and (5) 1-2, REQ-INT-054 on (4), REQ-INT-044 on (5) 3 and 7, REQ-INT-024's
-  profile on (5) 4, the predictive limit on (5) 6). *Was:* "TASK-M3-07 (REQ-INT-044, REQ-INT-049, REQ-INT-054, and the
+- **Waits:** TASK-M3-68 (REQ-INT-049 on (2) and (5) 1-2 and 9, REQ-INT-054 on (4), REQ-INT-044 on (5) 3 and 7,
+  REQ-INT-024's profile on (5) 4, the predictive limit on (5) 6). *Was:* "TASK-M3-07 (REQ-INT-044, REQ-INT-049, REQ-INT-054, and the
   Aarseth–Zare arms of REQ-INT-021 and REQ-INT-024)."
