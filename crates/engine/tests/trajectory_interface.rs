@@ -173,9 +173,11 @@ fn turn(v: [f64; 2], theta: f64) -> [f64; 2] {
     [c * v[0] - s * v[1], s * v[0] + c * v[1]]
 }
 
-/// The circular member's bound: 51u per unit of a vector's `|v_x| + |v_y|`, for each component of `rᵢ` and `pᵢ` at
-/// boundary `k ≤ 7` against the start's vector turned by the test's `θ = 2π·k/8`, `u = 2⁻⁵³`, libm's `sin` and `cos`
-/// under one ulp, so at most `2u` on values of magnitude at most 1. The terms:
+/// The circular member's bound: 51u per unit of the start's own vector's `|v_x| + |v_y|` (the unturned `rᵢ(0)` or
+/// `pᵢ(0)`: every term below multiplies that vector's components, and a turned vector's `|v_x| + |v_y|` can be up to
+/// `√2` smaller), for each component of `rᵢ` and `pᵢ` at boundary `k ≤ 7` against the start's vector turned by the
+/// test's `θ = 2π·k/8`, `u = 2⁻⁵³`, libm's `sin` and `cos` under one ulp, so at most `2u` on values of magnitude at
+/// most 1. The terms, each times the start's `|v_x| + |v_y|`:
 /// - the provider's angle `ω̂·fl(k·fl(P/8))`, `P = fl(2π/ω̂)`, is `θ(1 + δ)⁴` (`2π`'s representation, the division,
 ///   the product by `k`, the product by `ω̂`; `/8` exact), so off by at most `4.01u·θ ≤ 22.1u` at `θ ≤ 7π/4`; the
 ///   test's `fl(fl(2π·k)/8)` by `3.01u·θ ≤ 16.6u`: the two angles within `38.7u`;
@@ -187,12 +189,19 @@ fn circular_bound(v: [f64; 2]) -> f64 {
     51.0 * U * l1(v)
 }
 
-/// Each `rᵢ` and `pᵢ` of `got` within `bound` of `want`'s.
-fn check_within(got: &Ic<f64>, want: &Ic<f64>, bound: impl Fn([f64; 2]) -> f64, what: &str) {
-    let pairs = got.r.iter().zip(&want.r).chain(got.p.iter().zip(&want.p));
-    for (g, w) in pairs {
+/// Each `rᵢ` and `pᵢ` of `got` within `bound` of `want`'s, the bound scaled by `scale`'s same vector.
+fn check_within(
+    got: &Ic<f64>,
+    want: &Ic<f64>,
+    scale: &Ic<f64>,
+    bound: impl Fn([f64; 2]) -> f64,
+    what: &str,
+) {
+    let wants = want.r.iter().chain(&want.p);
+    let scales = scale.r.iter().chain(&scale.p);
+    for ((g, w), v) in got.r.iter().chain(&got.p).zip(wants).zip(scales) {
         for d in 0..2 {
-            let (err, b) = ((g[d] - w[d]).abs(), bound(*w));
+            let (err, b) = ((g[d] - w[d]).abs(), bound(*v));
             assert!(err <= b, "{what}: {err:e} exceeds the bound {b:e}");
         }
     }
@@ -212,6 +221,7 @@ fn check_circular(k: u64, at: u64) {
     check_within(
         &row(&t, k),
         &want,
+        &start,
         circular_bound,
         &format!("circular row {k}"),
     );
@@ -302,6 +312,7 @@ fn trajectory_interface_lagrange_within_bound() {
     }
     check_within(
         &row(&t, 8),
+        &p.start(),
         &p.start(),
         elliptic_closure_bound,
         "elliptic closure",
