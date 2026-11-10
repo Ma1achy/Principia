@@ -465,8 +465,8 @@ Everything in the prototype's documents that contradicts the repository, the con
     and `x₀`, `J_D` (Part 5), deep zoom § 2, REQ-SCHED-024. It does not remove the floor: on the f32 path the IC
     `x₀ + J_D·δ` is an absolute f32 number of order `|x₀|`, so adjacent ICs closer than its ulp are one IC to the
     integrator; the floor is the measured value quoted with `|x₀|` (R-632, REQ-DEC-051), and "a floor near ~50" needs
-    the sum and the integration in f64 (deep zoom § 2). The prototype's absolute records collapse sooner, at the ulp of
-    the whole state rather than of `x₀` with an exact `δ`.
+    the sum and the integration in f64 (deep zoom § 2). The prototype's absolute records reach the same ulp at `|x₀|`;
+    any earlier or ragged collapse in the prototype is its own evaluation error, which O8's measurement can show.
 12. **Not every chart is "assemble ∘ map"** (design § 1). The invariant and construction charts build momenta from
     targets with a seed (`decode/invariant.rs:385`); masses come through several links. Each chart's own decode gives
     REQ-DEC-005's `(m, r, p)`; the blend encodes each end to the signed state, as § 17.2's line does.
