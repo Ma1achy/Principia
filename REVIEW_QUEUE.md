@@ -1005,15 +1005,20 @@ prototype used a different trigger.*
   once), or coarser and interpolated on the GPU; and does R-90's trigger decide the switch to the one-cell patch?
 - **Options seen:**
   - (a) One node per sample above R-90's switch, exact; the one-cell patch, a centre and slopes, below it, R-90's
-    trigger unchanged; the record the integrator reads is REQ-DEC-005's `(m, r, p)`.
+    trigger unchanged; the record the integrator reads is REQ-DEC-005's `(m, r, p)`. R-90's "adjacent samples give
+    bitwise-identical ICs" compares the **narrowed f32 records**, the ICs the integrator actually starts from, as it
+    did when the full decode ran in f32. Comparing the f64 evaluations instead would almost never fire before
+    `ℓ_switch = 20` (f64 neighbours stay distinct to about level 48), so the switch would always be the upper bound,
+    and a quad between the f32 collapse and level 20 would keep sending identical f32 records; the choice moves the
+    switch depth and with it the starting states. (a-f64), the f64 comparison, is the alternative.
   - (b) A coarser grid the GPU interpolates bilinearly at every depth, a node spacing per chart: fewer CPU evaluations,
     starting states off by the interpolation error.
   - (c) (a) with the prototype's switch: a patch once it is within a sample of the exact evaluation, measured per chart.
-- **Recommended:** (a). It is the only option where a starting state is the chart's own system to rounding, which
+- **Recommended:** (a), comparing the narrowed f32 records. It is the only option where a starting state is the chart's own system to rounding, which
   REQ-DEC-005 and every round-trip gate assume; (c)'s trigger can be measured against R-90 without changing it.
 - **Measurement:** on the kernel's latent and exponential-map sphere charts, the CPU evaluations per frame under (a)
   against the frame budget; (b)'s interpolation error against the sample spacing; the depth at which R-90's trigger fires
-  against the prototype's trigger.
+  on the f32 records and on the f64 evaluations, against the prototype's trigger.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M5-04's quad request and TASK-M6-07, as the plan rewrites them.
 
