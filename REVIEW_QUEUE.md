@@ -798,7 +798,8 @@ areas. That needs the rulings changed, and a rule for whether the smeared or squ
   edge, each under physics review) and R-470, R-554 and EX4 (blank only where "blank" is the declared kind or validity
   fails)? (ii) what is each new kind's primary range for R-408's count?
 - **Options seen:**
-  - (a) Amend as asked: six kinds per edge (wrap = periodic, pole-crossing, unfold, clamp, saturate, blank = bounded);
+  - (a) Amend as asked: seven kinds per edge (affine, wrap = periodic, pole-crossing, unfold, clamp, saturate, blank =
+    bounded), and, where RQ-772 declares one, a reflection or a new repeat map, each a new kind under R-407's clause 3;
     blank stays a kind and validity failures stay "not a system". Counting: an unfold sheet is inside the primary range
     (new systems, counted); a clamped pixel is outside it (an edge system again, not counted, as a repeat is); a
     saturated pixel is counted where its system is not shown inside the square and not counted otherwise, the rule
