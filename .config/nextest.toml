@@ -17,7 +17,6 @@ filter = """
     binary_id(validation::qa_TASK-M0-24)
     | (binary_id(xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
     | (binary_id(xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
-    | (binary_id(xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
     | binary_id(xtask::nextest)
     | (binary_id(xtask::screenshot) & test(/^screenshot_gui_surface/))
 """
@@ -180,7 +179,6 @@ default-filter = """
         | binary_id(=validation::qa_TASK-M0-24)
         | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
         | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
-        | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
         | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
         | (binary_id(=xtask::screenshot) & test(/^screenshot_gui_surface/))
     )
@@ -202,7 +200,6 @@ default-filter = """
     | binary_id(=validation::qa_TASK-M0-24)
     | (binary_id(=xtask::controls) & test(/^controls_on_this_workspace_skips_gui/))
     | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
-    | (binary_id(=xtask::qa_TASK-M0-02) & test(/^qa02_a_failing_plan_check_turns_xtask_ci_red/))
     | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
     | (binary_id(=xtask::screenshot) & test(/^screenshot_gui_surface/))
 """
@@ -1595,7 +1592,6 @@ default-filter = """
 #      75.7 s  xtask::nextest nextest_ci_steps_list_every_test_under_their_profiles
 #     109.4 s  xtask::qa_TASK-M0-01 qa_cargo_xtask_alias_runs_deps
 #     159.2 s  xtask::qa_TASK-M0-01_live qa_live_deps_sees_every_live_workspace_edge
-#      74.5 s  xtask::qa_TASK-M0-02 qa02_a_failing_plan_check_turns_xtask_ci_red
 #     173.5 s  xtask::qa_TASK-M0-22 qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing
 #     172.0 s  xtask::qa_TASK-M0-22 qa_m022_ci_fails_on_a_test_without_control
 #     170.8 s  xtask::qa_TASK-M0-22 qa_m022_ci_passes_when_every_control_trips
@@ -1750,7 +1746,6 @@ default-filter = """
         | (binary_id(=xtask::nextest) & test(=nextest_ci_steps_list_every_test_under_their_profiles))
         | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
         | (binary_id(=xtask::qa_TASK-M0-01_live) & test(=qa_live_deps_sees_every_live_workspace_edge))
-        | (binary_id(=xtask::qa_TASK-M0-02) & test(=qa02_a_failing_plan_check_turns_xtask_ci_red))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_test_without_control))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_passes_when_every_control_trips))

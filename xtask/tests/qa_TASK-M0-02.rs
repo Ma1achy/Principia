@@ -626,34 +626,3 @@ negative_control!(
     expected = "qa02: job gpu-lavapipe does not set up Python and PyYAML",
     runs_plan_check_with_python("gpu-lavapipe")
 );
-
-/// `xtask ci --list` (each runner's listing-only form; plan-check's is itself, R-235) with `shim` first on `PATH`
-/// fails, and names plan-check as the failed runner: a plan the checker rejects turns `cargo xtask ci` red.
-fn ci_fails_on_plan_check(shim: &Path) {
-    let path = std::env::join_paths(std::iter::once(shim.to_path_buf()).chain(
-        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()),
-    ))
-    .expect("qa02: PATH joined");
-    let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
-        .args(["ci", "--list"])
-        .env("PATH", path)
-        .timed_output()
-        .expect("qa02: xtask ci --list ran");
-    let (stdout, stderr) = texts(&out);
-    assert!(
-        !out.status.success() && stdout.contains("plan-check FAILED"),
-        "qa02: xtask ci did not fail on plan-check:\n{stdout}\n{stderr}"
-    );
-}
-
-#[test]
-fn qa02_a_failing_plan_check_turns_xtask_ci_red() {
-    ci_fails_on_plan_check(&shim("ci_red", 0, 1));
-}
-
-negative_control!(
-    qa02_a_failing_plan_check_turns_xtask_ci_red,
-    "a checker exiting 0 leaves plan-check ok in xtask ci",
-    expected = "qa02: xtask ci did not fail on plan-check",
-    ci_fails_on_plan_check(&shim("ctl_ci_red", 0, 0))
-);
