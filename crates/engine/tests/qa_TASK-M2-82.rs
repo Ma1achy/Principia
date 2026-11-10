@@ -18,7 +18,6 @@
 //! - controls (R-176): a row one boundary off, a terminal not held, a read depending on an earlier read, a figure-eight
 //!   not read from `ledger`'s constants, a state not a rigid rotation, a terminal at the wrong index.
 
-use std::cell::Cell;
 use std::f64::consts::{PI, TAU};
 
 use engine::trajectory::{
@@ -184,10 +183,12 @@ impl Provider for Steps {
 }
 
 /// A provider whose state depends on how many reads came before: impure, for the order control.
+#[cfg(feature = "controls")]
 struct Leaky {
-    reads: Cell<u64>,
+    reads: std::cell::Cell<u64>,
 }
 
+#[cfg(feature = "controls")]
 impl Provider for Leaky {
     fn quantum(&self) -> f64 {
         0.25
@@ -215,11 +216,11 @@ fn last_by_scan(dt: f64, horizon: f64) -> u64 {
     k
 }
 
-#[test]
-fn trajectory_interface_qa_grid_by_products() {
+/// Across quanta and horizons at, one ulp either side of, and half a quantum past each `j·Δ`, `last(Δ, T)` is the
+/// greatest `k` with `k·Δ ≤ T`, by products.
+fn check_last_by_products(last: impl Fn(f64, f64) -> u64) {
     let quanta = [0.1, 0.7, 1.0 / 3.0, PI / 8.0, 1e-3, 0.3, 2.5];
     for dt in quanta {
-        let p = Steps { dt, term: None };
         for j in 0..60u64 {
             let at = j as f64 * dt;
             for horizon in [
@@ -231,15 +232,23 @@ fn trajectory_interface_qa_grid_by_products() {
                 if horizon < 0.0 {
                     continue;
                 }
-                let t = Trajectory::new(&p, steps_start(), horizon).unwrap();
                 assert_eq!(
-                    t.last(),
+                    last(dt, horizon),
                     last_by_scan(dt, horizon),
                     "Δ = {dt:e}, T = {horizon:e}: the last boundary is the greatest k with k·Δ ≤ T"
                 );
             }
         }
     }
+}
+
+#[test]
+fn trajectory_interface_qa_grid_by_products() {
+    check_last_by_products(|dt, horizon| {
+        Trajectory::new(&Steps { dt, term: None }, steps_start(), horizon)
+            .unwrap()
+            .last()
+    });
     // The cases where a quotient and the products may disagree: 0.3/0.1 rounds below 3 and 3·0.1 above 0.3.
     let p = Steps {
         dt: 0.1,
@@ -258,6 +267,25 @@ fn trajectory_interface_qa_grid_by_products() {
     assert!(same_bits(&read(&t, 0), &steps_start()));
 }
 
+negative_control!(
+    trajectory_interface_qa_grid_by_products,
+    "a last boundary by the quotient's floor, not by products, fails",
+    expected = "the last boundary is the greatest k",
+    check_last_by_products(|dt, horizon| (horizon / dt).floor() as u64)
+);
+
+/// `state` reads boundary `last` and refuses `last + 1` and `u64::MAX` as past the horizon.
+fn check_past_refused(state: impl Fn(u64) -> Result<Ic<f64>, Refused>, last: u64) {
+    assert!(state(last).is_ok(), "boundary {last} is refused");
+    assert_eq!(
+        state(last + 1).err(),
+        Some(Refused::PastHorizon { k: last + 1, last }),
+        "boundary {} past the horizon is not refused",
+        last + 1
+    );
+    assert!(state(u64::MAX).is_err(), "u64::MAX is not refused");
+}
+
 #[test]
 fn trajectory_interface_qa_past_horizon_refused() {
     let p = Steps {
@@ -265,10 +293,21 @@ fn trajectory_interface_qa_past_horizon_refused() {
         term: None,
     };
     let t = upto(&p, steps_start(), 4);
-    assert!(t.state(4).is_ok());
-    assert_eq!(t.state(5), Err(Refused::PastHorizon { k: 5, last: 4 }));
-    assert!(t.state(u64::MAX).is_err());
+    check_past_refused(|k| t.state(k), 4);
 }
+
+negative_control!(
+    trajectory_interface_qa_past_horizon_refused,
+    "the provider read directly, with no horizon to refuse past, fails",
+    expected = "past the horizon is not refused",
+    {
+        let p = Steps {
+            dt: 0.25,
+            term: None,
+        };
+        check_past_refused(|k| p.state(&steps_start(), k), 4)
+    }
+);
 
 /// Every row `0..=last` read through `t` is the provider's state at that boundary, bit for bit.
 fn check_rows_are_providers<P: Provider>(
@@ -431,7 +470,7 @@ negative_control!(
     expected = "the reads depend on order",
     {
         let p = Leaky {
-            reads: Cell::new(0),
+            reads: std::cell::Cell::new(0),
         };
         check_order_free(&p, steps_start(), 5)
     }
@@ -682,6 +721,19 @@ fn trajectory_interface_qa_elliptic_homographic() {
     check_rows_apart(&rows[..8]);
 }
 
+negative_control!(
+    trajectory_interface_qa_elliptic_homographic,
+    "a row whose third body is moved off the equilateral triangle fails",
+    expected = "is not equilateral",
+    {
+        let p = elliptic();
+        let t = upto(&p, p.start(), 8);
+        let mut r = read(&t, 3);
+        r.r[2][0] += 1e-6;
+        check_central(&r, 3)
+    }
+);
+
 // ── The Lagrange homothetic member ─────────────────────────────────────────────────────────────────────────────────
 
 /// QA's radial Kepler solution from rest at `|z| = 1` under `μ`: `|z| = cos²β`, `t = (β + sin β cos β)/√(2μ)`, `β` by
@@ -807,16 +859,40 @@ negative_control!(
 
 // ── The figure-eight ───────────────────────────────────────────────────────────────────────────────────────────────
 
+/// Every row `0..=last` is row 0, bit for bit.
+fn check_rows_are_zero(last: u64, row: impl Fn(u64) -> Ic<f64>) {
+    let zero = row(0);
+    for k in 0..=last {
+        assert!(same_bits(&row(k), &zero), "row {k}·T₈ is not row 0");
+    }
+}
+
 #[test]
 fn trajectory_interface_qa_figure_eight_rows_are_start() {
     let f = FigureEight::new();
     let t = upto(&f, f.start(), 6);
-    let zero = read(&t, 0);
-    assert!(same_bits(&zero, &f.start()));
-    for k in 0..=6 {
-        assert!(same_bits(&read(&t, k), &zero), "row {k}·T₈ is not row 0");
-    }
+    assert!(same_bits(&read(&t, 0), &f.start()));
+    check_rows_are_zero(6, |k| read(&t, k));
     assert_eq!(t.time(5).to_bits(), (5.0 * f.quantum()).to_bits());
+}
+
+negative_control!(
+    trajectory_interface_qa_figure_eight_rows_are_start,
+    "rows that move, the Lagrange circular member's within one period, fail",
+    expected = "is not row 0",
+    {
+        let c = circular();
+        let t = upto(&c, c.start(), 6);
+        check_rows_are_zero(6, |k| read(&t, k))
+    }
+);
+
+/// The quantum `got` is `want` within `64u`.
+fn check_quantum_is(got: f64, want: f64) {
+    assert!(
+        (got - want).abs() <= 64.0 * U * want,
+        "the quantum {got} is not T₈ in the sim's units {want}"
+    );
 }
 
 #[test]
@@ -828,11 +904,7 @@ fn trajectory_interface_qa_figure_eight_period_in_sim_units() {
     let lambda = 1.0 / inertia.sqrt();
     let want = c.period * 3f64.sqrt() * lambda.powf(1.5);
     let f = FigureEight::new();
-    assert!(
-        (f.quantum() - want).abs() <= 64.0 * U * want,
-        "the quantum {} is not T₈ in the sim's units {want}",
-        f.quantum()
-    );
+    check_quantum_is(f.quantum(), want);
     // Its start: equal masses, I = 1, Σp = 0, L_z = 0 (dd_validation_orbits § 1.2).
     let s = f.start();
     assert!(s.m.iter().all(|m| (m - 1.0 / 3.0).abs() <= U));
@@ -840,6 +912,18 @@ fn trajectory_interface_qa_figure_eight_period_in_sim_units() {
     assert!((inertia - 1.0).abs() <= 16.0 * U);
     assert!(lz(&s).abs() <= 1e-14, "L_z = {}", lz(&s));
 }
+
+negative_control!(
+    trajectory_interface_qa_figure_eight_period_in_sim_units,
+    "the published period, not carried to the sim's masses and scale, fails",
+    expected = "is not T₈ in the sim's units",
+    {
+        let c = ledger::fixtures::figure_eight();
+        let inertia = (1.0 / 3.0) * 2.0 * dot(c.x1, c.x1);
+        let want = c.period * 3f64.sqrt() * (1.0 / inertia.sqrt()).powf(1.5);
+        check_quantum_is(c.period, want)
+    }
+);
 
 /// `f`'s start is `validation`'s `figure_eight()`'s, bit for bit.
 fn check_reads_validation(f: &FigureEight) {
