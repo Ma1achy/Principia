@@ -1670,7 +1670,7 @@
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
-    section: "R-937 — RQ-771, the invariant charts' second sheet: option (a), the spin edges unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ`, on the warped and the linear mapping, its meaning read from the seed R-934 rules; below the floor at a non-zero spin, where the lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin, everywhere there, on the linear `(L_z, E)` and `(L_z, K)` charts and on Burrau `Φ_θ,L_z`, physics review agreeing with conditions C1 to C7; REQ-ENC-030's class rule binds lookups and the lock, never a drawn extension *(closes RQ-771; amends R-508)*"
+    section: "R-937 — RQ-771, the invariant charts' second sheet: option (a), the spin edges unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ`, on the warped and the linear mapping, its meaning read from the seed R-934 rules; below the floor at a non-zero spin, where the lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin, everywhere there, on the linear `(L_z, E)` and `(L_z, K)` charts and on Burrau `Φ_θ,L_z`, physics review agreeing with conditions C1 to C7; REQ-ENC-030's class rule binds lookups and the lock, never a drawn extension *(closes RQ-771; amends R-471 and R-508)*"
   verify:
     method: review checklist
     detail: "the section gives the projection metric per feasibility constraint (the (L_z, E) parabola at least) and the reject criterion; physics reviewer approved"
@@ -6352,7 +6352,7 @@
   - file: docs/contracts/principia_integrator_contract.md
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   - file: decisions.md
-    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; REQ-INT-054's bound per sync interval is the step budget over one interval; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; three points whose Rust files are not in the imported set stay open *(on RQ-756, which stays open)*"
+    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
   verify:
     method: numerical gate
     detail: "at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 (f32) / 4.0e-12 (f64) for the unstable form, the reference's own table (tb_lc.py:67-69), whose 3.5e-9 is its f64 figure at 179.99° (R-927)"
@@ -6439,7 +6439,7 @@
   - file: docs/contracts/principia_integrator_contract.md
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   - file: decisions.md
-    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; REQ-INT-054's bound per sync interval is the step budget over one interval; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; three points whose Rust files are not in the imported set stay open *(on RQ-756, which stays open)*"
+    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
   verify:
     method: numerical gate
     detail: "figure-eight closure after one period, on the gate's own sync interval T/n with n = 32, under integrator contract Part 6's per-step rule and the transcribed step control, the landing clamp with the landing secant as driver.rs has it (R-927): at most REQ-INT-114's calibrated threshold at eta = 0.001, the closure without the landing fix measured and reported beside it; convergence better than first order; the re-registration count reported with the result"
@@ -6534,17 +6534,17 @@
   - file: docs/contracts/principia_integrator_contract.md
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   - file: decisions.md
-    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; REQ-INT-054's bound per sync interval is the step budget over one interval; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; three points whose Rust files are not in the imported set stay open *(on RQ-756, which stays open)*"
+    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
   verify:
     method: property test
-    detail: "Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound, the step budget over one interval, max(N_min, step_budget_rate·Δ_sync) (R-927, RQ-756 (4)(a)), its values REQ-INT-103's and REQ-INT-108's calibrations."
+    detail: "Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound computed on the fixed τ-schedule. The bound's formula waits on RQ-756 (4): R-927 flags the owner's (4)(a), max(N_min, step_budget_rate·Δ_sync) per interval, against R-604's budget, which is cumulative since t = 0, and applies nothing; this arm is not built until the owner answers."
   rulings:
   - R-19
   - R-927
   milestone: M3
   rq:
   - RQ-756
-  note: "R-927 (10 Nov 2026, RQ-756 (4)(a)): the bound per sync interval is the step budget over one interval. *Was (verify):* \"Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound computed on the fixed τ-schedule.\""
+  note: "R-927 (10 Nov 2026) flags RQ-756 (4)(a) and applies nothing: the step budget over one interval is not a bound R-604's cumulative budget gives, so the bound's formula stays open in RQ-756 (4) and the verify's test is as it was, a sentence added saying it waits."
 - id: REQ-INT-055
   area: INT
   statement: The inspector's CPU reference integration must be RK45.
@@ -7733,13 +7733,13 @@
   statement: "The figure-eight closure threshold of REQ-INT-049's gate (one period, the gate's own sync interval T/32, eta = 0.001), under integrator contract Part 6's per-step rule and the transcribed Aarseth–Zare step control with the landing secant as driver.rs has it, must be calibrated: re-measured under that same code and proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md. The earlier figure, 4.232e-09, was measured under the fixed dτ of dd_validation_orbits § 0.1 and no longer binds (R-927)."
   source:
   - file: decisions.md
-    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; REQ-INT-054's bound per sync interval is the step budget over one interval; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; three points whose Rust files are not in the imported set stay open *(on RQ-756, which stays open)*"
-  - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: docs/contracts/principia_integrator_contract.md
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   - file: docs/design/principia_dd_validation_orbits.md
     section: 0.1 The mechanism, and the fix — measured, not proposed
+  - file: decisions.md
+    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
   verify:
     method: numerical gate
     detail: "cargo xtask gate az-final-step --propose: the closure after one period at eta = 0.001 and n = 32 under the rule in force, the convergence ladder across eta in [0.02, 0.001], and the closure without the landing fix beside it, each run reported with its re-registration count and whether the predictive limit bound any step; the reference's figures (2.976e-3 against 3.595e-9, driver.rs:398-400) quoted as measurements, never as the threshold; the threshold proposed from the measured closure, its margin stated; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md"
