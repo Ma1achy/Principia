@@ -1039,19 +1039,26 @@ be, or whether the table only gives a first guess that the chart's own forward c
     fragment-side, each through its own generated section".
 - **The silence:** the accuracy of the backwards answer on a plain chart with no closed-form inverse is not stated; a
   search refined on the bilinear table is limited by the table's spacing, while a refinement on the chart's generated
-  forward code, which every kernel chart has, reaches f32.
+  forward code, which every kernel chart has, drives the residual in state to f32 rounding; the error in chart
+  coordinates is then about that residual divided by `σ_min(J)`, the chart Jacobian's smallest singular value.
 - **The question:** what accuracy the table route must reach outside a morph, and whether it may refine against the
   generated forward code.
 - **Options seen:**
   - (a) The table seeds the search; Newton steps run on the chart's generated forward code where the chart has it
-    (every kernel chart, and a blend of two such charts), so the answer is f32-accurate outside a morph; the table
-    alone only where no forward code exists; the bound a calibration, criterion written first.
+    (every kernel chart, and a blend of two such charts), so the residual in state reaches f32 rounding outside a
+    morph; the table alone only where no forward code exists. The answer is not f32-accurate in chart coordinates
+    everywhere: its error is about the residual over `σ_min(J)`, which is unbounded at the sites a chart flags (the
+    poles, `r = 0`, the feasibility boundary). The bound is a calibration (R-71), stated in chart coordinates with
+    its conditioning, as `ε_res / σ_min(J)` with `ε_res` the residual tolerance, reported beside `σ_min(J)` at each
+    sample, and a sample whose `σ_min(J)` falls below a stated floor is labelled ill-conditioned rather than
+    held to the bound; criterion written first.
   - (b) The table alone, labelled approximate with its bound, the table's spacing, everywhere.
   - (c) Pixel resolution everywhere, as R-919 F11 has it for blend frames.
 - **Recommended:** (a). It costs a few forward evaluations per pixel, which the prototype's Metal figures (7 to 20 ns a
   sample for the search) suggest is cheap, and makes "approximate" true only where the owner allowed it.
 - **Measurement:** on the kernel's charts at `t = 0` and after a run, the round-trip error in cells and the wrong share
-  for (a) and (b), and the per-sample cost on Metal, against a criterion written before the run.
+  for (a) and (b), each binned by `σ_min(J)` with the flagged sites reported apart, and the per-sample cost on Metal,
+  against a criterion written before the run.
 - **Applied meanwhile:** nothing.
 - **Waits:** the backwards-table task of the plan; Chart position's build.
 
