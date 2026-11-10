@@ -15,11 +15,12 @@
 //! and the next value along the path, a lock on the edge taken and one f64 past it refused, and on their linear and
 //! mixed `Mapped` forms, whose `validate` does not decode, a pan to `v = f64::MAX` stops on `Φ` likewise; `RestStart`
 //! and `HeldLz` keep the `Φ` check of the chart they wrap; and a rest start's held momentum control sliced to NaN or
-//! ±∞ stops on `Φ` where it was, one sliced to ±`f64::MAX` taken whole, its decode a system. Controls: a stop that
+//! ±∞ stops on `Φ` where it was, one sliced to ±`f64::MAX` taken whole, its decode a system; and an inertia edit
+//! between finite ends more than `f64::MAX` apart stops at the edge, not where it began. Controls: a stop that
 //! keeps the requested value, a stop one bisection step short, a per-chart override, a centre check that reads `map`
 //! alone, the shape sphere's point alone, an invariant chart's frozen controls alone, or a linear mapped invariant
 //! chart's `map` alone, a wrapper that drops the wrapped chart's `Φ` check, and a rest start whose `Φ` check is the
-//! wrapped chart's alone.
+//! wrapped chart's alone, and a path that forms the difference of its ends first.
 //!
 //! **`nav_fuzz_never_leaves*`** (REQ-CHART-061): on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
 //! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts and
@@ -1009,6 +1010,123 @@ negative_control!(
     "a centre check that reads the shape sphere's point alone takes a non-finite inertia whole",
     expected = "the stop takes the inertia edit",
     check_shape_inertia(true)
+);
+
+/// A field whose path is `from + λ·(to − from)` as written, the difference formed first (the control): it is ±∞ where
+/// finite ends of opposite signs lie more than `f64::MAX` apart, and every value past `λ = 0` with it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Naive(f64);
+
+impl Field for Naive {
+    fn along(self, to: Self, lambda: f64) -> Self {
+        if lambda == 0.0 {
+            self
+        } else if lambda == 1.0 {
+            to
+        } else {
+            Naive(self.0 + lambda * (to.0 - self.0))
+        }
+    }
+}
+
+/// REQ-CHART-060's last valid value along a path whose finite ends lie more than `f64::MAX` apart: the shape sphere's
+/// inertia edited from `10³⁰⁷`, a system, to `−f64::MAX`. Every inertia between `10³⁰⁷` and 0 is on the path and half
+/// of `10³⁰⁷` is a system, so the stop moves, to the last positive inertia that builds finite, the next f64 of `λ`
+/// failing `Φ`. And the path itself: its ends bitwise at `λ = 0` and 1, its midpoint finite, a path whose difference
+/// is finite `from + λ·(to − from)` bitwise, and a non-finite end as before, NaN from an infinite `from` and `to`'s
+/// infinity toward an infinite `to`. `naive` forms the difference first (the control).
+fn check_wide_span(naive: bool) {
+    let base = shape(ShapeMap::Spherical, std::f64::consts::FRAC_PI_4);
+    let view = |inertia: f64| at(ShapeSphere { inertia, ..base }, [0.5, 0.5]);
+    let (from, to) = (1e307, -f64::MAX);
+    assert!(
+        (to - from).is_infinite(),
+        "{from:e} and {to:e} differ by a finite value: the wide arm does not bind"
+    );
+    for inertia in [from, from / 2.0] {
+        assert_eq!(
+            verdict(view(inertia)),
+            None,
+            "inertia {inertia:e} is not a system"
+        );
+    }
+    let stop = if naive {
+        let stop = nav_stop(
+            Edit::Path {
+                from: Naive(from),
+                to: Naive(to),
+            },
+            |inertia: Naive| view(inertia.0),
+            &P,
+        );
+        Stop {
+            value: stop.value.0,
+            lambda: stop.lambda,
+            steps: stop.steps,
+            stopped: stop.stopped,
+        }
+    } else {
+        nav_stop(Edit::Path { from, to }, view, &P)
+    };
+    assert!(
+        stop.lambda > 0.0 && stop.value < from / 2.0,
+        "the inertia edit {from:e} → {to:e} stays short of the edge, at {:e} (λ = {}), though half of it is a system",
+        stop.value,
+        stop.lambda
+    );
+    assert_eq!(stop.stopped, Some(Check::Phi));
+    assert!(
+        stop.value > 0.0,
+        "the stop at inertia {:e} is not positive",
+        stop.value
+    );
+    check_stop("inertia across zero", from, to, view, &stop);
+    println!(
+        "inertia {from:e} → {to:e}: stopped at {:e} (λ = {:?}) after {} steps",
+        stop.value, stop.lambda, stop.steps
+    );
+
+    assert_eq!(from.along(to, 0.0).to_bits(), from.to_bits());
+    assert_eq!(from.along(to, 1.0).to_bits(), to.to_bits());
+    let mid = from.along(to, 0.5);
+    assert_eq!(
+        mid,
+        0.5 * from + 0.5 * to,
+        "the midpoint of {from:e} and {to:e}"
+    );
+    assert!(mid.is_finite() && mid < 0.0);
+    assert_eq!(
+        [from, 0.1].along([to, 0.7], 0.5),
+        [mid, 0.1.along(0.7, 0.5)],
+        "an array's path is each component's"
+    );
+    // A finite difference: the path as written, bitwise, which the two-product form is not here.
+    let (a, b, lambda) = (0.1f64, 0.7f64, 0.3f64);
+    let written = a + lambda * (b - a);
+    assert_ne!(
+        written.to_bits(),
+        ((1.0 - lambda) * a + lambda * b).to_bits(),
+        "the two forms agree at ({a}, {b}, {lambda}): the case tells nothing"
+    );
+    assert_eq!(a.along(b, lambda).to_bits(), written.to_bits());
+    // A non-finite end, as before: no straight line from an infinite value, and an infinite `to` reached at once.
+    assert!(f64::INFINITY.along(1.0, 0.5).is_nan());
+    assert!(f64::NEG_INFINITY.along(f64::INFINITY, 0.5).is_nan());
+    assert_eq!(1.0.along(f64::INFINITY, 0.5), f64::INFINITY);
+    assert_eq!(1.0.along(f64::NEG_INFINITY, 0.5), f64::NEG_INFINITY);
+    assert!(1.0.along(f64::NAN, 0.5).is_nan());
+}
+
+#[test]
+fn nav_stop_at_edge_wide_span() {
+    check_wide_span(false);
+}
+
+negative_control!(
+    nav_stop_at_edge_wide_span,
+    "a path that forms the difference of its ends first leaves an edit across more than f64::MAX where it was",
+    expected = "stays short of the edge",
+    check_wide_span(true)
 );
 
 /// An invariant chart with its centre check reading `map` alone, the frozen controls, not the construction's decode:

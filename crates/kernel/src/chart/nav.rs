@@ -25,7 +25,7 @@
 //!
 //! **The path** (A3). The edited field moves along the straight line from the accepted value to the requested one,
 //! `from + λ·(to − from)` for `λ ∈ [0, 1]`, `to` itself at `λ = 1`, so a component the edit leaves alone keeps its
-//! value exactly ([`Field`]). A requested value that passes is taken. One that fails stops the edit at the last valid
+//! value exactly ([`Field`]); between finite ends whose difference overflows it is `(1 − λ)·from + λ·to`, finite. A requested value that passes is taken. One that fails stops the edit at the last valid
 //! value along the path, found by bisection on `λ`: each step halves the interval between the two ends' f64 bit
 //! patterns read as ordered integers (the f64s of `[0, 1]` in order, fewer than 2⁶²), until the two ends are adjacent
 //! f64 values, at most 62 steps, the valid end kept. The stop reports the check its adjacent invalid value fails
@@ -51,6 +51,9 @@ use crate::generated::links::LinkParams;
 pub trait Field: Copy {
     /// The value at the fraction `lambda` of the straight line from `self` to `to`: `self + λ·(to − self)`, with
     /// `self` itself at `λ = 0` and `to` at `λ = 1`, whatever `to` is (a non-finite `to` would give NaN at `λ = 0`).
+    /// Where `to − self` overflows from a finite `self` (finite ends of opposite signs more than `f64::MAX` apart, or
+    /// an infinite `to`), the same point as `(1 − λ)·self + λ·to`, which does not: the path's interior stays finite
+    /// between finite ends, so an edit across it stops at its last valid value and not where it began.
     fn along(self, to: Self, lambda: f64) -> Self;
 }
 
@@ -62,7 +65,14 @@ impl Field for f64 {
         } else if lambda == 1.0 {
             to
         } else {
-            self + lambda * (to - self)
+            let span = to - self;
+            if span.is_infinite() && self.is_finite() {
+                // Finite ends of opposite signs more than `f64::MAX` apart: the same point by two products, neither
+                // of which overflows, where the difference would put every interior value at ±∞.
+                (1.0 - lambda) * self + lambda * to
+            } else {
+                self + lambda * span
+            }
         }
     }
 }
