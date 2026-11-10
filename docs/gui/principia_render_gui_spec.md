@@ -334,7 +334,7 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
   anchor `± 1` locked. A held physical coordinate's slider spans its sibling axis's full range at the chart's home
   window (`principia_chart_reference.md` §4.5): the held `ν₀` over `[1/32, 31/32]`; the held `L_z` over
   `2√(2·K_max)`, rail `[−√(2K_max), +√(2K_max)]`; the held `K` 1 in its warp coordinate `t` (`K_max` on a linear axis),
-  its handle in `t` and the rail drawn evenly in `t`, its number box in `K`. Under a lock each anchor runs over `±` half
+  its handle in `t` and the rail, fixed per preset, drawn evenly in `t`, its number box in `K`; a slice moves the handle, not the rail. Under a lock each anchor runs over `±` half
   its span. The span is fixed per chart; a pan, a zoom or a slice never changes it. It is what R-507 divides a tilt's
   hidden offset by.
 - **Tilt** (named "Slice & tilt" before R-457): "tilt `τ₁` into [X]" and "tilt `τ₂` into [Y]", each a slider with its

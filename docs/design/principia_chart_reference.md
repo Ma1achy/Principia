@@ -978,11 +978,11 @@ with no construction there (`K < L_z²/2I`) reads as refused: no system, area we
     `± √(2K_max)`. Warped, the floor keeps every pixel a system, and inside the zoom-1 window `L_z²/2` stays at most
     `K_max` under a single 90° tilt; linear, a single 90° tilt draws the `(L_z, K)` chart's feasible parabola.
   - *The held `K`* (`Φ_θ,L_z`): warped, 1 in its warp coordinate `t`, the warped axis's zoom-1 range, `K = K_max·t^γ_K`,
-    `K_max` and `γ_K` this chart's own (REQ-CHART-141, R-833); rail `t ∈ [t₀ − ½, t₀ + ½]`, shifted to `[0, 1]` if
-    `t₀ < ½`, never below `t = 0`; under a lock the anchor `± ½` in `t`. Linear, `K_max` in `K`, the axis's `[0, K_max]`.
-    One slider, two units: the handle is in `t`, the rail drawn evenly in `t`, the number box shows `K = K_max·t^γ_K`; a
-    slice writes `K₀` by value (R-720) and `t₀ = (K₀/K_max)^(1/γ_K)` is recomputed; a tilt reads the rail's length, 1 in
-    `t`, `ΔK = K_max·[(t₀ + Δt)^γ_K − t₀^γ_K]`.
+    `K_max` and `γ_K` this chart's own (REQ-CHART-141, R-833); the rail fixed per preset at `t ∈ [t₀ − ½, t₀ + ½]`, `t₀`
+    the preset's, shifted to `[0, 1]` if `t₀ < ½`, never below `t = 0`; under a lock the anchor `± ½` in `t`. Linear,
+    `K_max` in `K`, the axis's `[0, K_max]`. One slider, two units: the handle is in `t`, the rail drawn evenly in `t`, the
+    number box shows `K = K_max·t^γ_K`; a slice writes `K₀` by value (R-720) and `t₀ = (K₀/K_max)^(1/γ_K)` is recomputed,
+    which moves the handle, not the rail; a tilt reads the rail's length, 1 in `t`, `ΔK = K_max·[(t₀ + Δt)^γ_K − t₀^γ_K]`.
   - *A `MixedEnergy` chart's held `L_z`* (R-818) on a lone virial axis has no chart-constant `K_max` (`K = Q·|U|/2`,
     R-817): its span is RQ-701's, written by TASK-M8-48 at M8 (R-920), as are R-818's other lone axes.
   - *The checks* (written before any run): at a single 90° tilt in the zoom-1 window the tilted axis's hidden values

@@ -2431,9 +2431,12 @@ its row at 0 bitwise, by the declaration; the Lagrange states, evaluated in clos
 evaluation's rounding, or else a calibration (R-71), its criterion written first and set by measurement (R-649, R-650);
 the terminal at its index and kind; two reads in either order, one bit pattern. Controls: a row reading one boundary off,
 a terminal not held, a read that depends on an earlier read. The row-one-boundary-off control, and every check that tells
-boundaries apart, runs on the Lagrange fixture, at a quantum no multiple of its period `2π/ω`, whose rows differ at each
-boundary; on the figure-eight every boundary row is its start, so such a check passes there whatever it reads (physics
-review 5834013503 of PR #465).
+boundaries apart, runs on the Lagrange fixture's circular member (the rigid rotation, whose period is `2π/ω`; the
+elliptic members run on the Kepler period and the homothetic one has none), with every boundary the test reads within one
+period, `kΔ < 2π/ω` for each boundary index `k` it reads at the quantum `Δ`. Then any two boundary rows it reads differ,
+which a quantum that is merely no multiple of the period does not give (at `Δ = T/2` or `T/3`, rows `k` and `k + 2` or
+`k + 3` are bitwise equal); on the figure-eight every boundary row is its start, so such a check passes there whatever it
+reads (physics reviews 5834013503 and 5834538186 of PR #465).
 
 ---
 

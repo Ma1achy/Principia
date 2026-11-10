@@ -35228,7 +35228,9 @@ The owner's words (9 Nov 2026), verbatim:
     by this ruling. `sigmoid_beta`, `tanh_beta` and `softsign_beta`, written onto the bounded `β ∈ [0, π]`, are not that
     link: TASK-M2-57 rewrites dd_generation_root § 3.9's `β` rows and REQ-GEN-013's `β` codomain to the one periodic
     link, each keeping its *Was*, and lists what the single `β` link changes in built code (REQ-VAL-024's 54 link
-    selections become 18).
+    selections become 18). The three stay as conversion sources only, their forward maps kept for Q3 (a) and its
+    control "a value converted by the wrong link fails": not selectable, not counted as `β` links (physics review
+    5834538186 of PR #465).
   - **Q2 (b), presets and goldens whose plane runs along `z_β`:** redefined, not converted. Each becomes an affine plane in
     the new coordinates, a deliberate change exempt from the conversion test and recorded with why, the goldens
     regenerated as R-898 allows; no non-affine latent chart kind is defined for them, and the default views show the
@@ -35287,10 +35289,11 @@ proposal is RQ-679's dated line of 9 Nov 2026, verbatim, its §§ 0 to 5. The ow
   practical bound R-720 left to the slider span.
 - **The held `K`** (on `Φ_θ,L_z`): tilted in its warp coordinate `t`, `K = K_max·t^γ_K` (R-708 as R-720 narrows it),
   with span 1 in `t`, the warped axis's zoom-1 range; `K_max` and `γ_K` the chart's own held-`K` warp (REQ-CHART-141,
-  R-833). The rail is `t ∈ [t₀ − ½, t₀ + ½]`, shifted to `[0, 1]` if `t₀ < ½`; under a lock the anchor `± ½` in `t`. On a
+  R-833). The rail is fixed per preset at `t ∈ [t₀ − ½, t₀ + ½]`, `t₀` the preset's, shifted to `[0, 1]` if `t₀ < ½`
+  (the proposal's "Rail fixed per preset"); under a lock the anchor `± ½` in `t`. On a
   linear axis the span is `K_max` in `K`, the axis's `[0, K_max]`. **One slider, two units:** its handle is in `t`, its
-  number box shows `K`; a slice writes `K₀` by value (R-720) and `t₀ = (K₀/K_max)^(1/γ_K)` is recomputed; a tilt reads
-  the rail's length, 1 in `t`.
+  number box shows `K`; a slice writes `K₀` by value (R-720) and `t₀ = (K₀/K_max)^(1/γ_K)` is recomputed, which moves
+  the handle, not the rail; a tilt reads the rail's length, 1 in `t`.
 - **The slider is drawn evenly in `t`**, the proposal's recommendation: "slice by value" does not require a rail drawn
   evenly in `K`, which would move only the handle's mid-rail position.
 - **A latent slider's span is 2:** rail `[−1, 1]` free, anchor `± 1` locked, the value the GUI already builds, written
