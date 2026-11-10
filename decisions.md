@@ -35120,7 +35120,7 @@ Adds REQ-CHART-166 to REQ-CHART-188 and REQ-GUI-431; moves 60 requirements to M2
 split requirements, REQ-PERF-116 and the moved calibrations.
 
 ## R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, "fully working and tested", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*
-*Amended in part by R-923 (10 Nov 2026): its order set aside for now by R-923, on the owner's say: integrator tasks that don't touch the undecided points go ahead before M2's gate, GUI work too (the owner's reply about 05:00), no new chart task starting meanwhile.*
+*Amended in part by R-923 (10 Nov 2026): its order set aside for now, on the owner's say: integrator tasks that don't touch the undecided points go ahead before M2's gate, GUI work too (the owner's reply about 05:00), no new chart task starting meanwhile.*
 *Still in force: M2's gate, "fully working and tested", and its checklist G1 to G14 (R-923 passes no gate); what
 finishes; CI and tooling outside the order; R-914's release holding in the graph. Its order and its hold on new
 integrator and visual dispatch until M2's gate are set aside for now (R-923).*
@@ -35334,7 +35334,8 @@ Changes REQ-CHART-188 (statement, verify, rulings, source, note, rq).
 *10 Nov 2026 · the owner's reply in session to the orchestrator's explanation of RQ-755; applied in `REVIEW_QUEUE.md`
 (RQ-755 moved), `docs/archive/review_queue/M0.md` (RQ-755 with its ruling), `docs/design/principia_dd_image_embedding.md`
 § "6. What travels" (a paragraph added), R-919's forward and "Still in force" lines, REQ-TOOL-172 (reqio: statement,
-verify, rulings, source, note), TASK-M7-45 and `plan/rule_groups.yaml`; changes REQ-TOOL-172*
+verify, rulings, source, note), TASK-M7-45 (a Deliverables line, and Depends on TASK-M2-57 for the fixture below),
+TASK-M2-57 (the fixture's deliverable and acceptance lines) and `plan/rule_groups.yaml`; changes REQ-TOOL-172*
 
 The owner's words (10 Nov 2026), verbatim:
 
@@ -35361,6 +35362,15 @@ The owner's words (10 Nov 2026), verbatim:
 - **The test,** "a record made before TASK-M2-57 recreates bitwise after it lands", is an acceptance line of
   REQ-TOOL-172's verify, the requirement TASK-M7-45 closes for recreation (its recreate arm), run by the same command,
   `cargo test -p engine decoder_identity_per_link`. TASK-M7-45's "waits on RQ-755" is settled.
+- **Where the expected bits come from** (physics review 5836519618 of PR #469, P1 and P2; applied per R-369): the
+  record writer is built in M7, after TASK-M2-57, so "a record made before TASK-M2-57" is read as a record whose latent
+  coordinates and links are what a pre-TASK-M2-57 build writes, its expected starting states that build's decode. They
+  are a fixture, `fixtures/retired_beta_links/pre_m2_57.json`, written on TASK-M2-57's baseline commit, before any link
+  changes: for each of `sigmoid_beta`, `tanh_beta` and `softsign_beta`, the latent coordinates, the four blocks' links
+  and each decoded starting state as bits. It includes, for each link, pixels where converting `z_β` to the periodic
+  link before decoding changes at least one bit of the decoded state, checked in TASK-M2-57 once the conversion exists,
+  so the converting reader's control cannot pass trivially. REQ-TOOL-172's arm and TASK-M7-45 read that fixture, so
+  the retained forward maps are checked against a pre-TASK-M2-57 decode and not against themselves.
 
 *What it refines:* **R-919**, Q1 (c)'s "The three stay as conversion sources only, their forward maps kept for Q3 (a)":
 those forward maps also decode a retired record's stored latent coordinates on recreation. Nothing becomes selectable,
@@ -35412,7 +35422,11 @@ Changes no requirement.
 ## R-923 — Integrator work before charts, for now: R-917's order (charts first, then integrator, then visuals) is set aside for now, on the owner's say; only integrator tasks that don't depend on the points the owner hasn't decided are taken, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; TASK-M3-14 stays stopped under R-918; no new chart task starts meanwhile *(amends R-917 in part, for now; no RQ)*
 *10 Nov 2026 · the owner's message of that morning (about 04:40), and their reply about 05:00; applied in R-917's
 forward and "Still in force" lines, `plan/OPERATIONS.md` § "Dispatching" (a dated line after R-917's hold),
-`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement, no task and no dependency*
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; and in dated lines beside R-917's hold in `plan/OPERATIONS.md`
+§ "The GUI track (R-390)", `plan/MILESTONES.md` (§ "Where the order comes from", § "M2 — The chart system: charts,
+decode and encode, and the non-visual chart core" and § "M8 — The dev GUI, tooling, v1 web and the release gates", its
+GUI-track line) and `plan/WORKFLOW.md` (§ "Human checkpoints: the milestone gates"); changes no requirement, no task and
+no dependency*
 
 The owner's words (10 Nov 2026), verbatim:
 
