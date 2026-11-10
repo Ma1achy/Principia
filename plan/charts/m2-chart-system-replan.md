@@ -413,7 +413,7 @@ branch selects (pole and upper/lower selects) that differ between the two; for d
 outcome class and `t_end_step` after `T`; and, at each zoom (home, 2¹⁰, 2²⁰, where 2²⁰ is R-90's `ℓ_switch = 20`), the
 share of neighbouring sample pairs whose narrowed records are bitwise identical.
 
-**The control arm** (measured beside the comparison, R-84): the same narrowed records each moved by one f32 ulp in one
+**The control arm** (measured beside the comparison, R-84, labels on chaotic trajectories may differ across precisions): the same narrowed records each moved by one f32 ulp in one
 component, integrated for the same `T`; the share of outcome-class and `t_end_step` flips it gives is the chaos
 baseline. A flip rate between today's f32 decode and the narrowed f64 records is read against this baseline, never
 alone: a rate at or below it says the conversion moves outcomes no more than rounding already does.
