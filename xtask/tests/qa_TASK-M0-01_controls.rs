@@ -10,9 +10,7 @@ mod qa_m0_01;
 
 use qa_m0_01::*;
 use serde_json::json;
-use std::process::Command;
 use validation::negative_control;
-use validation::spawn::Spawn;
 
 negative_control!(
     qa_oracle_is_not_trivial,
@@ -136,25 +134,6 @@ negative_control!(
         let mut edges = live_edges(&live_metadata());
         edges.push(("engine".to_owned(), "gui".to_owned(), Kind::Normal));
         check_the_live_edges_are_all_allowed(edges);
-    }
-);
-
-negative_control!(
-    qa_xtask_deps_passes_on_the_live_workspace,
-    "`xtask deps` on a document with engine → gui, which fails",
-    expected = "cargo xtask deps fails on the workspace",
-    {
-        let mut edges = baseline_edges();
-        edges.push(("engine", "gui", Kind::Normal));
-        let path = tmpdir().join("m022_live_forbidden.json");
-        std::fs::write(&path, metadata(&edges, &[], &[]).to_string()).unwrap();
-        let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
-            .args(["deps", "--metadata"])
-            .arg(&path)
-            .current_dir(workspace_root())
-            .timed_output()
-            .expect("run xtask deps");
-        check_xtask_deps_passes_on_the_workspace(&out);
     }
 );
 

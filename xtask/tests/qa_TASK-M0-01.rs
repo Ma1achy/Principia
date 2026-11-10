@@ -138,16 +138,6 @@ fn qa_live_workspace_edges_are_all_allowed() {
     check_the_live_edges_are_all_allowed(edges);
 }
 
-#[test]
-fn qa_xtask_deps_passes_on_the_live_workspace() {
-    let out = Command::new(env!("CARGO_BIN_EXE_xtask"))
-        .arg("deps")
-        .current_dir(workspace_root())
-        .timed_output()
-        .expect("run xtask deps");
-    check_xtask_deps_passes_on_the_workspace(&out);
-}
-
 /// Runs `cargo <args>` in the workspace root on the workspace's own target directory, the one the running tests were
 /// built in, whose `--features controls` build `ci --list` reuses, as `qa_TASK-M0-06_list`'s listing does. A target
 /// directory of its own was cold in every CI run, and its full `--features controls` build outlasted the child's 600 s

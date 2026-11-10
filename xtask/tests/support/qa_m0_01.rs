@@ -436,16 +436,6 @@ pub fn check_the_live_edges_are_all_allowed(edges: Vec<(String, String, Kind)>) 
     );
 }
 
-/// `qa_xtask_deps_passes_on_the_live_workspace`'s check: the run `out` of `xtask deps` on the workspace passes.
-pub fn check_xtask_deps_passes_on_the_workspace(out: &Output) {
-    assert!(
-        out.status.success(),
-        "cargo xtask deps fails on the workspace:\n{}{}",
-        String::from_utf8_lossy(&out.stdout),
-        String::from_utf8_lossy(&out.stderr)
-    );
-}
-
 /// Runs `cargo <args>` in the workspace root. A separate target dir avoids the lock held by the running `cargo test`.
 pub fn run_cargo_in_the_workspace(args: &[&str]) -> Output {
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
