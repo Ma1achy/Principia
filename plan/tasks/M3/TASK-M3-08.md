@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105
-- **Depends on:** TASK-M3-07
+- **Depends on:** TASK-M3-68
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-GEN-008
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-4, PIT-4.3, PIT-4.4
@@ -45,7 +45,7 @@ The regularisation slot is complete: Heggie 1974 global regularisation (three re
 - `cargo xtask gate hamiltonian-fd`: each occupant's analytic derivatives against a finite difference of its Hamiltonian (R-257).
 
 ## Acceptance tests
-- `cargo xtask gate separation-floor --propose` — REQ-INT-105's verify for Heggie and logH, on their own floored quantities: Heggie's pre-floor `dt/dτ` and `S` under Eq. 20 and Eq. 22, logH's drift denominator in its logH and TTL modes, over the radial collision passage and the close-encounter fixtures, with the floored-step counts (every step on which the floor acts, integrator contract Part 6) and the control (a `TINY` above the smallest pre-floor value floors steps and is reported); with TASK-M3-07's Aarseth–Zare evidence it gives the proposed `TINY` at f32 and f64, which the human confirms at the M3 gate and is recorded in decisions.md (REQ-INT-105; physics review 5606990734 of PR #277, P2, applied per R-369).
+- `cargo xtask gate separation-floor --propose` — REQ-INT-105's verify for Heggie and logH, on their own floored quantities: Heggie's pre-floor `dt/dτ` and `S` under Eq. 20 and Eq. 22, logH's drift denominator in its logH and TTL modes, over the radial collision passage and the close-encounter fixtures, with the floored-step counts (every step on which the floor acts, integrator contract Part 6) and the control (a `TINY` above the smallest pre-floor value floors steps and is reported); with TASK-M3-68's Aarseth–Zare evidence (*was:* TASK-M3-07's, split 10 Nov 2026, applied per R-369) it gives the proposed `TINY` at f32 and f64, which the human confirms at the M3 gate and is recorded in decisions.md (REQ-INT-105; physics review 5606990734 of PR #277, P2, applied per R-369).
 - `cargo test -p kernel regularisation_default` — every stepper × regularisation pair, `none` included, runs a step on a fixture state; the default config selects Heggie × RK4, with Eq. 22 at n = 3/2 as Heggie's time transformation and Eq. 20 selectable (R-161); controls: a default config of Heggie × KDK fails, and a config builder that refuses any pair fails (REQ-INT-006; R-560, R-561). *Was:* "each stepper composes with each regularisation; the default config selects Heggie, with Eq. 22 …".
 - Part 2b gives the equations, time transformations and step control for Heggie, logH and TTL and the predictive step limit, each cited to its paper and to the prin-rs file it was transcribed from; the physics reviewer approved; the human confirmed it at the M3 gate (REQ-INT-084).
 - Review (physics): a consumer can read, per method or per trajectory, how many sync-boundary re-registrations occurred (REQ-INT-018).
@@ -63,3 +63,4 @@ The regularisation slot is complete: Heggie 1974 global regularisation (three re
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-073, REQ-INT-095, REQ-INT-104 (R-566); and, under R-160, REQ-INT-084.
 - R-560 to R-566 (21 Oct 2026): the default occupant is Heggie × RK4; every pair runs (TASK-M3-39 measures the table); the radial collision gate reads the regularised energy. The default at every tier is Heggie × RK4 (R-606, RQ-529 (a); *was:* "RQ-529's (a) meanwhile").
 - R-257 (closes RQ-157) ported kernel-build §5's gates with their values into dd_validation_orbits §2: the radial collision gate reads `d_min < 1e-10` with `|dE/E| < 1e-12` (REQ-VAL-045); the finite-difference Hamiltonian check is REQ-VAL-170, its step and tolerance REQ-VAL-171 (R-71 calibration).
+- Depends on TASK-M3-68, not TASK-M3-07 (applied per R-369, 10 Nov 2026: TASK-M3-07 was split, and Aarseth–Zare is TASK-M3-68): its radial-collision gate, `regularised_step_reversibility` and the two Doc changes read Aarseth–Zare, and its `separation-floor` proposal takes Aarseth–Zare's evidence. *Was:* "TASK-M3-07" in Depends on.

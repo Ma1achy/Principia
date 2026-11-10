@@ -533,3 +533,154 @@ what the instrument does below it.*
   finite.
 - **Waits:** nothing built waits; TASK-M3-09 (#474) does not wait. A task that builds the `r_coll` slider or its
   dispatch-side flag would take the answer.
+
+## RQ-756: Aarseth–Zare's equations of motion, its Levi-Civita inverse, its reference-body rule and its step control are not in the corpus; and the figure-eight gate and the Law 18 bound assume a schedule R-565 and Part 6 replaced *(silence and conflict; R-160, R-159, R-565, R-563, R-19, R-72; REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-021, REQ-INT-024; context: TASK-M3-07)*
+
+*Queued 10 Nov 2026 by TASK-M3-07's implementer, before any code; each quote re-read on `origin/main` 3338e336.
+Nothing is chosen here. In plain English: the task builds the Aarseth–Zare regularisation (a way of integrating
+through close encounters by changing coordinates and time), but the rules it would implement are written only in the
+imported prin-rs reference files, which are reference and not authority; and two of its tests were measured under an
+older way of stepping that later rulings replaced.*
+
+- **File, section:**
+  1. **The equations are not in the corpus.** `plan/tasks/M3/TASK-M3-07.md` § Notes: "AZ's reference code, including
+     the predictive step limit (`predictive_dtau`) and the landing clamp, is
+     `docs/reference/prin-rs/src/integrate/az/driver.rs` (reference, not authority, R-159); the equations are
+     integrator_contract Part 2b's (R-160, REQ-INT-084)." But `decisions.md` § R-160: "The Heggie, logH and TTL
+     equations, the step control, and the predictive step limit … are written into integrator_contract Part 2b", and
+     REQ-INT-084: "Part 2b must carry the Heggie, logH and TTL equations of motion" — Aarseth–Zare is not named.
+     `docs/contracts/principia_integrator_contract.md` § "Part 2b", § "The equations and the step control (R-160,
+     R-161)" gives none of: the two-pair Hamiltonian (`Γ = A·B·(H − E)` is quoted only as a withdrawn mechanism,
+     `docs/design/principia_dd_predictability_horizon.md` § 7.3, and Part 2a's "the `|u|^2 |p_lambda|^2` term"), its
+     derivatives, the mass factors `μ₁, μ₂`, the reference-body rule beyond Part 2b's table cell "two pairs, reference
+     body from the longest side" (which body, and the tie rule), or the conditioned Levi-Civita inverse (§ 7.3 gives
+     only the unstable `u0 = sqrt((|rho| + rho.x)/2)`, `u1 = rho.y/(2 u0)`, and "the conditioned branch", not its
+     form or which sign branch it takes). The task's Deliverables say "AZ transcribed from the reference
+     (`workbench/tb_az.py`, with the overshoot fix of `workbench/tb_az_overshoot_fix.py`)", which is not normative
+     (R-159; `CLAUDE.md` § Authority). The imported set holds all of it (`docs/reference/prin-rs/reference/tb_az.py`,
+     `tb_lc.py`, `src/integrate/az/driver.rs`), but nothing rules it into the contract, as R-160 did for Heggie and
+     logH.
+  2. **Which `dτ` rule the gate figures were measured under.** `docs/design/principia_dd_validation_orbits.md` § 0.1:
+     "`dtau = eta·dt_left/(A·B)` is fixed per sub-interval", and its table (4.232e-09 at `eta = 0.001`) is REQ-INT-049's
+     threshold. Integrator contract Part 6 (R-563), the entry-cap bullet: "the step-size rule in force sizes each step
+     as `η·Δ_sync / (dt/dτ)` from the current state and caps it at the interval's entry size", with Part 2b's predictive
+     limit after it — a different schedule from the one the threshold was measured on.
+  3. **"After one period" against the grid.** REQ-INT-049's verify: "figure-eight closure after one period"
+     (`T = 6.32591398`, § 0). Integrator contract Part 2a § "The sync grid is a fixed quantum of physical time
+     (R-565)": "`ADVANCE(state, t_now, t_target, params)` advances to the latest boundary at or before `t_target`; it
+     never stops between boundaries", boundaries `t = k·Δ_sync`. Unless `Δ_sync` divides the period, ADVANCE cannot
+     end on it; § 0.1's runs used `dt_left = T/n_sync`.
+  4. **The Law 18 bound has no formula.** REQ-INT-054's verify: "the substep count per sync interval never exceeds the
+     Law 18 bound computed on the fixed τ-schedule"; `docs/contracts/principia_canonical_spec.md` § 9 item 18 and
+     R-19 say only "the count bound is on a fixed `tau`-schedule". Under Part 6's per-step rule with the predictive
+     limit (`dτ ≤ f·d_min / (|v_rel|_max·A·B)`), a step can be cut without a lower limit, so the count per interval is
+     bounded only by the step budget (Part 3's `step_budget_rate`, `N_min`), whose values are calibrations not yet
+     proposed (REQ-INT-103, REQ-INT-108).
+- **The question:** (1) may TASK-M3-07 transcribe Aarseth–Zare's Hamiltonian and equations of motion, its conditioned
+  Levi-Civita inverse, its reference-body rule and its step control from the imported set into integrator contract
+  Part 2b, cited (Aarseth & Zare 1974; the prin-rs files), physics-reviewed and confirmed at the M3 gate, as R-160 did
+  for Heggie and logH? (2) is REQ-INT-049's gate run under Part 6's per-step rule with the threshold re-measured, or
+  under § 0.1's fixed `dτ`? (3) does the closure gate run with `dt_left = T/n` (a gate-only grid) or on the `Δ_sync`
+  grid with the period's remainder handled how? (4) what is the Law 18 bound per sync interval: the step budget's
+  share of the interval, an entry-cap count (`⌈1/η⌉` plus the cuts), or another?
+- **Options seen:** (1)(a) yes, a ruling like R-160 naming TASK-M3-07 and a requirement for it (or REQ-INT-084
+  widened); (1)(b) another task transcribes them first and TASK-M3-07 waits. (2)(a) Part 6's rule, the 4.232e-09
+  figure re-measured and proposed per R-71; (2)(b) § 0.1's fixed rule as a gate-only mode. (3)(a) the gate's own
+  `dt_left = T/n`; (3)(b) the `Δ_sync` grid, closure read at the last boundary at or before `T` against the reference
+  trajectory there. (4)(a) the step budget over one interval, `max(N_min, step_budget_rate·Δ_sync)`; (4)(b) an
+  occupant-declared count.
+- **Recommended:** (1)(a), since the imported set was brought in to be transcribed (R-159) and R-160 is the
+  precedent; (2)(a) with (3)(a), so the landing clamp is tested on its own and the threshold is the rule in force's; and
+  (4)(a), since R-604 already accounts the budget every step. Measurable alternative for (2): run the figure-eight
+  ladder under both rules and record both.
+- **Narrowed 10 Nov 2026:** transcription done in PR #471 per CLAUDE.md § Authority (applied per R-369, R-160 the
+  precedent; the owner, 10 Nov 2026, of the integrator tasks to take: "Fine: the physics itself. Steppers,
+  regularisation, step control, conservation and convergence tests, the CPU reference, and TASK-M2-82 (the trajectory
+  interface with its exact fixtures, the Lagrange solution and the figure-eight, R-918), which has no dependencies."):
+  integrator contract Part 2b § "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step
+  control (transcribed)", physics-reviewed in PR #471 and confirmed at the M3 gate. Question (1) is answered by it.
+  Question (3) is decided, applied per R-369 as test mechanics: the figure-eight closure gate runs on its own sync
+  interval `T/n` with `n = 32`, the reference's comparable figure (`driver.rs:399`, "measured over one period at
+  `n_sync = 32`"), so `ADVANCE` lands on the period under R-565's rule that it stops only on a boundary, and the gate
+  reports its re-registration count with its result (PIT-4); the gate's grid is a fixture's, and the march's `Δ_sync`
+  is untouched. TASK-M3-07 is split: the regularisation axis stays TASK-M3-07, and Aarseth–Zare is TASK-M3-68. Open:
+  - (2) REQ-INT-049's threshold, 4.232e-09 at `η = 0.001`, was measured under § 0.1's fixed `dτ`, not Part 6's per-step
+    rule (R-563). Recommended: TASK-M3-68 re-measures it under the rule in force, at the gate's `n = 32`, and proposes
+    it as a calibration (R-71); the value is the owner's at the M3 gate. Measurable alternative: run the ladder under
+    both rules and record both.
+  - (4) REQ-INT-054's bound per sync interval has no formula. Recommended: the step budget over one interval,
+    `max(N_min, step_budget_rate·Δ_sync)`, a recommendation only, its values REQ-INT-103's and REQ-INT-108's.
+  - (5) Found in the transcription, where the reference and the corpus disagree; nothing is chosen:
+    1. **The landing secant.** `docs/design/principia_dd_validation_orbits.md` § 0.1: "Not yet RK4's fourth — a residual
+       lower-order term remains, most plausibly the LC re-registration at sync boundaries". `driver.rs:419-421`:
+       "`clamp_final_step` sizes the landing step from `dt/dtau` read *before* the step. That is a first-order
+       predictor, so its landing residual is `O(h^2)` and it caps the observable convergence order at two", and its
+       default `land_iterate: true`, `land_max_iters: 4` (`driver.rs:476-477`) retakes the landing step by a secant.
+       The corpus names the clamp only (REQ-INT-049; Part 6, "the landing clamp"). Is the secant part of Aarseth–Zare's
+       step control here? It moves REQ-INT-049's measurement.
+    2. **The gate's figures.** § 0.1's table: "0.001 | 2.818e-03 | **4.232e-09**". `driver.rs:398-400`: "closure error
+       `2.976e-3` against `3.595e-9` at `eta = 1e-3`, and the convergence order across `eta in [0.02, 0.001]` **1.13
+       against 3.06**", at `n_sync = 32`.
+    3. **The unstable inverse at 179.9°.** `docs/design/principia_dd_predictability_horizon.md` § 7.3 and REQ-INT-044's
+       verify: "reference (unstable) | 3.5e-9 | **2.2e-2**" at 179.9°. `tb_lc.py:67-69`: "angle 135 170 179 179.9
+       179.99 / f64 2.2e-16 3.9e-15 1.9e-13 4.0e-12 3.5e-09 / f32 1.8e-07 2.3e-06 9.8e-05 2.2e-02 1.7e-04", so f64's
+       3.5e-9 is at 179.99° and 179.9°'s is 4.0e-12.
+    4. **What couples Γ.** Integrator contract Part 2a: "`Gamma` is **not separable** (the `|u|^2 |p_lambda|^2` term
+       couples position and momentum)". That term is the single-pair Levi-Civita Γ's (`tb_lc.py:19`, "Gamma =
+       |p_u|^2/(8 mu_rho) + |u|^2 [ |p_lam|^2/(2 mu_lam) + V_pert - E ] - G m_i m_j"); Aarseth–Zare's two-pair Γ has no
+       `p_λ`, and couples through `B|p1|^2/(8 mu1) + A|p2|^2/(8 mu2) + (L1 p1).(L2 p2)/(4 m_a)` (`tb_az.py:29`). The
+       conclusion, not separable, holds either way.
+    5. **"From the longest side".** Part 2b's table: "two pairs, reference body from the longest side". `tb_az.py:146`:
+       "Reference body = the one NOT in the longest side". The transcription states the code's rule.
+    6. **`v_rel` in the predictive limit.** R-160: "`dτ ≤ f·d_min / (|v_rel|_max·A·B)`". `driver.rs:608`:
+       "`phys_from_state` returns `(R1, R2, V1, V2)`", but the AZ system it calls (`src/integrate/az/system.rs`) is not
+       in the imported set, and the NumPy `phys_from_state` it was transcribed from returns the conjugate momenta
+       (`tb_az.py:80-83`, "P1 = _Lmat_apply(u1, p1)/(2*A[:, None])"). Velocities or momenta?
+    7. **The `1e-300` guards.** `tb_lc.py:98`, `102-103` and `tb_az.py:78-79`, `224-225` test and floor at the literal
+       `1e-300`, which underflows at f32; integrator contract Part 2c rule 1: "NO PRECISION-DEPENDENT CONSTANT IN A
+       CONTROL-FLOW DECISION", and Part 6 floors `A` and `B` at `TINY`, as `driver.rs:716-717` does. The Rust inverse map
+       is not imported, so what it tests against is unknown.
+    8. **The tie-break's source.** The Rust selector (`src/integrate/az/reference_body.rs`) is not imported; the
+       tie-break transcribed is `tb_az.py:148`'s `np.argmax`, first maximum in `(0,1), (0,2), (1,2)` order.
+    9. **Where the landing secant stops.** `tb_az.py:303-306` re-tests the landing on every retake: "need =
+       (np.isfinite(s).all(axis=1) & (~done) / & (s[:, 8] >= dt_left - tol) / & np.isfinite(got) & (got > 0.0) / &
+       (np.abs(got - want) > tol))", so a retake that lands short ends the secant. `driver.rs:1086` does not: "if
+       !got.is_finite() || got <= T::zero() || (got - want).abs() <= tol_abs { break; }", retaking up to
+       `land_max_iters` times. Which stop is the rule? It moves the landing step and REQ-INT-049's measurement.
+- **Applied meanwhile:** the transcription and the split above (10 Nov 2026, applied per R-369). TASK-M3-07 builds the
+  axis, which needs none of it. *Was:* "none. TASK-M3-07 waits; nothing is built."
+- **Waits:** TASK-M3-68 (REQ-INT-049 on (2) and (5) 1-2 and 9, REQ-INT-054 on (4), REQ-INT-044 on (5) 3 and 7,
+  REQ-INT-024's profile on (5) 4, the predictive limit on (5) 6). *Was:* "TASK-M3-07 (REQ-INT-044, REQ-INT-049, REQ-INT-054, and the
+  Aarseth–Zare arms of REQ-INT-021 and REQ-INT-024)."
+
+## RQ-748: REQ-RENDER-102 and REQ-RENDER-104 test a `linocut` with a `depth` parameter and `ground` and `field` inputs, which the lab's linocut does not have *(record conflict between a verify and the reference; TASK-M7-54, PR for REQ-RENDER-101 to REQ-RENDER-104; context: the task that ports the lab's linocut)*
+
+*Queued 8 Nov 2026 by TASK-M7-54. A record correction, two-way under R-369 (§ "When to ask the human"): the orchestrator
+and the reviewers can settle it. It blocks nothing now: no linocut ships in TASK-M7-54, and its tests use a fixture.*
+
+**In plain English:** two Print graph tests describe a "linocut" node with a depth setting and two inputs called
+`ground` and `field`, and say its defaults are the lab's. The lab's real linocut has none of those: its knobs are ink,
+gouge, amount and seed, its inputs are `in`, `flow` and `paper`, and the `{ ground: "paper", field: "white" }` defaults
+belong to the lab's "Unfinished" node. TASK-M7-54 tests against a stand-in linocut built to the tests' description, so
+nothing is wrong today; but the task that ports the real linocut must follow the lab (R-486), not these tests.
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-RENDER-102's verify: "an unconnected `ground` input of `linocut` takes `paper` and an
+    unconnected `field` input `white`, as the lab's defaults declare"; REQ-RENDER-104's verify: "a fixture setting
+    `linocut.depth` outside its range".
+  - `docs/design/principia_print_graph.md` § "4.1 A graph is data", its example: `"cut": { "type": "linocut",
+    "params": { "depth": "$depth", "seed": "$seed" }, "in": { "in": "img", "flow": "fl", "paper": "pap" } }`; § "4.2
+    Port types": "An unconnected input takes the default its node type declares (the lab's `defaults: { ground:
+    "paper", field: "white" }`)."
+  - The reference, `docs/gui/reference/print_graph/catalogue/node_catalogue.json`, `linocut`: inputs `in`, `flow`,
+    `paper`; params `ink`, `gouge`, `amount`, `seed`; and the lab (`reference/print_graph_lab/index.html`), `linocut`:
+    `defaults: { paper: "paper" }`, the `{ ground: "paper", field: "white" }` defaults being `unfinished`'s.
+- **The question:** whether the two verifies are reworded to name a stand-in (or `unfinished`, whose defaults they
+  quote), so the linocut port is not read as needing a `depth` or `ground` and `field`.
+- **Options seen:** (a) reword the verifies to "a fixture node" with those ports and that parameter, as TASK-M7-54
+  built them; (b) name `unfinished` for the defaults and a node the lab gives a ranged parameter for the range; (c) leave
+  the text, with this entry as the record.
+- **Applied meanwhile:** TASK-M7-54's tests use `fixtures/print_graph/nodes/linocut.json`, a stand-in with the shape the
+  verifies ask of it (§4.1's `depth` and `seed`, §4.2's `ground` and `field` with the quoted defaults), stated in it and
+  in `fixtures/README.md` not to be the lab's linocut. Nothing ships from it.
+- **Waits:** nothing now. The linocut port task reads this entry.

@@ -1343,16 +1343,16 @@
   pitfalls: []
 - id: TASK-M3-07
   milestone: M3
-  title: The regularisation axis and the Aarseth–Zare occupant
+  title: "The regularisation axis, `none`, and the no-usable-step marker"
   depends_on: [TASK-M3-04, TASK-M3-05]
   needs: [REQ-DEC-005, REQ-INT-002]
-  requirements: [REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039, REQ-INT-080, REQ-TOOL-125]
+  requirements: [REQ-INT-021, REQ-TOOL-039, REQ-TOOL-125]  # split 10 Nov 2026 (R-369): AZ's are TASK-M3-68's
   reviewers: [code, qa, physics]
-  pitfalls: [PIT-4, PIT-4.1, PIT-9]
+  pitfalls: [PIT-4, PIT-9]
 - id: TASK-M3-08
   milestone: M3
   title: Heggie and logH occupants, and the visible re-registration count
-  depends_on: [TASK-M3-07]
+  depends_on: [TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-DEC-005, REQ-GEN-008]
   requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105]
   reviewers: [code, qa, physics]
@@ -1376,7 +1376,7 @@
 - id: TASK-M3-11
   milestone: M3
   title: The live shape readout, the lagged n̂ register and the closure fields
-  depends_on: [TASK-M3-04, TASK-M3-07]
+  depends_on: [TASK-M3-04, TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-INT-001, REQ-INT-003, REQ-CHART-036, REQ-PAY-009, REQ-GEN-008]
   requirements: [REQ-INT-042, REQ-PAY-043, REQ-PAY-055, REQ-PAY-056, REQ-PAY-059, REQ-VAL-055, REQ-INT-082, REQ-INT-087, REQ-INT-088, REQ-INT-089]
   reviewers: [code, qa, physics]
@@ -1576,7 +1576,7 @@
 - id: TASK-M3-36
   milestone: M3
   title: "Cross-implementation checks: BodyPlane bit-for-bit and the change-10 re-run"
-  depends_on: [TASK-M3-24, TASK-M3-07, TASK-M2-35]  # R-467 D11: the sweep it extends to BodyPlane
+  depends_on: [TASK-M3-24, TASK-M3-68, TASK-M2-35]  # R-467 D11: the sweep it extends to BodyPlane; TASK-M3-68 was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-CHART-015, REQ-CHART-028, REQ-CHART-029]
   requirements: [REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035, REQ-VAL-146, REQ-CHART-059]
   reviewers: [code, qa, physics]
@@ -1637,10 +1637,18 @@
   requirements: [REQ-CHART-177]
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M3-68
+  milestone: M3
+  title: The Aarseth–Zare occupant
+  depends_on: [TASK-M3-07]  # split from TASK-M3-07, 10 Nov 2026 (R-369)
+  needs: [REQ-DEC-005, REQ-INT-002]
+  requirements: [REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-080]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-4, PIT-4.1, PIT-9]
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
-  depends_on: [TASK-M3-07]
+  depends_on: [TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-INT-004, REQ-INT-008, REQ-INT-016, REQ-SYS-015, REQ-SYS-004, REQ-GEN-015, REQ-INT-028, REQ-INT-038, REQ-TOOL-039]
   requirements: [REQ-SYS-020, REQ-SYS-023, REQ-SYS-025, REQ-INT-058, REQ-INT-060, REQ-INT-062, REQ-INT-063, REQ-INT-067]
   reviewers: [code, qa, physics]
