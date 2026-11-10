@@ -67,7 +67,7 @@
 //! and the decode is [`Degenerate::InvariantInfeasible`] with every momentum 0, not a system (R-469 P1). At `K_max = 1`,
 //! `γ_K = 3/2` the last such `t` is `2.0065826040452472·10²⁰⁵`. `validate` does not decode, so it is `Valid` there too;
 //! the chart's [`Chart::phi_finite`] reads the decode instead, under [`Defaults`] at the default link parameters, and
-//! fails a point layer 2 accepts whose decode fails layer 3 ([`decoded_sanity`]: the masses positive, the configuration and momenta
+//! fails a point layer 2 accepts whose decode fails layer 3 (`decoded_sanity`: the masses positive, the configuration and momenta
 //! finite, the construction not infeasible), so the navigation stop holds the centre at the edge on `Φ`
 //! (`crate::chart::nav`). `validate` takes no f64 decode here because its impl holds for every parameter type, and a
 //! decode at f64 needs the parameters to widen to it.
