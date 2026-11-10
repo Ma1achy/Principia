@@ -146,8 +146,8 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   hasn't decided may be dispatched before M2's gate: the physics itself (steppers, regularisation, step control,
   conservation and convergence tests, the CPU reference) and TASK-M2-82. A task that fixes how starting states reach the
   integrator on the GPU, or fixes the horizon as one value per dispatch, stops and is queued. GUI work may go ahead too
-  (the owner's reply about 05:00). No new chart task starts, nothing from TASK-M2-57 to TASK-M2-85, while the owner
-  reworks the chart design; TASK-M3-14 stays stopped (R-918). M2's gate and G1 to G14 are unchanged, and no edge moves.
+  (the owner's reply about 05:00). No new chart task starts, nothing else from TASK-M2-57 to TASK-M2-85 (TASK-M2-82,
+  named above as fine, excepted), while the owner reworks the chart design; TASK-M3-14 stays stopped (R-918). M2's gate and G1 to G14 are unchanged, and no edge moves.
 - **What every dispatch names:**
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
@@ -641,8 +641,9 @@ summary:
 M2's gate (§ "Dispatching", R-917's hold); a running one finishes.
 *10 Nov 2026 (R-923):* R-917's order and its hold on the track are set aside for now, on the owner's say: integrator
 tasks that don't depend on the points the owner hasn't decided may be dispatched, and GUI work may go ahead (§
-"Dispatching", R-923's line). Chart work stays paused: no new chart task starts, nothing from TASK-M2-57 to TASK-M2-85.
-M2's gate and G1 to G14 are unchanged.
+"Dispatching", R-923's line). Chart work stays paused: no new chart task starts, nothing else from TASK-M2-57 to
+TASK-M2-85 (TASK-M2-82, the trajectory interface, which the same message names as fine, excepted). M2's gate and G1 to
+G14 are unchanged.
 
 The human's ruling of 6 Oct 2026 (R-390): a dev GUI the human runs on the Mac with `cargo run -p gui --features mock`,
 built on a mock engine, in six tasks, TASK-M6-24 to TASK-M6-29, one per ORDER item, each its own PR, reviewed by code,

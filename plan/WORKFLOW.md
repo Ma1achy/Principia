@@ -270,7 +270,8 @@ finishes. R-415's test doesn't bring forward a task R-917 holds.
 *10 Nov 2026 (R-923):* R-917's order and this hold on new integrator and visual dispatch are set aside for now, on the
 owner's say: integrator tasks that don't depend on the points the owner hasn't decided may be dispatched, and GUI work
 may go ahead (`plan/OPERATIONS.md` § "Dispatching", R-923's line). Chart work stays paused: no new chart task starts,
-nothing from TASK-M2-57 to TASK-M2-85. M2's gate and G1 to G14 are unchanged.
+nothing else from TASK-M2-57 to TASK-M2-85 (TASK-M2-82, the trajectory interface, which the same message names as
+fine, excepted). M2's gate and G1 to G14 are unchanged.
 *30 Oct 2026 (R-649, R-650):* a replication or verification target is a measurement, never a gate: an external
 target's outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED) blocks no merge and no milestone. The internal
 correctness tests, the GPU-vs-CPU agreement checks within their stated f32 tolerances and the anchor smoke tests
