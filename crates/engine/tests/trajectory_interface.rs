@@ -6,6 +6,9 @@
 //! - `_figure_eight_row_at_k_period_is_row_zero`: the figure-eight's row at `kT₈` is its row at 0, bit for bit;
 //! - `_lagrange_within_bound`: the Lagrange members' states within the bounds derived from the closed form's
 //!   evaluation (each bound's derivation at its function);
+//! - `_lagrange_starts`: each member's start is the configuration the closed form names, measured from the start:
+//!   equilateral, at `I = 1`, its period or collapse time from its measured side, the circular one's speeds `ω·|rᵢ|`;
+//! - `_figure_eight_period`: the figure-eight's quantum is `T₈` carried to the sim's units;
 //! - `_terminal_index_and_kind`, `_terminal_held`: the homothetic collapse's terminal at its index and kind, and held;
 //! - `_reads_order_free`: two reads in either order, and after other reads, give one bit pattern;
 //! - `_grid`: the last boundary at the horizon, by products of indices, and the refusals;
@@ -551,6 +554,17 @@ fn trajectory_interface_grid() {
         last(1.0, 4_503_599_627_370_496.0).err(),
         Some(Refused::Grid)
     );
+    let big = 134_217_728.0;
+    assert_eq!(
+        last(big, 5.0 * big),
+        Ok(5),
+        "a quantum of 2²⁷ holds index 5"
+    );
+    assert_eq!(
+        last(0.0, 0.0).err(),
+        Some(Refused::Grid),
+        "quantum 0 at horizon 0"
+    );
     let p = circular();
     let t = over(&p, s, 7);
     assert_eq!(
@@ -641,12 +655,119 @@ fn trajectory_interface_validation_reads_ledger_constants() {
     );
     let f = FigureEight::new();
     assert!(same_bits(&f.start(), &validation::drift::figure_eight().ic));
-    let period = ledger::fixtures::figure_eight().period;
+}
+
+/// The figure-eight's quantum is `T₈` carried to the sim's units, `√3·T₈·λ^{3/2}`, `λ = I^{−1/2}` with `I` the moment
+/// of inertia of the published state at the masses `1/3`, within 16u relative: `λ` to 4u (`I`'s products and sum
+/// 3u, its inverse square root 1u, step 0's power-of-two step exact), `λ^{3/2}` 7u, `√3` and the products 3u; the
+/// test's `I^{−3/4}`, 2u, and its products, 2u: 16u. `skew` scales the expected period, for the control.
+fn check_figure_eight_period(f: &FigureEight, skew: f64) {
+    let c = ledger::fixtures::figure_eight();
+    let inertia = 2.0 / 3.0 * (c.x1[0] * c.x1[0] + c.x1[1] * c.x1[1]);
+    let want = c.period * 3f64.sqrt() * inertia.powf(-0.75) * (1.0 + skew);
+    let err = (f.quantum() - want).abs() / want;
     assert!(
-        f.quantum() > period * 3f64.sqrt(),
-        "the canonical scale lengthens the period"
+        err <= 16.0 * U,
+        "the figure-eight's quantum is {err:e} from √3·T₈·λ^(3/2)"
     );
 }
+
+/// `|a − b|`, as a distance.
+fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
+    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2)).sqrt()
+}
+
+/// The Lagrange members' starts are the configurations the closed form names, measured from the start alone, each
+/// within 32u relative (each position within 3u·a of the exact: a vertex's product 1u, the centre of mass's products,
+/// sum and division 2u; so a side measured within 7.5u, with its norm): the three sides equal; at masses summing to 1,
+/// `I = Σmᵢ|rᵢ|² = 1` (the scale gauge); the period `2π·√(a³/(G·M))` circular, `2π·√(A³a³/(G·M))` elliptic
+/// (`A = 1/(1 − e)`), and the collapse `(π/2)·√(a³/(2G·M))` homothetic, each with the side `a` measured, against the
+/// provider's (its `a` 1.5u, `μ` 7.5u, the square root, `2π` and the division 6.3u; the test's side cubed 22.5u, the
+/// rest 3u: 31.3u); the circular start's speeds `ω·|rᵢ|` and its momenta perpendicular to its positions (16u, as for
+/// the periods, each momentum's rounding 3u). `scale` multiplies the masses, so `M` need not be 1.
+fn check_starts(scale: f64, skew: f64) {
+    let m = fixture().masses.map(|x| x * scale);
+    let e = fixture().eccentricity;
+    let g = ledger::constants::G.number();
+    let total = m[0] + m[1] + m[2];
+    let rel = |got: f64, want: f64, what: &str| {
+        let err = (got - want).abs() / want.abs();
+        assert!(err <= 32.0 * U, "{what}: {err:e} relative, over the bound");
+    };
+    for (member, a_power) in [
+        (Member::Circular, 1.0),
+        (Member::Elliptic { e }, 1.0 / (1.0 - e)),
+    ] {
+        let p = Lagrange::new(m, member, 8.0);
+        let s = p.start();
+        let a = dist(s.r[0], s.r[1]);
+        rel(dist(s.r[1], s.r[2]), a, "side 1-2 against side 0-1");
+        rel(dist(s.r[2], s.r[0]), a, "side 2-0 against side 0-1");
+        if scale == 1.0 {
+            let inertia: f64 = (0..3)
+                .map(|i| m[i] * (s.r[i][0].powi(2) + s.r[i][1].powi(2)))
+                .sum();
+            rel(inertia, 1.0, "the start's I");
+        }
+        let big_a = a * a_power;
+        let want = TAU * (big_a * big_a * big_a / (g * total)).sqrt() * (1.0 + skew);
+        rel(
+            p.period().unwrap(),
+            want,
+            "the period from the measured side",
+        );
+        if member == Member::Circular {
+            let w = TAU / want;
+            for ((r, q), mi) in s.r.iter().zip(&s.p).zip(m) {
+                let (radius, momentum) = (dist(*r, [0.0, 0.0]), dist(*q, [0.0, 0.0]));
+                rel(momentum / mi, w * radius, "a circular start's speed");
+                let dot = r[0] * q[0] + r[1] * q[1];
+                assert!(
+                    dot.abs() <= 32.0 * U * radius * momentum,
+                    "a circular start's momentum is not perpendicular"
+                );
+            }
+        }
+    }
+    let h = Lagrange::new(m, Member::Homothetic, 4.0);
+    let s = h.start();
+    let a = dist(s.r[0], s.r[1]);
+    let want = std::f64::consts::FRAC_PI_2 * (a * a * a / (2.0 * g * total)).sqrt() * (1.0 + skew);
+    rel(
+        h.collapse().unwrap(),
+        want,
+        "the collapse from the measured side",
+    );
+    assert!(
+        s.p.iter().flatten().all(|&x| x == 0.0),
+        "the homothetic start is at rest"
+    );
+}
+
+#[test]
+fn trajectory_interface_lagrange_starts() {
+    check_starts(1.0, 0.0);
+    check_starts(2.0, 0.0);
+}
+
+negative_control!(
+    trajectory_interface_lagrange_starts,
+    "a period a millionth off fails",
+    expected = "over the bound",
+    check_starts(1.0, 1e-6)
+);
+
+#[test]
+fn trajectory_interface_figure_eight_period() {
+    check_figure_eight_period(&FigureEight::new(), 0.0);
+}
+
+negative_control!(
+    trajectory_interface_figure_eight_period,
+    "a period a millionth off fails",
+    expected = "from √3·T₈·λ^(3/2)",
+    check_figure_eight_period(&FigureEight::new(), 1e-6)
+);
 
 negative_control!(
     trajectory_interface_validation_reads_ledger_constants,
