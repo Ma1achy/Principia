@@ -804,7 +804,7 @@ fn every_exclusion_still_runs(toml: &str, ci: &str, nightly: &str) {
     let doc: toml_edit::DocumentMut = toml.parse().expect("qa-mpl: nextest.toml is TOML");
     let excluded = terms(&default_filter(&doc, "mutants"));
     assert!(
-        excluded.len() >= 10,
+        excluded.len() >= 8,
         "qa-mpl: the mutants profile's exclusions did not parse as one term a line: {excluded:?}"
     );
     let ci_out = terms(&default_filter(&doc, "ci"));

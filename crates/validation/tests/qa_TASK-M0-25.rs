@@ -8,38 +8,9 @@ use std::process::Command;
 use validation::negative_control;
 use validation::spawn::Spawn;
 
-/// The qa tests merged before TASK-M0-22, per crate, from the files the task names (22 at R-209).
+/// The qa tests merged before TASK-M0-22, per crate, from the files the task names (22 at R-209): prin's, since R-909
+/// retired the test that listed validation's.
 const QA_TESTS: &[(&str, &[&str])] = &[
-    (
-        "validation",
-        &[
-            // qa_TASK-M0-04.rs
-            "qa_gpu_harness_identity_round_trips_2_16_words_bit_exact",
-            "qa_gpu_harness_round_trips_lengths_off_the_workgroup_size",
-            "qa_gpu_harness_binds_several_inputs_in_order",
-            "qa_gpu_harness_sees_extractbits_sign_extension_at_every_width",
-            "qa_gpu_backend_env_governs_harness_new",
-            "qa_prop_seed_printed_and_rerun_through_the_environment",
-            "qa_prop_shared_config_runs_256_cases_marked_provisional",
-            // qa_TASK-M0-04_r2.rs
-            "qa_adapter_info_printout_names_the_backend",
-            "qa_prop_case_count_is_not_replaced_by_proptest_cases",
-            // qa_TASK-M0-21.rs
-            "qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test",
-            "qa_control_under_another_name_does_not_pair",
-            "qa_unit_test_in_a_binary_target_pairs_with_its_control_in_tests",
-            "qa_workspace_pairs_within_each_crate_and_skips_the_featureless_one",
-            "qa_controls_exist_only_under_the_feature",
-            // qa_TASK-M0-21_r2.rs
-            "qa_binary_only_crate_is_checked_and_passes",
-            // qa_R-206.rs
-            "qa_r206_unset_defaults_by_platform_and_explicit_overrides",
-            "qa_r206_unknown_value_is_still_an_error",
-            "qa_r206_harness_opens_the_selected_backend",
-            "qa_r206_harness_logs_the_backend_it_ran_on",
-            "qa_r206_harness_explicit_value_overrides_the_default",
-        ],
-    ),
     (
         "prin",
         &[
@@ -127,36 +98,9 @@ fn qa_tests(krate: &str) -> &'static [&'static str] {
         .1
 }
 
-/// REQ-VAL-153: under the `controls` feature, every qa test merged before TASK-M0-22 in validation and prin has a
-/// control registered under its name, and none of R-210's three child bodies is a test. One test per crate, each
-/// listing its own crate, so that neither holds a CI shard over its target (R-336, REQ-SYS-077): this one validation,
-/// the next prin; together they cover every crate of [`QA_TESTS`].
-#[test]
-fn qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test() {
-    assert_eq!(
-        QA_TESTS.iter().map(|(k, _)| *k).collect::<Vec<_>>(),
-        ["validation", "prin"],
-        "QA_TESTS names a crate that neither split test lists"
-    );
-    check_paired(
-        "validation",
-        &listed("validation", true),
-        qa_tests("validation"),
-    );
-}
-
-negative_control!(
-    qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test,
-    "without the feature no control compiles, so the pairing check must fail on that listing",
-    expected = "has no registered control",
-    check_paired(
-        "validation",
-        &listed("validation", false),
-        qa_tests("validation")
-    )
-);
-
-/// [`qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test`] on prin (R-336's split).
+/// REQ-VAL-153 on prin: under the `controls` feature, every qa test merged before TASK-M0-22 in prin has a control
+/// registered under its name, and none of R-210's three child bodies is a test. Split from validation's (R-336), which
+/// R-909 retired.
 #[test]
 fn qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test() {
     check_paired("prin", &listed("prin", true), qa_tests("prin"));

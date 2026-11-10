@@ -798,10 +798,6 @@ const INVENTORY: &[(&str, &str)] = &[
     ),
     (
         "validation::qa_TASK-M0-25",
-        "qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test",
-    ),
-    (
-        "validation::qa_TASK-M0-25",
         "qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test",
     ),
     (
