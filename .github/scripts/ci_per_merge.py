@@ -41,8 +41,10 @@ A failed job (any conclusion but success, skipped and neutral) is judged by its 
     run: a test step skipped after a failed one, but for the steps that run process tests alone (PROCESS_STEPS), or
     nextest's summary counting fewer tests run than it selected (a failure that stopped the run). `ci.yml` runs the
     rest of the product suite after a failure (the `ci`, `ci-workspace` and `gpu-kernel` profiles set `fail-fast =
-    false`, and each later product test step of their jobs runs whatever an earlier one ended in), so a process test's
-    failure leaves no product test unrun; these two rules hold the verdict red if it ever does.
+    false`, and each later product test step of their jobs runs whatever an earlier one ended in, but for one: in
+    `ci`'s first shard a failing doctest skips the shard's nextest run after it, its quarter of the product suite, and
+    is red already, a product failure), so a process test's failure leaves no product test unrun; these two rules hold
+    the verdict red if it ever does.
   - Any other name is a job this script does not know: a correctness failure, so a job added to `ci.yml` without a
     place here is never let through (`xtask/tests/ci_per_merge.rs` checks the lists against `ci.yml`).
 A process test is one of the binaries the `process` profile's filter names before its `& not (`, the class the split

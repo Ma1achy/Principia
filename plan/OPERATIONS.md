@@ -355,9 +355,11 @@ pass with a failing step (REQ-TOOL-223, R-235, R-335). Applied per R-369/R-812.
 The verdict reads each failed test step in its own part of the job's log, and is red whenever part of the product
 suite did not run: a test step skipped after a failed one (but a step of process tests alone), or nextest counting
 fewer tests run than it selected. The `ci`, `ci-workspace` and `gpu-kernel` profiles run every test after a failure
-(`fail-fast = false`), and each later product test step of their jobs runs whatever an earlier one ended in, so a
-failing process test leaves no product test unrun (R-909; the owner, 8 Nov 2026: product-correctness tests are never
-retired). Applied per R-369/R-812.
+(`fail-fast = false`), and each later product test step of their jobs runs whatever an earlier one ended in, but for
+one: in `ci`'s first shard the doctests run before the shard's nextest run, which a failing doctest skips, leaving that
+shard's quarter of the product suite unrun. That `main` is red already, the doctest's failure being a product
+failure. So a failing process test leaves no product test unrun (R-909; the owner, 8 Nov 2026: product-correctness
+tests are never retired). Applied per R-369/R-812.
 
 **Advisory bot reviews before the merge (R-651, a standing rule; R-910).** Before step 3, the orchestrator's merge
 script checks, for Codex and Gemini CLI each (Copilot is never requested, R-910):
