@@ -622,6 +622,441 @@ nothing is wrong today; but the task that ports the real linocut must follow the
   in `fixtures/README.md` not to be the lab's linocut. Nothing ships from it.
 - **Waits:** nothing now. The linocut port task reads this entry.
 
+## RQ-771: On the invariant `(L_z, E)` and `(L_z, K)` charts, what "unfold" past the spin edge and "the nearest edge system" mean, now that the kernel's construction has no second sheet *(silence; a one-way door, a physics definition; the owner's direction of 10 Nov on extensions, R-407, R-508, R-72; REQ-CHART-054, REQ-ENC-030; context: the addendum's N12, N13, N14 in `plan/charts/m2-chart-addendum-extensions-axes.md`)*
+
+*Queued 10 Nov 2026 by the chart addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`), each quote re-read on
+`origin/main` a5f0aa88. The owner's direction is not a ruling; nothing is chosen here.*
+
+*In plain English: the prototype draws the energy chart past its "spin at its maximum" edge as a second sheet, where the
+system's in-and-out motion runs the other way. The kernel has no such sheet: it always takes the outward one. So the
+sheet, and what "the nearest system on the edge" means on the real chart, need defining before anything is built.*
+
+- **File, section:**
+  - The addendum (`orch/charts/prototype-2026-11-10/addendum-extensions-axes-2026-11-10.md`, on the orchestrator's
+    drive, cited by path, not a ruling) § 1.2's table: "L_z × E, spin at ± its maximum | unfold onto the contracting
+    sheet (radial rate changes sign); period 4 in L_z / L_max" and "L_z × E, kinetic energy below 0 | clamp to K = 0";
+    § 1.4: "On the real energy chart the feasibility edge depends on shape and is curved. "Unfold" and "nearest edge
+    system" both need a definition there."
+  - `docs/design/principia_chart_reference.md` § "2.2 Deterministic momentum construction", (iii): "a = √(2·(K* −
+    Lz²/(2I)))" and "vᵢ = vᵢ^(L) + a·wᵢ"; `crates/kernel/src/decode/invariant.rs:12`: "(iii) K* < K_min → infeasible;
+    else a = √(2(K* − K_min)),  vᵢ = vᵢ⁽ᴸ⁾ + a·wᵢ,  pᵢ = mᵢvᵢ".
+  - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid":
+    "**Past the unit square (R-407, R-508): `s` is bounded, and `t` bounded below `t = 0` and continuing past `t = 1`**".
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Chart-aware validation", "The nearest valid point" (R-72;
+    REQ-ENC-030): "The nearest valid point is the one at the same `K*`, and so at the same `E`, on the parabola, on the
+    side of the entered `L_z`" and "Where `K* < 0` … The nearest feasible point is then the parabola's apex, `L_z = 0`
+    at `K* = 0`, `E = U`: the rest start."; § "A qualitatively different IC": "At `K* = 0` with `L_z ≠ 0` the
+    parabola's only point is `L_z = 0`, so the pair is rejected (`L_z`'s class would change). At `K* < 0` the apex keeps
+    `L_z`'s class only where `L_z = 0`. … So that pair is projected to the rest start, and every other pair there is
+    rejected." and "A chart point below the invariant charts' apex, `t < 0`, has no entered `L_z`: `L_z(s, t)` has no
+    real value there. So projecting it to `t = 0` changes no class, and the projection stands."
+  - RQ-764, the momentum seed (does the expansion seed `w = r/√I` replace R-82's rule), with the re-plan's N10,
+    "the seed conversion", and its § D item 24, "The seed `w = r/√I`" (`plan/charts/m2-chart-system-replan.md`).
+- **The gap:** the kernel's exact feasibility test (`invariant.rs:273`, `2·I·K* < L_z²` decided exactly) is binary:
+  feasible or not. It gives no second sheet: `a` is always the non-negative root (`invariant.rs:532`), so the
+  construction always takes `+a·w`. The prototype's "contracting sheet" is `−a·w`, a new definition (R-72) and a new
+  extension type under R-407 clause 3's physics review. Its "radial rate" is the seed's. Under R-82's seed `w` is the
+  inner pair's dilation `(ρ̇, λ̇) = (ρ, 0)` where `z_α ≤ 0` and the third body's `(0, λ)` elsewhere (`invariant.rs:455`),
+  so "contracting" names a different pair on either side of `z_α = 0`; under (a) or (b) of RQ-764, the momentum
+  seed, with the re-plan's N10 built, `w = r/√I` and "contracting" names the whole system's dilation, `I` decreasing. N13 comes
+  after N10, and its "sheet 1 bitwise today's" baseline is `main`'s construction at N13's start: N10's under RQ-764's
+  (a) or (b), R-82's under its (c). Three facts frame the answer. On the default warped chart the edges are
+  straight (`s = 0, 1` at every `t`, `L_z = (2s − 1)·L_max(t)`, chart_reference §2.1), and the `t = 0` row is the rest
+  start, `L_max(0) = 0`: one system on an untilted, unsliced chart, a line of different rest systems, one per pixel,
+  under a tilt or slice that moves the configuration or masses (R-471 E3); only under the linear option (R-471 E2) is
+  the edge the curved parabola `|L_z| = √(2I(E − U))`, read per pixel with that pixel's own `U` and `I`. REQ-ENC-030
+  defines the nearest edge system on every pixel of the warped charts (past `s = 0, 1` the rigid rotation at
+  `±L_max(t)`, keeping the sign; below `t = 0` the rest start, "the projection stands"), but not everywhere under the
+  linear option or on `Φ_θ,L_z`: there it rejects `K* ≤ 0` with `L_z ≠ 0`, since the rest start's `L_z = 0` is
+  another class, the only one that can reach a triple collision (Sundman). And the sheet `−a·w` at `L_z` is exactly
+  the time reversal (`p → −p`) of the chart's own system at `−L_z`, since `vᵢ^(L)` is linear in `L_z` and `a` depends on
+  `L_z²`, for any seed `w` that does not depend on `L_z` (both seed rules): the unfolded side shows the time-reversed
+  chart, shifted by one in `s`.
+- **The question:** (i) is the second sheet `−a·w` adopted as the invariant charts' unfold, and on which mapping; (ii)
+  what does "the nearest edge system" mean for a clamp where REQ-ENC-030 rejects, that is under the linear option and
+  on `Φ_θ,L_z`, below the parabola's floor at a non-zero `L_z` (`K* ≤ 0`, `L_z ≠ 0`); (iii) on the Burrau `Φ_θ,L_z`
+  chart, which uses the same construction (chart_reference §4.5), the same?
+- **Options seen for (ii)**, below the floor at `L_z ≠ 0` (elsewhere the clamp is REQ-ENC-030's projection):
+  - (ii-1) The rest start, in spite of REQ-ENC-030's reject. One system per pixel's configuration; it draws the
+    `L_z = 0` class (the only one that can reach a triple collision) over pixels whose own `L_z` is not zero, so the
+    clamp changes the class the pixel's coordinates name, which lookup itself refuses.
+  - (ii-2) A vertical clamp at the pixel's own `L_z` to `E = U + L_z²/(2I)` (`K = L_z²/(2I)` on `(L_z, K)`), the rigid
+    rotation at that `L_z`, as § A.11's held-`L_z` row has it. It keeps `L_z`'s class, and on the linear chart it is a
+    line of systems, one per column. It moves `E`, so it is not REQ-ENC-030's metric (fixed `E`) but a new definition
+    (R-72) under R-407 clause 3's review; and where `L_z² ≥ −2IU` it lifts `E` to `0` or above, changing `E`'s class,
+    which REQ-ENC-030's second classifier forbids for a projection.
+  - (ii-3) Blank there: no new definition; the linear option then has a blank region the direction does not want.
+- **Options seen:**
+  - (a) Sheet 2 is `vᵢ = vᵢ^(L) − a·wᵢ`. Warped: past `s = 1`, `s' = 2 − s` on sheet 2, period 2 in `s` (4 in
+    `L_z/L_max`, the prototype's figure); linear option: at the pixel's own `E`, `L_z` reflected about the parabola, the
+    sheet flipped, the same period in `L_z/L_max(E)`. Clamp: REQ-ENC-030's nearest valid point where it projects (fixed
+    `E`, `L_z` onto the parabola where `K* > 0`; the rest start where `K* < 0` and `L_z = 0`, and on the warp below
+    `t = 0`), (ii)'s answer where it rejects. `Φ_θ,L_z` the same. Consequences: real, distinct systems, each the time reverse of
+    one in the square; a sheet word in the record and in the decode's inputs; R-408's primary range for `s` becomes two
+    sheets; the backwards table must tell the sheets apart (RQ-776).
+  - (b) As (a) on the warped mapping only (the default, straight edges); under the linear option the parabola clamps by
+    REQ-ENC-030 and nothing unfolds. Simpler per-pixel arithmetic; the linear option keeps its present meaning.
+  - (c) No second sheet: the spin edges clamp by REQ-ENC-030 or stay blank. No new physics definition; the prototype's
+    unfold is not built.
+- **Recommended:** (a), with physics review of the sheet's definition (R-407 clause 3): it is the only kind past this
+  edge that shows real, distinct systems, and its time-reversal identity gives an exact, bitwise test (the addendum's
+  N13) and a backwards-table shortcut. (b) is the measurable fallback if the per-pixel reflection under a tilt
+  misbehaves. For (ii), (ii-2) where it keeps both classes (`L_z² < −2IU`) and (ii-3) elsewhere, since it is the only
+  choice that never draws a system of another class; the owner's to choose, after physics review.
+- **Measurement:** N13's distinctness measurement on `InvariantLE` at the register's defaults (256 × 256 over `s ∈ [1,
+  2]`): the share of pixels whose decoded state equals a state of the square on the same grid, positions bitwise
+  equal (the held configuration on both) and momenta matching when `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂` over all six components (a zero `p` only
+  exactly); predicted only the fold columns and the `t = 0` row; its control, sheet 1 mirrored in `s` (a repeat),
+  matches 100%; void if the default configuration's seed is degenerate (`a = 0`, the sheets equal by construction).
+  Criterion written in the addendum before any run.
+- **Applied meanwhile:** nothing. The charts stay as chart_reference §5.4 has them: `s` bounded, `t` bounded below 0.
+- **Waits:** the addendum's N12 (the definitions) and N13 (the sheet).
+
+## RQ-772: Which edges of which real charts have a genuine continuation (a second sheet, or real systems the chart does not show), and which can only repeat, clamp, saturate or stay blank *(silence; a one-way door, physics definitions under R-407 clause 3; the owner's direction of 10 Nov on extensions, R-407, R-408, R-508, R-554, R-879; REQ-CHART-054, REQ-CHART-055; context: N12, N14)*
+
+*Queued 10 Nov 2026 by the chart addendum; quotes re-read on `origin/main` a5f0aa88. A per-edge table is proposed in
+`plan/charts/m2-chart-addendum-extensions-axes.md` § A.11 for the physics reviewer and the owner; nothing is chosen.*
+
+*In plain English: for every edge of every chart we ship, is there something real past it (new systems, or the same
+systems seen again), or is it a true end where the picture can only stop, smear the edge outward, squash, or stay
+empty?*
+
+- **File, section:**
+  - The addendum § 1.1: "Unfold is preferred wherever a second sheet exists, because it is the only non-periodic kind
+    that keeps the slice a genuine surface. Clamp is for true edges, where nothing exists beyond."
+  - `decisions.md` § R-407, clause 3 (as applied): "**No invented continuations.** An axis gets anything beyond
+    bounded only by declaring it, and any new extension type needs physics review."
+  - `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)": the
+    table of the existing charts' types (latent affine; sphere θ periodic, φ pole-crossing; exponential map bounded;
+    invariant warp `s` bounded, `t` bounded below 0 and affine past 1; mass simplex affine with negative masses not a
+    system; the Burrau family per axis).
+  - `decisions.md` § R-554's heading: "The shape sphere's exponential map past `r = π` is the domain's end by design,
+    blank and unwarned".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square", "Where the extension matters": the
+    exponential map's "square covers only a disc of radius `s√2` about `n₀`, so past its square a pixel is classified
+    not a system and draws the background, though the sphere holds systems there".
+  - `docs/design/principia_chart_composition.md` § 18 (time as an axis): "`t_lo` is new; integration still starts at
+    0." Nothing says what a time axis shows before `t = 0`.
+- **The gap:** the corpus types every shipped axis, but chose bounded wherever a continuation would repeat systems or
+  run off the domain; it never asks whether a second sheet exists. The owner's direction asks for an extension on every
+  edge, unfold where a sheet exists.
+- **The question:** for each edge in § A.11's table, which kind is genuine (wrap, pole-crossing, a new repeat map, an
+  unfold onto a sheet, affine up to the domain's end) and which can only clamp, saturate or stay blank?
+- **Options seen:**
+  - (a) Adopt § A.11's classification, each new declaration physics-reviewed: genuine continuations are the existing
+    periodic and pole-crossing axes; the exponential map's square edges (affine to `r = π`) and `r = π` (a repeat,
+    `r ↦ 2π − r` in the opposite direction, no new systems); the invariant charts' and `Φ_θ,L_z`'s spin edges (RQ-771's
+    sheet); the Burrau `ν` and `θ` edges up to the domain's end (twins past the leg-swap point repeat, R-27); the time
+    axis before 0 (the trajectory's past, by a backward run, new compute; R-879's final-condition charts run backward
+    already). True ends: the invariant `t < 0` (the rest start: one system untilted and unsliced, a line of rest
+    systems under a tilt or slice that moves the configuration or masses), the floor of a held `L_z`, the mass
+    simplex's sides and the δm strip's zero-mass end, the Burrau `K` below 0.
+  - (b) Only the invariant spin edges and the time axis get a continuation; every other bounded edge clamps.
+  - (c) Keep today's types; the direction's extension on every edge is met by clamp alone where the type is bounded.
+- **Recommended:** (a) as the physics reviewer's starting list, the owner confirming which to build.
+- **Measurement:** per declared continuation, the distinctness share of N13's form (new systems vs repeats), so a
+  repeat is counted once under R-408 and a new sheet is not mistaken for one.
+- **Applied meanwhile:** nothing.
+- **Waits:** N12, N14.
+
+## RQ-773: Does the direction "a chart never has a blank area" amend R-407's bounded default and "no invented continuations", R-470's blank and R-554's blank past `r = π`, and how do clamped, saturated and unfolded pixels count under R-408 *(conflict; a one-way door, amending rulings; the owner's direction of 10 Nov, R-407, R-408, R-470, R-508, R-537, R-554; REQ-CHART-054, REQ-CHART-056, REQ-GUI-268; context: N12, N14)*
+
+*Queued 10 Nov 2026 by the chart addendum; quotes re-read on `origin/main` a5f0aa88. A direction is not a ruling, so
+nothing in force changes until the owner rules.*
+
+*In plain English: today an edge with nothing past it draws empty background, by rulings. The owner now wants no empty
+areas. That needs the rulings changed, and a rule for whether the smeared or squashed areas count in statistics.*
+
+- **File, section:**
+  - The addendum § 1, "Direction (owner):": "a chart never has a blank area. The 2D slice should always be looking at
+    systems, so every edge of a chart's primary range has a declared extension."
+  - `decisions.md` § R-407, clause 1 (as applied): "**An axis that declares nothing is bounded.**"; clause 3: "any new
+    extension type needs physics review"; its applied text: "P4 (a clamped extension) does not arise, since no axis is
+    clamped".
+  - `decisions.md` § R-470's heading: "A pixel that is not a system draws blank, the view's background, in every view,
+    the outcome view included, never a palette colour".
+  - `decisions.md` § R-537, EX4 (the applied text): "The only blank pixels are not-a-system pixels (EX2)."
+  - `decisions.md` § R-408 (the owner's words): "count a visible pixel only if every axis is inside its primary
+    range."
+- **The conflict:** clamp and saturate are not among R-407's four types, and "no invented continuations" requires a
+  declaration under physics review for each; bounded, the default, is blank by R-470. A clamped area shows edge systems
+  again, a line smeared over an area, which R-408 must not count twice; a saturated area shows systems nearly alike; an
+  unfolded sheet shows new systems that R-408's primary ranges (one period, pole to pole, unbounded, the domain) do not
+  cover.
+- **The question:** (i) does the owner's direction amend R-407 (adding unfold, clamp and saturate as declared kinds, per
+  edge, each under physics review) and R-470, R-554 and EX4 (blank only where "blank" is the declared kind or validity
+  fails)? (ii) what is each new kind's primary range for R-408's count?
+- **Options seen:**
+  - (a) Amend as asked: seven kinds per edge (affine, wrap = periodic, pole-crossing, unfold, clamp, saturate, blank =
+    bounded), and, where RQ-772 declares one, a reflection or a new repeat map, each a new kind under R-407's clause 3;
+    blank stays a kind and validity failures stay "not a system". Counting: an unfold sheet is inside the primary range
+    (new systems, counted); a clamped pixel is outside it (an edge system again, not counted, as a repeat is); a
+    saturated pixel is counted where its system is not shown inside the square and not counted otherwise, the rule
+    declared per edge with the kind.
+  - (b) As (a), but no extension pixel past the primary square ever counts: statistics are the square's alone, simple
+    and unchanged from today for every chart but the latent.
+  - (c) The direction stands only for presentation: blank pixels draw the clamp's colour, the classification and
+    statistics unchanged.
+- **Recommended:** (a): it keeps R-408's "each system once" exactly and gives the unfold's new systems their count.
+- **Measurement:** REQ-CHART-079's test extended: panning by one period changes neither "forbidden in view" nor W7's
+  counts (exact for a pan of a whole number of periods, which leaves every pixel's canonical address, where its system
+  is counted once, as it was: R-537 EX7(g)); with the visible primary-range region held fixed, adding clamped pixels
+  to the view, or saturated pixels whose edge declares them not counted, changes no count and no total; a pan across a
+  clamp edge lowers each count and the total by exactly what the primary-range pixels that left the view contributed,
+  the clamped pixels that replace them contributing zero; an unfold adds exactly its sheet's systems.
+- **Applied meanwhile:** nothing; R-407, R-408, R-470 and R-554 stand as written.
+- **Waits:** N12, N14, and through them TASK-M8-87 and TASK-M8-55.
+
+## RQ-774: Are clamped or saturated areas marked in the picture *(silence; a one-way door, a look; the owner's direction of 10 Nov, R-470, R-552; REQ-GUI-348; context: N18)*
+
+*Queued 10 Nov 2026 by the chart addendum. The addendum records that the owner has not asked for a mark.*
+
+*In plain English: where the picture is a smear of the edge, or a squashed coordinate, should you see that it is, or
+does it look like the rest of the chart?*
+
+- **File, section:**
+  - The addendum § 1.4: "Whether a clamped or saturated area is marked in the picture (dimmed or hatched). The owner
+    has not asked for it."; § 2.2, "Direction (owner):": "no "wraps", "folds back", "saturated" or "one system" text …
+    The numbers and ticks carry it."
+  - `decisions.md` § R-470's heading: "the hatch survives only as the optional Overlays › Chart › forbidden region, off
+    by default, over blank pixels only".
+  - `plan/requirements.yaml` REQ-GUI-348: "Overlays ▾'s Chart group must hold an "outline the chart's primary square"
+    toggle … on by default".
+- **The question:** is a clamped or saturated area marked, and how?
+- **Options seen:**
+  - (a) No mark in a presentation view: the ticks carry it (direction § 2.2), the primary-square outline (REQ-GUI-348, on
+    by default) shows where the chart ends, and the debug view names each pixel's kind.
+  - (b) (a) plus an Overlays › Chart toggle, off by default, dimming or hatching clamped and saturated pixels, as R-470's
+    forbidden-region overlay does.
+  - (c) Always dimmed.
+- **Recommended:** (b): nothing changes by default, and the honest view is one toggle away.
+- **Measurement:** none decides it; a screenshot pair per option on the latent, energy and simplex charts for the
+  owner to look at.
+- **Applied meanwhile:** nothing.
+- **Waits:** N18 (built only under (b) or (c)).
+
+## RQ-775: Where a chart's per-edge extension choice lives (the registry, the view state, or both), and whether it is in the sim key *(silence; a one-way door, what the cache keys; the owner's direction of 10 Nov, R-92, R-407, R-472; REQ-CHART-096, REQ-CHART-068, REQ-SCHED-101; context: N14, TASK-M2-66)*
+
+*Queued 10 Nov 2026 by the chart addendum; quotes re-read on `origin/main` a5f0aa88.*
+
+*In plain English: if each edge's behaviour can be switched, is the switch part of the chart's definition, of the
+current view, or both; and does switching it throw away work already computed?*
+
+- **File, section:**
+  - The addendum § 1.2, "Direction (owner):": "the extension kind is a choice per edge, with a default. The owner picks
+    the defaults by looking."; "The prototype has no switch between kinds yet; each edge has one hard-coded kind."
+  - `decisions.md` § R-407, clause 1: "A custom chart inherits its extension from its axes, so nothing is written per
+    chart." and § R-472: "a tilted, sliced or saved chart extends by its axes' types, nothing written per chart".
+  - `decisions.md` § R-92: "In-plane pan and zoom re-address; slicing out of the plane, tilting and rotating
+    re-integrate; lock changes neither."
+  - `plan/requirements.yaml` REQ-CHART-068: "a chart parameter (warped | linear) in SimConfig, a sim key".
+- **The question:** (i) the registry, the view state, or both; (ii) in the sim key or not?
+- **Options seen:**
+  - (a) Both: each registry row and each map declares, per edge, the kinds allowed and the default; the view state holds
+    an override per edge, saved with the view. A kind whose pixels show systems computed elsewhere (wrap,
+    pole-crossing, clamp) re-addresses to the canonical quads and is off the sim key, as repeats are (R-537 EX7); a kind
+    that shows new systems (unfold, saturate) changes the quads' systems and is on it.
+  - (b) The registry only: one kind per edge per chart, no switch; nothing in the key beyond today's.
+  - (c) The view state only, always in the sim key.
+- **Recommended:** (a): it keeps R-407's inheritance (defaults from the row), gives the owner's per-edge choice, and
+  re-integrates only when a pixel's system changes.
+- **Measurement:** a test that switching clamp to blank requests and integrates no quad, and unfold to clamp drops the
+  sheet's quads from the request set; criterion: zero new integrations for re-addressing kinds.
+- **Applied meanwhile:** nothing.
+- **Waits:** N14, TASK-M2-66.
+
+## RQ-776: What the backwards table does on an unfolded chart *(silence; a one-way door, accuracy; the owner's direction of 10 Nov; R-926 item 7 and R-925 item 2, the backwards table; context: N15)*
+
+*Queued 10 Nov 2026 by the chart addendum. The backwards table (running state to chart position, for Chart position,
+the state map and the round-trip presets) is R-926 item 7's (the owner's chart-system decisions), built by the
+re-plan's N7 and N9 (`plan/charts/m2-chart-system-replan.md`).*
+
+*In plain English: colouring by "where on the chart is this system now" needs a lookup from a state back to a chart
+point. With two sheets, a state could belong to either; which one does the lookup return?*
+
+- **File, section:**
+  - The addendum § 1.4: "What the backwards table does on an unfolded chart: two sheets share a region of state space
+    only at the fold, so this should be benign, but it is unmeasured."
+  - `plan/charts/m2-chart-addendum-extensions-axes.md` § A.11 and RQ-771: sheet 2 at `L_z` is the time reversal of the
+    square's system at `−L_z`.
+- **The question:** does the key carry the sheet, does the search span both sheets, or does a state fold onto sheet 1?
+- **Options seen:**
+  - (a) The table holds sheet 1 only; a state is looked up as itself and as its time reverse, the better match kept and
+    its sheet recorded. Half the table; exact by the reversal identity, provided the table's state metric is invariant
+    under `p → −p` (a mass-weighted Euclidean metric is; a metric that is not would make the two lookups disagree).
+  - (b) A table per sheet, searched both.
+  - (c) Sheet 1 only, the second sheet never returned: Chart position is then wrong on the unfolded side.
+- **Recommended:** (a).
+- **Measurement:** N15's: wrong share and round-trip error, near the fold apart from the rest, criterion written in the
+  addendum before any run.
+- **Applied meanwhile:** nothing.
+- **Waits:** N15, and the re-plan's N7.
+
+## RQ-777: Is a weighted-mix axis value, which adds unlike quantities, acceptable mid-blend, and how are its units shown *(silence; a one-way door, what an axis claims; the owner's direction of 10 Nov on computed axes; REQ-GUI-084, REQ-GUI-246; context: N16, N17)*
+
+*Queued 10 Nov 2026 by the chart addendum.*
+
+*In plain English: halfway through a morph, or on a tilted view, an axis can be part angle and part momentum. The
+prototype labels it with a weighted sum of the two numbers. Is a number that adds an angle to a ratio acceptable, and
+how should units appear?*
+
+- **File, section:**
+  - The addendum § 2, "Direction (owner):": "An axis that is no longer a pure coordinate says what it is made of. One
+    axis per edge, including in a blend."; § 2.1: "A mixed value adds unlike quantities (an angle and a ratio, say). It
+    is consistent, and exact at the ends, but mid-blend it is a construction, not a physical quantity."; its example
+    name: "`0.52·[z_α shape] + 0.36·[q₀ inner pₓ] + 0.12·[β angle ÷ π]`".
+  - `plan/requirements.yaml` REQ-GUI-084: "The figure's axis labels must carry the short axis name and the range at
+    each end."
+  - `docs/design/principia_lines.md` § "8b. Axes": "**Primary scale.** The chart's own coordinates: latent units on a
+    latent chart, physical units on a physical axis."
+- **The question:** is the summed value shown, and in what units?
+- **Options seen:**
+  - (a) The prototype's: `Σ coef_k·value_k` in each term's own units, the name listing each term with its unit; the
+    hover readout gives each term's own value, the exact numbers. The coefficients are dimensionless, but `value_k` is
+    not, so the axis's numbers depend on the unit chosen for each coordinate: `β` in radians and `β ÷ π` (the
+    addendum's own example) give different tick values, and different places for the round values, in the same window.
+    The number on a mixed axis is then a definition fixed by those unit choices, not only a label.
+  - (b) Each term divided by its window scale (the unit of RQ-762, the window's per-coordinate scale), so the sum is
+    dimensionless "window units"; the name says so. `Σ coef_k·value_k/scale_k` does not depend on the unit chosen for
+    any coordinate, since `scale_k` carries the same unit as `value_k`.
+  - (c) No sum: the edge carries the dominant term's own ticks, the others listed in the name with their coefficients.
+- **Recommended:** (a), with the readout carrying the exact per-term values; (c) is the measurable alternative, judged
+  by the owner on N16's sweep.
+- **Measurement:** N16's sweep reports terms per edge and name length over a morph and a tilt; none decides the units.
+- **Applied meanwhile:** nothing.
+- **Waits:** N16, N17.
+
+## RQ-778: How a computed axis's terms are chosen: the share's scale, and whether small terms are dropped *(silence; a one-way door, a tolerance; the owner's direction of 10 Nov, R-507, R-920, R-71; context: N16)*
+
+*Queued 10 Nov 2026 by the chart addendum.*
+
+*In plain English: the prototype names an axis by the coordinates it moves, weighted by how much, and leaves out any
+under 2%. That 2% is a tolerance nobody has set, and the weighting needs a unit per coordinate.*
+
+- **File, section:**
+  - The addendum § 2.1: "**Share of the direction:** share_k = (slope_k / scale_k)², normalised to sum to 1 over the
+    chart's coordinates. Terms under 2% are dropped."
+  - `decisions.md` § R-507's heading: "the screen axis in units of the axis's full range at zoom 1, the hidden
+    coordinate in its slider span"; RQ-762, the window's per-coordinate scale.
+- **The gap:** `scale_k` is the window's per-coordinate scale, open as RQ-762; the 2% is a hand-set tolerance (R-71: a
+  missing value is a calibration). A tilt of 8° gives a share of `sin²8° ≈ 1.9%`, so the axis is named pure while the
+  view moves a second coordinate.
+- **The question:** (i) is `scale_k` the window's scale as RQ-762 rules it; (ii) are small terms dropped, and
+  at what share?
+- **Options seen:**
+  - (a) No drop: every non-zero term is named; the display shortens the name and the readout shows it whole.
+  - (b) Drop below a calibrated share (R-71), the dropped total shown on the axis as a number.
+  - (c) The prototype's 2%.
+- **Recommended:** (a): nothing claims purity it lacks; the long-name problem is layout (N17).
+- **Measurement:** N16's sweep: terms per edge and name length, reported; criterion: reported only, written before the
+  run.
+- **Applied meanwhile:** nothing.
+- **Waits:** N16; RQ-762, the window's per-coordinate scale.
+
+## RQ-779: The default extension kind of each edge, for the owner to confirm by eye *(the owner's call by looking; a one-way door, defaults; the owner's direction of 10 Nov; R-407, R-508, R-898; context: N14)*
+
+*Queued 10 Nov 2026 by the chart addendum. The addendum's table is the prototype's current settings, "which the owner
+has seen and not objected to (to be confirmed as defaults)"; it is not decided.*
+
+*In plain English: for each chart edge, which behaviour is on by default. The owner said they would pick by looking.*
+
+- **File, section:**
+  - The addendum § 1.2, "Direction (owner):": "where a chart has no fully valid extension (the mass simplex, L × E), the
+    extension kind is a choice per edge, with a default. The owner picks the defaults by looking."
+  - The addendum § 1.2's table (prototype settings): "L_z × E, spin at ± its maximum | unfold onto the contracting
+    sheet …"; "L_z × E, kinetic energy below 0 | clamp to K = 0"; "latent masses | saturate (already the behaviour; the
+    owner is happy with it)"; "latent shape z_α, latent momenta | saturate"; "β, longitude | wrap"; "polar angle |
+    unfold (over the pole)"; "time before 0 | clamp to the starting state".
+  - `docs/design/principia_chart_reference.md` § 5.4's table (today's types).
+- **The question:** confirm or change each row's default:
+
+  | Edge | Prototype now | Today (§ 5.4) | Proposed default |
+  |---|---|---|---|
+  | `(L_z, E)`, `(L_z, K)`: spin at ±max (`s` edges) | unfold | bounded, blank | unfold (RQ-771 (a)) |
+  | `(L_z, E)`, `(L_z, K)`: below `K = 0` (`t < 0`) | clamp to `K = 0` | bounded, blank | clamp: on the warp the rest start, one system untilted and unsliced; under a tilt or slice that moves the configuration or masses, a line of different rest systems smeared downward (the addendum's "streaks") |
+  | latent masses, shape `z_α`, momenta | saturate | affine; the links saturate (REQ-CHART-087) | unchanged: affine, saturating by the links |
+  | latent `β`, sphere longitude θ | wrap | `β` periodic (R-898); θ periodic | unchanged |
+  | sphere polar angle φ | unfold over the pole | pole-crossing | unchanged |
+  | exponential map: square edges, `r = π` | (not in the prototype) | bounded; past `π` blank (R-554) | affine to `r = π`, then the repeat (RQ-772 (a)) |
+  | mass simplex sides | (not in the prototype) | affine, negative masses blank | clamp in the chart's own coordinates |
+  | Burrau `ν`, `θ`, `m`; `K` below 0; δm | (not in the prototype) | bounded, or affine then blank | clamp, until RQ-772 declares a continuation |
+  | time before 0 | clamp to the start | silent | clamp to the start |
+- **Options seen:** (a) the proposed column; (b) the prototype's column where it has a row, blank elsewhere; (c) the
+  owner's picks, row by row.
+- **Recommended:** (a), for the owner to look at in the prototype (`chart-slice.html`, version 21) and, once built, on
+  the kernel's charts.
+- **Measurement:** none; screenshots per row from N14, side by side with today's blank.
+- **Applied meanwhile:** nothing.
+- **Waits:** N14.
+
+## RQ-780: Do computed axes replace the line system's primary scale and the composition's "no ticks mid-morph" rule *(conflict; a one-way door, what an axis shows; the owner's direction of 10 Nov on computed axes, R-476, R-850; REQ-GUI-246, REQ-GUI-084, REQ-GUI-422; context: N16, N17, TASK-M8-50, TASK-M8-06)*
+
+*Queued 10 Nov 2026 by the chart addendum; quotes re-read on `origin/main` a5f0aa88.*
+
+*In plain English: the design says a frame in the middle of a morph shows no ticks, and that a warped axis's ticks sit
+at round values of its physical quantity. The owner now wants ticks computed from the view everywhere, morphs
+included. Which rule wins, and where do they combine?*
+
+- **File, section:**
+  - The addendum § 2, "Direction (owner):": "axis names, tick positions and tick values are derived algorithmically,
+    and stay correct through pan, zoom, rotation, tilt, slice, blend and morph."; § 2.1: "It is linear in s, so ticks sit
+    at round values by exact arithmetic, with no sampling."
+  - `docs/design/principia_chart_composition.md` § 17 (line 1946): "axes carry no ticks, only "A, B, `s`"."
+  - `docs/design/principia_lines.md` § "8b. Axes": "A warped axis's ticks fall at round values of the quantity, so they
+    are unevenly spaced." and "A secondary scale is refused where the quantity is not monotonic along the edge."
+  - `docs/design/principia_chart_reference.md` § 2.1 (R-471 E3): "**The warp is evaluated per pixel,** with that
+    pixel's own `U`, `I` and masses".
+- **The conflict:** § 17 shows no ticks on a morph frame; the direction asks for them. The prototype's exactness holds
+  only for a coordinate linear in the window; a warped quantity, or `E` read with each pixel's own `U` under a tilt, is
+  not linear along an edge, so its ticks need § 8b's solve, which is sampling or root-finding. An unfolded axis's
+  numbers rise and fall, which § 8b's monotonic rule refuses for a secondary scale.
+- **The question:** (i) does the computed axis become § 8b's primary scale on every chart and every frame, § 17's
+  no-ticks rule withdrawn; (ii) are warped and per-pixel quantities placed by § 8b's solve; (iii) may a primary scale
+  be non-monotonic at an unfold; (iv) the solve's tolerance, which § 8b does not state: a missing value, so a
+  calibration requirement (R-71), "N16's tick tolerance", one-way and the owner's, never the implementer's.
+  Proposed form, for the owner: a tick's position error in base px (R-583), the unit its mark is drawn in; the owner
+  sets the value at the milestone gate's calibration batch, or ties it to an existing calibrated tolerance.
+- **Options seen:**
+  - (a) Yes to all three: the computed axis is the primary scale; coordinates linear in the window get exact
+    arithmetic, the rest § 8b's solve; an unfold's turning point is a marked fold, not a refusal; secondary scales stay
+    as § 8b has them.
+  - (b) Computed axes on affine charts and frames only; warped charts keep § 8b; morph frames keep "A, B, `s`".
+  - (c) Keep both texts as they are.
+- **Recommended:** (a).
+- **Measurement:** N16's tests (ends exact; ticks at round values to 4 ulps on linear coordinates; solved ticks within
+  N16's tick tolerance once (iv) sets it, the test waiting until then; the contour-on-ticks exactness test of lines
+  § 12).
+- **Applied meanwhile:** nothing.
+- **Waits:** N16, N17.
+
+## RQ-781: Where the view's centre may go once every edge extends: onto an unfold sheet, into a clamped or saturated area *(conflict; a one-way door, navigation; the owner's direction of 10 Nov, R-469, R-537; REQ-CHART-060; context: TASK-M2-38, N14)*
+
+*Queued 10 Nov 2026 by the chart addendum; quotes re-read on `origin/main` a5f0aa88.*
+
+*In plain English: today dragging stops when the centre of the view would leave valid systems, though the edges of the
+picture can show past it. With extensions everywhere, may the centre cross onto the second sheet, or into a smeared
+area?*
+
+- **File, section:**
+  - `decisions.md` § R-469's heading: "pan, slice, zoom, tilt and lock are accepted only while the chart's centre passes
+    `validate`, an edit that would cross stopping at the last valid value".
+  - `decisions.md` § R-537, EX3 (the applied text): "**Bounded charts** (the warp, the mass simplex, the Burrau family):
+    the centre stops at the domain's edge, but the window may still show blank past it."
+  - `plan/requirements.yaml` REQ-CHART-060: "an edit that would cross must stop at the last valid value along its own
+    path".
+- **The question:** may the centre (and a lock) sit on an unfold sheet, in a clamped area, in a saturated area?
+- **Options seen:**
+  - (a) An unfold sheet is valid ground: `validate` reads the sheet, and the centre crosses the fold as it crosses a
+    pole; a clamped or saturated area is not: the centre stops at the edge (R-469 unchanged there), the window showing
+    the extension past it.
+  - (b) The centre stops at every primary-range edge, sheets included.
+  - (c) The centre goes anywhere the picture does, a clamped centre reading as its edge system.
+- **Recommended:** (a): it keeps R-469's "last valid value" for every true end and treats a real sheet as the
+  pole-crossing axis is treated.
+- **Measurement:** TASK-M2-38's fuzz extended: no edit leaves the centre on a clamped or saturated pixel, and a pan
+  across the fold lands on sheet 2 with `validate` passing.
+- **Applied meanwhile:** nothing; R-469 stands.
+- **Waits:** TASK-M2-38, N14.
 ## RQ-758: Do central-difference slopes survive R-926's three slope tiers: as the linearised decoder's `J_D`, as a fourth tier, or only as a test's check? *(conflict; a one-way door; R-926 item 9 and item 11, R-633, R-113; REQ-DEC-034, REQ-DEC-036, REQ-DEC-042, REQ-GEN-018; context: TASK-M6-07, TASK-M5-04)*
 
 *Queued 10 Nov 2026 by the M2 chart re-plan (`plan/charts/m2-chart-system-replan.md`); each quote re-read on
