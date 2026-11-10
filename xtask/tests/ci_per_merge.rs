@@ -7,7 +7,10 @@
 //!   failure is red, a process test's alone a task, both together red; a failure outside the test steps, or the build
 //!   failing inside one, a task; a test step that names no failed test, or whose log is gone, red; the jobs that are
 //!   never correctness a task, the release profile's always red, and a job it does not know red; nextest's lines read
-//!   whatever their status, counter and colours, a retried attempt no failure of its own.
+//!   whatever their status, counter and colours, a retried attempt no failure of its own; each failed test step read in
+//!   its own part of the job's log, a part opening in its step's second its own and never a skipped step's; two failed
+//!   test steps whose parts cannot be told apart red; a test step skipped after a failed one red, one skipped before it
+//!   not; nextest's summary counting fewer tests run than selected red.
 //! - `ci_per_merge_process_class_is_the_process_profiles`: the classifier's process tests are the `process` profile's
 //!   binaries, and none of the product correctness the owner named (R-909).
 //! - `ci_per_merge_decide_*`: `decide`, with a stand-in `gh`: on `main`, one issue labelled `per-merge` for the other
@@ -18,7 +21,8 @@
 //!   ended in, with the permissions it uses and nothing self-hosted; the classifier knows each of those jobs by name;
 //!   and the tier runs the owner's list: the `ci`, `ci-workspace` and `gpu-kernel` profiles between them select every
 //!   test (the `ci` profile leaving out exactly the other two's), `cargo xtask golden --all` and `cargo xtask gate
-//!   decode-agreement` on lavapipe and on Metal, and the release profile.
+//!   decode-agreement` on lavapipe and on Metal, and the release profile; and the jobs of those three profiles run
+//!   every test after a failure.
 //!
 //! Each test has its registered negative control (R-176), which feeds the same check a script, run, workflow or
 //! configuration differing in the one respect it turns on. Unix only: the stand-in `gh` is an executable script.
@@ -296,8 +300,9 @@ fn ci_per_merge_verdict_product_test_failure_is_red() {
 
 negative_control!(
     ci_per_merge_verdict_product_test_failure_is_red,
-    "a classifier that reads every test as a process test",
-    expected = "ci_per_merge: a product test failing in a `ci` shard: the verdict is not red",
+    "a classifier that reads every test as a process test (red still, by the summary's tests left unrun, but not for the \
+     product test)",
+    expected = "ci_per_merge: a product test failing in a `ci` shard: ci (2) is not judged correctness (product tests failed",
     check_product(&edit(
         &script(),
         "if failed and any(b not in process for b, _ in failed):",
@@ -660,6 +665,458 @@ negative_control!(
     expected = "ci_per_merge: nextest's statuses: the verdict is not task",
     check_statuses("FAIL")
 );
+
+// ---- Every failed test step, and the suite run whole ----------------------------------------------------------------
+
+/// A job of the jobs API that failed, its steps each `(name, conclusion, start)`, the start `HH:MM:SS` on 10 Nov 2026
+/// as the API gives it, to the second, or none if empty.
+fn timed_job(id: u64, name: &str, steps: &[(&str, &str, &str)]) -> Value {
+    let steps: Vec<Value> = steps
+        .iter()
+        .map(|(step, conclusion, at)| {
+            let mut s = json!({"name": step, "conclusion": conclusion});
+            if !at.is_empty() {
+                s["started_at"] = json!(format!("2026-11-10T{at}Z"));
+            }
+            s
+        })
+        .collect();
+    json!({"id": id, "name": name, "status": "completed", "conclusion": "failure", "steps": steps})
+}
+
+/// A log line written at `at` (`HH:MM:SS.fffffff` on 10 Nov 2026).
+fn at(time: &str, text: &str) -> String {
+    format!("2026-11-10T{time}Z {text}")
+}
+
+/// A nextest status line written at `at`.
+fn status_at(time: &str, status: &str, binary: &str, test: &str) -> String {
+    format!("2026-11-10T{time}Z {status:>12} [   1.234s] (  7/900) {binary} {test}")
+}
+
+impl Run {
+    /// This run with its job named as `job` is replaced by `job`, its log `lines`.
+    fn with(mut self, job: Value, lines: &[String]) -> Run {
+        let at = self
+            .jobs
+            .iter()
+            .position(|j| j["name"] == job["name"])
+            .expect("a job of the run");
+        let id = job["id"].as_u64().expect("an id");
+        self.jobs[at] = job;
+        self.logs.insert(id, lines.join("\n") + "\n");
+        self
+    }
+}
+
+const WORKSPACE_TESTS: &str = "cargo nextest run -p xtask";
+const WORKSPACE_M0_24: &str = "cargo nextest run -p validation --test qa_TASK-M0-24";
+const WORKSPACE_CONTROLS: &str =
+    "cargo nextest run --features controls (the default-feature listing's controls)";
+const WORKSPACE_DOC: &str = "cargo test -p xtask --doc";
+
+/// `ci-workspace` failing its first test step with a process test, whose closing line is written in the second the
+/// next step starts, and its doctest step after it naming no failed test: each step read in its own part of the log.
+fn check_each_step(script: &str) {
+    let job = timed_job(
+        7,
+        "ci-workspace",
+        &[
+            ("Set up job", "success", "01:00:00"),
+            (WORKSPACE_TESTS, "failure", "01:00:02"),
+            (WORKSPACE_M0_24, "success", "01:00:09"),
+            (WORKSPACE_CONTROLS, "success", "01:00:11"),
+            ("Runner disk after the tests", "skipped", "01:00:12"),
+            (WORKSPACE_DOC, "failure", "01:00:12"),
+            ("Complete job", "success", "01:00:20"),
+        ],
+    );
+    let lines = [
+        "\u{feff}2026-11-10T01:00:00.1000000Z Current runner version: '2.338.2'".to_owned(),
+        at(
+            "01:00:02.1000000",
+            &format!("##[group]Run {WORKSPACE_TESTS}"),
+        ),
+        status_at(
+            "01:00:05.0000000",
+            "FAIL",
+            "xtask::ci",
+            "ci_list_runs_no_control",
+        ),
+        status_at(
+            "01:00:09.6000000",
+            "FAIL",
+            "xtask::ci",
+            "ci_list_runs_no_control",
+        ),
+        at(
+            "01:00:09.7000000",
+            "##[error]Process completed with exit code 100.",
+        ),
+        at(
+            "01:00:09.8000000",
+            &format!("##[group]Run {WORKSPACE_M0_24}"),
+        ),
+        at(
+            "01:00:11.0000000",
+            "##[group]Run cargo nextest run -p xtask --features controls --test nextest",
+        ),
+        at("01:00:12.2000000", &format!("##[group]Run {WORKSPACE_DOC}")),
+        at(
+            "01:00:13.0000000",
+            "test result: FAILED. 41 passed; 1 failed",
+        ),
+        at(
+            "01:00:13.1000000",
+            "##[error]Process completed with exit code 101.",
+        ),
+    ];
+    let run = Run::green().with(job, &lines);
+    check_verdict(
+        script,
+        "a doctest failing after a process test",
+        &run,
+        "red",
+        &[(
+            "ci-workspace",
+            "correctness",
+            "`cargo nextest run -p xtask`: process tests failed: xtask::ci ci_list_runs_no_control; \
+             `cargo test -p xtask --doc` failed, its log naming no failed test",
+        )],
+    );
+}
+
+#[test]
+fn ci_per_merge_verdict_reads_each_failed_test_step() {
+    check_each_step(&script());
+}
+
+negative_control!(
+    ci_per_merge_verdict_reads_each_failed_test_step,
+    "a classifier that reads the job's whole log for each failed step, so the process test's lines answer for the doctest",
+    expected = "ci_per_merge: a doctest failing after a process test: the verdict is not red",
+    check_each_step(&edit(
+        &script(),
+        "    own = parts(every, log)\n",
+        "    own = {at: clean(log) for at in tests}\n"
+    ))
+);
+
+/// `ci-workspace` failing two test steps, each with a process test alone: the second step's part opens in the second
+/// it started, beside a skipped step started in that second too, and is read as its own.
+fn check_two_process_steps(script: &str) {
+    let job = timed_job(
+        7,
+        "ci-workspace",
+        &[
+            ("Set up job", "success", "01:00:00"),
+            (WORKSPACE_TESTS, "failure", "01:00:02"),
+            (WORKSPACE_M0_24, "success", "01:00:09"),
+            (WORKSPACE_CONTROLS, "failure", "01:00:11"),
+            ("Runner disk after the tests", "skipped", "01:00:11"),
+            (WORKSPACE_DOC, "success", "01:00:30"),
+        ],
+    );
+    let lines = [
+        at("01:00:00.1000000", "Current runner version: '2.338.2'"),
+        at(
+            "01:00:02.1000000",
+            &format!("##[group]Run {WORKSPACE_TESTS}"),
+        ),
+        status_at(
+            "01:00:09.6000000",
+            "FAIL",
+            "xtask::ci",
+            "ci_list_runs_no_control",
+        ),
+        at(
+            "01:00:09.7000000",
+            "##[error]Process completed with exit code 100.",
+        ),
+        at(
+            "01:00:09.8000000",
+            &format!("##[group]Run {WORKSPACE_M0_24}"),
+        ),
+        at(
+            "01:00:11.0000000",
+            "##[group]Run cargo nextest run -p xtask --features controls --test nextest",
+        ),
+        status_at(
+            "01:00:11.4000000",
+            "FAIL",
+            "xtask::nextest",
+            "nextest_ci_shards_together_list_every_test",
+        ),
+        at(
+            "01:00:11.5000000",
+            "##[error]Process completed with exit code 100.",
+        ),
+        at("01:00:30.0000000", &format!("##[group]Run {WORKSPACE_DOC}")),
+        at("01:00:31.0000000", "test result: ok. 42 passed; 0 failed"),
+    ];
+    let run = Run::green().with(job, &lines);
+    check_verdict(
+        script,
+        "two test steps failing with process tests",
+        &run,
+        "task",
+        &[(
+            "ci-workspace",
+            "other",
+            "`cargo nextest run -p xtask`: process tests failed: xtask::ci ci_list_runs_no_control; \
+             `cargo nextest run --features controls (the default-feature listing's controls)`: process tests failed: \
+             xtask::nextest nextest_ci_shards_together_list_every_test",
+        )],
+    );
+}
+
+#[test]
+fn ci_per_merge_verdict_a_part_opening_in_its_steps_second_is_its_own() {
+    check_two_process_steps(&script());
+}
+
+negative_control!(
+    ci_per_merge_verdict_a_part_opening_in_its_steps_second_is_its_own,
+    "a classifier that gives a part only to a step started before its first line's second",
+    expected = "ci_per_merge: two test steps failing with process tests: the verdict is not task",
+    check_two_process_steps(&edit(
+        &script(),
+        "if second <= m.group(1)]",
+        "if second < m.group(1)]"
+    ))
+);
+
+mod a_skipped_step_owns_no_part {
+    use super::*;
+    negative_control!(
+        ci_per_merge_verdict_a_part_opening_in_its_steps_second_is_its_own,
+        "a classifier that lets a skipped step, started in the same second, take the failed step's part",
+        expected = "ci_per_merge: two test steps failing with process tests: the verdict is not task",
+        check_two_process_steps(&edit(
+            &script(),
+            "if m and step.get(\"conclusion\") != \"skipped\":",
+            "if m:"
+        ))
+    );
+}
+
+/// Steps without their start times: one failed test step reads the whole log; two are red, their parts not told apart.
+/// And steps with times over a log without them reads the whole log too.
+fn check_untimed(script: &str) {
+    let mut job = job(7, "ci-workspace", "failure", WORKSPACE_TESTS);
+    job["steps"]
+        .as_array_mut()
+        .expect("steps")
+        .push(json!({"name": WORKSPACE_DOC, "conclusion": "failure"}));
+    let lines = [
+        line("FAIL", "xtask::ci", "ci_list_runs_no_control"),
+        "2026-11-10T01:00:13.0000000Z test result: FAILED. 41 passed; 1 failed".to_owned(),
+    ];
+    let run = Run::green().with(job, &lines);
+    check_verdict(
+        script,
+        "two failed test steps without their times",
+        &run,
+        "red",
+        &[(
+            "ci-workspace",
+            "correctness",
+            "`cargo nextest run -p xtask`, `cargo test -p xtask --doc` failed, and the log's parts for each cannot be \
+             told apart",
+        )],
+    );
+    let timed = timed_job(
+        7,
+        "ci-workspace",
+        &[
+            ("Set up job", "success", "01:00:00"),
+            (WORKSPACE_TESTS, "failure", "01:00:02"),
+        ],
+    );
+    let bare = Run::green().with(
+        timed,
+        &["        FAIL [   1.250s] ( 12/5514) xtask::ci ci_list_runs_no_control".to_owned()],
+    );
+    check_verdict(
+        script,
+        "a log without times",
+        &bare,
+        "task",
+        &[("ci-workspace", "other", "process tests failed: xtask::ci")],
+    );
+}
+
+#[test]
+fn ci_per_merge_verdict_steps_not_told_apart_are_red() {
+    check_untimed(&script());
+}
+
+negative_control!(
+    ci_per_merge_verdict_steps_not_told_apart_are_red,
+    "a classifier that reads the first of two failed test steps in the whole log when it cannot cut it",
+    expected = "ci_per_merge: two failed test steps without their times: ci-workspace is not judged correctness",
+    check_untimed(&edit(
+        &script(),
+        "        if len(tests) > 1:\n",
+        "        if len(tests) > 2:\n"
+    ))
+);
+
+const KERNEL_DOC: &str = "cargo test -p validation -p xtask -p engine --doc";
+
+/// A test step skipped after a failed one is red: part of the suite did not run. A test step skipped before it (a
+/// shard's doctest step, which runs in shard 1 alone, before the shard's nextest run) is not.
+fn check_skipped(script: &str) {
+    let mut kernel = job(13, "gpu-kernel suites", "failure", KERNEL_STEP);
+    kernel["steps"]
+        .as_array_mut()
+        .expect("steps")
+        .insert(2, json!({"name": KERNEL_DOC, "conclusion": "skipped"}));
+    let lines = [line("FAIL", "xtask::ci", "ci_list_runs_no_control")];
+    let run = Run::green().with(kernel, &lines);
+    check_verdict(
+        script,
+        "a doctest step skipped after a failed test step",
+        &run,
+        "red",
+        &[(
+            "gpu-kernel suites",
+            "correctness",
+            "`cargo test -p validation -p xtask -p engine --doc` was skipped after \
+             `cargo nextest run -p validation -p xtask -p engine` failed, the suite left unrun",
+        )],
+    );
+    let shard = json!({"id": 4, "name": "ci (2)", "status": "completed", "conclusion": "failure", "steps": [
+        {"name": "Set up job", "conclusion": "success"},
+        {"name": "cargo test --workspace --doc", "conclusion": "skipped"},
+        {"name": CI_STEP, "conclusion": "failure"},
+    ]});
+    let run = Run::green().with(shard, &lines);
+    check_verdict(
+        script,
+        "a doctest step skipped before a failed test step",
+        &run,
+        "task",
+        &[("ci (2)", "other", "process tests failed: xtask::ci")],
+    );
+    let mut workspace = job(7, "ci-workspace", "failure", WORKSPACE_TESTS);
+    for (at, name, conclusion) in [
+        (2, WORKSPACE_M0_24, "skipped"),
+        (3, WORKSPACE_CONTROLS, "skipped"),
+        (4, WORKSPACE_DOC, "success"),
+    ] {
+        workspace["steps"]
+            .as_array_mut()
+            .expect("steps")
+            .insert(at, json!({"name": name, "conclusion": conclusion}));
+    }
+    let run = Run::green().with(workspace, &lines);
+    check_verdict(
+        script,
+        "the process tests' steps skipped after a failed test step",
+        &run,
+        "task",
+        &[("ci-workspace", "other", "process tests failed: xtask::ci")],
+    );
+}
+
+#[test]
+fn ci_per_merge_verdict_a_test_step_skipped_after_a_failure_is_red() {
+    check_skipped(&script());
+}
+
+negative_control!(
+    ci_per_merge_verdict_a_test_step_skipped_after_a_failure_is_red,
+    "a classifier that reads no skipped test step",
+    expected =
+        "ci_per_merge: a doctest step skipped after a failed test step: the verdict is not red",
+    check_skipped(&edit(&script(), "    if skipped:\n", "    if False:\n"))
+);
+
+mod skipped_process_steps {
+    use super::*;
+    negative_control!(
+        ci_per_merge_verdict_a_test_step_skipped_after_a_failure_is_red,
+        "a classifier that reads a step of process tests alone, skipped after a failure, as product tests left unrun",
+        expected = "ci_per_merge: the process tests' steps skipped after a failed test step: the verdict is not task",
+        check_skipped(&edit(
+            &script(),
+            " and s.get(\"name\") not in PROCESS_STEPS",
+            ""
+        ))
+    );
+}
+
+mod skipped_before {
+    use super::*;
+    negative_control!(
+        ci_per_merge_verdict_a_test_step_skipped_after_a_failure_is_red,
+        "a classifier that reads a test step skipped before the failed one as left unrun",
+        expected = "ci_per_merge: a doctest step skipped before a failed test step: the verdict is not task",
+        check_skipped(&edit(
+            &script(),
+            "for s in every[tests[0] + 1:]",
+            "for s in every[tests[0] - 1:]"
+        ))
+    );
+}
+
+/// A process test failing in a `ci` shard, nextest's summary saying how many of the tests it selected it ran: fewer is
+/// red, every one (as `N/N` or as `N`) a task.
+fn check_unrun(script: &str) {
+    let process = line("FAIL", "xtask::ci", "ci_list_runs_no_control");
+    let cases = [
+        (SUMMARY.to_owned(), "red", "correctness", "nextest ran 322 of the 5514 tests it selected, the rest unrun"),
+        (
+            "2026-11-10T01:00:01.0000000Z      Summary [  71.045s] 5514/5514 tests run: 5513 passed, 1 failed".to_owned(),
+            "task",
+            "other",
+            "process tests failed: xtask::ci ci_list_runs_no_control",
+        ),
+        (
+            "2026-11-10T01:00:01.0000000Z      Summary [ 300.000s] 5514 tests run: 5513 passed, 1 failed".to_owned(),
+            "task",
+            "other",
+            "process tests failed: xtask::ci ci_list_runs_no_control",
+        ),
+    ];
+    for (summary, want, kind, says) in cases {
+        let run = Run::green().test_failed("ci (3)", CI_STEP, &[process.clone(), summary.clone()]);
+        check_verdict(
+            script,
+            &format!("a process test's failure, then `{}`", summary.trim()),
+            &run,
+            want,
+            &[("ci (3)", kind, says)],
+        );
+    }
+}
+
+#[test]
+fn ci_per_merge_verdict_tests_left_unrun_are_red() {
+    check_unrun(&script());
+}
+
+negative_control!(
+    ci_per_merge_verdict_tests_left_unrun_are_red,
+    "a classifier that does not read nextest's count of the tests it ran",
+    expected = "ci_per_merge: a process test's failure, then",
+    check_unrun(&edit(&script(), "    if left:\n", "    if False:\n"))
+);
+
+mod every_test_run {
+    use super::*;
+    negative_control!(
+        ci_per_merge_verdict_tests_left_unrun_are_red,
+        "a classifier that reads a run of every selected test, `N/N`, as one that left tests unrun",
+        expected = "5514/5514 tests run: 5513 passed, 1 failed`: the verdict is not task",
+        check_unrun(&edit(
+            &script(),
+            "int(m.group(1)) < int(m.group(2))",
+            "int(m.group(1)) <= int(m.group(2))"
+        ))
+    );
+}
 
 // ---- The process class ----------------------------------------------------------------------------------------------
 
@@ -1475,6 +1932,228 @@ mod a_test_in_no_profile {
                 &read(CONFIG),
                 "    | binary_id(=engine::lock_gpu)\n    | binary_id(=engine::arctan_gpu)\n    | binary_id(=validation::decode_f32_eps_gpu)\n    | binary_id(=validation::invariant_gradient_gpu)\n    | binary_id(=validation::agreement_preset_gpu)\n    | binary_id(=validation::qa_TASK-M2-25_gpu)\n    | binary_id(=xtask::build_kernel)\n",
                 "    | binary_id(=engine::arctan_gpu)\n    | binary_id(=validation::decode_f32_eps_gpu)\n    | binary_id(=validation::invariant_gradient_gpu)\n    | binary_id(=validation::agreement_preset_gpu)\n    | binary_id(=validation::qa_TASK-M2-25_gpu)\n    | binary_id(=xtask::build_kernel)\n"
+            )
+        )
+    );
+}
+
+/// The steps of a job that run tests, by the start of their names, as the classifier reads them.
+const TEST_STEPS: [&str; 4] = [
+    "cargo nextest run",
+    "cargo test",
+    "cargo xtask golden",
+    "cargo xtask gate",
+];
+
+/// The classifier's PROCESS_STEPS, from `script`.
+fn process_steps(script: &str) -> BTreeSet<String> {
+    let dir = Scratch::new("ci_per_merge_process_steps");
+    std::fs::create_dir_all(&*dir).expect("scratch");
+    let file = dir.join("ci_per_merge.py");
+    std::fs::write(&file, script).expect("script");
+    let got = evaluated_from(&file, "list(m.PROCESS_STEPS)");
+    got.as_array()
+        .expect("ci_per_merge: a list")
+        .iter()
+        .map(|v| v.as_str().expect("a name").to_owned())
+        .collect()
+}
+
+/// `expr` evaluated by python3 with the script at `file` loaded as `m`: its JSON.
+fn evaluated_from(file: &Path, expr: &str) -> Value {
+    let program = format!(
+        "import importlib.util, json, sys\n\
+         spec = importlib.util.spec_from_file_location('m', sys.argv[1])\n\
+         m = importlib.util.module_from_spec(spec)\n\
+         spec.loader.exec_module(m)\n\
+         print(json.dumps({expr}))\n"
+    );
+    let out = Command::new("python3")
+        .arg("-I")
+        .arg("-c")
+        .arg(program)
+        .arg(file)
+        .timed_output()
+        .expect("ci_per_merge: python3 ran");
+    assert!(
+        out.status.success(),
+        "ci_per_merge: python3 failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    serde_json::from_slice(&out.stdout).expect("ci_per_merge: JSON")
+}
+
+/// The binaries a `cargo nextest run` command selects by `-p` and `--test`, each `<package>::<test>`; empty unless it
+/// names one package and at least one `--test`, and nothing else selects more (`--workspace`, `--lib`, `--all-targets`).
+fn selected_binaries(run: &str) -> BTreeSet<String> {
+    let words: Vec<&str> = run.split_whitespace().collect();
+    let packages: Vec<&str> = words
+        .windows(2)
+        .filter(|w| w[0] == "-p")
+        .map(|w| w[1])
+        .collect();
+    let tests: Vec<&str> = words
+        .windows(2)
+        .filter(|w| w[0] == "--test")
+        .map(|w| w[1])
+        .collect();
+    let wider = ["--workspace", "--lib", "--bins", "--all-targets", "--doc"];
+    if packages.len() != 1 || tests.is_empty() || words.iter().any(|w| wider.contains(w)) {
+        return BTreeSet::new();
+    }
+    tests
+        .iter()
+        .map(|t| format!("{}::{t}", packages[0]))
+        .collect()
+}
+
+/// The jobs that run the `ci`, `ci-workspace` and `gpu-kernel` profiles, R-909's product suite, run every product test
+/// after a failure: each profile with `fail-fast = false`; each test step after a job's first runs whatever an earlier
+/// one ended in (`!cancelled()`), or runs process tests alone (the classifier's PROCESS_STEPS, each selecting process
+/// binaries only), or follows doctest steps alone (whose failure is red); each `steps.<id>` a condition reads is an
+/// earlier step's. The other test jobs' later steps do not run after a failure; the verdict reads a product test step
+/// skipped there as red.
+fn check_run_whole(ci: &str, config: &str, script: &str) {
+    let ci = parse(ci);
+    let dir = Scratch::new("ci_per_merge_run_whole");
+    std::fs::create_dir_all(&*dir).expect("scratch");
+    let file = dir.join("nextest.toml");
+    std::fs::write(&file, config).expect("config");
+    let process = class_of(&file);
+    let alone = process_steps(script);
+    let config: toml_edit::DocumentMut = config.parse().expect("ci_per_merge: nextest.toml");
+    let mut seen = BTreeSet::new();
+    for key in ["ci", "ci-workspace", "gpu-kernel"] {
+        let steps = ci["jobs"][key]["steps"]
+            .as_array()
+            .unwrap_or_else(|| panic!("ci_per_merge: no job {key}"));
+        let mut ids = BTreeSet::new();
+        let mut earlier: Vec<String> = Vec::new();
+        for step in steps {
+            let name = text(&step["name"]);
+            let cond = text(&step["if"]);
+            let run = text(&step["run"]);
+            let mut rest = cond;
+            while let Some(at) = rest.find("steps.") {
+                rest = &rest[at + "steps.".len()..];
+                let id = rest.split('.').next().unwrap_or_default();
+                assert!(
+                    ids.contains(id),
+                    "ci_per_merge: `{name}` of {key} reads `steps.{id}`, no earlier step's id"
+                );
+            }
+            let profile = text(&step["env"]["NEXTEST_PROFILE"]);
+            if !profile.is_empty() {
+                assert_eq!(
+                    config
+                        .get("profile")
+                        .and_then(|p| p.get(profile))
+                        .and_then(|p| p.get("fail-fast"))
+                        .and_then(|v| v.as_bool()),
+                    Some(false),
+                    "ci_per_merge: the {profile} profile stops at a failure"
+                );
+            }
+            if alone.contains(name) {
+                let binaries = selected_binaries(run);
+                assert!(
+                    !binaries.is_empty() && binaries.iter().all(|b| process.contains(b)),
+                    "ci_per_merge: `{name}` of {key} is a step of process tests alone to the verdict, but runs `{run}`"
+                );
+                seen.insert(name.to_owned());
+            }
+            if TEST_STEPS.iter().any(|t| name.starts_with(t)) {
+                let after_doctests = earlier.iter().all(|r| r.contains("--doc"));
+                assert!(
+                    earlier.is_empty()
+                        || cond.contains("!cancelled()")
+                        || alone.contains(name)
+                        || after_doctests,
+                    "ci_per_merge: `{name}` of {key} does not run after a failed test step"
+                );
+                earlier.push(run.to_owned());
+            }
+            if let Some(id) = step["id"].as_str() {
+                ids.insert(id.to_owned());
+            }
+        }
+        assert!(!earlier.is_empty(), "ci_per_merge: {key} runs no test step");
+    }
+    assert_eq!(
+        seen, alone,
+        "ci_per_merge: a step the verdict reads as process tests alone is not in ci.yml"
+    );
+}
+
+#[test]
+fn ci_per_merge_tier_runs_every_test_after_a_failure() {
+    check_run_whole(&read(CI), &read(CONFIG), &script());
+}
+
+negative_control!(
+    ci_per_merge_tier_runs_every_test_after_a_failure,
+    "a gpu-kernel profile that stops at the first failure",
+    expected = "ci_per_merge: the gpu-kernel profile stops at a failure",
+    check_run_whole(
+        &read(CI),
+        &edit(
+            &read(CONFIG),
+            "[profile.gpu-kernel]\nfail-fast = false\n",
+            "[profile.gpu-kernel]\n"
+        ),
+        &script()
+    )
+);
+
+mod a_doctest_skipped_after_a_failure {
+    use super::*;
+    negative_control!(
+        ci_per_merge_tier_runs_every_test_after_a_failure,
+        "a ci-workspace whose doctest step is skipped after a failed test step",
+        expected = "ci_per_merge: `cargo test -p xtask --doc` of ci-workspace does not run after a failed test step",
+        check_run_whole(
+            &edit(
+                &read(CI),
+                "      - name: cargo test -p xtask --doc\n        if: ${{ !cancelled() && steps.workspace-tests.outcome != 'skipped' }}\n",
+                "      - name: cargo test -p xtask --doc\n"
+            ),
+            &read(CONFIG),
+            &script()
+        )
+    );
+}
+
+mod a_step_id_gone {
+    use super::*;
+    negative_control!(
+        ci_per_merge_tier_runs_every_test_after_a_failure,
+        "a gpu-kernel whose doctest step reads the nextest step under an id it does not have",
+        expected = "ci_per_merge: `cargo test -p validation -p xtask -p engine --doc` of gpu-kernel reads `steps.kernel-test`, no earlier step's id",
+        check_run_whole(
+            &edit(
+                &read(CI),
+                "steps.kernel-tests.outcome",
+                "steps.kernel-test.outcome"
+            ),
+            &read(CONFIG),
+            &script()
+        )
+    );
+}
+
+mod a_product_step_read_as_process {
+    use super::*;
+    negative_control!(
+        ci_per_merge_tier_runs_every_test_after_a_failure,
+        "a classifier that reads ci-workspace's doctest step as process tests alone",
+        expected = "ci_per_merge: `cargo test -p xtask --doc` of ci-workspace is a step of process tests alone to the verdict",
+        check_run_whole(
+            &read(CI),
+            &read(CONFIG),
+            &edit(
+                &script(),
+                "PROCESS_STEPS = (\n",
+                "PROCESS_STEPS = (\n    \"cargo test -p xtask --doc\",\n"
             )
         )
     );

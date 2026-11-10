@@ -33,16 +33,29 @@ A failed job (any conclusion but success, skipped and neutral) is judged by its 
     (which the pull-request tier's required checks gate), `cargo xtask ci` (the controls run) and the web skeleton.
   - RELEASE_JOBS fail as correctness, whatever failed: REQ-TOOL-223 makes every failure of `ci-release`, a shard or its
     archive, a correctness failure and so a red `main`.
-  - TEST_JOBS, the rest of the run: a failed step that runs tests (TEST_STEPS, by the step's name) is a correctness
-    failure unless the tests its log names failing are all process tests, or it names none and the log shows the build
-    failing (`error: could not compile`); a failure in any other step (the runner, the disk, the toolchain, a download,
-    the kernel's or the archive's build) is another kind.
+  - TEST_JOBS, the rest of the run: each failed step that runs tests (TEST_STEPS, by the step's name) is read on its
+    own, in its own part of the job's log, and is a correctness failure unless the tests it names failing are all
+    process tests, or it names none and shows the build failing (`error: could not compile`); a failure in any other
+    step (the runner, the disk, the toolchain, a download, the kernel's or the archive's build) is another kind. The
+    job is a correctness failure if any of its failed test steps is one, and whenever part of its product suite did not
+    run: a test step skipped after a failed one, but for the steps that run process tests alone (PROCESS_STEPS), or
+    nextest's summary counting fewer tests run than it selected (a failure that stopped the run). `ci.yml` runs the
+    rest of the product suite after a failure (the `ci`, `ci-workspace` and `gpu-kernel` profiles set `fail-fast =
+    false`, and each later product test step of their jobs runs whatever an earlier one ended in), so a process test's
+    failure leaves no product test unrun; these two rules hold the verdict red if it ever does.
   - Any other name is a job this script does not know: a correctness failure, so a job added to `ci.yml` without a
     place here is never let through (`xtask/tests/ci_per_merge.rs` checks the lists against `ci.yml`).
 A process test is one of the binaries the `process` profile's filter names before its `& not (`, the class the split
 of 9 Nov 2026 calls process. Fails towards red: a test job's failed test step with no log, or with no test and no build
-failure in its log (a doctest, `cargo xtask golden`, a gate), and a config whose process class cannot be read, which
-makes every test a product test.
+failure in its own part of the log (a doctest, `cargo xtask golden`, a gate), two failed test steps whose parts of the
+log cannot be told apart (their steps carry no start time, or a part starts without one), and a config whose process
+class cannot be read, which makes every test a product test.
+
+A step's part of the log: GitHub writes a job's steps into one log, each step's run opening with a `##[group]Run`
+line. The log is cut at those lines, and each part goes to the step that started last, of those that ran, at or before
+its first line's time (the jobs API gives a step's start to the second). A part is never split: nextest's closing lines,
+written in the second the next step starts, stay with their own step. A step that started in the same second as the
+next loses its part to it, and reads as naming no failed test: red, never a failure hidden.
 """
 
 import json
@@ -74,6 +87,13 @@ TEST_JOBS = (
 )
 # The steps that run tests, by the start of their names in `ci.yml`.
 TEST_STEPS = ("cargo nextest run", "cargo test", "cargo xtask golden", "cargo xtask gate")
+# The test steps that run process tests alone, by their names in `ci.yml`: skipped after a failed step, they leave no
+# product test unrun (`xtask/tests/ci_per_merge.rs` checks each selects process binaries only). `ci-workspace`'s, which
+# its checks hold unconditional: validation's `qa_TASK-M0-24`, and the controls of xtask's `nextest`.
+PROCESS_STEPS = (
+    "cargo nextest run -p validation --test qa_TASK-M0-24",
+    "cargo nextest run --features controls (the default-feature listing's controls)",
+)
 # The job and step states that are no failure.
 PASSED = ("success", "skipped", "neutral")
 # A step's states that mean it did not finish: failed, cut off by the job's timeout or cancelled with it.
@@ -93,6 +113,16 @@ ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 FAILED_TEST = re.compile(
     r"^\s+(?:FAIL|TIMEOUT|ABORT|LEAK-FAIL|SIG[A-Z]+) \[\s*[0-9.]+s\]\s+(?:\(\s*\d+/\s*\d+\)\s+)?(\S+)\s+(\S+)\s*$"
 )
+# nextest's closing line when it ran fewer tests than it selected: `Summary [  71.045s] 322/5514 tests run: 320 passed, 2
+# failed` (run 42722794689, `ci (3)`, which stopped at its first failure). A run of every test it selected prints
+# `5514 tests run`, without the `/`.
+UNRUN = re.compile(r"^\s*Summary \[\s*[0-9.]+s\]\s+(\d+)/(\d+) tests? run\b")
+# The line that opens each step's run in a job's log, its timestamp removed.
+GROUP = re.compile(r"^##\[group\]Run ")
+# A log line's timestamp, to the second.
+LINE_SECOND = re.compile(r"^\ufeff?(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.\d+)?Z")
+# A step's start, as the jobs API gives it, to the second, in UTC.
+STEP_SECOND = re.compile(r"^(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.\d+)?(?:Z|[+-]00:00)$")
 # cargo's line when a crate does not build.
 COMPILE = re.compile(r"^error: could not compile `")
 # A matrix job's name: its job's, then ` (<value>)`.
@@ -120,23 +150,78 @@ def clean(log):
     return [ANSI.sub("", STAMP.sub("", line, count=1)) for line in log.splitlines()]
 
 
-def failed_tests(log):
-    """Each (binary, test) the log names failing, once, in order."""
+def failed_tests(lines):
+    """Each (binary, test) the cleaned `lines` name failing, once, in order."""
     out = []
-    for line in clean(log):
+    for line in lines:
         m = FAILED_TEST.match(line)
         if m and m.groups() not in out:
             out.append(m.groups())
     return out
 
 
-def build_failed(log):
-    return any(COMPILE.match(line) for line in clean(log))
+def build_failed(lines):
+    return any(COMPILE.match(line) for line in lines)
+
+
+def unrun(lines):
+    """(run, selected) from nextest's summary in the cleaned `lines` when it ran fewer than it selected, else None."""
+    for line in lines:
+        m = UNRUN.match(line)
+        if m and int(m.group(1)) < int(m.group(2)):
+            return int(m.group(1)), int(m.group(2))
+    return None
 
 
 def failed_steps(job):
     """The names of the job's steps that did not finish."""
     return [s.get("name", "") for s in job.get("steps") or [] if s.get("conclusion") in STEP_FAILED]
+
+
+def is_test_step(step):
+    return step.get("name", "").startswith(TEST_STEPS)
+
+
+def parts(steps, log):
+    """Each step's own part of the job's `log`, cleaned, by its index in `steps`; None when they cannot be told apart.
+
+    The log is cut at each `##[group]Run` line, and each part goes to the step that started last, of those that ran, at
+    or before its first line's second. None when a part's first line has no time, or no step that ran has a start."""
+    started = []
+    for at, step in enumerate(steps):
+        m = STEP_SECOND.match(str(step.get("started_at") or ""))
+        if m and step.get("conclusion") != "skipped":
+            started.append((m.group(1), at))
+    if not started:
+        return None
+    out = {}
+    owner = None
+    for raw in log.splitlines():
+        line = ANSI.sub("", STAMP.sub("", raw, count=1))
+        if owner is None or GROUP.match(line):
+            m = LINE_SECOND.match(raw)
+            if m is None:
+                return None
+            owners = [at for second, at in started if second <= m.group(1)]
+            owner = max(owners) if owners else -1
+        out.setdefault(owner, []).append(line)
+    return out
+
+
+def judge_step(step, lines, process):
+    """(kind, why) for the failed test step named `step`, its own part of the log cleaned, `lines`."""
+    failed = failed_tests(lines)
+    named = ", ".join(f"{b} {t}" for b, t in failed)
+    if failed and any(b not in process for b, _ in failed):
+        return "correctness", f"{step}: product tests failed: {named}"
+    left = unrun(lines)
+    if left:
+        return "correctness", f"{step}: nextest ran {left[0]} of the {left[1]} tests it selected, the rest unrun"
+    if failed:
+        return "other", f"{step}: process tests failed: {named}"
+    if build_failed(lines):
+        return "other", f"{step}: the build failed"
+    return "correctness", f"{step} failed, its log naming no failed test"
 
 
 def judge(job, log, process):
@@ -150,21 +235,29 @@ def judge(job, log, process):
         return "correctness", f"{where}: every release-profile failure is one (REQ-TOOL-223)"
     if base not in TEST_JOBS:
         return "correctness", f"{where}: a job the verdict does not know"
-    tests = [s for s in steps if s.startswith(TEST_STEPS)]
+    every = job.get("steps") or []
+    tests = [at for at, s in enumerate(every) if s.get("conclusion") in STEP_FAILED and is_test_step(s)]
     if not tests:
         return "other", f"{where}: no test step failed"
-    step = f"`{tests[0]}`"
+    step = f"`{every[tests[0]].get('name', '')}`"
     if log is None:
         return "correctness", f"{step} failed and its log could not be read"
-    failed = failed_tests(log)
-    named = ", ".join(f"{b} {t}" for b, t in failed)
-    if failed and any(b not in process for b, _ in failed):
-        return "correctness", f"{step}: product tests failed: {named}"
-    if failed:
-        return "other", f"{step}: process tests failed: {named}"
-    if build_failed(log):
-        return "other", f"{step}: the build failed"
-    return "correctness", f"{step} failed, its log naming no failed test"
+    own = parts(every, log)
+    if own is None:
+        if len(tests) > 1:
+            names = ", ".join(f"`{every[at].get('name', '')}`" for at in tests)
+            return "correctness", f"{names} failed, and the log's parts for each cannot be told apart"
+        own = {tests[0]: clean(log)}
+    judged = [judge_step(f"`{every[at].get('name', '')}`", own.get(at, []), process) for at in tests]
+    skipped = [
+        s.get("name", "")
+        for s in every[tests[0] + 1:]
+        if s.get("conclusion") == "skipped" and is_test_step(s) and s.get("name") not in PROCESS_STEPS
+    ]
+    if skipped:
+        judged.append(("correctness", f"`{skipped[0]}` was skipped after {step} failed, the suite left unrun"))
+    kind = "correctness" if any(k == "correctness" for k, _ in judged) else "other"
+    return kind, "; ".join(why for _, why in judged)
 
 
 def classify(jobs, logs, process):

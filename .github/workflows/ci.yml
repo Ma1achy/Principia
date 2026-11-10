@@ -919,6 +919,15 @@ jobs:
               echo "::error::nextest-ci: downloaded $got of $WANT bytes, twice"; exit 1
             fi
           fi
+      # The doctests, once, in the first shard (R-231). nextest does not run them, so the archive holds none: this step
+      # compiles them, the shards' one compile. Under the disk sampler too. Before the shard's nextest run, not after:
+      # there its `if:` (its shard alone, which the doctest checks hold it to) skipped it whenever a test failed, a
+      # process test's among them, and the per-merge tier runs every product test whatever a process test did (R-909).
+      # A doctest failing here skips the nextest run after it; the per-merge verdict is red for both.
+      - name: cargo test --workspace --doc
+        if: matrix.shard == 1
+        run: cargo test --workspace --doc
+        shell: bash .github/scripts/disk_sampler.sh {0}
       # This shard's slice of every workspace test but those that need the built kernel, which `gpu-kernel` runs
       # (R-325), and those that run cargo on the workspace's own target directory, which `ci-workspace` runs (R-372):
       # the `ci` profile's default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE. From the archive
@@ -926,17 +935,13 @@ jobs:
       # it, beside the fixture pool restored there, so the paths compiled into the tests (`CARGO_BIN_EXE_*`,
       # `CARGO_TARGET_TMPDIR`) hold here as they did there. Under the disk sampler (`.github/scripts/disk_sampler.sh`),
       # as `cargo xtask ci` is in `xtask-ci`: a measurement, read by no gate; each such step's log notes the job's lowest free so far.
+      # The `ci` profile runs every test after a failure (`fail-fast = false`): the per-merge verdict reads every
+      # product test (R-909).
       - name: cargo nextest run --archive-file … --partition hash:${{ matrix.shard }}/4
         env:
           PRIN_GPU_BACKEND: vulkan
           NEXTEST_PROFILE: ci
         run: cargo nextest run --archive-file $RUNNER_TEMP/nextest-ci.tar.zst --extract-to . --extract-overwrite --partition hash:${{ matrix.shard }}/4
-        shell: bash .github/scripts/disk_sampler.sh {0}
-      # The doctests, once, in the first shard (R-231). nextest does not run them, so the archive holds none: this step
-      # compiles them, the shards' one compile. Under the disk sampler too.
-      - name: cargo test --workspace --doc
-        if: matrix.shard == 1
-        run: cargo test --workspace --doc
         shell: bash .github/scripts/disk_sampler.sh {0}
       - uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -1003,7 +1008,12 @@ jobs:
         run: printf '[profile.dev.package."*"]\ndebug = false\n[profile.test.package."*"]\ndebug = false\n' >> "${CARGO_HOME:-$HOME/.cargo}/config.toml"
       # Under the disk sampler (`.github/scripts/disk_sampler.sh`), as the `ci` shards' run is: a measurement, read by
       # no gate; the step's log notes the job's lowest free, and the next step its free space at the end.
+      # The job's first test step. The `ci-workspace` profile runs every test after a failure (`fail-fast = false`), and
+      # the doctest step runs whatever this one ended in (`steps.workspace-tests`), so a process test's failure leaves
+      # no product test unrun (R-909). The two nextest steps between run process tests alone, `qa_TASK-M0-24` and
+      # `nextest`'s controls (the per-merge verdict's PROCESS_STEPS), and stay unconditional.
       - name: cargo nextest run -p xtask
+        id: workspace-tests
         env:
           NEXTEST_PROFILE: ci-workspace
         run: cargo nextest run -p xtask
@@ -1028,6 +1038,7 @@ jobs:
       - name: Runner disk after the tests
         run: df -h /
       - name: cargo test -p xtask --doc
+        if: ${{ !cancelled() && steps.workspace-tests.outcome != 'skipped' }}
         run: cargo test -p xtask --doc
       # The kernel's log, on a failure, and the samples, whatever the job ended in, as in `xtask-ci`: `runner-disk.log`,
       # and from the tmpfs `runner-pressure.log`, written beside the steps under the disk sampler (RUNNER_DISK_TMPFS),
@@ -1383,13 +1394,17 @@ jobs:
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       # The tests that need the built kernel, in validation, xtask and engine (the decode stage's, TASK-M2-06): the
       # `gpu-kernel` profile's default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE. Their packages'
-      # doctests beside them, as beside every nextest step (R-231).
+      # doctests beside them, as beside every nextest step (R-231). The doctests run whatever the nextest step ended in,
+      # and the `gpu-kernel` profile runs every test after a failure (`fail-fast = false`): the per-merge verdict reads
+      # every product test (R-909).
       - name: cargo nextest run -p validation -p xtask -p engine
+        id: kernel-tests
         env:
           NEXTEST_PROFILE: gpu-kernel
         run: cargo nextest run -p validation -p xtask -p engine
         shell: bash .github/scripts/disk_sampler.sh {0}
       - name: cargo test -p validation -p xtask -p engine --doc
+        if: ${{ !cancelled() && steps.kernel-tests.outcome != 'skipped' }}
         run: cargo test -p validation -p xtask -p engine --doc
         shell: bash .github/scripts/disk_sampler.sh {0}
 
