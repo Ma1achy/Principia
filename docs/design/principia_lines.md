@@ -495,6 +495,14 @@ can be restyled like any contour.
 - **Sides.** Each side is off, the primary scale, or a secondary scale in another quantity.
 - **Primary scale.** The chart's own coordinates: latent units on a latent chart, physical units on a physical axis. A
   warped axis's ticks fall at round values of the quantity, so they are unevenly spaced.
+  *10 Nov 2026 (R-942, R-940; the owner's answers on RQ-780, RQ-778 and RQ-777):* the primary scale is the computed
+  axis, derived from the window, on every chart and every frame, a morph frame included. Coordinates linear in the
+  window get exact arithmetic; a warped or per-pixel quantity keeps this section's solve, whose tolerance is a
+  calibration requirement (R-71), the owner's; an unfold's turning point is a marked fold, never a refusal. On a tilt or
+  rotation within one chart the axis shows one number in window units and names every non-zero term, none dropped; in a
+  blend it is a dual ruler, one axis line with the starting chart's real ticks on one side and the target chart's on the
+  other, each fading with its share; hover gives every true value. No axis shows a number that sums unlike quantities.
+  Secondary scales stay as below. Built by the chart addendum's N16 and N17.
 - **Secondary scale.** Any quantity that varies monotonically along that edge, placed by solving the chart map. The
   mock-up's print panel puts the shape angles α and β on the top and right: 30°–60° and 60°–120°, unevenly spaced because
   the link is a sigmoid. A secondary scale is refused where the quantity is not monotonic along the edge.

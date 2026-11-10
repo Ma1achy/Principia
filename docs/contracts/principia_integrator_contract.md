@@ -325,6 +325,17 @@ set, so the equations of motion, the inverse map and the reference-body rule are
 `driver.rs:4` names as the source it was transcribed from. Planar, `G = 1` (`tb.py:10`). Where the reference and the
 rest of the corpus disagree, nothing is chosen here: each such point is in RQ-756 and is marked *(RQ-756)* below.
 
+*10 Nov 2026 (R-927, the owner's answer on RQ-756):* on each point where the reference code and the rest of the corpus
+disagree, the reference code's choice stands, the reference code being `driver.rs`, and REQ-INT-049's threshold is
+re-measured under that same code (REQ-INT-114, a calibration). So, of the marks below: the reference body is the body
+not in the longest pair, and the Part 2b table's wording reads so; the unstable form's loss at 179.9° is `tb_lc.py`'s,
+`4.0e-12` at f64 and `2.2e-2` at f32; `Γ`'s coupling is the two-pair one given here; the landing secant is part of the
+step control, and its stop is `driver.rs`'s (step 6), not `tb_az.py`'s; REQ-INT-049's gate runs under step 3's per-step
+rule; and REQ-INT-054's bound per sync interval is the step budget over one interval, `max(N_min,
+step_budget_rate·Δ_sync)` (Part 3, R-604). Three marks stay open in RQ-756, each needing a Rust file that is not in the
+imported set: whether `V₁, V₂` are velocities or conjugate momenta (step 4); what the inverse map tests against in place
+of the literal `1e-300`; and the selector's tie-break, the `argmax` order standing meanwhile.
+
 **The reference body (re-chosen at every sync boundary).** From the Cartesian state at the boundary, the three pair
 distances are taken in the order `(0,1), (0,2), (1,2)` (`tb.py:15`, `tb.py:41-47`). The longest is found by `argmax`,
 and the reference body `a` is **the body not in the longest pair**: `a = [2, 1, 0][argmax]` (`tb_az.py:145-150`). On a
@@ -796,6 +807,9 @@ Consequence, worth stating so an agent doesn't add a per-IC time rescale: becaus
 - **CoM re-projection is part of the deterministic step**: each step is *integrate → re-project to CoM* (removes accumulated centre-of-mass / total-linear-momentum drift). The projection is on the parity surface — CPU and GPU must project with identical arithmetic and order. It manages CoM/linear-momentum only; energy and `L_z` remain genuine conservation diagnostics. The integrator works in **CoM-frame particle coordinates** (3 bodies); Jacobi is the chart/IC representation, converted to particles once at decode.
 - **Exact step-index timing invariant**: `t_end_step` stores `step_count` (the completed-macro-step count — running: current, terminal: latched, initial: 0; payload §2), as an exact u16. **Requires `horizon_steps = ⌈T/dt_macro⌉ ≤ 65535`, ENFORCED at dispatch** (single format, no Q0.16 fallback); over-limit `(T, dt_macro)` is rejected — use coarser `dt_macro` or march epochs. Also assert the joint `horizon_steps × N_max ≤ 2³²−1` for the exact `total_substeps` counter.
 - **t=0 terminals are real outcomes, not decode failures**: at dispatch, before the first step, evaluate the terminal detectors on the decoded IC. A valid IC already inside `r_coll` → `state=collision, t_end_step=0`; escape has no t = 0 case, because its settling test needs a window of history (R-29), so an IC that is already escaping is classified when its window completes (RQ-19). `decode_failed` is reserved for the decoder failing to produce a valid physical IC (non-finite / degenerate / invalid mass), never a dynamical t=0 terminal.
+  *10 Nov 2026 (R-933, the owner's rule on starting collided):* a start whose bodies are already collided, one pair or
+  more, a double or a triple, is this `t = 0` collision, and its least separation and its pair are recorded as for any
+  collision: `d_min` with its pair, and `detail` (the pair's id, or 3 for two or more pairs inside `r_coll`).
 - **Branch-cut crossing detection (free-group word, payload §3)**: run detection at **every accepted adaptive substep** (not per-macro-step) — the word mutation is event-only/cold, but detection must be substep-granular to catch multiple/recrossing events. Order simultaneous crossings **chronologically by crossing fraction** `τ = d₀/(d₀−d₁)` (sort ascending); fixed cut-ID priority is a **tie-break only** when `τ` values are equal within tolerance. **Endpoint-on-cut: half-open sign convention** — count iff `negative → non-negative`; fixed and identical CPU/GPU. These branch decisions are Tier-L/Tier-B (parity contract): word content is only as deterministic as they are.
   **The τ tie rule (R-72, REQ-INT-079; a definition, written by TASK-M3-16, physics-reviewed before merge).** An
   accepted substep is a segment from its start state to its end state. Each cut `c`, cut `a` = 0 and cut `b` = 1 (the

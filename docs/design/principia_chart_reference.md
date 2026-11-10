@@ -293,6 +293,17 @@ past either edge, the warp stays bounded. *Was:* "So the warp declares nothing b
 every side (§5.4). Its `t > 1` side (`K > K_max`) stays feasible; declaring it would be a later declaration, needing
 physics review (R-407, clause 3), and is not made. Whether to declare it affine is queued: RQ-376 (R-469, §11)."
 
+*10 Nov 2026 (R-932, R-937, the owner's answers on chart edges and RQ-771):* the paragraph above is amended, and built
+by the chart addendum's N12 to N14. Past either `s` edge the warp unfolds onto the construction's second sheet (§ 2.2):
+`s' = 2 − s` on sheet 2, period 2 in `s`, the time reversal of the chart's own system at `−L_z`. Below `t = 0` it clamps
+to the rest start, REQ-ENC-030's projection. Under the linear option the parabola reflects `L_z` at the pixel's own `E`
+and flips the sheet; and below the floor at a non-zero `L_z` (`K* ≤ 0`, `L_z ≠ 0`), where REQ-ENC-030 rejects, the drawn
+extension is the rigid rotation at the pixel's own `L_z`, a vertical clamp to `E = U + L_z²/(2I)` (`K = L_z²/(2I)` on
+`(L_z, K)`), each pixel reading its own Newtonian `U` and its own `I`: a new definition (R-72), its metric `|ΔE|` at
+fixed `L_z`, beside REQ-ENC-030's `|ΔL_z|` at fixed `E`, with this section's held-`L_z` floor clamp and § 4.5's held-`K`
+floor clamp as its precedent. On `Φ_θ,L_z` (§ 4.5) the same rule clamps the held `K` to `L_z²/(2I)`. The physics
+reviewer's conditions on it are in R-937.
+
 **Every energy-type axis is warped by default (R-471).** Axes of kind 3 (`E`, `L_z`, `K`, `KE`, `PE`;
 `principia_chart_decoder_contract.md` Part 3) take this warp by default, wherever they appear: on these charts, the
 Burrau family's `K` axes, a mixed-axis chart (§1.3) and a Chart-builder axis (render_gui_spec §G7), superseding R-408's
@@ -463,6 +474,14 @@ vᵢ = vᵢ^(L) + a·wᵢ                pᵢ = mᵢ·vᵢ
 ```
 
 On the `(Lz, E)` chart at `ε ≠ 0`, this `U` is §2.1's Newtonian `U` (R-791).
+
+*10 Nov 2026 (R-934, R-937, the owner's answers on RQ-764 and RQ-771):* two changes are ruled here and built by the
+chart plans' N10 and N13; until they land the construction is as this section gives it. The seed: the expansion seed `w
+= r/√I` is the seed on every chart that uses this construction, Burrau's included, in place of (ii)'s largest-norm rule
+(R-82), which stays as a named option with its seam declared; every image it changes is a recorded conversion, updated
+under R-931. The second sheet: `vᵢ = vᵢ^(L) − a·wᵢ`, the same expression with `a` negated, sheet 1 bitwise the
+construction above; sheet 2 at `L_z` is the time reversal (`p → −p`) of sheet 1 at `−L_z`, and with the seed `w = r/√I`
+it is the whole system contracting, `I` decreasing.
 
 **The infeasible pixel's label** (defined per R-72). A pixel with `K* < K_min` is tagged
 `DEGENERATE(INVARIANT_INFEASIBLE)`, one of `DEGENERATE`'s enumerated causes (§0.7; `principia_dd_decoder.md` §2, "From
@@ -1114,6 +1133,14 @@ picture is not a better chart. The measurement is whether the criterion behaves 
 across charts, not which chart looks best.
 
 ### 5.4 Past the unit square — each axis's extension type (R-407)
+
+*10 Nov 2026 (R-932, R-938):* the owner's rule on chart edges, no blank areas, amends this section, and every chart's
+edges are built now: each edge in the table below takes a declared extension (saturate past a true edge, unfold onto a
+second sheet, wrap where the coordinate repeats; the mechanism per edge is the physics reviewer's call), the invariant
+charts' spin edges unfolding onto the time-reversed sheet (R-937, § 2.1, § 2.2), the mass simplex's sides saturating
+(R-941), the time axis before 0 showing the starting state. The table is the text in force for what is built today; the
+chart addendum's N12 rewrites it per edge, each replaced line kept as *Was*
+(`plan/charts/m2-chart-addendum-extensions-axes.md` § A.11).
 
 The rule is `principia_chart_decoder_contract.md` Part 3's (§ "Past the unit square — each axis's extension type
 (R-407)"): each axis declares **affine** (continues), **periodic** (wraps), **pole-crossing** (continues over the pole,
