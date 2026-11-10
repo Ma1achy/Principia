@@ -28,8 +28,10 @@ Time-axis chart mode's maths, read through the trajectory interface on its exact
 
 ## Acceptance tests
 - `cargo test -p engine -- time_rows_on_boundaries time_zoom_floor time_terminal_holds time_jitter_ic_only time_two_axes_refused time_window_frozen time_morph_rules time_anchor` — each with its control, on § 18.7's exact fixtures (REQ-CHART-123).
+- `cargo test -p engine -- path_lock_round_trip` on a time-axis pair — TASK-M2-65's gate test, lock → morph A → B → tilt → slice → morph back, its time-axis arm: the decode at the pin within the lock's tolerance on every frame of the pinned state where the target holds it, and on a sliding pair of the anchor R-849's slide prescribes at that frame (the stored state at s = 0, B's nearest point at s = 1; REQ-CHART-146); the return to `s = 0` bitwise equal to the same tilt and slice applied directly to A about the pin (R1, gating); a time-axis chart to an IC-only chart keeping its labelled jump; controls as TASK-M2-65's, the lock dropped on a blend segment, a hidden coordinate invented for the blend, a morph restarted from `s = 0`, each failing (REQ-CHART-161, REQ-CHART-174).
 - Review: DEFINITION (R-72): § 18.4's tilt and slice on a time-axis chart and G9's time arm written there, approved by the physics reviewer; backed by cargo test -p engine time_anchor and REQ-CHART-161's time-axis pair (REQ-CHART-174).
 
 ## Notes
 - Split from TASK-M8-113 by R-916 (9 Nov 2026); TASK-M8-113 keeps REQ-CHART-178 (`time_column_matches_playhead`, `time_extend_continues`), which read the real march (F6).
 - **Build order (R-916):** stage 5.
+- *9 Nov 2026 (Codex P1 on PR #465, applied per R-369):* this task gains the time-axis arm of TASK-M2-65's gate test (`path_lock_round_trip`), which TASK-M2-65, stage 2, can't run before this task, stage 5, builds the time-axis mode; TASK-M2-65's line reads "a time-axis pair once TASK-M2-83 lands". G9 still requires every pair at the gate.
