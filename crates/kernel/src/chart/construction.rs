@@ -378,6 +378,14 @@ impl<C: RestChart<Param = P>, P: Copy> Chart for RestStart<C, P> {
         self.chart.name()
     }
 
+    /// The wrapped chart's `Φ` check ([`Chart::phi_finite`]), so an override of its own is kept.
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        self.chart.phi_finite(u, v)
+    }
+
     fn requires_per_pixel_mass(&self) -> bool {
         self.chart.requires_per_pixel_mass()
     }
@@ -723,6 +731,14 @@ where
         self.chart.name()
     }
 
+    /// The wrapped chart's `Φ` check ([`Chart::phi_finite`]), so an override of its own is kept.
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        self.chart.phi_finite(u, v)
+    }
+
     fn requires_per_pixel_mass(&self) -> bool {
         self.chart.requires_per_pixel_mass()
     }
@@ -961,6 +977,14 @@ where
 
     fn name(&self) -> &str {
         self.chart.name()
+    }
+
+    /// The wrapped chart's `Φ` check ([`Chart::phi_finite`]), so an override of its own is kept.
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        self.chart.phi_finite(u, v)
     }
 
     fn requires_per_pixel_mass(&self) -> bool {

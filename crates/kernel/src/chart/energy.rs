@@ -638,6 +638,19 @@ macro_rules! mapped_invariant {
                 self.chart.name()
             }
 
+            /// The chart's own `Φ` check ([`Chart::phi_finite`]) where every axis is warped, so an override of its
+            /// own is kept; else `map`'s, the rule's decode not being the chart's.
+            fn phi_finite(&self, u: f64, v: f64) -> bool
+            where
+                f64: From<P>,
+            {
+                if self.own() {
+                    self.chart.phi_finite(u, v)
+                } else {
+                    self.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite())
+                }
+            }
+
             fn requires_per_pixel_mass(&self) -> bool {
                 self.chart.requires_per_pixel_mass()
             }
@@ -804,6 +817,19 @@ macro_rules! mapped_k {
 
             fn name(&self) -> &str {
                 self.chart.name()
+            }
+
+            /// The chart's own `Φ` check ([`Chart::phi_finite`]) where the vertical axis is warped, so an override
+            /// of its own is kept; else `map`'s, the linear decode not being the chart's.
+            fn phi_finite(&self, u: f64, v: f64) -> bool
+            where
+                f64: From<P>,
+            {
+                if self.mapping[1] == Mapping::Warped {
+                    self.chart.phi_finite(u, v)
+                } else {
+                    self.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite())
+                }
             }
 
             fn requires_per_pixel_mass(&self) -> bool {
