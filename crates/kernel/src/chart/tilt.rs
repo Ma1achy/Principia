@@ -941,6 +941,14 @@ where
         self.chart.name()
     }
 
+    /// The tilted chart's output at `(u, v)` finite, and the chart's own `Φ` at the tilted `(a, b)`
+    /// ([`Chart::phi_finite`]), a block it builds outside `map` included.
+    fn phi_finite(&self, u: f64, v: f64) -> bool {
+        let ([a, b], _) = self.at(u, v);
+        let map = self.map::<f64>(u, v).z.z;
+        map.iter().all(|x| x.is_finite()) && self.chart.phi_finite(a, b)
+    }
+
     /// The chart's, or true where a tilt moves a mass control, so the masses vary per pixel.
     fn requires_per_pixel_mass(&self) -> bool {
         let ([x, y], two) = self.tilt.targets();

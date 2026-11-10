@@ -35,7 +35,7 @@ use core::marker::PhantomData;
 use spirv_std::num_traits::Float;
 
 use super::burrau::{self, embed, unread, BurrauBlocks};
-use super::burrau_acute::BurrauThetaK;
+use super::burrau_acute::{decoded_sanity, BurrauThetaK};
 use super::invariant::{self, Invariant, InvariantLE, InvariantLK, WarpReal};
 use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{Burrau, Chart, ChartDecode, ChartOut, Constraint, ValidationResult};
@@ -638,6 +638,31 @@ macro_rules! mapped_invariant {
                 self.chart.name()
             }
 
+            /// The chart's own `Φ` check ([`Chart::phi_finite`]) where every axis is warped, so an override of its
+            /// own is kept; else `map`'s frozen controls finite and, at a point `invariant_validate` accepts, the
+            /// rule's f64 decode passing layer 3, as the chart's own check reads its decode: `invariant_validate`
+            /// does not decode, and past the overflow edge of `K(t)` the construction is infeasible. A point it
+            /// projects or rejects is left to `validate`, which names its constraint. The decode is at the default
+            /// link parameters, as `phi_finite` has none to pass.
+            fn phi_finite(&self, u: f64, v: f64) -> bool
+            where
+                f64: From<P>,
+            {
+                if self.own() {
+                    return self.chart.phi_finite(u, v);
+                }
+                let inside = invariant_validate(&self.chart.0, self.mapping, self.checks(), u, v)
+                    == ValidationResult::Valid;
+                self.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite())
+                    && (!inside
+                        || decoded_sanity(
+                            &self
+                                .decode_from(u, v, &self.chart.0.frozen(), &LinkParams::DEFAULT)
+                                .0,
+                        )
+                        .is_none())
+            }
+
             fn requires_per_pixel_mass(&self) -> bool {
                 self.chart.requires_per_pixel_mass()
             }
@@ -804,6 +829,19 @@ macro_rules! mapped_k {
 
             fn name(&self) -> &str {
                 self.chart.name()
+            }
+
+            /// The chart's own `Φ` check ([`Chart::phi_finite`]) where the vertical axis is warped, so an override
+            /// of its own is kept; else `map`'s, the linear decode not being the chart's.
+            fn phi_finite(&self, u: f64, v: f64) -> bool
+            where
+                f64: From<P>,
+            {
+                if self.mapping[1] == Mapping::Warped {
+                    self.chart.phi_finite(u, v)
+                } else {
+                    self.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite())
+                }
             }
 
             fn requires_per_pixel_mass(&self) -> bool {

@@ -59,13 +59,24 @@
 //! construction's projection). Past it: a non-finite coordinate is rejected; `t < 0` (`K < 0`, `E < U`, and no real
 //! `t^γ_K` for a non-integer `γ_K`) is projected to `(clamp(s), 0)`, the parabola's apex, the rest start; `s ∉ [0, 1]`
 //! (`|L_z| > L_max`) is projected to `(clamp(s), t)`, on the parabola at the same `K` and `E`. `t > 1` with `s ∈ [0, 1]`
-//! is feasible (`K > K_max`) and `Valid`; the axis is still bounded there, which is the extension type's business, not
-//! validation's (§2.1, §5.4).
+//! is feasible (`K > K_max`) and `Valid` in exact arithmetic; the axis is still bounded there, which is the extension
+//! type's business, not validation's (§2.1, §5.4).
+//!
+//! **The overflow edge.** In f64 the decode past `t > 1` is a system only while `K(t)` is at most half the greatest
+//! finite float: past it the construction's `2·I·K*` is not finite, `L_max` is stepped down to the greatest finite float,
+//! and the decode is [`Degenerate::InvariantInfeasible`] with every momentum 0, not a system (R-469 P1). At `K_max = 1`,
+//! `γ_K = 3/2` the last such `t` is `2.0065826040452472·10²⁰⁵`. `validate` does not decode, so it is `Valid` there too;
+//! the chart's [`Chart::phi_finite`] reads the decode instead, under [`Defaults`] at the default link parameters, and
+//! fails a point layer 2 accepts whose decode fails layer 3 (`decoded_sanity`: the masses positive, the configuration and momenta
+//! finite, the construction not infeasible), so the navigation stop holds the centre at the edge on `Φ`
+//! (`crate::chart::nav`). `validate` takes no f64 decode here because its impl holds for every parameter type, and a
+//! decode at f64 needs the parameters to widen to it.
 
 use core::marker::PhantomData;
 
 use spirv_std::num_traits::Float;
 
+use super::burrau_acute::decoded_sanity;
 use super::tilt::{shift_controls, Hidden, Shift, Tiltable};
 use super::{Chart, ChartOut, Constraint, ValidationResult};
 use crate::decode::config::{self, Config};
@@ -74,7 +85,7 @@ use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::Momentum;
 use crate::decode::{self, descriptor, Blocks, Decoded, Degenerate, Ic};
 use crate::generated::constants::ChartConstants;
-use crate::generated::links::{LinkParams, LinkReal, Selection};
+use crate::generated::links::{Defaults, LinkParams, LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
@@ -307,6 +318,22 @@ fn check(u: f64, v: f64, low: Constraint, wide: Constraint) -> ValidationResult 
     }
 }
 
+/// [`Chart::phi_finite`] on an invariant chart (the module's note, "The overflow edge"): `map`'s frozen controls finite
+/// and, at a point layer 2 accepts ([`check`] `Valid`), the f64 decode at `(u, v)` passing layer 3. A point layer 2
+/// projects or rejects is left to `validate`, which names its constraint. The decode is under [`Defaults`], as
+/// `phi_finite` has no selection to pass and the selection picks only the frozen controls' mass and configuration
+/// links, not the construction's targets.
+fn phi_decodes<C>(chart: &C, u: f64, v: f64) -> bool
+where
+    C: InvariantChart,
+    f64: From<C::Param>,
+{
+    let inside =
+        check(u, v, Constraint::LzEParabola, Constraint::LzEParabola) == ValidationResult::Valid;
+    chart.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite())
+        && (!inside || decoded_sanity(&decode::<Defaults, f64, C>(chart, u, v).0).is_none())
+}
+
 impl<P: Copy> Chart for InvariantLE<P> {
     type Param = P;
 
@@ -349,6 +376,15 @@ impl<P: Copy> Chart for InvariantLE<P> {
         R: LinkReal + PayloadReal + From<P>,
     {
         decode_params::<S, R, Self>(self, u, v, p).0
+    }
+
+    /// The frozen controls finite and the f64 decode a system: past the overflow edge it is infeasible (the module's
+    /// note).
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        phi_decodes(self, u, v)
     }
 
     /// Layer 2's parabola `|L_z| ≤ √(2I(E − U))` (the module's note).
@@ -399,6 +435,15 @@ impl<P: Copy> Chart for InvariantLK<P> {
         R: LinkReal + PayloadReal + From<P>,
     {
         decode_params::<S, R, Self>(self, u, v, p).0
+    }
+
+    /// The frozen controls finite and the f64 decode a system: past the overflow edge it is infeasible (the module's
+    /// note).
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        phi_decodes(self, u, v)
     }
 
     /// Layer 2's `K ≥ 0` and `K ≥ L_z²/2I` (the module's note).
