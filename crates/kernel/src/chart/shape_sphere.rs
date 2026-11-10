@@ -411,6 +411,16 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
         false
     }
 
+    /// The held blocks `map` gives and the chart's point `n` at `(u, v)`, the configuration it sets explicitly: a pan
+    /// far enough on the exponential map overflows `n`'s radius, and `n` is NaN there.
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        let map = self.map::<f64>(u, v).z.z;
+        map.iter().chain(&self.point(u, v)).all(|x| x.is_finite())
+    }
+
     /// [`ValidationResult::Valid`] at every `(u, v)` (the module's notes).
     fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
         ValidationResult::Valid

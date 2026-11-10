@@ -8,7 +8,10 @@
 //! physical slice, `ν₀`, toward a zero side, stop with every mass `> 0`; a held `K` sliced below 0 stops at `K₀ ≥ 0`
 //! (R-720's reading); a tilt and a zoom with no centre edit pass unchanged; a lock on a forbidden pixel is refused; a
 //! parameter edit whose boundary lies at `λ ≈ 10⁻⁶` stops at adjacent f64s within 62 steps; on the latent chart nothing
-//! stops. Controls: a stop that keeps the requested value, a stop one bisection step short, and a per-chart override.
+//! stops; a pan on the shape sphere's exponential map far enough that its point `n` overflows stops on `Φ`, the
+//! decoded configuration finite at the stop and not past it, and one large but short of the overflow is taken whole.
+//! Controls: a stop that keeps the requested value, a stop one bisection step short, a per-chart override, and a centre
+//! check that reads `map` alone.
 //!
 //! **`nav_fuzz_never_leaves*`** (REQ-CHART-061): on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
 //! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts and
@@ -38,9 +41,10 @@ use kernel::chart::mixed::{
 use kernel::chart::nav::{nav_stop, Check, Edit, Field, Stop, View};
 use kernel::chart::tilt::{latent_basis, Hidden, LatentFrame, Tiltable};
 use kernel::chart::{
-    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, Constraint, EuclidPlane, HeldK,
-    HeldLz, InvariantLE, InvariantLK, Latent, Mapped, Mapping, MassSimplex, Mixed, RestStart,
-    ShapeMap, ShapeSphere, Tilt, TiltMap, TiltSpec, Tilted, ValidationResult,
+    Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartOut, Constraint,
+    EuclidPlane, Float, HeldK, HeldLz, InvariantLE, InvariantLK, Latent, Mapped, Mapping,
+    MassSimplex, Mixed, RestStart, ShapeMap, ShapeSphere, Tilt, TiltMap, TiltSpec, Tilted,
+    ValidationResult,
 };
 use kernel::decode::Degenerate;
 use kernel::generated::links::{Defaults, LinkParams};
@@ -63,8 +67,9 @@ const MAX_STEPS: u32 = 62;
 
 // ── The independent check ─────────────────────────────────────────────────────────────────────────────────────────
 
-/// What fails at a view's centre, read from the chart alone: `Φ` where there is no view or its output is not finite,
-/// else `validate`'s constraint; none where the centre passes.
+/// What fails at a view's centre, read from the chart alone: `Φ` where there is no view or its `Φ` is not finite
+/// (`Chart::phi_finite`, which `nav_stop_at_edge_shape_overflow` checks against the decode), else `validate`'s
+/// constraint; none where the centre passes.
 fn verdict<C: Chart<Param = f64>>(view: Option<View<C>>) -> Option<Check> {
     let Some(View {
         chart,
@@ -73,7 +78,7 @@ fn verdict<C: Chart<Param = f64>>(view: Option<View<C>>) -> Option<Check> {
     else {
         return Some(Check::Phi);
     };
-    if !chart.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite()) {
+    if !chart.phi_finite(u, v) {
         return Some(Check::Phi);
     }
     match chart.validate_params(u, v, &P) {
@@ -739,6 +744,109 @@ negative_control!(
     "a per-chart override registered for the mass simplex stops at its own clamp, off the edit's path",
     expected = "is not on the edit's path",
     check_one_rule(&["MassSimplex"])
+);
+
+// ── REQ-CHART-060: Φ built outside `map` ──────────────────────────────────────────────────────────────────────────
+
+/// The shape sphere with its centre check reading `map` alone, the held blocks, which carry no `(u, v)`: the stop
+/// without the chart's own `Chart::phi_finite` (the control).
+#[derive(Clone, Copy)]
+struct MapOnly(ShapeSphere<f64>);
+
+impl Chart for MapOnly {
+    type Param = f64;
+
+    fn map<F: Float + From<f64>>(&self, u: F, v: F) -> ChartOut<F> {
+        self.0.map(u, v)
+    }
+
+    fn name(&self) -> &str {
+        "MapOnly"
+    }
+
+    fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.validate(u, v)
+    }
+}
+
+/// Whether every mass, position and momentum a view's chart decodes at its centre is finite.
+fn decodes_finite<C: Chart<Param = f64>>(view: Option<View<C>>) -> bool {
+    let View {
+        chart,
+        centre: [u, v],
+    } = view.expect("a view");
+    let ic = chart.decode::<Defaults, f64>(u, v).ic;
+    let rp = ic.r.iter().chain(&ic.p).flatten();
+    ic.m.iter().chain(rp).all(|x| x.is_finite())
+}
+
+/// A pan of the view's centre along `u` from `(½, ½)`: to `u = 10²⁰⁰`, where the exponential map's offset squares past
+/// f64's range and its point `n` is NaN, the pan stops on `Φ`, its stop finite in the decode and the next f64 past it
+/// not; to `u = 10¹⁰⁰`, short of that overflow, every block finite, it is taken whole.
+fn check_overflow_pan<C: Chart<Param = f64>>(
+    name: &str,
+    view: impl Fn([f64; 2]) -> Option<View<C>>,
+) {
+    let from = [0.5, 0.5];
+    let to = [1e200, 0.5];
+    let stop = nav_stop(Edit::Path { from, to }, &view, &P);
+    assert_eq!(
+        stop.stopped,
+        Some(Check::Phi),
+        "{name}: the stop takes the overflowed pan to u = 1e200 whole"
+    );
+    assert!(!decodes_finite(view(to)), "{name}: 1e200 decodes finite");
+    check_stop(name, from, to, &view, &stop);
+    assert!(
+        decodes_finite(view(stop.value)),
+        "{name}: the stop {:?} decodes non-finite",
+        stop.value
+    );
+    let past = from.along(to, stop.lambda.next_up());
+    assert!(
+        !decodes_finite(view(past)),
+        "{name}: the value {past:?} past the stop decodes finite"
+    );
+    println!(
+        "{name}: stopped at u = {:?} (λ = {:?}) after {} steps",
+        stop.value[0], stop.lambda, stop.steps
+    );
+    let near = [1e100, 0.5];
+    let stop = nav_stop(Edit::Path { from, to: near }, &view, &P);
+    check_stop(name, from, near, &view, &stop);
+    assert_eq!(stop.stopped, None, "{name}: the pan to u = 1e100 stops");
+    assert!(
+        decodes_finite(view(near)),
+        "{name}: 1e100 decodes non-finite"
+    );
+}
+
+/// REQ-CHART-060's `Φ` at the centre on the exponential shape sphere at `π/4`, bare, and under a tilt off and on, its
+/// centre the view's; `map_only` checks the centre by `map` alone (the control).
+fn check_shape_overflow(map_only: bool) {
+    let chart = shape(ShapeMap::Exponential, std::f64::consts::FRAC_PI_4);
+    if map_only {
+        check_overflow_pan("map alone", |c| at(MapOnly(chart), c));
+    }
+    check_overflow_pan("exponential shape sphere", |c| at(chart, c));
+    for (what, tau1) in [("untilted", 0.0), ("tilted", 0.3)] {
+        let spec = spec(tau1, 0.0, TiltMap::Sheet, 2, 2);
+        check_overflow_pan(what, |c| {
+            Tilted::new(chart, Tilt::new(&spec, c, SPAN)).and_then(|t| at(t, c))
+        });
+    }
+}
+
+#[test]
+fn nav_stop_at_edge_shape_overflow() {
+    check_shape_overflow(false);
+}
+
+negative_control!(
+    nav_stop_at_edge_shape_overflow,
+    "a centre check that reads the shape sphere's map alone takes the overflowed pan whole",
+    expected = "takes the overflowed pan",
+    check_shape_overflow(true)
 );
 
 /// The report's layer: 3 for decode sanity, 2 for every other constraint, none for `Φ`. `swap` reads `ComAtOrigin` as

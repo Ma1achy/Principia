@@ -6,8 +6,8 @@
 //! and 3, at the active link parameters ([`Chart::validate_params`]). The centre is the view's centre pixel: on an
 //! affine chart `(½, ½)`, where `z(½, ½) = z₀`; on a curved one the centre of the chart's own parameters, with the
 //! slice centre's hidden coordinates. The caller names it beside the chart ([`View`]). A centre whose `Φ` fails counts
-//! as failing ([`Check::Phi`]): a view that cannot be built at the edited value, or a chart output there that is not
-//! finite.
+//! as failing ([`Check::Phi`]): a view that cannot be built at the edited value, or a `Φ` there that is not finite,
+//! the chart's output or a block it builds outside it, the shape sphere's point ([`Chart::phi_finite`]).
 //!
 //! **The path** (A3). The edited field moves along the straight line from the accepted value to the requested one,
 //! `from + λ·(to − from)` for `λ ∈ [0, 1]`, `to` itself at `λ = 1`, so a component the edit leaves alone keeps its
@@ -135,7 +135,8 @@ pub struct Stop<V> {
     pub stopped: Option<Check>,
 }
 
-/// What fails at a view's centre (A1): `Φ`, where there is no view or the chart's output there is not finite, else
+/// What fails at a view's centre (A1): `Φ`, where there is no view or `Φ` there is not finite ([`Chart::phi_finite`]),
+/// a block the chart builds outside `map` included, else
 /// `validate`'s constraint at `p`; none where the centre passes.
 fn centre<C>(view: Option<View<C>>, p: &LinkParams<f64>) -> Option<Check>
 where
@@ -149,7 +150,7 @@ where
     else {
         return Some(Check::Phi);
     };
-    if !chart.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite()) {
+    if !chart.phi_finite(u, v) {
         return Some(Check::Phi);
     }
     match chart.validate_params(u, v, p) {

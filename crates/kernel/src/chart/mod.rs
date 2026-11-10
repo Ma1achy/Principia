@@ -224,6 +224,16 @@ pub trait Chart {
         true
     }
 
+    /// Whether `Φ` at `(u, v)` is finite, a CPU-side f64 check: the navigation stop's (`nav`), a centre whose `Φ` is
+    /// not finite failing (R-469 A1). By default `map`'s output; a chart that builds a block outside `map`, an explicit
+    /// configuration, overrides it to check that block too ([`ShapeSphere`]).
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<Self::Param>,
+    {
+        self.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite())
+    }
+
     /// The chart's domain function (R-26), a CPU-side f64 check: inverse_encode_contract § "Chart-aware validation"'s
     /// layers 2 and 3 at `(u, v)`, at the default parameters.
     fn validate(&self, u: f64, v: f64) -> ValidationResult;
