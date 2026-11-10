@@ -1074,9 +1074,14 @@ be, or whether the table only gives a first guess that the chart's own forward c
   two-dimensional image, so even a converged solve leaves a residual: its distance off the chart, which no solver
   removes. The state map treats it as a projection: `docs/design/principia_state_map.md` § "SM1. Definition" (lines
   108 to 117): "`P_T` is the target chart's projection, the one the trace uses (`principia_trajectory_viewing.md` §3;
-  trace follow-up F1)." (Codex review thread on PR #473.)
+  trace follow-up F1)." (Codex review thread on PR #473.) SM1 defines no distance in state space: its table reads
+  `P_T`'s coordinates through the encode on charts that have a closed-form read, and its only nearest point is a curve
+  axis's, § "SM1. Definition" (lines 154 to 155): "the targets are the app's own charts, through `encode_into` and
+  `curve::nearest`." For an off-image state on a chart with no closed-form inverse it is silent on which nearest point
+  is the answer and on the metric that distance is measured in; both are definitions owed (R-72).
 - **The question:** what accuracy the table route must reach outside a morph, and whether it may refine against the
-  generated forward code.
+  generated forward code; and, for an off-image state on a chart with no closed-form inverse, which nearest point is
+  the answer and in what state-space metric `W` (definitions, R-72).
 - **Options seen:**
   - (a) The table seeds the search; Newton steps run on the chart's generated forward code where the chart has it
     (every kernel chart, and a blend of two such charts), so the residual in state reaches f32 rounding outside a
@@ -1088,14 +1093,26 @@ be, or whether the table only gives a first guess that the chart's own forward c
       boundary). The bound is a calibration (R-71), stated in chart coordinates with its conditioning, as
       `ε_res / σ_min(J)` with `ε_res` the residual tolerance, reported beside `σ_min(J)` at each sample, and a sample
       whose `σ_min(J)` falls below a stated floor is labelled ill-conditioned rather than held to the bound.
-    - *Off the chart's image* (running and saved states): the converged residual in state is the projection distance,
-      `P_T`'s distance off the chart in the state map's metric (SM1, above), reported as a measured quantity and
-      never read as solver error. Convergence is judged apart from it, by first-order optimality: `‖Jᵀr‖ / (‖J‖·‖r‖)`,
-      or the Newton step in chart coordinates, below a stated tolerance, a calibration (R-71). Beside each sample, the
-      chart-coordinate error bound from conditioning: the optimality tolerance's step over `σ_min(J)`, with
-      `σ_min(J)`, under the same ill-conditioned floor. The projection distance is the same quantity as the trace's
-      residual the owner asked to measure (their reply of 10 Nov on the re-plan's addition, P4: "the median and worst
-      residual (how far off the surface each vertex is)"), so the two definitions agree.
+    - *Off the chart's image* (running and saved states): with `f` the chart's generated forward code from chart
+      coordinates `u` to the encoded state `x`, the converged residual `r = f(u) − x` is the projection distance
+      `‖r‖_W`, `P_T`'s distance off the chart, reported as a measured quantity and never read as solver error. Two
+      definitions it rests on are owed (R-72), as the silence says, and neither is chosen here: (i) which nearest
+      point counts as the answer for an off-image state on a chart with no closed-form inverse (SM1's `P_T` reads
+      coordinates through the encode where a closed-form inverse exists, and its only nearest point today is
+      `curve::nearest` on a curve axis); (ii) the state-space metric `W` it is measured in. The encoded state mixes
+      shape, momentum and mass coordinates in different units, so every number reported here (`‖r‖_W`, `‖J‖_W`,
+      `σ_min(J)` in `W`, the optimality) depends on `W`, and the first-order optimality measure is `JᵀWr`, not `Jᵀr`.
+      Convergence is judged apart from the distance, by first-order optimality: `‖JᵀWr‖ / (‖J‖_W·‖r‖_W)`, or the
+      Newton step in chart coordinates, below a stated tolerance, a calibration (R-71). That ratio is 0/0 as
+      `‖r‖_W → 0`, so a sample with `‖r‖_W ≤ ε_res` (every running state at `t = 0`, and any later one as close) is
+      judged by the on-chart criterion above instead, so that it is binned deterministically. Beside each sample, the
+      chart-coordinate error bound `‖JᵀWr‖ / λ_min(H)`, with `H = JᵀWJ + Σᵢ (Wr)ᵢ ∇²fᵢ` the objective's Hessian
+      off the image (`Σᵢ rᵢ ∇²fᵢ` when `W` is the identity); the residual-curvature term is kept because `H` loses
+      positive definiteness once `‖r‖_W` nears the image's radius of curvature, even where `σ_min(J)` is healthy.
+      `λ_min(H)` is reported with it, and the ill-conditioned floor applies to `λ_min(H)`: a sample below a stated
+      floor, a calibration (R-71), is labelled ill-conditioned rather than held to the bound, and a sample with
+      `λ_min(H) ≤ 0`, where the nearest point is not unique, is reported apart. The off-chart projection distance is
+      the quantity the trace's residual will be defined against when that work is planned.
 
     Each criterion is written first.
   - (b) The table alone, labelled approximate with its bound, the table's spacing, everywhere.
@@ -1105,10 +1122,13 @@ be, or whether the table only gives a first guess that the chart's own forward c
 - **Measurement:** on the kernel's charts at `t = 0` and after a run, for (a) and (b), each binned by `σ_min(J)` with
   the flagged sites reported apart, the on-chart and off-chart samples binned and reported apart: for on-chart samples
   (states decoded from pixels, at `t = 0`), the round-trip error in cells, the wrong share and the state residual
-  against `ε_res`; for off-chart samples (running states after the run, and saved states), the projection distance
-  (median and worst, as the trace's residual), the first-order optimality at the answer, the share that converged, the
-  wrong share (a worse projection than an exhaustive search of the same table), and the conditioning bound beside
-  `σ_min(J)`; and the per-sample cost on Metal; against a criterion written before the run.
+  against `ε_res`; for off-chart samples (running states after the run, and saved states, with `‖r‖_W > ε_res`),
+  also binned by `λ_min(H)`, the projection distance `‖r‖_W` (median and worst), the first-order optimality
+  `‖JᵀWr‖ / (‖J‖_W·‖r‖_W)` at the answer, the share that converged, the wrong share (an answer whose `‖r‖_W` exceeds
+  the reference's by more than a stated margin in `W`, a calibration (R-71); the reference is the best converged
+  answer over a multi-start refinement on the chart's forward code, seeded from every table cell), the bound
+  `‖JᵀWr‖ / λ_min(H)` beside `λ_min(H)` and `σ_min(J)`, and the samples with `λ_min(H) ≤ 0` counted apart; and the
+  per-sample cost on Metal; against a criterion written before the run.
 - **Applied meanwhile:** nothing.
 - **Waits:** the backwards-table task of the plan; Chart position's build.
 
