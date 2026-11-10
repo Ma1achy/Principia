@@ -1014,12 +1014,10 @@ only.
 *Amended by R-297.*
 *Refined by R-922 (10 Nov 2026: shader features work on every chart; where a chart has no closed-form code the CPU evaluates it and uploads a lookup texture the shader reads, labelled approximate; ruled, not built yet).*
 *Amended in part by R-925 (10 Nov 2026: where a chart has no closed-form shader code, the CPU evaluates it and the shader reads tables; the generated code stays wherever a chart has it).*
-*Still in force: all of it; the agreement presets compare within a stated tolerance, a calibration requirement, not
-bit-exactly (R-297); on a chart with no closed-form code the fragment reads R-922's lookup texture, never a
-hand-written decode.*
 *Still in force: all of it for every chart with closed-form shader code, the agreement presets comparing within a
-stated tolerance, a calibration requirement, not bit-exactly (R-297); a chart with none reaches the fragment through
-CPU-built tables, not generated code (R-925).*
+stated tolerance, a calibration requirement, not bit-exactly (R-297, the presets' tolerance); a chart with none reaches
+the fragment through the tables the CPU builds, R-922's lookup texture, never a hand-written decode and not generated
+code (R-922, shader features on every chart; R-925, the owner's six chart decisions, which calls them tables).*
 *25 Sep 2026 · applied in step 7*
 
 The fragment WGSL decode and encode are generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation),
