@@ -621,3 +621,691 @@ nothing is wrong today; but the task that ports the real linocut must follow the
   verifies ask of it (§4.1's `depth` and `seed`, §4.2's `ground` and `field` with the quoted defaults), stated in it and
   in `fixtures/README.md` not to be the lab's linocut. Nothing ships from it.
 - **Waits:** nothing now. The linocut port task reads this entry.
+
+## RQ-758: Do central-difference slopes survive R-926's three slope tiers: as the linearised decoder's `J_D`, as a fourth tier, or only as a test's check? *(conflict; a one-way door; R-926 item 9 and item 11, R-633, R-113; REQ-DEC-034, REQ-DEC-036, REQ-DEC-042, REQ-GEN-018; context: TASK-M6-07, TASK-M5-04)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan (`plan/charts/m2-chart-system-replan.md`); each quote re-read on
+`origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: a chart's "slopes" say how fast the starting system changes as you move across the picture; deep
+zoom needs them to shrink a tiny quad to a centre plus slopes. The owner ruled three kinds of slope (exact, implicit,
+none). The plan's requirements, written earlier, compute slopes another way, by nudging each coordinate a little
+either side ("central differences"). Which one the deep-zoom decoder uses changes its numbers.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 9: "Slopes come in three tiers: exact (dual numbers), implicit, none (per-sample
+    difference). A map that cannot give exact slopes is still a valid chart." Item 11: "A small quad's table collapses
+    to one cell — that IS the linearised decoder (centre + slopes)."
+  - `plan/requirements.yaml`, REQ-DEC-034: "The linearised decode must replace the decode with x₀ + J_D·δ, where J_D is
+    central differences of the full chart→IC composite in f64 with deep_zoom §2's step rule … chart-agnostic with no
+    per-axis-kind special-casing, and |det J_D| must double as the measure weight." REQ-DEC-036 says the same of
+    TASK-M5-04's CPU side.
+  - `decisions.md` § R-633's heading: "Every central-difference Jacobian of the decode takes the encode contract's step".
+  - `plan/tasks/M6/TASK-M6-07.md` § Goal: "`J_D = ∂(physical)/∂(u,v)` by central differences in f64 over the whole
+    chart→IC composite (Φ → decode → canonicalise)".
+- **The conflict:** R-926 names exact dual-number slopes as the first tier and gives no tier to central differences;
+  REQ-DEC-034 and REQ-DEC-036 rule central differences for `J_D`, and `|det J_D|` is the measure weight (REQ-GEN-018).
+  The orchestrator's code reading (10 Nov) found that a dual type needs one implementation of four traits (`IeeeBits`,
+  `ExactSign`, `WarpReal`, `LinkReal`) and that its slope is wrong or one-sided at about a dozen decode sites (the
+  feasibility kink, `warped_k` at `d = 0`, the exponential map's `r = 0`, the poles, the seed switches), each needing a
+  flag set at the site.
+- **The question:** for a tier-1 map, is the linearised decoder's `J_D` the dual-number slope (REQ-DEC-034 and
+  REQ-DEC-036 rewritten), and what are central differences then: removed, kept as the check, or a tier for maps with
+  no exact slope?
+- **Options seen:**
+  - (a) `J_D` is the tier-1 or tier-2 slope where a map has one; a tier-3 map gets no one-cell patch and every sample
+    is evaluated on the CPU, its record carrying its difference from the quad's centre ("per-sample difference");
+    central differences at R-633's step stay as the test that checks a dual slope away from flagged sites.
+    REQ-DEC-034, REQ-DEC-036 and TASK-M6-07 are rewritten; REQ-DEC-042's `h²` fit and REQ-GEN-018 stand.
+  - (b) As (a), but central differences are kept as the slope of a map with no exact slope, a fourth tier. Cheaper deep
+    zoom for tier-3 maps; it adds a tier the owner did not name.
+  - (c) Central differences stay `J_D` everywhere (REQ-DEC-034 as written); dual slopes serve the lock and the area
+    factor only. No rewrite; R-926 item 9 then has no reader in the decoder.
+- **Recommended:** (a). It reads item 9 and item 11 together as written, keeps a central-difference check that can
+  fail, and makes a tier-3 map pay in CPU evaluations, not in an unruled tier.
+- **Measurement:** the plan's slope measurement (§ B, "slopes"): per map, the dual slope against a central difference
+  at R-633's step `h_k = ε^{1/3}·max(1, |x_k|)`, away from the flagged sites, within that step's stated truncation and
+  rounding bound (each of order `ε^{2/3}`), with a control (the sign flipped on a column well above that bound) that
+  must fail; and the one-cell patch's depth with each slope against per-sample
+  f64 evaluation.
+- **Applied meanwhile:** nothing. REQ-DEC-034 and REQ-DEC-036 stand as written; no task is dispatched (the chart
+  pause, R-923).
+- **Waits:** the slope task of the plan and TASK-M6-07's rewrite; TASK-M5-04's CPU side.
+
+## RQ-759: The lock's re-solve after a map change: is it continuous, in what metric, and does it keep R-593's offer, R-469's stop and the stored-words select? *(conflict and silence; a one-way door; R-926 item 4, R-849, R-593, R-469, R-866, R-867, R-902; REQ-CHART-146, REQ-CHART-161, REQ-CHART-060, REQ-CHART-010, REQ-CHART-113; context: TASK-M2-62, TASK-M2-65, TASK-M2-73)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: a lock pins one system to one pixel. The owner ruled that after a change of map the lock finds the
+new position by least squares. Earlier rulings ask for more: that the pinned system slides smoothly (never jumps) when
+the new chart can't show it, that "nearest" is defined, that an impossible centre is only offered a re-centre, and that
+an edit stops at the last valid value. Least squares from a few starting guesses can jump between answers.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 4: "The lock is one constraint: "this pixel shows this system". Window edits re-solve
+    the centre; a map change re-solves by least squares."
+  - `decisions.md` § R-849, the rider: "the anchor slides continuously to its nearest point in B (define "nearest": e.g.
+    keep shape and masses where B allows, ease the held-fixed coordinates to B's values along the path) … The jump
+    stays only for time-axis to IC-only charts."
+  - `plan/requirements.yaml`, REQ-CHART-146: ""Nearest point in B" … must be defined, the chart-space model's Theorem 8
+    its construction".
+  - `decisions.md` § R-593's heading: "Lock validation gives one notice, never one per pixel: it offers a re-centre, to
+    the nearest feasible point of the lock's own centre, only when that centre has gone infeasible".
+  - `decisions.md` § R-469's heading: "pan, slice, zoom, tilt and lock are accepted only while the chart's centre passes
+    `validate`, an edit that would cross stopping at the last valid value".
+  - `docs/design/principia_chart_composition.md` § "17.8 Lock: a based homotopy": "With stored words | **Holds.** … a
+    sample at chart coordinate exactly the centre takes them by a comparison"; "Offset alone isn't bitwise … and the
+    select is what gives the bits."
+  - The prototype design (`orch/charts/prototype-2026-11-10/chart-system-prototype-design.md` § 4, a proposal): "solve
+    `P' = argmin_P ‖φ'(P) − X*‖` by Levenberg–Marquardt with a finite-difference Jacobian from four seeds … If `min > 0`
+    the new map cannot show `X*`; the pin becomes `φ'(P')`".
+- **The conflict:** R-926 rules least squares; it does not say in which metric (the prototype's is the unweighted
+  state norm, not REQ-CHART-146's Theorem 8 construction), whether the result must move continuously as the path moves
+  (R-849), whether an impossible centre is re-solved automatically or offered (R-593), whether a window edit that would
+  leave the valid systems stops (R-469) or re-solves, nor whether the pin's pixel keeps the stored state's words bit for
+  bit (§ 17.8, REQ-CHART-113's ends). R-849's time-axis to IC-only jump also meets R-926's time as a coordinate.
+- **The question:** what the least-squares re-solve must guarantee beyond item 4's words.
+- **Options seen:**
+  - (a) Least squares in the metric REQ-CHART-146 defines (Theorem 8's retraction), continued from the previous frame's
+    solution along a path so the anchor moves continuously (R-849 kept), a fresh multi-seed solve only at a cut; R-593's
+    offer kept for a centre that has gone infeasible on its own map; R-469's stop kept for window edits; the stored-words
+    select kept at the pin; R-849's time-axis jump dropped, time being a coordinate the re-solve includes. Continuity
+    and "nearest" can't both hold everywhere: at a cut locus of the nearest-point map, where two points of B are
+    equally near, a continuous anchor stops being the global nearest (the prototype's generic note § 5: a sliding
+    anchor needs a contractible constraint set). Under (a) continuity wins: the anchor follows the local minimiser
+    through a cut locus, labelled "not nearest" while another point is nearer, and does not jump there. The followed
+    local minimiser can also end: it merges with a saddle and disappears (a fold of the minimiser, likely further
+    along once the anchor has passed a cut locus onto the branch that is not the global one). There no continuous
+    anchor exists, and under (a) the path **stops** at the last frame where the followed minimiser exists, labelled
+    "the followed system ends here", as R-469's stop does for window edits; it never jumps silently, and going on is
+    the user's choice, which re-pins (a new lock, not a jump under the old one).
+  - (a′) As (a), but nearest wins at a cut locus: the anchor jumps to the new global nearest point there, a labelled
+    jump, as R-849's "no labelled jumps under the lock" does not allow.
+  - (b) As (a) but R-593 becomes automatic: the re-solve itself moves the centre to the nearest feasible point, with
+    the one notice.
+  - (c) The prototype's rule: an unweighted least squares from seeds each time, the pin becoming the nearest system it
+    finds; no continuity promise, a jump labelled when the basin changes.
+- **Recommended:** (a). It keeps R-849's "never jumps" by stopping where the followed minimiser ends, gives up
+  global nearness only at a cut locus and says so,
+  and reads item 4 as the solve's method, not its guarantees; (b) is the smaller change to R-593 if the owner prefers fewer prompts.
+- **Measurement:** G8's slide check, written before the run (`plan/MILESTONES.md`, G8): along a morph into rest and
+  Burrau charts, halve the frame step twice; the largest anchor step must fall to at most 0.6 of the previous each
+  time; plus the share of frames where a four-seed solve changes basin against the continued solve; and a fixture
+  that crosses a cut locus (a path whose target B holds two equally near points to the anchor at one frame, for example
+  a rest chart reached from a state symmetric under the swap of bodies 1 and 2), on which (a) must stay continuous and
+  label "not nearest", and (a′) must jump once, labelled; and a fixture that ends the followed minimiser (the same path
+  continued past the cut locus until the followed branch merges with a saddle), on which (a) must stop at the last
+  frame where the branch exists, labelled, with no anchor step larger than the slide check allows before it.
+- **Applied meanwhile:** nothing; TASK-M2-62 and TASK-M2-65 are paused with the other chart tasks (R-923).
+- **Waits:** TASK-M2-62, TASK-M2-65 and the solver core of TASK-M2-73, as the plan places them.
+
+## RQ-760: What becomes of design § 17.2's other path arms, the mass block, statistics on a blend and folds no axis declares, now that a morph blends the two charts' states? *(conflict and silence; a one-way door; R-926 item 3, R-925 item 4, R-850, R-853, R-408, R-407, R-898; REQ-CHART-112, REQ-CHART-113, REQ-CHART-131, REQ-CHART-150; context: TASK-M2-60, TASK-M2-65, TASK-M2-71, TASK-M2-81)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: the owner ruled that a morph mixes the two charts' systems directly, and that a blend is itself a
+chart. The design had other ways to go between charts: mixing one axis's value, bending the pair map, mixing view
+fields. It is not said whether those survive, whether "linear in masses" means the masses or their logarithms as the
+design has it, whether area statistics may be taken over a blend, or which copy counts when a blend shows one system
+twice.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 3: "A morph is a blend of two charts' states (linear in masses, momenta and time; slerp
+    on shape). Both ends are exactly the end charts." § R-925, item 4: ""Morph" means the system blend. A blend is a
+    chart."
+  - `docs/design/principia_chart_composition.md` § "17.2 The mechanism": "**The rule: blend at the last layer where the
+    two ends differ, and run everything downstream once, on the blend.**", with the arms `Path::AxisBlend`,
+    `Path::PairMap`, `Path::PerField`, and the line's block "mass `μ_k = ln(m_k/m₀)` `a + s(b − a)`".
+  - Same file, § "17.6 Per-axis and pair-map morphs": "between two pixels at `E* = −0.1`, the blended state misses by
+    0.054 median and 2.1 worst, against 1.4·10⁻¹⁶ with the step run after the blend."
+  - Same file, § "17.5 A frame: valid, reproducible, recorded": "A frame's `system_image` is unknown, since a blend may
+    fold (§ 17.6), so `measure` is `none`, no statistic is admitted (`admit_statistic` refuses)".
+  - `plan/requirements.yaml`, REQ-CHART-112: "a path type with arms for tilt, zoom, plane rotation, per-axis blend, pair
+    map, line and per-field, blending at the last layer where the ends differ".
+  - `decisions.md` § R-408's heading: "Area statistics count each system once, through the axis types".
+  - The prototype design § 13, items 4 and 5 (a proposal): "The `α×β→` sphere blend is still 0.4–1.0% wrong backwards
+    and the cause is not found." "A fold that is not a declared extension has no rule for the true copy."
+- **What R-925 and R-926 settle:** a morph blends states; a turn of the window within one map, `Path::Tilt`,
+  `Path::Zoom` and § 17.7's plane rotation, is a tilt or a window edit, not a morph; a blend is a chart; the ends are
+  the end charts exactly (REQ-CHART-113's exact selection of `s = 0` and `s = 1` gives that, and stays). R-850 already
+  says mid-morph frames never claim held values, so § 17.6's held-`E*` miss is a property of the morph, labelled.
+- **The question:** (i) whether `AxisBlend`, `PairMap`'s bend and `PerField` survive, and as what; (ii) whether
+  "linear in masses" is § 17.2's `μ_k = ln(m_k/m₀)`; (iii) whether a blend chart admits area statistics, and under what
+  measure; (iv) which copy is the system's position where a blend folds and no axis declares an extension.
+- **Options seen:**
+  - (i-a) Retired as morphs and offered as maps: a chart whose axis is the blend of two quantities, or the bent pair
+    map, is a map like any other, navigable and lockable. (i-b) Kept as morph families beside the state blend. (i-c)
+    Retired outright.
+  - (ii-a) The mass block in `μ`, as § 17.2 and REQ-CHART-112 have it. (ii-b) Linear in the masses `m_k` themselves,
+    which reaches every ratio too but blends differently.
+  - (iii-a) No statistic on a blend chart (§ 17.5 kept): the measure stays `none`. (iii-b) Statistics admitted where
+    a signed fold indicator keeps one sign over the view (no fold), refused elsewhere. No such indicator exists yet:
+    the Gram area factor is unsigned (§ 17.11: "a fold reads as a zero crossing, which a coarse grid can step over"),
+    so (iii-b) needs one defined first (R-72), for example the sign of the 2 × 2 Jacobian determinant of a fixed 2D
+    key of the swept state composed with the chart, and it sees only folds the sample grid resolves.
+  - (iv-a) No true copy: a folded pixel's backwards answer is the nearest one, labelled, and folded pixels are excluded
+    from statistics. (iv-b) A rule declared per blend (for example the copy continuous with `s = 0`).
+- **Recommended:** (i-a), (ii-a), (iii-b) once its indicator is defined (else (iii-a)), and (iv-a): they keep "morph" to the one meaning the owner gave, keep the
+  design's measured mass block, and keep R-408's "count each system once" honest on a blend.
+- **Measurement:** per blend pair on the kernel's charts (latent to the shape sphere's exponential map, `(L_z, E)` to the
+  sphere), the folded share by the signed fold indicator (once defined, R-72) and the backwards wrong share at `t = 0`, written as the plan's open item
+  "blend wrong backwards"; the `α × β` to sphere blend re-measured on the kernel's latent chart before any cause is
+  sought.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M2-60's contract text, TASK-M2-65's line and TASK-M2-81's flags, as the plan places them.
+
+## RQ-761: Time as a coordinate on the integrator's integer grid: a per-sample stop index, `bounded`, a playhead moved backwards, and the column march *(conflict and silence; a one-way door; R-926 items 2 and 3, R-925 item 5, R-565, R-602, R-842, R-849, R-92; REQ-INT-038, REQ-SCHED-010, REQ-CHART-123, REQ-CHART-174; context: TASK-M2-83, TASK-M4-05, TASK-M2-82)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: the owner made time an ordinary coordinate of every chart, so a picture can tilt into time and a
+morph can run while time plays. The integrator, though, only stops on a fixed grid of times counted in whole steps, and
+today every sample of a dispatch stops at the same time. How a sample with its own time stops, what its "ran to the
+end" flag means, and what playing backwards does are not said.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 2: "Time is the last coordinate of every map. The playhead is the window centre along
+    time." Item 1: "An axis change is a tilt to 90 degrees." § R-925, item 5: "A morph supports time running, and time
+    is a supported chart axis."
+  - `decisions.md` § R-565's heading: "steps are sized from it, the march stops only on it, the playhead reads boundary
+    states, so live march, catch-up and re-boot reach the same state bitwise".
+  - `plan/requirements.yaml`, REQ-INT-038: "The horizon test must be an integer macro-step counter against
+    `horizon_steps = ⌈T/dt_macro⌉`, never accumulated float time."
+  - `docs/design/principia_chart_composition.md` § "18.2 Against the core": "Rows are kept as **integer boundary
+    indices**, since `⌊(k·10⁻³)/10⁻³⌋ ≠ k` for 731 of the 65,535 `k` in f64"; § "18.5 Cost per column", C1: "The state
+    word differs by design: `bounded` belongs to the horizon".
+  - `plan/requirements.yaml`, REQ-CHART-123: "run each column once from t = 0 through the trajectory interface (§ 18.7),
+    read rows as integer boundary indices per occupant … and cut to an IC-only chart."
+  - The prototype design § 5 (a proposal): "The GPU integrates each sample until `t ≥ max(0, T + τ)`."
+- **What R-925 and R-926 settle:** time is a coordinate of every map, not a chart mode (R-842 amended in part); a tilt
+  may take it (REQ-CHART-174's "time never a tilt target" goes); a morph blends time linearly and may run with time
+  playing (REQ-CHART-123's cut to an IC-only chart goes).
+- **The question:** how a sample's own target time meets R-565's grid and REQ-INT-038's counter, and what `bounded`,
+  backwards play and the column march become.
+- **Options seen:**
+  - (a) A per-sample stop index `k_stop ≤ horizon_steps`, a `u32` in the record, the host mapping each target time to
+    the latest boundary at or before it in integers on the occupant's grid; `T` stays the per-dispatch uniform and
+    `bounded` stays the horizon's; a target below the current state re-boots from `t = 0` (R-565 bitwise); a
+    time-axis chart keeps the column march as an implementation that gives the same bits. A sample stopped at its own
+    `k_stop` needs a label, one of:
+    - (a-i) a new state, "reached its time": a sixth label beside escape, collision, bounded, the failures and running in
+      canonical spec § 9's totality invariant ("every pixel gets a labelled output (escape/collision/bounded,
+      sim_failed/decode_failed, or running)") and in the payload's state enum, each consumer of the enum (the
+      outcome legend, the statistics, export) handling it;
+    - (a-ii) no new label: `k_stop` is the sample's own horizon and the sample is labelled `bounded` there, which
+      changes `bounded`'s meaning from "reached the dispatch's horizon `T`" to "reached its own target" (§ 18.5 C1's
+      "`bounded` belongs to the horizon").
+  - **The staircase, under either (a):** on a view tilted toward time, once a pixel's step in time falls below the
+    grid's spacing (`Δ_sync`, or the macro-step on an unregularised occupant), neighbouring rows read the same boundary,
+    and the picture shows bands whose edges are level sets of the stop index, not dynamics (`principia_01_pitfalls.md`
+    § 1.7: "Smooth, clean geometric boundaries in a chaotic field … are level sets of something smooth — usually a
+    termination time"; § 1.2 on quantised end times). The time-axis mode already says so for its rows (§ 18.2, "Time
+    zoom floors at one boundary"); a tilted view needs the same: its zoom along time floors at one boundary, or the
+    bands are drawn with a label.
+  - (b) A per-sample float horizon `t ≥ T + τ`, as the prototype: off R-565's grid, so live march and re-boot no
+    longer meet bitwise.
+  - (c) Per-dispatch horizons only: one dispatch per distinct target time, the per-sample case going through the
+    trajectory interface.
+- **Recommended:** (a) with (a-i), and the zoom along time floored at one boundary. It is R-565 and REQ-INT-038
+  applied to a per-sample target, keeps the bitwise re-boot and `bounded`'s meaning, and needs one word in the record; (c) costs a dispatch per target time on a space-time slice.
+- **Measurement:** § 18.5's C1 re-run with per-sample stops (every row bitwise against a run with that row's boundary
+  as horizon, `bounded` excepted by design); a zoom-in-time check on a view tilted 90° toward time, the rows per
+  boundary counted at each zoom and the floor shown to stop the zoom (or label the bands) where a row's time step
+  falls below one boundary; and the cost of a morph with time running, every sample re-integrated per
+  frame, measured against the frame budget on the Mac.
+- **Applied meanwhile:** nothing. TASK-M4-05's interface is not built.
+- **Waits:** TASK-M4-05 (the integrator's entry and its record), TASK-M2-83 (re-scoped by the plan).
+
+## RQ-762: The window's per-coordinate scale: R-507's and R-920's units as `Σ`, and the scale of time and of coordinates that have no slider *(silence; a one-way door, a physics definition; R-926 item 1, R-507, R-920, R-474, R-92; REQ-CHART-188, REQ-CHART-064; context: TASK-M2-61, TASK-M2-63, TASK-M2-36)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: turning the window between two coordinates needs a rule for how far one unit of each goes, or the
+angle means nothing. The rulings already give units for the screen axes and the sliders. Time, and any coordinate with
+no slider, has none.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 1: "A chart is a map (named coordinates -> system state + time) composed with a flat
+    window (centre + basis). Pan, zoom, rotate, tilt and slice are edits of the window."
+  - `decisions.md` § R-507's heading: "the screen axis in units of the axis's full range at zoom 1, the hidden coordinate
+    in its slider span, so no unit depends on zoom; the latent chart's tilt stays the decoder's basis edit".
+  - `decisions.md` § R-920: "A hidden coordinate's slider span is the full range at zoom 1 of the screen axis that
+    carries the same coordinate on the registry's own charts, read at that chart's home window".
+  - The prototype design § 1 (a proposal): "Each coordinate `k` declares a scale `σ_k` and a home value `h_k` …
+    `G = diag(1/σ_k²)`, time excluded."
+- **The silence:** R-507 and R-920 give each screen axis and each slider a unit, which is a per-coordinate scale, but
+  time has no slider span and no zoom-1 range, the latent chart's tilt is "the decoder's basis edit" with no scale, and
+  a map's coordinate that is neither an axis nor a slider on any registry chart has none. A tilt toward time (R-926,
+  items 1 and 2) needs one.
+- **The question:** is the window's scale `σ_k` R-507's and R-920's unit for every coordinate that has one, and what is
+  it for time and for the rest?
+- **Options seen:**
+  - (a) `σ_k` = R-507's and R-920's unit wherever defined (the latent coordinates' span 2, uniform, so the latent tilt is
+    unchanged); time's `σ` is the chart's home time window, the span of `[0, T]` at zoom 1; any other coordinate
+    declares its own `σ` with its map, a definition each under physics review (R-72).
+  - (b) As (a), but time's `σ` is a fixed physical constant (for example `Δ_sync` times a count), the same on every
+    chart.
+  - (c) No metric: tilts toward a coordinate with no unit are refused. Conflicts with R-925's "no refusals" spirit and
+    R-926 item 1.
+- **Recommended:** (a). It adds no unit the rulings don't already have, and time's unit then behaves as R-920's spans
+  do, the same fraction of a home window on every coordinate.
+- **Measurement:** R-920's own checks reused for time (a 90° tilt into time at zoom 1 equals the time axis's home
+  extent, to rounding; a pan at fixed `τ` leaves the span bitwise unchanged), written before any run.
+- **Applied meanwhile:** nothing.
+- **Waits:** the window type of TASK-M2-61's revised sketch; TASK-M2-63's held-coordinate tilts.
+
+## RQ-763: Does R-864's "bitwise reproduction first" still bind stage 1 in full, now that every operation becomes an edit of a general window? *(conflict; a one-way door; R-864 item 3, R-894, R-917, R-919, R-926 item 1; REQ-CHART-147, REQ-CHART-113, REQ-CHART-099, REQ-CHART-156; context: TASK-M2-61, TASK-M2-64)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: before changing any arithmetic, the plan was to rebuild every one of today's view operations
+inside the new object so that each gives exactly the same bits as today, then merge them into one per operation. With
+the window now one general centre-and-basis, about 35 of today's routines would be rebuilt exactly only to be thrown
+away, and a general rotation gives different last bits on about one angle in nine.*
+
+- **File, section:**
+  - `decisions.md` § R-864, item 3 (its heading): "today's operations re-expressed as named families of it and their old
+    routes deleted; bitwise reproduction first".
+  - `decisions.md` § R-894's heading: "rounding-only differences resolved to one canonical formula with a documented bit
+    change and a conversion test … bit-for-bit reproduction is stage 1's safety net".
+  - `plan/MILESTONES.md` § "M2 — The chart system: charts, decode and encode, and the non-visual chart core", G1:
+    "Every existing chart and view operation through the composition, bit for bit (R-864 item 3; TASK-M2-61)".
+  - `decisions.md` § R-926, item 1: "Pan, zoom, rotate, tilt and slice are edits of the window."
+  - The chart review (`orch/charts/prototype-2026-11-10/chart-review-2026-11-10.md` § 5, point 3, a proposal): "Measure
+    the `≟` pairs first, and only freeze a separate leaf where a pair differs."
+- **The conflict:** R-926 makes every operation an edit of `(c, Q)`; R-864 item 3 and G1 require today's arithmetic
+  reproduced bitwise through the new object before any change. The orchestrator's reconciliation (10 Nov) counts 35
+  stage-1 leaves, of which a generic rotation of `Q` reproduces today's shared-basis tilt bitwise on about 89% of angles
+  (type sketch v10, physics note A1, not re-measured).
+- **The question:** does stage 1 still reproduce every one of today's operations bitwise through the new types, or only
+  those the generic edit reproduces, the rest converted at once with a recorded bit change?
+- **Options seen:**
+  - (a) As written: stage 1 reproduces all of today's leaves bitwise in the `(map, c, Q)` types, and TASK-M2-64
+    converts them with documented bit changes (R-894).
+  - (b) Measure first: each of today's operations against its generic edit; a bitwise-equal one is one leaf at once; a
+    differing one is converted in stage 1 with R-894's documented bit change and conversion test, never kept as a
+    temporary leaf.
+  - (c) No bitwise stage: every operation converted at once, conversion tests throughout.
+- **Recommended:** (b). It keeps R-864's safety net (every change measured and recorded) and drops only the scaffolding
+  the measurement shows is not needed; it is the review's point 3, which the owner has not ruled.
+- **Measurement:** the D2 pair measurement, criterion written before the run: per operation, at f64 and f32, the share
+  of a fixed grid of inputs on which today's route and the generic `(c, Q)` edit agree bitwise.
+- **Applied meanwhile:** nothing; R-864 item 3 and G1 stand as written.
+- **Waits:** TASK-M2-61 (and its type sketch, revised from v10 for the owner under R-864 item 1 and R-919).
+
+## RQ-764: The momentum seed: does the expansion seed `w = r/√I` replace R-82's largest-norm rule, everywhere or as a named option? *(silence; a one-way door, physics that changes every invariant chart's image; R-82, R-865, R-849; REQ-DEC-021; context: TASK-M2-57, TASK-M2-61, TASK-M2-85)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: on charts that fix the energy, the leftover energy is put into the bodies' motion along one
+"seed" direction. Today's rule picks the largest of four seeds, and the choice flips across a line in the picture, so
+the picture shows a vertical edge that is not physics. The independent review proposes a seed with no flip (a uniform
+expansion). It reads as the owner's decision, but no ruling records it.*
+
+- **File, section:**
+  - `decisions.md` § R-82: "Seed: among seeds with ‖w⁽²⁾‖²_m > ε_w, take the largest norm; break ties by seed order."
+  - The chart review (`orch/charts/prototype-2026-11-10/chart-review-2026-11-10.md` § 2, "The seed seam: remove it,
+    don't declare it (owner's decision)", a proposal): "**`w = r/√I` has no seam.** … it changes every invariant and
+    mixed-energy chart's image where `K* > K_min`, not only at the seam, so it is a recorded conversion."
+  - The prototype design § 13, item 9 (a proposal): "The seed: the composed map uses rigid rotation plus uniform
+    expansion. Not ruled."
+  - Code: `crates/kernel/src/decode/invariant.rs:313` (the seeds) and `crates/kernel/src/chart/burrau.rs:110` (Burrau's
+    seed select).
+- **The silence:** neither R-925 nor R-926 names the seed; no ruling on `main` records `w = r/√I`. Its seam sits in the
+  slope sites R-926 item 9 must flag (the seed switch at `z_α = 0` and at `ν = 1/3`).
+- **The question:** does `w = r/√I` replace R-82's seed rule, and where?
+- **Options seen:**
+  - (a) Everywhere, the invariant charts and Burrau's included: a recorded conversion of every image where
+    `K* > K_min` (before TASK-M2-61's baseline), `NO_QUALIFYING_SEED` unreachable for `I > 0`, R-82's rule kept as a named
+    option with its seam declared.
+  - (b) On the invariant charts only; Burrau keeps R-82's seed with a declared seam.
+  - (c) R-82 stands; the seams are declared and flagged as one-sided slopes.
+- **Recommended:** (a), as the review argues; with a check of the invariant charts' default pin, the equal-mass Lagrange
+  triangle, where every pixel then starts a homographic orbit whose break-up is set by rounding, labelled.
+- **Measurement:** the seed jump across `z_α = 0` on the kernel's `(L_z, E)` chart before and after (the review's 1.9545
+  predicted and measured), and the invariant `(L_z, K)` matrix case run under the legacy option and recorded (R-649).
+- **Applied meanwhile:** nothing; R-82 stands.
+- **Waits:** the seed conversion of the plan, which must land before TASK-M2-61 records its baseline.
+
+## RQ-765: With the integrator taking only records, what are the GPU decode entries, R-837's cap of baked entries and the lowering labels for? *(conflict; a one-way door; R-926 items 5 and 6, R-925 item 1, R-837, R-116, R-864 item 5; REQ-PERF-116, REQ-CHART-098, REQ-INT-070, REQ-SYS-022, REQ-DEC-007, REQ-COL-006, REQ-RENDER-027; context: TASK-M2-06, TASK-M4-05, TASK-M4-27, TASK-M4-33, TASK-M4-34, TASK-M2-66)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: the graphics card can run the chart's own decoding today, as a separate step used by tests and by
+the debug pictures. The owner ruled that in the product the card only integrates systems the CPU has prepared. It is not
+said whether that GPU decoding step stays (for tests and the fragment's pictures) or goes, nor what becomes of the
+limit on how many such decoders are compiled, or of each chart's "lowering" label.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 5: "The CPU evaluates charts in f64. The GPU only integrates records. No chart code in
+    the integrator."
+  - `decisions.md` § R-837's heading: "The axis cap is 4 baked entries beyond the gallery, counted as entries,
+    decode-only, created on first use, a pair past the cap running as CPU batch".
+  - `plan/requirements.yaml`, REQ-INT-070: "The kernel must take the chart description … as a uniform and per sample map
+    → z → decode → (m, r, p) → integrate in-kernel, never from a pre-decoded IC buffer, keeping per-frame CPU cost O(1)."
+  - `plan/requirements.yaml`, REQ-CHART-098: "A validated chart must carry its lowering (uniform affine, baked entry or
+    CPU batch) … and resolve must return the baked entry for a baked (H, V, M) and CPU batch for any other."
+  - `plan/requirements.yaml`, REQ-PERF-116: "The closed-form axis pairs baked into the GPU kernel beyond the gallery must
+    not exceed the ledger's cap".
+  - Code: `crates/kernel/src/stage/decode.rs:771` (the GPU decode entries), `crates/engine/src/decode_dispatch.rs:3`
+    (its callers are tests and validation gates).
+- **What R-926 settles:** REQ-INT-070's in-kernel decode, core seam 3 and R-839 go; the integrator decodes nothing.
+  R-925 keeps the fragment's generated code where a chart has closed-form code.
+- **The question:** what remains of the compute-side GPU decode entries, R-837's cap and REQ-CHART-098's three
+  lowerings.
+- **Options seen:**
+  - (a) The GPU decode, canon and encode compute entries stay as test entries: the cross-backend parity checks
+    (TASK-M4-27's) and the agreement presets that compare the fragment's generated code; R-837's cap and REQ-PERF-116
+    are retired as moot; REQ-CHART-098's label becomes the fragment route, "closed form" or "table", never a refusal.
+  - (b) As (a), but R-837's cap is re-read as a cap on the fragment's generated chart sections, which every pipeline
+    parses whole.
+  - (c) The compute decode entries are removed with their tests. Conflicts with R-908's "product-correctness tests are
+    never retired" where they check the fragment's generated code.
+- **Recommended:** (a), with (b)'s cap measured before it is retired: the fragment module's size and compile time with
+  every chart's section is what R-837's measurement was about.
+- **Measurement:** the fragment pipeline's compile time and module size with all generated chart sections, on the Mac
+  and on lavapipe, against C3's 2 s start-up limit (R-872), criterion as R-837's measurement wrote it.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M4-05's rewrite, TASK-M2-66's labels, TASK-M4-33 and TASK-M4-34's GPU sides.
+
+## RQ-766: A large quad's forward table: one node per sample, evaluated exactly, or a coarser grid the GPU interpolates; and when it becomes a one-cell patch *(silence; a one-way door, it changes the starting states; R-926 items 6 and 11, R-925 item 3, R-90, R-599, R-632; REQ-DEC-033, REQ-DEC-005, REQ-DEC-051, REQ-SCHED-024; context: TASK-M5-04, TASK-M6-07, TASK-M6-08)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: the CPU works out the starting system for each quad and sends it with the quad. It can do that for
+every sample exactly, or for a coarser grid that the graphics card fills in between. Filling in changes the starting
+systems slightly. When a quad is small enough to be sent as just a centre and its slopes is ruled already (R-90); the
+prototype used a different trigger.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 6: "Lookup tables are PER QUAD: a forward table (window position -> state) built on
+    the CPU, bundled with the quad and dispatched with it." Item 11: "Grids for large quads, one-cell patches for small
+    ones." § R-925, item 3: "The forward direction needs no table: the CPU evaluates the chart per quad and the result is
+    bundled with the quad when it is sent to the GPU."
+  - `decisions.md` § R-90: "Switch to the linearised decoder when the full decoder's adjacent samples give
+    bitwise-identical ICs, with ℓ_switch = 20 as an upper bound (whichever comes first)."
+  - `plan/requirements.yaml`, REQ-DEC-005: "The integrator must have exactly one input type, the decoder's canonical
+    (mᵢ, rᵢ, pᵢ) in the dimensionless system G = M = I = 1".
+  - The prototype's lookup-table notes (`lut-exploration-2026-11-10.md` § 5, a proposal): one patch "is within a sample
+    from about ×64 to ×256 in".
+- **The silence:** R-925 item 3 says the forward direction needs no table; R-926 item 6 says each quad carries a
+  forward table and item 11 says "grids for large quads". Neither says whether a grid has a node per sample.
+- **The question:** is a large quad's forward table one node per sample (each start the CPU's f64 evaluation rounded
+  once), or coarser and interpolated on the GPU; and does R-90's trigger decide the switch to the one-cell patch?
+- **Options seen:**
+  - (a) One node per sample above R-90's switch, exact; the one-cell patch, a centre and slopes, below it, R-90's
+    trigger unchanged; the record the integrator reads is REQ-DEC-005's `(m, r, p)`. R-90's "adjacent samples give
+    bitwise-identical ICs" compares the **narrowed f32 records**, the ICs the integrator actually starts from, as it
+    did when the full decode ran in f32. Comparing the f64 evaluations instead would almost never fire before
+    `ℓ_switch = 20` (f64 neighbours stay distinct to about level 48), so the switch would always be the upper bound,
+    and a quad between the f32 collapse and level 20 would keep sending identical f32 records; the choice moves the
+    switch depth and with it the starting states. (a-f64), the f64 comparison, is the alternative.
+  - (b) A coarser grid the GPU interpolates bilinearly at every depth, a node spacing per chart: fewer CPU evaluations,
+    starting states off by the interpolation error.
+  - (c) (a) with the prototype's switch: a patch once it is within a sample of the exact evaluation, measured per chart.
+- **Recommended:** (a), comparing the narrowed f32 records. It is the only option where a starting state is the chart's own system to rounding, which
+  REQ-DEC-005 and every round-trip gate assume; (c)'s trigger can be measured against R-90 without changing it.
+- **Measurement:** on the kernel's latent and exponential-map sphere charts, the CPU evaluations per frame under (a)
+  against the frame budget; (b)'s interpolation error against the sample spacing; the depth at which R-90's trigger fires
+  on the f32 records and on the f64 evaluations, against the prototype's trigger.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M5-04's quad request and TASK-M6-07, as the plan rewrites them.
+
+## RQ-767: How accurate must the table route be outside a morph, and may it refine on the chart's generated forward code? *(silence; a one-way door, a tolerance; R-926 items 7 and 8, R-925 items 1 and 2, R-116, R-542, R-919 F11; REQ-ENC-024, REQ-ENC-029, REQ-CHART-158; context: Chart position's build and the decode and round-trip presets)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: where a chart has no backwards formula, the picture finds a system's place on it from a table.
+The owner said an approximate answer is fine during a morph. Outside a morph, nothing says how close the answer must
+be, or whether the table only gives a first guess that the chart's own forward code then sharpens.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 7: "It is a baked backwards table with a table search as the fallback. Approximate is
+    acceptable during a morph."
+  - `decisions.md` § R-919, F11: "blend frames, which have no inverse (R-899 Q8), found to pixel resolution."
+  - The prototype design § 7.5 (a proposal): the search refines "by damped Gauss–Newton on the bilinear table".
+  - `docs/design/principia_colour_composition.md` § "3. The `ctx` contract": every chart's `Φ` "is evaluated
+    fragment-side, each through its own generated section".
+- **The silence:** the accuracy of the backwards answer on a plain chart with no closed-form inverse is not stated; a
+  search refined on the bilinear table is limited by the table's spacing, while a refinement on the chart's generated
+  forward code, which every kernel chart has, drives the residual in state to f32 rounding for a state that lies on
+  the chart's image (one decoded from a pixel); the error in chart coordinates is then about that residual divided by
+  `σ_min(J)`, the chart Jacobian's smallest singular value. A running or saved state generally lies off the chart's
+  two-dimensional image, so even a converged solve leaves a residual: its distance off the chart, which no solver
+  removes. The state map treats it as a projection: `docs/design/principia_state_map.md` § "SM1. Definition" (lines
+  108 to 117): "`P_T` is the target chart's projection, the one the trace uses (`principia_trajectory_viewing.md` §3;
+  trace follow-up F1)." (Codex review thread on PR #473.) SM1 defines no distance in state space: its table reads
+  `P_T`'s coordinates through the encode on charts that have a closed-form read, and its only nearest point is a curve
+  axis's, § "SM1. Definition" (lines 154 to 155): "the targets are the app's own charts, through `encode_into` and
+  `curve::nearest`." For an off-image state on a chart with no closed-form inverse it is silent on which nearest point
+  is the answer and on the metric that distance is measured in; both are definitions owed (R-72).
+- **The question:** what accuracy the table route must reach outside a morph, and whether it may refine against the
+  generated forward code; and, for an off-image state on a chart with no closed-form inverse, which nearest point is
+  the answer and in what state-space metric `W` (definitions, R-72).
+- **Options seen:**
+  - (a) The table seeds the search; Newton steps run on the chart's generated forward code where the chart has it
+    (every kernel chart, and a blend of two such charts), so the residual in state reaches f32 rounding outside a
+    morph; the table alone only where no forward code exists. The criterion is stated apart for the two kinds of
+    state:
+    - *On the chart's image* (a state known to lie on it, such as one decoded from a pixel): the residual in state
+      reaches f32 rounding. The answer is not f32-accurate in chart coordinates everywhere: its error is about the
+      residual over `σ_min(J)`, which is unbounded at the sites a chart flags (the poles, `r = 0`, the feasibility
+      boundary). The bound is a calibration (R-71), stated in chart coordinates with its conditioning, as
+      `ε_res / σ_min(J)` with `ε_res` the residual tolerance, reported beside `σ_min(J)` at each sample, and a sample
+      whose `σ_min(J)` falls below a stated floor is labelled ill-conditioned rather than held to the bound.
+    - *Off the chart's image* (running and saved states): with `f` the chart's generated forward code from chart
+      coordinates `u` to the encoded state `x`, the converged residual `r = f(u) − x` is the projection distance
+      `‖r‖_W`, `P_T`'s distance off the chart, reported as a measured quantity and never read as solver error. Two
+      definitions it rests on are owed (R-72), as the silence says, and neither is chosen here: (i) which nearest
+      point counts as the answer for an off-image state on a chart with no closed-form inverse (SM1's `P_T` reads
+      coordinates through the encode where a closed-form inverse exists, and its only nearest point today is
+      `curve::nearest` on a curve axis); (ii) the state-space metric `W` it is measured in. The encoded state mixes
+      shape, momentum and mass coordinates in different units, so every number reported here (`‖r‖_W`, `‖J‖_W`,
+      `σ_min(J)` in `W`, the optimality) depends on `W`, and the first-order optimality measure is `JᵀWr`, not `Jᵀr`.
+      Convergence is judged apart from the distance, by first-order optimality: `‖JᵀWr‖ / (‖J‖_W·‖r‖_W)`, or the
+      Newton step in chart coordinates, below a stated tolerance, a calibration (R-71). That ratio is 0/0 as
+      `‖r‖_W → 0`, so a sample with `‖r‖_W ≤ ε_res` (every running state at `t = 0`, and any later one as close) is
+      judged by the on-chart criterion above instead, so that it is binned deterministically. Beside each sample, the
+      chart-coordinate error bound `‖JᵀWr‖ / λ_min(H)`, with `H = JᵀWJ + Σᵢ (Wr)ᵢ ∇²fᵢ` the objective's Hessian
+      off the image (`Σᵢ rᵢ ∇²fᵢ` when `W` is the identity); the residual-curvature term is kept because `H` loses
+      positive definiteness once `‖r‖_W` nears the image's radius of curvature, even where `σ_min(J)` is healthy.
+      `λ_min(H)` is reported with it, and the ill-conditioned floor applies to `λ_min(H)`: a sample below a stated
+      floor, a calibration (R-71), is labelled ill-conditioned rather than held to the bound, and a sample with
+      `λ_min(H) ≤ 0`, where the nearest point is not unique, is reported apart. The off-chart projection distance is
+      the quantity the trace's residual will be defined against when that work is planned.
+
+    Each criterion is written first.
+  - (b) The table alone, labelled approximate with its bound, the table's spacing, everywhere.
+  - (c) Pixel resolution everywhere, as R-919 F11 has it for blend frames.
+- **Recommended:** (a). It costs a few forward evaluations per pixel, which the prototype's Metal figures (7 to 20 ns a
+  sample for the search) suggest is cheap, and makes "approximate" true only where the owner allowed it.
+- **Measurement:** on the kernel's charts at `t = 0` and after a run, for (a) and (b), each binned by `σ_min(J)` with
+  the flagged sites reported apart, the on-chart and off-chart samples binned and reported apart: for on-chart samples
+  (states decoded from pixels, at `t = 0`), the round-trip error in cells, the wrong share and the state residual
+  against `ε_res`; for off-chart samples (running states after the run, and saved states, with `‖r‖_W > ε_res`),
+  also binned by `λ_min(H)`, the projection distance `‖r‖_W` (median and worst), the first-order optimality
+  `‖JᵀWr‖ / (‖J‖_W·‖r‖_W)` at the answer, the share that converged, the wrong share (an answer whose `‖r‖_W` exceeds
+  the reference's by more than a stated margin in `W`, a calibration (R-71); the reference is the best converged
+  answer over a multi-start refinement on the chart's forward code, seeded from every table cell), the bound
+  `‖JᵀWr‖ / λ_min(H)` beside `λ_min(H)` and `σ_min(J)`, and the samples with `λ_min(H) ≤ 0` counted apart; and the
+  per-sample cost on Metal; against a criterion written before the run.
+- **Applied meanwhile:** nothing.
+- **Waits:** the backwards-table task of the plan; Chart position's build.
+
+## RQ-768: `ctx.chart.z` is a forward value in the corpus; R-926 item 7 lists it among the backwards direction's needs *(conflict in reading; a one-way door, a reading of the owner's words; R-926 item 7, R-116, R-72; REQ-COL-057, REQ-COL-006; context: the colour nodes that read `ctx.chart.z`)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: `ctx.chart.z` is the value of the chart's coordinates at the pixel, which a colour node can read.
+The corpus works it out going forwards, from the pixel. The owner's list puts it with the needs of the backwards
+direction (from a running system to its place on a chart). Either the owner means the forward value, served by tables
+where a chart has no shader code, or a new backwards value.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 7: "The backwards direction (running state -> chart position) exists ONLY for the
+    fragment-side needs: chart-position colouring / the state map, ctx.chart.z, and the decode/round-trip debug
+    presets."
+  - `docs/design/principia_colour_composition.md` § "3. The `ctx` contract": "`ctx.chart.z` is the eight controls `Φ`
+    hands the shared decoder at the pixel's chart point, `ctx.chart.slice_uv` … The fragment obtains it … by evaluating
+    the chart's own `D ∘ Φ` in WGSL at the pixel's `ctx.chart.slice_uv`".
+- **The conflict:** in the corpus `ctx.chart.z` is computed forwards from the pixel and needs no inverse.
+- **The question:** which reading the owner means.
+- **Options seen:**
+  - (a) Item 7 lists the fragment side's chart needs: `ctx.chart.z` stays forward, from the generated code where the
+    chart has it and from the quad's forward table where it has none. R-926 item 6's forward table maps window
+    position to state, and `ctx.chart.z` is the controls `Φ` hands the decoder, not the state, so on a table-route
+    chart (a) needs one of two sources:
+    - (a-table) the forward table carries `z` beside the state at each node (eight more f32 words a node), the
+      fragment interpolating it as it does the state, with the table's spacing its error; `z` keeps
+      colour_composition § 3's meaning;
+    - (a-window) `z` is the flat window's output, `c + Q·u`, affine and exact with no table, which is the map's named
+      coordinates at the pixel; it equals the decoder's controls only on a chart whose map takes the controls as its
+      named coordinates, so on any other chart it changes what `ctx.chart.z` means.
+  - (b) `ctx.chart.z` becomes, or gains a sibling that is, the running state's chart position, read backwards.
+- **Recommended:** (a-table), which changes nothing in colour_composition § 3 but the table fallback; (a-window) is
+  cheaper and exact, and is the alternative if the owner reads `ctx.chart.z` as the window's coordinates.
+- **Measurement:** none needed; a reading.
+- **Applied meanwhile:** the plan reads (a) and marks it "reading, open".
+- **Waits:** the colour work that builds `ctx.chart.z` on a table-route chart.
+
+## RQ-769: May the registry and composed-axis tasks (stage 3) run beside stages 1 and 2? *(conflict; a one-way door; R-863, R-916, R-917; context: TASK-M2-66 to TASK-M2-76)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan; each quote re-read on `origin/main` 054e7f72. Nothing is chosen here.*
+
+*In plain English: the chart work was ordered in five stages, each starting after the last. The registry of
+primitives, the warps, the holds and the curved slices use nothing from the lock or the path object, so they could be
+built in parallel, roughly halving the chain of about twenty tasks in a row.*
+
+- **File, section:**
+  - `decisions.md` § R-863's heading: "built in five stages, each merging only with the previous stage's tests green".
+  - `plan/tasks.yaml`: TASK-M2-66 to TASK-M2-76 each depend on TASK-M2-65, by stage order only.
+  - The chart review (`chart-review-2026-11-10.md` § 5, point 1, a proposal): "Run stage 3 beside stages 1–2, not after
+    them … This amends R-863's "each stage after the last", so it is the owner's call."
+- **The question:** may stage 3's tasks that touch no lock run beside stages 1 and 2, joining at the tasks that do
+  (region D's slide arm, points of interest, path flags)?
+- **Options seen:**
+  - (a) Two tracks: TASK-M2-66, M2-67, M2-69 to M2-72, M2-74 and M2-76 depend on TASK-M2-61's baseline only; the arms
+    that touch a lock (TASK-M2-68's slide, M2-73's general solve, M2-80, M2-81) keep their stage-2 edges.
+  - (b) R-863's order as written.
+- **Recommended:** (a).
+- **Measurement:** none; the critical path, counted from `plan/tasks.yaml` under each option.
+- **Applied meanwhile:** nothing; the plan's task list shows both orders.
+- **Waits:** `plan/tasks.yaml`'s rewrite after the one-way items are answered.
+
+## RQ-770: Does R-926 item 6's "just recompute the chart and re-integrate" keep R-92's cache re-addressing for an in-plane pan or zoom? *(conflict in reading; a one-way door, a reading of the owner's words; R-926 item 6, R-92; the caching contract's invalidation table; context: the scheduler and cache tasks of M5, TASK-M2-61)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan, from code review 5844040504 of PR #473, finding 1; each quote re-read on
+the PR's head. Nothing is chosen here.*
+
+*In plain English: today, sliding or zooming the picture within the same plane reuses the squares already worked out,
+only asking for new ones at the edges. The owner's new rule says pan and zoom "just recompute the chart and
+re-integrate". Read literally, every pan would throw the cache away; read as the owner's point about there being no
+backwards lookup on that path, the cache stays.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 6: "Pan, zoom, tilt, slice and morph just recompute the chart and re-integrate. There
+    is no inverse anywhere in that path."
+  - `decisions.md` § R-92: "In-plane pan and zoom re-address; slicing out of the plane, tilting and rotating
+    re-integrate; lock changes neither."
+  - `docs/contracts/principia_caching_contract.md`, the invalidation table: "In-plane pan, zoom, lock | **Nothing.** Pan
+    and zoom re-address which quads are asked for on the same slice plane"; and below it: "**in-plane pan and zoom
+    re-address; slicing out of the plane, tilting and rotating re-integrate — and neither invalidates.**"
+- **The conflict:** item 6 lists pan and zoom with tilt and slice as edits that recompute and re-integrate; R-92 and the
+  caching contract keep every quad already integrated on the same plane, computing only the quads a pan or zoom newly
+  asks for.
+- **The question:** does an in-plane pan or zoom still re-address the cache, new quads alone being evaluated on the CPU
+  and integrated?
+- **Options seen:**
+  - (a) Yes: item 6 says how a changed view is computed (the CPU re-evaluates, the GPU re-integrates, no inverse), and
+    a quad already integrated on the same plane is reused, as R-92 and the caching contract say. A tilt, slice, morph
+    or rotation is a new plane and re-integrates, as today.
+  - (b) No: every pan and zoom re-evaluates and re-integrates every visible quad; R-92's re-addressing and the caching
+    contract's row are amended.
+- **Recommended:** (a). It is how the plan reads item 6 (`plan/charts/m2-chart-system-replan.md` § A.3, R-92's row),
+  and (b) would make a pan cost a whole frame of CPU evaluation and integration (M-A's whole-screen rate).
+- **Measurement:** none decides a reading; for the cost, M-A's whole-screen rate against the in-motion rate (plan
+  § B.4, item 14).
+- **Applied meanwhile:** the plan reads (a) and marks it open; `docs/design/principia_core_design.md` § 3's dated note
+  says the point is open.
+- **Waits:** the scheduler and cache tasks that follow R-926 (TASK-M5-04 among them).
+
+## RQ-783: A record made before R-926's f64 decode route lands recreates bitwise only through today's f32 decode: R-921 and REQ-TOOL-172 require bitwise, and R-926 item 5 replaces that decode *(conflict; a one-way door, it changes what the instrument claims about reproducing records; R-921, R-926 item 5, R-521, R-919, R-483; REQ-TOOL-172; context: TASK-M7-45, TASK-M2-57, TASK-M2-61, TASK-M4-05, the plan's N1 and N2)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan, from physics review 5847854223 of PR #473, P1; each quote re-read on the
+PR's head 55e6462d. Nothing is chosen here.*
+
+*In plain English: a saved picture stores where each pixel sits on the chart, not the starting system itself, so
+re-running it works the starting system out again. The owner ruled that a picture saved before the `β` link changed
+must re-run bit for bit, because a chaotic run drifts apart if its starting system's last bits move. The new chart
+system works starting systems out a different way, in double precision on the CPU and then rounded, which gives
+different last bits from today's way on some pixels. So a picture saved before the switch re-runs bit for bit only if
+the old way is kept for it.*
+
+- **File, section:**
+  - `decisions.md` § R-921 (a record made under a retired `β` link recreates bitwise), the owner's words: "Recreating
+    a record made under a retired β link decodes its stored latent coordinates through that exact link (kept for
+    conversion) to the original physical starting state, bitwise, and runs from there"; "No conversion on recreation:
+    converting β to the new coordinates "to rounding" can change the starting state's last bits, and a chaotic run
+    then won't reproduce."; "Test: a record made before TASK-M2-57 recreates bitwise after it lands."
+  - `plan/requirements.yaml` REQ-TOOL-172 (a record refused naming exactly a changed link, and the retired-link
+    recreate arm), its statement's last sentence: "A record made before TASK-M2-57 whose β link is one R-919 retired
+    as a link (sigmoid_beta, tanh_beta or softsign_beta), every block's hash matching, must recreate by decoding its
+    stored latent coordinates through that exact retired link to the original physical starting state, bitwise,
+    labelled "made under a retired link", never converting z_β to the periodic link on recreation (R-921)."; its
+    verify: "read from fixtures/retired_beta_links/pre_m2_57.json, every bit of which TASK-M2-57 writes through its
+    baseline commit's decoder, before any link changes" and "each pixel's starting state decoded through the named
+    retired link equal bit for bit to the fixture's decoded starting state, the state the writing build decoded".
+  - `plan/tasks/M2/TASK-M2-57.md` (the decoder's mirror step removed, latent `β` periodic), Deliverables:
+    "`fixtures/retired_beta_links/pre_m2_57.json`, written through today's decoder".
+  - `decisions.md` § R-926 (the owner's eleven chart-system decisions), item 5, the owner's words: "The CPU evaluates
+    charts in f64. The GPU only integrates records. No chart code in the integrator."; and *What it supersedes*:
+    "every view, live or not, is filled from the CPU's f64 evaluation narrowed to the integrator's records".
+  - `decisions.md` § R-521 (a record recreates when every link's own hash matches), the option it decides: "a match
+    recreates, even across an unrelated schema change, if nothing else in the record's tier 1 changed meaning."
+  - `plan/charts/m2-chart-system-replan.md` § C, "Compared by bound": "The record difference between today's f32
+    decode and the f64-then-narrow path is the size of the conversion R-926 makes, which TASK-M2-61's baseline must
+    record."
+- **The conflict:** records store latent coordinates only (R-921), so recreation runs the decode again. The fixture's
+  expected states are today's decode, the f32 decode (§ C's `sample_with::<…, f32>`). Under R-926 item 5 the product
+  route becomes the CPU's f64 evaluation narrowed to `Ic<f32>`, which differs from the f32 decode in the last bits
+  wherever the f32 decode is not the correctly rounded value of the f64 one (§ C measures how often). TASK-M7-45 (the
+  decoder's identity per link), in M7, runs REQ-TOOL-172's retired-link arm after that route has landed (the plan's N1,
+  N2 and TASK-M4-05 CHANGE): decoded through the retained retired link but on the new route, a recreated state misses
+  the fixture's bits wherever the two routes differ. R-521's "a match recreates" has the same gap for every record
+  written before the switch, retired link or not: the switch changes no registry entry, so every link's hash still
+  matches and the record recreates, from a starting state whose last bits may differ from the one its writing build
+  ran.
+- **The question:** does a record written before R-926 item 5's route lands recreate bitwise, and through which
+  decode?
+- **Options seen:**
+  - (a) Keep today's f32 decode as a source for recreation, as R-919 Q1 (c) (the three retired `β` links kept as
+    conversion sources) keeps the retired links: a record written before the switch decodes through its writing
+    build's route, the f32 decode, bitwise, and runs from there; a record written after it uses the f64-then-narrow
+    route. The record must say which route wrote it (a route marker beside the entry hashes, or the build hash and
+    schema version it already carries); which is an implementation choice under R-521. Consequences: the f32 decode
+    stays product code for recreation (it stays anyway as test and parity entries under RQ-765 (a), the GPU decode
+    entries kept for tests; TASK-M2-06 KEEP in the plan); R-926 item 5's "The CPU evaluates charts in f64" gains a
+    named exception for recreating old records; R-921, REQ-TOOL-172 and TASK-M7-45 stand as written, the arm run
+    through the retained route.
+  - (b) Give up bitwise recreation of records written before the switch:
+    - (b1) recreate through the new route within a stated tolerance of the writing build's state, in f32 ulps per
+      component, a calibration (R-71, a missing value becomes a calibration requirement), labelled "recreated under a
+      changed decode"; or
+    - (b2) refuse, "state present, cannot recreate", naming the changed decode, as R-521 refuses a changed link.
+    Consequences: R-921's "bitwise" and REQ-TOOL-172's last sentence are amended; the owner's reason in R-921, a
+    chaotic run reproducing only from the same bits, holds only for records written after the switch; (b1) recreates
+    runs that may end differently, labelled, and (b2) loses those records' recreation altogether. One decode route
+    remains.
+- **Recommended:** (a). It keeps the owner's own reason in R-921, that a chaotic run reproduces only from the same
+  bits, at the cost of keeping code that R-919 Q1 (c) and RQ-765 (a) already keep for other reasons; (b) trades every
+  pre-switch record's reproducibility for one fewer route.
+- **Measurement:** the measurable alternative, the plan's first slice (§ C, N1): per chart, the share of samples where
+  the f64-then-narrow record differs from today's f32 decode, and, run on the fixture's pixels once TASK-M2-57 has
+  written it, how many of the fixture's starting states would miss their bits; its control arm gives the outcome flips
+  that difference causes against the one-ulp chaos baseline. Criterion, written before the run: if no record differs,
+  on the fixture's pixels and on N1's grids, the two routes agree on those inputs and the choice bears only on inputs
+  outside them; any differing record shows the conflict is real, and the question stands as written.
+- **Applied meanwhile:** nothing. R-921, REQ-TOOL-172, TASK-M7-45 and TASK-M2-57's fixture stand as written; the plan
+  lists the item in § A (REQ-TOOL-172 and TASK-M7-45, "waits on RQ-783") and § C, and recommends (a).
+- **Waits:** TASK-M7-45's retired-link arm; N2's record contract (whether a record carries its decode route);
+  TASK-M4-05's switch to records.

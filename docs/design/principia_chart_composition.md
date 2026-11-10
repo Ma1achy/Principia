@@ -72,6 +72,26 @@ by measurement with its criterion written first (R-649, R-650). R-920: the owner
 proposed (`principia_chart_reference.md` § 4.5). The status above, Proposed, stands until TASK-M2-58 (was
 TASK-M4-37) carries the rulings into the body.
 
+**The owner's decisions of 10 Nov 2026 on the chart system (R-925, R-926).** Where the body reads otherwise, these
+rule; the one-way questions they leave are filed with the plan that proposes their tasks,
+`plan/charts/m2-chart-system-replan.md`, and no task is dispatched from it. A chart is a map, from named coordinates
+to a system state and a time, composed with a flat window, a centre and a basis; pan, zoom, rotate, tilt and slice
+are edits of the window, an axis change a tilt to 90° (R-926, item 1). Time is the last coordinate of every map and the
+playhead the window's centre along it (item 2), so § 18.1's "a chart mode" and § 18.4's "time is never a tilt
+target" and its cut from a time-axis chart to an IC-only chart give way, R-842 amended in part; what time as a
+coordinate does on the integrator's integer grid is open. A morph is a blend of two charts' states, linear in masses,
+momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends (item 3;
+R-925, item 4): "morph" names this system blend only, a turn of the window within one map, § 17.2's `Path::Tilt` and
+§ 17.7's plane-to-plane path included, is a tilt, and a blend is a chart; what becomes of § 17.2's other arms is open.
+The CPU evaluates every chart in f64 and the GPU only integrates records, each quad dispatched with a forward table
+built on the CPU, with no inverse on that path (items 5 and 6): § 7's three lowerings are no longer three integrator
+routes, § 7.2's CPU batch is how every view is filled, and its seam-3 exception, R-839, is superseded. The fragment
+side keeps a chart's generated shader code where it has closed-form code and otherwise reads CPU-built tables, a baked
+backwards table with a table search as fallback for Chart position, `ctx.chart.z` and the decode and round-trip
+presets, never a refusal (items 7 and 8; R-925, items 1 and 2): § 3's "`numerical` (CPU batch only, never in the
+kernel)" holds for the integrator, and the fragment reaches such a chart through tables. Slopes come in three tiers,
+exact, implicit and none (item 9); a small quad's one-cell table is the linearised decoder (item 11).
+
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
 refusals are genuine contradictions, each with a named reason. Reduced capability is a label, not a refusal.

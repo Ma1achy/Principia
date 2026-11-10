@@ -170,6 +170,8 @@ The per-quad dispatch request carries a bit-packed `flags` word:
 
 When `DECODE_MODE` is set, the reference IC `x₀` and the Jacobian `J_D` travel in a **separate uniform buffer**, bound only for linear-path quads, not inside the request. They are about 45 floats and unused at shallow zoom. The request also carries the quad's centre and half-width, computed on the CPU in f64 and passed as f32. The GPU computes sample positions from them as `u = centre + half·(2t − 1)` (deep-zoom note §1), never from the min/max bounds, which are kept for CPU-side scheduling, culling and debugging.
 
+*10 Nov 2026 (R-926).* The CPU evaluates the chart in f64 and each quad is dispatched with its forward table, built on the CPU; the compute side decodes nothing and only integrates records (R-926, items 5 and 6). A small quad's table is one cell, a centre and its slopes, and that one cell is the linearised decoder (item 11): `x₀` and the slopes travel with the quad as its table. `DECODE_MODE` and the separate uniform above are kept as written until the plan's tasks rewrite this Part; R-90's switch trigger stands. The slopes' tier and the table's resolution for a large quad are open questions of the plan (`plan/charts/m2-chart-system-replan.md`).
+
 ---
 
 ## Part 6 — The settled policy
