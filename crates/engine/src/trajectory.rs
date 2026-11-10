@@ -190,7 +190,7 @@ impl FigureEight {
         let c = canonicalise(&ic);
         Self {
             start: c.ic,
-            period: constants.period * 3f64.sqrt() * c.lambda.powf(1.5),
+            period: constants.period * libm::sqrt(3.0) * c.lambda * libm::sqrt(c.lambda),
         }
     }
 
