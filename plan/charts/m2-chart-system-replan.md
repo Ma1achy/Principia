@@ -269,8 +269,10 @@ integrator work (TASK-M4-05) carries on as agreed.
 4. **N10, the seed conversion (NEW, only under RQ-764 (a) or (b)).** Acceptance: the conversion test of every invariant
    and mixed-energy chart image where `K* > K_min`; the legacy rule a named option. Measurement: the seam jump across
    `z_α = 0` on the kernel's `(L_z, E)` chart; criterion: after the change no neighbouring pair of pixels across the line
-   differs by more than the largest neighbouring difference within 8 pixels of it on either side. Door: one-way,
-   RQ-764.
+   differs by more than the largest neighbouring difference within 8 pixels of it on either side. Control (pitfalls
+   § 3, the measurement shown able to fire): the same measurement under R-82's legacy rule, the named option, whose
+   jump across the line the review predicts at 1.9545, must fail the same criterion; if it passes, the criterion
+   cannot see the seam and the result is void. Door: one-way, RQ-764.
 
 ### B.2 Stage 1: the object, today's operations through it
 
@@ -366,9 +368,9 @@ Each with its owner (a role) and the measurement that closes it. None is solved 
 | O4 | A blend 0.4 to 1.0% wrong backwards, cause unknown (`α × β` to the sphere; § 13.4) | implementer of N7; physics reviewer for the cause | the same blend on the kernel's latent chart (periodic `β`, TASK-M2-57) to the exponential-map sphere: wrong share by route, against the folded share by the signed fold indicator N5 defines (R-72; the Gram factor is unsigned, § 17.11), at table 64 and 128 |
 | O5 | No lift for periodic angles; an antipodal vortex; blends can fold (§ 13.4) | implementer of N5; owner, RQ-760 | the review's lifted-blend check: jump between neighbouring pixels at mid-morph, lifted against per-pixel shortest arc (prototype: 3.14 rad against 0.002) |
 | O6 | A fold no extension declares has no rule for the true copy (§ 13.5) | owner, RQ-760 (iv) | folded share per blend pair, by the signed fold indicator N5 defines (R-72), with § 17.11's limit stated: a fold narrower than a sample can be stepped over |
-| O7 | Feasibility by a plain comparison in the prototype (§ 13.6) | implementer of N1 | none: the kernel's exact predicate (`decode/invariant.rs:273`) is used; the review's f32/f64 triple added as a fixture |
+| O7 | Feasibility by a plain comparison in the prototype (§ 13.6) | implementer of N1 | the kernel's exact predicate (`decode/invariant.rs:273`) is used, and the review's f32/f64 triple is the measurement: the triple run through the kernel's predicate and through the prototype's plain comparison, each verdict reported; criterion: the kernel's predicate gives the f64 verdict on the triple and the plain comparison, the control, does not |
 | O8 | Records absolute f32, so "ragged grid lines at deep zoom" (§ 13.7). The product's f32 path has the same floor: `x₀ + J_D·δ` is an absolute f32 number of order `\|x₀\|` that the f32 integrator starts from (deep zoom § 2, R-632) | implementer of TASK-M6-07; owner, RQ-766 | the f32 path's distinguishable depth as integrated, quoted with `\|x₀\|`, at an O(1) coordinate and at the chart origin (REQ-DEC-052's gate; its value an R-71 calibration, REQ-DEC-051); criterion: reported with the level reached, never asserted against a fixed depth; deep zoom § 2's "a floor near ~50" applies only to an f64 sum and integration, measured separately on the CPU |
-| O9 | `q` not rescaled by size in the prototype's `live` (§ 13.8) | implementer of N7 | none: the kernel's encode (step 0, `canon.rs:9`) is reused, never a new map |
+| O9 | `q` not rescaled by size in the prototype's `live` (§ 13.8) | implementer of N7 | the kernel's encode (step 0, `canon.rs:9`) is reused, never a new map; measured by a backwards round trip on states after a run, whose size `I ≠ 1`: each state encoded, found on the chart and decoded, the size rescale checked against the state's own `I`; criterion: the round trip returns the state's shape and size, and the prototype's unrescaled `live`, the control, fails it |
 | O10 | The seed not ruled (§ 13.9) | owner, RQ-764 | B.1 item 4 |
 | O11 | No timing of the CPU side in Rust with threads (§ 13.10) | implementer of N4 | M-A (B.4 item 14) |
 | O12 | Tracking across morph frames does not work, 69 to 88% (§ 12) | physics reviewer | none planned: each morph frame is a different set of systems; recorded as a negative result |
