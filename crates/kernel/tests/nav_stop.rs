@@ -11,8 +11,10 @@
 //! stops; a pan on the shape sphere's exponential map far enough that its point `n` overflows stops on `Φ`, the
 //! decoded configuration finite at the stop and not past it, and one large but short of the overflow is taken whole;
 //! the shape sphere's inertia edited to `10³⁰⁸`, −1 or 0 stops on `Φ`, what it builds finite at the stop and not past
-//! it. Controls: a stop that keeps the requested value, a stop one bisection step short, a per-chart override, and a
-//! centre check that reads `map` alone or the shape sphere's point alone.
+//! it; and a pan on the invariant charts past the overflow edge of `K(t)` stops on `Φ` with the edge between the stop
+//! and the next value along the path, a lock on the edge taken and one f64 past it refused. Controls: a stop that keeps
+//! the requested value, a stop one bisection step short, a per-chart override, and a centre check that reads `map`
+//! alone, the shape sphere's point alone, or an invariant chart's frozen controls alone.
 //!
 //! **`nav_fuzz_never_leaves*`** (REQ-CHART-061): on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
 //! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts and
@@ -1002,6 +1004,141 @@ negative_control!(
     "a centre check that reads the shape sphere's point alone takes a non-finite inertia whole",
     expected = "the stop takes the inertia edit",
     check_shape_inertia(true)
+);
+
+/// An invariant chart with its centre check reading `map` alone, the frozen controls, not the construction's decode:
+/// the stop without the chart's own `Chart::phi_finite` (the control).
+#[derive(Clone, Copy)]
+struct FrozenOnly(InvariantLE<f64>);
+
+impl Chart for FrozenOnly {
+    type Param = f64;
+
+    fn map<F: Float + From<f64>>(&self, u: F, v: F) -> ChartOut<F> {
+        self.0.map(u, v)
+    }
+
+    fn name(&self) -> &str {
+        "FrozenOnly"
+    }
+
+    fn decode<S, R>(&self, u: R, v: R) -> kernel::decode::Decoded<R>
+    where
+        S: kernel::generated::links::Selection,
+        R: kernel::generated::links::LinkReal + kernel::payload::PayloadReal + From<f64>,
+    {
+        self.0.decode::<S, R>(u, v)
+    }
+
+    fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.validate(u, v)
+    }
+}
+
+/// The last `t` at which the invariant charts' f64 decode is a system at `K_max = 1`, `γ_K = 3/2` (the `invariant`
+/// module's note, "The overflow edge"): `K(t)` there is at most half the greatest finite float.
+const INVARIANT_EDGE: f64 = 2.0065826040452472e205;
+
+/// A view's decode at its centre is a system: not degenerate, every momentum finite.
+fn decodes_system<C: Chart<Param = f64>>(view: Option<View<C>>) -> bool {
+    let View {
+        chart,
+        centre: [u, v],
+    } = view.expect("a view");
+    let d = chart.decode::<Defaults, f64>(u, v);
+    d.degenerate.is_none() && d.ic.p.iter().flatten().all(|x| x.is_finite())
+}
+
+/// A pan of the view's centre along `v` from `(½, ½)` to `(½, 10²⁵⁰)` on an invariant chart: it stops on `Φ` at the
+/// overflow edge, `v` = [`INVARIANT_EDGE`], a system there and `INVARIANT_INFEASIBLE` at the next f64 of `v`; a pan to
+/// `(½, 10²⁰⁰)`, short of it, is taken whole.
+fn check_invariant_pan<C: Chart<Param = f64>>(
+    name: &str,
+    view: impl Fn([f64; 2]) -> Option<View<C>>,
+) {
+    let from = [0.5, 0.5];
+    let to = [0.5, 1e250];
+    let stop = nav_stop(Edit::Path { from, to }, &view, &P);
+    assert_eq!(
+        stop.stopped,
+        Some(Check::Phi),
+        "{name}: the stop takes the pan to v = 1e250, past the overflow edge, whole"
+    );
+    check_stop(name, from, to, &view, &stop);
+    let past = from.along(to, stop.lambda.next_up());
+    assert!(
+        stop.value[1] <= INVARIANT_EDGE && INVARIANT_EDGE < past[1],
+        "{name}: the overflow edge v = {INVARIANT_EDGE:e} is not between the stop {:e} and the next value {:e} along \
+         the path",
+        stop.value[1],
+        past[1]
+    );
+    println!(
+        "{name}: stopped at v = {:?} (λ = {:?}), the next value along the path {:?}",
+        stop.value[1], stop.lambda, past[1]
+    );
+    let edge = [0.5, INVARIANT_EDGE];
+    let lock = nav_stop(Edit::Lock { from, to: edge }, &view, &P);
+    assert_eq!(
+        (lock.value, lock.stopped),
+        (edge, None),
+        "{name}: a lock on the overflow edge is refused"
+    );
+    let over = [0.5, INVARIANT_EDGE.next_up()];
+    let lock = nav_stop(Edit::Lock { from, to: over }, &view, &P);
+    assert_eq!(
+        (lock.value, lock.stopped),
+        (from, Some(Check::Phi)),
+        "{name}: a lock one f64 past the overflow edge, past the overflow edge, whole"
+    );
+    assert!(
+        decodes_system(view(stop.value)),
+        "{name}: the stop {:?} decodes degenerate",
+        stop.value
+    );
+    let View {
+        chart,
+        centre: [u, v],
+    } = view([0.5, INVARIANT_EDGE.next_up()]).expect("a view");
+    assert_eq!(
+        chart.decode::<Defaults, f64>(u, v).degenerate,
+        Some(Degenerate::InvariantInfeasible),
+        "{name}: the next f64 of v past the edge is not INVARIANT_INFEASIBLE"
+    );
+    let near = [0.5, 1e200];
+    let stop = nav_stop(Edit::Path { from, to: near }, &view, &P);
+    check_stop(name, from, near, &view, &stop);
+    assert_eq!(stop.stopped, None, "{name}: the pan to v = 1e200 stops");
+}
+
+/// REQ-CHART-060's `Φ` at the centre on the invariant charts past the overflow edge: `(L_z, E)`, `(L_z, K)` and the
+/// warped `Mapped` `(L_z, E)`, bare and under a tilt off; `frozen_only` checks `(L_z, E)`'s centre by `map` alone (the
+/// control).
+fn check_invariant_overflow(frozen_only: bool) {
+    let le = InvariantLE(invariant());
+    if frozen_only {
+        check_invariant_pan("frozen controls alone", |c| at(FrozenOnly(le), c));
+    }
+    check_invariant_pan("(L_z, E)", |c| at(le, c));
+    check_invariant_pan("(L_z, K)", |c| at(InvariantLK(invariant()), c));
+    let warped: LeMapped = Mapped::new(le, [Mapping::Warped; 2]);
+    check_invariant_pan("warped Mapped (L_z, E)", |c| at(warped, c));
+    let spec = spec(0.0, 0.0, TiltMap::Sheet, 0, 0);
+    check_invariant_pan("untilted (L_z, E)", |c| {
+        Tilted::new(le, Tilt::new(&spec, c, SPAN)).and_then(|t| at(t, c))
+    });
+}
+
+#[test]
+fn nav_stop_at_edge_invariant_overflow() {
+    check_invariant_overflow(false);
+}
+
+negative_control!(
+    nav_stop_at_edge_invariant_overflow,
+    "a centre check that reads an invariant chart's frozen controls alone takes the pan past the overflow edge whole",
+    expected = "past the overflow edge, whole",
+    check_invariant_overflow(true)
 );
 
 /// The report's layer: 3 for decode sanity, 2 for every other constraint, none for `Φ`. `swap` reads `ComAtOrigin` as
