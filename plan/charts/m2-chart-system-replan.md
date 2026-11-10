@@ -405,13 +405,20 @@ about an O(1) point (each latent coordinate 0.7) and about the chart's origin; t
 
 **Compared by bound** (measured and reported, not asserted): the narrowed f64 records against today's CPU f32 decode
 (`sample_with::<…, f32>`) and against the GPU decode stage on Metal, per component in f32 ulps at `max(1, |x|)`; the
-branch selects (pole and upper/lower selects) that differ between the two; and, for differing records, the integrated
-outcome class and `t_end_step` after `T`.
+branch selects (pole and upper/lower selects) that differ between the two; for differing records, the integrated
+outcome class and `t_end_step` after `T`; and, at each zoom (home, 2¹⁰, 2²⁰, where 2²⁰ is R-90's `ℓ_switch = 20`), the
+share of neighbouring sample pairs whose narrowed records are bitwise identical.
+
+**The control arm** (measured beside the comparison, R-84): the same narrowed records each moved by one f32 ulp in one
+component, integrated for the same `T`; the share of outcome-class and `t_end_step` flips it gives is the chaos
+baseline. A flip rate between today's f32 decode and the narrowed f64 records is read against this baseline, never
+alone: a rate at or below it says the conversion moves outcomes no more than rounding already does.
 
 **The criterion, written before any run:**
-- **PASS:** predicates 1 to 4 hold; every record where the f32 decode differs from the narrowed f64 one is listed with
-  its size, none farther from the f64 value than the f32 decode; one thread reaches 8.1·10⁶ samples a second (M-A's
-  in-motion figure) on both charts.
+- **PASS:** predicates 1 to 4 hold; no branch select differs between today's f32 decode and the narrowed f64 records;
+  every record where the two differ is listed with its size (that none of the narrowed records is farther from the f64
+  value than the f32 decode follows from predicate 3 and is not a separate criterion); one thread reaches
+  8.1·10⁶ samples a second (M-A's in-motion figure) on both charts.
 - **EXPLAINED DIVERGENCE:** a predicate fails, or a branch select differs, with a named cause (for example the f32
   `atan2`'s integer path, `arctan.rs`, at a pole select, R-437); or the rate falls short with a named cost.
 - **UNEXPLAINED:** anything else.
