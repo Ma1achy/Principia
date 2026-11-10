@@ -39,14 +39,16 @@ is one object, bitwise first; R-866, locking doesn't move the view; R-867, the a
 2 s start-up limit is the Mac's; R-894, one leaf per operation after stage 1; R-898, latent `β` periodic; R-902, the
 lock belongs to the path; R-908, product tests never retired; R-916, M2 is the whole non-visual chart system; R-917,
 build order charts, then integrator, then visuals; R-918, M2's integrator-needing maths tested on exact trajectories;
-R-919, the owner's answers on the chart plan; R-920, the slider spans; R-925, the owner's six chart decisions of 10 Nov;
+R-919, the owner's answers on the chart plan; R-920, the slider spans; R-521, a record recreates when every link's
+own hash matches; R-921, a record made under a retired `β` link recreates bitwise; R-925, the owner's six chart decisions of 10 Nov;
 R-926, the owner's eleven chart-system decisions of 10 Nov.
 
 **Review queue.** RQ-758, slopes against central differences; RQ-759, what the lock's re-solve guarantees; RQ-760,
 the other path arms, the mass block, statistics and folds on a blend; RQ-761, time on the integrator's integer grid;
 RQ-762, the window's per-coordinate scale; RQ-763, how much of stage 1 stays bitwise; RQ-764, the momentum seed;
 RQ-765, what the GPU decode entries become; RQ-766, a large quad's forward table; RQ-767, the table route's accuracy
-outside a morph; RQ-768, what `ctx.chart.z` means in R-926; RQ-769, stage 3 beside stages 1 and 2; RQ-770, whether pan and zoom keep the cache.
+outside a morph; RQ-768, what `ctx.chart.z` means in R-926; RQ-769, stage 3 beside stages 1 and 2; RQ-770, whether pan and zoom keep the cache; RQ-783, whether a record made before the
+f64 decode route recreates bitwise.
 
 **Tasks** are glossed by their row in § A.1 the first time they appear; requirements by their row in § A.2. Two
 appear outside those tables: TASK-M2-36, the two tilt maps on the latent-control charts (built), and REQ-INT-038, the
@@ -97,6 +99,7 @@ plan's recommendation.
 | TASK-M4-05 | flat-grid compute: in-kernel decode, the march | CHANGE | The integrator entry reads records, never decodes (R-926 item 5); a per-sample stop waits on RQ-761 |
 | TASK-M8-102 | CPU batch for numerical inverses | CHANGE | CPU evaluation is every view's route (R-839 superseded); its branch rule and seam masking stay, as part of the evaluator |
 | TASK-M2-06 | the kernel decode stage on the GPU (built) | KEEP | Built; it stays as the test and parity entry under RQ-765 (a) |
+| TASK-M7-45 | the decoder's identity per link: each recorded link's own hash, and a record made under a retired `β` link recreated bitwise | KEEP | Waits on RQ-783: its retired-link arm runs after R-926 item 5's route lands, and a record made before the switch recreates bitwise only through today's f32 decode; KEEP under RQ-783 (a), the plan's recommendation, that decode kept for recreating pre-switch records |
 | N1 | **NEW:** the first slice, § C | NEW | One real chart through CPU f64, per-quad table, records, integrator, against today's decode |
 | N2 | **NEW:** the CPU-to-GPU record and table contract | NEW | R-926 items 5, 6: the record is REQ-DEC-005's `(m, r, p)`, its descriptor and tag words, a branch word and a stop index (RQ-761); `SimState` stays a separate buffer |
 | N3 | **NEW:** slopes in three tiers | NEW | R-926 item 9: a dual-number type over the four bit-level traits, a flag set at each kink site; RQ-758 |
@@ -182,6 +185,7 @@ Of the tasks above. Each line: id, gloss, mark, why.
 | REQ-CHART-129, REQ-CHART-130 | jitter in chart coordinates; seams masked | KEEP | Now on the CPU |
 | REQ-CHART-155 | the browser's CPU batch in a worker | CHANGE | Every chart is CPU-evaluated in the browser too |
 | REQ-DEC-005 | the integrator's one input type, canonical `(m, r, p)` | KEEP | It fixes the record's content (N2) |
+| REQ-TOOL-172 | a record refused naming exactly a changed link; one made before TASK-M2-57 under a retired `β` link recreated bitwise against `fixtures/retired_beta_links/pre_m2_57.json` | KEEP | Waits on RQ-783: the fixture holds today's f32 decode, and R-926 item 5's f64-then-narrow route gives other bits (§ C); KEEP under RQ-783 (a), CHANGE under (b) |
 | REQ-DEC-007 | chart and links baked, `DECODE_MODE` a per-quad uniform | CHANGE | Baked for the CPU and the fragment, not the integrator |
 | REQ-CHART-001, REQ-TOOL-030, REQ-DEC-043, REQ-DEC-047 | monomorphised charts; descriptor views; f32-eps factor; `tanh_sat` | KEEP | Unaffected |
 | REQ-COL-057 | what `ctx.chart.z` holds on each chart | KEEP | RQ-768 reads it forwards |
@@ -247,9 +251,9 @@ Of the tasks above. Each line: id, gloss, mark, why.
 
 ### A.5 Counts
 
-Tasks (A.1): KEEP 19, CHANGE 15, DROP 0, NEW 11. Requirements (A.2, rows; a row may group several ids): KEEP 52,
+Tasks (A.1): KEEP 20, CHANGE 15, DROP 0, NEW 11. Requirements (A.2, rows; a row may group several ids): KEEP 53,
 CHANGE 22, DROP 1, NEW 7. Rulings (A.3, rows): KEEP 19, CHANGE 6, DROP 1 (R-925 and R-926 are this PR's). Code items
-(A.4): KEEP 7, CHANGE 4. Total: KEEP 97, CHANGE 47, DROP 2, NEW 18.
+(A.4): KEEP 7, CHANGE 4. Total: KEEP 99, CHANGE 47, DROP 2, NEW 18.
 
 ## B. The updated M2 chart task list, in dependency order
 
@@ -432,6 +436,17 @@ alone: a rate at or below it says the conversion moves outcomes no more than rou
 The outcome is reported whichever way; nothing is tuned to pass. The record difference between today's f32 decode
 and the f64-then-narrow path is the size of the conversion R-926 makes, which TASK-M2-61's baseline must record.
 
+**Records made before the switch (RQ-783).** The same difference reaches records. R-921 (a record made under a retired
+`β` link recreates bitwise) and REQ-TOOL-172 (its recreate arm) need a record made before TASK-M2-57 (the periodic `β`
+link) to recreate bit for bit against `fixtures/retired_beta_links/pre_m2_57.json`, written through today's decoder;
+TASK-M7-45 (the decoder's identity per link) runs that arm in M7, after R-926 item 5's route has replaced today's f32
+decode, and R-521 (a record recreates when every link's hash matches) has the same gap for every record written before
+the switch. Through the f64-then-narrow path, a pre-switch record recreates bitwise only where the two routes agree, so
+the share this slice reports is also the share of pre-switch starting states that would fail. Which way that goes is
+the owner's: RQ-783, its recommendation (a) keeping today's f32 decode for recreating pre-switch records. Applied
+meanwhile: nothing; the slice reports the share on its grids, and on the fixture's pixels once TASK-M2-57 has
+written it.
+
 **What it does not do.** No backwards table (N7), no slopes (N3), no blend (N5), no time coordinate (N6), no shader.
 
 ## D. Contradictions
@@ -523,5 +538,7 @@ Everything in the prototype's documents that contradicts the repository, the con
 | RQ-768 | `ctx.chart.z`: the forward value the corpus defines, or something new read backwards? |
 | RQ-769 | May the registry and map tasks run in parallel with the path object and the lock, roughly halving the chain? |
 | RQ-770 | Does sliding or zooming the picture still reuse the squares already worked out, or recompute everything? |
+| RQ-783 | Does a picture saved before the new way of working out starting systems still re-run bit for bit (by keeping the old way for it), or only nearly, or not at all? |
 
-RQ-770 was filed in review; the five further queue numbers reserved for this re-plan are unused and released.
+RQ-770 and RQ-783 were filed in review; the five further queue numbers reserved for this re-plan are unused and
+released.

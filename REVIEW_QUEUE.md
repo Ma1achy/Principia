@@ -1135,3 +1135,84 @@ backwards lookup on that path, the cache stays.*
 - **Applied meanwhile:** the plan reads (a) and marks it open; `docs/design/principia_core_design.md` § 3's dated note
   says the point is open.
 - **Waits:** the scheduler and cache tasks that follow R-926 (TASK-M5-04 among them).
+
+## RQ-783: A record made before R-926's f64 decode route lands recreates bitwise only through today's f32 decode: R-921 and REQ-TOOL-172 require bitwise, and R-926 item 5 replaces that decode *(conflict; a one-way door, it changes what the instrument claims about reproducing records; R-921, R-926 item 5, R-521, R-919, R-483; REQ-TOOL-172; context: TASK-M7-45, TASK-M2-57, TASK-M2-61, TASK-M4-05, the plan's N1 and N2)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan, from physics review 5847854223 of PR #473, P1; each quote re-read on the
+PR's head 55e6462d. Nothing is chosen here.*
+
+*In plain English: a saved picture stores where each pixel sits on the chart, not the starting system itself, so
+re-running it works the starting system out again. The owner ruled that a picture saved before the `β` link changed
+must re-run bit for bit, because a chaotic run drifts apart if its starting system's last bits move. The new chart
+system works starting systems out a different way, in double precision on the CPU and then rounded, which gives
+different last bits from today's way on some pixels. So a picture saved before the switch re-runs bit for bit only if
+the old way is kept for it.*
+
+- **File, section:**
+  - `decisions.md` § R-921 (a record made under a retired `β` link recreates bitwise), the owner's words: "Recreating
+    a record made under a retired β link decodes its stored latent coordinates through that exact link (kept for
+    conversion) to the original physical starting state, bitwise, and runs from there"; "No conversion on recreation:
+    converting β to the new coordinates "to rounding" can change the starting state's last bits, and a chaotic run
+    then won't reproduce."; "Test: a record made before TASK-M2-57 recreates bitwise after it lands."
+  - `plan/requirements.yaml` REQ-TOOL-172 (a record refused naming exactly a changed link, and the retired-link
+    recreate arm), its statement's last sentence: "A record made before TASK-M2-57 whose β link is one R-919 retired
+    as a link (sigmoid_beta, tanh_beta or softsign_beta), every block's hash matching, must recreate by decoding its
+    stored latent coordinates through that exact retired link to the original physical starting state, bitwise,
+    labelled "made under a retired link", never converting z_β to the periodic link on recreation (R-921)."; its
+    verify: "read from fixtures/retired_beta_links/pre_m2_57.json, every bit of which TASK-M2-57 writes through its
+    baseline commit's decoder, before any link changes" and "each pixel's starting state decoded through the named
+    retired link equal bit for bit to the fixture's decoded starting state, the state the writing build decoded".
+  - `plan/tasks/M2/TASK-M2-57.md` (the decoder's mirror step removed, latent `β` periodic), Deliverables:
+    "`fixtures/retired_beta_links/pre_m2_57.json`, written through today's decoder".
+  - `decisions.md` § R-926 (the owner's eleven chart-system decisions), item 5, the owner's words: "The CPU evaluates
+    charts in f64. The GPU only integrates records. No chart code in the integrator."; and *What it supersedes*:
+    "every view, live or not, is filled from the CPU's f64 evaluation narrowed to the integrator's records".
+  - `decisions.md` § R-521 (a record recreates when every link's own hash matches), the option it decides: "a match
+    recreates, even across an unrelated schema change, if nothing else in the record's tier 1 changed meaning."
+  - `plan/charts/m2-chart-system-replan.md` § C, "Compared by bound": "The record difference between today's f32
+    decode and the f64-then-narrow path is the size of the conversion R-926 makes, which TASK-M2-61's baseline must
+    record."
+- **The conflict:** records store latent coordinates only (R-921), so recreation runs the decode again. The fixture's
+  expected states are today's decode, the f32 decode (§ C's `sample_with::<…, f32>`). Under R-926 item 5 the product
+  route becomes the CPU's f64 evaluation narrowed to `Ic<f32>`, which differs from the f32 decode in the last bits
+  wherever the f32 decode is not the correctly rounded value of the f64 one (§ C measures how often). TASK-M7-45 (the
+  decoder's identity per link), in M7, runs REQ-TOOL-172's retired-link arm after that route has landed (the plan's N1,
+  N2 and TASK-M4-05 CHANGE): decoded through the retained retired link but on the new route, a recreated state misses
+  the fixture's bits wherever the two routes differ. R-521's "a match recreates" has the same gap for every record
+  written before the switch, retired link or not: the switch changes no registry entry, so every link's hash still
+  matches and the record recreates, from a starting state whose last bits may differ from the one its writing build
+  ran.
+- **The question:** does a record written before R-926 item 5's route lands recreate bitwise, and through which
+  decode?
+- **Options seen:**
+  - (a) Keep today's f32 decode as a source for recreation, as R-919 Q1 (c) (the three retired `β` links kept as
+    conversion sources) keeps the retired links: a record written before the switch decodes through its writing
+    build's route, the f32 decode, bitwise, and runs from there; a record written after it uses the f64-then-narrow
+    route. The record must say which route wrote it (a route marker beside the entry hashes, or the build hash and
+    schema version it already carries); which is an implementation choice under R-521. Consequences: the f32 decode
+    stays product code for recreation (it stays anyway as test and parity entries under RQ-765 (a), the GPU decode
+    entries kept for tests; TASK-M2-06 KEEP in the plan); R-926 item 5's "The CPU evaluates charts in f64" gains a
+    named exception for recreating old records; R-921, REQ-TOOL-172 and TASK-M7-45 stand as written, the arm run
+    through the retained route.
+  - (b) Give up bitwise recreation of records written before the switch:
+    - (b1) recreate through the new route within a stated tolerance of the writing build's state, in f32 ulps per
+      component, a calibration (R-71, a missing value becomes a calibration requirement), labelled "recreated under a
+      changed decode"; or
+    - (b2) refuse, "state present, cannot recreate", naming the changed decode, as R-521 refuses a changed link.
+    Consequences: R-921's "bitwise" and REQ-TOOL-172's last sentence are amended; the owner's reason in R-921, a
+    chaotic run reproducing only from the same bits, holds only for records written after the switch; (b1) recreates
+    runs that may end differently, labelled, and (b2) loses those records' recreation altogether. One decode route
+    remains.
+- **Recommended:** (a). It keeps the owner's own reason in R-921, that a chaotic run reproduces only from the same
+  bits, at the cost of keeping code that R-919 Q1 (c) and RQ-765 (a) already keep for other reasons; (b) trades every
+  pre-switch record's reproducibility for one fewer route.
+- **Measurement:** the measurable alternative, the plan's first slice (§ C, N1): per chart, the share of samples where
+  the f64-then-narrow record differs from today's f32 decode, and, run on the fixture's pixels once TASK-M2-57 has
+  written it, how many of the fixture's starting states would miss their bits; its control arm gives the outcome flips
+  that difference causes against the one-ulp chaos baseline. Criterion, written before the run: if no record differs,
+  on the fixture's pixels and on N1's grids, the two routes agree on those inputs and the choice bears only on inputs
+  outside them; any differing record shows the conflict is real, and the question stands as written.
+- **Applied meanwhile:** nothing. R-921, REQ-TOOL-172, TASK-M7-45 and TASK-M2-57's fixture stand as written; the plan
+  lists the item in § A (REQ-TOOL-172 and TASK-M7-45, "waits on RQ-783") and § C, and recommends (a).
+- **Waits:** TASK-M7-45's retired-link arm; N2's record contract (whether a record carries its decode route);
+  TASK-M4-05's switch to records.
