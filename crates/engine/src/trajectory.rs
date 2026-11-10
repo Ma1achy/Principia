@@ -256,28 +256,27 @@ fn bodies(m: [f64; 3], c: [[f64; 2]; 3], z: [f64; 2], zdot: [f64; 2]) -> Ic<f64>
     }
 }
 
-/// The eccentric anomaly `E` with `E − e·sin E = M`, `e ∈ (0, 1]`: Newton's method kept inside the bracket
-/// `[M − e, M + e]`, which holds the root (`f` is monotone, `f(M − e) ≤ 0 ≤ f(M + e)`), bisecting where a step leaves
-/// it; it stops where a step leaves `E` unchanged, a fixed point of the float iteration.
+/// The eccentric anomaly `E` with `E − e·sin E = M`, `e ∈ (0, 1]`, by bisection of the bracket `[M − e, M + e]`,
+/// which holds the root (`f(E) = E − e·sin E − M` is monotone, `f(M − e) ≤ 0 ≤ f(M + e)`), to adjacent floats: the
+/// upper end, `f ≥ 0`, within one ulp of where the float `f` changes sign, or a float at which `f` is exactly 0. Pure
+/// in its arguments and the same bits everywhere (the soft-float `libm`).
 pub fn eccentric_anomaly(e: f64, mean: f64) -> f64 {
-    let (mut lo, mut hi, mut x) = (mean - e, mean + e, mean);
-    for _ in 0..256 {
-        let f = x - e * libm::sin(x) - mean;
+    let (mut lo, mut hi) = (mean - e, mean + e);
+    loop {
+        let mid = 0.5 * (lo + hi);
+        if mid <= lo || mid >= hi {
+            return hi;
+        }
+        let f = mid - e * libm::sin(mid) - mean;
+        if f == 0.0 {
+            return mid;
+        }
         if f < 0.0 {
-            lo = x;
+            lo = mid;
         } else {
-            hi = x;
+            hi = mid;
         }
-        let mut next = x - f / (1.0 - e * libm::cos(x));
-        if !(next > lo && next < hi) {
-            next = 0.5 * (lo + hi);
-        }
-        if next == x {
-            break;
-        }
-        x = next;
     }
-    x
 }
 
 impl Lagrange {
@@ -311,11 +310,6 @@ impl Lagrange {
     /// Its one start.
     pub fn start(&self) -> Ic<f64> {
         self.start
-    }
-
-    /// The member.
-    pub fn member(&self) -> Member {
-        self.member
     }
 
     /// The period: `2π/ω` circular, the Kepler period `2π/n` elliptic, none homothetic.

@@ -256,7 +256,7 @@ fn elliptic_lz_bound(lz0: f64) -> f64 {
 /// The elliptic member's closure at its Kepler period, boundary 8, `e = 1/2`, per unit of a vector's
 /// `|v_x| + |v_y|`: positions within `(3A + 3)u + b·δE`, momenta within `(A/b)·δE + 26u`, `A = 2`, `b = √3`, with
 /// `δE = 44u/(1 − e) + 8u = 96u` the anomaly's error at the period: the mean anomaly `n̂·fl(2π/n̂)` within `3.01u·2π
-/// ≤ 20u` of `2π`, the iteration's stop within `24u` of residual (three ulps of `2π`), each divided by `1 − e·cos E =
+/// ≤ 20u` of `2π`, the bisection's stop within `24u` of residual (three ulps of `2π`), each divided by `1 − e·cos E =
 /// 1 − e`, and one ulp of `2π`, `8u`. Then `z_x = A(cos E − e)` within `A·3u + u` of 1, `z_y = b·sin E` within
 /// `b·δE`, `ż_x = −A·n·sin E/d` within `(A/b)·|ż₀|·δE`, `ż_y` within `20u` of `ż₀ = √(μ(1 + e))` (its two
 /// evaluations' rounding), and each state's assembly `2u` for positions and `6u` for momenta (with the start's).
@@ -615,12 +615,18 @@ fn trajectory_interface_kepler_equation() {
         (0.5, 6.0),
         (0.9, 0.3),
         (1.0, 1e-3),
+        (0.5, 0.0),
         (1.0, 4.0),
         (1.0, 6.2),
         (0.1, 3.0),
     ] {
         check_kepler(e, mean, 0.0);
     }
+    assert_eq!(
+        eccentric_anomaly(0.5, 0.0).to_bits(),
+        0.0f64.to_bits(),
+        "M = 0: the exact root 0"
+    );
 }
 
 negative_control!(
