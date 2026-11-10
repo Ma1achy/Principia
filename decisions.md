@@ -35176,6 +35176,8 @@ and R-917 holds their dispatch until M2's gate; TASK-M4-06 also waits on the re-
 R-917 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement.
 
 ## R-918 — R-917's follow-ups: TASK-M3-14 (the Benettin FTLE shadow) stops and is re-queued after M2's gate; M2's maths that seems to need the integrator is tested against exactly known trajectories through a trajectory interface the real integrator plugs into after M2, flagging only what can't be tested so; CI work outside the order, TASK-M2-38 and TASK-M2-56 finishing, and the gate checklist first are agreed *(no RQ)*
+*Amended in part by R-924 (10 Nov 2026: TASK-M3-14, the Benettin FTLE shadow, resumes now and no longer waits for M2's gate; applied per R-369 following it, REQ-CHART-132, the FTLE field's chart independence, and its `ftle_chart_independent` arm move from TASK-M3-14 to TASK-M3-69, which waits on TASK-M3-14 and TASK-M2-71 and, as this ruling has it, M2's gate).*
+*Still in force: REQ-CHART-132 after M2's gate, now TASK-M3-69's; TASK-M2-71 before the chart-independence test; M2's maths that seems to need the integrator tested against exactly known trajectories through the trajectory interface (TASK-M2-82, design § 18.7), wired to integrated trajectories after M2 (TASK-M3-67, TASK-M8-113), flagging only what can't be tested so; CI work outside the order, TASK-M2-38 and TASK-M2-56 finishing, and the gate checklist first.*
 *9 Nov 2026 · the owner's message of that evening, pasted while #462's review was being set up; applied in TASK-M3-14,
 TASK-M2-82 and TASK-M3-67 (new), REQ-CHART-132 (reqio, moved to M3), REQ-CHART-173 and REQ-CHART-177 (reqio, new),
 `docs/design/principia_chart_composition.md` § 18.7 (new) and `plan/rule_groups.yaml`*
@@ -35435,7 +35437,9 @@ R-922 is in the "design" group of `plan/rule_groups.yaml`.
 Changes no requirement.
 
 ## R-923 — Integrator work before charts, for now: R-917's order (charts first, then integrator, then visuals) is set aside for now, on the owner's say; only integrator tasks that don't depend on the points the owner hasn't decided are taken, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; TASK-M3-14 stays stopped under R-918; no new chart task starts meanwhile *(amends R-917 in part, for now; no RQ)*
+*Amended in part by R-924 (10 Nov 2026: TASK-M3-14, the Benettin FTLE shadow, resumes now; this ruling's "TASK-M3-14 stays stopped under R-918" no longer holds).*
 *Read with R-925 and R-926 (10 Nov 2026, that afternoon, the owner's six chart decisions and eleven chart-system decisions). Of this ruling's "not decided" list, they decide four points: "Whether the CPU or a GPU decode fills the integrator's starting states", by R-926 item 5 (the CPU evaluates charts in f64, the GPU only integrates records); "Morph meaning the system blend, with a window turn treated as a tilt", by R-925 item 4 and R-926 item 3; "Time as an ordinary chart coordinate", by R-925 item 5 and R-926 item 2; "The lock as one constraint and one solve", by R-926 item 4. "The seed, and the default tilt" neither decides; the seed is RQ-764, the momentum seed. This ruling's hold on "anything that fixes how starting states reach the integrator on the GPU" is now addressed by R-926 item 5, which rules the route (the CPU fills records, the integrator reads them); the record's contract is proposed in `plan/charts/m2-chart-system-replan.md` (N2), with RQ-761 (time on the integer step grid), RQ-765 (what the GPU decode entries become) and RQ-783 (recreating records made before the switch) open on it. Whether that lifts the hold is the dispatcher's call or the owner's, not made here; the hold and the pause on new chart tasks stand as written.*
+*Still in force: all of it but its TASK-M3-14 line: R-917's order and its hold set aside for now; only integrator tasks that don't depend on the undecided points, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; GUI work going ahead; no new chart task meanwhile; the undecided points recorded as open; M2's gate and its checklist G1 to G14.*
 *10 Nov 2026 · the owner's message of that morning (about 04:40), and their reply about 05:00; applied in R-917's
 forward and "Still in force" lines, `plan/OPERATIONS.md` § "Dispatching" (a dated line after R-917's hold),
 `plan/section_notes.yaml` and `plan/rule_groups.yaml`; and in dated lines beside R-917's hold in `plan/OPERATIONS.md`
@@ -35497,6 +35501,43 @@ M2's gate. M2's gate and its checklist G1 to G14, and the rest, stand.
 R-923 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+## R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 and R-923 in part)*
+*10 Nov 2026 · the owner's message of that morning; applied in R-918's forward line, R-923's forward and "Still in
+force" lines, `plan/tasks.yaml`, TASK-M3-14, TASK-M3-17 and TASK-M3-69 (new), REQ-CHART-132 and REQ-PAY-058 (reqio,
+a note each), `plan/MILESTONES.md`, `plan/OPERATIONS.md` § "Dispatching", `docs/design/principia_chart_composition.md`
+(its R-918 line in the preamble, § 12's test table and § 15's after-the-gate list) and `plan/rule_groups.yaml`*
+
+The owner's words (10 Nov 2026), verbatim:
+
+> Resume the FTLE shadow work btw
+
+*What it decides:*
+
+- **TASK-M3-14, the Benettin FTLE shadow, resumes now,** by the owner's words. R-918's stop and re-queue are lifted for
+  it, and R-917's hold does not apply to it: it was in flight when R-918 stopped it (R-918's "barely started").
+- **Unchanged:** the rest of R-918 (the trajectory interface, TASK-M2-82; what M2 can't test and where it goes; CI work
+  outside the order, TASK-M2-38 and TASK-M2-56 finishing, the gate checklist first) and R-917's hold on every other
+  integrator and visual task, as R-923 leaves it.
+
+*What it amends:* **R-918**, in part: its stop and re-queue of TASK-M3-14. **R-923**, in part: its "TASK-M3-14 stays
+stopped under R-918" line.
+
+*Applied per R-369, following it (task scoping):*
+
+- **REQ-CHART-132, the FTLE field's chart independence,** and its `ftle_chart_independent` arm move from TASK-M3-14 to
+  a new task, **TASK-M3-69** ("The FTLE field's chart independence"), which depends on TASK-M3-14 and TASK-M2-71
+  (warps as options). The reason: the arm needs a warped chart from TASK-M2-71, and R-918 keeps REQ-CHART-132 after
+  M2's gate, so TASK-M3-14 could not resume while it held the arm. TASK-M3-69 waits on both and, as R-918 has it, on
+  M2's gate. TASK-M2-71 leaves TASK-M3-14's Depends on, which is again TASK-M3-05 and TASK-M3-06, as before R-918; this
+  changes where R-918 placed REQ-CHART-132, not when it is tested.
+- **TASK-M3-17** depends on TASK-M3-14 again, and its `escape_freezes_accumulators` asserts REQ-PAY-058's derived-FTLE
+  arm once more, in REQ-PAY-021's form (PR #468's first commits had moved that arm to TASK-M3-14 while TASK-M3-14 was
+  stopped).
+
+R-924 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-132 (rulings, note) and REQ-PAY-058 (verify detail, a record correction, and note); no requirement added or retired.
 
 ## R-925 — Shader features work on every chart with no refusal, by the chart's closed-form shader code where it has some and otherwise by tables the CPU builds; Chart position stays, a table search its fallback where a chart has no backwards formula; the forward direction needs no table, the CPU evaluating the chart per quad and sending the result with the quad; "morph" means the system blend, a blend is a chart, and a window turn on one map is a tilt; a morph supports time running and time is a supported chart axis; debug views of the tables are required *(amends R-116 and R-850; refines R-542)*
 *Read with R-922 (10 Nov 2026, that morning: shader features work on every chart, a lookup texture where a chart has no closed-form code). Item 1 rules the same decision: its "tables" are R-922's "lookup texture", and where R-922 said "Do not build it yet", the plan is now proposed in `plan/charts/m2-chart-system-replan.md`, nothing built or dispatched. This ruling does not amend R-922, so R-922 stands, "The approximate form is labelled" among it; whether that label applies where RQ-767, the table route's accuracy outside a morph, would bring a table-route value to f32 rounding is not settled by the docs, and rides on RQ-767. R-116, the fragment decode generated from the one source, carries R-922's refinement as well as this ruling's amendment in part. R-558, the state map's twenty entries, gives R-922's lookup texture for a target with no closed-form code; item 2 gives Chart position's target the table search as its fallback (R-558's "Read with" line).*

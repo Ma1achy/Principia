@@ -419,6 +419,58 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
 - **8 Nov 2026 (R-868):** the owner: "4. RQ-738: the model's wording follows R-474 (tip-as-sheet default, lean-each-axis the other map); I'll correct the model." Their corrected model of that day replaces `docs/design/principia_chart_space_model.md` byte for byte. That settles the correction list's item 1, as its option (a): § 0.2 now names R-474's two maps, Tip as sheet the default. **Still open:** the correction list's items 2 to 9, which the owner's copy doesn't change (its other changes are § 0.6, R-865, and a new § 0.7, R-866 and R-867), and all nine conflicts the filter order leaves. The entry stays open for them.
 - **8 Nov 2026 (R-878, R-871):** the owner: "RQ-738: the readings held stand for conflicts 1, 2 and 4 to 9; conflict 3 as in my RQ-714 answer. Items 2 to 9: send me the list and I'll correct the model." Applied: the nine conflicts are settled, 1, 2 and 4 to 9 by their readings held (conflict 1's amends R-544's words and chart_decoder_contract's "no one-hemisphere view", kept as a "Was"), and 3 by RQ-714's answer, its option (c), the full disc read literally (R-871). **Still open:** the correction list's items 2 to 9, which the owner corrects in the model from the list the orchestrator sent on 8 Nov, and two items this port adds to that list: **10.** the model's § 5, "Setting `δ ← 0` restores `φ(0) = a` exactly", and § 7's "Snap-back is exact", against the brief's Q2 (a), snap-back undoing the slice only (R-899); **11.** the model's § 1, "`Z = R^8`", Theorem 1's proof ("`Z = R^8` is convex") and § 4 ("`Z` is convex"), against RQ-750 (c), `z_β` periodic (R-898). Nothing waits on them: the corpus and the rulings stand meanwhile. The entry stays open for items 2 to 11.
 
+## RQ-782: The smallest `r_coll` the collision test actually honours is undefined: below the f32 spacing of the positions it decides "the bodies' f32 positions coincide", not `‖rᵢ − rⱼ‖ < r_coll` *(silence, a missing definition, R-72; a one-way door; integrator_contract Part 7, dd_integrator § 3.6, R-547; REQ-EVT-003, REQ-EVT-004; physics review 5845121432 of PR #474, F2; context: TASK-M3-09)*
+
+*Queued 10 Nov 2026 by TASK-M3-09's fix round (#474), from its physics review 5845121432, finding F2; each quote below
+re-read on the PR's head. Nothing is chosen, and #474 decides nothing here; the default `r_coll = 10⁻³` is
+unaffected.*
+
+*In plain English: the collision radius `r_coll` is a user slider that the docs say is valid all the way down to 0. But
+the collision test measures the distance between bodies from their positions rounded to single precision, whose
+spacing near the bodies' usual size (about 1) is about `6·10⁻⁸`. So for an `r_coll` below about `10⁻⁷` the test can
+only tell "the rounded positions are the same" from "they differ", and it may call a collision at a true separation
+larger than `r_coll`. The closest-approach distance `d_min` has the same limit. Nothing says where this floor is or
+what the instrument does below it.*
+
+- **File, section:**
+  - `docs/contracts/principia_integrator_contract.md` § "Part 7", "`r_coll` is user-exposed (sim-key), not a fixed
+    constant": "A slider from "regularise aggressively" (large) to "refuse to regularise" (→0), all valid, answering
+    different questions".
+  - The same section, "Coupling to `N_max`": "the usable minimum `r_coll` is bounded below by what the substepper
+    resolves before the cap". It names the substep cap's floor, not the positions' resolution.
+  - `docs/design/principia_dd_integrator.md` § "3.6 Detectors": "**Collision:** `min_{i<j} ‖rᵢ − rⱼ‖² < r_coll²` …
+    Uses the same squared min-separation the substepper buckets on and `d_min` displays (as its √) — one value, three
+    consumers."
+  - The same file, § "3.3 Substep law — and the determinism pin, made concrete", with
+    `docs/notes/principia_gpu_determinism_note.md` § "The discipline", rule 2 (R-547): the squared separation the
+    substepper buckets on is formed from each position cast to f32, so it is position-quantised.
+- **The silence:** the collision test must read the substepper's `d²` (§ 3.6), and that `d²` is formed from f32
+  positions, so its resolution is the f32 spacing at the bodies' coordinates: about `6·10⁻⁸` for `|x|` in `[0.5, 1)`,
+  `1.2·10⁻⁷` in `[1, 2)` (the `I = 1` gauge, Part 5). For an `r_coll` below that spacing, a pair collides exactly when
+  its f32 positions coincide on both axes, which can be at a true separation larger than `r_coll`, and `d_min`, the
+  latch's `√`, cannot resolve below it either. Part 7 calls every `r_coll` down to 0 valid and never states the
+  smallest one honoured. TASK-M3-09 (#474) builds the test as § 3.6 says, and for every `r_coll > 0` gives a threshold
+  of at least f32's least normal, so coincident f32 positions always collide (physics F1).
+- **The question:** what is the smallest `r_coll` the instrument honours as `‖rᵢ − rⱼ‖ < r_coll`, and what does it do
+  with a requested `r_coll` below it?
+- **Options seen:**
+  - (a) State the floor in Part 7 as a definition: below the f32 position spacing at the pair's coordinates,
+    `r_coll` means "collision at f32 coincidence", and `d_min` is resolved only to that spacing; the slider stays valid
+    to 0, and the floor is recorded with the run.
+  - (b) Dispatch refuses an `r_coll` below a stated floor (for example `2⁻²³`, the spacing at `|x| = 1`), or accepts it
+    and flags every output of the run as below the collision test's resolution.
+  - (c) Another, stated by the owner (for example a collision test on f64 separations, which § 3.6's "one value, three
+    consumers" and R-547 currently rule out).
+- **Recommended:** (a). It changes no result: it states what the test already computes, keeps Part 7's "all valid"
+  slider, and the default `10⁻³` lies four decades above the floor. The measurable alternative is (b), whose check is a
+  dispatch test at the stated floor and one below it; its cost is refusing or flagging a slider setting Part 7 calls
+  valid.
+- **Applied meanwhile:** nothing beyond TASK-M3-09's physics F1 fix: every `r_coll > 0` has a threshold of at least
+  `2⁻¹²⁶`, so f32-coincident bodies collide; dispatch accepts every finite, non-negative `r_coll` whose f32 square is
+  finite.
+- **Waits:** nothing built waits; TASK-M3-09 (#474) does not wait. A task that builds the `r_coll` slider or its
+  dispatch-side flag would take the answer.
+
 ## RQ-756: Aarseth–Zare's equations of motion, its Levi-Civita inverse, its reference-body rule and its step control are not in the corpus; and the figure-eight gate and the Law 18 bound assume a schedule R-565 and Part 6 replaced *(silence and conflict; R-160, R-159, R-565, R-563, R-19, R-72; REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-021, REQ-INT-024; context: TASK-M3-07)*
 
 *Queued 10 Nov 2026 by TASK-M3-07's implementer, before any code; each quote re-read on `origin/main` 3338e336.

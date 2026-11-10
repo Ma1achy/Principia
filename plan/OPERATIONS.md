@@ -140,15 +140,18 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
 - **R-917's hold (9 Nov 2026).** Until M2's gate passes (`plan/MILESTONES.md`, G1 to G14), dispatch only M2's tasks,
   in chart_composition § 15's stages, and R-917's and R-918's exceptions: work in flight or approved finishing (TASK-M2-38,
   TASK-M2-56 and the open PRs), fixes, CI and tooling work, and what M2's own tests need. No new integrator (M3) or
-  visual (M4 to M8) task is dispatched, the GUI track's included (R-390, R-627 as R-917 amends them), nor TASK-M3-14,
-  TASK-M4-06 and the 217 tasks R-914 released; the ready list may offer them, and the hold is the dispatcher's.
+  visual (M4 to M8) task is dispatched, the GUI track's included (R-390, R-627 as R-917 amends them), nor TASK-M3-69
+  (FTLE's chart independence, split from TASK-M3-14 per R-369, following R-924), TASK-M4-06 and the 217 tasks R-914 released; the ready
+  list may offer them, and the hold is the dispatcher's. TASK-M3-14, the Benettin FTLE shadow, resumes now (R-924),
+  work in flight under R-917's exception. *Was (R-918):* "nor TASK-M3-14, TASK-M4-06".
 - **R-923 (10 Nov 2026): R-917's order set aside for now.** Integrator tasks that don't depend on the points the owner
   hasn't decided may be dispatched before M2's gate: the physics itself (steppers, regularisation, step control,
   conservation and convergence tests, the CPU reference) and TASK-M2-82. A task that fixes how starting states reach the
   integrator on the GPU, or fixes the horizon as one value per dispatch, stops and is queued. GUI work may go ahead too
   (the owner's reply about 05:00). No new chart task starts, nothing else from TASK-M2-57 to TASK-M2-85 (TASK-M2-82,
   named above as fine, excepted), while the owner reworks the chart design; TASK-M3-14 stays stopped (R-918). M2's gate
-  and G1 to G14 are unchanged, and no edge moves.
+  and G1 to G14 are unchanged, and no edge moves. *Amended in part by R-924:* TASK-M3-14 resumes now (the bullet
+  above).
 - **What every dispatch names:**
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");

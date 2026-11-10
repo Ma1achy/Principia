@@ -1449,6 +1449,10 @@
   reason: informative only
   note: "the owner's words of 9 Nov 2026: the macOS XProtect developer-tool exemption trial on a build-only terminal failed its pre-written criterion (exempt median 217 s against 194 s) and the exemption is removed; the speed plan approved: the merge watcher merges on reviewer approval and every required check green, never by admin bypass (R-682); reviewers start from a copy of main's build; no macOS pull-request build; the first ten PRs' times reported; process, carried by the orchestrator's scripts; changes no requirement"
 - file: decisions.md
+  section: "R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 and R-923 in part)*"
+  reason: informative only
+  note: "the owner's words of 10 Nov 2026: TASK-M3-14, the Benettin FTLE shadow, resumes now; applied per R-369 following it, REQ-CHART-132's chart-independence arm moves to TASK-M3-69, which waits on TASK-M3-14, TASK-M2-71 and M2's gate; process and task scoping, carried by plan/tasks.yaml, the three task files, plan/MILESTONES.md and plan/OPERATIONS.md § Dispatching; changes no requirement's statement; REQ-CHART-132 gains R-924 and a note, REQ-PAY-058 its verify detail's record correction and a note"
+- file: decisions.md
   section: "R-657 — The R-369 decisions listed in the orchestrator's summary of 30 Oct 2026 stand, with no veto"
   reason: informative only
   note: "the owner's words of 30 and 31 Oct 2026: the listed R-369 decisions stand, with no veto; process; changes no requirement"

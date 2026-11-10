@@ -9,7 +9,7 @@
 - **Size:** ~500 lines
 
 ## Goal
-The label writer: `state` holds escape / bounded / collision / running / sim_failed / decode_failed, mutually exclusive, with no timeout state (reaching T is `bounded`) and no MAX_SUBSTEPS terminal — the `N_max` cap advances under-resolved with `saturated` set, identically on both pipelines. Precedence is R-30's: sim_failed first, then the earlier event in time with a same-time tie to collision, triple ejection as a detail of escape. `detail` is written with `state` as the union keyed by it. On termination the sample latches: `done` is set and the production loop ends (R-103), the state stops advancing, accumulators freeze (FTLE's S/T at t_esc), `t_end_step` is latched at the firing step. The post-escape march never touches the payload.
+The label writer: `state` holds escape / bounded / collision / running / sim_failed / decode_failed, mutually exclusive, with no timeout state (reaching T is `bounded`) and no MAX_SUBSTEPS terminal — the `N_max` cap advances under-resolved with `saturated` set, identically on both pipelines. Precedence is R-30's: sim_failed first, then the earlier event in time with a same-time tie to collision, triple ejection as a detail of escape. `detail` is written with `state` as the union keyed by it. On termination the sample latches: `done` is set and the production loop ends (R-103), the state stops advancing, accumulators freeze (the derived FTLE, REQ-PAY-021's S_final/(step_count·dt_macro) with the partial renorm interval finalised from the shadow's δ at the firing step, is frozen at t_esc), `t_end_step` is latched at the firing step. The post-escape march never touches the payload.
 
 ## References
 - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the walls — the primary comparison checklist)"
@@ -40,6 +40,9 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 - `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored"
 - `docs/design/principia_dd_simstate_payload.md` § "`times` (u32)"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-253 — `ftle` reads NaN at `step_count = 0`, by the predicate `step_count ≥ 1`; no sentinel *(closes RQ-154)*"
+- `decisions.md` § "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
+- `decisions.md` § "R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 and R-923 in part)*"
 
 ## Deliverables
 - `crates/kernel/src/detect/label.rs` — the precedence function and the single write of `state` + `detail`.
@@ -58,9 +61,10 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 - `cargo test -p kernel detail_union` — for each state, pack/unpack each detail code and assert the decoded meaning (REQ-PAY-046).
 - Review (code): no `timeout` or `survived_horizon` state exists; the horizon T is part of the sim key (REQ-PAY-049).
 - `cargo test -p kernel t_end_step_counter` — property test: running and terminal states, t_end_step equals the step counter (latched at the escape firing step); t_dmin_step equals the argmin step (REQ-PAY-051).
-- `cargo test -p kernel escape_freezes_accumulators` — on a fixture escaper the production loop ends at the firing step; state, t_end_step, S and the other accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc (the harness byte-identity arm is TASK-M3-33's) (REQ-PAY-058).
+- `cargo test -p kernel escape_freezes_accumulators` — on a fixture escaper at the FTLE tier, its escape firing off a renorm boundary, after at least one completed renorm (else the derived FTLE reads NaN, R-253, R-254) and with the partial interval's growth log(δ_current/δ₀) at the firing step clearly nonzero: the production loop ends at the firing step; S advances while the sample runs; state, t_end_step, S and the other accumulators and latches are unchanged by later dispatches; and the derived FTLE (REQ-PAY-021: S_final/(step_count·dt_macro), the partial renorm interval finalised from the shadow's δ at the firing step, TASK-M3-14's shadow) is frozen at t_esc; control: a plain S/t variant, the partial interval left unfinalised, fails (the harness byte-identity arm is TASK-M3-33's) (REQ-PAY-058).
 
 ## Notes
 - R-103 governs: in production `done` is set when escape fires; the §2.4 checks run only in `crates/validation` on the harness's own state (TASK-M3-33).
 - R-562 (21 Oct 2026): regularisation is v1; REQ-INT-033 is retired and its acceptance line removed. *Was:* "- Review (physics): no KS state representation in v1; saturated regions continue to their outcome (REQ-INT-033)." Saturated regions continuing to their outcome stays tested by `nmax_cap_continues` (REQ-INT-029) and `totality_labels` (REQ-EVT-001). A regularised copy that runs out of its step budget is undetermined, not a label (R-563, TASK-M3-41).
 - RQ-97 ruled: R-113 — REQ-INT-029's "CPU and GPU take the same capped step" is dropped from M3; M4 covers it by REQ-VAL-059 and REQ-VAL-061.
+- Applied per R-369 (10 Nov 2026), following R-924: TASK-M3-14, the Benettin FTLE shadow, resumes now, so this task keeps it in Depends on and `escape_freezes_accumulators` asserts REQ-PAY-058's derived-FTLE arm here, on TASK-M3-14's shadow, in REQ-PAY-021's form (record correction: the shorthand "S/T at t_esc" named REQ-PAY-021's formula; physics review 5836486519 of PR #468). The fixture escaper fires off a renorm boundary, after at least one completed renorm (else the derived FTLE reads NaN, R-253, R-254), with the partial interval's growth clearly nonzero, so the plain S/t control can fail (the physics reviewer's advisory on PR #468). R-253, R-254 and R-924 join References. *Was:* "accumulators freeze (FTLE's S/T at t_esc),"; "on a fixture escaper the production loop ends at the firing step; state, t_end_step, S and the other accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc (the harness byte-identity arm is TASK-M3-33's) (REQ-PAY-058)."

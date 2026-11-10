@@ -4412,8 +4412,9 @@
     detail: "cargo test -p engine ftle_chart_independent: a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one lambda_T bit for bit, read on copy 0; control: delta_0's direction taken from a chart tangent fails"
   rulings:
   - R-918
+  - R-924
   milestone: M3
-  note: "R-918 (9 Nov 2026): moved from M8 to M3, closed by TASK-M3-14 once it is re-queued after M2's gate; its test needs the Benettin shadow's initialisation and TASK-M2-71's warps (F4). TASK-M8-100 is retired."
+  note: "R-918 (9 Nov 2026): moved from M8 to M3, closed by TASK-M3-14 once it is re-queued after M2's gate; its test needs the Benettin shadow's initialisation and TASK-M2-71's warps (F4). TASK-M8-100 is retired. R-924 (10 Nov 2026): TASK-M3-14 resumes now; applied per R-369 following it, this requirement moves to TASK-M3-69, split from it, which waits on TASK-M3-14, TASK-M2-71 and M2's gate; its verify is unchanged. Was: \"closed by TASK-M3-14 once it is re-queued after M2's gate\"."
 - id: REQ-CHART-133
   area: CHART
   statement: "The mirror half of the shape sphere must never be dropped or folded by a path: a path between two lower-half views must stay in the lower half, at every pixel of every frame (R-544; the owner's rider to RQ-736)."
@@ -9431,12 +9432,13 @@
     section: "Part 1 — The shape: a swappable `step()` slot inside a fixed wrapper"
   verify:
     method: unit test
-    detail: "on a fixture escaper, the production loop ends at the firing step; state, t_end_step, S and the other stored accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc; running the harness's §2.4 march leaves the payload buffer byte-identical"
+    detail: "on a fixture escaper, the production loop ends at the firing step; state, t_end_step, S and the other stored accumulators and latches are unchanged by later dispatches; the derived FTLE (REQ-PAY-021: S_final/(step_count·dt_macro), the partial renorm interval finalised from the shadow's δ at the firing step) is frozen at t_esc (asserted in TASK-M3-17's escape_freezes_accumulators, on TASK-M3-14's shadow); running the harness's §2.4 march leaves the payload buffer byte-identical (asserted in TASK-M3-33)"
   rulings:
   - R-31
   - R-95
   - R-103
   milestone: M3
+  note: "Applied per R-369 (10 Nov 2026), following R-924: the verify detail names REQ-PAY-021's derived FTLE where the shorthand said \"S/T at t_esc\" (record correction; physics review 5836486519 of PR #468) and the task that asserts each arm: TASK-M3-17, which closes this requirement, the derived-FTLE arm on TASK-M3-14's shadow (TASK-M3-14 resumes under R-924); TASK-M3-33 the harness byte-identity arm. Was (verify detail): \"on a fixture escaper, the production loop ends at the firing step; state, t_end_step, S and the other stored accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc; running the harness's §2.4 march leaves the payload buffer byte-identical\"."
 - id: REQ-PAY-059
   area: PAY
   statement: "The n̂ from one window earlier must be held in a lagged register updated at the window's sampling points — macro-step boundaries for unregularised occupants, sync boundaries for regularised ones — and the payload/SimState widths must include it."
