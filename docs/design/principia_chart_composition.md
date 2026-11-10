@@ -1079,8 +1079,9 @@ TASK-M4-34 through TASK-M4-06 and need no edge of their own; the samples need no
 customer would be M4's own golden.
 
 *Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* the edge is dropped and never applied. With it, TASK-M4-06 would have waited on
-TASK-M4-34, which R-873 releases in stage 3, after stage 2, while stage 2 waits, through TASK-M2-61, TASK-M8-48,
-TASK-M8-18 and TASK-M4-17, on TASK-M4-06: a cycle. The GPU reference that reads region D, the DECODE-preset golden of
+TASK-M4-34, which R-873 releases in stage 3, after stage 2, while stage 2 waits, through TASK-M8-124 (now TASK-M2-61),
+TASK-M8-48, TASK-M8-18 and TASK-M4-17, on TASK-M4-06: a cycle (a record: R-916 removed TASK-M2-61's edge to TASK-M8-48,
+so stage 2, TASK-M2-65, no longer waits on TASK-M4-06; the edge stays dropped). The GPU reference that reads region D, the DECODE-preset golden of
 the Anosova physical-frame chart (REQ-RENDER-123), is TASK-M4-34's, which depends on TASK-M4-06 and can't close until
 that reference reads region D as R-871 requires. The appendix's Anosova physical-frame row is this pair, so its
 lowering is TASK-M4-34's too, through `region_d_variant`, unmasked and never folded to `(ξ, −η)` (REQ-CHART-165).
