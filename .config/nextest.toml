@@ -113,6 +113,20 @@ filter = """
 """
 priority = 75
 
+# The tests that catch the mutants of TASK-M4-27's source run first, ahead of their packages' slower tests. It is for
+# the mutants gate again (R-302; REQ-VAL-149, R-376): the diff has 1895 mutants, 1332 of them in
+# `validation::cross_backend`, whose every test takes under 7 s, while a survivor of its builders took 25-47 min (run
+# 42342356065, all 8 shards cut at 300 min). Only the schedule changes: the same tests, under the same limits, and a
+# survivor still runs every one. Applied per R-369.
+[[profile.default.overrides]]
+filter = """
+    binary_id(=validation::cross_backend_inputs)
+    | binary_id(=validation::cross_backend)
+    | binary_id(=validation::qa_TASK-M4-27)
+    | binary_id(=kernel::branch_read)
+"""
+priority = 80
+
 # Each of the job queue's test processes in a PID namespace of its own during a mutants run (`scripts/contain.sh test`;
 # a pass-through unless the run sets PRIN_TEST_PIDNS): nothing a mutant of the queue starts outlives its test, and nothing
 # it signals is outside it. `within-wrapper`: the memory cap, the target runner `.cargo/mutants.toml` sets, stays around
@@ -139,7 +153,8 @@ xtask-cargo = { max-threads = 1 }
 # them, the per-pixel mass decode's (`engine`'s `per_pixel_mass_gpu`, TASK-M2-13) and decoder test 12 across backends
 # (`engine`'s `decode_cross_backend` and `qa_TASK-M2-24_gpu`, TASK-M2-24), the lock's locked-against-free render
 # (`engine`'s `lock_gpu`, TASK-M2-23), the kernel's own f32 `atan2` as the backend compiles it (`engine`'s `arctan_gpu`,
-# RQ-628), and the agreement preset's against the decode stage (validation's
+# RQ-628), the read-back's dispatchers and the cross-backend record (`engine`'s `branch_read_gpu`, validation's
+# `cross_backend_gpu`, TASK-M4-27), and the agreement preset's against the decode stage (validation's
 # `agreement_preset_gpu` and `qa_TASK-M2-25_gpu`) and the fragment snippets' check against the kernel's translation
 # (xtask's `fragment_wgsl`, TASK-M2-25); the xtask tests that run cargo on
 # the workspace's own target directory, and validation's `qa_TASK-M0-24`, run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
@@ -168,6 +183,8 @@ default-filter = """
         | binary_id(=engine::qa_TASK-M2-24_gpu)
         | binary_id(=engine::lock_gpu)
         | binary_id(=engine::arctan_gpu)
+        | binary_id(=engine::branch_read_gpu)
+        | binary_id(=validation::cross_backend_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=validation::agreement_preset_gpu)
@@ -223,6 +240,8 @@ default-filter = """
     | binary_id(=engine::qa_TASK-M2-24_gpu)
     | binary_id(=engine::lock_gpu)
     | binary_id(=engine::arctan_gpu)
+    | binary_id(=engine::branch_read_gpu)
+    | binary_id(=validation::cross_backend_gpu)
     | binary_id(=validation::decode_f32_eps_gpu)
     | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=validation::agreement_preset_gpu)
@@ -1418,6 +1437,8 @@ default-filter = """
         | binary_id(=engine::qa_TASK-M2-24_gpu)
         | binary_id(=engine::lock_gpu)
         | binary_id(=engine::arctan_gpu)
+        | binary_id(=engine::branch_read_gpu)
+        | binary_id(=validation::cross_backend_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=validation::agreement_preset_gpu)
