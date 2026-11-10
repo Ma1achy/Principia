@@ -243,7 +243,7 @@ Of the tasks above. Each line: id, gloss, mark, why.
 | The state map, R-542 | `docs/design/principia_state_map.md` § SM2 | CHANGE | A backwards table where no formula (R-925) |
 | Decode and round-trip presets, R-116 | `crates/render/src/presets/` | KEEP | Generated where closed form, table otherwise |
 | The linearised decoder | `DecodeMode::Linearised` refused: `decode_dispatch.rs:320`, `crates/kernel/src/stage/fragment.rs:160` | CHANGE | It is the one-cell forward table (R-926 item 11), built on the CPU, its slopes per RQ-758 |
-| Deep-zoom precision against the one-cell patch | `docs/contracts/principia_scheduler_contract.md` § `QuadRequest.flags` | KEEP | Global f64 on the CPU, local f32 on the GPU (REQ-DEC-035); the prototype's absolute f32 records are its own gap |
+| Deep-zoom precision against the one-cell patch | `docs/contracts/principia_scheduler_contract.md` § `QuadRequest.flags` | KEEP | Global f64 on the CPU, local f32 on the GPU (REQ-DEC-035). The local arithmetic keeps `δ` exact, but `x₀ + J_D·δ` is still an absolute f32 IC of order `\|x₀\|` that the f32 integrator starts from, so the product's f32 path has a floor too, the measured value quoted with `\|x₀\|` (deep zoom § 2, R-632; REQ-DEC-051) |
 
 ### A.5 Counts
 
@@ -367,7 +367,7 @@ Each with its owner (a role) and the measurement that closes it. None is solved 
 | O5 | No lift for periodic angles; an antipodal vortex; blends can fold (§ 13.4) | implementer of N5; owner, RQ-760 | the review's lifted-blend check: jump between neighbouring pixels at mid-morph, lifted against per-pixel shortest arc (prototype: 3.14 rad against 0.002) |
 | O6 | A fold no extension declares has no rule for the true copy (§ 13.5) | owner, RQ-760 (iv) | folded share per blend pair, by the signed fold indicator N5 defines (R-72), with § 17.11's limit stated: a fold narrower than a sample can be stepped over |
 | O7 | Feasibility by a plain comparison in the prototype (§ 13.6) | implementer of N1 | none: the kernel's exact predicate (`decode/invariant.rs:273`) is used; the review's f32/f64 triple added as a fixture |
-| O8 | Records absolute f32; centre plus offsets not built, so "ragged grid lines at deep zoom" (§ 13.7) | implementer of TASK-M6-07; owner, RQ-766 | the depth at which neighbouring records stop being distinct, absolute f32 against centre plus offsets, at an O(1) coordinate and at the chart origin; criterion: the patch keeps neighbours distinct to at least level 48 (deep zoom § 2's "a floor near ~50"), else reported with the level reached |
+| O8 | Records absolute f32, so "ragged grid lines at deep zoom" (§ 13.7). The product's f32 path has the same floor: `x₀ + J_D·δ` is an absolute f32 number of order `\|x₀\|` that the f32 integrator starts from (deep zoom § 2, R-632) | implementer of TASK-M6-07; owner, RQ-766 | the f32 path's distinguishable depth as integrated, quoted with `\|x₀\|`, at an O(1) coordinate and at the chart origin (REQ-DEC-052's gate; its value an R-71 calibration, REQ-DEC-051); criterion: reported with the level reached, never asserted against a fixed depth; deep zoom § 2's "a floor near ~50" applies only to an f64 sum and integration, measured separately on the CPU |
 | O9 | `q` not rescaled by size in the prototype's `live` (§ 13.8) | implementer of N7 | none: the kernel's encode (step 0, `canon.rs:9`) is reused, never a new map |
 | O10 | The seed not ruled (§ 13.9) | owner, RQ-764 | B.1 item 4 |
 | O11 | No timing of the CPU side in Rust with threads (§ 13.10) | implementer of N4 | M-A (B.4 item 14) |
@@ -453,7 +453,11 @@ Everything in the prototype's documents that contradicts the repository, the con
     generated (`crates/kernel/src/stage/fragment.rs`), and the presets use it (`crates/render/src/presets/mod.rs:30`).
     R-925 keeps it where a chart has closed-form code.
 11. **"Centre-plus-offsets not built"** (design:160) is designed: the scheduler contract's per-quad centre and half-width
-    and `x₀`, `J_D` (Part 5), deep zoom § 2, REQ-SCHED-024. The design's absolute f32 records are its own gap.
+    and `x₀`, `J_D` (Part 5), deep zoom § 2, REQ-SCHED-024. It does not remove the floor: on the f32 path the IC
+    `x₀ + J_D·δ` is an absolute f32 number of order `|x₀|`, so adjacent ICs closer than its ulp are one IC to the
+    integrator; the floor is the measured value quoted with `|x₀|` (R-632, REQ-DEC-051), and "a floor near ~50" needs
+    the sum and the integration in f64 (deep zoom § 2). The prototype's absolute records collapse sooner, at the ulp of
+    the whole state rather than of `x₀` with an exact `δ`.
 12. **Not every chart is "assemble ∘ map"** (design § 1). The invariant and construction charts build momenta from
     targets with a seed (`decode/invariant.rs:385`); masses come through several links. Each chart's own decode gives
     REQ-DEC-005's `(m, r, p)`; the blend encodes each end to the signed state, as § 17.2's line does.
