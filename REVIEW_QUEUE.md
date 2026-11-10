@@ -541,6 +541,54 @@ older way of stepping that later rulings replaced.*
   precedent; (2)(a) with (3)(a), so the landing clamp is tested on its own and the threshold is the rule in force's; and
   (4)(a), since R-604 already accounts the budget every step. Measurable alternative for (2): run the figure-eight
   ladder under both rules and record both.
-- **Applied meanwhile:** none. TASK-M3-07 waits; nothing is built.
-- **Waits:** TASK-M3-07 (REQ-INT-044, REQ-INT-049, REQ-INT-054, and the Aarseth–Zare arms of REQ-INT-021 and
-  REQ-INT-024).
+- **Narrowed 10 Nov 2026:** transcription done in this PR per CLAUDE.md § Authority (applied per R-369, R-160 the
+  precedent; the owner, 10 Nov 2026: integrator work "is fine: physics (steppers, regularisation, step control,
+  conservation and convergence tests, the CPU reference)"): integrator contract Part 2b § "Aarseth–Zare: the equations,
+  the reference body, the Levi-Civita inverse and the step control (transcribed)", physics-reviewed in the PR and
+  confirmed at the M3 gate. Question (1) is answered by it. Question (3) is decided, applied per R-369 as test
+  mechanics: the figure-eight closure gate runs on its own sync interval `T/n`, so `ADVANCE` lands on the period under
+  R-565's rule that it stops only on a boundary; the gate's grid is a fixture's, and the march's `Δ_sync` is untouched.
+  TASK-M3-07 is split: the regularisation axis stays TASK-M3-07, and Aarseth–Zare is TASK-M3-68. Open:
+  - (2) REQ-INT-049's threshold, 4.232e-09 at `η = 0.001`, was measured under § 0.1's fixed `dτ`, not Part 6's per-step
+    rule (R-563). Recommended: TASK-M3-68 re-measures it under the rule in force and proposes it as a calibration
+    (R-71); the value is the owner's at the M3 gate. Measurable alternative: run the ladder under both rules and record
+    both.
+  - (4) REQ-INT-054's bound per sync interval has no formula. Recommended: the step budget over one interval,
+    `max(N_min, step_budget_rate·Δ_sync)`, a recommendation only, its values REQ-INT-103's and REQ-INT-108's.
+  - (5) Found in the transcription, where the reference and the corpus disagree; nothing is chosen:
+    1. **The landing secant.** `docs/design/principia_dd_validation_orbits.md` § 0.1: "Not yet RK4's fourth — a residual
+       lower-order term remains, most plausibly the LC re-registration at sync boundaries". `driver.rs:419-421`:
+       "`clamp_final_step` sizes the landing step from `dt/dtau` read *before* the step. That is a first-order
+       predictor, so its landing residual is `O(h^2)` and it caps the observable convergence order at two", and its
+       default `land_iterate: true`, `land_max_iters: 4` (`driver.rs:476-477`) retakes the landing step by a secant.
+       The corpus names the clamp only (REQ-INT-049; Part 6, "the landing clamp"). Is the secant part of Aarseth–Zare's
+       step control here? It moves REQ-INT-049's measurement.
+    2. **The gate's figures.** § 0.1's table: "0.001 | 2.818e-03 | **4.232e-09**". `driver.rs:398-400`: "closure error
+       `2.976e-3` against `3.595e-9` at `eta = 1e-3`, and the convergence order across `eta in [0.02, 0.001]` **1.13
+       against 3.06**", at `n_sync = 32`.
+    3. **The unstable inverse at 179.9°.** `docs/design/principia_dd_predictability_horizon.md` § 7.3 and REQ-INT-044's
+       verify: "reference (unstable) | 3.5e-9 | **2.2e-2**" at 179.9°. `tb_lc.py:67-69`: "angle 135 170 179 179.9
+       179.99 / f64 2.2e-16 3.9e-15 1.9e-13 4.0e-12 3.5e-09 / f32 1.8e-07 2.3e-06 9.8e-05 2.2e-02 1.7e-04", so f64's
+       3.5e-9 is at 179.99° and 179.9°'s is 4.0e-12.
+    4. **What couples Γ.** Integrator contract Part 2a: "`Gamma` is **not separable** (the `|u|^2 |p_lambda|^2` term
+       couples position and momentum)". That term is the single-pair Levi-Civita Γ's (`tb_lc.py:19`, "Gamma =
+       |p_u|^2/(8 mu_rho) + |u|^2 [ |p_lam|^2/(2 mu_lam) + V_pert - E ] - G m_i m_j"); Aarseth–Zare's two-pair Γ has no
+       `p_λ`, and couples through `B|p1|^2/(8 mu1) + A|p2|^2/(8 mu2) + (L1 p1).(L2 p2)/(4 m_a)` (`tb_az.py:29`). The
+       conclusion, not separable, holds either way.
+    5. **"From the longest side".** Part 2b's table: "two pairs, reference body from the longest side". `tb_az.py:146`:
+       "Reference body = the one NOT in the longest side". The transcription states the code's rule.
+    6. **`v_rel` in the predictive limit.** R-160: "`dτ ≤ f·d_min / (|v_rel|_max·A·B)`". `driver.rs:608`:
+       "`phys_from_state` returns `(R1, R2, V1, V2)`", but the AZ system it calls (`src/integrate/az/system.rs`) is not
+       in the imported set, and the NumPy `phys_from_state` it was transcribed from returns the conjugate momenta
+       (`tb_az.py:80-83`, "P1 = _Lmat_apply(u1, p1)/(2*A[:, None])"). Velocities or momenta?
+    7. **The `1e-300` guards.** `tb_lc.py:98`, `102-103` and `tb_az.py:78-79`, `224-225` test and floor at the literal
+       `1e-300`, which underflows at f32; integrator contract Part 2c rule 1: "NO PRECISION-DEPENDENT CONSTANT IN A
+       CONTROL-FLOW DECISION", and Part 6 floors `A` and `B` at `TINY`, as `driver.rs:716-717` does. The Rust inverse map
+       is not imported, so what it tests against is unknown.
+    8. **The tie-break's source.** The Rust selector (`src/integrate/az/reference_body.rs`) is not imported; the
+       tie-break transcribed is `tb_az.py:148`'s `np.argmax`, first maximum in `(0,1), (0,2), (1,2)` order.
+- **Applied meanwhile:** the transcription and the split above (10 Nov 2026, applied per R-369). TASK-M3-07 builds the
+  axis, which needs none of it. *Was:* "none. TASK-M3-07 waits; nothing is built."
+- **Waits:** TASK-M3-68 (REQ-INT-049 on (2) and (5) 1-2, REQ-INT-054 on (4), REQ-INT-044 on (5) 3 and 7, REQ-INT-024's
+  profile on (5) 4, the predictive limit on (5) 6). *Was:* "TASK-M3-07 (REQ-INT-044, REQ-INT-049, REQ-INT-054, and the
+  Aarseth–Zare arms of REQ-INT-021 and REQ-INT-024)."
