@@ -559,6 +559,16 @@ negative_control!(
     check_threshold(|r| (r * r) as f32)
 );
 
+/// A cadence that keeps nothing: no projection, no detector, never done; its bucket `d²` is the trait's default.
+struct Bare;
+
+impl Cadence<f64> for Bare {
+    fn after_step(&mut self, _state: &mut State<f64>, _geom: &mut Geom<f64>) {}
+    fn done(&self) -> bool {
+        false
+    }
+}
+
 // ── collision_shared_separation ──────────────────────────────────────────────────────────────────────────────────
 
 /// The wrapper's cadence hands the bucket the `d²` its detector formed for the last state, the IC's before the first
@@ -593,6 +603,13 @@ fn check_shared(bucket: fn(&WrapperCadence<f64>, &[[f64; 2]; 3]) -> f32) {
         cadence.detector().last(),
         Separations::of(&s.r),
         "the detector's separations are not the projected state's"
+    );
+    let mut bare = Bare;
+    bare.after_step(&mut s, &mut g);
+    assert_eq!(
+        bare.bucket_d2(&elsewhere).to_bits(),
+        d2_quantised(&elsewhere).to_bits(),
+        "a cadence that forms no d² does not hand the bucket the positions' own"
     );
     let want = bucket(&cadence, &elsewhere);
     let mut words = [FreeGroupWord::default()];
@@ -875,13 +892,6 @@ negative_control!(
 /// monitor failed writes 3 over the latched pair, unset as `d_min` is.
 #[test]
 fn dmin_pair_latch_sentinel() {
-    struct Bare;
-    impl Cadence<f64> for Bare {
-        fn after_step(&mut self, _state: &mut State<f64>, _geom: &mut Geom<f64>) {}
-        fn done(&self) -> bool {
-            false
-        }
-    }
     let x = fly_by();
     let out = integrate_with::<Kdk, f64, _>(&x, &uniforms(10), &mut Bare);
     assert_eq!(
