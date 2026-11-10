@@ -21,6 +21,10 @@ ryu = "1"
 wgpu = { version = "30", default-features = false, features = ["std", "parking_lot", "wgsl", "metal", "vulkan"] }
 naga = { version = "30", features = ["wgsl-in", "msl-out"] }
 pollster = "1"
+# The trajectory fixtures' closed forms (TASK-M2-82) evaluate sin and cos through the pinned pure-software libm the
+# ledger already uses, documented below one ulp, so their rounding bounds are derived and their bits the same on every
+# platform.
+libm = { version = "=0.2.16", default-features = false, features = ["force-soft-floats"] }
 
 # The profiler tests validate written traces against the checked-in JSON Schema (TASK-M0-17); no remote references,
 # so no HTTP resolver. Controls reach engine's tests through a dev-dependency on validation (R-176).

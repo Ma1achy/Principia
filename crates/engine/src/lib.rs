@@ -79,6 +79,11 @@ pub mod stain {
 /// structural sets of quad metadata (TASK-M1-13).
 pub mod synthetic;
 
+/// The trajectory interface (chart_composition § 18.7; R-918, R-919; TASK-M2-82): a provider's boundary grid, states
+/// and terminal from a start and a horizon, and its exact fixtures, the Lagrange equilateral homographic solution and
+/// the figure-eight, which M2's maths reads in place of the integrator.
+pub mod trajectory;
+
 /// The samples' chart classification, CPU-side: whether chart_decoder_contract Part 3 hatches a sample's chart point
 /// as forbidden, from the chart's `validate` and `Chart::map`, which the outcome view reads as `ctx.validity.forbidden`
 /// (REQ-COL-102; R-26, R-446; TASK-M2-32).
