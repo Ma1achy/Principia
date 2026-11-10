@@ -259,7 +259,9 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
     `path_lock_round_trip`, `path_mid_morph_tilt`). Chart pairs: latent to latent; latent to the shape sphere's
     exponential map; a mixed or invariant chart to a rest chart and to Burrau, the anchor sliding; region D
     (TASK-M2-68); a time-axis pair (TASK-M2-83's, REQ-CHART-174). Every frame's decode at the pin within REQ-CHART-158 of the
-    pinned state; a tilt and a slice mid-morph reach both endpoint charts in their own hidden coordinates and tilt
+    pinned state where the target holds it, and where it can't, of the anchor R-849's slide prescribes at that frame
+    (§ 17.8's nearest point in B, REQ-CHART-146: the stored state at `s = 0`, B's nearest point at `s = 1`), never of
+    the original state on a chart that can't hold it; R1 below applies to every pair, the sliding ones included; a tilt and a slice mid-morph reach both endpoint charts in their own hidden coordinates and tilt
     maps. "The same view" is R1, gating: the return to `s = 0` bitwise equal to the same tilt and slice applied
     directly to A about the pin; R2, undo's return to the start, is tested only where an undo feature exists (R-919,
     F10). Controls: the lock dropped on a blend segment, a hidden coordinate invented for the blend, a morph
