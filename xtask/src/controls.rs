@@ -652,9 +652,9 @@ impl Resolution {
     /// nothing, and one build of the workspace's crates is the fast way to it. A run resolves each package as cargo
     /// does, so its builds are the ones its tests' own cargo runs make (`cargo test -p validation --features controls`
     /// in validation's `qa_TASK-M0-24`). A listing inside a run resolves as the run, so it reuses the run's builds: one
-    /// resolved apart is a second build of every controls crate's tests, and in `xtask-ci (2)`, which runs the control
-    /// of `qa_m0_24_every_registered_control_makes_its_test_fail` (`cargo xtask controls --list` on the workspace),
-    /// that second build ran the runner out of disk (at 04055100); a run resolved over the workspace did the same
+    /// resolved apart is a second build of every controls crate's tests, and in `xtask-ci (2)`, which then ran the
+    /// control of `qa_m0_24_every_registered_control_makes_its_test_fail` (`cargo xtask controls --list` on the
+    /// workspace; the test is retired, R-909), that second build ran the runner out of disk (at 04055100); a run resolved over the workspace did the same
     /// against its tests' per-package builds (at 29111816).
     pub fn of(mode: Mode, in_run: bool) -> Resolution {
         match mode {
