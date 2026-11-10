@@ -796,17 +796,33 @@ end" flag means, and what playing backwards does are not said.*
 - **Options seen:**
   - (a) A per-sample stop index `k_stop ≤ horizon_steps`, a `u32` in the record, the host mapping each target time to
     the latest boundary at or before it in integers on the occupant's grid; `T` stays the per-dispatch uniform and
-    `bounded` stays the horizon's, a sample stopped at its own `k_stop` carrying a distinct "reached its time" state; a
-    target below the current state re-boots from `t = 0` (R-565 bitwise); a time-axis chart keeps the column march as an
-    implementation that gives the same bits.
+    `bounded` stays the horizon's; a target below the current state re-boots from `t = 0` (R-565 bitwise); a
+    time-axis chart keeps the column march as an implementation that gives the same bits. A sample stopped at its own
+    `k_stop` needs a label, one of:
+    - (a-i) a new state, "reached its time": a sixth label beside escape, collision, bounded, the failures and running in
+      canonical spec § 9's totality invariant ("every pixel gets a labelled output (escape/collision/bounded,
+      sim_failed/decode_failed, or running)") and in the payload's state enum, each consumer of the enum (the
+      outcome legend, the statistics, export) handling it;
+    - (a-ii) no new label: `k_stop` is the sample's own horizon and the sample is labelled `bounded` there, which
+      changes `bounded`'s meaning from "reached the dispatch's horizon `T`" to "reached its own target" (§ 18.5 C1's
+      "`bounded` belongs to the horizon").
+  - **The staircase, under either (a):** on a view tilted toward time, once a pixel's step in time falls below the
+    grid's spacing (`Δ_sync`, or the macro-step on an unregularised occupant), neighbouring rows read the same boundary,
+    and the picture shows bands whose edges are level sets of the stop index, not dynamics (`principia_01_pitfalls.md`
+    § 1.7: "Smooth, clean geometric boundaries in a chaotic field … are level sets of something smooth — usually a
+    termination time"; § 1.2 on quantised end times). The time-axis mode already says so for its rows (§ 18.2, "Time
+    zoom floors at one boundary"); a tilted view needs the same: its zoom along time floors at one boundary, or the
+    bands are drawn with a label.
   - (b) A per-sample float horizon `t ≥ T + τ`, as the prototype: off R-565's grid, so live march and re-boot no
     longer meet bitwise.
   - (c) Per-dispatch horizons only: one dispatch per distinct target time, the per-sample case going through the
     trajectory interface.
-- **Recommended:** (a). It is R-565 and REQ-INT-038 applied to a per-sample target, keeps the bitwise re-boot, and
-  needs one word in the record; (c) costs a dispatch per target time on a space-time slice.
+- **Recommended:** (a) with (a-i), and the zoom along time floored at one boundary. It is R-565 and REQ-INT-038
+  applied to a per-sample target, keeps the bitwise re-boot and `bounded`'s meaning, and needs one word in the record; (c) costs a dispatch per target time on a space-time slice.
 - **Measurement:** § 18.5's C1 re-run with per-sample stops (every row bitwise against a run with that row's boundary
-  as horizon, `bounded` excepted by design); and the cost of a morph with time running, every sample re-integrated per
+  as horizon, `bounded` excepted by design); a zoom-in-time check on a view tilted 90° toward time, the rows per
+  boundary counted at each zoom and the floor shown to stop the zoom (or label the bands) where a row's time step
+  falls below one boundary; and the cost of a morph with time running, every sample re-integrated per
   frame, measured against the frame budget on the Mac.
 - **Applied meanwhile:** nothing. TASK-M4-05's interface is not built.
 - **Waits:** TASK-M4-05 (the integrator's entry and its record), TASK-M2-83 (re-scoped by the plan).
