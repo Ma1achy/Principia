@@ -1340,7 +1340,6 @@ slow-timeout = { period = "30s", terminate-after = 3 }
 #     102.3 s  xtask::qa_TASK-M0-06_list qa_m006_ci_list_lists_golden_cases_without_a_device
 #     160.2 s  xtask::qa_TASK-M0-06_runner qa_m006_ci_golden_runner_renders
 #     505.2 s  xtask::qa_TASK-M0-20 qa_cli_screenshot_all_runs_selftest
-#     104.5 s  xtask::qa_TASK-M0-50 qa_lint_wgsl_workspace_passes
 #     104.5 s  xtask::qa_TASK-M1-01 qa_lint_wgsl_repository_read_side_is_clean
 #     103.2 s  xtask::qa_TASK-M1-15 qa_m1_15_exceptions_are_each_to_one_rule
 #     108.6 s  xtask::qa_TASK-M1-15 qa_m1_15_guard_follows_part4
@@ -1573,7 +1572,6 @@ default-filter = """
         | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
         | (binary_id(=xtask::qa_TASK-M0-06_runner) & test(=qa_m006_ci_golden_runner_renders))
         | (binary_id(=xtask::qa_TASK-M0-20) & test(=qa_cli_screenshot_all_runs_selftest))
-        | (binary_id(=xtask::qa_TASK-M0-50) & test(=qa_lint_wgsl_workspace_passes))
         | (binary_id(=xtask::qa_TASK-M1-01) & test(=qa_lint_wgsl_repository_read_side_is_clean))
         | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_exceptions_are_each_to_one_rule))
         | (binary_id(=xtask::qa_TASK-M1-15) & test(=qa_m1_15_guard_follows_part4))
