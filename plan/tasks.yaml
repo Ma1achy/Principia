@@ -1400,7 +1400,7 @@
 - id: TASK-M3-14
   milestone: M3
   title: The Benettin FTLE shadow
-  depends_on: [TASK-M3-05, TASK-M3-06, TASK-M2-71]  # R-918
+  depends_on: [TASK-M3-05, TASK-M3-06, TASK-M2-71, TASK-M3-17]  # R-918; TASK-M3-17 per R-369 (10 Nov 2026)
   needs: [REQ-PAY-021, REQ-PAY-026, REQ-PAY-032]
   requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-CHART-132]  # R-918
   reviewers: [code, qa, physics]
@@ -1424,7 +1424,7 @@
 - id: TASK-M3-17
   milestone: M3
   title: Terminal states, precedence and the terminal latch
-  depends_on: [TASK-M3-09, TASK-M3-10, TASK-M3-12, TASK-M3-13, TASK-M3-14, TASK-M3-16]
+  depends_on: [TASK-M3-09, TASK-M3-10, TASK-M3-12, TASK-M3-13, TASK-M3-16]
   needs: [REQ-PAY-004, REQ-PAY-013, REQ-PAY-014, REQ-PAY-031]
   requirements: [REQ-EVT-001, REQ-EVT-007, REQ-EVT-008, REQ-EVT-010, REQ-EVT-020, REQ-INT-029, REQ-INT-034, REQ-PAY-046, REQ-PAY-049, REQ-PAY-051, REQ-PAY-058]  # REQ-INT-033 retired by R-562
   reviewers: [code, qa, physics]

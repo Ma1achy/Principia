@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-EVT-001, REQ-EVT-007, REQ-EVT-008, REQ-EVT-010, REQ-EVT-020, REQ-INT-029, REQ-INT-034, REQ-PAY-046, REQ-PAY-049, REQ-PAY-051, REQ-PAY-058
-- **Depends on:** TASK-M3-09, TASK-M3-10, TASK-M3-12, TASK-M3-13, TASK-M3-14, TASK-M3-16
+- **Depends on:** TASK-M3-09, TASK-M3-10, TASK-M3-12, TASK-M3-13, TASK-M3-16
 - **Needs (earlier milestones):** REQ-PAY-004, REQ-PAY-013, REQ-PAY-014, REQ-PAY-031
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-1, PIT-1.4, PIT-1.6, PIT-2.4
@@ -58,9 +58,10 @@ The label writer: `state` holds escape / bounded / collision / running / sim_fai
 - `cargo test -p kernel detail_union` — for each state, pack/unpack each detail code and assert the decoded meaning (REQ-PAY-046).
 - Review (code): no `timeout` or `survived_horizon` state exists; the horizon T is part of the sim key (REQ-PAY-049).
 - `cargo test -p kernel t_end_step_counter` — property test: running and terminal states, t_end_step equals the step counter (latched at the escape firing step); t_dmin_step equals the argmin step (REQ-PAY-051).
-- `cargo test -p kernel escape_freezes_accumulators` — on a fixture escaper the production loop ends at the firing step; state, t_end_step, S and the other accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc (the harness byte-identity arm is TASK-M3-33's) (REQ-PAY-058).
+- `cargo test -p kernel escape_freezes_accumulators` — on a fixture escaper the production loop ends at the firing step; state, t_end_step, the FTLE accumulator S (frozen at t_esc, tested as any stored accumulator, its word seeded on the fixture) and the other accumulators and latches are unchanged by later dispatches (the derived-FTLE arm, FTLE equals S/T at t_esc, is TASK-M3-14's; the harness byte-identity arm is TASK-M3-33's) (REQ-PAY-058).
 
 ## Notes
 - R-103 governs: in production `done` is set when escape fires; the §2.4 checks run only in `crates/validation` on the harness's own state (TASK-M3-33).
 - R-562 (21 Oct 2026): regularisation is v1; REQ-INT-033 is retired and its acceptance line removed. *Was:* "- Review (physics): no KS state representation in v1; saturated regions continue to their outcome (REQ-INT-033)." Saturated regions continuing to their outcome stays tested by `nmax_cap_continues` (REQ-INT-029) and `totality_labels` (REQ-EVT-001). A regularised copy that runs out of its step budget is undetermined, not a label (R-563, TASK-M3-41).
 - RQ-97 ruled: R-113 — REQ-INT-029's "CPU and GPU take the same capped step" is dropped from M3; M4 covers it by REQ-VAL-059 and REQ-VAL-061.
+- Applied per R-369 (10 Nov 2026): TASK-M3-14 (the Benettin FTLE shadow, stopped under R-918) dropped from Depends on; this task's only tie to it was the derived-FTLE arm of `escape_freezes_accumulators`, now TASK-M3-14's acceptance arm `ftle_frozen_at_escape`; S's freeze is tested here as any stored accumulator's. The REQ-PAY-049 review line is that requirement's verify text and stays. *Was:* "Depends on: TASK-M3-09, TASK-M3-10, TASK-M3-12, TASK-M3-13, TASK-M3-14, TASK-M3-16"; "state, t_end_step, S and the other accumulators and latches are unchanged by later dispatches; the derived FTLE equals S/T at t_esc (the harness byte-identity arm is TASK-M3-33's)".
