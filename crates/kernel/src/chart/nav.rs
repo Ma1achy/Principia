@@ -17,8 +17,11 @@
 //! `(L_z, K)` charts and their `Mapped` forms, warped, linear or mixed, whose untilted `validate` does not decode, the
 //! f64 decode at a point layer 2 accepts passing layer 3 (past `K(t)` of half the greatest float the construction is
 //! infeasible), the chart's own decode where every axis is warped and the rule's otherwise. A tilt, the rest-start and
-//! held wrappers forward `phi_finite` to the chart they wrap, and `Mapped` does where its decode is the chart's. Either
-//! way it is the one edge, the last centre that is a system, reported by the check that finds it.
+//! held wrappers forward `phi_finite` to the chart they wrap, and `Mapped` does where its decode is the chart's. The
+//! rest-start wrapper first checks its own held momentum controls finite: they are `Φ`'s `z[2:6]`, which the wrapped
+//! chart's `map` and `validate` do not read, so a slice to NaN, its decode's momenta NaN, would pass both. The held
+//! `L_z` and `K` are read by their charts' `validate`, which decodes at them. Either way it is the one edge, the last
+//! centre that is a system, reported by the check that finds it.
 //!
 //! **The path** (A3). The edited field moves along the straight line from the accepted value to the requested one,
 //! `from + λ·(to − from)` for `λ ∈ [0, 1]`, `to` itself at `λ = 1`, so a component the edit leaves alone keeps its

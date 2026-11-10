@@ -436,7 +436,7 @@ mutant = "crates/kernel/src/encode/blocks.rs:279:29: replace | with ^ in <impl S
 justification = "the two operands are select(first, 1, 0) and select(second, 2, 0), which share no bit, so their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/construction.rs:987:9: replace <impl Chart for HeldK<P>>::phi_finite -> bool with true"
+mutant = "crates/kernel/src/chart/construction.rs:991:9: replace <impl Chart for HeldK<P>>::phi_finite -> bool with true"
 justification = "HeldK wraps the concrete BurrauThetaLz, whose map is the zero vector (unread()) and whose phi_finite is Chart's default, map's output finite, so the forwarded check is true at every (u, v) and every HeldK"
 
 [[equivalent]]

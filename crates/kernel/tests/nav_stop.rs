@@ -14,10 +14,12 @@
 //! it; and a pan on the invariant charts past the overflow edge of `K(t)` stops on `Φ` with the edge between the stop
 //! and the next value along the path, a lock on the edge taken and one f64 past it refused, and on their linear and
 //! mixed `Mapped` forms, whose `validate` does not decode, a pan to `v = f64::MAX` stops on `Φ` likewise; `RestStart`
-//! and `HeldLz` keep the `Φ` check of the chart they wrap. Controls: a stop that keeps the requested value, a stop one
-//! bisection step short, a per-chart override, a centre check that reads `map` alone, the shape sphere's point alone,
-//! an invariant chart's frozen controls alone, or a linear mapped invariant chart's `map` alone, and a wrapper that
-//! drops the wrapped chart's `Φ` check.
+//! and `HeldLz` keep the `Φ` check of the chart they wrap; and a rest start's held momentum control sliced to NaN or
+//! ±∞ stops on `Φ` where it was, one sliced to ±`f64::MAX` taken whole, its decode a system. Controls: a stop that
+//! keeps the requested value, a stop one bisection step short, a per-chart override, a centre check that reads `map`
+//! alone, the shape sphere's point alone, an invariant chart's frozen controls alone, or a linear mapped invariant
+//! chart's `map` alone, a wrapper that drops the wrapped chart's `Φ` check, and a rest start whose `Φ` check is the
+//! wrapped chart's alone.
 //!
 //! **`nav_fuzz_never_leaves*`** (REQ-CHART-061): on every gallery chart a seeded sequence of pan, slice, zoom, tilt and
 //! lock edits, each through the stop, leaves a centre that validates; on the invariant and Burrau `K` charts and
@@ -1397,6 +1399,133 @@ negative_control!(
     "a wrapper that does not forward the chart's own Φ check takes the pan across it whole",
     expected = "drops the chart's own Φ check",
     check_wrapped_phi(true)
+);
+
+// ── REQ-CHART-060: a rest start's held momentum controls ─────────────────────────────────────────────────────────
+
+/// A rest start whose `Φ` check is the wrapped chart's alone, its held momentum controls unread (the control).
+/// Everything else is the rest start's.
+#[derive(Clone, Copy)]
+struct Unheld<C>(RestStart<C, f64>);
+
+impl<C: RestChart<Param = f64>> Chart for Unheld<C> {
+    type Param = f64;
+
+    fn map<F: Float + From<f64>>(&self, u: F, v: F) -> ChartOut<F> {
+        self.0.map(u, v)
+    }
+
+    fn name(&self) -> &str {
+        self.0.name()
+    }
+
+    fn phi_finite(&self, u: f64, v: f64) -> bool {
+        self.0.chart.phi_finite(u, v)
+    }
+
+    fn validate(&self, u: f64, v: f64) -> ValidationResult {
+        self.0.validate(u, v)
+    }
+
+    fn validate_params(&self, u: f64, v: f64, p: &LinkParams<f64>) -> ValidationResult {
+        self.0.validate_params(u, v, p)
+    }
+}
+
+/// The edit `edit` of the momentum control `k` of `chart`, through the stop; `unheld` reads the centre through
+/// [`Unheld`] (the control).
+fn held_stop<C: RestChart<Param = f64>>(
+    chart: RestStart<C, f64>,
+    k: u32,
+    edit: Edit<f64>,
+    unheld: bool,
+) -> Stop<f64> {
+    if unheld {
+        let view = |x: f64| chart.sliced(k, x).and_then(|c| at(Unheld(c), C));
+        nav_stop(edit, view, &P)
+    } else {
+        let view = |x: f64| chart.sliced(k, x).and_then(|c| at(c, C));
+        nav_stop(edit, view, &P)
+    }
+}
+
+/// Each held momentum control of the rest start `chart` sliced from `0.3`: toward NaN, `+∞` and `−∞`, whose decode's
+/// momenta are NaN (NaN) or whose control is no finite `Φ` (±∞, as on a latent chart's `map`), the path stops on `Φ`
+/// where it was and a lock is refused; toward ±`f64::MAX`, the greatest finite control, it is taken whole. The
+/// accepted centre decodes to a system each time.
+fn check_held_controls_on<C: RestChart<Param = f64>>(
+    name: &str,
+    chart: RestStart<C, f64>,
+    unheld: bool,
+) {
+    let from = 0.3;
+    for k in 2..6 {
+        let view = |x: f64| chart.sliced(k, x).and_then(|c| at(c, C));
+        for to in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let stop = held_stop(chart, k, Edit::Path { from, to }, unheld);
+            assert!(
+                stop.stopped == Some(Check::Phi) && stop.value == from,
+                "{name}: the held control {k} sliced toward {to} stops at {}, {:?}, not on Φ where it was",
+                stop.value,
+                stop.stopped
+            );
+            check_stop(name, from, to, view, &stop);
+            let lock = held_stop(chart, k, Edit::Lock { from, to }, unheld);
+            assert!(
+                lock.stopped == Some(Check::Phi) && lock.value == from && lock.steps == 0,
+                "{name}: the held control {k} locked on {to} stops at {}, {:?}, not on Φ where it was",
+                lock.value,
+                lock.stopped
+            );
+            assert!(
+                decodes_system(view(stop.value)),
+                "{name}: the held control {k} stopped at {} decodes to no system",
+                stop.value
+            );
+        }
+        for to in [f64::MAX, f64::MIN] {
+            let stop = held_stop(chart, k, Edit::Path { from, to }, unheld);
+            assert!(
+                stop.stopped.is_none() && stop.value == to,
+                "{name}: the held control {k} sliced to the finite {to} is not taken whole: {}, {:?}",
+                stop.value,
+                stop.stopped
+            );
+            assert!(
+                decodes_system(view(stop.value)),
+                "{name}: the held control {k} at {to} decodes to no system"
+            );
+        }
+    }
+}
+
+/// REQ-CHART-060's `Φ` at the centre on the rest starts' own hidden coordinates (R-469 A1; R-633): the mass simplex,
+/// the Euclid plane and the δm strip, each momentum control ([`check_held_controls_on`]). `unheld` reads the centre
+/// by the wrapped chart's `Φ` check alone (the control).
+fn check_held_controls(unheld: bool) {
+    check_held_controls_on("mass simplex", RestStart::new(simplex(0.5)), unheld);
+    let plane = EuclidPlane {
+        m_range: [EUCLID_M_MIN.number(), EUCLID_M_MAX.number()],
+        nu_range: [EUCLID_NU_MIN.number(), EUCLID_NU_MAX.number()],
+    };
+    check_held_controls_on("Euclid plane", RestStart::new(plane), unheld);
+    let delta_m = BurrauThetaDeltaM {
+        theta_range: theta_range(),
+        m_target: BurrauThetaDeltaM::<f64>::equal_masses(),
+    };
+    check_held_controls_on("Φ_θ,δm", RestStart::new(delta_m), unheld);
+}
+
+#[test]
+fn nav_stop_at_edge_held_controls() {
+    check_held_controls(false);
+}
+
+negative_control!(
+    nav_stop_at_edge_held_controls,
+    "a rest start that checks only the wrapped chart's Φ takes a held momentum control of NaN whole",
+    expected = "not on Φ where it was",
+    check_held_controls(true)
 );
 
 /// The report's layer: 3 for decode sanity, 2 for every other constraint, none for `Φ`. `swap` reads `ComAtOrigin` as
