@@ -1012,8 +1012,10 @@ only.
 
 ## R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*
 *Amended by R-297.*
-*Still in force: all of it; the agreement presets compare within a stated tolerance, a calibration requirement, not
-bit-exactly (R-297).*
+*Amended in part by R-925 (10 Nov 2026: where a chart has no closed-form shader code, the CPU evaluates it and the shader reads tables; the generated code stays wherever a chart has it).*
+*Still in force: all of it for every chart with closed-form shader code, the agreement presets comparing within a
+stated tolerance, a calibration requirement, not bit-exactly (R-297); a chart with none reaches the fragment through
+CPU-built tables, not generated code (R-925).*
 *25 Sep 2026 · applied in step 7*
 
 The fragment WGSL decode and encode are generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation),
@@ -19782,6 +19784,7 @@ checkerboard, SM12 six tests; SM15's Flow preset becomes the tileable checkerboa
 *Amended by R-544 (the shape sphere target's mirror).*
 *Amended by R-558.*
 *Amended in part by R-793 (5 Nov 2026: SM6's dilation compaction scale, 0.6, goes with the `θ × dilation` and `ν × dilation` targets).*
+*Refined by R-925 (10 Nov 2026: Chart position stays, a table search its fallback where a target chart has no backwards formula).*
 *Still in force: all of it but SM6's dilation scale, which R-793 drops, SM8's one fixed treatment past the Picture's
 square, which R-543 makes the default
 (Mirror, dimmed) of a wrap mode, and the Flow preset's picture and settings, which R-543 replaces, every saved
@@ -19791,7 +19794,8 @@ sphere target is the whole sphere, read by its signed n̂, and its identity hold
 and what R-558 rules: "a fixed t" struck from SM11 and SM15; the presets' names, the brightness slot under a Picture
 and the fade's function the file's; Replace-L's chroma scaling an option, off by default; Chart position a named
 seam-6 exception, no longer waiting on RQ-489; and, for R-543's maps, its text winning where the code disagrees (R-611),
-and under a Torus base Left its starting tile comparing the Torus's own period cell (R-612).*
+and under a Torus base Left its starting tile comparing the Torus's own period cell (R-612); and Chart position reaching a
+target with no backwards formula through a table search, the tables render-side (R-925).*
 *21 Oct 2026 · applied in `docs/design/principia_state_map.md` (new: the design, every line kept, with the
 prototype's code transcribed), `docs/incoming/2026-10-21_state_map/` (the bundle as delivered),
 `docs/gui/reference/state_map/` (`state_flow.html` and `boards/`), `docs/design/principia_dd_simstate_payload.md` § "5.
@@ -32235,6 +32239,7 @@ The owner's words (7 Nov 2026), verbatim:
 R-838 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-839 — Core seam 3 holds for live views; a labelled CPU-batch view is the stated exception, writing the IC buffer the decode stage writes, never reached by a gesture *(closes RQ-719)*
+*Superseded by R-926 (10 Nov 2026: the CPU evaluates every chart in f64 and the GPU only integrates the records it is given, so every view, live or not, is filled from the CPU).*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-719 moved), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement*
 
@@ -32273,6 +32278,10 @@ The owner's words (7 Nov 2026), verbatim:
 R-841 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-842 — Time as an axis is a chart mode, not a fifth kind: `T` on the sim key and the window off it, a cache per column of at most one screen height of rows, re-integrating from `t = 0` past it; it amends the temporal note and the caching contract's `T` row *(closes RQ-727)*
+*Amended in part by R-926 (10 Nov 2026: time is the last coordinate of every map and a supported chart axis, put on screen by a tilt, not a chart mode; a morph blends time linearly, so a time-axis chart to an IC-only chart is no longer a forced cut).*
+*Still in force: all of it but "a chart mode" and the forced cut to an IC-only chart (R-926): no fifth `AxisKind`, `T`
+on the sim key as the march's top and the window off it, the per-column cache and marching on past a front, no dense
+output stored, and its amendments of the temporal note and the caching contract's `T` row.*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-727 moved), `docs/design/principia_temporal_architecture_note.md` § "The decision", `docs/contracts/principia_caching_contract.md` (the invalidation table's `T` row), `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement*
 
@@ -32418,7 +32427,9 @@ R-849 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*
 *Amended in part by R-849 (7 Nov 2026, the owner's later rider: under the lock the anchor slides, no labelled jump, the jump kept only for time-axis to IC-only charts).*
-*Still in force: all of it but the labelled jump under the lock.*
+*Amended in part by R-925 (10 Nov 2026: "morph" means the system blend, a blend is a chart, and a window turn on one map is a tilt).*
+*Still in force: all of it but the labelled jump under the lock (R-849) and "the morph is the general form": "morph"
+names the system blend only, the other view edits being edits of the window on the one path abstraction (R-925).*
 *Read with R-864 (8 Nov 2026: the chart-path work is one object; today's operations re-expressed as named families of
 it, their old routes deleted; special cases named families, never if-branches) and R-863 (8 Nov 2026: the build order,
 the path object with today's operations bitwise through it first).*
@@ -34127,7 +34138,9 @@ R-901 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-902 — The lock is a property of the path: any locked path, blend segments and chart switches included, keeps the pinned state fixed, sliding per the RQ-721 rider where the target can't hold it; the pivot record is stored as the state; a tilt or slice mid-morph goes to both endpoint charts, each in its own hidden coordinates and tilt map, about the pinned state, the morph continuing from its parameter; the gate test closes stage 2
 *Refined by R-919 (9 Nov 2026, F10: "the round trip returns the same view" is R1, gating: after the mid-morph tilt and slice, the return to `s = 0` equals the same tilt and slice applied directly to A about the pin, bitwise; R2, undo, is tested only where an undo feature exists).*
-*Still in force: all of it, its gate test's round trip read as R1 (R-919).*
+*Refined by R-926 (10 Nov 2026: on a blend, a pan, a zoom and a rotation are the same pixel-space edit applied to both ends).*
+*Still in force: all of it, its gate test's round trip read as R1 (R-919); a pan, a zoom or a rotation on a blend the
+same pixel-space edit on both ends (R-926).*
 *8 Nov 2026 · the owner's two messages of that day, on the lock with morphs and on the mid-morph tilt; applied in
 `docs/design/principia_chart_composition.md` § 17.5 (a cross-reference) and § 17.8, REQ-CHART-161 (reqio, new),
 TASK-M8-117, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-161*
@@ -35317,3 +35330,179 @@ the spans are per RQ-679, awaiting the owner's confirmation": the owner has answ
 R-920 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes REQ-CHART-188 (statement, verify, rulings, source, note, rq).
+
+## R-925 — Shader features work on every chart with no refusal, by the chart's closed-form shader code where it has some and otherwise by tables the CPU builds; Chart position stays, a table search its fallback where a chart has no backwards formula; the forward direction needs no table, the CPU evaluating the chart per quad and sending the result with the quad; "morph" means the system blend, a blend is a chart, and a window turn on one map is a tilt; a morph supports time running and time is a supported chart axis; debug views of the tables are required *(amends R-116 and R-850; refines R-542)*
+*10 Nov 2026 · the owner's message of that afternoon pointing at the chart prototype folder
+(`orch/charts/prototype-2026-11-10/` on the orchestrator's drive: a proposal, kept there and not copied into the repo);
+applied in `docs/design/principia_state_map.md` § "SM2. It changes no sim struct and reads only what the fragment
+already has" (a dated paragraph), `docs/design/principia_chart_composition.md` (the status block), the forward lines of
+R-116, R-542 and R-850, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; its consequences for the plan proposed in
+`plan/charts/m2-chart-system-replan.md`*
+
+The owner's words (10 Nov 2026), verbatim:
+
+> OWNER'S DECISIONS SO FAR (record these as rulings; everything else in the folder is proposal)
+> 1. Shader features work on every chart, with no refusals. Where a chart has closed-form shader code, use
+>    it. Where it does not, the CPU evaluates the chart and the shader reads tables (design section 7).
+> 2. The chart-position colouring (the state map's chart position, R-542) stays, with the table search as
+>    its fallback where a chart has no backwards formula.
+> 3. The forward direction needs no table: the CPU evaluates the chart per quad and the result is bundled
+>    with the quad when it is sent to the GPU.
+> 4. "Morph" means the system blend. A blend is a chart. A window turn on one map is a tilt.
+> 5. A morph supports time running, and time is a supported chart axis.
+> 6. Debug views of the tables are required (design section 10).
+>
+> WHAT TO DO NOW: read and report. No product code, no re-planning of tasks.
+> The earlier instruction still holds: no new chart tasks (TASK-M2-57 to TASK-M2-85); integrator work
+> continues as agreed.
+
+"Design section 7" and "design section 10" are the prototype's `chart-system-prototype-design.md`, a proposal. What
+is ruled is what the six items say; the sections' constructions (the reference window, the key, the bake, the fold
+flag, the self-check, the scan) stay proposal until a task measures them.
+
+*What it decides, item by item:*
+
+1. **No refusals on the fragment side.** Every shader feature works on every chart. Where a chart has closed-form
+   shader code, the WGSL generated from the one Rust source (R-116), that code is used. Where it has none, the CPU
+   evaluates the chart and the shader reads tables built from that evaluation. A chart with no closed-form inverse
+   is never refused a fragment feature for that reason.
+2. **Chart position (R-542) stays.** Where its target chart has no backwards formula, a table search is its fallback.
+3. **The forward direction needs no table to be searched:** the CPU evaluates the chart per quad, and the result goes
+   to the GPU with the quad. R-926's item 6 restates it as a per-quad forward table.
+4. **"Morph" means the system blend**, between two charts. **A blend is a chart**, so whatever a chart may do, a
+   blend may. **A window turn on one map is a tilt**, not a morph: today's `engine::nav::directions` "morph"
+   (`MorphInto`, the tilt of a source toward a target) is a tilt by this ruling.
+5. **A morph supports time running, and time is a supported chart axis.** R-926's items 1 to 3 give how.
+6. **Debug views of the tables are required,** as the prototype's § 10 lists them; R-926's item 10 names them.
+
+**"What to do now".** These words were the owner's instruction for that message: read and report, and no new chart
+task from TASK-M2-57 to TASK-M2-85 while integrator work continues. PR #469, not merged when this was written, records
+that pause; this ruling does not restate it. The owner's re-plan message of the same afternoon (R-926) asked for the
+plan, which `plan/charts/m2-chart-system-replan.md` proposes without dispatching a task.
+
+*What it amends:* **R-116**, in part: the fragment's decode and encode stay generated from the one source for every
+chart that has closed-form shader code; a chart with none reaches the fragment through CPU-built tables, which are not
+generated code. **R-850**, in part: its "the morph is the general form" now reads that "morph" names the system blend
+only; the other view edits are edits of the window (R-926's item 1), and R-850's one path abstraction, its tests per
+operation against the operation's own path family and its other items stand.
+
+*What it refines:* **R-542**: Chart position on every chart now reaches a target with no backwards formula, through a
+table search; SM2's "no sim struct changed" stands, the tables being render-side bindings, not a sim struct.
+
+*What it leaves:* where the six items meet a ruling, a contract or a requirement without settling it, the item is a
+one-way question in `REVIEW_QUEUE.md`, filed with this ruling's plan; the two-way consequences are decided in the plan
+by measurement, each with its criterion written first (R-649).
+
+R-925 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement here: the requirements and `plan/tasks.yaml` follow once the one-way items are answered
+(applied per R-369: task scoping).
+
+## R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, "this pixel shows this system", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*
+*10 Nov 2026 · the owner's re-plan task of that afternoon, sent after the "read and report" message (R-925): its
+decisions block; applied in `docs/design/principia_core_design.md` § "3. Kernel eats chart params, decodes in-kernel"
+(a dated paragraph, the old one kept as *Was*), `docs/contracts/principia_lowering_contract.md` § "Part 1 — What
+lowering is" and § "Compute side" (dated notes), `docs/contracts/principia_scheduler_contract.md` § "`QuadRequest.flags`"
+(a dated note), `docs/design/principia_chart_composition.md` (the status block), the forward lines of R-839, R-842 and
+R-902, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; its consequences for the plan proposed in
+`plan/charts/m2-chart-system-replan.md`*
+
+The owner's words (10 Nov 2026), verbatim, the decisions block of their re-plan task (the task's own instructions,
+plan only, the reconciliation, the updated plan, the first slice and the contradictions, are what
+`plan/charts/m2-chart-system-replan.md` answers):
+
+> WHAT THE NEW SYSTEM IS (the decisions already made — do not re-open these)
+>   1. A chart is a map (named coordinates -> system state + time) composed with a flat window (centre + basis).
+>      Pan, zoom, rotate, tilt and slice are edits of the window. An axis change is a tilt to 90 degrees.
+>   2. Time is the last coordinate of every map. The playhead is the window centre along time.
+>   3. A morph is a blend of two charts' states (linear in masses, momenta and time; slerp on shape).
+>      Both ends are exactly the end charts. Navigating a blend applies the same pixel-space edit to both ends.
+>      A "window morph" within one map is just a tilt.
+>   4. The lock is one constraint: "this pixel shows this system". Window edits re-solve the centre;
+>      a map change re-solves by least squares.
+>   5. The CPU evaluates charts in f64. The GPU only integrates records. No chart code in the integrator.
+>   6. Lookup tables are PER QUAD: a forward table (window position -> state) built on the CPU, bundled
+>      with the quad and dispatched with it. Pan, zoom, tilt, slice and morph just recompute the chart
+>      and re-integrate. There is no inverse anywhere in that path.
+>   7. The backwards direction (running state -> chart position) exists ONLY for the fragment-side needs:
+>      chart-position colouring / the state map, ctx.chart.z, and the decode/round-trip debug presets.
+>      It is a baked backwards table with a table search as the fallback. Approximate is acceptable
+>      during a morph.
+>   8. Fragment shaders work for every chart, always. No refusal path. A chart with no closed-form
+>      inverse gets the table route, not an error.
+>   9. Slopes come in three tiers: exact (dual numbers), implicit, none (per-sample difference).
+>      A map that cannot give exact slopes is still a valid chart.
+>   10. Debug fragment shaders that show table values as RGB/RGBA are part of the deliverable
+>       (forward table by block, forward-table check, backwards table over its key, route, distance off chart).
+>   11. A small quad's table collapses to one cell — that IS the linearised decoder (centre + slopes).
+>       Grids for large quads, one-cell patches for small ones.
+>
+> WHAT IS NOT SETTLED
+>   - Section 9 of the design (the quadtree) is a prototype stand-in. Do not copy it. It refines by
+>     zoom level only, not by dynamics. Plan against the repo's own scheduler/quadtree contracts.
+>   - Section 13 lists the open points (a blend that is 0.4–1.0% wrong backwards, folds with no
+>     declared extension, ragged grid lines at deep zoom, nothing yet run on the kernel's real charts).
+>     Carry each one into the plan as a named open item with an owner and a measurement, not as a solved thing.
+>   - Nothing in the prototype has run on the kernel's real charts. Every number is from the JS/WGSL prototype.
+
+*What it decides, item by item* (the owner's "do not re-open these": each item stands as written; where it meets an
+earlier ruling, contract or requirement without settling it, the open part is a one-way question in `REVIEW_QUEUE.md`,
+not a decision of the plan's):
+
+1. **A chart is a map composed with a flat window.** The map takes named coordinates to a system state and a time;
+   the window is a centre and a basis in those coordinates. Pan, zoom, rotate, tilt and slice are edits of the
+   window, on every chart, and an axis change is a tilt to 90°.
+2. **Time is the last coordinate of every map,** and the playhead is the window's centre along time.
+3. **A morph blends two charts' states:** linear in masses, momenta and time, a slerp on shape. Both ends are
+   exactly the end charts. Navigating a blend applies the same pixel-space edit to both ends. A turn of the window
+   within one map is a tilt, not a morph (R-925's item 4).
+4. **The lock is one constraint, "this pixel shows this system".** A window edit re-solves the centre; a map change
+   re-solves by least squares.
+5. **The CPU evaluates charts in f64, and the GPU only integrates records.** No chart code is in the integrator.
+6. **Lookup tables are per quad:** the CPU builds a forward table (window position to state), bundled with the quad
+   and dispatched with it. Pan, zoom, tilt, slice and morph re-evaluate the chart and re-integrate. No inverse is
+   anywhere on that path.
+7. **The backwards direction (running state to chart position) is only for the fragment side:** Chart position and
+   the state map, `ctx.chart.z`, and the decode and round-trip debug presets. It is a baked backwards table with a
+   table search as its fallback, and approximate is acceptable during a morph.
+8. **No refusal path:** fragment shaders work for every chart, and a chart with no closed-form inverse takes the table
+   route, never an error (R-925's item 1).
+9. **Slopes have three tiers:** exact (dual numbers), implicit, and none (a difference per sample). A map with no
+   exact slopes is still a valid chart.
+10. **Debug fragment shaders showing table values as RGB or RGBA are part of the deliverable:** the forward table by
+    block, the forward-table check, the backwards table over its key, the route, and the distance off the chart.
+11. **A small quad's table is one cell, and that is the linearised decoder** (a centre and slopes): grids for large
+    quads, one-cell patches for small ones.
+
+**What is not settled,** in the owner's words above, and how it is carried: the prototype's quadtree (its § 9) is not
+copied, and the plan works against `principia_scheduler_contract.md` and the caching and deep-zoom documents; each of
+the prototype's § 13 open points is a named open item in the plan with an owner and a measurement; every number in the
+prototype is a prototype measurement (R-649), re-measured on the kernel's charts before anything rests on it.
+
+*What it supersedes:* **R-839**: core seam 3's "*Not* a pre-decoded IC buffer" no longer holds for live views; every
+view, live or not, is filled from the CPU's f64 evaluation narrowed to the integrator's records, so a CPU-batch view is
+no longer a separate, labelled route that a gesture never reaches.
+
+*What it amends:* **R-842**, in part: time is the last coordinate of every map, not a chart mode; a chart puts time
+on a screen axis by a tilt (item 1), and a morph blends time linearly (item 3), so a switch from a time-axis chart to
+an IC-only chart is no longer a forced cut. R-842's other parts stand: no fifth `AxisKind`, `T` on the sim key as the
+march's top and the window off it, the per-column cache and marching on past a front, no dense output stored, and its
+amendments of the temporal note and the caching contract's `T` row.
+
+*What it refines:* **R-902**: on a blend, a pan, a zoom and a rotation are the same pixel-space edit applied to both
+ends (item 3); R-902's tilt and slice, each end in its own hidden coordinates and tilt map about the pinned state,
+stand.
+
+*What it meets without settling,* each a one-way question in `REVIEW_QUEUE.md` filed with this ruling's plan: the
+slopes against the central differences of R-633's step and REQ-DEC-034; the least-squares re-solve against R-849's
+continuous slide, R-593's offered re-centre, R-469's stop and design § 17.8's stored-words select; the morph's state
+blend against design § 17.2's layer rule and its other arms; a per-sample target time against R-565's integer grid;
+the window's per-coordinate scale against R-507 and R-920; R-864's bitwise-first stage against the generic window;
+the seed; what the GPU decode entries and R-837's cap become; the forward table's resolution; the table route's
+accuracy outside a morph; `ctx.chart.z`, which the corpus defines forwards; and running stage 3 beside stages 1 and 2.
+
+R-926 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement here: the requirements it contradicts (REQ-INT-070's in-kernel decode and REQ-CHART-174's
+"time never a tilt target" among them) and `plan/tasks.yaml` change once the one-way items are answered, as
+`plan/charts/m2-chart-system-replan.md` § A lists them (applied per R-369: task scoping).

@@ -194,6 +194,15 @@ Item 3 means that a base spending L on position takes a brightness node only wit
 keeping its L (RQ-496 (a)). *Was:* "The prototype offers no fixed t; meanwhile Chart position reads the playhead or
 `t = 0` only."
 
+*10 Nov 2026 (R-925, R-926).* Chart position stays, on every chart. Where its target chart has a backwards formula, the
+target's inverse is generated to WGSL from the one Rust source, as above. Where it has none, the CPU builds a baked
+backwards table from the chart's evaluation and the fragment reads it, with a table search as the fallback, never a
+refusal; the answer is approximate during a morph (R-926, item 7). The tables are a render-side binding beside item 2's
+picture texture, not a sim struct, so "no change to `SimState`, the payload, the `ICDescriptor` or any layout" stands.
+The table's row "the encode, including the chart inverses", read "WGSL generated from the one Rust source" for every
+target; it now holds for a target with closed-form shader code only. How the backwards table is keyed, baked and checked
+is the plan's (`plan/charts/m2-chart-system-replan.md`), measured on the kernel's charts first.
+
 ## SM3. Source side: the extension comes for free, because the colour is a property of the system
 
 The colour depends only on the sample's system, never on where its pixel sits. So:
