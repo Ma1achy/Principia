@@ -704,8 +704,8 @@ sheet, and what "the nearest system on the edge" means on the real chart, need d
   misbehaves. For (ii), (ii-2) where it keeps both classes (`L_z² < −2IU`) and (ii-3) elsewhere, since it is the only
   choice that never draws a system of another class; the owner's to choose, after physics review.
 - **Measurement:** N13's distinctness measurement on `InvariantLE` at the register's defaults (256 × 256 over `s ∈ [1,
-  2]`): the share of pixels whose decoded state equals a state of the square on the same grid, positions being the held
-  configuration on both and momenta matching when `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂` over all six components (a zero `p` only
+  2]`): the share of pixels whose decoded state equals a state of the square on the same grid, positions bitwise
+  equal (the held configuration on both) and momenta matching when `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂` over all six components (a zero `p` only
   exactly); predicted only the fold columns and the `t = 0` row; its control, sheet 1 mirrored in `s` (a repeat),
   matches 100%; void if the default configuration's seed is degenerate (`a = 0`, the sheets equal by construction).
   Criterion written in the addendum before any run.

@@ -412,8 +412,8 @@ the rest is non-visual and so M2's (R-916).
    gives `−0`, so a zero component is compared by `==` (control: a sheet 2 built as sheet 1 mirrored in `s`, a repeat,
    must fail it). *Measurement M-C*, criterion written now: on `InvariantLE` at the register's defaults, 256 × 256
    samples over `s ∈ [1, 2]`, `t ∈ [0, 1]`, the share of pixels whose decoded state equals a state of the square's
-   256 × 256 grid; positions are the held configuration on both, so a pixel matches a grid state when
-   `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂`, the Euclidean norm over all six momentum components, `p` the grid state's (a zero `p`, the
+   256 × 256 grid; positions are bitwise equal (`==` per component, the held configuration on both), so a pixel
+   matches a grid state when `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂`, the Euclidean norm over all six momentum components, `p` the grid state's (a zero `p`, the
    rest start, matches only an exactly equal one); PASS if only pixels on the fold columns (`s = 1, 2`) and the `t = 0`
    row match; the control (sheet 1 mirrored) must match 100%, else the measurement cannot see a repeat and the result is
    void. *Precondition*, checked before the run and reported: the register's default configuration has a qualifying
@@ -442,9 +442,11 @@ the rest is non-visual and so M2's (R-916).
 4. **N15, the backwards table on an extended chart.** *Slot:* § B.4, after item 16 (N7) and N14. *Acceptance:* N7's
    construction on `InvariantLE` with the spin edges unfolded, the sheet carried as RQ-776 rules; every forward node of
    both sheets returns to its own cell or, where cells decode to equal states, to a cell whose state equals its own by
-   M-C's match rule (positions equal, `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂`), criterion written now: the untilted `t = 0` row (every
-   cell the rest start) and the fold columns (sheet 2 at `s = 2` equal to sheet 1 at `s = 0`, `s = −1` to `s = 1`),
-   M-C's predicted matches; the round-trip error in cells below is measured to the nearest such cell. *Measurement*,
+   M-C's match rule (positions bitwise equal, `==` per component, the held configuration; `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂`),
+   criterion written now: the untilted `t = 0` row (every cell the rest start) and the fold columns (sheet 2 at
+   `s = 2` equal to sheet 1 at `s = 0`, `s = −1` to `s = 1`), M-C's predicted matches, only there: an equal-state
+   return outside those cells fails; the round-trip error in cells below is measured to the nearest such cell.
+   *Measurement*,
    criterion written now: N7's set-up (256 × 256 samples, table 64, scan 16) over `s ∈ [−1, 2]`, at `t = 0` of the run
    and after it: the wrong share (a worse match than an exhaustive search of the same table) and the round-trip error
    in cells, reported separately for pixels within 2 pixels of a fold and for the rest; PASS if the rest's wrong share
