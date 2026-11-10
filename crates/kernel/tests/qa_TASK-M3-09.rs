@@ -814,3 +814,102 @@ negative_control!(
         );
     }
 );
+
+// ── REQ-EVT-002 / REQ-EVT-003 at the slider's small end (integrator_contract Part 7, "→0, all valid") ──────────────
+
+/// For each pair and each tiny positive `r_coll` (its square subnormal in f32, or below f32's range), an IC with only
+/// that pair `r_coll / 4` apart, about `x = 0` and about `x = 0.5`, is within `r_coll`, so the t = 0 pass under the
+/// threshold `radius` gives `collision` with that pair, at both precisions, and the march takes no step: Part 7 calls
+/// every `r_coll > 0` valid, and an IC within it is `collision` at `t_end_step = 0` (REQ-EVT-002).
+fn check_tiny(radius: fn(f64) -> CollisionRadius) {
+    for r_coll in [1e-20, 2f64.powi(-64), 1e-30, 1e-100] {
+        let threshold = radius(r_coll);
+        for k in 0..3 {
+            for shift in [0.0, 0.5] {
+                let mut x = pair_ic(k, r_coll / 4.0);
+                let (a, b) = bodies(k);
+                x.r[a][0] += shift;
+                x.r[b][0] += shift;
+                let d = dist(&x.r);
+                assert!(
+                    (0..3).all(|j| (d[j] < r_coll) == (j == k)),
+                    "fixture: pair {k} is not the only pair inside r_coll {r_coll:e}: {d:?}"
+                );
+                let got = t0(&x, None, &threshold);
+                assert_eq!(
+                    (got.state, got.detail),
+                    (STATE_COLLISION, k as u32),
+                    "pair {k} within r_coll = {r_coll:e} (shift {shift}) is not collision at t = 0"
+                );
+                assert_eq!(
+                    t0(&to_f32(&x), None, &threshold),
+                    got,
+                    "the f32 t = 0 pass labels pair {k} otherwise at r_coll = {r_coll:e}"
+                );
+                let run = integrate_detecting::<Kdk, f64>(&x, &uniforms(5), threshold);
+                assert_eq!(
+                    (
+                        sd_state(run.packed_a),
+                        sd_detail(run.packed_a),
+                        tm_t_end_step(run.times),
+                        run.total_substeps
+                    ),
+                    (STATE_COLLISION, k as u32, 0, 0),
+                    "the dispatch of pair {k} within r_coll = {r_coll:e} is not collision at t_end_step = 0"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn qa_t0_inside_tiny_r_coll() {
+    check_tiny(CollisionRadius::from_r_coll);
+}
+
+negative_control!(
+    qa_t0_inside_tiny_r_coll,
+    "a threshold that writes a positive r_coll's square below f32's least normal as 0",
+    expected = "is not collision at t = 0",
+    check_tiny(|r| {
+        let r2 = (r * r) as f32;
+        CollisionRadius::from_squared(if r2 < f32::MIN_POSITIVE { 0.0 } else { r2 })
+    })
+);
+
+/// At a large `r_coll` whose square is finite in f32 (Part 7's "regularise aggressively" end), every pair of an
+/// ordinary IC is inside, so the t = 0 pass is `collision` with `detail = 3`, at both precisions (REQ-EVT-002,
+/// REQ-EVT-003); the threshold is finite.
+fn check_huge(radius: fn(f64) -> CollisionRadius) {
+    for r_coll in [10.0, 1e10, 1e18, 1.8e19] {
+        let threshold = radius(r_coll);
+        assert!(
+            threshold.squared().is_finite(),
+            "the threshold of r_coll = {r_coll:e} is not finite"
+        );
+        let x = pair_ic(0, 0.5);
+        let got = t0(&x, None, &threshold);
+        assert_eq!(
+            (got.state, got.detail),
+            (STATE_COLLISION, 3),
+            "every pair within r_coll = {r_coll:e} is not a triple collision at t = 0"
+        );
+        assert_eq!(
+            t0(&to_f32(&x), None, &threshold),
+            got,
+            "the f32 t = 0 pass labels the IC otherwise at r_coll = {r_coll:e}"
+        );
+    }
+}
+
+#[test]
+fn qa_t0_inside_huge_r_coll() {
+    check_huge(CollisionRadius::from_r_coll);
+}
+
+negative_control!(
+    qa_t0_inside_huge_r_coll,
+    "a threshold capped at 0.1, as if r_coll were clamped",
+    expected = "is not a triple collision at t = 0",
+    check_huge(|r| CollisionRadius::from_squared(((r * r) as f32).min(0.1)))
+);

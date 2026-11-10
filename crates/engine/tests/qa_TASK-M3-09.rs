@@ -150,3 +150,59 @@ negative_control!(
     expected = "has the same bytes",
     check_key(SimUniforms::default().r_coll)
 );
+
+/// Dispatch accepts the slider's tiny and large `r_coll` (Part 7, "all valid") and hands the kernel a threshold under
+/// which an IC within `r_coll` is `collision` at t = 0: two coincident-in-f32 bodies at every tiny positive `r_coll`
+/// (one pair), every pair of the lookup fixture at a large one (`detail = 3`) (REQ-EVT-002, REQ-EVT-003).
+fn check_extremes(rule: fn(&SimUniforms) -> Validated) {
+    let with = |r_coll: f64| {
+        rule(&SimUniforms {
+            r_coll,
+            ..SimUniforms::default()
+        })
+    };
+    let m = [1.0 / 3.0; 3];
+    for r_coll in [1e-20, 1e-30, f64::MIN_POSITIVE] {
+        let r = [[0.5, 0.0], [0.5 + r_coll / 4.0, 0.0], [-0.5, 0.0]];
+        let x = Ic {
+            m,
+            r,
+            p: [[0.0; 2]; 3],
+        };
+        assert!(dist(&x.r)[2] < r_coll, "fixture: pair 2 not within r_coll");
+        let label = t0(&x, None, &with(r_coll).collision_radius());
+        assert_eq!(
+            (label.state, label.detail),
+            (STATE_COLLISION, 2),
+            "pair 2 within r_coll = {r_coll:e} is not a t = 0 collision at dispatch"
+        );
+    }
+    for r_coll in [1e10, 1e18] {
+        let v = with(r_coll);
+        assert!(
+            v.collision_radius().squared().is_finite(),
+            "the threshold of r_coll = {r_coll:e} is not finite"
+        );
+        let label = t0(&fixture(), None, &v.collision_radius());
+        assert_eq!(
+            (label.state, label.detail),
+            (STATE_COLLISION, 3),
+            "every pair within r_coll = {r_coll:e} is not a triple collision at dispatch"
+        );
+    }
+}
+
+#[test]
+fn qa_dispatch_r_coll_extremes() {
+    check_extremes(|u| validate(u).expect("the sim key is accepted"));
+}
+
+negative_control!(
+    qa_dispatch_r_coll_extremes,
+    "a dispatch that hands the kernel r_coll = 0 for every r_coll below 10⁻¹⁹",
+    expected = "is not a t = 0 collision at dispatch",
+    check_extremes(|u| {
+        let r_coll = if u.r_coll < 1e-19 { 0.0 } else { u.r_coll };
+        validate(&SimUniforms { r_coll, ..*u }).expect("the sim key is accepted")
+    })
+);
