@@ -169,7 +169,7 @@ Of the tasks above. Each line: id, gloss, mark, why.
 | REQ-DEC-034 | `J_D` by central differences | CHANGE | RQ-758 |
 | REQ-DEC-035 | global precision in f64 on the CPU, local f32 on the GPU | KEEP | Is R-926 item 11 |
 | REQ-DEC-042 | the linearised decode's slope tolerance, a calibration | KEEP | Unaffected |
-| REQ-GEN-018 | `|det J_D|` matches the analytic link derivatives | KEEP | A check of any tier |
+| REQ-GEN-018 | `J_D`'s determinant, in magnitude, matches the analytic link derivatives | KEEP | A check of any tier |
 | REQ-DEC-031 | the quad's centre and half-width from the CPU | KEEP | The patch and the fragment still need them |
 | REQ-PAY-064 | `QuadRequest.flags` bits | CHANGE | `DECODE_MODE`'s meaning (RQ-766) |
 | REQ-SCHED-024 | deep zoom's global f64, local f32 | KEEP | Is R-926 item 11 |
