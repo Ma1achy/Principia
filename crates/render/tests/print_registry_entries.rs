@@ -4,10 +4,12 @@
 //! naga and holds each node's passes; an entry without a motion policy, and one without `temporally_stable`, each fail
 //! to register; a pass's nested block comments are skipped whole, and one never closed is refused; a comment between
 //! a pass's tokens is trivia, as white space is; WGSL's white space is Unicode's Pattern_White_Space, as naga reads it,
-//! never Unicode's White_Space; and the stain's codegen given a Print graph node refuses it. Each test registers its
+//! never Unicode's White_Space; a `//` comment ends at each of WGSL's line breaks, as naga ends it, in a pass and in an
+//! occupant's declaration lines; and the stain's codegen given a Print graph node refuses it. Each test registers its
 //! negative control (R-176).
 
 use naga::valid::{Capabilities, ValidationFlags, Validator};
+use render::assemble::{AssembleError, Declaration};
 use render::codegen::{generate as stain_generate, Arg, Call, Node as StainNode, Slot, ValueType};
 use render::print::codegen::{
     generate, Generated, Reads, FRAME_GROUP, PREFIX, TEXTURE_GROUP, UNIFORM_GROUP,
@@ -932,6 +934,118 @@ negative_control!(
     "Unicode's White_Space for WGSL's, as `char::is_whitespace` reads it",
     expected = "yet the pass registered",
     check_spaces(char::is_whitespace)
+);
+
+// ----- WGSL's line breaks -----
+
+/// The characters the line-break test puts after a `//` comment: WGSL's line breaks, then characters that are none:
+/// white space ([`SPACES`]) that is no line break, the control character after the carriage return, and Unicode
+/// White_Space that WGSL refuses (U+00A0, U+2000).
+const AFTER_COMMENT: [char; 13] = [
+    '\n', '\u{B}', '\u{C}', '\r', '\u{85}', '\u{2028}', '\u{2029}', ' ', '\t', '\u{200E}', '\u{E}',
+    '\u{A0}', '\u{2000}',
+];
+
+/// Whether naga ends a `//` comment at `c`: the function after it is defined.
+fn naga_ends_comment(c: char) -> bool {
+    naga::front::wgsl::parse_str(&format!("// note{c}fn f() {{}}"))
+        .is_ok_and(|m| m.functions.len() == 1)
+}
+
+/// Each character of [`AFTER_COMMENT`], placed after a `//` comment before `fn run(`, is read as `ends` says, and
+/// `ends` agrees with naga: where it ends the comment, the pass registers, `run` is its pass's function and the module
+/// compiles; where it does not, the pass defines no `fn run` and is refused.
+fn check_comment_ends(ends: fn(char) -> bool) {
+    for c in AFTER_COMMENT {
+        let pass = format!(
+            "// the pass{c}fn run(uv: vec2<f32>) -> vec4<f32> {{ return vec4<f32>(uv, 0.0, 1.0); }}"
+        );
+        if ends(c) {
+            check_commented(&pass, &[&format!("{c}fn print_n{{k}}_pass0(uv")], |s| s);
+        } else {
+            match commented(&pass) {
+                Ok(g) => panic!(
+                    "{c:?} ends no WGSL comment, yet the pass registered: {}",
+                    g.source
+                ),
+                Err(e) => assert!(e.contains("defines no `fn run`"), "{c:?}: {e}"),
+            }
+        }
+        assert_eq!(
+            ends(c),
+            naga_ends_comment(c),
+            "{c:?}: the comment's end disagrees with naga"
+        );
+    }
+}
+
+#[test]
+fn print_registry_entries_line_comment_ends() {
+    // Every line break naga reads ends the comment, and nothing else does.
+    assert!(naga_ends_comment('\u{2028}') && naga_ends_comment('\r') && !naga_ends_comment('\t'));
+    check_comment_ends(naga_ends_comment);
+}
+
+negative_control!(
+    print_registry_entries_line_comment_ends,
+    "a comment ending at a line feed only",
+    expected = "ends no WGSL comment, yet the pass registered",
+    check_comment_ends(|c| c == '\n')
+);
+
+/// The input names an occupant's declarations give, or its refusal.
+fn inputs(source: &str) -> Result<Vec<String>, AssembleError> {
+    Declaration::parse(source).map(|d| d.inputs.into_iter().map(|i| i.name).collect())
+}
+
+/// Each character of [`AFTER_COMMENT`] between two declaration lines is read as `ends` says: where it ends the first
+/// line's comment, two inputs are declared, as naga reads two comments; where it does not, the line is one, and not
+/// those two inputs.
+fn check_declaration_lines(ends: fn(char) -> bool) {
+    for c in AFTER_COMMENT {
+        let two = inputs(&format!("// @input a{c}// @input b"));
+        if ends(c) {
+            assert_eq!(
+                two.as_ref().ok(),
+                Some(&vec!["a".to_owned(), "b".to_owned()]),
+                "{c:?}: the declaration lines are not split there: {two:?}"
+            );
+        } else {
+            assert!(
+                two.as_ref().ok() != Some(&vec!["a".to_owned(), "b".to_owned()]),
+                "{c:?} ends no WGSL comment, yet two declaration lines were read"
+            );
+        }
+    }
+}
+
+/// The line `source`'s declaration refusal names.
+fn refused_line(source: &str) -> usize {
+    match Declaration::parse(source) {
+        Err(AssembleError::Declaration { line, .. }) => line,
+        other => panic!("{source:?}: no declaration refusal: {other:?}"),
+    }
+}
+
+#[test]
+fn print_registry_entries_declaration_line_breaks() {
+    check_declaration_lines(naga_ends_comment);
+    // A carriage return then a line feed is one line break; a carriage return alone is one; U+2028 is one character.
+    assert_eq!(refused_line("// @input a\r\n// @bad"), 2);
+    assert_eq!(refused_line("\r\r// @bad"), 3);
+    assert_eq!(refused_line("\u{2028}\n// @bad"), 3);
+    assert_eq!(refused_line("// @bad\u{2029}"), 1);
+    assert_eq!(
+        inputs("// @input a\r\n\r\n// @input b\u{85}").expect("declares"),
+        ["a", "b"]
+    );
+}
+
+negative_control!(
+    print_registry_entries_declaration_line_breaks,
+    "a declaration line ending at a line feed only",
+    expected = "ends no WGSL comment, yet two declaration lines were read",
+    check_declaration_lines(|c| c == '\n')
 );
 
 // ----- registration refusals -----

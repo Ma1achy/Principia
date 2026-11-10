@@ -49,7 +49,35 @@ pub(crate) fn is_space(c: char) -> bool {
     )
 }
 
-/// `s` as tokens, each its kind and byte range: comments (`//` to the line's end, `/* */` nested), identifiers,
+/// Whether `c` is a WGSL line break, which ends a `//` comment (WGSL, "Blankspace and line breaks"; "Comments"): the
+/// line feed, vertical tab, form feed and carriage return, U+0085 (next line), U+2028 (line separator) and U+2029
+/// (paragraph separator), the set naga 30.0.1 ends a line comment at. White space ([`is_space`]) that is no line break,
+/// the space, the tab and the marks U+200E and U+200F, is part of the comment.
+pub(crate) fn is_line_break(c: char) -> bool {
+    matches!(c, '\n'..='\r' | '\u{85}' | '\u{2028}' | '\u{2029}')
+}
+
+/// `s`'s lines, split at each line break ([`is_line_break`]), a carriage return then a line feed one break, as WGSL
+/// counts them; like [`str::lines`], a final line break ends the last line and opens none.
+pub(crate) fn lines(s: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut rest = s;
+    while let Some(k) = rest.find(is_line_break) {
+        out.push(&rest[..k]);
+        let brk = if rest[k..].starts_with("\r\n") {
+            2
+        } else {
+            rest[k..].chars().next().map_or(1, char::len_utf8)
+        };
+        rest = &rest[k + brk..];
+    }
+    if !rest.is_empty() {
+        out.push(rest);
+    }
+    out
+}
+
+/// `s` as tokens, each its kind and byte range: comments (`//` to the line break, [`is_line_break`], `/* */` nested), identifiers,
 /// numbers (a digit and the letters and digits after it), white space ([`is_space`]) and single punctuation
 /// characters; and whether every block comment is closed: one never closed is a comment to the end.
 pub(crate) fn tokens(s: &str) -> (Vec<(Tok, usize, usize)>, bool) {
@@ -60,13 +88,11 @@ pub(crate) fn tokens(s: &str) -> (Vec<(Tok, usize, usize)>, bool) {
     while i < b.len() {
         let start = i;
         let c = b[i];
-        // The comment branches compare bytes, never slice `s`: inside a comment `i` steps a byte at a time, through
-        // the middle of a multi-byte character, and a `/`, `*` or newline byte is never part of one (UTF-8).
+        // A line comment ends at a line break, a character (U+2028 is three bytes), so it slices `s`: `i` is at a
+        // character's start there. The block comment compares bytes, never slicing `s`: inside it `i` steps a byte at
+        // a time, through the middle of a multi-byte character, and a `/` or `*` byte is never part of one (UTF-8).
         let tok = if b[i..].starts_with(b"//") {
-            i = b[i..]
-                .iter()
-                .position(|&x| x == b'\n')
-                .map_or(b.len(), |k| i + k);
+            i = s[i..].find(is_line_break).map_or(b.len(), |k| i + k);
             Tok::Comment
         } else if b[i..].starts_with(b"/*") {
             match block_comment_len(&b[i..]) {
