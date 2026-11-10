@@ -1332,7 +1332,6 @@ slow-timeout = { period = "30s", terminate-after = 3 }
 #      66.3 s  validation::qa_TASK-M2-25_gpu qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole
 #     154.3 s  xtask::build_kernel build_kernel_listed_in_ci
 #     689.6 s  xtask::build_kernel build_kernel_runs_in_ci
-#     104.1 s  xtask::lint_wgsl_ctx_occupant lint_wgsl_ctx_occupant_structural_occupants_lint_clean
 #      77.4 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_deny_list_member_by_member
 #      96.4 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_fixtures_fire_as_marked
 #      89.5 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_repository_lints_clean
@@ -1563,7 +1562,6 @@ default-filter = """
         | (binary_id(=validation::qa_TASK-M2-25_gpu) & test(=qa_m253_flat_sin_keeps_rho_angle_near_the_lambda_pole))
         | (binary_id(=xtask::build_kernel) & test(=build_kernel_listed_in_ci))
         | (binary_id(=xtask::build_kernel) & test(=build_kernel_runs_in_ci))
-        | (binary_id(=xtask::lint_wgsl_ctx_occupant) & test(=lint_wgsl_ctx_occupant_structural_occupants_lint_clean))
         | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_deny_list_member_by_member))
         | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_fixtures_fire_as_marked))
         | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_repository_lints_clean))
