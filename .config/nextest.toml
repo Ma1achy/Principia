@@ -285,8 +285,6 @@ success-output = "immediate"
 # already run once in every CI run by `ci.yml` and the nightly `cpu` job, so coverage is unchanged:
 # - validation's `qa_TASK-M0-24`, every test: lists validation's doctests (`cargo test --doc -- --list`) and reads the
 #   workspace's metadata (`cargo tree`); `ci-workspace` runs it, in `ci.yml` and the nightly `cpu` job;
-# - validation's `qa_TASK-M0-25`, its prin inventory: lists every test of `prin` under and without `controls`, to pair
-#   each merged qa test with its control; the `ci` shards and the nightly `cpu` job run it;
 # - xtask's `qa_TASK-M0-22`, its three `xtask ci` runs: every check `xtask ci` makes over the workspace, the golden step
 #   through the real cargo, and the controls' inventory from the stand-in's listing; the `ci` shards and the nightly run
 #   them;
@@ -302,7 +300,6 @@ success-output = "immediate"
 default-filter = """
     not (
         binary_id(=validation::qa_TASK-M0-24)
-        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_control_that_leaves_its_test_passing))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_fails_on_a_test_without_control))
         | (binary_id(=xtask::qa_TASK-M0-22) & test(=qa_m022_ci_passes_when_every_control_trips))
@@ -1595,7 +1592,6 @@ default-filter = """
 #     146.0 s  validation::qa_TASK-M0-21 qa_control_under_another_name_does_not_pair
 #     145.1 s  validation::qa_TASK-M0-21 qa_controls_exist_only_under_the_feature
 #      88.8 s  validation::qa_TASK-M0-21 qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test
-#     130.4 s  validation::qa_TASK-M0-25 qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test
 #     142.3 s  validation::qa_TASK-M0-26 qa_m0_26_a_control_without_an_expected_message_does_not_compile
 #     143.9 s  validation::qa_TASK-M0-26 qa_m0_26_r206_lists_its_five_tests_and_no_child_path
 #     148.2 s  xtask::ci ci_list_runs_no_control
@@ -1754,7 +1750,6 @@ default-filter = """
         (binary_id(=validation::qa_TASK-M0-21) & test(=qa_control_under_another_name_does_not_pair))
         | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_controls_exist_only_under_the_feature))
         | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test))
-        | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
         | (binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_a_control_without_an_expected_message_does_not_compile))
         | (binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_r206_lists_its_five_tests_and_no_child_path))
         | (binary_id(=xtask::ci) & test(=ci_list_runs_no_control))

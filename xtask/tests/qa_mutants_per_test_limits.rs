@@ -639,10 +639,10 @@ negative_control!(
 // ---------------------------------------------------------------------------------------------------------------
 // The control inventories: out of per-mutant runs, still run once by every CI run and nightly.
 
-/// The binaries the owner names, qa_TASK-M0-22/24/25 (with M0-22's r235 file).
-const INVENTORIES: [&str; 4] = [
+/// The binaries the owner names, qa_TASK-M0-22/24/25 (with M0-22's r235 file), but qa_TASK-M0-25, whose two
+/// inventories R-909 retired, its one remaining test no inventory.
+const INVENTORIES: [&str; 3] = [
     "validation::qa_TASK-M0-24",
-    "validation::qa_TASK-M0-25",
     "xtask::qa_TASK-M0-22",
     "xtask::qa_TASK-M0-22_r235",
 ];
