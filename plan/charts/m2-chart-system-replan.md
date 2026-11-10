@@ -193,6 +193,7 @@ Of the tasks above. Each line: id, gloss, mark, why.
 | NEW (N2) | the record contract | NEW | The integrator reads records the CPU wrote |
 | NEW (N3) | each map's slope tier, flags at kink sites | NEW | R-926 item 9 |
 | NEW (N5) | a blend is a chart; edits on both ends; ends exact | NEW | R-925 item 4, R-926 item 3 |
+| NEW (N5) | a signed fold indicator on a blend chart, defined (R-72) | NEW | The Gram factor is unsigned (§ 17.11); RQ-760 (iii-b) and O4, O6 need a signed one |
 | NEW (N6) | time the last coordinate; the playhead the window's centre | NEW | R-926 item 2 |
 | NEW (N7, N9) | the backwards table and its search; never a refusal | NEW | R-925 items 1, 2; R-926 items 7, 8 |
 | NEW (N8) | the five table debug views | NEW | R-925 item 6; R-926 item 10 |
@@ -247,8 +248,8 @@ Of the tasks above. Each line: id, gloss, mark, why.
 ### A.5 Counts
 
 Tasks (A.1): KEEP 19, CHANGE 15, DROP 0, NEW 11. Requirements (A.2, rows; a row may group several ids): KEEP 52,
-CHANGE 22, DROP 1, NEW 6. Rulings (A.3, rows): KEEP 19, CHANGE 6, DROP 1 (R-925 and R-926 are this PR's). Code items
-(A.4): KEEP 7, CHANGE 4. Total: KEEP 97, CHANGE 47, DROP 2, NEW 17.
+CHANGE 22, DROP 1, NEW 7. Rulings (A.3, rows): KEEP 19, CHANGE 6, DROP 1 (R-925 and R-926 are this PR's). Code items
+(A.4): KEEP 7, CHANGE 4. Total: KEEP 97, CHANGE 47, DROP 2, NEW 18.
 
 ## B. The updated M2 chart task list, in dependency order
 
@@ -299,7 +300,9 @@ integrator work (TASK-M4-05) carries on as agreed.
     halves, twice (G8's criterion). Door: one-way, RQ-759.
 11. **N5, the blend chart (NEW), and TASK-M2-65, locked paths (CHANGE).** Acceptance: G4's ends bitwise (REQ-CHART-113),
     G8 and G9, the owner's lock-with-morphs test; a blend nests (a blend's end may be a blend); pan, zoom and rotate on a
-    blend reach both ends. Measurement: the held-`E*` miss mid-morph (§ 17.6's 0.054 median) reported, labelled, not a
+    blend reach both ends; a signed fold indicator on a blend chart is defined (R-72, a definition requirement:
+    the Gram area factor is unsigned, § 17.11), for example the sign of the 2 × 2 Jacobian determinant of a fixed 2D key
+    of the swept state composed with the chart, under physics review. Measurement: the held-`E*` miss mid-morph (§ 17.6's 0.054 median) reported, labelled, not a
     gate (R-850: mid-morph frames never claim held values). Door: one-way, RQ-759 and RQ-760.
 
 ### B.4 Stage 3: the registry and the maps (beside stages 1 and 2 under RQ-769 (a))
@@ -360,9 +363,9 @@ Each with its owner (a role) and the measurement that closes it. None is solved 
 | O1 | Nothing has run on the kernel's real charts; every number is the JS/WGSL prototype's (§ 13.1; R-926) | implementer of N1 | § C, then N4, N7 and M-B on the kernel's charts |
 | O2 | Exact slopes not built; every prototype Jacobian is a finite difference (§ 13.2) | implementer of N3; owner, RQ-758 | M-B (B.4 item 13) |
 | O3 | Tilt lean-each-axis only in the prototype (§ 13.3) | implementer of TASK-M2-61 | none needed: R-474's both maps, built (TASK-M2-36), each re-expressed as an edit of `Q` and tested bitwise per G1 |
-| O4 | A blend 0.4 to 1.0% wrong backwards, cause unknown (`α × β` to the sphere; § 13.4) | implementer of N7; physics reviewer for the cause | the same blend on the kernel's latent chart (periodic `β`, TASK-M2-57) to the exponential-map sphere: wrong share by route, against folded share by Gram sign, at table 64 and 128 |
+| O4 | A blend 0.4 to 1.0% wrong backwards, cause unknown (`α × β` to the sphere; § 13.4) | implementer of N7; physics reviewer for the cause | the same blend on the kernel's latent chart (periodic `β`, TASK-M2-57) to the exponential-map sphere: wrong share by route, against the folded share by the signed fold indicator N5 defines (R-72; the Gram factor is unsigned, § 17.11), at table 64 and 128 |
 | O5 | No lift for periodic angles; an antipodal vortex; blends can fold (§ 13.4) | implementer of N5; owner, RQ-760 | the review's lifted-blend check: jump between neighbouring pixels at mid-morph, lifted against per-pixel shortest arc (prototype: 3.14 rad against 0.002) |
-| O6 | A fold no extension declares has no rule for the true copy (§ 13.5) | owner, RQ-760 (iv) | folded share per blend pair, by the Gram sign |
+| O6 | A fold no extension declares has no rule for the true copy (§ 13.5) | owner, RQ-760 (iv) | folded share per blend pair, by the signed fold indicator N5 defines (R-72), with § 17.11's limit stated: a fold narrower than a sample can be stepped over |
 | O7 | Feasibility by a plain comparison in the prototype (§ 13.6) | implementer of N1 | none: the kernel's exact predicate (`decode/invariant.rs:273`) is used; the review's f32/f64 triple added as a fixture |
 | O8 | Records absolute f32; centre plus offsets not built, so "ragged grid lines at deep zoom" (§ 13.7) | implementer of TASK-M6-07; owner, RQ-766 | the depth at which neighbouring records stop being distinct, absolute f32 against centre plus offsets, at an O(1) coordinate and at the chart origin; criterion: the patch keeps neighbours distinct to at least level 48 (deep zoom § 2's "a floor near ~50"), else reported with the level reached |
 | O9 | `q` not rescaled by size in the prototype's `live` (§ 13.8) | implementer of N7 | none: the kernel's encode (step 0, `canon.rs:9`) is reused, never a new map |

@@ -741,13 +741,16 @@ twice.*
   - (ii-a) The mass block in `μ`, as § 17.2 and REQ-CHART-112 have it. (ii-b) Linear in the masses `m_k` themselves,
     which reaches every ratio too but blends differently.
   - (iii-a) No statistic on a blend chart (§ 17.5 kept): the measure stays `none`. (iii-b) Statistics admitted where
-    the frame's Gram area factor keeps one sign over the view (no fold), refused elsewhere.
+    a signed fold indicator keeps one sign over the view (no fold), refused elsewhere. No such indicator exists yet:
+    the Gram area factor is unsigned (§ 17.11: "a fold reads as a zero crossing, which a coarse grid can step over"),
+    so (iii-b) needs one defined first (R-72), for example the sign of the 2 × 2 Jacobian determinant of a fixed 2D
+    key of the swept state composed with the chart, and it sees only folds the sample grid resolves.
   - (iv-a) No true copy: a folded pixel's backwards answer is the nearest one, labelled, and folded pixels are excluded
     from statistics. (iv-b) A rule declared per blend (for example the copy continuous with `s = 0`).
-- **Recommended:** (i-a), (ii-a), (iii-b) and (iv-a): they keep "morph" to the one meaning the owner gave, keep the
+- **Recommended:** (i-a), (ii-a), (iii-b) once its indicator is defined (else (iii-a)), and (iv-a): they keep "morph" to the one meaning the owner gave, keep the
   design's measured mass block, and keep R-408's "count each system once" honest on a blend.
 - **Measurement:** per blend pair on the kernel's charts (latent to the shape sphere's exponential map, `(L_z, E)` to the
-  sphere), the folded share by the Gram sign and the backwards wrong share at `t = 0`, written as the plan's open item
+  sphere), the folded share by the signed fold indicator (once defined, R-72) and the backwards wrong share at `t = 0`, written as the plan's open item
   "blend wrong backwards"; the `α × β` to sphere blend re-measured on the kernel's latent chart before any cause is
   sought.
 - **Applied meanwhile:** nothing.
