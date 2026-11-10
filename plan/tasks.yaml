@@ -1632,7 +1632,7 @@
 - id: TASK-M3-67
   milestone: M3
   title: "After M2: the trajectory interface on the real integrator, and the outcome-class arms of the conversions (R-916, R-918)"
-  depends_on: [TASK-M2-82, TASK-M2-64, TASK-M2-65, TASK-M3-17, TASK-M3-19]  # R-916
+  depends_on: [TASK-M2-82, TASK-M2-64, TASK-M2-65, TASK-M3-17, TASK-M3-19, TASK-M3-40]  # R-916; TASK-M3-40 for R-565
   needs: []
   requirements: [REQ-CHART-177]
   reviewers: [code, qa, physics]

@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-CHART-177
-- **Depends on:** TASK-M2-82, TASK-M2-64, TASK-M2-65, TASK-M3-17, TASK-M3-19
+- **Depends on:** TASK-M2-82, TASK-M2-64, TASK-M2-65, TASK-M3-17, TASK-M3-19, TASK-M3-40
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -26,3 +26,4 @@ After M2's gate (R-918): the real integrator plugs into the trajectory interface
 
 ## Notes
 - New with R-916 and R-918 (9 Nov 2026), from F5. Waits for M2's gate (R-917).
+- Depends on TASK-M3-40 because the Goal's provider runs at R-565's fixed sync quantum, which TASK-M3-40 builds (REQ-INT-100).
