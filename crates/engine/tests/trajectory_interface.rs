@@ -314,12 +314,40 @@ fn trajectory_interface_lagrange_within_bound() {
         let s = row(&t, k);
         let z = l1(s.r[0]) / l1(c0);
         assert!(z < 1.0, "row {k} has collapsed inward");
+        let radial = s.r[0][0] * s.p[0][0] + s.r[0][1] * s.p[0][1];
+        assert!(radial < 0.0, "row {k} falls inward: r·p = {radial:e}");
         let (err, b) = ((energy(&s) - e0).abs(), homothetic_energy_bound(-e0, z));
         assert!(
             err <= b,
             "homothetic energy at row {k}: {err:e} exceeds the bound {b:e}"
         );
+        check_homothetic_time(&h, &s, t.time(k), k);
     }
+}
+
+/// The homothetic row's own time, read back from its state through the radial Kepler equation, is the boundary's
+/// time `t` within `17u·t_c`. From the state alone: `z = |r₀|/|c₀|`, `ż = z·(r₀·p₀)/(m₀|r₀|²)`, then `cos E = 1 − 2z`,
+/// `sin E = 2ż(1 − cos E)/n` (`n = π/t_c`, the radial orbit's semi-major axis `1/2`), `E` by `atan2` in `(π, 2π)`, and
+/// `t' = (E − sin E − π)/n`. The terms: `z` within `2u` and `ż` within `9u` relative (the provider's `7.5u` and the
+/// read-back), so `cos E` within `4u` and `sin E` within `12u` of a point at most `14u` from the unit circle; `E` from
+/// `atan2` within `14u`; `E − sin E` with derivative `1 − cos E ≤ 2`, `28u`, and its sums, three ulps of `2π`, `24u`;
+/// `n` `1u`: `53u` in `n·t`, `53u/π < 17u` in units of `t_c`.
+fn check_homothetic_time(h: &Lagrange, s: &Ic<f64>, t: f64, k: u64) {
+    let t_c = h.collapse().unwrap();
+    let n = std::f64::consts::PI / t_c;
+    let c0 = h.start().r[0];
+    let r2 = s.r[0][0].powi(2) + s.r[0][1].powi(2);
+    let z = (r2 / (c0[0].powi(2) + c0[1].powi(2))).sqrt();
+    let zdot = z * (s.r[0][0] * s.p[0][0] + s.r[0][1] * s.p[0][1]) / (s.m[0] * r2);
+    let cos_e = 1.0 - 2.0 * z;
+    let sin_e = 2.0 * zdot * (1.0 - cos_e) / n;
+    let big_e = libm::atan2(sin_e, cos_e) + TAU;
+    let back = (big_e - libm::sin(big_e) - std::f64::consts::PI) / n;
+    let (err, b) = ((back - t).abs(), 17.0 * U * t_c);
+    assert!(
+        err <= b,
+        "homothetic row {k}'s time read back: {err:e} exceeds the bound {b:e}"
+    );
 }
 
 negative_control!(
@@ -396,6 +424,20 @@ fn trajectory_interface_terminal_held() {
         );
     }
     check_distinct(&(0..=5).map(|k| row(&t, k)).collect::<Vec<_>>());
+    let index = t.terminal().unwrap().index;
+    for k in index..=10 {
+        let own = p.state(&p.start(), k).unwrap();
+        assert!(
+            same_bits(&own, &row(&t, index)),
+            "the provider holds its terminal at {k} too"
+        );
+    }
+    let held = row(&t, index);
+    let radial = held.r[0][0] * held.p[0][0] + held.r[0][1] * held.p[0][1];
+    assert!(
+        radial < 0.0,
+        "the held state is before the collision, still falling: r·p = {radial:e}"
+    );
 }
 
 negative_control!(
