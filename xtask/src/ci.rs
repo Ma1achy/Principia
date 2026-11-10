@@ -88,12 +88,13 @@ fn build_kernel() -> Result<(), String> {
     crate::build_kernel::run_in_ci(&crate::workspace_manifest())
 }
 
-/// build-kernel's listing-only form: the two files it writes, built by none (R-235).
+/// build-kernel's listing-only form: the three files it writes, built by none (R-235).
 fn build_kernel_list() -> Result<(), String> {
     println!(
-        "build-kernel: would write {} and {}",
+        "build-kernel: would write {} and {}, and {}",
         crate::build_kernel::SPV,
-        crate::build_kernel::WGSL
+        crate::build_kernel::WGSL,
+        crate::build_kernel::READ_WGSL
     );
     Ok(())
 }

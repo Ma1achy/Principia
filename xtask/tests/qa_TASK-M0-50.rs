@@ -17,7 +17,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use validation::negative_control;
 use xtask::lint_wgsl::{
-    check, check_fragment, check_fragment_module, lint, run, Rule, FRAG_DIR, GENERATED,
+    check_fragment, check_fragment_module, lint, run, Rule, FRAG_DIR, GENERATED,
 };
 
 const FLOAT_RULES: [Rule; 4] = [
@@ -529,34 +529,4 @@ negative_control!(
     "the file shifted down a line reports each finding one line later",
     expected = "not reported at line",
     multi_lines(&format!("\n{MULTI}"))
-);
-
-/// The real tree: `lint wgsl` on the workspace passes, and the generated file's `pa_d_min_is_unset` is there and
-/// tests bits (the generated file is checked with every rule by `check`).
-fn real_tree_clean(generated: &str) {
-    assert!(
-        generated.contains("fn pa_d_min_is_unset") && generated.contains("PA_D_MIN_UNSET"),
-        "the generated file has no bit-pattern pa_d_min_is_unset"
-    );
-    let found = check(generated).expect("the generated WGSL parses and validates");
-    assert!(
-        found.is_empty(),
-        "findings on the generated file: {found:?}"
-    );
-}
-
-#[test]
-fn qa_lint_wgsl_workspace_passes() {
-    run(&workspace_root().join("Cargo.toml")).expect("lint wgsl on the workspace");
-    real_tree_clean(&real_generated());
-}
-
-negative_control!(
-    qa_lint_wgsl_workspace_passes,
-    "pa_d_min_is_unset rewritten as an isinf-style self test fails",
-    expected = "findings on the generated file",
-    real_tree_clean(&format!(
-        "{}\nfn qa_unset(d: f32) -> bool {{ return d != d; }}\n",
-        real_generated()
-    ))
 );

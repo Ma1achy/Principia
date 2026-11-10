@@ -318,7 +318,7 @@ merge:
    on two lines meant alike: reword one.
 
    `ci` on `main` catches what slips through: every job runs on a push to `main` (§ "What CI runs on a pull request"),
-   `plan_check_passes_on_the_tree` among them; a pull request's own CI runs on its merge ref, so it sees only what was on
+   `cargo xtask ci`'s plan-check among them; a pull request's own CI runs on its merge ref, so it sees only what was on
    `main` at its last push. The check can't see everything a merge leaves. These still pass:
    two lines differing only in a plain number, a date or value among them, which read as a list's siblings; lines
    under 30 characters; runs over eight lines; an interleaving that moves no required field and repeats no

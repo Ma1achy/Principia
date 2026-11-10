@@ -5849,7 +5849,7 @@
   - R-561
   - R-567
   milestone: M3
-  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39, whose `regularisation_compose` re-run shows every pair including Heggie's, the measured-bad cells' warnings and note 4; TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type (qa review 5607548278 of PR #277, Q8, applied per R-369; *was:* closed by TASK-M3-07). Qa re-check 5607645188 of PR #277, Q10 (applied per R-369): the status and warning are the cell's for the time transformation in force, with its arm and control. *Was (statement):* \"and the pairs measured not to work must carry a warning, never a block (R-561).\""
+  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39, whose `regularisation_compose` re-run shows every pair including Heggie's, the measured-bad cells' warnings and note 4; TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type (qa review 5607548278 of PR #277, Q8, applied per R-369; *was:* closed by TASK-M3-07). Qa re-check 5607645188 of PR #277, Q10 (applied per R-369): the status and warning are the cell's for the time transformation in force, with its arm and control. *Was (statement):* \"and the pairs measured not to work must carry a warning, never a block (R-561).\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split; its arm covers the table's data type and the `none` pairs, and TASK-M3-68's the Aarseth–Zare pairs. *Was:* \"TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type\"."
 - id: REQ-INT-018
   area: INT
   statement: "The regularisation's re-registration count must be visible downstream, as a `re_registrations: u32` profile field or at minimum a per-trajectory count in the payload."
@@ -5948,12 +5948,16 @@
     section: The table gains two rows
   - file: decisions.md
     section: R-162 — The reversible occupant is logH's TTL time mode
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: review checklist
     detail: "AZ+RK4 profile has symplectic=false and reversible=false; the stepper slot under AZ accepts a Mikkola–Tanikawa leapfrog occupant"
   rulings:
   - R-162
   milestone: M3
+  rq:
+  - RQ-756
   note: "R-162: Aarseth–Zare with Mikkola–Tanikawa isn't required; the slot is specified, and the reversible occupant is logH's TTL time mode (REQ-VAL-044)."
 - id: REQ-INT-025
   area: INT
@@ -6340,12 +6344,16 @@
   source:
   - file: docs/design/principia_dd_predictability_horizon.md
     section: "7.3 The f32 horizon is falsified — and the cause is AZ, not precision"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: numerical gate
     detail: "at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form"
   rulings:
   - R-35
   milestone: M3
+  rq:
+  - RQ-756
   note: applies to the AZ occupant
 - id: REQ-INT-045
   area: INT
@@ -6420,11 +6428,15 @@
     section: 0.1 The mechanism, and the fix — measured, not proposed
   - file: docs/design/principia_dd_validation_orbits.md
     section: 5. Immediate action
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: numerical gate
     detail: "figure-eight closure after one period: ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order"
   rulings: []
   milestone: M3
+  rq:
+  - RQ-756
 - id: REQ-INT-050
   area: INT
   statement: "A regularisation-free occupant must be kept permanently, sharing no coordinate machinery with the others, as the arm that adjudicates when regularised occupants disagree."
@@ -6507,12 +6519,16 @@
   source:
   - file: decisions.md
     section: R-19 — Change 8 landed in full *(closes RQ-17)*
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   verify:
     method: property test
     detail: "Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound computed on the fixed τ-schedule."
   rulings:
   - R-19
   milestone: M3
+  rq:
+  - RQ-756
 - id: REQ-INT-055
   area: INT
   statement: The inspector's CPU reference integration must be RK45.
@@ -7508,12 +7524,12 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B (TASK-M3-07), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it"
+    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B (TASK-M3-68), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it"
   rulings:
   - R-71
   - R-563
   milestone: M3
-  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\""
+  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split, and Aarseth–Zare's proposal is TASK-M3-68's. *Was (verify):* \"Aarseth–Zare's pre-floor A and B (TASK-M3-07)\"; *was (this note):* TASK-M3-07 proposes it."
 - id: REQ-INT-106
   area: INT
   statement: "The energy-suspect threshold proposed under REQ-INT-085 must be measured against the default occupant, Heggie × RK4 (R-560), whose regularised energy SUSPECT_ENERGY reads (R-566): its regularised drift, final and max, on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and which suspect predicates it lights on each under the proposed thresholds, recorded with REQ-INT-085's proposal before the M3 gate confirms it."
@@ -16149,7 +16165,7 @@
   rulings:
   - R-822
   milestone: M4
-  note: "Closed by TASK-M4-27. Option (c), the kernel's own sin and cos, is ruled with RQ-687 on M4's cross-backend numbers."
+  note: "Closed by TASK-M4-38, split from TASK-M4-27 (applied per R-369, 10 Nov 2026). Option (c), the kernel's own sin and cos, is ruled with RQ-687 on M4's cross-backend numbers."
 - id: REQ-RENDER-123
   area: RENDER
   statement: "The Anosova physical-frame chart, region D's (TASK-M4-34's third-body pair at the lowering appendix's canonicalise entry), must decode through the DECODE fragment preset without special-casing, its GPU reference reading region D through `in_region_d` as R-871 requires: the full disc rendered literally, unmasked, D drawn as a contour until the symmetry filter (TASK-M8-120) lands; TASK-M4-34 doesn't close until it does (R-914)."
@@ -34201,18 +34217,18 @@
   milestone: M0
 - id: REQ-VAL-163
   area: VAL
-  statement: "Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) and `qa_m0_24_every_registered_control_makes_its_test_fail` (`crates/validation/tests/qa_TASK-M0-24.rs`) must check only what they claim, through a listing-only mode, without re-running every control in the workspace (R-226)."
+  statement: "Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) must check only what it claims, through a listing-only mode, without re-running every control in the workspace (R-226); what qa's retired `qa_m0_24_every_registered_control_makes_its_test_fail` claimed, that `cargo xtask controls` pairs every test with a control `cargo xtask ci` runs, is checked by the CI steps that stay (R-909)."
   source:
   - file: decisions.md
     section: "R-226 — The suite stops re-running every control; folded into TASK-M0-22"
   verify:
+    detail: "code and qa: `controls_on_this_workspace_skips_gui` runs none of the workspace's controls and still fails when what it claims is false (its control); the pull request's CI step `cargo xtask controls --list` fails on a test without a control, and `cargo xtask controls`, in `cargo xtask ci` on each merge to `main`, on a missing or non-tripping control; qa's merged file changes only as far as this needs"
     method: review checklist
-    detail: "code and qa: neither test runs the workspace's controls; each still fails when what it claims is false (its control); the CI step `cargo xtask controls` fails on a missing or non-tripping control; qa's merged file changes only as far as this needs"
   rulings:
   - R-226
   - R-909
   milestone: M0
-  note: "R-909 (9 Nov 2026): `qa_m0_24_every_registered_control_makes_its_test_fail` is among the 17 retired tests; its retirement commit (R-909's step (4)) repoints this requirement to the check that stays, through reqio."
+  note: "R-909 (9 Nov 2026): `qa_m0_24_every_registered_control_makes_its_test_fail` is among the 17 retired tests; its retirement commit (R-909's step (4)) repoints this requirement to the checks that stay, the CI steps `cargo xtask controls --list` and `cargo xtask controls`, through reqio. *Was (statement):* \"Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) and `qa_m0_24_every_registered_control_makes_its_test_fail` (`crates/validation/tests/qa_TASK-M0-24.rs`) must check only what they claim, through a listing-only mode, without re-running every control in the workspace (R-226).\" *Was (verify):* \"code and qa: neither test runs the workspace's controls; each still fails when what it claims is false (its control); the CI step `cargo xtask controls` fails on a missing or non-tripping control; qa's merged file changes only as far as this needs\""
 - id: REQ-VAL-164
   area: VAL
   statement: "No test may rebuild a binary that sibling tests spawn (`cargo build -p xtask` in `qa_m0_21_fixture.rs`), and parallel copies of one fixture must not build into a shared target directory (`xtask/tests/controls.rs`, `qa_m0_21_fixture.rs`, `support/qa_m0_21.rs`, `expected_message.rs`); each is fixed at its cause, and the whole workspace suite then passes 5 times in a row under normal load, with CI green on the head (R-227, R-230)."
@@ -43572,7 +43588,7 @@
   - R-697
   - R-909
   milestone: M0
-  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is. *Was (statement):* \"… every control run exactly once across the shards (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684). R-697 (4 Nov 2026): the owner accepts RQ-684's move and amends R-360 to match. R-909 (9 Nov 2026): tests of the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites are among the 17 retired; each retirement commit (R-909's step (4)) repoints this requirement to what stays, through reqio."
+  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is. *Was (statement):* \"… every control run exactly once across the shards (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684). R-697 (4 Nov 2026): the owner accepts RQ-684's move and amends R-360 to match. R-909 (9 Nov 2026): tests of the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites are among the 17 retired; each retirement commit (R-909's step (4)) repoints this requirement to what stays, through reqio. Retired under R-909: `qa_m0_24_every_registered_control_makes_its_test_fail`, of the split `qa_TASK-M0-24` suite; what stays of the suite is split as before, and the pairing it checked is the CI step `cargo xtask controls --list`. Retired under R-909: `qa_m0_24_every_implementer_test_has_a_registered_control`, of the same suite, whose pairing the same CI step checks. Retired under R-909: `qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test`, validation's half of the split `qa_TASK-M0-25` inventory, whose pairing the CI step `cargo xtask controls --list` checks. Retired under R-909: `qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test`, prin's half, checked by the same step. Retired under R-909: `qa_m0_26_r206_lists_its_five_tests_and_no_child_path`, of the split `qa_TASK-M0-26` suite, a one-off check of R-213's migration; a child path made a `#[test]` again, with no control, fails the CI step `cargo xtask controls --list`. Retired under R-909: `qa_m0_26_r206_test_has_no_child_path_and_qa_child_has_it`, the suite's other check of that migration, on the same terms. Retired under R-909: `qa_cargo_xtask_alias_runs_the_deps_check`, the `cargo xtask deps` half split from `qa_cargo_xtask_alias_runs_deps`, which stays with its listing-only `cargo xtask ci --list`; CI's `cargo xtask deps` step runs the same command through the same alias."
 - id: REQ-SYS-078
   area: SYS
   statement: "The `ci` CI job's test binaries must be built once per feature set its shards run, as a nextest archive (`cargo nextest archive`) that every `ci` shard runs its `--partition hash:<k>/4` slice from (`--archive-file`), so no shard compiles the tests; the shards together still run every test the unsharded run did, and ~10.5 min per job stays the target (R-372, R-325)."

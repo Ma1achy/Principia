@@ -148,7 +148,7 @@ mutant = "crates/kernel/src/burrau.rs:74:7: replace > with >= in primitive"
 justification = "m == n makes m ^ n = 0, so the parity test (m ^ n) & 1 == 1 already refuses every pair the > excludes"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/burrau.rs:116:29: replace | with ^ in seed"
+mutant = "crates/kernel/src/chart/burrau.rs:128:29: replace | with ^ in seed_of_sum"
 justification = "s < 1 and s == 1 cannot both hold, so the two operands of | are never both true, and their ^ is their |"
 
 [[equivalent]]
@@ -200,7 +200,7 @@ mutant = "crates/kernel/src/chart/burrau_acute.rs:455:33: replace > with >= in B
 justification = "nearest_feasible runs only on an infeasible v; v = 1/2 gives L_z = 0, feasible at every K >= 0, so it never reaches the comparison, and at K < 0 no v is feasible, both edges fail, and the clamp returns 1/2 either way"
 
 [[equivalent]]
-mutant = "crates/kernel/src/decode/invariant.rs:471:53: replace > with >= in finish"
+mutant = "crates/kernel/src/decode/invariant.rs:527:53: replace > with >= in finish"
 justification = "held + held is even and doubling_limit is odd (127 at f32, 1023 at f64), so they are never equal and > and >= agree on every input"
 
 [[equivalent]]
@@ -252,23 +252,23 @@ mutant = "crates/kernel/src/encode/ingest.rs:165:39: replace * with / in weighte
 justification = "the forward branch is taken only for k < 3, a mass, whose weight weights() sets to exactly 1, so span * 1 and span / 1 are the same value"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:223:18: replace / with % in wide"
+mutant = "crates/kernel/src/canon.rs:231:18: replace / with % in wide"
 justification = "x finite has exponent field k in -127..=127 (-1023..=1023 at f64); k % 2 takes k's sign, so 2^-(k%2) and 2^((k%2)-k) are both normal powers of two whose product is 2^-k, as k / 2's are, and x times them is the same exact scaling"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:241:28: replace > with >= in wide_add"
+mutant = "crates/kernel/src/canon.rs:249:28: replace > with >= in wide_add"
 justification = "at gap == 60 both select(gap > 60, 60, gap) and select(gap >= 60, 60, gap) give 60"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:269:17: replace | with ^ in wide_greater"
+mutant = "crates/kernel/src/canon.rs:277:17: replace | with ^ in wide_greater"
 justification = "a.e > b.e and a.e == b.e never hold together, so their disjuncts are exclusive and ^ is |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:312:35: replace < with <= in ldexp"
+mutant = "crates/kernel/src/canon.rs:320:35: replace < with <= in ldexp"
 justification = "at k == lo both clamps give lo"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:312:54: replace > with >= in ldexp"
+mutant = "crates/kernel/src/canon.rs:320:54: replace > with >= in ldexp"
 justification = "at k == hi both clamps give hi"
 
 [[equivalent]]
@@ -392,6 +392,10 @@ mutant = "xtask/src/jobq.rs:1511:41: replace | with ^ in leader_exited"
 justification = "WEXITED (0x4) and WNOHANG (0x1) share no bit on both the Linux and the Mac targets, so their ^ is their |, and the options passed to waitid are the same bits"
 
 [[equivalent]]
+mutant = "crates/kernel/src/canon.rs:652:16: replace < with <= in mirror_side"
+justification = "at c = 0 the left side m₂c² is 0, which wide_greater never takes above the right side's δ_λ²·M₀₁·‖ρ‖²·d² ≥ 0, so c ≤ 0 and c < 0 agree on every state"
+
+[[equivalent]]
 mutant = "crates/kernel/src/chart/energy.rs:478:26: replace & with | in invariant_decode"
 justification = "u_ref is read only through the rule's weight, which invariant_rule sets non-zero only for a linear E, so computing it for more mappings changes no K*"
 
@@ -434,6 +438,34 @@ justification = "the two operands are select(first, 1, 0) and select(second, 2, 
 [[equivalent]]
 mutant = "crates/kernel/src/chart/tilt.rs:463:25: replace < with <= in lean_normal"
 justification = "cross[2] = cos τ₁·cos τ₂ from f64 sin_cos of to_radians(τ), never exactly 0 (no double's cos is 0, and the product of two such, at least about 1e-38, never underflows), so < 0.0 and <= 0.0 agree on every input"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:1004:22: replace < with <= in at_inertia"
+justification = "i == target has already pushed the state and left the loop, so i <= target and i < target agree on every i that reaches the step"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:880:40: delete - in axis_tie"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at magnitudes 0.107..2.2, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:904:39: replace - with + in turned"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at magnitudes 0.107..2.2, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:904:60: replace + with - in turned"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at magnitudes 0.107..2.2, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:931:78: replace / with % in turned_ties"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at magnitudes 0.107..2.2, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:931:78: replace / with * in turned_ties"
+justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 word they give is the f64 value rounded at magnitudes 0.107..2.2, whose nearest f32 rounding midpoint is 3.4e-10 away at the closest (measured over all 60 states), so a change of at most 5.7e-12 in the a terms rounds to the same 60 states, bit for bit"
+
+[[equivalent]]
+mutant = "crates/validation/src/cross_backend.rs:647:5: replace os_build -> Option<String> with None"
+justification = "the mutants job runs on ubuntu-24.04, which has no sw_vers, so Command::output errs and os_build returns None there as the mutant does; on the Mac, where it answers, cross_backend_read_back_os_build_is_macos_alone kills it"
 
 [[equivalent]]
 mutant = "crates/engine/src/trajectory.rs:274:14: replace < with <= in eccentric_anomaly"

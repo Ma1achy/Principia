@@ -5,6 +5,8 @@
 //!   `qa_r206_harness_opens_the_selected_backend`'s child path (R-213)." Verify: "a child that sleeps past a short test
 //!   timeout is killed and the helper's error names it, and the child process no longer exists afterwards; a child
 //!   that exits in time returns its output; [...] `cargo test -- --list` lists no child path of `qa_R-206.rs`".
+//!   R-909 retired this file's two checks of R-213's migration, done: the child path is `qa_child r206_opened`, and
+//!   a child path made a `#[test]` again, with no control of its own, fails the CI step `cargo xtask controls --list`.
 //! - REQ-VAL-156: "300 s provisional (R-217)", confirmed by the human at the M0 gate as 600 s (R-376).
 //! - REQ-VAL-154: "every `negative_control!` call in the workspace carries an expected message (the macro requires
 //!   it)", checked on the fixture `fixtures/qa_m0_26/old_form`, a control in R-199's form without the message.
@@ -34,13 +36,6 @@ fn root() -> PathBuf {
         .join("../..")
         .canonicalize()
         .unwrap()
-}
-
-/// The qa_R-206 cargo runs' own target directory (R-224). A cargo run into the workspace's target directory replaces
-/// `target/debug/qa_child` (removes it, then copies the build back) even when nothing is rebuilt, and
-/// `qa_child_r206` spawns that file meanwhile. Here no cargo run writes that file.
-fn target_dir() -> PathBuf {
-    Path::new(env!("CARGO_TARGET_TMPDIR")).join("qa_m0_26-r206")
 }
 
 /// A fresh scratch directory under the target's tmp dir.
@@ -260,142 +255,14 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------------
-// REQ-VAL-155, R-213: `qa_r206_harness_opens_the_selected_backend` is a test only; its child path is the `qa_child`
-// bin's.
+// REQ-VAL-154: the macro requires the expected message.
 
+/// `cargo` in the workspace root; the caller gives it its own target directory.
 fn cargo() -> Command {
     let mut cmd = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned()));
-    cmd.current_dir(root())
-        .env("CARGO_TARGET_DIR", target_dir());
+    cmd.current_dir(root());
     cmd
 }
-
-/// The names `cargo test -p validation --test qa_R-206 -- --list` lists, with or without `controls`.
-fn r206_listing(controls: bool) -> Vec<String> {
-    let mut cmd = cargo();
-    cmd.args(["test", "-q", "-p", "validation", "--test", "qa_R-206"]);
-    if controls {
-        cmd.args(["--features", "controls"]);
-    }
-    let o = cmd
-        .args(["--", "--list", "--format", "terse"])
-        .timed_output()
-        .expect("run cargo test --list");
-    let out = String::from_utf8_lossy(&o.stdout).into_owned();
-    assert!(
-        o.status.success(),
-        "cargo test --list failed:\n{out}\n{}",
-        String::from_utf8_lossy(&o.stderr)
-    );
-    let mut names: Vec<String> = out
-        .lines()
-        .filter_map(|l| l.strip_suffix(": test"))
-        .map(str::to_owned)
-        .collect();
-    names.sort();
-    names
-}
-
-/// `qa_R-206.rs`'s five tests, from TASK-M0-25's list (none of them a child body).
-const R206_TESTS: [&str; 5] = [
-    "qa_r206_harness_explicit_value_overrides_the_default",
-    "qa_r206_harness_logs_the_backend_it_ran_on",
-    "qa_r206_harness_opens_the_selected_backend",
-    "qa_r206_unknown_value_is_still_an_error",
-    "qa_r206_unset_defaults_by_platform_and_explicit_overrides",
-];
-
-fn check_lists_only_the_tests(names: &[String]) {
-    assert_eq!(
-        names, R206_TESTS,
-        "qa_R-206.rs lists more than its five tests"
-    );
-}
-
-#[test]
-fn qa_m0_26_r206_lists_its_five_tests_and_no_child_path() {
-    check_lists_only_the_tests(&r206_listing(false));
-}
-
-negative_control!(
-    qa_m0_26_r206_lists_its_five_tests_and_no_child_path,
-    "the listing under `controls`, which adds a control per test, required to be the five tests alone",
-    expected = "qa_R-206.rs lists more than its five tests",
-    check_lists_only_the_tests(&r206_listing(true))
-);
-
-/// The marker the child path prints.
-const OPENED: &str = "QA_R206_OPENED backend=";
-
-/// The child path is gone from the test: run as the old parent did (the test, filtered exactly, with the old
-/// `QA_R206_CHILD` switch and `--nocapture`), the test binary prints no marker.
-fn test_binary_as_child() -> String {
-    let o = cargo()
-        .args([
-            "test",
-            "-q",
-            "-p",
-            "validation",
-            "--test",
-            "qa_R-206",
-            "--",
-            "qa_r206_harness_opens_the_selected_backend",
-            "--exact",
-            "--nocapture",
-            "--test-threads=1",
-        ])
-        .env("QA_R206_CHILD", "1")
-        .timed_output()
-        .expect("run the qa_R-206 test binary");
-    let out = String::from_utf8_lossy(&o.stdout).into_owned();
-    assert!(
-        o.status.success(),
-        "the test did not open the harness and pass:\n{out}\n{}",
-        String::from_utf8_lossy(&o.stderr)
-    );
-    out
-}
-
-/// The `qa_child` body R-213 moved it to.
-fn qa_child_r206() -> String {
-    let o = Command::new(env!("CARGO_BIN_EXE_qa_child"))
-        .arg("r206_opened")
-        .timed_output()
-        .expect("run qa_child r206_opened");
-    let out = String::from_utf8_lossy(&o.stdout).into_owned();
-    assert!(
-        o.status.success(),
-        "qa_child r206_opened failed:\n{out}\n{}",
-        String::from_utf8_lossy(&o.stderr)
-    );
-    out
-}
-
-fn check_no_child_marker(stdout: &str) {
-    assert!(
-        !stdout.contains(OPENED),
-        "the run printed the child path's marker:\n{stdout}"
-    );
-}
-
-#[test]
-fn qa_m0_26_r206_test_has_no_child_path_and_qa_child_has_it() {
-    check_no_child_marker(&test_binary_as_child());
-    assert!(
-        qa_child_r206().contains(OPENED),
-        "qa_child r206_opened printed no marker"
-    );
-}
-
-negative_control!(
-    qa_m0_26_r206_test_has_no_child_path_and_qa_child_has_it,
-    "the qa_child body's own output, required to carry no child marker",
-    expected = "the run printed the child path's marker",
-    check_no_child_marker(&qa_child_r206())
-);
-
-// ---------------------------------------------------------------------------------------------------------------------
-// REQ-VAL-154: the macro requires the expected message.
 
 /// Copies `fixtures/qa_m0_26/old_form` to a directory of the test's or the control's own, making its validation path
 /// absolute; `add_expected` adds R-212's `expected = …` to the control. Returns `cargo test --no-run --features

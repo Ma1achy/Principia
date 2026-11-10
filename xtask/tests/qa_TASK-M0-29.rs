@@ -16,9 +16,7 @@ mod qa_m0_01;
 
 use qa_m0_01::*;
 use serde_json::{json, Value};
-use std::process::{Command, Output};
 use validation::negative_control;
-use validation::spawn::Spawn;
 
 /// The baseline graph plus `extra` path edges.
 fn baseline_plus(extra: &[(&'static str, &'static str, Kind)]) -> Value {
@@ -32,18 +30,6 @@ fn dep_with(to: &str, field: &str, value: Value) -> Value {
     let mut dep = dep_entry(to, Kind::Normal);
     dep[field] = value;
     dep
-}
-
-/// `xtask deps` run in the workspace root, or on a metadata `doc` when one is given.
-fn xtask_deps(doc: Option<(&str, &Value)>) -> Output {
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_xtask"));
-    cmd.arg("deps").current_dir(workspace_root());
-    if let Some((tag, doc)) = doc {
-        let path = tmpdir().join(format!("{tag}.json"));
-        std::fs::write(&path, serde_json::to_vec_pretty(doc).unwrap()).unwrap();
-        cmd.arg("--metadata").arg(&path);
-    }
-    cmd.timed_output().expect("run xtask deps")
 }
 
 // --- The oracle ------------------------------------------------------------------------------------------
@@ -414,21 +400,6 @@ negative_control!(
     "no edges read is a broken reader, so the live-edges check must reject an empty list",
     expected = "no workspace edges read: the reader is broken",
     check_the_live_edges_are_all_allowed(Vec::new())
-);
-
-#[test]
-fn qa_m0_29_workspace_deps_check_accepts_xtask_deps_on_the_workspace() {
-    check_xtask_deps_passes_on_the_workspace(&xtask_deps(None));
-}
-
-negative_control!(
-    qa_m0_29_workspace_deps_check_accepts_xtask_deps_on_the_workspace,
-    "xtask deps on a graph with kernel → engine fails, so the workspace-deps check must reject it",
-    expected = "cargo xtask deps fails on the workspace",
-    check_xtask_deps_passes_on_the_workspace(&xtask_deps(Some((
-        "qa29_workspace_deps_nc",
-        &baseline_plus(&[("kernel", "engine", Kind::Normal)]),
-    ))))
 );
 
 // --- The alias checks, on runs of cargo in the workspace that need no build ------------------------------------
