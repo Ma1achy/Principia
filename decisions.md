@@ -35351,4 +35351,4 @@ commits had moved that arm to TASK-M3-14 while TASK-M3-14 was stopped).
 
 R-924 is in the "process" group of `plan/rule_groups.yaml`.
 
-Changes the notes of REQ-CHART-132 and REQ-PAY-058; no requirement added or retired.
+Changes REQ-CHART-132 (rulings, note) and REQ-PAY-058 (verify detail, a record correction, and note); no requirement added or retired.
