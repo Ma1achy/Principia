@@ -181,7 +181,7 @@ recommendation. "Direction 1" is extensions on every edge, "direction 2" compute
 | `principia_chart_reference.md` § 5.4 (line 1116) | Each shipped chart's types and counts | CHANGE (RQ-772) | Per-edge table (§ A.11) |
 | `principia_chart_reference.md` § 2.1 (line 284) | The warp's `s` bounded, `t` bounded below 0 | CHANGE (RQ-771) | The sheet and the clamp |
 | `principia_chart_reference.md` § 2.2 (iii) (line 461) | `a = √(2·(K* − Lz²/(2I)))`, always the outward sheet | CHANGE (RQ-771) | A sheet sign, defined under R-72 |
-| `principia_inverse_encode_contract.md` § "Chart-aware validation", "The nearest valid point" (line 469), "A qualitatively different IC" (line 476) | Fixed energy, `L_z` onto the parabola; below the apex the rest start where `L_z = 0`; `K* = 0` or `K* < 0` with `L_z ≠ 0` rejected; a warped chart point below `t = 0` projected to the rest start; other charts clamp in their own coordinates | KEEP | The defined nearest edge system the prototype lacks, on the warp everywhere; under the linear option and on `Φ_θ,L_z` not where it rejects (RQ-771 (ii)) |
+| `principia_inverse_encode_contract.md` § "Chart-aware validation", "The nearest valid point" (line 469), "A qualitatively different IC" (line 481; the reject at 489–494) | Fixed energy, `L_z` onto the parabola; below the apex the rest start where `L_z = 0`; `K* = 0` or `K* < 0` with `L_z ≠ 0` rejected; a warped chart point below `t = 0` projected to the rest start; other charts clamp in their own coordinates | KEEP | The defined nearest edge system the prototype lacks, on the warp everywhere; under the linear option and on `Φ_θ,L_z` not where it rejects (RQ-771 (ii)) |
 | `principia_chart_composition.md` § 3 (line 183), "extension: the natural type" | One type per registry row | CHANGE (RQ-775) | Per edge, kinds and a default |
 | `principia_chart_composition.md` § 4 (line 470), "Extension it implies" | Each warp's type | CHANGE | Becomes the edge's default |
 | `principia_chart_composition.md` § 5.1, pair maps | Polar's periodic and pole-crossing | KEEP | Unaffected |
@@ -290,8 +290,8 @@ linear option (R-471 E2) has the curved, shape-dependent edge the addendum descr
 **Where "nearest edge system" is defined.** REQ-ENC-030's nearest valid point keeps `E` and moves `L_z` onto the
 parabola, keeping `L_z`'s sign, where `K* > 0`; where `K* < 0` it projects to the rest start only a pair with
 `L_z = 0`, and it rejects `K* = 0` or `K* < 0` with `L_z ≠ 0`, since the rest start's `L_z = 0` is another class
-(`docs/contracts/principia_inverse_encode_contract.md` § "A qualitatively different IC", line 476: "At `K* = 0` with
-`L_z ≠ 0` … the pair is rejected (`L_z`'s class would change). At `K* < 0` the apex keeps `L_z`'s class only where
+(`docs/contracts/principia_inverse_encode_contract.md` § "A qualitatively different IC", lines 489–494: "At `K* = 0`
+with `L_z ≠ 0` … the pair is rejected (`L_z`'s class would change). At `K* < 0` the apex keeps `L_z`'s class only where
 `L_z = 0` … every other pair there is rejected"). On the warp that reject never arises: past `s = 0, 1` at `t > 0`,
 `K* > 0` and the projection is the rigid rotation at `±L_max(t)`, keeping the sign; at `t = 0`, `L_z = 0`; and below
 `t = 0` the contract's own last sentence there holds, "`L_z(s, t)` has no real value there. So projecting it to `t = 0`
@@ -383,7 +383,8 @@ the rest is non-visual and so M2's (R-916).
 1. **N12, the extension kinds in the contracts.** *Slot:* § B.2 item 5, with TASK-M2-59 and TASK-M2-60 (chart paths in
    the contracts), after TASK-M2-58 has carried the answers to RQ-771 to RQ-781. *Acceptance:*
    `principia_chart_decoder_contract.md` Part 3 and `principia_chart_reference.md` § 5.4 rewritten from the answers,
-   each replaced line kept as *Was*: the kinds (periodic, pole-crossing, unfold, clamp, saturate, bounded), declared per
+   each replaced line kept as *Was*: the kinds (affine, periodic, pole-crossing, unfold, clamp, saturate, bounded, and,
+   where RQ-772 declares one, a reflection or a new repeat map, each a new kind under R-407's clause 3), declared per
    edge, each with its primary range and its place in R-408's classification order; each shipped chart's per-edge table
    (§ A.11 as ruled), physics-reviewed under R-407's clause 3; the second sheet defined (R-72) in § 2.2; REQ-ENC-030's
    metric named as the clamp's; REQ-CHART-054 and REQ-CHART-056 changed and the NEW requirements of § A.2 added through
@@ -426,20 +427,25 @@ the rest is non-visual and so M2's (R-916).
    projects (every pixel of the warped energy charts; under the linear option and on `Φ_θ,L_z`, the pixels with
    `K* > 0`, or `K* < 0` with `L_z = 0`), to RQ-771 (ii)'s ruled rule on the rest (`K* ≤ 0` with `L_z ≠ 0`, or blank if
    so ruled), and to the clamped chart point elsewhere; saturate, monotone and inside its declared band; blank as
-   today; each with a control that swaps that kind's arm for blank and must fail; the debug view's per-pixel kind; the
-   navigation stop per RQ-781 (TASK-M2-38's fuzz extended: no edit leaves the centre on a clamped or saturated pixel; a
-   pan across the fold lands on sheet 2 with `validate` passing); the sim key per RQ-775 (switching a re-addressing kind
-   requests no new quad). *Measurement:* none. *Door:* one-way where RQ-773, RQ-775, RQ-779 and RQ-781 decide; the rest
-   two-way.
+   today; each kind but blank with a control that swaps that kind's arm for blank and must fail; blank with its own
+   two controls, each of which must fail: its arm swapped for clamp (a pixel past a blank edge drawn as a system), and
+   a blank pixel counted by `energy::count`; the debug view's per-pixel kind; the navigation stop per RQ-781
+   (TASK-M2-38's fuzz extended: no edit leaves the centre on a clamped or saturated pixel; a pan across the fold lands
+   on sheet 2 with `validate` passing); the sim key per RQ-775 (switching a re-addressing kind requests no new quad).
+   *Measurement:* none. *Door:* one-way where RQ-773, RQ-775, RQ-779 and RQ-781 decide; the rest two-way.
 
 4. **N15, the backwards table on an extended chart.** *Slot:* § B.4, after item 16 (N7) and N14. *Acceptance:* N7's
    construction on `InvariantLE` with the spin edges unfolded, the sheet carried as RQ-776 rules; every forward node of
-   both sheets returns to its own cell. *Measurement*, criterion written now: N7's set-up (256 × 256 samples, table 64,
-   scan 16) over `s ∈ [−1, 2]`, at `t = 0` of the run and after it: the wrong share (a worse match than an exhaustive
-   search of the same table) and the round-trip error in cells, reported separately for pixels within 2 pixels of a fold
-   and for the rest; PASS if the rest's wrong share is at most the same run's figure over the square alone; EXPLAINED
-   DIVERGENCE if worse with a named cause; else UNEXPLAINED. The near-fold share is reported, not judged. *Door:*
-   two-way for the construction; one-way for the accuracy, RQ-776 and PR #473's backwards-accuracy entry.
+   both sheets returns to its own cell or, where cells decode to equal states, to a cell whose state equals its own by
+   M-C's match rule (positions equal, `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂`), criterion written now: the untilted `t = 0` row (every
+   cell the rest start) and the fold columns (sheet 2 at `s = 2` equal to sheet 1 at `s = 0`, `s = −1` to `s = 1`),
+   M-C's predicted matches; the round-trip error in cells below is measured to the nearest such cell. *Measurement*,
+   criterion written now: N7's set-up (256 × 256 samples, table 64, scan 16) over `s ∈ [−1, 2]`, at `t = 0` of the run
+   and after it: the wrong share (a worse match than an exhaustive search of the same table) and the round-trip error
+   in cells, reported separately for pixels within 2 pixels of a fold and for the rest; PASS if the rest's wrong share
+   is at most the same run's figure over the square alone; EXPLAINED DIVERGENCE if worse with a named cause; else
+   UNEXPLAINED. The near-fold share is reported, not judged. *Door:* two-way for the construction; one-way for the
+   accuracy, RQ-776 and PR #473's backwards-accuracy entry.
 
 5. **N16, computed axes, the maths.** *Slot:* § B.5, after TASK-M2-61 (the chart-path object, whose window `(c, Q)` PR
    #473 rewrites), N5 (the blend) and N14 (the kinds), beside TASK-M2-81 (path re-timing and alignment). Non-visual, in
@@ -542,8 +548,8 @@ Everything in the addendum that contradicts the repository, the contracts or the
    default warp the edges are straight lines `s = 0, 1` and the row `t = 0` (`principia_chart_reference.md:261`,
    `:264`); the prototype's rectangle `L_z × E` is the linear option's picture, not the default chart's.
 8. **"Nearest edge system" is undefined in the addendum and defined in the contracts only in part**: REQ-ENC-030's
-   nearest valid point (`docs/contracts/principia_inverse_encode_contract.md:469`, `:476`): fixed `E`, `L_z` onto the
-   parabola where `K* > 0`; below the apex the rest start where `L_z = 0`; `K* = 0` or `K* < 0` with `L_z ≠ 0`
+   nearest valid point (`docs/contracts/principia_inverse_encode_contract.md:469`, `:476`, `:489`): fixed `E`, `L_z`
+   onto the parabola where `K* > 0`; below the apex the rest start where `L_z = 0`; `K* = 0` or `K* < 0` with `L_z ≠ 0`
    rejected, a class change. On the warp it covers every pixel (below `t = 0` `L_z` has no real value, so "the
    projection stands"), and "Clamp to K = 0" there is that apex, one system on an untilted, unsliced chart and a line of
    different rest systems under a tilt or slice that moves the configuration or masses. Under the linear option and on
