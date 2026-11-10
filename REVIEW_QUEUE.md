@@ -482,7 +482,7 @@ old saved chart is, or refused as too old.*
 - **Waits:** TASK-M7-45, which builds the per-link refuse-or-recreate path on read (REQ-TOOL-172), on its recreate
   arm for a pre-R-919 record. TASK-M2-57 does not wait: it keeps the three forward maps either way.
 
-## RQ-756: Which state the Lagrange homothetic collapse's terminal holds, the closed form's own state at the triple collision having every body at the centre of mass and unbounded momenta *(silence; a definition (R-72); chart_composition § 18.7 and § 18.2, R-918, R-919 F18; REQ-CHART-173; context: TASK-M2-82)*
+## RQ-757: Which state the Lagrange homothetic collapse's terminal holds, the closed form's own state at the triple collision having every body at the centre of mass and unbounded momenta *(silence; a definition (R-72); chart_composition § 18.7 and § 18.2, R-918, R-919 F18; REQ-CHART-173; context: TASK-M2-82)*
 
 *Filed by TASK-M2-82's implementer, 10 Nov 2026.*
 

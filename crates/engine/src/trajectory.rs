@@ -395,7 +395,7 @@ impl Provider for Lagrange {
     }
 
     /// Boundary 0 is the start, by definition. At and past the collision's boundary the terminal state is the state at
-    /// the last boundary before it (RQ-756: the closed form's own state at `t_c` has every body at the centre of mass
+    /// the last boundary before it (RQ-757: the closed form's own state at `t_c` has every body at the centre of mass
     /// and its momenta unbounded; applied meanwhile).
     fn state(&self, start: &Ic<f64>, k: u64) -> Result<Ic<f64>, Refused> {
         own(start, &self.start)?;
