@@ -26,7 +26,7 @@ use kernel::decode::{decode, Degenerate, Ic};
 use kernel::detect::collision::{classify, CollisionRadius, DminLatch, Separations, Verdict};
 use kernel::detect::t0::{t0, T0};
 use kernel::driver::advance::Cadence;
-use kernel::driver::cadence::WrapperCadence;
+use kernel::driver::cadence::{WordCadence, WrapperCadence};
 use kernel::driver::nsub_table::{thresholds, NsubConfig};
 use kernel::driver::substep::d2_quantised;
 use kernel::driver::wrapper::{
@@ -37,9 +37,9 @@ use kernel::generated::links::Defaults;
 use kernel::occupant::kdk::Kdk;
 use kernel::occupant::{Geom, State};
 use kernel::payload::{
-    sd_detail, sd_dmin_pair, sd_state, tm_t_end_step, SimStateBaseOf, SD_DMIN_PAIR_SENTINEL,
-    STATE_BOUNDED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_ESCAPE, STATE_RUNNING,
-    STATE_SIM_FAILED,
+    sd_detail, sd_dmin_pair, sd_state, tm_t_end_step, FreeGroupWord, SimStateBaseOf,
+    SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_ESCAPE,
+    STATE_RUNNING, STATE_SIM_FAILED,
 };
 use validation::drift::{integrate_fixture, Fixture};
 use validation::negative_control;
@@ -475,18 +475,26 @@ negative_control!(
     }
 );
 
-/// The comparison is strict: a pair at `d² = r_coll²` exactly does not collide, and one whose `d²` is the next f32
-/// below does; `r_coll = 0` fires on nothing, coincident bodies included.
+/// The comparison is strict, for each pair: a pair at `d² = r_coll²` exactly does not collide, and one whose `d²` is
+/// the next f32 below does; `r_coll = 0` fires on nothing, coincident bodies included.
 fn check_boundary(fires: fn(f32, &[[f64; 2]; 3]) -> bool) {
-    // Bodies 0 and 1 0.5 apart: pair 2's quantised d² is 0.25 exactly.
-    let r = [[0.0, 0.0], [0.5, 0.0], [10.0, 10.0]];
-    assert_eq!(
-        Separations::of(&r).d2[2],
-        0.25,
-        "the fixture's d² is not 0.25"
-    );
-    assert!(!fires(0.25, &r), "d² = r_coll² collided");
-    assert!(fires(0.25f32.next_up(), &r), "d² < r_coll² did not collide");
+    for k in 0..3 {
+        // Bodies k + 1 and k + 2 (mod 3) 0.5 apart, body k far: pair k's quantised d² is 0.25 exactly.
+        let mut r = [[0.0; 2]; 3];
+        r[(k + 1) % 3] = [0.0, 0.0];
+        r[(k + 2) % 3] = [0.5, 0.0];
+        r[k] = [10.0, 10.0];
+        assert_eq!(
+            Separations::of(&r).d2[k],
+            0.25,
+            "the fixture's d² is not 0.25"
+        );
+        assert!(!fires(0.25, &r), "d² = r_coll² collided, pair {k}");
+        assert!(
+            fires(0.25f32.next_up(), &r),
+            "d² < r_coll² did not collide, pair {k}"
+        );
+    }
     let coincident = [[0.5, 0.5], [0.5, 0.5], [10.0, 10.0]];
     assert!(!fires(0.0, &coincident), "r_coll = 0 collided");
 }
@@ -585,6 +593,14 @@ fn check_shared(bucket: fn(&WrapperCadence<f64>, &[[f64; 2]; 3]) -> f32) {
         cadence.detector().last(),
         Separations::of(&s.r),
         "the detector's separations are not the projected state's"
+    );
+    let want = bucket(&cadence, &elsewhere);
+    let mut words = vec![FreeGroupWord::default()];
+    let word = WordCadence::new(&mut cadence, &s.r, 0, &mut words[..]);
+    assert_eq!(
+        word.bucket_d2(&elsewhere).to_bits(),
+        want.to_bits(),
+        "the word's cadence does not hand on its inner cadence's d²"
     );
 }
 

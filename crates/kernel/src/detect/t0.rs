@@ -52,21 +52,23 @@ impl T0 {
     }
 }
 
-/// Whether any of `ic`'s masses, positions or momenta is NaN or `±∞`, tested on the bits.
+/// Whether either of `v`'s components is NaN or `±∞`, tested on the bits.
+#[inline]
+fn bad<R: IeeeBits>(v: [R; 2]) -> bool {
+    v[0].non_finite_bits() || v[1].non_finite_bits()
+}
+
+/// Whether any of `ic`'s masses, positions or momenta is NaN or `±∞`, tested on the bits, each by a constant index.
 #[inline]
 fn non_finite<R: IeeeBits>(ic: &Ic<R>) -> bool {
-    let mut bad = false;
-    let mut i = 0;
-    while i < 3 {
-        bad = bad
-            || ic.m[i].non_finite_bits()
-            || ic.r[i][0].non_finite_bits()
-            || ic.r[i][1].non_finite_bits()
-            || ic.p[i][0].non_finite_bits()
-            || ic.p[i][1].non_finite_bits();
-        i += 1;
-    }
-    bad
+    bad([ic.m[0], ic.m[1]])
+        || ic.m[2].non_finite_bits()
+        || bad(ic.r[0])
+        || bad(ic.r[1])
+        || bad(ic.r[2])
+        || bad(ic.p[0])
+        || bad(ic.p[1])
+        || bad(ic.p[2])
 }
 
 /// The dispatch-time label of the decoded IC `ic`, tagged `degenerate` by the decoder or not, under the threshold
