@@ -1071,3 +1071,40 @@ built in parallel, roughly halving the chain of about twenty tasks in a row.*
 - **Measurement:** none; the critical path, counted from `plan/tasks.yaml` under each option.
 - **Applied meanwhile:** nothing; the plan's task list shows both orders.
 - **Waits:** `plan/tasks.yaml`'s rewrite after the one-way items are answered.
+
+## RQ-770: Does R-926 item 6's "just recompute the chart and re-integrate" keep R-92's cache re-addressing for an in-plane pan or zoom? *(conflict in reading; a one-way door, a reading of the owner's words; R-926 item 6, R-92; the caching contract's invalidation table; context: the scheduler and cache tasks of M5, TASK-M2-61)*
+
+*Queued 10 Nov 2026 by the M2 chart re-plan, from code review 5844040504 of PR #473, finding 1; each quote re-read on
+the PR's head. Nothing is chosen here.*
+
+*In plain English: today, sliding or zooming the picture within the same plane reuses the squares already worked out,
+only asking for new ones at the edges. The owner's new rule says pan and zoom "just recompute the chart and
+re-integrate". Read literally, every pan would throw the cache away; read as the owner's point about there being no
+backwards lookup on that path, the cache stays.*
+
+- **File, section:**
+  - `decisions.md` § R-926, item 6: "Pan, zoom, tilt, slice and morph just recompute the chart and re-integrate. There
+    is no inverse anywhere in that path."
+  - `decisions.md` § R-92: "In-plane pan and zoom re-address; slicing out of the plane, tilting and rotating
+    re-integrate; lock changes neither."
+  - `docs/contracts/principia_caching_contract.md`, the invalidation table: "In-plane pan, zoom, lock | **Nothing.** Pan
+    and zoom re-address which quads are asked for on the same slice plane"; and below it: "**in-plane pan and zoom
+    re-address; slicing out of the plane, tilting and rotating re-integrate — and neither invalidates.**"
+- **The conflict:** item 6 lists pan and zoom with tilt and slice as edits that recompute and re-integrate; R-92 and the
+  caching contract keep every quad already integrated on the same plane, computing only the quads a pan or zoom newly
+  asks for.
+- **The question:** does an in-plane pan or zoom still re-address the cache, new quads alone being evaluated on the CPU
+  and integrated?
+- **Options seen:**
+  - (a) Yes: item 6 says how a changed view is computed (the CPU re-evaluates, the GPU re-integrates, no inverse), and
+    a quad already integrated on the same plane is reused, as R-92 and the caching contract say. A tilt, slice, morph
+    or rotation is a new plane and re-integrates, as today.
+  - (b) No: every pan and zoom re-evaluates and re-integrates every visible quad; R-92's re-addressing and the caching
+    contract's row are amended.
+- **Recommended:** (a). It is how the plan reads item 6 (`plan/charts/m2-chart-system-replan.md` § A.3, R-92's row),
+  and (b) would make a pan cost a whole frame of CPU evaluation and integration (M-A's whole-screen rate).
+- **Measurement:** none decides a reading; for the cost, M-A's whole-screen rate against the in-motion rate (plan
+  § B.4, item 14).
+- **Applied meanwhile:** the plan reads (a) and marks it open; `docs/design/principia_core_design.md` § 3's dated note
+  says the point is open.
+- **Waits:** the scheduler and cache tasks that follow R-926 (TASK-M5-04 among them).

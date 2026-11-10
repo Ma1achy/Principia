@@ -46,7 +46,7 @@ R-926, the owner's eleven chart-system decisions of 10 Nov.
 the other path arms, the mass block, statistics and folds on a blend; RQ-761, time on the integrator's integer grid;
 RQ-762, the window's per-coordinate scale; RQ-763, how much of stage 1 stays bitwise; RQ-764, the momentum seed;
 RQ-765, what the GPU decode entries become; RQ-766, a large quad's forward table; RQ-767, the table route's accuracy
-outside a morph; RQ-768, what `ctx.chart.z` means in R-926; RQ-769, stage 3 beside stages 1 and 2.
+outside a morph; RQ-768, what `ctx.chart.z` means in R-926; RQ-769, stage 3 beside stages 1 and 2; RQ-770, whether pan and zoom keep the cache.
 
 **Tasks** are glossed by their row in § A.1 the first time they appear; requirements by their row in § A.2. Two
 appear outside those tables: TASK-M2-36, the two tilt maps on the latent-control charts (built), and REQ-INT-038, the
@@ -64,7 +64,7 @@ plan's recommendation.
 | Task | What it builds (gloss) | Mark | Why |
 |---|---|---|---|
 | TASK-M2-57 | the decoder's mirror step removed, latent `β` periodic | KEEP | Independent of R-926; proposed to land before TASK-M2-61's baseline, its edge to TASK-M2-65 dropped (applied per R-369: task scoping), so the baseline is frozen once |
-| TASK-M2-58 | the gate: the owner's rulings applied to the composition design | CHANGE | Also carries R-925, R-926 and the answers to RQ-758 to RQ-769 into the design's body |
+| TASK-M2-58 | the gate: the owner's rulings applied to the composition design | CHANGE | Also carries R-925, R-926 and the answers to RQ-758 to RQ-770 into the design's body |
 | TASK-M2-59 | the chart composition in the contracts | CHANGE | Its "three lowerings" become one CPU evaluation and two fragment routes (closed form, table); adds the CPU-to-GPU record and table contract (N2) |
 | TASK-M2-60 | chart paths in the contracts | CHANGE | A path is window edits plus the system blend (R-926 items 1, 3); § 17.2's other arms wait on RQ-760 |
 | TASK-M2-61 | the chart-path object, today's operations bitwise through it | CHANGE | Core types become map, window `(c, Q)`, blend and lock (R-926); the type sketch is revised from v10 for the owner (R-864 item 1, R-919); its bitwise scope waits on RQ-763; its window scale on RQ-762 |
@@ -116,7 +116,7 @@ Of the tasks above. Each line: id, gloss, mark, why.
 | Requirement | Gloss | Mark | Why |
 |---|---|---|---|
 | REQ-DEC-055, REQ-DEC-056 | mirror step removed; periodic `β` link | KEEP | TASK-M2-57 as written |
-| REQ-CHART-125 | the composition's rulings applied before its tasks | CHANGE | Adds R-925, R-926 and RQ-758 to RQ-769 |
+| REQ-CHART-125 | the composition's rulings applied before its tasks | CHANGE | Adds R-925, R-926 and RQ-758 to RQ-770 |
 | REQ-CHART-094 | composition in the contracts, three lowerings | CHANGE | One CPU evaluation; fragment closed form or table |
 | REQ-CHART-095 | region D defined in chart_reference | KEEP | A map |
 | REQ-CHART-108, REQ-CHART-109, REQ-CHART-110 | both-held's computed form, outcomes; encode under a hold | KEEP | Map maths |
@@ -203,7 +203,7 @@ Of the tasks above. Each line: id, gloss, mark, why.
 |---|---|---|
 | R-82 | KEEP | Stands until RQ-764 is answered |
 | R-90 | KEEP | The switch to the one-cell patch (RQ-766 recommends keeping it) |
-| R-92 | KEEP | Pan and zoom re-address cached quads; R-926 item 6's "recompute and re-integrate" is read as "no inverse on the path", not "no cache" |
+| R-92 | KEEP | Pan and zoom re-address cached quads; reading R-926 item 6's "recompute and re-integrate" as "no inverse on the path", not "no cache", is the owner's: RQ-770 recommends it |
 | R-116 | CHANGE | Amended in part by R-925 |
 | R-407, R-408 | KEEP | Axis extension types and the count stand; blend folds per RQ-760 |
 | R-469 | KEEP | The stop stands; with the re-solve, RQ-759 |
@@ -260,7 +260,7 @@ integrator work (TASK-M4-05) carries on as agreed.
 
 ### B.1 Before the baseline
 
-1. **TASK-M2-58, the gate (CHANGE).** Acceptance: every answer to RQ-758 to RQ-769 written into the composition design's
+1. **TASK-M2-58, the gate (CHANGE).** Acceptance: every answer to RQ-758 to RQ-770 written into the composition design's
    body, each with its *Was*. Measurement: none. Door: one-way, every RQ.
 2. **N1, the first slice (NEW).** § C. Door: two-way; its outcome decides nothing the owner has ruled.
 3. **TASK-M2-57, `β` periodic (KEEP).** Acceptance: as its task file. Its edge to TASK-M2-65 dropped so it lands before
@@ -497,5 +497,6 @@ Everything in the prototype's documents that contradicts the repository, the con
 | RQ-767 | The backwards table outside a morph: how accurate, and may it sharpen its answer with the chart's own forward code? |
 | RQ-768 | `ctx.chart.z`: the forward value the corpus defines, or something new read backwards? |
 | RQ-769 | May the registry and map tasks run in parallel with the path object and the lock, roughly halving the chain? |
+| RQ-770 | Does sliding or zooming the picture still reuse the squares already worked out, or recompute everything? |
 
-The six further queue numbers reserved for this re-plan are unused and released.
+RQ-770 was filed in review; the five further queue numbers reserved for this re-plan are unused and released.
