@@ -21,13 +21,17 @@
 //! - **The joint bound** `horizon_steps × N_max ≤ 2³² − 1`, so the exact `total_substeps` u32 cannot overflow
 //!   ([`check_total_substeps`]). With `horizon_steps ≤ 65535` and `N_max` at most the table's maximum length it holds
 //!   for every accepted sim key; it is asserted all the same, as Part 5 asks.
-//! - **The carried lengths and thresholds**, each refused with its own reason where the branch it feeds would
-//!   silently read as "never" or not a number: `r_coll` and `r_close` finite and not negative (`r_coll = 0` is
-//!   accepted, Part 7's "refuses to regularise"); `tau` finite and positive, since Part 7's escape test `|Δn̂| < tau`
-//!   is strict and `|Δn̂|` is never below 0, so at `tau = 0` escape never fires; `eps_E` and `eps_L` finite and
-//!   positive, since each is only the floor under a relative drift's denominator, `δE = ΔE / max(ε_E, |E₀|)`
-//!   (dd_integrator §3.5), and with a floor not positive and `E₀ = 0`, on the `E` axis of an `(L_z, E)` chart, the
-//!   drift is `0/0`.
+//! - **The carried lengths and thresholds**, each refused with its own reason where the branch it feeds would silently
+//!   read as "never" or not a number: `r_coll` and `r_close` finite and not negative (`r_coll = 0` is accepted, Part
+//!   7's "refuses to regularise"); `r_coll²` rounded once to f32, the kernel's collision threshold
+//!   (`kernel::detect::collision::CollisionRadius::from_r_coll`), finite: a `±∞` may be tested only on its bits
+//!   (gpu_determinism_note § "The discipline", rule 4), and a finite-math backend may not honour `d² < +∞`, so an
+//!   `r_coll` above about `1.8·10¹⁹` is refused, never clamped to `f32::MAX`: dispatch refuses a carried value rather
+//!   than alter it, as it does `T`, and as the `N_sub` table refuses an infinite threshold (R-502); `tau` finite and
+//!   positive, since Part 7's escape test `|Δn̂| < tau` is strict and `|Δn̂|` is never below 0, so at `tau = 0` escape
+//!   never fires; `eps_E` and `eps_L` finite and positive, since each is only the floor under a relative drift's
+//!   denominator, `δE = ΔE / max(ε_E, |E₀|)` (dd_integrator §3.5), and with a floor not positive and `E₀ = 0`, on the
+//!   `E` axis of an `(L_z, E)` chart, the drift is `0/0`.
 //! - **The softening length**, `epsilon = 0`: no force law takes `epsilon`, and the corpus does not define softened
 //!   gravity (dd_generation_root §3.7, "Open"; RQ-627), so a run with any other `epsilon`, NaN and ±∞ included, would
 //!   come back Newtonian under the `softened` tag. It is refused until the force law is built.
@@ -41,6 +45,7 @@
 
 use core::fmt;
 
+use kernel::detect::collision::CollisionRadius;
 use kernel::driver::nsub_table::{thresholds, NsubTableError};
 use kernel::driver::wrapper::WrapperUniforms;
 use ledger::constants::{G, HORIZON_STEPS_MAX, M_TOTAL, T_HORIZON_MAX};
@@ -91,6 +96,12 @@ pub enum DispatchError {
     Nsub(NsubTableError),
     /// `r_coll` is not finite or is negative: at NaN `d² < r_coll²` is never true, so collisions would be silently off.
     CollisionRadius {
+        /// The `r_coll` carried.
+        r_coll: f64,
+    },
+    /// `r_coll²` rounded once to f32, the kernel's collision threshold, is not finite: the collision branch would
+    /// compare with `+∞` (gpu_determinism_note rule 4).
+    CollisionThreshold {
         /// The `r_coll` carried.
         r_coll: f64,
     },
@@ -186,6 +197,10 @@ impl fmt::Display for DispatchError {
                 f,
                 "r_coll {r_coll} is refused: not finite or negative, the collision branch would never fire"
             ),
+            Self::CollisionThreshold { r_coll } => write!(
+                f,
+                "r_coll {r_coll} is refused: its square rounded to f32, the collision threshold, is not finite"
+            ),
             Self::EscapeThreshold { tau } => write!(
                 f,
                 "tau {tau} is refused: not finite and positive, the escape arm would never fire"
@@ -277,6 +292,14 @@ impl Validated {
             thresholds: self.uniforms.thresholds,
         }
     }
+
+    /// The kernel's collision threshold for the accepted `r_coll` (integrator_contract Part 7): `r_coll²` rounded once
+    /// to f32 (`kernel::detect::collision::CollisionRadius::from_r_coll`), the same at f64 and f32, so the collision
+    /// branch reads the sim key's value on every pipeline. `r_coll` itself stays on the sim key
+    /// ([`SimUniforms::sim_key_bytes`]), which every output is keyed by.
+    pub fn collision_radius(&self) -> CollisionRadius {
+        CollisionRadius::from_r_coll(self.uniforms.r_coll)
+    }
 }
 
 /// The joint bound `horizon_steps × N_max ≤ 2³² − 1` (Part 5; payload §8), in exact integer arithmetic.
@@ -324,6 +347,9 @@ fn finite_positive(x: f64) -> bool {
 fn check_carried(u: &SimUniforms) -> Result<(), DispatchError> {
     if !finite_not_negative(u.r_coll) {
         return Err(DispatchError::CollisionRadius { r_coll: u.r_coll });
+    }
+    if !((u.r_coll * u.r_coll) as f32).is_finite() {
+        return Err(DispatchError::CollisionThreshold { r_coll: u.r_coll });
     }
     if !finite_positive(u.tau) {
         return Err(DispatchError::EscapeThreshold { tau: u.tau });

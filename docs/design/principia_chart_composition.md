@@ -62,7 +62,8 @@ and path maths, each an engine function with its tests, today's charts and opera
 lowering, display and the GUI stay in their milestones as thin adapters onto it, and tasks mixing the two are split
 (§ 15). R-917: the build order is the chart system, then the integrator, then everything visual, and M2's gate is the
 checklist G1 to G14 (`plan/MILESTONES.md`). R-918: TASK-M3-14 waits for that gate, and M2's maths that reads a trajectory
-reads it through the interface of § 18.7, tested on exact fixtures. R-919: the owner's answers to the plan's frictions: the
+reads it through the interface of § 18.7, tested on exact fixtures. R-924: TASK-M3-14 resumes now; following it, per R-369,
+FTLE's chart independence (REQ-CHART-132) moves to TASK-M3-69, which waits on TASK-M2-71 and that gate. R-919: the owner's answers to the plan's frictions: the
 merged GUI routes made adapters in TASK-M2-64 (F1 (a)); the gate test's round trip read as R1, bitwise (F10; § 17.14); "round
 trips across paths" read as G4 (F11); `τ` provisional at M2 (F13 (b)); RQ-679's spans answered now, proposed by physics for
 the owner to confirm, tilts into `ν₀`, `L_z` and `K` in M2 (F14); R-864's sketch approved when TASK-M2-61 brings it; the
@@ -70,6 +71,26 @@ trajectory fixtures the Lagrange equilateral homographic solution and the figure
 by measurement with its criterion written first (R-649, R-650). R-920: the owner confirmed RQ-679's spans as physics
 proposed (`principia_chart_reference.md` § 4.5). The status above, Proposed, stands until TASK-M2-58 (was
 TASK-M4-37) carries the rulings into the body.
+
+**The owner's decisions of 10 Nov 2026 on the chart system (R-925, R-926).** Where the body reads otherwise, these
+rule; the one-way questions they leave are filed with the plan that proposes their tasks,
+`plan/charts/m2-chart-system-replan.md`, and no task is dispatched from it. A chart is a map, from named coordinates
+to a system state and a time, composed with a flat window, a centre and a basis; pan, zoom, rotate, tilt and slice
+are edits of the window, an axis change a tilt to 90° (R-926, item 1). Time is the last coordinate of every map and the
+playhead the window's centre along it (item 2), so § 18.1's "a chart mode" and § 18.4's "time is never a tilt
+target" and its cut from a time-axis chart to an IC-only chart give way, R-842 amended in part; what time as a
+coordinate does on the integrator's integer grid is open. A morph is a blend of two charts' states, linear in masses,
+momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends (item 3;
+R-925, item 4): "morph" names this system blend only, a turn of the window within one map, § 17.2's `Path::Tilt` and
+§ 17.7's plane-to-plane path included, is a tilt, and a blend is a chart; what becomes of § 17.2's other arms is open.
+The CPU evaluates every chart in f64 and the GPU only integrates records, each quad dispatched with a forward table
+built on the CPU, with no inverse on that path (items 5 and 6): § 7's three lowerings are no longer three integrator
+routes, § 7.2's CPU batch is how every view is filled, and its seam-3 exception, R-839, is superseded. The fragment
+side keeps a chart's generated shader code where it has closed-form code and otherwise reads CPU-built tables, a baked
+backwards table with a table search as fallback for Chart position, `ctx.chart.z` and the decode and round-trip
+presets, never a refusal (items 7 and 8; R-925, items 1 and 2): § 3's "`numerical` (CPU batch only, never in the
+kernel)" holds for the integrator, and the fragment reaches such a chart through tables. Slopes come in three tiers,
+exact, implicit and none (item 9); a small quad's one-cell table is the linearised decoder (item 11).
 
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
@@ -1512,7 +1533,7 @@ Each with a control (R-176), named here and owned by a task.
 | `seam_jitter_flagged` | on a composed chart the copies are the sampling note's offsets in `(u, v)`, whatever the seam; a footprint across a numerical seam, a closed-form CPU batch row's two-root branch or mask, polar's branch line or a baked chart's mask, is flagged, its `E + 1` copies all in the pool, its spread and `error_ratio` carrying `seam-contaminated`; two orders, one flag | a copy dropped at the seam; the flag read from a neighbour | TASK-M8-102 |
 | `seam_refinement_masked` | a flagged footprint doesn't fire `unresolved`, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes `Seam`, a mixed quad included, with `n_seam` counted, and its `coherence` doesn't raise its priority; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart of today's registry bitwise today's | the mask removed: quads split along the seam at every depth; the mask applied to an unflagged footprint; `Keep` taken for `Seam`; `Seam` taken only when every footprint is flagged | TASK-M8-102 |
 | `statistic_measure` | a statistic over a warped chart is weighted into a named measure or labelled `per pixel of this chart`; a fixture of known fraction recovered through a power warp; a fraction in a paper's own measure equals the flat grid in the paper's coordinates | no weight and no label; the weight inverted; a count of quadtree leaves fed in | TASK-M2-71 (R-916; *was* TASK-M8-100) |
-| `ftle_chart_independent` | a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one `λ_T` bit for bit, read on copy 0 (§ 6.5) | `δ₀`'s direction taken from a chart tangent, which only the third chart can catch: a warp rescales the tangent and keeps its direction | TASK-M3-14 (R-918; *was* TASK-M8-100) |
+| `ftle_chart_independent` | a linear chart, a warped one at a pixel where the warp's value is exact, and a third with a different tangent through the same state, a tilted pair, decode one bit pattern and give one `λ_T` bit for bit, read on copy 0 (§ 6.5) | `δ₀`'s direction taken from a chart tangent, which only the third chart can catch: a warp rescales the tangent and keeps its direction | TASK-M3-69 (per R-369, following R-924; *was* TASK-M3-14 (R-918), and before it TASK-M8-100) |
 | Golden | `cargo xtask golden decode-preset`: region D through the DECODE preset, TASK-M4-34's acceptance (R-914; *was* TASK-M4-06's), unchanged | as that task's | TASK-M4-34 |
 
 The test names `round_trip_complete` to `ftle_chart_independent`, `trajectory_polar_unfolded`, the `symmetry_filter_` tests and `path_lower_half_stays` (§ 17.14) are this design's proposals; the two the order asks for are the owner's.
@@ -1679,7 +1700,8 @@ tests green):
 TASK-M2-61's baseline is the digest every later task is held to, TASK-M2-66 included. TASK-M2-55 sits in stage 3: it is new
 capability, and the re-expression lands before any (R-864 item 3, R-916).
 
-**After M2's gate,** each an adapter on the M2 core: TASK-M3-14 (FTLE, REQ-CHART-132) and TASK-M3-67 (the trajectory
+**After M2's gate,** each an adapter on the M2 core: TASK-M3-69 (FTLE's chart independence, REQ-CHART-132, split per R-369 from
+TASK-M3-14, the FTLE shadow, when R-924 resumed it) and TASK-M3-67 (the trajectory
 interface on the real integrator, the outcome-class arms) in M3; TASK-M4-33 (baked entries, the cap, V1's decode time),
 TASK-M4-34 (region D's baked variant, its lowering row and GPU reference) and TASK-M4-06's GPU band walk in M4; TASK-M7-72
 (contours of any primitive) in M7; and in M8 TASK-M8-48, TASK-M8-125 and TASK-M8-129 (the panels, the lock badge, D19 and
@@ -1687,12 +1709,12 @@ D23), TASK-M8-102 (seam flags, refinement, the browser route), TASK-M8-103 and T
 charts), TASK-M8-107 and TASK-M8-108 (live paths, the Sequence's segment and export), TASK-M8-113 to TASK-M8-116 (the
 column march, storage, the UI), TASK-M8-118 (`τ` and the GPU tags; `τ` provisional at M2, R-919 F13), TASK-M8-120 (the
 filter's display, toggle and real-run test), TASK-M8-126 (points of interest drawn) and TASK-M8-128 (final-condition
-charts). TASK-M8-100 is retired, its warps TASK-M2-71's and its FTLE test TASK-M3-14's.
+charts). TASK-M8-100 is retired, its warps TASK-M2-71's and its FTLE test TASK-M3-69's (per R-369, following R-924; *was* TASK-M3-14's).
 
 **What can't be tested in M2, and where it goes** (R-918): "outcome class unchanged" in the conversion tests needs
 integrated outcomes (TASK-M3-67); the time-axis column against the playhead and its extension read the real march
 (TASK-M8-113); the owner's `symmetry_filter_rest_reconstructs` on real runs (TASK-M8-120); final-condition charts
-(TASK-M8-128); FTLE's independence of the chart (TASK-M3-14). Nothing of the core is impossible in M2.
+(TASK-M8-128); FTLE's independence of the chart (TASK-M3-69, per R-369 following R-924; *was* TASK-M3-14). Nothing of the core is impossible in M2.
 
 **Before R-916, for the record.**
 

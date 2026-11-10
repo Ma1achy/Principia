@@ -17,6 +17,8 @@ This is axiom 4 ("charts lower; they do not interpret") made literal: the resolu
 
 **The factoring that keeps the space finite:** the configuration tuple does *not* lower into one shader. Chart map + decode + canonicalise + wrapper + occupant lower into the **compute pipeline**; the stain graph + compositor lower into the **fragment pipeline**; the two meet *only* through `SimState`/`ICDescriptor`. Two small keyed sets that compose, never one product.
 
+*10 Nov 2026 (R-926).* The chart map and the decode no longer lower into the compute pipeline: the CPU evaluates them in f64 and sends each quad its forward table, from which the integrator's records are formed, and the compute pipeline integrates those records through the wrapper and the occupant, with no chart code in the integrator (R-926, items 5 and 6). The fragment pipeline keeps the chart's generated decode and encode where the chart has closed-form shader code, and reads CPU-built tables where it has none (R-925). The paragraph above is kept as written for what it says of the fragment side and of `SimState` and `ICDescriptor`; its compute-side list is *Was*.
+
 ---
 
 ## Part 2 — Two assembly mechanisms (the substrate split; the old "one mechanism" claim retires)
@@ -57,6 +59,8 @@ The central tension: bake too much → variant explosion and compile stalls; uni
 | Per-quad (`c, h, x₀, J_D`, quad `T`, decode flag) | **PER-QUAD UNIFORM** | deep-zoom doc |
 | Mass source | *(simplified away)* | mass is **always produced by the decode** (in the Rust kernel) — from per-pixel axis values or from uniform z-slice components; one code path. `requires_per_pixel_mass` survives only as CPU-side metadata saying whether `SimUniforms.m[3]` is trustworthy for CPU consumers |
 <!-- /retired-terms -->
+
+*10 Nov 2026 (R-926).* Under R-926 the rows above that concern the chart (chart type, link selection, decode mode, chart params and the per-quad `x₀`, `J_D`) govern the CPU's f64 evaluation and the fragment's generated code, not the compute pipeline: navigation is a re-evaluation of the chart on the CPU and an upload of the quads' forward tables, never a compile; the per-quad values travel with the quad as its forward table, a one-cell table (a centre and slopes) being the linearised decoder (R-926, items 6 and 11). The rows themselves are kept as written until the plan's tasks rewrite this Part; the integrator's rows (occupant, tier co-computations, ensemble copy, bring-up mode, wrapper config) stand.
 
 ### Fragment side
 

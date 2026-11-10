@@ -1400,9 +1400,9 @@
 - id: TASK-M3-14
   milestone: M3
   title: The Benettin FTLE shadow
-  depends_on: [TASK-M3-05, TASK-M3-06, TASK-M2-71]  # R-918
+  depends_on: [TASK-M3-05, TASK-M3-06]  # R-369, following R-924: TASK-M2-71 (R-918) dropped with REQ-CHART-132
   needs: [REQ-PAY-021, REQ-PAY-026, REQ-PAY-032]
-  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-CHART-132]  # R-918
+  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038]  # R-369, following R-924: REQ-CHART-132 to TASK-M3-69
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-15
@@ -1645,6 +1645,14 @@
   requirements: [REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-080]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.1, PIT-9]
+- id: TASK-M3-69
+  milestone: M3
+  title: "The FTLE field's chart independence (R-369, following R-924)"
+  depends_on: [TASK-M3-14, TASK-M2-71]  # R-369, following R-924; after M2's gate (R-918)
+  needs: []
+  requirements: [REQ-CHART-132]  # R-369, following R-924, from TASK-M3-14 (R-918)
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
@@ -2915,7 +2923,7 @@
 - id: TASK-M7-45
   milestone: M7
   title: "The decoder's identity per link: each recorded link's own entry hash, refusing exactly the changed link (R-483 X4)"
-  depends_on: [TASK-M7-31, TASK-M7-32]  # R-521 ruled RQ-385; no longer waits; TASK-M7-32 builds the tEXt chunk (code review F8 of PR #265, applied per R-369)
+  depends_on: [TASK-M7-31, TASK-M7-32, TASK-M2-57]  # R-521 ruled RQ-385; no longer waits; TASK-M7-32 builds the tEXt chunk (code review F8 of PR #265, applied per R-369); TASK-M2-57 writes the pre-M2-57 fixture REQ-TOOL-172's retired-link arm reads (R-921; physics review 5836519618 of PR #469, applied per R-369)
   needs: []
   requirements: [REQ-TOOL-172, REQ-TOOL-186]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone

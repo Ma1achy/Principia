@@ -466,3 +466,7 @@ justification = "the turned ties' a is at most 2δ_λ = 2e-12, and every f32 wor
 [[equivalent]]
 mutant = "crates/validation/src/cross_backend.rs:647:5: replace os_build -> Option<String> with None"
 justification = "the mutants job runs on ubuntu-24.04, which has no sw_vers, so Command::output errs and os_build returns None there as the mutant does; on the Mac, where it answers, cross_backend_read_back_os_build_is_macos_alone kills it"
+
+[[equivalent]]
+mutant = "crates/engine/src/trajectory.rs:281:14: replace < with <= in eccentric_anomaly"
+justification = "f == 0.0 has already returned mid, so f <= 0.0 and f < 0.0 agree on every f that reaches the sign test"

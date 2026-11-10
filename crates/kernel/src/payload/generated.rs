@@ -169,6 +169,18 @@ pub const STATE_SIM_FAILED: u32 = 4;
 /// The `state` code of decode_failed (payload §2).
 pub const STATE_DECODE_FAILED: u32 = 5;
 
+/// `collision`'s `detail` code 0: pair 0 (payload §2).
+pub const DETAIL_COLLISION_PAIR_0: u32 = 0;
+
+/// `collision`'s `detail` code 1: pair 1 (payload §2).
+pub const DETAIL_COLLISION_PAIR_1: u32 = 1;
+
+/// `collision`'s `detail` code 2: pair 2 (payload §2).
+pub const DETAIL_COLLISION_PAIR_2: u32 = 2;
+
+/// `collision`'s `detail` code 3: all three: triple collision (payload §2).
+pub const DETAIL_COLLISION_ALL_THREE_TRIPLE_COLLISION: u32 = 3;
+
 /// `decode_failed`'s `detail` code 0: non-finite decode output (payload §2).
 pub const DETAIL_DECODE_FAILED_NON_FINITE_DECODE_OUTPUT: u32 = 0;
 

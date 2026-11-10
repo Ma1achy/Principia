@@ -7,11 +7,13 @@
 //! `detail` and an outcome class, 1-based ([`display`]; R-449); the link registry ([`links`]); the payload schema
 //! version, the ledger's content hash ([`version`]); `RenderQuad`'s ledger table, the CPU-written quad record
 //! ([`quad`]; dd_generation_root §3.7a); and `QuadReduction`'s ledger, the per-quad summary, with its struct and
-//! emitter ([`reduction`]; dd_generation_root §3.7).
+//! emitter ([`reduction`]; dd_generation_root §3.7); and the trajectory interface's exact fixtures' constants, which
+//! `engine` and `validation` both read ([`fixtures`]; chart_composition § 18.7, R-919).
 
 pub mod check;
 pub mod constants;
 pub mod display;
+pub mod fixtures;
 pub mod fragment;
 pub mod gen;
 pub mod links;

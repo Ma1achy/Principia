@@ -79,6 +79,8 @@ pub mod stain {
 /// structural sets of quad metadata (TASK-M1-13).
 pub mod synthetic;
 
+pub mod trajectory;
+
 /// The samples' chart classification, CPU-side: whether chart_decoder_contract Part 3 hatches a sample's chart point
 /// as forbidden, from the chart's `validate` and `Chart::map`, which the outcome view reads as `ctx.validity.forbidden`
 /// (REQ-COL-102; R-26, R-446; TASK-M2-32).

@@ -12,9 +12,11 @@
 //! (Part 5). No float time is accumulated: `ADVANCE`'s times are the macro-step grid's indices.
 //!
 //! **Per macro-step** the wrapper chooses `N_sub` from the position-quantised `d²` of the state it starts from
-//! ([`SubstepState::macro_step`]; dd_integrator §3.3), then calls `ADVANCE` from `macro` to `macro + 1` with it and the
-//! cadence. The occupant reports the internal steps it took, and `total_substeps` is their sum (Part 2a, Cost 2): the
-//! wrapper cannot verify it, so it is asserted by test against the cadence's calls (REQ-INT-022).
+//! ([`SubstepState::macro_step`]; dd_integrator §3.3), which the cadence gives it ([`Cadence::bucket_d2`]): the wrapper's
+//! own forms it once per step, for the collision test and `dmin_pair` too (integrator_contract Part 7; REQ-EVT-004).
+//! It then calls `ADVANCE` from `macro` to `macro + 1` with it and the cadence. The occupant reports the internal steps
+//! it took, and `total_substeps` is their sum (Part 2a, Cost 2): the wrapper cannot verify it, so it is asserted by test
+//! against the cadence's calls (REQ-INT-022).
 //!
 //! **One input type, no other** (seam 3; REQ-DEC-005, REQ-INT-025; scheduler_contract Part 1): the entry point takes the
 //! decoded `(m, r, p)` and the sim key's uniforms, nothing else, so no chart, neighbour or parent state reaches the
@@ -30,8 +32,14 @@
 //! its cadence's monitor ([`monitored`]; Part 1, "COM projection and invariant monitoring"): `E_0` and `Lz_0`, stored
 //! before the loop, and `packed_b`'s `dE_max` and `dLz_max`, the maxima latched at `Real` during the march and packed
 //! to f16 once, here (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
-//! side derives them from the final state (payload §5). A terminal's label and step and `d_min` are the cadence's hooks'
-//! (TASK-M3-09, TASK-M3-12); `d_min` is written unset and `dmin_pair` its sentinel until then.
+//! side derives them from the final state (payload §5). [`monitored`] also writes the detector's: `dmin_pair`, the
+//! latched pair (payload §2), and a collision's `state` and `detail` over `running` (Part 7; [`crate::detect`]).
+//! `integrate_with` writes `dmin_pair`'s sentinel, 3, and `d_min` unset, so a run whose cadence latches nothing keeps
+//! them; `d_min`'s value is TASK-M3-10's latch writer's, `t_dmin_step` TASK-M3-17's, and escape's label TASK-M3-12's.
+//!
+//! **`r_coll`** (Part 7): [`integrate_detecting`] takes the sim key's collision threshold ([`CollisionRadius`]),
+//! carried beside the loop's uniforms, and [`integrate`] is the run at `r_coll = 0`, Part 7's "refuse to regularise",
+//! where no collision fires.
 //!
 //! **The Welford diffusion** (dd_simstate_payload §4; dd_integrator §3.5; [`super::welford`]): after each completed
 //! macro-step, on the state the occupant returns (post-projection), the wrapper takes the sample `y` against the IC's
@@ -43,9 +51,10 @@ use spirv_std::num_traits::Float;
 
 use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence};
 use super::cadence::{WordCadence, WrapperCadence};
-use super::substep::{d2_quantised, NsubThresholds, Quantise, SubstepState};
+use super::substep::{NsubThresholds, Quantise, SubstepState};
 use super::welford::{self, Welford};
 use crate::decode::Ic;
+use crate::detect::collision::CollisionRadius;
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
@@ -77,27 +86,42 @@ pub struct WrapperUniforms<R> {
     pub thresholds: NsubThresholds,
 }
 
-/// The integration of `ic` under the sim key's `uniforms` by the occupant `A`, with the wrapper's own cadence
-/// ([`WrapperCadence`]), built from `ic` before the loop: [`integrate_with`], then the monitored fields
-/// ([`monitored`]).
+/// The integration of `ic` under the sim key's `uniforms` by the occupant `A` at `r_coll = 0`, where no collision
+/// fires ([`CollisionRadius::none`]): [`integrate_detecting`].
 #[inline]
 pub fn integrate<A: Advance, R: WrapperReal>(
     ic: &Ic<R>,
     uniforms: &WrapperUniforms<R>,
 ) -> SimStateBaseOf<R> {
-    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+    integrate_detecting::<A, R>(ic, uniforms, CollisionRadius::none())
+}
+
+/// The integration of `ic` under the sim key's `uniforms` and collision threshold `radius` by the occupant `A`, with
+/// the wrapper's own cadence ([`WrapperCadence::with_radius`]), built from `ic` before the loop, its detectors run on
+/// `ic` there: [`integrate_with`], then the monitored and detected fields ([`monitored`]). An `ic` already inside
+/// `r_coll` takes no step and is labelled `collision` at `t_end_step = 0` (integrator_contract Part 5).
+#[inline]
+pub fn integrate_detecting<A: Advance, R: WrapperReal>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    radius: CollisionRadius,
+) -> SimStateBaseOf<R> {
+    let mut cadence = WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius);
     let out = integrate_with::<A, R, WrapperCadence<R>>(ic, uniforms, &mut cadence);
     monitored(out, &cadence)
 }
 
 /// `out` with the monitored fields of the run `cadence` followed (Part 1, "COM projection and invariant monitoring";
 /// payload §1, §2): `E_0` and `Lz_0` as stored before the loop, and `packed_b` holding `dE_max = max|ΔE|` and
-/// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed to f16 (clamped to binary16's finite range first).
+/// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed to f16 (clamped to binary16's finite range first); and its
+/// detector's fields (Part 7; [`crate::detect::collision::Detector::label`]): `dmin_pair` the latched pair, and where a
+/// collision fired, `state` `collision` and its `detail`.
 ///
 /// **A run whose monitor latched a non-finite value** is marked, never stored as measured: `state` `sim_failed`, with
-/// its detail by what failed (payload §2: `failed_detail`), and both latches the defined failed-state 0.0 (payload §1,
-/// "Failed-state contents are defined"; R-79, R-271; `d_min` is unset already). The rest of the failure path, the terminal
-/// that ends the march and the other fields' failed-state values, is TASK-M3-17's and TASK-M3-18's.
+/// its detail by what failed (payload §2: `failed_detail`), over a collision too (R-30: `sim_failed` first), both
+/// latches the defined failed-state 0.0 (payload §1, "Failed-state contents are defined"; R-79, R-271; `d_min` is unset
+/// already), and `dmin_pair` its sentinel, 3, unset as `d_min` is. The rest of the failure path, the terminal that ends
+/// the march and the other fields' failed-state values, is TASK-M3-17's and TASK-M3-18's.
 #[inline]
 pub fn monitored<R: WrapperReal>(
     out: SimStateBaseOf<R>,
@@ -105,11 +129,13 @@ pub fn monitored<R: WrapperReal>(
 ) -> SimStateBaseOf<R> {
     let m = cadence.monitor_state();
     let failed = m.non_finite();
+    let detected = cadence.detector().label(out.packed_a);
     let (packed_a, de_max, dlz_max) = if failed {
-        let marked = set_state(out.packed_a, STATE_SIM_FAILED);
+        let marked = set_state(detected, STATE_SIM_FAILED);
+        let marked = set_dmin_pair(marked, SD_DMIN_PAIR_SENTINEL);
         (set_detail(marked, failed_detail(&out.r, &out.p)), 0.0, 0.0)
     } else {
-        (out.packed_a, m.de_max().quantise(), m.dlz_max().quantise())
+        (detected, m.de_max().quantise(), m.dlz_max().quantise())
     };
     SimStateBaseOf {
         E_0: m.e_0(),
@@ -190,8 +216,11 @@ pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
     let n_0 = shape(ic.r, ic.m);
     let mut diffusion = Welford::default();
     while macro_step < uniforms.horizon_steps && !cadence.done() {
-        let n_sub =
-            substep.macro_step(d2_quantised(&state.r), &uniforms.thresholds, uniforms.n_max);
+        let n_sub = substep.macro_step(
+            cadence.bucket_d2(&state.r),
+            &uniforms.thresholds,
+            uniforms.n_max,
+        );
         let params = AdvanceParams {
             dt_macro: uniforms.dt_macro,
             n_sub,
