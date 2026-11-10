@@ -150,7 +150,8 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   integrator on the GPU, or fixes the horizon as one value per dispatch, stops and is queued. GUI work may go ahead too
   (the owner's reply about 05:00). No new chart task starts, nothing else from TASK-M2-57 to TASK-M2-85 (TASK-M2-82,
   named above as fine, excepted), while the owner reworks the chart design; TASK-M3-14 stays stopped (R-918). M2's gate
-  and G1 to G14 are unchanged, and no edge moves.
+  and G1 to G14 are unchanged, and no edge moves. *Amended in part by R-924:* TASK-M3-14 resumes now (the bullet
+  above).
 - **What every dispatch names:**
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");

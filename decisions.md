@@ -35422,6 +35422,8 @@ R-922 is in the "design" group of `plan/rule_groups.yaml`.
 Changes no requirement.
 
 ## R-923 — Integrator work before charts, for now: R-917's order (charts first, then integrator, then visuals) is set aside for now, on the owner's say; only integrator tasks that don't depend on the points the owner hasn't decided are taken, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; TASK-M3-14 stays stopped under R-918; no new chart task starts meanwhile *(amends R-917 in part, for now; no RQ)*
+*Amended in part by R-924 (10 Nov 2026: TASK-M3-14, the Benettin FTLE shadow, resumes now; this ruling's "TASK-M3-14 stays stopped under R-918" no longer holds).*
+*Still in force: all of it but its TASK-M3-14 line: R-917's order and its hold set aside for now; only integrator tasks that don't depend on the undecided points, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; GUI work going ahead; no new chart task meanwhile; the undecided points recorded as open; M2's gate and its checklist G1 to G14.*
 *10 Nov 2026 · the owner's message of that morning (about 04:40), and their reply about 05:00; applied in R-917's
 forward and "Still in force" lines, `plan/OPERATIONS.md` § "Dispatching" (a dated line after R-917's hold),
 `plan/section_notes.yaml` and `plan/rule_groups.yaml`; and in dated lines beside R-917's hold in `plan/OPERATIONS.md`
