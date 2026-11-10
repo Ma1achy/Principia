@@ -1,8 +1,9 @@
 //! The helpers, inputs and checks of `qa_TASK-M0-01_live.rs`, in a module so the controls TASK-M0-22 registers in a
 //! target of their own run the test's own check on the test's own inputs, not a copy of them (REQ-VAL-160; R-215,
 //! R-218). A `tests/*.rs` file is a crate of its own, so each includes this file with `#[path]`; every item here is
-//! used by each file that includes it. The `qa_m0_01` module's helpers of the same names differ (its metadata has no
-//! dependencies, its runs join stdout and stderr), so the two stay apart and qa's calls stay as they are (R-215).
+//! used by each file that includes it, but the one marked `allow(dead_code)`, which `qa_TASK-M0-29_live.rs` calls no
+//! more since R-909 retired its test of it. The `qa_m0_01` module's helpers of the same names differ (its metadata has
+//! no dependencies, its runs join stdout and stderr), so the two stay apart and qa's calls stay as they are (R-215).
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -137,6 +138,9 @@ pub fn check_the_independent_reader_finds_edges(want: usize) {
 
 /// `qa_live_deps_sees_every_live_workspace_edge`'s check on the run `out` of `xtask deps` on the workspace (the
 /// default path, reading cargo metadata itself): it passes and reports `want` edges.
+// Called by `qa_TASK-M0-01_live.rs` and its controls, not by `qa_TASK-M0-29_live.rs`, which includes this module too:
+// R-909 retired its one caller there, `qa_m0_29_live_default_path_check_accepts_the_live_count`.
+#[allow(dead_code)]
 pub fn check_the_default_path_sees_every_edge(out: &Output, want: usize) {
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
