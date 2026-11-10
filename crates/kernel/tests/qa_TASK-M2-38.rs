@@ -319,8 +319,7 @@ negative_control!(
     check_layers(&[(Constraint::DecodedMassPositive, 2)])
 );
 
-#[test]
-fn qa_nav_stop_at_edge_phi_fails() {
+fn check_phi(stop: WallStop) {
     // Φ non-finite past the wall, validate passing everywhere.
     let w = Wall {
         lo: f64::NEG_INFINITY,
@@ -329,7 +328,7 @@ fn qa_nav_stop_at_edge_phi_fails() {
         nan: true,
     };
     let view = wall_view(w);
-    let s = nav_stop(Edit::Path { from: 0.1, to: 0.9 }, &view, &P);
+    let s = stop(Edit::Path { from: 0.1, to: 0.9 }, &view);
     assert_stop("Φ non-finite", 0.1, 0.9, &view, &s);
     assert_eq!(s.stopped, Some(Check::Phi));
     assert_eq!(Check::Phi.layer(), None);
@@ -345,11 +344,43 @@ fn qa_nav_stop_at_edge_phi_fails() {
             centre: [x, 0.5],
         })
     };
-    let s = nav_stop(Edit::Path { from: 0.0, to: 1.0 }, none, &P);
+    let s = stop(Edit::Path { from: 0.0, to: 1.0 }, &none);
     assert_stop("no view", 0.0, 1.0, &none, &s);
     assert_eq!(s.stopped, Some(Check::Phi));
     assert_eq!(s.lambda, 0.4);
 }
+
+#[test]
+fn qa_nav_stop_at_edge_phi_fails() {
+    check_phi(real_stop);
+}
+
+/// A stop blind to `Φ`: it consults `validate` alone, at the target, and takes the edit whole where that passes (a
+/// missing view read as passing). Used only by the control.
+#[cfg(feature = "controls")]
+fn phi_blind(edit: Edit<f64>, view: &dyn Fn(f64) -> Option<View<Wall>>) -> Stop<f64> {
+    let Edit::Path { from, to } = edit else {
+        unreachable!()
+    };
+    let passes = view(to).is_none_or(|v| {
+        let [u, w] = v.centre;
+        matches!(v.chart.validate_params(u, w, &P), ValidationResult::Valid)
+    });
+    let (value, lambda) = if passes { (to, 1.0) } else { (from, 0.0) };
+    Stop {
+        value,
+        lambda,
+        steps: 0,
+        stopped: None,
+    }
+}
+
+negative_control!(
+    qa_nav_stop_at_edge_phi_fails,
+    "a stop blind to Φ accepts a centre where Φ is not finite, or has no view",
+    expected = "fails validate",
+    check_phi(phi_blind)
+);
 
 // ── The lock ──────────────────────────────────────────────────────────────────────────────────────────────────────
 
