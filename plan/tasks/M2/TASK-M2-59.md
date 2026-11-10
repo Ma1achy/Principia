@@ -1,8 +1,8 @@
-# TASK-M4-32 — The chart composition in the contracts: registry, refusals, lowerings, region D
+# TASK-M2-59 — The chart composition in the contracts: registry, refusals, lowerings, region D
 
-- **Milestone:** M4
+- **Milestone:** M2
 - **Closes:** REQ-CHART-094, REQ-CHART-095, REQ-CHART-108, REQ-CHART-109, REQ-CHART-110
-- **Depends on:** TASK-M4-37, TASK-M2-37, TASK-M2-52
+- **Depends on:** TASK-M2-58, TASK-M2-37, TASK-M2-52
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -43,6 +43,7 @@ Port principia_chart_composition.md into the contracts, as the rulings on RQ-712
 
 ## Notes
 - **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
-- The virial kind's answer (RQ-717) lands in this task if it is ruled by then, else in TASK-M8-119.
-- Waits on its rulings item: RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M4-37 in Depends on holds it.
-- *8 Nov 2026 (R-873):* **Build order:** before stage 3 (RQ-744 (C)); TASK-M8-105, which depends on it, is before stage 1.
+- The virial kind's answer (RQ-717) lands in this task if it is ruled by then, else in TASK-M2-70.
+- Waits on its rulings item: RQ-712, RQ-713, RQ-714, RQ-715, RQ-716, RQ-719. Nothing here is implemented until ruled (the order's A6, "Nothing implemented until ruled"); TASK-M2-58 in Depends on holds it.
+- *8 Nov 2026 (R-873):* **Build order:** before stage 3 (RQ-744 (C)); TASK-M2-60, which depends on it, is before stage 1.
+- *9 Nov 2026 (R-916):* moved from M4 to M2 and renumbered: formerly TASK-M4-32; the header follows plan/tasks.yaml. *Was:* "Milestone: M4".

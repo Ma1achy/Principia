@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-INT-070, REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008
-- **Depends on:** TASK-M4-01, TASK-M3-06, TASK-M3-15
+- **Depends on:** TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66
 - **Needs (earlier milestones):** REQ-SCHED-001, REQ-SYS-012, REQ-CHART-003, REQ-INT-026, REQ-PAY-025, REQ-PAY-038, REQ-PAY-037, REQ-PAY-014, REQ-SYS-003, REQ-SCHED-003, REQ-DEC-007
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -49,3 +49,4 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - RQ-92 ruled: R-124 — systems_architecture §5.5 is conformed to R-102 (applied in step 7; the heading above is the new one): each ensemble copy is the same kernel dispatched again with `copy_index` a uniform. This task builds the per-copy dispatch shape; the copy offsets and the (E+1) dispatches are TASK-M4-06's. This settles the gap.
 - R-135 settles where the across-copy reduction lives: its own resolve pass, dispatched after all E+1 copy dispatches for a quad complete, reading their SimState slices and writing the footprint resolve and the QuadReduction fields (REQ-PERF-012). This task dispatches that pass; the reductions it computes are M5's (TASK-M5-17, TASK-M5-18).
 - **The fresh-sample check on a GPU-computed reference (R-652; render contract Part 5, "The neutral band"; PR #360's physics review 5723029285, C1, and code review 5723219417, C3):** `drift_view_neutral_fresh_sample_renders_exactly_neutral` takes its references from the CPU read side, as no GPU kernel writes real samples before this task. This task's PR repeats the check on samples this march wrote, with the band's GPU-reference domain: `k_E = 34·K/|E_0| + 22` and `k_L = 6·S/|Lz_0|` at most 128, so `K/|E_0|` up to 3.1 and `S/|Lz_0|` up to 21.3.
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M4-01, TASK-M3-06, TASK-M3-15".

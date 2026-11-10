@@ -2,7 +2,7 @@
 
 - **Milestone:** M6
 - **Closes:** REQ-GUI-265
-- **Depends on:** TASK-M6-49
+- **Depends on:** TASK-M6-49, TASK-M2-63, TASK-M2-64
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -29,3 +29,4 @@ On the mock engine, a latent view saved as a chart at a tilt offers as its tilt 
 - **⚑ Physics review is required**: the tilt maths on a non-orthonormal saved pair; it does not merge on the code reviewer's word alone.
 - **A leaf task waiting for RQ-404** (`rq: RQ-404` on REQ-GUI-265): nothing depends on it. *Superseded by the R-514 note below as to the wait; kept as history.* Numbered past the links port's (unmerged) TASK-M6-50 (applied per R-369).
 - **R-514 (20 Oct 2026) rules RQ-404:** nothing waits. Decided per R-369 under physics review: the plane's own named dimensions are its first parent's axes (I2); a dimension vanishes at `|t|² ≤ 10⁻¹²`, REQ-GUI-203's threshold (I2); the tilted pair is the stored pair carried by the map, `(M q₁, M q₂)`, which keeps a Lean-saved pair's tilt continuous at `τ = 0` (I4, flagged); C5 is checked on the frame's images (I5). The qa test of TASK-M6-49's guard (REQ-GUI-240's tilt-saved arms) changes in this task's qa commit, the guard being lifted by this ruling (applied per R-369, R-514 I6).
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M6-49".

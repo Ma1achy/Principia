@@ -2,7 +2,7 @@
 
 - **Milestone:** M5
 - **Closes:** REQ-CHART-038, REQ-SCHED-025, REQ-SCHED-054
-- **Depends on:** TASK-M5-04, TASK-M5-06, TASK-M5-08
+- **Depends on:** TASK-M5-04, TASK-M5-06, TASK-M5-08, TASK-M2-64
 - **Needs (earlier milestones):** REQ-GUI-004, REQ-GUI-005, REQ-GUI-007, REQ-CHART-007, REQ-SYS-022
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -46,3 +46,4 @@ view mode, camera object or second code path.
 ## Notes
 - Revealed quads catching up to the playhead off-loop (REQ-SCHED-025's last clause) uses the catch-up path of
   TASK-M5-21; this task's property test runs with the playhead at t = 0 and is re-run by TASK-M5-21 at t > 0.
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M5-04, TASK-M5-06, TASK-M5-08".
