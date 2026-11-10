@@ -1068,26 +1068,47 @@ be, or whether the table only gives a first guess that the chart's own forward c
     fragment-side, each through its own generated section".
 - **The silence:** the accuracy of the backwards answer on a plain chart with no closed-form inverse is not stated; a
   search refined on the bilinear table is limited by the table's spacing, while a refinement on the chart's generated
-  forward code, which every kernel chart has, drives the residual in state to f32 rounding; the error in chart
-  coordinates is then about that residual divided by `σ_min(J)`, the chart Jacobian's smallest singular value.
+  forward code, which every kernel chart has, drives the residual in state to f32 rounding for a state that lies on
+  the chart's image (one decoded from a pixel); the error in chart coordinates is then about that residual divided by
+  `σ_min(J)`, the chart Jacobian's smallest singular value. A running or saved state generally lies off the chart's
+  two-dimensional image, so even a converged solve leaves a residual: its distance off the chart, which no solver
+  removes. The state map treats it as a projection: `docs/design/principia_state_map.md` § "SM1. Definition" (lines
+  108 to 117): "`P_T` is the target chart's projection, the one the trace uses (`principia_trajectory_viewing.md` §3;
+  trace follow-up F1)." (Codex review thread on PR #473.)
 - **The question:** what accuracy the table route must reach outside a morph, and whether it may refine against the
   generated forward code.
 - **Options seen:**
   - (a) The table seeds the search; Newton steps run on the chart's generated forward code where the chart has it
     (every kernel chart, and a blend of two such charts), so the residual in state reaches f32 rounding outside a
-    morph; the table alone only where no forward code exists. The answer is not f32-accurate in chart coordinates
-    everywhere: its error is about the residual over `σ_min(J)`, which is unbounded at the sites a chart flags (the
-    poles, `r = 0`, the feasibility boundary). The bound is a calibration (R-71), stated in chart coordinates with
-    its conditioning, as `ε_res / σ_min(J)` with `ε_res` the residual tolerance, reported beside `σ_min(J)` at each
-    sample, and a sample whose `σ_min(J)` falls below a stated floor is labelled ill-conditioned rather than
-    held to the bound; criterion written first.
+    morph; the table alone only where no forward code exists. The criterion is stated apart for the two kinds of
+    state:
+    - *On the chart's image* (a state known to lie on it, such as one decoded from a pixel): the residual in state
+      reaches f32 rounding. The answer is not f32-accurate in chart coordinates everywhere: its error is about the
+      residual over `σ_min(J)`, which is unbounded at the sites a chart flags (the poles, `r = 0`, the feasibility
+      boundary). The bound is a calibration (R-71), stated in chart coordinates with its conditioning, as
+      `ε_res / σ_min(J)` with `ε_res` the residual tolerance, reported beside `σ_min(J)` at each sample, and a sample
+      whose `σ_min(J)` falls below a stated floor is labelled ill-conditioned rather than held to the bound.
+    - *Off the chart's image* (running and saved states): the converged residual in state is the projection distance,
+      `P_T`'s distance off the chart in the state map's metric (SM1, above), reported as a measured quantity and
+      never read as solver error. Convergence is judged apart from it, by first-order optimality: `‖Jᵀr‖ / (‖J‖·‖r‖)`,
+      or the Newton step in chart coordinates, below a stated tolerance, a calibration (R-71). Beside each sample, the
+      chart-coordinate error bound from conditioning: the optimality tolerance's step over `σ_min(J)`, with
+      `σ_min(J)`, under the same ill-conditioned floor. The projection distance is the same quantity as the trace's
+      residual the owner asked to measure (their reply of 10 Nov on the re-plan's addition, P4: "the median and worst
+      residual (how far off the surface each vertex is)"), so the two definitions agree.
+
+    Each criterion is written first.
   - (b) The table alone, labelled approximate with its bound, the table's spacing, everywhere.
   - (c) Pixel resolution everywhere, as R-919 F11 has it for blend frames.
 - **Recommended:** (a). It costs a few forward evaluations per pixel, which the prototype's Metal figures (7 to 20 ns a
   sample for the search) suggest is cheap, and makes "approximate" true only where the owner allowed it.
-- **Measurement:** on the kernel's charts at `t = 0` and after a run, the round-trip error in cells and the wrong share
-  for (a) and (b), each binned by `σ_min(J)` with the flagged sites reported apart, and the per-sample cost on Metal,
-  against a criterion written before the run.
+- **Measurement:** on the kernel's charts at `t = 0` and after a run, for (a) and (b), each binned by `σ_min(J)` with
+  the flagged sites reported apart, the on-chart and off-chart samples binned and reported apart: for on-chart samples
+  (states decoded from pixels, at `t = 0`), the round-trip error in cells, the wrong share and the state residual
+  against `ε_res`; for off-chart samples (running states after the run, and saved states), the projection distance
+  (median and worst, as the trace's residual), the first-order optimality at the answer, the share that converged, the
+  wrong share (a worse projection than an exhaustive search of the same table), and the conditioning bound beside
+  `σ_min(J)`; and the per-sample cost on Metal; against a criterion written before the run.
 - **Applied meanwhile:** nothing.
 - **Waits:** the backwards-table task of the plan; Chart position's build.
 
