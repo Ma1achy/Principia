@@ -643,8 +643,9 @@ either side ("central differences"). Which one the deep-zoom decoder uses change
 - **Recommended:** (a). It reads item 9 and item 11 together as written, keeps a central-difference check that can
   fail, and makes a tier-3 map pay in CPU evaluations, not in an unruled tier.
 - **Measurement:** the plan's slope measurement (§ B, "slopes"): per map, the dual slope against a central difference
-  at a fixed O(1) step chosen from the map's order, written down before running, away from the flagged sites, with a
-  control (one column's sign flipped) that must fail; and the one-cell patch's depth with each slope against per-sample
+  at R-633's step `h_k = ε^{1/3}·max(1, |x_k|)`, away from the flagged sites, within that step's stated truncation and
+  rounding bound (each of order `ε^{2/3}`), with a control (the sign flipped on a column well above that bound) that
+  must fail; and the one-cell patch's depth with each slope against per-sample
   f64 evaluation.
 - **Applied meanwhile:** nothing. REQ-DEC-034 and REQ-DEC-036 stand as written; no task is dispatched (the chart
   pause, PR #469).

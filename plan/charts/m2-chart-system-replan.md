@@ -306,12 +306,16 @@ integrator work (TASK-M4-05) carries on as agreed.
 
 12. **TASK-M2-66 (CHANGE), TASK-M2-67 (KEEP).** Acceptance: G3, G5, G6; each row's slope tier and fragment route.
     Door: one-way, RQ-765; the rest two-way.
-13. **N3, slopes (NEW).** Acceptance: for each map, tier 1 or 2 slopes, a flag set at each kink site the orchestrator's
-    reading lists (the feasibility boundary, `k = 0`, `warped_k` at `d = 0`, `normalise`'s edges, the exponential map's
-    `r = 0`, the poles, the seed switches). Measurement M-B: the dual slope against a central difference at a fixed
-    O(1) step chosen from each map's order, written down before the run, at points away from the flagged sites;
-    criterion: agreement within the central difference's stated truncation bound; the control, one column's sign
-    flipped, must fail. Door: one-way, RQ-758.
+13. **N3, slopes (NEW).** Acceptance: each map declares its tier, exact (dual numbers), implicit or none (R-926 item 9:
+    a map with no exact slopes is still a valid chart); a tier-1 or tier-2 map sets a flag at each kink site the
+    orchestrator's reading lists (the feasibility boundary, `k = 0`, `warped_k` at `d = 0`, `normalise`'s edges, the
+    exponential map's `r = 0`, the poles, the seed switches); a tier-3 map is accepted with no slope, each sample
+    evaluated on the CPU. Measurement M-B, for each tier-1 or tier-2 map: the dual slope against a central difference
+    at R-633's step, `h_k = ε^{1/3}·max(1, |x_k|)` in f64 (the step REQ-DEC-034 names), at points away from the
+    flagged sites by more than that step; criterion: per column, agreement within the central difference's error at
+    that step, its truncation `h_k²·|f'''|/6` plus its rounding `ε·|f|/h_k`, each of order `ε^{2/3}`, with `|f'''|`
+    bounded from the map's own closed form and stated before the run; the control flips the sign of a column whose
+    norm is at least 100 times that bound, and must fail. Door: one-way, RQ-758.
 14. **N4, the forward-table builder (NEW).** Acceptance: a quad's table built from `decode_only_with` on threads,
     narrowed once, bitwise equal to the per-sample evaluation. Measurement M-A, criterion written now: on the Mac,
     1920 × 1080 samples per chart, median of 5 warm runs; PASS if one thread reaches 8.1·10⁶ samples a second
