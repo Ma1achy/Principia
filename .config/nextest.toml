@@ -190,8 +190,8 @@ default-filter = """
 # screenshot runner's `gui` surface tests, which run gui's capture mode through `cargo run` (RQ-252), which CI's
 # `ci-workspace` job runs on a build of its own, beside the `ci` shards (R-372, REQ-SYS-078): the shards run from an
 # archive, which carries no cargo build state, so in a shard each would rebuild the workspace while holding every
-# test thread. Validation's `qa_TASK-M0-24` joins them: it runs `cargo test` on the workspace and `cargo xtask controls
-# --list`, the same `--features controls` build the alias test's `cargo xtask ci --list` makes here; in a `ci` shard
+# test thread. Validation's `qa_TASK-M0-24` joins them: it runs `cargo test` on the workspace, the same `--features
+# controls` build the alias test's `cargo xtask ci --list` makes here; in a `ci` shard
 # that rebuild left `ci (4)` 13 MiB free on a 72 GB runner (run 41756812074). It is not in xtask, so each job that runs
 # this profile has a step that names validation. `xtask ci --list`'s test in `qa_TASK-M0-06_list` joins them, that one
 # test, as its binary's others build nothing: the same listing in a `ci` shard took `ci (3)`'s `target/debug/deps` from
@@ -283,8 +283,8 @@ success-output = "immediate"
 # Excluded from per-mutant runs (the owner, 8 Nov 2026: "The qa control-inventory tests (qa_TASK-M0-22/24/25 and
 # similar, which inspect the whole workspace) run once per CI run as a step, not inside per-mutant test runs"), each
 # already run once in every CI run by `ci.yml` and the nightly `cpu` job, so coverage is unchanged:
-# - validation's `qa_TASK-M0-24`, every test: lists every workspace test (`cargo test -- --list`), every registered
-#   control (`cargo xtask controls --list`) and the workspace's metadata; `ci-workspace` runs it, in `ci.yml` and the
+# - validation's `qa_TASK-M0-24`, every test: lists every workspace test (`cargo test -- --list`) and the workspace's
+#   metadata; `ci-workspace` runs it, in `ci.yml` and the
 #   nightly `cpu` job;
 # - validation's `qa_TASK-M0-25`, its two inventories: lists every test of `validation` and `prin` under and without
 #   `controls`, to pair each merged qa test with its control; the `ci` shards and the nightly `cpu` job run them;
@@ -1598,7 +1598,6 @@ default-filter = """
 #     145.1 s  validation::qa_TASK-M0-21 qa_controls_exist_only_under_the_feature
 #      88.8 s  validation::qa_TASK-M0-21 qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test
 #     167.8 s  validation::qa_TASK-M0-24 qa_m0_24_every_implementer_test_has_a_registered_control
-#     346.7 s  validation::qa_TASK-M0-24 qa_m0_24_every_registered_control_makes_its_test_fail
 #     224.3 s  validation::qa_TASK-M0-25 qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test
 #     130.4 s  validation::qa_TASK-M0-25 qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test
 #     142.3 s  validation::qa_TASK-M0-26 qa_m0_26_a_control_without_an_expected_message_does_not_compile
@@ -1760,7 +1759,6 @@ default-filter = """
         | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_controls_exist_only_under_the_feature))
         | (binary_id(=validation::qa_TASK-M0-21) & test(=qa_leaky_control_beside_a_sound_one_of_the_same_name_fails_naming_the_test))
         | (binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_implementer_test_has_a_registered_control))
-        | (binary_id(=validation::qa_TASK-M0-24) & test(=qa_m0_24_every_registered_control_makes_its_test_fail))
         | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
         | (binary_id(=validation::qa_TASK-M0-25) & test(=qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test))
         | (binary_id(=validation::qa_TASK-M0-26) & test(=qa_m0_26_a_control_without_an_expected_message_does_not_compile))

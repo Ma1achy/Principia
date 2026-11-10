@@ -33658,18 +33658,18 @@
   milestone: M0
 - id: REQ-VAL-163
   area: VAL
-  statement: "Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) and `qa_m0_24_every_registered_control_makes_its_test_fail` (`crates/validation/tests/qa_TASK-M0-24.rs`) must check only what they claim, through a listing-only mode, without re-running every control in the workspace (R-226)."
+  statement: "Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) must check only what it claims, through a listing-only mode, without re-running every control in the workspace (R-226); what qa's retired `qa_m0_24_every_registered_control_makes_its_test_fail` claimed, that `cargo xtask controls` pairs every test with a control `cargo xtask ci` runs, is checked by the CI steps that stay (R-909)."
   source:
   - file: decisions.md
     section: "R-226 — The suite stops re-running every control; folded into TASK-M0-22"
   verify:
+    detail: "code and qa: `controls_on_this_workspace_skips_gui` runs none of the workspace's controls and still fails when what it claims is false (its control); the pull request's CI step `cargo xtask controls --list` fails on a test without a control, and `cargo xtask controls`, in `cargo xtask ci` on each merge to `main`, on a missing or non-tripping control; qa's merged file changes only as far as this needs"
     method: review checklist
-    detail: "code and qa: neither test runs the workspace's controls; each still fails when what it claims is false (its control); the CI step `cargo xtask controls` fails on a missing or non-tripping control; qa's merged file changes only as far as this needs"
   rulings:
   - R-226
   - R-909
   milestone: M0
-  note: "R-909 (9 Nov 2026): `qa_m0_24_every_registered_control_makes_its_test_fail` is among the 17 retired tests; its retirement commit (R-909's step (4)) repoints this requirement to the check that stays, through reqio."
+  note: "R-909 (9 Nov 2026): `qa_m0_24_every_registered_control_makes_its_test_fail` is among the 17 retired tests; its retirement commit (R-909's step (4)) repoints this requirement to the checks that stay, the CI steps `cargo xtask controls --list` and `cargo xtask controls`, through reqio. *Was (statement):* \"Once `cargo xtask controls` runs as its own CI step (failing on any finding), `controls_on_this_workspace_skips_gui` (`xtask/tests/controls.rs`) and `qa_m0_24_every_registered_control_makes_its_test_fail` (`crates/validation/tests/qa_TASK-M0-24.rs`) must check only what they claim, through a listing-only mode, without re-running every control in the workspace (R-226).\" *Was (verify):* \"code and qa: neither test runs the workspace's controls; each still fails when what it claims is false (its control); the CI step `cargo xtask controls` fails on a missing or non-tripping control; qa's merged file changes only as far as this needs\""
 - id: REQ-VAL-164
   area: VAL
   statement: "No test may rebuild a binary that sibling tests spawn (`cargo build -p xtask` in `qa_m0_21_fixture.rs`), and parallel copies of one fixture must not build into a shared target directory (`xtask/tests/controls.rs`, `qa_m0_21_fixture.rs`, `support/qa_m0_21.rs`, `expected_message.rs`); each is fixed at its cause, and the whole workspace suite then passes 5 times in a row under normal load, with CI green on the head (R-227, R-230)."
@@ -43026,7 +43026,7 @@
   - R-697
   - R-909
   milestone: M0
-  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is. *Was (statement):* \"… every control run exactly once across the shards (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684). R-697 (4 Nov 2026): the owner accepts RQ-684's move and amends R-360 to match. R-909 (9 Nov 2026): tests of the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites are among the 17 retired; each retirement commit (R-909's step (4)) repoints this requirement to what stays, through reqio."
+  note: "R-336 (applied per R-204, accepted by R-344): the test files are qa's with implementer commits, so qa makes the splits in TASK-M0-45's qa commit, a named exception to R-290, as R-335 is. *Was (statement):* \"… every control run exactly once across the shards (R-360); …\" — amended per R-369 (the orchestrator's decision on PR #395, RQ-684). R-697 (4 Nov 2026): the owner accepts RQ-684's move and amends R-360 to match. R-909 (9 Nov 2026): tests of the `qa_TASK-M0-24`, `qa_TASK-M0-25` and `qa_TASK-M0-26` suites are among the 17 retired; each retirement commit (R-909's step (4)) repoints this requirement to what stays, through reqio. Retired under R-909: `qa_m0_24_every_registered_control_makes_its_test_fail`, of the split `qa_TASK-M0-24` suite; what stays of the suite is split as before, and the pairing it checked is the CI step `cargo xtask controls --list`."
 - id: REQ-SYS-078
   area: SYS
   statement: "The `ci` CI job's test binaries must be built once per feature set its shards run, as a nextest archive (`cargo nextest archive`) that every `ci` shard runs its `--partition hash:<k>/4` slice from (`--archive-file`), so no shard compiles the tests; the shards together still run every test the unsharded run did, and ~10.5 min per job stays the target (R-372, R-325)."

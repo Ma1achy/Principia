@@ -3,8 +3,9 @@
 //! - "Every test the implementer merged before TASK-M0-22 must have a registered negative control that makes it fail
 //!   (R-199): validation's `gpu` and `prop` unit tests and xtask's `ci`, `controls` and `deps` tests." Checked by
 //!   listing those tests with plain `cargo test -- --list`, so the check does not go through the command under
-//!   review; that each control makes its test fail is judged by `cargo xtask controls` in `cargo xtask ci`, whose
-//!   `--list` shows it pairs each of them, without running the workspace's controls (R-226).
+//!   review. That each control makes its test fail is judged by `cargo xtask controls` in `cargo xtask ci`, and that
+//!   each test is paired with a control by `cargo xtask controls --list`, a CI step of its own on every pull request;
+//!   R-909 retired the test that read that listing here (R-226).
 //! - "xtask must declare the `controls` feature with a dev-dependency on `crates/validation` (R-176)." Checked on
 //!   `cargo metadata`.
 //! - "The example in `crates/validation/src/control.rs` must be a non-test block, since a doctest in a controls crate
@@ -31,10 +32,9 @@ fn cargo() -> Command {
 }
 
 /// Held by each of this binary's cargo runs on the workspace, for the whole run (REQ-VAL-164, applied per R-227). A
-/// cargo run into the workspace's target replaces `debug/xtask` and `debug/qa_child` even when nothing is rebuilt, and
-/// `list_controls` spawns `debug/xtask`, whose `--list` runs cargo on the workspace in turn. Those runs and their
-/// spawns are all in this process (cargo test runs one test binary at a time, and a nested workspace run holds xtask's
-/// `WORKSPACE_TARGET`), so running them one at a time means none replaces a binary another run's tests are spawning.
+/// cargo run into the workspace's target replaces `debug/xtask` and `debug/qa_child` even when nothing is rebuilt.
+/// Those runs are all in this process (cargo test runs one test binary at a time), so running them one at a time means
+/// none replaces a binary another run's tests are spawning.
 /// They stay on the workspace's warm target: a target of their own builds cold inside one 300 s child.
 static WORKSPACE_RUN: Mutex<()> = Mutex::new(());
 
@@ -192,50 +192,6 @@ fn assert_each_has_a_control(scope: &Scope) -> Vec<String> {
     scope.tests.iter().map(|t| short(t).to_owned()).collect()
 }
 
-/// `cargo xtask controls --list` on the workspace: each test of each controls crate with the controls paired with it,
-/// none of them run (R-226); the stdout.
-fn list_controls() -> String {
-    let _run = WORKSPACE_RUN.lock().unwrap_or_else(PoisonError::into_inner);
-    let output = cargo()
-        .args(["run", "--quiet", "-p", "xtask", "--manifest-path"])
-        .arg(workspace_manifest())
-        .args(["--", "controls", "--list"])
-        .timed_output()
-        .expect("run cargo xtask controls --list");
-    String::from_utf8_lossy(&output.stdout).into_owned()
-}
-
-/// The tests of `krate` that `listing` (by `list_controls`) pairs with a control, by short name, each with its count
-/// of controls: the controls `cargo xtask ci` runs, failing on any that leaves its test passing (R-198, R-226).
-fn judged_by_ci(listing: &str, krate: &str) -> BTreeMap<String, usize> {
-    let mut judged: BTreeMap<String, usize> = BTreeMap::new();
-    let prefix = format!("xtask controls: {krate}: test `");
-    for line in listing.lines() {
-        if let Some((test, _)) = line
-            .strip_prefix(&prefix)
-            .and_then(|rest| rest.split_once("`: control `"))
-        {
-            *judged.entry(short(test).to_owned()).or_default() += 1;
-        }
-    }
-    judged
-}
-
-/// Every test in `tests` has a control `cargo xtask controls` pairs with it, so `cargo xtask ci` runs that control and
-/// fails unless it makes its test fail (the macro compiles a control as `#[should_panic]`, R-199, R-212).
-fn assert_each_control_is_judged(krate: &str, tests: &[String], judged: &BTreeMap<String, usize>) {
-    assert!(
-        !tests.is_empty(),
-        "{krate}: no test in scope, the check would pass on nothing"
-    );
-    for test in tests {
-        assert!(
-            judged.get(test).is_some_and(|&controls| controls > 0),
-            "{krate}: `cargo xtask controls` pairs no control with `{test}`, so `cargo xtask ci` does not judge it"
-        );
-    }
-}
-
 #[test]
 fn qa_m0_24_every_implementer_test_has_a_registered_control() {
     let mut total = 0;
@@ -266,28 +222,6 @@ validation::negative_control!(
     expected = "tests without a registered control of their own",
     for scope in scopes(&[]) {
         assert_each_has_a_control(&scope);
-    }
-);
-
-#[test]
-fn qa_m0_24_every_registered_control_makes_its_test_fail() {
-    let listing = list_controls();
-    for scope in scopes(&["--features", "controls"]) {
-        let tests = assert_each_has_a_control(&scope);
-        assert_each_control_is_judged(scope.krate, &tests, &judged_by_ci(&listing, scope.krate));
-    }
-}
-
-validation::negative_control!(
-    qa_m0_24_every_registered_control_makes_its_test_fail,
-    "validation's real listing with one test's controls taken out (a control `cargo xtask ci` would not run)",
-    expected = "so `cargo xtask ci` does not judge it",
-    {
-        let scope = scopes(&["--features", "controls"]).remove(0);
-        let tests = assert_each_has_a_control(&scope);
-        let mut judged = judged_by_ci(&list_controls(), scope.krate);
-        judged.remove(&tests[0]);
-        assert_each_control_is_judged(scope.krate, &tests, &judged);
     }
 );
 

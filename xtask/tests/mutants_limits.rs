@@ -794,10 +794,6 @@ const INVENTORY: &[(&str, &str)] = &[
     ),
     (
         "validation::qa_TASK-M0-24",
-        "qa_m0_24_every_registered_control_makes_its_test_fail",
-    ),
-    (
-        "validation::qa_TASK-M0-24",
         "qa_m0_24_xtask_declares_controls_with_a_validation_dev_dependency",
     ),
     (
