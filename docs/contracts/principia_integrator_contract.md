@@ -332,7 +332,11 @@ tie for the longest, `argmax` returns the first maximum in that order, so the ea
 and `(0,2)` gives `a = 2`, and any tie involving `(0,1)` gives `a = 2`; a tie between `(0,2)` and `(1,2)` alone gives
 `a = 1`. The other two bodies are `b < c` in index order: `(a, b, c)` is `(0,1,2)`, `(1,0,2)` or `(2,0,1)`
 (`tb_az.py:39`, the triple taken at `tb_az.py:259-263`). The regularised pairs are `(a,b)` and `(a,c)`; the side
-`(b,c)` is the longest and is not regularised, so it closes only at a triple collision (`tb_az.py:8-15`). A switch is
+`(b,c)` is not regularised. At the boundary where `a` is chosen, `(b,c)` is the longest side, `|R₃| ≥ max(|R₁|, |R₂|)`,
+so it can then close only at a triple collision (`tb_az.py:8-15`). Within an interval `a` is not re-chosen: the side
+can shorten and close with `a` at a finite distance, and that approach enters through the unregularised term
+`−A·B·m_b m_c/|R₃|` until the next boundary re-chooses `a`. Hence the floor on `|R₃|` (`tb_az.py:118`) and `|R₂ − R₁|`
+in the predictive limit's `d_min` (`driver.rs:620`). A switch is
 counted when `a` differs from the previous boundary's (`tb_az.py:255-257`; `driver.rs:955-961`). `driver.rs` also
 carries a hysteresis on this choice, default `0`, which at `0` is the plain `argmax` bitwise (`driver.rs:433-445`,
 `driver.rs:937-952`), and a forced-reference override for a shared policy (`driver.rs:499-500`, `driver.rs:933-935`);
@@ -414,8 +418,9 @@ mass.
 **The step control within one sync interval**, `driver.rs`'s defaults (`driver.rs:472-497`): the per-step interval
 rule (`DtauMode::PerStepInterval`, `driver.rs:110-126`), the landing clamp on (`clamp_final_step`), the landing secant
 on with at most 4 retakes (`land_iterate`, `land_max_iters`), the hard minimum (`StepBlend::Min`), and no per-step limit
-(`StepLimit::None`); the predictive limit is R-160's, above, and enters as the third constraint. `tb_az.py` mirrors it
-(`tb_az.py:153-238`), flooring at `1e-300` where `driver.rs` floors at `TINY` (Part 6).
+(`StepLimit::None`); the predictive limit is R-160's, above, and enters as the third constraint. `tb_az.py` mirrors
+these defaults (`tb_az.py:153-238`, the march at `tb_az.py:253-331`), flooring at `1e-300` where `driver.rs` floors at
+`TINY` (Part 6), except for the landing secant, which stops differently (step 6).
 
 1. **The interval.** `dt_left = t_target − t` (`driver.rs:975`), `Δ_sync` on the grid (R-565, Part 2a). An interval
    whose `t ≥ t_target − SYNC_EPS` is skipped (`driver.rs:963-966`).
@@ -434,13 +439,18 @@ on with at most 4 retakes (`land_iterate`, `land_max_iters`), the hard minimum (
    the conjugate momenta `P₁, P₂`.)*
 5. **The step.** One classical RK4 step of the equations above, on `(u₁, p₁, u₂, p₂, t)` with `E` held, from the
    saved state (`driver.rs:1044-1049`; `tb_az.py:288-292`).
-6. **The landing secant** (`driver.rs:1065-1095`; `tb_az.py:196-210`, `tb_az.py:294-316`). When the step just taken
+6. **The landing secant** (`driver.rs:1065-1095`). When the step just taken
    reaches the boundary (`t_s ≥ dt_left − dt_left·LAND_EPS_REL`): `want = dt_left − t_before`, `cur = h`, and up to
    `land_max_iters` (4) times, `got = t_s − t_before`; stop if `got` is not finite, `got ≤ 0`, or
    `|got − want| ≤ dt_left·LAND_EPS_REL`; otherwise `cur = cur·want/got` and the step is retaken from the saved
    state at `cur`, each retake a counted step. The clamp predicts the landing step from `A·B` before the step, a
    first-order predictor, and the secant on `t(dτ)` with the exact point `t(0) = 0` removes that residual
-   (`driver.rs:417-424`, `driver.rs:1065-1069`) *(RQ-756: the corpus names the clamp only)*.
+   (`driver.rs:417-424`, `driver.rs:1065-1069`) *(RQ-756: the corpus names the clamp only)*. `tb_az.py`'s secant
+   (`tb_az.py:196-210`, `tb_az.py:294-316`) stops differently: on every retake it re-tests the landing,
+   `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, and the finiteness of the whole state (`tb_az.py:303-306`), so a retake that
+   lands short of the boundary ends the secant and the march takes another clamped step; `driver.rs` does not re-test
+   the landing, and retakes until `|got − want| ≤ dt_left·LAND_EPS_REL`, `got` is not finite or `got ≤ 0`, or the 4
+   tries are used (`driver.rs:1084-1094`). The two trajectories differ *(RQ-756: which stop is the rule)*.
 7. **The exit.** The march ends when `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, or the state is not finite, or the
    budget is spent (`driver.rs:997-1012`; here the step budget of Part 6, R-604). On a landing the clock is set to the
    boundary exactly, `t += dt_left`; otherwise `t += min(t_s, dt_left)` (`driver.rs:1186-1194`). A step that carries
