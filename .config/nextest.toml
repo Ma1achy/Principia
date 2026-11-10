@@ -1334,7 +1334,6 @@ slow-timeout = { period = "30s", terminate-after = 3 }
 #     689.6 s  xtask::build_kernel build_kernel_runs_in_ci
 #      77.4 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_deny_list_member_by_member
 #      96.4 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_fixtures_fire_as_marked
-#      89.5 s  xtask::lint_wgsl_occupant_rules lint_wgsl_occupant_repository_lints_clean
 #      88.2 s  xtask::lint_wgsl_rules lint_wgsl_ci_runner_runs_the_lint
 #     102.3 s  xtask::qa_TASK-M0-06_list qa_m006_ci_list_lists_golden_cases_without_a_device
 #     160.2 s  xtask::qa_TASK-M0-06_runner qa_m006_ci_golden_runner_renders
@@ -1564,7 +1563,6 @@ default-filter = """
         | (binary_id(=xtask::build_kernel) & test(=build_kernel_runs_in_ci))
         | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_deny_list_member_by_member))
         | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_fixtures_fire_as_marked))
-        | (binary_id(=xtask::lint_wgsl_occupant_rules) & test(=lint_wgsl_occupant_repository_lints_clean))
         | (binary_id(=xtask::lint_wgsl_rules) & test(=lint_wgsl_ci_runner_runs_the_lint))
         | (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
         | (binary_id(=xtask::qa_TASK-M0-06_runner) & test(=qa_m006_ci_golden_runner_renders))

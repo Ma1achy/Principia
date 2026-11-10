@@ -10,7 +10,8 @@
 //! - PIT-3: one fixture with an `isnan`, a `raw != raw`, a raw payload read and an `r_sh` read fails each rule
 //!   (`lint_wgsl_occupant_pit3_*`);
 //! - the exceptions the definitions name are each needed, and each only for its rule (`lint_wgsl_occupant_exceptions_*`);
-//!   the repository, the checked-in runtime WGSL among it, lints clean (`lint_wgsl_occupant_repository_*`).
+//!   that the repository, the checked-in runtime WGSL among it, lints clean is CI's `cargo xtask lint wgsl` step (R-909
+//!   retired the test of it here).
 //!
 //! Each fixture under `tests/fixtures/lint_wgsl/occupant/` marks every finding it must give with `// fires <rule>` on
 //! its line; a fixture without marks must give none. Each test registers its negative control (R-176).
@@ -550,38 +551,6 @@ negative_control!(
     "a presentation function taken for a generated accessor",
     expected = "`dbg_hash_word` is not a generated accessor",
     check_accessors("dbg_hash_word")
-);
-
-// ── The repository ────────────────────────────────────────────────────────────────────────────────────────────────
-
-/// The repository lints clean, the checked-in runtime WGSL (`want`) among the files it lints.
-fn check_repository(want: &[&str]) {
-    let reports = lint(&repo()).unwrap_or_else(|e| panic!("the repository does not lint: {e}"));
-    for r in &reports {
-        assert!(r.findings.is_empty(), "{}: {:?}", r.file, r.findings);
-    }
-    for file in want {
-        assert!(
-            reports.iter().any(|r| r.file == *file),
-            "{file} is not linted"
-        );
-    }
-}
-
-#[test]
-fn lint_wgsl_occupant_repository_lints_clean() {
-    check_repository(&[
-        "crates/render/frag/runtime/field_ramp/ftle.wgsl",
-        "crates/render/frag/runtime/debug/presets/coordinate_uv_source.wgsl",
-        "crates/render/frag/debug/generated/r_sh.wgsl",
-    ]);
-}
-
-negative_control!(
-    lint_wgsl_occupant_repository_lints_clean,
-    "a runtime file that is not there",
-    expected = "is not linted",
-    check_repository(&["crates/render/frag/runtime/field_ramp/no_such_field.wgsl"])
 );
 
 // ── A tier constant in a `const` declaration ─────────────────────────────────────────────────────────────────────
