@@ -64,6 +64,11 @@ the whole non-visual chart system); then the integrator (M3); then everything vi
 visual task starts until M2's gate passes, but fixes, CI and tooling work, and what M2's own tests need (R-918);
 work in flight or approved finishes.
 
+*10 Nov 2026 (R-923):* R-917's order and its hold on new integrator and visual tasks are set aside for now, on the
+owner's say: integrator tasks that don't depend on the points the owner hasn't decided may be dispatched, and GUI work
+may go ahead (`plan/OPERATIONS.md` § "Dispatching", R-923's line). Chart work stays paused: no new chart task starts,
+nothing from TASK-M2-57 to TASK-M2-85. M2's gate and G1 to G14 are unchanged.
+
 **The research phases are settled (R-74).** canonical_spec §11 governs: the vertical slice settled the
 integrator, step control, escape criterion and refinement policy, so there is no research milestone before
 the build. Philosophy §7.8's sequencing is marked superseded; what survives of it is one M3 validation
@@ -218,6 +223,10 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   then everything visual (M4 to M8). Work in flight or approved finishes; no new integrator or visual task starts
   until M2's gate passes, but fixes, CI and tooling work, and what M2's own tests need (R-918). The GUI track's
   exception (R-390, R-627) doesn't hold for new dispatch.
+  *10 Nov 2026 (R-923):* R-917's order and its hold are set aside for now, on the owner's say: integrator tasks that
+  don't depend on the points the owner hasn't decided may be dispatched, and GUI work may go ahead (`plan/OPERATIONS.md`
+  § "Dispatching", R-923's line). Chart work stays paused: no new chart task starts, nothing from TASK-M2-57 to
+  TASK-M2-85. M2's gate and G1 to G14 are unchanged.
 - **M2's gate, "fully working and tested" (R-917):** the checklist G1 to G14 below, the owner's lock-with-morphs test
   among it, beside the requirement block. `ε_phys` is REQ-ENC-024's tolerance. "Controls" are R-176's named negative
   controls under `--features controls` (REQ-VAL-147). Every item marked [CAL] is a calibration (R-71): its criterion
@@ -530,6 +539,10 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   that exists. The physics-coupled M8 work stays behind the engine chain.
   R-917 (9 Nov 2026): the track's exception, merging without waiting for the gates, doesn't hold for new dispatch; a
   track task not yet started waits for M2's gate.
+  *10 Nov 2026 (R-923):* R-917's order and the track's wait for M2's gate are set aside for now, on the owner's say:
+  integrator tasks that don't depend on the points the owner hasn't decided may be dispatched, and GUI work may go ahead
+  (`plan/OPERATIONS.md` § "Dispatching", R-923's line). Chart work stays paused: no new chart task starts, nothing from
+  TASK-M2-57 to TASK-M2-85. M2's gate and G1 to G14 are unchanged.
 - **The chart core's visual remainders (R-916):** the GUI's side of locking, tilt and slice, Save view, the
   consolidation's slips, points of interest's stars, the symmetry filter's toggle and real-run test, time-axis mode
   on the real integrator, hold `L_z`'s GPU tags and `τ`, the CPU-batch seams and the Sequence's morph segment with

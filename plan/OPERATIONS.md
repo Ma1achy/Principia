@@ -639,6 +639,10 @@ summary:
 
 *9 Nov 2026 (R-917):* the track's exception doesn't hold for new dispatch: a track task not yet started waits for
 M2's gate (§ "Dispatching", R-917's hold); a running one finishes.
+*10 Nov 2026 (R-923):* R-917's order and its hold on the track are set aside for now, on the owner's say: integrator
+tasks that don't depend on the points the owner hasn't decided may be dispatched, and GUI work may go ahead (§
+"Dispatching", R-923's line). Chart work stays paused: no new chart task starts, nothing from TASK-M2-57 to TASK-M2-85.
+M2's gate and G1 to G14 are unchanged.
 
 The human's ruling of 6 Oct 2026 (R-390): a dev GUI the human runs on the Mac with `cargo run -p gui --features mock`,
 built on a mock engine, in six tasks, TASK-M6-24 to TASK-M6-29, one per ORDER item, each its own PR, reviewed by code,
