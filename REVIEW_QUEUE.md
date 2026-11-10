@@ -650,17 +650,17 @@ sheet, and what "the nearest system on the edge" means on the real chart, need d
     `L_z`'s class only where `L_z = 0`. … So that pair is projected to the rest start, and every other pair there is
     rejected." and "A chart point below the invariant charts' apex, `t < 0`, has no entered `L_z`: `L_z(s, t)` has no
     real value there. So projecting it to `t = 0` changes no class, and the projection stands."
-  - PR #473's momentum-seed entry (unmerged; does the expansion seed `w = r/√I` replace R-82's rule), with its N10,
-    "the seed conversion", and its § D item 24, "The seed `w = r/√I`".
+  - RQ-764, the momentum seed (does the expansion seed `w = r/√I` replace R-82's rule), with the re-plan's N10,
+    "the seed conversion", and its § D item 24, "The seed `w = r/√I`" (`plan/charts/m2-chart-system-replan.md`).
 - **The gap:** the kernel's exact feasibility test (`invariant.rs:273`, `2·I·K* < L_z²` decided exactly) is binary:
   feasible or not. It gives no second sheet: `a` is always the non-negative root (`invariant.rs:532`), so the
   construction always takes `+a·w`. The prototype's "contracting sheet" is `−a·w`, a new definition (R-72) and a new
   extension type under R-407 clause 3's physics review. Its "radial rate" is the seed's. Under R-82's seed `w` is the
   inner pair's dilation `(ρ̇, λ̇) = (ρ, 0)` where `z_α ≤ 0` and the third body's `(0, λ)` elsewhere (`invariant.rs:455`),
-  so "contracting" names a different pair on either side of `z_α = 0`; under PR #473's momentum-seed entry's (a) or
-  (b), with its N10 built, `w = r/√I` and "contracting" names the whole system's dilation, `I` decreasing. N13 comes
-  after N10, and its "sheet 1 bitwise today's" baseline is `main`'s construction at N13's start: N10's under the seed
-  entry's (a) or (b), R-82's under its (c). Three facts frame the answer. On the default warped chart the edges are
+  so "contracting" names a different pair on either side of `z_α = 0`; under (a) or (b) of RQ-764, the momentum
+  seed, with the re-plan's N10 built, `w = r/√I` and "contracting" names the whole system's dilation, `I` decreasing. N13 comes
+  after N10, and its "sheet 1 bitwise today's" baseline is `main`'s construction at N13's start: N10's under RQ-764's
+  (a) or (b), R-82's under its (c). Three facts frame the answer. On the default warped chart the edges are
   straight (`s = 0, 1` at every `t`, `L_z = (2s − 1)·L_max(t)`, chart_reference §2.1), and the `t = 0` row is the rest
   start, `L_max(0) = 0`: one system on an untilted, unsliced chart, a line of different rest systems, one per pixel,
   under a tilt or slice that moves the configuration or masses (R-471 E3); only under the linear option (R-471 E2) is
@@ -861,10 +861,11 @@ current view, or both; and does switching it throw away work already computed?*
 - **Applied meanwhile:** nothing.
 - **Waits:** N14, TASK-M2-66.
 
-## RQ-776: What the backwards table does on an unfolded chart *(silence; a one-way door, accuracy; the owner's direction of 10 Nov; PR #473's backwards-table decisions (unmerged); context: N15)*
+## RQ-776: What the backwards table does on an unfolded chart *(silence; a one-way door, accuracy; the owner's direction of 10 Nov; R-926 item 7 and R-925 item 2, the backwards table; context: N15)*
 
 *Queued 10 Nov 2026 by the chart addendum. The backwards table (running state to chart position, for Chart position,
-the state map and the round-trip presets) is PR #473's (unmerged), its N7 and N9.*
+the state map and the round-trip presets) is R-926 item 7's (the owner's chart-system decisions), built by the
+re-plan's N7 and N9 (`plan/charts/m2-chart-system-replan.md`).*
 
 *In plain English: colouring by "where on the chart is this system now" needs a lookup from a state back to a chart
 point. With two sheets, a state could belong to either; which one does the lookup return?*
@@ -885,7 +886,7 @@ point. With two sheets, a state could belong to either; which one does the looku
 - **Measurement:** N15's: wrong share and round-trip error, near the fold apart from the rest, criterion written in the
   addendum before any run.
 - **Applied meanwhile:** nothing.
-- **Waits:** N15, and PR #473's N7.
+- **Waits:** N15, and the re-plan's N7.
 
 ## RQ-777: Is a weighted-mix axis value, which adds unlike quantities, acceptable mid-blend, and how are its units shown *(silence; a one-way door, what an axis claims; the owner's direction of 10 Nov on computed axes; REQ-GUI-084, REQ-GUI-246; context: N16, N17)*
 
@@ -911,7 +912,7 @@ how should units appear?*
     not, so the axis's numbers depend on the unit chosen for each coordinate: `β` in radians and `β ÷ π` (the
     addendum's own example) give different tick values, and different places for the round values, in the same window.
     The number on a mixed axis is then a definition fixed by those unit choices, not only a label.
-  - (b) Each term divided by its window scale (the unit of PR #473's window-scale entry, unmerged), so the sum is
+  - (b) Each term divided by its window scale (the unit of RQ-762, the window's per-coordinate scale), so the sum is
     dimensionless "window units"; the name says so. `Σ coef_k·value_k/scale_k` does not depend on the unit chosen for
     any coordinate, since `scale_k` carries the same unit as `value_k`.
   - (c) No sum: the edge carries the dominant term's own ticks, the others listed in the name with their coefficients.
@@ -932,11 +933,11 @@ under 2%. That 2% is a tolerance nobody has set, and the weighting needs a unit 
   - The addendum § 2.1: "**Share of the direction:** share_k = (slope_k / scale_k)², normalised to sum to 1 over the
     chart's coordinates. Terms under 2% are dropped."
   - `decisions.md` § R-507's heading: "the screen axis in units of the axis's full range at zoom 1, the hidden
-    coordinate in its slider span"; PR #473's queue entry on the window's per-coordinate scale (unmerged).
-- **The gap:** `scale_k` is the window's per-coordinate scale, open on PR #473; the 2% is a hand-set tolerance (R-71: a
+    coordinate in its slider span"; RQ-762, the window's per-coordinate scale.
+- **The gap:** `scale_k` is the window's per-coordinate scale, open as RQ-762; the 2% is a hand-set tolerance (R-71: a
   missing value is a calibration). A tilt of 8° gives a share of `sin²8° ≈ 1.9%`, so the axis is named pure while the
   view moves a second coordinate.
-- **The question:** (i) is `scale_k` the window's scale as PR #473's entry rules it; (ii) are small terms dropped, and
+- **The question:** (i) is `scale_k` the window's scale as RQ-762 rules it; (ii) are small terms dropped, and
   at what share?
 - **Options seen:**
   - (a) No drop: every non-zero term is named; the display shortens the name and the readout shows it whole.
@@ -946,7 +947,7 @@ under 2%. That 2% is a tolerance nobody has set, and the weighting needs a unit 
 - **Measurement:** N16's sweep: terms per edge and name length, reported; criterion: reported only, written before the
   run.
 - **Applied meanwhile:** nothing.
-- **Waits:** N16; PR #473's window-scale entry.
+- **Waits:** N16; RQ-762, the window's per-coordinate scale.
 
 ## RQ-779: The default extension kind of each edge, for the owner to confirm by eye *(the owner's call by looking; a one-way door, defaults; the owner's direction of 10 Nov; R-407, R-508, R-898; context: N14)*
 

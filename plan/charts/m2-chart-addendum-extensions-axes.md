@@ -1,19 +1,20 @@
 # M2 chart re-plan, addendum: chart extensions and computed axes
 
 **Status: proposed, 10 Nov 2026.** This document plans; it builds nothing and dispatches nothing. It adds to the M2
-chart re-plan of PR #473 (unmerged, `plan/charts/m2-chart-system-replan.md` on its branch), from the owner's two
+chart re-plan (`plan/charts/m2-chart-system-replan.md`, merged from PR #473; "the re-plan" below), from the owner's two
 directions of 10 Nov 2026 afternoon, which are **directions, not rulings**: nothing in force changes until the owner
 rules on the questions in § D. `plan/tasks.yaml`, the task files and `plan/requirements.yaml` are not edited here (applied
 per R-369, the orchestrator's two-way decisions: task scoping): the tasks in § C are proposed, named N12 to N18 so they
-slot into PR #473's § B beside its N1 to N11, and land in `tasks.yaml` once both PRs merge and the one-way items of § D
-are answered.
+slot into the re-plan's § B beside its N1 to N11, and land in `tasks.yaml` once this addendum merges and the one-way
+items of § D are answered.
 
 **Sources.** The owner's directions, quoted verbatim in § 0 from the addendum
 `orch/charts/prototype-2026-11-10/addendum-extensions-axes-2026-11-10.md`, on the orchestrator's drive, cited by path and
 never copied. The prototype it describes, `orch/charts/prototype-2026-11-10/chart-slice.html`, is now version 21
 (the addendum's § 3 lists versions 14 to 21); it is referenced by path only, and its quadtree (its design's § 9) is still
-a stand-in, version 15's patch for zoomed-out gaps included, so nothing here copies it. PR #473's plan, its queue entries
-and its two rulings, read from its branch `origin/plan/chart-system-2026-11-10` at ac706b8d. The orchestrator's surveys
+a stand-in, version 15's patch for zoomed-out gaps included, so nothing here copies it. The re-plan, its queue entries
+and its two rulings (R-925 and R-926), read first from PR #473's branch `origin/plan/chart-system-2026-11-10` at
+ac706b8d and again, as merged, on `origin/main` 58160bb5. The orchestrator's surveys
 (`orch/charts/replan-2026-11-10/survey-*.md`). File and line evidence below was read on `origin/main` a5f0aa88.
 
 **Every number from the prototype is a toy-map figure** from its no-WebGPU fallback (the addendum's own words: "Numbers
@@ -21,15 +22,15 @@ come from the four toy maps, not the kernel's charts"); none is quoted here as m
 measurement in § C runs on the kernel's charts before anything rests on it (R-649, targets are measurements, never
 gates; R-650, replication is scored in its own milestone).
 
-**PR #473's ids, by name.** PR #473 is unmerged, so its two rulings and its thirteen queue entries are not entries on
-`main`, and `plan/check_plan.py` requires every ruling and queue number in a plan file to resolve. This document names
-them instead: **"the system decisions"** is PR #473's ruling of the owner's eleven chart-system decisions (a chart is a
+**The re-plan's ids, by number.** PR #473 has merged, so its two rulings and its queue entries are entries on `main`
+and are cited here by number (a record correction, applied per R-369: naming; earlier heads of this document named
+them by topic, since `plan/check_plan.py` requires every ruling and queue number in a plan file to resolve and they did
+not yet). **R-926** is the ruling of the owner's eleven chart-system decisions (a chart is a
 map composed with a flat window; time the last coordinate; a morph a blend of two charts' states; the lock one
 constraint; the CPU evaluates charts and the GPU only integrates; per-quad forward tables; a backwards table for the
-fragment; no refusals; three slope tiers; table debug views; the one-cell patch), cited "system decision 3" and so on;
-**"the prototype decisions"** is its ruling of the owner's six prototype decisions; and its queue entries by topic
-("PR #473's window-scale entry"). The PR's description gives the numbers. Once both PRs merge, a follow-up may write the
-numbers in (applied per R-369: naming).
+fragment; no refusals; three slope tiers; table debug views; the one-cell patch), cited "R-926 item 3" and so on;
+**R-925** is the ruling of the owner's six prototype decisions; and the re-plan's queue entries are cited by id, each
+with its topic ("RQ-762, the window's per-coordinate scale").
 
 ## 0. The owner's direction, verbatim (not a ruling)
 
@@ -75,14 +76,18 @@ tilted sphere's lattice of repeats; R-693, every id glossed; R-791, the energy a
 softening; R-819, that reaching every axis that reads the potential; R-834, the four axis kinds stay; R-842, time as an
 axis is a chart mode; R-850, one path abstraction for view edits; R-879, final-condition charts with backward runs, after
 the M8 charts; R-898, latent `β` periodic over the full circle; R-916, M2 is the whole non-visual chart system; R-917,
-the build order (charts, integrator, visuals); R-920, the slider spans.
+the build order (charts, integrator, visuals); R-920, the slider spans; R-923, integrator work before charts, for now
+(the pause of the chart tasks); R-925, the owner's six prototype decisions; R-926, the owner's eleven chart-system
+decisions.
 
 **Review queue.** RQ-771, the invariant charts' second sheet and nearest edge system; RQ-772, which edges have a genuine
 continuation; RQ-773, amending R-407, R-408, R-470 and R-554 for "no blank", and the count; RQ-774, marking clamped or
 saturated areas; RQ-775, where the per-edge choice lives and the sim key; RQ-776, the backwards table on an unfolded
 chart; RQ-777, mixed-axis values and units; RQ-778, the share's scale and the 2% drop; RQ-779, the defaults table, by
 eye; RQ-780, computed axes against the line system's primary scale and the no-ticks-mid-morph rule; RQ-781, where the
-view's centre may go. RQ-734, final-condition charts (ruled by R-879, archived).
+view's centre may go. RQ-734, final-condition charts (ruled by R-879, archived). The re-plan's: RQ-760, what a state
+blend leaves open, folds no axis declares among it; RQ-762, the window's per-coordinate scale; RQ-764, the momentum
+seed; RQ-767, the table route's accuracy outside a morph.
 
 **Tasks and requirements** are glossed in their rows of § A the first time they appear.
 
@@ -160,10 +165,10 @@ recommendation. "Direction 1" is extensions on every edge, "direction 2" compute
 | TASK-M2-37 | Energy axes warped by default, the extension per mapping (built) | KEEP | Built; N14 extends `energy::sides` |
 | TASK-M2-38 | The generic navigation stop | CHANGE (RQ-781) | Sheet-aware `validate`; the fuzz extended (N14) |
 | TASK-M2-39 | Under Tip as sheet, past the edge is past the edge | KEEP | Unaffected |
-| TASK-M2-58 | The gate: rulings applied to the composition design (PR #473: CHANGE) | CHANGE | Also carries the answers to RQ-771 to RQ-781 |
-| TASK-M2-59 | The composition in the contracts (PR #473: CHANGE) | CHANGE | With N12 |
-| TASK-M2-66 | The primitive registry (PR #473: CHANGE) | CHANGE (RQ-775) | Each row's edges: kinds allowed and a default |
-| TASK-M2-67 | CPU decode and encode through the composition (PR #473: KEEP) | KEEP | N14 applies the kinds before it |
+| TASK-M2-58 | The gate: rulings applied to the composition design (the re-plan: CHANGE) | CHANGE | Also carries the answers to RQ-771 to RQ-781 |
+| TASK-M2-59 | The composition in the contracts (the re-plan: CHANGE) | CHANGE | With N12 |
+| TASK-M2-66 | The primitive registry (the re-plan: CHANGE) | CHANGE (RQ-775) | Each row's edges: kinds allowed and a default |
+| TASK-M2-67 | CPU decode and encode through the composition (the re-plan: KEEP) | KEEP | N14 applies the kinds before it |
 | TASK-M2-71 | Warps and pair maps | KEEP | Its warps' implied types become defaults through N14 |
 | TASK-M8-87 | The real engine's extension types, statistics and F3 fill | CHANGE (RQ-773) | The new kinds |
 | TASK-M8-55 | Past the square with the controls shown, no gaps | CHANGE (RQ-773) | Blank only where declared |
@@ -211,8 +216,8 @@ recommendation. "Direction 1" is extensions on every edge, "direction 2" compute
 | R-583 | Every mark length, ticks included, in base px | KEEP | Seam and fold ticks take base px too |
 | R-459 | The compass cube's H, V, D labels are dimension buttons | KEEP | The compass, not the figure's axes |
 | R-791, R-819 | The energy axis named "Newtonian energy" under softening | KEEP | A name, not one of direction 2.2's domain words |
-| R-842 | Time as a chart mode; ticks in canonical time units | CHANGE | Already amended by PR #473's system decision 2; its ticks become a computed axis (N16) |
-| R-507, R-920 | Units: an axis's full range at zoom 1, a slider span | KEEP | The `scale_k` of the prototype's share rule, completed by PR #473's window-scale entry (RQ-778) |
+| R-842 | Time as a chart mode; ticks in canonical time units | CHANGE | Already amended by R-926 item 2 (time the last coordinate of every map); its ticks become a computed axis (N16) |
+| R-507, R-920 | Units: an axis's full range at zoom 1, a slider span | KEEP | The `scale_k` of the prototype's share rule, completed by RQ-762, the window's per-coordinate scale (RQ-778) |
 | R-850 | One path abstraction for every view edit, the morph its general form | KEEP | Unaffected; the no-ticks line is the composition design's § 17 text, marked in § A.9 (RQ-780) |
 | R-538 | The trace's seam tick, "a short tick at both ends of the jump" | KEEP | The precedent for direction 2.2's taller seam tick |
 | R-599 | The readout names a saturated axis | KEEP | A readout line, not axis text |
@@ -269,8 +274,8 @@ recommendation. "Direction 1" is extensions on every edge, "direction 2" compute
 `I = 1`), the non-negative root, so it always builds `vᵢ = vᵢ^(L) + a·wᵢ`. The prototype's "contracting sheet" is
 `−a·wᵢ`. Its "radial rate" is the seed's. Under today's rule (R-82) `w` is the inner pair's dilation
 `(ρ̇, λ̇) = (ρ, 0)` where `z_α ≤ 0` and the third body's `(0, λ)` elsewhere (`invariant.rs:455`), so "contracting" names a
-different pair on either side of `z_α = 0`. PR #473's momentum-seed entry (does the expansion seed `w = r/√I` replace
-R-82's rule; its N10, "the seed conversion", and its § D item 24, "The seed `w = r/√I`") may change that: under its
+different pair on either side of `z_α = 0`. RQ-764, the momentum seed (does the expansion seed `w = r/√I` replace
+R-82's rule; the re-plan's N10, "the seed conversion", and its § D item 24, "The seed `w = r/√I`"), may change that: under its
 options (a) and (b) `w` is the uniform expansion of the whole system (on `Φ_θ,L_z` under (a) only), and "contracting" names the whole system's
 dilation, `I` decreasing, on both sides of `z_α = 0`. The identity below holds for any seed `w` that does not depend
 on `L_z`, which both rules satisfy. Since `vᵢ^(L)` is linear in `L_z` and `a` depends on `L_z²`, **sheet 2 at `L_z` is
@@ -372,9 +377,9 @@ keeps it:
 (RQ-779), the axis as a computed sum of window terms through blends (RQ-777, RQ-778, RQ-780), and seam, fold, clamp and
 saturate marks on the axis in place of words. Seven tasks, § C.
 
-## C. The new tasks, in dependency order, slotted into PR #473's § B
+## C. The new tasks, in dependency order, slotted into the re-plan's § B
 
-Each gives its slot in PR #473's § B, its acceptance test, the measurement that informs any open choice with its
+Each gives its slot in the re-plan's § B, its acceptance test, the measurement that informs any open choice with its
 criterion **written now, before any run** (R-649), and its door: **two-way** (decided by the measurement, recorded
 "applied per R-369") or **one-way** (the owner's; the RQ named). No tolerance is tuned to pass; a replication or
 prototype figure is a measurement, never a gate (R-649, R-650). Visual work (N17, N18) waits for M2's gate (R-917);
@@ -391,11 +396,11 @@ the rest is non-visual and so M2's (R-916).
    `plan/tools/reqio.py`. *Measurement:* none. *Door:* one-way, RQ-771, RQ-772, RQ-773, RQ-775, RQ-779, RQ-781.
 
 2. **N13, the invariant construction's second sheet.** *Slot:* § B.4, after item 12 (TASK-M2-66, TASK-M2-67), only under
-   RQ-771 (a) or (b). *Order with PR #473's N10* (the seed conversion, built only under its momentum-seed entry's (a) or
-   (b)): N10 sits in that plan's § B.1, before TASK-M2-61's baseline, so N13 comes after it. Under the seed entry's (a)
+   RQ-771 (a) or (b). *Order with the re-plan's N10* (the seed conversion, built only under (a) or (b) of RQ-764, the
+   momentum seed): N10 sits in that plan's § B.1, before TASK-M2-61's baseline, so N13 comes after it. Under RQ-764 (a)
    or (b), N13's "sheet 1 bitwise today's" baseline is the construction as N10 leaves it, with the seed `w = r/√I` on
    the charts N10 converts; under its (c), R-82's construction as `main` has it now. Either way the baseline is `main`'s
-   construction at N13's start, and N13 does not start while that entry is unanswered. *Acceptance:* one source for f32
+   construction at N13's start, and N13 does not start while RQ-764 is unanswered. *Acceptance:* one source for f32
    and f64 (as `invariant.rs` is): a sheet input, sheet 1 bitwise the baseline on every shipped chart (the control,
    sheet 2 as default, must fail that check); on sheet 2, chart_reference §2.2's three checks (`Σpᵢ = 0`, `L_z(p)`,
    `K(p)`) to machine precision; the feasibility branch identical on both sheets for the same `(L_z, K*)`; **the
@@ -414,8 +419,8 @@ the rest is non-visual and so M2's (R-916).
    void. *Precondition*, checked before the run and reported: the register's default configuration has a qualifying
    seed, so its outcome is not `Outcome::Degenerate`. Under a degenerate seed the construction sets `a = 0`
    (`invariant.rs:519-536`), so the two sheets are equal by construction, and, the configuration being held across the
-   chart, on every pixel at once; a degenerate default configuration makes the result void, not PASS (under PR #473's
-   seed entry (a) or (b) it cannot arise for `I > 0`). *Door:* one-way whether it is built (RQ-771); the construction
+   chart, on every pixel at once; a degenerate default configuration makes the result void, not PASS (under RQ-764
+   (a) or (b) it cannot arise for `I > 0`). *Door:* one-way whether it is built (RQ-771); the construction
    two-way.
 
 3. **N14, per-edge extensions in the CPU evaluator and the count.** *Slot:* § B.4, after N13 and TASK-M2-66, before item
@@ -445,12 +450,12 @@ the rest is non-visual and so M2's (R-916).
    in cells, reported separately for pixels within 2 pixels of a fold and for the rest; PASS if the rest's wrong share
    is at most the same run's figure over the square alone; EXPLAINED DIVERGENCE if worse with a named cause; else
    UNEXPLAINED. The near-fold share is reported, not judged. *Door:* two-way for the construction; one-way for the
-   accuracy, RQ-776 and PR #473's backwards-accuracy entry.
+   accuracy, RQ-776 and RQ-767, the table route's accuracy outside a morph.
 
-5. **N16, computed axes, the maths.** *Slot:* § B.5, after TASK-M2-61 (the chart-path object, whose window `(c, Q)` PR
-   #473 rewrites), N5 (the blend) and N14 (the kinds), beside TASK-M2-81 (path re-timing and alignment). Non-visual, in
+5. **N16, computed axes, the maths.** *Slot:* § B.5, after TASK-M2-61 (the chart-path object, whose window `(c, Q)` the
+   re-plan rewrites), N5 (the blend) and N14 (the kinds), beside TASK-M2-81 (path re-timing and alignment). Non-visual, in
    the engine, on the CPU. *Acceptance:* a function from the window `(c, Q)`, the chart or blend and its share, each
-   coordinate's scale (PR #473's window-scale entry) and the edges' kinds, to, per screen edge: the terms (coordinate,
+   coordinate's scale (RQ-762, the window's per-coordinate scale) and the edges' kinds, to, per screen edge: the terms (coordinate,
    coefficient, sign), the name, the value along the edge, the tick positions and values, and the marks (a wrap's seam,
    an unfold's fold, a clamp's constant run, a saturated stretch). Tests, each with a control: (1) **ends exact**: at a
    morph's `s = 0` and `1`, selected by REQ-CHART-113's exact comparison, the name and every tick value bitwise the
@@ -487,7 +492,7 @@ the rest is non-visual and so M2's (R-916).
    also dims a system pixel inside the square fails). *Measurement:* none. *Door:* one-way, RQ-774.
 
 The order: N12 (contracts) → N13 → N14 → N15, and N16 after N14, N5 and TASK-M2-61; N17 and N18 after M2's gate.
-Nothing here is dispatched while PR #473's pause of the chart tasks holds.
+Nothing here is dispatched while the pause of the chart tasks holds (R-923, integrator work before charts, for now).
 
 ## D. Questions for the owner
 
@@ -542,8 +547,8 @@ Everything in the addendum that contradicts the repository, the contracts or the
    second sheet; `a` is the non-negative root (`crates/kernel/src/decode/invariant.rs:12`, `:532`;
    `docs/design/principia_chart_reference.md:461`). The sheet is a new definition (R-72) and type (R-407 clause 3); its
    "radial rate" is, under R-82's seed, the inner pair's for `z_α ≤ 0` and the third body's otherwise
-   (`invariant.rs:455`), and under PR #473's momentum-seed entry's (a) or (b) (its N10, the seed conversion; its § D
-   item 24, the seed `w = r/√I`) the whole system's dilation (RQ-771).
+   (`invariant.rs:455`), and under (a) or (b) of RQ-764, the momentum seed (the re-plan's N10, the seed conversion; its
+   § D item 24, the seed `w = r/√I`), the whole system's dilation (RQ-771).
 7. **"The feasibility edge depends on shape and is curved"** (addendum § 1.4) holds only under the linear option. On the
    default warp the edges are straight lines `s = 0, 1` and the row `t = 0` (`principia_chart_reference.md:261`,
    `:264`); the prototype's rectangle `L_z × E` is the linear option's picture, not the default chart's.
@@ -584,11 +589,12 @@ Everything in the addendum that contradicts the repository, the contracts or the
     direction 2 supersedes it on the real engine (N17).
 17. **Not contradictions, recorded:** the addendum's § 1.3 fixes agree with the corpus (R-437; R-538's "a start already
     inside `r_coll` ends as a collision at `t = 0`", `decisions.md:18597`), and its quadtree, version 15's patch
-    included, is a stand-in and not copied, as PR #473 holds.
+    included, is a stand-in and not copied, as R-926 and the re-plan hold.
 
-## F. With PR #473
+## F. With the re-plan
 
-PR #473's re-plan gains N12 to N18 in its § B at the slots given in § C once both PRs merge; its § A.1 then reads
+The re-plan (`plan/charts/m2-chart-system-replan.md`, merged from PR #473) gains N12 to N18 in its § B at the slots
+given in § C once this addendum merges; its § A.1 then reads
 TASK-M2-38, TASK-M8-87, TASK-M8-55, TASK-M8-56, TASK-M8-06, TASK-M8-50 and TASK-M8-115 as CHANGE for the reasons in
-§ A here, and its § E gains RQ-771 to RQ-781. Its open item on a fold no extension declares (its O6) meets RQ-773: a
+§ A here, and its § E gains RQ-771 to RQ-781. Its open item on a fold no extension declares (its O6, the owner's under RQ-760 (iv)) meets RQ-773: a
 blend's fold is not an edge extension and stays its question. Nothing here edits its files.
