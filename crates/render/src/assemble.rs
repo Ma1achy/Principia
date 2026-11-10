@@ -49,7 +49,7 @@ use std::fmt::{self, Write as _};
 use std::sync::OnceLock;
 
 use crate::codegen;
-use crate::lex::{lines, tokens, Tok};
+use crate::lex::{is_space, lines, tokens, Tok};
 use ledger::gen::{self as generate, prelude, read};
 use ledger::schema::{Entry, Scale, Word};
 use naga::valid::{Capabilities, FunctionInfo, ModuleInfo, ValidationFlags, Validator};
@@ -359,13 +359,14 @@ pub struct Declaration {
 }
 
 impl Declaration {
-    /// The declarations in `source`: each line whose text, leading whitespace removed, starts `// @`, its lines
-    /// split at WGSL's line breaks ([`lines`]), where naga ends the declaration's comment. Any word after `@` but
-    /// `uniform` and `input` is refused, as is a malformed line or a name declared twice.
+    /// The declarations in `source`: each line whose text, leading WGSL white space ([`is_space`]) removed, starts
+    /// `// @`, its lines split at WGSL's line breaks ([`lines`]), where naga ends the declaration's comment. The text
+    /// before `//` is WGSL source, so its white space is WGSL's, not Unicode's. Any word after `@` but `uniform` and
+    /// `input` is refused, as is a malformed line or a name declared twice.
     pub fn parse(source: &str) -> Result<Declaration, AssembleError> {
         let mut out = Declaration::default();
         for (k, line) in lines(source).into_iter().enumerate() {
-            let Some(rest) = line.trim_start().strip_prefix("// @") else {
+            let Some(rest) = line.trim_start_matches(is_space).strip_prefix("// @") else {
                 continue;
             };
             let bad = |why: &str| AssembleError::Declaration {

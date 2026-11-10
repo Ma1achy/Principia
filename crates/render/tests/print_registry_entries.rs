@@ -1048,6 +1048,45 @@ negative_control!(
     check_declaration_lines(|c| c == '\n')
 );
 
+/// Each character of [`SPACES`] before a declaration line is read as `is_space` says: where it is white space, the
+/// text before `//` is blank and `a` is declared, as naga reads the line as a comment; where it is not, the line is no
+/// declaration, and `a` is not declared.
+fn check_declaration_spaces(is_space: fn(char) -> bool) {
+    for c in SPACES {
+        let one = inputs(&format!("{c}// @input a"));
+        if is_space(c) {
+            assert_eq!(
+                one.as_ref().ok(),
+                Some(&vec!["a".to_owned()]),
+                "{c:?}: the declaration after it is not read: {one:?}"
+            );
+        } else {
+            assert!(
+                one.as_ref().ok() != Some(&vec!["a".to_owned()]),
+                "{c:?} is not WGSL's white space, yet the declaration after it was read"
+            );
+        }
+    }
+}
+
+#[test]
+fn print_registry_entries_declaration_leading_space() {
+    // naga reads a line opening with a mark as a comment, and refuses one opening with the no-break space.
+    let comment = |c: char| {
+        naga::front::wgsl::parse_str(&format!("{c}// @input a\nfn f() {{}}"))
+            .is_ok_and(|m| m.functions.len() == 1)
+    };
+    assert!(comment('\u{200E}') && comment('\u{200F}') && !comment('\u{A0}'));
+    check_declaration_spaces(naga_space);
+}
+
+negative_control!(
+    print_registry_entries_declaration_leading_space,
+    "Unicode's White_Space before a declaration, as `char::is_whitespace` reads it",
+    expected = "is not WGSL's white space, yet the declaration after it was read",
+    check_declaration_spaces(char::is_whitespace)
+);
+
 // ----- registration refusals -----
 
 /// The output entry's declaration with `member` taken out.
