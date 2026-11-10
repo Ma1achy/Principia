@@ -617,7 +617,7 @@ either side ("central differences"). Which one the deep-zoom decoder uses change
   must fail; and the one-cell patch's depth with each slope against per-sample
   f64 evaluation.
 - **Applied meanwhile:** nothing. REQ-DEC-034 and REQ-DEC-036 stand as written; no task is dispatched (the chart
-  pause, PR #469).
+  pause, R-923).
 - **Waits:** the slope task of the plan and TASK-M6-07's rewrite; TASK-M5-04's CPU side.
 
 ## RQ-759: The lock's re-solve after a map change: is it continuous, in what metric, and does it keep R-593's offer, R-469's stop and the stored-words select? *(conflict and silence; a one-way door; R-926 item 4, R-849, R-593, R-469, R-866, R-867, R-902; REQ-CHART-146, REQ-CHART-161, REQ-CHART-060, REQ-CHART-010, REQ-CHART-113; context: TASK-M2-62, TASK-M2-65, TASK-M2-73)*
@@ -684,7 +684,7 @@ an edit stops at the last valid value. Least squares from a few starting guesses
   label "not nearest", and (a′) must jump once, labelled; and a fixture that ends the followed minimiser (the same path
   continued past the cut locus until the followed branch merges with a saddle), on which (a) must stop at the last
   frame where the branch exists, labelled, with no anchor step larger than the slide check allows before it.
-- **Applied meanwhile:** nothing; TASK-M2-62 and TASK-M2-65 are paused with the other chart tasks (PR #469).
+- **Applied meanwhile:** nothing; TASK-M2-62 and TASK-M2-65 are paused with the other chart tasks (R-923).
 - **Waits:** TASK-M2-62, TASK-M2-65 and the solver core of TASK-M2-73, as the plan places them.
 
 ## RQ-760: What becomes of design § 17.2's other path arms, the mass block, statistics on a blend and folds no axis declares, now that a morph blends the two charts' states? *(conflict and silence; a one-way door; R-926 item 3, R-925 item 4, R-850, R-853, R-408, R-407, R-898; REQ-CHART-112, REQ-CHART-113, REQ-CHART-131, REQ-CHART-150; context: TASK-M2-60, TASK-M2-65, TASK-M2-71, TASK-M2-81)*

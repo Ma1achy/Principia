@@ -35544,8 +35544,8 @@ flag, the self-check, the scan) stay proposal until a task measures them.
 6. **Debug views of the tables are required,** as the prototype's § 10 lists them; R-926's item 10 names them.
 
 **"What to do now".** These words were the owner's instruction for that message: read and report, and no new chart
-task from TASK-M2-57 to TASK-M2-85 while integrator work continues. PR #469, not merged when this was written, records
-that pause; this ruling does not restate it. The owner's re-plan message of the same afternoon (R-926) asked for the
+task from TASK-M2-57 to TASK-M2-85 while integrator work continues. R-923 (integrator work before charts, for now)
+records that pause, merged from PR #469, which was not merged when this was written; this ruling does not restate it. The owner's re-plan message of the same afternoon (R-926) asked for the
 plan, which `plan/charts/m2-chart-system-replan.md` proposes without dispatching a task.
 
 *What it amends:* **R-116**, in part: the fragment's decode and encode stay generated from the one source for every

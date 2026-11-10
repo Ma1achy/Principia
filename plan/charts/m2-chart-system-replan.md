@@ -4,8 +4,8 @@
 re-plan task of 10 Nov (R-926), on the owner's decisions R-925 and R-926. `plan/tasks.yaml` and the task files are
 **not** edited here: the task list in § B is proposed, and `tasks.yaml` follows once the one-way items of § E are
 answered (applied per R-369: task scoping). The owner's instruction of 10 Nov (R-925 quotes it) holds new chart
-tasks, TASK-M2-57 to TASK-M2-85; PR #469, not merged when this was written, records the pause and its exceptions, so
-every task below, the first slice of § C included, is proposed and waits for the pause to lift. Integrator work carries
+tasks, TASK-M2-57 to TASK-M2-85; R-923 (integrator work before charts, for now) records the pause and its exceptions,
+merged from PR #469, which was not merged when this was written, so every task below, the first slice of § C included, is proposed and waits for the pause to lift. Integrator work carries
 on as agreed.
 
 **Sources.** The owner's words: R-925 and R-926, verbatim in `decisions.md`. The prototype, a proposal that stays on the
@@ -40,8 +40,9 @@ is one object, bitwise first; R-866, locking doesn't move the view; R-867, the a
 lock belongs to the path; R-908, product tests never retired; R-916, M2 is the whole non-visual chart system; R-917,
 build order charts, then integrator, then visuals; R-918, M2's integrator-needing maths tested on exact trajectories;
 R-919, the owner's answers on the chart plan; R-920, the slider spans; R-521, a record recreates when every link's
-own hash matches; R-921, a record made under a retired `β` link recreates bitwise; R-925, the owner's six chart decisions of 10 Nov;
-R-926, the owner's eleven chart-system decisions of 10 Nov.
+own hash matches; R-921, a record made under a retired `β` link recreates bitwise; R-923, integrator work before
+charts, for now, no new chart task meanwhile; R-925, the owner's six chart decisions of 10 Nov; R-926, the owner's
+eleven chart-system decisions of 10 Nov.
 
 **Review queue.** RQ-758, slopes against central differences; RQ-759, what the lock's re-solve guarantees; RQ-760,
 the other path arms, the mass block, statistics and folds on a blend; RQ-761, time on the integrator's integer grid;
@@ -387,7 +388,7 @@ Each with its owner (a role) and the measurement that closes it. None is solved 
 
 **What.** The smallest piece that puts one real kernel chart through the system R-926 rules, and checks it against
 today's decode, so that § 12's forward numbers are re-measured on a kernel chart. **Proposed, not dispatched:** the
-chart tasks are paused (PR #469), and N1 waits for the owner to lift the pause or let it through as a measurement.
+chart tasks are paused (R-923), and N1 waits for the owner to lift the pause or let it through as a measurement.
 
 **Charts.** The latent chart first (`crates/kernel/src/chart/latent.rs`, the one chart that bakes its window in), then
 the shape sphere's exponential map (`chart/shape_sphere.rs`, with its `r = 0` centre and its poles).
