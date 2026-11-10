@@ -516,7 +516,7 @@ kept. TR-1, MK-1 and SL-1 are binary-plus-single scatterings, not hierarchical t
   not scored, with no requirement.
   *7 Nov 2026 (R-847, the owner's reply on RQ-725 and RQ-726):* R-669 is reversed here, its recorded reason being cost
   and scope only. Binary-plus-single (scattering) and fixed-`k` become charts and builder axes like any other, built
-  when their turn comes (TASK-M8-123 and TASK-M8-122), with Heggie & Sweatman 1991 alongside; the targets that use
+  when their turn comes (TASK-M2-79 and TASK-M2-78), with Heggie & Sweatman 1991 alongside; the targets that use
   them, TR-1, MK-1, SL-1 and TS-2, score in M9 once the charts exist. The missing definitions (`b_max`, the pericentre
   phase, the pull-in distance with a stated tidal error, fixed-`k`'s rotation sense) are filled at build under physics
   review. f_col is built with the scattering chart, so TR-1's colouring is scored with it. MK-1 stays, labelled as a

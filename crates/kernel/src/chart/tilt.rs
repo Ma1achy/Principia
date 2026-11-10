@@ -144,13 +144,18 @@ impl TiltSpec {
         }
     }
 
-    /// `R·e_X` and `R·e_Y` in `(a, b, d_X, d_Y)`: where the rotation sends an offset on each target, the inputs a saved
-    /// chart's new tilt feeds it (R-513 Q1; `super::saved`). `None` where `R` is no rotation, Lean each axis with one
-    /// target and both angles set, whose skewed columns leave its third input undefined (RQ-746).
+    /// `R·e_X` and `R·e_Y` in `(a, b, d_X, d_Y)`: where the tilt sends an offset on each target, the inputs a saved
+    /// chart's new tilt feeds it (R-513 Q1; `super::saved`).
     /// - With two targets, each axis turned toward its own: `(−sin τ₁, 0, cos τ₁, 0)` and `(0, −sin τ₂, 0, cos τ₂)`.
     /// - Tip as sheet with one target and both angles set, Rodrigues' image of `e_X`: `(k_b sin m, −k_a sin m, cos m, 0)`,
     ///   its first two entries read off the columns, `R_aX = −R_Xa` and `R_bX = −R_Xb` exactly (the axis `k` lies in the
     ///   plane, `k_X = 0`), and `cos m` at the total tip, which a wrap by 360° leaves unchanged.
+    /// - Lean each axis with one target and both angles set, whose skewed columns are no rotation's: the saved plane's
+    ///   unit normal `t̂ = (û₁ × û₂)/|û₁ × û₂|`, its sign toward `+e_X`, so `R = [û₁ û₂ t̂]` (R-895, ruling RQ-746 (a)).
+    ///   The cross product is `(−sin τ₁ cos τ₂, −cos τ₁ sin τ₂, cos τ₁ cos τ₂)` and its length the Gram factor; where
+    ///   its `e_X` entry is not negative, at the edge of Lean's range (`|τ₁|` or `|τ₂|` = 90° with the other set)
+    ///   included, `t̂` takes the cross product's own sign. At RQ-471's corner, `|τ₁| = |τ₂| = 90°`, there is no frame
+    ///   (R-554's `ray-degenerate`): `None`.
     /// - A single angle under either map, the turn in its own axis's plane: `(−sin τ₁, 0, cos τ₁, 0)` for `τ₁`,
     ///   `(0, −sin τ₂, cos τ₂, 0)` for `τ₂`; untilted, `e_X`.
     ///
@@ -162,12 +167,16 @@ impl TiltSpec {
         if self.two_targets() {
             Some([[-s1, 0.0, c1, 0.0], [0.0, -s2, 0.0, c2]])
         } else if self.tau1 != 0.0 && self.tau2 != 0.0 {
-            (self.map == TiltMap::Sheet).then(|| {
+            if self.map == TiltMap::Sheet {
                 let [r1, r2] = self.columns();
                 let total = Float::sqrt(self.tau1 * self.tau1 + self.tau2 * self.tau2);
                 let cm = Float::cos(Float::to_radians(total));
-                [[-r1[2], -r2[2], cm, 0.0], e_y]
-            })
+                Some([[-r1[2], -r2[2], cm, 0.0], e_y])
+            } else if self.rank_loss() {
+                None
+            } else {
+                Some([lean_normal(self.columns()), e_y])
+            }
         } else if self.tau2 == 0.0 {
             Some([[-s1, 0.0, c1, 0.0], e_y])
         } else {
@@ -442,6 +451,18 @@ fn gram([u1, u2]: [[f64; 4]; 2]) -> f64 {
     let y = u1[0] * u2[2];
     let z = u1[0] * u2[1];
     Float::sqrt(x * x + y * y + z * z)
+}
+
+/// One-target Lean's unit normal `t̂ = (û₁ × û₂)/|û₁ × û₂|` in `(a, b, d_X, d_Y)`, its sign toward `+e_X` (R-895):
+/// the cross product's components as [`gram`] forms them, divided by [`gram`]'s length, and negated where the `e_X`
+/// entry is negative. The columns must not be RQ-471's corner, where the length is no frame's.
+fn lean_normal(columns: [[f64; 4]; 2]) -> [f64; 4] {
+    let [u1, u2] = columns;
+    let cross = [-(u1[2] * u2[1]), -(u1[0] * u2[2]), u1[0] * u2[1]];
+    let length = gram(columns);
+    let flip = cross[2] < 0.0;
+    let unit = |x: f64| if flip { -x / length } else { x / length };
+    [unit(cross[0]), unit(cross[1]), unit(cross[2]), 0.0]
 }
 
 /// A share of an area statistic: `part` of `total`, undefined (`None`) where the total is 0, never 0 (R-554 L2).

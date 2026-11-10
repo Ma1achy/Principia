@@ -1,2 +1,7 @@
 # Merges keep both sides of the queue, so appended entries never conflict (applied per R-369; plan/OPERATIONS.md § "Merging").
 REVIEW_QUEUE.md merge=union
+# The gate and report blocks of MILESTONES.md are generated (plan/tools/milestones.py) and stay committed, as code and
+# tests read them: a conflict in a block is resolved by `python3 plan/tools/regenerate.py --all`, never by hand, and
+# plan/check_plan.py fails if the committed blocks differ from a fresh regeneration (R-718). The plan's other generated
+# files are not committed (.gitignore; the owner, 8 Nov 2026).
+plan/MILESTONES.md generated-blocks=plan/tools/milestones.py

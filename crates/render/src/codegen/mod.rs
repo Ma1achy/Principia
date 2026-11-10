@@ -202,7 +202,8 @@ pub fn uniform_name(id: u32, param: &str) -> String {
 }
 
 /// The tree rooted at `root`, filling `slot`, as the occupant's WGSL; refused where a node's id is used twice, a
-/// function or parameter name is not a WGSL identifier or a parameter name is used twice in a node, a node's name
+/// function or parameter name is not a WGSL identifier or a parameter name is used twice in a node, a function is in
+/// the Print graph's namespace ([`crate::print::codegen::PREFIX`]: the stain's codegen never sees it), a node's name
 /// holds a control character (it would leave its comment), an argument names no input or parameter, or a parameter's
 /// value is no value of its uniform.
 pub fn generate(slot: Slot, root: &Node) -> Result<Generated, CodegenError> {
@@ -252,6 +253,13 @@ fn emit(
     }
     if !is_identifier(&call.function) {
         return refuse(format!("`{}` is no function name", call.function));
+    }
+    if call.function.starts_with(crate::print::codegen::PREFIX) {
+        return refuse(format!(
+            "`{}` is a Print graph node's: the Print graph has its own registry and codegen, which the stain's never \
+             sees (render_gui_spec §12)",
+            call.function
+        ));
     }
     let mut names = BTreeSet::new();
     let mut uniforms = Vec::with_capacity(call.params.len());

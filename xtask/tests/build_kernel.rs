@@ -16,8 +16,8 @@ use validation::negative_control;
 use validation::spawn::Spawn;
 use xtask::build_kernel::{
     backend_built, build_backend, check_channel, check_locked, check_source, ensure_backend,
-    exact_requirement, locked_version, pinned_channel, prepare_backend, run, to_wgsl, BACKEND_LOCK,
-    BACKEND_TOML, BACKEND_VERSION, SPV, TARGET, WGSL,
+    exact_requirement, locked_version, pinned_channel, prepare_backend, run, to_read_wgsl, to_wgsl,
+    BACKEND_LOCK, BACKEND_TOML, BACKEND_VERSION, READ_ENTRIES, READ_WGSL, SPV, TARGET, WGSL,
 };
 
 fn root() -> PathBuf {
@@ -319,6 +319,46 @@ negative_control!(
     {
         let spv = fs::read(root().join(SPV)).expect("target/spirv/kernel.spv");
         check_translated(&spv[..spv.len() / 2])
+    }
+);
+
+/// The read-back's entries, 13 of them, are in `read` alone (TASK-M4-27): the production module holds none.
+fn check_parted(production: &str, read: &str) {
+    let entries = |wgsl: &str| wgsl.matches("@compute").count();
+    let read_back = format!("fn {READ_ENTRIES}");
+    assert_eq!(
+        production.matches(&read_back).count(),
+        0,
+        "the production module holds a read-back entry"
+    );
+    assert_eq!(read.matches(&read_back).count(), 13);
+    assert_eq!(
+        entries(read),
+        13,
+        "the read-back's module holds another entry"
+    );
+    assert!(entries(production) > 0);
+}
+
+#[test]
+fn build_kernel_parts_the_read_back_from_the_production_module() {
+    let spv = fs::read(root().join(SPV))
+        .expect("target/spirv/kernel.spv: run `cargo xtask build-kernel` first");
+    let (production, read) = (to_wgsl(&spv).unwrap(), to_read_wgsl(&spv).unwrap());
+    check_parted(&production, &read);
+    let on_disk = fs::read_to_string(root().join(READ_WGSL)).expect("the read-back's module");
+    assert!(on_disk == read, "{READ_WGSL} is not the translation");
+    let err = to_read_wgsl(&spv[..spv.len() / 2]).expect_err("half a module translated");
+    assert!(err.contains("naga could not read the SPIR-V"), "{err}");
+}
+
+negative_control!(
+    build_kernel_parts_the_read_back_from_the_production_module,
+    "the two modules taken the wrong way round",
+    expected = "the production module holds a read-back entry",
+    {
+        let spv = fs::read(root().join(SPV)).expect("target/spirv/kernel.spv");
+        check_parted(&to_read_wgsl(&spv).unwrap(), &to_wgsl(&spv).unwrap())
     }
 );
 

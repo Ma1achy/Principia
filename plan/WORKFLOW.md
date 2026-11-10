@@ -188,16 +188,19 @@ crate's test binaries one after another; nextest runs every test of every binary
 
 1. **The implementer** opens the PR once the task's acceptance tests pass locally and it has run `cargo mutants
    --in-diff` on its own diff against `origin/main` and tested the boundary of every comparison and match arm it adds
-   (R-388; `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item). CI's mutants gate stays the authority.
+   (R-388; `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item). Since the owner's CI model (R-908, R-909) no
+   pull-request run mutates, so that local run is the pull request's mutation check. *Was:* "CI's mutants gate stays
+   the authority."
 2. **Every reviewer named in the task** (`plan/reviewers/<name>.md`) reviews against their checklist and the task's
    References. The reviewers are agents (R-175): each posts a PR review headed `VERDICT: APPROVE <role>` or
    `VERDICT: CHANGES <role>`, since GitHub won't let one account approve its own PR. `code` and `qa` review every task; `physics`, `gui` and `perf` when the task names them.
    Reviewers never share a checkout: each gets its own git worktree at the PR head and its own `CARGO_TARGET_DIR`,
    which the orchestrator makes before dispatch and removes afterwards (R-219).
    A reviewer runs the acceptance commands and the tests the diff touches plus their dependents, and checks CI is green
-   on the head for the full suite; a full local run is only for a cross-cutting change (R-229). Before `merge-ready`, a
-   code head's green is the quick tier's, the full-only checks pending; the full suite then runs on the approved head
-   (R-684; `plan/OPERATIONS.md` § "What CI runs on a pull request").
+   on the head; a full local run is only for a cross-cutting change (R-229). A head's green is the PR tier's
+   (`plan/OPERATIONS.md` § "What CI runs on a pull request: the PR tier"); the full suite runs on each merge to `main`.
+   *Was (R-684):* "Before `merge-ready`, a code head's green is the quick tier's, the full-only checks pending; the
+   full suite then runs on the approved head."
 3. **Findings cite file and line** — of the diff, or of the doc section a finding rests on (`file` § "section"). A
    finding without a citation isn't actionable and is returned to its author.
 4. **The implementer fixes** each finding and replies on the finding with the fixing commit.
@@ -258,6 +261,12 @@ R-627 (27 Oct 2026) extends the exception to M8's GUI-track tasks (TASK-M8-05, T
 web skeleton and its measurements): each merges once its reviews pass and CI is green without waiting for the gates of M3 to M6; the gates of M2
 and M7, which R-627 does not name, by R-415's test above, recorded in the PR. Their wiring tasks, TASK-M8-88 to
 TASK-M8-95, run on the real engine and wait for the gates as any other task does.
+*9 Nov 2026 (R-917, R-918):* M2 is the whole non-visual chart system (R-916), and its gate, "fully working and
+tested", is the checklist G1 to G14 in `plan/MILESTONES.md` § "M2 — The chart system: charts, decode and encode, and the
+non-visual chart core", the owner's lock-with-morphs test among it. Until it passes, no new integrator or visual task
+is dispatched: work in flight or approved finishes, and fixes, CI and tooling work and what M2's own tests need go
+ahead. The GUI track's exception above (R-390, R-627) doesn't hold for new dispatch; a track task already started
+finishes. R-415's test doesn't bring forward a task R-917 holds.
 *30 Oct 2026 (R-649, R-650):* a replication or verification target is a measurement, never a gate: an external
 target's outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED) blocks no merge and no milestone. The internal
 correctness tests, the GPU-vs-CPU agreement checks within their stated f32 tolerances and the anchor smoke tests
@@ -297,5 +306,16 @@ reviewer. A requirement leaves a gate only by a ruling (retired with `retired: <
   permanent.
 - `plan/coverage.md` and the MILESTONES gate blocks are generated (`plan/tools/coverage.py`, `plan/tools/milestones.py`)
   and checked in CI.
+- The generated files `plan/CURRENT_RULES.md`, `plan/coverage.md` and `plan/reviewers/lists/` are not committed (the
+  owner, 8 Nov 2026: "Generated plan files (plan/coverage.md etc.) stop being committed; CI regenerates and checks
+  them."). `python3 plan/tools/regenerate.py` writes them; run it before reading one, every time, since a copy on disk is
+  only as fresh as its last run. It leaves committed files alone. A reviewer, who creates no file in its worktree, runs
+  `python3 plan/tools/regenerate.py --out <its target directory>/plan-generated` and reads each file at the same path
+  under that directory (`<its target directory>/plan-generated/plan/CURRENT_RULES.md` and so on); `--out` refuses a
+  directory inside the repo tree and writes nothing into it. The MILESTONES gate blocks stay committed, as
+  `cargo xtask gate-report` and tests read them: a merge conflict inside one is resolved by
+  `python3 plan/tools/regenerate.py --all`, never by hand (R-718). `plan/check_plan.py` fails if a generated file is
+  committed, if a generator can't build its file from the sources, or if the gate blocks differ from a fresh
+  regeneration.
 - Every commit that changes `docs/`, `decisions.md` or `plan/` ends with its "Removed lines" note: each removed line
   is "reworded, kept at <file:line>" or "stale value, replaced by <ruling>".

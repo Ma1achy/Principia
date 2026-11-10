@@ -1,6 +1,7 @@
 # The group each decisions.md entry falls under in plan/CURRENT_RULES.md (R-292). plan/tools/current_rules.py reads
-# this file with decisions.md and rebuilds CURRENT_RULES.md; `python3 plan/check_plan.py` fails if an entry is in no
-# group or in two, if a group names an entry decisions.md lacks, or if CURRENT_RULES.md is stale.
+# this file with decisions.md and rebuilds CURRENT_RULES.md, which is not committed (`python3 plan/tools/regenerate.py`
+# writes it; the owner, 8 Nov 2026); `python3 plan/check_plan.py` fails if an entry is in no group or in two, or if a
+# group names an entry decisions.md lacks.
 #
 # A new ruling is added to one group here, in the same commit that records it. The groups, in the order the file
 # lists them:
@@ -33,7 +34,8 @@ groups:
             R-710,
             R-791, R-792, R-795, R-796, R-797, R-798, R-799, R-800, R-810, R-811,
             R-816, R-817, R-818, R-819, R-821, R-822, R-836, R-838, R-843, R-844, R-845, R-848, R-851, R-853, R-854, R-865,
-            R-871, R-874, R-875, R-876, R-877, R-878, R-879, R-880, R-881, R-882, R-883, R-885, R-886, R-895, R-898, R-914]
+            R-871, R-874, R-875, R-876, R-877, R-878, R-879, R-880, R-881, R-882, R-883, R-885, R-886, R-895, R-898, R-914, R-919,
+            R-920]
   design:
     title: Design and architecture
     rules: [R-15, R-20, R-36, R-38, R-39, R-40, R-41, R-42, R-43, R-44, R-45, R-46, R-48, R-49, R-51, R-52, R-53, R-54,
@@ -61,7 +63,7 @@ groups:
             R-793, R-794, R-801, R-802, R-803, R-804, R-805, R-806, R-807,
             R-813, R-814, R-815, R-820, R-823, R-824, R-825, R-826, R-834, R-835, R-839, R-840, R-841, R-842, R-846, R-847, R-849, R-850, R-852, R-855, R-858,
             R-862, R-864, R-866, R-867, R-868, R-869, R-870,
-            R-873, R-884, R-887, R-888, R-889, R-890, R-894, R-896, R-897, R-899, R-900, R-901, R-902]
+            R-873, R-884, R-887, R-888, R-889, R-890, R-894, R-896, R-897, R-899, R-900, R-901, R-902, R-916]
   values:
     title: Values
     rules: [R-10, R-21, R-94, R-137, R-165, R-166, R-171, R-173, R-181, R-182, R-203, R-250, R-258, R-273, R-376, R-380,
@@ -78,7 +80,7 @@ groups:
             R-373, R-388, R-391, R-393, R-396, R-414, R-415, R-439, R-477, R-482, R-492, R-594, R-626, R-629, R-634,
             R-635, R-636, R-643, R-644, R-645, R-647, R-648, R-651, R-657, R-658, R-659, R-666, R-673, R-674, R-675,
             R-680, R-681, R-682, R-693, R-697, R-706, R-707, R-717, R-718, R-719, R-812,
-            R-827, R-857, R-863, R-910, R-913]
+            R-827, R-857, R-863, R-910, R-913, R-917, R-918]
   ci:
     title: CI
     rules: [R-58, R-85, R-110, R-111, R-134, R-149, R-153, R-169, R-174, R-186, R-188, R-189, R-190, R-191, R-192,

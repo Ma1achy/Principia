@@ -1,0 +1,15 @@
+{
+  "id": "polaroid",
+  "label": "Polaroid",
+  "category": "photo",
+  "doc": "A test fixture: a one-pass medium for the Polaroid preset.",
+  "inputs": [{ "name": "in", "type": "image", "default": "render" }],
+  "outputs": [{ "name": "out", "type": "image" }],
+  "params": [{ "name": "seed", "kind": "number", "default": 0, "min": 0, "max": 99, "step": 1, "unit": "none" }],
+  "passes": ["polaroid.wgsl"],
+  "cost": "light",
+  "motion": "full",
+  "temporally_stable": true,
+  "screen_medium": false,
+  "deviations": ["A test fixture, not the lab's polaroid."]
+}

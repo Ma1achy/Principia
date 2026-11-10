@@ -1,12 +1,14 @@
-//! `cargo xtask plan-check` (REQ-SYS-007, REQ-SYS-008): the checker passes on this tree, and fails, naming the fault,
-//! on a copy of `plan/` + the corpus with a task dropped from `tasks.yaml`, a requirement source into `docs/archive/`,
-//! or a task reference to an `ARCHIVE_` brief (R-184: "cites archived file", not "doesn't exist"). It also fails on a
-//! still-open item of `open-questions.md` that names neither a requirement nor an open REVIEW_QUEUE entry, or names a
-//! missing or retired requirement, or an RQ that isn't open (R-334). It fails too on an RQ heading that a union merge
-//! of `REVIEW_QUEUE.md` left twice, or left open though it is archived, and on what else that merge leaves in the
-//! queue: two entries with one question, two versions of a field or a text, an entry with no body or short of a required
-//! field, a heading out of form, or a fragment. `--queue` checks a queue at any path, so a would-be merge's
-//! (`.gitattributes`; `plan/OPERATIONS.md` § "Merging" step 2).
+//! `cargo xtask plan-check` (REQ-SYS-007, REQ-SYS-008): the checker fails, naming the fault, on a copy of `plan/` + the
+//! corpus with a task dropped from `tasks.yaml`, a requirement source into `docs/archive/`, or a task reference to an
+//! `ARCHIVE_` brief (R-184: "cites archived file", not "doesn't exist"). It also fails on a still-open item of
+//! `open-questions.md` that names neither a requirement nor an open REVIEW_QUEUE entry, or names a missing or retired
+//! requirement, or an RQ that isn't open (R-334). It fails too on an RQ heading that a union merge of `REVIEW_QUEUE.md`
+//! left twice, or left open though it is archived, and on what else that merge leaves in the queue: two entries with
+//! one question, two versions of a field or a text, an entry with no body or short of a required field, a heading out
+//! of form, or a fragment. `--queue` checks a queue at any path, so a would-be merge's (`.gitattributes`;
+//! `plan/OPERATIONS.md` § "Merging" step 2). That it passes on this tree is CI's `python3 plan/check_plan.py` step on
+//! every pull request, and `cargo xtask plan-check` in `cargo xtask ci` on each merge (R-909 retired the test of it
+//! here).
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -102,12 +104,6 @@ fn fails_naming(root: &Path, fault: &str) {
     );
 }
 
-#[test]
-fn plan_check_passes_on_the_tree() {
-    let (passed, out) = check(&repo_root());
-    assert!(passed, "plan-check failed on the tree:\n{out}");
-}
-
 /// Drops `TASK-M0-35`'s entry from `tasks.yaml`.
 fn drop_task(root: &Path) {
     let path = root.join("plan/tasks.yaml");
@@ -174,18 +170,6 @@ fn plan_check_fails_on_a_task_reference_to_an_archive_brief() {
         &format!("plan/tasks/M0/TASK-M0-02.md: reference cites archived file {ARCHIVED_BRIEF}"),
     );
 }
-
-negative_control!(
-    plan_check_passes_on_the_tree,
-    "a copy with a task dropped from tasks.yaml must fail the passing check",
-    expected = "plan-check failed on the tree",
-    {
-        let root = copy("plan_check_ctl_tree");
-        drop_task(&root);
-        let (passed, out) = check(&root);
-        assert!(passed, "plan-check failed on the tree:\n{out}");
-    }
-);
 
 negative_control!(
     plan_check_fails_on_a_task_missing_from_tasks_yaml,
@@ -707,5 +691,636 @@ negative_control!(
             &base_with_note("N = 12: the same long words of a list, one item each"),
         );
         queue_fails_naming(&queue, &archive, "are two versions of one text");
+    }
+);
+
+// ---- The generated files: not committed; CI regenerates and checks them (the owner, 8 Nov 2026) ----------------------
+
+/// Runs `python3 <script> <args>` in `root`: (passed, its output).
+fn python(root: &Path, script: &str, args: &[&str]) -> (bool, String) {
+    let out = Command::new("python3")
+        .arg(script)
+        .args(args)
+        .current_dir(root)
+        .timed_output()
+        .expect("python3 ran");
+    let text =
+        String::from_utf8_lossy(&out.stdout).into_owned() + &String::from_utf8_lossy(&out.stderr);
+    (out.status.success(), text)
+}
+
+/// Writes `root`'s generated files and makes `root` a git repo; with `track`, `plan/coverage.md` is added to its index,
+/// past the `.gitignore` the main tree has.
+fn generated_in_git(root: &Path, track: bool) {
+    let (passed, out) = python(root, "plan/tools/regenerate.py", &[]);
+    assert!(passed, "regenerate.py failed:\n{out}");
+    git(root, &["init", "-q"]);
+    if track {
+        git(root, &["add", "-f", "plan/coverage.md"]);
+    }
+}
+
+const COMMITTED: &str = "plan/coverage.md: generated, so not committed";
+
+#[test]
+fn plan_check_fails_on_a_committed_generated_file() {
+    let root = copy("plan_check_committed");
+    generated_in_git(&root, true);
+    fails_naming(&root, COMMITTED);
+}
+
+negative_control!(
+    plan_check_fails_on_a_committed_generated_file,
+    "the same files written but left out of git pass, so the failure check must fail on them",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_committed");
+        generated_in_git(&root, false);
+        fails_naming(&root, COMMITTED);
+    }
+);
+
+/// Appends `text` to `root`'s perf checklist.
+fn append_to_perf(root: &Path, text: &str) {
+    let path = root.join("plan/reviewers/perf.md");
+    let doc = fs::read_to_string(&path).expect("checklist read");
+    fs::write(&path, format!("{doc}\n{text}")).expect("checklist written");
+}
+
+const LIST_BLOCK: &str = "plan/reviewers/perf.md holds a `<!-- list:… -->` block";
+
+#[test]
+fn plan_check_fails_on_a_list_block_committed_in_a_checklist() {
+    let root = copy("plan_check_list_block");
+    append_to_perf(
+        &root,
+        "<!-- list:benchmarks -->\n*48 requirements*\n<!-- /list:benchmarks -->\n",
+    );
+    fails_naming(&root, LIST_BLOCK);
+}
+
+negative_control!(
+    plan_check_fails_on_a_list_block_committed_in_a_checklist,
+    "a comment that is no list marker passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_list_block");
+        append_to_perf(&root, "<!-- a note on the benchmarks -->\n");
+        fails_naming(&root, LIST_BLOCK);
+    }
+);
+
+const UNNAMED_LIST: &str =
+    "plan/reviewers/perf.md doesn't name its list `plan/reviewers/lists/benchmarks.md`";
+
+#[test]
+fn plan_check_fails_on_a_checklist_not_naming_its_list() {
+    let root = copy("plan_check_unnamed_list");
+    edit(
+        &root,
+        "plan/reviewers/perf.md",
+        "## 9. Benchmarks",
+        "`plan/reviewers/lists/benchmarks.md`",
+        "the benchmarks list",
+    );
+    fails_naming(&root, UNNAMED_LIST);
+}
+
+negative_control!(
+    plan_check_fails_on_a_checklist_not_naming_its_list,
+    "the pointer reworded around the path still names it, and passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_unnamed_list");
+        edit(
+            &root,
+            "plan/reviewers/perf.md",
+            "## 9. Benchmarks",
+            "are listed in",
+            "are in",
+        );
+        fails_naming(&root, UNNAMED_LIST);
+    }
+);
+
+const NO_GROUP: &str = "decisions.md's entry R-99999 is in no group";
+
+/// Appends a ruling, R-99999, to `root`'s `decisions.md`.
+fn add_ruling(root: &Path) {
+    let path = root.join("decisions.md");
+    let text = fs::read_to_string(&path).expect("decisions.md read");
+    fs::write(
+        &path,
+        format!("{text}\n## R-99999 — A ruling in no group\n\nText.\n"),
+    )
+    .expect("decisions.md written");
+}
+
+#[test]
+fn plan_check_fails_on_rules_that_cannot_be_generated() {
+    let root = copy("plan_check_no_group");
+    add_ruling(&root);
+    fails_naming(&root, NO_GROUP);
+}
+
+negative_control!(
+    plan_check_fails_on_rules_that_cannot_be_generated,
+    "a copy with no ruling added generates, and passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    fails_naming(&copy("plan_check_ctl_no_group"), NO_GROUP)
+);
+
+const STALE_GATE: &str = "plan/MILESTONES.md is out of date";
+
+/// In `root`'s `plan/MILESTONES.md`, drops one requirement from M0's committed gate block.
+fn stale_gate(root: &Path) {
+    edit(
+        root,
+        "plan/MILESTONES.md",
+        "<!-- gate:M0 -->",
+        "REQ-SYS-063…079",
+        "REQ-SYS-063…078",
+    );
+}
+
+#[test]
+fn plan_check_fails_on_a_gate_block_unlike_a_fresh_regeneration() {
+    let root = copy("plan_check_stale_gate");
+    stale_gate(&root);
+    fails_naming(&root, STALE_GATE);
+}
+
+negative_control!(
+    plan_check_fails_on_a_gate_block_unlike_a_fresh_regeneration,
+    "an edit to the hand-written prose, outside every block, passes, so the failure check must fail on it",
+    expected = "plan-check passed",
+    {
+        let root = copy("plan_check_ctl_stale_gate");
+        edit(
+            &root,
+            "plan/MILESTONES.md",
+            "# Milestones",
+            "in dependency order",
+            "in the order of their dependencies",
+        );
+        fails_naming(&root, STALE_GATE);
+    }
+);
+
+/// Puts a merge conflict, as git writes one, after `anchor`'s line in `root`'s `plan/MILESTONES.md`.
+fn conflict_after(root: &Path, anchor: &str) {
+    edit(
+        root,
+        "plan/MILESTONES.md",
+        anchor,
+        &format!("{anchor}\n"),
+        &format!("{anchor}\n<<<<<<< HEAD\n- one side\n=======\n- the other side\n>>>>>>> theirs\n"),
+    );
+}
+
+/// `regenerate.py --all` resolves `root`'s conflicted `plan/MILESTONES.md` to the tree's own.
+fn resolves(root: &Path) {
+    let (passed, out) = python(root, "plan/tools/regenerate.py", &["--all"]);
+    assert!(passed, "regenerate.py --all failed:\n{out}");
+    let (now, tree) = (
+        fs::read_to_string(root.join("plan/MILESTONES.md")).expect("resolved file read"),
+        fs::read_to_string(repo_root().join("plan/MILESTONES.md")).expect("tree's file read"),
+    );
+    assert!(now == tree, "the resolved MILESTONES.md is not the tree's");
+}
+
+#[test]
+fn regenerate_all_resolves_a_conflict_inside_a_gate_block() {
+    let root = copy("regenerate_conflict_in_block");
+    conflict_after(&root, "<!-- gate:M0 -->");
+    fails_naming(&root, "a merge conflict inside a generated block");
+    resolves(&root);
+    let (passed, out) = check(&root);
+    assert!(passed, "plan-check failed on the resolved copy:\n{out}");
+}
+
+negative_control!(
+    regenerate_all_resolves_a_conflict_inside_a_gate_block,
+    "a conflict in the hand-written prose is no generated block's, so regenerating must refuse it",
+    expected = "regenerate.py --all failed",
+    {
+        let root = copy("regenerate_ctl_conflict_in_block");
+        conflict_after(&root, "# Milestones — M0 to M9");
+        resolves(&root);
+    }
+);
+
+const OUTSIDE: &str = "a merge conflict outside the generated blocks";
+
+/// `regenerate.py --all` refuses `root`, naming a conflict in the hand-written text.
+fn refuses_outside(root: &Path) {
+    let (passed, out) = python(root, "plan/tools/regenerate.py", &["--all"]);
+    assert!(!passed, "regenerate.py --all passed:\n{out}");
+    assert!(
+        out.contains(OUTSIDE),
+        "regenerate.py --all did not name the fault:\n{out}"
+    );
+}
+
+#[test]
+fn regenerate_all_refuses_a_conflict_in_the_hand_written_text() {
+    let root = copy("regenerate_conflict_outside");
+    conflict_after(&root, "# Milestones — M0 to M9");
+    refuses_outside(&root);
+}
+
+negative_control!(
+    regenerate_all_refuses_a_conflict_in_the_hand_written_text,
+    "a conflict inside a gate block is the generator's to resolve, so the refusal check must fail on it",
+    expected = "regenerate.py --all passed",
+    {
+        let root = copy("regenerate_ctl_conflict_outside");
+        conflict_after(&root, "<!-- gate:M0 -->");
+        refuses_outside(&root);
+    }
+);
+
+/// Runs `regenerate.py` with `args` on a copy whose M0 gate block is stale; returns the copy.
+fn regenerate_on_a_stale_gate(name: &str, args: &[&str]) -> PathBuf {
+    let root = copy(name);
+    for file in [
+        "plan/CURRENT_RULES.md",
+        "plan/coverage.md",
+        "plan/reviewers/lists",
+    ] {
+        let path = root.join(file);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_dir_all(&path);
+    }
+    stale_gate(&root);
+    let (passed, out) = python(&root, "plan/tools/regenerate.py", args);
+    assert!(passed, "regenerate.py failed:\n{out}");
+    root
+}
+
+/// `root`'s uncommitted files are written, and its committed MILESTONES.md is as it was.
+fn wrote_only_the_uncommitted(root: &Path) {
+    for file in [
+        "plan/CURRENT_RULES.md",
+        "plan/coverage.md",
+        "plan/reviewers/lists/numerical-gates.md",
+        "plan/reviewers/lists/m9-targets.md",
+        "plan/reviewers/lists/benchmarks.md",
+        "plan/reviewers/lists/gui-screenshots.md",
+    ] {
+        assert!(
+            root.join(file).is_file(),
+            "regenerate.py did not write {file}"
+        );
+    }
+    let text = fs::read_to_string(root.join("plan/MILESTONES.md")).expect("MILESTONES.md read");
+    assert!(
+        text.contains("REQ-SYS-063…078"),
+        "regenerate.py rewrote the committed MILESTONES.md"
+    );
+}
+
+#[test]
+fn regenerate_writes_the_uncommitted_files_and_leaves_committed_ones() {
+    wrote_only_the_uncommitted(&regenerate_on_a_stale_gate("regenerate_default", &[]));
+}
+
+negative_control!(
+    regenerate_writes_the_uncommitted_files_and_leaves_committed_ones,
+    "--all rewrites the committed gate blocks too, so the leaves-them check must fail on it",
+    expected = "regenerate.py rewrote the committed MILESTONES.md",
+    wrote_only_the_uncommitted(&regenerate_on_a_stale_gate(
+        "regenerate_ctl_default",
+        &["--all"]
+    ))
+);
+
+/// Every file under `dir`, relative to it, with its length and modified time.
+fn snapshot(dir: &Path) -> Vec<(PathBuf, u64, std::time::SystemTime)> {
+    let mut out = Vec::new();
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(at) = stack.pop() {
+        for entry in fs::read_dir(&at).expect("dir read") {
+            let path = entry.expect("entry read").path();
+            let meta = fs::metadata(&path).expect("metadata read");
+            if meta.is_dir() {
+                stack.push(path);
+            } else {
+                let rel = path.strip_prefix(dir).expect("under dir").to_path_buf();
+                out.push((rel, meta.len(), meta.modified().expect("mtime read")));
+            }
+        }
+    }
+    out.sort();
+    out
+}
+
+/// A copy with no generated file in it, and an empty directory beside it, outside it: (copy, directory).
+fn copy_and_out(name: &str) -> (PathBuf, PathBuf) {
+    let root = copy(name);
+    for file in [
+        "plan/CURRENT_RULES.md",
+        "plan/coverage.md",
+        "plan/reviewers/lists",
+    ] {
+        let path = root.join(file);
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_dir_all(&path);
+    }
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}_out"));
+    let _ = fs::remove_dir_all(&out);
+    (root, out)
+}
+
+/// `regenerate.py` with `args` writes every generated file under `out` and leaves `root`'s tree as it was.
+fn writes_only_under(root: &Path, out: &Path, args: &[&str]) {
+    let before = snapshot(root);
+    let (passed, text) = python(root, "plan/tools/regenerate.py", args);
+    assert!(passed, "regenerate.py failed:\n{text}");
+    let after = snapshot(root);
+    let added: Vec<_> = after.iter().filter(|f| !before.contains(f)).collect();
+    assert!(
+        added.is_empty(),
+        "regenerate.py wrote into the tree: {added:?}"
+    );
+    for file in [
+        "plan/CURRENT_RULES.md",
+        "plan/coverage.md",
+        "plan/reviewers/lists/numerical-gates.md",
+        "plan/reviewers/lists/m9-targets.md",
+        "plan/reviewers/lists/benchmarks.md",
+        "plan/reviewers/lists/gui-screenshots.md",
+    ] {
+        assert!(
+            out.join(file).is_file(),
+            "regenerate.py did not write {file} under the --out directory"
+        );
+    }
+}
+
+#[test]
+fn regenerate_out_writes_under_its_directory_and_nothing_into_the_tree() {
+    let (root, out) = copy_and_out("regenerate_out");
+    let dir = out.to_str().expect("utf-8 path");
+    writes_only_under(&root, &out, &["--out", dir]);
+}
+
+negative_control!(
+    regenerate_out_writes_under_its_directory_and_nothing_into_the_tree,
+    "with no --out the files are written into the tree, so the nothing-into-the-tree check must fail on it",
+    expected = "regenerate.py wrote into the tree",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out");
+        writes_only_under(&root, &out, &[]);
+    }
+);
+
+const OUT_INSIDE: &str = "is inside the repo tree";
+
+/// `regenerate.py --out <dir>` refuses `dir`, naming it inside the tree, and writes nothing there.
+fn refuses_out(root: &Path, dir: &Path) {
+    refuses_out_by(root, "plan/tools/regenerate.py", dir);
+}
+
+/// `<script> --out <dir>` refuses `dir`, naming it inside the tree, and writes nothing there. Run with `-B`, as
+/// `regenerate.py` runs the generators, so Python's bytecode cache for their imports isn't counted as a write.
+fn refuses_out_by(root: &Path, script: &str, dir: &Path) {
+    refuses_out_naming(root, script, dir, OUT_INSIDE);
+}
+
+/// `<script> --out <dir>` fails, naming `fault`, and writes nothing into the tree `root`.
+fn refuses_out_naming(root: &Path, script: &str, dir: &Path, fault: &str) {
+    let before = snapshot(root);
+    let (passed, out) = python(
+        root,
+        "-B",
+        &[script, "--out", dir.to_str().expect("utf-8 path")],
+    );
+    assert!(!passed, "{script} --out passed:\n{out}");
+    assert!(
+        out.contains(fault),
+        "{script} --out did not name the fault:\n{out}"
+    );
+    assert!(
+        snapshot(root) == before,
+        "{script} --out wrote into the tree"
+    );
+}
+
+#[test]
+fn regenerate_out_refuses_the_tree_and_a_directory_in_it() {
+    let (root, _) = copy_and_out("regenerate_out_inside");
+    refuses_out(&root, &root);
+    refuses_out(&root, &root.join("plan/generated"));
+}
+
+negative_control!(
+    regenerate_out_refuses_the_tree_and_a_directory_in_it,
+    "a sibling whose name starts with the tree's is outside it, and passes, so the refusal check must fail on it",
+    expected = "regenerate.py --out passed",
+    {
+        let (root, _) = copy_and_out("regenerate_ctl_out_inside");
+        let sibling = PathBuf::from(format!("{}-sibling", root.display()));
+        let _ = fs::remove_dir_all(&sibling);
+        refuses_out(&root, &sibling);
+    }
+);
+
+/// Each script that takes `--out`: `regenerate.py` and the generators it runs, which share its guard.
+const OUT_SCRIPTS: [&str; 4] = [
+    "plan/tools/regenerate.py",
+    "plan/tools/current_rules.py",
+    "plan/tools/coverage.py",
+    "plan/tools/reviewer_lists.py",
+];
+
+/// A symlink named after `name` beside the copy `root`, outside it, to `to`.
+#[cfg(unix)]
+fn link_beside(root: &Path, name: &str, to: &Path) -> PathBuf {
+    let link = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}_link"));
+    let _ = fs::remove_file(&link);
+    std::os::unix::fs::symlink(to, &link).expect("symlink made");
+    assert!(!link.starts_with(root), "the link is outside the copy");
+    link
+}
+
+#[cfg(unix)]
+#[test]
+fn regenerate_out_refuses_a_symlink_to_a_directory_in_the_tree() {
+    let (root, _) = copy_and_out("regenerate_out_symlink");
+    let link = link_beside(&root, "regenerate_out_symlink", &root.join("plan"));
+    for script in OUT_SCRIPTS {
+        refuses_out_by(&root, script, &link.join("z"));
+    }
+    assert!(!root.join("plan/z").exists(), "a generator wrote plan/z");
+}
+
+#[cfg(unix)]
+negative_control!(
+    regenerate_out_refuses_a_symlink_to_a_directory_in_the_tree,
+    "a symlink to a directory outside the tree is outside it, and passes, so the refusal check must fail on it",
+    expected = "--out passed",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out_symlink");
+        fs::create_dir_all(&out).expect("out made");
+        let link = link_beside(&root, "regenerate_ctl_out_symlink", &out);
+        refuses_out_by(&root, "plan/tools/regenerate.py", &link.join("z"));
+    }
+);
+
+/// An empty `--out` directory for `root`, outside it, holding a symlink `plan` to `to` (code review C3).
+#[cfg(unix)]
+fn out_with_plan_link(root: &Path, name: &str, to: &Path) -> PathBuf {
+    let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("{name}_out"));
+    let _ = fs::remove_dir_all(&out);
+    fs::create_dir_all(&out).expect("out made");
+    std::os::unix::fs::symlink(to, out.join("plan")).expect("symlink made");
+    assert!(
+        !out.starts_with(root),
+        "the --out directory is outside the copy"
+    );
+    out
+}
+
+#[cfg(unix)]
+#[test]
+fn regenerate_out_refuses_a_symlink_under_it_into_the_tree() {
+    let (root, _) = copy_and_out("regenerate_out_link_under");
+    let out = out_with_plan_link(&root, "regenerate_out_link_under", &root.join("plan"));
+    for script in OUT_SCRIPTS {
+        refuses_out_by(&root, script, &out);
+    }
+}
+
+#[cfg(unix)]
+negative_control!(
+    regenerate_out_refuses_a_symlink_under_it_into_the_tree,
+    "a symlink under --out to a directory outside the tree carries the writes outside, and passes, so the refusal \
+     check must fail on it",
+    expected = "--out passed",
+    {
+        let (root, elsewhere) = copy_and_out("regenerate_ctl_out_link_under");
+        fs::create_dir_all(&elsewhere).expect("elsewhere made");
+        let out = out_with_plan_link(&root, "regenerate_ctl_out_link_under", &elsewhere);
+        refuses_out_by(&root, "plan/tools/regenerate.py", &out);
+    }
+);
+
+/// Every file the generators write, relative to the repo root.
+const GENERATED_FILES: [&str; 6] = [
+    "plan/CURRENT_RULES.md",
+    "plan/coverage.md",
+    "plan/reviewers/lists/numerical-gates.md",
+    "plan/reviewers/lists/m9-targets.md",
+    "plan/reviewers/lists/benchmarks.md",
+    "plan/reviewers/lists/gui-screenshots.md",
+];
+
+/// Puts at each generated file's place under `out` a symlink to `to(file)`.
+#[cfg(unix)]
+fn link_each_target(out: &Path, to: impl Fn(&str) -> PathBuf) {
+    let _ = fs::remove_dir_all(out);
+    for file in GENERATED_FILES {
+        let at = out.join(file);
+        fs::create_dir_all(at.parent().expect("has a parent")).expect("dir made");
+        std::os::unix::fs::symlink(to(file), &at).expect("symlink made");
+    }
+}
+
+#[cfg(unix)]
+#[test]
+fn regenerate_out_refuses_a_target_that_is_a_symlink_into_the_tree() {
+    let (root, out) = copy_and_out("regenerate_out_target_link");
+    // CURRENT_RULES.md's link dangles at a file a write would create in the tree; the others name a source file.
+    link_each_target(&out, |file| match file {
+        "plan/CURRENT_RULES.md" => root.join(file),
+        _ => root.join("plan/requirements.yaml"),
+    });
+    for script in OUT_SCRIPTS {
+        refuses_out_by(&root, script, &out);
+    }
+}
+
+#[cfg(unix)]
+negative_control!(
+    regenerate_out_refuses_a_target_that_is_a_symlink_into_the_tree,
+    "a target linked to a file outside the tree is written there, and passes, so the refusal check must fail on it",
+    expected = "--out passed",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out_target_link");
+        let elsewhere = Path::new(env!("CARGO_TARGET_TMPDIR")).join("regenerate_ctl_out_target_link_elsewhere");
+        let _ = fs::remove_dir_all(&elsewhere);
+        fs::create_dir_all(&elsewhere).expect("elsewhere made");
+        link_each_target(&out, |file| elsewhere.join(file.replace('/', "_")));
+        refuses_out_by(&root, "plan/tools/regenerate.py", &out);
+    }
+);
+
+const HARD_LINK: &str = "has another hard link";
+
+/// `out` after a clean `regenerate.py --out` run, and the run over it again, which passes: a file with one link is
+/// the last run's, and is rewritten.
+fn regenerated_twice(root: &Path, out: &Path) {
+    let dir = out.to_str().expect("utf-8 path");
+    for _ in 0..2 {
+        let (passed, text) = python(root, "plan/tools/regenerate.py", &["--out", dir]);
+        assert!(passed, "regenerate.py --out failed:\n{text}");
+    }
+}
+
+#[test]
+fn regenerate_out_refuses_a_target_with_a_second_hard_link() {
+    let (root, out) = copy_and_out("regenerate_out_hard_link");
+    regenerated_twice(&root, &out);
+    for file in GENERATED_FILES {
+        fs::remove_file(out.join(file)).expect("file removed");
+        fs::hard_link(root.join("plan/requirements.yaml"), out.join(file)).expect("hard link made");
+    }
+    for script in OUT_SCRIPTS {
+        refuses_out_naming(&root, script, &out, HARD_LINK);
+    }
+}
+
+negative_control!(
+    regenerate_out_refuses_a_target_with_a_second_hard_link,
+    "a target the last run wrote has one link, and passes, so the refusal check must fail on it",
+    expected = "--out passed",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out_hard_link");
+        regenerated_twice(&root, &out);
+        refuses_out_naming(&root, "plan/tools/regenerate.py", &out, HARD_LINK);
+    }
+);
+
+/// A line of `regenerate.py`'s usage, which it prints on arguments it doesn't take.
+const USAGE: &str = "regenerate.py --out <dir>  write them under <dir>";
+
+/// `regenerate.py` with `args` fails and prints `fault`.
+fn refuses_args(root: &Path, args: &[&str], fault: &str) {
+    let (passed, out) = python(root, "plan/tools/regenerate.py", args);
+    assert!(!passed, "regenerate.py {args:?} passed:\n{out}");
+    assert!(
+        out.contains(fault),
+        "regenerate.py {args:?} did not name the fault:\n{out}"
+    );
+}
+
+#[test]
+fn regenerate_out_needs_a_directory_and_goes_alone() {
+    let (root, out) = copy_and_out("regenerate_out_args");
+    let dir = out.to_str().expect("utf-8 path");
+    refuses_args(&root, &["--out"], "--out needs a directory");
+    refuses_args(&root, &["--out", "--all"], "--out needs a directory");
+    refuses_args(&root, &["--out", dir, "--all"], USAGE);
+    refuses_args(&root, &["--check", "--out", dir], USAGE);
+}
+
+negative_control!(
+    regenerate_out_needs_a_directory_and_goes_alone,
+    "--out with its directory and nothing else passes, so the refusal check must fail on it",
+    expected = "passed",
+    {
+        let (root, out) = copy_and_out("regenerate_ctl_out_args");
+        refuses_args(&root, &["--out", out.to_str().expect("utf-8 path")], USAGE);
     }
 );

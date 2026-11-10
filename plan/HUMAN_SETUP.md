@@ -20,19 +20,21 @@ one self-hosted runner, in place of R-174's same-repository `if:` guard; the app
 
 In **Settings → Branches → Add branch protection rule** (or a ruleset) for `main`:
 - require a pull request before merging;
-- require status checks to pass: `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-kernel`, `gpu-metal` and
-  `gpu-lavapipe` (R-266, and `gpu-kernel` again since TASK-M0-14; each appears in the list after its workflow has run
-  once);
-- require `mutants-check` too (R-305), the per-PR mutation gate's verdict over every shard (TASK-M0-23). It reports on
-  every pull request event, a job of every run of `mutants.yml` (R-678): the merge-ready run's verdict, passing when
-  the diff has no surviving mutant (R-676); "not applicable", passed, on a head whose change has no `.rs` file under
-  `crates/` (R-677) or that is not merge-ready; and, when another label goes on or off a merge-ready head, that head's
-  merge-ready verdict. `xtask/tests/ci_changes.rs` checks that this list is the one every required check is tested
-  against. The human authorised the agent to
-  add it, once TASK-M0-23 merges, and this is the one settings change R-305 allows;
-  *8 and 9 Nov 2026 (R-907 to R-909):* `mutants-check`, `xtask-ci` and the full-tier GPU jobs leave the required checks
-  when the pull-request tier's restructure lands; the owner changes the protection from the orchestrator's old-to-new
-  list (R-909), and this section is rewritten to it then;
+- require status checks to pass: `fmt`, `clippy`, `build`, `ci`, `gpu-lavapipe`, `gpu-metal`, `pr-check`,
+  `reviews-complete` and `no-atlas-params` (R-908 and R-909, the owner's CI model approved on 9 Nov 2026; his order of
+  8 Nov 2026: "PR required checks become: build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set,
+  reviews"; R-909's PR tier: "check_plan.py, reviews-complete, pr-check, no-atlas-params"; `gpu-metal`, the Metal smoke
+  set on a GPU-path change, keeps its name; each appears in the list after its workflow has run once).
+  `ci.yml` bears the first six, each a job of every pull-request run that skips its work inside the job on the
+  classification's verdict (R-656), so each reports on every pull request; `no-atlas-params.yml`, the atlas guard,
+  runs on every pull request with no path filter. The owner sets branch protection himself,
+  from the orchestrator's old-to-new list (R-909); `xtask/tests/ci_changes.rs` checks that this list is the one every
+  required check is tested against.
+  *Was, until the owner switches it (R-907 to R-909):* `ci`, `pr-check`, `reviews-complete`, `xtask-ci`, `gpu-kernel`,
+  `gpu-metal` and `gpu-lavapipe` (R-266, and `gpu-kernel` again since TASK-M0-14), and `mutants-check` (R-305), the
+  per-PR mutation gate's verdict, which the owner's CI model takes off the pull request's path with `xtask-ci` and the
+  full tier's GPU suites (they run on each merge to `main`; R-907, R-908). The human authorised the agent to add
+  `mutants-check` once TASK-M0-23 merged, the one settings change R-305 allows;
 - leave "require branches to be up to date before merging" off (R-266): CI runs on each PR merged with main, and every
   push to main runs CI again;
 - turn on "do not allow bypassing the above settings", so the required checks bind every merge, the agent's included

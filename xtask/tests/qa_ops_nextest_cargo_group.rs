@@ -703,11 +703,20 @@ fn check_the_gate_runs_every_ci_profile(ci: &str, gate: &str, config: &str) {
         .split(',')
         .map(str::trim)
         .collect();
-    let profiles = profiles_run(ci);
-    assert!(
-        profiles.iter().any(|p| p == "ci-workspace"),
-        "qa-ops-ncg: premise: ci.yml runs the `ci-workspace` profile: {profiles:?}"
-    );
+    // The owner's CI model (9 Nov 2026) adds the PR tier's profiles, `pr`, `process` and `gpu-smoke`: each selects a
+    // subset of the tests the per-merge run's `ci`, `ci-workspace` and `gpu-kernel` profiles hold between them (those
+    // three select every test once, `xtask/tests/nextest.rs`), so the gate, running those, runs every test they do.
+    // They are left out here, and the three are held to be still run by ci.yml (R-290's exception, applied per R-369).
+    let profiles: Vec<String> = profiles_run(ci)
+        .into_iter()
+        .filter(|p| !["pr", "process", "gpu-smoke"].contains(&p.as_str()))
+        .collect();
+    for full in ["ci", "ci-workspace", "gpu-kernel"] {
+        assert!(
+            profiles.iter().any(|p| p == full),
+            "qa-ops-ncg: premise: ci.yml runs the `{full}` profile: {profiles:?}"
+        );
+    }
     for profile in &profiles {
         let packages = packages_of(config, profile);
         let runner = gate_jobs.iter().find(|(_, job)| {

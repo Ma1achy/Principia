@@ -108,10 +108,22 @@ pub fn acute_angle<R: Float>(nu: R) -> R {
 /// `s = 1` and `e ≤ 0`: only additions, subtractions and comparisons, so one `ν` takes one seed on every backend.
 #[inline]
 pub fn seed<R: Float>(nu: R) -> Seed {
+    let (s, e) = seed_input(nu);
+    seed_of_sum(s, e)
+}
+
+/// [`seed`]'s branch input: `3ν` as the exact sum `s + e`.
+#[inline]
+pub fn seed_input<R: Float>(nu: R) -> (R, R) {
     let two = nu + nu;
     let s = two + nu;
     let back = s - two;
-    let e = (two - (s - back)) + (nu - back);
+    (s, (two - (s - back)) + (nu - back))
+}
+
+/// [`seed`]'s decision on [`seed_input`]'s `s + e`: `(ρ, 0)` where it is at most 1, else `(0, λ)`.
+#[inline]
+pub fn seed_of_sum<R: Float>(s: R, e: R) -> Seed {
     let one = R::one();
     let at_most = (s < one) | ((s == one) & (e <= R::zero()));
     select(at_most, Seed::Rho, Seed::Lambda)

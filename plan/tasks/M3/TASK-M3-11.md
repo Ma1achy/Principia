@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-INT-042, REQ-PAY-043, REQ-PAY-055, REQ-PAY-056, REQ-PAY-059, REQ-VAL-055, REQ-INT-082, REQ-INT-087, REQ-INT-088, REQ-INT-089
-- **Depends on:** TASK-M3-04, TASK-M3-07
+- **Depends on:** TASK-M3-04, TASK-M3-68
 - **Needs (earlier milestones):** REQ-INT-001, REQ-INT-003, REQ-CHART-036, REQ-PAY-009, REQ-GEN-008
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -105,3 +105,4 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
   config"; caching contract Part 2), so it is on the sim key whatever form this task gives it, and a change at the M3
   gate re-integrates and never serves payloads computed under the old value; the §3.8 hash text stands.
 - The lagged `n̂` register (REQ-PAY-059) is a new SimState member after R-397's recheck: it costs 8 B per 8 B or less of its width (no free tail remains at f32), and the departed bit's placement does not use `_reserved`.
+- Depends on TASK-M3-68, not TASK-M3-07 (applied per R-369, 10 Nov 2026: TASK-M3-07 was split, and Aarseth–Zare is TASK-M3-68): the lagged register updates at sync boundaries under a regularised occupant, and Aarseth–Zare is the first one built. *Was:* "TASK-M3-07" in Depends on.

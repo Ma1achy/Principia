@@ -133,7 +133,7 @@ segments 6 and 5, and the labels sum to the spec's frames from the first keyfram
 
 *7 Nov 2026 (R-850, ruling RQ-721 (a), amended):* a chart-change segment may morph, live and in export, the default
 for a new such segment where the ends allow, cut and dissolve still offered and old specs untouched; a changed link id
-stays a cut (R-520). TASK-M8-105 carries it into this section and § 3.3.
+stays a cut (R-520). TASK-M2-60 carries it into this section and § 3.3.
 
 **Easing is set per segment, between keyframes (R-576).** The spec object carries one segment between each pair of
 neighbouring keyframes, each with its own easing curve, which gives the segment's progress `s ∈ [0, 1]` at each frame

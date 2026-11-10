@@ -229,26 +229,69 @@ fn columns<R: ExactSign>(scale: R, x: R, y: R, z: R) -> R {
     (((c0 + c1) + c2) + c3) + c4
 }
 
+/// The feasibility test's branch input (the module's note): what the bits and the columns give it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Feasibility<R> {
+    /// `I·K*` is 0.
+    pub flat: bool,
+    /// `I·K*` is negative.
+    pub negative: bool,
+    /// `L_z` is not 0.
+    pub moving: bool,
+    /// `E = e_I + e_K + 1 − 2e_L`.
+    pub e: i32,
+    /// The columns' sum, of the sign of `2^E·s_I·s_K − s_L²` for `E ∈ {−1, 0, 1}`.
+    pub columns: R,
+}
+
+/// [`Feasibility`] of `i`, `k`, `l`, read from their bits, the columns summed at `E`'s power of two.
+#[inline]
+pub fn feasibility_input<R: ExactSign>(i: R, k: R, l: R) -> Feasibility<R> {
+    let (bi, bk, bl) = (i.binade(), k.binade(), l.binade());
+    let e = bi.e + bk.e + 1 - 2 * bl.e;
+    let scale = select(e < 0, R::two_to(-1), select(e > 0, R::two_to(1), R::one()));
+    Feasibility {
+        flat: bi.zero | bk.zero,
+        negative: bi.negative != bk.negative,
+        moving: !bl.zero,
+        e,
+        columns: columns(scale, bi.s, bk.s, bl.s),
+    }
+}
+
+/// The feasibility test's decision on its branch input.
+#[inline]
+pub fn feasibility_short<R: ExactSign>(f: &Feasibility<R>) -> bool {
+    let near = f.columns < R::zero();
+    let below = select(f.e > 1, false, select(f.e < -1, true, near));
+    select(f.flat, f.moving, f.negative | (f.moving & below))
+}
+
 /// Whether `2·i·k < l²`, in exact arithmetic, for finite `i`, `k`, `l`: `K* < L_z²/(2I)` at `I = i > 0`, `K* = k`,
 /// `L_z = l` (the module's note). One input gives one answer at f32 and f64 and on every backend.
 #[inline]
 pub fn infeasible<R: ExactSign>(i: R, k: R, l: R) -> bool {
-    let (bi, bk, bl) = (i.binade(), k.binade(), l.binade());
-    let flat = bi.zero | bk.zero;
-    let negative = bi.negative != bk.negative;
-    let moving = !bl.zero;
-    let e = bi.e + bk.e + 1 - 2 * bl.e;
-    let scale = select(e < 0, R::two_to(-1), select(e > 0, R::two_to(1), R::one()));
-    let near = columns(scale, bi.s, bk.s, bl.s) < R::zero();
-    let below = select(e > 1, false, select(e < -1, true, near));
-    select(flat, moving, negative | (moving & below))
+    feasibility_short(&feasibility_input(i, k, l))
 }
 
 /// Whether the construction has nothing at `(L_z, K*) = (l, k)`, `I = 1`, at the decode's own precision: [`infeasible`],
 /// or `k` has no finite double (the module's note). The one predicate of the decode and of every chart's refusal.
 #[inline]
 pub fn no_construction<R: ExactSign>(k: R, l: R) -> bool {
-    infeasible(R::one(), k, l) | (k.binade().e >= R::doubling_limit())
+    construction_short(&feasibility_input(R::one(), k, l), doubling_input(k))
+}
+
+/// The no-finite-`2K*` half of [`no_construction`]'s input: `k`'s binade `e`, an integer read from its bits.
+#[inline]
+pub fn doubling_input<R: ExactSign>(k: R) -> i32 {
+    k.binade().e
+}
+
+/// [`no_construction`]'s decision on its input: the feasibility test's ([`feasibility_short`]), or `K*`'s binade `e`
+/// at or past [`ExactSign::doubling_limit`].
+#[inline]
+pub fn construction_short<R: ExactSign>(f: &Feasibility<R>, e: i32) -> bool {
+    feasibility_short(f) | (e >= R::doubling_limit())
 }
 
 /// The label of an infeasible pixel, `DEGENERATE(INVARIANT_INFEASIBLE)`, as `(state, detail)` of payload §2's
@@ -410,8 +453,21 @@ pub fn choose<R: LinkReal>(norms: [R; 4]) -> Option<Seed> {
 /// comparisons reads the same input.
 #[inline]
 pub fn decoded_seed<R: ExactSign>(z_alpha: R) -> Seed {
+    let (negative, zero) = alpha_sign(z_alpha);
+    seed_of_sign(negative, zero)
+}
+
+/// `z_α`'s sign reads, the seed's branch input: the sign bit, and every other bit clear.
+#[inline]
+pub fn alpha_sign<R: ExactSign>(z_alpha: R) -> (bool, bool) {
     let b = z_alpha.binade();
-    select(b.negative | b.zero, Seed::Rho, Seed::Lambda)
+    (b.negative, b.zero)
+}
+
+/// The seed [`alpha_sign`]'s reads take: `(ρ, 0)` where `z_α ≤ 0`, else `(0, λ)`.
+#[inline]
+pub fn seed_of_sign(negative: bool, zero: bool) -> Seed {
+    select(negative | zero, Seed::Rho, Seed::Lambda)
 }
 
 /// The seeds' `w⁽²⁾`, in seed order, and their `‖w⁽²⁾‖²_m`.

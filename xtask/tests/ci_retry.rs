@@ -15,7 +15,9 @@
 //! - `ci_retry_main_and_pull_requests_alike`: the event and the branch change nothing;
 //! - `ci_retry_decide_*`: `decide`, under bash with a stand-in `gh`, asks for `rerun-failed-jobs` once, never a whole
 //!   run, and writes the decision and its reasons to the step summary;
-//! - `ci_retry_workflow_*`: `retry.yml`, parsed with PyYAML, and `ci.yml`'s disk probe.
+//! - `ci_retry_workflow_*`: `retry.yml`, parsed with PyYAML, and `ci.yml`'s disk probe;
+//! - `ci_retry_reads_the_live_ci_yml`: the classifier reads the live `ci.yml`'s job names as their own jobs, the saved
+//!   runs reading the frozen copy under `fixtures/ci_retry/`.
 //!
 //! No panic here prints a verdict or a log. The classifier reads a failed step's text, so a test failing here must not
 //! put a signature in it, or that failure would read as a runner fault.
@@ -225,6 +227,19 @@ fn low_disk() -> Run {
     Run::saved(DISK_RUN).passing(CI_3)
 }
 
+/// The workflow file a saved run is classified against. The saved runs under `fixtures/ci_retry/` are runs of `ci.yml`
+/// as it stood before the owner's CI model of 9 Nov 2026, with its gates named by a one-value matrix, so `ci.yml` is
+/// read from the copy beside them, `fixtures/ci_retry/ci.yml`: the classifier reads the run's own workflow file, as
+/// `retry.yml` reads it from the run, and a run's jobs are those of the workflow it ran. Any other workflow is the
+/// live one.
+fn workflow_path(workflow: &str) -> PathBuf {
+    if workflow == "ci.yml" {
+        root().join("fixtures/ci_retry/ci.yml")
+    } else {
+        root().join(".github/workflows").join(workflow)
+    }
+}
+
 /// `run`, classified by `script` against the workflow `workflow`: what it printed.
 fn classified_on(script: &str, run: &Run, workflow: &str) -> String {
     let dir = Scratch::new("ci_retry_classify");
@@ -237,7 +252,7 @@ fn classified_on(script: &str, run: &Run, workflow: &str) -> String {
         .arg(&file)
         .arg("classify")
         .arg(&*dir)
-        .arg(root().join(".github/workflows").join(workflow))
+        .arg(workflow_path(workflow))
         .timed_output()
         .expect("ci_retry: python3 ran");
     assert!(out.status.success(), "ci_retry: the classifier failed");
@@ -1138,7 +1153,7 @@ fn decide(script: &str, run: &Run, env: &[(&str, &str)]) -> Decided {
         )
         .env("STUB_CALLS", &calls)
         .env("STUB_DATA", &data)
-        .env("STUB_WORKFLOW", root().join(".github/workflows/ci.yml"))
+        .env("STUB_WORKFLOW", workflow_path("ci.yml"))
         .env("GH_REPO", "o/r")
         .env("RUN_ID", "42")
         .env(
@@ -1404,8 +1419,14 @@ mod keeps_the_live_head {
 
 // ---- `ci.yml`'s gates ---------------------------------------------------------------------------------------------
 
-/// The job id `script`'s `job_ids` and `id_of` give each API name, on the real `ci.yml`.
+/// The job id `script`'s `job_ids` and `id_of` give each API name, on the `ci.yml` the saved runs ran
+/// ([`workflow_path`]).
 fn ids_on_ci(script: &str, names: &[&str]) -> Vec<String> {
+    ids_on(script, &workflow_path("ci.yml"), names)
+}
+
+/// The job id `script`'s `job_ids` and `id_of` give each API name, on the workflow file `workflow`.
+fn ids_on(script: &str, workflow: &Path, names: &[&str]) -> Vec<String> {
     let dir = Scratch::new("ci_retry_ids");
     std::fs::create_dir_all(&*dir).expect("scratch folder");
     let file = dir.join("ci_retry.py");
@@ -1422,7 +1443,7 @@ fn ids_on_ci(script: &str, names: &[&str]) -> Vec<String> {
              print(' '.join(str(m.id_of(n, ids)) for n in sys.argv[3:]))",
         ])
         .arg(&file)
-        .arg(root().join(".github/workflows/ci.yml"))
+        .arg(workflow)
         .args(names)
         .timed_output()
         .expect("python3 ran");
@@ -1483,6 +1504,64 @@ negative_control!(
         &script(),
         "        if whole and isinstance(matrix, dict) and isinstance(matrix.get(whole.group(1)), list):\n",
         "        if False:\n"
+    ))
+);
+
+/// On the live `ci.yml`, the PR tier's required checks and the interim per-merge run's jobs each read as their own job:
+/// `ci`, the product tests' check, is the job `tests` and no shard of `ci`; `gpu-lavapipe` and `gpu-metal` are the
+/// smoke sets, and the per-merge suites' `… suites` names are not. The saved runs read the frozen copy; this case keeps
+/// the classifier tested against the workflow it reads today.
+fn check_live_ids(script: &str) {
+    assert_eq!(
+        ids_on(
+            script,
+            &root().join(".github/workflows/ci.yml"),
+            &[
+                "fmt",
+                "clippy",
+                "build",
+                "ci",
+                "gpu-lavapipe",
+                "gpu-metal",
+                "ci (3)",
+                "xtask-ci (2)",
+                "ci-release (1)",
+                "gpu-kernel suites",
+                "gpu-metal suites",
+                "gpu-lavapipe suites",
+            ]
+        ),
+        [
+            "fmt",
+            "clippy",
+            "build",
+            "tests",
+            "gpu-lavapipe-smoke",
+            "gpu-metal-smoke",
+            "ci",
+            "xtask-ci",
+            "ci-release",
+            "gpu-kernel",
+            "gpu-metal",
+            "gpu-lavapipe",
+        ],
+        "ci_retry: the job ids of the live ci.yml's names"
+    );
+}
+
+#[test]
+fn ci_retry_reads_the_live_ci_yml() {
+    check_live_ids(&script());
+}
+
+negative_control!(
+    ci_retry_reads_the_live_ci_yml,
+    "a job's name read as a prefix, so `ci` claims `ci (3)` and `gpu-metal` claims `gpu-metal suites`",
+    expected = "ci_retry: the job ids of the live ci.yml's names",
+    check_live_ids(&edit(
+        &script(),
+        "        out.append((jid, re.compile(f\"^{pattern}$\"), list(needs)))\n",
+        "        out.append((jid, re.compile(f\"^{pattern}\"), list(needs)))\n"
     ))
 );
 

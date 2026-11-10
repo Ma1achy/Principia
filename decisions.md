@@ -6410,9 +6410,8 @@ well as the slider touched).*
 it to the real engine; a v1 web skeleton on the mock, deployed to GitHub Pages by hand only).*
 *Amended in part by R-812 (7 Nov 2026: a silence on look, as "scope and taste", is a one-way door, asked through
 `/rulings-report`; a silence on feel or behaviour is still decided under R-369, as a two-way door).*
-*Still in force: all of it, as its text reads, except a silence on look (R-812); that TASK-M6-24 is reviewed by physics as well as code, qa and
-gui, for REQ-GUI-176 and REQ-GUI-177 only; and that ORDER item 3's compass switches between slicing and tilting by its
-Tilt and Slice buttons as well as by activity, in a fixed view with no orbit (R-409).*
+*Amended in part by R-917 (9 Nov 2026: the track's exception, merging without waiting for the gates, doesn't hold for new dispatch: a track task not yet started waits for M2's gate, as every visual task does).*
+*Still in force: all of it, as its text reads, except a silence on look (R-812) and its exception for new dispatch (R-917); that TASK-M6-24 is reviewed by physics as well as code, qa and gui, for REQ-GUI-176 and REQ-GUI-177 only; and that ORDER item 3's compass switches between slicing and tilting by its Tilt and Slice buttons as well as by activity, in a fixed view with no orbit (R-409).*
 *6 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` §1 and `docs/gui/principia_render_gui_spec.md`'s
 header (added lines), REQ-GUI-165 to REQ-GUI-175 (reqio, new), twelve requirements' notes (reqio), TASK-M6-24 to
 TASK-M6-29 (new), `plan/tasks.yaml` and twenty-three existing task files, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`,
@@ -16608,6 +16607,8 @@ Changes REQ-GUI-228 (statement, verify, rulings, `rq` removed, note), REQ-CHART-
 (statement, verify, rulings, note) and REQ-CHART-040, REQ-CHART-056 and REQ-GUI-109 (notes).
 
 ## R-507 — T4's units: the screen axis in units of the axis's full range at zoom 1, the hidden coordinate in its slider span, so no unit depends on zoom; the latent chart's tilt stays the decoder's basis edit; the human's half-width proposal is withdrawn *(closes RQ-375; amends R-473)*
+*Refined by R-920 (9 Nov 2026, RQ-679: U1's slider span defined: a latent slider's span 2, the held `ν₀`, `L_z` and `K`'s each fixed per chart from its home window).*
+*Still in force: all of it.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (RQ-375's sentence
 reworded, with its earlier words kept), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
 (`01_main.png`)" (Tilt, a clause), R-473's heading block, `docs/archive/review_queue/M0.md` (RQ-375, moved with its
@@ -26852,6 +26853,8 @@ R-626 is in the "process" group of `plan/rule_groups.yaml`, with R-482.
 Changes REQ-CHART-074 (statement, verify, rq removed, rulings, source, note).
 
 ## R-627 — M8's GUI tasks are built on the mock engine, as R-390's track is, each followed by a small task wiring it to the real engine; TASK-M8-01 is re-planned on the contract that exists; TASK-M8-05 goes first; a v1 web skeleton is deployed to GitHub Pages, by hand only *(extends R-390; the skeleton measures for RQ-550 and RQ-551 and settles neither)*
+*Amended in part by R-917 (9 Nov 2026: the exception R-627 extends to M8's GUI tasks doesn't hold for new dispatch: a track task not yet started waits for M2's gate).*
+*Still in force: all of it but the exception for new dispatch (R-917): M8's GUI tasks on the mock engine, each followed by its wiring task; TASK-M8-01 re-planned; TASK-M8-05 first; the v1 web skeleton deployed by hand only.*
 
 *27 Oct 2026 · applied in `docs/contracts/principia_canonical_spec.md` §0,
 `docs/contracts/principia_caching_contract.md` Part 6a, `docs/design/principia_systems_architecture.md` §3 (added
@@ -31403,7 +31406,8 @@ R-719 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-720 — The held `L_z` of `(ν, K)`, `Φ_θ,K` and `Φ_strip,K` tilts and slices by value, `L_z = L_z0 + d`; R-708's warp-coordinate tilt is narrowed to held `K` only; a column above `K_max` at large tilt is accepted, the practical bound the slider span, RQ-679, still deferred to TASK-M8-48 *(closes RQ-699; amends R-708)*
 *Extended by R-818 (7 Nov 2026; RQ-701 (a): the same by-value tilt and slice for a `MixedEnergy` chart's held `L_z`, built in M8).*
-*Still in force: all of it.*
+*Amended in part by R-920 (9 Nov 2026, RQ-679: the slider span is no longer deferred to TASK-M8-48; the held `L_z`'s span is `2√(2·K_max)`, the practical bound this ruling names).*
+*Still in force: all of it but "still deferred to TASK-M8-48", which R-920 answers.*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-508, R-633 and R-708, R-708's "case that came back" passage, `docs/archive/review_queue/M0.md` (RQ-699 moved), `REVIEW_QUEUE.md` (with dated lines on RQ-679 and RQ-701), `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md` § "4.5 The Burrau-family chart maps" and § 5.4, REQ-CHART-062 and REQ-CHART-065 (reqio), TASK-M2-52 and `plan/rule_groups.yaml`; built by TASK-M2-52*
 
 The owner's words, 5 Nov 2026, verbatim:
@@ -32952,8 +32956,8 @@ Adds REQ-SYS-097 and REQ-TOOL-226; changes no existing requirement.
 view's centre, the slide's follower and the area factor taken at the pin).*
 *Refined by R-894 (8 Nov 2026: a consolidation step, TASK-M8-129, sits after stage 1 and before stage 2) and R-873
 (8 Nov 2026; RQ-744: the leftovers placed, milestones kept and the order kept by dispatch).*
-*Still in force: all of it, stage 2's "centre IC" read as the recorded state at the pin (R-897), with R-894's step
-between stages 1 and 2.*
+*Amended in part by R-916 (9 Nov 2026: the stages are built in M2, as TASK-M2-61 to TASK-M2-85, before any further downstream chart work; GPU lowering, display and the GUI stay in their milestones as thin adapters, after M2's gate under R-917's order).*
+*Still in force: all of it, stage 2's "centre IC" read as the recorded state at the pin (R-897), with R-894's step between stages 1 and 2; its five stages are M2's tasks as R-916 places them (`principia_chart_composition.md` § 15).*
 *8 Nov 2026 · the owner's order of that day, pasted as their own; applied in `docs/design/principia_chart_composition.md`
 § 15 and § 17, `REVIEW_QUEUE.md` (RQ-744, new), `plan/tasks.yaml` and the files of TASK-M4-32 to TASK-M4-34,
 TASK-M4-37, TASK-M7-72, TASK-M8-100 to TASK-M8-120 and TASK-M8-124 (new), REQ-CHART-147 (reqio, new) and
@@ -33026,7 +33030,9 @@ with a documented bit change and a conversion test).*
 *Refined by R-900 (8 Nov 2026: stage 2's saved-file rewrite is handled as
 RQ-750, a versioned format converted on load, a conversion test in place of the bitwise check, golden hashes
 regenerated with a record of why).*
-*Still in force: all of it, "bitwise reproduction first" holding for stage 1 and read with R-894 and R-900 after it.*
+*Refined by R-916 (9 Nov 2026: stage 1, today's charts and view operations re-expressed bit for bit, is TASK-M2-61, in M2).*
+*Refined by R-919 (9 Nov 2026: item 1's sketch is approved when TASK-M2-61 brings it, before its baseline commit, starting from type-sketch v10).*
+*Still in force: all of it, "bitwise reproduction first" holding for stage 1 and read with R-894 and R-900 after it; item 1's sketch approved as R-919 says.*
 *8 Nov 2026 · the owner's rule of that day, pasted as their own; applied in `docs/design/principia_chart_composition.md`
 § 17 and its status block, the "Read with" lines of R-849 and R-850, TASK-M8-124 (new), REQ-CHART-147 (reqio, new)
 and `plan/rule_groups.yaml`; built by TASK-M8-124 and the tasks after it*
@@ -33429,6 +33435,8 @@ R-837's cap of 4 baked entries stands on this reading, the one under which it pa
 R-872 is in the "values" group of `plan/rule_groups.yaml`.
 
 ## R-873 — The build order's leftovers: the milestones are kept and the order across them kept by dispatch; TASK-M8-106 is split, its stage-1 tests to TASK-M8-124; each unplaced task goes in the stage it serves, points of interest one task in stage 3; and the stage-1 path object depends on the Save view tasks *(closes RQ-744)*
+*Superseded in part by R-916 (9 Nov 2026: (A) (b), the milestones kept for TASK-M4-32 to TASK-M4-34 and TASK-M7-72's release by dispatch, and (E) (i), TASK-M8-124's edges to TASK-M6-49, TASK-M6-51 and TASK-M8-48, no longer hold: the core is M2's, and the path object builds Save view of curved views itself, TASK-M2-63).*
+*Still in force: (B) (a), TASK-M8-106 split, its stage-1 tests TASK-M2-61's (was TASK-M8-124) and the rest TASK-M2-81; (C), each task in the stage it serves, the stages now M2's (R-916), points of interest's maths one task in stage 3 (TASK-M2-80); (D) moot.*
 *8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-744 moved),
 `docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` § 15, `plan/tasks.yaml`, the files of
 TASK-M4-32, TASK-M4-33, TASK-M4-34, TASK-M7-72, TASK-M8-102 to TASK-M8-107, TASK-M8-112, TASK-M8-117, TASK-M8-118,
@@ -33648,6 +33656,7 @@ option (c) ruled with RQ-687 on the cross-backend numbers.
 R-881 is in the "physics" group of `plan/rule_groups.yaml`.
 
 ## R-882 — The slider span of `ν₀`, the held `L_z` and the held `K` stays deferred to M8 *(defers RQ-679)*
+*Superseded by R-919 (9 Nov 2026, F14: RQ-679 is answered now, not at M8, the physics reviewer's proposal put to the owner on the rulings pull request; tilts into `ν₀`, `L_z` and `K` are in M2).*
 *8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-679, a deferral line),
 `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
 
@@ -33821,6 +33830,9 @@ is already written into TASK-M8-48. R-818's deferral to M8 is spent: nothing is 
 R-893 is in the "one_off" group of `plan/rule_groups.yaml`.
 
 ## R-894 — Right after stage 1 and before stage 2, a consolidation step collapses the chart-path leaves to one per operation: bitwise-equal pairs merged with no bit change, rounding-only differences resolved to one canonical formula with a documented bit change and a conversion test, the GUI routes thin input adapters, the same-frame slips fixed; bit-for-bit reproduction is stage 1's safety net, not a permanent rule; the dispatch classes sit in the GUI's `dispatch.rs`, the path in `chart_space` *(the report's D-43, which stands; refines R-863 and R-864)*
+*Refined by R-916 (9 Nov 2026: the consolidation step is TASK-M2-64, in M2).*
+*Refined by R-919 (9 Nov 2026, F1 (a): TASK-M2-64 makes the merged GUI routes thin adapters onto the M2 leaves; D19 and D23 are fixed by TASK-M8-129).*
+*Still in force: all of it, the step being TASK-M2-64 in M2, D19 and D23 TASK-M8-129's (R-919).*
 *8 Nov 2026 · the owner's reply to the report of 8 Nov 2026, its D-43 line and its "Consolidation" paragraph, and their
 later message of that day on the mid-morph tilt; applied in `docs/design/principia_chart_composition.md` § 15,
 the forward lines of R-863 and R-864, REQ-CHART-156 (reqio, new), TASK-M8-129 (new), TASK-M8-117, `plan/tasks.yaml`,
@@ -34114,6 +34126,8 @@ on `main`): R-849 carries a dated line quoting it, and no new ruling.
 R-901 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-902 — The lock is a property of the path: any locked path, blend segments and chart switches included, keeps the pinned state fixed, sliding per the RQ-721 rider where the target can't hold it; the pivot record is stored as the state; a tilt or slice mid-morph goes to both endpoint charts, each in its own hidden coordinates and tilt map, about the pinned state, the morph continuing from its parameter; the gate test closes stage 2
+*Refined by R-919 (9 Nov 2026, F10: "the round trip returns the same view" is R1, gating: after the mid-morph tilt and slice, the return to `s = 0` equals the same tilt and slice applied directly to A about the pin, bitwise; R2, undo, is tested only where an undo feature exists).*
+*Still in force: all of it, its gate test's round trip read as R1 (R-919).*
 *8 Nov 2026 · the owner's two messages of that day, on the lock with morphs and on the mid-morph tilt; applied in
 `docs/design/principia_chart_composition.md` § 17.5 (a cross-reference) and § 17.8, REQ-CHART-161 (reqio, new),
 TASK-M8-117, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-161*
@@ -34886,6 +34900,8 @@ the trial's own record names Ghostty. The exemption is now removed either way.
 R-913 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement.
 
 ## R-914 — The stage 1 / stage 3 dependency cycle, RQ-752: option (a), the edge from TASK-M4-06 (the GPU compute variants) to TASK-M4-34 (region D) dropped; the GPU reference that reads region D moves into TASK-M4-34, which can't close until that reference reads region D as R-871 requires; R-871's substance unchanged, only the task that applies its link; TASK-M4-06 and the 217 tasks queued behind it released *(closes RQ-752)*
+*Refined by R-917 (9 Nov 2026: the release of TASK-M4-06 and the 217 tasks behind it holds in the graph, and their dispatch waits for M2's gate; TASK-M4-06 also waits on TASK-M3-14, re-queued by R-918; region D's CPU half is TASK-M2-68, R-916).*
+*Still in force: all of it: the edge from TASK-M4-06 to TASK-M4-34 dropped, region D's GPU reference TASK-M4-34's and R-871's substance unchanged, the dispatch read with R-917.*
 *9 Nov 2026 · the owner's answer of that day to RQ-752; applied in `REVIEW_QUEUE.md` (RQ-752 filed and moved),
 `docs/archive/review_queue/M0.md`, R-871's forward line, `docs/design/principia_chart_composition.md` (§§ 8.4, 8.5, 8.7,
 8.8, 12 and 15), `docs/design/principia_colour_composition.md` (§ 3), REQ-RENDER-082, REQ-RENDER-123, REQ-CHART-037,
@@ -34980,3 +34996,324 @@ job-queue mutants still move to Windows only once that check passes inside the W
 R-915 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-181 (statement, rulings, source, note).
+
+## R-916 — M2 is the whole non-visual chart system: the primitive registry, axes from primitives and warps, charts as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the composition, and the non-visual path maths, each an engine function with its tests, landing before any further downstream chart work, today's charts and view operations re-expressed in it bit for bit first; GPU lowering, contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones as thin adapters onto it; a task mixing maths and visuals is split *(amends R-863; supersedes R-873 (A) (b) and (E) (i); refines R-864 and R-894)*
+*9 Nov 2026 · the owner's ruling of that evening; applied in `docs/design/principia_chart_composition.md` (the status
+block, §§ 5.2, 7.4, 8.4, 8.7, 12, 13, 15, 17.14, 18.6 and the new § 18.7), `plan/MILESTONES.md` (§ "M2 — Charts, decode
+and encode", its title and scope, and §§ M3, M4 and M8), the forward lines of R-863, R-864, R-873 and R-894, the
+requirements (reqio: 60 moved to M2 and one to M3, 12 split into new ids, 11 new), `plan/tasks.yaml` and the task files
+(15 tasks moved and renumbered, 13 new tasks in M2 and one in M3, TASK-M8-100 retired once empty, the remainders and
+their dependents re-edged), `plan/rule_groups.yaml` and `plan/section_notes.yaml`*
+
+The owner's message of 9 Nov 2026 held two pastes. The first was interrupted ("[Request interrupted by user]") and is
+superseded by the second, which the owner calls a ruling; the first is kept here for the record only, and nothing in it
+is applied. The first paste, verbatim, superseded:
+
+> Chart composition and tech debt — the label isn't the issue, the order is.
+> 1. Report first: every task done, running or queued in M2–M8 that builds against the current hard-coded chart cases and would need rework under the composition design (§ registry, axes from primitives + warps, chart as a pair of axes). For each: what it touches and the rework cost.
+> 2. Proposal I lean towards, for you to check against the design and return as an RQ: split the kernel core of the composition out into M2 — the primitive registry types, axis = primitive + warps, chart = pair of axes with its dependence rules, refusals and labels, and CPU decode/encode routed through it, with today's charts re-expressed in it bit for bit. It lands before any further downstream chart work. GPU lowering (M4-33/34), contours (M7-72), and the path object, GUI, Sequence, time-axis and symmetry-filter tasks keep their milestones and depend on the M2 core. M2's sign-off then means "the chart model is done in the kernel"; the full feature set still lands by its own milestones.
+> 3. Until that's ruled: no new task that adds a hard-coded chart case or builds on one is dispatched without saying so.
+> Say if the design's § 15 dependency analysis makes any part of the core impossible to land in M2, and why.
+
+The second paste, the ruling, verbatim:
+
+> Chart composition: M2 = the whole non-visual chart system. Ruling, not a proposal.
+> In M2, landing before any further downstream chart work: the primitive registry; axes built from primitives + warps; charts as a pair of axes with their dependence rules, refusals and labels; curved slices; CPU decode/encode routed through the composition; and the non-visual path maths — pan, zoom, tilt, slice, lock and chart switch, locking without moving the view, the based morph with its anchor, morph and time-axis paths, the symmetry filter's maths, points of interest's maths — as engine-level functions with their tests. Today's charts and view operations re-expressed in it bit for bit first, as R-864 requires.
+> Stays in its milestone, depending on the M2 core: GPU lowering (M4), contours and display (M7), GUI routes, panels, Sequence UI, time-axis mode's UI, overlays (M6/M8). Those become thin adapters onto the M2 core, as the consolidation step already intends.
+> Re-label and re-order the affected tasks accordingly; where a task mixes maths and visuals, split it. Report the before/after task list and anything in the design's § 15 that makes part of this impossible in M2, with why. Still report every task built on the old hard-coded chart cases and its rework cost.
+
+*What it decides:*
+
+- **M2 is the whole non-visual chart system.** In M2, before any further downstream chart work: the primitive registry;
+  axes built from primitives and warps; charts as a pair of axes with their dependence rules, refusals and labels;
+  curved slices; CPU decode and encode routed through the composition; and the non-visual path maths (pan, zoom, tilt,
+  slice, lock and chart switch, locking without moving the view, the based morph with its anchor, morph and time-axis
+  paths, the symmetry filter's maths, points of interest's maths), each an engine-level function with its tests.
+- **Bit for bit first.** Today's charts and view operations are re-expressed in it bit for bit before anything new, as
+  R-864 requires (stage 1, now TASK-M2-61).
+- **What stays in its milestone,** depending on the M2 core: GPU lowering (M4), contours and display (M7), GUI routes,
+  panels, the Sequence's UI, time-axis mode's UI and overlays (M6, M8). Each becomes a thin adapter onto the M2 core,
+  as the consolidation step (R-894) already intends.
+- **Re-labelled, re-ordered and split.** A task that mixes maths and visuals is split: its maths to M2 under a new id,
+  its visual remainder keeping its old id and depending on the new one. The tasks wholly of the core move to M2 and are
+  renumbered, as R-650 renumbered the replication tasks (`plan/WORKFLOW.md` § "Task files": a task's id names its
+  milestone). A ruling or record before this one that names an old id means the new one.
+
+| Was | Now | Was | Now | Was | Now |
+|---|---|---|---|---|---|
+| TASK-M4-37 | TASK-M2-58 | TASK-M8-117 | TASK-M2-65 | TASK-M8-112 | TASK-M2-77 |
+| TASK-M4-32 | TASK-M2-59 | TASK-M8-119 | TASK-M2-70 | TASK-M8-122 | TASK-M2-78 |
+| TASK-M8-105 | TASK-M2-60 | TASK-M8-101 | TASK-M2-72 | TASK-M8-123 | TASK-M2-79 |
+| TASK-M8-124 | TASK-M2-61 | TASK-M8-109 | TASK-M2-74 | TASK-M8-106 | TASK-M2-81 |
+| TASK-M8-100 | retired: TASK-M2-71 and TASK-M3-14 | TASK-M8-110 | TASK-M2-75 | TASK-M8-127 | TASK-M2-85 |
+| | | TASK-M8-111 | TASK-M2-76 | | |
+
+  The splits, each new task's maths from the old one, the old id keeping its visual remainder:
+
+  | New | From | The maths it takes | The old id keeps |
+  |---|---|---|---|
+  | TASK-M2-62 | TASK-M8-125 | locking doesn't move the view, in the engine (REQ-CHART-163, REQ-GUI-429, REQ-CHART-166) | the badge, the setting and the gui test (REQ-GUI-425) |
+  | TASK-M2-63 | TASK-M8-48 | Save view as chart on curved views, the pivot record at a centred pin, the held-coordinate tilts (REQ-CHART-157, REQ-CHART-141, REQ-CHART-167, REQ-CHART-188) | the real engine's panels, the mapping control, the readout (REQ-GUI-241 to REQ-GUI-244) |
+  | TASK-M2-64 | TASK-M8-129 | the consolidation, one leaf per operation through REQ-CHART-060's stop, the merged GUI routes made thin adapters (REQ-CHART-156, REQ-CHART-168) | D19 and D23 (REQ-GUI-431) |
+  | TASK-M2-66 | TASK-M4-33 | the registry, classes, refusals, labels and the digest (REQ-CHART-096 to REQ-CHART-099, REQ-CHART-127, REQ-CHART-128, REQ-CHART-169) | the baked entries and the cap (REQ-PERF-116) |
+  | TASK-M2-67 | new | CPU decode and encode through the composition (REQ-CHART-170) | |
+  | TASK-M2-68 | TASK-M4-34 | region D on the CPU (REQ-CHART-101, REQ-CHART-142, REQ-CHART-171, REQ-CHART-180) | the baked variant, the lowering row and the GPU reference (REQ-CHART-100, REQ-CHART-165, REQ-RENDER-123) |
+  | TASK-M2-69 | TASK-M8-118 | hold `L_z` on the CPU (REQ-CHART-102, REQ-CHART-111) | `τ` and the GPU tags (REQ-CHART-126, REQ-CHART-179) |
+  | TASK-M2-71 | TASK-M8-100 | warps, pair maps and a statistic's measure (REQ-CHART-104, REQ-CHART-131, REQ-CHART-181) | nothing: TASK-M8-100 is retired, REQ-CHART-132 going to TASK-M3-14 |
+  | TASK-M2-73 | TASK-M8-102 | numerical inverses and the general solve (REQ-CHART-107, REQ-CHART-145, REQ-CHART-183) | the seam flags, refinement masking and the browser route (REQ-CHART-129, REQ-CHART-130, REQ-CHART-155) |
+  | TASK-M2-80 | TASK-M8-126 | points of interest's maths (REQ-GUI-427, REQ-GUI-428, REQ-CHART-172) | the drawing (REQ-GUI-426) |
+  | TASK-M2-82 | new (R-918) | the trajectory interface and its fixtures (REQ-CHART-173) | |
+  | TASK-M2-83 | TASK-M8-113 | time-axis mode's maths (REQ-CHART-123, REQ-CHART-174) | the column march against the playhead on the real integrator (REQ-CHART-178) |
+  | TASK-M2-84 | TASK-M8-120 | the symmetry filter's maths (REQ-CHART-135, REQ-CHART-137, REQ-CHART-150, REQ-CHART-175, REQ-CHART-176) | the owner's test on real runs, the statement and the toggle (REQ-CHART-136, REQ-CHART-138, REQ-GUI-424) |
+  | TASK-M3-67 | new (R-918) | after M2: the interface on the real integrator and the outcome-class arms (REQ-CHART-177) | |
+
+- **What § 15 of the design makes impossible in M2, and why** (the owner asked): nothing of the core. What can't be
+  tested in M2 is what reads integrated outcomes or the real march: "outcome class unchanged" in R-894's and R-900's
+  conversion tests (F5), the time-axis column against the playhead and its extension (F6), the owner's
+  `symmetry_filter_rest_reconstructs` on real runs (F7), final-condition charts (F8), FTLE's independence of the chart
+  (F4); each is in TASK-M3-67, TASK-M8-113, TASK-M8-120, TASK-M8-128 or TASK-M3-14, and R-918's trajectory interface
+  carries the rest. Once TASK-M2-61 drops its edges to TASK-M6-49, TASK-M6-51 and TASK-M8-48 (F2), no edge points
+  backward, and the old stage-2-to-TASK-M4-06 cycle is gone.
+- **The tasks built on the old hard-coded chart cases, and their rework cost,** are listed in this ruling's pull request
+  (the report's § 2): no chart is rebuilt, the registry wraps them, and the cost falls on routes and dispatch.
+
+*Applied per R-369:*
+
+- **The stage order** (`principia_chart_composition.md` § 15): before stage 1, docs first, TASK-M2-58, TASK-M2-59 and
+  TASK-M2-60, TASK-M2-38 and TASK-M2-56 finishing, TASK-M2-39 before the baseline (it changes existing pixels), and
+  TASK-M2-82 at any time; stage 1, TASK-M2-61 (the sketch, then the baseline commit, then the bitwise re-expression),
+  then TASK-M2-62 and TASK-M2-63 through the object; between stages 1 and 2, TASK-M2-64; stage 2, TASK-M2-65; stage 3,
+  TASK-M2-66 to TASK-M2-80, with TASK-M2-55 and TASK-M2-57; stage 4, TASK-M2-81; stage 5, TASK-M2-83 to TASK-M2-85. The
+  edges carry it, each stage's tasks depending on the stage before; TASK-M2-61's baseline writes
+  `fixtures/chart_composition/digest.json`, and TASK-M2-66 is held to the same baseline.
+- **TASK-M2-55** (saved curved charts, the rest) is in stage 3, not started now: it is new capability, wider compositions
+  and a saved chart saved again, and R-864 item 3 and this ruling put the re-expression before any new capability;
+  built first, it would add a route the baseline must then re-express and delete. It depends on TASK-M2-65.
+- **REQ-CHART-134** (a shape-sphere trajectory's polar angle never folded) stays in M8: TASK-M8-58 closes it, and it reads
+  a kernel run, so it is not among the moved requirements though it sits inside their numbers.
+- **REQ-CHART-152 is split, its CPU arm REQ-CHART-169** (TASK-M2-66); TASK-M4-06 keeps the GPU edge walk, and gains
+  TASK-M2-66 in Depends on, as TASK-M4-05 does.
+- **REQ-CHART-104's decode-time clause** (§ 13's V1, a GPU measurement) moves to REQ-PERF-116's verify, with TASK-M4-33.
+- **The calibrations whose gate moves from M8 to M2** (F12): REQ-CHART-141, REQ-CHART-158, REQ-CHART-162, REQ-GUI-428
+  and REQ-GUI-429 read "confirmed at the M2 gate"; G5's round-trip tolerances, which § 12 gives only as measured worsts,
+  are the new calibrations REQ-CHART-180 to REQ-CHART-187.
+- **Stale `rq:` fields** naming ruled entries (RQ-711 to RQ-736) are cleared on the moved requirements.
+- **RQ-729's edges,** which TASK-M2-58 (was TASK-M4-37) was to apply, are applied here: TASK-M9-20, TASK-M9-22 and
+  TASK-M9-28 gain TASK-M2-77.
+- **Reviewers:** each new task takes its reviewers by `plan/WORKFLOW.md` § "Task files": code, qa and physics, gui where
+  it closes a GUI-area requirement (TASK-M2-62, TASK-M2-64 and TASK-M2-80).
+
+*What it amends:* **R-863**: its stages are now M2's tasks, and the order across milestones is M2's, with GPU, display
+and GUI after. *What it supersedes in part:* **R-873** (A) (b), "keep the milestones" for TASK-M4-32 to TASK-M4-34 (F3),
+and (E) (i), TASK-M8-124's edges to the Save view tasks (F2): the path object now builds Save view of curved views
+itself (TASK-M2-63). *What it refines:* **R-864**, its stage 1 now in M2; **R-894**, the consolidation now TASK-M2-64.
+
+R-916 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-166 to REQ-CHART-188 and REQ-GUI-431; moves 60 requirements to M2 and REQ-CHART-132 to M3; changes the
+split requirements, REQ-PERF-116 and the moved calibrations.
+
+## R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, "fully working and tested", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*
+*9 Nov 2026 · the owner's ruling of that evening, which follows R-916; applied in `plan/MILESTONES.md` (§ "Where the order
+comes from" and § "M2 — Charts, decode and encode", its gate text), `plan/WORKFLOW.md` (§ "Human checkpoints: the
+milestone gates"), `plan/OPERATIONS.md` (§ "Dispatching" and § "The GUI track (R-390)"), the forward lines of R-390,
+R-627 and R-914, and `plan/rule_groups.yaml`*
+
+The owner's words (9 Nov 2026), verbatim:
+
+> Build order, owner's ruling: (1) the chart system and encoder/decoder, complete and tested, as M2 above; (2) then the integrator; (3) then everything visual. Work already in flight or approved (#360, #431, #448 and the running M2 tasks) finishes; new dispatch follows this order — no new integrator or visual task starts until M2's gate passes, except fixes and anything M2's own tests need.
+> M2's gate, "fully working and tested": every existing chart and view operation runs through the composition, bit for bit against today's (R-864); encode/decode round-trips to rounding on every chart, including across chart switches and paths; each primitive and warp has its own tests plus a mutation control that fires; refusals and labels are tested at their boundaries; the path maths (lock, based morph, sliding anchor, time-axis paths) passes the lock-with-morphs gate test I set (lock → morph A→B → tilt → slice → morph back, pin held to tolerance, round trip returns the same view). Report the gate's checklist before building against it.
+
+*What it decides:*
+
+- **The order:** (1) the chart system and its encoder and decoder, complete and tested, as M2 (R-916); (2) then the
+  integrator; (3) then everything visual.
+- **What finishes:** work already in flight or approved, #360, #431, #448 and the running M2 tasks (TASK-M2-38 and
+  TASK-M2-56, R-918).
+- **New dispatch follows the order:** no new integrator or visual task starts until M2's gate passes, except fixes and
+  anything M2's own tests need. CI and tooling work is outside the order (R-918).
+- **M2's gate, "fully working and tested":** every existing chart and view operation runs through the composition, bit
+  for bit against today's (R-864); encode and decode round-trip to rounding on every chart, across chart switches and
+  paths too; each primitive and warp has its own tests and a mutation control that fires; refusals and labels are
+  tested at their boundaries; the path maths passes the owner's lock-with-morphs gate test (R-902). The checklist the
+  owner asked for before building against it is G1 to G14, written into `plan/MILESTONES.md` § "M2 — Charts, decode
+  and encode" as the gate's text, with G9's round trip as R-919 reads it.
+
+*Applied per R-369:* the hold is in the dispatch rules (`plan/OPERATIONS.md` § "Dispatching"; `plan/WORKFLOW.md`
+§ "Human checkpoints: the milestone gates"), not in edges: the M3 to M9 tasks that M2's own tests don't need keep their
+edges and wait at dispatch. The GUI track's exception (R-390, R-627) is overridden for new dispatch: a track task not
+yet started waits for M2's gate like any other visual task. "Visual" is the GUI, render, colour, display and export
+tasks of M4 to M8; "integrator" is M3's tasks and the integrator work of M4 to M6.
+
+*What it amends:* **R-390** and **R-627**, their exception, each merging without waiting for the gates of M1 to M6, for
+new dispatch only. *What it refines:* **R-914**: its release of TASK-M4-06 and the 217 tasks behind it holds in the graph,
+and R-917 holds their dispatch until M2's gate; TASK-M4-06 also waits on the re-queued TASK-M3-14 (R-918).
+
+R-917 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement.
+
+## R-918 — R-917's follow-ups: TASK-M3-14 (the Benettin FTLE shadow) stops and is re-queued after M2's gate; M2's maths that seems to need the integrator is tested against exactly known trajectories through a trajectory interface the real integrator plugs into after M2, flagging only what can't be tested so; CI work outside the order, TASK-M2-38 and TASK-M2-56 finishing, and the gate checklist first are agreed *(no RQ)*
+*9 Nov 2026 · the owner's message of that evening, pasted while #462's review was being set up; applied in TASK-M3-14,
+TASK-M2-82 and TASK-M3-67 (new), REQ-CHART-132 (reqio, moved to M3), REQ-CHART-173 and REQ-CHART-177 (reqio, new),
+`docs/design/principia_chart_composition.md` § 18.7 (new) and `plan/rule_groups.yaml`*
+
+The owner's words (9 Nov 2026), verbatim:
+
+> R-917 follow-ups:
+> - TASK-M3-14 (Benettin FTLE): stop it now and re-queue it after M2's gate; it's integrator work and barely started.
+> - Anything in M2 that seems to need the integrator (time-axis paths, anything else the planner flags): test its maths in M2 against analytic or exactly-known trajectories — two-body Kepler (closed form) and the figure-eight (exactly periodic, already a fixture) — through a trajectory interface the real integrator plugs into later. Wiring to integrated trajectories happens after M2. Flag only what genuinely can't be tested that way.
+> CI work outside the order, M2-38 and M2-56 finishing, and the gate checklist first: agreed.
+
+*What it decides:*
+
+- **TASK-M3-14, the Benettin FTLE shadow,** stops now and is re-queued after M2's gate: it is integrator work and barely
+  started. It gains REQ-CHART-132 (FTLE in physical phase space, never in chart coordinates), whose test needs the
+  shadow's initialisation and a warped chart, and so TASK-M2-71 in Depends on.
+- **M2's maths that seems to need the integrator** (time-axis paths, and what else the plan flags) is tested in M2
+  against analytic or exactly known trajectories, through a trajectory interface the real integrator plugs into later
+  (TASK-M2-82; design § 18.7, a definition, R-72). Its fixtures are R-919's. Wiring to integrated trajectories is after
+  M2 (TASK-M3-67, TASK-M8-113). What genuinely can't be tested that way is flagged: R-916's list of F4 to F8.
+- **Agreed:** CI work outside the order; TASK-M2-38 and TASK-M2-56 finishing; the gate checklist first (R-917).
+
+R-918 is in the "process" group of `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-173 and REQ-CHART-177; moves REQ-CHART-132 to M3.
+
+## R-919 — The owner's answers to the chart plan: F1 (a), the merged GUI routes made thin adapters in TASK-M2-64; F10, R1 gates bitwise and R2 is undo; F11, G4's reading; F13 (b), `τ` provisional at M2; F14, the slider spans of `ν₀`, the held `L_z` and the held `K` answered now, proposed by physics for the owner to confirm, and tilts into them in M2; TASK-M2-57's three questions answered (RQ-754): one periodic `β` link, the presets and goldens along `z_β` redefined, an unpinned saved chart converted from `sigmoid_beta` with a notice; the R-864 type sketch approved when TASK-M2-61 brings it, from type-sketch v10; the trajectory interface's three-body fixtures the Lagrange equilateral homographic solution and the figure-eight, two-body Kepler only where the interface is generic, the constants in a lower crate; F2 to F20 stand; every calibration set by measurement with its criterion written first *(closes RQ-754; supersedes R-882; refines R-864 and R-902)*
+*Refined by R-920 (9 Nov 2026: the owner confirmed F14's proposal, all six points; RQ-679 is closed and REQ-CHART-188 states the spans).*
+*Still in force: all of it, F14's "awaiting the owner's confirmation" answered by R-920.*
+*9 Nov 2026 · the owner's answers that late evening to the chart plan (chart-plan.pdf, the report written from the plan of
+R-916 to R-918); applied in R-882's forward line, `REVIEW_QUEUE.md` (RQ-679, a dated line with the physics reviewer's
+proposal), the forward lines of R-864 and R-902, REQ-CHART-161, REQ-CHART-156 and REQ-CHART-188 (reqio),
+`plan/MILESTONES.md` (G9, G11 and G13), TASK-M2-61, TASK-M2-63, TASK-M2-64, TASK-M2-65, TASK-M2-69, TASK-M2-82 and the
+calibration tasks, and `plan/rule_groups.yaml`; and, once PR #462 had filed RQ-754 on `main`, `REVIEW_QUEUE.md` (RQ-754
+moved with its ruling), REQ-GEN-013 and REQ-GEN-014 (reqio, a note each), TASK-M2-57 and `plan/tasks.yaml`*
+
+The owner's words (9 Nov 2026), verbatim:
+
+> Chart plan (chart-plan.pdf, 9 Nov) — answers:
+> F1: (a).
+> F10: R1 gates: after G9's mid-morph tilt and slice, the return to s = 0 equals the same tilt and slice applied directly to A about the pin, bitwise (same leaf, same inputs: A's basis, p0, x*); if a measured reason prevents bitwise, bring it to me rather than loosening to the lock's tolerance. R2 is undo, not morph-back; test it only where an undo feature exists.
+> F11: G4's reading.
+> F13: (b).
+> F14: answer RQ-679 now. Physics proposes the slider spans for held ν0, Lz and K, with reasoning, in the same rulings PR; forward R-882. Tilts into those coordinates are in M2.
+> RQ-754: Q1 (c); Q2 (b); Q3 (a).
+> R-864 type sketch: approve when TASK-M2-61 brings it, before its baseline commit (start from type-sketch v10).
+> F18 steer: the trajectory interface's three-body fixtures are the Lagrange equilateral homographic solution (exact, closed form) and the figure-eight; two-body Kepler only where the interface is generic. Constants in a lower crate.
+> Mechanical frictions F2–F20 otherwise stand. Every [CAL] value is set by measurement with the criterion written first, never chosen to make a test pass (R-649/650).
+> Correct the four slips you found, then open the one rulings PR (R-916 to R-918, renumbering, splits, docs).
+
+*What it decides, item by item of the plan's frictions:*
+
+- **F1 (a).** TASK-M2-64 rewires the merged GUI routes into thin adapters onto the M2 leaves, with no new UI, and takes
+  the gui reviewer; D19 and D23 stay in M8 (TASK-M8-129, REQ-GUI-431). Every view operation then runs through the
+  composition, and R-864 item 2's "no parallel code paths" holds at M2's gate.
+- **F10.** **R1 gates:** after G9's mid-morph tilt and slice, the return to `s = 0` equals the same tilt and slice applied
+  directly to A about the pin, **bitwise**, the same leaf with the same inputs (A's basis, `p0`, `x*`); if a measured
+  reason prevents bitwise, it goes to the owner, never loosened to the lock's tolerance. **R2 is undo, not morph-back:**
+  tested only where an undo feature exists. REQ-CHART-161 says so.
+- **F11:** G4's reading of "round-trips across paths": the ends bitwise, tilt, zoom, pan and slice frames plain views,
+  the frame record round-tripping bitwise, and blend frames, which have no inverse (R-899 Q8), found to pixel resolution.
+- **F13 (b):** `τ` (REQ-CHART-126) stays with TASK-M8-118 and the GPU evidence; at M2 it is listed provisional (R-182),
+  and the CPU hold outcomes read the provisional value.
+- **F14: RQ-679 is answered now, not at M8.** The physics reviewer proposes the slider spans of the held `ν₀`, `L_z` and
+  `K`, with reasoning, in this ruling's pull request; R-882's deferral is overtaken; tilts into those coordinates are in
+  M2 (TASK-M2-63, REQ-CHART-188). The proposal is the physics reviewer's, put to the owner: **proposed by physics; the
+  owner confirms on this PR.** Its six points for the owner are in RQ-679's dated line and the pull request; until the
+  owner answers, the spans are "per RQ-679, awaiting the owner's confirmation", RQ-679 stays open, and REQ-CHART-188
+  carries it.
+- **TASK-M2-57's three questions (RQ-754, filed by PR #462):** answered by the owner's line "RQ-754: Q1 (c); Q2 (b);
+  Q3 (a).", each the option RQ-754 states:
+  - **Q1 (c), the `β` links:** one periodic link on `β` now, the one TASK-M2-57 defines (REQ-DEC-056); a second `β`
+    density waits for a study that needs it (R-519), and REQ-GEN-014's two links per block is not met on `β` meanwhile,
+    by this ruling. `sigmoid_beta`, `tanh_beta` and `softsign_beta`, written onto the bounded `β ∈ [0, π]`, are not that
+    link: TASK-M2-57 rewrites dd_generation_root § 3.9's `β` rows and REQ-GEN-013's `β` codomain to the one periodic
+    link, each keeping its *Was*, and lists what the single `β` link changes in built code (REQ-VAL-024's 54 link
+    selections become 18). The three stay as conversion sources only, their forward maps kept for Q3 (a) and its
+    control "a value converted by the wrong link fails": not selectable, not counted as `β` links (physics review
+    5834538186 of PR #465).
+  - **Q2 (b), presets and goldens whose plane runs along `z_β`:** redefined, not converted. Each becomes an affine plane in
+    the new coordinates, a deliberate change exempt from the conversion test and recorded with why, the goldens
+    regenerated as R-898 allows; no non-affine latent chart kind is defined for them, and the default views show the
+    lower half R-865 opens. The conversion test still holds for stored latent views and saved charts.
+  - **Q3 (a), the link an unpinned saved chart was made under:** an old saved chart converts from the `β` link it pins
+    where it pins one (R-516), else from `sigmoid_beta`, the default, with a notice on load naming the assumption.
+- **The R-864 type sketch:** approved when TASK-M2-61 brings it, before its baseline commit, starting from type-sketch
+  v10. R-864 item 1's gate stands; the approval is given on TASK-M2-61's pull request.
+- **F18:** the trajectory interface's three-body fixtures are the Lagrange equilateral homographic solution (exact, closed
+  form) and the figure-eight; two-body Kepler only where the interface is generic; the constants in a crate below
+  `engine` and `validation`. Design § 18.7 says so.
+- **F2 to F20 otherwise stand,** as R-916 applies them.
+- **Every calibration value** is set by measurement with the criterion written first, never chosen to make a test pass
+  (R-649, R-650). Each `[CAL]` item of M2's gate says "criterion written first, set by measurement (R-649/650)".
+
+*What it supersedes:* **R-882**, the deferral of RQ-679 to M8. *What it refines:* **R-864**, item 1's sketch approved when
+TASK-M2-61 brings it; **R-902**, its gate test's "the round trip returns the same view" read as R1, bitwise.
+
+R-919 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-161 and REQ-CHART-156; adds REQ-CHART-188 (with R-916); a note on REQ-GEN-013 and on REQ-GEN-014
+(RQ-754).
+
+## R-920 — RQ-679, the slider spans, confirmed as physics proposed: each hidden coordinate's span fixed per chart from its home window ((a′)); `ν₀` over `[1/32, 31/32]`; the held `L_z` over `2√(2·K_max)`; the held `K` tilted in its warp coordinate `t` with span 1 (`K_max` on a linear axis), the handle in `t`, the number box in `K`, the slider drawn evenly in `t`; a latent slider's span 2, written into § G2 as a definition; the virial axis's `K_max` left to RQ-701 at M8 *(closes RQ-679; amends R-720; refines R-507 and R-919)*
+*9 Nov 2026 · the owner's confirmation that late evening of the physics reviewer's proposal on RQ-679, put to them on
+PR #465 under R-919 (F14); applied in `REVIEW_QUEUE.md` (RQ-679 moved), `docs/archive/review_queue/M0.md` (RQ-679 moved
+with its ruling; a dated line on RQ-701), the forward lines of R-507, R-720 and R-919,
+`docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)", `docs/design/principia_chart_reference.md`
+§ "4.5 The Burrau-family chart maps", `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" (Slice centre), `docs/design/principia_chart_composition.md` (the status block),
+REQ-CHART-188 (reqio), `plan/MILESTONES.md` (G12), TASK-M2-63, TASK-M8-48 and `plan/rule_groups.yaml`; changes
+REQ-CHART-188*
+
+RQ-679 asked for the slider span of the held `ν₀`, `L_z` and `K`, the length R-507 U1 divides a hidden offset by. R-919
+(F14) brought it forward to M2 and put the physics reviewer's proposal to the owner on this ruling's pull request; the
+proposal is RQ-679's dated line of 9 Nov 2026, verbatim, its §§ 0 to 5. The owner's words (9 Nov 2026), verbatim:
+
+> RQ-679: confirm all six as proposed — (a′) range fixed per chart from its home window; ν0 over [1/32, 31/32]; held Lz over 2√(2·K_max); held K tilted in its warp coordinate t with range 1 (K_max on a linear axis), handle in t, number box in K; the slider drawn evenly in t; the latent slider range 2 written into the GUI spec as a definition, and the mixed-energy virial K_max left to RQ-701 at M8.
+
+*What it decides, the proposal's six points, all confirmed as proposed:*
+
+- **(a′), principle P.** A hidden coordinate's slider span is the full range at zoom 1 of the screen axis that carries
+  the same coordinate on the registry's own charts, read at that chart's home window (the preset's window), not at the
+  view's centre. So a 90° tilt turns a screen axis into that sibling axis at its home extent, and a given `τ` is the same
+  fraction of a home window on every coordinate, latent or physical. Each span is a length, fixed per chart, the same
+  under pan, zoom, slice centre and lock (R-507; a saved chart stores it, R-507 U3), and invariant under the scale gauge
+  (`principia_chart_reference.md` § 0.5). Option (a) read at the view's centre, which changes on a pan, and option (b),
+  a measured span, are not taken.
+- **`ν₀`, the held shape of the mass simplex:** span `Δν = ν_max − ν_min`, the `ν` axis's zoom-1 range over
+  `[ν_min, ν_max] = [1/32, 31/32]` (REQ-CHART-023), `15/16`; rail `[ν_min, ν_max]`, centred on the default `ν₀ = 1/2`;
+  under a lock the anchor `± Δν/2`. Linear along the rail. A tilted `ν₀ + d` outside `(0, 1)` is refused per cell, as
+  § 4.5 refuses it, never clamped by the rail; REQ-CHART-060's stop holds the slice.
+- **The held `L_z`** (on `(ν, K)`, `Φ_θ,K` and `Φ_strip,K`, by value, R-720): span `2√(2·I·K_max)`, `I = 1` after the
+  scale gauge, `K_max` the chart's own `K` axis's (REQ-CHART-044), read at the window's top, `K = K_max`: the `(L_z, K)`
+  chart's top row. Rail `[−√(2K_max), +√(2K_max)]`, centred on 0; under a lock the anchor `± √(2K_max)`. This is the
+  practical bound R-720 left to the slider span.
+- **The held `K`** (on `Φ_θ,L_z`): tilted in its warp coordinate `t`, `K = K_max·t^γ_K` (R-708 as R-720 narrows it),
+  with span 1 in `t`, the warped axis's zoom-1 range; `K_max` and `γ_K` the chart's own held-`K` warp (REQ-CHART-141,
+  R-833). The rail is fixed per preset at `t ∈ [t₀ − ½, t₀ + ½]`, `t₀` the preset's, shifted to `[0, 1]` if `t₀ < ½`
+  (the proposal's "Rail fixed per preset"); under a lock the anchor `± ½` in `t`. On a
+  linear axis the span is `K_max` in `K`, the axis's `[0, K_max]`. **One slider, two units:** its handle is in `t`, its
+  number box shows `K`; a slice writes `K₀` by value (R-720) and `t₀ = (K₀/K_max)^(1/γ_K)` is recomputed, which moves
+  the handle, not the rail; a tilt reads the rail's length, 1 in `t`.
+- **The slider is drawn evenly in `t`**, the proposal's recommendation: "slice by value" does not require a rail drawn
+  evenly in `K`, which would move only the handle's mid-rail position.
+- **A latent slider's span is 2:** rail `[−1, 1]` free, anchor `± 1` locked, the value the GUI already builds, written
+  into `principia_render_gui_spec.md` § G2 as a definition (R-72).
+- **A `MixedEnergy` chart's held `L_z` on a lone virial axis** has no chart-constant `K_max` (`K = Q·|U|/2`, R-817), so
+  the span above doesn't define it. It is left to RQ-701 at M8: RQ-701's form is ruled (R-818, R-893) and built by
+  TASK-M8-48, which writes that span when it starts. R-818's other lone axes (`K`, `KE`, `E`), where the proposal notes
+  the same formula with that axis's `K_max`, are not RQ-679's either, and are TASK-M8-48's with it.
+
+*The checks,* the proposal's § 4, written before any run, predicates and not tolerances: at a single 90° tilt in the
+zoom-1 window the tilted axis's hidden values equal the sibling axis's at the same `u`, to rounding (`ν₀` the Euclid
+plane's `ν(v)`, the held `L_z` `±√(2K_max)·(2s − 1)`, the held `K` `K_max·t^γ_K` over `t₀ ± ½`), with a span of 2 or a
+span read at the view's centre failing; a pan at fixed `τ` leaves every span bitwise unchanged, a centre-read span
+moving; a saved tilted chart reopens bitwise with its stored span (R-507 U3). REQ-CHART-188's verify carries them.
+
+*What it amends:* **R-720**, its "the practical bound the slider span, RQ-679, still deferred to TASK-M8-48": the span
+is now this ruling's. *What it refines:* **R-507**, U1's "that coordinate's slider span, the Slice centre slider's
+range", now defined for the latent sliders and the held `ν₀`, `L_z` and `K`; **R-919**, F14's "until the owner answers,
+the spans are per RQ-679, awaiting the owner's confirmation": the owner has answered. It closes **RQ-679**.
+
+R-920 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-188 (statement, verify, rulings, source, note, rq).

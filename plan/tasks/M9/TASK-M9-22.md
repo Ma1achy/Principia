@@ -2,7 +2,7 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-295, REQ-VAL-296, REQ-VAL-297, REQ-VAL-298
-- **Depends on:** TASK-M3-25, TASK-M3-34
+- **Depends on:** TASK-M3-25, TASK-M3-34, TASK-M2-77
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-2, PIT-3
@@ -57,3 +57,4 @@ The replication suite's targets GG-1, BR-1 run as engine tests (`principia_dd_re
 - *1 Nov 2026 (R-669, RQ-620):* GG-1's per-point panel: a reproduction per point against the Fig. 1 panel at its own ε (ε = 10⁻⁶ the left, ε = 10⁻⁷⁰ the right); our lifetimes per point against the ε = 10⁻⁷⁰ panel, and by KS against the ε = 10⁻⁶ panel; the reliability mask (the points where the two panels agree within one LUT step) reported beside them. The wait on RQ-620 ends.
 - *2 Nov 2026 (R-671, closing RQ-669):* the (a) part of this mixed target reads "not scored yet: needs a GPU run", with the f64 statistic recorded beside it at (b), its instrument stated; the (b) part is unaffected.
 - *7 Nov 2026 (R-822, RQ-696 (c)):* BR-1 runs both arms, each labelled: the authors' own starts, for the 180 they cover, kept local (R-641, R-701), and R-638's seeded draw, committed. Outcome fractions are reported side by side.
+- *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M3-25, TASK-M3-34".

@@ -3334,8 +3334,10 @@ dependencies = [
  "png",
  "pollster",
  "proptest",
+ "ryu",
  "serde",
  "serde_json",
+ "unicode-ident",
  "validation",
  "wgpu",
 ]

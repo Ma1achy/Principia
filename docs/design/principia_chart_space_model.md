@@ -52,7 +52,7 @@ override a measured or ruled section.** The proofs below stand on the corrected 
    initial in-plane excursion equal to that pixel's offset from the view centre. Theorem 6 generalises: an
    anchor-preserving edit turns about the *pin*, not the screen centre (conjugate by the excursion), so the
    pinned pixel stays fixed on screen through tilt and zoom. "Centre on pin" is an optional action. The
-   anchor is stored as the signed starting state, not a latent point (TASK-M8-117).
+   anchor is stored as the signed starting state, not a latent point (TASK-M2-65).
 8. Everything else stands: concatenation and easing (Thm 4–5), the lock's anchor-preserving and excursion
    split (Thm 6), the based morph and the sliding anchor (Thm 7–8, with the anchor in `S`), time charts
    (Thm 9), composed axes (Thm 10, with assembly into `S`), and the quantity classes with final-condition

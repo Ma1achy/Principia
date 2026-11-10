@@ -7,9 +7,15 @@
 //! real workflow files, on hand-built runs whose job names are those `ci.yml` gives. Every control here changes the
 //! run, never the script, so that each holds whatever the script's text becomes.
 //!
-//! A gate is a job that fails only because a job it gathers did not pass: `ci.yml` says so of `ci-gate` ("a failed or
+//! A gate is a job that fails only because a job it gathers did not pass: `ci.yml` said so of `ci-gate` ("a failed or
 //! cancelled job turns it red"; "the skips turn it red"). A runner fault upstream of the jobs a gate gathers turns the
 //! gate red through a skip, so a gate's red is the fault's trace there too.
+//!
+//! The owner's CI model (approved 9 Nov 2026) removes `ci.yml`'s gates: the PR tier's required checks are jobs of their
+//! own, each needing only `changes` and failing at its first step when `changes` did not succeed, and the full tier
+//! runs on `main` with no gate. The hand-built runs below are re-pointed at that `ci.yml`, the gates of the old one taken
+//! out of them; the saved runs, runs of the old `ci.yml`, are read against the copy of it they ran,
+//! `fixtures/ci_retry/ci.yml` (R-290's exception, applied per R-369 by the orchestrator).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -56,12 +62,17 @@ fn skipped(name: &str) -> Job<'_> {
 
 /// `ci_retry.py classify` on the directory `dir`, against `workflow` in `.github/workflows/`: its output.
 fn classify(dir: &Path, workflow: &str) -> String {
+    classify_against(dir, &root().join(".github/workflows").join(workflow))
+}
+
+/// `ci_retry.py classify` on the directory `dir`, against the workflow file `workflow`: its output.
+fn classify_against(dir: &Path, workflow: &Path) -> String {
     let out = Command::new("python3")
         .arg("-I")
         .arg(root().join(".github/scripts/ci_retry.py"))
         .arg("classify")
         .arg(dir)
-        .arg(root().join(".github/workflows").join(workflow))
+        .arg(workflow)
         .timed_output()
         .expect("python3 ran");
     assert!(out.status.success(), "the classifier failed");
@@ -120,7 +131,10 @@ fn retried(jobs: &[Job]) -> bool {
 
 fn check_saved(cases: &[(&str, bool)]) {
     for (run, expected) in cases {
-        let text = classify(&root().join("fixtures/ci_retry").join(run), "ci.yml");
+        let text = classify_against(
+            &root().join("fixtures/ci_retry").join(run),
+            &root().join("fixtures/ci_retry/ci.yml"),
+        );
         assert_eq!(verdict(&text), *expected, "the saved run {run}");
     }
 }
@@ -146,22 +160,31 @@ negative_control!(
 
 // ---- A fault in each job of `ci.yml`, with the gate it turns red -------------------------------------------------------
 
-/// Each job with a required gate that gathers it directly, then that gate.
-const GATHERED: [(&str, &str); 7] = [
-    ("ci (2)", "ci"),
-    ("ci-checks", "ci"),
-    ("ci-workspace", "ci"),
-    ("xtask-ci (3)", "xtask-ci"),
-    ("gpu-kernel suites", "gpu-kernel"),
-    ("gpu-metal suites", "gpu-metal"),
-    ("gpu-lavapipe suites", "gpu-lavapipe"),
+/// Each job of `ci.yml` a runner fault can end, as its check is named: the PR tier's (the owner's CI model, 9 Nov 2026)
+/// and the per-merge run's. Each had a required gate that gathered it, which went red with it; the gates are gone, so
+/// the fault is the run's one failed job (R-290's exception, applied per R-369).
+const JOBS: [&str; 14] = [
+    "fmt",
+    "clippy",
+    "build",
+    "ci",
+    "gpu-lavapipe",
+    "gpu-metal",
+    "process",
+    "ci (2)",
+    "ci-checks",
+    "ci-workspace",
+    "xtask-ci (3)",
+    "gpu-kernel suites",
+    "gpu-metal suites",
+    "gpu-lavapipe suites",
 ];
 
 fn check_gathered(message: &str) {
-    for (job, gate) in GATHERED {
+    for job in JOBS {
         assert!(
-            retried(&[failed(job, message), failed(gate, REAL)]),
-            "a fault in {job} and its gate: not re-run"
+            retried(&[failed(job, message)]),
+            "a fault in {job}: not re-run"
         );
     }
     assert!(
@@ -181,18 +204,17 @@ fn qa_ci_retry_a_fault_in_each_job_and_its_gate() {
 negative_control!(
     qa_ci_retry_a_fault_in_each_job_and_its_gate,
     "a real failure in place of the fault",
-    expected = "a fault in ci (2) and its gate: not re-run",
+    expected = "a fault in fmt: not re-run",
     check_gathered(REAL)
 );
 
-/// `ci-archive` builds what the `ci` shards run. Out of disk there, the shards are skipped, and the skips turn `ci` red
-/// (`ci.yml` § `ci-gate`): the one failed job besides the fault is that gate, and nothing but the fault is wrong.
+/// `ci-archive` builds what the `ci` shards run. Out of disk there, the shards are skipped; they turned the gate `ci`
+/// red until the owner's CI model (9 Nov 2026) took the gate away, so now nothing but the fault is red.
 fn check_archive(message: &str) {
     assert!(
         retried(&[
             failed("ci-archive", message),
             skipped("ci (${{ matrix.shard }})"),
-            failed("ci", REAL),
         ]),
         "a fault in ci-archive, the shards skipped and ci red: not re-run"
     );
@@ -210,19 +232,19 @@ negative_control!(
     check_archive(REAL)
 );
 
-/// `changes` feeds every job. Lost there, all of them are skipped and all five required gates go red.
+/// `changes` feeds every job of a pull request's run. Lost there, the advisory jobs are skipped and the PR tier's six
+/// required checks (the owner's CI model, 9 Nov 2026, in place of the five gates) go red at their first step, each a
+/// gate of the fault through its `needs: changes`.
 fn check_changes(message: &str) {
     assert!(
         retried(&[
             failed("changes", message),
-            skipped("ci-archive"),
-            skipped("ci (${{ matrix.shard }})"),
-            skipped("ci-checks"),
-            skipped("ci-workspace"),
-            skipped("xtask-ci (${{ matrix.shard }})"),
+            skipped("process"),
+            skipped("web-skeleton"),
+            failed("fmt", REAL),
+            failed("clippy", REAL),
+            failed("build", REAL),
             failed("ci", REAL),
-            failed("xtask-ci", REAL),
-            failed("gpu-kernel", REAL),
             failed("gpu-metal", REAL),
             failed("gpu-lavapipe", REAL),
         ]),
@@ -244,23 +266,20 @@ negative_control!(
 
 // ---- What is not re-run ------------------------------------------------------------------------------------------------
 
-/// With `real` the failure of the jobs that did not fault.
+/// With `real` the failure of the jobs that did not fault. Each case named the gate `ci` red beside its jobs until the
+/// owner's CI model (9 Nov 2026) took the gate away; the job reporting `ci` now gathers nothing, so a red `ci` there would
+/// be a real failure of its own, which no retry may pass, and would hold each case whatever the rest: it is gone.
 fn check_kept(real: &str) {
     let cases: [(&str, Vec<Job>); 8] = [
         (
             "a failure beside a fault",
-            vec![
-                failed("ci (3)", NO_SPACE),
-                failed("ci (4)", real),
-                failed("ci", REAL),
-            ],
+            vec![failed("ci (3)", NO_SPACE), failed("ci (4)", real)],
         ),
         (
             "a failure in the archive",
             vec![
                 failed("ci-archive", real),
                 skipped("ci (${{ matrix.shard }})"),
-                failed("ci", REAL),
             ],
         ),
         (
@@ -269,7 +288,6 @@ fn check_kept(real: &str) {
                 failed("ci-archive", NO_SPACE),
                 skipped("ci (${{ matrix.shard }})"),
                 failed("ci-checks", real),
-                failed("ci", REAL),
             ],
         ),
         (
@@ -277,7 +295,6 @@ fn check_kept(real: &str) {
             vec![
                 ("ci (2)", Some("success"), Some(NO_SPACE)),
                 failed("ci (3)", real),
-                failed("ci", REAL),
             ],
         ),
         (
@@ -285,23 +302,17 @@ fn check_kept(real: &str) {
             vec![
                 failed("ci (3)", NO_SPACE),
                 ("ci (4)", Some("cancelled"), None),
-                failed("ci", REAL),
             ],
         ),
         (
             "a job with no state, beside a fault",
-            vec![
-                failed("ci (3)", NO_SPACE),
-                ("ci (4)", None, None),
-                failed("ci", REAL),
-            ],
+            vec![failed("ci (3)", NO_SPACE), ("ci (4)", None, None)],
         ),
         (
             "a job over its limit, which ends cancelled, beside a fault",
             vec![
                 failed("ci (3)", NO_SPACE),
                 ("ci (4)", Some("cancelled"), Some(JOB_TIMEOUT)),
-                failed("ci", REAL),
             ],
         ),
         (
@@ -309,7 +320,6 @@ fn check_kept(real: &str) {
             vec![
                 failed("ci (3)", NO_SPACE),
                 ("ci (4)", Some("cancelled"), Some(JOB_TIMEOUT_NOW)),
-                failed("ci", REAL),
             ],
         ),
     ];
@@ -335,7 +345,7 @@ negative_control!(
 /// "run_attempt cap: retry while attempt < 3", and "attempt 3 is not". `cap` is that 3.
 fn check_cap(cap: u64) {
     for attempt in 1..=4 {
-        let jobs = [failed("ci (3)", NO_SPACE), failed("ci", REAL)];
+        let jobs = [failed("ci (3)", NO_SPACE)];
         assert_eq!(
             retried_at(&jobs, attempt, "ci.yml"),
             attempt < cap,
@@ -358,7 +368,7 @@ negative_control!(
 
 /// Whether a run is re-run whose one failed job's failed step, its log as the sampler writes it, read `kb` KiB free.
 fn retried_on_sample(kb: u64) -> bool {
-    let dir = saved_run(&[failed("ci (4)", REAL), failed("ci", REAL)], 1);
+    let dir = saved_run(&[failed("ci (4)", REAL)], 1);
     std::fs::create_dir_all(dir.join("logs")).expect("logs folder");
     let log = format!(
         "2026-11-04T00:31:12.4207242Z ##[group]Run cargo nextest run\n\

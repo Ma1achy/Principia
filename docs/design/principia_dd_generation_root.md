@@ -1106,6 +1106,13 @@ No link clamps its output (validation ground-truth note: no endpoint clamping, n
 | `exp` | (0, ∞) | `eˣ` | `log y` | `x` | exp is heavy-tailed |
 | `identity` | ℝ | `x` | `y` | 0 | neutral |
 
+*R-919 (9 Nov 2026, RQ-754 Q1 (c) and Q3 (a)):* latent `β` takes one periodic link (R-898), which TASK-M2-57 defines;
+it rewrites the `β` rows above and `β`'s codomain in the list above to that link, each keeping its *Was*. `sigmoid_beta`,
+`tanh_beta` and `softsign_beta` are not retired outright: they stay as conversion sources only, their forward maps
+kept so that an old saved chart converts from the `β` link it pins, or from `sigmoid_beta` when it pins none (Q3 (a)),
+and so that a value converted by the wrong link can be shown to fail. They are not selectable on any block and not
+counted as `β` links (REQ-GEN-013, REQ-GEN-014; physics review 5834538186 of PR #465).
+
 Every sampling note reads "over-" and "under-samples" as the density of samples drawn with uniform controls, not as
 the link's Jacobian weight (R-413), as chart_decoder_contract § "Integrity: the link is part of the experiment" has it
 ("which region of the block it over- and under-samples relative to uniform"). So σ's note is "edge-heavy: crowds the

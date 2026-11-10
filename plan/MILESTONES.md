@@ -2,7 +2,8 @@
 
 The build plan's milestones, in dependency order. Each has a scope, the build order it comes from, and an exit
 gate stated as requirement ids from `plan/requirements.yaml`. The gate blocks are generated
-(`plan/tools/milestones.py`); the prose is not.
+(`plan/tools/milestones.py`); the prose is not. The blocks stay committed, and a merge conflict inside one is resolved
+by `python3 plan/tools/regenerate.py --all`, never by hand (R-718; `.gitattributes`).
 
 *30 Oct 2026 (R-649, R-650):* M9, external replication, follows M8 and has no exit gate: its targets are measurements,
 never gates, and it exits on its report (§ "M9 — External replication"). Its block is a report block, generated the
@@ -57,6 +58,11 @@ the integrator and events are validated on the CPU (M3), because canonical_spec 
 parity, branch-determinism, and the toolchain in a native `cargo test`" before the browser. Colour
 composition (M7) and the GUI (M8) come last: render_contract's order ends at adaptive, and colour "has no
 parity stakes" (canonical_spec §1, item 4).
+
+**R-917's order (9 Nov 2026):** the chart system and its encoder and decoder, complete and tested, as M2 (R-916:
+the whole non-visual chart system); then the integrator (M3); then everything visual (M4 to M8). No new integrator or
+visual task starts until M2's gate passes, but fixes, CI and tooling work, and what M2's own tests need (R-918);
+work in flight or approved finishes.
 
 **The research phases are settled (R-74).** canonical_spec §11 governs: the vertical slice settled the
 integrator, step control, escape criterion and refinement policy, so there is no research milestone before
@@ -177,7 +183,7 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
 - SYS (4): REQ-SYS-009, REQ-SYS-080…082
 <!-- /gate:M1 -->
 
-## M2 — Charts, decode and encode
+## M2 — The chart system: charts, decode and encode, and the non-visual chart core
 
 debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUNDTRIP "once encode lands" (R-75).
 
@@ -200,21 +206,105 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - Display names (R-449; TASK-M2-33): one conversion function names what a person reads, the bodies 1, 2, 3 and a pair
   by its two bodies, never its pair id, on every surface built so far; machine-readable exports stay 0-based and say
   so in their header or schema.
+- **The whole non-visual chart system (R-916, R-917):** the primitive registry, axes from primitives and warps, charts
+  as a pair of axes with their dependence rules, refusals and labels, curved slices, CPU decode and encode through the
+  composition, and the non-visual path maths (pan, zoom, tilt, slice, lock, chart switch, locking without moving the
+  view, the based morph and its anchor, morph paths, time-axis paths, the symmetry filter's maths, points of
+  interest's maths), each an engine function with its tests, today's charts and view operations re-expressed in it
+  bit for bit first. TASK-M2-58 to TASK-M2-85 build it, in the stages of chart_composition § 15. GPU lowering,
+  contours and display, GUI routes, panels, the Sequence's UI, time-axis mode's UI and overlays keep their milestones
+  as thin adapters onto it. *Was (title):* "M2 — Charts, decode and encode".
+- **R-917's order:** M2, the chart system and its encoder and decoder, complete and tested; then the integrator (M3);
+  then everything visual (M4 to M8). Work in flight or approved finishes; no new integrator or visual task starts
+  until M2's gate passes, but fixes, CI and tooling work, and what M2's own tests need (R-918). The GUI track's
+  exception (R-390, R-627) doesn't hold for new dispatch.
+- **M2's gate, "fully working and tested" (R-917):** the checklist G1 to G14 below, the owner's lock-with-morphs test
+  among it, beside the requirement block. `ε_phys` is REQ-ENC-024's tolerance. "Controls" are R-176's named negative
+  controls under `--features controls` (REQ-VAL-147). Every item marked [CAL] is a calibration (R-71): its criterion
+  written first, set by measurement (R-649/650), never chosen to pass, checked by the physics reviewer and confirmed
+  by the owner at this gate.
+  - **G1. Every existing chart and view operation through the composition, bit for bit** (R-864 item 3; TASK-M2-61).
+    Every chart of `kernel::chart::REGISTRY` and the gallery, at f64 and f32, with its wrappers and saved charts; every
+    operation of `engine/nav`, `engine/lock.rs`, the kernel tilt, the chart switch, Save view as chart, the saved
+    re-tilt, the navigation stop, the zoom row, the typed basis and the GUI routes. Pass: the sim key and IC words,
+    and the image hash where the DECODE preset renders the chart, match a baseline recorded on its own commit before
+    the re-expression; each old route deleted (REQ-CHART-113, REQ-CHART-147; the digest held by TASK-M2-66,
+    REQ-CHART-099). Easing and the path curve a property of each path segment, built with the path object (R-901;
+    REQ-CHART-160). The only exceptions are R-894's consolidation and R-898's latent `β` change (TASK-M2-57), each with
+    a conversion test; their outcome-class arm is TASK-M3-67's (R-918, F5).
+  - **G2. No parallel routes, no special-case if-branches** (R-864 items 2 and 4): a word-bounded `git grep` finds no
+    deleted route's name; the merged GUI routes are thin adapters onto the leaves (R-919, F1 (a); TASK-M2-64).
+  - **G3. CPU decode and encode through the composition** (TASK-M2-67; REQ-CHART-170): T2 per chart within `ε_phys`
+    at f64 and f32, T1 as REQ-DEC-055 restates it (TASK-M2-57's), the decode sanity within `16·ε_R` (REQ-ENC-027's
+    bound, TASK-M2-19's), the shape sphere's round trip within `10⁻¹³` (REQ-CHART-053's bound, TASK-M2-08's).
+  - **G4. Round trips across chart switches and paths:** decode on A, encode on B, decode on B within `ε_phys` where
+    B holds the state, otherwise the stated outcome (REQ-ENC-030, or R-849's slide); path ends bitwise; tilt, zoom,
+    pan and slice frames plain views (REQ-CHART-113); a frame record round-tripping bitwise; blend frames have no
+    inverse, their points found to pixel resolution (R-899 Q8; R-919, F11).
+  - **G5. Every primitive and warp with its own tests and a control that fires** (REQ-CHART-127): `forward(inverse(x))
+    = x` at f64 and f32, each row's `Holds` read back. Region D native within `4ε·max(1, |ξ|, |η|)` (REQ-CHART-121);
+    Table 1 within REQ-VAL-120's tolerance, [CAL] confirmed at this gate; every other row's tolerance [CAL]
+    (REQ-CHART-180 to REQ-CHART-187).
+  - **G6. Refusals and labels at their boundaries** (TASK-M2-66): on the adjacent representable values either side of
+    an exact boundary the outcome flips exactly there, and a label never becomes a refusal (REQ-CHART-098); the f32
+    band's label on the CPU (REQ-CHART-169), its width [CAL] if a number.
+  - **G7. Locking doesn't move the view** (R-866; TASK-M2-62; REQ-CHART-166, REQ-CHART-163): snap-back within the
+    bound derived from its construction, else [CAL]; REQ-GUI-429 [CAL] only if the pin can't be exact.
+  - **G8. The based morph, the sliding anchor, the pivot across a switch and the saved-file conversion**
+    (TASK-M2-65; REQ-CHART-115, REQ-CHART-146, REQ-CHART-164, REQ-CHART-159): the pin within the lock's tolerance,
+    REQ-CHART-158 [CAL]; the slide continuous, its largest step falling to at most 0.6 of the previous each time the
+    frame step halves, twice; the area factor within 0.5 of the ends'.
+  - **G9. The owner's lock-with-morphs test** (R-902: "lock → morph A→B → tilt → slice → morph back; the pinned state
+    holds to the lock's tolerance throughout, and the round trip returns the same view"; TASK-M2-65; REQ-CHART-161,
+    `path_lock_round_trip`, `path_mid_morph_tilt`). Chart pairs: latent to latent; latent to the shape sphere's
+    exponential map; a mixed or invariant chart to a rest chart and to Burrau, the anchor sliding; region D
+    (TASK-M2-68); a time-axis pair (TASK-M2-83's, REQ-CHART-174). Every frame's decode at the pin within REQ-CHART-158 of the
+    pinned state where the target holds it, and where it can't, of the anchor R-849's slide prescribes at that frame
+    (§ 17.8's nearest point in B, REQ-CHART-146: the stored state at `s = 0`, B's nearest point at `s = 1`), never of
+    the original state on a chart that can't hold it; R1 below applies to every pair, the sliding ones included; a tilt and a slice mid-morph reach both endpoint charts in their own hidden coordinates and tilt
+    maps. "The same view" is R1, gating: the return to `s = 0` bitwise equal to the same tilt and slice applied
+    directly to A about the pin; R2, undo's return to the start, is tested only where an undo feature exists (R-919,
+    F10). Controls: the lock dropped on a blend segment, a hidden coordinate invented for the blend, a morph
+    restarted from `s = 0`.
+  - **G10. Morph-path maths** (TASK-M2-81): REQ-CHART-114, REQ-CHART-116 (re-timing spread ≤ 1.25), REQ-CHART-124,
+    REQ-CHART-133. REQ-CHART-160 (easing per path segment) is TASK-M2-61's, in G1.
+  - **G11. Time-axis paths through the trajectory interface** (R-918; TASK-M2-82, TASK-M2-83; REQ-CHART-173,
+    REQ-CHART-123): the interface of chart_composition § 18.7 on two exact three-body fixtures, the Lagrange
+    equilateral homographic solution in closed form and the figure-eight, exact by declaration at its period; two-body
+    Kepler only where the interface is generic; the fixtures' constants in a crate below `engine` and `validation`
+    (R-919). A row reads the provider's state bitwise; the figure-eight's row at `kT` equals its row at 0 bitwise; the
+    Lagrange states within the bound derived from the closed form, else [CAL]. The control "a row reading one boundary
+    off", and every check that tells boundaries apart, runs on the Lagrange fixture's circular member, every boundary
+    it reads within one period, `kΔ < 2π/ω`: the figure-eight's boundary rows, at `kT`, all equal its start.
+  - **G12. The rest of the core:** hold `L_z` on the CPU (TASK-M2-69), `τ` provisional at M2 (R-919, F13 (b));
+    tilts into the held `ν₀`, `L_z` and `K` (TASK-M2-63; REQ-CHART-188), their spans as R-920 rules them, RQ-679
+    confirmed (R-919, F14; *was:* "per RQ-679, awaiting the owner's confirmation"); the virial pair, curved slices, region D, the primitives, the paper frames, the fixed-`k`
+    and scattering charts on a synthetic payload; the symmetry filter's maths and region D's filtered area
+    `π/6 − √3/8 ≈ 0.30709` within the derived pixel bound (TASK-M2-84); points of interest's maths (TASK-M2-80); the
+    acute Burrau charts (TASK-M2-85); a statistic's measure (TASK-M2-71).
+  - **G13. Calibrations confirmed and definitions approved at this gate:** the calibrations already in M2, and those
+    joining it, each [CAL]: REQ-CHART-141, REQ-CHART-158, REQ-CHART-162, REQ-CHART-180 to REQ-CHART-187, REQ-GUI-428,
+    REQ-GUI-429 if the pin is inexact; the definitions REQ-CHART-094, REQ-CHART-095, REQ-CHART-105, REQ-CHART-108 to
+    REQ-CHART-110, REQ-CHART-112, REQ-CHART-117, REQ-CHART-119, REQ-CHART-124, REQ-CHART-146, REQ-CHART-174,
+    REQ-CHART-188 and REQ-GUI-427.
+  - **G14. M2's existing gate survives whole:** the bullets above this checklist, the requirement block below
+    regenerated with the moved requirements, and every earlier gate still green. "The lock is chart construction on
+    the CPU, in `SimConfig` (R-69)" reads with R-866.
 
 <!-- gate:M2 -->
-**Exit gate — 226 requirements** (and every earlier gate still green):
+**Exit gate — 306 requirements** (and every earlier gate still green):
 
 - DEC (45): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048, REQ-DEC-050, REQ-DEC-053…056
 - ENC (34): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031, REQ-ENC-034…038
-- CHART (70): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089…090, REQ-CHART-148…149
+- CHART (146): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089…090, REQ-CHART-094…099, REQ-CHART-101…125, REQ-CHART-127…128, REQ-CHART-131, REQ-CHART-133, REQ-CHART-135, REQ-CHART-137, REQ-CHART-139, REQ-CHART-141…151, REQ-CHART-156…164, REQ-CHART-166…176, REQ-CHART-180…188
 - INT (2): REQ-INT-002…003
 - PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
 - GEN (15): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034, REQ-GEN-036…042, REQ-GEN-044…045
 - RENDER (3): REQ-RENDER-025…027
 - COL (12): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070, REQ-COL-101…105, REQ-COL-108…110
-- GUI (7): REQ-GUI-002…007, REQ-GUI-188
+- GUI (10): REQ-GUI-002…007, REQ-GUI-188, REQ-GUI-427…429
 - TOOL (5): REQ-TOOL-029…030, REQ-TOOL-163, REQ-TOOL-188…189
-- VAL (18): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174, REQ-VAL-192…193
+- VAL (19): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174, REQ-VAL-192…193, REQ-VAL-354
 - SYS (10): REQ-SYS-010…016, REQ-SYS-083…085
 <!-- /gate:M2 -->
 
@@ -242,12 +332,14 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
   - the tau gap;
   - the Yoshida-6 coefficient check before Yoshida-6 enters the shared source.
 - The CPU-side parity suite (`computeIC`).
+- **After M2's gate (R-917, R-918):** TASK-M3-14, the Benettin FTLE shadow, re-queued, with REQ-CHART-132; TASK-M3-67,
+  the real integrator as the trajectory interface's provider and the outcome-class arms of M2's conversions.
 
 <!-- gate:M3 -->
-**Exit gate — 235 requirements** (and every earlier gate still green):
+**Exit gate — 237 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
-- CHART (4): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086
+- CHART (6): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086, REQ-CHART-132, REQ-CHART-177
 - INT (84): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110
 - EVT (26): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032…033
 - PAY (33): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…113
@@ -274,11 +366,14 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - The first kernel benchmarks.
 - The kernel cross-backend check (R-686): M4's gate report lists REQ-VAL-347's and REQ-VAL-348's NVIDIA rows, the record and REQ-VAL-348's replay each its own, as "not run" until
   a Windows run posts them (the builder is TASK-M4-27's). That row is what carries the outstanding run after its task closes; it blocks nothing (R-649).
+- **The chart core's GPU adapters (R-916):** the baked entries and the axis cap (TASK-M4-33), region D's baked entry
+  and GPU reference (TASK-M4-34), the f32 band's GPU edge walk (TASK-M4-06), onto M2's engine functions. Their
+  dispatch waits for M2's gate (R-917), as does TASK-M4-06 and the 217 tasks R-914 released.
 
 <!-- gate:M4 -->
-**Exit gate — 132 requirements** (and every earlier gate still green):
+**Exit gate — 118 requirements** (and every earlier gate still green):
 
-- CHART (20): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-094…101, REQ-CHART-108…110, REQ-CHART-125, REQ-CHART-127…128, REQ-CHART-142, REQ-CHART-152, REQ-CHART-165
+- CHART (6): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-100, REQ-CHART-152, REQ-CHART-165
 - INT (18): REQ-INT-057…071, REQ-INT-083, REQ-INT-112…113
 - EVT (1): REQ-EVT-021
 - PAY (2): REQ-PAY-074, REQ-PAY-085
@@ -433,6 +528,13 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   that wires it to the real engine under the conformance suite. TASK-M8-87 is split from TASK-M8-05: the figure past
   `[0,1]²`, its axis extension types and area statistics, on the real engine. TASK-M8-01 is re-planned on the contract
   that exists. The physics-coupled M8 work stays behind the engine chain.
+  R-917 (9 Nov 2026): the track's exception, merging without waiting for the gates, doesn't hold for new dispatch; a
+  track task not yet started waits for M2's gate.
+- **The chart core's visual remainders (R-916):** the GUI's side of locking, tilt and slice, Save view, the
+  consolidation's slips, points of interest's stars, the symmetry filter's toggle and real-run test, time-axis mode
+  on the real integrator, hold `L_z`'s GPU tags and `τ`, the CPU-batch seams and the Sequence's morph segment with
+  export, thin adapters onto M2's engine functions (TASK-M8-48, TASK-M8-102, TASK-M8-108, TASK-M8-113, TASK-M8-118,
+  TASK-M8-120, TASK-M8-125, TASK-M8-126, TASK-M8-129).
 - **The v1 web skeleton (R-627; TASK-M8-86, measured by TASK-M8-96):** the egui app and the mock engine in wasm on
   WebGPU, deployed to the GitHub Pages site by hand only; TASK-M8-96 measures COOP/COEP and SharedArrayBuffer, wasm
   threads, text input, the clipboard and the frame rate there against RQ-550 and RQ-551. TASK-M8-37 builds v1 web
@@ -446,19 +548,19 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both are recorded".
 
 <!-- gate:M8 -->
-**Exit gate — 537 requirements** (and every earlier gate still green):
+**Exit gate — 493 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
-- CHART (63): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088, REQ-CHART-102…107, REQ-CHART-111…124, REQ-CHART-126, REQ-CHART-129…139, REQ-CHART-141, REQ-CHART-143…147, REQ-CHART-150…151, REQ-CHART-153…164
+- CHART (22): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088, REQ-CHART-126, REQ-CHART-129…130, REQ-CHART-134, REQ-CHART-136, REQ-CHART-138, REQ-CHART-153…155, REQ-CHART-178…179
 - INT (3): REQ-INT-093, REQ-INT-096, REQ-INT-107
 - GEN (1): REQ-GEN-023
 - SCHED (5): REQ-SCHED-073, REQ-SCHED-101…102, REQ-SCHED-104…105
 - REF (1): REQ-REF-054
 - RENDER (8): REQ-RENDER-073…074, REQ-RENDER-097…098, REQ-RENDER-100, REQ-RENDER-116…117, REQ-RENDER-119
 - COL (7): REQ-COL-047…048, REQ-COL-111, REQ-COL-121, REQ-COL-135, REQ-COL-160…161
-- GUI (275): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…409, REQ-GUI-419…429
+- GUI (273): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230, REQ-GUI-241…250, REQ-GUI-253, REQ-GUI-261, REQ-GUI-263…264, REQ-GUI-266…283, REQ-GUI-308…334, REQ-GUI-339, REQ-GUI-341…345, REQ-GUI-348…409, REQ-GUI-419…426, REQ-GUI-431
 - TOOL (83): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146, REQ-TOOL-167…170, REQ-TOOL-175…178, REQ-TOOL-182…183, REQ-TOOL-185, REQ-TOOL-190…218, REQ-TOOL-220
-- VAL (24): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194, REQ-VAL-196…200, REQ-VAL-354
+- VAL (23): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144, REQ-VAL-194, REQ-VAL-196…200
 - PERF (32): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092, REQ-PERF-098…112, REQ-PERF-114…115, REQ-PERF-117…119
 - SYS (32): REQ-SYS-039…062, REQ-SYS-086…093
 <!-- /gate:M8 -->

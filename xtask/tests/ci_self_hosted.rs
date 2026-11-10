@@ -79,19 +79,27 @@ const REFUSAL_LOG: &str = "WIN_REFUSAL_LOG";
 /// The exact path: `[AppendOnly]::Add` prefixes `\\??\\` to it as it stands (#390).
 const REFUSAL_LOG_PATH: &str = "E:\\runner-tools\\refusal-log\\refusals.log";
 const LABEL: &str = "possibly faulty hardware (owner-reported)";
-/// Branch protection's required checks on `main`. A self-hosted job bearing one of these names would report under it.
-/// The first five are `FULL_ONLY` in `.github/scripts/ci_tier.sh`, which the test reads.
-const REQUIRED: [&str; 8] = [
+/// Branch protection's required checks on `main`, and those it required before the owner's CI model of 9 Nov 2026,
+/// which a run on an older head can still report. A self-hosted job bearing one of these names would report under it.
+/// `plan/HUMAN_SETUP.md` §2 lists the current ones, which the test reads.
+const REQUIRED: [&str; 12] = [
+    "fmt",
+    "clippy",
+    "build",
     "ci",
-    "xtask-ci",
-    "gpu-kernel",
-    "gpu-metal",
     "gpu-lavapipe",
+    "gpu-metal",
     "pr-check",
     "reviews-complete",
+    "no-atlas-params",
+    "xtask-ci",
+    "gpu-kernel",
     "mutants-check",
 ];
+/// A script that reads CI's results, as the controls give it a line naming a self-hosted job.
+#[cfg(feature = "controls")]
 const TIER_SCRIPT: &str = ".github/scripts/ci_tier.sh";
+const SETUP: &str = "plan/HUMAN_SETUP.md";
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..")
@@ -589,13 +597,39 @@ fn consumers() -> Vec<(String, String)> {
     out
 }
 
-fn check_not_gathered(files: &[(String, String)], others: &[(String, String)], tier: &str) {
-    let full_only = tier
-        .lines()
-        .find_map(|l| l.strip_prefix("FULL_ONLY=\""))
-        .and_then(|l| l.strip_suffix('"'))
-        .expect("no FULL_ONLY in the tier script");
-    for name in full_only.split(' ') {
+/// The checks `plan/HUMAN_SETUP.md` §2 (`setup`) says branch protection requires: the names in backticks in its bullet
+/// "require status checks to pass: …", before its first parenthesis.
+fn required_in(setup: &str) -> Vec<String> {
+    let mut bullet = String::new();
+    for line in setup.lines() {
+        if let Some(rest) = line.strip_prefix("- require status checks to pass:") {
+            bullet = rest.to_owned();
+        } else if !bullet.is_empty() && line.starts_with("  ") && !bullet.contains('(') {
+            bullet.push(' ');
+            bullet.push_str(line.trim());
+        } else if !bullet.is_empty() {
+            break;
+        }
+    }
+    let names: Vec<String> = bullet
+        .split('(')
+        .next()
+        .unwrap_or("")
+        .split('`')
+        .skip(1)
+        .step_by(2)
+        .map(str::to_owned)
+        .collect();
+    assert!(
+        !names.is_empty(),
+        "no required checks in plan/HUMAN_SETUP.md §2"
+    );
+    names
+}
+
+fn check_not_gathered(files: &[(String, String)], others: &[(String, String)], setup: &str) {
+    for name in required_in(setup) {
+        let name = name.as_str();
         assert!(
             REQUIRED.contains(&name),
             "the required check {name} isn't in this test's list"
@@ -646,7 +680,7 @@ fn check_not_gathered(files: &[(String, String)], others: &[(String, String)], t
 
 #[test]
 fn self_hosted_jobs_are_never_required_or_gathered() {
-    check_not_gathered(&workflows(), &consumers(), &read(TIER_SCRIPT));
+    check_not_gathered(&workflows(), &consumers(), &read(SETUP));
 }
 
 negative_control!(
@@ -659,7 +693,7 @@ negative_control!(
             "jobs:\n  gather:\n    runs-on: ubuntu-24.04\n    needs: [win-tests]\n    steps: []\n"
         ),
         &consumers(),
-        &read(TIER_SCRIPT)
+        &read(SETUP)
     )
 );
 
@@ -676,7 +710,7 @@ mod retried {
                 "[ci, mutants, gate, win-gpu]"
             ),
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -690,7 +724,7 @@ mod required_name {
         check_not_gathered(
             &measured("  win-tests:\n", "  win-tests:\n    name: gpu-lavapipe\n"),
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -715,7 +749,7 @@ mod required_id {
                     )
             )],
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -735,7 +769,7 @@ mod by_a_script {
                     read(TIER_SCRIPT)
                 )
             )],
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -752,7 +786,7 @@ mod by_a_gate {
                 "xtask/src/x.rs".to_owned(),
                 "const RUNS: &str = \"actions/workflows/win-gpu.yml/runs\";".to_owned()
             )],
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -766,7 +800,11 @@ mod new_required {
         check_not_gathered(
             &workflows(),
             &consumers(),
-            &read(TIER_SCRIPT).replacen("gpu-lavapipe\"", "gpu-lavapipe gpu-new\"", 1)
+            &read(SETUP).replacen(
+                "`gpu-metal`, `pr-check`",
+                "`gpu-metal`, `gpu-new`, `pr-check`",
+                1
+            )
         )
     );
 }
@@ -5469,7 +5507,7 @@ mod proof_retried {
                 "[ci, mutants, gate, runner-proof]"
             ),
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -5489,7 +5527,7 @@ mod proof_gathered_by_a_script {
                     read(TIER_SCRIPT)
                 )
             )],
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }
@@ -5503,7 +5541,7 @@ mod proof_required_name {
         check_not_gathered(
             &proved("  runner-proof:\n", "  runner-proof:\n    name: ci\n"),
             &consumers(),
-            &read(TIER_SCRIPT)
+            &read(SETUP)
         )
     );
 }

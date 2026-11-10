@@ -354,16 +354,16 @@ fn overrides_name_one_test_each(toml: &str) {
             "an override that does not end its test at the third period: {filter}"
         );
     }
-    assert_eq!(seen.len(), 232, "not the 232 measured tests");
+    assert_eq!(seen.len(), 215, "not the 215 measured tests");
 }
 
 #[test]
-fn mutants_profile_names_the_232_measured_tests_once_each() {
+fn mutants_profile_names_the_215_measured_tests_once_each() {
     overrides_name_one_test_each(&nextest_toml());
 }
 
 negative_control!(
-    mutants_profile_names_the_232_measured_tests_once_each,
+    mutants_profile_names_the_215_measured_tests_once_each,
     "an override that ends its test at the second period",
     expected = "does not end its test at the third period",
     overrides_name_one_test_each(&edited(
@@ -790,27 +790,11 @@ negative_control!(
 const INVENTORY: &[(&str, &str)] = &[
     (
         "validation::qa_TASK-M0-24",
-        "qa_m0_24_every_implementer_test_has_a_registered_control",
-    ),
-    (
-        "validation::qa_TASK-M0-24",
-        "qa_m0_24_every_registered_control_makes_its_test_fail",
-    ),
-    (
-        "validation::qa_TASK-M0-24",
         "qa_m0_24_xtask_declares_controls_with_a_validation_dev_dependency",
     ),
     (
         "validation::qa_TASK-M0-24",
         "qa_m0_24_validation_lists_no_doctest",
-    ),
-    (
-        "validation::qa_TASK-M0-25",
-        "qa_m0_25_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test",
-    ),
-    (
-        "validation::qa_TASK-M0-25",
-        "qa_m0_25_prin_every_merged_qa_test_has_a_control_and_no_child_body_is_a_test",
     ),
     (
         "xtask::qa_TASK-M0-22",

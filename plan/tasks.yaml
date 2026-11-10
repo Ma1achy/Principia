@@ -285,6 +285,198 @@
   requirements: [REQ-VAL-167]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
+- id: TASK-M0-35
+  milestone: M0
+  title: "The static layout check: overlap, coverage-or-reserved, width against range"
+  depends_on: [TASK-M0-07]
+  needs: []
+  requirements: [REQ-GEN-003, REQ-GEN-028]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-36
+  milestone: M0
+  title: "`cargo xtask reviews-check` and the `reviews-complete` check"
+  depends_on: [TASK-M0-01, TASK-M0-22]
+  needs: []
+  requirements: [REQ-SYS-066]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-37
+  milestone: M0
+  title: "`reviews-check`: qa's test commits keep an approval, and a PR naming no task passes"
+  depends_on: [TASK-M0-36]
+  needs: []
+  requirements: [REQ-SYS-068]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-38
+  milestone: M0
+  title: "Three harness follow-ups: embedded libtest headers, ETXTBSY on stand-in executables, nameless meter lines"
+  depends_on: [TASK-M0-03, TASK-M0-22, TASK-M0-34]
+  needs: []
+  requirements: [REQ-SYS-069, REQ-SYS-070, REQ-SYS-071]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-39
+  milestone: M0
+  title: "The r217 controls stop flaking: the grandchild gets its own process group at spawn"
+  depends_on: [TASK-M0-26, TASK-M0-33]
+  needs: []
+  requirements: [REQ-VAL-175]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-40
+  milestone: M0
+  title: "Presence means visible, and a review re-runs the stale reviews check"
+  depends_on: [TASK-M0-20, TASK-M0-37]
+  needs: []
+  requirements: [REQ-TOOL-136, REQ-SYS-072]
+  reviewers: [code, qa, gui]
+  pitfalls: [PIT-3]
+- id: TASK-M0-41
+  milestone: M0
+  title: "`cargo xtask codegen` writes a generated file only when its content changes"
+  depends_on: [TASK-M0-07, TASK-M0-10]
+  needs: []
+  requirements: [REQ-TOOL-138]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-42
+  milestone: M0
+  title: "CI caches only the cargo registry and the fixture pool, with per-job keys"
+  depends_on: [TASK-M0-33]
+  needs: []
+  requirements: [REQ-SYS-073]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-43
+  milestone: M0
+  title: "Fragment output quantised in the shader; one golden reference across backends"
+  depends_on: [TASK-M0-06]
+  needs: []
+  requirements: [REQ-VAL-176]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-44
+  milestone: M0
+  title: "Compute pipelines under an explicit fast-math setting: our own MSL through wgpu's passthrough on Metal, and each stage's mode in the session header"
+  depends_on: [TASK-M0-14, TASK-M0-19]
+  needs: []
+  requirements: [REQ-SYS-074, REQ-TOOL-141]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3, PIT-9]
+- id: TASK-M0-45
+  milestone: M0
+  title: "Shard the CI test runs and split the long single tests, so each job is back under ~10.5 min"
+  depends_on: [TASK-M0-14]
+  needs: []
+  requirements: [REQ-SYS-077]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-46
+  milestone: M0
+  title: "The link registry in the schema version: each link hashed by its semantic content"
+  depends_on: [TASK-M0-12]
+  needs: []
+  requirements: [REQ-GEN-031, REQ-GEN-032]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M0-47
+  milestone: M0
+  title: "`prin profile` streams its trace: header first, each frame as it completes, flushed every 60 frames or 1 s"
+  depends_on: [TASK-M0-18]
+  needs: []
+  requirements: [REQ-TOOL-147]
+  reviewers: [code, qa, perf]
+  pitfalls: [PIT-3]
+- id: TASK-M0-48
+  milestone: M0
+  title: Tests delete their scratch folders on success and keep them only on failure
+  depends_on: [TASK-M0-06, TASK-M0-17, TASK-M0-18, TASK-M0-23, TASK-M0-38, TASK-M0-39, TASK-M0-40]
+  needs: []
+  requirements: [REQ-VAL-178]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-49
+  milestone: M0
+  title: Mutants runs get a per-mutant timeout and a per-process memory cap on test processes
+  depends_on: [TASK-M0-14, TASK-M0-23]
+  needs: []
+  requirements: [REQ-VAL-179, REQ-VAL-180, REQ-VAL-181]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-50
+  milestone: M0
+  title: "`cargo xtask lint wgsl` fails on `isinf`, `isnan`, comparisons against inf, NaN or finite-max constants, and self-comparisons in fragment-stage WGSL"
+  depends_on: [TASK-M0-13]
+  needs: []
+  requirements: [REQ-RENDER-083]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-51
+  milestone: M0
+  title: The profile reader accepts a cut-off last line after the summary line
+  depends_on: [TASK-M0-17]
+  needs: []
+  requirements: [REQ-TOOL-148]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-52
+  milestone: M0
+  title: "The `ci` shards share one test build: a nextest archive built once, so no shard recompiles the tests"
+  depends_on: [TASK-M0-45]
+  needs: []
+  requirements: [REQ-SYS-078]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M0-53
+  milestone: M0
+  title: "gate-report fails a requirement whose named test doesn't exist"
+  depends_on: [TASK-M0-19]
+  needs: []
+  requirements: [REQ-SYS-079]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-54
+  milestone: M0
+  title: "`ci-gate` gathers `ci-release` (R-809)"
+  depends_on: [TASK-M0-52]
+  needs: []
+  requirements: [REQ-TOOL-223]  # R-809 (5 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-55
+  milestone: M0
+  title: "The Windows runner's named measurements on `main` (R-859)"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-TOOL-224]  # R-859 (8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-56
+  milestone: M0
+  title: "The heavy-work comparison: the Windows runner against hosted runners (R-859)"
+  depends_on: [TASK-M0-55]
+  needs: []
+  requirements: [REQ-TOOL-225]  # R-859 (8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-57
+  milestone: M0
+  title: "The DX12 opt-in: a cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default, local testing only (R-862)"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-SYS-097]  # R-862 (the order of 4 Nov 2026, ported 8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-58
+  milestone: M0
+  title: "The Windows runner's DX12 run, Phase 2: the GPU suites on DX12 as a named measurement (R-862, R-859)"
+  depends_on: [TASK-M0-55, TASK-M0-57]
+  needs: []
+  requirements: [REQ-TOOL-226]  # R-862, R-859 (8 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"
@@ -829,14 +1021,6 @@
   requirements: [REQ-VAL-022, REQ-VAL-121, REQ-VAL-193]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
-- id: TASK-M3-01
-  milestone: M3
-  title: "Kernel core: the generic Real, the force and the shared pair distances"
-  depends_on: [TASK-M2-15]
-  needs: [REQ-PAY-017, REQ-SYS-004, REQ-SYS-015, REQ-DEC-005, REQ-INT-002]
-  requirements: [REQ-INT-004, REQ-INT-016, REQ-INT-036, REQ-PERF-001, REQ-PERF-002]
-  reviewers: [code, qa, physics, perf]
-  pitfalls: [PIT-9]
 - id: TASK-M2-52
   milestone: M2
   title: "Tilt and slice on the six charts that hold a block by a construction: the mass simplex's `ν₀`, a rest start's momentum controls from 0, and the held `L_z` or `K` of the Burrau charts, as physical hidden coordinates (R-633, R-473) ⚑"
@@ -864,7 +1048,7 @@
 - id: TASK-M2-55
   milestone: M2
   title: "Saved curved charts, the rest: compositions onto three or four hidden coordinates, a saved chart saved again, and the composed chart's area weight and repeat counting (R-475, R-513) ⚑"
-  depends_on: [TASK-M2-40]  # split from TASK-M2-40 (code review 5816802860 of PR #447, C1; physics F3); applied per R-369
+  depends_on: [TASK-M2-40, TASK-M2-65]  # R-916
   needs: []
   requirements: [REQ-CHART-148]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
@@ -880,11 +1064,243 @@
 - id: TASK-M2-57
   milestone: M2
   title: "The decoder's mirror step removed, latent β over the full circle, under the owner's bitwise check (R-865) ⚑"
-  depends_on: [TASK-M2-40]
+  depends_on: [TASK-M2-40, TASK-M2-65]  # R-916 (stage 3), applied with R-919
   needs: []
   requirements: [REQ-DEC-055, REQ-DEC-056]
   reviewers: [code, qa, physics]  # ⚑ physics review required: it changes the decoder
   pitfalls: []
+- id: TASK-M2-58
+  milestone: M2
+  title: "The owner's rulings on the chart composition design, applied (a gate: not an implementer's task)"
+  depends_on: []  # R-916
+  needs: []
+  requirements: [REQ-CHART-125]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-59
+  milestone: M2
+  title: "The chart composition in the contracts: registry, refusals, lowerings, region D"
+  depends_on: [TASK-M2-58, TASK-M2-37, TASK-M2-52]  # R-916
+  needs: []
+  requirements: [REQ-CHART-094, REQ-CHART-095, REQ-CHART-108, REQ-CHART-109, REQ-CHART-110]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-60
+  milestone: M2
+  title: "Chart paths in the contracts"
+  depends_on: [TASK-M2-58, TASK-M2-59]  # R-916
+  needs: []
+  requirements: [REQ-CHART-112]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-61
+  milestone: M2
+  title: "The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)"
+  depends_on: [TASK-M2-58, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, TASK-M2-38, TASK-M2-39, TASK-M2-56, TASK-M2-60]  # R-916
+  needs: []
+  requirements: [REQ-CHART-147, REQ-CHART-113, REQ-CHART-160]  # R-873, R-901
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-62
+  milestone: M2
+  title: "Locking doesn't move the view, in the engine: the pin at the clicked pixel, tilt and zoom about it, snap-back, exact on nonlinear charts or saying why (R-866, R-916)"
+  depends_on: [TASK-M2-61]  # R-916
+  needs: []
+  requirements: [REQ-CHART-166, REQ-CHART-163, REQ-GUI-429]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: []
+- id: TASK-M2-63
+  milestone: M2
+  title: "Save view as chart on curved views, the pivot record at a centred pin, and tilts into the held ν₀, L_z and K, in the engine (R-475, R-899, R-916, R-919)"
+  depends_on: [TASK-M2-61, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M2-52]  # R-916
+  needs: []
+  requirements: [REQ-CHART-167, REQ-CHART-157, REQ-CHART-141, REQ-CHART-188]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-64
+  milestone: M2
+  title: "Consolidating the chart path: one leaf per operation through REQ-CHART-060's stop, the merged GUI routes made thin adapters (R-894, R-916, R-919 F1 (a))"
+  depends_on: [TASK-M2-61, TASK-M2-62, TASK-M2-63, TASK-M2-38]  # R-916
+  needs: []
+  requirements: [REQ-CHART-156, REQ-CHART-168]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: []
+- id: TASK-M2-65
+  milestone: M2
+  title: "Paths under a lock: the stored anchor"
+  depends_on: [TASK-M2-58, TASK-M2-23, TASK-M2-61, TASK-M2-62, TASK-M2-63, TASK-M2-64]  # R-916
+  needs: []
+  requirements: [REQ-CHART-115, REQ-CHART-146, REQ-CHART-158, REQ-CHART-159, REQ-CHART-161, REQ-CHART-164]  # REQ-CHART-164 split from REQ-CHART-157 (applied per R-369)
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-66
+  milestone: M2
+  title: "The primitive registry, the refusals, the labels and the bitwise digest, on the CPU (R-916)"
+  depends_on: [TASK-M2-58, TASK-M2-59, TASK-M2-14, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-096, REQ-CHART-097, REQ-CHART-098, REQ-CHART-099, REQ-CHART-127, REQ-CHART-128, REQ-CHART-169]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-67
+  milestone: M2
+  title: "CPU decode and encode through the composition: every chart through resolve, every inverse through the registry (R-916)"
+  depends_on: [TASK-M2-66, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-170]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-68
+  milestone: M2
+  title: "Region D on the CPU: the third-body pair, its preset, its velocities and the closed round trips (R-916)"
+  depends_on: [TASK-M2-66, TASK-M2-67, TASK-M2-20, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-101, REQ-CHART-142, REQ-CHART-171, REQ-CHART-180]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-69
+  milestone: M2
+  title: "Hold L_z on any chart, on the CPU (R-916)"
+  depends_on: [TASK-M2-66, TASK-M2-37, TASK-M2-52, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-102, REQ-CHART-111]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-70
+  milestone: M2
+  title: "The virial pair: its axis kind, descriptor and entry"
+  depends_on: [TASK-M2-58, TASK-M2-66, TASK-M2-37, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-103, REQ-CHART-139, REQ-CHART-187]  # R-916
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-71
+  milestone: M2
+  title: "Warps as options, polar and log-polar pair maps, and a statistic's measure (R-916)"
+  depends_on: [TASK-M2-66, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-104, REQ-CHART-131, REQ-CHART-181]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-72
+  milestone: M2
+  title: "Curved slices off the shape sphere: the momentum and mass spheres"
+  depends_on: [TASK-M2-58, TASK-M2-71, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-105, REQ-CHART-106, REQ-CHART-182]  # R-916
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-73
+  milestone: M2
+  title: "Numerical inverses and the general numerical solve, on the CPU (R-916)"
+  depends_on: [TASK-M2-66, TASK-M2-67, TASK-M2-68, TASK-M2-71, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-107, REQ-CHART-145, REQ-CHART-183]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-74
+  milestone: M2
+  title: "The primitives of 6 Nov: axes and overlays"
+  depends_on: [TASK-M2-58, TASK-M2-66, TASK-M2-71, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-117, REQ-CHART-118, REQ-CHART-184]  # R-916
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-75
+  milestone: M2
+  title: "Region D's exact map and every target's native coordinates"
+  depends_on: [TASK-M2-58, TASK-M2-68, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-121]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-76
+  milestone: M2
+  title: "The primitives of the full order"
+  depends_on: [TASK-M2-58, TASK-M2-74, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-119, REQ-CHART-120, REQ-CHART-185]  # R-916
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-77
+  milestone: M2
+  title: "Paper frames as presets"
+  depends_on: [TASK-M2-58, TASK-M2-75, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-122, REQ-CHART-186]  # R-916
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-78
+  milestone: M2
+  title: "The fixed-k chart: rigid rotation at a chosen virial coefficient over D₁₁ ∪ D₁₂, a chart and builder axes (R-847)"
+  depends_on: [TASK-M2-58, TASK-M2-74, TASK-M2-73, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-143]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-79
+  milestone: M2
+  title: "The binary-plus-single scattering chart, with f_col and Heggie & Sweatman 1991 alongside (R-847)"
+  depends_on: [TASK-M2-58, TASK-M2-76, TASK-M2-73, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-144, REQ-VAL-354]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-80
+  milestone: M2
+  title: "Points of interest's maths: the signed point, the nearest chart point, the off-slice distance and the near-match (R-870, R-916)"
+  depends_on: [TASK-M2-66, TASK-M2-57, TASK-M2-65]  # R-916
+  needs: []
+  requirements: [REQ-CHART-172, REQ-GUI-427, REQ-GUI-428]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: []
+- id: TASK-M2-81
+  milestone: M2
+  title: "Path re-timing, alignment and flags (the path type is TASK-M2-61's, the line on blocks TASK-M2-65's, export TASK-M8-108's; R-873, R-899, R-916)"
+  depends_on: [TASK-M2-58, TASK-M2-60, TASK-M2-55, TASK-M2-57, TASK-M2-66, TASK-M2-67, TASK-M2-68, TASK-M2-69, TASK-M2-70, TASK-M2-71, TASK-M2-72, TASK-M2-73, TASK-M2-74, TASK-M2-75, TASK-M2-76, TASK-M2-77, TASK-M2-78, TASK-M2-79, TASK-M2-80]  # R-916
+  needs: []
+  requirements: [REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133]  # REQ-CHART-113 moved to TASK-M2-61 (R-873)
+  reviewers: [code, qa, physics]  # R-916: export, the perf arm, is TASK-M8-108's
+  pitfalls: []
+- id: TASK-M2-82
+  milestone: M2
+  title: "The trajectory interface and its exact fixtures: the Lagrange equilateral homographic solution and the figure-eight (R-918, R-919)"
+  depends_on: []  # R-916
+  needs: []
+  requirements: [REQ-CHART-173]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-83
+  milestone: M2
+  title: "Time-axis chart mode's maths, through the trajectory interface (R-916, R-918)"
+  depends_on: [TASK-M2-81, TASK-M2-82, TASK-M2-66]  # R-916
+  needs: []
+  requirements: [REQ-CHART-123, REQ-CHART-174]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-84
+  milestone: M2
+  title: "The symmetry filter's maths: the mask, the partner check and the statistics, on a synthetic payload (R-916)"
+  depends_on: [TASK-M2-77, TASK-M2-81]  # R-916
+  needs: []
+  requirements: [REQ-CHART-135, REQ-CHART-137, REQ-CHART-150, REQ-CHART-175, REQ-CHART-176]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-85
+  milestone: M2
+  title: "The acute-angle Burrau charts over the full acute range, both labellings, the leg swap through the symmetry filter (R-875)"
+  depends_on: [TASK-M2-84]  # R-916
+  needs: []
+  requirements: [REQ-CHART-151, REQ-CHART-162]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M3-01
+  milestone: M3
+  title: "Kernel core: the generic Real, the force and the shared pair distances"
+  depends_on: [TASK-M2-15]
+  needs: [REQ-PAY-017, REQ-SYS-004, REQ-SYS-015, REQ-DEC-005, REQ-INT-002]
+  requirements: [REQ-INT-004, REQ-INT-016, REQ-INT-036, REQ-PERF-001, REQ-PERF-002]
+  reviewers: [code, qa, physics, perf]
+  pitfalls: [PIT-9]
 - id: TASK-M3-02
   milestone: M3
   title: Stepper occupants and the capability profile
@@ -927,16 +1343,16 @@
   pitfalls: []
 - id: TASK-M3-07
   milestone: M3
-  title: The regularisation axis and the Aarseth–Zare occupant
+  title: "The regularisation axis, `none`, and the no-usable-step marker"
   depends_on: [TASK-M3-04, TASK-M3-05]
   needs: [REQ-DEC-005, REQ-INT-002]
-  requirements: [REQ-INT-021, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-TOOL-039, REQ-INT-080, REQ-TOOL-125]
+  requirements: [REQ-INT-021, REQ-TOOL-039, REQ-TOOL-125]  # split 10 Nov 2026 (R-369): AZ's are TASK-M3-68's
   reviewers: [code, qa, physics]
-  pitfalls: [PIT-4, PIT-4.1, PIT-9]
+  pitfalls: [PIT-4, PIT-9]
 - id: TASK-M3-08
   milestone: M3
   title: Heggie and logH occupants, and the visible re-registration count
-  depends_on: [TASK-M3-07]
+  depends_on: [TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-DEC-005, REQ-GEN-008]
   requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105]
   reviewers: [code, qa, physics]
@@ -960,7 +1376,7 @@
 - id: TASK-M3-11
   milestone: M3
   title: The live shape readout, the lagged n̂ register and the closure fields
-  depends_on: [TASK-M3-04, TASK-M3-07]
+  depends_on: [TASK-M3-04, TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-INT-001, REQ-INT-003, REQ-CHART-036, REQ-PAY-009, REQ-GEN-008]
   requirements: [REQ-INT-042, REQ-PAY-043, REQ-PAY-055, REQ-PAY-056, REQ-PAY-059, REQ-VAL-055, REQ-INT-082, REQ-INT-087, REQ-INT-088, REQ-INT-089]
   reviewers: [code, qa, physics]
@@ -984,9 +1400,9 @@
 - id: TASK-M3-14
   milestone: M3
   title: The Benettin FTLE shadow
-  depends_on: [TASK-M3-05, TASK-M3-06]
+  depends_on: [TASK-M3-05, TASK-M3-06, TASK-M2-71]  # R-918
   needs: [REQ-PAY-021, REQ-PAY-026, REQ-PAY-032]
-  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038]
+  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-CHART-132]  # R-918
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-15
@@ -1160,7 +1576,7 @@
 - id: TASK-M3-36
   milestone: M3
   title: "Cross-implementation checks: BodyPlane bit-for-bit and the change-10 re-run"
-  depends_on: [TASK-M3-24, TASK-M3-07, TASK-M2-35]  # R-467 D11: the sweep it extends to BodyPlane
+  depends_on: [TASK-M3-24, TASK-M3-68, TASK-M2-35]  # R-467 D11: the sweep it extends to BodyPlane; TASK-M3-68 was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-CHART-015, REQ-CHART-028, REQ-CHART-029]
   requirements: [REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035, REQ-VAL-146, REQ-CHART-059]
   reviewers: [code, qa, physics]
@@ -1213,10 +1629,26 @@
   requirements: [REQ-SYS-096]  # R-668 (1 Nov 2026), RQ-668
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M3-67
+  milestone: M3
+  title: "After M2: the trajectory interface on the real integrator, and the outcome-class arms of the conversions (R-916, R-918)"
+  depends_on: [TASK-M2-82, TASK-M2-64, TASK-M2-65, TASK-M3-17, TASK-M3-19, TASK-M3-40]  # R-916; TASK-M3-40 for R-565
+  needs: []
+  requirements: [REQ-CHART-177]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M3-68
+  milestone: M3
+  title: The Aarseth–Zare occupant
+  depends_on: [TASK-M3-07]  # split from TASK-M3-07, 10 Nov 2026 (R-369)
+  needs: [REQ-DEC-005, REQ-INT-002]
+  requirements: [REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-080]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-4, PIT-4.1, PIT-9]
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
-  depends_on: [TASK-M3-07]
+  depends_on: [TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-INT-004, REQ-INT-008, REQ-INT-016, REQ-SYS-015, REQ-SYS-004, REQ-GEN-015, REQ-INT-028, REQ-INT-038, REQ-TOOL-039]
   requirements: [REQ-SYS-020, REQ-SYS-023, REQ-SYS-025, REQ-INT-058, REQ-INT-060, REQ-INT-062, REQ-INT-063, REQ-INT-067]
   reviewers: [code, qa, physics]
@@ -1248,7 +1680,7 @@
 - id: TASK-M4-05
   milestone: M4
   title: "Flat-grid compute: in-kernel decode from chart uniforms, one workgroup per quad, an in-place march"
-  depends_on: [TASK-M4-01, TASK-M3-06, TASK-M3-15]
+  depends_on: [TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66]  # R-916
   needs: [REQ-SCHED-001, REQ-SYS-012, REQ-CHART-003, REQ-INT-026, REQ-PAY-025, REQ-PAY-038, REQ-PAY-037, REQ-PAY-014, REQ-SYS-003, REQ-SCHED-003, REQ-DEC-007]
   requirements: [REQ-INT-070, REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008]
   reviewers: [code, qa, physics, perf]
@@ -1256,7 +1688,7 @@
 - id: TASK-M4-06
   milestone: M4
   title: "The baked compute variants: chart × link × occupant × FTLE, with copy_index a uniform"
-  depends_on: [TASK-M4-05, TASK-M2-25, TASK-M2-28, TASK-M3-14, TASK-M0-44]
+  depends_on: [TASK-M4-05, TASK-M2-25, TASK-M2-28, TASK-M3-14, TASK-M0-44, TASK-M2-66]  # R-916
   needs: [REQ-CHART-001, REQ-CHART-002, REQ-CHART-013, REQ-CHART-017, REQ-CHART-028, REQ-CHART-029, REQ-CHART-031, REQ-DEC-007, REQ-INT-005, REQ-PAY-026, REQ-INT-035, REQ-INT-043, REQ-RENDER-027, REQ-SYS-074]
   requirements: [REQ-CHART-037, REQ-SYS-024, REQ-INT-065, REQ-INT-069, REQ-RENDER-031, REQ-RENDER-082, REQ-INT-083, REQ-CHART-152]  # R-876
   reviewers: [code, qa, physics, perf]
@@ -1387,7 +1819,7 @@
   title: "The kernel cross-backend check, the arm for now: decode's and canon's branch outcomes on NVIDIA Vulkan, Metal, lavapipe and CPU f32, per backend pair (R-686)"
   depends_on: [TASK-M2-07, TASK-M2-24, TASK-M2-25]
   needs: [REQ-DEC-017, REQ-DEC-008]
-  requirements: [REQ-VAL-347, REQ-RENDER-122]
+  requirements: [REQ-VAL-347]  # REQ-RENDER-122 moved to TASK-M4-38 (applied per R-369, 10 Nov 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M4-28
@@ -1422,36 +1854,29 @@
   requirements: [REQ-VAL-349]
   reviewers: [code, qa, physics]
   pitfalls: []
-- id: TASK-M4-32
-  milestone: M4
-  title: "The chart composition in the contracts: registry, refusals, lowerings, region D"
-  depends_on: [TASK-M4-37, TASK-M2-37, TASK-M2-52]
-  needs: []
-  requirements: [REQ-CHART-094, REQ-CHART-095, REQ-CHART-108, REQ-CHART-109, REQ-CHART-110]
-  reviewers: [code, qa, physics]
-  pitfalls: []
 - id: TASK-M4-33
   milestone: M4
-  title: "The primitive registry, the refusals, the labels and the bitwise digest"
-  depends_on: [TASK-M4-37, TASK-M4-32, TASK-M2-14]
+  title: "The baked entries on the GPU, the axis cap and V1's decode time (R-916)"
+  depends_on: [TASK-M2-66, TASK-M2-70]  # R-916
   needs: []
-  requirements: [REQ-CHART-096, REQ-CHART-097, REQ-CHART-098, REQ-CHART-099, REQ-PERF-116, REQ-CHART-127, REQ-CHART-128]
+  requirements: [REQ-PERF-116]  # R-916
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M4-34
   milestone: M4
-  title: "Region D: the third-body pair, its preset, and the angles and side ratios it carries"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-20, TASK-M4-06]  # R-914
+  title: "Region D on the GPU: the pair's baked entry, its lowering row and its GPU reference (R-914, R-916)"
+  depends_on: [TASK-M2-68, TASK-M4-33, TASK-M4-06]  # R-916
   needs: []
-  requirements: [REQ-CHART-100, REQ-CHART-101, REQ-CHART-142, REQ-RENDER-123, REQ-CHART-165]  # R-914
+  requirements: [REQ-CHART-100, REQ-RENDER-123, REQ-CHART-165]  # R-916
   reviewers: [code, qa, physics, perf]
   pitfalls: []
-- id: TASK-M4-37
+# TASK-M4-38: split from TASK-M4-27 (applied per R-369, 10 Nov 2026); TASK-M4-35 and -36 became TASK-M8-118 and -119 and are not reused
+- id: TASK-M4-38
   milestone: M4
-  title: "The owner's rulings on the chart composition design, applied (a gate: not an implementer's task)"
-  depends_on: []
+  title: "Per-backend accuracy of cos near π/2 against f64 (REQ-RENDER-122)"
+  depends_on: [TASK-M4-27]
   needs: []
-  requirements: [REQ-CHART-125]
+  requirements: [REQ-RENDER-122]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M5-01
@@ -1553,7 +1978,7 @@
 - id: TASK-M5-13
   milestone: M5
   title: "Navigation as chart-uniform edits: in-plane re-addressing and new identities"
-  depends_on: [TASK-M5-04, TASK-M5-06, TASK-M5-08]
+  depends_on: [TASK-M5-04, TASK-M5-06, TASK-M5-08, TASK-M2-64]  # R-916
   needs: [REQ-GUI-004, REQ-GUI-005, REQ-GUI-007, REQ-CHART-007, REQ-SYS-022]
   requirements: [REQ-CHART-038, REQ-SCHED-025, REQ-SCHED-054]
   reviewers: [code, qa, physics]
@@ -2081,7 +2506,7 @@
 - id: TASK-M6-48
   milestone: M6
   title: "The GUI track (R-390): RQ-340 ruled — Tip as sheet the default, Lean each axis an option, over the pole, the compass drawing the active map, the readout's lines (R-474) ⚑"
-  depends_on: [TASK-M6-38, TASK-M6-39, TASK-M6-40, TASK-M6-45]  # R-474 K13: the Tilt section's targets (M6-38), live drags (M6-39), the H, V, D buttons (M6-40) and the resets (M6-45)
+  depends_on: [TASK-M6-38, TASK-M6-39, TASK-M6-40, TASK-M6-45, TASK-M2-64]  # R-916
   needs: []
   requirements: [REQ-GUI-231, REQ-GUI-232, REQ-GUI-233, REQ-GUI-234, REQ-GUI-235, REQ-GUI-236, REQ-GUI-237, REQ-GUI-238, REQ-GUI-430]  # R-896
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
@@ -2089,7 +2514,7 @@
 - id: TASK-M6-49
   milestone: M6
   title: "The GUI track (R-390): Save view as chart on the mock — the button and View entry, the Saved group, provenance, one undo entry, the oblique latent chart reopened bitwise (R-475)"
-  depends_on: [TASK-M6-48, TASK-M6-45, TASK-M6-46, TASK-M6-47]
+  depends_on: [TASK-M6-48, TASK-M6-45, TASK-M6-46, TASK-M6-47, TASK-M2-64]  # R-916
   needs: []
   requirements: [REQ-GUI-239, REQ-GUI-240]
   reviewers: [code, qa, gui]
@@ -2105,7 +2530,7 @@
 - id: TASK-M6-51
   milestone: M6
   title: "The GUI track (R-390): a latent view saved at a tilt, tilted again in the orthonormal frame of its projected targets, the stored pair kept (R-475, R-514) ⚑"
-  depends_on: [TASK-M6-49]  # R-475 L4, R-514: a leaf; numbered past the links port's (unmerged) TASK-M6-50
+  depends_on: [TASK-M6-49, TASK-M2-63, TASK-M2-64]  # R-916
   needs: []
   requirements: [REQ-GUI-265]
   reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
@@ -2699,7 +3124,7 @@
 - id: TASK-M7-72
   milestone: M7
   title: "Contours of any registered primitive"
-  depends_on: [TASK-M4-37, TASK-M7-43, TASK-M4-33]
+  depends_on: [TASK-M2-66, TASK-M7-43]  # R-916
   needs: [REQ-CHART-096]
   requirements: [REQ-RENDER-121]
   reviewers: [code, qa, gui, physics]
@@ -2747,7 +3172,7 @@
 - id: TASK-M8-06
   milestone: M8
   title: "Manifold view panel: Chart, Navigate, depth readout, Slice centre, Tilt, and the figure's axis labels"
-  depends_on: [TASK-M8-05, TASK-M6-26, TASK-M6-38, TASK-M2-22, TASK-M2-23, TASK-M2-17, TASK-M2-14, TASK-M2-28]
+  depends_on: [TASK-M8-05, TASK-M6-26, TASK-M6-38, TASK-M2-22, TASK-M2-23, TASK-M2-17, TASK-M2-14, TASK-M2-28, TASK-M2-64]  # R-916
   needs: [REQ-GUI-002, REQ-GUI-003, REQ-GUI-006, REQ-CHART-005, REQ-CHART-012, REQ-CHART-028, REQ-SYS-014, REQ-CHART-002, REQ-RENDER-026]
   requirements: [REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161, REQ-GUI-345]  # REQ-GUI-345: an invariant chart's frozen controls (R-549, RQ-350)
   reviewers: [code, qa, physics, gui]
@@ -2755,7 +3180,7 @@
 - id: TASK-M8-07
   milestone: M8
   title: "Lock, compass and time controls: the reticle, the pin, the nav cube and the scrubber (08_lock.png, 01_main.png)"
-  depends_on: [TASK-M8-06, TASK-M6-26, TASK-M6-27, TASK-M2-23]
+  depends_on: [TASK-M8-06, TASK-M6-26, TASK-M6-27, TASK-M2-23, TASK-M2-64]  # R-916
   needs: [REQ-GUI-004, REQ-GUI-005, REQ-GUI-006, REQ-GUI-007]
   requirements: [REQ-GUI-099]
   reviewers: [code, qa, gui]
@@ -3083,9 +3508,9 @@
 - id: TASK-M8-48
   milestone: M8
   title: "On the real engine: tilt and slice on every chart, the energy axes' mapping control, the navigation stop in the edit path, and Save view as chart on curved views (R-469, R-471, R-473, R-475) ⚑"
-  depends_on: [TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18, TASK-M2-52]  # TASK-M2-52: R-633 (RQ-603), every chart's tilt and REQ-CHART-062; applied per R-369
+  depends_on: [TASK-M8-89, TASK-M8-03, TASK-M6-48, TASK-M6-49, TASK-M2-36, TASK-M2-37, TASK-M2-38, TASK-M2-40, TASK-M8-18, TASK-M2-52, TASK-M2-63, TASK-M2-64]  # R-916
   needs: [REQ-CHART-060, REQ-CHART-062, REQ-CHART-068, REQ-CHART-073, REQ-CHART-077]
-  requirements: [REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244, REQ-CHART-141, REQ-CHART-157]  # R-899 Q5
+  requirements: [REQ-GUI-241, REQ-GUI-242, REQ-GUI-243, REQ-GUI-244]  # R-916
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M8-49
@@ -3139,7 +3564,7 @@
 - id: TASK-M8-55
   milestone: M8
   title: "Past the square with the controls shown: pan and zoom past [0,1]², drawn with no gaps, every interaction working there, a repeat resolving to its canonical system, the ✕ and the round trip (R-537 EX1 to EX5, EX9)"
-  depends_on: [TASK-M8-56, TASK-M8-87, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48]
+  depends_on: [TASK-M8-56, TASK-M8-87, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48, TASK-M2-64]  # R-916
   needs: []
   requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342, REQ-GUI-348, REQ-GUI-357]
   reviewers: [code, qa, gui]
@@ -3384,198 +3809,6 @@
   requirements: [REQ-TOOL-214]
   reviewers: [code, qa, physics]
   pitfalls: []
-- id: TASK-M0-35
-  milestone: M0
-  title: "The static layout check: overlap, coverage-or-reserved, width against range"
-  depends_on: [TASK-M0-07]
-  needs: []
-  requirements: [REQ-GEN-003, REQ-GEN-028]
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-36
-  milestone: M0
-  title: "`cargo xtask reviews-check` and the `reviews-complete` check"
-  depends_on: [TASK-M0-01, TASK-M0-22]
-  needs: []
-  requirements: [REQ-SYS-066]
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-37
-  milestone: M0
-  title: "`reviews-check`: qa's test commits keep an approval, and a PR naming no task passes"
-  depends_on: [TASK-M0-36]
-  needs: []
-  requirements: [REQ-SYS-068]
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-38
-  milestone: M0
-  title: "Three harness follow-ups: embedded libtest headers, ETXTBSY on stand-in executables, nameless meter lines"
-  depends_on: [TASK-M0-03, TASK-M0-22, TASK-M0-34]
-  needs: []
-  requirements: [REQ-SYS-069, REQ-SYS-070, REQ-SYS-071]
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-39
-  milestone: M0
-  title: "The r217 controls stop flaking: the grandchild gets its own process group at spawn"
-  depends_on: [TASK-M0-26, TASK-M0-33]
-  needs: []
-  requirements: [REQ-VAL-175]
-  reviewers: [code, qa]
-  pitfalls: [PIT-3]
-- id: TASK-M0-40
-  milestone: M0
-  title: "Presence means visible, and a review re-runs the stale reviews check"
-  depends_on: [TASK-M0-20, TASK-M0-37]
-  needs: []
-  requirements: [REQ-TOOL-136, REQ-SYS-072]
-  reviewers: [code, qa, gui]
-  pitfalls: [PIT-3]
-- id: TASK-M0-41
-  milestone: M0
-  title: "`cargo xtask codegen` writes a generated file only when its content changes"
-  depends_on: [TASK-M0-07, TASK-M0-10]
-  needs: []
-  requirements: [REQ-TOOL-138]
-  reviewers: [code, qa]
-  pitfalls: [PIT-3]
-- id: TASK-M0-42
-  milestone: M0
-  title: "CI caches only the cargo registry and the fixture pool, with per-job keys"
-  depends_on: [TASK-M0-33]
-  needs: []
-  requirements: [REQ-SYS-073]
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-43
-  milestone: M0
-  title: "Fragment output quantised in the shader; one golden reference across backends"
-  depends_on: [TASK-M0-06]
-  needs: []
-  requirements: [REQ-VAL-176]
-  reviewers: [code, qa]
-  pitfalls: [PIT-3]
-- id: TASK-M0-44
-  milestone: M0
-  title: "Compute pipelines under an explicit fast-math setting: our own MSL through wgpu's passthrough on Metal, and each stage's mode in the session header"
-  depends_on: [TASK-M0-14, TASK-M0-19]
-  needs: []
-  requirements: [REQ-SYS-074, REQ-TOOL-141]
-  reviewers: [code, qa, physics]
-  pitfalls: [PIT-3, PIT-9]
-- id: TASK-M0-45
-  milestone: M0
-  title: "Shard the CI test runs and split the long single tests, so each job is back under ~10.5 min"
-  depends_on: [TASK-M0-14]
-  needs: []
-  requirements: [REQ-SYS-077]
-  reviewers: [code, qa]
-  pitfalls: [PIT-3]
-- id: TASK-M0-46
-  milestone: M0
-  title: "The link registry in the schema version: each link hashed by its semantic content"
-  depends_on: [TASK-M0-12]
-  needs: []
-  requirements: [REQ-GEN-031, REQ-GEN-032]
-  reviewers: [code, qa, physics]
-  pitfalls: []
-- id: TASK-M0-47
-  milestone: M0
-  title: "`prin profile` streams its trace: header first, each frame as it completes, flushed every 60 frames or 1 s"
-  depends_on: [TASK-M0-18]
-  needs: []
-  requirements: [REQ-TOOL-147]
-  reviewers: [code, qa, perf]
-  pitfalls: [PIT-3]
-- id: TASK-M0-48
-  milestone: M0
-  title: Tests delete their scratch folders on success and keep them only on failure
-  depends_on: [TASK-M0-06, TASK-M0-17, TASK-M0-18, TASK-M0-23, TASK-M0-38, TASK-M0-39, TASK-M0-40]
-  needs: []
-  requirements: [REQ-VAL-178]
-  reviewers: [code, qa]
-  pitfalls: [PIT-3]
-- id: TASK-M0-49
-  milestone: M0
-  title: Mutants runs get a per-mutant timeout and a per-process memory cap on test processes
-  depends_on: [TASK-M0-14, TASK-M0-23]
-  needs: []
-  requirements: [REQ-VAL-179, REQ-VAL-180, REQ-VAL-181]
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-50
-  milestone: M0
-  title: "`cargo xtask lint wgsl` fails on `isinf`, `isnan`, comparisons against inf, NaN or finite-max constants, and self-comparisons in fragment-stage WGSL"
-  depends_on: [TASK-M0-13]
-  needs: []
-  requirements: [REQ-RENDER-083]
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-51
-  milestone: M0
-  title: The profile reader accepts a cut-off last line after the summary line
-  depends_on: [TASK-M0-17]
-  needs: []
-  requirements: [REQ-TOOL-148]
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-52
-  milestone: M0
-  title: "The `ci` shards share one test build: a nextest archive built once, so no shard recompiles the tests"
-  depends_on: [TASK-M0-45]
-  needs: []
-  requirements: [REQ-SYS-078]
-  reviewers: [code, qa]
-  pitfalls: [PIT-3]
-- id: TASK-M0-53
-  milestone: M0
-  title: "gate-report fails a requirement whose named test doesn't exist"
-  depends_on: [TASK-M0-19]
-  needs: []
-  requirements: [REQ-SYS-079]
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-54
-  milestone: M0
-  title: "`ci-gate` gathers `ci-release` (R-809)"
-  depends_on: [TASK-M0-52]
-  needs: []
-  requirements: [REQ-TOOL-223]  # R-809 (5 Nov 2026)
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-55
-  milestone: M0
-  title: "The Windows runner's named measurements on `main` (R-859)"
-  depends_on: [TASK-M0-04]
-  needs: []
-  requirements: [REQ-TOOL-224]  # R-859 (8 Nov 2026)
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-56
-  milestone: M0
-  title: "The heavy-work comparison: the Windows runner against hosted runners (R-859)"
-  depends_on: [TASK-M0-55]
-  needs: []
-  requirements: [REQ-TOOL-225]  # R-859 (8 Nov 2026)
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-57
-  milestone: M0
-  title: "The DX12 opt-in: a cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default, local testing only (R-862)"
-  depends_on: [TASK-M0-04]
-  needs: []
-  requirements: [REQ-SYS-097]  # R-862 (the order of 4 Nov 2026, ported 8 Nov 2026)
-  reviewers: [code, qa]
-  pitfalls: []
-- id: TASK-M0-58
-  milestone: M0
-  title: "The Windows runner's DX12 run, Phase 2: the GPU suites on DX12 as a named measurement (R-862, R-859)"
-  depends_on: [TASK-M0-55, TASK-M0-57]
-  needs: []
-  requirements: [REQ-TOOL-226]  # R-862, R-859 (8 Nov 2026)
-  reviewers: [code, qa]
-  pitfalls: []
 - id: TASK-M8-86
   milestone: M8
   title: "The v1 web skeleton (R-627): the egui app and the mock engine in wasm on WebGPU, deployed to GitHub Pages by hand"
@@ -3611,7 +3844,7 @@
 - id: TASK-M8-90
   milestone: M8
   title: "Lock, compass and time controls on the real engine, and the scrub that re-integrates (R-627; wires TASK-M8-07)"
-  depends_on: [TASK-M8-07, TASK-M8-89, TASK-M6-21, TASK-M6-22]
+  depends_on: [TASK-M8-07, TASK-M8-89, TASK-M6-21, TASK-M6-22, TASK-M2-64]  # R-916
   needs: [REQ-TOOL-046, REQ-TOOL-047, REQ-SCHED-036, REQ-SCHED-016]
   requirements: [REQ-GUI-404, REQ-GUI-092, REQ-GUI-155]
   reviewers: [code, qa, physics, gui]  # physics for REQ-GUI-155 (physics review 5664187570 of R-627's port, F1)
@@ -3665,34 +3898,18 @@
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 
-- id: TASK-M8-100
-  milestone: M8
-  title: "Warps as options, and polar and log-polar pair maps"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M3-14]
-  needs: [REQ-CHART-096]
-  requirements: [REQ-CHART-104, REQ-CHART-131, REQ-CHART-132]
-  reviewers: [code, qa, physics, perf]
-  pitfalls: []
-- id: TASK-M8-101
-  milestone: M8
-  title: "Curved slices off the shape sphere: the momentum and mass spheres"
-  depends_on: [TASK-M4-37, TASK-M8-100, TASK-M8-117]
-  needs: []
-  requirements: [REQ-CHART-105, REQ-CHART-106]
-  reviewers: [code, qa, physics]
-  pitfalls: []
 - id: TASK-M8-102
   milestone: M8
   title: "CPU batch: numerical inverses, their branch rule and seam"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-100, TASK-M8-117]  # R-873: stage 3, after stage 2
+  depends_on: [TASK-M2-73, TASK-M4-06, TASK-M6-03, TASK-M4-34]  # R-916
   needs: []
-  requirements: [REQ-CHART-107, REQ-CHART-129, REQ-CHART-130, REQ-CHART-145, REQ-CHART-155]  # R-889
+  requirements: [REQ-CHART-129, REQ-CHART-130, REQ-CHART-155]  # R-916
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-103
   milestone: M8
   title: "The Chart builder's composition panels"
-  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-34, TASK-M8-118, TASK-M8-100, TASK-M8-102, TASK-M8-117]  # R-873: stage 3, after stage 2
+  depends_on: [TASK-M2-58, TASK-M8-18, TASK-M2-68, TASK-M2-69, TASK-M2-71, TASK-M2-73, TASK-M2-65]  # R-916
   needs: []
   requirements: [REQ-GUI-419]
   reviewers: [code, qa, physics, gui]
@@ -3700,31 +3917,15 @@
 - id: TASK-M8-104
   milestone: M8
   title: "1D charts in the GUI"
-  depends_on: [TASK-M4-37, TASK-M8-18, TASK-M4-33, TASK-M8-117]  # R-873: stage 3, after stage 2
+  depends_on: [TASK-M8-18, TASK-M2-66, TASK-M2-65]  # R-916
   needs: []
   requirements: [REQ-GUI-420]
   reviewers: [code, qa, gui]
   pitfalls: []
-- id: TASK-M8-105
-  milestone: M8
-  title: "Chart paths in the contracts"
-  depends_on: [TASK-M4-37, TASK-M4-32]
-  needs: []
-  requirements: [REQ-CHART-112]
-  reviewers: [code, qa, physics]
-  pitfalls: []
-- id: TASK-M8-106
-  milestone: M8
-  title: "Path re-timing, alignment and export through CPU batch (the path type is TASK-M8-124's, the line on blocks TASK-M8-117's; R-873, R-899)"
-  depends_on: [TASK-M4-37, TASK-M8-105, TASK-M8-102, TASK-M8-31, TASK-M8-103, TASK-M8-104, TASK-M8-112, TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-126, TASK-M7-72]  # R-873: stage 4, after every stage-3 task
-  needs: []
-  requirements: [REQ-CHART-114, REQ-CHART-116, REQ-CHART-124, REQ-CHART-133]  # REQ-CHART-113 moved to TASK-M8-124 (R-873)
-  reviewers: [code, qa, physics, perf]
-  pitfalls: []
 - id: TASK-M8-107
   milestone: M8
   title: "Live paths: the blend entry and the coarse cover"
-  depends_on: [TASK-M4-37, TASK-M8-106]
+  depends_on: [TASK-M2-81, TASK-M4-33]  # R-916
   needs: []
   requirements: [REQ-PERF-117]
   reviewers: [code, qa, physics, perf]
@@ -3732,55 +3933,23 @@
 - id: TASK-M8-108
   milestone: M8
   title: "The Sequence's morph segment"
-  depends_on: [TASK-M4-37, TASK-M8-106, TASK-M8-77, TASK-M8-78, TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101, TASK-M8-109, TASK-M8-110, TASK-M8-111, TASK-M8-119, TASK-M8-102, TASK-M8-103, TASK-M8-104, TASK-M8-112, TASK-M8-118, TASK-M8-122, TASK-M8-123, TASK-M8-126, TASK-M7-72]  # R-873: stage 4
+  depends_on: [TASK-M2-81, TASK-M8-31, TASK-M8-77, TASK-M8-78, TASK-M8-102, TASK-M8-103, TASK-M8-104, TASK-M8-118, TASK-M8-126, TASK-M7-72]  # R-916
   needs: []
   requirements: [REQ-GUI-421]
-  reviewers: [code, qa, gui]
-  pitfalls: []
-- id: TASK-M8-109
-  milestone: M8
-  title: "The primitives of 6 Nov: axes and overlays"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M8-100, TASK-M7-72, TASK-M8-117]
-  needs: []
-  requirements: [REQ-CHART-117, REQ-CHART-118]
-  reviewers: [code, qa, physics]
-  pitfalls: []
-- id: TASK-M8-110
-  milestone: M8
-  title: "Region D's exact map and every target's native coordinates"
-  depends_on: [TASK-M4-37, TASK-M4-34, TASK-M8-117]
-  needs: []
-  requirements: [REQ-CHART-121]
-  reviewers: [code, qa, physics]
-  pitfalls: []
-- id: TASK-M8-111
-  milestone: M8
-  title: "The primitives of the full order"
-  depends_on: [TASK-M4-37, TASK-M8-109, TASK-M8-117]
-  needs: []
-  requirements: [REQ-CHART-119, REQ-CHART-120]
-  reviewers: [code, qa, physics]
-  pitfalls: []
-- id: TASK-M8-112
-  milestone: M8
-  title: "Paper frames as presets"
-  depends_on: [TASK-M4-37, TASK-M8-110, TASK-M8-117]  # R-873: stage 3, after stage 2
-  needs: []
-  requirements: [REQ-CHART-122]
-  reviewers: [code, qa, physics]
+  reviewers: [code, qa, gui, perf]  # R-916: export through CPU batch from TASK-M2-81
   pitfalls: []
 - id: TASK-M8-113
   milestone: M8
-  title: "Time-axis chart mode"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M8-108]
+  title: "Time-axis chart mode on the real integrator: the column march (R-916)"
+  depends_on: [TASK-M2-83, TASK-M3-40, TASK-M3-67, TASK-M8-108]  # R-916
   needs: []
-  requirements: [REQ-CHART-123]
+  requirements: [REQ-CHART-178]  # R-916
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-114
   milestone: M8
   title: "Time-axis storage and the column cost"
-  depends_on: [TASK-M4-37, TASK-M8-113, TASK-M8-108]
+  depends_on: [TASK-M2-58, TASK-M8-113, TASK-M8-108]
   needs: []
   requirements: [REQ-PERF-118]
   reviewers: [code, qa, physics, perf]
@@ -3788,7 +3957,7 @@
 - id: TASK-M8-115
   milestone: M8
   title: "Time-axis mode in the GUI"
-  depends_on: [TASK-M4-37, TASK-M8-113, TASK-M8-108]
+  depends_on: [TASK-M2-58, TASK-M8-113, TASK-M8-108]
   needs: []
   requirements: [REQ-GUI-422]
   reviewers: [code, qa, gui]
@@ -3796,41 +3965,25 @@
 - id: TASK-M8-116
   milestone: M8
   title: "Time-axis mode in Sequence and export sidecars"
-  depends_on: [TASK-M4-37, TASK-M8-115, TASK-M8-77, TASK-M8-108]
+  depends_on: [TASK-M2-58, TASK-M8-115, TASK-M8-77, TASK-M8-108]
   needs: []
   requirements: [REQ-GUI-423]
   reviewers: [code, qa, gui]
   pitfalls: []
-- id: TASK-M8-117
-  milestone: M8
-  title: "Paths under a lock: the stored anchor"
-  depends_on: [TASK-M4-37, TASK-M2-23, TASK-M8-124, TASK-M8-125, TASK-M8-129]  # TASK-M8-125: R-866, stage 1 (applied per R-369); R-894, R-899 Q9
-  needs: []
-  requirements: [REQ-CHART-115, REQ-CHART-146, REQ-CHART-158, REQ-CHART-159, REQ-CHART-161, REQ-CHART-164]  # REQ-CHART-164 split from REQ-CHART-157 (applied per R-369)
-  reviewers: [code, qa, physics]
-  pitfalls: []
 - id: TASK-M8-118
   milestone: M8
-  title: "Hold L_z on any chart, beside energy normalisation"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M2-52, TASK-M8-117]  # R-873: stage 3, after stage 2
+  title: "Hold L_z on the GPU: the outcome tags across backends and the calibration of τ (R-916)"
+  depends_on: [TASK-M2-69, TASK-M4-06]  # R-916
   needs: []
-  requirements: [REQ-CHART-102, REQ-CHART-111, REQ-CHART-126]
+  requirements: [REQ-CHART-126, REQ-CHART-179]  # R-916
   reviewers: [code, qa, physics, perf]
-  pitfalls: []
-- id: TASK-M8-119
-  milestone: M8
-  title: "The virial pair: its axis kind, descriptor and entry"
-  depends_on: [TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M8-117]
-  needs: []
-  requirements: [REQ-CHART-103, REQ-CHART-139]
-  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-120
   milestone: M8
   title: "The symmetry filter: a display option after rendering, GUI and export"
-  depends_on: [TASK-M4-37, TASK-M8-112, TASK-M8-103, TASK-M8-32, TASK-M8-108]
+  depends_on: [TASK-M2-84, TASK-M8-103, TASK-M8-32, TASK-M8-108]  # R-916
   needs: []
-  requirements: [REQ-CHART-135, REQ-CHART-136, REQ-CHART-137, REQ-CHART-138, REQ-GUI-424, REQ-CHART-150]
+  requirements: [REQ-CHART-136, REQ-CHART-138, REQ-GUI-424]  # R-916
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-121
@@ -3841,68 +3994,36 @@
   requirements: [REQ-PERF-119]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
-- id: TASK-M8-122
-  milestone: M8
-  title: "The fixed-k chart: rigid rotation at a chosen virial coefficient over D₁₁ ∪ D₁₂, a chart and builder axes (R-847)"
-  depends_on: [TASK-M4-37, TASK-M8-109, TASK-M8-102, TASK-M8-117]  # R-873: stage 3, after stage 2
-  needs: []
-  requirements: [REQ-CHART-143]
-  reviewers: [code, qa, physics]
-  pitfalls: []
-- id: TASK-M8-123
-  milestone: M8
-  title: "The binary-plus-single scattering chart, with f_col and Heggie & Sweatman 1991 alongside (R-847)"
-  depends_on: [TASK-M4-37, TASK-M8-111, TASK-M8-102, TASK-M8-117]  # R-873: stage 3, after stage 2
-  needs: []
-  requirements: [REQ-CHART-144, REQ-VAL-354]
-  reviewers: [code, qa, physics]
-  pitfalls: []
-- id: TASK-M8-124
-  milestone: M8
-  title: "The chart-path object, and today's pan, zoom, tilt, slice, lock, chart switch and Save view as chart re-expressed through it, bitwise (R-863 stage 1, R-864)"
-  depends_on: [TASK-M4-37, TASK-M2-14, TASK-M2-22, TASK-M2-23, TASK-M2-40, TASK-M2-52, TASK-M6-49, TASK-M6-51, TASK-M8-48, TASK-M8-105]  # R-873: RQ-744 (E) (i), before stage 1
-  needs: []
-  requirements: [REQ-CHART-147, REQ-CHART-113, REQ-CHART-160]  # R-873, R-901
-  reviewers: [code, qa, physics]
-  pitfalls: []
 - id: TASK-M8-125
   milestone: M8
   title: "Locking doesn't move the view: the pin at the clicked pixel, tilt and zoom about it, centre on pin and the auto-snap setting, exact on nonlinear charts or saying why (R-866, R-863 stage 1)"
-  depends_on: [TASK-M4-37, TASK-M8-124]
+  depends_on: [TASK-M2-62]  # R-916
   needs: []
-  requirements: [REQ-GUI-425, REQ-GUI-429, REQ-CHART-163]  # REQ-CHART-163 split from REQ-CHART-157 (applied per R-369)
+  requirements: [REQ-GUI-425]  # R-916
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-126
   milestone: M8
   title: "Points of interest: saved signed states, their stars on every chart and path frame, and similar-systems overlays (R-870)"
-  depends_on: [TASK-M4-37, TASK-M8-124, TASK-M7-43, TASK-M7-72, TASK-M4-33, TASK-M2-57, TASK-M8-117]  # R-873: stage 3 (applied per R-369)
+  depends_on: [TASK-M2-80, TASK-M7-43, TASK-M7-72]  # R-916
   needs: []
-  requirements: [REQ-GUI-426, REQ-GUI-427, REQ-GUI-428]
+  requirements: [REQ-GUI-426]  # R-916
   reviewers: [code, qa, physics, gui]
-  pitfalls: []
-- id: TASK-M8-127
-  milestone: M8
-  title: "The acute-angle Burrau charts over the full acute range, both labellings, the leg swap through the symmetry filter (R-875)"
-  depends_on: [TASK-M8-120]  # R-875: behind TASK-M4-37 through TASK-M8-120
-  needs: []
-  requirements: [REQ-CHART-151, REQ-CHART-162]
-  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-128
   milestone: M8
   title: "Final-condition charts: a CPU batch chart of state functions at time T, the round-trip miss measured, large misses masked (R-879)"
-  depends_on: [TASK-M4-37, TASK-M8-102, TASK-M8-108, TASK-M8-118, TASK-M8-122, TASK-M8-123]  # R-879: after the M8 charts
+  depends_on: [TASK-M2-58, TASK-M8-102, TASK-M8-108, TASK-M8-118, TASK-M2-78, TASK-M2-79, TASK-M2-69, TASK-M2-73]  # R-916
   needs: []
   requirements: [REQ-CHART-153, REQ-CHART-154]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-129
   milestone: M8
-  title: "Consolidating the chart path: one leaf per operation, the GUI routes as input adapters, D19 and D23 fixed (R-894)"
-  depends_on: [TASK-M4-37, TASK-M8-124, TASK-M8-125]  # R-894: between stages 1 and 2
+  title: "The same-frame slips D19 and D23, fixed in the GUI's adapters onto the chart-path leaves (R-894, R-916)"
+  depends_on: [TASK-M2-64]  # R-916
   needs: []
-  requirements: [REQ-CHART-156]
+  requirements: [REQ-GUI-431]  # R-916
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M9-01
@@ -4060,7 +4181,7 @@
 - id: TASK-M9-20
   milestone: M9
   title: "Lehto et al. 2008 at a small grid: local homogeneity, reversibility and the step-halving controls (L-3, L-4, L-5)"
-  depends_on: [TASK-M3-34, TASK-M3-08]
+  depends_on: [TASK-M3-34, TASK-M3-08, TASK-M2-77]  # R-916
   needs: []
   requirements: [REQ-VAL-281, REQ-VAL-282, REQ-VAL-283, REQ-VAL-284, REQ-VAL-285]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -4076,7 +4197,7 @@
 - id: TASK-M9-22
   milestone: M9
   title: "Converged-code references: Boekholt et al. 2020's lifetime grid and Breen et al. 2020's Brutus runs (GG-1, BR-1)"
-  depends_on: [TASK-M3-25, TASK-M3-34]
+  depends_on: [TASK-M3-25, TASK-M3-34, TASK-M2-77]  # R-916
   needs: []
   requirements: [REQ-VAL-295, REQ-VAL-296, REQ-VAL-297, REQ-VAL-298]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -4084,7 +4205,7 @@
 - id: TASK-M9-23
   milestone: M9
   title: "Binary-plus-single targets: Trani et al.'s planar row, Manwadkar et al.'s escape probabilities, Stone & Leigh's closed forms (TR-1, MK-1, SL-1)"
-  depends_on: [TASK-M3-34, TASK-M8-123]
+  depends_on: [TASK-M3-34, TASK-M2-79]
   needs: []
   requirements: [REQ-VAL-318, REQ-VAL-319, REQ-VAL-320, REQ-VAL-321, REQ-VAL-322]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -4124,7 +4245,7 @@
 - id: TASK-M9-28
   milestone: M9
   title: "Symbol-sequence maps: Tanikawa & Mikkola's free-fall and non-zero-L maps, and Valtonen et al.'s L/M/A/H partition (TS-1, TS-2, V-1/V-3/V-7)"
-  depends_on: [TASK-M4-17, TASK-M3-16, TASK-M8-122]
+  depends_on: [TASK-M4-17, TASK-M3-16, TASK-M2-78, TASK-M2-77]  # R-916
   needs: []
   requirements: [REQ-VAL-325, REQ-VAL-326, REQ-VAL-327, REQ-VAL-328, REQ-VAL-342]  # R-594, R-629 (27 Oct 2026); R-669: REQ-VAL-342
   reviewers: [code, qa, physics]
