@@ -148,7 +148,7 @@ mutant = "crates/kernel/src/burrau.rs:74:7: replace > with >= in primitive"
 justification = "m == n makes m ^ n = 0, so the parity test (m ^ n) & 1 == 1 already refuses every pair the > excludes"
 
 [[equivalent]]
-mutant = "crates/kernel/src/chart/burrau.rs:116:29: replace | with ^ in seed"
+mutant = "crates/kernel/src/chart/burrau.rs:128:29: replace | with ^ in seed_of_sum"
 justification = "s < 1 and s == 1 cannot both hold, so the two operands of | are never both true, and their ^ is their |"
 
 [[equivalent]]
@@ -200,7 +200,7 @@ mutant = "crates/kernel/src/chart/burrau_acute.rs:455:33: replace > with >= in B
 justification = "nearest_feasible runs only on an infeasible v; v = 1/2 gives L_z = 0, feasible at every K >= 0, so it never reaches the comparison, and at K < 0 no v is feasible, both edges fail, and the clamp returns 1/2 either way"
 
 [[equivalent]]
-mutant = "crates/kernel/src/decode/invariant.rs:471:53: replace > with >= in finish"
+mutant = "crates/kernel/src/decode/invariant.rs:527:53: replace > with >= in finish"
 justification = "held + held is even and doubling_limit is odd (127 at f32, 1023 at f64), so they are never equal and > and >= agree on every input"
 
 [[equivalent]]
@@ -252,23 +252,23 @@ mutant = "crates/kernel/src/encode/ingest.rs:165:39: replace * with / in weighte
 justification = "the forward branch is taken only for k < 3, a mass, whose weight weights() sets to exactly 1, so span * 1 and span / 1 are the same value"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:223:18: replace / with % in wide"
+mutant = "crates/kernel/src/canon.rs:231:18: replace / with % in wide"
 justification = "x finite has exponent field k in -127..=127 (-1023..=1023 at f64); k % 2 takes k's sign, so 2^-(k%2) and 2^((k%2)-k) are both normal powers of two whose product is 2^-k, as k / 2's are, and x times them is the same exact scaling"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:241:28: replace > with >= in wide_add"
+mutant = "crates/kernel/src/canon.rs:249:28: replace > with >= in wide_add"
 justification = "at gap == 60 both select(gap > 60, 60, gap) and select(gap >= 60, 60, gap) give 60"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:269:17: replace | with ^ in wide_greater"
+mutant = "crates/kernel/src/canon.rs:277:17: replace | with ^ in wide_greater"
 justification = "a.e > b.e and a.e == b.e never hold together, so their disjuncts are exclusive and ^ is |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:312:35: replace < with <= in ldexp"
+mutant = "crates/kernel/src/canon.rs:320:35: replace < with <= in ldexp"
 justification = "at k == lo both clamps give lo"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:312:54: replace > with >= in ldexp"
+mutant = "crates/kernel/src/canon.rs:320:54: replace > with >= in ldexp"
 justification = "at k == hi both clamps give hi"
 
 [[equivalent]]
