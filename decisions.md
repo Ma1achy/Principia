@@ -35486,7 +35486,7 @@ R-923 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
 
-## R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 in part)*
+## R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 and R-923 in part)*
 *10 Nov 2026 · the owner's message of that morning; applied in R-918's forward line, `plan/tasks.yaml`, TASK-M3-14,
 TASK-M3-17 and TASK-M3-69 (new), REQ-CHART-132 and REQ-PAY-058 (reqio, a note each), `plan/MILESTONES.md`,
 `plan/OPERATIONS.md` § "Dispatching", `docs/design/principia_chart_composition.md` (its R-918 line in the preamble,
@@ -35502,9 +35502,10 @@ The owner's words (10 Nov 2026), verbatim:
   it, and R-917's hold does not apply to it: it was in flight when R-918 stopped it (R-918's "barely started").
 - **Unchanged:** the rest of R-918 (the trajectory interface, TASK-M2-82; what M2 can't test and where it goes; CI work
   outside the order, TASK-M2-38 and TASK-M2-56 finishing, the gate checklist first) and R-917's hold on every other
-  integrator and visual task.
+  integrator and visual task, as R-923 leaves it.
 
-*What it amends:* **R-918**, in part: its stop and re-queue of TASK-M3-14.
+*What it amends:* **R-918**, in part: its stop and re-queue of TASK-M3-14. **R-923**, in part: its "TASK-M3-14 stays
+stopped under R-918" line.
 
 *Applied per R-369, following it (task scoping):*
 

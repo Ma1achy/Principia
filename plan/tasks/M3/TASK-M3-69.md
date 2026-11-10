@@ -17,7 +17,7 @@ FTLE and the Lyapunov exponent are computed in physical phase space, never in ch
 - `docs/design/principia_dd_integrator.md` § "3.8 Co-computations (tier-gated, ride the forward pass)"
 - `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored"
 - `decisions.md` § "R-918 — R-917's follow-ups: TASK-M3-14 (the Benettin FTLE shadow) stops and is re-queued after M2's gate; M2's maths that seems to need the integrator is tested against exactly known trajectories through a trajectory interface the real integrator plugs into after M2, flagging only what can't be tested so; CI work outside the order, TASK-M2-38 and TASK-M2-56 finishing, and the gate checklist first are agreed *(no RQ)*"
-- `decisions.md` § "R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 in part)*"
+- `decisions.md` § "R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 and R-923 in part)*"
 
 ## Deliverables
 - The `ftle_chart_independent` test in `crates/engine`, with its control (R-176).

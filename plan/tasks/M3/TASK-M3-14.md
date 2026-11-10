@@ -22,7 +22,7 @@ Every sample carries its own Benettin shadow (FTLE tier): one shadow renormalise
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/contracts/principia_integrator_contract.md` § "Part 3 — Parameter ownership (who owns what)"
 - `docs/design/principia_dd_simstate_payload.md` § "8. Build-time settles (measure / specify once running)"
-- `decisions.md` § "R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 in part)*"
+- `decisions.md` § "R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now *(amends R-918 and R-923 in part)*"
 
 ## Deliverables
 - `crates/kernel/src/driver/benettin.rs` — the shadow march through the same wrapper cadence (own projection), renormalisation, finalisation at read.
