@@ -595,7 +595,7 @@ fn check_shared(bucket: fn(&WrapperCadence<f64>, &[[f64; 2]; 3]) -> f32) {
         "the detector's separations are not the projected state's"
     );
     let want = bucket(&cadence, &elsewhere);
-    let mut words = vec![FreeGroupWord::default()];
+    let mut words = [FreeGroupWord::default()];
     let word = WordCadence::new(&mut cadence, &s.r, 0, &mut words[..]);
     assert_eq!(
         word.bucket_d2(&elsewhere).to_bits(),
