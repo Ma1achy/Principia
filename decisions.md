@@ -35152,6 +35152,8 @@ and R-917 holds their dispatch until M2's gate; TASK-M4-06 also waits on the re-
 R-917 is in the "process" group of `plan/rule_groups.yaml`. It changes no requirement.
 
 ## R-918 — R-917's follow-ups: TASK-M3-14 (the Benettin FTLE shadow) stops and is re-queued after M2's gate; M2's maths that seems to need the integrator is tested against exactly known trajectories through a trajectory interface the real integrator plugs into after M2, flagging only what can't be tested so; CI work outside the order, TASK-M2-38 and TASK-M2-56 finishing, and the gate checklist first are agreed *(no RQ)*
+*Amended in part by R-924 (10 Nov 2026: TASK-M3-14, the Benettin FTLE shadow, resumes now and no longer waits for M2's gate; REQ-CHART-132, the FTLE field's chart independence, and its `ftle_chart_independent` arm move from TASK-M3-14 to TASK-M3-69, which waits on TASK-M3-14 and TASK-M2-71 and, as this ruling has it, M2's gate).*
+*Still in force: REQ-CHART-132 after M2's gate, now TASK-M3-69's; TASK-M2-71 before the chart-independence test; M2's maths that seems to need the integrator tested against exactly known trajectories through the trajectory interface (TASK-M2-82, design § 18.7), wired to integrated trajectories after M2 (TASK-M3-67, TASK-M8-113), flagging only what can't be tested so; CI work outside the order, TASK-M2-38 and TASK-M2-56 finishing, and the gate checklist first.*
 *9 Nov 2026 · the owner's message of that evening, pasted while #462's review was being set up; applied in TASK-M3-14,
 TASK-M2-82 and TASK-M3-67 (new), REQ-CHART-132 (reqio, moved to M3), REQ-CHART-173 and REQ-CHART-177 (reqio, new),
 `docs/design/principia_chart_composition.md` § 18.7 (new) and `plan/rule_groups.yaml`*
@@ -35317,3 +35319,36 @@ the spans are per RQ-679, awaiting the owner's confirmation": the owner has answ
 R-920 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes REQ-CHART-188 (statement, verify, rulings, source, note, rq).
+
+## R-924 — TASK-M3-14 (the Benettin FTLE shadow) resumes now; its chart-independence arm (REQ-CHART-132), which needs TASK-M2-71's warped chart, moves to a new task that waits on TASK-M2-71 *(amends R-918 in part)*
+*10 Nov 2026 · the owner's message of that morning; applied in R-918's forward line, `plan/tasks.yaml`, TASK-M3-14,
+TASK-M3-17 and TASK-M3-69 (new), REQ-CHART-132 and REQ-PAY-058 (reqio, a note each), `plan/MILESTONES.md`,
+`plan/OPERATIONS.md` § "Dispatching", `docs/design/principia_chart_composition.md` (its R-918 line in the preamble,
+§ 12's test table and § 15's after-the-gate list) and `plan/rule_groups.yaml`*
+
+The owner's words (10 Nov 2026), verbatim:
+
+> Resume the FTLE shadow work btw
+
+*What it decides:*
+
+- **TASK-M3-14, the Benettin FTLE shadow, resumes now.** R-918's "stops and is re-queued after M2's gate" is lifted for
+  it: it was work in flight when R-918 stopped it, and it returns to R-917's exception for work in flight finishing, so
+  R-917's hold does not hold it. Its Depends on is again TASK-M3-05 and TASK-M3-06, as before R-918.
+- **REQ-CHART-132, the FTLE field's chart independence,** whose test `ftle_chart_independent` needs a warped chart, and so
+  TASK-M2-71 (warps as options), moves from TASK-M3-14 to a new task, **TASK-M3-69** ("The FTLE field's chart
+  independence"), which depends on TASK-M3-14 and TASK-M2-71. Chart work stays paused, TASK-M2-71 included, so that task
+  waits; as R-918 has it, REQ-CHART-132 stays after M2's gate.
+- **Unchanged:** the rest of R-918 (the trajectory interface, TASK-M2-82; what M2 can't test and where it goes; CI work
+  outside the order, TASK-M2-38 and TASK-M2-56 finishing, the gate checklist first) and R-917's hold on every other
+  integrator and visual task.
+
+*What it amends:* **R-918**, in part: its stop of TASK-M3-14, and REQ-CHART-132's placement in TASK-M3-14.
+
+*Applied per R-369, following it (task scoping):* TASK-M3-17 depends on TASK-M3-14 again, and its
+`escape_freezes_accumulators` asserts REQ-PAY-058's derived-FTLE arm once more, in REQ-PAY-021's form (PR #468's first
+commits had moved that arm to TASK-M3-14 while TASK-M3-14 was stopped).
+
+R-924 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes the notes of REQ-CHART-132 and REQ-PAY-058; no requirement added or retired.
