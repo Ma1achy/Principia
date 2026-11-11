@@ -28222,7 +28222,7 @@
     section: "R-962 — RQ-788, the built-in margin's colour map: option (a), the greyscale ramp of `top1 − top2` clamped to [0, 1], white where `top1` is far above `top2`, as built; \"provisional\" is dropped by a task *(closes RQ-788)*"
   verify:
     method: unit test
-    detail: "cargo test -p render stain_fanout_margin_map_is_the_grey_ramp: the margin occupant with two field inputs draws OKLab L equal to top1 − top2 for margins in [0, 1], black for a margin below 0 (the wires swapped) and white above 1, at the boundaries 0 and 1 exactly; neither margin.wgsl nor the test names the map provisional or RQ-788; controls: a diverging map through a neutral and an unclamped ramp each fail it (R-962)"
+    detail: "cargo test -p render stain_fanout_margin_map_is_the_grey_ramp: the built-in margin occupant with two field inputs draws OKLab (L, 0, 0) with L equal to top1 − top2 for margins in [0, 1] (0.375 as now), black for a margin below 0 (the wires swapped, −0.375, as now) and white for a margin above 1, at the boundaries 0 and 1 exactly; git grep RQ-788 under crates/ prints nothing and neither margin.wgsl nor stain_graph.rs calls the map provisional; controls: the existing hue-wheel occupant, a diverging map through a neutral grey and an unclamped ramp each fail it (R-176, R-962)"
   rulings:
   - R-813
   - R-962
