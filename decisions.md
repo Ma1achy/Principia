@@ -37252,7 +37252,8 @@ Changes no requirement. The parse printed R-955 for this answer.
 
 ## R-956 — Whether a record made before R-926's f64 decode route re-runs bit for bit is deferred to M2 *(defers RQ-783)*
 *11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-783, a deferral line),
-`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+`plan/charts/m2-chart-replan-addition.md` (its list of open entries), `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement*
 
 The owner's words (11 Nov 2026), verbatim:
 
@@ -37351,7 +37352,8 @@ Adds REQ-GUI-436 (the margin's map, range and polarity), closed by TASK-M7-75. T
 
 ## R-963 — The default extension kind of each edge, the owner's check by eye, stays open, deferred to M2 *(defers RQ-779)*
 *11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-779, a deferral line),
-`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+`plan/charts/m2-chart-replan-addition.md` (its list of open entries), `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement*
 
 The owner's words (11 Nov 2026), verbatim:
 
