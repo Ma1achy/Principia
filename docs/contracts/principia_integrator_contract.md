@@ -241,6 +241,15 @@ requirement between its own two builds**, before any backend is involved.
 If a tolerance must scale with precision, it belongs where the *value* is used, never where the
 *branch* is taken.
 
+*11 Nov 2026 (R-953, the owner's answer on RQ-756):* rule 1 has one enumerated exception, the floor `TINY`: one value
+per working precision, a calibration (Part 3, Part 6; R-71, REQ-INT-105). A branch may compare a quantity with `TINY`,
+as the regularised occupants do: Aarseth–Zare's `A < TINY` and `B < TINY`, Heggie's `Rᵢ < TINY`, `S < TINY` and
+`dt/dτ < TINY`, logH's drift denominator below `TINY` (Part 6), and the Levi-Civita inverse's guards `u₀ > TINY` and
+`|u₁| > TINY` (Part 2b, the conditioned inverse). This Part used `TINY` in those branch tests before this note without
+saying it was excepted; the owner's answer calls it "the same floor constant the contract already excepts", and R-953
+writes the exception down. Rule 1's text stands for every other constant: `SYNC_EPS` and `LAND_EPS_REL` stay forbidden
+in a branch.
+
 **2. COMPARISON-ONLY IN BRANCH CONDITIONS.** No runtime transcendental deciding a branch. Frozen
 threshold tables (frozen per sim key, generated on the host, R-502), integer counters, `d² < r_coll²` rather than `d < r_coll`. The spike's control —
 runtime `ceil((r_sub/√d²)^1.5)` — forked **105 times on Metal and 82 on lavapipe**; the
@@ -308,6 +317,10 @@ physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
   default.
 - **The predictive step limit:** `dτ ≤ f·d_min / (|v_rel|_max·A·B)`, with f = 0.02 (R-160). It is what removed the wedges
   (INDEX, the evidence base).
+  *11 Nov 2026 (R-953, the owner's answer on RQ-756 (5) 6):* under Aarseth–Zare the limit reads the relative
+  **momenta**, not velocities: `dτ ≤ f·d_min / (|P|_max·A·B)`, `|P|_max` the largest of `|P₁|`, `|P₂|` and `|P₂ − P₁|`,
+  as the reference code computes it (the Aarseth–Zare section below, step 4). Heggie's and logH's limits read velocities
+  (`heggie/driver.rs:242-245`, `logh/driver.rs:256-259`), and this line stands for them as written.
 - **TTL is a prior finding, not an open build:** it is built and validated in prin-rs, and it loses on accuracy,
   monotonically worse with mass ratio (prin-rs `NOTES.md:2573`; R-162).
 
@@ -340,6 +353,41 @@ RQ-756, each needing a Rust file that is not in the imported set: whether `V₁,
 the three pairs, its first-maximum `argmax` being the driver's own stated convention and the order given here standing
 meanwhile.
 
+*11 Nov 2026 (R-953, the owner's answer on RQ-756, which it closes):* the three Rust files are imported, verbatim, from
+prin-rs at commit `b1e6006`, which differs from the set's `8600d45` by the owner's word:
+`docs/reference/prin-rs/src/integrate/az/system.rs` (`system.rs` below), `.../az/lc.rs` (`lc.rs`) and
+`.../az/reference_body.rs` (`reference_body.rs`). `hamiltonian.rs` is not imported and is not needed: the equations
+below stay `tb_az.py`'s, which `system.rs:7` names as its source. What they settle, each now written into the text
+below with its *Was*:
+
+- **The predictive limit reads momenta (step 4).** `phys_from_state` returns the relative positions and the relative
+  momenta, `P₁ = L₁p₁/(2A)`, `P₂ = L₂p₂/(2B)`, `A` and `B` floored at `TINY` (`system.rs:88-102`), and the limit takes
+  the largest of `|P₁|`, `|P₂|` and `|P₂ − P₁|`. The comment above `predictive_dtau` (`driver.rs:607-608`, "a physical
+  bound `dt <= f*d_min/|v_rel|_max` … `phys_from_state` returns `(R1, R2, V1, V2)`", and `driver.rs:82`) mislabels them
+  velocities: **the comment is wrong and the code is the rule** (the owner having checked the code, R-953). The
+  difference from R-160's `|v_rel|` is more than a label (R-927, R-953): the momenta are mass-weighted, `P = K·V`
+  (`K` the velocity-space mass matrix above), so `f·d_min/|P|_max` is a length over a momentum, not a crossing time, and
+  `P₂ − P₁` is not proportional to `v_c − v_b` (at equal unit masses `P₁ = (2V₁ − V₂)/3`). The limit therefore differs
+  from R-160's by a mass-dependent factor of order one, and the reference code's form is the rule here. Nobody is to
+  "fix" it to velocities.
+- **The inverse map's guards are `TINY`.** `lc.rs`'s conditioned inverse tests `u0 > T::TINY` (`lc.rs:55`) and
+  `u1.abs() > T::TINY` (`lc.rs:63`), and its retained unstable form `u0 > T::TINY` (`lc.rs:78-79`), where `tb_lc.py`
+  has the literal `1e-300`. `T::TINY` is the floor `TINY` of Part 3 and Part 6, one value per working precision, a
+  calibration (R-71, REQ-INT-105); the owner's two numbers, `1e-37` at f32 and `1e-300` at f64, are its values in
+  prin-rs (`src/real.rs:61`, `:77` at `b1e6006`, read by the physics consult, not imported). A branch on `TINY` is
+  rule 1's one exception (Part 2c, the dated note there). `system.rs` floors at `TINY` too, where `tb_az.py` floors at
+  `1e-300`: `A` and `B` in `phys_from_state` (`system.rs:93-94`) and the three separations in `energy_phys`
+  (`system.rs:109-111`).
+- **The reference body's pairs are taken in the order `(0,1), (0,2), (1,2)`,** as transcribed, by the owner's word;
+  `longest_index` keeps the first maximum by a strict `>` ("Strict `>` only, so the first maximum wins — numpy's
+  convention", `reference_body.rs:38-47`), and `choose_reference` returns `THIRD[longest_index(…)]`
+  (`reference_body.rs:29-31`), `THIRD` the body opposite each pair. The pair order itself is in `src/physics/mod.rs:17`
+  at `b1e6006`, `PAIRS = [(0, 1), (0, 2), (1, 2)]`, read by the physics consult (not imported).
+- **REQ-INT-054's bound per sync interval (RQ-756 (4), the owner's (4)(a-2)):** R-604's cumulative step budget, read at
+  each boundary: the running total of steps at boundary `t_k` is at most `max(N_min, step_budget_rate·t_k)` (Part 3's
+  `step_budget_rate` row, `t_k` the physical time since `t = 0`), with no cap per interval. It adds no behaviour: the
+  budget check of Part 6 is unchanged, and the bound is what it already gives.
+
 **The reference body (re-chosen at every sync boundary).** From the Cartesian state at the boundary, the three pair
 distances are taken in the order `(0,1), (0,2), (1,2)` (`tb.py:15`, `tb.py:41-47`). The longest is found by `argmax`,
 and the reference body `a` is **the body not in the longest pair**: `a = [2, 1, 0][argmax]` (`tb_az.py:145-150`). On a
@@ -355,8 +403,9 @@ in the predictive limit's `d_min` (`driver.rs:620`). A switch is
 counted when `a` differs from the previous boundary's (`tb_az.py:255-257`; `driver.rs:955-961`). `driver.rs` also
 carries a hysteresis on this choice, default `0`, which at `0` is the plain `argmax` bitwise (`driver.rs:433-445`,
 `driver.rs:937-952`), and a forced-reference override for a shared policy (`driver.rs:499-500`, `driver.rs:933-935`);
-neither is part of the rule. The Part 2b table's "reference body from the longest side" is this rule *(RQ-756, the
-wording)*.
+neither is part of the rule. The Part 2b table's "reference body from the longest side" is this rule (R-927, RQ-756
+(5) 5; *was:* "*(RQ-756, the wording)*"), and its pairs are taken in the order above by the owner's word (R-953, RQ-756
+(5) 8; `reference_body.rs:38-47`).
 
 **Coordinates and mass factors.** With `m_a, m_b, m_c` the three masses and `M = m_a + m_b + m_c`
 (`tb_az.py:46-51`):
@@ -371,7 +420,8 @@ wording)*.
 - the physical energy, held fixed through the interval as `E` (`tb_az.py:72`, `tb_az.py:85-94`):
   `E = |P₁|²/(2μ₁) + P₁·P₂/m_a + |P₂|²/(2μ₂) − m_a m_b/|R₁| − m_a m_c/|R₂| − m_b m_c/|R₃|`, the kinetic part with its
   cross term `P₁·P₂/m_a` because `R₁, R₂` share the body `a` rather than being Jacobi coordinates (`tb_az.py:17-22`).
-  Each `|Rᵢ|` in it is floored at `1e-300` (`tb_az.py:86-89`).
+  Each `|Rᵢ|` in it is floored at `1e-300` (`tb_az.py:86-89`); the reference code, `system.rs`'s `energy_phys`, floors
+  each at `TINY` (`system.rs:109-111`; R-953).
 
 **The Levi-Civita map on each pair** (`tb_lc.py:11-13`, `tb_lc.py:31-44`). For `u = (u₀, u₁)`,
 `L(u) = [[u₀, −u₁], [u₁, u₀]]`, and
@@ -381,25 +431,34 @@ wording)*.
 
 On both pairs, `R₁ = L(u₁)u₁`, `R₂ = L(u₂)u₂`, `A = |u₁|² = |R₁|`, `B = |u₂|² = |R₂|` (`tb_az.py:24`). Below,
 `L₁ = L(u₁)`, `L₂ = L(u₂)`. The regularised momenta are `p₁ = 2L₁ᵀP₁`, `p₂ = 2L₂ᵀP₂` (`tb_az.py:70-71`), and back,
-`P₁ = L₁p₁/(2A)`, `P₂ = L₂p₂/(2B)`, with `A` and `B` floored at `1e-300` there (`tb_az.py:76-83`).
+`P₁ = L₁p₁/(2A)`, `P₂ = L₂p₂/(2B)`, with `A` and `B` floored at `1e-300` there (`tb_az.py:76-83`); the reference
+code, `system.rs`'s `phys_from_state`, floors them at `TINY` (`system.rs:92-102`; R-953). These `P₁, P₂` are what the
+predictive limit reads (step 4).
 
 **The conditioned inverse, `u` from `R`** (`tb_lc.py:80-106`; the default, `USE_STABLE_LC = True`, `tb_lc.py:55` and
 `tb_lc.py:109-111`; in `driver.rs` the field `lc_stable`, default `true`, `driver.rs:285-286`, `driver.rs:483`). With
 `r = |R|`, `x = R.x`, `y = R.y`, `a = sqrt(max((r + x)/2, 0))` (`= |u₀|`) and `b = sqrt(max((r − x)/2, 0))`
 (`= |u₁|`) (`tb_lc.py:89-94`):
 
-- **`x ≥ 0`:** `u₀ = a`; `u₁ = y/(2a)` if `a > 1e-300`, otherwise `u₁ = b` (`tb_lc.py:96-98`).
-- **`x < 0`:** `u₁ = −b` if `y < 0`, otherwise `u₁ = b` (so `+b` at `y = 0`); `u₀ = y/(2u₁)` if `|u₁| > 1e-300`,
-  otherwise `u₀ = a` (`tb_lc.py:100-103`).
+- **`x ≥ 0`:** `u₀ = a`; `u₁ = y/(2a)` if `a > TINY`, otherwise `u₁ = b` (`tb_lc.py:96-98`; `lc.rs:53-59`).
+- **`x < 0`:** `u₁ = −b` if `y < 0`, otherwise `u₁ = b` (so `+b` at `y = 0`); `u₀ = y/(2u₁)` if `|u₁| > TINY`,
+  otherwise `u₀ = a` (`tb_lc.py:100-103`; `lc.rs:60-67`).
+
+The guards are the floor `TINY` (Part 3, Part 6), as the reference code tests them (`lc.rs:55`, `u0 > T::TINY`;
+`lc.rs:63`, `u1.abs() > T::TINY`), where `tb_lc.py` tests the literal `1e-300`; a branch on `TINY` is Part 2c rule 1's
+one exception (R-953). *Was:* "`a > 1e-300`" and "`|u₁| > 1e-300`".
 
 The larger component is computed directly and the smaller derived from it: `u₀` is the larger when `x ≥ 0`, `u₁` when
 `x < 0` (`tb_lc.py:83-85`). **The sign choice:** both branches give `u₀ ≥ 0` (on `x < 0`, `u₁` takes the sign of `y`,
 so `y/(2u₁) = |y|/(2b) ≥ 0`), the same half-plane as the unstable form, and the other root `−u` maps to the same `R`
 (`tb_lc.py:85-86`). **The unstable form** it replaces, kept only to reproduce earlier results (`tb_lc.py:58-77`):
-`u₀ = sqrt(max((r + x)/2, 0))`, then `u₁ = y/(2u₀)` if `u₀ > 1e-300`, otherwise `sqrt(max((r − x)/2, 0))`; it cancels
+`u₀ = sqrt(max((r + x)/2, 0))`, then `u₁ = y/(2u₀)` if `u₀ > TINY`, otherwise `sqrt(max((r − x)/2, 0))` (`lc.rs:74-83`;
+*was:* "`u₀ > 1e-300`"); it cancels
 catastrophically as `R` turns towards `−x` (relative round-trip loss at 179.9°: `4.0e-12` at f64 and `2.2e-2` at f32,
-`tb_lc.py:65-69`; *RQ-756: § 7.3 and REQ-INT-044 give `3.5e-9` at f64 for 179.9°, the figure `tb_lc.py` gives for
-179.99°*). The guards `1e-300` are literals in branch conditions *(RQ-756, against Part 2c rule 1 and `TINY`)*.
+`tb_lc.py:65-69`; R-927 settles it so, `3.5e-9` being `tb_lc.py`'s f64 figure for 179.99°; *was:* "*RQ-756: § 7.3 and
+REQ-INT-044 give `3.5e-9` at f64 for 179.9°, the figure `tb_lc.py` gives for 179.99°*"). The guards are `TINY`, rule 1's
+one exception (R-953, RQ-756 (5) 7). *Was:* "The guards `1e-300` are literals in branch conditions *(RQ-756, against
+Part 2c rule 1 and `TINY`)*."
 
 **The regularised Hamiltonian** `Γ = A·B·(H − E)` (`tb_az.py:27-30`):
 
@@ -407,7 +466,9 @@ catastrophically as `R` turns towards `−x` (relative round-trip loss at 179.9�
 
 The two regularised singular terms, `−m_a m_b/|R₁|` and `−m_a m_c/|R₂|`, have become `−m_a m_b B` and `−m_a m_c A`;
 `Γ` is singular only as `|R₃| → 0` (`tb_az.py:32-33`). It couples positions and momenta through its first three terms,
-so it is not separable *(RQ-756, against Part 2a's "the `|u|^2 |p_lambda|^2` term")*. The derivation of the kinetic
+so it is not separable; Part 2a's "the `|u|^2 |p_lambda|^2` term" is the single-pair Levi-Civita `Γ`'s, and this
+two-pair coupling is the rule here (R-927, RQ-756 (5) 4; *was:* "*(RQ-756, against Part 2a's "the `|u|^2 |p_lambda|^2`
+term")*"). The derivation of the kinetic
 terms: `|L₁p₁|² = A|p₁|²`, so `A·B·|P₁|²/(2μ₁) = B|p₁|²/(8μ₁)`, and `A·B·P₁·P₂/m_a = (L₁p₁)·(L₂p₂)/(4m_a)`.
 
 **The equations of motion in fictitious time `τ`** (`tb_az.py:112-142`), on the state `(u₁, p₁, u₂, p₂, t)` with `E`
@@ -447,11 +508,18 @@ these defaults (`tb_az.py:153-238`, the march at `tb_az.py:253-331`), flooring a
    (`driver.rs:639-642`); then the landing clamp, `dτ = min(dτ, max(dt_left − t_s, 0)/ab)`, `t_s` the interval clock
    and `ab` the same floored product (`driver.rs:752-756`). The floor signal fires when `A < TINY` or `B < TINY`
    (`driver.rs:716`, Part 6).
-4. **The predictive limit** (`driver.rs:614-632`): `c₂ = f·d_min/(v_max·ab)` with `d_min = min(|R₁|, |R₂|, |R₂ − R₁|)`
-   and `v_max = max(|V₁|, |V₂|, |V₂ − V₁|)`, the pair `(V₁, V₂)` being the second half of the system's
-   `phys_from_state` (`driver.rs:619-621`), and `+∞` when `f ≤ 0`, the denominator is not positive, or `d_min` or the
-   denominator is not finite (`driver.rs:627-631`). `f = 0.02` (R-160). *(RQ-756: whether `V₁, V₂` are velocities or
-   the conjugate momenta `P₁, P₂`.)*
+4. **The predictive limit** (`driver.rs:614-632`): `c₂ = f·d_min/(P_max·ab)` with `d_min = min(|R₁|, |R₂|, |R₂ − R₁|)`
+   and `P_max = max(|P₁|, |P₂|, |P₂ − P₁|)`, the pair `(P₁, P₂)` being the relative **momenta**, the second half of the
+   system's `phys_from_state` (`driver.rs:619-621`; `system.rs:88-102`, `P₁ = L₁p₁/(2A)`, `P₂ = L₂p₂/(2B)`, `A` and `B`
+   floored at `TINY`), and `+∞` when `f ≤ 0`, the denominator is not positive, or `d_min` or the denominator is not
+   finite (`driver.rs:627-631`). `f = 0.02` (R-160). **The comment above `predictive_dtau` is wrong** and the code is the
+   rule (R-953): `driver.rs:607-608` says "a physical bound `dt <= f*d_min/|v_rel|_max`" and "`phys_from_state` returns
+   `(R1, R2, V1, V2)`", and `driver.rs:82` "`f * d_min / |v_rel|_max`", but the values read are momenta, not velocities.
+   The difference from R-160's `|v_rel|` is more than a label: momenta are mass-weighted (`P = K·V`), so this limit
+   differs from a velocity limit by an order-one, mass-dependent factor (at equal unit masses `P₁ = (2V₁ − V₂)/3`), and
+   this is the rule (R-927, R-953). The kernel reads `P₁, P₂`; it is not to be "fixed" to velocities. *Was:*
+   "`c₂ = f·d_min/(v_max·ab)` … and `v_max = max(|V₁|, |V₂|, |V₂ − V₁|)`, the pair `(V₁, V₂)` being the second half of
+   the system's `phys_from_state` … *(RQ-756: whether `V₁, V₂` are velocities or the conjugate momenta `P₁, P₂`.)*".
 5. **The step.** One classical RK4 step of the equations above, on `(u₁, p₁, u₂, p₂, t)` with `E` held, from the
    saved state (`driver.rs:1044-1049`; `tb_az.py:288-292`).
 6. **The landing secant** (`driver.rs:1065-1095`). When the step just taken
@@ -460,14 +528,22 @@ these defaults (`tb_az.py:153-238`, the march at `tb_az.py:253-331`), flooring a
    `|got − want| ≤ dt_left·LAND_EPS_REL`; otherwise `cur = cur·want/got` and the step is retaken from the saved
    state at `cur`, each retake a counted step. The clamp predicts the landing step from `A·B` before the step, a
    first-order predictor, and the secant on `t(dτ)` with the exact point `t(0) = 0` removes that residual
-   (`driver.rs:417-424`, `driver.rs:1065-1069`) *(RQ-756: the corpus names the clamp only)*. `tb_az.py`'s secant
+   (`driver.rs:417-424`, `driver.rs:1065-1069`); the secant is part of the step control (R-927, RQ-756 (5) 1; *was:*
+   "*(RQ-756: the corpus names the clamp only)*"). `tb_az.py`'s secant
    (`tb_az.py:196-210`, `tb_az.py:294-316`) stops differently: on every retake it re-tests the landing,
    `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, and the finiteness of the whole state (`tb_az.py:303-306`), so a retake that
    lands short of the boundary ends the secant and the march takes another clamped step; `driver.rs` does not re-test
    the landing, and retakes until `|got − want| ≤ dt_left·LAND_EPS_REL`, `got` is not finite or `got ≤ 0`, or the 4
-   tries are used (`driver.rs:1084-1094`). The two trajectories differ *(RQ-756: which stop is the rule)*.
+   tries are used (`driver.rs:1084-1094`). The two trajectories differ, and `driver.rs`'s stop is the rule (R-927,
+   RQ-756 (5) 9; *was:* "*(RQ-756: which stop is the rule)*").
 7. **The exit.** The march ends when `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, or the state is not finite, or the
-   budget is spent (`driver.rs:997-1012`; here the step budget of Part 6, R-604). On a landing the clock is set to the
+   budget is spent (`driver.rs:997-1012`; here the step budget of Part 6, R-604). The finiteness test is explicit
+   (`driver.rs:1000-1001`, "Test is_finite explicitly"), and it is the guard that catches a doubly degenerate state, not
+   the floor: with both `A` and `B` below `TINY` at f32, `TINY·TINY` underflows to `0`, so `dτ_entry` (step 2) is
+   infinite and the step's state is not finite (Part 6, the Aarseth–Zare bullet; R-953). A state degenerate only
+   mid-interval does not reach it: step 3 skips the non-finite constraint (`driver.rs:640`) and takes a finite step, a
+   counted cap hit; the infinite step reaches RK4 when the state is degenerate at the interval's entry. On a landing the
+   clock is set to the
    boundary exactly, `t += dt_left`; otherwise `t += min(t_s, dt_left)` (`driver.rs:1186-1194`). A step that carries
    `t_s` past `2·dt_left` is counted as an overshoot (`driver.rs:1101-1114`).
 8. **The largest physical step**, recorded only: `dt_took = t_s − t_before` after the secant, folded into `dt_max`
@@ -757,7 +833,7 @@ measured not to work carry a warning (R-561)"). **A reversible occupant exists: 
 | `Δ_sync` | a calibration value (R-71, REQ-INT-080); 0.1 costs about 2% more steps than the production grid, 0.0125 about 50% (Part 2a) | the sync grid of the regularised occupants: a fixed quantum of physical time, the same for every run, independent of `T` and of frame timing; steps are sized from it and the march stops only on it (R-565, Part 2a § "The sync grid is a fixed quantum of physical time (R-565)") | wrapper loop bound (a constant of the build) |
 | `step_budget_rate` | a calibration value starting at about 4e4 steps per unit physical time per copy (R-71, R-564, REQ-INT-103) | a regularised occupant's step budget, a rate: steps per unit physical time, per ensemble copy, so it is defined for a live playhead with no fixed end; running out makes the copy undetermined (Part 6, R-563). Accounted every step (R-604, closing RQ-527): a copy's running total of steps is checked at every step against `max(N_min, step_budget_rate · t_elapsed)`, `t_elapsed` its physical time since `t = 0`, and the copy is exhausted when it exceeds it (*was:* "How the rate is accounted along a run is RQ-527") | wrapper loop bound |
 | `N_min` | a calibration value (R-71, R-604, REQ-INT-108), confirmed at the M3 gate | the step budget's floor: the allowance below which the budget never falls, so that an early close encounter is not cut before `step_budget_rate · t_elapsed` has grown | wrapper loop bound |
-| `TINY` | a calibration value, one per working precision (R-71, REQ-INT-105); in neither the corpus nor the reference set | the floor of the regularised occupants' time-transformation denominators: Heggie's `S` and `dt/dτ` (its `Rᵢ` are tested against it, not floored; *was:* "Heggie's `Rᵢ`, `S` and `dt/dτ`"), Aarseth–Zare's `A` and `B`, logH's drift denominator; a step taken at the floor is a counted, non-terminal signal (Part 6, R-563) | occupant (regularisation) |
+| `TINY` | a calibration value, one per working precision (R-71, REQ-INT-105); in neither the corpus nor the reference set. *11 Nov 2026 (R-953):* its values in prin-rs, which the owner states as "1e-37 at f32, 1e-300 at f64" (prin-rs `src/real.rs:61` and `:77` at `b1e6006`, read by the physics consult; not imported), are recorded as the reference's values; the calibration is still proposed with its evidence and confirmed at the M3 gate (REQ-INT-105) | the floor of the regularised occupants' time-transformation denominators: Heggie's `S` and `dt/dτ` (its `Rᵢ` are tested against it, not floored; *was:* "Heggie's `Rᵢ`, `S` and `dt/dτ`"), Aarseth–Zare's `A` and `B`, logH's drift denominator; a step taken at the floor is a counted, non-terminal signal (Part 6, R-563). Also, by the reference code (R-953): the Levi-Civita inverse's guards, `u₀ > TINY` and `|u₁| > TINY` (Part 2b, the conditioned inverse; `lc.rs:55`, `:63`), which compare a component of `u` (a length to the power ½) with it, a different use from a denominator's floor; and Aarseth–Zare's three separations in its energy, floored at it (`system.rs:109-111`). A branch on `TINY` is Part 2c rule 1's one exception (R-953) | occupant (regularisation) |
 | `r_close` | 0.01 | close-encounter counting | wrapper detector |
 | `r_pole` | 0.01 (R-433; the constants register's `r_pole`, provisional until M3, REQ-INT-086) | the pole disc of the unwrapped phase `θ̃` (dd_integrator §3.7): it decides the stored `θ̃`, `_reserved`, `orbit_count` and `retrograde` for the same IC, so it is on the sim key whatever form TASK-M3-11 gives it, and a change at the M3 gate re-integrates (applied per R-369, PR #210). It is not hashed (dd_generation_root §3.8 "The hash"): it changes values, not what the bits mean | wrapper march |
 | `eps_E`, `eps_L` | 10⁻⁶ | relative-drift floors (rest starts) | wrapper monitor |
@@ -898,7 +974,7 @@ regularisations, and a later method is added by its own ruling. *Was:* "whether 
 - **Regularised** (Aarseth–Zare, Heggie, logH): there is no `N_sub` and no `N_max`. The bound is a **step budget**, a rate of steps per unit physical time per copy (R-564, Part 3's `step_budget_rate`), so every loop stays bounded (Part 2c, rule 3). **Running out of the budget makes the result undetermined, never discarded:** the copy stops, is not finite, and its footprint reads undetermined (`principia_dd_refinement_policy.md` §1). **The separation floor and the entry-cap hits are counted, non-terminal signals;** each lets the run advance under-resolved, and each is counted, never ending the run. Per occupant, each transcribed from its prin-rs driver (applied per R-369, physics review 5605806092 of PR #277, F3; *was:* "the separation floor fires when a pair separation `Rᵢ` falls below the floor `TINY`, so the time transformation's denominator `R₁R₂R₃` is floored and the step advances anyway (prin-rs `r_floored`), and an entry-cap hit is a step whose size is held at the interval's entry cap, `η·Δ_sync` over `dt/dτ` at the interval's entry (prin-rs `n_cap_hits`)"):
   - **The floor `TINY`** is one value per working precision, a calibration (R-71, REQ-INT-105): it is in neither the corpus nor the reference set, which names it only (`T::TINY`).
   - **Heggie:** the quantity floored is `dt/dτ`, at `TINY`: `R₁R₂R₃` under Eq. 20, and `R₁R₂R₃ / S^{3/2}` under the default, Eq. 22 (R-161), with `S` itself floored at `TINY` first; `Rᵢ` is tested, never floored. **The signal counts every step on which the floor acts:** it fires when `dt/dτ < TINY` or (under Eq. 22) `S < TINY`, and also when any pair separation `Rᵢ < TINY`, the reference's own test. This differs from the reference, whose `r_floored` fires on `Rᵢ < TINY` only (`heggie/driver.rs`): `dt/dτ` can fall below `TINY` while every `Rᵢ ≥ TINY` (under Eq. 20 with one `Rᵢ` just above `TINY` and the other two's product below 1; under Eq. 22 near a binary collision, where `dt/dτ ≈ R₁/√(R₂R₃)`, whenever `R₂R₃ > 1`), and such a step advances on a fabricated denominator. Counting it keeps "each is counted" true, as logH's bullet does (applied per R-369, physics review 5606990734 of PR #277, P1). *Was:* "the signal fires when any pair separation `Rᵢ < TINY` (prin-rs `r_floored`)".
-  - **Aarseth–Zare:** the signal fires when `A < TINY` or `B < TINY` (prin-rs `ab_floored`); each factor is floored at `TINY`, and the denominator is the product `A·B` of the floored factors. At f32 `TINY·TINY` can underflow, so a step with both factors floored is recorded by the proposal of REQ-INT-105.
+  - **Aarseth–Zare:** the signal fires when `A < TINY` or `B < TINY` (prin-rs `ab_floored`); each factor is floored at `TINY`, and the denominator is the product `A·B` of the floored factors. At f32 `TINY·TINY` can underflow, so a step with both factors floored is recorded by the proposal of REQ-INT-105. *11 Nov 2026 (R-953, the owner's follow-up on RQ-756):* the guard that catches such a doubly degenerate state is the march's explicit finiteness test (Part 2b, the Aarseth–Zare step control, step 7; `driver.rs:1000-1001`), not the floor: `1e-37 × 1e-37` underflows to `0` at f32, the denominator `A·B` of the floored factors is `0`, and `dτ = η·dt_left/(A·B)` is infinite. Its test arm (REQ-INT-105's, built by TASK-M3-68) exercises that finiteness test on a state degenerate at the interval's entry, since a state degenerate only mid-interval takes a finite step under step 3's per-step rule and never reaches it.
   - **logH:** it floors its own drift denominator at `TINY` (`K + B` in the logH time mode, the carried `W` in the TTL mode), so `dt/ds` is `1 / max(drift, TINY)`. The signal fires when that drift denominator is below `TINY` or either denominator, drift or kick, is not positive (prin-rs records the second, `den_degenerate`; the first is counted too, so every floored step is counted, applied per R-369).
   - **An entry-cap hit**, every regularised occupant: the step-size rule in force sizes each step as `η·Δ_sync / (dt/dτ)` from the current state and caps it at the interval's entry size, `dτ_entry = η·Δ_sync / (dt/dτ at the interval's entry)`, each `dt/dτ` the occupant's floored one above. A hit is counted when the per-step size asks for more than the entry cap (prin-rs `capped = cons[0] > cons[1]`, counted into `n_cap_hits`), before the predictive step limit (Part 2b), which may cut the step further, and before the landing clamp, which is never counted as a hit. prin-rs counts it under Aarseth–Zare only; Heggie's and logH's drivers apply the same cap uncounted, and here it is counted under each.
 
@@ -923,6 +999,7 @@ Escape and collision are where the categorical outcome comes from — every outc
   - **`r_coll → 0` (or 0)** — refuses to regularise: near-collisions are integrated *through*, so the force `∝1/r²` blows up and the substepper drives `N_sub` toward `N_max`. Singular encounters then **saturate the substep cap** — the trajectory advances under-resolved and flagged (not terminated; saturation is non-terminal — Terminal states, below), continuing to whatever dynamical outcome it reaches. So zero is *not* "perfect integration" and it no longer *manufactures terminations* — it *degrades confidence* at the singular structure (high saturation flag) while the trajectories still run. Expensive (the substepper works hardest here), and the true coincidence still can't be integrated through — but the region is *computed-with-low-confidence*, not *cut off*.
   - **Coupling to `N_max`:** the usable minimum `r_coll` is bounded below by what the substepper resolves before the cap — very small `r_coll` fills the field with **substep-saturated (under-resolved, flagged) samples** (the integration floor, Part 6), not terminations. Either surface the coupling in the UI, or let very-small `r_coll` raise `N_max` at a cost the quality controller accounts for. Under a regularised occupant there is no `N_max`; its bound is Part 6's step budget (R-563). *Was:* "This is the same floor KS regularisation (v2) would lift." (R-562).
   - **Benchmarks pin it:** literature comparisons (Burrau especially — it *is* a close-encounter problem) assume a specific regularisation, so the ground-truth validation suite records the `r_coll` used (`principia_validation_ground_truth_note.md`).
+  - **The collision test's floor (a definition; 11 Nov 2026, R-954, the owner's answer on RQ-782).** The test reads the substepper's squared separation, formed from each position cast to f32 (`principia_dd_integrator.md` § 3.3 and § 3.6; R-547), so it resolves a separation only to the f32 spacing of the positions at the pair's coordinates: about `6·10⁻⁸` for `|x|` in `[0.5, 1)` and `1.2·10⁻⁷` in `[1, 2)`, in the `I = 1` gauge (Part 5). **Below that spacing, `r_coll` means "collision at f32 coincidence":** a pair collides when its f32 positions coincide, which can be at a true separation larger than `r_coll`, and `d_min` is resolved only to that spacing. **The slider stays valid to 0,** as above. **The floor is recorded with the run,** beside `r_coll`, so an output says whether its `r_coll` lay below what the test resolves; what is recorded, and how it is computed from the run, is a definition TASK-M3-71 writes into this Part under physics review (R-72; REQ-EVT-035). The default `10⁻³` lies four decades above the floor. The test itself is unchanged: TASK-M3-09's threshold of at least `2⁻¹²⁶` for every `r_coll > 0` stands, so f32-coincident bodies always collide.
 
 **Softening, `epsilon` (R-654).** Where `ε ≠ 0` the force law is Plummer's, `V = −Σ mᵢmⱼ/√(r² + ε²)` and `Fᵢ = −∂V/∂rᵢ`, a different force law at any `ε` (generation_root § "Open"), tagged and never pooled with `ε = 0`. `ε` is canonical, a fraction of the initial hyperradius `R` fixed at `t = 0`, never co-moving; like `r_coll` it is a **recorded parameter**, in every output header. The gauge (Part 5, `M = I = 1`) has `R₀ = √(I₀/M) = 1`, so the sim-key value is both the fraction and the length: it is read as given, and never recomputed from the state, whose `I` is 1 only to rounding. `E`, `E₀` and the drift meters of Part 1 read the softened `V`. Runs with `ε ≠ 0` are refused at dispatch until TASK-M9-39 lands. *2 Nov 2026 (R-670, closing RQ-656):* under `ε ≠ 0`, the collision test stays on geometric `r`, `min ‖rᵢ − rⱼ‖ < r_coll`; softening is offered on the unregularised occupants only, and a regularised occupant (Part 2b) refuses `ε ≠ 0` with a typed reason; the Chazy classifier's `E` is the softened `E_0`; `E_rel` and the ionisation gate's three pairwise relative energies take the softened potential, `d` read as `√(d² + ε²)` in the potential term only (identical at `ε = 0`; `tau`'s measured gap and `E_rel`'s to-re-measure note were not taken under softening); the decode's `V₀` is softened (`principia_dd_decoder.md` § 3.6); a view refuses `ε ≠ 0` with any `Some(E*)` (§ 3.7); and the substep law stays on the geometric `d²` and `r_min`. *Was:* "The collision test, the regularised occupants, the Chazy classifier, `E_rel` and the ionisation gate, the decode's `V₀`, `η_E`'s `U` and the substep law under `ε ≠ 0` are RQ-656."
 

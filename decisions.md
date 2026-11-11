@@ -1349,6 +1349,8 @@ contracts and cite; never cite these files as normative." The set:
 Images and `results/` are not imported; they are cited by commit (`8600d45`, and `70cfbc4` for the original 256² data).
 
 ## R-160 — The integrator equations are transcribed into integrator_contract Part 2b
+*Amended in part by R-953 (11 Nov 2026; under Aarseth–Zare the predictive limit reads the relative momenta, `|P|_max`, in place of `|v_rel|_max`, as the reference code computes it).*
+*Still in force: all of it, the predictive limit's `|v_rel|` for Heggie and logH included; under Aarseth–Zare the limit reads the relative momenta (R-953).*
 *25 Sep 2026 · applied in step 7*
 
 The Heggie, logH and TTL equations, the step control, and the predictive step limit
@@ -31043,7 +31045,8 @@ Adds REQ-GUI-414 and REQ-GUI-415; changes REQ-PERF-115 (verify, rulings, source,
 *Amended in part by R-793, R-794, R-795, R-798, R-799, R-800, R-801 and R-802 (5 Nov 2026: the owner's reply of that day answers RQ-680, RQ-681's part (a), RQ-594, RQ-619, RQ-643's option (b), RQ-378 and RQ-386, and puts RQ-577 at M3 in place of its own session).*
 *Amended in part by R-813, R-814 and R-815 (7 Nov 2026: RQ-675, RQ-676 and RQ-677 ruled at their tasks' start, so their deferral has ended).*
 *Amended in part by R-824 (7 Nov 2026; RQ-681 (c): OC-2's state is ruled, `ref_*`; the rest of RQ-681 deferred to M9 again).*
-*Still in force: RQ-681's part (b) and part (c)'s precision deferred to M9, part (c)'s state being R-824's, RQ-643's option (a) to M9, the deferrals of RQ-391 and RQ-679 as R-803 and R-807 restate them, and what it says of RQ-654 and RQ-647.*
+*Amended in part by R-964 (11 Nov 2026; RQ-391 deferred to M7, in place of the exporter's design).*
+*Still in force: RQ-681's part (b) and part (c)'s precision deferred to M9, part (c)'s state being R-824's, RQ-643's option (a) to M9, the deferral of RQ-391, to M7 (R-964), and of RQ-679 as R-807 restates it, and what it says of RQ-654 and RQ-647.*
 *4 Nov 2026 · the owner's batch of that day; applied in `REVIEW_QUEUE.md` (a dated line on each deferred entry), `docs/archive/review_queue/M0.md` (a dated note on RQ-647 and RQ-654) and `plan/rule_groups.yaml`*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -31699,6 +31702,8 @@ The owner's words (5 Nov 2026), verbatim:
 R-802 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-803 — Whether the presentation frames become a stage after the Print graph is deferred until the exporter is designed *(defers RQ-391)*
+*Amended by R-964 (11 Nov 2026; RQ-391 is deferred to M7, in place of the exporter's design).*
+*Still in force: the deferral of RQ-391, to M7 (R-964).*
 *5 Nov 2026 · the owner's reply to the report of 5 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-391, a deferral line; the entry stays open), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement*
 
@@ -32079,6 +32084,8 @@ The owner's words (7 Nov 2026), verbatim:
 R-824 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-825 — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)*
+*Amended by R-964 (11 Nov 2026; RQ-391 is deferred to M7, in place of the exporter's design).*
+*Still in force: the deferral of RQ-391, to M7 (R-964).*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-391, a deferral line), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes no requirement*
 
@@ -33824,6 +33831,8 @@ round trip intact and its pixels not bitwise (design § 7.5).
 R-889 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-890 — Whether the presentation frames become a stage stays deferred until the exporter is designed *(defers RQ-391)*
+*Amended by R-964 (11 Nov 2026; RQ-391 is deferred to M7, in place of the exporter's design).*
+*Still in force: the deferral of RQ-391, to M7 (R-964).*
 *8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-391, a deferral line),
 `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
 
@@ -35777,6 +35786,8 @@ Changes no requirement here: the requirements it contradicts (REQ-INT-070's in-k
 `plan/charts/m2-chart-system-replan.md` § A lists them (applied per R-369: task scoping).
 
 ## R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*
+*Refined by R-953 (11 Nov 2026; the flagged (4) is answered by the owner's (4)(a-2), the cumulative budget read at each boundary, and (5) 6, 7 and 8 by the imported Rust files: the predictive limit reads momenta, the inverse map's guards are `TINY`, the pairs are taken in the order `(0,1), (0,2), (1,2)`; RQ-756 closes).*
+*Still in force: all of it; what it left open is answered by R-953.*
 *10 Nov 2026 · the owner's reply to the report of 10 Nov 2026, and their confirmation in session that day; applied in
 `REVIEW_QUEUE.md` (RQ-756, a dated line), `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the
 equations, the reference body, the Levi-Civita inverse and the step control (transcribed)" (a dated paragraph),
@@ -35971,6 +35982,8 @@ R-931 is in the "process" group of `plan/rule_groups.yaml`.
 Changes no requirement.
 
 ## R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*
+*Refined by R-955 (11 Nov 2026; RQ-784 (a): "No blank areas" is about edges and their extensions, and does not reach a pixel energy normalisation cannot reach, which R-598 keeps not a system).*
+*Still in force: all of it, read as R-955 has it.*
 *10 Nov 2026 · the owner's reply to the report of 10 Nov 2026, "NEW GENERAL RULES, in my words", rule 2, and its line on
 RQ-773; applied in `REVIEW_QUEUE.md` (RQ-773 moved), `docs/archive/review_queue/M0.md` (RQ-773 with its ruling),
 `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)" (a
@@ -37071,3 +37084,341 @@ plan PR (applied per R-369: task scoping, as R-932).
 *Corrected 11 Nov 2026 (the physics review of PR #482, review 5852979675, P4):* "What it amends" above reaches further than the owner's words. They agree that contours are evaluated on the CPU for every chart; where a contour is evaluated is not which precision path it follows, and their words do not reach that. So of the two sentences of `principia_lines.md` § 4.2 named there, only "It runs as a GPU pass on the shared decode, with a CPU fallback at reduced resolution" gives way. "It uses the same precision path as the decode (the linearised decoder at depth)" stands, and § 4.2 keeps it: the contour's decode is the route the picture's forward table takes, the one-cell patch included where R-90's switch fires (R-926 item 11; R-935, under RQ-766 (a)), which is what keeps § 4.2's "exact at any zoom and any depth of refinement" true. The owner's words quoted above are unchanged.
 
 *Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-RENDER-093 and REQ-RENDER-121 (changed), REQ-PERF-123 (new: the 8.3 ms criterion and its report, a benchmark) and REQ-RENDER-092 (it gains a clause: the Chart and Latent variables on a blend, (C), applied per R-369); the task files of TASK-M7-43, TASK-M7-72 and TASK-M2-58. `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
+## R-953 — RQ-756, Aarseth–Zare's last points: REQ-INT-054's bound per sync interval is R-604's cumulative step budget read at each boundary, the owner's (4)(a-2), with no cap per interval; the three Rust files are imported at `b1e6006`; the predictive limit reads the relative momenta, as the code computes them, its comment's "velocities" being wrong; the inverse map's guards are the floor `TINY`, written down as Part 2c rule 1's one exception; the pairs are taken in the order (0,1), (0,2), (1,2) *(closes RQ-756; amends R-160; refines R-927)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026, and their follow-up of the same day on point 7; applied in
+`REVIEW_QUEUE.md` (RQ-756 moved), `docs/archive/review_queue/M0.md` (RQ-756 with its ruling),
+`docs/reference/prin-rs/src/integrate/az/system.rs`, `.../az/lc.rs` and `.../az/reference_body.rs` (new, verbatim at
+prin-rs `b1e6006`), `docs/reference/prin-rs/README.md` (the three rows, the commit note and the known error),
+`docs/contracts/principia_integrator_contract.md` (Part 2c rule 1, a dated note; Part 2b § "The equations and the step
+control (R-160, R-161)", a dated note on the predictive limit; Part 2b § "Aarseth–Zare: the equations, the reference
+body, the Levi-Civita inverse and the step control (transcribed)", a dated paragraph, the conditioned inverse, step 4,
+step 7 and the marks of RQ-756, each with its *Was*; Part 3's `TINY` row; Part 6's Aarseth–Zare bullet), R-160's and
+R-927's forward and "Still in force" lines, REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-105 and
+REQ-INT-114 (reqio), TASK-M3-68 and `plan/rule_groups.yaml`; changes REQ-INT-024, REQ-INT-044, REQ-INT-049,
+REQ-INT-054, REQ-INT-105 and REQ-INT-114*
+
+The owner's words (11 Nov 2026), verbatim, from the reply:
+
+> RQ-756: (4)(a-2). For (5): the three files are in prin-rs at b1e6006 (src/integrate/az/system.rs, lc.rs, reference_body.rs); import them. Point 6: the code uses relative momenta, not velocities, though its comment says velocities; transcribe it as built and name it momenta. Point 7: 1e-37 at f32, 1e-300 at f64. Point 8: (0,1), (0,2), (1,2), as transcribed.
+
+and, the same day, their follow-up on point 7, verbatim and whole, which supersedes the reply's reading of point 7
+(`orch/r630/owner-rq756-point7-tiny-11nov.txt`):
+
+> That reads right. One correction on point 7: it probably doesn't need a new exception at all.
+>
+> In prin-rs the inverse map's test is `if u0 > T::TINY` in `lc.rs`, and `T::TINY` is the same floor constant the contract already excepts, one value per precision. My 1e-37 and 1e-300 are just that constant's two values. So the cleaner record is "point 7 is the existing floor TINY", not a second named exception beside it. Rule 1 would then need no new dated note, only a pointer from point 7 to the TINY exception. Have the physics reviewer check it's literally the same symbol in the imported files before it's written either way.
+>
+> Two things worth passing to the implementer:
+>
+> - **The guard arm should test the is-finite check, not just the floor.** In single precision 1e-37 × 1e-37 underflows to zero, and prin-rs's own notes say the explicit is-finite test is what catches a doubly degenerate state, not the floor. An arm that only checks the floor's value would pass without exercising the guard that actually works.
+> - **The momenta halt should not trigger.** I've checked the code: `phys_from_state` (`system.rs:92`) returns `L(u)p / 2|u|²`, the physical relative momenta. `predictive_dtau` (`driver.rs`) takes the largest of |P1|, |P2| and |P2 − P1|. It's the comment above it that says velocities. The transcription should name them momenta and record the comment's mislabelling, so nobody "fixes" it later.
+
+*What it decides,* part by part of RQ-756 (the entry's questions (1) to (3) and (5) 1 to 5 and 9 were settled before:
+(1) and (3) by PR #471, the rest by R-927):
+
+- **(4), the owner's (4)(a-2): the bound per sync interval is R-604's cumulative step budget read at each boundary.**
+  The running total of a copy's steps at boundary `t_k` is at most `max(N_min, step_budget_rate·t_k)`, `t_k` its
+  physical time since `t = 0` (integrator contract Part 3, the `step_budget_rate` row); there is no cap per interval.
+  It adds no behaviour: R-604's budget check is unchanged, and REQ-INT-054's property test checks the budget already in
+  force at each boundary. R-927's flag on (4) is answered by it: the reading (4)(a-1), a new cap per interval, is not
+  taken. REQ-INT-054's statement and verify say so, and TASK-M3-68's `tau_schedule_bound` arm no longer waits; its
+  output reports the largest count seen in one interval, for the record, and asserts nothing about it.
+- **(5): the three files are imported.** `src/integrate/az/system.rs`, `src/integrate/az/lc.rs` and
+  `src/integrate/az/reference_body.rs` are copied verbatim from the owner's repository, prin-rs, at commit `b1e6006`
+  (`b1e60065a4d46bfcb0ef0590784513bfd561b003`), into `docs/reference/prin-rs/src/integrate/az/`, each checked against
+  its git blob (`6c196f5b`, `f91be0d1`, `a64072ce`). The set's README pins `8600d45`: the three rows name `b1e6006` and
+  say it differs from the set's pin, by the owner's word. The set is the owner's own; no licence question arises
+  (R-167). Reference, not authority (R-159): what they say is written into the contract, and the contract is cited.
+- **(5) 6: the predictive limit reads the relative momenta.** The owner: "the code uses relative momenta, not
+  velocities, though its comment says velocities; transcribe it as built and name it momenta", and, having checked
+  the code, "`phys_from_state` (`system.rs:92`) returns `L(u)p / 2|u|²`, the physical relative momenta.
+  `predictive_dtau` (`driver.rs`) takes the largest of |P1|, |P2| and |P2 − P1|. It's the comment above it that says
+  velocities." The contract's step 4 is rewritten to `c₂ = f·d_min/(P_max·ab)`, `P_max = max(|P₁|, |P₂|, |P₂ − P₁|)`,
+  and **records the comment's mislabelling explicitly**: `driver.rs:607-608` ("a physical bound
+  `dt <= f*d_min/|v_rel|_max`", "`phys_from_state` returns `(R1, R2, V1, V2)`") and `driver.rs:82` are wrong, and the
+  code is the rule, so nobody "fixes" it later. The physics consult adds, recorded with R-927: the difference from
+  R-160's `|v_rel|` is more than a label. The momenta are mass-weighted, `P = K·V`, so `f·d_min/|P|_max` is a length
+  over a momentum, not a crossing time, and `P₂ − P₁` is not proportional to `v_c − v_b` (at equal unit masses
+  `P₁ = (2V₁ − V₂)/3`). Under Aarseth–Zare the limit therefore differs from R-160's formula by an order-one,
+  mass-dependent factor, and the reference code's form is the rule. Heggie's and logH's limits read velocities, and
+  R-160's formula stands for them.
+- **(5) 7: the inverse map's guards are the floor `TINY`.** The reply's "1e-37 at f32, 1e-300 at f64" is read, by the
+  follow-up, as the existing floor: `lc.rs` tests `u0 > T::TINY` (`lc.rs:55`) and `u1.abs() > T::TINY` (`lc.rs:63`),
+  and `T::TINY` is the floor `TINY` the contract already uses (Part 3, Part 6; one value per working precision, a
+  calibration, R-71, REQ-INT-105). The physics consult the owner asked for confirmed that it is literally the same
+  symbol and that the two numbers are its values in prin-rs (`src/real.rs:37`, `:61`, `:77`; `lc.rs:55`, `:63`; at
+  `b1e6006`). So point 7 **is** the floor `TINY`, not a second named exception beside it.
+  **The owner's premise, and the record applied** (`CLAUDE.md` § "Rulings": flag it, and record what was applied; it
+  changes nothing built, the code testing `T::TINY` either way). The owner's words call `TINY` "the same floor constant
+  the contract already excepts", and propose "no new dated note, only a pointer from point 7 to the TINY exception".
+  No such exception was written: integrator contract Part 2c rule 1 lists none, and neither does this file, though
+  the contract already used `TINY` in branch tests (`A < TINY`, `Rᵢ < TINY`, the drift denominator below `TINY`, Part
+  6) without saying so. A pointer would point at nothing, so the owner's "no new dated note" is read as conditional on
+  an exception already written, and this ruling records the exception the owner's words name: **`TINY` in a branch
+  condition is the one enumerated exception to Part 2c rule 1**, recording explicitly what the contract had done
+  implicitly. Rule 1's text stands, with one dated note naming R-953 and `TINY`; the open-conflict mark at the inverse
+  map ("*(RQ-756, against Part 2c rule 1 and `TINY`)*") is cleared with its *Was*. `TINY`'s scope in Part 3's row and
+  REQ-INT-105 gains the Levi-Civita inverse's guards (`|u₀|` and `|u₁|` against `TINY`, a component of `u`, so a
+  different use from a denominator's floor), and the calibration's evidence covers that use. The physics consult's
+  measurable alternative is noted, not taken: the precision-free test `u0 > 0` would meet rule 1 exactly; the reference
+  code's `T::TINY` is the rule (R-927).
+  **The two numbers.** `1e-37` at f32 and `1e-300` at f64 are recorded as the reference's values of `TINY` and as the
+  owner's stated values (Part 3's row). They answer point 7, what the inverse map tests against; the owner's words
+  do not set the calibration, so REQ-INT-105 stands: `TINY` is proposed with its evidence and confirmed at the M3 gate
+  (R-71), and the proposal reports these two values beside its own. `real.rs:75-76`'s comment, that the f32 value
+  leaves "headroom so squaring a guarded value does not itself underflow", is not transcribed as a reason: it is false
+  (`1e-37²` is about `1e-74`, below f32's least subnormal, about `1.4e-45`).
+- **The is-finite guard arm (the follow-up's first point).** The owner: "The guard arm should test the is-finite
+  check, not just the floor … 1e-37 × 1e-37 underflows to zero". The physics consult shows the explicit finiteness test
+  is not in the inverse map (`lc.rs:49-69`, `system.rs:65-86` have none) but in the RK4 loop (`driver.rs:1000-1001`),
+  and that what it catches is a doubly degenerate `A·B`, both factors floored at `TINY` and their product underflowing
+  at f32 (prin-rs `NOTES.md:629-632`, `driver.rs:244-246`): the Aarseth–Zare floor of integrator contract Part 6.
+  Applied where the owner's concern takes effect: the arm that exercises the finiteness test on a doubly degenerate
+  state goes on that floor's requirement, REQ-INT-105, whose Aarseth–Zare part TASK-M3-68 builds, not on REQ-INT-044.
+  Its fixture is **degenerate at the interval's entry**, at registration: under the default per-step rule a state
+  degenerate only mid-interval takes a finite step (`blend_dtau` drops non-finite constraints, `driver.rs:640`) and
+  the finiteness test would never fire.
+- **(5) 8: the pairs are taken in the order `(0,1), (0,2), (1,2)`,** as transcribed. Confirmed against
+  `reference_body.rs`: `choose_reference` returns `THIRD[longest_index(&newton::pair_dists(r))]`
+  (`reference_body.rs:30`), and `longest_index` keeps the first maximum by a strict `>` (`reference_body.rs:38-47`);
+  the order itself is prin-rs `src/physics/mod.rs:17` at `b1e6006`, `PAIRS = [(0, 1), (0, 2), (1, 2)]`, read by the
+  physics consult and not imported.
+- **Nothing is left open, so RQ-756 closes.** TASK-M3-68's arms that waited on (4), (5) 6 and (5) 7 no longer wait.
+
+*What it amends:* **R-160**, in part: its predictive step limit, "`dτ ≤ f·d_min / (|v_rel|_max·A·B)`", reads, under
+Aarseth–Zare, the relative momenta `|P|_max` in place of `|v_rel|_max`, as the reference code computes it. R-160's
+words are not edited; its forward and "Still in force" lines say so.
+
+*What it refines:* **R-927**, which flagged (4) and left (5) 6, 7 and 8 open: each is now answered, as above.
+
+R-953 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-054 (statement, verify, rulings, rq, note), REQ-INT-105 (statement and verify: the inverse map's
+guards among `TINY`'s uses, the reference's values reported, and the finiteness arm), REQ-INT-024, REQ-INT-044,
+REQ-INT-049 and REQ-INT-114 (rulings, rq, note), each through `plan/tools/reqio.py`. The parse printed R-953 for this
+answer.
+
+## R-954 — RQ-782, the collision test's floor: option (a), a definition in integrator contract Part 7; below the f32 spacing of the positions at the pair's coordinates `r_coll` means collision at f32 coincidence, `d_min` is resolved only to that spacing, the slider stays valid to 0, and the floor is recorded with the run *(closes RQ-782)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-782 moved),
+`docs/archive/review_queue/M0.md` (RQ-782 with its ruling), `docs/contracts/principia_integrator_contract.md` Part 7
+(the floor, a dated bullet), a new definition requirement (reqio), TASK-M3-71 (new), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; adds REQ-EVT-035*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-782: (a)
+
+*What it decides:* RQ-782's option (a): "State the floor in Part 7 as a definition: below the f32 position spacing at
+the pair's coordinates, `r_coll` means "collision at f32 coincidence", and `d_min` is resolved only to that spacing;
+the slider stays valid to 0, and the floor is recorded with the run." It changes no result: the test already computes
+this (the squared separation formed from f32 positions, R-547), every `r_coll > 0` keeps TASK-M3-09's threshold of at
+least `2⁻¹²⁶`, and the default `10⁻³` lies four decades above the floor. Part 7 says so, as a definition.
+
+The last clause, "the floor is recorded with the run", is built behaviour, and nothing records it today: every output
+carries `r_coll` (REQ-EVT-004, TASK-M3-09), not the floor. No task builds the `r_coll` slider or a dispatch-side flag,
+so a new task does, TASK-M3-71 (applied per R-369: task scoping). What is recorded, and how it is computed from the
+run (the floor is the spacing at the pair's coordinates, so it varies along a run), is not settled by the option's
+words: it is a definition requirement (R-72), REQ-EVT-035, which TASK-M3-71 writes into Part 7 under physics review
+before building it.
+
+R-954 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-EVT-035, closed by TASK-M3-71. The parse printed R-954 for this answer.
+
+## R-955 — RQ-784: option (a), R-598 stands; a latent pixel energy normalisation cannot reach is a validity failure, not an edge, and stays not a system with the reason in the readout; R-932's "No blank areas" is about edges and their extensions *(closes RQ-784; refines R-932)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-784 moved),
+`docs/archive/review_queue/M0.md` (RQ-784 with its ruling), `docs/contracts/principia_chart_decoder_contract.md` §
+"Past the unit square — each axis's extension type (R-407)" and `docs/design/principia_chart_reference.md` § "5.4 Past
+the unit square — each axis's extension type (R-407)" (each, the open line answered with its *Was*), R-932's forward and
+"Still in force" lines, `plan/charts/m2-chart-addendum-extensions-axes.md`, `plan/charts/m2-chart-replan-addition.md`,
+TASK-M2-95, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-784: (a)
+
+*What it decides:* RQ-784's option (a): "R-598 stands. Such a pixel has no system at the chart's energy; it is a
+validity failure, not an edge, and stays "not a system" with the reason in the readout. "No blank areas" is read as
+about edges and their extensions. Changes nothing built or planned." The chart addendum's N12 and N14 and TASK-M8-57
+build R-598's arm as it stands, now settled rather than meanwhile.
+
+*What it refines:* **R-932**, the reading of its rule 2, "No blank areas": it is about edges and their extensions, and
+does not reach a pixel inside the chart whose target energy cannot be reached (R-598).
+
+R-955 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes no requirement. The parse printed R-955 for this answer.
+
+## R-956 — Whether a record made before R-926's f64 decode route re-runs bit for bit is deferred to M2 *(defers RQ-783)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-783, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-783: defer:M2
+
+*What it decides:* the deferral, as it reads, to M2. Nothing is applied meanwhile: R-921, REQ-TOOL-172 and TASK-M2-57's fixture stand as written, and TASK-M7-45's retired-link arm, the record contract and TASK-M4-05's switch to records wait as the entry says. The report gave the chart re-plan's first slice, which counts the samples where the two routes differ, as when it can be answered; that slice is M2 work.
+
+R-956 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-957 — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-577, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-577: defer:M3
+
+*What it decides:* the deferral, as it reads, to M3, restating R-880's.
+
+R-957 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-958 — GPU `sin` and `cos` near π/2 stay deferred to M4 *(defers RQ-629)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-629, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-629: defer:M4
+
+*What it decides:* the deferral, as it reads, to M4, restating R-881's; option (b) is built at M4 by TASK-M4-27, as ruled.
+
+R-958 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-959 — Whether the kernel takes its own f32 `sin` and `cos` stays deferred to M4 *(defers RQ-687)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-687, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-687: defer:M4
+
+*What it decides:* the deferral, as it reads, to M4, restating R-883's: option (a) on M4's cross-backend measurement, option (b) built.
+
+R-959 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-960 — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-643, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-643: defer:M9
+
+*What it decides:* the deferral, as it reads, to M9, restating R-886's; option (b) stays applied.
+
+R-960 is in the "physics" group of `plan/rule_groups.yaml`.
+
+## R-961 — The rest of TASK-M9-01's gaps stay deferred to M9 *(defers RQ-681)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-681, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-681: defer:M9
+
+*What it decides:* the deferral, as it reads, to M9, restating R-887's; what R-794 and R-824 ruled stays applied.
+
+R-961 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-962 — RQ-788, the built-in margin's colour map: option (a), the greyscale ramp of `top1 − top2` clamped to [0, 1], white where `top1` is far above `top2`, as built; "provisional" is dropped by a task *(closes RQ-788)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-788 moved),
+`docs/archive/review_queue/M0.md` (RQ-788 with its ruling), `docs/design/principia_colour_composition.md` § "1.2 Family
+B — field-ramp" (the margin's default, a bullet), a new requirement (reqio), TASK-M7-75 (new), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; adds REQ-GUI-436*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-788: (a)
+
+*What it decides:* RQ-788's option (a): "The greyscale ramp of the difference clamped to [0, 1], as built
+(`ramp_grey(top1 − top2)`): OKLab L equal to the margin. Range [0, 1]: every margin below 0 draws black and every
+margin above 1 white, so a swapped pair of wires is all black. Polarity: white = `top1` far above `top2`. Needs no
+further value." The margin is read as § 1.2's non-negative `d_1 − d_2`, a magnitude, which § 1.2 draws in grey. The
+colour composition design records it under § 1.2's defaults by field role; `docs/gui/principia_render_gui_spec.md` § 5
+names the margin's ports, not its look, and is unchanged. What it draws for a sample with no valid value is unchanged
+(R-467, R-470, R-511).
+
+The built code marks the map "provisional pending RQ-788" (`crates/render/shaders/wgsl/frag/colour/margin.wgsl`, and
+the test `stain_fanout_margin_provisional_map_is_the_grey_ramp` in `crates/render/tests/stain_graph.rs`). Changing that
+wording is a code change, so this pull request makes none: TASK-M7-75 drops "provisional", renames the test and cites
+this ruling (applied per R-369: task scoping). Until it merges the map is drawn as now; only its label is stale.
+
+R-962 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-436 (the margin's map, range and polarity), closed by TASK-M7-75. The parse printed R-962 for this answer.
+
+## R-963 — The default extension kind of each edge, the owner's check by eye, stays open, deferred to M2 *(defers RQ-779)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-779, a deferral line),
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-779: defer:M2
+
+*What it decides:* the deferral, as it reads, to M2. R-941's rule stands meanwhile: per R-932, the mass simplex saturating, each other row built to rule 2, the mechanism physics review's call.
+
+R-963 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-964 — Whether the presentation frames become a stage after the Print graph is deferred to M7, in place of the exporter's design *(defers RQ-391; amends R-706, R-803, R-825 and R-890)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-391, a deferral line),
+the forward and "Still in force" lines of R-706, R-803, R-825 and R-890, `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-391: defer:M7
+
+*What it decides:* the deferral, to M7, the milestone of the render graph and the Print graph, in place of the event
+the earlier deferrals named, "until the exporter is designed". Nothing is built meanwhile.
+
+*What it amends:* the earlier deferrals of RQ-391: **R-803** (5 Nov 2026, "until the exporter is designed"), **R-825**
+(7 Nov) and **R-890** (8 Nov), which restated it, and **R-706**'s deferral of RQ-391 (4 Nov), as R-803 restated it.
+Each target becomes M7; each forward line says so.
+
+R-964 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-965 — RQ-738, the chart-space model's correction list: the owner's "correct the wording as listed"; items 2 to 11 are corrected in the model as record corrections, each with its *Was*, item 1 having been settled by R-868 *(closes RQ-738)*
+*11 Nov 2026 · the owner's reply to the report of 11 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-738 moved),
+`docs/archive/review_queue/M0.md` (RQ-738 with its ruling), `docs/design/principia_chart_space_model.md` (§ 1, § 2,
+§ 3, § 3b, § 4, § 5, § 6, § 6b, § 7, § 8 and § 9, each correction dated with its *Was*), `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> RQ-738: correct the wording as listed.
+
+*What it decides:* the owner corrects nothing by hand: the correction list's items 2 to 11 are applied to the model as
+the list gives them, as record corrections, each in the direction its item states and each with its *Was* (item 1 was
+settled by R-868; the nine conflicts by R-871 and R-878). Where an item names no new wording, the least that makes the
+sentence agree with the section, ruling or design section the item names:
+
+2. "Always blend in `Z`", withdrawn in § 0.1, is rewritten where the body still says it (§ 1, § 2's rule, § 7, § 8,
+   § 9): blend each block in its own signed state; and § 1's "Every chart Principia has fits this" becomes "Not every
+   chart … fits this", a chart's target being the signed state.
+3. `L_z`'s sign: Theorem 11's limits and § 7 read "`L_z²E` and the sign of `E`" (§ 0.5); "`T = 0` recovers the ordinary
+   chart" holds within `ε_phys`, not bitwise.
+4. Corollary 2 is narrowed to frames whose path does not hold the value (design § 17.11's table; R-943, R-944);
+   Corollary 1's blank end is held to the end frame, not interpolated (design § 17.11; R-470).
+5. The encode's discontinuities are facts of exact arithmetic, said so where § 8 lists them.
+6. Trajectory functionals are "excluded", a design rule, for the reasons the item gives, not "impossible" as
+   many-to-one.
+7. Theorem 11's mask is an app limit (escape does not break the flow's continuity, binary collisions regularise), and
+   "All of §2–§6 applies" holds off the mirror seam where the start goes through `Enc`.
+8. Theorem 3's tangents agree only to `O(θ²)`, and its figure is design § 17.3's, 0.016 median and 0.124 worst; the
+   "0.197 at `τ = 1.2`" is in no file of the repo.
+9. The swapped plane is `R(π)` in another plane, and every tilt's midpoint area is `cos(θ/2)`; pan and zoom out use the
+   chart's extension past `U`; a morph's seams are `Σ_φ ∪ Σ_ψ`; the per-axis morph in quantity space can lose rank, so
+   § 8's "seams belong to charts" excepts it; § 9's "nearest admissible point" is nearest for coordinate constraints
+   only; and the encode is `Enc` throughout, `E` keeping the energy.
+10. Snap-back undoes the slice only (R-899, Q2 (a)); with "centre on pin" it restores `φ(0) = a`, exactly in exact
+    arithmetic.
+11. `Z = ℝ × S¹ × ℝ⁶`, `z_β` periodic (R-898): it is not convex, so Theorem 1's proof points to § 0.1's and takes `z_β`
+    on a lift, where a wrap enters being TASK-M2-57's definition (REQ-DEC-056), and § 4's splines and Theorem 9's
+    hybrid likewise. Theorem 9's "`Z × [0,T]` is convex" is corrected with item 11, being the same statement.
+
+No item needed a choice between readings, so RQ-738 closes. Nothing is built from the model's wording; the corpus and
+the rulings stood meanwhile, and stand.
+
+R-965 is in the "design" group of `plan/rule_groups.yaml`.

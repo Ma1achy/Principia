@@ -123,6 +123,13 @@ is not uniform:
   white = low certainty and black = high certainty);
 - **time-to-event (`t_end`) → white = low / early** (quick-resolving pops; late and bounded darken,
   keeping bounded = black consistent with §1.4).
+- **The built-in margin, `top1 − top2` → the greyscale ramp of the difference clamped to `[0, 1]`, white = `top1` far
+  above `top2`** (*11 Nov 2026, R-962, the owner's answer on RQ-788, its option (a)*). The margin is the `colour` (or
+  `post`) occupant with two `field` inputs (R-813; render_gui_spec § 5), and it draws `ramp_grey(top1 − top2)`: OKLab
+  `L` equal to the margin. Range `[0, 1]`: a margin below 0 draws black and one above 1 draws white, so a swapped pair of
+  wires draws all black. It is read as `topk_margin`'s non-negative magnitude, `d_1 − d_2` above, and needs no further
+  value. A sample with no valid margin draws as any invalid sample does (R-467, R-470). TASK-M7-12 built it so, marked
+  provisional pending RQ-788; TASK-M7-75 drops the mark.
 
 The payoff is composition: `combine(colour = shape-sphere map, brightness = FTLE-greyscale,
 Replace-L)` modulates the position map's lightness by chaos (unstable brightens, regular darkens) —

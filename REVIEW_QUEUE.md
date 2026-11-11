@@ -27,6 +27,7 @@ later." For the human: yes, whether there is a Frame stage at all.*
 - **Deferred:** deferred to the exporter's design by owner 5 Nov 2026 (R-803, the owner: "RQ-391: Defer until the exporter is designed.").
 - **7 Nov 2026 (R-825), restated:** the owner: "RQ-391: defer until the exporter is designed." It stays deferred to the exporter's design.
 - **Deferred:** deferred to the exporter's design by owner 8 Nov 2026 (R-890, the owner: "RQ-391: defer until the exporter is designed.").
+- **Deferred:** deferred to M7 by owner 11 Nov 2026 (R-964, the owner: "RQ-391: defer:M7").
 
 ## RQ-577: The precision-ladder proposal's seven open questions (§6), and the amendments it proposes to R-265, R-572, R-90, canonical spec §1 item 3, deep zoom §2 and its layer table, and integrator contract Part 2 and Part 2b *(the human's queued questions on the 26 Oct incoming proposal; R-265, R-572, R-90, R-561, R-547, R-33; context: none built)*
 
@@ -110,6 +111,7 @@ here.*
 - **Deferred:** deferred to M3 by owner 5 Nov 2026 (R-795, the owner: "RQ-577: defer:M3").
 - **7 Nov 2026 (R-821), restated:** the owner: "RQ-577: defer:M3". It stays deferred to M3.
 - **Deferred:** deferred to M3 by owner 8 Nov 2026 (R-880, the owner: "RQ-577: defer:M3").
+- **Deferred:** deferred to M3 by owner 11 Nov 2026 (R-957, the owner: "RQ-577: defer:M3").
 
 ## RQ-643: The collinear statistical targets' stops lie past R-610's horizon cap in the integrator's units (proposed OR02-1, OR03-1, MH89-1) *(physics review of the 29 Oct research-batches ingest, finding F4; `docs/incoming/2026-10-29_research_batches/README.md` § 10.3, § 10.5, `horizons_integrator_units.txt`; context: none built)*
 
@@ -138,6 +140,7 @@ here.*
 - **Deferred:** deferred to M9, option (a) only, if the cost measurement allows, with option (b) applied now (R-800) by owner 5 Nov 2026 (R-800, the owner: "RQ-643: (b) now. Revisit (a) at M9 if the cost measurement allows.").
 - **Deferred:** deferred to M9 (R-823) by owner 7 Nov 2026 (R-823, the owner: "RQ-643: defer:M9").
 - **8 Nov 2026 (R-886):** deferred to M9 again, the third time; the owner: "RQ-643: defer:M9".
+- **Deferred:** deferred to M9 by owner 11 Nov 2026 (R-960, the owner: "RQ-643: defer:M9").
 
 ## RQ-629: WGSL and Vulkan bound `sin` and `cos` only by an absolute error, where the decode's `cos α` near `π/2` needs a relative one *(a note for future backends; REQ-ENC-024, REQ-RENDER-025; R-297; inverse-encode contract Part 4; dd_decoder §3.2; context: RQ-628, TASK-M2-26, PR #343)*
 
@@ -180,6 +183,7 @@ here.*
   RQ-687: defer:M4
   RQ-696: (c).").
 - **Deferred:** deferred to M4 by owner 8 Nov 2026 (R-881, the owner: "RQ-629: defer:M4").
+- **Deferred:** deferred to M4 by owner 11 Nov 2026 (R-958, the owner: "RQ-629: defer:M4").
 
 ## RQ-681: TASK-M9-01: no task builds the scoring runner it calls, AT-D6's twins and slice planes are undefined, and OC-2's state and precision are unsettled *(silence, R-72; R-71; R-649, R-650; REQ-VAL-214 to REQ-VAL-217; dd_replication § 4.3, § 8; context: TASK-M9-01, TASK-M3-27, RQ-660)*
 
@@ -225,6 +229,7 @@ here.*
 - **Deferred:** deferred to M9, parts (b) and (c), with part (a) ruled, a deliverable of TASK-M3-27 (R-794) by owner 5 Nov 2026 (R-794, the owner: "RQ-681: (a) as a deliverable of TASK-M3-27, the earlier user. Parts (b) and (c) stay deferred to M9.").
 - **Deferred:** deferred to M9, its remaining parts, with part (c) state ruled ref_* (R-824) by owner 7 Nov 2026 (R-824, the owner: "RQ-681: (c) ref_*, rerun the figures at M9; the rest defer:M9.").
 - **Deferred:** deferred to M9 by owner 8 Nov 2026 (R-887, the owner: "RQ-681: defer:M9").
+- **Deferred:** deferred to M9 by owner 11 Nov 2026 (R-961, the owner: "RQ-681: defer:M9").
 
 ## RQ-687: Whether the kernel takes its own f32 `sin` and `cos`, as `arctan.rs` does for `atan2` (RQ-628), given that it can change CPU bits *(physics; a decision that changes what is built; R-297, R-649; REQ-DEC-043; RQ-628, RQ-629; issues #390, #393, #401; context: the Windows RTX 2080 Super run, RQ-685)*
 
@@ -326,256 +331,7 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
   RQ-687: defer:M4
   RQ-696: (c).").
 - **Deferred:** deferred to M4 by owner 8 Nov 2026 (R-883, the owner: "RQ-687: defer:M4").
-
-## RQ-738: RQ-736's correction list and the conflicts the filter order leaves *(carried from RQ-736, closed by R-853 on 7 Nov 2026; the owner's model against the corpus; a one-way door where an item changes what is built; context: TASK-M4-34, TASK-M8-120, TASK-M4-37)*
-
-*Filed 7 Nov 2026 by the rulings PR of that day. RQ-736 closed on what the owner ruled (R-853, R-855); these two lists were not answered by any of it, so they move here unchanged, so they aren't lost. Nothing in them is applied but the "reading held" each states.*
-
-*In plain English: the owner ruled that the measured and ruled documents win over the chart-space model, and the model was corrected. A few of the model's sentences still say otherwise, and the owner's symmetry filter order meets the corpus in nine places. Each is listed with what stands meanwhile.*
-
-- **File, section:** `docs/archive/review_queue/M0.md`, RQ-736, from which both lists are moved word for word; each item quotes its own files and sections.
-- **Applied meanwhile:** what each item states as standing meanwhile, or its "reading held"; nothing else.
-- **Not settled by the revised model: a correction list for the owner.** What stands meanwhile on each: the corpus and § 17. The model's file is untouched in PR #422 beyond the owner's copy. Recommended on each: correct the wording at the next revision; only item 1 has options.
-  1. **Which tilt.** Model § 0.2: "**Affine tilt is the ruled lean-each-axis map (R-474), not a Grassmannian geodesic.**" `docs/contracts/principia_chart_decoder_contract.md` § "Two tilt maps": "**Tip as sheet**, the default (`sheet`)", "**Lean each axis**, an option (`lean`)", with the sheet "turned rigidly". So the default tilt is a rigid rotation, and lean is the option. (a) **Recommended.** § 0.2 reads "R-474's two tilt maps, each tested against its own formula", which the contract and `path_tilt_bitwise` already say. (b) Lean each axis becomes the default, which amends R-474.
-  2. **Body text § 0 overrides but doesn't rewrite.** Model § 1: "Every chart Principia has fits this"; § 2: "**Rule: always blend in `Z`, never in physical coordinates.**"; § 7: "**Proved** (Thm 1): requires blending in `Z` and the decoder being total"; § 9: "blend in latent space, never in physical space"; § 8: "never the morph itself, which is continuous in `Z` (Thm 1)". § 0: "\"Always blend in Z\" is withdrawn."
-  3. **`L_z`'s sign, still in the body.** Model § 6b, Theorem 11's limits: "(`L_z²E`, the signs of `E` and `L_z`)"; § 7: "the scale-free L_z²E and the signs". § 0.5: "`L_z²E` and the sign of `E` only". Also code F3: the model's "`T = 0` recovers the ordinary chart" holds within `ε_phys`, not bitwise (model § 8: "`E(D(z)) ≠ z` bitwise").
-  4. **Held values mid-morph (physics B5, the rest).** Model Corollary 2: "Mid-morph frames must not claim a held value." Right for the corollary's mixed case; too wide for one `E*` at both ends, which design § 17.11 holds. Corollary 1's "interpolated as a display choice": design § 17.11, a blank end "resolves at the end frame" (R-470).
-  5. **`E`'s discontinuities (physics B2, the rest).** Model § 8: "The encode `E` has genuine discontinuities: the mirror deadband (`λ̃_y = 0`) and collision degeneracies." Filed under floating point, and they're exact-arithmetic facts.
-  6. **Physics B6.** Model § 6b: "many-to-one, with no inverse even locally"; § 7: "**Impossible**: many-to-one". Every axis quantity is many-to-one on 8D, and where `d_min` or `t_end` is smooth the implicit function theorem gives a local inverse. The true reasons are discontinuity, fractal level sets and no tractable section. The exclusion stands as a design rule: "excluded" for "Impossible".
-  7. **Physics B7.** Model Theorem 11's limits: "`φ_T` is continuous only where the backward trajectory survives `[0, T]` without a triple collision or an escape." Escape doesn't break the flow's continuity, and binary collisions regularise, so that mask is an app limit. "All of §2–§6 applies" needs "off the mirror seam" if the start goes through `Enc` (design § 10.3).
-  8. **Physics B8.** Model Theorem 3: "same endpoints and same tangent at `s = 0`" holds to `O(θ²)` only; "0.197 at `τ = 1.2`" is in no file of the repo, and design § 17.3 gives 0.016 median, 0.124 worst.
-  9. **Physics B9.**
-     - Model § 3: "`Q' = [e₂ e₁]`, which is the same plane with its axes swapped (a 90° rotation in the plane plus a mirror)": not a tilt in `(q_i, t)` but `R(π)` in another plane. The stronger fact is that every tilt fails: the midpoint area of `L` is `cos(θ/2)`.
-     - Model § 3, "Pan by `a`", "Zoom by factor `k > 0`": pan and zoom-out leave `U`, so `φ` needs Part 3's extension.
-     - Model § 3b: "every theorem holds on `U \ Σ_φ`"; § 7: "Continuity proved everywhere": a morph needs `Σ_φ ∪ Σ_ψ`.
-     - Model § 3b: "This is a path whenever `A` is continuous along it": `A` depends on `s`, and a blend can lose rank: `(K, E) → (U, E)` gives axis 1 `= E/2` at `s = ½`.
-     - Model § 8: "Seams belong to charts, not to paths": fails for that family.
-     - Model § 9: "the target's nearest admissible point": nearest holds only for coordinate constraints.
-     - `E` names both the energy and encode (model § 2, § 8).
-- **Conflicts the filter order and the ruling leave, none resolved here. What stands meanwhile on each: the design's reading as stated, unbuilt.**
-  1. **R-544's words.** `decisions.md` § R-544's title: "no hemisphere toggle, no remap and no fold at the equator"; `docs/contracts/principia_chart_decoder_contract.md`: "nothing is folded or hidden", "The shape sphere has no one-hemisphere view (R-544)". Against the order: "the half shape sphere at rest come out of this filter". The filter is such a toggle, as a view. Reading held: the owner's later order governs and R-544's words want amending in the rulings PR.
-  2. **RQ-714 and what it touches.** Its (a), "A mask", agreed in principle; `docs/design/principia_dd_validation_orbits.md` § 1.6: "A point outside it is not a region-D start, and the import refuses it."; the lowering Appendix: "region D bounds", and its row "physical (m,r,p) construction → **canonicalise entry**"; REQ-CHART-095 and REQ-CHART-100. Against "region D presets render the full disc". Reading held: the import's refusal stands (an import isn't a chart), and the preset's domain is RQ-714's question, answered by the filter order. On the Appendix's row, reading held: the entry is the one seam, taken with `C`'s step 3 not taken, as R-544 takes it for the shape sphere; identical on D.
-  3. **"Full disc" (corrected by physics review 5812620255, P2).** Eq. 8's D is `ξ ≥ 0, η ≥ 0, (ξ + ½)² + η² ≤ 1`, area 0.307. Its four images under the mirror and the 1↔2 swap are the lens `(|ξ| + ½)² + η² ≤ 1`, area 1.228, four times D. At equal masses at rest D is the fundamental domain of the mirror × S₃, twelve elements, under the gauge `A₁A₂ = 1`: the lens is where 1–2 is the longest side, and every rest point outside it is the 1↔3 or 2↔3 image, rescaled, of a lens point. A square chart's box `ξ ∈ [−½, ½]`, `η ∈ [−√3/2, √3/2]`, area 1.732, 5.64 times D, has corners outside the lens. Options, none picked here:
-     - (a) The lens, the box's corners masked: the filter with the mirror and the 1↔2 swap gives D. It is a mask, which the order removed.
-     - (b) The box drawn whole, the mirror and the 1↔2 swap declared: the filter leaves the box's quadrant `ξ, η ≥ 0`, not D. `(0.5, 0.8)` has `(|ξ| + ½)² + η² = 1.64`: outside D, and all four images outside the lens, so never blanked.
-     - (c) "Full disc" read literally, any window holding the lens, the mirror and all three swaps declared, as the order's "body-label swaps where the masses make them exact" allows: every pixel outside the lens has its partner in the domain, the filter gives exactly D with no mask, and the order's words hold as written. At eq. 3 and at unequal masses only the mirror holds (conflict 4, § 8.8).
-     - What stands meanwhile: nothing built; design § 8.4 states the three.
-  4. **Eq. 3's velocities.** "Region D's quarter disc … come out of this filter", but the near-rest start of `principia_dd_validation_orbits.md` § 1.6 has `ẋ ≠ 0`, so the swap's image isn't on the chart and the correctness rule keeps `ξ < 0`. AA-2 and AA-7 run eq. 3, and AA-3 and AA-5 do by RQ-714's (3)(a). So on those presets the filter gives `η ≥ 0`, not D. Options: (a) `ξ ≥ 0` shown by the label `reduced domain` of the ruling above, a separate crop; (b) the half is drawn; (c) the eq. 3 chart declares the swap as approximate. Recommended (b), since it needs no exception to the correctness rule.
-  5. **"Bitwise".** The order's test: "filtered + its mirror reproduces the full chart bitwise". `docs/design/principia_chart_reference.md`: "bitwise where the integration is mirror-exact, else to rounding (R-544 §4) … the two pixels of a pair decode to mirror images only to the decode's rounding". Ensemble copies' offsets aren't mirror-symmetric either. Reading held: the test's fixture decodes its pairs to exact mirrors, one copy; the alternative is a pixel-by-pixel comparison from the exactly mirrored state `Π·x`.
-  6. **The angle pair and Parischewsky's pair.** The ruling: the presets "that inherit its limit (Anosova half-disc, Parischewsky, the angle pair)"; the order: "region D presets render the full disc". Their axes are unsigned, so neither has a partner or a full disc. Reading held: part 2's label stands for those two, as `reduced domain`, with no filter and no one-click full disc.
-  7. **R-408's statistics on a filtered view.** The order: "a display option applied after rendering", so the legend's shares stay those of the computed chart, while the papers' fractions are of D. Reading held: shares of the computed chart, a paper's own fraction by `in_region_d` (design § 6.4).
-  8. **Order of building.** TASK-M4-34's preset and TASK-M4-06's golden are M4, the filter M8. Reading held: the preset renders the window conflict 3 rules, D as a contour, until TASK-M8-120 lands, and the golden reads `in_region_d`. It inherits conflict 3's choice: on (a) a mask is built in M4 after all, on (b) and (c) none.
-  9. **Unequal masses.** The ruling: "state what the preset does there (RQ-728 links)". RQ-728 settles the labelling; no document says how a paper's D at a Li & Liao mass set is shown once the mask is gone. Reading held: a contour on the half the mirror leaves (design § 8.8). A gap.
-- **Waits:** TASK-M4-34's preset and TASK-M8-120 (conflicts 3 and 4, through RQ-714's open part); the correction list waits for the owner's next revision of the model.
-- **8 Nov 2026 (R-868):** the owner: "4. RQ-738: the model's wording follows R-474 (tip-as-sheet default, lean-each-axis the other map); I'll correct the model." Their corrected model of that day replaces `docs/design/principia_chart_space_model.md` byte for byte. That settles the correction list's item 1, as its option (a): § 0.2 now names R-474's two maps, Tip as sheet the default. **Still open:** the correction list's items 2 to 9, which the owner's copy doesn't change (its other changes are § 0.6, R-865, and a new § 0.7, R-866 and R-867), and all nine conflicts the filter order leaves. The entry stays open for them.
-- **8 Nov 2026 (R-878, R-871):** the owner: "RQ-738: the readings held stand for conflicts 1, 2 and 4 to 9; conflict 3 as in my RQ-714 answer. Items 2 to 9: send me the list and I'll correct the model." Applied: the nine conflicts are settled, 1, 2 and 4 to 9 by their readings held (conflict 1's amends R-544's words and chart_decoder_contract's "no one-hemisphere view", kept as a "Was"), and 3 by RQ-714's answer, its option (c), the full disc read literally (R-871). **Still open:** the correction list's items 2 to 9, which the owner corrects in the model from the list the orchestrator sent on 8 Nov, and two items this port adds to that list: **10.** the model's § 5, "Setting `δ ← 0` restores `φ(0) = a` exactly", and § 7's "Snap-back is exact", against the brief's Q2 (a), snap-back undoing the slice only (R-899); **11.** the model's § 1, "`Z = R^8`", Theorem 1's proof ("`Z = R^8` is convex") and § 4 ("`Z` is convex"), against RQ-750 (c), `z_β` periodic (R-898). Nothing waits on them: the corpus and the rulings stand meanwhile. The entry stays open for items 2 to 11.
-
-## RQ-782: The smallest `r_coll` the collision test actually honours is undefined: below the f32 spacing of the positions it decides "the bodies' f32 positions coincide", not `‖rᵢ − rⱼ‖ < r_coll` *(silence, a missing definition, R-72; a one-way door; integrator_contract Part 7, dd_integrator § 3.6, R-547; REQ-EVT-003, REQ-EVT-004; physics review 5845121432 of PR #474, F2; context: TASK-M3-09)*
-
-*Queued 10 Nov 2026 by TASK-M3-09's fix round (#474), from its physics review 5845121432, finding F2; each quote below
-re-read on the PR's head. Nothing is chosen, and #474 decides nothing here; the default `r_coll = 10⁻³` is
-unaffected.*
-
-*In plain English: the collision radius `r_coll` is a user slider that the docs say is valid all the way down to 0. But
-the collision test measures the distance between bodies from their positions rounded to single precision, whose
-spacing near the bodies' usual size (about 1) is about `6·10⁻⁸`. So for an `r_coll` below about `10⁻⁷` the test can
-only tell "the rounded positions are the same" from "they differ", and it may call a collision at a true separation
-larger than `r_coll`. The closest-approach distance `d_min` has the same limit. Nothing says where this floor is or
-what the instrument does below it.*
-
-- **File, section:**
-  - `docs/contracts/principia_integrator_contract.md` § "Part 7", "`r_coll` is user-exposed (sim-key), not a fixed
-    constant": "A slider from "regularise aggressively" (large) to "refuse to regularise" (→0), all valid, answering
-    different questions".
-  - The same section, "Coupling to `N_max`": "the usable minimum `r_coll` is bounded below by what the substepper
-    resolves before the cap". It names the substep cap's floor, not the positions' resolution.
-  - `docs/design/principia_dd_integrator.md` § "3.6 Detectors": "**Collision:** `min_{i<j} ‖rᵢ − rⱼ‖² < r_coll²` …
-    Uses the same squared min-separation the substepper buckets on and `d_min` displays (as its √) — one value, three
-    consumers."
-  - The same file, § "3.3 Substep law — and the determinism pin, made concrete", with
-    `docs/notes/principia_gpu_determinism_note.md` § "The discipline", rule 2 (R-547): the squared separation the
-    substepper buckets on is formed from each position cast to f32, so it is position-quantised.
-- **The silence:** the collision test must read the substepper's `d²` (§ 3.6), and that `d²` is formed from f32
-  positions, so its resolution is the f32 spacing at the bodies' coordinates: about `6·10⁻⁸` for `|x|` in `[0.5, 1)`,
-  `1.2·10⁻⁷` in `[1, 2)` (the `I = 1` gauge, Part 5). For an `r_coll` below that spacing, a pair collides exactly when
-  its f32 positions coincide on both axes, which can be at a true separation larger than `r_coll`, and `d_min`, the
-  latch's `√`, cannot resolve below it either. Part 7 calls every `r_coll` down to 0 valid and never states the
-  smallest one honoured. TASK-M3-09 (#474) builds the test as § 3.6 says, and for every `r_coll > 0` gives a threshold
-  of at least f32's least normal, so coincident f32 positions always collide (physics F1).
-- **The question:** what is the smallest `r_coll` the instrument honours as `‖rᵢ − rⱼ‖ < r_coll`, and what does it do
-  with a requested `r_coll` below it?
-- **Options seen:**
-  - (a) State the floor in Part 7 as a definition: below the f32 position spacing at the pair's coordinates,
-    `r_coll` means "collision at f32 coincidence", and `d_min` is resolved only to that spacing; the slider stays valid
-    to 0, and the floor is recorded with the run.
-  - (b) Dispatch refuses an `r_coll` below a stated floor (for example `2⁻²³`, the spacing at `|x| = 1`), or accepts it
-    and flags every output of the run as below the collision test's resolution.
-  - (c) Another, stated by the owner (for example a collision test on f64 separations, which § 3.6's "one value, three
-    consumers" and R-547 currently rule out).
-- **Recommended:** (a). It changes no result: it states what the test already computes, keeps Part 7's "all valid"
-  slider, and the default `10⁻³` lies four decades above the floor. The measurable alternative is (b), whose check is a
-  dispatch test at the stated floor and one below it; its cost is refusing or flagging a slider setting Part 7 calls
-  valid.
-- **Applied meanwhile:** nothing beyond TASK-M3-09's physics F1 fix: every `r_coll > 0` has a threshold of at least
-  `2⁻¹²⁶`, so f32-coincident bodies collide; dispatch accepts every finite, non-negative `r_coll` whose f32 square is
-  finite.
-- **Waits:** nothing built waits; TASK-M3-09 (#474) does not wait. A task that builds the `r_coll` slider or its
-  dispatch-side flag would take the answer.
-
-## RQ-756: Aarseth–Zare's equations of motion, its Levi-Civita inverse, its reference-body rule and its step control are not in the corpus; and the figure-eight gate and the Law 18 bound assume a schedule R-565 and Part 6 replaced *(silence and conflict; R-160, R-159, R-565, R-563, R-19, R-72; REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-021, REQ-INT-024; context: TASK-M3-07)*
-
-*Queued 10 Nov 2026 by TASK-M3-07's implementer, before any code; each quote re-read on `origin/main` 3338e336.
-Nothing is chosen here. In plain English: the task builds the Aarseth–Zare regularisation (a way of integrating
-through close encounters by changing coordinates and time), but the rules it would implement are written only in the
-imported prin-rs reference files, which are reference and not authority; and two of its tests were measured under an
-older way of stepping that later rulings replaced.*
-
-- **File, section:**
-  1. **The equations are not in the corpus.** `plan/tasks/M3/TASK-M3-07.md` § Notes: "AZ's reference code, including
-     the predictive step limit (`predictive_dtau`) and the landing clamp, is
-     `docs/reference/prin-rs/src/integrate/az/driver.rs` (reference, not authority, R-159); the equations are
-     integrator_contract Part 2b's (R-160, REQ-INT-084)." But `decisions.md` § R-160: "The Heggie, logH and TTL
-     equations, the step control, and the predictive step limit … are written into integrator_contract Part 2b", and
-     REQ-INT-084: "Part 2b must carry the Heggie, logH and TTL equations of motion" — Aarseth–Zare is not named.
-     `docs/contracts/principia_integrator_contract.md` § "Part 2b", § "The equations and the step control (R-160,
-     R-161)" gives none of: the two-pair Hamiltonian (`Γ = A·B·(H − E)` is quoted only as a withdrawn mechanism,
-     `docs/design/principia_dd_predictability_horizon.md` § 7.3, and Part 2a's "the `|u|^2 |p_lambda|^2` term"), its
-     derivatives, the mass factors `μ₁, μ₂`, the reference-body rule beyond Part 2b's table cell "two pairs, reference
-     body from the longest side" (which body, and the tie rule), or the conditioned Levi-Civita inverse (§ 7.3 gives
-     only the unstable `u0 = sqrt((|rho| + rho.x)/2)`, `u1 = rho.y/(2 u0)`, and "the conditioned branch", not its
-     form or which sign branch it takes). The task's Deliverables say "AZ transcribed from the reference
-     (`workbench/tb_az.py`, with the overshoot fix of `workbench/tb_az_overshoot_fix.py`)", which is not normative
-     (R-159; `CLAUDE.md` § Authority). The imported set holds all of it (`docs/reference/prin-rs/reference/tb_az.py`,
-     `tb_lc.py`, `src/integrate/az/driver.rs`), but nothing rules it into the contract, as R-160 did for Heggie and
-     logH.
-  2. **Which `dτ` rule the gate figures were measured under.** `docs/design/principia_dd_validation_orbits.md` § 0.1:
-     "`dtau = eta·dt_left/(A·B)` is fixed per sub-interval", and its table (4.232e-09 at `eta = 0.001`) is REQ-INT-049's
-     threshold. Integrator contract Part 6 (R-563), the entry-cap bullet: "the step-size rule in force sizes each step
-     as `η·Δ_sync / (dt/dτ)` from the current state and caps it at the interval's entry size", with Part 2b's predictive
-     limit after it — a different schedule from the one the threshold was measured on.
-  3. **"After one period" against the grid.** REQ-INT-049's verify: "figure-eight closure after one period"
-     (`T = 6.32591398`, § 0). Integrator contract Part 2a § "The sync grid is a fixed quantum of physical time
-     (R-565)": "`ADVANCE(state, t_now, t_target, params)` advances to the latest boundary at or before `t_target`; it
-     never stops between boundaries", boundaries `t = k·Δ_sync`. Unless `Δ_sync` divides the period, ADVANCE cannot
-     end on it; § 0.1's runs used `dt_left = T/n_sync`.
-  4. **The Law 18 bound has no formula.** REQ-INT-054's verify: "the substep count per sync interval never exceeds the
-     Law 18 bound computed on the fixed τ-schedule"; `docs/contracts/principia_canonical_spec.md` § 9 item 18 and
-     R-19 say only "the count bound is on a fixed `tau`-schedule". Under Part 6's per-step rule with the predictive
-     limit (`dτ ≤ f·d_min / (|v_rel|_max·A·B)`), a step can be cut without a lower limit, so the count per interval is
-     bounded only by the step budget (Part 3's `step_budget_rate`, `N_min`), whose values are calibrations not yet
-     proposed (REQ-INT-103, REQ-INT-108).
-- **The question:** (1) may TASK-M3-07 transcribe Aarseth–Zare's Hamiltonian and equations of motion, its conditioned
-  Levi-Civita inverse, its reference-body rule and its step control from the imported set into integrator contract
-  Part 2b, cited (Aarseth & Zare 1974; the prin-rs files), physics-reviewed and confirmed at the M3 gate, as R-160 did
-  for Heggie and logH? (2) is REQ-INT-049's gate run under Part 6's per-step rule with the threshold re-measured, or
-  under § 0.1's fixed `dτ`? (3) does the closure gate run with `dt_left = T/n` (a gate-only grid) or on the `Δ_sync`
-  grid with the period's remainder handled how? (4) what is the Law 18 bound per sync interval: the step budget's
-  share of the interval, an entry-cap count (`⌈1/η⌉` plus the cuts), or another?
-- **Options seen:** (1)(a) yes, a ruling like R-160 naming TASK-M3-07 and a requirement for it (or REQ-INT-084
-  widened); (1)(b) another task transcribes them first and TASK-M3-07 waits. (2)(a) Part 6's rule, the 4.232e-09
-  figure re-measured and proposed per R-71; (2)(b) § 0.1's fixed rule as a gate-only mode. (3)(a) the gate's own
-  `dt_left = T/n`; (3)(b) the `Δ_sync` grid, closure read at the last boundary at or before `T` against the reference
-  trajectory there. (4)(a) the step budget over one interval, `max(N_min, step_budget_rate·Δ_sync)`; (4)(b) an
-  occupant-declared count.
-- **Recommended:** (1)(a), since the imported set was brought in to be transcribed (R-159) and R-160 is the
-  precedent; (2)(a) with (3)(a), so the landing clamp is tested on its own and the threshold is the rule in force's; and
-  (4)(a), since R-604 already accounts the budget every step. Measurable alternative for (2): run the figure-eight
-  ladder under both rules and record both.
-- **Narrowed 10 Nov 2026:** transcription done in PR #471 per CLAUDE.md § Authority (applied per R-369, R-160 the
-  precedent; the owner, 10 Nov 2026, of the integrator tasks to take: "Fine: the physics itself. Steppers,
-  regularisation, step control, conservation and convergence tests, the CPU reference, and TASK-M2-82 (the trajectory
-  interface with its exact fixtures, the Lagrange solution and the figure-eight, R-918), which has no dependencies."):
-  integrator contract Part 2b § "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step
-  control (transcribed)", physics-reviewed in PR #471 and confirmed at the M3 gate. Question (1) is answered by it.
-  Question (3) is decided, applied per R-369 as test mechanics: the figure-eight closure gate runs on its own sync
-  interval `T/n` with `n = 32`, the reference's comparable figure (`driver.rs:399`, "measured over one period at
-  `n_sync = 32`"), so `ADVANCE` lands on the period under R-565's rule that it stops only on a boundary, and the gate
-  reports its re-registration count with its result (PIT-4); the gate's grid is a fixture's, and the march's `Δ_sync`
-  is untouched. TASK-M3-07 is split: the regularisation axis stays TASK-M3-07, and Aarseth–Zare is TASK-M3-68. Open:
-  - (2) REQ-INT-049's threshold, 4.232e-09 at `η = 0.001`, was measured under § 0.1's fixed `dτ`, not Part 6's per-step
-    rule (R-563). Recommended: TASK-M3-68 re-measures it under the rule in force, at the gate's `n = 32`, and proposes
-    it as a calibration (R-71); the value is the owner's at the M3 gate. Measurable alternative: run the ladder under
-    both rules and record both.
-  - (4) REQ-INT-054's bound per sync interval has no formula. Recommended: the step budget over one interval,
-    `max(N_min, step_budget_rate·Δ_sync)`, a recommendation only, its values REQ-INT-103's and REQ-INT-108's.
-  - (5) Found in the transcription, where the reference and the corpus disagree; nothing is chosen:
-    1. **The landing secant.** `docs/design/principia_dd_validation_orbits.md` § 0.1: "Not yet RK4's fourth — a residual
-       lower-order term remains, most plausibly the LC re-registration at sync boundaries". `driver.rs:419-421`:
-       "`clamp_final_step` sizes the landing step from `dt/dtau` read *before* the step. That is a first-order
-       predictor, so its landing residual is `O(h^2)` and it caps the observable convergence order at two", and its
-       default `land_iterate: true`, `land_max_iters: 4` (`driver.rs:476-477`) retakes the landing step by a secant.
-       The corpus names the clamp only (REQ-INT-049; Part 6, "the landing clamp"). Is the secant part of Aarseth–Zare's
-       step control here? It moves REQ-INT-049's measurement.
-    2. **The gate's figures.** § 0.1's table: "0.001 | 2.818e-03 | **4.232e-09**". `driver.rs:398-400`: "closure error
-       `2.976e-3` against `3.595e-9` at `eta = 1e-3`, and the convergence order across `eta in [0.02, 0.001]` **1.13
-       against 3.06**", at `n_sync = 32`.
-    3. **The unstable inverse at 179.9°.** `docs/design/principia_dd_predictability_horizon.md` § 7.3 and REQ-INT-044's
-       verify: "reference (unstable) | 3.5e-9 | **2.2e-2**" at 179.9°. `tb_lc.py:67-69`: "angle 135 170 179 179.9
-       179.99 / f64 2.2e-16 3.9e-15 1.9e-13 4.0e-12 3.5e-09 / f32 1.8e-07 2.3e-06 9.8e-05 2.2e-02 1.7e-04", so f64's
-       3.5e-9 is at 179.99° and 179.9°'s is 4.0e-12.
-    4. **What couples Γ.** Integrator contract Part 2a: "`Gamma` is **not separable** (the `|u|^2 |p_lambda|^2` term
-       couples position and momentum)". That term is the single-pair Levi-Civita Γ's (`tb_lc.py:19`, "Gamma =
-       |p_u|^2/(8 mu_rho) + |u|^2 [ |p_lam|^2/(2 mu_lam) + V_pert - E ] - G m_i m_j"); Aarseth–Zare's two-pair Γ has no
-       `p_λ`, and couples through `B|p1|^2/(8 mu1) + A|p2|^2/(8 mu2) + (L1 p1).(L2 p2)/(4 m_a)` (`tb_az.py:29`). The
-       conclusion, not separable, holds either way.
-    5. **"From the longest side".** Part 2b's table: "two pairs, reference body from the longest side". `tb_az.py:146`:
-       "Reference body = the one NOT in the longest side". The transcription states the code's rule.
-    6. **`v_rel` in the predictive limit.** R-160: "`dτ ≤ f·d_min / (|v_rel|_max·A·B)`". `driver.rs:608`:
-       "`phys_from_state` returns `(R1, R2, V1, V2)`", but the AZ system it calls (`src/integrate/az/system.rs`) is not
-       in the imported set, and the NumPy `phys_from_state` it was transcribed from returns the conjugate momenta
-       (`tb_az.py:80-83`, "P1 = _Lmat_apply(u1, p1)/(2*A[:, None])"). Velocities or momenta?
-    7. **The `1e-300` guards.** `tb_lc.py:98`, `102-103` and `tb_az.py:78-79`, `224-225` test and floor at the literal
-       `1e-300`, which underflows at f32; integrator contract Part 2c rule 1: "NO PRECISION-DEPENDENT CONSTANT IN A
-       CONTROL-FLOW DECISION", and Part 6 floors `A` and `B` at `TINY`, as `driver.rs:716-717` does. The Rust inverse map
-       is not imported, so what it tests against is unknown.
-    8. **The tie-break's source.** The Rust selector (`src/integrate/az/reference_body.rs`) is not imported; the
-       tie-break transcribed is `tb_az.py:148`'s `np.argmax`, first maximum in `(0,1), (0,2), (1,2)` order.
-    9. **Where the landing secant stops.** `tb_az.py:303-306` re-tests the landing on every retake: "need =
-       (np.isfinite(s).all(axis=1) & (~done) / & (s[:, 8] >= dt_left - tol) / & np.isfinite(got) & (got > 0.0) / &
-       (np.abs(got - want) > tol))", so a retake that lands short ends the secant. `driver.rs:1086` does not: "if
-       !got.is_finite() || got <= T::zero() || (got - want).abs() <= tol_abs { break; }", retaking up to
-       `land_max_iters` times. Which stop is the rule? It moves the landing step and REQ-INT-049's measurement.
-- **Applied meanwhile:** the transcription and the split above (10 Nov 2026, applied per R-369). TASK-M3-07 builds the
-  axis, which needs none of it. *Was:* "none. TASK-M3-07 waits; nothing is built."
-- **Waits:** TASK-M3-68 (REQ-INT-049 on (2) and (5) 1-2 and 9, REQ-INT-054 on (4), REQ-INT-044 on (5) 3 and 7,
-  REQ-INT-024's profile on (5) 4, the predictive limit on (5) 6). *Was:* "TASK-M3-07 (REQ-INT-044, REQ-INT-049, REQ-INT-054, and the
-  Aarseth–Zare arms of REQ-INT-021 and REQ-INT-024)."
-- **10 Nov 2026 (R-927):** the owner, in their reply to the report of 10 Nov 2026: "RQ-756: (2)(a), (4)(a), and the
-  reference code's choice on each point of (5)."; and, in session the same day, that "the reference code" is the Rust
-  driver, the gate threshold re-measured under that same code (both quoted in full in R-927). Settled: (2)(a),
-  REQ-INT-049's gate under Part 6's per-step rule, its threshold re-measured by TASK-M3-68 under that code and proposed
-  as a calibration (REQ-INT-114, R-71); (5) 1, 2 and 9 by `driver.rs` (the landing secant is part of the step control,
-  its figures the reference's, its stop the driver's); (5) 3, 4 and 5 by the imported reference, as transcribed (4.0e-12
-  at f64 for 179.9°; the two-pair `Γ`'s coupling; the reference body the one not in the longest side, which is the
-  driver's own "the reference is `THIRD[argmax d]`", `driver.rs:180`). **Still open, so the entry stays:**
-  - **(4), flagged, not applied.** The owner chose (4)(a), "the step budget over one interval, `max(N_min,
-    step_budget_rate·Δ_sync)`", as the bound on the substep count per sync interval. The step control in force does not
-    guarantee that bound: R-604, the owner's words, "Check the running total every step against max(N_min,
-    rate·t_elapsed)", and integrator contract Part 3, the `step_budget_rate` row, "`t_elapsed` its physical time since
-    `t = 0`", make the budget cumulative. A copy that is quiet for many intervals and then meets a close encounter may
-    rightly take, in that one interval, all its running total has left, far more than `step_budget_rate·Δ_sync`; the
-    formula holds only in the first interval. So a test of (4)(a) as worded fails on correct runs, or passes only with
-    a new cap that would end more copies undetermined at encounters (physics review 5851141196 of PR #478, F1).
-    **For the owner, which is meant:** (4)(a-1) a new cap per sync interval, `max(N_min, step_budget_rate·Δ_sync)`,
-    added beside R-604's cumulative budget, so a copy that spends more than that inside one interval ends undetermined
-    (new behaviour, amending R-604 and Part 3); or (4)(a-2) R-604's cumulative budget, read at each boundary: the
-    running total at boundary `t_k` is at most `max(N_min, step_budget_rate·t_k)`, with no cap per interval (no new
-    behaviour; REQ-INT-054's test checks the budget already in force). Recommended: (4)(a-2), since it adds nothing to
-    what R-604 rules and the entry's own reason for (4)(a) was that "R-604 already accounts the budget every step".
-    Measurable alternative: TASK-M3-68's fuzz run reports its largest count in one interval beside both bounds.
-    Applied meanwhile: what stood before; REQ-INT-054's verify is unchanged and TASK-M3-68's `tau_schedule_bound` arm
-    waits.
-  - **(5) 6, 7 and 8,** each asking for the choice of a Rust file that is not in the imported set, so the reference
-    code's choice can't be read, and nothing is guessed. (5) 6: whether the predictive limit's `V₁, V₂` are velocities
-    or conjugate momenta (`src/integrate/az/system.rs`). (5) 7: what the Rust inverse map tests against in place of the
-    literal `1e-300` (the Levi-Civita map; `A` and `B` floored at `TINY` is settled). (5) 8, narrowed: `driver.rs:1671`
-    already says "Exact argmax, first maximum — `choose_reference`'s own convention", which is the transcribed
-    tie-break, so only the order in which `longest_index` takes the three pairs is unread (`reference_body.rs`).
-    **For the owner:** import those three files, or rule the three points: (5) 6, velocities or conjugate momenta;
-    (5) 7, the value the inverse map tests against; (5) 8, whether the pairs are taken in the order `(0,1), (0,2),
-    (1,2)`, as transcribed. Meanwhile the transcription's marks on them stand, and TASK-M3-68's arms that touch them
-    wait (the predictive limit on (5) 6, REQ-INT-044's guard on (5) 7); (5) 8 holds nothing, the transcribed order
-    standing meanwhile.
+- **Deferred:** deferred to M4 by owner 11 Nov 2026 (R-959, the owner: "RQ-687: defer:M4").
 
 ## RQ-779: The default extension kind of each edge, for the owner to confirm by eye *(the owner's call by looking; a one-way door, defaults; the owner's direction of 10 Nov; R-407, R-508, R-898; context: N14)*
 
@@ -620,6 +376,7 @@ has seen and not objected to (to be confirmed as defaults)"; it is not decided.*
   saturate, not the table's proposed "clamp in the chart's own coordinates". **Still open, so the entry stays:** every
   other row, which the owner confirms or changes by eye when the kernel's charts render (N14's screenshots, row by row).
   Nothing waits on it: N14 builds each row to rule 2 meanwhile.
+- **Deferred:** deferred to M2 by owner 11 Nov 2026 (R-963, the owner: "RQ-779: defer:M2").
 
 ## RQ-783: A record made before R-926's f64 decode route lands recreates bitwise only through today's f32 decode: R-921 and REQ-TOOL-172 require bitwise, and R-926 item 5 replaces that decode *(conflict; a one-way door, it changes what the instrument claims about reproducing records; R-921, R-926 item 5, R-521, R-919, R-483; REQ-TOOL-172; context: TASK-M7-45, TASK-M2-57, TASK-M2-61, TASK-M4-05, the plan's N1 and N2)*
 
@@ -701,6 +458,7 @@ the old way is kept for it.*
   lists the item in § A (REQ-TOOL-172 and TASK-M7-45, "waits on RQ-783") and § C, and recommends (a).
 - **Waits:** TASK-M7-45's retired-link arm; N2's record contract (whether a record carries its decode route);
   TASK-M4-05's switch to records.
+- **Deferred:** deferred to M2 by owner 11 Nov 2026 (R-956, the owner: "RQ-783: defer:M2").
 
 ## RQ-786: The domain an untransformed slot input inherits from a field whose manifest range has exactly one finite end *(silence; a one-way door, a default the legend samples over; R-815, R-53; REQ-GEN-019; gui_state_contract § 3; render_gui_spec § 10.1; context: TASK-M7-13, TASK-M8-22, TASK-M8-93)*
 
@@ -769,135 +527,6 @@ so the choice changes what the legend shows.*
   the Stain canvas on the real engine (TASK-M8-93), both of which need REQ-GEN-019.
 - **Waits:** REQ-GEN-019's arm for a field with one finite end (`rq: RQ-786`); TASK-M8-22's legend over such a wire;
   TASK-M8-93 where it wires one. TASK-M7-13's other arms do not wait.
-## RQ-788: The built-in margin node's colour map, range and polarity are not in the corpus *(silence; a one-way door, a shipped look; R-813, R-467; REQ-GUI-024; context: TASK-M7-12, PR #483, gui review 5853011099 F1)*
-
-*Raised by the gui review of PR #483 (finding F1) and filed by TASK-M7-12's implementer. For the human: yes; the
-margin is a built-in occupant registered from `frag/colour/`, so what it draws is a look the product ships
-(`CLAUDE.md` § "When to ask the human": "scope and taste: new features, UI look"). The node, its two `// @input`s and
-its two `field` in-ports are settled (R-813; REQ-GUI-024) and are not in question; nor is what it draws for a sample
-with no value (R-467, R-470, R-511: the canvas background or `#141418`). Only the map of a valid margin is.*
-
-- **File, section:**
-  - `docs/gui/principia_render_gui_spec.md` § "5. Sources & multi-source": "**Multi-source mappings expose multiple
-    input ports** on the consuming node (e.g. a `colour` or `post` node declaring two `field` ins for a
-    `top1 − top2` margin, or a `gradient-magnitude` node). This is distinct from multi-wire-per-port (which is
-    disallowed, §6). A `source` keeps no input (§3.1): the margin is a `colour` (or `post`) occupant declaring two
-    `// @input`s (R-813, ruling RQ-675 (a); *was:* "e.g. a derived source taking two `field` ins for a `top1 − top2`
-    margin")."
-  - `decisions.md` § R-813: "The margin is a `colour` (or `post`) occupant declaring two `// @input`s, as § 3.1 and
-    § 15 item 6 allow".
-  - `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp", which gives the scalar and no map:
-    "`topk_margin(sites)` = `d_1 − d_2` (drives soft-Voronoi/basin edges)"; and, in the same section, "**Default ramps
-    by field role.** Signed fields (energy, L_z, drifts) default to diverging-through-neutral so the zero-crossing is a
-    legible contour; positive fields to sequential; angles to cyclic. **Magnitude / diagnostic fields default to
-    *greyscale*, not a sequential LUT** — because a greyscale magnitude field *is* a lightness, so the same field
-    doubles as a natural **brightness occupant** (§4.1). Polarity is **per-field**, set so the *salient* end is
-    bright, and is not uniform".
-  - `docs/design/principia_colour_composition.md` § "7. Preset table & golden-image obligation", the one place the
-    scalar is used: "| Dot lattice | `SiteBlend{ fib(N), nearest, swatches }` masked by `bands(topk_margin…)`, `bgCol`
-    base |".
-  - `docs/contracts/principia_render_contract.md` does not mention a margin.
-- **The silence:** no passage says how the margin `top1 − top2` becomes a colour. Read as § 1.2's top-k `d_1 − d_2`
-  it is a non-negative magnitude; as built it is the difference of any two fields the user wires, in either order, so
-  it is signed. § 1.2's default differs between the two readings (greyscale or sequential for the first, diverging for
-  the second), and neither reading gives a range or a polarity.
-- **The question:** which map, over which range and with which polarity, does the built-in margin draw a valid
-  margin through?
-- **Options seen:**
-  - (a) The greyscale ramp of the difference clamped to [0, 1], as built (`ramp_grey(top1 − top2)`): OKLab L equal to
-    the margin. Range [0, 1]: every margin below 0 draws black and every margin above 1 white, so a swapped pair of
-    wires is all black. Polarity: white = `top1` far above `top2`. Needs no further value. Fits § 1.2's "Magnitude /
-    diagnostic fields default to *greyscale*" under the top-k reading, and doubles as a lightness.
-  - (b) Diverging through a neutral, for a signed difference, § 1.2's default for signed fields. Range symmetric,
-    [−m, +m], zero at the neutral, so the zero-crossing (the two fields equal) is a legible contour and swapping the
-    wires mirrors the picture. Polarity: which end is `top1 > top2`. Needs three further answers: the three colours,
-    the half-range m (a fixed value, a node param or a per-view statistic), and the polarity; each not in the corpus
-    for this node (R-71 where a value).
-  - (c) Sequential, for the non-negative top-k reading `d_1 − d_2`. Range [0, max]; a negative margin has no place on
-    it and would draw the invalid colour `#141418` or clamp to the low end, to be said. Polarity: which end is the
-    small margin (the basin edge, the salient end by § 1.2's rule). Needs the ramp's name and `max`.
-  - (d) A band mask, as § 7's one use has it ("masked by `bands(topk_margin…)`"): a line colour where the margin is
-    under a band width, a base colour elsewhere. Range is the band width; polarity is fixed (small margin = line).
-    Needs the width and the two colours.
-  - (e) Other: the owner's own map; or no shipped map at all, the margin left a custom occupant the user writes, with
-    no built-in registered (TASK-M7-12's deliverable "A margin occupant" would then be met by a test's occupant, to be
-    said).
-- **Recommended:** (a), kept, with its range and polarity as stated above confirmed. Under the node's own name
-  (`top1 − top2`, § 1.2's `d_1 − d_2`) the margin is a non-negative magnitude, for which § 1.2 gives greyscale, and it
-  needs no further value. If the owner reads the built-in as a general signed difference, § 1.2 gives (b), and its
-  three further answers are needed with it.
-- **Measurement:** a look is not settled by a number; the measurable alternative is the share of valid samples whose
-  margin the clamp of (a) hides, on the golden scenes, for the pairs of fields a preset would wire. Criterion, written
-  before any run: if no valid sample's margin falls outside [0, 1], (a)'s clamp hides nothing on those inputs and the
-  choice is of look alone; if any does, (a) as built does not show the field whole and its range is part of the
-  question. The four maps drawn side by side on one golden scene can go with the report.
-- **Applied meanwhile:** the greyscale ramp of the difference clamped to [0, 1], as built, provisional.
-  `crates/render/shaders/wgsl/frag/colour/margin.wgsl` marks the map provisional pending this entry, and one test,
-  `stain_fanout_margin_provisional_map_is_the_grey_ramp` (`crates/render/tests/stain_graph.rs`), holds it, named as
-  provisional; the settled parts are tested apart from it.
-- **Waits:** the margin's final map, and any preset or golden image that draws the built-in margin. Nothing else in
-  TASK-M7-12 waits: REQ-GUI-024's verify ("a margin node has two field ins") does not carry the map, so no
-  requirement carries an `rq:` for this entry.
-## RQ-784: Whether the owner's "No blank areas" reaches a latent pixel that energy normalisation cannot reach, which R-598 draws as not a system *(a reading of the owner's words; a one-way door, it changes what a chart draws; R-932, R-598, R-937, R-570; REQ-CHART-087, REQ-GUI-357; physics review 5851141196 of PR #478, F3; context: the chart addendum's N12 and N14, TASK-M8-57)*
-
-*Queued 10 Nov 2026 by the fix round on the rulings PR #478, from its physics review 5851141196, finding F3; each quote
-below re-read on the PR's branch. Nothing is chosen here.*
-
-*In plain English: the owner's new rule says a chart has no blank areas. One blank area was put there by an earlier
-ruling of the owner's own. With energy normalisation switched on (every pixel's system rescaled to one chosen energy;
-it is off by default), some pixels of a latent chart have no system at that energy, because their shape needs more
-energy than the target even to stand still, and the earlier ruling draws them as "not a system". The new rule doesn't
-name this case, and its words can be read either way. On the energy charts the same physics, a pixel below the least
-energy its shape allows, was just given a drawn stand-in by the owner. Nobody but the owner may pick the reading.*
-
-- **File, section:**
-  - `decisions.md` § R-932 (chart edges: no blank areas), the owner's words: "2. Chart edges. No blank areas. Past every
-    true edge the chart saturates. Where there is a second sheet it unfolds onto it. Where the coordinate repeats it
-    wraps. Smearing and saturating are the same idea to me: which mechanism is used on a given edge is physics review's
-    call (saturate wherever the edge system itself is not a valid system, such as a zero mass)."
-  - `decisions.md` § R-598 (energy normalisation's unreachable pixels), the owner's words: "RQ-552: (a). The rule holds
-    with normalisation off. With it on, a pixel whose target energy cannot be reached has no system at that energy:
-    draw it as not a system and give the reason in the readout. Not (c): drawing it unnormalised would put a different
-    energy on the same chart."
-  - `docs/contracts/principia_chart_decoder_contract.md` Part 4, "Latent and flat charts: no limit on pan or
-    zoom-out": "with η_E on a pixel whose target energy cannot be reached has no system at that energy; each draws as
-    not a system".
-  - `docs/design/principia_dd_decoder.md` § 2's table: "`ENERGY_INFEASIBLE` | `η_E`: `E* < U` (§3.7)" and
-    "`ENERGY_UNSCALABLE` | `η_E`: the rest start at `E* > U`, or the collision pole `U = −∞` (§3.7)".
-  - `decisions.md` § R-937 (the energy charts' floor), its heading: "below the floor at a non-zero spin, where the
-    lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin", a drawn clamp where the
-    same condition, a pixel's energy below what its shape allows, holds on the linear `(L_z, E)` chart.
-  - `decisions.md` § R-932, *What it decides*: "a validity failure stays "not a system", drawn blank (R-470)", the
-    reading this PR applied to the edges, which is silent on R-598.
-- **The silence:** rule 2 speaks of edges ("Past every true edge"). R-598's pixels are not past an edge of the chart's
-  coordinates: they lie inside the latent plane, wherever `E* < U` at the pixel's own shape, or the momenta cannot be
-  scaled to the target. They are a blank area all the same, and "No blank areas" is unqualified. R-932 amends the
-  rulings that left an edge blank and does not name R-598.
-- **The question:** with energy normalisation on, does a latent pixel whose target energy cannot be reached still draw
-  as not a system (R-598), or does it take a drawn extension under rule 2?
-- **Options seen:**
-  - (a) R-598 stands. Such a pixel has no system at the chart's energy; it is a validity failure, not an edge, and
-    stays "not a system" with the reason in the readout. "No blank areas" is read as about edges and their
-    extensions. Changes nothing built or planned.
-  - (b) Rule 2 reaches it. The pixel draws a declared extension, the mechanism the physics reviewer's call under
-    R-932: for `E* < U`, a clamp to the pixel's own least energy (the rest start at `E = U`), disclosed as R-937's C6
-    discloses the energy charts' clamp (the readout shows the drawn system's own energy and a "clamped" flag, and the
-    pixel stays out of the area statistics); for the rest start at `E* > U` and the collision pole, a kind the
-    physics reviewer declares. R-598 is amended in part: its own reason against option (c) of RQ-552, "a different
-    energy on the same chart", then holds only as far as the disclosure answers it.
-  - (c) Another, stated by the owner.
-- **Recommended:** (a). R-598 is the owner's own ruling on exactly these pixels, and its stated reason, that the chart
-  must not show a different energy from the one it names, is one any drawn stand-in would cut against; the pixels are
-  not at an edge, which is what rule 2's mechanisms are about; and normalisation is off by default, so no chart is
-  blank anywhere unless the user turns it on. Against it: the owner has just chosen a drawn clamp for the same physics
-  on the energy charts (R-937). The measurable alternative: on each gallery latent chart at its home view, with
-  normalisation on at a bound target energy, the share of pixels R-598 blanks, and one screenshot each of (a) and of
-  (b)'s clamp, for the owner to judge by eye.
-- **Applied meanwhile:** R-598 as it stands: such a pixel draws as not a system, with the reason in the readout.
-  R-932 names this entry and amends nothing in R-598.
-- **Waits:** nothing built waits. The chart addendum's N12 (the kinds in the contracts) and N14 (the kinds in the
-  evaluator) and TASK-M8-57 build R-598's arm as it stands until this is answered.
-
 ## RQ-785: At what picture size P2's and P4's pixels are counted: the owner's "more than 8 pixels apart" names none *(silence, a missing definition, R-72; a one-way door, what a reported measurement means; R-951, R-947, R-583, R-649; context: the re-plan addition's measurement task, TASK-M8-49, TASK-M8-58)*
 
 *Queued 11 Nov 2026 with the plan PR for the chart re-plan's addition, as the orchestrator's answer to the first
