@@ -296,6 +296,10 @@ mutant = "crates/kernel/src/driver/advance.rs:130:32: replace > with >= in <impl
 justification = "at t_target == t_now both arms give a span of 0 (t_target - t_now is 0), so > and >= agree on every input"
 
 [[equivalent]]
+mutant = "crates/kernel/src/regularisation/dt_max.rs:82:31: replace > with >= in DtMax<R>::skipping"
+justification = "at more == u32::MAX - skipped the saturating arm gives u32::MAX and the sum arm gives skipped + more == u32::MAX, so > and >= agree on every input"
+
+[[equivalent]]
 mutant = "crates/kernel/src/driver/cadence.rs:110:9: replace <impl Cadence<R> for WrapperCadence<R>>::done -> bool with false"
 justification = "done is only ever set from detect, which returns the constant false until TASK-M3-09 fills it (collision), so WrapperCadence::done is always false; TASK-M3-09 removes this entry with the hook"
 
