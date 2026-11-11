@@ -29,8 +29,7 @@ mod ports;
 #[allow(dead_code)]
 #[path = "src/print/registry.rs"]
 mod registry;
-// The fragment registry's scan, compiled here as in the library: `std` only.
-#[allow(dead_code)]
+// The fragment registry's scan, compiled here as in the library: `std` only, and every item of it used.
 #[path = "src/registry/scan.rs"]
 mod scan;
 
