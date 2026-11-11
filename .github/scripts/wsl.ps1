@@ -181,13 +181,13 @@ switch ($verb) {
         $copied = Get-Sha256 $rootfs
         if ($copied -ne $built) { Fail "rootfs.tar.gz is $copied here, $built as built: the copy is not the image" }
         $hash = Get-Sha256 $manifest
-        if ($hash -ne $pinned) { Fail "the image's manifest is $hash, the pin is $pinned: refusing it" }
+        if ($hash -ne $pinned) { Fail "the image's manifest is $hash, the pin is ${pinned}: refusing it" }
         "the image's manifest matches the pin: $hash"
         if ((Get-Distros) -contains $Distro) {
             if ($env:WSL_REPLACE -ne 'true') { Fail "$Distro is registered already; dispatch with replace: true to replace it" }
             "replacing ${Distro}: unregistering it"
             & wsl.exe --unregister $Distro
-            if ($LASTEXITCODE -ne 0) { Fail "wsl --unregister $Distro: exit $LASTEXITCODE" }
+            if ($LASTEXITCODE -ne 0) { Fail "wsl --unregister ${Distro}: exit $LASTEXITCODE" }
         }
         New-Item -ItemType Directory -Force -Path $Disk | Out-Null
         "wsl --import $Distro $Disk (WSL 2), as $([Environment]::UserName)"
@@ -198,7 +198,7 @@ switch ($verb) {
         Stop-Distro
         if ($liveHash -ne $pinned) {
             & wsl.exe --unregister $Distro | Out-Null
-            Fail "inside the imported distro the manifest derives to $liveHash, not the pinned $pinned: unregistered it"
+            Fail "inside the imported distro the manifest derives to $liveHash, not the pinned ${pinned}: unregistered it"
         }
         "registered ${Distro}: its manifest, derived inside it, is the pinned $pinned"
         exit 0

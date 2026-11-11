@@ -854,6 +854,171 @@ mod unchecked_copy {
     );
 }
 
+// ---- The scripts parse under Windows PowerShell ---------------------------------------------------------------------
+
+/// Where the repository's PowerShell scripts live.
+const PS_DIRS: [&str; 2] = [".github/scripts", "scripts"];
+/// The namespaces a `$name:` may really name: PowerShell's scopes and the drives the scripts read variables from.
+const PS_SCOPES: [&str; 8] = [
+    "env", "script", "global", "using", "local", "private", "function", "variable",
+];
+
+/// Every `.ps1` under `PS_DIRS`, at any depth, by its path from the root, with its text.
+fn ps_scripts() -> Vec<(String, String)> {
+    fn walk(root: &Path, rel: &Path, found: &mut Vec<(String, String)>) {
+        let entries =
+            std::fs::read_dir(root.join(rel)).unwrap_or_else(|e| panic!("{}: {e}", rel.display()));
+        for entry in entries {
+            let entry = entry.expect("a directory entry");
+            let path = rel.join(entry.file_name());
+            if entry.file_type().expect("a file type").is_dir() {
+                walk(root, &path, found);
+            } else if path
+                .extension()
+                .is_some_and(|x| x.eq_ignore_ascii_case("ps1"))
+            {
+                let name = path.to_string_lossy().replace('\\', "/");
+                found.push((name.clone(), read(&name)));
+            }
+        }
+    }
+    let mut found = Vec::new();
+    for dir in PS_DIRS {
+        walk(&root(), Path::new(dir), &mut found);
+    }
+    found.sort();
+    found
+}
+
+/// Each `$name:` in `text` whose name is none of `PS_SCOPES`, with its line number. PowerShell reads `$name:` as a
+/// variable in the drive or scope `name`, in a double-quoted string as much as in code, and what follows the colon must
+/// then be a variable's name: "$pinned: refusing it" doesn't parse (`InvalidVariableReferenceWithDrive`), and
+/// "${pinned}: refusing it" does. This reads the text, not PowerShell's tokens, so it is stricter than the parser: it
+/// names one in a comment or a single-quoted string too, where `${name}:` reads the same to a person.
+fn drive_references(text: &str) -> Vec<(usize, String)> {
+    let mut found = Vec::new();
+    for (n, line) in text.lines().enumerate() {
+        for (at, _) in line.match_indices('$') {
+            let rest = &line[at + 1..];
+            let len = rest
+                .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+                .unwrap_or(rest.len());
+            let name = &rest[..len];
+            let scoped = PS_SCOPES.iter().any(|s| s.eq_ignore_ascii_case(name));
+            if !name.is_empty() && rest[len..].starts_with(':') && !scoped {
+                found.push((n + 1, format!("${name}:")));
+            }
+        }
+    }
+    found
+}
+
+/// No script holds a `$name:` that isn't a scope's or a drive's; a script that doesn't parse never runs at all.
+fn check_ps_references(scripts: &[(String, String)]) {
+    assert!(
+        scripts.iter().any(|(name, _)| name == PS),
+        "the scan found no {PS}: it reads nothing"
+    );
+    for (name, text) in scripts {
+        let found = drive_references(text);
+        assert!(
+            found.is_empty(),
+            "{name} doesn't parse under Windows PowerShell: `$name:` reads as a drive-qualified variable; write \
+             `${{name}}:`: {found:?}"
+        );
+    }
+}
+
+/// `scripts`, with `from` replaced by `to` in wsl.ps1.
+#[cfg(feature = "controls")]
+fn ps_scripts_edited(from: &str, to: &str) -> Vec<(String, String)> {
+    let mut scripts = ps_scripts();
+    for (name, text) in &mut scripts {
+        if name == PS {
+            *text = edited(text, from, to);
+        }
+    }
+    scripts
+}
+
+#[test]
+fn ps_scripts_hold_no_drive_qualified_reference() {
+    check_ps_references(&ps_scripts());
+}
+
+negative_control!(
+    ps_scripts_hold_no_drive_qualified_reference,
+    "the register script's first message, as run 42944409475 refused it",
+    expected = "doesn't parse under Windows PowerShell",
+    check_ps_references(&ps_scripts_edited(
+        "the pin is ${pinned}: refusing it",
+        "the pin is $pinned: refusing it"
+    ))
+);
+
+mod unregister_message {
+    use super::*;
+    negative_control!(
+        ps_scripts_hold_no_drive_qualified_reference,
+        "the unregister message, as that run refused it",
+        expected = "doesn't parse under Windows PowerShell",
+        check_ps_references(&ps_scripts_edited(
+            "wsl --unregister ${Distro}: exit",
+            "wsl --unregister $Distro: exit"
+        ))
+    );
+}
+
+mod unread {
+    use super::*;
+    negative_control!(
+        ps_scripts_hold_no_drive_qualified_reference,
+        "a scan that reads no script",
+        expected = "it reads nothing",
+        check_ps_references(&[])
+    );
+}
+
+/// The scan's edges: what it names and what it leaves.
+fn check_drive_references(text: &str, expected: &[(usize, &str)]) {
+    let found = drive_references(text);
+    let found: Vec<(usize, &str)> = found.iter().map(|(n, r)| (*n, r.as_str())).collect();
+    assert_eq!(
+        found, expected,
+        "the scan of {text:?} names the wrong references"
+    );
+}
+
+/// A scope's or a drive's reference, in any case; a braced name; a colon apart from the name; a subexpression's; a
+/// bare `$`; a name with no colon.
+const PS_SOUND: &str =
+    "\"$env:A $script:b $GLOBAL:c $using:d $local:e $private:f $function:g $variable:h\"\n\
+                        \"${pinned}: $pinned : $($r.Code): $ : $: $pinned\"\n";
+
+#[test]
+fn ps_scan_names_only_what_does_not_parse() {
+    check_drive_references(PS_SOUND, &[]);
+    check_drive_references(
+        "\"$a: b\"\n\n\"x $_: $envx: $en: ${ok}: $B2:$c:\"\n$last:",
+        &[
+            (1, "$a:"),
+            (3, "$_:"),
+            (3, "$envx:"),
+            (3, "$en:"),
+            (3, "$B2:"),
+            (3, "$c:"),
+            (4, "$last:"),
+        ],
+    );
+}
+
+negative_control!(
+    ps_scan_names_only_what_does_not_parse,
+    "a scan that takes every name for a scope",
+    expected = "names the wrong references",
+    check_drive_references("\"the pin is $pinned: refusing it\"", &[])
+);
+
 // ---- Proof 3, the host over WSL's virtual switch -------------------------------------------------------------------
 
 /// Proof 3 tries the host over WSL's virtual switch as well as over the LAN: the distro's default gateway (in NAT mode,
