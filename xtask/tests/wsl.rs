@@ -854,6 +854,276 @@ mod unchecked_copy {
     );
 }
 
+// ---- The scripts parse under Windows PowerShell ---------------------------------------------------------------------
+
+/// Where the repository's PowerShell scripts live.
+const PS_DIRS: [&str; 2] = [".github/scripts", "scripts"];
+/// The namespaces a `$name:` may really name: PowerShell's scopes and the drives the scripts read variables from.
+const PS_SCOPES: [&str; 8] = [
+    "env", "script", "global", "using", "local", "private", "function", "variable",
+];
+
+/// Every `.ps1` under `PS_DIRS`, at any depth, by its path from the root, with its text.
+fn ps_scripts() -> Vec<(String, String)> {
+    fn walk(root: &Path, rel: &Path, found: &mut Vec<(String, String)>) {
+        let entries =
+            std::fs::read_dir(root.join(rel)).unwrap_or_else(|e| panic!("{}: {e}", rel.display()));
+        for entry in entries {
+            let entry = entry.expect("a directory entry");
+            let path = rel.join(entry.file_name());
+            if entry.file_type().expect("a file type").is_dir() {
+                walk(root, &path, found);
+            } else if path
+                .extension()
+                .is_some_and(|x| x.eq_ignore_ascii_case("ps1"))
+            {
+                let name = path.to_string_lossy().replace('\\', "/");
+                found.push((name.clone(), read(&name)));
+            }
+        }
+    }
+    let mut found = Vec::new();
+    for dir in PS_DIRS {
+        walk(&root(), Path::new(dir), &mut found);
+    }
+    found.sort();
+    found
+}
+
+/// A character of a PowerShell variable's name: a letter or a digit, ASCII or not, `_`, or `?`.
+fn ps_name_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || c == '?'
+}
+
+/// Each `$name:` in `text`, with its line number, but for a scope's or a drive's with a name after its colon.
+/// PowerShell reads `$name:` as a variable in the drive or scope `name`, in a double-quoted string as much as in code,
+/// and what follows the colon must then be a variable's name: "$pinned: refusing it" doesn't parse
+/// (`InvalidVariableReferenceWithDrive`), no more does "$script: failed", and "${pinned}: refusing it" does. This reads
+/// the text, not PowerShell's tokens, so it is stricter than the parser: it names one in a comment or a single-quoted
+/// string too, where `${name}:` reads the same to a person; one whose name is no scope's with a name after the colon
+/// (`$pinned:x`), which parses and reads a drive that isn't there; and `$type::Member`, which no script here uses and
+/// `($type)::Member` says as well.
+fn drive_references(text: &str) -> Vec<(usize, String)> {
+    let mut found = Vec::new();
+    for (n, line) in text.lines().enumerate() {
+        for (at, _) in line.match_indices('$') {
+            let rest = &line[at + 1..];
+            let len = rest.find(|c: char| !ps_name_char(c)).unwrap_or(rest.len());
+            let name = &rest[..len];
+            let Some(after) = rest[len..].strip_prefix(':') else {
+                continue;
+            };
+            let scoped = PS_SCOPES.iter().any(|s| s.eq_ignore_ascii_case(name))
+                && after.starts_with(ps_name_char);
+            if !name.is_empty() && !scoped {
+                found.push((n + 1, format!("${name}:")));
+            }
+        }
+    }
+    found
+}
+
+/// No script holds a `$name:` that isn't a scope's or a drive's; a script that doesn't parse never runs at all.
+fn check_ps_references(scripts: &[(String, String)]) {
+    assert!(
+        scripts.iter().any(|(name, _)| name == PS),
+        "the scan found no {PS}: it reads nothing"
+    );
+    for (name, text) in scripts {
+        let found = drive_references(text);
+        assert!(
+            found.is_empty(),
+            "{name} doesn't parse under Windows PowerShell: `$name:` reads as a drive-qualified variable; write \
+             `${{name}}:`: {found:?}"
+        );
+    }
+}
+
+/// `scripts`, with `from` replaced by `to` in wsl.ps1.
+#[cfg(feature = "controls")]
+fn ps_scripts_edited(from: &str, to: &str) -> Vec<(String, String)> {
+    let mut scripts = ps_scripts();
+    for (name, text) in &mut scripts {
+        if name == PS {
+            *text = edited(text, from, to);
+        }
+    }
+    scripts
+}
+
+#[test]
+fn ps_scripts_hold_no_drive_qualified_reference() {
+    check_ps_references(&ps_scripts());
+}
+
+negative_control!(
+    ps_scripts_hold_no_drive_qualified_reference,
+    "the register script's first message, as run 42944409475 refused it",
+    expected = "doesn't parse under Windows PowerShell",
+    check_ps_references(&ps_scripts_edited(
+        "the pin is ${pinned}: refusing it",
+        "the pin is $pinned: refusing it"
+    ))
+);
+
+mod unregister_message {
+    use super::*;
+    negative_control!(
+        ps_scripts_hold_no_drive_qualified_reference,
+        "the unregister message, as that run refused it",
+        expected = "doesn't parse under Windows PowerShell",
+        check_ps_references(&ps_scripts_edited(
+            "wsl --unregister ${Distro}: exit",
+            "wsl --unregister $Distro: exit"
+        ))
+    );
+}
+
+mod unread {
+    use super::*;
+    negative_control!(
+        ps_scripts_hold_no_drive_qualified_reference,
+        "a scan that reads no script",
+        expected = "it reads nothing",
+        check_ps_references(&[])
+    );
+}
+
+/// The scan's edges: what it names and what it leaves.
+fn check_drive_references(text: &str, expected: &[(usize, &str)]) {
+    let found = drive_references(text);
+    let found: Vec<(usize, &str)> = found.iter().map(|(n, r)| (*n, r.as_str())).collect();
+    assert_eq!(
+        found, expected,
+        "the scan of {text:?} names the wrong references"
+    );
+}
+
+/// A scope's or a drive's reference, in any case, and one to a name starting with `_`, `?`, a digit or a letter that
+/// isn't ASCII; a braced name; a colon apart from the name; a subexpression's; a bare `$`; a name with no colon.
+const PS_SOUND: &str =
+    "\"$env:A $script:b $GLOBAL:c $using:d $local:e $private:f $function:g $variable:h\"\n\
+     \"$env:_a $env:?b $env:1 $env:\u{e9}t\u{e9}\"\n\
+                        \"${pinned}: $pinned : $($r.Code): $ : $: $pinned\"\n";
+
+#[test]
+fn ps_scan_names_only_what_does_not_parse() {
+    check_drive_references(PS_SOUND, &[]);
+    check_drive_references(
+        "\"$a: b\"\n\n\"x $_: $envx: $en: ${ok}: $B2:$c:\"\n$last:",
+        &[
+            (1, "$a:"),
+            (3, "$_:"),
+            (3, "$envx:"),
+            (3, "$en:"),
+            (3, "$B2:"),
+            (3, "$c:"),
+            (4, "$last:"),
+        ],
+    );
+    // A scope's name is a reference only with a name after its colon: before a space, at a string's end, at the
+    // line's end and before a second colon it is the same parse error.
+    check_drive_references(
+        "\"$script: failed\"\n\"$env: x\"\n\"$local:\"\n$Function:\n[int]$global::MaxValue $x::y",
+        &[
+            (1, "$script:"),
+            (2, "$env:"),
+            (3, "$local:"),
+            (4, "$Function:"),
+            (5, "$global:"),
+            (5, "$x:"),
+        ],
+    );
+    // `?` and letters outside ASCII are a name's characters, and don't end it early.
+    check_drive_references(
+        "\"$ok?: $na\u{ef}ve: $?: $\u{e9}:\"",
+        &[
+            (1, "$ok?:"),
+            (1, "$na\u{ef}ve:"),
+            (1, "$?:"),
+            (1, "$\u{e9}:"),
+        ],
+    );
+}
+
+negative_control!(
+    ps_scan_names_only_what_does_not_parse,
+    "a scan that takes every name for a scope",
+    expected = "names the wrong references",
+    check_drive_references("\"the pin is $pinned: refusing it\"", &[])
+);
+
+mod scope_alone {
+    use super::*;
+    negative_control!(
+        ps_scan_names_only_what_does_not_parse,
+        "a scope's name exempt whatever follows its colon",
+        expected = "names the wrong references",
+        check_drive_references("\"$script: failed\"", &[])
+    );
+}
+
+// ---- A refusal's line reaches the log ------------------------------------------------------------------------------
+
+/// The text of wsl.ps1's function `name`, from its `function` line to its closing brace.
+fn ps_function<'a>(script: &'a str, name: &str) -> &'a str {
+    let start = script
+        .find(&format!("\nfunction {name}"))
+        .unwrap_or_else(|| panic!("{PS} has no function {name}"));
+    let rest = &script[start + 1..];
+    &rest[..rest.find("\n}\n").expect("the function ends") + 2]
+}
+
+/// `Fail` writes its `::error::` line to the console and exits 125. Left on the output stream, the line is lost with
+/// the exit whenever the caller is collecting that output: `$pinned = Get-Pinned`, the refusal of an unpinned
+/// manifest, exited 125 and said nothing. So `Fail` emits nothing: its body is the write and the exit.
+fn check_fail(script: &str) {
+    let fail = ps_function(script, "Fail");
+    let body: Vec<&str> = fail.lines().map(str::trim).collect();
+    assert_eq!(
+        body,
+        [
+            "function Fail($message) {",
+            "[Console]::Out.WriteLine(\"::error::wsl.ps1: $message\")",
+            "exit 125",
+            "}"
+        ],
+        "Fail's line can be lost to a caller collecting output, or its exit isn't 125"
+    );
+    // The refusal that showed it is still Fail's, from a function whose output register assigns.
+    assert!(
+        ps_function(script, "Get-Pinned").contains("        Fail \"no manifest hash is pinned")
+            && arm(script, "register").contains("$pinned = Get-Pinned"),
+        "the unpinned refusal isn't Fail's"
+    );
+}
+
+#[test]
+fn wsl_fail_writes_where_no_assignment_collects_it() {
+    check_fail(&read(PS));
+}
+
+negative_control!(
+    wsl_fail_writes_where_no_assignment_collects_it,
+    "the line left on the output stream, as it was",
+    expected = "Fail's line can be lost to a caller collecting output",
+    check_fail(&edited(
+        &read(PS),
+        "    [Console]::Out.WriteLine(\"::error::wsl.ps1: $message\")\n",
+        "    \"::error::wsl.ps1: $message\"\n"
+    ))
+);
+
+mod other_status {
+    use super::*;
+    negative_control!(
+        wsl_fail_writes_where_no_assignment_collects_it,
+        "Fail exits 1",
+        expected = "or its exit isn't 125",
+        check_fail(&edited(&read(PS), "    exit 125\n}", "    exit 1\n}"))
+    );
+}
+
 // ---- Proof 3, the host over WSL's virtual switch -------------------------------------------------------------------
 
 /// Proof 3 tries the host over WSL's virtual switch as well as over the LAN: the distro's default gateway (in NAT mode,

@@ -29,8 +29,10 @@ $Record = Join-Path $env:RUNNER_TEMP 'win-measure'
 # wsl.exe's own messages in UTF-8, not UTF-16.
 $env:WSL_UTF8 = '1'
 
+# Written to the console, as Invoke-Wsl writes: a line left on the output stream is lost with the exit when the caller is
+# collecting that output, as `$pinned = Get-Pinned` is.
 function Fail($message) {
-    "::error::wsl.ps1: $message"
+    [Console]::Out.WriteLine("::error::wsl.ps1: $message")
     exit 125
 }
 
@@ -181,13 +183,13 @@ switch ($verb) {
         $copied = Get-Sha256 $rootfs
         if ($copied -ne $built) { Fail "rootfs.tar.gz is $copied here, $built as built: the copy is not the image" }
         $hash = Get-Sha256 $manifest
-        if ($hash -ne $pinned) { Fail "the image's manifest is $hash, the pin is $pinned: refusing it" }
+        if ($hash -ne $pinned) { Fail "the image's manifest is $hash, the pin is ${pinned}: refusing it" }
         "the image's manifest matches the pin: $hash"
         if ((Get-Distros) -contains $Distro) {
             if ($env:WSL_REPLACE -ne 'true') { Fail "$Distro is registered already; dispatch with replace: true to replace it" }
             "replacing ${Distro}: unregistering it"
             & wsl.exe --unregister $Distro
-            if ($LASTEXITCODE -ne 0) { Fail "wsl --unregister $Distro: exit $LASTEXITCODE" }
+            if ($LASTEXITCODE -ne 0) { Fail "wsl --unregister ${Distro}: exit $LASTEXITCODE" }
         }
         New-Item -ItemType Directory -Force -Path $Disk | Out-Null
         "wsl --import $Distro $Disk (WSL 2), as $([Environment]::UserName)"
@@ -198,7 +200,7 @@ switch ($verb) {
         Stop-Distro
         if ($liveHash -ne $pinned) {
             & wsl.exe --unregister $Distro | Out-Null
-            Fail "inside the imported distro the manifest derives to $liveHash, not the pinned $pinned: unregistered it"
+            Fail "inside the imported distro the manifest derives to $liveHash, not the pinned ${pinned}: unregistered it"
         }
         "registered ${Distro}: its manifest, derived inside it, is the pinned $pinned"
         exit 0
