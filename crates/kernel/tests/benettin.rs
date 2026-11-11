@@ -198,8 +198,14 @@ type Writer = fn(&Benettin<f64, Absolute>, SimStateBaseOf<f64>) -> SimStateFTLEO
 /// `write` keeps every field of the sample's `SimState` and adds the shadow's `r_sh`, `p_sh` and `S`: each field is
 /// set to a value of its own, so a field dropped or crossed shows.
 fn check_write(write: Writer) {
-    let (ic, _) = setup::<f64>(&burrau(), 5.0);
-    let shadow = Benettin::<f64, Absolute>::new(&ic, CollisionRadius::none(), proposed());
+    // A shadow that has marched and renormalised, so its momenta and `S` are not the zeros a dropped field reads.
+    let (ic, key) = setup::<f64>(&burrau(), 5.0);
+    let params = BenettinParams {
+        n_renorm: 1,
+        ..proposed()
+    };
+    let (_, shadow) =
+        integrate_ftle_with::<Yoshida4, f64, Absolute>(&ic, &key, CollisionRadius::none(), params);
     let k = |i: u8| f64::from(i) + 0.25;
     let out = SimStateBaseOf::<f64> {
         r: [[k(1), k(2)], [k(3), k(4)], [k(5), k(6)]],
@@ -225,6 +231,10 @@ fn check_write(write: Writer) {
         r: out.r,
         p: out.p,
     });
+    assert!(
+        shadow.s_sum() != 0.0 && sh.p.iter().flatten().all(|&v| v != 0.0),
+        "the marched shadow's S or a momentum is zero, the value a dropped field reads"
+    );
     assert!(
         ftle_sample_bits(&s) == base_bits(&out)
             && s._reserved == out._reserved
