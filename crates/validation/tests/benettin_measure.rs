@@ -68,6 +68,9 @@ fn check_exponent(exponent: fn([f64; 3]) -> f64) {
 fn lagrange_known_exponent() {
     check_exponent(lagrange_exponent);
     assert!((routh_beta([1.0 / 3.0; 3]) - 1.0 / 3.0).abs() < 1e-16);
+    // β is a ratio: masses not summing to 1 give the same β as the same masses normalised.
+    assert!((routh_beta([1.0; 3]) - 1.0 / 3.0).abs() < 1e-16);
+    assert!((routh_beta([5.0, 3.0, 2.0]) - routh_beta([0.5, 0.3, 0.2])).abs() < 1e-16);
     assert!((lagrange_exponent([1.0 / 3.0; 3]) - 0.5f64.sqrt()).abs() < 1e-15);
     // The equal-mass orbit in canonical units: side √3, ω = 3^(−3/4), its exponent ω/√2.
     let known = lagrange("equal", [1.0 / 3.0; 3], 30.0)
