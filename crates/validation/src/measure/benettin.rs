@@ -350,6 +350,15 @@ pub fn tolerance(worst: f64) -> f64 {
     format!("{digit}e{exponent}").parse().unwrap_or(f64::NAN)
 }
 
+/// Whether the sweep confirms the gate whose threshold is `tol`: the rule picked the proposal (`chosen`), the
+/// tolerance the rule gives from its worst change is `tol`, and `tol` is the proposed tolerance.
+pub fn sweep_confirms(chosen: &Candidate, tol: f64) -> bool {
+    chosen.delta_0 == PROPOSED_DELTA_0
+        && chosen.n_renorm == PROPOSED_N_RENORM
+        && tolerance(chosen.worst()) == tol
+        && tol == PROPOSED_TOLERANCE
+}
+
 // ── REQ-VAL-038: the absolute and displacement f32 shadows ────────────────────────────────────────────────────────
 
 /// The periodic-orbit set, each orbit's exponent known: Lagrange's equal-mass orbit (`ω/√2`), its `(0.5, 0.3, 0.2)`
@@ -547,10 +556,7 @@ impl Gate for BenettinCalibrationGate {
                 let candidates = sweep();
                 let chosen = select(&candidates).ok_or("the sweep ran no candidate")?;
                 let proposed = tolerance(chosen.worst());
-                let pass = chosen.delta_0 == PROPOSED_DELTA_0
-                    && chosen.n_renorm == PROPOSED_N_RENORM
-                    && proposed == tol
-                    && tol == PROPOSED_TOLERANCE;
+                let pass = sweep_confirms(chosen, tol);
                 let scatter = candidates
                     .iter()
                     .map(|c| {

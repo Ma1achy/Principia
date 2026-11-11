@@ -20,9 +20,10 @@ use kernel::decode::Ic;
 use validation::gate::Gate;
 use validation::gate::{self, GateSpec, MeasurementGate, Verdict};
 use validation::measure::benettin::{
-    burrau, calibration_orbit, figure_eight, kepler_embedded, lagrange, lagrange_exponent,
-    periodic_set, routh_beta, select, tolerance, BenettinCalibrationGate, Candidate, Precision,
-    ShadowFormGate, Test10, PROPOSED_DELTA_0, PROPOSED_N_RENORM, PROPOSED_TOLERANCE,
+    burrau, calibration_orbit, figure_eight, kepler_embedded, lagrange, lagrange_exponent, lambda,
+    periodic_set, routh_beta, select, sweep_confirms, tolerance, BenettinCalibrationGate,
+    Candidate, FormRow, Precision, ShadowFormGate, Test10, LAGRANGE_HORIZON, PROPOSED_DELTA_0,
+    PROPOSED_N_RENORM, PROPOSED_TOLERANCE,
 };
 use validation::negative_control;
 
@@ -146,6 +147,20 @@ fn check_change(change: fn(&Test10) -> f64) {
 #[test]
 fn test10_change() {
     check_change(Test10::change);
+    // Its four runs are at the candidate, at half its ‖δ₀‖, at twice its n_renorm, and at both: a short orbit.
+    let orbit = lagrange("short", [0.5, 0.3, 0.2], 1.0);
+    let (d, n) = (1e-3, 10);
+    let at = |d: f64, n: u32| lambda(&orbit, Precision::F64, d, n).to_bits();
+    let t = Test10::run(&orbit, Precision::F64, d, n);
+    assert_eq!(
+        t.lambdas.map(f64::to_bits),
+        [at(d, n), at(d / 2.0, n), at(d, 2 * n), at(d / 2.0, 2 * n)],
+        "Test10's runs are not at (δ₀, n), (δ₀/2, n), (δ₀, 2n), (δ₀/2, 2n)"
+    );
+    assert!(
+        at(d, n) != at(d / 2.0, n) && at(d, n) != at(d, 2 * n),
+        "λ on the short orbit does not tell the variants apart"
+    );
 }
 
 negative_control!(
@@ -232,6 +247,24 @@ fn check_rule(tol: fn(f64) -> f64) {
 fn calibration_rule() {
     check_rule(tolerance);
     assert_eq!(tolerance(0.0944), PROPOSED_TOLERANCE);
+    // The sweep confirms the gate only when every part holds; each case below breaks one part alone.
+    assert!(sweep_confirms(&cand(3e-3, 300, 0.0944), 0.2));
+    for (c, tol, part) in [
+        (cand(1e-3, 300, 0.0944), 0.2, "‖δ₀‖ is not the proposal"),
+        (cand(3e-3, 100, 0.0944), 0.2, "n_renorm is not the proposal"),
+        (
+            cand(3e-3, 300, 0.3),
+            0.2,
+            "the rule's tolerance is not the gate's",
+        ),
+        (
+            cand(3e-3, 300, 0.3),
+            0.6,
+            "the gate's tolerance is not the proposal",
+        ),
+    ] {
+        assert!(!sweep_confirms(&c, tol), "the sweep confirms where {part}");
+    }
 }
 
 negative_control!(
@@ -279,6 +312,7 @@ fn check_gate_test10(expect_control: Verdict) {
 
 #[test]
 fn calibration_gate() {
+    assert_eq!(BenettinCalibrationGate.name(), "benettin-calibration");
     assert_eq!(calibration_config().threshold.value, PROPOSED_TOLERANCE);
     check_gate_test10(Verdict::Fail);
     assert!(calibration_orbit("kepler").is_some() && calibration_orbit("burrau").is_some());
@@ -334,6 +368,58 @@ fn check_form_controls(doubled: f64) {
 #[test]
 fn shadow_form_gate() {
     check_form_controls(2.0);
+    assert_eq!(ShadowFormGate.name(), "shadow-form");
+    // The set is the four orbits its doc names, at their masses.
+    let named = [
+        lagrange("Lagrange, equal masses", [1.0 / 3.0; 3], LAGRANGE_HORIZON),
+        lagrange(
+            "Lagrange, (0.5, 0.3, 0.2)",
+            [0.5, 0.3, 0.2],
+            LAGRANGE_HORIZON,
+        ),
+        lagrange(
+            "Lagrange, (0.98, 0.01, 0.01)",
+            [0.98, 0.01, 0.01],
+            LAGRANGE_HORIZON,
+        ),
+        figure_eight(LAGRANGE_HORIZON),
+    ];
+    for (o, want) in periodic_set().iter().zip(&named) {
+        assert!(
+            o.name == want.name && o.ic == want.ic && o.horizon == want.horizon,
+            "{} is not the orbit its name says",
+            o.name
+        );
+    }
+    // A row with any value not finite reads not finite.
+    let row = FormRow {
+        orbit: "r",
+        known: 0.0,
+        f64_absolute: 0.1,
+        f32_absolute: 0.2,
+        f32_displacement: 0.3,
+    };
+    assert!(row.finite());
+    for bad in [
+        FormRow {
+            known: f64::NAN,
+            ..row
+        },
+        FormRow {
+            f64_absolute: f64::INFINITY,
+            ..row
+        },
+        FormRow {
+            f32_absolute: f64::NAN,
+            ..row
+        },
+        FormRow {
+            f32_displacement: f64::NEG_INFINITY,
+            ..row
+        },
+    ] {
+        assert!(!bad.finite(), "{bad:?} reads finite");
+    }
 }
 
 negative_control!(
