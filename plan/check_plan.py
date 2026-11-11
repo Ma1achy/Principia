@@ -206,7 +206,7 @@ def twins(body):
     when they are once short lines naming no id (under TWIN_MIN, which plan/OPERATIONS.md § "Merging" step 2 lets
     pass) are left out at their outer edges: at the start of the first run, the tail of the text above, and at the
     end of the second, the start of the text below. Nothing between the two runs is left out, nor a long line, nor
-    a line naming an id."""
+    a line naming an id, nor one whose leaving out would cut an id the run names across two lines."""
     out = []
     plain = [(n, t) for n, t in body if t.strip()]
     join = lambda lines: " ".join(" ".join(t.split()) for _, t in lines)
@@ -221,8 +221,12 @@ def twins(body):
         tail = 0
         while tail < len(second) - 1 and edge(second[len(second) - 1 - tail]):
             tail += 1
+        ids = lambda lines: TWIN_NAME.findall(join(lines))
+        # A cut that splits an id ("… line" | "6, …", "… PR" | "#360, …") would drop it: such a cut is not made.
+        whole = lambda run, at: ids(run) == ids(run[:at]) + ids(run[at:])
         return any(siblings(join(first[s:]), join(second[:len(second) - e]))
-                   for s in range(lead + 1) for e in range(tail + 1))
+                   for s in range(lead + 1) if whole(first, s)
+                   for e in range(tail + 1) if whole(second, len(second) - e))
 
     i = 0
     while i < len(plain):
@@ -353,6 +357,14 @@ def queue_self_test():
          "two versions of one text"),
         ("siblings, the second with a short line naming a ruling after it", good.replace(
             line, "\n".join([dated.format(6) + " end.", dated.format(12) + " end.", "  by R-101."])),
+         "two versions of one text"),
+        ("versions in a `line N` that a short line starts", good.replace(
+            line, line + "\n  line\n" + "\n".join(
+                f"  {n}, which the long dated note of the owner names, as the record has it." for n in (6, 12))),
+         "two versions of one text"),
+        ("versions in a `PR #n` that a short line starts", good.replace(
+            line, line + "\n  PR\n" + "\n".join(
+                f"  #{n}, which the long dated note of the owner names, as the record has it." for n in (359, 360))),
          "two versions of one text"),
         ("versions after a paragraph's short tail", good.replace(
             line, line + "\n  it.\n" + versions.format("R-100", "R-101")), "two versions of one text"),
