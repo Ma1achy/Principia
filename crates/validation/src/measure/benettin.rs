@@ -85,24 +85,18 @@ pub fn routh_beta(m: [f64; 3]) -> f64 {
 /// equation in the rotating frame (Routh 1875), `½·√(√(27β) − 1)` where `27β > 1`, and 0 where `27β ≤ 1`, the stable
 /// case, whose roots are imaginary.
 pub fn lagrange_exponent(m: [f64; 3]) -> f64 {
-    let b27 = 27.0 * routh_beta(m);
-    if b27 > 1.0 {
-        0.5 * (b27.sqrt() - 1.0).sqrt()
-    } else {
-        0.0
-    }
+    // `√(27β) − 1 ≤ 0` exactly where the roots are imaginary, so the floor at 0 is the stable case.
+    0.5 * ((27.0 * routh_beta(m)).sqrt() - 1.0).max(0.0).sqrt()
 }
 
-/// Lagrange's circular equilateral orbit of masses `m` (summing to 1), canonicalised, to the horizon `horizon`, its known
-/// exponent [`lagrange_exponent`] times its canonical `ω = L_z / I = |L_z|` (`I = 1`, rigid rotation).
+/// Lagrange's circular equilateral orbit of masses `m` (summing to 1, so that `ω = 1` at side 1), canonicalised, to
+/// the horizon `horizon`, its known exponent [`lagrange_exponent`] times its canonical `ω = L_z / I = |L_z|` (`I = 1`,
+/// rigid rotation).
 pub fn lagrange(name: &'static str, m: [f64; 3], horizon: f64) -> Orbit {
-    let h = 3f64.sqrt() / 2.0;
-    let tri = [[0.0, 0.0], [1.0, 0.0], [0.5, h]];
-    let total = m[0] + m[1] + m[2];
-    let c = [0, 1].map(|k| (m[0] * tri[0][k] + m[1] * tri[1][k] + m[2] * tri[2][k]) / total);
-    let r = tri.map(|v| [v[0] - c[0], v[1] - c[1]]);
-    let omega = total.sqrt();
-    let p = [0, 1, 2].map(|i| [-m[i] * omega * r[i][1], m[i] * omega * r[i][0]]);
+    // The unit triangle turning rigidly at `ω = √(M/a³) = 1` about the origin; canonicalising takes it to its centre of
+    // mass and removes the bulk momentum, which leaves the rotation about the centre of mass.
+    let r = [[0.0, 0.0], [1.0, 0.0], [0.5, 3f64.sqrt() / 2.0]];
+    let p = [0, 1, 2].map(|i| [-m[i] * r[i][1], m[i] * r[i][0]]);
     let ic = canonical(&Ic { m, r, p });
     let lz: f64 = (0..3)
         .map(|i| ic.r[i][0] * ic.p[i][1] - ic.r[i][1] * ic.p[i][0])
@@ -306,28 +300,20 @@ impl Candidate {
     }
 }
 
-/// Every candidate of the grid, run on as many threads as the machine has.
+/// Every candidate of the grid, each on a thread of its own.
 pub fn sweep() -> Vec<Candidate> {
     let pairs: Vec<(f64, u32)> = GRID_DELTA_0
         .iter()
         .flat_map(|&d| GRID_N_RENORM.iter().map(move |&n| (d, n)))
         .collect();
-    let threads = std::thread::available_parallelism().map_or(1, usize::from);
-    let chunk = pairs.len().div_ceil(threads);
     std::thread::scope(|s| {
         let handles: Vec<_> = pairs
-            .chunks(chunk)
-            .map(|c| {
-                s.spawn(move || {
-                    c.iter()
-                        .map(|&(d, n)| Candidate::run(d, n))
-                        .collect::<Vec<_>>()
-                })
-            })
+            .iter()
+            .map(|&(d, n)| s.spawn(move || Candidate::run(d, n)))
             .collect();
         handles
             .into_iter()
-            .flat_map(|h| h.join().expect("a sweep thread completes"))
+            .map(|h| h.join().expect("a sweep thread completes"))
             .collect()
     })
 }
@@ -352,12 +338,16 @@ pub fn select(candidates: &[Candidate]) -> Option<&Candidate> {
 /// The tolerance the rule proposes from the selected candidate's worst change `worst`: the smallest value of one
 /// significant digit at or above `2·worst`, a margin of two for the scatter a second orbit or machine would show.
 pub fn tolerance(worst: f64) -> f64 {
-    let x = 2.0 * worst;
-    let e = x.log10().floor();
-    let unit = 10f64.powf(e);
-    let digit = (x / unit).ceil();
-    let value = digit * unit;
-    format!("{value:.0e}").parse().unwrap_or(value)
+    // In decimal, from the shortest representation of `2·worst`, so that 0.08 stays 0.08 rather than reading 8.000…2
+    // hundredths and rising to 0.09.
+    let text = format!("{:e}", 2.0 * worst);
+    let (mantissa, exponent) = text.split_once('e').unwrap_or((text.as_str(), "0"));
+    let (mantissa, exponent): (f64, i32) = (
+        mantissa.parse().unwrap_or(f64::NAN),
+        exponent.parse().unwrap_or(0),
+    );
+    let digit = mantissa.ceil();
+    format!("{digit}e{exponent}").parse().unwrap_or(f64::NAN)
 }
 
 // ── REQ-VAL-038: the absolute and displacement f32 shadows ────────────────────────────────────────────────────────

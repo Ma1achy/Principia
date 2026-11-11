@@ -10,7 +10,13 @@
 //! - `benettin_ftle` (dd test 10; REQ-INT-043): halving `‖δ₀‖` and doubling `n_renorm` leave `λ_T` within the proposed
 //!   tolerance (REQ-INT-076's) on the Kepler-embedded orbit and the Burrau IC at f32 and f64; `λ_T ≈ 0` on the
 //!   Kepler-embedded orbit (it falls as `T` doubles) and large on Burrau (at least five times it); a read between renormalisation boundaries is not biased low; the read is
-//!   NaN without a completed renormalisation, and agrees with the generated read side at f32.
+//!   NaN without a completed renormalisation or on a failed sample, and agrees with the generated read side at f32.
+//! - `delta0_direction` (REQ-INT-077): the shadow starts at §3.8's offset, bit for bit: `‖δ₀‖·u` on the positions, one
+//!   rounding each, no momentum moved.
+//! - `shadow_lockstep`: where the sample's `done` cuts a macro-step short, the shadow stops at the same substep, and that
+//!   macro-step, not completed, is not counted towards a renormalisation.
+//! - `shadow_forms_agree` (REQ-VAL-038's forms): at f64 the displacement form reads the absolute form's `λ_T`, to
+//!   rounding.
 //!
 //! **Domain** (pitfalls §10): Yoshida-4, the steppers' march at `r_coll = 0`, so no terminal fires; the orbits are
 //! `validation::measure::benettin`'s, which the calibration gate runs.
@@ -22,7 +28,7 @@ use kernel::detect::collision::CollisionRadius;
 use kernel::driver::advance::{Advance, AdvanceParams, Cadence};
 use kernel::driver::benettin::{
     completed_renorms, delta, ftle, ftle_read, integrate_ftle, integrate_ftle_with, offset,
-    pool_member, Absolute, BenettinParams,
+    pool_member, Absolute, Benettin, BenettinParams, Displacement,
 };
 use kernel::driver::cadence::WrapperCadence;
 use kernel::driver::project::ComProjection;
@@ -32,12 +38,13 @@ use kernel::driver::wrapper::{
 use kernel::occupant::yoshida4::Yoshida4;
 use kernel::occupant::{Geom, State};
 use kernel::payload::{
-    sim_state_from_ftle, tm_t_end_step, ReadParams, SimStateBaseOf, SimStateFTLEOf,
+    set_state, sim_state_from_ftle, tm_t_end_step, ReadParams, SimStateBaseOf, SimStateFTLEOf,
+    STATE_SIM_FAILED,
 };
 use spirv_std::num_traits::Float;
 use validation::drift::{ic_at, sim_key, AsR};
 use validation::measure::benettin::{
-    burrau, kepler_embedded, lagrange, Orbit, Precision, Test10, PROPOSED_DELTA_0,
+    burrau, kepler_embedded, lagrange, measure, Orbit, Precision, Test10, PROPOSED_DELTA_0,
     PROPOSED_N_RENORM, PROPOSED_TOLERANCE,
 };
 use validation::negative_control;
@@ -623,6 +630,12 @@ fn benettin_ftle() {
         );
         assert_eq!(mine.to_bits(), read.ftle.to_bits());
         assert_eq!(completed_renorms(horizon, n_renorm) > 0, valid);
+        // A failed sample reads NaN whatever its renormalisations (R-254).
+        let failed = SimStateFTLEOf {
+            packed_a: set_state(s.packed_a, STATE_SIM_FAILED),
+            ..s
+        };
+        assert!(ftle_read(&failed, &params, dt).is_nan());
     }
 }
 
@@ -631,4 +644,225 @@ negative_control!(
     "a read that leaves the partial interval out must fail as biased low",
     expected = "is biased against the read at every boundary",
     check_between_boundaries(plain)
+);
+
+// ── delta0_direction (REQ-INT-077) ──────────────────────────────────────────────────────────────────────────────
+
+/// §3.8's direction `u`: the position offsets of bodies 0, 1, 2 in units of `‖δ₀‖`; the momenta take none.
+const U: [[f64; 2]; 3] = [[0.5, 0.0], [-0.5, 0.5], [0.0, -0.5]];
+
+/// The shadow's start from `start(x, ‖δ₀‖)` against `x + ‖δ₀‖·u`, each component one rounding of an exact product.
+fn check_direction<R: P>(start: fn(&State<R>, R) -> State<R>)
+where
+    f64: AsR<R>,
+{
+    let ic = ic_at::<R>(&burrau().ic);
+    let x = State {
+        m: ic.m,
+        r: ic.r,
+        p: ic.p,
+    };
+    let d0: R = PROPOSED_DELTA_0.to_r();
+    let s = start(&x, d0);
+    for (i, row) in U.iter().enumerate() {
+        for (k, &uk) in row.iter().enumerate() {
+            let u: R = uk.to_r();
+            assert_eq!(
+                s.r[i][k].bits(),
+                (x.r[i][k] + u * d0).bits(),
+                "body {i}, component {k}: the shadow's offset is not §3.8's direction"
+            );
+            assert_eq!(
+                s.p[i][k].bits(),
+                x.p[i][k].bits(),
+                "body {i}, component {k}: the shadow's offset is not §3.8's direction (a momentum moved)"
+            );
+        }
+    }
+    assert_eq!(s.m.map(P::bits), x.m.map(P::bits));
+}
+
+#[test]
+fn delta0_direction() {
+    check_direction::<f64>(offset::<f64>);
+    check_direction::<f32>(offset::<f32>);
+}
+
+negative_control!(
+    delta0_direction,
+    "an offset in the momenta must fail",
+    expected = "is not §3.8's direction",
+    check_direction::<f64>(|x, d| State {
+        p: offset(&State { p: x.r, ..*x }, d).r,
+        ..*x
+    })
+);
+
+// ── shadow_lockstep ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The sample's cadence, done after `left` substeps.
+struct StopAfter<R> {
+    inner: WrapperCadence<R>,
+    left: u32,
+}
+
+impl<R: WrapperReal> Cadence<R> for StopAfter<R> {
+    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.inner.after_step(state, geom);
+        self.left -= 1;
+    }
+
+    fn done(&self) -> bool {
+        self.left == 0
+    }
+}
+
+/// A co-march that hands the shadow the macro-step's full `N_sub`, whatever the sample took.
+struct FullMacro(Benettin<f64, Absolute>);
+
+impl CoMarch<f64> for FullMacro {
+    fn after_macro<A: Advance>(
+        &mut self,
+        start: &State<f64>,
+        end: &State<f64>,
+        t_now: u32,
+        params: &AdvanceParams<f64>,
+        _taken: u32,
+    ) {
+        self.0
+            .after_macro::<A>(start, end, t_now, params, params.n_sub);
+    }
+}
+
+/// A close circular pair, so the substep law takes `N_sub = 3` throughout (`d = 0.03`, `(0.05/0.03)^1.5 ≈ 2.15`), and
+/// a third body far off: masses 1/3, the pair's relative speed `√(2/3 / 0.03)`.
+fn close_pair() -> Ic<f64> {
+    let p = (2.0f64 / 3.0 / 0.03).sqrt() / 2.0 / 3.0;
+    Ic {
+        m: [1.0 / 3.0; 3],
+        r: [[-0.015, 0.0], [0.015, 0.0], [0.0, 1.0]],
+        p: [[0.0, -p], [0.0, p], [0.0, 0.0]],
+    }
+}
+
+/// The run of the close pair with the sample stopped after `stop` substeps (`N_sub = 3`, so 4 stops part-way through the
+/// second macro-step and 6 at its end), `n_renorm = 2`: the substeps the sample took, the shadow's, and `S`; `full`
+/// hands the shadow the whole macro-step ([`FullMacro`]).
+fn lockstep(stop: u32, full: bool) -> (u32, u32, f64) {
+    let ic = close_pair();
+    let key = sim_key::<f64>(1.0);
+    let params = BenettinParams {
+        delta_0: 1e-6,
+        n_renorm: 2,
+    };
+    let mut base = StopAfter {
+        inner: WrapperCadence::new(&ic.m, &ic.r, &ic.p),
+        left: stop,
+    };
+    let b = Benettin::new(&ic, CollisionRadius::none(), params);
+    let mut shadow = if full {
+        FullMacroOr::Full(FullMacro(b))
+    } else {
+        FullMacroOr::Kernel(b)
+    };
+    let out = integrate_with_co::<Yoshida4, f64, _, _>(&ic, &key, &mut base, &mut shadow);
+    let b = shadow.inner();
+    (out.total_substeps, b.cadence().invocations(), b.s_sum())
+}
+
+/// The shadow as the kernel marches it, or with [`FullMacro`].
+enum FullMacroOr {
+    Kernel(Benettin<f64, Absolute>),
+    Full(FullMacro),
+}
+
+impl FullMacroOr {
+    fn inner(&self) -> &Benettin<f64, Absolute> {
+        match self {
+            Self::Kernel(b) | Self::Full(FullMacro(b)) => b,
+        }
+    }
+}
+
+impl CoMarch<f64> for FullMacroOr {
+    fn after_macro<A: Advance>(
+        &mut self,
+        start: &State<f64>,
+        end: &State<f64>,
+        t_now: u32,
+        params: &AdvanceParams<f64>,
+        taken: u32,
+    ) {
+        match self {
+            Self::Kernel(b) => b.after_macro::<A>(start, end, t_now, params, taken),
+            Self::Full(f) => f.after_macro::<A>(start, end, t_now, params, taken),
+        }
+    }
+}
+
+fn check_lockstep(full: bool) {
+    let (taken, shadow, s) = lockstep(4, full);
+    assert_eq!(taken, 4);
+    assert_eq!(
+        shadow, taken,
+        "the shadow ran past the substeps the sample took"
+    );
+    assert_eq!(
+        s, 0.0,
+        "the macro-step `done` cut short was counted towards a renormalisation"
+    );
+    let (taken, shadow, s) = lockstep(6, full);
+    assert_eq!((taken, shadow), (6, 6));
+    assert_ne!(
+        s, 0.0,
+        "the second completed macro-step did not renormalise"
+    );
+}
+
+#[test]
+fn shadow_lockstep() {
+    check_lockstep(false);
+}
+
+negative_control!(
+    shadow_lockstep,
+    "a shadow marched through the whole of a macro-step the sample cut short must fail",
+    expected = "the shadow ran past the substeps the sample took",
+    check_lockstep(true)
+);
+
+// ── shadow_forms_agree (REQ-VAL-038's forms) ────────────────────────────────────────────────────────────────────
+
+/// The displacement form's `λ_T` at `scale·‖δ₀‖` against the absolute form's at `‖δ₀‖`, at f64, on `orbit`.
+fn check_forms(orbit: &Orbit, scale: f64) {
+    let abs = measure::<Yoshida4, f64, Absolute>(orbit, PROPOSED_DELTA_0, PROPOSED_N_RENORM).lambda;
+    let disp =
+        measure::<Yoshida4, f64, Displacement>(orbit, scale * PROPOSED_DELTA_0, PROPOSED_N_RENORM)
+            .lambda;
+    assert!(
+        (disp - abs).abs() <= 1e-8 * abs.abs(),
+        "{}: the displacement form reads {disp}, the absolute form {abs}",
+        orbit.name
+    );
+}
+
+#[test]
+fn shadow_forms_agree() {
+    let mut chaotic = burrau();
+    chaotic.horizon = 5.0;
+    check_forms(&chaotic, 1.0);
+    check_forms(
+        &lagrange("Lagrange, equal masses", [1.0 / 3.0; 3], 30.0),
+        1.0,
+    );
+}
+
+negative_control!(
+    shadow_forms_agree,
+    "a displacement form started at another ‖δ₀‖ must fail",
+    expected = "the displacement form reads",
+    check_forms(
+        &lagrange("Lagrange, equal masses", [1.0 / 3.0; 3], 30.0),
+        2.0
+    )
 );

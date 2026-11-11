@@ -47,7 +47,6 @@ use spirv_std::num_traits::Float;
 
 use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence};
 use super::cadence::WrapperCadence;
-use super::substep::Quantise;
 use super::wrapper::{integrate_with_co, monitored, CoMarch, WrapperReal, WrapperUniforms};
 use crate::decode::Ic;
 use crate::detect::collision::CollisionRadius;
@@ -86,56 +85,46 @@ impl ShadowForm for Displacement {
     const DISPLACEMENT: bool = true;
 }
 
+/// `f` applied to each of the six components of `a` and `b`, written out: no loop (gpu_determinism_note § "The
+/// discipline", rule 5) and no runtime index.
+#[inline]
+fn each<R: Copy>(a: &[[R; 2]; 3], b: &[[R; 2]; 3], f: impl Fn(R, R) -> R) -> [[R; 2]; 3] {
+    [
+        [f(a[0][0], b[0][0]), f(a[0][1], b[0][1])],
+        [f(a[1][0], b[1][0]), f(a[1][1], b[1][1])],
+        [f(a[2][0], b[2][0]), f(a[2][1], b[2][1])],
+    ]
+}
+
 /// `a + b` per component of the positions and momenta; `a`'s masses.
 #[inline]
 fn plus<R: AdvanceReal>(a: &State<R>, b: &State<R>) -> State<R> {
-    let mut s = *a;
-    let mut i = 0;
-    while i < 3 {
-        let mut j = 0;
-        while j < 2 {
-            s.r[i][j] = a.r[i][j] + b.r[i][j];
-            s.p[i][j] = a.p[i][j] + b.p[i][j];
-            j += 1;
-        }
-        i += 1;
+    State {
+        m: a.m,
+        r: each(&a.r, &b.r, |x, y| x + y),
+        p: each(&a.p, &b.p, |x, y| x + y),
     }
-    s
 }
 
 /// `a − b` per component of the positions and momenta; `a`'s masses.
 #[inline]
 fn minus<R: AdvanceReal>(a: &State<R>, b: &State<R>) -> State<R> {
-    let mut s = *a;
-    let mut i = 0;
-    while i < 3 {
-        let mut j = 0;
-        while j < 2 {
-            s.r[i][j] = a.r[i][j] - b.r[i][j];
-            s.p[i][j] = a.p[i][j] - b.p[i][j];
-            j += 1;
-        }
-        i += 1;
+    State {
+        m: a.m,
+        r: each(&a.r, &b.r, |x, y| x - y),
+        p: each(&a.p, &b.p, |x, y| x - y),
     }
-    s
 }
 
 /// `k·d + x` per component, each one rounded multiply-add (gpu_determinism_note § "The discipline", rule 2); `x`'s
 /// masses.
 #[inline]
 fn scaled_plus<R: AdvanceReal>(k: R, d: &State<R>, x: &State<R>) -> State<R> {
-    let mut s = *x;
-    let mut i = 0;
-    while i < 3 {
-        let mut j = 0;
-        while j < 2 {
-            s.r[i][j] = k.fma(d.r[i][j], x.r[i][j]);
-            s.p[i][j] = k.fma(d.p[i][j], x.p[i][j]);
-            j += 1;
-        }
-        i += 1;
+    State {
+        m: x.m,
+        r: each(&d.r, &x.r, |dk, xk| k.fma(dk, xk)),
+        p: each(&d.p, &x.p, |dk, xk| k.fma(dk, xk)),
     }
-    s
 }
 
 /// The shadow's initial state `x₀ + ‖δ₀‖·u` (dd_integrator §3.8; REQ-INT-077): `u`, the direction of `δ₀`, is
@@ -206,7 +195,8 @@ pub fn ftle_read<R: WrapperReal>(
     dt_macro: R,
 ) -> R {
     let n = tm_t_end_step(s.times);
-    let valid = !sd_is_failed(s.packed_a) && n > 0 && completed_renorms(n, params.n_renorm) > 0;
+    // `step_count ≥ 1` (R-253) is implied: a completed renormalisation needs `n ≥ n_renorm ≥ 1`.
+    let valid = !sd_is_failed(s.packed_a) && completed_renorms(n, params.n_renorm) > 0;
     if valid {
         let d = delta(&s.r, &s.p, &s.r_sh, &s.p_sh);
         ftle(s.S, d, params.delta_0, n, dt_macro)
@@ -223,7 +213,7 @@ pub fn pool_member<R: PayloadReal>(s: &SimStateFTLEOf<R>) -> ([[R; 2]; 3], [[R; 
 }
 
 /// The shadow's cadence for one macro-step: its own [`WrapperCadence`], done once it is or once it has taken `left`
-/// more substeps, the sample's count.
+/// more substeps, the sample's count. The shadow's `N_sub` is the sample's, so no bucket is read from it.
 struct Limited<'a, C> {
     inner: &'a mut C,
     left: u32,
@@ -239,14 +229,6 @@ impl<R: WrapperReal, C: Cadence<R>> Cadence<R> for Limited<'_, C> {
     #[inline]
     fn done(&self) -> bool {
         self.left == 0 || self.inner.done()
-    }
-
-    #[inline]
-    fn bucket_d2(&self, r: &[[R; 2]; 3]) -> f32
-    where
-        R: Quantise,
-    {
-        self.inner.bucket_d2(r)
     }
 }
 
