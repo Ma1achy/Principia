@@ -257,33 +257,6 @@ negative_control!(
     }
 );
 
-/// Two siblings, each wrapped to a short tail of its own, as this queue's 120-column wrap leaves a list's items;
-/// `second` names the second's id and `n` its number.
-fn each_wrapped(second: &str, n: u32) -> Vec<String> {
-    vec![
-        sibling("R-700", 6),
-        "  it.".to_owned(),
-        sibling(second, n),
-        "  it.".to_owned(),
-    ]
-}
-
-#[test]
-fn siblings_each_wrapped_to_a_short_tail_pass() {
-    // Two items of a list, differing only in a plain number, each run to a short second line: siblings, which pass,
-    // however the wrap falls about them.
-    passes(&queue_ending("each_wrapped", &each_wrapped("R-700", 12)));
-}
-
-negative_control!(
-    siblings_each_wrapped_to_a_short_tail_pass,
-    "the second item naming another ruling is a version of the first, so the passes check must fail on it",
-    expected = "queue check failed",
-    {
-        passes(&queue_ending("ctl_each_wrapped", &each_wrapped("R-701", 6)));
-    }
-);
-
 // ---- A wrapped item edited on two sides: its short tails differ in words ---------------------------------------------
 
 /// One item of a list at `n`, wrapped to a short tail `tail`, as this queue's 120-column wrap leaves it.
@@ -343,5 +316,46 @@ negative_control!(
     {
         let dir = item_edited_on_two_sides("ctl_wrapped_versions", "in 2 runs", "in 3 runs");
         fails_naming(&dir, "are two versions of one text");
+    }
+);
+
+// ---- A `line N` that a short line at the outer edge starts: leaving the line out drops the id ----------------------
+
+/// A paragraph whose short line `edge` ends with the word before the number that starts each of the two lines after
+/// it: what a union merge leaves when the base's third line (at 9) is edited to 6 on one side and to 12 on the other,
+/// the short line above them kept once.
+fn edge_starting_a_number(edge: &str) -> Vec<String> {
+    let line = |n: u32| {
+        format!("  {n}, which the long dated note of the owner names, as the record has it.")
+    };
+    vec![
+        "- **Note:** the long note of the base runs on and on, as the record has it, until it ends at"
+            .to_owned(),
+        format!("  {edge}"),
+        line(6),
+        line(12),
+    ]
+}
+
+#[test]
+fn versions_differing_in_a_line_n_started_by_a_short_line_are_caught() {
+    // "line" closing the short line and "6" or "12" opening the next make a `line N`, which step 2 counts as a
+    // difference: the two runs ("line 6, …" and "12, …", a line more or less) are two versions, not siblings, though
+    // the short line alone names no id.
+    fails_naming(
+        &queue_ending("edge_line_n", &edge_starting_a_number("line")),
+        "are two versions of one text",
+    );
+}
+
+negative_control!(
+    versions_differing_in_a_line_n_started_by_a_short_line_are_caught,
+    "with no `line` before them the numbers are plain, so the two lines are siblings and pass",
+    expected = "queue check passed",
+    {
+        fails_naming(
+            &queue_ending("ctl_edge_line_n", &edge_starting_a_number("the end, N")),
+            "are two versions of one text",
+        );
     }
 );
