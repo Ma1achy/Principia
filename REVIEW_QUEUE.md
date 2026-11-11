@@ -111,7 +111,7 @@ here.*
 - **Deferred:** deferred to M3 by owner 5 Nov 2026 (R-795, the owner: "RQ-577: defer:M3").
 - **7 Nov 2026 (R-821), restated:** the owner: "RQ-577: defer:M3". It stays deferred to M3.
 - **Deferred:** deferred to M3 by owner 8 Nov 2026 (R-880, the owner: "RQ-577: defer:M3").
-- **Deferred:** deferred to M3 by owner 11 Nov 2026 (R-957, the owner: "RQ-577: defer:M3").
+- **11 Nov 2026 (R-957):** deferred to M3 again; the owner: "RQ-577: defer:M3".
 
 ## RQ-643: The collinear statistical targets' stops lie past R-610's horizon cap in the integrator's units (proposed OR02-1, OR03-1, MH89-1) *(physics review of the 29 Oct research-batches ingest, finding F4; `docs/incoming/2026-10-29_research_batches/README.md` § 10.3, § 10.5, `horizons_integrator_units.txt`; context: none built)*
 
@@ -183,7 +183,7 @@ here.*
   RQ-687: defer:M4
   RQ-696: (c).").
 - **Deferred:** deferred to M4 by owner 8 Nov 2026 (R-881, the owner: "RQ-629: defer:M4").
-- **Deferred:** deferred to M4 by owner 11 Nov 2026 (R-958, the owner: "RQ-629: defer:M4").
+- **11 Nov 2026 (R-958):** deferred to M4 again; the owner: "RQ-629: defer:M4".
 
 ## RQ-681: TASK-M9-01: no task builds the scoring runner it calls, AT-D6's twins and slice planes are undefined, and OC-2's state and precision are unsettled *(silence, R-72; R-71; R-649, R-650; REQ-VAL-214 to REQ-VAL-217; dd_replication § 4.3, § 8; context: TASK-M9-01, TASK-M3-27, RQ-660)*
 
@@ -229,7 +229,7 @@ here.*
 - **Deferred:** deferred to M9, parts (b) and (c), with part (a) ruled, a deliverable of TASK-M3-27 (R-794) by owner 5 Nov 2026 (R-794, the owner: "RQ-681: (a) as a deliverable of TASK-M3-27, the earlier user. Parts (b) and (c) stay deferred to M9.").
 - **Deferred:** deferred to M9, its remaining parts, with part (c) state ruled ref_* (R-824) by owner 7 Nov 2026 (R-824, the owner: "RQ-681: (c) ref_*, rerun the figures at M9; the rest defer:M9.").
 - **Deferred:** deferred to M9 by owner 8 Nov 2026 (R-887, the owner: "RQ-681: defer:M9").
-- **Deferred:** deferred to M9 by owner 11 Nov 2026 (R-961, the owner: "RQ-681: defer:M9").
+- **11 Nov 2026 (R-961):** deferred to M9 again; the owner: "RQ-681: defer:M9".
 
 ## RQ-687: Whether the kernel takes its own f32 `sin` and `cos`, as `arctan.rs` does for `atan2` (RQ-628), given that it can change CPU bits *(physics; a decision that changes what is built; R-297, R-649; REQ-DEC-043; RQ-628, RQ-629; issues #390, #393, #401; context: the Windows RTX 2080 Super run, RQ-685)*
 
@@ -331,7 +331,7 @@ run's record, the 13 failures and the hardware-health arm are in RQ-685.*
   RQ-687: defer:M4
   RQ-696: (c).").
 - **Deferred:** deferred to M4 by owner 8 Nov 2026 (R-883, the owner: "RQ-687: defer:M4").
-- **Deferred:** deferred to M4 by owner 11 Nov 2026 (R-959, the owner: "RQ-687: defer:M4").
+- **11 Nov 2026 (R-959):** deferred to M4 again; the owner: "RQ-687: defer:M4".
 
 ## RQ-779: The default extension kind of each edge, for the owner to confirm by eye *(the owner's call by looking; a one-way door, defaults; the owner's direction of 10 Nov; R-407, R-508, R-898; context: N14)*
 

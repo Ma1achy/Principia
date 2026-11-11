@@ -1821,6 +1821,14 @@
   requirements: [REQ-TOOL-227]
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M3-71
+  milestone: M3
+  title: "The collision test's floor, recorded with the run (R-954)"
+  depends_on: [TASK-M3-09]  # R-954 (11 Nov 2026), RQ-782 (a)
+  needs: []
+  requirements: [REQ-EVT-035]
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
@@ -3320,6 +3328,14 @@
   needs: []
   requirements: [REQ-RENDER-125, REQ-PERF-122, REQ-RENDER-126]  # REQ-RENDER-126: R-935's three tolerances, a calibration (11 Nov 2026)
   reviewers: [code, qa, physics, perf]
+  pitfalls: []
+- id: TASK-M7-75
+  milestone: M7
+  title: "The margin's map is settled: drop \"provisional pending RQ-788\" (R-962)"
+  depends_on: [TASK-M7-12]  # R-962 (11 Nov 2026), RQ-788 (a)
+  needs: []
+  requirements: [REQ-GUI-436]
+  reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-01
   milestone: M8

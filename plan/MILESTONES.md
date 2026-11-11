@@ -355,12 +355,12 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
   Benettin FTLE shadow, re-queued, with REQ-CHART-132;".
 
 <!-- gate:M3 -->
-**Exit gate — 239 requirements** (and every earlier gate still green):
+**Exit gate — 240 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (6): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086, REQ-CHART-132, REQ-CHART-177
 - INT (85): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110, REQ-INT-114
-- EVT (26): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032…033
+- EVT (27): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032…033, REQ-EVT-035
 - PAY (33): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…113
 - GEN (1): REQ-GEN-016
 - SCHED (2): REQ-SCHED-002…003
@@ -503,7 +503,7 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   REQ-RENDER-110 (TASK-M7-69, a leaf), and so this gate, until it is ruled."
 
 <!-- gate:M7 -->
-**Exit gate — 266 requirements** (and every earlier gate still green):
+**Exit gate — 267 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
 - PAY (10): REQ-PAY-099…108
@@ -511,7 +511,7 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
 - SCHED (1): REQ-SCHED-072
 - RENDER (49): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096, REQ-RENDER-101…115, REQ-RENDER-118, REQ-RENDER-120…121, REQ-RENDER-124…126
 - COL (125): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…132, REQ-COL-134, REQ-COL-136…159, REQ-COL-162
-- GUI (23): REQ-GUI-016…031, REQ-GUI-151…152, REQ-GUI-335…338, REQ-GUI-340
+- GUI (24): REQ-GUI-016…031, REQ-GUI-151…152, REQ-GUI-335…338, REQ-GUI-340, REQ-GUI-436
 - TOOL (30): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151, REQ-TOOL-171…174, REQ-TOOL-179…181, REQ-TOOL-186
 - VAL (11): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…189
 - PERF (7): REQ-PERF-068…069, REQ-PERF-096…097, REQ-PERF-113, REQ-PERF-122…123

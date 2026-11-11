@@ -224,7 +224,8 @@ momentum seed; RQ-765, what the GPU's decode entries become; RQ-767, how accurat
 whether pan and zoom keep the cache; RQ-771, the energy chart's second sheet and the clamp below its floor; RQ-775,
 where the per-edge choice lives; RQ-776, the backwards table on a two-sheet chart; RQ-779, each edge's default kind,
 still open; RQ-781, where the view's centre may go; RQ-783, whether a record made before the new decode route recreates
-bit for bit, still open; RQ-784, whether "No blank areas" reaches a pixel energy normalisation cannot reach, still open;
+bit for bit, still open; RQ-784, whether "No blank areas" reaches a pixel energy normalisation cannot reach, still open
+(*11 Nov 2026:* answered by R-955, option (a), R-598 standing; RQ-783 and RQ-779 deferred to M2 by R-956 and R-963);
 RQ-785, at what picture size P2's and P4's pixels are counted, new and open, with three further questions on the
 same set-up; RQ-787, what a blend's interior pixel shows when its blended masses raise `M01_TINY` between two valid
 ends, new and open.
@@ -715,8 +716,10 @@ exhaustive; R-947 to R-952, the owner's answers above; R-369, the orchestrator's
     item 7, and R-945 cites it there.
 
 **Still open,** none of them among the fifteen: RQ-785 (the picture size P2's and P4's pixels are counted at), which
-holds N20; RQ-779 (each edge's default kind), under which N14's rows are built to R-932 as R-941 says; RQ-784 (whether
-"No blank areas" reaches a pixel energy normalisation cannot reach); RQ-783 (pre-switch records). *11 Nov 2026:*
+holds N20; RQ-779 (each edge's default kind), under which N14's rows are built to R-932 as R-941 says, deferred to M2
+(R-963); RQ-783 (pre-switch records), deferred to M2 (R-956). RQ-784 (whether "No blank areas" reaches a pixel energy
+normalisation cannot reach) is answered by R-955, option (a), R-598 standing (*11 Nov 2026; was:* "RQ-784 (whether "No
+blank areas" reaches a pixel energy normalisation cannot reach);" in this list). *11 Nov 2026:*
 RQ-787 (what a blend's interior pixel shows when its blended masses raise `M01_TINY` between two valid ends), which
 holds that one pixel of N5's fixture; and RQ-785's three further questions on N20's set-up.
 

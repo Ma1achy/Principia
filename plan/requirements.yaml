@@ -6610,15 +6610,16 @@
     section: R-162 — The reversible occupant is logH's TTL time mode
   - file: docs/contracts/principia_integrator_contract.md
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
+  - file: decisions.md
+    section: "R-953 — RQ-756, Aarseth–Zare's last points: REQ-INT-054's bound per sync interval is R-604's cumulative step budget read at each boundary, the owner's (4)(a-2), with no cap per interval; the three Rust files are imported at `b1e6006`; the predictive limit reads the relative momenta, as the code computes them, its comment's \"velocities\" being wrong; the inverse map's guards are the floor `TINY`, written down as Part 2c rule 1's one exception; the pairs are taken in the order (0,1), (0,2), (1,2) *(closes RQ-756; amends R-160; refines R-927)*"
   verify:
     method: review checklist
     detail: "AZ+RK4 profile has symplectic=false and reversible=false; the stepper slot under AZ accepts a Mikkola–Tanikawa leapfrog occupant"
   rulings:
   - R-162
+  - R-953
   milestone: M3
-  rq:
-  - RQ-756
-  note: "R-162: Aarseth–Zare with Mikkola–Tanikawa isn't required; the slot is specified, and the reversible occupant is logH's TTL time mode (REQ-VAL-044)."
+  note: "R-162: Aarseth–Zare with Mikkola–Tanikawa isn't required; the slot is specified, and the reversible occupant is logH's TTL time mode (REQ-VAL-044). R-953 (11 Nov 2026) closes RQ-756; this requirement's part of it, the two-pair Γ's coupling, was settled by R-927."
 - id: REQ-INT-025
   area: INT
   statement: "The occupant must read only the per-sample IC `(m, r, p)`, `dt` and `G`; the IC must come per sample from the decoder (never a uniform) and the integrator must never learn the chart's name."
@@ -7008,16 +7009,17 @@
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   - file: decisions.md
     section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
+  - file: decisions.md
+    section: "R-953 — RQ-756, Aarseth–Zare's last points: REQ-INT-054's bound per sync interval is R-604's cumulative step budget read at each boundary, the owner's (4)(a-2), with no cap per interval; the three Rust files are imported at `b1e6006`; the predictive limit reads the relative momenta, as the code computes them, its comment's \"velocities\" being wrong; the inverse map's guards are the floor `TINY`, written down as Part 2c rule 1's one exception; the pairs are taken in the order (0,1), (0,2), (1,2) *(closes RQ-756; amends R-160; refines R-927)*"
   verify:
     method: numerical gate
     detail: "at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 (f32) / 4.0e-12 (f64) for the unstable form, the reference's own table (tb_lc.py:67-69), whose 3.5e-9 is its f64 figure at 179.99° (R-927)"
   rulings:
   - R-35
   - R-927
+  - R-953
   milestone: M3
-  rq:
-  - RQ-756
-  note: "applies to the AZ occupant. R-927 (10 Nov 2026, RQ-756 (5) 3): the unstable form's f64 figure at 179.9° is the reference's 4.0e-12. *Was (verify):* \"at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form\" RQ-756 stays open on (5) 7, the guard the inverse map tests against."
+  note: "applies to the AZ occupant. R-927 (10 Nov 2026, RQ-756 (5) 3): the unstable form's f64 figure at 179.9° is the reference's 4.0e-12. *Was (verify):* \"at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form\" R-953 (11 Nov 2026, RQ-756 (5) 7): the inverse map's guards are the floor TINY (lc.rs:55, :63), a calibration (REQ-INT-105); the finiteness arm the owner asked for is REQ-INT-105's, not this gate's. *Was:* \"RQ-756 stays open on (5) 7, the guard the inverse map tests against.\""
 - id: REQ-INT-045
   area: INT
   statement: "Threshold and suspect decisions in the march's control flow must use the live f32 measurement, never an unpacked f16 latch; the read-time suspect predicates, which run after the march, read the stored latches (R-669, RQ-636 (a))."
@@ -7095,15 +7097,16 @@
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   - file: decisions.md
     section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
+  - file: decisions.md
+    section: "R-953 — RQ-756, Aarseth–Zare's last points: REQ-INT-054's bound per sync interval is R-604's cumulative step budget read at each boundary, the owner's (4)(a-2), with no cap per interval; the three Rust files are imported at `b1e6006`; the predictive limit reads the relative momenta, as the code computes them, its comment's \"velocities\" being wrong; the inverse map's guards are the floor `TINY`, written down as Part 2c rule 1's one exception; the pairs are taken in the order (0,1), (0,2), (1,2) *(closes RQ-756; amends R-160; refines R-927)*"
   verify:
     method: numerical gate
     detail: "figure-eight closure after one period, on the gate's own sync interval T/n with n = 32, under integrator contract Part 6's per-step rule and the transcribed step control, the landing clamp with the landing secant as driver.rs has it (R-927): at most REQ-INT-114's calibrated threshold at eta = 0.001, the closure without the landing fix measured and reported beside it; convergence better than first order; the re-registration count reported with the result"
   rulings:
   - R-927
+  - R-953
   milestone: M3
-  rq:
-  - RQ-756
-  note: "R-927 (10 Nov 2026, RQ-756 (2)(a), (5) 1, 2 and 9): the gate runs under the rule in force with the reference code's step control, and its threshold is re-measured under that same code, a calibration (REQ-INT-114); 4.232e-09 was measured under § 0.1's fixed dτ and no longer binds. *Was (verify):* \"figure-eight closure after one period: ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order\""
+  note: "R-927 (10 Nov 2026, RQ-756 (2)(a), (5) 1, 2 and 9): the gate runs under the rule in force with the reference code's step control, and its threshold is re-measured under that same code, a calibration (REQ-INT-114); 4.232e-09 was measured under § 0.1's fixed dτ and no longer binds. *Was (verify):* \"figure-eight closure after one period: ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order\" R-953 (11 Nov 2026) closes RQ-756: the step control's predictive limit reads the relative momenta, as the reference code computes it."
 - id: REQ-INT-050
   area: INT
   statement: "A regularisation-free occupant must be kept permanently, sharing no coordinate machinery with the others, as the arm that adjudicates when regularised occupants disagree."
@@ -7182,7 +7185,7 @@
   milestone: M3
 - id: REQ-INT-054
   area: INT
-  statement: Law 18's substep count bound must be on a fixed τ-schedule.
+  statement: "Law 18's substep count bound must be on a fixed τ-schedule: under a regularised occupant the bound per sync interval is R-604's cumulative step budget read at each boundary, the running total of a copy's steps at boundary t_k at most max(N_min, step_budget_rate·t_k), t_k its physical time since t = 0, with no cap per interval (R-953)."
   source:
   - file: decisions.md
     section: R-19 — Change 8 landed in full *(closes RQ-17)*
@@ -7190,16 +7193,20 @@
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
   - file: decisions.md
     section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
+  - file: decisions.md
+    section: "R-953 — RQ-756, Aarseth–Zare's last points: REQ-INT-054's bound per sync interval is R-604's cumulative step budget read at each boundary, the owner's (4)(a-2), with no cap per interval; the three Rust files are imported at `b1e6006`; the predictive limit reads the relative momenta, as the code computes them, its comment's \"velocities\" being wrong; the inverse map's guards are the floor `TINY`, written down as Part 2c rule 1's one exception; the pairs are taken in the order (0,1), (0,2), (1,2) *(closes RQ-756; amends R-160; refines R-927)*"
+  - file: decisions.md
+    section: "R-604 — A regularised copy's step budget is checked every step: its running total against `max(N_min, rate · t_elapsed)`; `N_min` protects early close encounters and is an M3 calibration *(closes RQ-527; settles R-564's accounting)*"
   verify:
     method: property test
-    detail: "Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound computed on the fixed τ-schedule. The bound's formula waits on RQ-756 (4): R-927 flags the owner's (4)(a), max(N_min, step_budget_rate·Δ_sync) per interval, against R-604's budget, which is cumulative since t = 0, and applies nothing; this arm is not built until the owner answers."
+    detail: "cargo test -p kernel tau_schedule_bound: fuzz ICs under Aarseth–Zare; at every sync boundary t_k the copy's running total of steps is at most max(N_min, step_budget_rate·t_k), and a copy that would exceed it has ended undetermined (R-604, R-563), never run on; no cap per interval is asserted; the test's output reports the largest count seen in one interval, for the record, asserting nothing about it; control: a step counter that resets at each boundary (a cap per interval read as the budget) misses a run whose total exceeds the boundary bound and fails (R-953)"
   rulings:
   - R-19
+  - R-604
   - R-927
+  - R-953
   milestone: M3
-  rq:
-  - RQ-756
-  note: "R-927 (10 Nov 2026) flags RQ-756 (4)(a) and applies nothing: the step budget over one interval is not a bound R-604's cumulative budget gives, so the bound's formula stays open in RQ-756 (4) and the verify's test is as it was, a sentence added saying it waits."
+  note: "R-953 (11 Nov 2026, RQ-756 (4), the owner's (4)(a-2)): the bound is R-604's cumulative budget read at each boundary, no cap per interval; it adds no behaviour. *Was (statement):* \"Law 18's substep count bound must be on a fixed τ-schedule.\" *Was (verify):* \"Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound computed on the fixed τ-schedule. The bound's formula waits on RQ-756 (4): R-927 flags the owner's (4)(a), max(N_min, step_budget_rate·Δ_sync) per interval, against R-604's budget, which is cumulative since t = 0, and applies nothing; this arm is not built until the owner answers.\" *Was (note):* R-927 (10 Nov 2026) flags RQ-756 (4)(a) and applies nothing; the bound's formula stayed open in RQ-756 (4)."
 - id: REQ-INT-055
   area: INT
   statement: The inspector's CPU reference integration must be RK45.
@@ -8184,7 +8191,7 @@
 - id: REQ-INT-105
   area: INT
   kind: calibration
-  statement: "The floor TINY of the regularised occupants' time-transformation denominators (Heggie's S and dt/dτ, its Rᵢ tested against TINY and never floored; Aarseth–Zare's A and B; logH's drift denominator), one value per working precision, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it is in neither the corpus nor the reference set."
+  statement: "The floor TINY of the regularised occupants' time-transformation denominators (Heggie's S and dt/dτ, its Rᵢ tested against TINY and never floored; Aarseth–Zare's A and B; logH's drift denominator), and, by the reference code, the Levi-Civita inverse's guards (|u₀| and |u₁| tested against TINY) and Aarseth–Zare's three separations in its energy (floored at TINY) (R-953), one value per working precision, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it is in neither the corpus nor the reference set, whose prin-rs values the owner states as 1e-37 at f32 and 1e-300 at f64 (R-953)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
@@ -8194,14 +8201,19 @@
     section: "R-563 — The integration floor follows the occupant: with regularisation off the substep machinery is unchanged; under a regularised occupant running out of the step budget makes the result undetermined, never discarded, and the separation floor and the entry-cap hits are counted, non-terminal signals; REQ-SCHED-063 and REQ-SCHED-077 are re-pointed"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
+  - file: decisions.md
+    section: "R-953 — RQ-756, Aarseth–Zare's last points: REQ-INT-054's bound per sync interval is R-604's cumulative step budget read at each boundary, the owner's (4)(a-2), with no cap per interval; the three Rust files are imported at `b1e6006`; the predictive limit reads the relative momenta, as the code computes them, its comment's \"velocities\" being wrong; the inverse map's guards are the floor `TINY`, written down as Part 2c rule 1's one exception; the pairs are taken in the order (0,1), (0,2), (1,2) *(closes RQ-756; amends R-160; refines R-927)*"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B (TASK-M3-68), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it"
+    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B and the Levi-Civita inverse's guarded components |u₀| and |u₁| at registration (TASK-M3-68), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; the reference's values (1e-37 at f32, 1e-300 at f64) reported beside the proposal; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it. And cargo test -p kernel az_doubly_degenerate_is_finite (TASK-M3-68): an f32 Aarseth–Zare fixture degenerate at the interval's entry, at registration, with both A and B below TINY, so that TINY·TINY underflows to 0 and the entry size is infinite, ends its march at the explicit finiteness test (integrator contract Part 2b, the Aarseth–Zare step control, step 7) with no non-finite state carried past it; controls: the march with that finiteness test removed carries a non-finite state on and fails, and the same fixture degenerate only mid-interval takes a finite step (the per-step rule skipping the non-finite constraint) and does not reach the test (R-953)"
   rulings:
   - R-71
   - R-563
+  - R-953
   milestone: M3
-  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split, and Aarseth–Zare's proposal is TASK-M3-68's. *Was (verify):* \"Aarseth–Zare's pre-floor A and B (TASK-M3-07)\"; *was (this note):* TASK-M3-07 proposes it."
+  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split, and Aarseth–Zare's proposal is TASK-M3-68's. *Was (verify):* \"Aarseth–Zare's pre-floor A and B (TASK-M3-07)\"; *was (this note):* TASK-M3-07 proposes it. R-953 (11 Nov 2026, RQ-756 (5) 7 and the owner's follow-up): TINY's uses gain the Levi-Civita inverse's guards and Aarseth–Zare's energy separations, as the imported reference code has them; a branch on TINY is integrator contract Part 2c rule 1's one exception; the owner's two values are the reference's, recorded and reported, the calibration still the M3 gate's; the finiteness arm on a doubly degenerate state is this requirement's, its fixture degenerate at entry (applied per R-369: where the owner's concern takes effect, not REQ-INT-044). *Was (statement):* \"The floor TINY of the regularised occupants' time-transformation denominators (Heggie's S and dt/dτ, its Rᵢ tested against TINY and never floored; Aarseth–Zare's A and B; logH's drift denominator), one value per working precision, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it is in neither the corpus nor the reference set.\" *Was (verify):* the same, without the inverse's guards, the reference's values and the finiteness arm."
 - id: REQ-INT-106
   area: INT
   statement: "The energy-suspect threshold proposed under REQ-INT-085 must be measured against the default occupant, Heggie × RK4 (R-560), whose regularised energy SUSPECT_ENERGY reads (R-566): its regularised drift, final and max, on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and which suspect predicates it lights on each under the proposed thresholds, recorded with REQ-INT-085's proposal before the M3 gate confirms it."
@@ -8396,14 +8408,17 @@
     section: 0.1 The mechanism, and the fix — measured, not proposed
   - file: decisions.md
     section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
+  - file: decisions.md
+    section: "R-953 — RQ-756, Aarseth–Zare's last points: REQ-INT-054's bound per sync interval is R-604's cumulative step budget read at each boundary, the owner's (4)(a-2), with no cap per interval; the three Rust files are imported at `b1e6006`; the predictive limit reads the relative momenta, as the code computes them, its comment's \"velocities\" being wrong; the inverse map's guards are the floor `TINY`, written down as Part 2c rule 1's one exception; the pairs are taken in the order (0,1), (0,2), (1,2) *(closes RQ-756; amends R-160; refines R-927)*"
   verify:
     method: numerical gate
     detail: "cargo xtask gate az-final-step --propose: the closure after one period at eta = 0.001 and n = 32 under the rule in force, the convergence ladder across eta in [0.02, 0.001], and the closure without the landing fix beside it, each run reported with its re-registration count and whether the predictive limit bound any step; the reference's figures (2.976e-3 against 3.595e-9, driver.rs:398-400) quoted as measurements, never as the threshold; the threshold proposed from the measured closure, its margin stated; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md"
   rulings:
   - R-71
   - R-927
+  - R-953
   milestone: M3
-  note: "R-927 (10 Nov 2026, RQ-756 (2)(a)): \"provided the gate threshold is re-measured\" under the reference code, the Rust driver. Closed by TASK-M3-68. RQ-756 stays open on (5) 6, the predictive limit's `v_rel`: the proposal states whether that limit bound any step of the run."
+  note: "R-927 (10 Nov 2026, RQ-756 (2)(a)): \"provided the gate threshold is re-measured\" under the reference code, the Rust driver. Closed by TASK-M3-68. R-953 (11 Nov 2026, RQ-756 (5) 6): the predictive limit reads the relative momenta P₁, P₂, as the code computes it; the proposal states whether that limit bound any step of the run. *Was:* \"RQ-756 stays open on (5) 6, the predictive limit's `v_rel`: the proposal states whether that limit bound any step of the run.\""
 - id: REQ-INT-115
   area: INT
   statement: "The integrator's entry must read records the CPU wrote and must never decode (R-926 items 5 and 6): the record contract must give the record as REQ-DEC-005's `(m, r, p)`, its descriptor and tag words, a branch word and the stop index of RQ-761 (R-935, a per-sample stop index), with `SimState` a separate buffer (REQ-SCHED-012)."
@@ -9127,6 +9142,23 @@
   - R-792
   milestone: M9
   note: "Closed by TASK-M9-39, which R-670 gives the classifier's change at ε ≠ 0. The GPU arm: physics review 5805354224 of PR #430, F12: the classifier runs on the GPU too, and the kernel test doesn't reach it. *Was (verify):* it ended at \"on a fixture built to separate them\"."
+- id: REQ-EVT-035
+  area: EVT
+  kind: definition
+  statement: "Integrator contract Part 7 must define how the collision test's floor is recorded with a run (R-954): below the f32 spacing of the positions at the pair's coordinates r_coll means collision at f32 coincidence and d_min is resolved only to that spacing, and the run records, beside r_coll, what it needs for an output to say whether its r_coll lay below what the test resolves; the definition states what is recorded (a value, a flag or both), how it is computed from the run, the floor varying with the pair's coordinates along it, and where it is stored, written into Part 7 under physics review before it is built."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 7 — Detectors as the `SimState` producer
+  - file: decisions.md
+    section: "R-954 — RQ-782, the collision test's floor: option (a), a definition in integrator contract Part 7; below the f32 spacing of the positions at the pair's coordinates `r_coll` means collision at f32 coincidence, `d_min` is resolved only to that spacing, the slider stays valid to 0, and the floor is recorded with the run *(closes RQ-782)*"
+  verify:
+    method: unit test
+    detail: "Review (physics): Part 7 carries the definition, as stated. cargo test -p engine r_coll_floor_recorded: a run with r_coll at the default 10⁻³ records that it lies above the floor; a run with r_coll below the f32 spacing of its bodies' coordinates (one at 2⁻²⁶ with bodies near |x| = 1) records that it lies below; a run at r_coll = 0 records it; the record is carried on every output beside r_coll, bit for bit as defined; controls: a recorder that reads only r_coll's value and not the coordinates misreports a run whose bodies lie at |x| in [1, 2) with r_coll between the two spacings, and fails; a run whose output drops the record fails"
+  rulings:
+  - R-547
+  - R-954
+  milestone: M3
+  note: "R-954 (11 Nov 2026, RQ-782 (a)): the floor is stated in Part 7 as a definition; the clause \"the floor is recorded with the run\" is built behaviour nothing recorded, so this definition requirement (R-72) and TASK-M3-71 carry it. The test's figures (2⁻²⁶, |x| in [1, 2)) are the definition's examples; the task's definition fixes them."
 - id: REQ-PAY-001
   area: PAY
   statement: "ICDescriptor must be 64 B (its 12 f32 fields plus explicit padding, with E₀ derived as K_0 + V_0 and not stored), and the sample descriptor must use bits 0–9 (bits 8–9 `last_symbol`) with bits 10–15 reserved."
@@ -28180,6 +28212,22 @@
   - R-948
   milestone: M8
   note: "Added 11 Nov 2026 (the physics review of PR #482 (review 5852979675), P6 (b) and (c)), on TASK-M8-58 (the trace's markers and leaving rule), which closes it. Conditions of the physics review's confirmation of R-948 (ii-a) and (iii-a)."
+- id: REQ-GUI-436
+  area: GUI
+  statement: "The built-in margin node must draw a valid margin as the greyscale ramp of top1 − top2 clamped to [0, 1], OKLab L equal to the margin, a margin below 0 black and one above 1 white, white where top1 is far above top2 (R-962), and must carry no provisional mark."
+  source:
+  - file: docs/design/principia_colour_composition.md
+    section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
+  - file: decisions.md
+    section: "R-962 — RQ-788, the built-in margin's colour map: option (a), the greyscale ramp of `top1 − top2` clamped to [0, 1], white where `top1` is far above `top2`, as built; \"provisional\" is dropped by a task *(closes RQ-788)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render stain_fanout_margin_map_is_the_grey_ramp: the margin occupant with two field inputs draws OKLab L equal to top1 − top2 for margins in [0, 1], black for a margin below 0 (the wires swapped) and white above 1, at the boundaries 0 and 1 exactly; neither margin.wgsl nor the test names the map provisional or RQ-788; controls: a diverging map through a neutral and an unclamped ramp each fail it (R-962)"
+  rulings:
+  - R-813
+  - R-962
+  milestone: M7
+  note: "R-962 (11 Nov 2026, RQ-788 (a)): the map is as TASK-M7-12 built it; TASK-M7-75 drops the \"provisional pending RQ-788\" wording and renames the test from stain_fanout_margin_provisional_map_is_the_grey_ramp."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
