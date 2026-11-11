@@ -876,6 +876,16 @@ fn stain_fallback_an_invalid_graph_renders_the_fallback() {
         ["var out = vec3<f32>(0.0, 1.0, 0.0);", "return out;"],
         "the fallback's shade() is its one statement"
     );
+    // Each tier's fallback is its own, the first time it is asked for and every time after.
+    for _ in 0..2 {
+        for tier in Tier::ALL {
+            let f = assemble::fallback(tier).unwrap_or_else(|e| panic!("{e}"));
+            assert!(
+                f.source.starts_with(&prelude::wgsl(tier)),
+                "the fallback at {tier:?} is not that tier's"
+            );
+        }
+    }
 }
 
 negative_control!(

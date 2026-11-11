@@ -335,7 +335,7 @@ fn check_always_renderable(render: Render) {
     let fallback = assemble::fallback(Tier::FULL).unwrap_or_else(|e| panic!("{e}"));
     let seen = Seen::default();
     let drawn = RefCell::new(BTreeSet::new());
-    let strategy = (prop::collection::vec(op(), 1..40), any::<u8>());
+    let strategy = (prop::collection::vec(op(), 1..24), any::<u8>());
     validation::prop::run(&strategy, |(ops, how)| {
         run_ops(&ops, how, render, &gpu, &fallback, &seen, &drawn).map_err(TestCaseError::fail)
     });

@@ -49,9 +49,9 @@
 //! into [`DEBUG_COUNTS_GROUP`]'s storage buffer for the legend's "Debug" key. The presentation variant has no arm and no
 //! flag bit: its `note_non_finite()`, the hook a node calls where it reads a non-finite value, does nothing.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt::{self, Write as _};
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock, PoisonError};
 
 use crate::codegen;
 use crate::lex::{is_space, lines, tokens, Tok};
@@ -1020,8 +1020,19 @@ pub fn assemble_or_fallback(
 
 /// The invalid-graph fallback's fragment at `tier` (render_gui_spec §13; [`codegen::fallback`]): the template with no
 /// node function, its `shade()` returning the fallback's flat colour at every pixel. It reads no field and has no
-/// uniform block; it has no debug arm in either view, so it is flat there too and binds no counts.
+/// uniform block; it has no debug arm in either view, so it is flat there too and binds no counts. It is a function
+/// of the tier alone, so each tier's is assembled once and kept.
 pub fn fallback(tier: Tier) -> Result<Fragment, AssembleError> {
+    static KEPT: OnceLock<Mutex<HashMap<Tier, Fragment>>> = OnceLock::new();
+    let kept = KEPT.get_or_init(Mutex::default);
+    // A poisoned lock still holds whole fragments: each is inserted complete.
+    if let Some(f) = kept
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .get(&tier)
+    {
+        return Ok(f.clone());
+    }
     let mut source = head(tier, &[])?;
     source.push_str(&shade_functions(
         &format!("    {}\n", codegen::fallback::statement()),
@@ -1029,12 +1040,16 @@ pub fn fallback(tier: Tier) -> Result<Fragment, AssembleError> {
     ));
     source.push_str(PRESENTATION_HOOK);
     compile(&source)?;
-    Ok(Fragment {
+    let fragment = Fragment {
         source,
         fields: Vec::new(),
         uniforms: Vec::new(),
         debug_arm: false,
-    })
+    };
+    kept.lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .insert(tier, fragment.clone());
+    Ok(fragment)
 }
 
 /// [`assemble`] with the debug arm `arm`, WGSL defining
