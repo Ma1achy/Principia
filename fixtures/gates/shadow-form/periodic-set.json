@@ -1,0 +1,5 @@
+{
+  "expected": "pass",
+  "kind": "periodic-set",
+  "description": "the absolute and displacement f32 shadows' λ_T against the known exponent on the periodic-orbit set"
+}

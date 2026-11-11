@@ -1,0 +1,5 @@
+{
+  "expected": "pass",
+  "kind": "sweep",
+  "description": "dd test 10 over the candidate grid at f32 and f64; the rule picks the proposed (‖δ₀‖, n_renorm) and tolerance"
+}

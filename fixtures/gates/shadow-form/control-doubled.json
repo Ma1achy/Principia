@@ -1,0 +1,6 @@
+{
+  "expected": "fail",
+  "kind": "compare",
+  "description": "control: the f32 absolute form's λ_T against its own at twice ‖δ₀‖, which the comparison must tell apart",
+  "scale": 2.0
+}

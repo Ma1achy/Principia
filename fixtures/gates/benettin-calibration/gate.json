@@ -1,0 +1,15 @@
+{
+  "gate": "benettin-calibration",
+  "inputs": [
+    "sweep.json",
+    "kepler_f32.json",
+    "kepler_f64.json",
+    "burrau_f32.json",
+    "burrau_f64.json",
+    "lagrange_f32.json",
+    "lagrange_f64.json",
+    "control_f32_rounding.json"
+  ],
+  "threshold": { "value": 0.2, "requirement": "REQ-INT-076", "status": "provisional", "ruling": "R-71" },
+  "min_regions": { "value": null, "requirement": "REQ-INT-076" }
+}
