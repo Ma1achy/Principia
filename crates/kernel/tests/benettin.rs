@@ -192,6 +192,64 @@ negative_control!(
     check_not_in_pool::<f64>(&burrau(), |s| (s.r_sh, s.p_sh))
 );
 
+/// How a sample's base `SimState` becomes the FTLE tier's, beside its shadow.
+type Writer = fn(&Benettin<f64, Absolute>, SimStateBaseOf<f64>) -> SimStateFTLEOf<f64>;
+
+/// `write` keeps every field of the sample's `SimState` and adds the shadow's `r_sh`, `p_sh` and `S`: each field is
+/// set to a value of its own, so a field dropped or crossed shows.
+fn check_write(write: Writer) {
+    let (ic, _) = setup::<f64>(&burrau(), 5.0);
+    let shadow = Benettin::<f64, Absolute>::new(&ic, CollisionRadius::none(), proposed());
+    let k = |i: u8| f64::from(i) + 0.25;
+    let out = SimStateBaseOf::<f64> {
+        r: [[k(1), k(2)], [k(3), k(4)], [k(5), k(6)]],
+        p: [[k(7), k(8)], [k(9), k(10)], [k(11), k(12)]],
+        S: 0.0,
+        theta: k(13),
+        mean_y: k(14),
+        C_ty: k(15),
+        E_0: k(16),
+        Lz_0: k(17),
+        packed_a: 18,
+        packed_b: 19,
+        times: 20,
+        total_substeps: 21,
+        closure_min: k(22),
+        closure_step: 23,
+        _reserved: 24,
+        ..SimStateBaseOf::default()
+    };
+    let s = write(&shadow, out);
+    let sh = shadow.shadow(&State {
+        m: ic.m,
+        r: out.r,
+        p: out.p,
+    });
+    assert!(
+        ftle_sample_bits(&s) == base_bits(&out)
+            && s._reserved == out._reserved
+            && bits6(&s.r_sh) == bits6(&sh.r)
+            && bits6(&s.p_sh) == bits6(&sh.p)
+            && s.S.bits() == shadow.s_sum().bits(),
+        "the FTLE tier's SimState does not carry the sample's fields and the shadow's state and S"
+    );
+}
+
+#[test]
+fn shadow_write() {
+    check_write(|b, out| b.write(out));
+}
+
+negative_control!(
+    shadow_write,
+    "a writer that drops the sample's theta must fail",
+    expected = "does not carry",
+    check_write(|b, out| SimStateFTLEOf {
+        theta: 0.0,
+        ..b.write(out)
+    })
+);
+
 // ── shadow_own_projection (REQ-INT-039) ─────────────────────────────────────────────────────────────────────────
 
 /// `R_com` and `P_com` of a state as its projection forms them.
