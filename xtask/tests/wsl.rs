@@ -890,22 +890,32 @@ fn ps_scripts() -> Vec<(String, String)> {
     found
 }
 
-/// Each `$name:` in `text` whose name is none of `PS_SCOPES`, with its line number. PowerShell reads `$name:` as a
-/// variable in the drive or scope `name`, in a double-quoted string as much as in code, and what follows the colon must
-/// then be a variable's name: "$pinned: refusing it" doesn't parse (`InvalidVariableReferenceWithDrive`), and
-/// "${pinned}: refusing it" does. This reads the text, not PowerShell's tokens, so it is stricter than the parser: it
-/// names one in a comment or a single-quoted string too, where `${name}:` reads the same to a person.
+/// A character of a PowerShell variable's name: a letter or a digit, ASCII or not, `_`, or `?`.
+fn ps_name_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || c == '?'
+}
+
+/// Each `$name:` in `text`, with its line number, but for a scope's or a drive's with a name after its colon.
+/// PowerShell reads `$name:` as a variable in the drive or scope `name`, in a double-quoted string as much as in code,
+/// and what follows the colon must then be a variable's name: "$pinned: refusing it" doesn't parse
+/// (`InvalidVariableReferenceWithDrive`), no more does "$script: failed", and "${pinned}: refusing it" does. This reads
+/// the text, not PowerShell's tokens, so it is stricter than the parser: it names one in a comment or a single-quoted
+/// string too, where `${name}:` reads the same to a person; one whose name is no scope's with a name after the colon
+/// (`$pinned:x`), which parses and reads a drive that isn't there; and `$type::Member`, which no script here uses and
+/// `($type)::Member` says as well.
 fn drive_references(text: &str) -> Vec<(usize, String)> {
     let mut found = Vec::new();
     for (n, line) in text.lines().enumerate() {
         for (at, _) in line.match_indices('$') {
             let rest = &line[at + 1..];
-            let len = rest
-                .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
-                .unwrap_or(rest.len());
+            let len = rest.find(|c: char| !ps_name_char(c)).unwrap_or(rest.len());
             let name = &rest[..len];
-            let scoped = PS_SCOPES.iter().any(|s| s.eq_ignore_ascii_case(name));
-            if !name.is_empty() && rest[len..].starts_with(':') && !scoped {
+            let Some(after) = rest[len..].strip_prefix(':') else {
+                continue;
+            };
+            let scoped = PS_SCOPES.iter().any(|s| s.eq_ignore_ascii_case(name))
+                && after.starts_with(ps_name_char);
+            if !name.is_empty() && !scoped {
                 found.push((n + 1, format!("${name}:")));
             }
         }
@@ -989,10 +999,11 @@ fn check_drive_references(text: &str, expected: &[(usize, &str)]) {
     );
 }
 
-/// A scope's or a drive's reference, in any case; a braced name; a colon apart from the name; a subexpression's; a
-/// bare `$`; a name with no colon.
+/// A scope's or a drive's reference, in any case, and one to a name starting with `_`, `?`, a digit or a letter that
+/// isn't ASCII; a braced name; a colon apart from the name; a subexpression's; a bare `$`; a name with no colon.
 const PS_SOUND: &str =
     "\"$env:A $script:b $GLOBAL:c $using:d $local:e $private:f $function:g $variable:h\"\n\
+     \"$env:_a $env:?b $env:1 $env:\u{e9}t\u{e9}\"\n\
                         \"${pinned}: $pinned : $($r.Code): $ : $: $pinned\"\n";
 
 #[test]
@@ -1010,6 +1021,29 @@ fn ps_scan_names_only_what_does_not_parse() {
             (4, "$last:"),
         ],
     );
+    // A scope's name is a reference only with a name after its colon: before a space, at a string's end, at the
+    // line's end and before a second colon it is the same parse error.
+    check_drive_references(
+        "\"$script: failed\"\n\"$env: x\"\n\"$local:\"\n$Function:\n[int]$global::MaxValue $x::y",
+        &[
+            (1, "$script:"),
+            (2, "$env:"),
+            (3, "$local:"),
+            (4, "$Function:"),
+            (5, "$global:"),
+            (5, "$x:"),
+        ],
+    );
+    // `?` and letters outside ASCII are a name's characters, and don't end it early.
+    check_drive_references(
+        "\"$ok?: $na\u{ef}ve: $?: $\u{e9}:\"",
+        &[
+            (1, "$ok?:"),
+            (1, "$na\u{ef}ve:"),
+            (1, "$?:"),
+            (1, "$\u{e9}:"),
+        ],
+    );
 }
 
 negative_control!(
@@ -1018,6 +1052,16 @@ negative_control!(
     expected = "names the wrong references",
     check_drive_references("\"the pin is $pinned: refusing it\"", &[])
 );
+
+mod scope_alone {
+    use super::*;
+    negative_control!(
+        ps_scan_names_only_what_does_not_parse,
+        "a scope's name exempt whatever follows its colon",
+        expected = "names the wrong references",
+        check_drive_references("\"$script: failed\"", &[])
+    );
+}
 
 // ---- Proof 3, the host over WSL's virtual switch -------------------------------------------------------------------
 
