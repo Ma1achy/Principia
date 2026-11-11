@@ -323,9 +323,17 @@ no body's momentum, so no light body is given a large velocity: a momentum offse
 velocity offset `‖δ₀‖/2mᵢ`, which on the Kepler-embedded orbit's `m₂ → ε` would swamp the first interval's growth. Its
 unweighted sum is zero in each component; its mass-weighted sum, the shadow's CoM offset, is zero at equal masses and
 otherwise removed by the shadow's own projection after its first step (§3.4), which leaves a nonzero separation, since
-`u` moves the bodies by different amounts. Any direction with a component along the most expanding one converges to
-the largest exponent under renormalisation; a fixed one makes the shadow a deterministic function of the sample's
-state. `‖δ₀‖` and `n_renorm` are calibrated (REQ-INT-076, R-71).
+`u` moves the bodies by different amounts. That separation is `‖δ₀‖·√(1 + 3|c|²)`, `c = Σmᵢuᵢ/M` the offset's
+mass-weighted mean: since `Σuᵢ = 0` and `Σ|uᵢ|² = 1`, removing the translation `‖δ₀‖·c` from each of the three bodies
+only lengthens the offset. As a mass-weighted mean of the `uᵢ`, the longest of which is `|u₁| = 1/√2`, `c` has
+`|c|² ≤ ½`, so the first interval starts between `‖δ₀‖` and `‖δ₀‖·√1.75`. This biases `λ_T` up by at most
+`½·ln 1.75 / T ≈ 0.28/T`, and every later interval starts at `‖δ₀‖` exactly. Any direction with a component along the
+most expanding one converges to the largest exponent under renormalisation; a fixed one makes the shadow a
+deterministic function of the sample's state. `u` lacks that component in one measure-zero case: a state at rest
+(`p = 0`) whose positions about the centre of mass are proportional to `−ẑ × (uᵢ − c)`, at equal masses
+`(0, −½), (½, ½), (−½, 0)`. There `u`, once projected, is an infinitesimal rotation `δrᵢ ∝ ẑ × rᵢ`, a symmetry of
+exponent 0, and the separation grows only through the `O(‖δ₀‖)` nonlinearity and rounding. `‖δ₀‖` and `n_renorm` are
+calibrated (REQ-INT-076, R-71).
 
 **Ensemble sensitivity** (E copies per nominal sample, full samples jittered within the footprint at fixed Halton (2,3) offsets — copy 0 the un-jittered centre, copies 1..E at Halton points 1..E centred and scaled to the footprint, R-80 — no intervention):
 ```
