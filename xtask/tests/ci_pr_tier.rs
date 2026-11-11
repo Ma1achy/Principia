@@ -30,6 +30,9 @@
 //!   owner, 11 Nov 2026: "split the ci job as planned"): each nextest step runs its `hash:` slice of 3, the doctests run
 //!   in shard 1, `ci` passes only when the shards' matrix succeeded, and each reader binary a partitioned step names
 //!   holds a test.
+//! - `ci_pr_tier_crates_are_fetched_first`: `clippy`, `build` and `process` fetch the crates first, up to three tries
+//!   over HTTP/1.1, then run offline, and restore the registry `ci` saves on `main`, restore-only (#481's `clippy` failed
+//!   at crates.io, curl 56, before anything compiled).
 //!
 //! Each test has its registered negative control (R-176), which feeds the same check a configuration or workflow
 //! differing in the one respect it turns on.
@@ -1591,3 +1594,189 @@ negative_control!(
     ))
 );
 
+// ---- The crates fetched first, then offline (#481's `clippy`, curl 56; the CI diagnosis of 11 Nov 2026) -------------
+
+/// The jobs that fetch the crates before their own work.
+const FETCHING: [&str; 3] = ["clippy", "build", "process"];
+
+const FETCH_STEP: &str = "      - name: cargo fetch --locked (up to three tries)";
+
+/// Each of [`FETCHING`] fetches the crates in a step of its own before any other cargo step, over HTTP/1.1, and that
+/// step alone turns the job's later cargo runs offline; each restores the registry `ci` saves on `main`, never saving
+/// one of its own.
+fn check_fetch_first(workflow: &str) {
+    let jobs = jobs(workflow);
+    for id in FETCHING {
+        let (_, lines) = jobs
+            .iter()
+            .find(|(job, _)| job == id)
+            .unwrap_or_else(|| panic!("ci_pr_tier: no job {id}"));
+        let steps = steps_of(lines);
+        let at = steps
+            .iter()
+            .position(|s| s[0] == FETCH_STEP)
+            .unwrap_or_else(|| panic!("ci_pr_tier: {id} fetches no crates first"));
+        let cargo_before = steps[..at].iter().any(|s| {
+            step_key(s, "run").is_some_and(|r| r.contains("cargo ") && !r.starts_with("rustup"))
+        });
+        assert!(
+            !cargo_before,
+            "ci_pr_tier: {id} runs cargo before it fetches the crates"
+        );
+        let fetch = &steps[at];
+        assert!(
+            fetch
+                .iter()
+                .any(|l| l.trim() == "CARGO_HTTP_MULTIPLEXING: \"false\"")
+                && step_key(fetch, "timeout-minutes").is_some(),
+            "ci_pr_tier: {id}'s fetch is not over HTTP/1.1 under a limit"
+        );
+        assert!(
+            lines.iter().any(|l| l == "          shared-key: ci")
+                && lines
+                    .iter()
+                    .any(|l| l.trim() == "save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}")
+                && lines
+                    .iter()
+                    .find_map(|l| l.strip_prefix("    if: "))
+                    .is_some_and(|c| c.contains("github.event_name == 'pull_request'")),
+            "ci_pr_tier: {id} does not restore the registry `ci` saves on main, restore-only"
+        );
+    }
+}
+
+/// The fetch step's script under bash, `cargo` a stand-in failing its first `fails` calls: whether it passed, the calls,
+/// and what it wrote to GITHUB_ENV.
+fn fetch_run(workflow: &str, fails: u32) -> (bool, u32, String) {
+    let jobs = jobs(workflow);
+    let (_, lines) = jobs
+        .iter()
+        .find(|(job, _)| job == "clippy")
+        .expect("ci_pr_tier: no job clippy");
+    let step = steps_of(lines)
+        .into_iter()
+        .find(|s| s[0] == FETCH_STEP)
+        .expect("ci_pr_tier: clippy fetches no crates");
+    let script = step_key(&step, "run").expect("a run");
+    // A directory of this process's own: the test and its controls run at once, each in a process of its own.
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("ci_pr_tier_fetch_{}_{fails}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a scratch directory");
+    let env_file = dir.join("env");
+    std::fs::write(&env_file, "").expect("env");
+    let calls = dir.join("calls");
+    let out = std::process::Command::new("bash")
+        .args(["--noprofile", "--norc", "-eo", "pipefail", "-c"])
+        .arg(format!(
+            "cargo() {{ echo \"cargo $*\" >> \"$CALLS\"; [ \"$(wc -l < \"$CALLS\")\" -gt {fails} ]; }}\n{script}\n"
+        ))
+        .env("CALLS", &calls)
+        .env("GITHUB_ENV", &env_file)
+        .output()
+        .expect("bash runs");
+    let n = std::fs::read_to_string(&calls)
+        .unwrap_or_default()
+        .lines()
+        .filter(|l| *l == "cargo fetch --locked")
+        .count() as u32;
+    (
+        out.status.success(),
+        n,
+        std::fs::read_to_string(&env_file).unwrap_or_default(),
+    )
+}
+
+/// The fetch passes at its first, second or third try, and only then turns the job offline; three failures fail it.
+fn check_fetch_tries(workflow: &str) {
+    for fails in 0..3 {
+        assert_eq!(
+            fetch_run(workflow, fails),
+            (true, fails + 1, "CARGO_NET_OFFLINE=true\n".to_owned()),
+            "ci_pr_tier: the fetch does not pass at try {} and turn the job offline",
+            fails + 1
+        );
+    }
+    assert_eq!(
+        fetch_run(workflow, 3),
+        (false, 3, String::new()),
+        "ci_pr_tier: three failed fetches do not fail the step"
+    );
+}
+
+#[test]
+fn ci_pr_tier_crates_are_fetched_first() {
+    check_fetch_first(&read(".github/workflows/ci.yml"));
+    check_fetch_tries(&read(".github/workflows/ci.yml"));
+}
+
+negative_control!(
+    ci_pr_tier_crates_are_fetched_first,
+    "A fetch tried twice.",
+    expected = "the fetch does not pass at try 3",
+    {
+        let ci = read(".github/workflows/ci.yml").replace(
+            "for attempt in 1 2 3; do cargo fetch --locked",
+            "for attempt in 1 2; do cargo fetch --locked",
+        );
+        check_fetch_tries(&ci)
+    }
+);
+
+mod fetch_on_http2 {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_crates_are_fetched_first,
+        "The build's fetch over HTTP/2, whose framing errors failed it.",
+        expected = "build's fetch is not over HTTP/1.1 under a limit",
+        {
+            let text = read(".github/workflows/ci.yml");
+            let at = text.find("\n  build:\n").expect("the job");
+            let (head, tail) = text.split_at(at);
+            check_fetch_first(&format!(
+                "{head}{}",
+                tail.replacen("          CARGO_HTTP_MULTIPLEXING: \"false\"\n", "", 1)
+            ))
+        }
+    );
+}
+
+mod own_registry {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_crates_are_fetched_first,
+        "clippy under a registry key of its own, which nothing ever saves.",
+        expected = "clippy does not restore the registry `ci` saves on main",
+        {
+            let text = read(".github/workflows/ci.yml");
+            let at = text.find("\n  clippy:\n").expect("the job");
+            let (head, tail) = text.split_at(at);
+            check_fetch_first(&format!(
+                "{head}{}",
+                tail.replacen(
+                    "          shared-key: ci\n",
+                    "          shared-key: clippy\n",
+                    1
+                )
+            ))
+        }
+    );
+}
+
+mod fetch_after_the_lint {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_crates_are_fetched_first,
+        "The process job with no fetch step.",
+        expected = "process fetches no crates first",
+        {
+            let text = read(".github/workflows/ci.yml");
+            let at = text.find("\n  process:\n").expect("the job");
+            let (head, tail) = text.split_at(at);
+            check_fetch_first(&format!(
+                "{head}{}",
+                tail.replacen(FETCH_STEP, "      - name: fetch", 1)
+            ))
+        }
+    );
+}

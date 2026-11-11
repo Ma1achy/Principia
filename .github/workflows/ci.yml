@@ -250,17 +250,32 @@ jobs:
       - name: rustup toolchain install (rust-toolchain.toml)
         if: needs.changes.outputs.docs_only != 'true'
         run: rustup toolchain install
+      # The registry the `ci` shards save on `main`, restored only (R-337): this job runs on no push, so a key of its own
+      # was never saved, and every run downloaded the registry from crates.io. Applied per R-369/R-812.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         if: needs.changes.outputs.docs_only != 'true'
         with:
           prefix-key: cargo-registry
-          shared-key: clippy
+          shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Dependencies without debug info, every profile
         if: needs.changes.outputs.docs_only != 'true'
         uses: ./.github/actions/cargo-ci-config
+      # The crates, fetched before the job's own work, up to three tries, over HTTP/1.1
+      # (CARGO_HTTP_MULTIPLEXING=false: the curl 16 errors were HTTP/2 framing); then CARGO_NET_OFFLINE=true for every
+      # later step, with the lockfile `--locked` has just checked, `--frozen`'s two halves, so the job's own steps fail
+      # only on their own work. Five PR jobs since 7 Nov 2026 failed at crates.io's index, curl 56 or 16, before anything
+      # compiled (#481's `clippy` among them, job 130327300645). Criterion, fixed before measuring: no network-caused
+      # `clippy` or `build` failure over the next 50 PR runs, and `clippy`'s median job time within 10 s of today's
+      # (about 2 min). Applied per R-369/R-812.
+      - name: cargo fetch --locked (up to three tries)
+        if: needs.changes.outputs.docs_only != 'true'
+        timeout-minutes: 10
+        env:
+          CARGO_HTTP_MULTIPLEXING: "false"
+        run: for attempt in 1 2 3; do cargo fetch --locked && { echo "CARGO_NET_OFFLINE=true" >> "$GITHUB_ENV"; exit 0; }; echo "attempt $attempt of 3 of cargo fetch failed"; done; exit 1
       - name: cargo clippy --workspace --all-targets -- -D warnings
         if: needs.changes.outputs.docs_only != 'true'
         run: cargo clippy --workspace --all-targets -- -D warnings
@@ -296,15 +311,29 @@ jobs:
           df -h /
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
+      # The registry the `ci` shards save on `main`, restored only (R-337): this job runs on no push, so a key of its own
+      # was never saved, and every run downloaded the registry from crates.io. Applied per R-369/R-812.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
-          shared-key: build
+          shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
+      # The crates, fetched before the job's own work, up to three tries, over HTTP/1.1
+      # (CARGO_HTTP_MULTIPLEXING=false: the curl 16 errors were HTTP/2 framing); then CARGO_NET_OFFLINE=true for every
+      # later step, with the lockfile `--locked` has just checked, `--frozen`'s two halves, so the job's own steps fail
+      # only on their own work. Five PR jobs since 7 Nov 2026 failed at crates.io's index, curl 56 or 16, before anything
+      # compiled (#481's `clippy` among them, job 130327300645). Criterion, fixed before measuring: no network-caused
+      # `clippy` or `build` failure over the next 50 PR runs, and `clippy`'s median job time within 10 s of today's
+      # (about 2 min). Applied per R-369/R-812.
+      - name: cargo fetch --locked (up to three tries)
+        timeout-minutes: 10
+        env:
+          CARGO_HTTP_MULTIPLEXING: "false"
+        run: for attempt in 1 2 3; do cargo fetch --locked && { echo "CARGO_NET_OFFLINE=true" >> "$GITHUB_ENV"; exit 0; }; echo "attempt $attempt of 3 of cargo fetch failed"; done; exit 1
       # The plan checks need Python and PyYAML (REQ-SYS-007).
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -578,15 +607,29 @@ jobs:
         run: |
           rustup toolchain install
           echo "cachekey=$({ rustc --version --verbose; env | grep -E '^CARGO_(INCREMENTAL|PROFILE)' | sort; cat .github/actions/cargo-ci-config/config.sh; } | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
+      # The registry the `ci` shards save on `main`, restored only (R-337): this job runs on no push, so a key of its own
+      # was never saved, and every run downloaded the registry from crates.io. Applied per R-369/R-812.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
-          shared-key: process
+          shared-key: ci
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
+      # The crates, fetched before the job's own work, up to three tries, over HTTP/1.1
+      # (CARGO_HTTP_MULTIPLEXING=false: the curl 16 errors were HTTP/2 framing); then CARGO_NET_OFFLINE=true for every
+      # later step, with the lockfile `--locked` has just checked, `--frozen`'s two halves, so the job's own steps fail
+      # only on their own work. Five PR jobs since 7 Nov 2026 failed at crates.io's index, curl 56 or 16, before anything
+      # compiled (#481's `clippy` among them, job 130327300645). Criterion, fixed before measuring: no network-caused
+      # `clippy` or `build` failure over the next 50 PR runs, and `clippy`'s median job time within 10 s of today's
+      # (about 2 min). Applied per R-369/R-812.
+      - name: cargo fetch --locked (up to three tries)
+        timeout-minutes: 10
+        env:
+          CARGO_HTTP_MULTIPLEXING: "false"
+        run: for attempt in 1 2 3; do cargo fetch --locked && { echo "CARGO_NET_OFFLINE=true" >> "$GITHUB_ENV"; exit 0; }; echo "attempt $attempt of 3 of cargo fetch failed"; done; exit 1
       - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: target/tmp/fixture-targets
