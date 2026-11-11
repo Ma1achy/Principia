@@ -810,9 +810,11 @@ wf, outputs, failed, event = yaml.safe_load(open(sys.argv[1])), json.loads(sys.a
 jobs, results = wf["jobs"], {}
 ref = "refs/heads/main" if event == "push" else "refs/pull/1/merge"
 def holds(cond):
-    e = re.sub(r"needs\.changes\.outputs\.(\w+)", lambda m: repr(outputs.get(m[1], "")), cond)
+    # Inside `${{ }}` or not, the same expression. `!cancelled()` reads as `always()`: this run is not cancelled.
+    e = re.sub(r"^\$\{\{(.*)\}\}$", r"\1", cond.strip()).strip()
+    e = re.sub(r"needs\.changes\.outputs\.(\w+)", lambda m: repr(outputs.get(m[1], "")), e)
     e = e.replace("github.event_name", repr(event)).replace("github.ref", repr(ref))
-    e = e.replace("always()", "True").replace("&&", "and").replace("||", "or")
+    e = e.replace("!cancelled()", "True").replace("always()", "True").replace("&&", "and").replace("||", "or")
     return bool(eval(e, {"__builtins__": {}}))
 def result(jid):
     if jid not in results:
@@ -823,7 +825,7 @@ def result(jid):
         cond = str(job.get("if", ""))
         if jid == "changes":
             results[jid] = "failure" if failed else "success"
-        elif "always()" in cond:
+        elif "always()" in cond or "!cancelled()" in cond:
             results[jid] = "success" if holds(cond) else "skipped"
         else:
             ok = all(r == "success" for r in before) and (not cond or holds(cond))

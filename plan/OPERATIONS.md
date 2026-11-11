@@ -484,11 +484,19 @@ On a code change the jobs run in parallel:
   and `per-merge` passes (§ "Merging", what is red `main`). The orchestrator's merge script
   refuses a merge with a red `process` job on the head, though branch protection does not require it;
 - `web-skeleton`, advisory: the v1 web skeleton's wasm build.
-Every job bearing a required check runs on every pull request, `if: always()`, and skips its work inside the job on the
+Every job bearing a required check runs on every pull request whose run is not cancelled, `if: !cancelled()`,
+whatever `changes` ended in, and skips its work inside the job on the
 classification's verdict (R-656: "Do the GPU and mutants skips inside the job … then skip as success under the same
 check name"); its first step fails when `changes` did not succeed, so a failed classification never passes a skip, and
 a required check is never a job skipped at job level. No job polls or waits on another run. `merge-batch.sh`'s
-`gh pr checks --required` reads `pass` for each.
+`gh pr checks --required` reads `pass` for each. `!cancelled()`, not `always()`, so that a push stops the run on the
+head it supersedes: under `always()` that run's jobs ran to their end and the ones not yet started still started, and
+the new head waited behind them (applied per R-369/R-812, the CI diagnosis of 10 Nov 2026). Every job of the PR tier
+has a `timeout-minutes` (`ci.yml`'s header gives each with its measured basis), and every step that installs from apt,
+in every workflow, bounds each `apt-get` call (`apt-get update` at 90 s, `apt-get install` at 420 s, each past the
+longest passing call of 654 measured steps), tries it three times and has a step limit of its own, 8 minutes: two
+runs had waited six hours in `apt-get update`, where a hung one now costs 5 minutes at most. `xtask/tests/ci_pr_tier.rs`
+pins the three.
 
 What a pull request leaves to a merge runs on every push to `main`: the slow tier, the in-depth GPU suites on lavapipe
 and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xtask golden --all`, `cargo xtask gate

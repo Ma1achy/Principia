@@ -123,7 +123,10 @@ def runs_on_prs(wf):
 
 QUICK_GATE = "always() && needs.changes.outputs.quick != 'true'"
 # The owner's CI model (9 Nov 2026): the PR tier's required jobs run on every pull request and skip inside the job.
-PR_TIER_GATE = "always() && github.event_name == 'pull_request'"
+# `!cancelled()` since 10 Nov 2026, where `always()` kept a superseded run's jobs running: it too runs the job whatever
+# its `needs:` ended in.
+PR_TIER_GATE = "${{ !cancelled() && github.event_name == 'pull_request' }}"
+NOT_CANCELLED = "${{ !cancelled() }}"
 
 def bears(job, jid):
     name, only = str(job.get("name", jid)), ((job.get("strategy") or {}).get("matrix") or {}).get("check")
@@ -155,7 +158,7 @@ def report(args):
             continue
         cond = job.get("if")
         # R-684: `ci.yml`'s gates skip on a quick run alone, under their raw `name:`, and report on any other.
-        if not ((cond is None and not needs_of(job)) or str(cond).strip() in ("always()", QUICK_GATE, PR_TIER_GATE)):
+        if not ((cond is None and not needs_of(job)) or str(cond).strip() in ("always()", NOT_CANCELLED, QUICK_GATE, PR_TIER_GATE)):
             problems.append("`%s` on `%s`: %s's job `%s` can be skipped (if: %s)" % (name, action, f, jid, cond))
     print(json.dumps(problems))
 
@@ -365,7 +368,7 @@ negative_control!(
     expected = "`build` on `opened`: ci.yml's job `build` can be skipped",
     pushes(&edited(
         "ci.yml",
-        "  build:\n    needs: changes\n    if: always() && github.event_name == 'pull_request'\n",
+        "  build:\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
         "  build:\n    needs: changes\n    if: needs.changes.outputs.docs_only != 'true'\n",
     ))
 );
@@ -381,7 +384,7 @@ negative_control!(
     expected = "`gpu-metal` on `opened`: ci.yml's job `gpu-metal-smoke` can be skipped",
     pushes(&edited(
         "ci.yml",
-        "    name: gpu-metal\n    needs: changes\n    if: always()\n",
+        "    name: gpu-metal\n    needs: changes\n    if: ${{ !cancelled() }}\n",
         "    name: gpu-metal\n    needs: changes\n    if: success()\n",
     ))
 );

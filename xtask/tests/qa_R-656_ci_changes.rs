@@ -28,7 +28,7 @@
 //!   request's, reads the change against the first parent (the base), not against the pull request's head; a non-pull
 //!   request event, and a commit that is no merge, run everything.
 //! - `qa_r656_required_checks_report_under_always`: the PR tier's eight required checks (the owner's CI model, 9 Nov
-//!   2026) are present; `ci.yml`'s six are `if: always()` jobs, one each; `mutants.yml`, off the pull request's path,
+//!   2026) are present; `ci.yml`'s six are `if: !cancelled()` jobs, one each; `mutants.yml`, off the pull request's path,
 //!   is triggered by no pull request and posts nothing through the Checks API; `ci.yml` filters no `pull_request` by
 //!   path. (Until 9 Nov 2026 this held `mutants-check` to one `if: always()` job of every run, R-678; the owner's model
 //!   retired it from the PR path, R-290's exception applied per R-369.)
@@ -573,8 +573,9 @@ fn check_required(ci: &str, mutants: &str, pr_check: &str, reviews: &str) {
     let ci = parse(ci);
     // The owner's CI model (9 Nov 2026) makes the PR tier's checks `ci.yml`'s fmt, clippy, build, ci, gpu-lavapipe and
     // gpu-metal, each a job of every pull-request run that skips its work inside on the classification (R-656), under
-    // `if: always()`, the GPU smoke sets on a push too, the rest on `pull_request` alone; `xtask-ci` and `gpu-kernel`
-    // left the required checks for each merge. R-290's exception, applied per R-369 by the orchestrator.
+    // `if: !cancelled()` (`always()` until 10 Nov 2026, which kept a superseded run's jobs running), the GPU smoke sets
+    // on a push too, the rest on `pull_request` alone; `xtask-ci` and `gpu-kernel` left the required checks for each
+    // merge. R-290's exception, applied per R-369 by the orchestrator.
     for gate in ["fmt", "clippy", "build", "ci", "gpu-metal", "gpu-lavapipe"] {
         let jobs = reporting(&ci, gate);
         assert_eq!(
@@ -585,8 +586,9 @@ fn check_required(ci: &str, mutants: &str, pr_check: &str, reviews: &str) {
         );
         let cond = s(&jobs[0].1["if"]);
         assert!(
-            cond == "always()" || cond == "always() && github.event_name == 'pull_request'",
-            "qa_r656: ci.yml's required check `{gate}` is not `if: always()`: `{cond}`"
+            cond == "${{ !cancelled() }}"
+                || cond == "${{ !cancelled() && github.event_name == 'pull_request' }}",
+            "qa_r656: ci.yml's required check `{gate}` is not `if: !cancelled()`: `{cond}`"
         );
     }
     // R-678 made `mutants-check` a job of every run of `mutants.yml`. The owner's CI model (9 Nov 2026) takes the
@@ -648,11 +650,11 @@ fn qa_r656_required_checks_report_under_always() {
 negative_control!(
     qa_r656_required_checks_report_under_always,
     "ci.yml with the `gpu-lavapipe` gate run only when its suites succeeded",
-    expected = "ci.yml's required check `gpu-lavapipe` is not `if: always()`",
+    expected = "ci.yml's required check `gpu-lavapipe` is not `if: !cancelled()`",
     check_required(
         &swap(
             &workflow("ci.yml"),
-            "    name: gpu-lavapipe\n    needs: changes\n    if: always()\n",
+            "    name: gpu-lavapipe\n    needs: changes\n    if: ${{ !cancelled() }}\n",
             "    name: gpu-lavapipe\n    needs: changes\n    if: success()\n"
         ),
         &workflow("mutants.yml"),

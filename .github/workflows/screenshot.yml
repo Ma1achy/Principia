@@ -60,7 +60,8 @@ jobs:
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
       - name: Install Mesa (lavapipe)
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - name: cargo xtask screenshot --all
         run: cargo xtask screenshot --all
       - name: Upload the captures
