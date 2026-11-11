@@ -654,13 +654,14 @@ impl MeasurementGate for ShadowFormGate {
                     "# shadow-form: {name}\n\n{description}; T = {LAGRANGE_HORIZON}, Yoshida-4, n_renorm = \
                      {PROPOSED_N_RENORM}\n"
                 );
-                let mut finite = true;
+                let mut every = Vec::new();
                 for d in FORM_DELTA_0 {
                     let rows = shadow_forms(d, PROPOSED_N_RENORM);
                     let table: Vec<String> = rows.iter().map(FormRow::line).collect();
                     markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{FORM_HEADER}\n{}\n", table.join("\n"));
-                    finite = finite && rows.iter().all(FormRow::finite);
+                    every.extend(rows);
                 }
+                let finite = every.iter().all(FormRow::finite);
                 print!("{markdown}");
                 Ok(MeasurementControl {
                     description,
