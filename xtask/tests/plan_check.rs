@@ -510,7 +510,12 @@ fn side(dir: &Path, name: &str, text: &str) {
 /// A repo whose `REVIEW_QUEUE.md` merges by union: branches `a` and `b` hold `ours` and `theirs`, each passing the
 /// queue check alone. Merges them and returns the merged queue and an empty archive; the merge itself must be clean.
 fn union_merge(name: &str, ours: &str, theirs: &str) -> (PathBuf, PathBuf) {
-    let (queue, archive) = queue_file(name, BASE_RQ);
+    union_merge_from(name, BASE_RQ, ours, theirs)
+}
+
+/// `union_merge`, from the queue `base` on `main`.
+fn union_merge_from(name: &str, base: &str, ours: &str, theirs: &str) -> (PathBuf, PathBuf) {
+    let (queue, archive) = queue_file(name, base);
     let dir = queue.parent().expect("queue has a directory");
     fs::write(dir.join(".gitattributes"), "REVIEW_QUEUE.md merge=union\n").expect("attr written");
     git(dir, &["init", "-q", "-b", "main"]);
@@ -691,6 +696,52 @@ negative_control!(
             &base_with_note("N = 12: the same long words of a list, one item each"),
         );
         queue_fails_naming(&queue, &archive, "are two versions of one text");
+    }
+);
+
+/// `BASE_RQ` whose last field wraps to a short tail, as the real queue's last entry did after PR #482.
+fn base_with_short_tail() -> String {
+    BASE_RQ.replace(
+        "- **Applied meanwhile:** none.\n",
+        "- **Applied meanwhile:** none, until the long note of the base runs on to the end of\n  it.\n",
+    )
+}
+
+/// The union merge of one dated note added after `base_with_short_tail`'s short tail, closed by `ours` on one side and
+/// by `theirs` on the other.
+fn note_after_a_short_tail(name: &str, ours: &str, theirs: &str) -> (PathBuf, PathBuf) {
+    let base = base_with_short_tail();
+    let note =
+        |by: &str| format!("{base}- **31 Oct 2026:** closed by {by}, in the very words of it.\n");
+    union_merge_from(name, &base, &note(ours), &note(theirs))
+}
+
+/// The queue at `queue` passes the check.
+fn queue_passes(queue: &Path, archive: &Path) {
+    let (passed, out) = check_queue(queue, archive);
+    assert!(passed, "queue check failed:\n{out}");
+}
+
+#[test]
+fn union_merge_of_siblings_after_a_short_tail_passes() {
+    // Two lines differing only in a plain number are a list's siblings (OPERATIONS § "Merging" step 2), also when the
+    // line above them is a paragraph's short tail, which a run of two lines would else carry past the ratio.
+    let (queue, archive) = note_after_a_short_tail(
+        "union_short_tail",
+        "R-700 at N = 6 (one of a list)",
+        "R-700 at N = 12 (one of a list)",
+    );
+    queue_passes(&queue, &archive);
+}
+
+negative_control!(
+    union_merge_of_siblings_after_a_short_tail_passes,
+    "the same note differing in a ruling after the short tail is two versions, so the passes check must fail on it",
+    expected = "are two versions of one text",
+    {
+        let (queue, archive) =
+            note_after_a_short_tail("union_ctl_short_tail", "R-700", "R-701");
+        queue_passes(&queue, &archive);
     }
 );
 
