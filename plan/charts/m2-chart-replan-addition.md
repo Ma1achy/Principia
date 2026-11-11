@@ -680,7 +680,11 @@ exhaustive; R-947 to R-952, the owner's answers above; R-369, the orchestrator's
    blank that the dated note missed, `M01_TINY` between two valid ends, which is not resolved here: RQ-787, the
    owner's.
 6. **`principia_chart_space_model.md` § 0's "Corollary 1 is withdrawn" against R-943.** Resolved by that section's dated
-   note: Corollary 1 holds again for the state blend.
+   note: Corollary 1 holds again for the state blend. *11 Nov 2026, after the re-checks (the bot Codex's comment on
+   that section; the physics review's P1 and P9):* resolved only for the held-constraint blanks, which the state blend
+   removes. Corollary 1 does not hold without exception: the mass guard's `M01_TINY` between two valid ends remains
+   (design § 17.11, case 2), tagged, its display the owner's under RQ-787; that section and Corollary 1 itself now say
+   so. *Was:* "Corollary 1 holds again for the state blend."
 7. **R-520's F1, "nothing between two links to interpolate", against R-926 item 3's state blend.** Resolved by R-949,
    which amends R-520 and R-483.
 8. **R-849's time-axis jump against R-926.** Resolved by R-950, which amends R-849 and R-901; R-935 had already applied
