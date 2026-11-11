@@ -923,3 +923,8 @@ that case, and say nothing about the middle of a morph. Only the owner may say w
   built at all while R-923's hold stands.
 - **Waits:** REQ-CHART-189's arm for this pixel (`rq: RQ-787`), and through it TASK-M2-90 (the blend chart) for that
   pixel alone; TASK-M2-81's `path_blank_ends` reads the answer for a blend's interior pixel.
+  *Added 11 Nov 2026 (the code review of PR #482, review 5854054751, N6):* the fixture's arm with both ends saturated
+  is now REQ-CHART-211's (a blend of two saturated pixels raises the tag; `rq: RQ-787`), closed by TASK-M2-103
+  (saturate in the CPU evaluator), which builds the saturated pixels it blends; so REQ-CHART-211 and, through it,
+  TASK-M2-103 wait for that pixel alone as well. REQ-CHART-189 and TASK-M2-90 keep the other two arms. No option
+  changes.

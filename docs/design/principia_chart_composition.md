@@ -2383,6 +2383,8 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
      nothing is chosen here. Meanwhile the decoder's rule stands as written: the pixel is tagged `M01_TINY`, never
      dropped and never NaN, and the blend chart's fixture for this case (TASK-M2-90) asserts, on each arm, the tag
      and that both ends are valid, and nothing about what is drawn.
+     *(11 Nov 2026: the arm with both ends saturated is checked by TASK-M2-103, the task that builds the saturated
+     pixels it blends, under REQ-CHART-211; TASK-M2-90 checks the other two. What each arm asserts is unchanged.)*
 - **Blank or forbidden at an end.** A pixel in a morph frame is in only if it's in both ends. No state exists for a blank end
   to blend from, and substituting the other end invents a continuity (R-470, R-467). So the blank is held for every `0 < s <
   1` and resolves at the end frame, a step at each end. A region-D mask behaves so: outside D blank at every `s < 1`.
