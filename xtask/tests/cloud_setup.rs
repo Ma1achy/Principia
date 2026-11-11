@@ -159,6 +159,9 @@ const NO_INSTALL: &[&str] = &[
     "actions/deploy-pages@",
     "Swatinem/rust-cache@",
     "./.github/actions/cargo-ci-config",
+    // Mesa from the Actions cache: the `apt-get install` step beside it names the same packages, and the plan reads
+    // that (`.github/actions/mesa-debs`).
+    "./.github/actions/mesa-debs",
 ];
 
 /// The kind of a target a `rustup toolchain install && rustup target add` step adds, until `ci_plan` has the channel.

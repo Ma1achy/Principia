@@ -139,6 +139,8 @@ ci_records() {
         if (v ~ /^dtolnay\/rust-toolchain@/) { tc = substr(v, index(v, "@") + 1); emit("R " tc) }
         else if (v ~ /^(actions\/checkout|actions\/cache|actions\/cache\/restore|actions\/cache\/save|actions\/upload-artifact|actions\/download-artifact|actions\/upload-pages-artifact|actions\/deploy-pages|Swatinem\/rust-cache|taiki-e\/install-action|actions\/setup-python)@/) { }
         else if (v == "./.github/actions/cargo-ci-config") { }
+        # Mesa from the Actions cache, beside the `apt-get install` step that names the same packages, read above.
+        else if (v == "./.github/actions/mesa-debs") { }
         else emit("U " FILENAME ":" FNR ": " t)
         next
       }

@@ -2738,6 +2738,10 @@ fn pr_holds(
         if term == "matrix.shard" {
             return env.get("matrix.shard").cloned().unwrap_or_default();
         }
+        // The Mesa cache's restore (`.github/actions/mesa-debs`): a miss, so the apt install runs.
+        if term == "steps.mesa.outputs.installed" {
+            return String::new();
+        }
         panic!("ci_changes: an expression this test does not read: `{term}`")
     };
     let value = |term: &str| -> String {
