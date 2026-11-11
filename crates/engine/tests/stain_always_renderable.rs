@@ -5,7 +5,10 @@
 //!   accepted or refused, the graph lowers and assembles to a fragment, never the fallback and never an error, and
 //!   each sequence's last graph draws on the GPU (a fragment drawn once is not drawn again); and that graph's node
 //!   list, forced invalid (a second combiner, a second `OUT`, no `OUT`, `OUT` reading itself, or the combiner None),
-//!   still renders: the defined fallback, with the refusal;
+//!   still renders: the defined fallback, with the refusal. The assemblies and the draws are the test's whole cost,
+//!   and each is a function of its graph's canonical form, so the run's distinct forms are assembled and drawn once
+//!   each, across threads, before the property runs with the same seed ([`warm`]); the property then asserts what
+//!   it always did, of every state of every case;
 //! - `stain_always_renderable_the_fallback_draws_its_colour`: the fallback's fragment draws the fallback's flat
 //!   colour on the GPU, bit for bit.
 //!
@@ -15,6 +18,8 @@
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, PoisonError};
 
 use engine::contract::set_field::{Edit, RenderField};
 use engine::contract::stain::edit::{apply, StainEdit};
@@ -280,20 +285,11 @@ fn rendered(g: &StainGraph, render: Render, seen: &Seen) -> Result<Fragment, Str
     Ok(r.fragment)
 }
 
-/// One sequence: from [`start`], each of `ops` applied where the graph accepts it, the graph rendering after every
-/// one ([`rendered`]); then the last graph drawn on the GPU, and its node list forced invalid by `how`, which the
-/// graph's own check refuses and `render` still renders, as `fallback`'s fragment, with the refusal.
-fn run_ops(
-    ops: &[Op],
-    how: u8,
-    render: Render,
-    gpu: &GpuHarness,
-    fallback: &Fragment,
-    seen: &Seen,
-    drawn: &RefCell<BTreeSet<String>>,
-) -> Result<(), String> {
+/// The graphs a sequence passes through: [`start`], then the graph after each of `ops`, an edit the graph refuses
+/// leaving it as it was; each with the edit that led to it.
+fn states(ops: &[Op]) -> Result<Vec<(Option<StainEdit>, StainGraph)>, String> {
     let mut g = start();
-    let mut fragment = rendered(&g, render, seen)?;
+    let mut out = vec![(None, g.clone())];
     for &op in ops {
         let edit = edit_of(&g, op);
         if let Ok(set) = apply(&g, &edit) {
@@ -306,11 +302,37 @@ fn run_ops(
                 }
             };
         }
-        fragment = rendered(&g, render, seen).map_err(|e| format!("after {edit:?}: {e}"))?;
+        out.push((Some(edit), g.clone()));
     }
+    Ok(out)
+}
+
+/// One sequence: from [`start`], each of `ops` applied where the graph accepts it, the graph rendering after every
+/// one ([`rendered`]); then the last graph drawn on the GPU, and its node list forced invalid by `how`, which the
+/// graph's own check refuses and `render` still renders, as `fallback`'s fragment, with the refusal.
+fn run_ops(
+    ops: &[Op],
+    how: u8,
+    render: Render,
+    gpu: &GpuHarness,
+    fallback: &Fragment,
+    seen: &Seen,
+    drawn: &RefCell<BTreeSet<String>>,
+) -> Result<(), String> {
+    let states = states(ops)?;
+    let mut last = None;
+    for (edit, g) in &states {
+        let fragment = rendered(g, render, seen).map_err(|e| match edit {
+            Some(edit) => format!("after {edit:?}: {e}"),
+            None => e,
+        })?;
+        last = Some((g, fragment));
+    }
+    let (g, fragment) = last.ok_or("a sequence holds its start")?;
     // A fragment drawn before draws the same again: the draw is a function of its source.
-    if drawn.borrow_mut().insert(fragment.source.clone()) {
+    if !drawn.borrow().contains(&fragment.source) {
         draw(gpu, &fragment).map_err(|e| format!("the last graph did not draw: {e}"))?;
+        drawn.borrow_mut().insert(fragment.source);
     }
 
     let nodes = forced_invalid(g.lower().map_err(|e| e.to_string())?.nodes().to_vec(), how);
@@ -329,43 +351,126 @@ fn run_ops(
     Ok(())
 }
 
-/// The property, over `render`.
-fn check_always_renderable(render: Render) {
+/// The property's assemblies and draws, done ahead of it and across threads: the property is run once over the same
+/// cases (`seed`'s) to collect each state's canonical form and node list, with no assembly, then each distinct form is
+/// assembled through `render`, and drawn where it is some sequence's last graph, on as many threads as the machine
+/// gives. What succeeds is kept, in `seen` and `drawn`, as the property keeps it itself; whatever fails here, a
+/// state that does not lower, an assembly that errs or gives the fallback, a draw that errs, is kept nowhere, so the
+/// property meets it again in its case and fails there, with the edit and proptest's minimal case. Nothing the
+/// property asserts is asserted here in its place: this only fills the two caches.
+fn warm(
+    seed: u64,
+    strategy: &impl Strategy<Value = (Vec<Op>, u8)>,
+    render: Render,
+    gpu: &GpuHarness,
+    seen: &Seen,
+    drawn: &RefCell<BTreeSet<String>>,
+) {
+    // Each distinct form: its node list, and whether some sequence ends on it.
+    let forms: RefCell<BTreeMap<String, (Vec<assemble::Node>, bool)>> = RefCell::default();
+    let _ = validation::prop::check_with_seed(seed, strategy, |(ops, _)| {
+        let Ok(states) = states(&ops) else {
+            return Ok(());
+        };
+        for (i, (_, g)) in states.iter().enumerate() {
+            let Ok(stain) = g.lower() else { continue };
+            let mut forms = forms.borrow_mut();
+            let form = forms
+                .entry(stain.canonical().text())
+                .or_insert_with(|| (stain.nodes().to_vec(), false));
+            form.1 |= i + 1 == states.len();
+        }
+        Ok(())
+    });
+    let forms: Vec<(String, Vec<assemble::Node>, bool)> = forms
+        .into_inner()
+        .into_iter()
+        .map(|(key, (nodes, last))| (key, nodes, last))
+        .collect();
+    let next = AtomicUsize::new(0);
+    let done: Mutex<Vec<(String, Fragment, bool)>> = Mutex::default();
+    let threads = std::thread::available_parallelism().map_or(1, usize::from);
+    std::thread::scope(|scope| {
+        for _ in 0..threads.min(forms.len()) {
+            scope.spawn(|| {
+                while let Some((key, nodes, last)) = forms.get(next.fetch_add(1, Ordering::Relaxed))
+                {
+                    let Ok(r) = render(nodes.clone()) else {
+                        continue;
+                    };
+                    if r.invalid.is_some() {
+                        continue;
+                    }
+                    let drew = *last && draw(gpu, &r.fragment).is_ok();
+                    done.lock().unwrap_or_else(PoisonError::into_inner).push((
+                        key.clone(),
+                        r.fragment,
+                        drew,
+                    ));
+                }
+            });
+        }
+    });
+    for (key, fragment, drew) in done.into_inner().unwrap_or_else(PoisonError::into_inner) {
+        if drew {
+            drawn.borrow_mut().insert(fragment.source.clone());
+        }
+        seen.borrow_mut().insert(key, fragment);
+    }
+}
+
+/// The property, over `render`; with `ahead`, its assemblies and draws are done ahead of it ([`warm`]), which changes
+/// how long it takes and nothing it asserts. A control, which fails in its first case, runs without.
+fn check_always_renderable(render: Render, ahead: bool) {
     let gpu = GpuHarness::new().expect("a GPU device");
     let fallback = assemble::fallback(Tier::FULL).unwrap_or_else(|e| panic!("{e}"));
     let seen = Seen::default();
     let drawn = RefCell::new(BTreeSet::new());
     let strategy = (prop::collection::vec(op(), 1..24), any::<u8>());
-    validation::prop::run(&strategy, |(ops, how)| {
+    // One seed for both passes, so the forms assembled ahead are the property's own.
+    let seed = validation::prop::seed();
+    if ahead {
+        warm(seed, &strategy, render, &gpu, &seen, &drawn);
+    }
+    let (ahead_forms, ahead_draws) = (seen.borrow().len(), drawn.borrow().len());
+    let result = validation::prop::check_with_seed(seed, &strategy, |(ops, how)| {
         run_ops(&ops, how, render, &gpu, &fallback, &seen, &drawn).map_err(TestCaseError::fail)
     });
     eprintln!(
         "stain_always_renderable: {} distinct canonical forms assembled and {} distinct last graphs drawn over {} \
-         cases",
+         cases ({ahead_forms} and {ahead_draws} of them ahead of the property)",
         seen.borrow().len(),
         drawn.borrow().len(),
         validation::prop::CASES
     );
+    if let Err(failure) = result {
+        eprintln!("{failure}");
+        panic!("{failure}");
+    }
 }
 
 #[test]
 fn stain_always_renderable_through_every_edit() {
-    check_always_renderable(|nodes| {
-        assemble::assemble_or_fallback(nodes, Tier::FULL, View::Presentation)
-    });
+    check_always_renderable(
+        |nodes| assemble::assemble_or_fallback(nodes, Tier::FULL, View::Presentation),
+        true,
+    );
 }
 
 negative_control!(
     stain_always_renderable_through_every_edit,
     "an assembler with no fallback refuses a forced-invalid graph, which then does not render",
     expected = "a forced-invalid graph did not render",
-    check_always_renderable(|nodes| {
-        let stain = Stain::new(nodes)?;
-        Ok(Rendered {
-            fragment: assemble::assemble(&stain, Tier::FULL)?,
-            invalid: None,
-        })
-    })
+    check_always_renderable(
+        |nodes| {
+            let stain = Stain::new(nodes)?;
+            Ok(Rendered {
+                fragment: assemble::assemble(&stain, Tier::FULL)?,
+                invalid: None,
+            })
+        },
+        false
+    )
 );
 
 /// The fallback's fragment drawn: `colour`, bit for bit.
