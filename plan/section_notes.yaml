@@ -1992,3 +1992,27 @@
   section: "R-965 — RQ-738, the chart-space model's correction list: the owner's \"correct the wording as listed\"; items 2 to 11 are corrected in the model as record corrections, each with its *Was*, item 1 having been settled by R-868 *(closes RQ-738)*"
   reason: informative only
   note: "record corrections to docs/design/principia_chart_space_model.md, RQ-738's items 2 to 11; nothing is built from the model's wording; no requirement changes"
+- file: decisions.md
+  section: "R-966 — The merge watcher checks `main`'s status before every merge and refuses the merge while `main` is red or unknown, in place of a hold list; `merge-ready` is counted from green, or put on only once the head is green *(refines R-681)*"
+  reason: informative only
+  note: "the owner's order of 11 Nov 2026: the merge watcher's guard on `main`'s status and `merge-ready` from green; process; changes no requirement"
+- file: decisions.md
+  section: "R-967 — CI caches the Mesa (lavapipe) packages of `gpu-lavapipe` and the release jobs, keyed on the package list, so a run no longer fetches them from Ubuntu's archive *(amends R-285)*"
+  reason: informative only
+  note: "the owner's order of 11 Nov 2026: CI caches the Mesa packages, amending R-285; ci; changes no requirement"
+- file: decisions.md
+  section: "R-968 — A job whose only failure is the package-install step is re-run once, automatically, on GitHub-hosted runners, marked as a re-run and never turning a real failure green; the per-merge verdict is unchanged, RQ-789 open *(extends R-714)*"
+  reason: informative only
+  note: "the owner's order of 11 Nov 2026: one automatic re-run of an install-only failure, extending R-714; REQ-TOOL-223 unchanged, RQ-789 open; ci; changes no requirement"
+- file: decisions.md
+  section: "R-969 — The `ci` job is split as planned, and the 30-minute target is judged only after a week of runs on the split; the timings are reported now against the 30-minute and one-hour targets, from what merged since #457, the outage runs shown apart"
+  reason: informative only
+  note: "the owner's orders of 11 Nov 2026: the ci job split, the 30-minute target judged after a week, the timings reported now; ci; changes no requirement"
+- file: decisions.md
+  section: "R-970 — A CI run clearly hung or stuck because of a bug is caught and cancelled, on `main` too; every other run on `main` is still never cancelled *(amends R-656)*"
+  reason: informative only
+  note: "the owner's word of 11 Nov 2026: a clearly hung or stuck run is cancelled, amending R-656; ci; changes no requirement"
+- file: decisions.md
+  section: "R-971 — The per-merge verdict fix and the `plan/requirements.yaml`-only move come to the owner as rulings, through RQ-789 and RQ-790, which stay open; neither goes straight into a CI pull request"
+  reason: informative only
+  note: "the owner's message of 11 Nov 2026: RQ-789 and RQ-790 come as rulings and stay open; ci; changes no requirement"

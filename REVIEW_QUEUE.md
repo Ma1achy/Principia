@@ -527,6 +527,7 @@ so the choice changes what the legend shows.*
   the Stain canvas on the real engine (TASK-M8-93), both of which need REQ-GEN-019.
 - **Waits:** REQ-GEN-019's arm for a field with one finite end (`rq: RQ-786`); TASK-M8-22's legend over such a wire;
   TASK-M8-93 where it wires one. TASK-M7-13's other arms do not wait.
+
 ## RQ-785: At what picture size P2's and P4's pixels are counted: the owner's "more than 8 pixels apart" names none *(silence, a missing definition, R-72; a one-way door, what a reported measurement means; R-951, R-947, R-583, R-649; context: the re-plan addition's measurement task, TASK-M8-49, TASK-M8-58)*
 
 *Queued 11 Nov 2026 with the plan PR for the chart re-plan's addition, as the orchestrator's answer to the first
@@ -877,8 +878,10 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
     - (e1) Along the current direction `δ⃗/δ`, as § 3.8's renormalisation has it (`x' ← x + δ₀·(δ⃗/δ)`): the terminal
       is treated as an ordinary renormalisation. In case B `δ⃗` is finite at the terminal; only in case C, where it is
       not, does the reset fall back to `u`, § 3.8's initial direction (REQ-INT-077, the definition of `δ₀`'s
-      direction), the last finite `S` kept. This is the smallest code change from what PR #493's head does: its
-      `renormalise` already resets `x'` along `δ⃗/δ`, and only the latch stays set.
+      direction), the last finite `S` kept. This is the smaller of (e)'s two directions as a change from what PR
+      #493's head does ((a) is smaller overall): its `renormalise` already resets `x'` along `δ⃗/δ`, and only the
+      latch stays set. *Corrected 11 Nov 2026 (physics review 5864551603 of PR #494, nb3). Was:* "the smallest code
+      change".
     - (e2) Always along `u`. *Its own cost:* each re-seed throws away the shadow's alignment with the most-expanding
       direction, so each is followed by a re-alignment transient lasting about `1/(λ₁ − λ₂)` (the inverse gap between
       the two largest exponents), under-counting by about the log of `u`'s projection on that direction; the cost
@@ -904,14 +907,20 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
   region of a chaotic chart; if that share is large where the FTLE matters, (b) keeps those samples, at the cost of a
   flag and a stored step. The same measurement weighs (e) against (a): on the samples it finds, the share that reach
   (e)'s re-seed cap and fall back, and the bias of the re-seeded FTLE (each of (e1) and (e2)) against a reference.
-  The reference is the shadow marched with its terminal disabled (`CollisionRadius::none()`, which is option (d) and
-  leaves the sample's own march unchanged, the sample never having collided); it can itself blow up on exactly these
-  samples, so the share of selected samples whose reference goes non-finite is counted and reported on its own, and
-  those samples are left out of the bias; and the reference is accepted on the rest only where it has converged, its
-  `λ` unchanged, within the tolerance REQ-INT-076 (the calibration of `‖δ₀‖` and `n_renorm`) sets, when `‖δ₀‖` is
-  halved and `n_renorm` doubled, as in dd test 10, the share failing that reported as well. A small bias, a small fallback
-  share and a small unreferenced share favour (e), which then keeps most samples' full-window FTLE, its fallback's
-  field still added. The owner chooses with those numbers.
+  The reference is the shadow marched with only the shadow's terminal disabled (option (d)), the sample's own
+  detectors left on, so the sample's march is the one the measured run makes; `CollisionRadius::none()` does not do
+  that alone, since it disables the sample's collisions too, so a reference run at it must end at the sample's own
+  terminal. The reference can itself blow up on exactly these samples, so the share of selected samples whose
+  reference goes non-finite is counted and reported on its own, and those samples are left out of the bias; and the
+  reference is accepted on the rest only where it has converged, its `λ` unchanged when `‖δ₀‖` is halved and
+  `n_renorm` doubled, within dd test 10's own "within tolerance" (`docs/design/principia_dd_integrator.md` § "5. Unit
+  tests", test 10; REQ-INT-043's verify), the share failing that reported as well. That tolerance has no value yet,
+  and it is not REQ-INT-076's, which calibrates `‖δ₀‖` and `n_renorm` and sets no tolerance; it is fixed, and
+  written down, before the run (R-649). A small bias, a small fallback share and a small unreferenced share favour
+  (e), which then keeps most samples' full-window FTLE, its fallback's field still added. The owner chooses with
+  those numbers. *Corrected 11 Nov 2026 (physics review 5864551603 of PR #494, nb1 and nb2). Was:*
+  "(`CollisionRadius::none()`, which is option (d) and leaves the sample's own march unchanged, the sample never
+  having collided)"; "within the tolerance REQ-INT-076 (the calibration of `‖δ₀‖` and `n_renorm`) sets".
 - **Applied meanwhile:** nothing is merged: PR #493 is not merged and builds nothing for this case. The physics review
   asks for a test at a nonzero `r_coll` that drives a shadow-only collision and pins whatever is ruled.
 - **Waits:** TASK-M3-14 (the Benettin FTLE shadow).
