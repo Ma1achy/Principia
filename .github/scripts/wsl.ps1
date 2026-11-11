@@ -29,8 +29,10 @@ $Record = Join-Path $env:RUNNER_TEMP 'win-measure'
 # wsl.exe's own messages in UTF-8, not UTF-16.
 $env:WSL_UTF8 = '1'
 
+# Written to the console, as Invoke-Wsl writes: a line left on the output stream is lost with the exit when the caller is
+# collecting that output, as `$pinned = Get-Pinned` is.
 function Fail($message) {
-    "::error::wsl.ps1: $message"
+    [Console]::Out.WriteLine("::error::wsl.ps1: $message")
     exit 125
 }
 

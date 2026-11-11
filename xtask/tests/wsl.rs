@@ -1063,6 +1063,67 @@ mod scope_alone {
     );
 }
 
+// ---- A refusal's line reaches the log ------------------------------------------------------------------------------
+
+/// The text of wsl.ps1's function `name`, from its `function` line to its closing brace.
+fn ps_function<'a>(script: &'a str, name: &str) -> &'a str {
+    let start = script
+        .find(&format!("\nfunction {name}"))
+        .unwrap_or_else(|| panic!("{PS} has no function {name}"));
+    let rest = &script[start + 1..];
+    &rest[..rest.find("\n}\n").expect("the function ends") + 2]
+}
+
+/// `Fail` writes its `::error::` line to the console and exits 125. Left on the output stream, the line is lost with
+/// the exit whenever the caller is collecting that output: `$pinned = Get-Pinned`, the refusal of an unpinned
+/// manifest, exited 125 and said nothing. So `Fail` emits nothing: its body is the write and the exit.
+fn check_fail(script: &str) {
+    let fail = ps_function(script, "Fail");
+    let body: Vec<&str> = fail.lines().map(str::trim).collect();
+    assert_eq!(
+        body,
+        [
+            "function Fail($message) {",
+            "[Console]::Out.WriteLine(\"::error::wsl.ps1: $message\")",
+            "exit 125",
+            "}"
+        ],
+        "Fail's line can be lost to a caller collecting output, or its exit isn't 125"
+    );
+    // The refusal that showed it is still Fail's, from a function whose output register assigns.
+    assert!(
+        ps_function(script, "Get-Pinned").contains("        Fail \"no manifest hash is pinned")
+            && arm(script, "register").contains("$pinned = Get-Pinned"),
+        "the unpinned refusal isn't Fail's"
+    );
+}
+
+#[test]
+fn wsl_fail_writes_where_no_assignment_collects_it() {
+    check_fail(&read(PS));
+}
+
+negative_control!(
+    wsl_fail_writes_where_no_assignment_collects_it,
+    "the line left on the output stream, as it was",
+    expected = "Fail's line can be lost to a caller collecting output",
+    check_fail(&edited(
+        &read(PS),
+        "    [Console]::Out.WriteLine(\"::error::wsl.ps1: $message\")\n",
+        "    \"::error::wsl.ps1: $message\"\n"
+    ))
+);
+
+mod other_status {
+    use super::*;
+    negative_control!(
+        wsl_fail_writes_where_no_assignment_collects_it,
+        "Fail exits 1",
+        expected = "or its exit isn't 125",
+        check_fail(&edited(&read(PS), "    exit 125\n}", "    exit 1\n}"))
+    );
+}
+
 // ---- Proof 3, the host over WSL's virtual switch -------------------------------------------------------------------
 
 /// Proof 3 tries the host over WSL's virtual switch as well as over the LAN: the distro's default gateway (in NAT mode,
