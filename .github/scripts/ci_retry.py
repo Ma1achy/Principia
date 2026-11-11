@@ -36,6 +36,21 @@ A runner-level signature in a failed job, and nothing else:
 A timeout (a `timed_out` job, or TIMEOUT in an annotation or the log) is never one, whatever else the job shows, and a
 job that timed out is no gate either; nor is an assertion failure, a cancelled job or anything else one. Fails towards
 no retry: a job with neither annotations nor log, a workflow that cannot be read, or an unknown job state gets none.
+
+A failed package install is re-run too, once (the owner, 11 Nov 2026: "add one automatic re-run, on GitHub-hosted
+runners, for a job whose only failure is the package-install cap, so an outage costs minutes, not hours; it is marked as
+a re-run and never turns a real failure green"). A failed job is an install failure when, and only when:
+  - it ran on a GitHub-hosted runner: its runner labels are listed and none is `self-hosted`, so the Windows PC's jobs
+    never are;
+  - it concluded `failure`, and every step of it that did not finish (failed, cancelled or timed out) is one of
+    INSTALL_STEPS, the step that installs Mesa from apt, `bounded`'s three tries at their cap or an archive's error, or
+    the cache's restore before it; a job with no steps listed is none;
+  - every timeout its annotations or log name is that step's own limit (STEP_TIMEOUT naming it), never the job's;
+  - and the same job (its name) was no install failure in an earlier attempt of the run: a second install failure
+    stands, so each job is re-run for it once per run.
+It is then re-run as a runner fault is, with its gates; anything else failing beside it still keeps the run as it is.
+The decision's summary says which jobs are re-run for an install failure, and the re-run job's own summary says it is a
+re-run (`.github/actions/mesa-debs`).
 """
 
 import json
@@ -64,6 +79,12 @@ TIMEOUT = re.compile(r"has timed out after \d+ minutes|has exceeded the maximum 
 SAMPLE = re.compile(r"^== sample \d+, \+\d+ s, avail_kb=(\d+),")
 # A log line's timestamp, and the byte-order mark GitHub puts before the first.
 STAMP = re.compile(r"^\ufeff?\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ?")
+# The steps that install packages: a failure in no other step is an install failure (above).
+INSTALL_STEPS = ("Install Mesa (lavapipe)", "Restore the Mesa packages")
+# A step's own `timeout-minutes` reached, as the runner says it: the action's name, then its limit.
+STEP_TIMEOUT = re.compile(r"The action '([^']*)' has timed out after \d+ minutes")
+# A step's states that mean it did not finish.
+STEP_FAILED = ("failure", "cancelled", "timed_out")
 # A step's start in the job's log.
 STEP = "##[group]Run "
 # The job states that are no failure. Every other one (failure, cancelled, timed_out, …) is a failed job.
@@ -114,6 +135,36 @@ def signature(annotations, log):
                 mib = int(m.group(1)) // 1024
                 return f"lowest free {mib} MiB, under {LOW_MIB} MiB, in the failed step (disk sampler)"
     return None
+
+
+def hosted(job):
+    """Whether the job ran on a GitHub-hosted runner: its labels listed, and none `self-hosted`."""
+    labels = job.get("labels")
+    return isinstance(labels, list) and bool(labels) and not any(
+        str(label).lower() == "self-hosted" for label in labels)
+
+
+def install_steps_failed(job):
+    """The install steps that did not finish, when the job concluded `failure` and no other step failed; else []."""
+    steps = job.get("steps")
+    if job.get("conclusion") != "failure" or not isinstance(steps, list):
+        return []
+    failed = [s.get("name", "") for s in steps if isinstance(s, dict) and s.get("conclusion") in STEP_FAILED]
+    if not failed or any(name not in INSTALL_STEPS for name in failed):
+        return []
+    return failed
+
+
+def install_only(job, annotations, log):
+    """Why the failed job's only failure is a package install on a hosted runner, or None (the module's rules)."""
+    failed = install_steps_failed(job)
+    if not failed or not hosted(job):
+        return None
+    for text in failure_messages(annotations) + [log or ""]:
+        own = sum(1 for m in STEP_TIMEOUT.finditer(text) if m.group(1) in INSTALL_STEPS)
+        if len(TIMEOUT.findall(text)) > own:
+            return None
+    return f"only the package install failed ({', '.join(failed)})"
 
 
 def job_ids(workflow_text):
@@ -169,8 +220,8 @@ def faults_upstream(jid, needs, faulted_ids, passed_ids):
     return sorted(hits)
 
 
-def classify(run, jobs, annotations, logs, workflow_text):
-    """(retry, reason, [(job name, verdict)])."""
+def classify(run, jobs, annotations, logs, workflow_text, earlier=()):
+    """(retry, reason, [(job name, verdict)]). `earlier`: the jobs of each earlier attempt of the run."""
     conclusion = run.get("conclusion")
     attempt = int(run.get("run_attempt") or 0)
     if conclusion != "failure":
@@ -180,10 +231,19 @@ def classify(run, jobs, annotations, logs, workflow_text):
     failed = [j for j in jobs if j.get("conclusion") not in PASSED]
     if not failed:
         return False, "no failed job to re-run", []
-    found, timeouts = {}, set()
+    # The jobs that were an install failure in an earlier attempt: each is re-run for one once per run.
+    before = {j.get("name") for jobs_then in earlier for j in jobs_then if install_steps_failed(j)}
+    found, timeouts, installs, again = {}, set(), {}, set()
     for j in failed:
         jid = str(j["id"])
-        if timed_out(j, annotations.get(jid, []), logs.get(jid)):
+        why = install_only(j, annotations.get(jid, []), logs.get(jid))
+        if why and j["name"] in before:
+            again.add(j["name"])
+            found[j["name"]] = None
+        elif why:
+            installs[j["name"]] = why
+            found[j["name"]] = why
+        elif timed_out(j, annotations.get(jid, []), logs.get(jid)):
             timeouts.add(j["name"])
             found[j["name"]] = None
         else:
@@ -201,7 +261,7 @@ def classify(run, jobs, annotations, logs, workflow_text):
     for j in failed:
         n = j["name"]
         jid = id_of(n, ids)
-        if n in faulted or n in timeouts or jid is None:
+        if n in faulted or n in timeouts or n in again or jid is None:
             continue
         hit = faults_upstream(jid, needs, faulted_ids, passed_ids)
         if hit:
@@ -209,7 +269,12 @@ def classify(run, jobs, annotations, logs, workflow_text):
     verdicts, blocking = [], []
     for j in failed:
         n = j["name"]
-        if found[n]:
+        if n in installs:
+            verdicts.append((n, f"install failure: {installs[n]}: re-run once"))
+        elif n in again:
+            verdicts.append((n, "install failure again, after its re-run: not re-run"))
+            blocking.append(n)
+        elif found[n]:
             verdicts.append((n, f"runner fault: {found[n]}"))
         elif n in gates:
             verdicts.append((n, f"gate of a re-run job ({', '.join(gates[n])})"))
@@ -223,6 +288,9 @@ def classify(run, jobs, annotations, logs, workflow_text):
         return False, f"failed without a runner-level signature: {', '.join(blocking)}", verdicts
     if not faulted:
         return False, "no failed job shows a runner-level signature", verdicts
+    if installs:
+        return True, ("every failed job shows a runner-level signature or a first install failure, or gathers one "
+                      "that does"), verdicts
     return True, "every failed job shows a runner-level signature or gathers one that does", verdicts
 
 
@@ -243,7 +311,9 @@ def load(directory, workflow):
         workflow_text = Path(workflow).read_text()
     except OSError:
         workflow_text = ""
-    return classify(run, jobs, annotations, logs, workflow_text)
+    # The earlier attempts' jobs, `earlier/<attempt>.json`, each as the jobs API lists them.
+    earlier = [json.loads(p.read_text()) for p in sorted((d / "earlier").glob("*.json"))]
+    return classify(run, jobs, annotations, logs, workflow_text, earlier)
 
 
 def verdict_lines(retry, reason, verdicts):
@@ -290,8 +360,8 @@ def decide():
     run_id = os.environ["RUN_ID"]
     attempt = os.environ["RUN_ATTEMPT"]
     run = {"conclusion": os.environ.get("RUN_CONCLUSION"), "run_attempt": attempt}
-    title = f"Re-run on runner faults: run {run_id}, attempt {attempt}"
-    jobs, annotations, logs, workflow_text = [], {}, {}, ""
+    title = f"Re-run on runner faults and install failures: run {run_id}, attempt {attempt}"
+    jobs, annotations, logs, workflow_text, earlier = [], {}, {}, "", []
     if run["conclusion"] == "failure" and int(attempt) < MAX_ATTEMPTS:
         listed = gh(["--paginate", f"repos/{repo}/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100"])
         if listed is None:
@@ -307,7 +377,13 @@ def decide():
             if log is not None:
                 logs[jid] = log
         workflow_text = workflow_at(repo, os.environ.get("WORKFLOW_PATH", ""), os.environ.get("HEAD_SHA", ""))
-    retry, reason, verdicts = classify(run, jobs, annotations, logs, workflow_text)
+        # Each earlier attempt's jobs, for the install failures already re-run; unread, the run is not re-run.
+        for n in range(1, int(attempt)):
+            then = gh(["--paginate", f"repos/{repo}/actions/runs/{run_id}/attempts/{n}/jobs?per_page=100"])
+            if then is None:
+                return finish(title, False, f"attempt {n}'s jobs could not be read", [], repo, run_id)
+            earlier.append([j for page in values(then) for j in page.get("jobs", [])])
+    retry, reason, verdicts = classify(run, jobs, annotations, logs, workflow_text, earlier)
     if retry:
         gone = head_gone(repo, os.environ.get("HEAD_BRANCH", ""), os.environ.get("HEAD_SHA", ""))
         if gone:

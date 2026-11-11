@@ -12,6 +12,13 @@
 //! - `ci_retry_retries_*`: each signature is re-run, the gate that gathers the job beside it;
 //! - `ci_retry_keeps_*`: a real test failure, a mixed run, attempt 3 and on, a timeout, a run that did not fail, a
 //!   gate alone, and a signature in the wrong place are not;
+//! - `ci_retry_retries_a_failed_package_install`, `ci_retry_retries_an_install_at_its_own_limit_alone`,
+//!   `ci_retry_keeps_an_install_failure_beside_another`, `ci_retry_keeps_an_install_failure_off_github_s_runners`,
+//!   `ci_retry_reruns_an_install_failure_once` and `ci_retry_decide_reruns_an_install_failure_once`: a job whose only
+//!   failure is its package install, on a GitHub-hosted runner, is re-run once per run, and never anything beside a real
+//!   failure, a timeout of the job, or on the self-hosted runner (the owner, 11 Nov 2026: "one automatic re-run, on
+//!   GitHub-hosted runners, for a job whose only failure is the package-install cap … it is marked as a re-run and never
+//!   turns a real failure green"). Its log is the outage's of that day, trimmed.
 //! - `ci_retry_main_and_pull_requests_alike`: the event and the branch change nothing;
 //! - `ci_retry_decide_*`: `decide`, under bash with a stand-in `gh`, asks for `rerun-failed-jobs` once, never a whole
 //!   run, and writes the decision and its reasons to the step summary;
@@ -89,6 +96,8 @@ struct Run {
     jobs: Vec<Value>,
     annotations: BTreeMap<String, String>,
     logs: BTreeMap<String, String>,
+    /// The jobs of each earlier attempt of the run.
+    earlier: Vec<Vec<Value>>,
 }
 
 impl Run {
@@ -117,6 +126,7 @@ impl Run {
                 .clone(),
             annotations: folder("annotations"),
             logs: folder("logs"),
+            earlier: Vec::new(),
         }
     }
 
@@ -214,6 +224,52 @@ impl Run {
         for (id, text) in &self.logs {
             std::fs::write(dir.join("logs").join(format!("{id}.log")), text).expect("log");
         }
+        if !self.earlier.is_empty() {
+            std::fs::create_dir_all(dir.join("earlier")).expect("earlier");
+            for (n, jobs) in self.earlier.iter().enumerate() {
+                std::fs::write(
+                    dir.join("earlier").join(format!("{}.json", n + 1)),
+                    Value::from(jobs.clone()).to_string(),
+                )
+                .expect("an earlier attempt");
+            }
+        }
+    }
+
+    /// The job `id`, failed at its steps `failed` among `steps` (each named, the rest passing or skipped after), on a
+    /// runner labelled `labels`, its log an apt failure's and its one annotation the step's exit.
+    fn install_failed(mut self, id: &str, steps: &[&str], failed: &[&str], labels: &[&str]) -> Run {
+        let job = self
+            .jobs
+            .iter_mut()
+            .find(|j| j["id"].as_u64() == id.parse().ok())
+            .unwrap_or_else(|| panic!("ci_retry: no job {id}"));
+        let mut after = false;
+        let listed: Vec<Value> = steps
+            .iter()
+            .map(|name| {
+                let conclusion = if failed.contains(name) {
+                    after = true;
+                    "failure"
+                } else if after {
+                    "skipped"
+                } else {
+                    "success"
+                };
+                json!({"name": name, "conclusion": conclusion})
+            })
+            .collect();
+        job["conclusion"] = json!("failure");
+        job["steps"] = json!(listed);
+        job["labels"] = json!(labels);
+        self.logs.insert(id.to_owned(), APT_LOG.to_owned());
+        self.annotated(id, "Process completed with exit code 1.")
+    }
+
+    /// This run with an earlier attempt, its jobs `jobs`.
+    fn after(mut self, jobs: Vec<Value>) -> Run {
+        self.earlier.push(jobs);
+        self
     }
 }
 
@@ -705,8 +761,8 @@ negative_control!(
     expected = "a step's timeout, in an annotation: re-run",
     check_timeouts(&edit(
         &script(),
-        "        if timed_out(j, annotations.get(jid, []), logs.get(jid)):\n",
-        "        if False:\n"
+        "        elif timed_out(j, annotations.get(jid, []), logs.get(jid)):\n",
+        "        elif False:\n"
     ))
 );
 
@@ -732,8 +788,8 @@ mod timed_out_gate {
         expected = "a gate that timed out: re-run",
         check_timeouts(&edit(
             &script(),
-            "if n in faulted or n in timeouts or jid is None:",
-            "if n in faulted or jid is None:"
+            "if n in faulted or n in timeouts or n in again or jid is None:",
+            "if n in faulted or n in again or jid is None:"
         ))
     );
 }
@@ -1804,3 +1860,277 @@ mod no_probe {
         })
     );
 }
+
+// ---- A failed package install, re-run once (the owner, 11 Nov 2026) --------------------------------------------------
+
+/// The log of a Mesa step that failed at `bounded`'s cap, as the outage of 11 Nov 2026 wrote it (run 43034808169).
+const APT_LOG: &str = "2026-11-11T14:05:01.0000000Z ##[group]Run bounded() { limit=$1; shift; }; bounded 90 apt-get update\n\
+2026-11-11T14:06:31.0000000Z E: Failed to fetch http://azure.archive.ubuntu.com/ubuntu/dists/noble/InRelease  Connection failed\n\
+2026-11-11T14:06:31.0000000Z attempt 1 of 3 failed or ran past 90 s, apt-get update\n\
+2026-11-11T14:09:31.0000000Z attempt 3 of 3 failed or ran past 90 s, apt-get update\n\
+2026-11-11T14:09:31.0000000Z ##[error]Process completed with exit code 1.\n";
+
+/// A `ci` shard's steps, the Mesa install among them.
+const SHARD_STEPS: [&str; 5] = [
+    "Set up job",
+    "Restore the Mesa packages",
+    "Install Mesa (lavapipe)",
+    "cargo nextest run --archive-file … --partition hash:3/4",
+    "Complete job",
+];
+
+const MESA: &str = "Install Mesa (lavapipe)";
+const HOSTED: [&str; 1] = ["ubuntu-24.04"];
+
+/// `ci (3)` alone failed on the saved disk run, at its Mesa install on a hosted runner, and the gate that gathers it.
+fn install_run() -> Run {
+    no_space().install_failed(CI_3, &SHARD_STEPS, &[MESA], &HOSTED)
+}
+
+/// Asserts `run` is re-run, `ci (3)` for its install failure.
+fn check_install_retried(script: &str, case: &str, run: &Run) {
+    assert!(retried(script, run), "{case}: not re-run");
+    let text = classified_on(script, run, "ci.yml");
+    assert!(
+        text.lines()
+            .any(|l| l.starts_with("job=ci (3): install failure: only the package install failed")),
+        "{case}: the verdict does not say it is re-run for its install failure"
+    );
+}
+
+fn check_install(script: &str) {
+    check_install_retried(script, "a failed Mesa install", &install_run());
+    check_install_retried(
+        script,
+        "a failed restore of the Mesa packages",
+        &no_space().install_failed(CI_3, &SHARD_STEPS, &["Restore the Mesa packages"], &HOSTED),
+    );
+}
+
+#[test]
+fn ci_retry_retries_a_failed_package_install() {
+    check_install(&script());
+}
+
+negative_control!(
+    ci_retry_retries_a_failed_package_install,
+    "a classifier that knows no install step",
+    expected = "a failed Mesa install: not re-run",
+    check_install(&edit(
+        &script(),
+        "INSTALL_STEPS = (\"Install Mesa (lavapipe)\", \"Restore the Mesa packages\")",
+        "INSTALL_STEPS = ()"
+    ))
+);
+
+/// The install step cut at its own `timeout-minutes`, the step's cap, is an install failure; the job's is not.
+fn check_install_cut(script: &str) {
+    check_install_retried(
+        script,
+        "a Mesa install at its own limit",
+        &install_run().annotated(
+            CI_3,
+            "The action 'Install Mesa (lavapipe)' has timed out after 8 minutes.",
+        ),
+    );
+    check_kept(
+        script,
+        "an install failure in a job that timed out",
+        &install_run().annotated(CI_3, JOB_TIMEOUT),
+    );
+    check_kept(
+        script,
+        "an install failure beside another step's limit",
+        &install_run().log(CI_3, |l| {
+            format!("{l}##[error]The action 'cargo nextest run' has timed out after 90 minutes.\n")
+        }),
+    );
+}
+
+#[test]
+fn ci_retry_retries_an_install_at_its_own_limit_alone() {
+    check_install_cut(&script());
+}
+
+negative_control!(
+    ci_retry_retries_an_install_at_its_own_limit_alone,
+    "a classifier that reads no step's own limit",
+    expected = "a Mesa install at its own limit: not re-run",
+    check_install_cut(&edit(
+        &script(),
+        "if m.group(1) in INSTALL_STEPS)",
+        "if False)"
+    ))
+);
+
+mod any_limit {
+    use super::*;
+    negative_control!(
+        ci_retry_retries_an_install_at_its_own_limit_alone,
+        "a classifier that takes any step's limit for the install's",
+        expected = "an install failure beside another step's limit: re-run",
+        check_install_cut(&edit(
+            &script(),
+            "if m.group(1) in INSTALL_STEPS)",
+            "if True)"
+        ))
+    );
+}
+
+/// An install failure is re-run only when nothing else failed: not beside a failed test step, a real failure of another
+/// job, as a cancelled job, or with no steps listed.
+fn check_install_alone(script: &str) {
+    check_kept(
+        script,
+        "an install failure beside a failed test step",
+        &no_space().install_failed(CI_3, &SHARD_STEPS, &[MESA, SHARD_STEPS[3]], &HOSTED),
+    );
+    check_kept(
+        script,
+        "an install failure beside a real test failure",
+        &install_run().with_job_of(&Run::saved(TEST_RUN), RELEASE_1),
+    );
+    check_kept(
+        script,
+        "a cancelled job stopped at its install",
+        &install_run().concluded(CI_3, "cancelled"),
+    );
+    let mut unlisted = install_run();
+    for job in unlisted.jobs.iter_mut() {
+        if job["id"].as_u64() == CI_3.parse().ok() {
+            job.as_object_mut().expect("a job").remove("steps");
+        }
+    }
+    check_kept(script, "an install failure with no steps listed", &unlisted);
+}
+
+#[test]
+fn ci_retry_keeps_an_install_failure_beside_another() {
+    check_install_alone(&script());
+}
+
+negative_control!(
+    ci_retry_keeps_an_install_failure_beside_another,
+    "a classifier that reads only whether an install step failed",
+    expected = "an install failure beside a failed test step: re-run",
+    check_install_alone(&edit(
+        &script(),
+        "if not failed or any(name not in INSTALL_STEPS for name in failed):",
+        "if not any(name in INSTALL_STEPS for name in failed):"
+    ))
+);
+
+/// Never on the self-hosted runner: a job whose labels name `self-hosted`, or name none, is kept.
+fn check_hosted_only(script: &str) {
+    check_kept(
+        script,
+        "an install failure on the self-hosted runner",
+        &no_space().install_failed(
+            CI_3,
+            &SHARD_STEPS,
+            &[MESA],
+            &["self-hosted", "windows", "nvidia"],
+        ),
+    );
+    check_kept(
+        script,
+        "an install failure on a runner with no labels",
+        &no_space().install_failed(CI_3, &SHARD_STEPS, &[MESA], &[]),
+    );
+}
+
+#[test]
+fn ci_retry_keeps_an_install_failure_off_github_s_runners() {
+    check_hosted_only(&script());
+}
+
+negative_control!(
+    ci_retry_keeps_an_install_failure_off_github_s_runners,
+    "a classifier that re-runs on any runner",
+    expected = "an install failure on the self-hosted runner: re-run",
+    check_hosted_only(&edit(
+        &script(),
+        "    if not failed or not hosted(job):\n",
+        "    if not failed:\n"
+    ))
+);
+
+/// Once per job per run: the same job's install failure in an earlier attempt keeps it; another job's does not.
+fn check_once(script: &str) {
+    let earlier = install_run().jobs;
+    let again = install_run().attempt(2).after(earlier);
+    check_kept(script, "a second install failure of the same job", &again);
+    assert!(
+        classified_on(script, &again, "ci.yml")
+            .lines()
+            .any(|l| l == "job=ci (3): install failure again, after its re-run: not re-run"),
+        "a second install failure: the verdict does not say why it stands"
+    );
+    let other = Run::saved(DISK_RUN)
+        .passing(CI_3)
+        .install_failed(CI_4, &SHARD_STEPS, &[MESA], &HOSTED)
+        .jobs;
+    check_install_retried(
+        script,
+        "an install failure after another job's",
+        &install_run().attempt(2).after(other),
+    );
+}
+
+#[test]
+fn ci_retry_reruns_an_install_failure_once() {
+    check_once(&script());
+}
+
+negative_control!(
+    ci_retry_reruns_an_install_failure_once,
+    "a classifier that forgets the earlier attempts",
+    expected = "a second install failure of the same job: re-run",
+    check_once(&edit(
+        &script(),
+        "        if why and j[\"name\"] in before:\n",
+        "        if False:\n"
+    ))
+);
+
+/// `decide` reads each earlier attempt's jobs: at attempt 2, where attempt 1 (the stand-in serves every attempt the
+/// same jobs) failed the same install, it re-runs nothing; at attempt 1 it re-runs, and its summary says why.
+fn check_decide_install(script: &str) {
+    let first = decide(script, &install_run(), &[]);
+    assert!(
+        first.ok
+            && first.posts().len() == 1
+            && first
+                .summary
+                .contains("| ci (3) | install failure: only the package install failed"),
+        "decide does not re-run a first install failure and say so"
+    );
+    let second = decide(script, &install_run().attempt(2), &[]);
+    assert!(
+        second
+            .calls
+            .iter()
+            .any(|c| c.contains("repos/o/r/actions/runs/42/attempts/1/jobs")),
+        "decide does not read the earlier attempt"
+    );
+    assert!(
+        second.posts().is_empty() && second.summary.contains("**Decision: no re-run.**"),
+        "decide re-runs a second install failure"
+    );
+}
+
+#[test]
+fn ci_retry_decide_reruns_an_install_failure_once() {
+    check_decide_install(&script());
+}
+
+negative_control!(
+    ci_retry_decide_reruns_an_install_failure_once,
+    "decide that reads no earlier attempt",
+    expected = "decide does not read the earlier attempt",
+    check_decide_install(&edit(
+        &script(),
+        "for n in range(1, int(attempt)):",
+        "for n in range(1, 1):"
+    ))
+);

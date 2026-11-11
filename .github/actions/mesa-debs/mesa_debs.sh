@@ -5,7 +5,7 @@
 #   mesa_debs.sh install  on a hit (HIT=true), the cached packages installed with dpkg, offline, and each of PACKAGES
 #                         checked installed: `installed=true`; otherwise, or when they do not install, `installed=false`,
 #                         and the apt step after installs as before. It notes the packages already downloaded, which
-#                         `collect` leaves out.
+#                         `collect` leaves out, and, in a re-run, says so in the job's summary.
 #   mesa_debs.sh collect  the packages the apt step downloaded, copied to the cached folder: `count=<n>`.
 # The folders: MESA_DEBS_DIR (the cached one, ~/.cache/mesa-debs), MESA_APT_ARCHIVES (apt's download folder,
 # /var/cache/apt/archives) and MESA_DEBS_BEFORE (the note, under RUNNER_TEMP). It never fails its step: a cache that
@@ -27,6 +27,9 @@ case "${1:-}" in
     fi
     ;;
   install)
+    if [ "${GITHUB_RUN_ATTEMPT:-1}" -gt 1 ] 2> /dev/null && [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+      echo "**Re-run:** attempt ${GITHUB_RUN_ATTEMPT} of run ${GITHUB_RUN_ID:-?} (\`.github/workflows/retry.yml\`'s summary says why)." >> "$GITHUB_STEP_SUMMARY"
+    fi
     ls "$archives" 2> /dev/null | grep '\.deb$' > "$before" || true
     installed=false
     if [ "${HIT:-}" = true ] && ls "$dir"/*.deb > /dev/null 2>&1; then

@@ -11,6 +11,7 @@
 //! - `ci_mesa_debs_a_hit_installs_offline`: on a hit the cached packages install with dpkg and are checked installed;
 //!   a miss, or packages that do not install, leave the install to apt.
 //! - `ci_mesa_debs_keeps_only_what_apt_downloaded`: what is kept is what the apt step downloaded, nothing older.
+//! - `ci_mesa_debs_marks_a_re_run`: in a re-run the job's summary says so.
 //!
 //! Each test has its registered negative control (R-176), which edits the one thing it turns on.
 
@@ -554,5 +555,45 @@ negative_control!(
         &read(SCRIPT),
         "      grep -qxF \"$base\" \"$before\" 2> /dev/null && continue\n",
         ""
+    ))
+);
+
+fn check_marks(script: &str) {
+    for (attempt, marked) in [("1", false), ("2", true)] {
+        let dir = Scratch::new("ci_mesa_debs_mark");
+        std::fs::create_dir_all(&*dir).expect("scratch");
+        let summary = dir.join("summary");
+        let (ok, _, _) = run(
+            &dir,
+            script,
+            "install",
+            &[
+                ("PACKAGES", "mesa-vulkan-drivers"),
+                ("GITHUB_RUN_ATTEMPT", attempt),
+                ("GITHUB_RUN_ID", "42"),
+                ("GITHUB_STEP_SUMMARY", summary.to_str().expect("a path")),
+            ],
+        );
+        let said = std::fs::read_to_string(&summary).unwrap_or_default();
+        assert!(
+            ok && said.contains("**Re-run:** attempt 2 of run 42") == marked,
+            "ci_mesa_debs: attempt {attempt}'s summary is not marked as it should be: {said:?}"
+        );
+    }
+}
+
+#[test]
+fn ci_mesa_debs_marks_a_re_run() {
+    check_marks(&read(SCRIPT));
+}
+
+negative_control!(
+    ci_mesa_debs_marks_a_re_run,
+    "A summary marked from the third attempt on.",
+    expected = "attempt 2's summary is not marked as it should be",
+    check_marks(&edit(
+        &read(SCRIPT),
+        "\"${GITHUB_RUN_ATTEMPT:-1}\" -gt 1",
+        "\"${GITHUB_RUN_ATTEMPT:-1}\" -gt 2"
     ))
 );
