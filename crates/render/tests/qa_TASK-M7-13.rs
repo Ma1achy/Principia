@@ -12,7 +12,9 @@
 //!
 //! What each entry should hold is read here from the files themselves, by this file's own walk of the directories
 //! and its own reading of the `// @uniform` and `// @input` lines (gui_state_contract §3, "The declaration format").
-//! A field with exactly one finite end is not tested: neither the requirement nor R-815 states it.
+//! A field with exactly one finite end has no ruled domain (RQ-786, open; REQ-GEN-019 carries `rq: RQ-786`): it is
+//! tested only for what the never-guess rule asks, that no domain is chosen for it (`plan/WORKFLOW.md` §
+//! "Escalation"), neither `(0, 1)` nor its finite end standing in.
 //!
 //! Every failure panics "qa M7-13:", and each test registers its negative control (R-176).
 
@@ -718,4 +720,127 @@ negative_control!(
     "an untransformed input given (0, 1) whatever is wired, the field's range ignored, must fail the check",
     expected = "qa M7-13: an untransformed input wired to",
     check_wired(|input, _| Some(if input == 0 { (2.0, 5.0) } else { (0.0, 1.0) }))
+);
+
+// ── REQ-GEN-019, RQ-786: a field with one finite end is given no domain ─────────────────────────────────────────
+
+/// Whether a range has exactly one finite end, an end at `±∞` (closed or open) or `Unbounded` counted as none.
+fn one_finite_end(range: Range) -> bool {
+    let finite = |b: Bound| matches!(b, Bound::Closed(v) | Bound::Open(v) if v.is_finite());
+    finite(range.lo) != finite(range.hi)
+}
+
+/// The wires to a field with one finite end: every such field of the manifest (render_gui_spec §10.1 names `K_0`
+/// `[0, ∞)` and `V_0` `(−∞, 0]`), and hand-made ones with the missing end written each way, on each side.
+fn one_finite_end_wires() -> Vec<(String, Range)> {
+    let fields = ledger::gen::validate(&ledger::layout()).expect("qa M7-13: the ledger validates");
+    let mut wires: Vec<(String, Range)> = fields
+        .iter()
+        .filter(|f| one_finite_end(f.range))
+        .map(|f| (f.name.to_string(), f.range))
+        .collect();
+    assert!(
+        !wires.is_empty(),
+        "qa M7-13: the manifest has no field with one finite end to wire"
+    );
+    let r = |lo, hi| Range { lo, hi };
+    for (what, lo, hi) in [
+        ("[0, unbounded)", Bound::Closed(0.0), Bound::Unbounded),
+        ("(unbounded, 0]", Bound::Unbounded, Bound::Closed(0.0)),
+        (
+            "(1.5, +inf]",
+            Bound::Open(1.5),
+            Bound::Closed(f64::INFINITY),
+        ),
+        (
+            "[-4, +inf)",
+            Bound::Closed(-4.0),
+            Bound::Open(f64::INFINITY),
+        ),
+        (
+            "[-inf, 2)",
+            Bound::Closed(f64::NEG_INFINITY),
+            Bound::Open(2.0),
+        ),
+        (
+            "(-inf, -2]",
+            Bound::Open(f64::NEG_INFINITY),
+            Bound::Closed(-2.0),
+        ),
+    ] {
+        wires.push((format!("a hand-made {what}"), r(lo, hi)));
+    }
+    wires
+}
+
+/// `entries`' inputs, each wired to every field with one finite end: `domain(entry, input, range)` is the domain the
+/// registry gives it. An untransformed input gets none; a declared one keeps its own (R-53: a node that transforms
+/// its field declares its domain, whatever is wired).
+fn check_unruled(entries: &[Entry], domain: impl Fn(&Entry, usize, Range) -> Option<(f64, f64)>) {
+    let wires = one_finite_end_wires();
+    let mut inherited = 0;
+    for e in entries {
+        for (i, input) in e.input_domains.iter().enumerate() {
+            for (name, range) in &wires {
+                let got = domain(e, i, *range);
+                match input.domain {
+                    None => {
+                        inherited += 1;
+                        assert_eq!(
+                            got, None,
+                            "qa M7-13: `{}`'s untransformed input `{}` wired to `{name}`, range {range:?}, was given \
+                             a domain, and RQ-786 rules none",
+                            e.id, input.name
+                        );
+                    }
+                    Some(own) => assert_eq!(
+                        got,
+                        Some(own),
+                        "qa M7-13: `{}`'s declared input `{}` wired to `{name}` lost its own domain",
+                        e.id,
+                        input.name
+                    ),
+                }
+            }
+        }
+    }
+    assert!(inherited > 0, "qa M7-13: no untransformed input was wired");
+}
+
+/// The entries the unruled arm is checked on: one per scanned slot directory, a custom registered at run time, and
+/// the crate's own registry.
+fn unruled_entries() -> Vec<Entry> {
+    let mut entries = five();
+    registry::register(&mut entries, "colour/qa_custom", COLOUR)
+        .expect("qa M7-13: registering the custom");
+    entries.extend(registry::registry().expect("qa M7-13: the crate's registry"));
+    entries
+}
+
+#[test]
+fn qa_registry_input_domains_one_finite_end_is_given_none() {
+    let entries = unruled_entries();
+    check_unruled(&entries, |e, i, range| e.domain(i, range));
+    // The same through `resolve`, which says why: no domain is defined for that range.
+    check_unruled(&entries, |e, i, range| {
+        match registry::resolve(e.input_domains[i].domain, range) {
+            Ok(d) => Some(d),
+            Err(registry::Unruled(named)) => {
+                assert_eq!(
+                    named, range,
+                    "qa M7-13: the refusal names another range than the wired one"
+                );
+                None
+            }
+        }
+    });
+}
+
+negative_control!(
+    qa_registry_input_domains_one_finite_end_is_given_none,
+    "an untransformed input given (0, 1) on a field with one finite end, a default chosen for RQ-786, must fail",
+    expected = "and RQ-786 rules none",
+    check_unruled(&unruled_entries(), |e, i, range| {
+        e.domain(i, range).or(Some(registry::UNIT_DOMAIN))
+    })
 );
