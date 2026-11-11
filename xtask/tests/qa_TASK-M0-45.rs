@@ -322,7 +322,7 @@ fn passes_with(script: &str, changes: &str) -> bool {
 }
 
 /// R-266 and R-656 on `workflow`: the job reporting the required check `check`, one job, runs whatever the job it
-/// needs ended in (its own `if:` is `always()`, alone or first, so a failed classification turns it red rather than
+/// needs ended in (its own `if:` is `!cancelled()`, alone or first, so a failed classification turns it red rather than
 /// skipping it, which branch protection counts as passing), and its first step, the classification's check, passes
 /// only when `changes` succeeded.
 fn check_unskippable(workflow: &str, check: &str) {
@@ -338,7 +338,7 @@ fn check_unskippable(workflow: &str, check: &str) {
     let job = found[0];
     assert!(
         job.own("if")
-            .is_some_and(|c| c == "always()" || c.starts_with("always() && ")),
+            .is_some_and(|c| c == "${{ !cancelled() }}" || c.starts_with("${{ !cancelled() && ")),
         "the check `{check}` (job `{}`) can be skipped when the job it needs fails",
         job.id
     );
@@ -369,11 +369,11 @@ fn qa_m0_45_the_required_checks_cannot_be_skipped() {
 
 negative_control!(
     qa_m0_45_the_required_checks_cannot_be_skipped,
-    "the checked-in workflow with `always()` dropped from the `ci` check, which a failed classification then skips",
+    "the checked-in workflow with `!cancelled()` dropped from the `ci` check, which a failed classification then skips",
     expected = "can be skipped when the job it needs fails",
     {
         let workflow = the_workflow().replacen(
-            "    name: ci\n    needs: changes\n    if: always() && github.event_name == 'pull_request'\n",
+            "    name: ci\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
             "    name: ci\n    needs: changes\n    if: github.event_name == 'pull_request'\n",
             1,
         );

@@ -378,6 +378,18 @@ impl<C: RestChart<Param = P>, P: Copy> Chart for RestStart<C, P> {
         self.chart.name()
     }
 
+    /// The held momentum controls finite, then the wrapped chart's `Φ` check ([`Chart::phi_finite`]), so an override
+    /// of its own is kept. The controls are `Φ`'s `z[2:6]` here, which the wrapped chart's `map` leaves at 0 and its
+    /// `validate` never reads, so a NaN one, whose decode has NaN momenta, is caught nowhere else; an infinite one
+    /// fails as it does in a latent chart's `map`. The held `L_z` and `K` need none: their charts' `validate` decodes
+    /// at the held value ([`HeldLz`], [`HeldK`]).
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        self.z_mom.iter().all(|&z| f64::from(z).is_finite()) && self.chart.phi_finite(u, v)
+    }
+
     fn requires_per_pixel_mass(&self) -> bool {
         self.chart.requires_per_pixel_mass()
     }
@@ -723,6 +735,14 @@ where
         self.chart.name()
     }
 
+    /// The wrapped chart's `Φ` check ([`Chart::phi_finite`]), so an override of its own is kept.
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        self.chart.phi_finite(u, v)
+    }
+
     fn requires_per_pixel_mass(&self) -> bool {
         self.chart.requires_per_pixel_mass()
     }
@@ -961,6 +981,14 @@ where
 
     fn name(&self) -> &str {
         self.chart.name()
+    }
+
+    /// The wrapped chart's `Φ` check ([`Chart::phi_finite`]), so an override of its own is kept.
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        self.chart.phi_finite(u, v)
     }
 
     fn requires_per_pixel_mass(&self) -> bool {

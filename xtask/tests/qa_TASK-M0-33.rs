@@ -73,7 +73,7 @@ fn job_runs(workflow: &str) -> Vec<(String, Vec<String>)> {
 
 /// Each job of `workflow` with the tiers it runs on, `(pull_request, push)`: a job-level `if:` naming
 /// `github.event_name == 'pull_request'` leaves out the push tier and one naming `!= 'pull_request'` the pull-request
-/// tier; a job whose `if:` does not say `always()` runs only where every job it `needs:` runs.
+/// tier; a job whose `if:` says neither `always()` nor `!cancelled()` runs only where every job it `needs:` runs.
 fn job_tiers(workflow: &str) -> Vec<(String, bool, bool)> {
     let mut jobs: Vec<(String, Option<String>, Vec<String>)> = Vec::new();
     let mut in_jobs = false;
@@ -117,7 +117,7 @@ fn job_tiers(workflow: &str) -> Vec<(String, bool, bool)> {
         if cond.contains("github.event_name != 'pull_request'") {
             pr = false;
         }
-        if !cond.contains("always()") {
+        if !cond.contains("always()") && !cond.contains("!cancelled()") {
             for need in &needs {
                 if let Some((_, p, q)) = out.iter().find(|(n, _, _)| n == need) {
                     pr &= *p;

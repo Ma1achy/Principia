@@ -9,7 +9,8 @@
 //! no job or script of it names a secret or a token, and every checkout leaves no credential; `wsl-cpu` refuses while
 //! `.github/wsl-cpu-enabled` is absent, as it is until a reviewed PR adds it after all six proofs have passed;
 //! `/etc/wsl.conf` is exactly the owner's, with no `[boot]` and so no systemd, and the image has no sudo and no sudoers
-//! entry; the base and rustup are pinned by hash and checked before use, the packages come from one dated snapshot,
+//! entry, the purge forced past sudo's own guard for that command alone and the build failing unless sudo is then gone;
+//! the base and rustup are pinned by hash and checked before use, the packages come from one dated snapshot,
 //! the toolchain is `rust-toolchain.toml`'s; the image installs the Vulkan packages `ci.yml`'s lavapipe steps install,
 //! and `inside.sh` selects the backend those jobs select; registration refuses without a pinned manifest hash; proof 3 tries the
 //! host over WSL's virtual switch, at the distro's gateway and on SMB's 445, as well as over the LAN; and proof 4 runs
@@ -293,6 +294,28 @@ mod flag_unchecked {
 
 // ---- The image ----------------------------------------------------------------------------------------------------
 
+/// The purge, forced past sudo's pre-removal guard, which refuses while root's password is locked as the base's is.
+const PURGE: &str = "in_root env SUDO_FORCE_REMOVE=yes apt-get -q -y purge sudo\n";
+/// What the build runs in the chroot straight after the purge, and fails on: dpkg holds no sudo, not even its
+/// conffiles, and no sudo is on PATH, at /usr/bin/sudo or as /etc/sudoers.
+const SUDO_GONE: &str = r#"in_root sh -eu -s << 'EOF' || {
+dpkg-query --version > /dev/null
+state=$(dpkg-query -W -f '${db:Status-Status}' sudo 2> /dev/null || true)
+case "$state" in
+  "" | not-installed) ;;
+  *) echo "dpkg still holds sudo: $state" && exit 1 ;;
+esac
+if command -v sudo; then echo "a sudo is on PATH" && exit 1; fi
+for f in /usr/bin/sudo /etc/sudoers; do
+  if [ -e "$f" ] || [ -L "$f" ]; then echo "$f is left" && exit 1; fi
+done
+echo "sudo: purged; no package, no binary, no /etc/sudoers"
+EOF
+  echo "::error::build-image.sh: sudo isn't proved gone from the image after the purge"
+  exit 1
+}
+"#;
+
 /// The value of `NAME=...` in the build script.
 fn setting<'a>(build: &'a str, name: &str) -> &'a str {
     build
@@ -329,9 +352,28 @@ fn check_image(build: &str, conf: &str, mutants: &str) {
         );
     }
     assert!(
-        build.contains("in_root apt-get -q -y purge sudo")
-            && build.contains("sudo rm -rf \"$root/etc/sudoers.d\""),
+        build.contains(PURGE) && build.contains("sudo rm -rf \"$root/etc/sudoers.d\""),
         "the image keeps sudo"
+    );
+    let forced: Vec<&str> = build
+        .lines()
+        .filter(|l| l.contains("SUDO_FORCE_REMOVE") && !l.starts_with('#'))
+        .collect();
+    assert_eq!(
+        forced,
+        [PURGE.trim_end()],
+        "SUDO_FORCE_REMOVE is set beyond the purge's own command"
+    );
+    let purge = build.find(PURGE).expect("checked above");
+    let gone = build
+        .find(SUDO_GONE)
+        .expect("the build doesn't prove sudo gone, or doesn't fail on it");
+    assert!(
+        purge < gone
+            && build[purge + PURGE.len()..gone]
+                .lines()
+                .all(|l| l.starts_with('#')),
+        "the proof that sudo is gone doesn't follow the purge"
     );
     let url = setting(build, "BASE_URL");
     assert!(
@@ -404,10 +446,89 @@ mod keeps_sudo {
         "sudo kept",
         expected = "the image keeps sudo",
         check_image(
-            &edited(&read(BUILD), "in_root apt-get -q -y purge sudo\n", ""),
+            &edited(&read(BUILD), PURGE, ""),
             &read(CONF),
             &read(".github/workflows/mutants.yml")
         )
+    );
+}
+
+mod unforced_purge {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "the purge left to sudo's guard, which refuses it",
+        expected = "the image keeps sudo",
+        check_image(
+            &edited(&read(BUILD), PURGE, "in_root apt-get -q -y purge sudo\n"),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod forced_everywhere {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "the bypass exported to every command",
+        expected = "SUDO_FORCE_REMOVE is set beyond the purge's own command",
+        check_image(
+            &edited(
+                &read(BUILD),
+                PURGE,
+                &format!("export SUDO_FORCE_REMOVE=yes\n{PURGE}")
+            ),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod unproved {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "the purge taken on apt's word",
+        expected = "the build doesn't prove sudo gone, or doesn't fail on it",
+        check_image(
+            &edited(&read(BUILD), SUDO_GONE, ""),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod proof_not_fatal {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "a failed proof that lets the build go on",
+        expected = "the build doesn't prove sudo gone, or doesn't fail on it",
+        check_image(
+            &edited(
+                &read(BUILD),
+                "after the purge\"\n  exit 1\n}\n",
+                "after the purge\"\n}\n"
+            ),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod proof_before_purge {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "sudo proved gone before it's purged",
+        expected = "the proof that sudo is gone doesn't follow the purge",
+        {
+            let build = read(BUILD);
+            let moved =
+                edited(&build, SUDO_GONE, "").replace(PURGE, &format!("{SUDO_GONE}{PURGE}"));
+            check_image(&moved, &read(CONF), &read(".github/workflows/mutants.yml"));
+        }
     );
 }
 

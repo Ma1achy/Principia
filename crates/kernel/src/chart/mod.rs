@@ -29,6 +29,9 @@
 //! their blocks by latent controls, and those that hold one by a physical construction, whose hidden coordinates are
 //! its physical parameters ([`mod@construction`]; R-633).
 //!
+//! **Navigation stops at the edge** (`nav`; R-469 P2): one generic stop over this trait and `validate`, keeping the
+//! view's centre valid under every navigation edit, which no chart writes for itself. CPU-side, off the SPIR-V build.
+//!
 //! **Saved charts** ([`mod@saved`]; R-475, R-513): a latent view saved as the oblique chart `(z₀, q₁, q₂)`, reopened as
 //! [`Latent`] on the stored vectors; a curved one as its parent, slice centre and tilt, reopened as [`Tilted`] on the
 //! parent under the saved tilt composed after a new one ([`Composed`]), so tilts compose.
@@ -75,6 +78,8 @@ pub mod invariant;
 pub mod latent;
 pub mod mass_simplex;
 pub mod mixed;
+#[cfg(not(target_arch = "spirv"))]
+pub mod nav;
 pub mod physical;
 pub mod saved;
 pub mod shape_sphere;
@@ -217,6 +222,18 @@ pub trait Chart {
     /// crate declares it; the default, `true`, trusts no uniform mass.
     fn requires_per_pixel_mass(&self) -> bool {
         true
+    }
+
+    /// Whether `Φ` at `(u, v)` is finite, a CPU-side f64 check: the navigation stop's (`nav`), a centre whose `Φ` is
+    /// not finite failing (R-469 A1). By default `map`'s output; a chart that builds a block outside `map` and whose
+    /// `validate` does not decode overrides it to check that block too: the shape sphere's explicit configuration and
+    /// momenta ([`ShapeSphere`]), the invariant charts' construction, read through layer 3 on the f64 decode
+    /// ([`InvariantLE`], `crate::chart::nav`'s note).
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<Self::Param>,
+    {
+        self.map::<f64>(u, v).z.z.iter().all(|x| x.is_finite())
     }
 
     /// The chart's domain function (R-26), a CPU-side f64 check: inverse_encode_contract § "Chart-aware validation"'s

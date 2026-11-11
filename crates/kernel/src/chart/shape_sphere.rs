@@ -116,7 +116,7 @@ use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::{self, Momentum};
 use crate::decode::{self, descriptor, Decoded, Ic};
 use crate::generated::constants::{SINC_CUT2_F32, SINC_SERIES_F32};
-use crate::generated::links::{LinkParams, LinkReal, Selection};
+use crate::generated::links::{Defaults, LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
 use crate::Real;
 
@@ -417,6 +417,35 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     /// `false`: the masses are held, `D_mass` at the chart's `z_mass`.
     fn requires_per_pixel_mass(&self) -> bool {
         false
+    }
+
+    /// The held blocks `map` gives, the chart's point `n` at `(u, v)`, and what [`place`] and [`held_momentum_at`]
+    /// build from them, the configuration it sets explicitly (`ρ̃`, `λ̃` and `r`) and the momenta, at the chart's
+    /// inertia and phase and the masses it decodes, with the decoded state. A pan far enough on the exponential map
+    /// overflows `n`'s radius, and `n` is NaN there; an inertia edited toward `f64::MAX` overflows [`inverse`]'s
+    /// `inertia·(1 + |n₀|)`, one below 0 has no `√a`, and at 0 the momenta's `I^{−1/4}` is infinite. The decode is
+    /// under [`Defaults`]: `phi_finite` has no selection to pass, and `S` picks only the mass and momentum links here, the
+    /// held blocks', not the configuration [`place`] builds.
+    fn phi_finite(&self, u: f64, v: f64) -> bool
+    where
+        f64: From<P>,
+    {
+        let map = self.map::<f64>(u, v).z.z;
+        let d = self.decode::<Defaults, f64>(u, v);
+        let c = &d.config;
+        let built = c
+            .rho_t
+            .iter()
+            .chain(&c.lambda_t)
+            .chain(c.r.iter().flatten());
+        let momenta = d.momentum.p.iter().flatten();
+        let ic = d.ic.m.iter().chain(d.ic.r.iter().chain(&d.ic.p).flatten());
+        map.iter()
+            .chain(&self.point(u, v))
+            .chain(built)
+            .chain(momenta)
+            .chain(ic)
+            .all(|x| x.is_finite())
     }
 
     /// [`ValidationResult::Valid`] at every `(u, v)` (the module's notes).

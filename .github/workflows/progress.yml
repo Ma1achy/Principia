@@ -82,9 +82,11 @@ jobs:
       # `Helvetica Neue` through `Arial`, `Liberation Sans` and `DejaVu Sans` to `sans-serif`, so the runner's fonts take
       # over. The log lists which of the list's families the runner has (librsvg takes the first it finds).
       - name: Install rsvg-convert
+        timeout-minutes: 8
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends librsvg2-bin
+          bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }
+          bounded 90 apt-get update
+          bounded 420 apt-get install -y --no-install-recommends librsvg2-bin -oDPkg::Lock::Timeout=60
           fc-list : family | grep -E "Helvetica|Arial|Liberation Sans|Arimo|Nimbus Sans|DejaVu Sans" | sort -u || true
       - name: Render the PNGs
         run: |

@@ -243,6 +243,11 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
     REQ-CHART-099). Easing and the path curve a property of each path segment, built with the path object (R-901;
     REQ-CHART-160). The only exceptions are R-894's consolidation and R-898's latent `β` change (TASK-M2-57), each with
     a conversion test; their outcome-class arm is TASK-M3-67's (R-918, F5).
+    *10 Nov 2026 (R-935, RQ-763 (b)):* stage 1 measures first, each of today's operations against its generic window
+    edit, the criterion written before the run. A bitwise-equal operation is one leaf at once and passes as above; a
+    differing one is converted in stage 1 with R-894's documented bit change and a conversion test, never kept as a
+    temporary leaf, and joins the exceptions here by name. The seed conversion (R-934, RQ-764 (a)) is such a recorded
+    conversion too, made before the baseline, its images updated under R-931.
   - **G2. No parallel routes, no special-case if-branches** (R-864 items 2 and 4): a word-bounded `git grep` finds no
     deleted route's name; the merged GUI routes are thin adapters onto the leaves (R-919, F1 (a); TASK-M2-64).
   - **G3. CPU decode and encode through the composition** (TASK-M2-67; REQ-CHART-170): T2 per chart within `ε_phys`
@@ -349,18 +354,18 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
   Benettin FTLE shadow, re-queued, with REQ-CHART-132;".
 
 <!-- gate:M3 -->
-**Exit gate — 237 requirements** (and every earlier gate still green):
+**Exit gate — 239 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (6): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086, REQ-CHART-132, REQ-CHART-177
-- INT (84): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110
+- INT (85): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110, REQ-INT-114
 - EVT (26): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032…033
 - PAY (33): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…113
 - GEN (1): REQ-GEN-016
 - SCHED (2): REQ-SCHED-002…003
 - RENDER (1): REQ-RENDER-028
 - GUI (1): REQ-GUI-008
-- TOOL (15): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150, REQ-TOOL-219, REQ-TOOL-222
+- TOOL (16): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150, REQ-TOOL-219, REQ-TOOL-222, REQ-TOOL-227
 - VAL (57): REQ-VAL-025…041, REQ-VAL-043…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126, REQ-VAL-128…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171, REQ-VAL-190…191, REQ-VAL-195, REQ-VAL-250…251, REQ-VAL-336…337
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
 - SYS (4): REQ-SYS-017…019, REQ-SYS-096

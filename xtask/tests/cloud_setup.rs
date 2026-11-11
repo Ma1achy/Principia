@@ -763,11 +763,31 @@ validation::negative_control!(
     }
 );
 
-/// The one-line lavapipe step CI's Linux jobs use, and the same step as a `run: |` block whose `apt-get install`
-/// continues, after a `\`, onto a line naming one more package.
+/// The end of the one-line lavapipe step CI's Linux jobs use, which calls `apt-get` through its `bounded` function,
+/// and the same end as the lines of a `run: |` block whose `apt-get install` continues, after a `\`, onto a line
+/// naming one more package.
 const LAVAPIPE_LINE: &str =
-    "        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers\n";
-const LAVAPIPE_CONTINUED: &str = "        run: |\n          sudo apt-get update\n          sudo apt-get install -y \\\n            mesa-vulkan-drivers xvfb\n";
+    "; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60\n";
+const LAVAPIPE_CONTINUED: &str = "\n          bounded 90 apt-get update\n          bounded 420 apt-get install -y \\\n            mesa-vulkan-drivers xvfb\n";
+
+/// `text` with each lavapipe step's `run:` opened as a block and its install continued (`LAVAPIPE_CONTINUED`).
+fn continue_lavapipe(text: &str) -> String {
+    let mut out = String::new();
+    for line in text.split_inclusive('\n') {
+        match line
+            .strip_suffix(LAVAPIPE_LINE)
+            .and_then(|l| l.split_once("run: "))
+        {
+            Some((indent, bounded)) => {
+                out.push_str(&format!(
+                    "{indent}run: |\n          {bounded}{LAVAPIPE_CONTINUED}"
+                ));
+            }
+            None => out.push_str(line),
+        }
+    }
+    out
+}
 
 /// CI's value of `PRIN_GPU_BACKEND` for its Linux jobs.
 fn ci_backend() -> String {
@@ -782,7 +802,7 @@ fn ci_backend() -> String {
 /// `PRIN_GPU_BACKEND: <CI's value>` moved to the workflow's top-level `env:`.
 fn continue_and_lift(text: &str) -> String {
     let backend = format!("PRIN_GPU_BACKEND: {}", ci_backend());
-    let text = text.replace(LAVAPIPE_LINE, LAVAPIPE_CONTINUED);
+    let text = continue_lavapipe(text);
     if !text.lines().any(|l| indent(l) > 0 && l.trim() == backend) {
         return text;
     }
