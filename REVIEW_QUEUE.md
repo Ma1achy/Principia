@@ -915,3 +915,45 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
 - **Applied meanwhile:** nothing is merged: PR #493 is not merged and builds nothing for this case. The physics review
   asks for a test at a nonzero `r_coll` that drives a shadow-only collision and pins whatever is ruled.
 - **Waits:** TASK-M3-14 (the Benettin FTLE shadow).
+
+## RQ-792: Aarseth–Zare's landing tolerance `LAND_EPS_REL`: the step control branches on it, rule 1 forbids it in a branch, and the corpus gives it no value *(conflict and silence, a missing value, R-71; a one-way door, it changes when a sync interval counts as landed and so what the occupant computes, at both precisions; Part 2b steps 6 and 7, Part 2c rule 1; R-927, R-953; REQ-INT-049, REQ-INT-114; context: TASK-M3-68)*
+
+*Queued 11 Nov 2026 by the implementer of TASK-M3-68 (the Aarseth–Zare occupant); each quote re-read on `main` at
+50f406e4. Nothing is chosen here.*
+
+*In plain English: Aarseth–Zare marches each sync interval in small steps of a stretched time, and stops when the
+clock has reached the interval's end "closely enough". The contract's transcription of the step control says how close
+with a tolerance, `LAND_EPS_REL`, in three places, but the contract's own rule 1 forbids exactly that constant in a
+branch, and it gives no value for it. The march cannot be built without some landing test, so the choice of test (and,
+if it is a tolerance, its value) is the owner's.*
+
+- **File, section:**
+  - `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference body, the
+    Levi-Civita inverse and the step control (transcribed)", step 6, "The landing secant": "When the step just taken
+    reaches the boundary (`t_s ≥ dt_left − dt_left·LAND_EPS_REL`) … stop if `got` is not finite, `got ≤ 0`, or
+    `|got − want| ≤ dt_left·LAND_EPS_REL`"; and step 7, "The exit": "The march ends when
+    `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, or the state is not finite, or the budget is spent".
+  - The same section, after step 8: "`SYNC_EPS` and `LAND_EPS_REL` are the reference's precision-dependent constants
+    that Part 2c rule 1 forbids in a branch; their values are not part of this transcription."
+  - The same contract, § "Rules the new kernel must hold by construction", rule 1: "prin-rs gives `f32` and `f64`
+    different `SYNC_EPS` (1e-6 / 1e-15) and `LAND_EPS_REL` (1e-5 / 1e-14), **both sitting directly in branch
+    conditions.** … If a tolerance must scale with precision, it belongs where the *value* is used, never where the
+    *branch* is taken."; and R-953's note there: "Rule 1's text stands for every other constant: `SYNC_EPS` and
+    `LAND_EPS_REL` stay forbidden in a branch."
+- **The conflict:** steps 6 and 7 branch on `LAND_EPS_REL`; rule 1 and R-953 forbid it in a branch; neither says what
+  the landing test is instead. **The silence:** no value is given (the values rule 1 quotes are prin-rs's, described as
+  the defect).
+- **`SYNC_EPS` does not need a ruling:** TASK-M3-68 replaces the reference's `t ≥ t_target − SYNC_EPS` (step 1) by
+  integer sync-boundary indices, so no tolerance reaches that branch (applied per R-369, an implementation choice that
+  changes no result on the grid R-565 fixes).
+- **Options (measurable):** (a) one tolerance for both precisions, set where the value is used, as rule 1 allows, a
+  calibration with its value proposed (R-71); (b) no tolerance: the interval lands when the secant's last retake ends
+  the interval clock at or past `dt_left`, the clamp then setting the remainder exactly, so the branch compares `t_s`
+  with `dt_left` alone; (c) the reference's per-precision values, which needs rule 1 amended. Each changes the
+  trajectory by at most the landing residual, which the `az-final-step` gate measures; the figure-eight closure under
+  each can be run on request.
+- **Applied meanwhile:** TASK-M3-68 takes the tolerance as a parameter of the occupant's configuration
+  (`AzParams::land_eps_rel`), with no value in the kernel and no production configuration; the gates and tests that
+  run the occupant state the reference's values (`1e-5`, `1e-14`) as their run condition, marked with this entry.
+- **Waits:** the occupant's production configuration (its `AzConfig`), with REQ-INT-080 and REQ-INT-105's values;
+  TASK-M3-68 itself does not wait.
