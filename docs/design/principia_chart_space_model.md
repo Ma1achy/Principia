@@ -32,6 +32,18 @@ override a measured or ruled section.** The proofs below stand on the corrected 
 4. **Blanks mid-morph can come from a held constraint** (§17.11), not only from a chart's mask. Corollary 1
    is withdrawn. Corollary 2 is strengthened: under a common hold, blending can leave the feasible set, and
    those pixels are blank and tagged.
+   *11 Nov 2026 (R-926 item 3, R-943; a record correction applied per R-369, listed for veto):* that was a held
+   constraint run on a blended configuration. Under the state blend no hold runs mid-morph, and every in-between frame
+   is a valid system (R-943), so Corollary 1 holds again for the state blend; `principia_chart_composition.md` § 17.11
+   has the note and the one case left to physics review.
+   *11 Nov 2026, later (the physics review of PR #482, review 5852979675, P1, and its re-check, review 5853427038,
+   P9):* that note went too far. The state blend removes the held-constraint blanks, and no more: Corollary 1 does not
+   hold without exception. One decoder-side case remains, the mass guard's: the masses blend in log-ratios, so a
+   blend's interior pixel can raise `M01_TINY` between two valid ends, and commonly, wherever two ends at the band's
+   edge differ in `m₁/m₀`, saturated ends included (`principia_chart_composition.md` § 17.11, "Out of feasible", case
+   2). Such a pixel is tagged, never dropped and never NaN; what it shows is the owner's, RQ-787, and nothing is
+   chosen here. *Was, the two sentences as the note above has them:* "every in-between frame is a valid system
+   (R-943), so Corollary 1 holds again for the state blend" and "the one case left to physics review".
 5. **In the gauge, `L_z`'s sign isn't preserved:** the encode's mirror flips it. The scale-free invariant
    overlap is `L_z²E` and the sign of `E` only (§6b corrected below).
 6. **Symmetry acts on starting states only (owner rule, 7 Nov).** Every symmetry reduction (translation,
@@ -108,6 +120,10 @@ masses can leave the simplex. **Rule: always blend in `Z`, never in physical coo
 
 **Corollary 1 (no frame is invalid).** A morph never produces a "not a system" pixel from the decoder side.
 Blank pixels mid-morph come only from a chart's own mask (`M_φ`, `M_ψ`), interpolated as a display choice.
+*11 Nov 2026 (§ 0, correction 4, and its notes of this date):* this does not hold without exception. § 0 withdrew it
+for a held constraint run on a blended configuration; the state blend (R-926 item 3, R-943) removes those blanks, but
+a blend's interior pixel can still raise the mass guard's `M01_TINY` between two valid ends
+(`principia_chart_composition.md` § 17.11, "Out of feasible", case 2): tagged, its display the owner's under RQ-787.
 
 **Corollary 2 (held quantities are not conserved).** If `φ` holds energy at `E₀` and `ψ` holds `L_z` at `L₀`,
 the frames in between generally hold neither. The set `{z : E(D(z)) = E₀}` isn't convex in `Z`, so the
@@ -426,3 +442,9 @@ chart can't, the anchor slides continuously to the target's nearest admissible p
 Held quantities aren't preserved mid-morph. Time-to-IC morphs are possible but cut by choice. In floating
 point, family membership means "same formula, same evaluation order", the anchor is carried as stored words,
 and seams belong to charts, not paths.
+
+*11 Nov 2026 (R-926 items 2 and 3; R-950; R-925):* "Time-to-IC morphs are possible but cut by choice" gives way: time is
+the last coordinate of every map and blends like any other, and under the lock no jump stays, the leftover one from a
+time-axis chart to one with no time axis removed by the owner (R-950). "Held quantities aren't preserved mid-morph"
+stands. "Morph" names the system blend, the blend of two charts' states (R-925, R-926), where this paragraph has "blend
+in latent space".

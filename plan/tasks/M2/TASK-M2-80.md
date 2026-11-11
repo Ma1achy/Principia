@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-CHART-172, REQ-GUI-427, REQ-GUI-428
-- **Depends on:** TASK-M2-66, TASK-M2-57, TASK-M2-65
+- **Depends on:** TASK-M2-66, TASK-M2-57, TASK-M2-65, TASK-M2-99
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -29,8 +29,10 @@ The maths of R-870's points of interest as engine functions: the signed point, w
 - `cargo test -p engine points_of_interest_maths` — a point lying in the chart is found at the pixel that decodes to it, within the lock's tolerance, with its off-slice distance; a point off the chart gets the nearest chart point and its distance; a one-property match passes through the point's pixel; across a morph's frames the match is consistent, mid-morph found to pixel resolution; saving a point changes no sim key, payload or statistic; controls: a point one pixel off fails, another property's value fails to pass through it, a point in the sim key fails (REQ-CHART-172).
 - Review: chart_composition § 10.5 states each definition: the nearest chart point, the off-slice metric, the near-match measure, marks on a frame with no inverse, the state group holding the points, and the gauge of the property values and the off-slice distance, mirror not quotiented; the physics reviewer approved (REQ-GUI-427).
 - Review: the proposal gives the tolerance and its evidence (how many pixels match at it on a stated set of charts and points, against one tighter and one looser value); recorded in decisions.md (REQ-GUI-428).
+- *11 Nov 2026 (R-947, R-944):* `cargo test -p engine points_of_interest_maths` — REQ-CHART-172's verify as it now reads: the nearest chart point and the off-slice distance are `place`'s point and residual (TASK-M2-99); mid-morph the point is found to the lock's tolerance under (D), **the condition written in: physics review confirms, else R-899's Q8 (a), "to pixel resolution", is what the test asserts** (REQ-CHART-172). The definitions' review reads REQ-GUI-427 as it now reads (REQ-GUI-427).
 
 ## Notes
 - Split from TASK-M8-126 by R-916 (9 Nov 2026); TASK-M8-126 keeps REQ-GUI-426, the drawing.
 - TASK-M2-57 is in Depends on because a point's signed state on the latent chart needs the full-circle `β` (R-865).
 - **Build order (R-916):** stage 3.
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-947):* the nearest chart point and the off-slice distance are `place`'s (TASK-M2-99, a new dependency); REQ-GUI-427's "how marks are found on a path frame with no inverse" is defined by chart_composition § 10.6. Mid-morph marks meet the lock's tolerance under (D), applied per R-369 and conditional on physics review: not settled until the physics reviewer confirms; if they disagree it goes to the owner as a queue entry. Where a dated line under Acceptance tests differs from an earlier line for the same requirement, the dated line binds and the earlier one is kept as its *Was*. *Was (Depends on):* "TASK-M2-66, TASK-M2-57, TASK-M2-65".

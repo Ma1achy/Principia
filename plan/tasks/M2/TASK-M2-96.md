@@ -1,0 +1,38 @@
+# TASK-M2-96 — The invariant construction's second sheet, and a state's sheet from one source with it (R-937)
+
+- **Milestone:** M2
+- **Closes:** REQ-DEC-061, REQ-DEC-062
+- **Depends on:** TASK-M2-95, TASK-M2-93, TASK-M2-66, TASK-M2-67
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** none
+- **Size:** kernel; no split named
+
+## Goal
+The spin edges of the invariant charts unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ` (R-937, RQ-771 (a)), built from the construction as TASK-M2-93 leaves it, with the seed `w = r/√I`. The same source exposes a state's sheet, the sign of its momentum along the construction's seed (R-948: sheet 1 while the system grows, sheet 2 while it shrinks), to TASK-M2-99 (placement).
+
+## References
+- `decisions.md` § "R-937 — RQ-771, the invariant charts' second sheet: option (a), the spin edges unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ`, on the warped and the linear mapping, its meaning read from the seed R-934 rules; below the floor at a non-zero spin, where the lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin, everywhere there, on the linear `(L_z, E)` and `(L_z, K)` charts and on Burrau `Φ_θ,L_z`, physics review agreeing with conditions C1 to C7; REQ-ENC-030's class rule binds lookups and the lock, never a drawn extension *(closes RQ-771; amends R-471 and R-508)*"
+- `decisions.md` § "R-934 — RQ-764, the momentum seed: option (a), the expansion seed `w = r/√I` takes the place of the largest-norm rule of R-82 everywhere, the invariant charts and Burrau's included; the seam is not physics; every image it changes is a recorded conversion, updated under R-931; R-82's rule is kept as a named option with its seam declared *(closes RQ-764; amends R-82)*"
+- `decisions.md` § "R-948 — Traces at the new edges, the re-plan addition's question (B): (i-a), (ii-a), (iii-a); a state's sheet is set by whether the system is growing or shrinking, the trace jumps at the fold with an optional tick, off by default, and nothing is drawn inside a clamped or saturated area, physics review confirming *(no RQ; answers the re-plan addition's question (B); refines R-538)*"
+- `decisions.md` § "R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*"
+- `decisions.md` § "R-923 — Integrator work before charts, for now: R-917's order (charts first, then integrator, then visuals) is set aside for now, on the owner's say; only integrator tasks that don't depend on the points the owner hasn't decided are taken, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; TASK-M3-14 stays stopped under R-918; no new chart task starts meanwhile *(amends R-917 in part, for now; no RQ)*"
+- `docs/design/principia_chart_reference.md` § "2.2 Deterministic momentum construction"
+- `docs/design/principia_lines.md` § "8. Traces"
+
+## Deliverables
+- In `crates/kernel` (as `decode/invariant.rs` is, one source for f32 and f64): a sheet input to the construction; sheet 2 built by negating `a` in the same expression, `pᵢ = mᵢ(spin·J rᵢ + (−a)·wᵢ)`.
+- A state's sheet, the sign of its seed component, from one source with the construction.
+- Measurement M-C's test and report.
+- The definition (R-72) of a state's sheet at a zero seed component, `p·w = 0`, `+0` and `−0` included, written into lines § 8 ("At the new edges") under physics review: one pure function, shared by the decode and `place` (REQ-DEC-062).
+
+## Acceptance tests
+- `cargo test -p kernel invariant_second_sheet` — sheet 1 bitwise the baseline on every shipped chart (control: sheet 2 as default must fail that check); on sheet 2, chart_reference § 2.2's three checks (`Σpᵢ = 0`, `L_z(p)`, `K(p)`) to machine precision; the feasibility branch identical on both sheets for the same `(L_z, K*)`; the time-reversal identity, bitwise: `a` coming from `mul_add(−L_z, L_z, 2K*)`, which is even in `L_z`, sheet 2 at `L_z` decodes to positions bitwise equal to, and momenta bitwise equal to the negation of, sheet 1 at `−L_z`, on both backends, a component whose sum is exactly zero compared by `==` (`+0` against `−0`) (control: a sheet 2 built as sheet 1 mirrored in `s`, a repeat, must fail it). Measurement M-C, criterion written before any run: on `InvariantLE` at the register's defaults, 256 × 256 samples over `s ∈ [1, 2]`, `t ∈ [0, 1]`, the share of pixels whose decoded state equals a state of the square's 256 × 256 grid, positions bitwise equal (`==` per component), a pixel matching a grid state when `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂`, the Euclidean norm over all six momentum components, `p` the grid state's (a zero `p`, the rest start, matches only an exactly equal one); PASS if only pixels on the fold columns (`s = 1, 2`) and the `t = 0` row match; the control (sheet 1 mirrored) must match 100%, else the measurement cannot see a repeat and the result is void. Precondition, checked before the run and reported: the register's default configuration has a qualifying seed, so its outcome is not `Outcome::Degenerate`; a degenerate default configuration makes the result void, not PASS (REQ-DEC-061).
+- Definition: lines § 8 states which sheet a state with `p·w = 0` is on, for `+0` and for `−0`; the decode and `place` call one pure function for it (a test places every cell of the untilted `t = 0` row and reads the same sheet from both); the physics reviewer approved it (REQ-DEC-062).
+
+## Notes
+- Entered 11 Nov 2026 as N13 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`) (applied per R-369: task scoping); its acceptance is the addendum's § C item 2 with measurement M-C; R-937's C1 to C7 where they bind it; the addition's § A.1 (the sheet reading). The plan documents are under `plan/charts/`; the lines above carry what they say.
+- **Entered, not released (R-923).** R-923 (integrator work before charts, for now) holds the chart tasks TASK-M2-57 to TASK-M2-85, TASK-M2-82 excepted, and allows no new chart task meanwhile. Entering this task in `plan/tasks.yaml` does not lift the hold: it is a chart task, entered held, and it is not dispatched until the owner lifts R-923's hold.
+- Its baseline is `main`'s construction at its start, which after TASK-M2-93 carries the seed `w = r/√I`.
+- R-937's conditions C1 to C7 on the clamp below the floor bind TASK-M2-95 to TASK-M2-102; where they bind this task: the clamp arm takes no sheet input (C1), and no pixel is averaged across sheets.
+- *11 Nov 2026 (the physics review of PR #482, review 5852979675, P6 (a), a condition of its confirmation of R-948 (i-a)):* "the sign of its seed component" is undefined at `p·w = 0`, signed zero included (PIT-11's family). It is not rare: every rest start has it, and on the untilted `t = 0` row every cell is the rest start, shown at `s` and at `2 − s`. The rule is a definition owed (R-72), REQ-DEC-062, written by this task under physics review; nothing is chosen in the plan. *Was (Closes):* "REQ-DEC-061".

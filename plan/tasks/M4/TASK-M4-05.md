@@ -1,8 +1,8 @@
 # TASK-M4-05 — Flat-grid compute: in-kernel decode from chart uniforms, one workgroup per quad, an in-place march
 
 - **Milestone:** M4
-- **Closes:** REQ-INT-070, REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008
-- **Depends on:** TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66
+- **Closes:** REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008, REQ-INT-116
+- **Depends on:** TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66, TASK-M2-87
 - **Needs (earlier milestones):** REQ-SCHED-001, REQ-SYS-012, REQ-CHART-003, REQ-INT-026, REQ-PAY-025, REQ-PAY-038, REQ-PAY-037, REQ-PAY-014, REQ-SYS-003, REQ-SCHED-003, REQ-DEC-007
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -37,7 +37,8 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 ## Acceptance tests
 - `cargo test -p engine dispatch_shape` — shader reflection: workgroup size N²; shared-memory size independent of E; the kernel has no loop over ensemble copies — each copy is the same kernel dispatched again with `copy_index` a uniform (R-102); the resolve pass is dispatched after the E+1 copy dispatches and is the only writer of the footprint resolve and QuadReduction (R-135) (REQ-PERF-012).
 - Perf reviewer: no `k` (texels-per-thread) parameter exists in the dispatch configuration (REQ-PERF-013).
-- `cargo test -p engine per_frame_uniform_write` plus code review — no IC buffer exists; per-frame CPU work is a uniform write and dispatch, independent of grid size (REQ-INT-070).
+- *Was, retired 11 Nov 2026 with REQ-INT-070 (R-926 item 5: the integrator entry reads records, never decodes; REQ-INT-115, closed by TASK-M2-87, replaces it):* `cargo test -p engine per_frame_uniform_write` plus code review — no IC buffer exists; per-frame CPU work is a uniform write and dispatch, independent of grid size (REQ-INT-070).
+- *11 Nov 2026:* `cargo test -p kernel discipline_lint` (extended) plus code review — the integrator entry's source, and everything it calls, contains no chart map, no link and no decode call, and its starting states are read from the record buffer of REQ-INT-115's contract; control: an integrator entry that calls the decode fails the lint (REQ-INT-116).
 - Code reviewer: no ping-pong `SimState` copy exists; the march writes each sample's own slot in place (REQ-SCHED-012).
 - `cargo test -p kernel discipline_lint` (extended) plus physics review — kernel source has no runtime switch on axis-kind / link / occupant enums, except the workgroup-uniform decode-mode branch (REQ-SYS-022).
 - `cargo test -p engine horizon_substep_bound` — a config violating `horizon_steps × N_max ≤ 2³²−1` fails the assertion at dispatch (REQ-SCHED-010).
@@ -50,3 +51,5 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - R-135 settles where the across-copy reduction lives: its own resolve pass, dispatched after all E+1 copy dispatches for a quad complete, reading their SimState slices and writing the footprint resolve and the QuadReduction fields (REQ-PERF-012). This task dispatches that pass; the reductions it computes are M5's (TASK-M5-17, TASK-M5-18).
 - **The fresh-sample check on a GPU-computed reference (R-652; render contract Part 5, "The neutral band"; PR #360's physics review 5723029285, C1, and code review 5723219417, C3):** `drift_view_neutral_fresh_sample_renders_exactly_neutral` takes its references from the CPU read side, as no GPU kernel writes real samples before this task. This task's PR repeats the check on samples this march wrote, with the band's GPU-reference domain: `k_E = 34·K/|E_0| + 22` and `k_L = 6·S/|Lz_0|` at most 128, so `K/|E_0|` up to 3.1 and `S/|Lz_0|` up to 21.3.
 - *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M4-01, TASK-M3-06, TASK-M3-15".
+- *11 Nov 2026 (R-926 item 5; the chart re-plan § A.1, CHANGE, and § B.6 item 21):* the integrator entry reads records and never decodes; a per-sample stop (R-935, under RQ-761 (a)). REQ-INT-070 (decode in the kernel, never an IC buffer) is retired and replaced by REQ-INT-115 (the record contract), which TASK-M2-87 closes; this task reads TASK-M2-87's records and depends on it. The lines above that have the kernel decode are kept as their *Was* until this task's file is rewritten from TASK-M2-87's contract. *Was (Closes):* "REQ-INT-070, REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008"; *was (Depends on):* "TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66".
+- *11 Nov 2026 (the code re-check of PR #482, review 5853463481, N1; R-926 item 5):* the retired line above (REQ-INT-070) had nothing in its place, and REQ-INT-115, which replaced that requirement, is contract text closed by TASK-M2-87 with no code, so no acceptance checked that the entry this task builds holds no chart code and never decodes. REQ-INT-116 is that check, and this task closes it (applied per R-369: task scoping); REQ-SYS-022 (no interpreter on the GPU) stands beside it. *Was (Closes):* "REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008".

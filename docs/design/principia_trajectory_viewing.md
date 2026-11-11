@@ -70,6 +70,13 @@ Two behaviours follow, and both are diagnostic value that exists *because* the a
 
 Works in **any** chart, any tilt, any slice — uniformly, because the full CPU state supports the projection regardless.
 
+*11 Nov 2026 (R-944, R-947).* A mid-morph frame is a chart and its hover trace is drawn. Its IC is the blend's decoded
+state at the hovered pixel. There is no `(q₁, q₂)` plane to project onto, so the projection is the nearest-point
+placement of `principia_lines.md` §8 and `principia_chart_composition.md` § 10.6. The diagnostic readings above (a
+conserved axis showing a dot, a tilt deforming the trace) are properties of an end chart's own axes; mid-morph the dual
+ruler (R-940) carries each end's reading. At an unfolded chart's fold and past a clamped or saturated edge the trace
+follows R-948 (`principia_lines.md` §8, "At the new edges").
+
 **Drawn by the line system (R-476).** The trace's drawing, the hover, pinned and kept traces with their style and
 fade (the proxy where the chart defines one, else none, R-509), is the line system's (`principia_lines.md` §8): its integration is unchanged (`computeIC`, §6), and the same
 `Trace` and renderer serve the inspector's views (§4), nothing in them specific to the slice view (R-476, L3).

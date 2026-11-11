@@ -176,6 +176,17 @@ A small, total expression language, evaluated at every point of the slice. It ha
 | Starting state | `E K U Lz I virial m1 m2 m3 r12 r13 r23 area α β θ φ` | from the decoded IC; the payload's decoded-IC quantities (colour_composition §1) plus cheap geometry |
 | Playhead | `t_end state d_min drift ftle …` | payload fields at the current playhead |
 
+**On a mid-morph frame** *(11 Nov 2026; R-944, R-940; applied per R-369 under the owner's go-ahead of 10 Nov 2026,
+quoted in `principia_chart_composition.md`'s status block, and listed for their veto).* A Chart or Latent variable has
+one value per end chart: the pixel's place in that end's own coordinates, its own window and units. An expression that
+names a Chart or Latent variable is drawn once per end, that end's values substituted, at that end's share of opacity
+(`1 − s` for the starting chart, `s` for the target). So the grid preset draws each end's own grid at its own ruler's
+ticks, fading with its share, and grid lines and ticks still agree (§8b). An expression that names neither is drawn
+once, on the blend's own state. At `s = 0` and `s = 1`, selected exactly, only that end's contours are drawn, at full
+strength, bitwise as on the end chart. A variable of a quantity (a warped energy axis's `h`, which gives energy) is the
+end's own value at that pixel, not the blend's: the blend's energy is the Starting-state `E`. The share-weighted sum `(1
+− s)·h_A + s·h_B` is not used: it is the summed number R-940 rejects for the ruler.
+
 **Operators and functions.** `+ − × / ^`, `abs sqrt log exp min max atan2`, and comparisons, which give 0 or 1.
 
 **Totality.** A pixel where the expression is not finite (division by zero, log of a negative, a non-system pixel) has
@@ -190,12 +201,27 @@ turned.
 ### 4.2 Evaluation
 
 - **Starting state (the default).** Evaluated on the chart's decode only, on a grid at screen resolution, independent of
-  the quadtree. So it is exact at any zoom and any depth of refinement, and it updates live during slice, tilt, pan and
-  zoom.
-  - It uses the same precision path as the decode (the linearised decoder at depth).
-  - It runs as a GPU pass on the shared decode, with a CPU fallback at reduced resolution.
+  the quadtree. So it is exact at any zoom and any depth of refinement, and it updates live during slice, tilt, pan,
+  zoom and morph (*was:* "slice, tilt, pan and zoom").
+  - *11 Nov 2026 (R-952; R-926 item 5, R-925 item 1):* the decode is the CPU's f64 evaluation of the chart, the same
+    evaluator that fills the quads' forward tables, run on the screen grid rather than a quad's, and the expression is
+    evaluated on the decoded state on the CPU. It is one route for every chart, a chart with no shader code and a blend
+    included, with no reduced resolution forced by a chart's kind. *Was:* "It runs as a GPU pass on the shared decode,
+    with a CPU fallback at reduced resolution."
+  - It uses the same precision path as the decode (the linearised decoder at depth): the contour's decode is the route
+    the picture's forward table takes, the one-cell patch, a centre and slopes, included where R-90's switch fires
+    (R-926 item 11; R-935, under RQ-766 (a)). That is what keeps "exact at any zoom and any depth of refinement" true: a contour from
+    the plain f64 map alone would stop resolving where f64 rounds while the picture goes on. *11 Nov 2026 (the physics
+    review of PR #482, review 5852979675, P4):* this sentence stands. R-952 moves where contours are evaluated, to the
+    CPU; the owner's words there do not reach which precision path they follow, and this PR's first commit had wrongly
+    listed the sentence as a *Was*. *Was (main's wording):* "It uses the same precision path as the decode (the
+    linearised decoder at depth)."
   - During motion it may drop to half resolution and refine at rest: the same degrade-in-motion, converge-at-rest rule
     the coarse-ancestor fill uses.
+    *11 Nov 2026 (R-952):* whether the grid in motion is at half or at quarter resolution is decided by R-952's
+    measurement, its criterion written before the run: the half-resolution grid, 960 × 540, within 8.3 ms on the Mac, on
+    the latent chart, the shape sphere's exponential map and a blend of the two at `s = 0.5`; a miss steps the in-motion
+    grid down to quarter resolution. Its report says which the owner will see on each of the three.
 - **Playhead.** Read from the resident quads' payload, so its resolution is the displayed texels, and it breaks up in
   chaotic regions, as the `t_end` mock shows. That is the field, not a drawing fault. The editor says which resolution a
   set is drawn at.
@@ -288,6 +314,27 @@ it:
   policy's lookup and lock validation (inverse encode Part 6) on a sample: it encodes the shown coordinates without
   clamping and checks each shown axis on its own. On a tilted chart the θ branches are not repeats of one image: θ
   wraps but the tilt target does not, so the chart is affine along that axis and does not repeat.
+- **On a mid-morph frame** *(11 Nov 2026; R-947, R-944).* A blend is a chart, so its traces are drawn. A blend has no
+  shown axes to read and no hidden coordinates (R-902 invents none), so each trace sample is placed by the placement
+  function's nearest-point route (`principia_chart_composition.md` § 10.6): the chart point of the frame whose system is
+  nearest the sample's state, found by a solve on the blend's own f64 forward map, seeded by the previous sample's
+  place, or by the backwards table where there is no previous one or the solve fails from it. The first vertex of a
+  hover trace is the hovered pixel itself, so §12's trace projection holds on a blend. **A blend's trace is drawn
+  unfaded.** A blend has no hidden coordinates, so the fade's off-slice distance has no value there, and the rule of
+  "Where a trace can leave" below applies (R-509): no fade, and the GUI says so. Fading a blend's trace by the solve's
+  residual is a proposal nothing adopts: the owner names it as the likely fallback and keeps the choice (R-951), so it
+  is not drawn until they have seen P2 and P4 and said so. *Was (this PR's first commit; withdrawn after the physics
+  review of PR #482, review 5852979675, P5):* "The fade is the solve's residual, in place of the hidden coordinates'
+  distance." A sample leaves the chart's reach where the solve reports failure, that is, where it does not converge
+  (`principia_chart_composition.md` § 10.6, "Accuracy": off the chart's image a large residual is the projection
+  distance, never a failure), with the rings. At `s = 0` and `s = 1`, selected exactly, the frame is the end chart and the trace is placed as on that
+  chart, bitwise. Where the frame folds and more than one pixel shows the state within the lock's tolerance, the trace
+  takes the one nearest its previous sample, the branch rule above; a seam of an end's numerical branch breaks the line
+  as a seam does today. **Measured, not yet judged (R-951):** a trajectory is almost always off the picture's surface,
+  and on a blend the nearest pixel to an off-surface state can snap from one place to another, so a trace may break into
+  pieces mid-morph and may jump as a morph starts or ends. P2 and P4 report how often; they are not gates, the owner
+  sees both before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is chosen by anyone else. The
+  picture size their pixels are counted at is RQ-785.
 - **Fade off the plane.** Opacity per vertex falls with the state's distance from the slice, down to a floor (0.18 in
   the mock). See §11 Q3 for what "distance" should be in general.
 - **Breaks.** The line breaks where the path leaves the chart and resumes where it comes back. It is never joined across
@@ -314,6 +361,7 @@ it:
   | **Re-enters the chart's reach** | it comes back | a ring with a centre dot | a bar, then an arrow out | a filled ring | a ring with a dot |
   | **Leaves / enters the window** (optional, off) | the line crosses the view's edge | a chevron at the edge | | | |
   | **Seam** (optional, off) | θ wraps | a short tick at both ends of the jump | | | |
+  | **Fold** (optional, off; R-948, 10 Nov 2026) | on an unfolded chart the trace changes sheet away from the fold line | a short tick at both ends of the jump, the seam tick's twin | | | |
   | **Syzygy** (off by default) | the three bodies are collinear | o–o–o | o–o–o | three in a row | an eclipse |
 
   There is no double escape: it is not an outcome class (two bodies leaving a third is triple ejection, `detail = 3`).
@@ -334,7 +382,7 @@ it:
   | a physical quantity (`E`, `L_z`, `K`, a momentum, the dilation rate) | No, unless its warp's inverse has no value (`K ≥ 0` always; R-508 continues `t > 1`) |
   | a curve axis (Burrau's ν) | No: the encode projects onto the nearest point of the curve (inverse encode Part 5(b)) and the distance to the curve is fade (R-509). A point whose nearest ν lies past a bounded edge is not drawn there, the line broken, with no ring; it is a real system the axis does not show, counted in the readout's "past the domain's end: N samples", apart from the not-a-system count (RQ-425 (a), R-553) |
   | a latent coordinate behind a saturating link (`z_q` past `q_max`, `z_α` past the decoder's α limits) | Yes, exactly when it has weight in the shown axis: on the latent momenta chart, or a tilt toward `z_q`; never on the latent `z_α × z_β` chart through a momentum |
-  | `z_β` at a syzygy | It runs to ±∞ and comes back: a jump at infinity, not a sample off the chart. *[Waits on TASK-M7-52's definition and RQ-739, 7 Nov 2026: R-853's "traces are continuous through syzygies" can't hold on `z_β` while the decoder's `β = π·σ(z_β)` stands, `β` being 0 or π at a syzygy and a signed lower-half state having no `z_β`; this row stands meanwhile (physics review of PR #443, P2).]* *[8 Nov 2026: the removal is ruled by R-865, on RQ-739, which stays open on its item 3 (*was:* "RQ-739 is ruled (R-865)"); TASK-M2-57 waits on RQ-750: the mirror step goes and latent `β` runs over the full circle, conditional on the bitwise check, and the owner's words say this also fixes the latent-chart traces' jump at syzygies. TASK-M2-57 shows it, or brings back why not (its full-circle link is its definition, REQ-DEC-056); this row stands until it lands. Under a σ-type link only the syzygies at `β = π` become continuous, one at the seam `β = 0` still jumping unless `z_β` is periodic: RQ-750, on which the task waits.]* |
+  | `z_β` at a syzygy | It runs to ±∞ and comes back: a jump at infinity, not a sample off the chart. *[Waits on TASK-M7-52's definition (TASK-M2-99's since 11 Nov 2026, R-947) and RQ-739, 7 Nov 2026: R-853's "traces are continuous through syzygies" can't hold on `z_β` while the decoder's `β = π·σ(z_β)` stands, `β` being 0 or π at a syzygy and a signed lower-half state having no `z_β`; this row stands meanwhile (physics review of PR #443, P2).]* *[8 Nov 2026: the removal is ruled by R-865, on RQ-739, which stays open on its item 3 (*was:* "RQ-739 is ruled (R-865)"); TASK-M2-57 waits on RQ-750: the mirror step goes and latent `β` runs over the full circle, conditional on the bitwise check, and the owner's words say this also fixes the latent-chart traces' jump at syzygies. TASK-M2-57 shows it, or brings back why not (its full-circle link is its definition, REQ-DEC-056); this row stands until it lands. Under a σ-type link only the syzygies at `β = π` become continuous, one at the seam `β = 0` still jumping unless `z_β` is periodic: RQ-750, on which the task waits.]* |
 
   A tilted axis is a mix, a weighted sum of the chart's parameters and the tilt target (R-473), and leaves only through
   a term with non-zero weight: tilted toward a latent momentum `z_q` (weight `sin τ`), the trace leaves while the
@@ -390,6 +438,35 @@ it:
   other half, with no fold and no kink (R-544). *Was (R-412, R-538 TM7; the toggle removed by R-544):* "On a periodic,
   pole-crossing or fold chart (the shape sphere, its hemisphere)"; "With the hemisphere toggle on (R-412) the trace
   folds at the equator and its repeats continue into the mirror hemisphere".
+- **At the new edges** *(11 Nov 2026; R-948, the owner's answer of 10 Nov 2026, physics review confirming; R-932,
+  R-937).*
+  - **Wrap:** as a periodic axis today, drawn in every image, with the seam tick.
+  - **Unfold:** a sample is placed on the sheet its own state lies on, the sign of its momentum along the construction's
+    seed: under R-934's seed `w = r/√I`, the sign of the dilation rate, sheet 1 while the system grows (`İ > 0`) and
+    sheet 2 while it shrinks. A trajectory changes sheet at every turning point of `I`. Read per shown axis, the trace
+    keeps its `L_z` and its place reflects across the fold line, `s ↦ 2 − s`. Where it changes sheet away from the fold
+    that is a jump: the line breaks there, and a **fold tick** marks both ends of the jump, optional and off by default,
+    as the seam tick is. Where it changes sheet on the fold, where all the kinetic energy is rigid rotation, the line
+    runs on. Over a pole the place is continuous because both readings name the same shape; across the fold they name
+    time-reversed systems.
+  - **Clamp and saturate:** the area past such an edge shows the edge's systems again, many pixels to one system. A
+    sample is never placed inside it: a real state is placed at its own point inside the primary range, or, if its shown
+    coordinate lies past a bounded edge or its link's reach, it leaves by "Where a trace can leave" above, with the
+    rings. On the mass simplex a run's masses are constant inside the simplex, so a trace never meets the saturated
+    band.
+  - **Confirmed by physics review, 11 Nov 2026** (the review of PR #482, review 5852979675): the sheet by growing or
+    shrinking, the jump at the fold with the tick optional and off, and nothing inside a clamped or saturated area,
+    R-948's (i-a), (ii-a) and (iii-a), each with a condition, which are the three points below.
+  - **Owed (R-72; REQ-DEC-062 for (a), REQ-GUI-435 for (b) and (c)), three points the rules above leave open.** Each is written here under physics review by
+    the task named, and nothing is chosen until then. **(a) The sheet at zero**, by TASK-M2-96: "the sign of its seed
+    component" is undefined at `p·w = 0`, `+0` and `−0` included. It is not rare: every rest start has it, and on the
+    untilted `t = 0` row every cell is the rest start, shown at `s` and at `2 − s`. The rule must be one pure function
+    shared by the decode and `place`. **(b) The linear mapping**, by TASK-M8-58: `s ↦ 2 − s` is written in the warp's
+    `s`. Under the linear mapping the definition must say that the fold line and the floor are read at the state's own
+    `U` and `I` (its encode), never the slice picture's, and `trace_fold` must test more than the warp, which is all
+    "at the register's defaults" covers. **(c) A hover on a clamped or saturated pixel**, by TASK-M8-58: the drawn
+    system's own place is the edge point it repeats, so under (iii-a) its trace starts there, not under the pointer,
+    and §12's "a trace's first vertex lands on the hovered pixel exactly" needs that exception written.
 - **Not a system (R-538).** Every sample of the trajectory is encoded into the chart; a sample whose chart point is not
   a system (fails `validate`'s layers 2 and 3, on the shown axes after the types fold the point, never Part 6's ladder on the whole state, RQ-429 (a), R-553) is
   not drawn,
@@ -431,8 +508,12 @@ it:
       integrates nothing (§8 "Not a system"). The demo's `restartOnNewRun`, called from `compute` after the run is
       integrated (`docs/incoming/2026-10-21_trace_playback/demo/`). **Only a new run restarts** (R-616, closing
       RQ-533): a hover into a repeat of the same system, or a click that pins the trace the hover already shows,
-      integrates no new run and does not restart; "another point" in R-569 meant another run. **Only the trace's own
-      marker restarts** (R-617, closing RQ-534): under "With the playhead" the new trace's head starts at 0 and runs at
+      integrates no new run and does not restart; "another point" in R-569 meant another run. *11 Nov 2026, while a
+      morph plays (R-944; applied per R-369 under the owner's go-ahead of 10 Nov 2026, as §4.1's note, listed for
+      veto):* the hovered pixel's system changes with the morph's `s`, so each frame integrates another system; a run
+      changed by the morph and not by the pointer is not a new run for this rule and keeps its head's time, and a
+      pointer move still restarts. Pinned and kept traces are fixed systems, re-placed each frame. **Only the trace's
+      own marker restarts** (R-617, closing RQ-534): under "With the playhead" the new trace's head starts at 0 and runs at
       the transport's rate while the transport plays, as the own clock does; the figure's global playhead (the Time
       panel's) and the field's live march are untouched, so hovering never restarts the field. Each of the Time panel's
       own controls that jumps its playhead (render_gui_spec §G2, the Time panel) puts the head back on the figure's
@@ -580,6 +661,9 @@ can be restyled like any contour.
 - **Smart ink.** Over a split background, the ink differs on the two sides and stays put within a hysteresis band.
   Control: hysteresis 0 flickers on a mottled strip.
 - **Trace projection.** On the shape chart, a trace's first vertex lands on the hovered pixel exactly.
+  *11 Nov 2026 (R-948; the physics review of PR #482, review 5852979675, P6):* an exception is owed and not yet
+  written, for a hover on a clamped or saturated pixel, whose trace starts at the edge point the pixel repeats: §8, "At
+  the new edges", the point (c) owed under REQ-GUI-435.
 - **Provenance.** A print re-opened reproduces its contour sets and styles bitwise.
 - **No re-integration.** Changing any line setting leaves the simulation key and quad requests unchanged.
 - **Trace markers (R-538).** `principia_trace_markers.md` §11's tests T1 to T12, each with its arm, are in the

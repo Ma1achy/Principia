@@ -48,3 +48,4 @@ Hover and click map the pointer through the single Y-flip, decode the IC on the 
 - Calibrations (R-71) proposed here: REQ-PERF-078. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - **R-476 M4 (20 Oct 2026):** the integration is unchanged; the drawing is the line system's (TASK-M8-49).
 - **R-537 EX5, R-538 TM8 and TM9 (20 Oct 2026):** a pick in a repeat decodes the canonical IC, and a pick on a pixel that is not a system calls no `computeIC` and draws the ✕ (TASK-M8-55, REQ-GUI-269); `computeIC`'s two guards, a start inside `r_coll` and a non-finite step, are TASK-M8-58's (REQ-INT-096).
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-944):* `computeIC` takes a blend chart, its IC the blend's CPU decode at the hovered pixel (TASK-M2-90). No change of scope.

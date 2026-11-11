@@ -38,7 +38,9 @@ with its topic ("RQ-762, the window's per-coordinate scale").
 § D but RQ-779 (the default behaviour of each edge) is closed. This document still builds and dispatches nothing. N12 to
 N18 are not in `plan/tasks.yaml` yet: the owner's reply to the draft of the re-plan's addition puts the chart plans'
 `tasks.yaml` changes in that addition's own PR and nowhere else, so they land there, with their requirements (applied
-per R-369: task scoping). The body below is kept as proposed, with a dated note where an answer changes it; where it
+per R-369: task scoping). *11 Nov 2026:* the addition is `plan/charts/m2-chart-replan-addition.md`; its § F lists N12
+to N18 as entered, N14 split by kind, and marks TASK-M8-58 CHANGE under R-948 (traces at the new edges), where § A.8
+below has KEEP. The body below is kept as proposed, with a dated note where an answer changes it; where it
 says "only under RQ-n", "directions, not rulings" or "waits on RQ-n", read the row here.
 
 | Question | Answer | Ruling |

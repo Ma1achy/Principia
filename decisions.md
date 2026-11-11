@@ -14564,7 +14564,9 @@ follows).*
 the Trajectory panel and `Trace…`; whether Lines ▾ stays for the rest is RQ-448, its option (a) applied).*
 *Amended in part by R-583 (21 Oct 2026; one size rule, base px: `PrintPt` and `LineStyle`'s `units` are retired).*
 *Refined by R-942 (10 Nov 2026; RQ-780 (a): the line system's primary scale is the computed axis on every chart and every frame, a dual ruler on a blend, R-940).*
-*Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces, §8's markers and trace defaults as adopted, which R-538 replaces, Lines ▾'s listing of the traces, which R-541 replaces, and `LineStyle`'s `units: ScreenPx | PrintPt` and §5's "pt in a print export", which R-583 replaces with base px; the primary scale is the computed axis (R-942), a dual ruler on a blend (R-940).*
+*Amended in part by R-952 (10 Nov 2026; starting-state contours are evaluated on the CPU for every chart, R-926 item 5:
+lines §4.2's "GPU pass on the shared decode, with a CPU fallback at reduced resolution" gives way).*
+*Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces, §8's markers and trace defaults as adopted, which R-538 replaces, Lines ▾'s listing of the traces, which R-541 replaces, and `LineStyle`'s `units: ScreenPx | PrintPt` and §5's "pt in a print export", which R-583 replaces with base px; the primary scale is the computed axis (R-942), a dual ruler on a blend (R-940); and lines §4.2's GPU pass on the shared decode with its reduced-resolution CPU fallback, which R-952 replaces with the CPU's f64 evaluation of the chart for every chart.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (added, the bundle's design with an adoption note and
 RQ-377's pointer), `docs/gui/reference/lines/` (added: `images/`, `canvas/`), `docs/read_first/principia_INDEX.md` §
 "Design documents — the reasoning" and § "GUI" (two lines added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore
@@ -15269,9 +15271,12 @@ a blocking export only, flagged).*
 *Amended in part by R-521 (20 Oct 2026; X4 and H4 (b), RQ-385 closed: each recorded link carries its own
 entry hash; the schema-version refusal holds only for a record with none).*
 *Amended in part by R-850 (7 Nov 2026; RQ-721 (a), amended: H7's "as a chart switch is" no longer holds, a chart switch may morph; a change of link id stays a cut, R-520's).*
+*Amended in part by R-949 (10 Nov 2026; the re-plan addition's question (G): X7's cut at a changed link id gives way, a
+chart change that changes a link id morphing like any chart change; the line above's "a change of link id stays a cut,
+R-520's" is read with it).*
 *Still in force: all of it, but H7's meanwhile (parameters never interpolated), which R-520 confines to live
-playback, and H4 (b)'s meanwhile, which R-521 confines to records without entry hashes; and H7's comparison with a chart switch, which may now morph
-(R-850).*
+playback, and H4 (b)'s meanwhile, which R-521 confines to records without entry hashes; H7's comparison with a chart switch, which may now morph
+(R-850); and X7's cut at a changed link id, which may morph too (R-949).*
 *20 Oct 2026 · applied in `docs/design/principia_dd_image_embedding.md` § "6. What travels" (the list, the decoder's
 identity, old records), § "7. Measured capacity and behaviour" (to be re-measured, never truncated) and § "9.
 Obligations" (the fourth outcome, the golden test), `docs/contracts/principia_export_animation_contract.md` § "Part 3 —
@@ -17272,8 +17277,12 @@ Changes REQ-GEN-014 (rulings, source, note).
 ## R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*
 *Amended by R-623 (at a link-parameter change a segment offers cut or interpolate, interpolating by default) and read by R-624 for a reel takeover.*
 *Amended by R-576 (the easing curve that gives a segment's progress is that segment's own, not one curve for the whole spec).*
-*Still in force: all of it, F2's "the spec's `easing` curve" reading "the segment's own easing curve" (R-576); in a
-blocking export a segment set to cut cuts its link parameters, interpolating being the default (R-623).*
+*Amended in part by R-949 (10 Nov 2026; the re-plan addition's question (G): a chart change that changes a link id
+morphs like any chart change, a blend of states, so F1's "A changed link id is a cut everywhere" and F6's "a link-id
+change cuts in both" no longer hold; the rule for link parameters inside one chart stands).*
+*Still in force: all of it but F1's and F6's cut at a changed link id, which may morph as any chart change does (R-949);
+F2's "the spec's `easing` curve" reading "the segment's own easing curve" (R-576); in a blocking export a segment set
+to cut cuts its link parameters, interpolating being the default (R-623).*
 *20 Oct 2026 · applied in `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The keyframe system
 (retained)" (the decoder-in-a-keyframe bullet's last sentence, with its earlier words kept, and a bullet added),
 REQ-TOOL-175 (reqio: statement, verify, rulings, source, note), REQ-TOOL-185 (reqio, new), TASK-M8-31 (closes it;
@@ -18329,13 +18338,18 @@ target; RQ-473 and RQ-474 closed).*
 *Amended by R-569 (21 Oct 2026; J11's playback, TF3: a new trace while playing restarts at `t = 0`, and paused at
 `t = 0` the line is drawn dotted; TM6's pin: an icon is placed by its whole measured extent, the start icon included;
 TM7: a repeat's icons are never moved).*
+*Refined by R-948 (10 Nov 2026; the re-plan addition's question (B): at an unfold a sample is placed on the sheet its
+state lies on and the trace jumps at the fold, with an optional fold tick, off by default; no sample is placed inside
+a clamped or saturated area).*
 *Still in force: all of it but I2's place for the settings, which R-541 replaces, and TM7's hemisphere, the trace
 folding at the equator with the toggle on, which goes with the toggle (R-544); the settings, their order and their
 defaults stand. R-553 rules the queued questions as applied meanwhile: TM8's readout labels in a debug view only,
 TM9's guard (b) `sim_failed`, TF3 the default length's, T18's fade arm only where a distance is defined. R-554 reads
 F6's T16 and T16b cells "within the calibrated threshold (REQ-GUI-283)" and runs T15's second arm on the physical
 `p_λ` target. TM6's pin "to the nearest point just inside the view's edge" is read as R-569 places it, by the icon's
-whole extent, and J11 with R-569's restart and dotted line.*
+whole extent, and J11 with R-569's restart and dotted line. At the new chart edges TF1 and TF2 are read with R-948: a
+sample sits on the sheet its state lies on, the trace jumps at the fold with an optional fold tick, and nothing is
+drawn inside a clamped or saturated area.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (the adoption note, a sentence), § "3. The data model" (the
 `Trace` block, with its earlier words kept), § "8. Traces" (the markers, length, colour and incomplete-run bullets reworded, with their earlier words
 kept; bullets added) and § "12. Tests (each with an arm that can fail)" (a sentence), `docs/gui/principia_render_gui_spec.md`
@@ -19785,6 +19799,8 @@ checkerboard, SM12 six tests; SM15's Flow preset becomes the tileable checkerboa
 *Amended by R-558.*
 *Amended in part by R-793 (5 Nov 2026: SM6's dilation compaction scale, 0.6, goes with the `θ × dilation` and `ν × dilation` targets).*
 *Refined by R-925 (10 Nov 2026: Chart position stays, a table search its fallback where a target chart has no backwards formula).*
+*Refined by R-947 (10 Nov 2026; the re-plan addition's question (A): one placement function, H11's one projection its
+route where a chart has an inverse, the nearest point its route everywhere else, every blend included).*
 *Still in force: all of it but SM6's dilation scale, which R-793 drops, SM8's one fixed treatment past the Picture's
 square, which R-543 makes the default
 (Mirror, dimmed) of a wrap mode, and the Flow preset's picture and settings, which R-543 replaces, every saved
@@ -19795,7 +19811,8 @@ and what R-558 rules: "a fixed t" struck from SM11 and SM15; the presets' names,
 and the fade's function the file's; Replace-L's chroma scaling an option, off by default; Chart position a named
 seam-6 exception, no longer waiting on RQ-489; and, for R-543's maps, its text winning where the code disagrees (R-611),
 and under a Torus base Left its starting tile comparing the Torus's own period cell (R-612); and Chart position reaching a
-target with no backwards formula through a table search, the tables render-side (R-925).*
+target with no backwards formula through a table search, the tables render-side (R-925); H11's one projection is the
+encode route of the one placement function, a chart with no inverse taking its nearest-point route (R-947).*
 *21 Oct 2026 · applied in `docs/design/principia_state_map.md` (new: the design, every line kept, with the
 prototype's code transcribed), `docs/incoming/2026-10-21_state_map/` (the bundle as delivered),
 `docs/gui/reference/state_map/` (`state_flow.html` and `boards/`), `docs/design/principia_dd_simstate_payload.md` § "5.
@@ -32415,7 +32432,10 @@ slides per this rider where the target can't hold the pinned state).*
 *Read with R-922 (10 Nov 2026: "labelled CPU-only" is the chart's decode route; a shader feature on such a chart is not
 refused, the fragment reading a lookup texture the CPU evaluates, labelled approximate; ruled, not built yet).*
 *Amended in part by R-935 (10 Nov 2026; RQ-759 (a): the jump kept "only for time-axis to IC-only charts" is dropped, time being a coordinate the re-solve includes; the slide follows the local minimiser through a cut locus, and the path stops where that minimiser ends).*
-*Still in force: all of it but the time-axis jump: the general numerical solve with its branch rule and its seams, and the anchor sliding continuously under the lock, as RQ-759 (a) reads it (R-935); "labelled CPU-only" read with R-922.*
+*Amended in part by R-950 (10 Nov 2026; the owner's own word on the re-plan addition's question (H): the leftover jump
+from a time-axis chart to one with no time axis is removed, so the rider's "The jump stays only for time-axis to IC-only
+charts" and the dated line of 8 Nov 2026 above no longer hold).*
+*Still in force: all of it but the time-axis jump (R-935, R-950): the general numerical solve with its branch rule and its seams, and the anchor sliding continuously under the lock, as RQ-759 (a) reads it (R-935); "labelled CPU-only" read with R-922.*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-733 moved), REQ-CHART-145 (reqio, new), TASK-M8-102, TASK-M8-117, `docs/design/principia_chart_composition.md` (status), TASK-M4-37, `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 adds REQ-CHART-145*
 *Also applied 7 Nov 2026, from Codex's finding on PR #443: REQ-CHART-115 (reqio), the sliding anchor in place of `anchor not in B`, REQ-CHART-146 (reqio, new), "nearest" as a definition (R-72), and TASK-M8-117's acceptance.*
@@ -34132,6 +34152,10 @@ R-900 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-901 — Easing and the path curve are a property of each segment of a path, per the chart-space model's Theorems 4 and 5, one representation shared by live morphs, saved paths and export, built with the path object *(amends R-576 and export contract Part 3)*
 *Read with R-943 (10 Nov 2026: the general rule for a morph; easing is how fast a morph moves along its path, and changes timing and nothing else).*
+*Amended in part by R-950 (10 Nov 2026; the re-plan addition's question (H): the second line of its message, "except
+time-axis → IC-only charts, which keep a labelled jump", no longer holds; the jump is removed).*
+*Still in force: all of it but the labelled jump its message's second line restated (R-950): easing and the path curve
+per segment, one representation shared by live morphs, saved paths and export.*
 *8 Nov 2026 · the owner's message of that day; applied in `docs/contracts/principia_export_animation_contract.md` Part 3,
 `docs/design/principia_chart_composition.md` § 17.9, R-576's forward and "Still in force" lines, R-849 (a dated line),
 REQ-CHART-160 (reqio, new), TASK-M8-124, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-160*
@@ -35635,7 +35659,8 @@ Changes no requirement here: the requirements and `plan/tasks.yaml` follow once 
 *Refined by R-942 (10 Nov 2026; RQ-776 (a): on an unfolded chart item 7's backwards table is sheet 1's, searched with the time reverse).*
 *Refined by R-943 (10 Nov 2026; the general rule for a morph: item 3's blend is the default path, the shortest in each block's natural geometry; other paths allowed, not built now).*
 *Refined by R-945 (10 Nov 2026; the owner's clarification: item 7's "ONLY" list was not exhaustive; the backwards direction serves anything that places a running or saved state on a chart).*
-*Still in force: all of it, its eleven items as the owner wrote them; item 3's "linear in masses" read as linear in the mass coordinates, the log-ratios (R-936, R-943), and item 7's list of the backwards direction's uses read as not exhaustive (R-945); its open readings answered by R-935 and R-942, RQ-783 alone still open.*
+*Refined by R-947 (10 Nov 2026; the re-plan addition's question (A): one placement function with two routes; item 7's "Approximate is acceptable during a morph" binds the fragment's table route, a placement on the CPU refined to the lock's precision).*
+*Still in force: all of it, its eleven items as the owner wrote them; item 3's "linear in masses" read as linear in the mass coordinates, the log-ratios (R-936, R-943), and item 7's list of the backwards direction's uses read as not exhaustive (R-945), its "Approximate is acceptable during a morph" read as the fragment's table route only, a placement on the CPU refined to the lock's precision (R-947); its open readings answered by R-935 and R-942, RQ-783 alone still open.*
 *10 Nov 2026 · the owner's re-plan task of that afternoon, sent after the "read and report" message (R-925): its
 decisions block; applied in `docs/design/principia_core_design.md` § "3. Kernel eats chart params, decodes in-kernel"
 (a dated paragraph, the old one kept as *Was*), `docs/contracts/principia_lowering_contract.md` § "Part 1 — What
@@ -36710,3 +36735,339 @@ file one of them as a code bug; the lavapipe run on the PC sorts it, as above. R
 R-946 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+## R-947 — Placement, the re-plan addition's question (A): option (a), one placement function for "where is this state on this chart", two routes chosen by the chart, the existing reading where a chart has an inverse and the nearest point everywhere else, every blend included, refined to the lock's precision on the CPU *(no RQ; answers the re-plan addition's question (A); refines R-542 and R-926)*
+*10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in
+`docs/design/principia_chart_composition.md` (the status block, § "10.5 Points of interest" (a dated note) and § "10.6
+Placement: one function for "where is this state on this chart"", new), `docs/design/principia_lines.md` § "8. Traces"
+(a dated paragraph at "Projection"), `docs/design/principia_trajectory_viewing.md` § "3. Hover trace — projection onto
+the current (tilted, sliced) plane" (a dated note), the forward and "Still in force" lines of R-542 and R-926,
+`plan/charts/m2-chart-replan-addition.md`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement
+here*
+
+The owner's words (10 Nov 2026), verbatim, from their reply to the draft of the chart re-plan's addition, which opens
+"These are my words. Record them as rulings where they answer a question.", under their heading "THE FOUR QUESTIONS":
+
+> (A) Placement: yes, option (a). One placement function, two routes chosen by the chart: the
+> existing reading where a chart has an inverse, the nearest point everywhere else, every blend
+> included. Refined to the lock's precision on the CPU.
+
+Question (A) asked where a running or saved state is on a mid-morph frame, and on a chart with no inverse: one placement
+function for every consumer or separate ones, which reading a blend takes, and how exact the answer is on the CPU
+mid-morph. The draft's questions were put to the owner in the draft itself and never entered `REVIEW_QUEUE.md`, so no
+queue entry closes.
+
+*What it decides,* option (a):
+
+- **One function.** `place(state, chart) → {point, sheet, residual, route, status}` is one Rust source, and every
+  consumer calls it, never a second implementation, as R-542's H11 has the one projection: Chart position and the state
+  map, the hover, pinned and kept traces, the marks of points of interest, the symmetry filter's partner check, the
+  lock's re-solve, and the decode and round-trip presets. Its chart is any chart, a blend or a saved blend included.
+- **Two routes, chosen by the chart, never by the consumer.** *The existing reading where a chart has an inverse:* the
+  encode, read on the shown axes, the hidden coordinates giving the off-slice distance; this is R-542 H11's one
+  projection and R-538 TF2's per-axis reading, unchanged on every chart that has it. *The nearest point everywhere else,
+  every blend included:* the chart point whose decoded state is nearest the state, found by a solve on the chart's own
+  f64 forward map, seeded by the caller's hint (a trace's previous sample, a lock's previous centre) or by the backwards
+  table; its residual is the off-slice distance.
+- **Refined to the lock's precision on the CPU.** On the CPU every route refines to the lock's tolerance
+  (REQ-CHART-158), mid-morph included. R-926 item 7's "Approximate is acceptable during a morph" is read as the
+  fragment's table route only.
+- **What the option says follows.** Mid-morph a trace starts on the hovered pixel. At `s = 0⁺` a trace vertex whose
+  state is off the chart's image may jump between chart A's encode reading and the blend's nearest point; the
+  measurement P2 reports that jump, and P4 the trace's breaking mid-morph (R-951).
+- **Not taken:** (a′), a blend's trace placed by the share-weighted mix of the two ends' own readings; (b), the nearest
+  point on every chart, which would change every trace on every tilted chart; (c), a mechanism per consumer.
+- **The definition REQ-GUI-427 owes,** "how marks are found on a path frame with no inverse", is this function's
+  nearest-point route, written in design § 10.6. The metric "nearest" is measured in, and which nearest point answers
+  for a state off the chart's image, stay definitions written under physics review (R-72) by the task that builds the
+  function, as R-935 has them (RQ-767 (a)); this ruling fixes that there is one function and which route a chart takes,
+  not the metric's weights.
+- **Built by** a new M2 task, the re-plan addition's N19, which enters `plan/tasks.yaml` with the chart plans' tasks in
+  the addition's own plan PR.
+
+*What it refines:* **R-542**, H11: the one projection every consumer calls is the encode route of the one placement
+function, and a chart with no inverse, every blend included, takes the nearest-point route of the same function.
+**R-926**, item 7: "Approximate is acceptable during a morph" binds the fragment's table route; a placement on the CPU
+is refined to the lock's precision. *Read with* **R-945** (the backwards direction serves anything that places a running
+or saved state on a chart: this is how), **R-944** (a morph frame is a chart: its traces and marks are placed),
+**R-538** (TF2's per-axis reading is the encode route) and **R-899** (Q8 (a)'s "to pixel resolution", a gap to close
+under R-944: this function is the mechanism).
+
+R-947 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement here: REQ-GUI-427 and REQ-CHART-172 change, and N19's requirement is added, with the tasks in the
+addition's plan PR (applied per R-369: task scoping, as R-932).
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-CHART-199 and REQ-CHART-200 (new: the placement function and the two definitions it owes), REQ-CHART-201 and REQ-RENDER-125 (new, naming it), REQ-CHART-172, REQ-COL-134, REQ-GUI-245, REQ-GUI-426 and REQ-GUI-427 (changed), and REQ-COL-133 and REQ-COL-163, moved with their milestone to TASK-M2-99, the task that now builds the source they define (physics review, P2); `plan/tasks.yaml` and the task files of TASK-M2-99 (new, N19), TASK-M2-100, TASK-M2-58, TASK-M2-80, TASK-M2-84, TASK-M2-94, TASK-M7-52, TASK-M7-74, TASK-M8-10, TASK-M8-49, TASK-M8-58, TASK-M8-120 and TASK-M8-126; `docs/design/principia_chart_composition.md` § 10.6, "Accuracy", which now carries R-935's split under RQ-767 (a), the residual on the chart's image and first-order optimality off it (physics review, P7). `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
+## R-948 — Traces at the new edges, the re-plan addition's question (B): (i-a), (ii-a), (iii-a); a state's sheet is set by whether the system is growing or shrinking, the trace jumps at the fold with an optional tick, off by default, and nothing is drawn inside a clamped or saturated area, physics review confirming *(no RQ; answers the re-plan addition's question (B); refines R-538)*
+*10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in
+`docs/design/principia_lines.md` § "8. Traces" (the markers table's fold row and a dated bullet after "Repeats"),
+`docs/design/principia_chart_composition.md` (the status block), the forward and "Still in force" lines of R-538,
+`plan/charts/m2-chart-replan-addition.md`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement
+here*
+
+The owner's words (10 Nov 2026), verbatim, from their reply to the draft of the chart re-plan's addition, which opens
+"These are my words. Record them as rulings where they answer a question.", under their heading "THE FOUR QUESTIONS":
+
+> (B) Traces at the new edges: yes, as recommended: (i-a), (ii-a), (iii-a). The sheet is set by
+> growing or shrinking, the trace jumps at the fold with an optional tick (off by default), and
+> nothing is drawn inside a clamped or saturated area. Physics review confirms.
+
+and, in their message of the same day on the addition, item 1c (item 1 is "TRACES (hover trace, pinned and kept
+traces)"), which asked the question:
+
+>    c. The new edges. Say what a trace does at an unfold line (I'd expect it to cross onto the other sheet,
+>       as it crosses a pole today) and in a saturated area.
+
+Question (B) had three parts: (i) which sheet of an unfolded chart a trajectory state is on; (ii) what the trace draws
+when the sheet changes away from the fold; (iii) what a trace does in a clamped or saturated area. The draft's questions
+were put to the owner in the draft itself and never entered `REVIEW_QUEUE.md`, so no queue entry closes.
+
+*What it decides:*
+
+- **(i-a), the sheet of a state.** A sample is placed on the sheet its own state lies on: the sign of the state's
+  momentum along the construction's seed `w`. Under the seed R-934 rules, `w = r/√I`, that is the sign of the dilation
+  rate: sheet 1 while the system grows (`İ > 0`), sheet 2 while it shrinks. (i-b), the sign of `L_z`, is not taken:
+  `L_z` is conserved, so a trace would never cross.
+- **(ii-a), the trace jumps at the fold.** The trace is read per shown axis, as on every chart (R-538 TF2): when the
+  sheet changes the trace keeps its `L_z` and its place reflects across the fold line, `s ↦ 2 − s`. Away from the fold
+  itself that is a jump: the line breaks there, and a **fold tick**, the seam tick's twin, marks both ends of the jump,
+  optional and off by default. Only where the sheet changes on the fold does the line run on. (ii-b), reading the state
+  as an angle round the circle `L_z² + a² = 2K*` so that the trace always passes the fold continuously, is not taken:
+  the shown `L_z` would not be the state's.
+- **(iii-a), nothing inside a clamped or saturated area.** A trace sample is never placed inside a clamp or saturate
+  area, whose pixels show an edge's systems again: a real state is placed at its own point inside the primary range, or,
+  where its shown coordinate lies past a bounded edge or its link's reach, it leaves by lines § 8's rule, with the
+  rings. (iii-b), placing it at the area's pixel nearest its unclamped point, is not taken: it would draw a real state
+  on a pixel whose system is another.
+- **A wrap** is drawn as a periodic axis is today, in every image, with the seam tick.
+- **"Physics review confirms."** The sheet reading and the clamp and saturate rule are physics definitions (R-72),
+  declared under R-407's clause 3. The owner's answer stands on the physics reviewer confirming the three; the
+  confirmation is the physics review of the plan PR that records this ruling and of the task that builds each, and a
+  disagreement goes back to the owner, never settled by the implementer or a reviewer.
+- **Built by** TASK-M8-58 (the fold tick, the sheet in the per-axis placement, "never inside a clamp or saturate area"),
+  with the addendum's N13 exposing a state's sheet from one source with the construction, and R-947's function returning
+  the sheet.
+
+*What it refines:* **R-538**: TF1's leaving rule gains the new edges (a sample past a clamped or saturated edge leaves,
+and is never drawn inside the area), TF2's branch rule gains the sheet of an unfold, and the markers gain the fold tick
+beside the seam tick. *Read with* **R-932** (the kinds), **R-934** (the seed that gives the sheet its meaning),
+**R-937** (the second sheet) and **R-942** (RQ-776: the backwards table tells the sheets apart; RQ-781: the centre and
+the lock cross the fold).
+
+R-948 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes no requirement here: REQ-GUI-272 changes with TASK-M8-58 in the addition's plan PR (applied per R-369: task
+scoping, as R-932).
+
+*11 Nov 2026, physics review confirmed:* the physics review of the plan PR that records this ruling (PR #482, review 5852979675) confirmed (i-a), (ii-a) and (iii-a), with conditions. They are three points of definition the rules above leave open, owed under R-72 and written under physics review by the task that builds each, nothing chosen meanwhile: (a) the sheet at `p·w = 0`, signed zero included, one pure function shared by the decode and `place` (REQ-DEC-062, TASK-M2-96); (b) under the linear mapping the fold line and the floor are read at the state's own `U` and `I`, and `trace_fold` tests more than the warp (REQ-GUI-435, TASK-M8-58); (c) a hover on a clamped or saturated pixel starts its trace at the edge point the pixel repeats, the exception lines § 12's first-vertex rule needs (REQ-GUI-435, TASK-M8-58). `docs/design/principia_lines.md` § 8, "At the new edges", lists them as owed.
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-GUI-272 (changed: the fold tick and `trace_fold`), REQ-GUI-434 (new: the tolerance of `trace_fold`'s comparison, a calibration, R-71), REQ-DEC-061 (new, naming it for the sheet reading), and REQ-DEC-062 and REQ-GUI-435 (new: the three points above, definitions, R-72); `plan/tasks.yaml` and the task files of TASK-M2-96 and TASK-M8-58; `docs/design/principia_lines.md` § 8 and § 12. `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
+## R-949 — A changed link id mid-morph, the re-plan addition's question (G): option (a), blend, don't cut; a chart change that changes a link id morphs like any chart change, and R-520's rule for interpolating link parameters inside one chart stands *(no RQ; answers the re-plan addition's question (G); amends R-520 and R-483)*
+*10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in
+`docs/design/principia_chart_composition.md` (the status block, § "17.12 Performance" (the conflicts table's R-520 row),
+§ "17.13 The Sequence" and § "17.14 Tests" (dated notes)), `docs/design/principia_sequence.md` § "3.4 Segments: easing
+per segment, and transitions" (a dated note), `docs/contracts/principia_export_animation_contract.md` § "Part 3 — The
+keyframe system (retained)" (a dated note at the decoder-in-a-keyframe bullet), the forward and "Still in force" lines
+of R-520 and R-483, `plan/charts/m2-chart-replan-addition.md`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement here*
+
+The owner's words (10 Nov 2026), verbatim, from their reply to the draft of the chart re-plan's addition, which opens
+"These are my words. Record them as rulings where they answer a question.", under their heading "THE FOUR QUESTIONS":
+
+> (G) A changed link id mid-morph: (a), blend, don't cut. R-520's rule for interpolating link
+> parameters inside one chart stands.
+
+Question (G) asked whether a chart change that changes a link id morphs. R-520's F1 has "A changed link id is a cut
+everywhere, as X7 has it: there is nothing between two links to interpolate", and R-926 item 3 makes a morph a blend of
+two charts' states. The draft's questions were put to the owner in the draft itself and never entered `REVIEW_QUEUE.md`,
+so no queue entry closes.
+
+*What it decides,* option (a):
+
+- **Blend, don't cut.** A chart change that changes a link id morphs like any chart change. A morph blends the two
+  charts' states, pixel by pixel (R-926 item 3, R-943). A link only maps a chart's coordinates to a state, and the
+  states exist on both sides of a changed link, so there is something between them to blend. No frame interpolates the
+  link function itself.
+- **R-520's rule inside one chart stands.** Link parameters (`μ_max`, `q_max`, any tunable of R-481) differing between
+  two keyframes whose link ids are the same interpolate in a blocking export only, flagged, each frame re-integrated;
+  live playback cuts them; a segment may be set to cut (R-623). That rule interpolates a parameter, not states.
+- **Cut stays on offer,** as for every chart change (R-850): a file's segments reopen as saved, and a cut mark is shown
+  only on what is a cut.
+- **Not taken:** (b), R-520 F1 standing, a cut at every changed link id.
+- **The test** is question (G)'s measurement: the ends exact and the small-step bound across a link change, with the
+  control a frame that interpolates the link function itself; it takes the place of design § 17.14's `path_links_cut` in
+  TASK-M2-81.
+
+*What it amends:* **R-520**: F1's "A changed link id is a cut everywhere, as X7 has it: there is nothing between two
+links to interpolate", and with it F6's "a link-id change cuts in both": a chart change that changes a link id may
+morph, a state blend; F1's rule for which changes interpolate inside one chart, and F2 to F5, stand. **R-483**: X7's cut
+at a changed link id, as R-520 and R-850's forward line carried it ("a change of link id stays a cut, R-520's"), gives
+way in the same way; a link change is still a sim-key change at that keyframe.
+
+R-949 is in the "design" group of `plan/rule_groups.yaml`, with R-520.
+
+Changes no requirement here: REQ-TOOL-175 changes with TASK-M2-81 and TASK-M8-108 in the addition's plan PR (applied per
+R-369: task scoping, as R-932).
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-TOOL-175, REQ-CHART-114 (`path_links_morph` in place of `path_links_cut`) and REQ-GUI-421 (the Sequence's chart-change segment, its "a link-id change still a cut") (changed); the task files of TASK-M2-81, TASK-M8-108 and TASK-M8-31. `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
+## R-950 — The lock's leftover jump, the re-plan addition's question (H): option (a), the labelled jump from a time-axis chart to one with no time axis is removed; under a lock every pair of charts slides *(no RQ; answers the re-plan addition's question (H); amends R-849 and R-901)*
+*10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in
+`docs/design/principia_chart_composition.md` (the status block), `docs/design/principia_chart_space_model.md` § "9.
+One-paragraph version for the agents" (a dated note), the forward and "Still in force" lines of R-849 and R-901,
+`plan/charts/m2-chart-replan-addition.md`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement
+here*
+
+The owner's words (10 Nov 2026), verbatim, from their reply to the draft of the chart re-plan's addition, which opens
+"These are my words. Record them as rulings where they answer a question.", under their heading "THE FOUR QUESTIONS":
+
+> (H) The lock's leftover jump from a time-axis chart to one with no time axis: (a), remove it.
+
+Question (H) asked whether the jump stays. R-849's rider, the owner's words of 7 Nov 2026, has "The jump stays only for
+time-axis to IC-only charts", and their message of 8 Nov 2026, quoted in R-901 and in R-849's dated line, restates it:
+"under a lock the anchor slides, except time-axis → IC-only charts, which keep a labelled jump". The draft's questions
+were put to the owner in the draft itself and never entered `REVIEW_QUEUE.md`, so no queue entry closes.
+
+*What it decides,* option (a): the jump is retired. Time is the last coordinate of every map and a morph blends it
+linearly (R-926 items 2 and 3), so the lock's one constraint, "this pixel shows this system", includes the system's
+time; a chart with no time axis holds it by its window's centre along time, the playhead, which the lock's re-solve
+moves. Under a lock the anchor slides on every pair of charts, a time-axis chart to one with no time axis included, and
+no path makes a labelled jump. (b), the jump kept, is not taken.
+
+R-935 had already applied this as a consequence of the re-plan's recommendation on RQ-759 ("R-849's time-axis jump is
+dropped, time being a coordinate the re-solve includes"); this ruling is the owner's own word on the two passages of
+theirs that still said otherwise. The test is question (H)'s measurement: on REQ-CHART-161's time-axis pair the pinned
+state stays within the lock's tolerance on every frame, the control the jump.
+
+*What it does not touch:* R-899's Q3 (a) and R-902's "labelled jump per Q3 until the sliding anchor exists" are about
+build order, a label kept until the slide is built, and stand as written. Without a lock, the cut from a time-axis chart
+to an IC-only chart was R-842's, which R-926 amends.
+
+*What it amends:* **R-849**: the rider's sentence "The jump stays only for time-axis to IC-only charts" and its dated
+line of 8 Nov 2026 no longer hold; the rest of the rider, the continuous slide, stands as R-935 reads it. **R-901**: the
+second line of its message, "except time-axis → IC-only charts, which keep a labelled jump", no longer holds; "under a
+lock the anchor slides" stands, and so does everything it rules on easing and the path curve. *Read with* **R-935**
+(RQ-759 (a): the slide follows the local minimiser and stops where that ends).
+
+R-950 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement here: REQ-CHART-161 changes with TASK-M2-65 in the addition's plan PR (applied per R-369: task
+scoping, as R-932).
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-CHART-161 and REQ-CHART-123 (changed); the task files of TASK-M2-65 and TASK-M2-83. `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
+## R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*
+*10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in `REVIEW_QUEUE.md`
+(RQ-785, new), `docs/design/principia_lines.md` § "8. Traces" (the dated paragraph at "Projection"),
+`docs/design/principia_chart_composition.md` (the status block), `plan/charts/m2-chart-replan-addition.md`,
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement here*
+
+The owner's words (10 Nov 2026), verbatim, from their reply to the draft of the chart re-plan's addition, which opens
+"These are my words. Record them as rulings where they answer a question.", item 1 under their heading "TWO THINGS TO
+ADD BEFORE THE TRACE TASK IS BUILT":
+
+> 1. A trajectory is almost always off the picture's surface. On a blend the nearest pixel to an
+>    off-surface state can snap from one place to another, so a trace may break into pieces
+>    mid-morph, and the whole trace may jump as a morph starts or ends. Your tests only check
+>    points that are on the surface. Add a measurement next to P2, call it P4:
+>    - on the same fixtures and blend pairs, at s = 0.25, 0.5 and 0.75, the share of neighbouring
+>      trace vertices that land more than 8 pixels apart on the blend, set against the same
+>      share on each end chart's own trace;
+>    - also the median and worst residual (how far off the surface each vertex is).
+>    P2 and P4 are reported, not gates. Show me both before TASK-M8-49 and TASK-M8-58 are built.
+>    If the numbers are bad I will decide then; the likely fallback is fading the trace by its
+>    residual, which your draft already has. Do not pick thresholds or fallbacks yourself.
+
+*What it decides:*
+
+- **Why.** A trajectory is almost always off the picture's surface, and on a blend the nearest pixel to an off-surface
+  state can snap from one place to another: a trace may break into pieces mid-morph, and the whole trace may jump as a
+  morph starts or ends. The planned gating tests check only points that are on the surface (a pixel's own state), so
+  they cannot see this.
+- **P2,** as the addition's plan defines it: the on-screen jump between an end chart's own trace (`s = 0`) and the
+  blend's (`s = 10⁻⁶`), median and worst, in pixels per vertex, over the trajectory fixtures of R-919's F18 (the
+  figure-eight and the Lagrange equilateral solution) and 16 seeded pixels per chart pair, on the plan's blend pairs.
+- **P4,** new, in the owner's words: on the same fixtures and blend pairs, at `s = 0.25`, `0.5` and `0.75`, the share of
+  neighbouring trace vertices that land more than 8 pixels apart on the blend, set against the same share on each end
+  chart's own trace; and the median and worst residual, how far off the surface each vertex is.
+- **Reported, not gates.** Neither has a pass line. Each is a measurement in R-649's sense, its numbers shown as
+  measured.
+- **Shown before the trace tasks are built.** The owner sees both before TASK-M8-49 and TASK-M8-58 are built: the two
+  tasks depend on the report having been shown to the owner.
+- **No threshold and no fallback is picked by anyone else.** If the numbers are bad the owner decides then. Fading the
+  trace by its residual is the fallback the owner names as likely; it is not adopted, and neither the implementer, the
+  orchestrator nor a reviewer chooses a threshold or a fallback for a trace that breaks or jumps on a blend.
+- **What the words leave undefined.** "More than 8 pixels apart" names no picture size, and neither does P2's "in
+  pixels". That is a missing definition (R-72), the owner's to state: it is queued as **RQ-785**, and a definition
+  requirement on the measurement task carries it. Nothing is chosen meanwhile, and the measurement is not run until it
+  is answered.
+- **Where it lives** (applied per R-369: task scoping): a new M2 measurement task, after the placement function (R-947's
+  N19), the blend chart (the re-plan's N5) and the trajectory fixtures (TASK-M2-82).
+
+*Read with* **R-649** (a measurement decides only against a criterion written before the run; these two have none and
+decide nothing) and **R-947** (the placement they measure).
+
+R-951 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement here: the measurement task's requirement and its definition requirement are added, and
+TASK-M8-49's and TASK-M8-58's dependencies change, in the addition's plan PR (applied per R-369: task scoping, as
+R-932).
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-CHART-201 (new: the report of P2 and P4), REQ-CHART-202 and REQ-CHART-203 (new, definitions, R-72, each waiting on RQ-785: REQ-CHART-202 the picture size; REQ-CHART-203 the further set-up points, which are what a seeded pixel contributes, whether P2 is also read at `s = 1`, and the trace's vertex spacing in time and the window the charts are read in) and REQ-GUI-245 (changed); `plan/tasks.yaml` and the task files of TASK-M2-100 (new, the measurement task), TASK-M8-49 and TASK-M8-58; `REVIEW_QUEUE.md`, RQ-785, which gains three further questions on the set-up (the two set-up points, from the code review's F2, and the vertex spacing and the window, from the physics review). Fading a blend's trace by its residual, which the PR's first commit had drawn as the trace's ordinary fade, is withdrawn: it is the fallback the owner's words above keep for them, and a blend's trace is drawn unfaded until they have seen P2 and P4 (physics review, P5; `docs/design/principia_lines.md` § 8). `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
+## R-952 — Contours are evaluated on the CPU for every chart, as R-926 item 5 has it; the 8.3 ms criterion is kept as written, and its report says plainly what the owner will see while moving, half or quarter resolution, on each of the three test charts *(no RQ; amends R-476)*
+*10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in
+`docs/design/principia_lines.md` § "4.2 Evaluation" (the Starting-state bullet, its earlier words kept as *Was*),
+`docs/design/principia_chart_composition.md` (the status block and § "10.2 Tier 1 overlays", a dated note), R-476's
+forward and "Still in force" lines, `plan/charts/m2-chart-replan-addition.md`, `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement here*
+
+The owner's words (10 Nov 2026), verbatim, from their reply to the draft of the chart re-plan's addition, which opens
+"These are my words. Record them as rulings where they answer a question.", item 2 under their heading "TWO THINGS TO
+ADD BEFORE THE TRACE TASK IS BUILT":
+
+> 2. Contours moving to the CPU for every chart: agreed, it follows from R-926 item 5. Keep the
+>    8.3 ms criterion as written. When you report it, say plainly what I will see while moving
+>    (half or quarter resolution) on each of the three test charts.
+
+and, in their message of the same day on the addition, item 2b (item 2 is "CONTOURS"), which asked for the re-read:
+
+>    b. Where contours are evaluated. Lines § 4.2 runs them as a GPU pass on the shared decode. Under the
+>       new system the CPU evaluates charts. Re-read § 4.2 for a chart with no shader code and for a blend,
+>       and mark the contour tasks (TASK-M7-43, TASK-M7-72) keep or change.
+
+*What it decides:*
+
+- **Contours on the CPU, for every chart.** A starting-state contour is evaluated on the chart's decode on a grid at
+  screen resolution, independent of the quadtree, as before; the decode is the CPU's f64 evaluation of the chart, the
+  evaluator that fills the quads' forward tables, run on the screen grid, and the expression is evaluated on the decoded
+  state on the CPU. It is one route for every chart, a chart with no shader code and a blend included, with no reduced
+  resolution forced by a chart's kind. It follows from R-926 item 5: "The CPU evaluates charts in f64. The GPU only
+  integrates records. No chart code in the integrator." Playhead contours, read from the resident quads' payload, are
+  unchanged.
+- **The 8.3 ms criterion, kept as written,** before any run (R-649): on the Mac (R-186), the starting-state contour
+  pass, the CPU's f64 evaluation, the expression and the marching squares together, on all cores, slowest of five warm
+  runs, on three test charts, the latent chart, the shape sphere's exponential map, and a blend of the two at `s = 0.5`.
+  PASS if the half-resolution grid, 960 × 540, takes at most 8.3 ms, half a 60 Hz frame, in motion. If it misses, the
+  in-motion grid steps down to quarter resolution, lines § 4.2's own degrade-in-motion rule, recorded with the numbers.
+  At rest the full grid is reported, not judged. The criterion is not adjusted after the run.
+- **The report says what the owner will see.** When the measurement is reported it says plainly, for each of the three
+  test charts, what the owner will see while moving: contours at half resolution, or at quarter resolution.
+
+*What it amends:* **R-476**, as to `principia_lines.md` § 4.2: "It runs as a GPU pass on the shared decode, with a CPU
+fallback at reduced resolution" and "It uses the same precision path as the decode (the linearised decoder at depth)"
+give way to the CPU's f64 evaluation of the chart for every chart; the screen-resolution grid independent of the
+quadtree, the half resolution in motion refined at rest, and the playhead contours stand. *Read with* **R-926** (item
+5), **R-925** (item 1: no shader feature is refused on any chart) and **R-944** (contours work on a morph frame).
+
+R-952 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement here: REQ-RENDER-093 and REQ-RENDER-121 change with TASK-M7-43 and TASK-M7-72 in the addition's
+plan PR (applied per R-369: task scoping, as R-932).
+
+*Corrected 11 Nov 2026 (the physics review of PR #482, review 5852979675, P4):* "What it amends" above reaches further than the owner's words. They agree that contours are evaluated on the CPU for every chart; where a contour is evaluated is not which precision path it follows, and their words do not reach that. So of the two sentences of `principia_lines.md` § 4.2 named there, only "It runs as a GPU pass on the shared decode, with a CPU fallback at reduced resolution" gives way. "It uses the same precision path as the decode (the linearised decoder at depth)" stands, and § 4.2 keeps it: the contour's decode is the route the picture's forward table takes, the one-cell patch included where R-90's switch fires (R-926 item 11; R-935, under RQ-766 (a)), which is what keeps § 4.2's "exact at any zoom and any depth of refinement" true. The owner's words quoted above are unchanged.
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-RENDER-093 and REQ-RENDER-121 (changed), REQ-PERF-123 (new: the 8.3 ms criterion and its report, a benchmark) and REQ-RENDER-092 (it gains a clause: the Chart and Latent variables on a blend, (C), applied per R-369); the task files of TASK-M7-43, TASK-M7-72 and TASK-M2-58. `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*

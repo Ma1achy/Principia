@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-246, REQ-GUI-247, REQ-GUI-248
-- **Depends on:** TASK-M7-42, TASK-M7-43, TASK-M8-87, TASK-M8-08, TASK-M8-94, TASK-M8-03
+- **Depends on:** TASK-M7-42, TASK-M7-43, TASK-M8-87, TASK-M8-08, TASK-M8-94, TASK-M8-03, TASK-M2-98
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -42,3 +42,4 @@ Lines ▾ beside Overlays ▾ with its count and `Alt+L`; the contour-set editor
   Lines ▾ kept for contours, axes, grids, the presets and class edges.
 - R-484 J4 (20 Oct 2026): the line system is tier 2 of the embedding.
 - R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87; TASK-M8-23 by TASK-M8-94 (applied per R-369). *Was:* "- **Depends on:** TASK-M7-42, TASK-M7-43, TASK-M8-05, TASK-M8-08, TASK-M8-23, TASK-M8-03".
+- *11 Nov 2026 (the addendum's § A.8, CHANGE; the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-940, R-942):* the primary scale (REQ-GUI-246) is TASK-M2-98's computed axis, with its seam, fold, clamp and saturate marks; secondary scales, presets and styles are kept. The Grid preset on a blend draws both ends' grids, reading TASK-M2-98's dual ruler, so one source gives the ruler's ticks and the grid's (the addition's § A.2). It depends on TASK-M2-98 (computed axes, the maths); TASK-M8-130 then draws the computed axes on the figure. *Was (Depends on):* "TASK-M7-42, TASK-M7-43, TASK-M8-87, TASK-M8-08, TASK-M8-94, TASK-M8-03".

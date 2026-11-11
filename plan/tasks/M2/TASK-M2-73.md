@@ -33,3 +33,4 @@ Numerical inverses on the CPU: a pair with a numerical inverse runs in f64, its 
 ## Notes
 - Split from TASK-M8-102 by R-916 (9 Nov 2026); TASK-M8-102 keeps REQ-CHART-129, REQ-CHART-130 and REQ-CHART-155.
 - **Build order (R-916):** stage 3.
+- *11 Nov 2026 (the re-plan's § A.1, CHANGE; the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4):* split: its solver core is TASK-M2-94's, built before TASK-M2-65 for the lock's re-solve; this task keeps the rest. "CPU batch" and "CPU-only" lose their meaning: every chart is CPU-evaluated, and the fragment reaches it by table (R-925).
