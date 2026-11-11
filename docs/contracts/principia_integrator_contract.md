@@ -273,17 +273,21 @@ REQ-TOOL-039, REQ-TOOL-125).
   ledger field and takes no payload bytes, so nothing here goes through the generation root; it is not on the sim key
   and is not hashed. The occupant that forms the physical steps feeds it one step at a time, in march order, and whoever
   runs the occupant reads it afterwards. Placing it in the payload would be a ledger change and needs a ruling.
-- **A usable step is one that is a number:** `dt == dt`, a comparison (rule 2), with no constant in it (rule 1). A NaN
-  step is unusable and is skipped. Every other value is usable and is reported as it stands, never judged, clamped or
-  filtered: a zero step, a negative one, the overflow `2.209e128` and `±∞` (which is what `2.209e128` is at f32). The
-  diagnostic exists to show such a step, so it must not hide one.
+- **A usable step is a finite one,** as Part 2b's step 8 folds it ("folded into `dt_max` when finite"). A step whose
+  exponent field is all ones, a NaN or `±∞`, is unusable and is skipped. That is decided on the step's bits, before any
+  comparison (`IeeeBits::non_finite_bits`; R-114, R-538; `principia_gpu_determinism_note.md` § "The discipline",
+  rule 4): never by a float compared with itself, and with no precision-dependent constant in the branch (rule 1). Every
+  finite step is usable and is reported as it stands, never judged, clamped or filtered: a zero step, a negative one,
+  and the overflow `2.209e128`, which is finite at f64 and is reported as itself. At f32 `2.209e128` is `+∞`, so there
+  it is skipped.
 - **The fold is reseeded from the first usable step** (rule 4): the first usable step becomes the maximum, whatever its
-  value, and a later usable step replaces it only where it compares greater (`dt > dt_max`). No `0.0`, no infinity and
-  no other seed value takes part.
+  value, and a later usable step replaces it only where it compares greater (`dt > dt_max`). That comparison only ever
+  sees finite operands, the non-finite steps having been skipped on their bits before it. No `0.0`, no infinity and no
+  other seed value takes part.
 - **"No usable step" is an explicit sentinel, never a number.** A trajectory that took no step, or whose every step was
   unusable, reports `DtMaxReport::NoUsableStep`; one with a usable step reports `DtMaxReport::Largest(dt_max)`. So "no
   usable step" cannot be read as "the largest step was `0.0`", which is the report of a trajectory whose largest usable
-  step was zero (`principia_01_pitfalls.md` §9).
+  step was zero (`principia_01_pitfalls.md` §9). At f32 a trajectory whose every step overflowed reports the sentinel.
 
 #### And FMA contraction is a live question
 
