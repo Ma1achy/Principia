@@ -83,7 +83,8 @@ jobs:
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
       - name: Install Mesa (lavapipe)
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - name: Build the stand-in tests
         run: cargo test -p xtask --no-run --test ${{ matrix.test }}
       # RQ-688: on run 1, `xtask ci` children side by side under `cargo test`, each with the 600 s timer, share what the

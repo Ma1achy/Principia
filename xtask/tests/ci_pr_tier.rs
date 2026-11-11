@@ -20,8 +20,9 @@
 //!   smoke sets, `gpu-lavapipe` and `gpu-metal`, run them under it with nothing letting a failure through
 //!   (REQ-GUI-412: "CI's lavapipe and Metal block").
 //! - `ci_pr_tier_required_checks_skip_inside_the_job`: in `ci.yml` every job bearing a required check of the PR tier
-//!   runs on every pull request (`if: always() && github.event_name == 'pull_request'`, or `if: always()` for the GPU
-//!   smoke sets, which run on a push too), needs `changes`, and fails at
+//!   runs on every pull request whose run is not cancelled (`if: ${{ !cancelled() && github.event_name ==
+//!   'pull_request' }}`, or `if: ${{ !cancelled() }}` for the GPU smoke sets, which run on a push too), needs `changes`,
+//!   and fails at
 //!   its first step unless `changes` succeeded (R-656: the skips are inside the job), and no step of the workflow
 //!   sleeps or polls.
 //!
@@ -566,10 +567,10 @@ fn check_required(workflow: &str) {
         );
         let (id, lines) = bearing[0];
         let has = |want: &str| lines.iter().any(|l| l == want);
-        // `always()` alone for the GPU smoke sets, which run on a push too, to save their caches on `main`.
+        // `!cancelled()` alone for the GPU smoke sets, which run on a push too, to save their caches on `main`.
         assert!(
-            has("    if: always() && github.event_name == 'pull_request'")
-                || has("    if: always()"),
+            has("    if: ${{ !cancelled() && github.event_name == 'pull_request' }}")
+                || has("    if: ${{ !cancelled() }}"),
             "ci_pr_tier: {check} ({id}) does not run on every pull request"
         );
         assert!(
@@ -612,7 +613,501 @@ negative_control!(
     expected = "gpu-lavapipe (gpu-lavapipe-smoke) does not run on every pull request",
     check_required(&edited(
         ".github/workflows/ci.yml",
-        "    name: gpu-lavapipe\n    needs: changes\n    if: always()\n",
+        "    name: gpu-lavapipe\n    needs: changes\n    if: ${{ !cancelled() }}\n",
         "    name: gpu-lavapipe\n    needs: changes\n    if: needs.changes.outputs.gpu == 'true'\n",
     ))
 );
+
+// ---- A cancelled run stops, every job has a time limit, apt is bounded (the CI diagnosis of 10 Nov 2026) -------------
+
+/// The job-level `if:` of a job (four spaces in), or nothing.
+fn job_if(lines: &[String]) -> &str {
+    lines
+        .iter()
+        .find_map(|l| l.strip_prefix("    if: "))
+        .unwrap_or("")
+}
+
+/// Whether the job `id` is of the per-merge tier alone: its `if:` leaves out every pull request, or, its `if:` holding
+/// no status function, a job it needs (`needs: a` or `needs: [a, b]`) is of that tier alone, which skips it.
+fn push_only(jobs: &[(String, Vec<String>)], id: &str) -> bool {
+    let Some((_, lines)) = jobs.iter().find(|(job, _)| job == id) else {
+        return false;
+    };
+    let cond = job_if(lines);
+    if cond.contains("github.event_name != 'pull_request'") {
+        return true;
+    }
+    let needs = lines
+        .iter()
+        .find_map(|l| l.strip_prefix("    needs: "))
+        .unwrap_or("");
+    !(cond.contains("always()") || cond.contains("!cancelled()"))
+        && needs
+            .trim_matches(['[', ']'])
+            .split(',')
+            .any(|need| push_only(jobs, need.trim()))
+}
+
+/// No job a pull request runs holds `always()` at job level, under which a cancelled run's jobs run to their end and
+/// its jobs not yet started still start (runs 42753619619, 42753864312, 42710215419); each job bearing a required check
+/// holds `!cancelled()` in its place, so it still runs whatever `changes` ended in.
+fn check_cancelled_runs_stop(workflow: &str) {
+    let jobs = jobs(workflow);
+    for (id, lines) in &jobs {
+        assert!(
+            push_only(&jobs, id) || !job_if(lines).contains("always()"),
+            "ci_pr_tier: {} ({id}) runs on in a cancelled run: `if: {}`",
+            job_name(id, lines),
+            job_if(lines)
+        );
+    }
+    for check in REQUIRED {
+        let (id, lines) = jobs
+            .iter()
+            .find(|(id, l)| job_name(id, l) == check)
+            .unwrap_or_else(|| panic!("ci_pr_tier: no job of ci.yml bears {check}"));
+        assert!(
+            job_if(lines).starts_with("${{ !cancelled() "),
+            "ci_pr_tier: {check} ({id}) does not run whatever `changes` ended in, short of a cancelled run: `if: {}`",
+            job_if(lines)
+        );
+    }
+}
+
+#[test]
+fn ci_pr_tier_cancelled_runs_stop() {
+    check_cancelled_runs_stop(&read(".github/workflows/ci.yml"));
+}
+
+negative_control!(
+    ci_pr_tier_cancelled_runs_stop,
+    "The product tests under `always()` again, which a cancelled run cannot stop.",
+    expected = "ci (tests) runs on in a cancelled run: `if: always() && github.event_name == 'pull_request'`",
+    check_cancelled_runs_stop(&edited(
+        ".github/workflows/ci.yml",
+        "    name: ci\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
+        "    name: ci\n    needs: changes\n    if: always() && github.event_name == 'pull_request'\n",
+    ))
+);
+
+mod a_required_job_without_a_status_function {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_cancelled_runs_stop,
+        "The Metal smoke set with no status function, which a failed classification skips.",
+        expected = "gpu-metal (gpu-metal-smoke) does not run whatever `changes` ended in",
+        check_cancelled_runs_stop(&edited(
+            ".github/workflows/ci.yml",
+            "    name: gpu-metal\n    needs: changes\n    if: ${{ !cancelled() }}\n",
+            "    name: gpu-metal\n    needs: changes\n    if: github.event_name != 'workflow_dispatch'\n",
+        ))
+    );
+}
+
+/// The PR tier's jobs, every job of `ci.yml` a pull request can run, each with its `timeout-minutes`: the larger of
+/// 1.5 times the job's longest passing run (60 pull-request and 40 push runs before 10 Nov 2026), rounded up to 5
+/// minutes, and the diagnosis's figure. `ci.yml`'s header gives each job's longest run.
+const LIMITS: [(&str, u32); 9] = [
+    ("changes", 5),
+    ("fmt", 5),
+    ("clippy", 10),
+    ("build", 25),
+    ("tests", 90),
+    ("process", 60),
+    ("gpu-lavapipe-smoke", 25),
+    ("gpu-metal-smoke", 20),
+    ("web-skeleton", 10),
+];
+
+/// Every job of `ci.yml` that a pull request can run has its own `timeout-minutes`, the one [`LIMITS`] gives, so none
+/// runs to GitHub's 360 minutes (runs 42760984954 and 42759947849 did), and a job added to the PR tier is given one.
+fn check_time_limits(workflow: &str) {
+    let mut seen = BTreeSet::new();
+    let jobs = jobs(workflow);
+    for (id, lines) in &jobs {
+        if push_only(&jobs, id) {
+            continue;
+        }
+        let limit = lines
+            .iter()
+            .find_map(|l| l.strip_prefix("    timeout-minutes: "))
+            .unwrap_or_else(|| panic!("ci_pr_tier: the PR tier's job {id} has no timeout-minutes"));
+        let want = LIMITS
+            .iter()
+            .find(|(job, _)| *job == id.as_str())
+            .unwrap_or_else(|| panic!("ci_pr_tier: the PR tier's job {id} has no measured limit"))
+            .1;
+        assert_eq!(
+            limit.parse::<u32>().ok(),
+            Some(want),
+            "ci_pr_tier: the PR tier's job {id} is limited to {limit} minutes, not its measured {want}"
+        );
+        seen.insert(id.as_str());
+    }
+    for (job, _) in LIMITS {
+        assert!(
+            seen.contains(job),
+            "ci_pr_tier: {job}, which has a measured limit, is no job of the PR tier"
+        );
+    }
+}
+
+#[test]
+fn ci_pr_tier_every_job_has_a_time_limit() {
+    check_time_limits(&read(".github/workflows/ci.yml"));
+}
+
+negative_control!(
+    ci_pr_tier_every_job_has_a_time_limit,
+    "The product tests with no limit of their own, so GitHub's 360 minutes.",
+    expected = "the PR tier's job tests has no timeout-minutes",
+    check_time_limits(&edited(
+        ".github/workflows/ci.yml",
+        "    runs-on: ubuntu-24.04\n    timeout-minutes: 90\n",
+        "    runs-on: ubuntu-24.04\n",
+    ))
+);
+
+mod a_limit_off_its_measured_value {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_every_job_has_a_time_limit,
+        "The product tests limited to a minute more than their measured limit.",
+        expected = "the PR tier's job tests is limited to 91 minutes, not its measured 90",
+        check_time_limits(&edited(
+            ".github/workflows/ci.yml",
+            "    runs-on: ubuntu-24.04\n    timeout-minutes: 90\n",
+            "    runs-on: ubuntu-24.04\n    timeout-minutes: 91\n",
+        ))
+    );
+}
+
+mod a_pull_request_job_without_a_measured_limit {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_every_job_has_a_time_limit,
+        "A job added to the PR tier with a limit nothing measured.",
+        expected = "the PR tier's job qa_new has no measured limit",
+        check_time_limits(&format!(
+            "{}  qa_new:\n    runs-on: ubuntu-24.04\n    timeout-minutes: 5\n    steps:\n      - run: true\n",
+            read(".github/workflows/ci.yml")
+        ))
+    );
+}
+
+/// The shell function every apt step calls `apt-get` through: each call under `timeout`, 120 s and a kill 10 s later,
+/// tried three times.
+const BOUNDED: &str = "bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 \"$@\" && return; \
+                       echo \"attempt $attempt of 3 failed or ran past 120 s, $*\"; done; return 1; }";
+
+/// The most minutes a step that installs from apt may take.
+const APT_STEP_LIMIT: u32 = 8;
+
+/// Each step of a workflow that names `apt-get` outside a comment, as (its lines to its `run:`, its script's lines).
+fn apt_steps(workflow: &str) -> Vec<(Vec<String>, Vec<String>)> {
+    let mut steps: Vec<Vec<&str>> = Vec::new();
+    for line in workflow.lines() {
+        if line.starts_with("      - ") {
+            steps.push(vec![line]);
+        } else if line.starts_with("        ") || line.trim().is_empty() {
+            if let Some(step) = steps.last_mut() {
+                step.push(line);
+            }
+        } else {
+            // A job's or the workflow's own line, or a comment between steps: the step before it has ended.
+            steps.push(Vec::new());
+        }
+    }
+    steps
+        .into_iter()
+        .filter(|step| {
+            step.iter()
+                .any(|l| !l.trim_start().starts_with('#') && l.contains("apt-get"))
+        })
+        .map(|step| {
+            let run = step
+                .iter()
+                .position(|l| l.trim_start().trim_start_matches("- ").starts_with("run:"))
+                .unwrap_or(step.len());
+            let own = |l: &&str| l.trim().to_owned();
+            (
+                step[..=run.min(step.len() - 1)].iter().map(own).collect(),
+                step[(run + 1).min(step.len())..]
+                    .iter()
+                    .filter(|l| !l.trim().is_empty())
+                    .map(own)
+                    .collect(),
+            )
+        })
+        .collect()
+}
+
+/// Whether a word after `apt-get install -y` is a package's name or an option, and no more of the shell.
+fn package_or_option(word: &str) -> bool {
+    word.chars()
+        .all(|c| c.is_ascii_alphanumeric() || "-.+".contains(c))
+}
+
+/// In every workflow, a step that installs from apt has a limit of its own of at most [`APT_STEP_LIMIT`] minutes and
+/// calls `apt-get` only through [`BOUNDED`], first to update and then to install: `sudo apt-get update` alone stalled
+/// three jobs for six hours (jobs 129651506462, 129651506556, 129653679613).
+fn check_apt_bounded(workflows: &[(String, String)]) {
+    let mut found = 0;
+    for (file, text) in workflows {
+        for (head, script) in apt_steps(text) {
+            let name = head[0].trim_start_matches("- name: ").to_owned();
+            found += 1;
+            let limit = head
+                .iter()
+                .find_map(|l| l.strip_prefix("timeout-minutes: "))
+                .and_then(|m| m.parse::<u32>().ok());
+            assert!(
+                limit.is_some_and(|m| (1..=APT_STEP_LIMIT).contains(&m)),
+                "ci_pr_tier: {file}'s step `{name}` has no limit of its own of 1 to {APT_STEP_LIMIT} minutes: {limit:?}"
+            );
+            // One line, the whole `run:`, or the first three lines of a `run: |` block.
+            let one_line = head
+                .last()
+                .and_then(|l| l.strip_prefix("run: "))
+                .and_then(|l| l.strip_prefix(BOUNDED))
+                .and_then(|l| {
+                    l.strip_prefix("; bounded apt-get update && bounded apt-get install -y ")
+                })
+                .is_some_and(|packages| packages.split_whitespace().all(package_or_option))
+                && script.iter().all(|l| !l.contains("apt-get"));
+            let block = head.last().is_some_and(|l| l == "run: |")
+                && script.len() >= 3
+                && script[0] == BOUNDED
+                && script[1] == "bounded apt-get update"
+                && script[2]
+                    .strip_prefix("bounded apt-get install -y ")
+                    .is_some_and(|packages| packages.split_whitespace().all(package_or_option))
+                && script[3..].iter().all(|l| !l.contains("apt-get"));
+            assert!(
+                one_line || block,
+                "ci_pr_tier: {file}'s step `{name}` calls apt-get outside `bounded`, update then install: {:?} {script:?}",
+                head.last()
+            );
+        }
+    }
+    assert!(
+        found > 0,
+        "ci_pr_tier: no step of any workflow installs from apt"
+    );
+}
+
+/// Every workflow, as (file name, text).
+fn all_workflows() -> Vec<(String, String)> {
+    let dir = root().join(".github/workflows");
+    let mut out: Vec<(String, String)> = std::fs::read_dir(&dir)
+        .unwrap_or_else(|e| panic!("ci_pr_tier: {}: {e}", dir.display()))
+        .map(|entry| entry.expect("a workflow").path())
+        .filter(|p| p.extension().is_some_and(|x| x == "yml" || x == "yaml"))
+        .map(|p| {
+            let name = p.file_name().unwrap().to_string_lossy().into_owned();
+            (name.clone(), read(&format!(".github/workflows/{name}")))
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+/// Every workflow, `file`'s first `from` replaced by `to`.
+#[cfg(feature = "controls")]
+fn all_workflows_edited(file: &str, from: &str, to: &str) -> Vec<(String, String)> {
+    let mut workflows = all_workflows();
+    let at = workflows
+        .iter()
+        .position(|(f, _)| f == file)
+        .unwrap_or_else(|| panic!("ci_pr_tier: no {file}"));
+    workflows[at].1 = edited(&format!(".github/workflows/{file}"), from, to);
+    workflows
+}
+
+#[test]
+fn ci_pr_tier_apt_installs_are_bounded() {
+    check_apt_bounded(&all_workflows());
+}
+
+negative_control!(
+    ci_pr_tier_apt_installs_are_bounded,
+    "The product tests' Mesa install as it was, two bare apt-get calls.",
+    expected = "ci.yml's step `Install Mesa (lavapipe)` calls apt-get outside `bounded`",
+    check_apt_bounded(&all_workflows_edited(
+        "ci.yml",
+        &format!("        run: {BOUNDED}; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers\n"),
+        "        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers\n",
+    ))
+);
+
+mod an_apt_step_past_its_limit {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_apt_installs_are_bounded,
+        "The pull request's screenshot job's Mesa install limited to a minute more than the most allowed.",
+        expected = "screenshot.yml's step `Install Mesa (lavapipe)` has no limit of its own of 1 to 8 minutes: Some(9)",
+        check_apt_bounded(&all_workflows_edited(
+            "screenshot.yml",
+            "        timeout-minutes: 8\n        run: bounded() {",
+            "        timeout-minutes: 9\n        run: bounded() {",
+        ))
+    );
+}
+
+mod an_apt_step_without_a_limit {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_apt_installs_are_bounded,
+        "The progress banner's librsvg install with no limit of its own.",
+        expected = "progress.yml's step `Install rsvg-convert` has no limit of its own of 1 to 8 minutes: None",
+        check_apt_bounded(&all_workflows_edited(
+            "progress.yml",
+            "        timeout-minutes: 8\n        run: |\n",
+            "        run: |\n",
+        ))
+    );
+}
+
+mod an_apt_call_after_the_install {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_apt_installs_are_bounded,
+        "A gate job's Mesa install followed by a bare apt-get call.",
+        expected = "gate.yml's step `Install Mesa (lavapipe)` calls apt-get outside `bounded`",
+        check_apt_bounded(&all_workflows_edited(
+            "gate.yml",
+            "bounded apt-get install -y mesa-vulkan-drivers\n",
+            "bounded apt-get install -y mesa-vulkan-drivers && sudo apt-get clean\n",
+        ))
+    );
+}
+
+/// `script` run as a step is (`bash -eo pipefail`), `sudo` stood in by a function that records its arguments and
+/// fails on the calls `fail` numbers, from 1: whether the step passed, and each call.
+fn apt_step_run(script: &str, fail: &[u32]) -> (bool, Vec<String>) {
+    let fail: Vec<String> = fail.iter().map(u32::to_string).collect();
+    let stand_in = "calls=0\nsudo() { calls=$((calls + 1)); echo \"sudo $*\"; \
+                    case \" $FAIL \" in *\" $calls \"*) return 1 ;; esac; }\n";
+    let out = std::process::Command::new("bash")
+        .args(["--noprofile", "--norc", "-eo", "pipefail", "-c"])
+        .arg(format!("{stand_in}{script}"))
+        .env("FAIL", fail.join(" "))
+        .output()
+        .expect("bash runs");
+    let calls = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|l| l.strip_prefix("sudo "))
+        .map(str::to_owned)
+        .collect();
+    (out.status.success(), calls)
+}
+
+/// An apt step's script, installing `packages`: each `apt-get` call runs under `timeout -k 10 120`; a call that fails
+/// is tried again, three times in all; a third failure fails the step there, the install not tried after a failed
+/// update.
+fn check_apt_retries(script: &str, packages: &str) {
+    let update = "timeout -k 10 120 apt-get update";
+    let install = format!("timeout -k 10 120 apt-get install -y {packages}");
+    let install = install.as_str();
+    assert_eq!(
+        apt_step_run(script, &[]),
+        (true, vec![update.to_owned(), install.to_owned()]),
+        "ci_pr_tier: the Mesa step, every call passing, is not one bounded update and one bounded install"
+    );
+    assert_eq!(
+        apt_step_run(script, &[1, 2]),
+        (
+            true,
+            [update, update, update, install]
+                .map(str::to_owned)
+                .to_vec()
+        ),
+        "ci_pr_tier: the Mesa step does not pass on its update's third attempt"
+    );
+    assert_eq!(
+        apt_step_run(script, &[1, 2, 3]),
+        (false, [update, update, update].map(str::to_owned).to_vec()),
+        "ci_pr_tier: the Mesa step does not fail at its update's third failure"
+    );
+    assert_eq!(
+        apt_step_run(script, &[2, 3, 4]),
+        (
+            false,
+            [update, install, install, install]
+                .map(str::to_owned)
+                .to_vec()
+        ),
+        "ci_pr_tier: the Mesa step does not fail at its install's third failure"
+    );
+}
+
+/// The script of the product tests' Mesa step, as `ci.yml` has it: its one-line `run:`.
+fn mesa_script() -> String {
+    let ci = read(".github/workflows/ci.yml");
+    let (head, _) = apt_steps(&ci)
+        .into_iter()
+        .next()
+        .expect("ci_pr_tier: ci.yml has no apt step");
+    let run = head
+        .last()
+        .and_then(|l| l.strip_prefix("run: "))
+        .expect("ci_pr_tier: ci.yml's Mesa step is not a one-line `run:`");
+    format!("{run}\n")
+}
+
+/// The apt calls of the progress banner's librsvg step, as `progress.yml` has them: the first three lines of its
+/// `run: |` block, where the line after them would hide a failed one from a script that didn't stop at it.
+fn rsvg_script() -> String {
+    let progress = read(".github/workflows/progress.yml");
+    let (_, script) = apt_steps(&progress)
+        .into_iter()
+        .next()
+        .expect("ci_pr_tier: progress.yml has no apt step");
+    format!("{}\necho after\n", script[..3].join("\n"))
+}
+
+const MESA: &str = "mesa-vulkan-drivers";
+
+#[test]
+fn ci_pr_tier_apt_calls_retry_under_a_timeout() {
+    check_apt_retries(&mesa_script(), MESA);
+    check_apt_retries(&rsvg_script(), "--no-install-recommends librsvg2-bin");
+}
+
+negative_control!(
+    ci_pr_tier_apt_calls_retry_under_a_timeout,
+    "The Mesa step trying each call twice.",
+    expected = "the Mesa step does not pass on its update's third attempt",
+    check_apt_retries(&mesa_script().replace("in 1 2 3;", "in 1 2;"), MESA)
+);
+
+mod an_apt_call_without_its_timeout {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_apt_calls_retry_under_a_timeout,
+        "The Mesa step's calls with no timeout, as the ones that stalled six hours.",
+        expected =
+            "the Mesa step, every call passing, is not one bounded update and one bounded install",
+        check_apt_retries(
+            &mesa_script().replace("sudo timeout -k 10 120 ", "sudo "),
+            MESA
+        )
+    );
+}
+
+mod an_install_after_a_failed_update {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_apt_calls_retry_under_a_timeout,
+        "The Mesa step going on to the install whatever the update ended in.",
+        expected = "the Mesa step does not fail at its update's third failure",
+        check_apt_retries(
+            &mesa_script().replace(
+                " && bounded apt-get install",
+                " || true; bounded apt-get install"
+            ),
+            MESA
+        )
+    );
+}

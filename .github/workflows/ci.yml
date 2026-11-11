@@ -30,10 +30,14 @@
 # - `web-skeleton`, advisory: the v1 web skeleton's wasm build, on a code change.
 # The required checks are `fmt`, `clippy`, `build`, `ci`, `gpu-lavapipe` and `gpu-metal` here, with `pr-check`
 # (`pr-check.yml`) and `reviews-complete` (`reviews.yml`); `plan/HUMAN_SETUP.md` §2 lists them, and the owner sets
-# branch protection. Each job bearing one runs on every pull request, `if: always()`, and skips its work inside the job
+# branch protection. Each job bearing one runs on every pull request whose run is not cancelled, `if: !cancelled()`,
+# whatever `changes` ended in, and skips its work inside the job
 # on the classification's verdict (R-656: "Do the GPU and mutants skips inside the job … then skip as success under the
 # same check name"): its first step fails when `changes` did not succeed, so a failed classification never passes a
-# skip, and a required check is never a job skipped at job level. No job polls or waits on another run. The per-PR
+# skip, and a required check is never a job skipped at job level. `!cancelled()`, not `always()`: under `always()` a
+# superseded run's jobs ran to their end, and the ones not yet started still started, the new head waiting behind them
+# (runs 42753619619, 42753864312 and 42710215419; the CI diagnosis of 10 Nov 2026, applied per R-369/R-812). No job
+# polls or waits on another run. The per-PR
 # mutation run, the merge-ready label and the full tier it started are gone from the pull request's path (the owner's
 # CI model): `mutants.yml` runs on no pull request.
 #
@@ -109,6 +113,17 @@
 # 40 GB or less (`fmt`, `clippy`, `gpu-lavapipe`) free nothing; the ones near `ci-quick`'s and `ci-workspace`'s 69-91 GB
 # (`build`, `ci`, `process`) remove the largest toolsets without the prune. The per-merge tier's jobs keep the steps
 # they had as the full suite.
+#
+# Time limits (the CI diagnosis of 10 Nov 2026, applied per R-369/R-812): every job of the PR tier has a
+# `timeout-minutes`, where GitHub's default is 360, which two runs reached (42760984954, 42759947849). Each is the
+# larger of 1.5 times the longest passing run of the job, over the 60 pull-request and 40 push runs before 10 Nov 2026,
+# rounded up to 5 minutes, and the diagnosis's own figure: `changes` 5 (longest 0.9 min), `fmt` 5 (1.0), `clippy` 10
+# (3.5), `build` 25 (14.5), `ci` 90 (58.9), `process` 60 (38.9), `gpu-lavapipe` 25 (16.6, a run that built rust-gpu
+# with no cache), `gpu-metal` 20 (12.5, the same) and `web-skeleton` 10 (2.4).
+# Every step that installs from apt, in every workflow, calls `apt-get` through one shell function, `bounded`: each call
+# ends within 120 s (`timeout`, then a kill 10 s later) and is tried three times, and the step has a limit of 8 minutes
+# (5 in `mutants.yml`, whose steps' limits were set before). `apt-get update` is what stalled those two runs for six
+# hours, three jobs; a passing install took 12 s at the median.
 name: ci
 
 on:
@@ -151,6 +166,7 @@ jobs:
   # per-merge tier's jobs below read no classification.
   changes:
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
       contents: read
     outputs:
@@ -179,15 +195,16 @@ jobs:
         run: .github/scripts/ci_tier.sh decide
 
   # Formatting (R-195), first and on its own, so a formatting fault reports within minutes. Every job below that bears a
-  # required check runs on every pull request, `if: always()`, and skips its work inside, on the classification
+  # required check runs on every pull request, `if: !cancelled()`, and skips its work inside, on the classification
   # (R-656: "Do the GPU and mutants skips inside the job … then skip as success under the same check name"): its first
   # step fails when `changes` did not succeed, so a failed classification never passes a skip, and its other steps run
   # only on the verdict that needs them. On a push `fmt`, `clippy`, `build` and `ci` skip at job level (the GPU
   # smoke sets run there, to save their caches); no required check is read on a push.
   fmt:
     needs: changes
-    if: always() && github.event_name == 'pull_request'
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - name: The classification ran
         env:
@@ -209,8 +226,9 @@ jobs:
   # Clippy over every target, every warning an error (R-195).
   clippy:
     needs: changes
-    if: always() && github.event_name == 'pull_request'
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - name: The classification ran
         env:
@@ -250,8 +268,9 @@ jobs:
   # part (the CI study of 9 Nov 2026: 160-175 s a job). Applied per R-369/R-812.
   build:
     needs: changes
-    if: always() && github.event_name == 'pull_request'
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - name: The classification ran
         env:
@@ -340,8 +359,9 @@ jobs:
   tests:
     name: ci
     needs: changes
-    if: always() && github.event_name == 'pull_request'
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 90
     env:
       PRIN_GPU_BACKEND: vulkan
       RUNNER_DISK_TMPFS: /dev/shm
@@ -393,7 +413,8 @@ jobs:
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         if: env.RUN == 'true'
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         if: env.RUN == 'true'
         with:
@@ -479,6 +500,7 @@ jobs:
     needs: changes
     if: github.event_name == 'pull_request' && needs.changes.outputs.process == 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 60
     env:
       PRIN_GPU_BACKEND: vulkan
       RUNNER_DISK_TMPFS: /dev/shm
@@ -519,7 +541,8 @@ jobs:
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -560,8 +583,9 @@ jobs:
   gpu-lavapipe-smoke:
     name: gpu-lavapipe
     needs: changes
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
     env:
       PRIN_GPU_BACKEND: vulkan
       RUN: ${{ needs.changes.outputs.gpu == 'true' }}
@@ -598,7 +622,8 @@ jobs:
           key: rust-gpu-gpu-lavapipe-smoke-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         if: env.RUN == 'true'
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         if: env.RUN == 'true'
         with:
@@ -656,8 +681,9 @@ jobs:
   gpu-metal-smoke:
     name: gpu-metal
     needs: changes
-    if: always()
+    if: ${{ !cancelled() }}
     runs-on: macos-15
+    timeout-minutes: 20
     env:
       PRIN_GPU_BACKEND: metal
       RUN: ${{ needs.changes.outputs.gpu == 'true' }}
@@ -887,7 +913,8 @@ jobs:
       # The workspace tests include the GPU harness self-tests, which need an adapter and PRIN_GPU_BACKEND (R-169):
       # here they run on lavapipe; metal_hosted_probe is ignored off macOS.
       - name: Install Mesa (lavapipe)
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -990,7 +1017,8 @@ jobs:
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -1122,6 +1150,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: rustup toolchain install (rust-toolchain.toml)
@@ -1258,7 +1287,8 @@ jobs:
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -1379,7 +1409,8 @@ jobs:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -1492,7 +1523,8 @@ jobs:
           path: ~/.cache/rust-gpu
           key: rust-gpu-xtask-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
@@ -1705,7 +1737,8 @@ jobs:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-lavapipe-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
-        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
