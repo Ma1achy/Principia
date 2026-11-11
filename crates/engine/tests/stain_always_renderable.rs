@@ -9,6 +9,8 @@
 //!   and each is a function of its graph's canonical form, so the run's distinct forms are assembled and drawn once
 //!   each, across threads, before the property runs with the same seed ([`warm`]); the property then asserts what
 //!   it always did, of every state of every case;
+//! - `stain_always_renderable_a_panic_ahead_is_the_propertys_failure`: a panic in that ahead pass is caught there and
+//!   met by the property in its own case, so the failure still names its seed and minimal case;
 //! - `stain_always_renderable_the_fallback_draws_its_colour`: the fallback's fragment draws the fallback's flat
 //!   colour on the GPU, bit for bit.
 //!
@@ -18,6 +20,7 @@
 
 use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
+use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, PoisonError};
 
@@ -355,10 +358,14 @@ fn run_ops(
 /// cases (`seed`'s) to collect each state's canonical form and node list, with no assembly, then each distinct form is
 /// assembled through `render`, and drawn where it is some sequence's last graph, on as many threads as the machine
 /// gives. What succeeds is kept, in `seen` and `drawn`, as the property keeps it itself; whatever fails here, a
-/// state that does not lower, an assembly that errs or gives the fallback, a draw that errs, is kept nowhere, so the
-/// property meets it again in its case and fails there, with the edit and proptest's minimal case. Nothing the
+/// state that does not lower, an assembly that errs, panics or gives the fallback, a draw that errs or panics, is
+/// kept nowhere, so the property meets it again in its case and fails there, with the seed, the edit and proptest's
+/// minimal case. A panic is caught here for that: each form's assembly and draw run through `guard`, [`caught`],
+/// under `catch_unwind`, as proptest runs the property's own; through a guard that lets it unwind, a control's, the
+/// scope would re-raise it before the property ran, and the failure would name no seed and no case. Nothing the
 /// property asserts is asserted here in its place: this only fills the two caches.
 fn warm(
+    guard: Guard,
     seed: u64,
     strategy: &impl Strategy<Value = (Vec<Op>, u8)>,
     render: Render,
@@ -395,16 +402,22 @@ fn warm(
             scope.spawn(|| {
                 while let Some((key, nodes, last)) = forms.get(next.fetch_add(1, Ordering::Relaxed))
                 {
-                    let Ok(r) = render(nodes.clone()) else {
+                    // The form's assembly and, where a sequence ends on it, its draw: `None` for a form to keep
+                    // nowhere.
+                    let form = || {
+                        let r = render(nodes.clone()).ok()?;
+                        if r.invalid.is_some() {
+                            return None;
+                        }
+                        let drew = *last && draw(gpu, &r.fragment).is_ok();
+                        Some((r.fragment, drew))
+                    };
+                    let Some((fragment, drew)) = guard(&form) else {
                         continue;
                     };
-                    if r.invalid.is_some() {
-                        continue;
-                    }
-                    let drew = *last && draw(gpu, &r.fragment).is_ok();
                     done.lock().unwrap_or_else(PoisonError::into_inner).push((
                         key.clone(),
-                        r.fragment,
+                        fragment,
                         drew,
                     ));
                 }
@@ -419,9 +432,21 @@ fn warm(
     }
 }
 
-/// The property, over `render`; with `ahead`, its assemblies and draws are done ahead of it ([`warm`]), which changes
-/// how long it takes and nothing it asserts. A control, which fails in its first case, runs without.
-fn check_always_renderable(render: Render, ahead: bool) {
+/// A form assembled ahead, and whether it was drawn; `None` for a form to keep nowhere.
+type Formed = Option<(Fragment, bool)>;
+
+/// What runs one form's assembly and draw in the ahead pass ([`warm`]): [`caught`], or a control's.
+type Guard = fn(&dyn Fn() -> Formed) -> Formed;
+
+/// `form` run with a panic caught: a form that panics is kept nowhere, as one that errs is.
+fn caught(form: &dyn Fn() -> Formed) -> Formed {
+    catch_unwind(AssertUnwindSafe(form)).ok().flatten()
+}
+
+/// The property, over `render`; with `ahead`, its assemblies and draws are done ahead of it ([`warm`]), each through
+/// that guard, which changes how long it takes and nothing it asserts. A control that fails in its first case runs
+/// without.
+fn check_always_renderable(render: Render, ahead: Option<Guard>) {
     let gpu = GpuHarness::new().expect("a GPU device");
     let fallback = assemble::fallback(Tier::FULL).unwrap_or_else(|e| panic!("{e}"));
     let seen = Seen::default();
@@ -429,8 +454,8 @@ fn check_always_renderable(render: Render, ahead: bool) {
     let strategy = (prop::collection::vec(op(), 1..24), any::<u8>());
     // One seed for both passes, so the forms assembled ahead are the property's own.
     let seed = validation::prop::seed();
-    if ahead {
-        warm(seed, &strategy, render, &gpu, &seen, &drawn);
+    if let Some(guard) = ahead {
+        warm(guard, seed, &strategy, render, &gpu, &seen, &drawn);
     }
     let (ahead_forms, ahead_draws) = (seen.borrow().len(), drawn.borrow().len());
     let result = validation::prop::check_with_seed(seed, &strategy, |(ops, how)| {
@@ -453,7 +478,7 @@ fn check_always_renderable(render: Render, ahead: bool) {
 fn stain_always_renderable_through_every_edit() {
     check_always_renderable(
         |nodes| assemble::assemble_or_fallback(nodes, Tier::FULL, View::Presentation),
-        true,
+        Some(caught),
     );
 }
 
@@ -469,8 +494,53 @@ negative_control!(
                 invalid: None,
             })
         },
-        false
+        None
     )
+);
+
+/// A renderer that panics on every graph, as an assembler with a fault would on some: the property over it, its
+/// assemblies done ahead through `guard`, must fail as a property does, its failure naming the seed that reproduces
+/// it and the minimal case (`validation::prop::Failure`), whichever pass met the panic first.
+fn check_panic_ahead(guard: Guard) {
+    let failed = catch_unwind(|| {
+        check_always_renderable(
+            |nodes| {
+                // The panic comes before any assembly, so each of proptest's shrinking steps costs nothing.
+                assert!(Stain::new(nodes.clone()).is_err(), "the assembler's fault");
+                assemble::assemble_or_fallback(nodes, Tier::FULL, View::Presentation)
+            },
+            Some(guard),
+        );
+    })
+    .expect_err("a renderer that panics on every graph passed the property");
+    let message = failed
+        .downcast_ref::<String>()
+        .cloned()
+        .or_else(|| failed.downcast_ref::<&str>().map(|s| (*s).to_owned()))
+        .unwrap_or_default();
+    for part in [
+        "property failed: ",
+        "the assembler's fault",
+        "minimal case: ",
+        "re-run with PROPTEST_RNG_SEED=",
+    ] {
+        assert!(
+            message.contains(part),
+            "a panic ahead of the property lost its report: no `{part}` in `{message}`"
+        );
+    }
+}
+
+#[test]
+fn stain_always_renderable_a_panic_ahead_is_the_propertys_failure() {
+    check_panic_ahead(caught);
+}
+
+negative_control!(
+    stain_always_renderable_a_panic_ahead_is_the_propertys_failure,
+    "an ahead pass that lets a panic unwind fails before the property runs, naming no seed and no case",
+    expected = "a panic ahead of the property lost its report",
+    check_panic_ahead(|form| form())
 );
 
 /// The fallback's fragment drawn: `colour`, bit for bit.
