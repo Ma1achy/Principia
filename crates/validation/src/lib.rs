@@ -3,6 +3,7 @@
 //! R-187).
 
 pub mod arctan;
+pub mod az;
 pub mod bench;
 pub mod bringup;
 pub mod control;

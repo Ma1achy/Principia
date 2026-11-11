@@ -1,0 +1,6 @@
+{
+  "gate": "lc-inverse",
+  "inputs": ["conditioned.json", "unstable.json"],
+  "threshold": { "value": 1.0, "requirement": "REQ-INT-044", "status": "confirmed" },
+  "min_regions": { "value": null, "requirement": "REQ-INT-105" }
+}

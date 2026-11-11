@@ -34,6 +34,7 @@ use serde::Deserialize;
 
 pub use report::{GateReport, Minimum, RegionCount, Regions, Verdict};
 
+use crate::az::{AzFinalStepGate, LcInverseGate, SeparationFloorGate};
 use crate::convergence::ConvergenceGate;
 use crate::cross_backend::CrossBackendGate;
 use crate::decode_agreement::DecodeAgreementGate;
@@ -61,6 +62,16 @@ pub trait Gate: Sync {
         name: &str,
         fixture: &serde_json::Value,
     ) -> Result<GateReport, String>;
+
+    /// Runs the flags `args` on the workspace at `root`: a calibration's proposal, which asserts nothing (R-71), for a
+    /// gate that has one (TASK-M3-68's `--propose`). None by default.
+    fn flags(&self, _root: &Path, args: &[&str]) -> Result<(), String> {
+        Err(format!(
+            "gate `{}` takes no flags (`{}`): it is not a measurement gate and has none of its own",
+            self.name(),
+            args.join(" ")
+        ))
+    }
 }
 
 /// The registered gates, in the order `--all` runs them.
@@ -78,6 +89,8 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &DecodeAgreementGate,
     &LiteratureImportGate,
     &ProjectionParityGate,
+    &LcInverseGate,
+    &AzFinalStepGate,
 ];
 
 /// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.
@@ -109,7 +122,7 @@ pub struct MeasurementControl {
 }
 
 /// The registered measurement gates, in the order `--all` runs them, after [`REGISTRY`].
-pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[&CrossBackendGate];
+pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[&CrossBackendGate, &SeparationFloorGate];
 
 /// `gate.json`'s `measurement`: what it is measured under, in place of a threshold.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
@@ -515,9 +528,15 @@ fn read_input(path: &Path) -> Result<(serde_json::Value, Expected), String> {
     Ok((value, expected))
 }
 
-/// Runs the flags `args` of the measurement gate `name` on the workspace at `root`.
+/// Runs the flags `args` of the gate `name` on the workspace at `root`: a measurement gate's, or a gate's own
+/// ([`Gate::flags`]).
 pub fn run_flags(root: &Path, name: &str, args: &[&str]) -> Result<(), String> {
-    measurement(name)
+    if let Some(g) = measurement(name) {
+        return g.flags(root, args);
+    }
+    REGISTRY
+        .iter()
+        .find(|g| g.name() == name)
         .ok_or_else(|| format!("gate `{name}` takes no flags: it is not a measurement gate"))?
         .flags(root, args)
 }
