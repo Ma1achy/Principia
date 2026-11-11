@@ -16,11 +16,11 @@
 #   `lint no-alloc`, the generated files current (`cargo xtask codegen` writes nothing), the static listing that every
 #   test has a registered negative control (`cargo xtask controls --list`, which runs no control) and the plan checks;
 #   on a data or docs change only the plan checks and the vocabulary lint;
-# - `ci` (the job `tests`): the product tests of the changed crates and their reverse dependencies
-#   (`.github/scripts/ci_tier.sh`, `.github/scripts/ci_quick_crates.py`) under the `pr` nextest profile, every test but
-#   the process tests, the in-depth GPU tests, the golden and screenshot runners' and the slow tier, each test measured
-#   over 60 s (`.config/nextest.toml` names them), with their doctests (R-231); on a data change the tests of the code
-#   that reads it (R-677);
+# - `ci` (the job `tests-verdict`, over the 3 shards of the job `tests`): the product tests of the changed crates and
+#   their reverse dependencies (`.github/scripts/ci_tier.sh`, `.github/scripts/ci_quick_crates.py`) under the `pr`
+#   nextest profile, every test but the process tests, the in-depth GPU tests, the golden and screenshot runners' and the
+#   slow tier, each test measured over 60 s (`.config/nextest.toml` names them), with their doctests (R-231); on a data
+#   change the tests of the code that reads it (R-677);
 # - `gpu-lavapipe` and `gpu-metal`: on a change with a GPU-path file (`gpu`), the GPU smoke set on lavapipe and on
 #   Metal, one fast test of each GPU stage after `cargo xtask build-kernel` (the `gpu-smoke` profile), and on lavapipe
 #   every numerical gate but `decode-agreement`; on a push too, to keep their rust-gpu caches warm on `main`;
@@ -119,7 +119,9 @@
 # larger of 1.5 times the longest passing run of the job, over the 60 pull-request and 40 push runs before 10 Nov 2026,
 # rounded up to 5 minutes, and the diagnosis's own figure: `changes` 5 (longest 0.9 min), `fmt` 5 (1.0), `clippy` 10
 # (3.5), `build` 25 (14.5), `ci` 90 (58.9), `process` 60 (38.9), `gpu-lavapipe` 25 (16.6, a run that built rust-gpu
-# with no cache), `gpu-metal` 20 (12.5, the same) and `web-skeleton` 10 (2.4).
+# with no cache), `gpu-metal` 20 (12.5, the same) and `web-skeleton` 10 (2.4). Since the split of 11 Nov 2026 each of
+# `ci`'s 3 shards (`tests`) keeps the unsharded job's 90, nothing yet measured of a shard, and `tests-verdict`, which
+# only reads the shards' result, has 5.
 # Every step that installs from apt, in every workflow, calls `apt-get` through one shell function, `bounded`, which
 # ends a call at its limit (`timeout`, then a kill 10 s later) and tries it three times: `apt-get update` at 90 s,
 # `apt-get install` at 420 s, and the step at 8 minutes. `apt-get update` is what stalled those two runs for six
@@ -362,6 +364,12 @@ jobs:
   # xtask's readers and validation's Part 6 catalogue, and for the GUI's artboards and references the screenshot tests
   # and the HTML references' tests. On a docs change, none.
   # Built here, not from an archive, so the tests that run cargo on the workspace's own target have its build state.
+  # As 3 parallel shards (the owner, 11 Nov 2026: "split the ci job as planned, and judge the 30-minute target only after
+  # a week of runs on the split"; the CI diagnosis of 10 Nov 2026, its change 3), a matrix, each building for itself and
+  # running nextest's `--partition hash:<k>/3` of every nextest step, so together they run every test the unsharded job
+  # did, once: the product tests and the data readers alike. The doctests, which nextest does not run, run in shard 1.
+  # The shards bear no required check: the job after them, `tests-verdict`, bears `ci`, and fails unless every shard
+  # passed. Applied per R-369/R-812.
   # Runner disk: `ci-quick`, the job this replaces, grew 20-91 GB (runner-disk artefacts of 9 Nov 2026, 6 runs), most
   # of it the process tests' cargo runs, which run here no more; the image starts with about 85 GB free. This job grew
   # 28-31 GB at its largest sample (jobs 129477740831, 129590408874, 129638775481 and 129899725782 of 10 Nov 2026, the
@@ -369,11 +377,15 @@ jobs:
   # 140 s a job. The plan's task data's readers' steps run outside the sampler; the `df` after the tests reads the disk
   # at their end. Applied per R-369/R-812.
   tests:
-    name: ci
+    name: ci shard ${{ matrix.shard }}/3
     needs: changes
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
       PRIN_GPU_BACKEND: vulkan
       RUNNER_DISK_TMPFS: /dev/shm
@@ -433,11 +445,12 @@ jobs:
           NEXTEST_PROFILE: pr
           NEXTEST_NO_TESTS: pass
           PACKAGES: ${{ needs.changes.outputs.packages }}
-        run: cargo nextest run $PACKAGES
+        run: cargo nextest run $PACKAGES --partition hash:${{ matrix.shard }}/3
         shell: bash .github/scripts/disk_sampler.sh {0}
-      # On the packages with a library: `cargo test --doc` fails on a list with none, as a change to `prin` alone is.
+      # On the packages with a library: `cargo test --doc` fails on a list with none, as a change to `prin` alone is. In
+      # shard 1 alone: the doctests have no partition.
       - name: cargo test --doc (the changed crates and their reverse dependencies)
-        if: env.CODE == 'true' && needs.changes.outputs.doc_packages != ''
+        if: env.CODE == 'true' && needs.changes.outputs.doc_packages != '' && matrix.shard == 1
         env:
           PACKAGES: ${{ needs.changes.outputs.doc_packages }}
         run: cargo test $PACKAGES --doc
@@ -448,16 +461,20 @@ jobs:
       # gate report read `plan/MILESTONES.md` and the requirements' fields, plan-check, the progress banner and
       # reviews-check the task files, the print-graph coverage the statements, and validation's Part 6 catalogue walks
       # the task files. `xtask/tests/ci_changes.rs` checks that every reader the sources show is among them.
+      # Partitioned across the shards as the product tests are; a shard whose slice of a step holds no test passes it
+      # (NEXTEST_NO_TESTS), and `xtask/tests/ci_pr_tier.rs` checks that every reader step's binaries hold tests.
       - name: cargo nextest run -p xtask (the plan's task data's readers)
         if: needs.changes.outputs.plan_data == 'true'
         env:
           NEXTEST_PROFILE: ci
-        run: cargo nextest run -p xtask --test gate_provisional --test gate_report --test plan_check --test progress_banner --test qa_R-485_print_graph_coverage --test qa_TASK-M0-02 --test qa_TASK-M0-19 --test qa_TASK-M0-36 --test qa_TASK-M0-53 --test reviews_check
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p xtask --test gate_provisional --test gate_report --test plan_check --test progress_banner --test qa_R-485_print_graph_coverage --test qa_TASK-M0-02 --test qa_TASK-M0-19 --test qa_TASK-M0-36 --test qa_TASK-M0-53 --test reviews_check --partition hash:${{ matrix.shard }}/3
       - name: cargo nextest run -p validation (the plan's task data's readers)
         if: needs.changes.outputs.plan_data == 'true'
         env:
           NEXTEST_PROFILE: ci
-        run: cargo nextest run -p validation --test part6_catalogue
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p validation --test part6_catalogue --partition hash:${{ matrix.shard }}/3
       # Tier (b), the GUI's artboards and references (R-677), beside code or not, as `ci-workspace` ran them: xtask's
       # screenshot tests, the gui ones among them, which copy an artboard (under the default profile, which keeps them),
       # its screenshot-case checks and the print-graph coverage; kernel's initial-conditions inspector and render's
@@ -465,13 +482,19 @@ jobs:
       # request.
       - name: cargo nextest run -p xtask (the GUI's artboards' and references' readers)
         if: needs.changes.outputs.gui_data == 'true'
-        run: cargo nextest run -p xtask --test qa_R-485_print_graph_coverage --test qa_TASK-M6-24 --test screenshot
+        env:
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p xtask --test qa_R-485_print_graph_coverage --test qa_TASK-M6-24 --test screenshot --partition hash:${{ matrix.shard }}/3
       - name: cargo nextest run -p kernel (the GUI's references' readers)
         if: needs.changes.outputs.gui_data == 'true'
-        run: cargo nextest run -p kernel --test qa_TASK-M2-08
+        env:
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p kernel --test qa_TASK-M2-08 --partition hash:${{ matrix.shard }}/3
       - name: cargo nextest run -p render (the GUI's references' readers)
         if: needs.changes.outputs.gui_data == 'true'
-        run: cargo nextest run -p render --test qa_TASK-M1-03
+        env:
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p render --test qa_TASK-M1-03 --partition hash:${{ matrix.shard }}/3
       - name: Runner disk after the tests
         if: always() && env.RUN == 'true'
         run: df -h /
@@ -485,7 +508,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 5
         with:
-          name: runner-disk-tests
+          name: runner-disk-tests-${{ matrix.shard }}
           path: |
             ${{ runner.temp }}/runner-disk.log
             /dev/shm/runner-pressure.log
@@ -493,6 +516,27 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           overwrite: true
+
+  # The required check `ci`: the product tests' verdict over their 3 shards (above). It runs whatever the shards ended
+  # in, short of a cancelled run, and passes only when every shard passed: `needs.tests.result` is `success` only when
+  # every shard of the matrix succeeded, and is `failure`, `cancelled` or `skipped` when one failed, was cancelled or
+  # never ran, so a shard that fails or is missing fails `ci`. Its first step fails when `changes` did not succeed, as
+  # every required check's does. It builds and runs nothing. Applied per R-369/R-812.
+  tests-verdict:
+    name: ci
+    needs: [changes, tests]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: The classification ran
+        env:
+          CHANGES: ${{ needs.changes.result }}
+        run: '[ "$CHANGES" = success ] || { echo "changes ended $CHANGES: no verdict to skip on"; exit 1; }'
+      - name: Every shard passed
+        env:
+          SHARDS: ${{ needs.tests.result }}
+        run: '[ "$SHARDS" = success ] || { echo "the product test shards ended $SHARDS: every shard must pass"; exit 1; }'
 
   # The process tests (the owner's CI model, R-909: "Process tests only when the PR changes .github/, xtask/,
   # scripts/, plan/, decisions.md, REVIEW_QUEUE.md or docs/"): the split's process class, the `process` nextest profile,

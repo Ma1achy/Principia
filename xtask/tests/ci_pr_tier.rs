@@ -25,6 +25,11 @@
 //!   and fails at
 //!   its first step unless `changes` succeeded (R-656: the skips are inside the job), and no step of the workflow
 //!   sleeps or polls.
+//! - `ci_pr_tier_ci_runs_as_three_shards`, `ci_pr_tier_ci_fails_unless_every_shard_passed` and
+//!   `ci_pr_tier_reader_binaries_hold_tests`: the required check `ci` is a verdict over the product tests' 3 shards (the
+//!   owner, 11 Nov 2026: "split the ci job as planned"): each nextest step runs its `hash:` slice of 3, the doctests run
+//!   in shard 1, `ci` passes only when the shards' matrix succeeded, and each reader binary a partitioned step names
+//!   holds a test.
 //!
 //! Each test has its registered negative control (R-176), which feeds the same check a configuration or workflow
 //! differing in the one respect it turns on.
@@ -573,8 +578,14 @@ fn check_required(workflow: &str) {
                 || has("    if: ${{ !cancelled() }}"),
             "ci_pr_tier: {check} ({id}) does not run on every pull request"
         );
+        // `needs: changes`, or a list naming it: `ci`'s verdict needs the shards beside it.
         assert!(
-            has("    needs: changes"),
+            lines.iter().any(
+                |l| l.strip_prefix("    needs: ").is_some_and(|n| n == "changes"
+                    || n.trim_matches(['[', ']'])
+                        .split(',')
+                        .any(|x| x.trim() == "changes"))
+            ),
             "ci_pr_tier: {check} ({id}) does not need changes"
         );
         let first = lines
@@ -682,12 +693,12 @@ fn ci_pr_tier_cancelled_runs_stop() {
 
 negative_control!(
     ci_pr_tier_cancelled_runs_stop,
-    "The product tests under `always()` again, which a cancelled run cannot stop.",
-    expected = "ci (tests) runs on in a cancelled run: `if: always() && github.event_name == 'pull_request'`",
+    "The product tests' verdict under `always()` again, which a cancelled run cannot stop.",
+    expected = "ci (tests-verdict) runs on in a cancelled run: `if: always() && github.event_name == 'pull_request'`",
     check_cancelled_runs_stop(&edited(
         ".github/workflows/ci.yml",
-        "    name: ci\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
-        "    name: ci\n    needs: changes\n    if: always() && github.event_name == 'pull_request'\n",
+        "    name: ci\n    needs: [changes, tests]\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
+        "    name: ci\n    needs: [changes, tests]\n    if: always() && github.event_name == 'pull_request'\n",
     ))
 );
 
@@ -708,12 +719,13 @@ mod a_required_job_without_a_status_function {
 /// The PR tier's jobs, every job of `ci.yml` a pull request can run, each with its `timeout-minutes`: the larger of
 /// 1.5 times the job's longest passing run (60 pull-request and 40 push runs before 10 Nov 2026), rounded up to 5
 /// minutes, and the diagnosis's figure. `ci.yml`'s header gives each job's longest run.
-const LIMITS: [(&str, u32); 9] = [
+const LIMITS: [(&str, u32); 10] = [
     ("changes", 5),
     ("fmt", 5),
     ("clippy", 10),
     ("build", 25),
     ("tests", 90),
+    ("tests-verdict", 5),
     ("process", 60),
     ("gpu-lavapipe-smoke", 25),
     ("gpu-metal-smoke", 20),
@@ -1306,3 +1318,276 @@ mod a_limit_the_function_does_not_pass_on {
         )
     );
 }
+
+// ---- `ci` over 3 shards (the owner, 11 Nov 2026: "split the ci job as planned") -------------------------------------
+
+/// The number of shards the product tests run as.
+const SHARDS: usize = 3;
+
+/// A job's steps, each as its lines (six spaces in, `- ` first).
+fn steps_of(lines: &[String]) -> Vec<Vec<String>> {
+    let mut out: Vec<Vec<String>> = Vec::new();
+    let mut in_steps = false;
+    for line in lines {
+        if line == "    steps:" {
+            in_steps = true;
+        } else if in_steps && line.starts_with("      - ") {
+            out.push(vec![line.clone()]);
+        } else if in_steps && line.starts_with("        ") {
+            if let Some(step) = out.last_mut() {
+                step.push(line.clone());
+            }
+        } else if !line.trim().is_empty() && !line.trim_start().starts_with('#') {
+            in_steps = in_steps && line.starts_with("      ");
+        }
+    }
+    out
+}
+
+/// A step's value of `key` (its own, eight spaces in, or on its `- ` line).
+fn step_key(step: &[String], key: &str) -> Option<String> {
+    step.iter().find_map(|l| {
+        l.trim_start()
+            .trim_start_matches("- ")
+            .strip_prefix(&format!("{key}: "))
+            .map(str::to_owned)
+    })
+}
+
+/// `ci` is a verdict over the product tests' shards: the job `tests` is a matrix of exactly [`SHARDS`] shards, each
+/// nextest step in it runs its `--partition hash:${{ matrix.shard }}/<SHARDS>`, so together they run every test once,
+/// the doctests, which have no partition, run in shard 1 alone, every other step of the job runs in every shard, and the
+/// job bearing `ci` needs `tests` and reads its result.
+fn check_shards(workflow: &str) {
+    let jobs = jobs(workflow);
+    let (_, tests) = jobs
+        .iter()
+        .find(|(id, _)| id == "tests")
+        .expect("ci_pr_tier: no job tests");
+    let matrix: Vec<String> = (1..=SHARDS).map(|k| k.to_string()).collect();
+    assert!(
+        tests
+            .iter()
+            .any(|l| l == &format!("        shard: [{}]", matrix.join(", "))),
+        "ci_pr_tier: the product tests are not a matrix of {SHARDS} shards"
+    );
+    let partition = format!("--partition hash:${{{{ matrix.shard }}}}/{SHARDS}");
+    let mut nextest = 0;
+    for step in steps_of(tests) {
+        let name = step[0].trim_start_matches("      - ").to_owned();
+        let run = step_key(&step, "run").unwrap_or_default();
+        let cond = step_key(&step, "if").unwrap_or_default();
+        if run.starts_with("cargo nextest run") {
+            nextest += 1;
+            assert!(
+                run.ends_with(&format!(" {partition}")) && run.matches("--partition").count() == 1,
+                "ci_pr_tier: the shards' step `{name}` does not run its slice of {SHARDS}: {run}"
+            );
+        } else if run.starts_with("cargo test") {
+            assert!(
+                cond.ends_with(" && matrix.shard == 1"),
+                "ci_pr_tier: the shards' step `{name}` does not run in shard 1 alone: {cond}"
+            );
+        }
+        if !run.starts_with("cargo test") {
+            assert!(
+                !cond.contains("matrix."),
+                "ci_pr_tier: the shards' step `{name}` runs in some shards only: {cond}"
+            );
+        }
+    }
+    assert!(nextest > 0, "ci_pr_tier: the shards run no nextest step");
+    let (id, verdict) = jobs
+        .iter()
+        .find(|(id, l)| job_name(id, l) == "ci")
+        .expect("ci_pr_tier: no job bears ci");
+    assert!(
+        verdict
+            .iter()
+            .any(|l| l.strip_prefix("    needs: ").is_some_and(|n| n
+                .trim_matches(['[', ']'])
+                .split(',')
+                .any(|x| x.trim() == "tests"))),
+        "ci_pr_tier: ci ({id}) does not need the shards"
+    );
+    assert!(
+        verdict
+            .iter()
+            .any(|l| l.trim() == "SHARDS: ${{ needs.tests.result }}"),
+        "ci_pr_tier: ci ({id}) does not read the shards' result"
+    );
+}
+
+#[test]
+fn ci_pr_tier_ci_runs_as_three_shards() {
+    check_shards(&read(".github/workflows/ci.yml"));
+}
+
+negative_control!(
+    ci_pr_tier_ci_runs_as_three_shards,
+    "The product tests' step run whole in every shard, every test three times.",
+    expected = "does not run its slice of 3",
+    check_shards(&edited(
+        ".github/workflows/ci.yml",
+        "        run: cargo nextest run $PACKAGES --partition hash:${{ matrix.shard }}/3\n",
+        "        run: cargo nextest run $PACKAGES\n",
+    ))
+);
+
+mod a_slice_of_four {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_ci_runs_as_three_shards,
+        "A reader step cut into four slices on three shards, the fourth never run.",
+        expected = "does not run its slice of 3",
+        check_shards(&edited(
+            ".github/workflows/ci.yml",
+            "--test part6_catalogue --partition hash:${{ matrix.shard }}/3\n",
+            "--test part6_catalogue --partition hash:${{ matrix.shard }}/4\n",
+        ))
+    );
+}
+
+mod two_shards {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_ci_runs_as_three_shards,
+        "A matrix of two shards, the third slice never run.",
+        expected = "the product tests are not a matrix of 3 shards",
+        check_shards(&edited(
+            ".github/workflows/ci.yml",
+            "        shard: [1, 2, 3]\n    env:\n      PRIN_GPU_BACKEND: vulkan\n      RUNNER_DISK_TMPFS",
+            "        shard: [1, 2]\n    env:\n      PRIN_GPU_BACKEND: vulkan\n      RUNNER_DISK_TMPFS",
+        ))
+    );
+}
+
+mod doctests_everywhere {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_ci_runs_as_three_shards,
+        "The doctests in every shard, three times.",
+        expected = "does not run in shard 1 alone",
+        check_shards(&edited(
+            ".github/workflows/ci.yml",
+            " && needs.changes.outputs.doc_packages != '' && matrix.shard == 1\n",
+            " && needs.changes.outputs.doc_packages != ''\n",
+        ))
+    );
+}
+
+mod a_verdict_that_waits_for_nothing {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_ci_runs_as_three_shards,
+        "`ci` without the shards among its needs.",
+        expected = "ci (tests-verdict) does not need the shards",
+        check_shards(&edited(
+            ".github/workflows/ci.yml",
+            "    needs: [changes, tests]\n",
+            "    needs: [changes]\n",
+        ))
+    );
+}
+
+/// The script of `ci`'s step `Every shard passed`, run under bash with `SHARDS` the shards' result: whether it passed.
+fn verdict_passes(workflow: &str, shards: &str) -> bool {
+    let jobs = jobs(workflow);
+    let (_, lines) = jobs
+        .iter()
+        .find(|(id, l)| job_name(id, l) == "ci")
+        .expect("ci_pr_tier: no job bears ci");
+    let step = steps_of(lines)
+        .into_iter()
+        .find(|s| s[0] == "      - name: Every shard passed")
+        .expect("ci_pr_tier: ci has no step `Every shard passed`");
+    let run = step_key(&step, "run").expect("ci_pr_tier: the step has no run");
+    let script = run
+        .strip_prefix('\'')
+        .and_then(|r| r.strip_suffix('\''))
+        .unwrap_or(&run)
+        .replace("''", "'");
+    std::process::Command::new("bash")
+        .args(["--noprofile", "--norc", "-e", "-c", &script])
+        .env("SHARDS", shards)
+        .output()
+        .expect("bash runs")
+        .status
+        .success()
+}
+
+/// `ci` passes when the shards' matrix succeeded, and only then: a shard that failed, was cancelled or never ran (the
+/// matrix's result `failure`, `cancelled` or `skipped`, or none) fails it.
+fn check_verdict(workflow: &str) {
+    assert!(
+        verdict_passes(workflow, "success"),
+        "ci_pr_tier: ci fails when every shard passed"
+    );
+    for result in ["failure", "cancelled", "skipped", ""] {
+        assert!(
+            !verdict_passes(workflow, result),
+            "ci_pr_tier: ci passes when the shards ended {result:?}"
+        );
+    }
+}
+
+#[test]
+fn ci_pr_tier_ci_fails_unless_every_shard_passed() {
+    check_verdict(&read(".github/workflows/ci.yml"));
+}
+
+negative_control!(
+    ci_pr_tier_ci_fails_unless_every_shard_passed,
+    "A verdict that passes unless a shard failed, so a skipped or cancelled shard passes.",
+    expected = "ci passes when the shards ended \"cancelled\"",
+    check_verdict(&edited(
+        ".github/workflows/ci.yml",
+        "[ \"$SHARDS\" = success ] ||",
+        "[ \"$SHARDS\" != failure ] ||",
+    ))
+);
+
+/// Each test binary a reader step of the shards names (`-p <pkg> … --test <name>`) holds a test: a partitioned step
+/// passes on a slice with none (NEXTEST_NO_TESTS), so a binary emptied of its tests would pass unseen.
+fn check_readers_hold_tests(workflow: &str) {
+    let jobs = jobs(workflow);
+    let (_, tests) = jobs
+        .iter()
+        .find(|(id, _)| id == "tests")
+        .expect("ci_pr_tier: no job tests");
+    let mut seen = 0;
+    for step in steps_of(tests) {
+        let run = step_key(&step, "run").unwrap_or_default();
+        let words: Vec<&str> = run.split_whitespace().collect();
+        let Some(pkg) = words.windows(2).find(|w| w[0] == "-p").map(|w| w[1]) else {
+            continue;
+        };
+        for name in words.windows(2).filter(|w| w[0] == "--test").map(|w| w[1]) {
+            let path = test_source(&format!("{pkg}::{name}")).expect("a binary");
+            let text = std::fs::read_to_string(&path).unwrap_or_default();
+            assert!(
+                text.contains("#[test]"),
+                "ci_pr_tier: the reader binary {pkg}::{name} holds no test"
+            );
+            seen += 1;
+        }
+    }
+    assert!(seen > 0, "ci_pr_tier: the shards name no reader binary");
+}
+
+#[test]
+fn ci_pr_tier_reader_binaries_hold_tests() {
+    check_readers_hold_tests(&read(".github/workflows/ci.yml"));
+}
+
+negative_control!(
+    ci_pr_tier_reader_binaries_hold_tests,
+    "A reader step naming a binary that is no test file.",
+    expected = "the reader binary validation::no_such_binary holds no test",
+    check_readers_hold_tests(&edited(
+        ".github/workflows/ci.yml",
+        "--test part6_catalogue --partition",
+        "--test no_such_binary --partition",
+    ))
+);
+

@@ -1508,7 +1508,8 @@ negative_control!(
 );
 
 /// On the live `ci.yml`, the PR tier's required checks and the interim per-merge run's jobs each read as their own job:
-/// `ci`, the product tests' check, is the job `tests` and no shard of `ci`; `gpu-lavapipe` and `gpu-metal` are the
+/// `ci`, the product tests' check, is the job `tests-verdict` and no shard of `ci`, and `ci shard 2/3` the product
+/// tests' shard (the job `tests`); `gpu-lavapipe` and `gpu-metal` are the
 /// smoke sets, and the per-merge suites' `… suites` names are not. The saved runs read the frozen copy; this case keeps
 /// the classifier tested against the workflow it reads today.
 fn check_live_ids(script: &str) {
@@ -1523,6 +1524,7 @@ fn check_live_ids(script: &str) {
                 "ci",
                 "gpu-lavapipe",
                 "gpu-metal",
+                "ci shard 2/3",
                 "ci (3)",
                 "xtask-ci (2)",
                 "ci-release (1)",
@@ -1535,9 +1537,10 @@ fn check_live_ids(script: &str) {
             "fmt",
             "clippy",
             "build",
-            "tests",
+            "tests-verdict",
             "gpu-lavapipe-smoke",
             "gpu-metal-smoke",
+            "tests",
             "ci",
             "xtask-ci",
             "ci-release",
