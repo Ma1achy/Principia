@@ -704,8 +704,10 @@ never green." Nothing is chosen here.*
 *In plain English: after each merge, the per-merge check on `main` (`ci_per_merge.py`, which decides whether a failed
 run means the code is wrong) reads any failure of the release-build jobs as a real failure, so `main` goes red. On 11
 Nov those jobs failed before building anything, because Ubuntu's package mirror was down while they installed the
-software GPU driver. `main` read red three times with nothing wrong in the code. REQ-TOOL-223 (a release-build failure
-is always a correctness failure) says that is right, so changing it is the owner's call.*
+software GPU driver. `main` read red three times, each time from the outage alone: on the first two of those merges a
+tooling check (`xtask-ci (2)`'s controls run) failed as well, but the check files that as a tooling task and never reads
+it red, so no product code was shown wrong. REQ-TOOL-223 (a release-build failure is always a correctness failure) says
+that red is right, so changing it is the owner's call.*
 
 - **File, section:**
   - `plan/requirements.yaml`, REQ-TOOL-223 (a failure of the release-build jobs fails the run and makes `main` red), its
@@ -717,10 +719,20 @@ is always a correctness failure) says that is right, so changing it is the owner
   - `decisions.md` § R-907 (each merge to `main` tested on its own), its heading: "each merge to `main` is tested on its
     own, advisory, a correctness failure making `main` red and any other filing a top-priority task".
 - **The evidence:** three per-merge runs on `main`, 11 Nov 2026, read red during Ubuntu's mirror outage, every
-  `ci-release` failure at the step "Install Mesa (lavapipe)", before any build: cf75b5f7 (run 43026202826:
-  `ci-release (1)`), 5e776987 (run 43026967872: `ci-release (1)` and `(2)`), 7ddcca15 (run 43029168415: `ci-release
-  (1)` and `(2)`, and every other test job at the same step). In each run the other test jobs' install failures read as
-  another kind (a download), so `ci-release` alone made the verdict red.
+  `ci-release` failure at the step "Install Mesa (lavapipe)", before any build. What each run's per-merge verdict
+  printed (the `per-merge` job's log, `ci_per_merge.py decide`):
+  - cf75b5f7 (run 43026202826): "verdict=red"; "job=ci-release (1): correctness: Install Mesa (lavapipe): every
+    release-profile failure is one (REQ-TOOL-223)"; the one other failed job, "job=xtask-ci (2): other: cargo xtask
+    ci --partition 2/4: not a correctness job", failed at its test step (the controls run), not at the install step.
+  - 5e776987 (run 43026967872): "verdict=red"; `ci-release (1)` and `(2)` correctness, at the install step, as above;
+    `xtask-ci (2)` other, at its controls step, as above; `gpu-lavapipe` and `ci (1)` to `(4)` other, at the install
+    step, each "no test step failed".
+  - 7ddcca15 (run 43029168415): "verdict=red"; `ci-release (1)` and `(2)` correctness, at the install step; every
+    other failed job (`ci (1)` to `(4)`, `ci-workspace`, `gpu-lavapipe`, `gpu-lavapipe suites`, `gpu-kernel suites`,
+    `xtask-ci (1)` to `(4)`) other, at the install step, "no test step failed" or "not a correctness job".
+  In all three, `ci-release` was the only job classed as a correctness failure, so it alone made the verdict red. On
+  cf75b5f7 and 5e776987 the red came beside a real failure of `xtask-ci (2)`'s controls run, which the verdict reads
+  as another kind (a process failure, filed as a task, never red).
 - **The question:** does a `ci-release` failure confined to the install step's network or archive fetch stay a
   correctness failure (red `main`), or read as "no result"?
 - **Options seen:**
