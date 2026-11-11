@@ -702,6 +702,75 @@ the old way is kept for it.*
 - **Waits:** TASK-M7-45's retired-link arm; N2's record contract (whether a record carries its decode route);
   TASK-M4-05's switch to records.
 
+## RQ-788: The built-in margin node's colour map, range and polarity are not in the corpus *(silence; a one-way door, a shipped look; R-813, R-467; REQ-GUI-024; context: TASK-M7-12, PR #483, gui review 5853011099 F1)*
+
+*Raised by the gui review of PR #483 (finding F1) and filed by TASK-M7-12's implementer. For the human: yes; the
+margin is a built-in occupant registered from `frag/colour/`, so what it draws is a look the product ships
+(`CLAUDE.md` § "When to ask the human": "scope and taste: new features, UI look"). The node, its two `// @input`s and
+its two `field` in-ports are settled (R-813; REQ-GUI-024) and are not in question; nor is what it draws for a sample
+with no value (R-467, R-470, R-511: the canvas background or `#141418`). Only the map of a valid margin is.*
+
+- **File, section:**
+  - `docs/gui/principia_render_gui_spec.md` § "5. Sources & multi-source": "**Multi-source mappings expose multiple
+    input ports** on the consuming node (e.g. a `colour` or `post` node declaring two `field` ins for a
+    `top1 − top2` margin, or a `gradient-magnitude` node). This is distinct from multi-wire-per-port (which is
+    disallowed, §6). A `source` keeps no input (§3.1): the margin is a `colour` (or `post`) occupant declaring two
+    `// @input`s (R-813, ruling RQ-675 (a); *was:* "e.g. a derived source taking two `field` ins for a `top1 − top2`
+    margin")."
+  - `decisions.md` § R-813: "The margin is a `colour` (or `post`) occupant declaring two `// @input`s, as § 3.1 and
+    § 15 item 6 allow".
+  - `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp", which gives the scalar and no map:
+    "`topk_margin(sites)` = `d_1 − d_2` (drives soft-Voronoi/basin edges)"; and, in the same section, "**Default ramps
+    by field role.** Signed fields (energy, L_z, drifts) default to diverging-through-neutral so the zero-crossing is a
+    legible contour; positive fields to sequential; angles to cyclic. **Magnitude / diagnostic fields default to
+    *greyscale*, not a sequential LUT** — because a greyscale magnitude field *is* a lightness, so the same field
+    doubles as a natural **brightness occupant** (§4.1). Polarity is **per-field**, set so the *salient* end is
+    bright, and is not uniform".
+  - `docs/design/principia_colour_composition.md` § "7. Preset table & golden-image obligation", the one place the
+    scalar is used: "| Dot lattice | `SiteBlend{ fib(N), nearest, swatches }` masked by `bands(topk_margin…)`, `bgCol`
+    base |".
+  - `docs/contracts/principia_render_contract.md` does not mention a margin.
+- **The silence:** no passage says how the margin `top1 − top2` becomes a colour. Read as § 1.2's top-k `d_1 − d_2`
+  it is a non-negative magnitude; as built it is the difference of any two fields the user wires, in either order, so
+  it is signed. § 1.2's default differs between the two readings (greyscale or sequential for the first, diverging for
+  the second), and neither reading gives a range or a polarity.
+- **The question:** which map, over which range and with which polarity, does the built-in margin draw a valid
+  margin through?
+- **Options seen:**
+  - (a) The greyscale ramp of the difference clamped to [0, 1], as built (`ramp_grey(top1 − top2)`): OKLab L equal to
+    the margin. Range [0, 1]: every margin below 0 draws black and every margin above 1 white, so a swapped pair of
+    wires is all black. Polarity: white = `top1` far above `top2`. Needs no further value. Fits § 1.2's "Magnitude /
+    diagnostic fields default to *greyscale*" under the top-k reading, and doubles as a lightness.
+  - (b) Diverging through a neutral, for a signed difference, § 1.2's default for signed fields. Range symmetric,
+    [−m, +m], zero at the neutral, so the zero-crossing (the two fields equal) is a legible contour and swapping the
+    wires mirrors the picture. Polarity: which end is `top1 > top2`. Needs three further answers: the three colours,
+    the half-range m (a fixed value, a node param or a per-view statistic), and the polarity; each not in the corpus
+    for this node (R-71 where a value).
+  - (c) Sequential, for the non-negative top-k reading `d_1 − d_2`. Range [0, max]; a negative margin has no place on
+    it and would draw the invalid colour `#141418` or clamp to the low end, to be said. Polarity: which end is the
+    small margin (the basin edge, the salient end by § 1.2's rule). Needs the ramp's name and `max`.
+  - (d) A band mask, as § 7's one use has it ("masked by `bands(topk_margin…)`"): a line colour where the margin is
+    under a band width, a base colour elsewhere. Range is the band width; polarity is fixed (small margin = line).
+    Needs the width and the two colours.
+  - (e) Other: the owner's own map; or no shipped map at all, the margin left a custom occupant the user writes, with
+    no built-in registered (TASK-M7-12's deliverable "A margin occupant" would then be met by a test's occupant, to be
+    said).
+- **Recommended:** (a), kept, with its range and polarity as stated above confirmed. Under the node's own name
+  (`top1 − top2`, § 1.2's `d_1 − d_2`) the margin is a non-negative magnitude, for which § 1.2 gives greyscale, and it
+  needs no further value. If the owner reads the built-in as a general signed difference, § 1.2 gives (b), and its
+  three further answers are needed with it.
+- **Measurement:** a look is not settled by a number; the measurable alternative is the share of valid samples whose
+  margin the clamp of (a) hides, on the golden scenes, for the pairs of fields a preset would wire. Criterion, written
+  before any run: if no valid sample's margin falls outside [0, 1], (a)'s clamp hides nothing on those inputs and the
+  choice is of look alone; if any does, (a) as built does not show the field whole and its range is part of the
+  question. The four maps drawn side by side on one golden scene can go with the report.
+- **Applied meanwhile:** the greyscale ramp of the difference clamped to [0, 1], as built, provisional.
+  `crates/render/shaders/wgsl/frag/colour/margin.wgsl` marks the map provisional pending this entry, and one test,
+  `stain_fanout_margin_provisional_map_is_the_grey_ramp` (`crates/render/tests/stain_graph.rs`), holds it, named as
+  provisional; the settled parts are tested apart from it.
+- **Waits:** the margin's final map, and any preset or golden image that draws the built-in margin. Nothing else in
+  TASK-M7-12 waits: REQ-GUI-024's verify ("a margin node has two field ins") does not carry the map, so no
+  requirement carries an `rq:` for this entry.
 ## RQ-784: Whether the owner's "No blank areas" reaches a latent pixel that energy normalisation cannot reach, which R-598 draws as not a system *(a reading of the owner's words; a one-way door, it changes what a chart draws; R-932, R-598, R-937, R-570; REQ-CHART-087, REQ-GUI-357; physics review 5851141196 of PR #478, F3; context: the chart addendum's N12 and N14, TASK-M8-57)*
 
 *Queued 10 Nov 2026 by the fix round on the rulings PR #478, from its physics review 5851141196, finding F3; each quote
