@@ -1310,7 +1310,7 @@ the old way is kept for it.*
 - **Waits:** TASK-M7-45's retired-link arm; N2's record contract (whether a record carries its decode route);
   TASK-M4-05's switch to records.
 
-## RQ-787: The built-in margin node's colour map, range and polarity are not in the corpus *(silence; a one-way door, a shipped look; R-813, R-467; REQ-GUI-024; context: TASK-M7-12, PR #483, gui review 5853011099 F1)*
+## RQ-788: The built-in margin node's colour map, range and polarity are not in the corpus *(silence; a one-way door, a shipped look; R-813, R-467; REQ-GUI-024; context: TASK-M7-12, PR #483, gui review 5853011099 F1)*
 
 *Raised by the gui review of PR #483 (finding F1) and filed by TASK-M7-12's implementer. For the human: yes; the
 margin is a built-in occupant registered from `frag/colour/`, so what it draws is a look the product ships

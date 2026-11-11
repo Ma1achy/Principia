@@ -10,7 +10,7 @@
 //! - REQ-GUI-024: picking a vector field sets the source's subtype to vector; one source wired to a colour and a
 //!   brightness node renders both; the margin node has two field in-ports, both reaching its colour, blanks a pixel
 //!   that is not a system and draws a failed or non-finite sample `#141418` (`stain_fanout_*`; R-813; R-467, R-470,
-//!   R-511). The margin's colour map is not settled (RQ-787): one test holds the provisional grey ramp, named so;
+//!   R-511). The margin's colour map is not settled (RQ-788): one test holds the provisional grey ramp, named so;
 //! - REQ-COL-025: a 9th post in the chain is refused, the chain composes in declaration order, and reordering two
 //!   posts or inserting one changes the output accordingly (`post_chain_order_*`);
 //! - REQ-RENDER-072, REQ-RENDER-081: a node list that is no graph renders the defined fallback, never an error, and
@@ -612,7 +612,7 @@ fn margin_graph(occupant: &Occupant, top1: Option<usize>, top2: Option<usize>) -
 /// `top2`, so its node has two `field` in-ports and no third; each takes its own wire; both inputs reach the colour,
 /// which the margin `top1 − top2` = 0.375 draws apart from the margin 0 of one source wired to both ports, whichever
 /// of the two ports the second wire replaces; with one in-port dangling the node is None (render_gui_spec §13). A
-/// source keeps no input. Which map draws the margin is not pinned here: it is not settled (RQ-787;
+/// source keeps no input. Which map draws the margin is not pinned here: it is not settled (RQ-788;
 /// [`check_margin_provisional_map`]).
 fn check_margin(occupant: &Occupant) {
     let d = assemble::declaration(Kind::Colour, occupant).unwrap_or_else(|e| panic!("{e}"));
@@ -685,9 +685,9 @@ negative_control!(
     check_margin(&custom(COLOUR))
 );
 
-/// **Provisional, pending RQ-787: not a settled value.** The corpus gives the margin no colour map, range or
+/// **Provisional, pending RQ-788: not a settled value.** The corpus gives the margin no colour map, range or
 /// polarity; what is applied meanwhile is the greyscale ramp of the margin clamped to [0, 1], and this check holds the
-/// built-in `occupant` to that provisional map alone, so that the day the owner answers RQ-787 it is the one check to
+/// built-in `occupant` to that provisional map alone, so that the day the owner answers RQ-788 it is the one check to
 /// change: the margin 0.375 draws OKLab (0.375, 0, 0), and the wires swapped, −0.375, the ramp's black.
 fn check_margin_provisional_map(occupant: &Occupant) {
     let gpu = GpuHarness::new().expect("a GPU device");
@@ -695,13 +695,13 @@ fn check_margin_provisional_map(occupant: &Occupant) {
     let got = draw(&gpu, &assembled(&margin_graph(occupant, Some(0), Some(1))));
     assert!(
         is_oklab(got, [margin, 0.0, 0.0]),
-        "the margin draws OKLab {:?}, not the provisional map's (RQ-787), top1 − top2 = {margin} on the grey ramp",
+        "the margin draws OKLab {:?}, not the provisional map's (RQ-788), top1 − top2 = {margin} on the grey ramp",
         space::linear_to_oklab(wide(got))
     );
     let got = draw(&gpu, &assembled(&margin_graph(occupant, Some(1), Some(0))));
     assert_eq!(
         got, [0.0; 3],
-        "the wires swapped, top1 − top2 is below 0: the provisional map's (RQ-787) black"
+        "the wires swapped, top1 − top2 is below 0: the provisional map's (RQ-788) black"
     );
 }
 
@@ -713,7 +713,7 @@ fn stain_fanout_margin_provisional_map_is_the_grey_ramp() {
 negative_control!(
     stain_fanout_margin_provisional_map_is_the_grey_ramp,
     "a margin drawn on the hue wheel is not on the provisional grey ramp",
-    expected = "not the provisional map's (RQ-787)",
+    expected = "not the provisional map's (RQ-788)",
     check_margin_provisional_map(&custom(
         "// @input top1\n// @input top2\nfn colour(ctx: Ctx) -> vec3<f32> { return hue_wheel(ctx.inputs[0].x - \
          ctx.inputs[1].x); }"
