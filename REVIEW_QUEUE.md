@@ -871,6 +871,16 @@ that case, and say nothing about the middle of a morph. Only the owner may say w
   `μ = (0, L/2)` and `M₀₁ = 2/(2 + e^{L/2})`, below `10⁻⁵` for `L > 24.4`. Both ends are valid pixels of a chart that
   sets its masses directly (the edge-reaching simplex link). Latent-link ends cannot reach it (`|μ| ≤ 5` gives
   `g ≥ e^{−5}`).
+- **The general condition, from the physics re-check (review 5853427038 of PR #482, P9; 11 Nov 2026):** the example is
+  right but is not the typical case, and no extreme mass is needed. With `r_k = m_k/m₂` the blend gives
+  `r_k(s) = r_kA^(1−s)·r_kB^s`, and `g = r₀ + r₁`. Take two ends on or just outside the band's edge, `g = g*`, whose
+  light pair has the ratios `q` and `1/q`: then `g(½) = g*·2√q/(1 + q)`, below `g*` for every `q ≠ 1`. In masses: end A
+  ∝ `(1, 0.01, 10⁵)` and end B ∝ `(0.01, 1, 10⁵)` both have `M₀₁ = 1.01·10⁻⁵`; the midpoint ∝ `(0.1, 0.1, 10⁵)` has
+  `M₀₁ = 2·10⁻⁶`. A brute-force search over ends with every mass at least `10⁻⁹` and `M₀₁ ≥ 10⁻⁵` finds midpoints down
+  to `7·10⁻⁷`. It reaches saturated ends too: a saturated end blends its saturated state (condition (i) of
+  chart_composition § 17.11's table), which sits on the band's edge, so wherever both ends saturate a pixel to states
+  with different `m₁/m₀`, the interior dips for every `0 < s < 1`. The region can be the whole overlap of the two
+  ends' saturated bands, not a few deep-zoom pixels. Latent-link ends still cannot reach it.
 - **The silence:** R-932 and R-597 say what a chart draws at its own edge where `M₀₁` is tiny, and each edge has a
   declared kind. A blend's interior pixel is on no edge, and no edge kind applies to it. R-943 requires every
   in-between frame to be a valid system, and on the default path of the mass block (R-936) this pixel is not one. No
@@ -881,22 +891,34 @@ that case, and say nothing about the middle of a morph. Only the owner may say w
   - (a) It saturates, as rule 2 treats a zero mass at an edge (R-932, with R-597): the pixel shows a valid system and
     is never blank. What it saturates to is then to state, and R-932 leaves the mechanism to physics review: the
     masses held at the band's edge with the rest of the blend unchanged, or the pixel's own system at the nearest `s`
-    on its path where `M₀₁` is still large enough.
+    on its path where `M₀₁` is still large enough. *11 Nov 2026, physics review's condition on any mechanism (review
+    5853427038, P9):* it is continuous in `s` and across pixels, and equals the plain blend where the dip begins and
+    ends (R-943's continuity). Holding the blended `m₁ : m₀` and lifting the pair to `M₀₁ = ε_M01`, the rest of the
+    blend unchanged, meets it. "The pixel's own system at the nearest `s` where `M₀₁` is still large enough" **fails
+    continuity** and is not a mechanism physics review would pass: at the middle of the dip the shown system jumps
+    from the entry state to the exit state.
   - (b) It is blank, a validity failure (R-467): tagged `M01_TINY`, drawn as not a system with the reason in the
     readout, as R-597 had it. A blank then opens mid-path on these pairs, an exception to R-943's "every in-between
     frame is a valid system" and to R-944 that the owner would be accepting.
   - (c) Another path for the mass block on such a pair: R-943 allows any path whose in-between frames are all valid,
     so the masses could take a path that does not dip (straight on the simplex, in the masses themselves) where the
-    log-ratio path would. That changes R-936's answer for those pairs.
+    log-ratio path would. That changes R-936's answer for those pairs. *11 Nov 2026, two facts from physics review
+    (review 5853427038, P9):* a path straight in the masses never dips (`M₀₁` is then linear in `s`); but applied only
+    to the pairs that dip it makes a seam between pixels on the two paths, so (c) is clean only if it replaces R-936's
+    log-ratio path for every pair.
   - (d) Another, stated by the owner.
 - **Recommended:** (a), because the owner's rule 2 names the same failure at an edge ("saturate wherever the edge
   system itself is not a valid system, such as a zero mass") and R-943 asks for a valid system on every frame; the
   mechanism would then go to physics review, as R-932 has it. Against it: no ruling yet reaches inside a blend, and (c)
   removes the case rather than covering it. The measurable alternative: TASK-M2-90's fixture reports, on the pairs of
   shipped charts that set their masses directly, the share of pixels and the range of `s` where `M₀₁ < ε_M01`, and the
-  owner chooses with that number; the case needs `L > 24.4` in the example, so the share may be small.
+  owner chooses with that number. The dip needs no extreme mass: it opens wherever two ends on or just outside the
+  band's edge differ in `m₁/m₀`, saturated ends included (the general condition above), and the share is not known
+  until measured, so the measurement matters more. *Corrected 11 Nov 2026 (the physics re-check, review 5853427038,
+  P9). Was:* "the case needs `L > 24.4` in the example, so the share may be small."
 - **Applied meanwhile:** nothing new. The decoder's rule stands as written: such a pixel is tagged `M01_TINY`, never
-  dropped and never NaN. The blend chart's fixture (REQ-CHART-189, TASK-M2-90) asserts the tag and that both ends are
+  dropped and never NaN. The blend chart's fixture (REQ-CHART-189, TASK-M2-90), in its three arms (the `L > 24.4`
+  example; the band with modest ratios; both ends saturated), asserts the tag and that both ends are
   valid, and asserts nothing about what is drawn; no saturation of a blend's interior pixel is built. Nothing is
   built at all while R-923's hold stands.
 - **Waits:** REQ-CHART-189's arm for this pixel (`rq: RQ-787`), and through it TASK-M2-90 (the blend chart) for that

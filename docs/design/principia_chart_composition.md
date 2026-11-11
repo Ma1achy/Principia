@@ -2367,9 +2367,22 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
      `M₀₁ = 2/(2 + e^{L/2})`, below `10⁻⁵` for `L > 24.4`. Both ends are valid pixels of a chart that sets its masses
      directly (the edge-reaching simplex link); the midpoint raises `M01_TINY`, "on the emitted masses of every chart"
      (`principia_dd_decoder.md` § 2), and no edge kind saturates a blend's interior pixel. Latent-link ends cannot
-     reach it (`|μ| ≤ 5` gives `g ≥ e^{−5}`). No ruling says what such a pixel shows: it is the owner's, RQ-787, and
+     reach it (`|μ| ≤ 5` gives `g ≥ e^{−5}`). *11 Nov 2026 (the physics re-check of PR #482, review 5853427038,
+     finding P9):* that example is right but is not the typical case, and no extreme mass is needed. With
+     `r_k = m_k/m₂` the blend gives `r_k(s) = r_kA^(1−s)·r_kB^s`, and `g = r₀ + r₁`. Take two ends on or just outside
+     the band's edge, `g = g*`, whose light pair has the ratios `q` and `1/q`: then `g(½) = g*·2√q/(1 + q)`, below `g*`
+     for every `q ≠ 1`. In masses: end A ∝ `(1, 0.01, 10⁵)` and end B ∝ `(0.01, 1, 10⁵)` both have
+     `M₀₁ = 1.01·10⁻⁵`; the midpoint ∝ `(0.1, 0.1, 10⁵)` has `M₀₁ = 2·10⁻⁶`. The review's brute-force search over ends
+     with every mass at least `10⁻⁹` and `M₀₁ ≥ 10⁻⁵` finds midpoints down to `7·10⁻⁷`. It reaches saturated ends
+     too: by condition (i) of the table under "Tagged at an end" below, a saturated end blends its saturated state,
+     which sits on the band's edge, so wherever both ends saturate a pixel to states with different `m₁/m₀`, the
+     interior dips for every `0 < s < 1`. The region can be the whole overlap of the two ends' saturated bands, not a
+     few deep-zoom pixels, and its share of a frame is not known until measured. The blend chart's fixture therefore
+     has three arms: the `L > 24.4` example, the pair above at the band with modest ratios, and one where both ends
+     are saturated pixels with different `m₁/m₀`. No ruling says what such a pixel shows: it is the owner's, RQ-787, and
      nothing is chosen here. Meanwhile the decoder's rule stands as written: the pixel is tagged `M01_TINY`, never
-     dropped and never NaN, and the blend chart's fixture for this case (TASK-M2-90) asserts the tag and no more.
+     dropped and never NaN, and the blend chart's fixture for this case (TASK-M2-90) asserts, on each arm, the tag
+     and that both ends are valid, and nothing about what is drawn.
 - **Blank or forbidden at an end.** A pixel in a morph frame is in only if it's in both ends. No state exists for a blank end
   to blend from, and substituting the other end invents a continuity (R-470, R-467). So the blank is held for every `0 < s <
   1` and resolves at the end frame, a step at each end. A region-D mask behaves so: outside D blank at every `s < 1`.
