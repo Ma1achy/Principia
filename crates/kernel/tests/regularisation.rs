@@ -16,11 +16,15 @@
 //!   kinds not built yet are stood in for by stubs here; Aarseth–Zare's own arm is TASK-M3-68's.
 //! - `no_usable_step_sentinel`: a trajectory with no step, or with every step unusable, reports the explicit sentinel,
 //!   not `0.0`; a zero step reads apart from it; the `2.209e128` overflow is reported as itself at f64 and is skipped
-//!   at f32, where it is `+∞`; the fold is reseeded from the first usable step; its control is the fold from `0.0`
-//!   (REQ-TOOL-039; pitfalls §9).
-//! - `dt_max_skips_infinity`: `+∞` and `−∞` among finite steps are skipped, first, last or between, at f64 and f32,
-//!   and alone they leave the sentinel (Part 2b's step 8, "when finite"); its control folds every step that is a
-//!   number.
+//!   and counted at f32, where it is `+∞`; the fold is reseeded from the first usable step; its control is the fold
+//!   from `0.0` (REQ-TOOL-039; pitfalls §9).
+//! - `dt_max_skipped_nan_is_counted`: a NaN among finite steps is skipped and counted, so the report reads apart from
+//!   the same steps without it, at f64 and f32; its control drops the NaN uncounted.
+//! - `dt_max_skipped_infinity_is_counted`: `+∞` and `−∞` among finite steps are skipped and counted, first, last or
+//!   between, at f64 and f32 (Part 2b's step 8, "when finite"); its control folds every step that is a number.
+//! - `no_usable_step_sentinel_counts_skipped`: a trajectory of non-finite steps alone reports the sentinel with their
+//!   count, at f64 and f32, an all-overflow f32 trajectory among them; its control is a sentinel with no count.
+//! - `dt_max_skipped_count_saturates`: the count of skipped steps stops at `u32::MAX`; its control wraps.
 
 use kernel::driver::advance::{Advance, AdvanceParams, AdvanceReal, Advanced, Cadence};
 use kernel::occupant::euler::Euler;
@@ -467,127 +471,277 @@ fn dt_max<R: IeeeBits>(steps: &[R]) -> DtMaxReport<R> {
         .report()
 }
 
+/// The diagnostic's fold of `steps` at f32, each step rounded to f32 first and the report widened back.
+fn dt_max_at_f32(steps: &[f64]) -> DtMaxReport<f64> {
+    let steps: Vec<f32> = steps.iter().map(|&dt| dt as f32).collect();
+    match dt_max(&steps) {
+        DtMaxReport::NoUsableStep { skipped } => DtMaxReport::NoUsableStep { skipped },
+        DtMaxReport::Largest { dt_max, skipped } => DtMaxReport::Largest {
+            dt_max: f64::from(dt_max),
+            skipped,
+        },
+    }
+}
+
+/// A fold written apart from the kernel's, for the controls: the largest of the steps `usable` passes, seeded from
+/// the first, with the others counted where `counted`.
+#[cfg(feature = "controls")]
+fn model(steps: &[f64], usable: impl Fn(f64) -> bool, counted: bool) -> DtMaxReport<f64> {
+    let kept: Vec<f64> = steps.iter().copied().filter(|&dt| usable(dt)).collect();
+    let skipped = if counted {
+        u32::try_from(steps.len() - kept.len()).expect("a short fixture")
+    } else {
+        0
+    };
+    match kept.split_first() {
+        None => DtMaxReport::NoUsableStep { skipped },
+        Some((&first, rest)) => DtMaxReport::Largest {
+            dt_max: rest.iter().copied().fold(first, f64::max),
+            skipped,
+        },
+    }
+}
+
+/// `Largest { dt_max, skipped }`.
+fn largest(dt_max: f64, skipped: u32) -> DtMaxReport<f64> {
+    DtMaxReport::Largest { dt_max, skipped }
+}
+
 /// The overflowed physical step the diagnostic was built to catch (pitfalls §9).
 const OVERFLOW: f64 = 2.209e128;
 
 /// Checks a largest-step fold over f64 steps.
 fn check_dt_max(fold: impl Fn(&[f64]) -> DtMaxReport<f64>) {
     let nan = f64::NAN;
-    for unusable in [&[][..], &[nan], &[nan, -nan, nan]] {
+    for (unusable, skipped) in [(&[][..], 0), (&[nan], 1), (&[nan, -nan, nan], 3)] {
         assert_eq!(
             fold(unusable),
-            DtMaxReport::NoUsableStep,
+            DtMaxReport::NoUsableStep { skipped },
             "no usable step must be the sentinel ({unusable:?})"
         );
     }
-    assert_eq!(fold(&[nan, 0.0, nan]), DtMaxReport::Largest(0.0));
+    assert_eq!(fold(&[nan, 0.0, nan]), largest(0.0, 2));
     assert_eq!(
         fold(&[1e-3, OVERFLOW, 1e-3, nan]),
-        DtMaxReport::Largest(OVERFLOW),
+        largest(OVERFLOW, 1),
         "the overflow case is reported"
     );
-    assert_eq!(fold(&[1.0, 3.0, 2.0]), DtMaxReport::Largest(3.0));
-    assert_eq!(fold(&[3.0, 1.0]), DtMaxReport::Largest(3.0));
+    assert_eq!(fold(&[1.0, 3.0, 2.0]), largest(3.0, 0));
+    assert_eq!(fold(&[3.0, 1.0]), largest(3.0, 0));
     assert_eq!(
         fold(&[-3.0, -1.0, -2.0]),
-        DtMaxReport::Largest(-1.0),
+        largest(-1.0, 0),
         "the fold is reseeded from the first usable step"
     );
     // An equal step does not replace the maximum: `−0.0`, then `+0.0`, stays `−0.0`.
     match fold(&[-0.0, 0.0]) {
-        DtMaxReport::Largest(x) => assert_eq!(x.to_bits(), (-0.0f64).to_bits(), "an equal step"),
-        DtMaxReport::NoUsableStep => panic!("a zero step is usable"),
+        DtMaxReport::Largest { dt_max, skipped } => {
+            assert_eq!(dt_max.to_bits(), (-0.0f64).to_bits(), "an equal step");
+            assert_eq!(skipped, 0);
+        }
+        DtMaxReport::NoUsableStep { .. } => panic!("a zero step is usable"),
     }
 }
 
 #[test]
 fn no_usable_step_sentinel() {
     check_dt_max(dt_max::<f64>);
-    assert_eq!(DtMax::<f64>::default().report(), DtMaxReport::NoUsableStep);
-    assert_ne!(
+    assert_eq!(
+        DtMax::<f64>::default().report(),
+        DtMaxReport::NoUsableStep { skipped: 0 }
+    );
+    assert_eq!(
         dt_max(&[0.0f64]),
-        DtMaxReport::NoUsableStep,
+        largest(0.0, 0),
         "a step of zero is not `no usable step`"
     );
-    // At f32 the overflow is `+∞`: skipped, never the maximum.
-    assert_eq!(dt_max::<f32>(&[]), DtMaxReport::NoUsableStep);
-    assert_eq!(dt_max(&[f32::NAN, f32::NAN]), DtMaxReport::NoUsableStep);
+    // At f32 the overflow is `+∞`: skipped and counted, never the maximum.
+    assert_eq!(dt_max::<f32>(&[]), DtMaxReport::NoUsableStep { skipped: 0 });
+    assert_eq!(
+        dt_max(&[f32::NAN, f32::NAN]),
+        DtMaxReport::NoUsableStep { skipped: 2 }
+    );
     assert_eq!(
         dt_max(&[1e-3f32, OVERFLOW as f32, f32::NAN]),
-        DtMaxReport::Largest(1e-3f32)
+        DtMaxReport::Largest {
+            dt_max: 1e-3f32,
+            skipped: 2
+        }
     );
     assert_eq!(
-        dt_max(&[OVERFLOW as f32, OVERFLOW as f32]),
-        DtMaxReport::NoUsableStep,
-        "an all-overflow f32 trajectory is the sentinel"
+        dt_max(&[-2.0f32, -5.0]),
+        DtMaxReport::Largest {
+            dt_max: -2.0f32,
+            skipped: 0
+        }
     );
-    assert_eq!(dt_max(&[-2.0f32, -5.0]), DtMaxReport::Largest(-2.0));
+    assert_eq!(
+        dt_max(&[0.0f32]),
+        DtMaxReport::Largest {
+            dt_max: 0.0f32,
+            skipped: 0
+        }
+    );
 }
 
 negative_control!(
     no_usable_step_sentinel,
     "the fold from 0.0, which reports an all-unusable trajectory's largest step as zero",
     expected = "no usable step must be the sentinel",
-    check_dt_max(|steps| DtMaxReport::Largest(steps.iter().copied().fold(0.0, f64::max)))
+    check_dt_max(|steps| largest(steps.iter().copied().fold(0.0, f64::max), 0))
 );
 
-/// The diagnostic's fold of `steps` at f32, each step rounded to f32 first and the report widened back.
-fn dt_max_at_f32(steps: &[f64]) -> DtMaxReport<f64> {
-    let steps: Vec<f32> = steps.iter().map(|&dt| dt as f32).collect();
-    match dt_max(&steps) {
-        DtMaxReport::NoUsableStep => DtMaxReport::NoUsableStep,
-        DtMaxReport::Largest(dt_max) => DtMaxReport::Largest(f64::from(dt_max)),
-    }
-}
-
-/// Checks that a fold skips `+∞` and `−∞`. The steps are exact at f32.
-fn check_infinity_skipped(fold: impl Fn(&[f64]) -> DtMaxReport<f64>) {
-    let (pos, neg) = (f64::INFINITY, f64::NEG_INFINITY);
-    let m = "an infinite step must be skipped";
-    let largest = DtMaxReport::Largest;
-    assert_eq!(fold(&[1.0, pos, 2.0]), largest(2.0), "{m}");
-    assert_eq!(fold(&[pos, 1.0]), largest(1.0), "{m}");
-    assert_eq!(fold(&[1.0, pos]), largest(1.0), "{m}");
-    assert_eq!(fold(&[neg, -3.0]), largest(-3.0), "{m}");
-    assert_eq!(fold(&[-3.0, neg]), largest(-3.0), "{m}");
-    assert_eq!(fold(&[2.0, neg, 1.0]), largest(2.0), "{m}");
-    assert_eq!(fold(&[pos, neg, 0.5, pos]), largest(0.5), "{m}");
-    assert_eq!(fold(&[pos]), DtMaxReport::NoUsableStep, "{m}");
-    assert_eq!(fold(&[neg]), DtMaxReport::NoUsableStep, "{m}");
-    assert_eq!(
-        fold(&[neg, f64::NAN, pos]),
-        DtMaxReport::NoUsableStep,
-        "{m}"
-    );
-    // The largest finite step is finite, so usable, at each width.
-    let (max, min) = (f64::from(f32::MAX), f64::from(f32::MIN));
-    assert_eq!(fold(&[max, pos]), largest(max), "{m}");
-    assert_eq!(fold(&[min, neg]), largest(min), "{m}");
+/// Checks that a fold skips and counts a NaN among finite steps. The steps are exact at f32.
+fn check_nan_counted(fold: impl Fn(&[f64]) -> DtMaxReport<f64>) {
+    let nan = f64::NAN;
+    let m = "a skipped NaN must be counted";
+    assert_eq!(fold(&[0.5]), largest(0.5, 0), "{m}");
+    assert_eq!(fold(&[0.5, nan]), largest(0.5, 1), "{m}");
+    assert_ne!(fold(&[0.5, nan]), fold(&[0.5]), "{m}");
+    assert_eq!(fold(&[nan, 0.5]), largest(0.5, 1), "{m}");
+    assert_eq!(fold(&[0.25, nan, 2.0, -nan, 0.5]), largest(2.0, 2), "{m}");
+    assert_eq!(fold(&[nan, -4.0, nan, nan]), largest(-4.0, 3), "{m}");
 }
 
 #[test]
-fn dt_max_skips_infinity() {
-    check_infinity_skipped(dt_max::<f64>);
-    check_infinity_skipped(dt_max_at_f32);
+fn dt_max_skipped_nan_is_counted() {
+    check_nan_counted(dt_max::<f64>);
+    check_nan_counted(dt_max_at_f32);
+}
+
+negative_control!(
+    dt_max_skipped_nan_is_counted,
+    "a fold that drops a NaN step and leaves no trace of it",
+    expected = "a skipped NaN must be counted",
+    check_nan_counted(|steps| model(steps, |dt| !dt.is_nan(), false))
+);
+
+/// Checks that a fold skips and counts `+∞` and `−∞` among finite steps. The steps are exact at f32.
+fn check_infinity_counted(fold: impl Fn(&[f64]) -> DtMaxReport<f64>) {
+    let (pos, neg) = (f64::INFINITY, f64::NEG_INFINITY);
+    let m = "an infinite step must be skipped and counted";
+    assert_eq!(fold(&[1.0, pos, 2.0]), largest(2.0, 1), "{m}");
+    assert_eq!(fold(&[pos, 1.0]), largest(1.0, 1), "{m}");
+    assert_eq!(fold(&[1.0, pos]), largest(1.0, 1), "{m}");
+    assert_eq!(fold(&[neg, -3.0]), largest(-3.0, 1), "{m}");
+    assert_eq!(fold(&[-3.0, neg]), largest(-3.0, 1), "{m}");
+    assert_eq!(fold(&[2.0, neg, 1.0]), largest(2.0, 1), "{m}");
+    assert_eq!(fold(&[pos, neg, 0.5, pos]), largest(0.5, 3), "{m}");
+    assert_ne!(fold(&[1.0, pos]), fold(&[1.0]), "{m}");
+    assert_ne!(fold(&[1.0, neg]), fold(&[1.0]), "{m}");
+    // The largest finite step is finite, so usable, at each width.
     assert_eq!(
-        dt_max(&[f64::MAX, f64::INFINITY]),
-        DtMaxReport::Largest(f64::MAX)
+        fold(&[f64::from(f32::MAX), pos]),
+        largest(f64::from(f32::MAX), 1),
+        "{m}"
     );
     assert_eq!(
-        dt_max(&[f64::MIN, f64::NEG_INFINITY]),
-        DtMaxReport::Largest(f64::MIN)
+        fold(&[f64::from(f32::MIN), neg]),
+        largest(f64::from(f32::MIN), 1),
+        "{m}"
+    );
+}
+
+#[test]
+fn dt_max_skipped_infinity_is_counted() {
+    check_infinity_counted(dt_max::<f64>);
+    check_infinity_counted(dt_max_at_f32);
+    assert_eq!(dt_max(&[f64::MAX, f64::INFINITY]), largest(f64::MAX, 1));
+    assert_eq!(dt_max(&[f64::MIN, f64::NEG_INFINITY]), largest(f64::MIN, 1));
+}
+
+negative_control!(
+    dt_max_skipped_infinity_is_counted,
+    "the fold of every step that is a number, which reports an infinite step as the largest",
+    expected = "an infinite step must be skipped and counted",
+    check_infinity_counted(|steps| model(steps, |dt| !dt.is_nan(), true))
+);
+
+/// Checks that a fold of non-finite steps alone reports the sentinel with their count.
+fn check_sentinel_count(fold: impl Fn(&[f64]) -> DtMaxReport<f64>) {
+    let (nan, pos, neg) = (f64::NAN, f64::INFINITY, f64::NEG_INFINITY);
+    let m = "the sentinel must carry the count of skipped steps";
+    let sentinel = |skipped| DtMaxReport::NoUsableStep { skipped };
+    assert_eq!(fold(&[]), sentinel(0), "{m}");
+    assert_eq!(fold(&[pos]), sentinel(1), "{m}");
+    assert_eq!(fold(&[neg]), sentinel(1), "{m}");
+    assert_eq!(fold(&[nan, pos, neg]), sentinel(3), "{m}");
+    assert_eq!(fold(&[neg, neg, pos, nan, nan]), sentinel(5), "{m}");
+    assert_ne!(fold(&[nan]), fold(&[]), "{m}");
+}
+
+#[test]
+fn no_usable_step_sentinel_counts_skipped() {
+    check_sentinel_count(dt_max::<f64>);
+    check_sentinel_count(dt_max_at_f32);
+    // At f32 every `2.209e128` step is `+∞`: the all-overflow trajectory is the sentinel, with its count, where at
+    // f64 the same steps report the overflow itself.
+    assert_eq!(
+        dt_max_at_f32(&[OVERFLOW, OVERFLOW, OVERFLOW]),
+        DtMaxReport::NoUsableStep { skipped: 3 }
+    );
+    assert_eq!(
+        dt_max(&[OVERFLOW, OVERFLOW, OVERFLOW]),
+        largest(OVERFLOW, 0)
     );
 }
 
 negative_control!(
-    dt_max_skips_infinity,
-    "the fold of every step that is a number, which reports an infinite step as the largest",
-    expected = "an infinite step must be skipped",
-    check_infinity_skipped(|steps| {
-        let mut numbers = steps.iter().copied().filter(|dt| !dt.is_nan());
-        match numbers.next() {
-            None => DtMaxReport::NoUsableStep,
-            Some(first) => DtMaxReport::Largest(numbers.fold(first, f64::max)),
-        }
-    })
+    no_usable_step_sentinel_counts_skipped,
+    "a sentinel that says nothing of the steps skipped",
+    expected = "the sentinel must carry the count of skipped steps",
+    check_sentinel_count(|steps| model(steps, f64::is_finite, false))
+);
+
+/// Checks a count of skipped steps: `count(already, more)` is the count reported after `already` skipped steps and
+/// then `more` non-finite steps observed.
+fn check_saturation(count: impl Fn(u32, u32) -> u32) {
+    let m = "the count of skipped steps must saturate";
+    assert_eq!(count(0, 0), 0, "{m}");
+    assert_eq!(count(7, 2), 9, "{m}");
+    assert_eq!(count(u32::MAX - 2, 1), u32::MAX - 1, "{m}");
+    assert_eq!(count(u32::MAX - 1, 1), u32::MAX, "{m}");
+    assert_eq!(count(u32::MAX - 1, 2), u32::MAX, "{m}");
+    assert_eq!(count(u32::MAX, 3), u32::MAX, "{m}");
+}
+
+/// The kernel's count: `already` steps skipped, then `more` steps observed, NaN and `±∞` in turn, around a finite one.
+fn skipped_count<R: IeeeBits + From<f32>>(already: u32, more: u32) -> u32 {
+    let non_finite = [f32::NAN, f32::INFINITY, f32::NEG_INFINITY];
+    let fold = (0..more).fold(
+        DtMax::<R>::new()
+            .observe(<R as From<f32>>::from(1.0))
+            .skipping(already),
+        |d, i| d.observe(<R as From<f32>>::from(non_finite[i as usize % 3])),
+    );
+    match fold.report() {
+        DtMaxReport::Largest { skipped, .. } => skipped,
+        DtMaxReport::NoUsableStep { .. } => panic!("a finite step was observed"),
+    }
+}
+
+#[test]
+fn dt_max_skipped_count_saturates() {
+    check_saturation(skipped_count::<f64>);
+    check_saturation(skipped_count::<f32>);
+    // `skipping` saturates by itself too, and leaves the largest step alone.
+    assert_eq!(
+        DtMax::new()
+            .observe(2.0f64)
+            .skipping(u32::MAX)
+            .skipping(u32::MAX)
+            .report(),
+        largest(2.0, u32::MAX)
+    );
+    assert_eq!(
+        DtMax::<f64>::new().skipping(4).report(),
+        DtMaxReport::NoUsableStep { skipped: 4 }
+    );
+}
+
+negative_control!(
+    dt_max_skipped_count_saturates,
+    "a count that wraps past its largest value",
+    expected = "the count of skipped steps must saturate",
+    check_saturation(u32::wrapping_add)
 );
