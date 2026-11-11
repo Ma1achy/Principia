@@ -12,7 +12,7 @@
 //! | Aarseth–Zare + time-transformed leapfrog | 2 | 1 | ✓ | ✓ (measured) | ✗ | ✓ | allowed future occupant |
 //!
 //! The five steppers are built here, and each row reads its occupant's own [`Stepper::profile`]. Aarseth–Zare + RK4 is
-//! a regularised composition TASK-M3-07 builds (Part 2b); its row is the table's profile until then, and a
+//! a regularised composition TASK-M3-68 builds (Part 2b); its row is the table's profile until then, and a
 //! regularised occupant's `step_reversible` is the one dd_integrator §5 test 3 measures (R-500). Aarseth–Zare +
 //! time-transformed leapfrog is an allowed future occupant, not a v1 requirement, and is not built (R-162, R-168).
 //!
@@ -69,7 +69,7 @@ pub enum Binding {
 pub enum Built {
     /// A stepper built here, as its selection.
     Stepper(Selection),
-    /// A regularised composition, built with the regularisation axis (Part 2b; TASK-M3-07).
+    /// A regularised composition, built on the regularisation axis (Part 2b; TASK-M3-68).
     Regularised,
     /// Not built (R-162, R-168).
     NotBuilt,
