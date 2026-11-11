@@ -202,18 +202,27 @@ def twins(body):
     """(line, line) for each run of lines in `body`, a list of (line number, text), directly followed by a run that
     reads nearly the same, of the same length or one line more or less, since an edit can rewrap: what a union merge
     leaves of text edited on two sides. Lines that differ only in the digits of plain numbers are a list's siblings,
-    not versions; a difference in an id or a `line N` is a disagreement (TWIN_NAME). Two runs one of which is
-    wholly a sibling of the lines of the other next to it, the end of the first or the start of the second, are those
-    siblings with a neighbour, not two versions: a short line before them, the tail of the paragraph above, would else
-    carry them past the ratio. Leftovers on both sides are versions of each other, and are compared."""
+    not versions; a difference in an id or a `line N` is a disagreement (TWIN_NAME). Two runs are also siblings
+    when they are once short lines naming no id (under TWIN_MIN, which plan/OPERATIONS.md § "Merging" step 2 lets
+    pass) are left out at their outer edges: at the start of the first run, the tail of the text above, and at the
+    end of the second, the start of the text below. Nothing between the two runs is left out, nor a long line, nor
+    a line naming an id."""
     out = []
     plain = [(n, t) for n, t in body if t.strip()]
     join = lambda lines: " ".join(" ".join(t.split()) for _, t in lines)
 
-    def meet_at_siblings(first, second):  # all of one run, and the lines of the other next to it, are siblings
-        return any(siblings(join(first[-p:]), join(second[:q]))
-                   for p in range(1, len(first) + 1) for q in range(1, len(second) + 1)
-                   if p == len(first) or q == len(second))
+    def edge(line):  # a line an outer edge may leave out: short, naming no id
+        return len(join([line])) < TWIN_MIN and not TWIN_NAME.search(line[1])
+
+    def edged_siblings(first, second):  # siblings, less short id-free lines at the start of `first`, end of `second`
+        lead = 0
+        while lead < len(first) - 1 and edge(first[lead]):
+            lead += 1
+        tail = 0
+        while tail < len(second) - 1 and edge(second[len(second) - 1 - tail]):
+            tail += 1
+        return any(siblings(join(first[s:]), join(second[:len(second) - e]))
+                   for s in range(lead + 1) for e in range(tail + 1))
 
     i = 0
     while i < len(plain):
@@ -228,7 +237,7 @@ def twins(body):
                 d = difflib.SequenceMatcher(None, a, b, autojunk=False)
                 # The sibling test only ever cancels a match, so it runs on a match alone: it costs many joins.
                 if (d.quick_ratio() >= TWIN_RATIO and d.ratio() >= TWIN_RATIO
-                        and not meet_at_siblings(plain[i:i + k], plain[i + k:i + k + m])):
+                        and not edged_siblings(plain[i:i + k], plain[i + k:i + k + m])):
                     found = k, m
                     break
             if found:
@@ -304,6 +313,8 @@ def queue_self_test():
     sibling = "  - N = {}: the same long words of a list, one item each"
     versions = "  - Closed as {0}, by the same words of a ruling.\n  - Closed as {1}, by the same words of a ruling."
     long_note = "  the long words of one dated note, closed by {} in the very words of it, which run on to its end"
+    dated = "  - **31 Oct 2026:** the long dated note of the base, which the owner approved at N = {}, in the"
+    words = "  very words of it, as the note runs on until it comes to the end of the long second line of it."
 
     def version(lines, mark):  # `lines` lines, none like another, each marked in its last letter
         return "".join("  " + "".join(chr(97 + i * j % 26) for j in range(40)) + mark + "\n"
@@ -325,6 +336,23 @@ def queue_self_test():
             "  - step 6 under R-200, kept.\n  - step 12 under R-300, kept."), "two versions of one text"),
         ("versions meeting at siblings, each with a long line differing in a ruling", good.replace(
             line, long_note.format("R-700") + "\n  at 6.\n  at 12.\n" + long_note.format("R-701")),
+         "two versions of one text"),
+        ("siblings between two short lines", good.replace(
+            line, line + "\n  it.\n" + sibling.format(6) + "\n" + sibling.format(12) + "\n  it."), None),
+        ("siblings after a paragraph's two short lines", good.replace(
+            line, line + "\n  the end\n  of it.\n" + sibling.format(12) + "\n" + sibling.format(6)), None),
+        ("three siblings after a paragraph's short tail", good.replace(
+            line, line + "\n  it.\n" + "\n".join(sibling.format(n) for n in (6, 12, 24))), None),
+        ("siblings of short lines alone", good.replace(
+            line, "- value at N = 6:\n  is retained in the run.\n- value at N = 12:\n  is retained in the run."), None),
+        ("siblings with a long line naming a ruling added on one side", good.replace(
+            line, "\n".join([dated.format(6), words, dated.format(12), words, "  closed by R-101, reversing it all."])),
+         "two versions of one text"),
+        ("siblings with a short line naming a ruling added on one side", good.replace(
+            line, "\n".join([sibling.format(6), words, sibling.format(12), words, "  by R-101."])),
+         "two versions of one text"),
+        ("siblings, the second with a short line naming a ruling after it", good.replace(
+            line, "\n".join([dated.format(6) + " end.", dated.format(12) + " end.", "  by R-101."])),
          "two versions of one text"),
         ("versions after a paragraph's short tail", good.replace(
             line, line + "\n  it.\n" + versions.format("R-100", "R-101")), "two versions of one text"),
