@@ -202,16 +202,18 @@ def twins(body):
     """(line, line) for each run of lines in `body`, a list of (line number, text), directly followed by a run that
     reads nearly the same, of the same length or one line more or less, since an edit can rewrap: what a union merge
     leaves of text edited on two sides. Lines that differ only in the digits of plain numbers are a list's siblings,
-    not versions; a difference in an id or a `line N` is a disagreement (TWIN_NAME). Two runs that meet at a pair of
-    siblings, the end of the first and the start of the second, are those siblings with their neighbours, not two
-    versions: a short line before them, the tail of the paragraph above, would else carry them past the ratio."""
+    not versions; a difference in an id or a `line N` is a disagreement (TWIN_NAME). Two runs one of which is
+    wholly a sibling of the lines of the other next to it, the end of the first or the start of the second, are those
+    siblings with a neighbour, not two versions: a short line before them, the tail of the paragraph above, would else
+    carry them past the ratio. Leftovers on both sides are versions of each other, and are compared."""
     out = []
     plain = [(n, t) for n, t in body if t.strip()]
     join = lambda lines: " ".join(" ".join(t.split()) for _, t in lines)
 
-    def meet_at_siblings(first, second):  # some run ending `first` and some run starting `second` are siblings
+    def meet_at_siblings(first, second):  # all of one run, and the lines of the other next to it, are siblings
         return any(siblings(join(first[-p:]), join(second[:q]))
-                   for p in range(1, len(first) + 1) for q in range(1, len(second) + 1))
+                   for p in range(1, len(first) + 1) for q in range(1, len(second) + 1)
+                   if p == len(first) or q == len(second))
 
     i = 0
     while i < len(plain):
@@ -299,6 +301,7 @@ def queue_self_test():
             "- **Applied meanwhile:** the second answer, as the contract has it.\n")
     sibling = "  - N = {}: the same long words of a list, one item each"
     versions = "  - Closed as {0}, by the same words of a ruling.\n  - Closed as {1}, by the same words of a ruling."
+    long_note = "  the long words of one dated note, closed by {} in the very words of it, which run on to its end"
 
     def version(lines, mark):  # `lines` lines, none like another, each marked in its last letter
         return "".join("  " + "".join(chr(97 + i * j % 26) for j in range(40)) + mark + "\n"
@@ -315,6 +318,12 @@ def queue_self_test():
         ("two-line siblings after a short tail", good.replace(
             line, line + "\n  it.\n" + sibling.format(12) + "\n  and more, at 12.\n" + sibling.format(6)
             + "\n  and more, at 6."), None),
+        ("versions meeting at siblings, ids differing in the lines past them", good.replace(
+            line, "  - step 6 under R-100, kept.\n  - step 12 under R-200, kept.\n"
+            "  - step 6 under R-200, kept.\n  - step 12 under R-300, kept."), "two versions of one text"),
+        ("versions meeting at siblings, each with a long line differing in a ruling", good.replace(
+            line, long_note.format("R-700") + "\n  at 6.\n  at 12.\n" + long_note.format("R-701")),
+         "two versions of one text"),
         ("versions after a paragraph's short tail", good.replace(
             line, line + "\n  it.\n" + versions.format("R-100", "R-101")), "two versions of one text"),
         ("versions differing in a ruling", good.replace(line, versions.format("R-100", "R-101")),
