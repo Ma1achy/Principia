@@ -27,18 +27,27 @@
 use super::substep::{d2_quantised, Quantise};
 use crate::occupant::{Geom, State, StepReal, Stepper};
 use crate::payload::{PayloadReal, SimStateBaseOf};
+use crate::real::IeeeBits;
 
 /// A step count as the float type it divides: `n` converted, exact for `n ≤ 2²⁴` at f32, and `N_sub ≤ L_max` is far
-/// below it.
+/// below it. And back: a float truncated to a count, as a regularised occupant finds its sync boundary.
 pub trait Count: Sized {
     /// `n` as `Self`.
     fn count(n: u32) -> Self;
+
+    /// `self` truncated toward zero to a `u32`: `0` for a NaN or a negative, `u32::MAX` above it.
+    fn whole(self) -> u32;
 }
 
 impl Count for f32 {
     #[inline]
     fn count(n: u32) -> Self {
         n as f32
+    }
+
+    #[inline]
+    fn whole(self) -> u32 {
+        self as u32
     }
 }
 
@@ -47,12 +56,41 @@ impl Count for f64 {
     fn count(n: u32) -> Self {
         n as f64
     }
+
+    #[inline]
+    fn whole(self) -> u32 {
+        self as u32
+    }
 }
 
-/// The float type an occupant advances at: a stepper's ([`StepReal`]), with step counts converted ([`Count`]).
-pub trait AdvanceReal: StepReal + Count {}
+/// A configuration value given at each width, read at this one: a regularised occupant's configuration states each of
+/// its values at f32 and at f64, and the occupant reads its own width's, never one converted from the other.
+pub trait Width: Sized {
+    /// `single` at f32, `double` at f64.
+    fn at_width(single: f32, double: f64) -> Self;
+}
 
-impl<R: StepReal + Count> AdvanceReal for R {}
+impl Width for f32 {
+    #[inline]
+    fn at_width(single: f32, _double: f64) -> Self {
+        single
+    }
+}
+
+impl Width for f64 {
+    #[inline]
+    fn at_width(_single: f32, double: f64) -> Self {
+        double
+    }
+}
+
+/// The float type an occupant advances at: a stepper's ([`StepReal`]), with step counts converted ([`Count`]), its
+/// values' bits read ([`IeeeBits`]), so that a regularised occupant tests its state's finiteness on its bits
+/// (integrator_contract Part 2b, the Aarseth–Zare step control's step 7; Part 2c's `dt_max`), and its configuration read
+/// at its width ([`Width`]). f32 and f64 are both.
+pub trait AdvanceReal: StepReal + Count + IeeeBits + Width {}
+
+impl<R: StepReal + Count + IeeeBits + Width> AdvanceReal for R {}
 
 /// The per-substep cadence the wrapper passes into the occupant (integrator_contract Part 2a, Cost 1; R-19): the work
 /// that runs after every internal step, and the `done` flag that ends the march.

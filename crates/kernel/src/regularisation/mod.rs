@@ -11,13 +11,16 @@
 //! profile says.
 //!
 //! **`none`** ([`NoRegularisation`]) is built here: Cartesian, the independent control, always available. Its pairs are
-//! separable, so each is the stepper's own form: the stepper's profile and the stepper's `ADVANCE`. Aarseth–Zare is
-//! TASK-M3-68's and Heggie and logH TASK-M3-08's.
+//! separable, so each is the stepper's own form: the stepper's profile and the stepper's `ADVANCE`. **Aarseth–Zare**
+//! ([`az::AarsethZare`]) is built in [`az`]; Heggie and logH are TASK-M3-08's. Under a regularisation the stepper is
+//! applied to the regularised equations of motion in its form on a non-separable system ([`form`]).
 //!
 //! [`pairs`] is Part 2b's pair table and the selection of a pair; [`dt_max`] is the per-trajectory largest-step
 //! diagnostic with its "no usable step" sentinel (Part 2c).
 
+pub mod az;
 pub mod dt_max;
+pub mod form;
 pub mod pairs;
 
 use core::marker::PhantomData;
