@@ -37446,8 +37446,8 @@ R-965 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-966 — The merge watcher checks `main`'s status before every merge and refuses the merge while `main` is red or unknown, in place of a hold list; `merge-ready` is counted from green, or put on only once the head is green *(refines R-681)*
 *11 Nov 2026 · the owner's two messages of that day on CI, after the report on PR #488 and the report on CI since PR
-#457; applied in the forward and "Still in force" lines of R-681, `plan/section_notes.yaml` and
-`plan/rule_groups.yaml`; changes no requirement*
+#457; applied in `plan/OPERATIONS.md` § "Merging" (the R-681 paragraph), the forward and "Still in force" lines of
+R-681, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
 
 The owner's words (11 Nov 2026), verbatim, the message that opens "Good account of #488":
 
@@ -37479,8 +37479,8 @@ R-966 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-967 — CI caches the Mesa (lavapipe) packages of `gpu-lavapipe` and the release jobs, keyed on the package list, so a run no longer fetches them from Ubuntu's archive *(amends R-285)*
 *11 Nov 2026 · the owner's two messages of that day on CI (R-966 quotes them); applied in the forward and "Still in
-force" lines of R-285, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement; the CI change is
-PR #495's*
+force" lines of R-285, `plan/OPERATIONS.md` § "Merging" (a paragraph), `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement; the CI change is PR #495's*
 
 The owner's words (11 Nov 2026), verbatim, item (3) of the second message:
 
@@ -37500,8 +37500,8 @@ R-967 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-968 — A job whose only failure is the package-install step is re-run once, automatically, on GitHub-hosted runners, marked as a re-run and never turning a real failure green; the per-merge verdict is unchanged, RQ-789 open *(extends R-714)*
 *11 Nov 2026 · the owner's two messages of that day on CI (R-966 quotes them); applied in the forward and "Still in
-force" lines of R-714, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement; the CI change is
-PR #495's*
+force" lines of R-714, `plan/OPERATIONS.md` § "Merging" (R-714's paragraph), `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement; the CI change is PR #495's*
 
 The owner's words (11 Nov 2026), verbatim, from the first message:
 
@@ -37515,12 +37515,15 @@ And from item (3) of the second:
 
 - **One re-run.** A job whose only failure is the package-install step (the step's own time limit, the "cap", or its
   fetch failing) is re-run once, automatically, so an outage costs minutes, not hours.
-- **On GitHub-hosted runners only**, never on R-711's self-hosted runner.
+- **On GitHub-hosted runners only**, never on R-711's self-hosted runner, which runs no required work (R-859).
 - **Marked as a re-run, never turning a real failure green:** a job with any other failure beside the install step is
   not re-run, and its failure stands.
 
 *What it extends:* **R-714**, under which a failed job is re-run only on a runner-level fault, in at most two retries,
-by the classifier script tested on saved logs: the install step's failure is added, re-run once, by the same script.
+by the classifier script tested on saved logs: the install step's failure is added, re-run once.
+
+*Applied per R-369:* the re-run is made by R-714's classifier script, tested on saved logs as R-714 requires; the
+owner's words name no mechanism.
 
 *What it does not change:* REQ-TOOL-223 (a failure of the release-build jobs is a correctness failure and a red `main`)
 and the per-merge verdict that applies it; whether an install-step failure there reads "no result" is **RQ-789**, open
@@ -37559,8 +37562,9 @@ And item (2) of the third (R-971):
 R-969 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-970 — A CI run clearly hung or stuck because of a bug is caught and cancelled, on `main` too; every other run on `main` is still never cancelled *(amends R-656)*
-*11 Nov 2026 · the owner's reply of that day on a hung Windows run; applied in the forward and "Still in force" lines
-of R-656, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+*11 Nov 2026 · the owner's reply of that day on a hung Windows run; applied in `plan/OPERATIONS.md` § "Merging" (the
+PR tier's paragraph), the forward and "Still in force" lines of R-656, `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement*
 
 The owner's words (11 Nov 2026), verbatim:
 

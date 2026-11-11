@@ -359,6 +359,9 @@ stuck check is cleared by re-running only the job that reports it, never a whole
 one that changes what CI runs or checks, shows its own run of what it changes passing on its head before it merges
 (its `process` check, the process tests, since the owner's CI model of 9 Nov 2026, R-907 and R-909; *was:* "its own `xtask-ci` run"):
 #381 merged and broke `main`.
+*11 Nov 2026 (R-966):* the merge watcher checks `main`'s status before every merge and refuses the merge while it is red
+or unknown, so nothing depends on remembering a list; it replaces the orchestrator's hold list. The time to merge is
+counted from the head's required checks going green, or `merge-ready` goes on only once they are green.
 What is red `main` (R-907: "a correctness failure (physics, validation, bit-for-bit, golden) is red main under R-681;
 any other failure files a top-priority task without freezing PR work"): `ci.yml`'s `per-merge` job failing on `main`'s
 head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose summary names each failed job and why. A
@@ -423,7 +426,9 @@ change, adding `mutants-check`, which lapses with it (R-907).
 Machinery that tests the machinery is secondary").** `ci.yml` runs on a push to `main` (and to a `measure/` branch,
 R-272) and, for a pull request, through `pull_request` only, once per push. Each workflow that builds or tests keeps
 one `concurrency` group per pull request, so a push cancels the run on the head it supersedes; a run on `main` is
-never cancelled (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one
+never cancelled unless it is clearly hung or stuck because of a bug, which is caught (by a limit that ends it where one
+can be set) and cancelled, on `main`, a pull request's current head or a schedule alike (R-970, 11 Nov 2026; *was:* "a
+run on `main` is never cancelled") (`no-atlas-params.yml` and `gemini-dispatch.yml` keep none, decisions.md R-656). `reviews.yml` keeps one
 group per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs
 the `pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job
 classifies the change with `scripts/ci_changes.sh` (the pull request's merge commit against the base it merges onto)
@@ -540,6 +545,9 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 **CI demand (R-713).** A head not ready for review is not pushed, and pushes go in order of what is closest to merging.
 
 **Automatic retries and disk (R-714).** `retry.yml` re-runs failed jobs only on a runner-level fault, in at most two retries, never on a real test failure or a flake; its classifier is tested on saved logs. Every CI speed-up step reports the lowest free disk per job, before and after, and must reduce or hold it.
+*11 Nov 2026 (R-968):* a job whose only failure is the package-install step is also re-run, once, automatically, on GitHub-hosted runners only, marked as a re-run; any other failure beside it stands, so a real failure never turns green. The per-merge verdict on such a failure is unchanged (REQ-TOOL-223; RQ-789, open).
+
+**The Mesa package cache (R-967).** CI caches the Mesa (lavapipe) packages that `gpu-lavapipe` and the release jobs install, keyed on the package list and the runner's image, saved only on a push to `main` and restored by pull-request runs (R-326), so a run no longer fetches them from Ubuntu's archive. It joins R-285's cargo registry and fixture pool and R-320's rust-gpu build; no target directory is cached (R-285, R-656).
 
 **Measuring CI (R-715).** A speed-up is claimed or rejected only on medians over at least 5 runs per arm, with per-step durations and `cargo build --timings` totals. `ci-workspace` red on a test timer is diagnosed first, as disk pressure, runner load or a slow test; the retry doesn't cover it, the timeout isn't raised, and the cause is fixed or the shard split.
 
