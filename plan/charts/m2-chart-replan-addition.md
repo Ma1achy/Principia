@@ -700,3 +700,74 @@ trajectory interface and its fixtures) excepted, and allows no new chart task me
 `plan/tasks.yaml` does not lift it.** N1 to N20 are chart tasks: each is entered held, and none is dispatched until the
 owner lifts the hold. N20 waits on RQ-785 as well, and TASK-M8-49 and TASK-M8-58 on N20's report having been shown to
 the owner.
+
+### F.7 As entered, 11 Nov 2026: the N-numbers and their task ids
+
+The tasks of § F.1 to § F.3 are in `plan/tasks.yaml`, each with its file under `plan/tasks/` and its requirements in
+`plan/requirements.yaml`. Ids are the next free in each milestone, in § F's order: § F.1's rows, then § F.2's. Every one
+is entered held (§ F.6): entering a task does not release it.
+
+| N | Task | Title | Milestone | Depends on | Reviewers | Closes |
+|---|---|---|---|---|---|---|
+| N1 | TASK-M2-86 | The first slice: one real chart through CPU f64, the per-quad table, records and the integrator, against today's decode (R-926) | M2 | none | code, qa, physics, perf | REQ-DEC-057, REQ-PERF-120 |
+| N2 | TASK-M2-87 | The CPU-to-GPU record and table contract (R-926 items 5 and 6) | M2 | TASK-M2-58 | code, qa, physics | REQ-INT-115 |
+| N3 | TASK-M2-88 | Slopes in three tiers: exact (dual numbers), implicit or none, a flag at each kink site (R-926 item 9) | M2 | TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-DEC-058 |
+| N4 | TASK-M2-89 | The per-quad forward-table builder on the CPU, and measurement M-A (R-926 item 6) | M2 | TASK-M2-86 (N1) | code, qa, physics, perf | REQ-DEC-059, REQ-PERF-121 |
+| N5 | TASK-M2-90 | The blend chart: the state blend, nested blends, both ends navigated, the ends exact, a signed fold indicator defined (R-926 item 3) | M2 | TASK-M2-61 | code, qa, physics | REQ-CHART-189, REQ-CHART-190 |
+| N6 | TASK-M2-91 | Time as the last coordinate: the map's time coordinate, the playhead the window's centre, a target time to an integer index (R-926 item 2) | M2 | TASK-M2-82, TASK-M2-61 | code, qa, physics | REQ-CHART-191 |
+| N7 | TASK-M2-92 | The backwards table on the CPU: bake, key, fold flag, search (R-926 item 7) | M2 | TASK-M2-86 (N1), TASK-M2-89 (N4), TASK-M2-101 (N14a), TASK-M2-102 (N14b), TASK-M2-103 (N14c), TASK-M2-104 (N14d) | code, qa, physics | REQ-CHART-192 |
+| N8 | TASK-M7-73 | The five table debug views (R-925 item 6, R-926 item 10) | M7 | TASK-M2-89 (N4), TASK-M2-92 (N7), TASK-M7-74 (N9) | code, qa, physics | REQ-RENDER-124 |
+| N9 | TASK-M7-74 | The fragment table route: the GPU side of the backwards table, for Chart position and the presets (R-925 items 1 and 2) | M7 | TASK-M2-92 (N7), TASK-M2-99 (N19) | code, qa, physics, perf | REQ-RENDER-125, REQ-PERF-122 |
+| N10 | TASK-M2-93 | The seed conversion: `w = r/√I` everywhere, every changed golden and reference image a recorded conversion (R-934, R-931) | M2 | none | code, qa, physics | REQ-DEC-021, REQ-DEC-060 |
+| N11 | TASK-M2-94 | The lock's solver core, from TASK-M2-73 (R-926 item 4) | M2 | TASK-M2-61 | code, qa, physics | REQ-CHART-193 |
+| N12 | TASK-M2-95 | The extension kinds in the contracts: the kinds per edge, each shipped chart's per-edge table, the second sheet and the clamp's metric defined (R-932, R-937, R-938) | M2 | TASK-M2-58 | code, qa, physics | REQ-CHART-194, REQ-CHART-195 |
+| N13 | TASK-M2-96 | The invariant construction's second sheet, and a state's sheet from one source with it (R-937) | M2 | TASK-M2-95 (N12), TASK-M2-93 (N10), TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-DEC-061 |
+| N14a | TASK-M2-101 | Unfold in the CPU evaluator: past a fold the chart shows its second sheet (R-932, R-937) | M2 | TASK-M2-96 (N13), TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-CHART-204 |
+| N14b | TASK-M2-102 | Clamp in the CPU evaluator, the clamp below the floor included (R-932, R-937) | M2 | TASK-M2-96 (N13), TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-CHART-205 |
+| N14c | TASK-M2-103 | Saturate in the CPU evaluator (R-932, R-941) | M2 | TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-CHART-206 |
+| N14d | TASK-M2-104 | Wrap in the CPU evaluator: periodic and pole-crossing edges (R-932) | M2 | TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-CHART-207 |
+| N14e | TASK-M2-105 | The edge kinds' count, navigation stop and sim key: `energy::count`, the view state's override, blank's controls (R-932, R-942) | M2 | TASK-M2-101 (N14a), TASK-M2-102 (N14b), TASK-M2-103 (N14c), TASK-M2-104 (N14d), TASK-M2-38 | code, qa, physics | REQ-CHART-208 |
+| N15 | TASK-M2-97 | The backwards table on an extended chart: sheet 1 only, a state looked up as itself and as its time reverse (R-942) | M2 | TASK-M2-92 (N7), TASK-M2-96 (N13), TASK-M2-101 (N14a) | code, qa, physics | REQ-CHART-196 |
+| N16 | TASK-M2-98 | Computed axes, the maths: terms, name, ticks and marks from the window; the dual ruler in a blend (R-940, R-942) | M2 | TASK-M2-61, TASK-M2-90 (N5), TASK-M2-101 (N14a), TASK-M2-102 (N14b), TASK-M2-103 (N14c), TASK-M2-104 (N14d) | code, qa, physics | REQ-CHART-197, REQ-CHART-198 |
+| N17 | TASK-M8-130 | The figure draws the computed axes: the dual ruler, the edge marks, mixed names (R-940, R-942) | M8 | TASK-M2-98 (N16), TASK-M8-06, TASK-M8-50 | code, qa, gui, physics | REQ-GUI-432 |
+| N18 | TASK-M8-131 | Marking clamped and saturated areas: a toggle, off by default (R-939) | M8 | TASK-M2-102 (N14b), TASK-M2-103 (N14c), TASK-M2-105 (N14e) | code, qa, gui, physics | REQ-GUI-433 |
+| N19 | TASK-M2-99 | The one placement function, `place(state, chart) → {point, sheet, residual, route, status}`, and the two definitions it owes (R-947) | M2 | TASK-M2-90 (N5), TASK-M2-92 (N7), TASK-M2-94 (N11), TASK-M2-96 (N13), TASK-M2-67 | code, qa, physics | REQ-CHART-199, REQ-CHART-200 |
+| N20 | TASK-M2-100 | The measurements P2 and P4, reported to the owner, with P3's timing (R-951) | M2 | TASK-M2-99 (N19), TASK-M2-90 (N5), TASK-M2-82 | code, qa, physics | REQ-CHART-201, REQ-CHART-202, REQ-CHART-203 |
+
+**Decided when the tasks were entered (applied per R-369, the orchestrator's two-way decisions: task scoping; each
+listed for the owner's veto):**
+
+- **Milestones the plans leave unnamed.** N8 and N9 are entered in M7, N17 and N18 in M8. Each waits for M2's gate
+  (R-917, the build order) as well as R-923's hold.
+- **The † edges.** Dropped: N1 to TASK-M2-58 (the slice uses today's charts, window and record layout, nothing the gate
+  writes); N4 to N2 (the builder's acceptance compares the table with the per-sample evaluation and uses nothing the
+  contract text gives). Kept, each because the acceptance uses the other task's output: N3 to TASK-M2-66 and TASK-M2-67;
+  N5, N6 and N11 to TASK-M2-61; N7 to N4; N8 to N4, N7 and N9; N17 to TASK-M8-06 and TASK-M8-50; TASK-M8-58 to N14a,
+  N14b and N14c; TASK-M8-107 to N4 and N5.
+- **"Before TASK-M2-61's baseline."** TASK-M2-61 depends on TASK-M2-57 and on N10, the one way the plan file can say
+  they land first.
+- **"With".** N2 and N12 sit beside TASK-M2-59 and TASK-M2-60 with no edge; TASK-M2-83 depends on N6.
+- **The axes' tasks.** TASK-M8-06, TASK-M8-50 and TASK-M8-115 depend on N16, the addendum's § A.8 having their labels,
+  primary scale and ticks "from N16"; N17 depends on the first two.
+- **REQ-COL-133 and REQ-COL-163** (the leaving rule's definition; later states read signed) stay with TASK-M7-52: the
+  sources do not move them.
+- **REQ-DEC-021** (the momentum seed) was closed by TASK-M2-09, which is built. The requirement is brought into line
+  with R-934 and moves to N10; TASK-M2-09's file is not rewritten.
+- **REQ-TOOL-175** (a keyframe's state): its closing task, TASK-M8-31, is not built, so that task's file carries the
+  change under R-949.
+- **REQ-GUI-421** (the Sequence's chart-change segment), which § F.5 does not list: its verify had "a link-id change
+  still a cut", and follows R-949 with TASK-M8-108.
+- **The two merged plans' other CHANGE marks** (the re-plan's § A.1 and § A.2, the addendum's § A.2, § A.3, § A.7 and §
+  A.8) are entered as dated notes on each requirement and task file, with the ruling added to the requirement's
+  `rulings`; their statements and verifies are left for the tasks that close them to rewrite. Only the requirements §
+  F.5 names are reworded here.
+- **Requirements beyond § F.5's named list,** each from its acceptance paragraph: N1's and N4's rates and N9's
+  backwards-pass cost as benchmarks; N12's definition of the second sheet and the clamp's metric (R-72); N20's two
+  set-up points, what a seeded pixel contributes and whether P2 is also read at `s = 1` (R-72, the owner's to state; no
+  queue entry asks them yet).
+- **Test names** not given by the plans (`first_slice`, `forward_table_builder`, `blend_chart` and the like) are named
+  in the task files: naming.
+
+**Owed to the owner, nothing chosen:** RQ-785 (the picture size of P2's and P4's pixels); N20's two set-up points above;
+N16's tick tolerance and TASK-M8-58's `trace_fold` tolerance (calibrations, R-71); N18's dim or hatch (a screenshot
+pair); R-952's case of a quarter-resolution grid that still misses 8.3 ms (reported, the owner decides).
