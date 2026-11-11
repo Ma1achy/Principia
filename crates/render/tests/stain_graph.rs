@@ -783,16 +783,15 @@ fn stain_fanout_margin_blanks_a_pixel_that_is_not_a_system() {
     check_margin_blank(&builtin("margin"));
 }
 
-/// The margin with no guard of its own, as it was first built: its map over every sample.
-const MARGIN_UNGUARDED: &str = "// @input top1
-// @input top2
-fn colour(ctx: Ctx) -> vec3<f32> { return ramp_grey(ctx.inputs[0].x - ctx.inputs[1].x); }";
-
 negative_control!(
     stain_fanout_margin_blanks_a_pixel_that_is_not_a_system,
-    "a margin with no guard draws a forbidden sample on its map",
+    "a margin with no guard, as it was first built, draws a forbidden sample on its map",
     expected = "a forbidden sample, two sources: the margin draws",
-    check_margin_blank(&custom(MARGIN_UNGUARDED))
+    check_margin_blank(&custom(
+        "// @input top1
+// @input top2
+fn colour(ctx: Ctx) -> vec3<f32> { return ramp_grey(ctx.inputs[0].x - ctx.inputs[1].x); }"
+    ))
 );
 
 /// The margin `occupant` over a sample with no value (render contract "Presentation layer"; R-467, R-511): a
