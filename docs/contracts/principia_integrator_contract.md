@@ -370,13 +370,13 @@ below with its *Was*:
   it is not covariant under a rescaling of the masses: masses `×λ` at fixed lengths scale time by `λ^(−1/2)`, `V` by
   `λ^(1/2)` and `P` by `λ^(3/2)`, so the limit moves by `λ⁻¹` against the dynamical time. In the `M = 1` gauge at equal
   masses `P₁ = (2V₁ − V₂)/9` and `P₂ − P₁ = (V₂ − V₁)/3`, so the limit is three times looser or more than R-160's at
-  the same `f`; at Burrau's masses 3, 4, 5 (`M = 12`, `tools/xcheck/cases.py:160`) it is tighter. `P₂ − P₁` is
-  proportional to `V₂ − V₁` exactly when `m_b = m_c`. So under Aarseth–Zare `f = 0.02` is tied to `M = 1` (the
-  kernel's gauge, R-668): its evidence, FINDINGS § 3.3 on `config_stability`, is a latent decode (`grid.rs:430-461`)
-  whose masses sum to 1 (`grid.rs:639`). The reference code's form is the rule here. Nobody is to "fix" it to
-  velocities. *Was (corrected 11 Nov 2026 by the physics review of PR #488):* "`P₂ − P₁` is not proportional to
-  `v_c − v_b` (at equal unit masses `P₁ = (2V₁ − V₂)/3`). The limit therefore differs from R-160's by a mass-dependent
-  factor of order one".
+  the same `f`; at Burrau's masses 3, 4, 5 (`M = 12`, `tools/xcheck/cases.py:162`) it is tighter. `P₂ − P₁` is
+  proportional to `V₂ − V₁` exactly when `m_b = m_c`. So under Aarseth–Zare `f = 0.02` is tied to `M = 1` (the kernel's
+  gauge, R-668): its evidence, FINDINGS § 3.3 on `config_stability`, is a latent decode (`grid.rs:430-461`) whose masses
+  sum to 1 (the decoder's `ΣM = 1`, `principia_dd_decoder.md:208`). The reference code's form is the rule here. Nobody
+  is to "fix" it to velocities. *Was (corrected 11 Nov 2026 by the physics review of PR #488):* "`P₂ − P₁` is not
+  proportional to `v_c − v_b` (at equal unit masses `P₁ = (2V₁ − V₂)/3`). The limit therefore differs from R-160's by a
+  mass-dependent factor of order one".
 - **The inverse map's guards are `TINY`.** `lc.rs`'s conditioned inverse tests `u0 > T::TINY` (`lc.rs:55`) and
   `u1.abs() > T::TINY` (`lc.rs:63`), and its retained unstable form `u0 > T::TINY` (`lc.rs:78-79`), where `tb_lc.py`
   has the literal `1e-300`. `T::TINY` is the floor `TINY` of Part 3 and Part 6, one value per working precision, a
@@ -557,12 +557,11 @@ these defaults (`tb_az.py:153-238`, the march at `tb_az.py:253-331`), flooring a
    state is not finite (Part 6, the Aarseth–Zare bullet; R-953). *Was (corrected 11 Nov 2026 by the physics review of PR
    #488):* "it is the guard that catches a doubly degenerate state, not the floor: with both `A` and `B` below `TINY` at
    f32, `TINY·TINY` underflows to `0`, so `dτ_entry` (step 2) is infinite and the step's state is not finite". A state
-   degenerate only
-   mid-interval does not reach it: step 3 skips the non-finite constraint (`driver.rs:640`) and takes a finite step, a
-   counted cap hit; the infinite step reaches RK4 when the state is degenerate at the interval's entry. On a landing the
-   clock is set to the
-   boundary exactly, `t += dt_left`; otherwise `t += min(t_s, dt_left)` (`driver.rs:1186-1194`). A step that carries
-   `t_s` past `2·dt_left` is counted as an overshoot (`driver.rs:1101-1114`).
+   degenerate only mid-interval does not reach it: step 3 skips the non-finite constraint (`driver.rs:640`) and takes a
+   finite step, a counted cap hit; the infinite step reaches RK4 when the state is degenerate at the interval's entry.
+   On a landing the clock is set to the boundary exactly, `t += dt_left`; otherwise `t += min(t_s, dt_left)`
+   (`driver.rs:1186-1194`). A step that carries `t_s` past `2·dt_left` is counted as an overshoot
+   (`driver.rs:1101-1114`).
 8. **The largest physical step**, recorded only: `dt_took = t_s − t_before` after the secant, folded into `dt_max`
    when finite (`driver.rs:1097-1100`); `driver.rs` seeds it at `0` (`driver.rs:885`), which the kernel does not
    (Part 2c, rule 4; REQ-TOOL-039).
