@@ -217,8 +217,8 @@ negative_control!(
     check_required_report(
         &swap(
             &ci(),
-            "  fmt:\n    needs: changes\n    if: always() && github.event_name == 'pull_request'\n",
-            "  fmt:\n    needs: changes\n    if: always() && github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true'\n",
+            "  fmt:\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
+            "  fmt:\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' && needs.changes.outputs.docs_only != 'true' }}\n",
         ),
         &read(".github/workflows/pr-check.yml"),
         &read(".github/workflows/reviews.yml"),

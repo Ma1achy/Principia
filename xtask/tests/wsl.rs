@@ -9,7 +9,8 @@
 //! no job or script of it names a secret or a token, and every checkout leaves no credential; `wsl-cpu` refuses while
 //! `.github/wsl-cpu-enabled` is absent, as it is until a reviewed PR adds it after all six proofs have passed;
 //! `/etc/wsl.conf` is exactly the owner's, with no `[boot]` and so no systemd, and the image has no sudo and no sudoers
-//! entry; the base and rustup are pinned by hash and checked before use, the packages come from one dated snapshot,
+//! entry, the purge forced past sudo's own guard for that command alone and the build failing unless sudo is then gone;
+//! the base and rustup are pinned by hash and checked before use, the packages come from one dated snapshot,
 //! the toolchain is `rust-toolchain.toml`'s; the image installs the Vulkan packages `ci.yml`'s lavapipe steps install,
 //! and `inside.sh` selects the backend those jobs select; registration refuses without a pinned manifest hash; proof 3 tries the
 //! host over WSL's virtual switch, at the distro's gateway and on SMB's 445, as well as over the LAN; and proof 4 runs
@@ -293,6 +294,28 @@ mod flag_unchecked {
 
 // ---- The image ----------------------------------------------------------------------------------------------------
 
+/// The purge, forced past sudo's pre-removal guard, which refuses while root's password is locked as the base's is.
+const PURGE: &str = "in_root env SUDO_FORCE_REMOVE=yes apt-get -q -y purge sudo\n";
+/// What the build runs in the chroot straight after the purge, and fails on: dpkg holds no sudo, not even its
+/// conffiles, and no sudo is on PATH, at /usr/bin/sudo or as /etc/sudoers.
+const SUDO_GONE: &str = r#"in_root sh -eu -s << 'EOF' || {
+dpkg-query --version > /dev/null
+state=$(dpkg-query -W -f '${db:Status-Status}' sudo 2> /dev/null || true)
+case "$state" in
+  "" | not-installed) ;;
+  *) echo "dpkg still holds sudo: $state" && exit 1 ;;
+esac
+if command -v sudo; then echo "a sudo is on PATH" && exit 1; fi
+for f in /usr/bin/sudo /etc/sudoers; do
+  if [ -e "$f" ] || [ -L "$f" ]; then echo "$f is left" && exit 1; fi
+done
+echo "sudo: purged; no package, no binary, no /etc/sudoers"
+EOF
+  echo "::error::build-image.sh: sudo isn't proved gone from the image after the purge"
+  exit 1
+}
+"#;
+
 /// The value of `NAME=...` in the build script.
 fn setting<'a>(build: &'a str, name: &str) -> &'a str {
     build
@@ -329,9 +352,28 @@ fn check_image(build: &str, conf: &str, mutants: &str) {
         );
     }
     assert!(
-        build.contains("in_root apt-get -q -y purge sudo")
-            && build.contains("sudo rm -rf \"$root/etc/sudoers.d\""),
+        build.contains(PURGE) && build.contains("sudo rm -rf \"$root/etc/sudoers.d\""),
         "the image keeps sudo"
+    );
+    let forced: Vec<&str> = build
+        .lines()
+        .filter(|l| l.contains("SUDO_FORCE_REMOVE") && !l.starts_with('#'))
+        .collect();
+    assert_eq!(
+        forced,
+        [PURGE.trim_end()],
+        "SUDO_FORCE_REMOVE is set beyond the purge's own command"
+    );
+    let purge = build.find(PURGE).expect("checked above");
+    let gone = build
+        .find(SUDO_GONE)
+        .expect("the build doesn't prove sudo gone, or doesn't fail on it");
+    assert!(
+        purge < gone
+            && build[purge + PURGE.len()..gone]
+                .lines()
+                .all(|l| l.starts_with('#')),
+        "the proof that sudo is gone doesn't follow the purge"
     );
     let url = setting(build, "BASE_URL");
     assert!(
@@ -404,10 +446,89 @@ mod keeps_sudo {
         "sudo kept",
         expected = "the image keeps sudo",
         check_image(
-            &edited(&read(BUILD), "in_root apt-get -q -y purge sudo\n", ""),
+            &edited(&read(BUILD), PURGE, ""),
             &read(CONF),
             &read(".github/workflows/mutants.yml")
         )
+    );
+}
+
+mod unforced_purge {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "the purge left to sudo's guard, which refuses it",
+        expected = "the image keeps sudo",
+        check_image(
+            &edited(&read(BUILD), PURGE, "in_root apt-get -q -y purge sudo\n"),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod forced_everywhere {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "the bypass exported to every command",
+        expected = "SUDO_FORCE_REMOVE is set beyond the purge's own command",
+        check_image(
+            &edited(
+                &read(BUILD),
+                PURGE,
+                &format!("export SUDO_FORCE_REMOVE=yes\n{PURGE}")
+            ),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod unproved {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "the purge taken on apt's word",
+        expected = "the build doesn't prove sudo gone, or doesn't fail on it",
+        check_image(
+            &edited(&read(BUILD), SUDO_GONE, ""),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod proof_not_fatal {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "a failed proof that lets the build go on",
+        expected = "the build doesn't prove sudo gone, or doesn't fail on it",
+        check_image(
+            &edited(
+                &read(BUILD),
+                "after the purge\"\n  exit 1\n}\n",
+                "after the purge\"\n}\n"
+            ),
+            &read(CONF),
+            &read(".github/workflows/mutants.yml")
+        )
+    );
+}
+
+mod proof_before_purge {
+    use super::*;
+    negative_control!(
+        wsl_image_is_pinned_and_has_the_owners_config,
+        "sudo proved gone before it's purged",
+        expected = "the proof that sudo is gone doesn't follow the purge",
+        {
+            let build = read(BUILD);
+            let moved =
+                edited(&build, SUDO_GONE, "").replace(PURGE, &format!("{SUDO_GONE}{PURGE}"));
+            check_image(&moved, &read(CONF), &read(".github/workflows/mutants.yml"));
+        }
     );
 }
 
@@ -730,6 +851,276 @@ mod unchecked_copy {
         "the copy's hash never compared",
         expected = "register imports before checking the image against the pin",
         check_register(&edited(&read(PS), "if ($copied -ne $built)", "if ($false)"))
+    );
+}
+
+// ---- The scripts parse under Windows PowerShell ---------------------------------------------------------------------
+
+/// Where the repository's PowerShell scripts live.
+const PS_DIRS: [&str; 2] = [".github/scripts", "scripts"];
+/// The namespaces a `$name:` may really name: PowerShell's scopes and the drives the scripts read variables from.
+const PS_SCOPES: [&str; 8] = [
+    "env", "script", "global", "using", "local", "private", "function", "variable",
+];
+
+/// Every `.ps1` under `PS_DIRS`, at any depth, by its path from the root, with its text.
+fn ps_scripts() -> Vec<(String, String)> {
+    fn walk(root: &Path, rel: &Path, found: &mut Vec<(String, String)>) {
+        let entries =
+            std::fs::read_dir(root.join(rel)).unwrap_or_else(|e| panic!("{}: {e}", rel.display()));
+        for entry in entries {
+            let entry = entry.expect("a directory entry");
+            let path = rel.join(entry.file_name());
+            if entry.file_type().expect("a file type").is_dir() {
+                walk(root, &path, found);
+            } else if path
+                .extension()
+                .is_some_and(|x| x.eq_ignore_ascii_case("ps1"))
+            {
+                let name = path.to_string_lossy().replace('\\', "/");
+                found.push((name.clone(), read(&name)));
+            }
+        }
+    }
+    let mut found = Vec::new();
+    for dir in PS_DIRS {
+        walk(&root(), Path::new(dir), &mut found);
+    }
+    found.sort();
+    found
+}
+
+/// A character of a PowerShell variable's name: a letter or a digit, ASCII or not, `_`, or `?`.
+fn ps_name_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || c == '?'
+}
+
+/// Each `$name:` in `text`, with its line number, but for a scope's or a drive's with a name after its colon.
+/// PowerShell reads `$name:` as a variable in the drive or scope `name`, in a double-quoted string as much as in code,
+/// and what follows the colon must then be a variable's name: "$pinned: refusing it" doesn't parse
+/// (`InvalidVariableReferenceWithDrive`), no more does "$script: failed", and "${pinned}: refusing it" does. This reads
+/// the text, not PowerShell's tokens, so it is stricter than the parser: it names one in a comment or a single-quoted
+/// string too, where `${name}:` reads the same to a person; one whose name is no scope's with a name after the colon
+/// (`$pinned:x`), which parses and reads a drive that isn't there; and `$type::Member`, which no script here uses and
+/// `($type)::Member` says as well.
+fn drive_references(text: &str) -> Vec<(usize, String)> {
+    let mut found = Vec::new();
+    for (n, line) in text.lines().enumerate() {
+        for (at, _) in line.match_indices('$') {
+            let rest = &line[at + 1..];
+            let len = rest.find(|c: char| !ps_name_char(c)).unwrap_or(rest.len());
+            let name = &rest[..len];
+            let Some(after) = rest[len..].strip_prefix(':') else {
+                continue;
+            };
+            let scoped = PS_SCOPES.iter().any(|s| s.eq_ignore_ascii_case(name))
+                && after.starts_with(ps_name_char);
+            if !name.is_empty() && !scoped {
+                found.push((n + 1, format!("${name}:")));
+            }
+        }
+    }
+    found
+}
+
+/// No script holds a `$name:` that isn't a scope's or a drive's; a script that doesn't parse never runs at all.
+fn check_ps_references(scripts: &[(String, String)]) {
+    assert!(
+        scripts.iter().any(|(name, _)| name == PS),
+        "the scan found no {PS}: it reads nothing"
+    );
+    for (name, text) in scripts {
+        let found = drive_references(text);
+        assert!(
+            found.is_empty(),
+            "{name} doesn't parse under Windows PowerShell: `$name:` reads as a drive-qualified variable; write \
+             `${{name}}:`: {found:?}"
+        );
+    }
+}
+
+/// `scripts`, with `from` replaced by `to` in wsl.ps1.
+#[cfg(feature = "controls")]
+fn ps_scripts_edited(from: &str, to: &str) -> Vec<(String, String)> {
+    let mut scripts = ps_scripts();
+    for (name, text) in &mut scripts {
+        if name == PS {
+            *text = edited(text, from, to);
+        }
+    }
+    scripts
+}
+
+#[test]
+fn ps_scripts_hold_no_drive_qualified_reference() {
+    check_ps_references(&ps_scripts());
+}
+
+negative_control!(
+    ps_scripts_hold_no_drive_qualified_reference,
+    "the register script's first message, as run 42944409475 refused it",
+    expected = "doesn't parse under Windows PowerShell",
+    check_ps_references(&ps_scripts_edited(
+        "the pin is ${pinned}: refusing it",
+        "the pin is $pinned: refusing it"
+    ))
+);
+
+mod unregister_message {
+    use super::*;
+    negative_control!(
+        ps_scripts_hold_no_drive_qualified_reference,
+        "the unregister message, as that run refused it",
+        expected = "doesn't parse under Windows PowerShell",
+        check_ps_references(&ps_scripts_edited(
+            "wsl --unregister ${Distro}: exit",
+            "wsl --unregister $Distro: exit"
+        ))
+    );
+}
+
+mod unread {
+    use super::*;
+    negative_control!(
+        ps_scripts_hold_no_drive_qualified_reference,
+        "a scan that reads no script",
+        expected = "it reads nothing",
+        check_ps_references(&[])
+    );
+}
+
+/// The scan's edges: what it names and what it leaves.
+fn check_drive_references(text: &str, expected: &[(usize, &str)]) {
+    let found = drive_references(text);
+    let found: Vec<(usize, &str)> = found.iter().map(|(n, r)| (*n, r.as_str())).collect();
+    assert_eq!(
+        found, expected,
+        "the scan of {text:?} names the wrong references"
+    );
+}
+
+/// A scope's or a drive's reference, in any case, and one to a name starting with `_`, `?`, a digit or a letter that
+/// isn't ASCII; a braced name; a colon apart from the name; a subexpression's; a bare `$`; a name with no colon.
+const PS_SOUND: &str =
+    "\"$env:A $script:b $GLOBAL:c $using:d $local:e $private:f $function:g $variable:h\"\n\
+     \"$env:_a $env:?b $env:1 $env:\u{e9}t\u{e9}\"\n\
+                        \"${pinned}: $pinned : $($r.Code): $ : $: $pinned\"\n";
+
+#[test]
+fn ps_scan_names_only_what_does_not_parse() {
+    check_drive_references(PS_SOUND, &[]);
+    check_drive_references(
+        "\"$a: b\"\n\n\"x $_: $envx: $en: ${ok}: $B2:$c:\"\n$last:",
+        &[
+            (1, "$a:"),
+            (3, "$_:"),
+            (3, "$envx:"),
+            (3, "$en:"),
+            (3, "$B2:"),
+            (3, "$c:"),
+            (4, "$last:"),
+        ],
+    );
+    // A scope's name is a reference only with a name after its colon: before a space, at a string's end, at the
+    // line's end and before a second colon it is the same parse error.
+    check_drive_references(
+        "\"$script: failed\"\n\"$env: x\"\n\"$local:\"\n$Function:\n[int]$global::MaxValue $x::y",
+        &[
+            (1, "$script:"),
+            (2, "$env:"),
+            (3, "$local:"),
+            (4, "$Function:"),
+            (5, "$global:"),
+            (5, "$x:"),
+        ],
+    );
+    // `?` and letters outside ASCII are a name's characters, and don't end it early.
+    check_drive_references(
+        "\"$ok?: $na\u{ef}ve: $?: $\u{e9}:\"",
+        &[
+            (1, "$ok?:"),
+            (1, "$na\u{ef}ve:"),
+            (1, "$?:"),
+            (1, "$\u{e9}:"),
+        ],
+    );
+}
+
+negative_control!(
+    ps_scan_names_only_what_does_not_parse,
+    "a scan that takes every name for a scope",
+    expected = "names the wrong references",
+    check_drive_references("\"the pin is $pinned: refusing it\"", &[])
+);
+
+mod scope_alone {
+    use super::*;
+    negative_control!(
+        ps_scan_names_only_what_does_not_parse,
+        "a scope's name exempt whatever follows its colon",
+        expected = "names the wrong references",
+        check_drive_references("\"$script: failed\"", &[])
+    );
+}
+
+// ---- A refusal's line reaches the log ------------------------------------------------------------------------------
+
+/// The text of wsl.ps1's function `name`, from its `function` line to its closing brace.
+fn ps_function<'a>(script: &'a str, name: &str) -> &'a str {
+    let start = script
+        .find(&format!("\nfunction {name}"))
+        .unwrap_or_else(|| panic!("{PS} has no function {name}"));
+    let rest = &script[start + 1..];
+    &rest[..rest.find("\n}\n").expect("the function ends") + 2]
+}
+
+/// `Fail` writes its `::error::` line to the console and exits 125. Left on the output stream, the line is lost with
+/// the exit whenever the caller is collecting that output: `$pinned = Get-Pinned`, the refusal of an unpinned
+/// manifest, exited 125 and said nothing. So `Fail` emits nothing: its body is the write and the exit.
+fn check_fail(script: &str) {
+    let fail = ps_function(script, "Fail");
+    let body: Vec<&str> = fail.lines().map(str::trim).collect();
+    assert_eq!(
+        body,
+        [
+            "function Fail($message) {",
+            "[Console]::Out.WriteLine(\"::error::wsl.ps1: $message\")",
+            "exit 125",
+            "}"
+        ],
+        "Fail's line can be lost to a caller collecting output, or its exit isn't 125"
+    );
+    // The refusal that showed it is still Fail's, from a function whose output register assigns.
+    assert!(
+        ps_function(script, "Get-Pinned").contains("        Fail \"no manifest hash is pinned")
+            && arm(script, "register").contains("$pinned = Get-Pinned"),
+        "the unpinned refusal isn't Fail's"
+    );
+}
+
+#[test]
+fn wsl_fail_writes_where_no_assignment_collects_it() {
+    check_fail(&read(PS));
+}
+
+negative_control!(
+    wsl_fail_writes_where_no_assignment_collects_it,
+    "the line left on the output stream, as it was",
+    expected = "Fail's line can be lost to a caller collecting output",
+    check_fail(&edited(
+        &read(PS),
+        "    [Console]::Out.WriteLine(\"::error::wsl.ps1: $message\")\n",
+        "    \"::error::wsl.ps1: $message\"\n"
+    ))
+);
+
+mod other_status {
+    use super::*;
+    negative_control!(
+        wsl_fail_writes_where_no_assignment_collects_it,
+        "Fail exits 1",
+        expected = "or its exit isn't 125",
+        check_fail(&edited(&read(PS), "    exit 125\n}", "    exit 1\n}"))
     );
 }
 

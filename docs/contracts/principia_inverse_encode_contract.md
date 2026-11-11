@@ -493,6 +493,15 @@ rest start, and every other pair there is rejected. A non-finite entry is reject
 carried on as a NaN. A chart point below the invariant charts' apex, `t < 0`, has no entered `L_z`: `L_z(s, t)` has
 no real value there. So projecting it to `t = 0` changes no class, and the projection stands.
 
+**The class rule binds lookups and the lock, never a drawn extension** (R-937, 10 Nov 2026, the owner's order on RQ-771
+(ii)). The two classifiers above protect a system the user meant to enter: they decide what lookup and the lock may
+project, clamp or must reject. They do not bind what a chart draws past its own edge. Where a chart's declared extension
+draws a pixel that lookup would reject (under the linear option and on `Φ_θ,L_z`, `K* ≤ 0` with `L_z ≠ 0`), the drawn
+system is the extension's, defined in `principia_chart_reference.md` § 2.1: the rigid rotation at the pixel's own `L_z`,
+whose metric is `|ΔE|` at fixed `L_z`, written beside this section's metric and never as it. That system keeps `L_z`'s
+class exactly and may change `E`'s; the Inspector and hover show its own energy and class, never the row's, and a click
+or a re-centre on such a pixel never locks it while showing the row's energy.
+
 **Lock validation.** A clicked pixel is valid by construction, but a tilt can carry the lock's neighbourhood
 into an infeasible region. Detect it, then re-centre to the nearest feasible point or switch to a chart where
 the lock is valid. The nearest feasible point is the lock's own centre's, and the re-centre is offered only when that

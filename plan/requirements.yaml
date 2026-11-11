@@ -1669,12 +1669,16 @@
     section: Chart-aware validation
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-937 — RQ-771, the invariant charts' second sheet: option (a), the spin edges unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ`, on the warped and the linear mapping, its meaning read from the seed R-934 rules; below the floor at a non-zero spin, where the lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin, everywhere there, on the linear `(L_z, E)` and `(L_z, K)` charts and on Burrau `Φ_θ,L_z`, physics review agreeing with conditions C1 to C7; REQ-ENC-030's class rule binds lookups and the lock, never a drawn extension *(closes RQ-771; amends R-471 and R-508)*"
   verify:
     method: review checklist
     detail: "the section gives the projection metric per feasibility constraint (the (L_z, E) parabola at least) and the reject criterion; physics reviewer approved"
   rulings:
   - R-72
+  - R-937
   milestone: M2
+  note: "R-937 (10 Nov 2026, the owner's order on RQ-771 (ii)): the class rule binds lookups and the lock, never a drawn extension; the contract's chart-aware validation says so, and the drawn clamp below the floor at a non-zero L_z is chart_reference § 2.1's, its metric |ΔE| at fixed L_z written beside this metric, never as it."
 - id: REQ-ENC-031
   area: ENC
   kind: definition
@@ -3010,7 +3014,7 @@
   note: "R-469 (20 Oct 2026), P2, A1 to A3, A8. Closed by TASK-M2-38. The edit path on the real engine is REQ-GUI-243 (TASK-M8-48). Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F4: halving λ itself reaches adjacent f64s only near λ ≥ ½ (R-469 A3 corrected). *Was:* \"by bisection on the edit's fraction λ ∈ [0, 1] until the two ends are adjacent f64 values (at most 64 steps)\"."
 - id: REQ-CHART-061
   area: CHART
-  statement: "Navigation must never leave the manifold under fuzzed edits (C6): on every gallery chart, a seeded, reproducible sequence of random pan, slice, zoom, tilt and lock edits, each passed through REQ-CHART-060's stop, must leave a centre that validates after every edit; under the default warp of every energy-type axis (R-471) every pixel of a 65 × 65 grid over [0,1]² whose own chart parameters (a, b) lie in the chart's square must validate at every tilt reached (every grid pixel, under Lean each axis, with X ≠ Y or with one angle set; a pixel whose (a, b) leave the square is past the edge, REQ-CHART-076, R-512); and under the linear option infeasible pixels must appear in the window and be classified not a system."
+  statement: "Navigation must never leave the manifold under fuzzed edits (C6): on every gallery chart, a seeded, reproducible sequence of random pan, slice, zoom, tilt and lock edits, each passed through REQ-CHART-060's stop, must leave a centre that validates after every edit; under the default warp of every energy-type axis (R-471) every pixel of a 65 × 65 grid over [0,1]² whose own chart parameters (a, b) lie in the chart's square must validate at every tilt reached (every grid pixel, under Lean each axis, with X ≠ Y or with one angle set, with the view's centre in the square, R-512; a pixel whose (a, b) leave the square is past the edge, REQ-CHART-076, R-512); and under the linear option infeasible pixels must appear in the window and be classified not a system."
   source:
   - file: decisions.md
     section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
@@ -3028,7 +3032,7 @@
     section: "R-708 — The tilted Burrau `K` charts follow R-471's two modes: warped, the default, every pixel a system under every tilt, the `K` axis floored at the pixel's own held `L_z` in the additive form and the bottom row never blanked; linear, rows at fixed values, an infeasible cell blank, held coordinates by value; held energy-type coordinates tilt in their warp coordinate in warped mode *(closes RQ-678 and RQ-683; amends R-633; refines R-471 and R-508)*"
   verify:
     method: property test
-    detail: "cargo test -p kernel nav_fuzz_never_leaves (seeded, the seed printed): ≥ 1000 edits per gallery chart; after each, validate(centre) is Valid; on the invariant and Burrau K charts, warped, every grid pixel whose (a, b) lie in the square validates at every tilt, and under Lean each axis or X ≠ Y that is every grid pixel; control (the arm that fires): the same run under the linear option finds infeasible pixels inside [0,1]² and each is classified not a system (blank), and a fuzz run with the stop disabled reaches an invalid centre"
+    detail: "cargo test -p kernel nav_fuzz_never_leaves (seeded, the seed printed): ≥ 1000 edits per gallery chart; after each, validate(centre) is Valid; on the invariant and Burrau K charts, warped, every grid pixel whose (a, b) lie in the square validates at every tilt, and under Lean each axis or X ≠ Y, with the view's centre in the square (R-512), that is every grid pixel; control (the arm that fires): the same run under the linear option finds infeasible pixels inside [0,1]² and each is classified not a system (blank), and a fuzz run with the stop disabled reaches an invalid centre"
   rulings:
   - R-469
   - R-471
@@ -3036,7 +3040,7 @@
   - R-512
   - R-708
   milestone: M2
-  note: "R-477 C6. Closed by TASK-M2-38. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Narrowed on physics review 5586890917 of PR #255, F1 (R-471 H9): under Tip as sheet with one target and both angles set a window pixel's (a, b) can leave the square; that case is RQ-402. *Was:* \"every pixel of a 65 × 65 grid over [0,1]² must validate at every tilt reached\". R-512 (RQ-402 ruled): C6 reads over the chart's square, as narrowed. *Was:* \"what a pixel whose (a, b) leave the square draws is REQ-CHART-076, RQ-402\". R-708 (4 Nov 2026, RQ-678): the verify stands as written: warped, on the tilted Burrau K charts, every in-square pixel validates, and refused cells are the linear arm. RQ-678 no longer holds this arm."
+  note: "R-477 C6. Closed by TASK-M2-38. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Narrowed on physics review 5586890917 of PR #255, F1 (R-471 H9): under Tip as sheet with one target and both angles set a window pixel's (a, b) can leave the square; that case is RQ-402. *Was:* \"every pixel of a 65 × 65 grid over [0,1]² must validate at every tilt reached\". R-512 (RQ-402 ruled): C6 reads over the chart's square, as narrowed. *Was:* \"what a pixel whose (a, b) leave the square draws is REQ-CHART-076, RQ-402\". R-708 (4 Nov 2026, RQ-678): the verify stands as written: warped, on the tilted Burrau K charts, every in-square pixel validates, and refused cells are the linear arm. RQ-678 no longer holds this arm. Record correction, applied per R-369 (physics call on PR #464, comment 6754204292; R-512: \"E3 and C6 read over the chart's square\"): the every-grid-pixel parenthetical gains R-471 H9's premise, the view's centre in the square, as a centre outside it (a held K₀ = 0, R-720) takes grid pixels past the edge. *Was:* \"(every grid pixel, under Lean each axis, with X ≠ Y or with one angle set; a pixel whose (a, b) leave the square is past the edge, REQ-CHART-076, R-512)\". The verify's every-grid-pixel clause gains the same premise. *Was:* \"and under Lean each axis or X ≠ Y that is every grid pixel\"."
 - id: REQ-CHART-062
   area: CHART
   statement: "Tilt and slice must be available on every chart (latent, shape sphere, mass simplex, Burrau family, invariant charts, custom and saved charts): the tilt is a rotation R(τ₁, τ₂) in the 3-space of the two screen axes and the hidden target coordinate (with X ≠ Y the two-target form in the 4-space (a, b, d_X, d_Y)), applied to the chart's own parameters, a pixel at window offset (u, v) mapping to (a, b, d) = R·(u, v, 0), a and b through the chart map exactly and d added to the hidden coordinate's value at the slice centre; on the latent chart it must be exactly the decoder's basis edit; R must come from the active tilt map (REQ-GUI-231) and be computed on the CPU, the kernel receiving it in the chart's params; a chart's hidden coordinates are the latent controls its axes do not write where it holds a block by latent controls, and, where it holds a block by a physical construction, that construction's physical parameters, tilted by value (d added to the physical value at the slice centre) as R-554 L5's p_λ (R-633), a held K in warped mode in its warp coordinate instead (R-708, R-720): the mass simplex's ν₀, the held Burrau-family shape, d = 0 reproducing the untilted chart exactly; a rest start's four momentum controls from 0 (z_mom = 0; the mass simplex, the Euclid plane, the δm strip); the held L_z of the (ν, K) chart and Φ_θ,K, and the held K of Φ_θ,L_z, each by its axis's mode (R-708): in warped mode, the default, every pixel inside the chart's square a system under every tilt, the K axis K = L_z²/2I + K_max·t^γ_K at the pixel's own held L_z (past K_max at the top if the floor takes it there), the held K tilted in its warp coordinate so it stays ≥ 0, the held L_z by value, L_z = L_z0 + d with no sign constraint, a column above K_max at large tilt accepted (R-720), the bottom row never blanked by rounding at the floor, and, if the implementer confirms a held energy's warp coordinate reaches t < 0, that coordinate clamped at t = 0, each clamped pixel a real system flagged held at floor, with no mirror (R-709); in linear mode, by value, a cell with no momentum construction at the tilted value (K < L_z²/2I) refused, no system, blank (R-470) and area weight 0; and untilted (τ = 0, under either map) the chart must take no tilt path and render bitwise today's (C2); and a tilted chart's system_image must fold two pixels only when their full (a, b, d) decode to the same system, taken over the tilted view's pixels and recomputed when τ₁, τ₂ or the targets change, a pixel's mirror being the pixel with the mirrored (a, b) and the same d; on the shape sphere there is no mirror pair to fold, every pixel its own system, so the tilted view is one-to-one at every tilt but RQ-471's rank-loss corner (the Lean-each-axis corner |τ₁| = |τ₂| = 90° with one target, where the window maps onto one line of systems) (R-544, R-613) (chart_reference §3.3, applied per R-369); and on every chart, under Lean each axis with one target at |τ₁| = |τ₂| = 90°, the chart must report system_image ray-degenerate, apply no fold (there is no normal) and weight every pixel's area 0, every share then undefined (0 of a total of 0), never 0 (R-554, RQ-471 (a))."
@@ -6347,15 +6351,18 @@
     section: "7.3 The f32 horizon is falsified — and the cause is AZ, not precision"
   - file: docs/contracts/principia_integrator_contract.md
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
+  - file: decisions.md
+    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
   verify:
     method: numerical gate
-    detail: "at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form"
+    detail: "at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 (f32) / 4.0e-12 (f64) for the unstable form, the reference's own table (tb_lc.py:67-69), whose 3.5e-9 is its f64 figure at 179.99° (R-927)"
   rulings:
   - R-35
+  - R-927
   milestone: M3
   rq:
   - RQ-756
-  note: applies to the AZ occupant
+  note: "applies to the AZ occupant. R-927 (10 Nov 2026, RQ-756 (5) 3): the unstable form's f64 figure at 179.9° is the reference's 4.0e-12. *Was (verify):* \"at rho angle 179.9°: f32 relative error ≈ 5.96e-8 (f32 eps) and f64 ≈ 1e-16, vs 2.2e-2 / 3.5e-9 for the unstable form\" RQ-756 stays open on (5) 7, the guard the inverse map tests against."
 - id: REQ-INT-045
   area: INT
   statement: "Threshold and suspect decisions in the march's control flow must use the live f32 measurement, never an unpacked f16 latch; the read-time suspect predicates, which run after the march, read the stored latches (R-669, RQ-636 (a))."
@@ -6431,13 +6438,17 @@
     section: 5. Immediate action
   - file: docs/contracts/principia_integrator_contract.md
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
+  - file: decisions.md
+    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
   verify:
     method: numerical gate
-    detail: "figure-eight closure after one period: ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order"
-  rulings: []
+    detail: "figure-eight closure after one period, on the gate's own sync interval T/n with n = 32, under integrator contract Part 6's per-step rule and the transcribed step control, the landing clamp with the landing secant as driver.rs has it (R-927): at most REQ-INT-114's calibrated threshold at eta = 0.001, the closure without the landing fix measured and reported beside it; convergence better than first order; the re-registration count reported with the result"
+  rulings:
+  - R-927
   milestone: M3
   rq:
   - RQ-756
+  note: "R-927 (10 Nov 2026, RQ-756 (2)(a), (5) 1, 2 and 9): the gate runs under the rule in force with the reference code's step control, and its threshold is re-measured under that same code, a calibration (REQ-INT-114); 4.232e-09 was measured under § 0.1's fixed dτ and no longer binds. *Was (verify):* \"figure-eight closure after one period: ≤ 4.232e-09 at eta = 0.001 (vs 2.818e-03 without the fix); convergence better than first order\""
 - id: REQ-INT-050
   area: INT
   statement: "A regularisation-free occupant must be kept permanently, sharing no coordinate machinery with the others, as the arm that adjudicates when regularised occupants disagree."
@@ -6522,14 +6533,18 @@
     section: R-19 — Change 8 landed in full *(closes RQ-17)*
   - file: docs/contracts/principia_integrator_contract.md
     section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
+  - file: decisions.md
+    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
   verify:
     method: property test
-    detail: "Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound computed on the fixed τ-schedule."
+    detail: "Fuzz ICs; the substep count per sync interval never exceeds the Law 18 bound computed on the fixed τ-schedule. The bound's formula waits on RQ-756 (4): R-927 flags the owner's (4)(a), max(N_min, step_budget_rate·Δ_sync) per interval, against R-604's budget, which is cumulative since t = 0, and applies nothing; this arm is not built until the owner answers."
   rulings:
   - R-19
+  - R-927
   milestone: M3
   rq:
   - RQ-756
+  note: "R-927 (10 Nov 2026) flags RQ-756 (4)(a) and applies nothing: the step budget over one interval is not a bound R-604's cumulative budget gives, so the bound's formula stays open in RQ-756 (4) and the verify's test is as it was, a sentence added saying it waits."
 - id: REQ-INT-055
   area: INT
   statement: The inspector's CPU reference integration must be RK45.
@@ -7712,6 +7727,27 @@
   - R-710
   milestone: M4
   note: "R-710 (4 Nov 2026, RQ-697 (b)). Closed by TASK-M4-03. A fork past this width is reported as a defect, never reconciled."
+- id: REQ-INT-114
+  area: INT
+  kind: calibration
+  statement: "The figure-eight closure threshold of REQ-INT-049's gate (one period, the gate's own sync interval T/32, eta = 0.001), under integrator contract Part 6's per-step rule and the transcribed Aarseth–Zare step control with the landing secant as driver.rs has it, must be calibrated: re-measured under that same code and proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md. The earlier figure, 4.232e-09, was measured under the fixed dτ of dd_validation_orbits § 0.1 and no longer binds (R-927)."
+  source:
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 0.1 The mechanism, and the fix — measured, not proposed
+  - file: decisions.md
+    section: "R-927 — RQ-756, Aarseth–Zare's open points: REQ-INT-049's figure-eight threshold is re-measured under the step rule in force, a calibration; on each point of (5) where the reference code and the corpus disagree, the reference code's choice, the Rust driver being that code, the threshold re-measured under the same code; the owner's (4)(a), REQ-INT-054's bound per sync interval as the step budget over one interval, contradicts R-604's budget, which is cumulative since `t = 0`: flagged, not applied, (4) staying open with three points of (5) whose Rust files are not in the imported set *(on RQ-756, which stays open)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate az-final-step --propose: the closure after one period at eta = 0.001 and n = 32 under the rule in force, the convergence ladder across eta in [0.02, 0.001], and the closure without the landing fix beside it, each run reported with its re-registration count and whether the predictive limit bound any step; the reference's figures (2.976e-3 against 3.595e-9, driver.rs:398-400) quoted as measurements, never as the threshold; the threshold proposed from the measured closure, its margin stated; checked by a reviewer; confirmed by the human at the M3 gate; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-927
+  milestone: M3
+  note: "R-927 (10 Nov 2026, RQ-756 (2)(a)): \"provided the gate threshold is re-measured\" under the reference code, the Rust driver. Closed by TASK-M3-68. RQ-756 stays open on (5) 6, the predictive limit's `v_rel`: the proposal states whether that limit bound any step of the run."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -15723,13 +15759,16 @@
     section: 4.2 Port types
   - file: decisions.md
     section: "R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*"
+  - file: decisions.md
+    section: "R-930 — RQ-748, the Print graph tests' `linocut`: option (a), REQ-RENDER-102's and REQ-RENDER-104's verifies are reworded to name a fixture node, as TASK-M7-54 built them, so the linocut port follows the lab *(closes RQ-748)*"
   verify:
     method: unit test
-    detail: "cargo test -p render print_port_types: an `image` → `direction` wire is refused with both ports and types named; an unconnected `ground` input of `linocut` takes `paper` and an unconnected `field` input `white`, as the lab's defaults declare; control: a validator that accepts every wire passes the mismatched fixture and fails the test"
+    detail: "cargo test -p render print_port_types: an `image` → `direction` wire is refused with both ports and types named; an unconnected `ground` input of a fixture node takes `paper` and an unconnected `field` input `white`, as that node's declared defaults say (the stand-in `fixtures/print_graph/nodes/linocut.json`, not the lab's linocut, R-930); control: a validator that accepts every wire passes the mismatched fixture and fails the test"
   rulings:
   - R-486
+  - R-930
   milestone: M7
-  note: "R-485's §4 list, \"port typing and the editor's wire refusal\": the model's refusal here, the editor's in REQ-GUI-361. Closed by TASK-M7-54."
+  note: "R-485's §4 list, \"port typing and the editor's wire refusal\": the model's refusal here, the editor's in REQ-GUI-361. Closed by TASK-M7-54. R-930 (10 Nov 2026, RQ-748 (a)): the verify names the stand-in fixture node TASK-M7-54 built, so the linocut port follows the lab (R-486) and needs no `ground` or `field`. *Was (verify):* \"cargo test -p render print_port_types: an `image` → `direction` wire is refused with both ports and types named; an unconnected `ground` input of `linocut` takes `paper` and an unconnected `field` input `white`, as the lab's defaults declare; control: a validator that accepts every wire passes the mismatched fixture and fails the test\""
 - id: REQ-RENDER-103
   area: RENDER
   statement: "Print graph node types must be a registry, the Print graph's own and never the stain's codegen, each entry declaring its id, label, category, a one-paragraph doc, typed inputs with their defaults, typed outputs, its parameters each with a type, default, range, step and unit (`ref_px`, `device_px` or `fraction` for a length), its passes in WGSL, a cost class (`light`, `medium`, `heavy`), a motion policy (`full`, `reduced`, `bypass`), whether it is `temporally_stable`, whether it is a `screen_medium` (R-525 V1) and its listed deviations from the lab (R-492); the lab's `source` category, holding the Render node, must be labelled \"Print source\"."
@@ -15768,13 +15807,16 @@
     section: 11. Tests (each with an arm that can fail)
   - file: decisions.md
     section: "R-492 — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail"
+  - file: decisions.md
+    section: "R-930 — RQ-748, the Print graph tests' `linocut`: option (a), REQ-RENDER-102's and REQ-RENDER-104's verifies are reworded to name a fixture node, as TASK-M7-54 built them, so the linocut port follows the lab *(closes RQ-748)*"
   verify:
     method: unit test
-    detail: "cargo test -p render print_registry_check and cargo test -p xtask print_registry_build (§11 test 8): the shipped registry and presets pass; controls: a fixture preset naming `linocutt` fails naming it, a fixture setting `linocut.depth` outside its range fails naming the preset, node and parameter, and a length parameter registered without a unit fails; the build runs the check: building `render` in a scratch copy of the workspace with a fixture preset naming `linocutt` added to its presets fails, the error naming the preset and the node; with a fixture preset setting `linocut.depth` outside its range added instead it fails, the error naming the preset, the node and the parameter; and the same copy with neither builds; control: a build script that does not call the check builds both bad presets and fails the build arm"
+    detail: "cargo test -p render print_registry_check and cargo test -p xtask print_registry_build (§11 test 8): the shipped registry and presets pass; controls: a fixture preset naming `linocutt` fails naming it, a fixture setting a fixture node's `depth` outside its range (the stand-in `fixtures/print_graph/nodes/linocut.json`'s `linocut.depth`, not a parameter of the lab's linocut, R-930) fails naming the preset, node and parameter, and a length parameter registered without a unit fails; the build runs the check: building `render` in a scratch copy of the workspace with a fixture preset naming `linocutt` added to its presets fails, the error naming the preset and the node; with a fixture preset setting that fixture node's `depth` outside its range added instead it fails, the error naming the preset, the node and the parameter; and the same copy with neither builds; control: a build script that does not call the check builds both bad presets and fails the build arm"
   rulings:
   - R-492
+  - R-930
   milestone: M7
-  note: "Closed by TASK-M7-54. Fix round 8 of PR #281 (qa review 5608745757, finding 9, applied per R-369): the build itself runs the preset check, shown by a build that fails on a bad preset, with a control. *Was (verify):* \"cargo test -p render print_registry_check (§11 test 8): the shipped registry and presets pass; controls: a fixture preset naming `linocutt` fails naming it, a fixture setting `linocut.depth` outside its range fails naming the preset, node and parameter, and a length parameter registered without a unit fails\" Fix round 9 of PR #281 (qa re-check 5624154623, D, applied per R-369): the build arm covers both of the statement's cases, an unknown node type (its error naming the preset and the node) and an out-of-range value (naming the preset, the node and the parameter). *Was (verify):* \"cargo test -p render print_registry_check and cargo test -p xtask print_registry_build (§11 test 8): the shipped registry and presets pass; controls: a fixture preset naming `linocutt` fails naming it, a fixture setting `linocut.depth` outside its range fails naming the preset, node and parameter, and a length parameter registered without a unit fails; the build runs the check: building `render` in a scratch copy of the workspace with a fixture preset naming `linocutt` added to its presets fails, the error naming the preset, the node and the parameter, and the same copy without it builds; control: a build script that does not call the check builds the bad preset and fails the build arm\""
+  note: "Closed by TASK-M7-54. Fix round 8 of PR #281 (qa review 5608745757, finding 9, applied per R-369): the build itself runs the preset check, shown by a build that fails on a bad preset, with a control. *Was (verify):* \"cargo test -p render print_registry_check (§11 test 8): the shipped registry and presets pass; controls: a fixture preset naming `linocutt` fails naming it, a fixture setting `linocut.depth` outside its range fails naming the preset, node and parameter, and a length parameter registered without a unit fails\" Fix round 9 of PR #281 (qa re-check 5624154623, D, applied per R-369): the build arm covers both of the statement's cases, an unknown node type (its error naming the preset and the node) and an out-of-range value (naming the preset, the node and the parameter). *Was (verify):* \"cargo test -p render print_registry_check and cargo test -p xtask print_registry_build (§11 test 8): the shipped registry and presets pass; controls: a fixture preset naming `linocutt` fails naming it, a fixture setting `linocut.depth` outside its range fails naming the preset, node and parameter, and a length parameter registered without a unit fails; the build runs the check: building `render` in a scratch copy of the workspace with a fixture preset naming `linocutt` added to its presets fails, the error naming the preset, the node and the parameter, and the same copy without it builds; control: a build script that does not call the check builds the bad preset and fails the build arm\" R-930 (10 Nov 2026, RQ-748 (a)): the verify's `linocut.depth` is the stand-in fixture node's parameter, named so; the lab's linocut has no `depth`. *Was (verify), the two phrases reworded:* \"a fixture setting `linocut.depth` outside its range fails naming the preset, node and parameter\" and \"with a fixture preset setting `linocut.depth` outside its range added instead\""
 - id: REQ-RENDER-105
   area: RENDER
   statement: "The Print graph must run as the print stage of the display chain, where R-67 had style, on the stain's finished colours (SimState → stain → [the line sets drawn through] → Print graph → display scale → gamut clamp → [the line sets drawn over] → colour-vision simulation → screen); its default, Plain, must be the bitwise identity; and a Print graph edit must be a render-only change that re-integrates nothing, never touches the sim key and leaves the quad cache and quad requests unchanged."
@@ -31221,6 +31263,27 @@
   - R-862
   milestone: M0
   note: Closed by TASK-M0-58. Phase 2 of the runner's GPU suites.
+- id: REQ-TOOL-227
+  area: TOOL
+  statement: "symlog's neutral band on a current drift must scale with the rounding itself: a drift with |x| ≤ k'·2⁻²³·(K + |V|) for the energy, or |x| ≤ k'·2⁻²³·S for L_z with S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|), is drawn as 0, k' from the rounding bound (15 with a CPU reference and 22 with a GPU one for the energy; 5 and 6 for L_z), in place of k·2⁻²³·|reference| with k = 128 (R-928); and the band must be applied where the drift is read, so that a field ramp on energy_drift or Lz_drift has it as the three drift debug views do, compact_symlog itself unchanged (R-929). lin and log keep no band, a non-finite operand passes through first, and the value passed to dbg_suspect stays the drift."
+  source:
+  - file: decisions.md
+    section: "R-928 — RQ-637, `symlog`'s neutral band near a zero reference: option (b), the band scales by the rounding itself, `k'·2⁻²³·(K + |V|)` for the energy and `k'·2⁻²³·S` for `L_z`, `k'` from the bound *(closes RQ-637; amends R-652)*"
+  - file: decisions.md
+    section: "R-929 — RQ-638, the neutral band on a field ramp: option (a), the band is applied where the drift is read, so a field ramp on `energy_drift` or `Lz_drift` has it, and the fresh-sample test is extended to that path *(closes RQ-638; refines R-652)*"
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: docs/design/principia_colour_composition.md
+    section: 6. Debug views as presets
+  verify:
+    method: unit test
+    detail: "cargo test -p render drift_view_neutral_fresh_sample_renders_exactly_neutral, extended: a fresh sample renders exactly neutral on every backend in the three drift debug views and through a field ramp on energy_drift and on Lz_drift, on every sample of the test's set, those with E_0 or Lz_0 near zero included (dd_integrator test 2's fresh figure-eight among them), which the band relative to the reference left outside its domain; a drift just past the band keeps its own place; controls: the band relative to |E_0| or |Lz_0| (k = 128) fails on the near-zero samples, and a field ramp without the band fails the field-ramp arm; k' and its bound written in render contract Part 5 and reviewed by the physics reviewer; any golden the change moves reported with its reason, re-baselined only as R-110 and R-931 allow"
+  rulings:
+  - R-652
+  - R-928
+  - R-929
+  milestone: M3
+  note: "R-928 (RQ-637 (b)) and R-929 (RQ-638 (a)), 10 Nov 2026. Closed by TASK-M3-70; until it merges the band is TASK-M3-05's, relative to the reference with k = 128, in the three drift debug views only."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

@@ -329,6 +329,11 @@ ill-conditioned in single precision, independent of any horizon argument.**
 > the same exponential-from-a-small-intercept signature. The curve was under-determined and was read
 > as conclusive.
 
+*10 Nov 2026 (R-927, the owner's answer on RQ-756 (5) 3):* the table above is kept as the note recorded it. The
+reference's own table (`docs/reference/prin-rs/reference/tb_lc.py:67-69`) gives the unstable form `4.0e-12` at f64 and
+`2.2e-2` at f32 for 179.9°; `3.5e-9` is its f64 figure at 179.99°. The reference code's figure is the one REQ-INT-044's
+gate reads, as integrator contract Part 2b's Aarseth–Zare section has it.
+
 > ### ⚠ (superseded) §7.3's mechanism is withdrawn and its conclusion is UNVERIFIED
 > **My cancellation explanation was wrong.** I claimed `Gamma = A·B·(H − E)` is identically zero
 > on-shell so its terms cancel catastrophically. The equations of motion use **`dGamma/du`, not

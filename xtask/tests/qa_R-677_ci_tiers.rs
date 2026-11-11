@@ -965,7 +965,7 @@ impl Walk {
 }
 
 /// `ci.yml` walked as GitHub runs it, `changes` outputting `verdict` (or failing, when it is in `fail`); each job in
-/// `fail` fails. A job whose `needs` didn't all succeed is skipped unless its `if` holds `always()`; a matrix job counts
+/// `fail` fails. A job whose `needs` didn't all succeed is skipped unless its `if` holds `always()` or `!cancelled()`; a matrix job counts
 /// as one. A job whose first step checks the classification (`CHANGES` in its env, the owner's CI model of 9 Nov 2026)
 /// has that step's script run under bash, as a gate (a job of one step with `RESULTS` in its env) has its own.
 fn walk(yml: &Value, verdict: &[(&str, &str)], fail: &[&str]) -> Walk {
@@ -979,11 +979,21 @@ fn walk(yml: &Value, verdict: &[(&str, &str)], fail: &[&str]) -> Walk {
                 continue;
             }
             let cond = s(&job["if"]);
+            // Inside `${{ }}` or not, the same expression.
+            let cond = cond
+                .trim()
+                .strip_prefix("${{")
+                .and_then(|c| c.strip_suffix("}}"))
+                .map_or(cond.clone(), |c| c.trim().to_owned());
             let ok = needs.iter().all(|n| w.results[n] == "success");
-            // R-684 joins an `if:` to `always()`: what follows it holds or skips the job.
-            let runs = if let Some(rest) = cond.strip_prefix("always() && ") {
+            // R-684 joins an `if:` to `always()`: what follows it holds or skips the job. `!cancelled()` (the required
+            // checks' jobs since 10 Nov 2026) reads as `always()` does: the run this walk is of is not cancelled.
+            let runs = if let Some(rest) = cond
+                .strip_prefix("always() && ")
+                .or_else(|| cond.strip_prefix("!cancelled() && "))
+            {
                 w.eval(rest) == "true"
-            } else if cond.contains("always()") {
+            } else if cond.contains("always()") || cond == "!cancelled()" {
                 true
             } else {
                 ok && (cond.is_empty() || w.eval(&cond) == "true")

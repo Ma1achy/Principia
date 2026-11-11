@@ -432,6 +432,15 @@ with dd_colouring §3.1's sRGB transfer.
     **Scope (applied per R-369; RQ-638).** The band is in the three drift debug views above. A field ramp on `energy_drift`
     or `Lz_drift`, colour_composition §6's `f_edrift` (`default_ramp`'s `Compaction::Diverging`, `compact_symlog`), has no
     band, so a fresh sample's rounding still shows there at `x₀ = 10⁻⁶`; RQ-638 asks the owner whether to extend it.
+    **10 Nov 2026 (R-928, R-929; the owner's answers on RQ-637 and RQ-638).** Both are ruled, and neither is built yet:
+    until TASK-M3-70 merges, the band is as this section describes it. RQ-637 (b): the band scales by the rounding
+    itself, `|x| ≤ k'·2⁻²³·(K + |V|)` for the energy and `|x| ≤ k'·2⁻²³·S` for `L_z`, `S = Σ(|xᵢp_{y,i}| +
+    |yᵢp_{x,i}|)`, with `k'` from the bound: 15 with a CPU reference and 22 with a GPU one for the energy, 5 and 6 for
+    `L_z`; it replaces `k·2⁻²³·|reference|`, `k = 128`, so a fresh sample near a zero `E_0` or `Lz_0` reads exactly
+    neutral, and less is hidden where `K/|E_0|` is small. RQ-638 (a): the band is applied where the drift is read, so a
+    field ramp on `energy_drift` or `Lz_drift` has it too, `compact_symlog` itself unchanged, and the fresh-sample test
+    is extended to that path. TASK-M3-70 rewrites this passage when it builds them, the replaced text kept as *Was*
+    (REQ-TOOL-227).
   - **The ramp.** `symlog` and `lin` draw on `diverging(c−, c0, c+)`, `c−` `#3B4CC0`, `c0` `#DDDDDD` and `c+`
     `#B40426` in 8-bit sRGB, Moreland's cool-warm ends and neutral, mixed in linear RGB by `ramp_diverging`, `c0` at
     `t = 0.5`; under the palette swap, the view's `PALETTE` uniform 1, they draw on viridis, so `symlog`'s pixel is

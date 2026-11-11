@@ -484,11 +484,19 @@ On a code change the jobs run in parallel:
   and `per-merge` passes (§ "Merging", what is red `main`). The orchestrator's merge script
   refuses a merge with a red `process` job on the head, though branch protection does not require it;
 - `web-skeleton`, advisory: the v1 web skeleton's wasm build.
-Every job bearing a required check runs on every pull request, `if: always()`, and skips its work inside the job on the
+Every job bearing a required check runs on every pull request whose run is not cancelled, `if: !cancelled()`,
+whatever `changes` ended in, and skips its work inside the job on the
 classification's verdict (R-656: "Do the GPU and mutants skips inside the job … then skip as success under the same
 check name"); its first step fails when `changes` did not succeed, so a failed classification never passes a skip, and
 a required check is never a job skipped at job level. No job polls or waits on another run. `merge-batch.sh`'s
-`gh pr checks --required` reads `pass` for each.
+`gh pr checks --required` reads `pass` for each. `!cancelled()`, not `always()`, so that a push stops the run on the
+head it supersedes: under `always()` that run's jobs ran to their end and the ones not yet started still started, and
+the new head waited behind them (applied per R-369/R-812, the CI diagnosis of 10 Nov 2026). Every job of the PR tier
+has a `timeout-minutes` (`ci.yml`'s header gives each with its measured basis), and every step that installs from apt,
+in every workflow, bounds each `apt-get` call (`apt-get update` at 90 s, `apt-get install` at 420 s, each past the
+longest passing call of 654 measured steps), tries it three times and has a step limit of its own, 8 minutes: two
+runs had waited six hours in `apt-get update`, where a hung one now costs 5 minutes at most. `xtask/tests/ci_pr_tier.rs`
+pins the three.
 
 What a pull request leaves to a merge runs on every push to `main`: the slow tier, the in-depth GPU suites on lavapipe
 and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xtask golden --all`, `cargo xtask gate
@@ -1006,10 +1014,27 @@ anything outside the repository and its build and scratch directories without as
 - A recorded run on R-711's runner takes a clean target only where it is filed as evidence, as the Paper 2 parity run
   is; every other recorded run keeps the runner's target, as now (R-856).
 - Once the DX12 opt-in lands, the same card is the second discriminator: the same failure points at the card or our code, a different one at the Vulkan driver path.
+- *10 Nov 2026 (R-946):* the four failing steps on the PC (the validation, xtask and engine tests; the fast-math check;
+  the full golden-image comparison; the halfway-rounding golden test) are sorted by running each on the PC under
+  lavapipe as well as on the RTX, on the same commit, since a faulty card can fail the same way every time and so
+  re-running is not enough. Passing on lavapipe and failing on the RTX is the card or its driver: record it as a
+  measurement, don't file it. Failing on both is a Windows code-path defect: fix it or file an issue. Failing on
+  lavapipe only, or differing between runs, is reported to the owner and not classified. Nothing is tuned or loosened to
+  make a step pass (R-649). For these four, "deterministically on Windows" in the first bullet no longer files a code
+  bug by itself. The PC's GPU results stay measurements until each of the four is explained.
 
 ## The Windows runner's work (R-859)
 
 The owner's ruling of 8 Nov 2026 on what R-711's runner, `malachys-pc-rtx2080s`, may run:
+
+*10 Nov 2026 (R-946):* "Windows once proven" (R-909) is met tier by tier. The PC's CPU-only tiers (the slow tier, the
+mutation runs and the process tests) may move to its per-merge run without waiting for the card, on two conditions.
+Containment first, unchanged: the hash run, the pin PR, the register run and the six proofs all pass before anything
+per-merge moves to the PC (R-912, RQ-751 option (b)). And the CPU results repeat: the tiers are run three times on one
+commit of `main` on the PC, and they count only if all three runs give the same pass or fail result for every test and
+every test that passes on the hosted Linux run of that commit passes on all three; the numbers are reported, and if they
+differ the tier does not move and the owner is told which tests differed. The RTX's GPU tests wait on § "Windows GPU
+results (R-719)"'s sorting of the four failing steps.
 
 - **From the anchor move** (the owner's move of the PC hook's signing-gate anchor; before it the hook refuses `main`'s
   merges), it may run, each as a named measurement reporting under its own name and never a required check, gathered

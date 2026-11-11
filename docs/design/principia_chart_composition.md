@@ -92,6 +92,31 @@ presets, never a refusal (items 7 and 8; R-925, items 1 and 2): § 3's "`numeric
 kernel)" holds for the integrator, and the fragment reaches such a chart through tables. Slopes come in three tiers,
 exact, implicit and none (item 9); a small quad's one-cell table is the linearised decoder (item 11).
 
+**The owner's reply of 10 Nov 2026 to that day's rulings report, and their messages of the same day (R-931 to R-945).**
+Where the body reads otherwise, these rule, and TASK-M2-58 carries each into the body. The chart re-plan's one-way
+questions (R-935): RQ-758 (a), exact or implicit slopes as `J_D`, central differences the check; RQ-759 (a), the lock's
+re-solve continuous along a path, stopping where the followed minimiser ends, R-849's time-axis jump dropped; RQ-761 (a)
+with (a-i), a per-sample stop index on the integer grid and a new label, "reached its time", the zoom along time floored
+at one boundary; RQ-762 (a), the window's scale; RQ-763 (b), measure first; RQ-765 (a), the GPU decode entries as test
+entries, R-837's cap retired once measured; RQ-766 (a), one exact node per sample; RQ-767 (a), the table seeding a
+refinement on the forward code; RQ-768 (a-table); RQ-769 (a), two tracks; RQ-770 (a), pan and zoom still re-address the
+cache. RQ-760 (R-936): § 17.2's `AxisBlend`, `PairMap` bend and `PerField` are retired as morphs and offered as maps;
+the mass block blends `μ_k = ln(m_k/m₀)`, "linear in masses" having been loose wording for that; no area statistic on a
+mid-morph frame, § 17.5 kept there; no true copy at a fold. RQ-764 (a) (R-934): the seed `w = r/√I` everywhere, its
+images updated under R-931, the goldens rule. The general rule for a morph (R-943): a pairing, a path and an easing; the
+default path the shortest in each block's natural geometry, other paths allowed and not built now. The principle
+(R-944): a morph frame is a chart, and every chart feature works on it; a stated mid-morph limitation is a gap to close;
+area statistics are the one exception. R-945: R-926 item 7's list was not exhaustive; the backwards direction serves
+anything that places a running or saved state on a chart. Chart edges (R-932, closing RQ-773 (a)): no blank areas;
+saturate past a true edge, unfold onto a second sheet, wrap where the coordinate repeats, the mechanism per edge physics
+review's call. RQ-771 (a) with (ii-2) (R-937): the invariant charts' spin edges unfold onto the time-reversed sheet, and
+below the floor at a non-zero spin the rigid rotation at the pixel's own spin is drawn. RQ-772 (R-938): every chart's
+edges built now, time before zero the starting state. RQ-774 (b) (R-939): a marking toggle, off by default. RQ-777
+(R-940): no summed axis number; a dual ruler in a blend, window units on a tilt or rotation, every true value on hover.
+RQ-775, RQ-776, RQ-778, RQ-780 and RQ-781, each (a) (R-942): § 3's extension per registry row becomes kinds per edge
+with a default, a view holding an override; § 17's "axes carry no ticks" is withdrawn. Open: RQ-779, the per-edge
+defaults by eye (R-941: per the rule, the mass simplex saturating); RQ-783, a record made before the f64 decode route.
+
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
 refusals are genuine contradictions, each with a named reason. Reduced capability is a label, not a refusal.
@@ -1973,6 +1998,15 @@ has no hidden coordinate to turn. That is reduced capability, a label.
 endpoint charts of the morph, each in its own hidden coordinates and R-474 map, about the pinned state, and the morph
 continues from its parameter between the tilted ends. No hidden coordinate is invented for the blend, so the sentence
 above stands as written.
+
+*10 Nov 2026 (R-944, the owner's principle; R-936; R-940, R-942):* "Every pixel of a morph frame is a valid system, so a
+morph frame is a chart", and every feature that works on a chart works on a morph frame. So this section's limitations
+are gaps to close, not labels to keep: "axes carry no ticks, only "A, B, `s`"" is withdrawn, a morph frame carrying a
+dual ruler, each end chart's own ticks fading with its share (R-940, R-942); and "Saving a mid frame … with no tilt or
+slice" and its "reduced capability, a label" no longer stand as the answer, a saved morph frame tilting and slicing as a
+live one does. One limitation is kept, the owner's one accepted exception: no area statistic on a mid-morph frame,
+`measure` staying `none`, the two end charts keeping their own (R-936, RQ-760 (iii-a)). This note does not rewrite the
+section: the chart re-plan's addition does, item by item, with the tasks affected.
 
 **R-669.** A frame is never a target's chart and never scored (replication rule 6, R-649). A morph doesn't make a refused
 chart reachable as a chart: each end has to be built, and `excluded_primitives` still holds. It can pass close to a refused

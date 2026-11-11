@@ -54,7 +54,7 @@
 //!   the `--test`s of the step its flag runs (R-677).
 //! - `ci_changes_jobs_skip_on_the_verdict` (the owner's CI model, 9 Nov 2026): the `changes` job runs the classifier,
 //!   then `.github/scripts/ci_tier.sh decide`, cannot be skipped, and passes the verdict and the crates on; each of the
-//!   pull request's jobs waits on it alone, those bearing a required check under `if: always()`, `process` only on a
+//!   pull request's jobs waits on it alone, those bearing a required check under `if: !cancelled()`, `process` only on a
 //!   change to the machinery.
 //! - `ci_changes_no_skipped_job_reports_a_required_name`: every workflow that runs on pull requests has no
 //!   workflow-level `paths:` or `paths-ignore:`; the required checks are each reported by exactly one job of a
@@ -2249,12 +2249,16 @@ const PR_JOBS: [(&str, &str); 7] = [
         "process",
         "github.event_name == 'pull_request' && needs.changes.outputs.process == 'true'",
     ),
-    ("gpu-lavapipe-smoke", "always()"),
-    ("gpu-metal-smoke", "always()"),
+    ("gpu-lavapipe-smoke", NOT_CANCELLED),
+    ("gpu-metal-smoke", NOT_CANCELLED),
 ];
 
-/// A job that runs on every pull request whatever `changes` ended in, and on no push.
-const PR_ALWAYS: &str = "always() && github.event_name == 'pull_request'";
+/// A job that runs on every pull request whatever `changes` ended in, unless its run is cancelled, and on no push:
+/// `!cancelled()`, where `always()` kept a superseded run's jobs running and starting (`ci_pr_tier.rs`).
+const PR_ALWAYS: &str = "${{ !cancelled() && github.event_name == 'pull_request' }}";
+
+/// A job that runs on every event whatever `changes` ended in, unless its run is cancelled.
+const NOT_CANCELLED: &str = "${{ !cancelled() }}";
 
 fn check_skips(yml: &str) {
     let wf = parse(yml);
@@ -2395,10 +2399,25 @@ fn reports(id: &str, job: &Value) -> String {
     }
 }
 
-/// Whether a job-level `if:` holds on every pull-request run, whatever its `needs:` ended in: `always()`, or
-/// `always()` and the event being a pull request.
+/// Whether a job-level `if:` holds on every pull-request run that is not cancelled, whatever its `needs:` ended in:
+/// `!cancelled()`, or `!cancelled()` and the event being a pull request.
 fn holds_on_every_pull_request(cond: &str) -> bool {
-    cond == "always()" || cond == PR_ALWAYS
+    cond == NOT_CANCELLED || cond == PR_ALWAYS
+}
+
+/// Whether a job-level `if:` opens with a status function that runs the job whatever its `needs:` ended in: `always()`,
+/// or `!cancelled()`, inside `${{ }}` or not. Without one GitHub implies `success()`, and a failed need skips the job.
+fn runs_whatever_its_needs_ended_in(cond: &str) -> bool {
+    let cond = cond.trim();
+    let cond = cond
+        .strip_prefix("${{")
+        .and_then(|c| c.strip_suffix("}}"))
+        .unwrap_or(cond)
+        .trim();
+    ["always()", "!cancelled()"].iter().any(|status| {
+        cond.strip_prefix(status)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with(" && "))
+    })
 }
 
 fn check_required(workflows: &[(String, String)]) {
@@ -2450,7 +2469,7 @@ fn check_required(workflows: &[(String, String)]) {
             found.push((name.clone(), format!("{file}: {id}")));
             let skippable = job.get("needs").is_some() || !cond.is_empty();
             assert!(
-                !skippable || cond.starts_with("always()"),
+                !skippable || runs_whatever_its_needs_ended_in(&cond),
                 "ci_changes: {file}'s job `{id}`, the required check `{name}`, can be skipped (if: `{cond}`)"
             );
             // A job an `if:` can skip whatever its `needs:` ended in: skipped, it must not report the required name.
@@ -2499,11 +2518,11 @@ mod a_required_job_skips_on_the_verdict {
         ci_changes_no_skipped_job_reports_a_required_name,
         "ci.yml with the product tests skipped at job level on a data or docs change, so the skip reports `ci` and \
          passes",
-        expected = "skips on `always() && needs.changes.outputs.docs_only != 'true'` under the required name `ci`",
+        expected = "skips on `${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}` under the required name `ci`",
         check_required(&workflows_edited(
             "ci.yml",
-            "    name: ci\n    needs: changes\n    if: always() && github.event_name == 'pull_request'\n",
-            "    name: ci\n    needs: changes\n    if: always() && needs.changes.outputs.docs_only != 'true'\n",
+            "    name: ci\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
+            "    name: ci\n    needs: changes\n    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}\n",
         ))
     );
 }
@@ -2516,7 +2535,7 @@ mod a_smoke_set_skips_at_job_level {
         expected = "the required check `gpu-metal`, can be skipped",
         check_required(&workflows_edited(
             "ci.yml",
-            "    name: gpu-metal\n    needs: changes\n    if: always()\n",
+            "    name: gpu-metal\n    needs: changes\n    if: ${{ !cancelled() }}\n",
             "    name: gpu-metal\n    needs: changes\n    if: needs.changes.outputs.gpu == 'true'\n",
         ))
     );
@@ -2672,7 +2691,8 @@ fn pr_holds(
             return lit.to_owned();
         }
         match term {
-            "always()" => return "true".to_owned(),
+            // The run this reads is not cancelled.
+            "always()" | "!cancelled()" => return "true".to_owned(),
             "failure()" => return "false".to_owned(),
             "github.event_name" => return "pull_request".to_owned(),
             "github.ref" => return "refs/pull/1/merge".to_owned(),
@@ -2974,8 +2994,8 @@ mod smoke_on_every_code_change {
         check_every_tier(
             &edited(
                 ".github/workflows/ci.yml",
-                "    name: gpu-lavapipe\n    needs: changes\n    if: always()\n    runs-on: ubuntu-24.04\n    env:\n      PRIN_GPU_BACKEND: vulkan\n      RUN: ${{ needs.changes.outputs.gpu == 'true' }}\n",
-                "    name: gpu-lavapipe\n    needs: changes\n    if: always()\n    runs-on: ubuntu-24.04\n    env:\n      PRIN_GPU_BACKEND: vulkan\n      RUN: ${{ needs.changes.outputs.tier == 'code' }}\n",
+                "    name: gpu-lavapipe\n    needs: changes\n    if: ${{ !cancelled() }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 25\n    env:\n      PRIN_GPU_BACKEND: vulkan\n      RUN: ${{ needs.changes.outputs.gpu == 'true' }}\n",
+                "    name: gpu-lavapipe\n    needs: changes\n    if: ${{ !cancelled() }}\n    runs-on: ubuntu-24.04\n    timeout-minutes: 25\n    env:\n      PRIN_GPU_BACKEND: vulkan\n      RUN: ${{ needs.changes.outputs.tier == 'code' }}\n",
             ),
             &read("scripts/ci_changes.sh"),
         )
