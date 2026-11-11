@@ -117,6 +117,40 @@ RQ-775, RQ-776, RQ-778, RQ-780 and RQ-781, each (a) (R-942): § 3's extension pe
 with a default, a view holding an override; § 17's "axes carry no ticks" is withdrawn. Open: RQ-779, the per-edge
 defaults by eye (R-941: per the rule, the mass simplex saturating); RQ-783, a record made before the f64 decode route.
 
+**The owner's reply of 10 Nov 2026 to the draft of the chart re-plan's addition (R-947 to R-952), and R-944 applied item
+by item.** Where the body reads otherwise, these rule. One placement function answers "where is this state on this
+chart" for every consumer, by the encode where a chart has an inverse and by the nearest point everywhere else, every
+blend included, refined to the lock's precision on the CPU (R-947): § 10.6, new, which also gives § 10.5 the definition
+it owed. Traces at the new edges (R-948): a sample sits on the sheet its state lies on, the trace jumps at the fold with
+an optional tick, and nothing is drawn inside a clamped or saturated area, physics review confirming;
+`principia_lines.md` § 8 has it. A chart change that changes a link id morphs like any chart change (R-949): § 17.12's
+conflicts table, § 17.13 and § 17.14. The lock's leftover jump from a time-axis chart to one with no time axis is
+removed (R-950): the first paragraph's "the jump kept only for time-axis to IC-only charts" no longer holds. Two
+measurements, P2 and P4, are reported and are not gates, shown to the owner before the trace tasks are built (R-951);
+the picture size their pixels are counted at is open, RQ-785. Contours are evaluated on the CPU for every chart (R-952):
+§ 10.2 and `principia_lines.md` § 4.2. § 17.5 is rewritten item by item under R-944, each stated mid-morph limitation
+closed, naming its mechanism, or kept as the one accepted exception, area statistics.
+
+**Decided per R-369 on the way, each listed for the owner's veto.** The owner's words on the first five (10 Nov 2026),
+verbatim, under their heading "THE FOUR YOU DECIDE":
+
+> Go ahead with (C), (D), (E) and (F) as you proposed, listed for my veto. The unlocked pivot for a
+> saved frame (each end about its own centre) is fine too.
+
+That is a go-ahead to decide them, not a ruling on any of them. Applied per R-369: (C), a Chart or Latent contour
+variable on a mid-morph frame has one value per end chart and is drawn once per end at that end's share
+(`principia_lines.md` § 4.1); (D), on a mid-morph frame marks are found to the lock's tolerance and the symmetry filter
+is on (§ 10.4, § 10.5), conditional on physics review and not settled until it confirms; (E), a change of the hovered
+system caused by a playing morph does not restart the trace (`principia_lines.md` § 8); (F), an end pixel that is tagged
+and carries a state blends as a state, only an end pixel with no state staying blank mid-path (§ 17.11, V21),
+conditional on physics review, tag by tag, and not settled until it confirms; the unlocked pivot of a saved frame's
+tilt, each end about its own centre (§ 17.5). Applied per R-369 as mechanical consequences of the rulings named at each,
+and listed for veto with them: no blank opens mid-path under the state blend (§ 17.11; R-926 item 3, R-943); a `gauge`
+end's paper scale is drawn on its own side of the dual ruler (§ 17.11; R-940); a pan or zoom on a blend re-addresses the
+cache as on any chart (§ 17.12; R-935); the "CPU batch" label and the GPU blend entry are moot (§ 17.12; R-926 items 5
+and 6); two time windows blend like any two windows, V29 retired (§ 18.4; R-926 item 3); a blend's well-posedness, in
+words (§ 17.5; R-943); a blend's repeats (§ 17.5).
+
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
 refusals are genuine contradictions, each with a named reason. Reduced capability is a label, not a refusal.
@@ -1272,6 +1306,11 @@ An overlay of a primitive evaluates on the decode, so every registered forward n
 fallback: §4.2 already says "a GPU pass on the shared decode, with a CPU fallback at reduced resolution". The Domain
 preview draws the same contours.
 
+*11 Nov 2026 (R-952; R-926 item 5):* an overlay of a primitive evaluates on the CPU's f64 decoded state, on every chart,
+a chart with no shader code and a blend included: each registered forward is evaluated there, and lines § 4.2's GPU pass
+with its reduced-resolution CPU fallback is replaced. *Was:* "every registered forward needs f32 evaluation on the GPU
+or the CPU fallback".
+
 ### 10.3 Final-condition charts
 
 A design item for the rulings report, the owner's order of 7 Nov: **door RQ-734.** No axis and no task exists until it's
@@ -1331,6 +1370,16 @@ The owner's order of 7 Nov, verbatim in RQ-736: "a display option applied after 
 - **Default.** Off, except on the paper-frame presets: region D's and § 20's presets render the full disc with the filter on. That gives region D's quarter disc, the Anosova half-disc and the half shape sphere at rest, so the papers' figures are reproducible with the full disc still computed underneath.
 - **Later, not built here:** a "skip computing duplicates" export setting for speed, off by default and labelled. No task owes it.
 
+*11 Nov 2026, the filter on a mid-morph frame (R-944; applied per R-369, listed for the owner's veto, and conditional on
+physics review).* R-899's Q8 (a) had the filter off on a mid-morph frame, with a label; R-944 makes that a gap to close.
+The mechanism: the frame declares the symmetries either end declares; a pixel's partner is `place(g·D(φ(u)), frame)` (§
+10.6), and the correctness rule above then decides each pixel, unchanged, so a declared symmetry that the blend breaks
+blanks nothing ("no duplicates in this chart"). The canonical representative of a pair on a blend is a definition owed
+(R-72), since `η ≥ 0` is an end's coordinate and not the frame's: proposed, the partner whose pixel comes first in the
+frame's row-major order, a pure function of the pixel, for the physics reviewer to approve where TASK-M2-84 builds it.
+Until physics review confirms the mechanism and that definition, the filter on a mid-morph frame is not recorded as
+settled.
+
 **Display only.** Nothing computed changes: not the sim key, the payload, refinement, an outcome or a statistic. It is a mask read by the display pass and the export writer, built on the CPU from the chart's map, off the sim key. So **R-408's statistics are unchanged**: a transparent pixel is still counted, and the optional "mirror pairs counted once" is the mirror-step proposal's, not this. The legend says its shares are of the computed chart. **Replication changes nothing:** a target scores what's computed, in its paper's measure (§ 6.4), selected by `in_region_d` or its own domain, never by what the filter drew. A paper-frame preset does compute more: the lens is 1.228 against D's 0.307, four times, and the box 1.732, 5.64 times.
 
 **Checked against.**
@@ -1377,8 +1426,59 @@ nearest chart point, the off-slice distance and the near-match, as engine functi
   near-match tolerance, proposed by TASK-M2-80 with its evidence, its criterion written first and set by measurement
 (R-649, R-650), and confirmed by the owner at the M2 gate (R-916; *was:* "proposed by TASK-M8-126 … at the M8 gate"). A point's
   signed state on the latent chart needs the full-circle `β` of R-865 (TASK-M2-57).
+- *11 Nov 2026 (R-947; R-944).* "How marks are found on a path frame with no inverse" is now defined: by § 10.6's
+  placement function, its nearest-point route. So on a mid-morph frame a mark is found as on any chart with no inverse,
+  with its off-slice distance, the route's residual. R-899's Q8 (a), "to pixel resolution" on a mid-morph frame, was a
+  limitation with a label, which R-944 makes a gap to close; that the marks then meet the lock's tolerance mid-morph,
+  with § 10.4's filter on, is applied per R-369, listed for the owner's veto, and conditional on physics review, not
+  settled until it confirms.
 
 ---
+
+### 10.6 Placement: one function for "where is this state on this chart"
+
+*11 Nov 2026 (R-947, the owner's answer of 10 Nov 2026 to the re-plan addition's question (A); R-945; R-944).* Six
+consumers ask one question, "which chart point shows this state, and how far off is it": Chart position and the state
+map, the traces, the marks of § 10.5, § 10.4's partner check, the lock's re-solve (§ 17.8) and the decode and round-trip
+presets. One function answers all of them.
+
+`place(state, chart) → { point, sheet, residual, route, status }` is one Rust source in `crates/kernel`, beside the
+encode, as R-542's H11 has the one projection; every consumer calls it, never a second implementation. Its input is a
+signed state (R-854), its chart any chart, a blend or a saved blend included. It has two routes, chosen by the chart,
+never by the consumer:
+
+1. **The encode reading,** where the chart has a closed-form or registered numerical inverse: the encode, read on the
+   shown axes, the hidden coordinates giving the off-slice distance. This is the one projection, unchanged, and R-538
+   TF2's per-axis reading; it is what keeps a conserved axis showing a dot under a tilt
+   (`principia_trajectory_viewing.md` § 3).
+2. **The nearest point,** where the chart has neither, every blend included: the chart point whose decoded state is
+   nearest the state, found by the lock's solver on the chart's own f64 forward map, seeded by the caller's hint (a
+   trace's previous sample, a lock's previous centre) or by the backwards table. The residual is the off-slice distance.
+
+`status` is `placed`, `left` (the leaving rule of `principia_lines.md` § 8, or a failed solve) or `ill-conditioned`
+(below the floor R-935 has for RQ-767 (a)). On a chart with a second sheet, `sheet` names it (R-942, RQ-776; R-948 for a
+trajectory state). Where a blend folds and more than one point lies within the lock's tolerance (REQ-CHART-158), every
+such point is returned and the consumer applies its own rule: a trace takes the one nearest its previous sample, a mark
+draws a star at each, the lock follows its local minimiser (R-935, RQ-759 (a)). The ends of a path are selected exactly:
+at `s = 0` and `s = 1` the end chart's own route answers, bitwise.
+
+**Accuracy.** On the CPU every route refines to the lock's tolerance, mid-morph included. "Approximate is acceptable
+during a morph" (R-926 item 7) binds the fragment's table route only, which is measured against this function. **The
+fragment** reads the same function's generated WGSL where the chart has closed-form code, and the backwards table with
+its search where it has none (R-925).
+
+**The two routes differ off the chart's image, by design.** The encode reading projects along the chart's hidden
+coordinates; the nearest point projects orthogonally in the metric. They agree on the chart's own image. So at `s = 0⁺`
+a trace vertex whose state is off the image may jump between chart A's encode reading and the blend's nearest point, and
+on a blend the nearest point of an off-image state can snap from one place to another. Two measurements report this, P2
+and P4, and neither is a gate; the owner decides on the numbers, and no threshold or fallback is chosen by anyone else
+(R-951).
+
+**Owed (R-72), under physics review, by the task that builds it:** the metric "nearest" is measured in (REQ-CHART-124's
+mass-weighted metric on the `I = 1` state is where it starts), and which nearest point answers for a state off the
+chart's image (R-935, RQ-767 (a)).
+
+**This is the definition § 10.5 owed,** "how marks are found on a path frame with no inverse" (REQ-GUI-427): by route 2.
 
 ## 11. The axis cap
 
@@ -1629,8 +1729,8 @@ Each states its criterion, written first, then the result. Any may be vetoed; ea
 | V17 | Re-timing: 33 knots, 16 × 16 probes, on the decoded blocks | spread at most 1.25 on the saturated fixture | as such | 1.12, § 17.9 |
 | V18 | Live target: 4 ms for one coarse cover's chart side | written before measuring | 4 ms; missed on the stand-in, about 15 ms | § 17.12 |
 | V19 | Re-centre once per end and segment, not per frame, unless the anchor moves | a pure function, so a repeat gives the same bits | once | § 17.8 |
-| V20 | A saved mid frame reopens as a record, with no tilt or slice | it has no hidden coordinate; labelled | as such | § 17.5 |
-| V21 | A pixel blank or tagged at either end is blank mid-path | no invented state (R-470), no undeclared seam (P3) | as such | § 17.11 |
+| ~~V20~~ | ~~A saved mid frame reopens as a record, with no tilt or slice~~ | ~~it has no hidden coordinate; labelled~~ | retired 11 Nov 2026 (R-944): a saved frame tilts and slices, the edit going to both end charts | § 17.5 |
+| V21 | A pixel blank or tagged at either end is blank mid-path | no invented state (R-470), no undeclared seam (P3) | as such. *11 Nov 2026:* only an end pixel with no state stays blank, a tagged end that carries a state blending as one (applied per R-369, listed for veto, conditional on physics review; until it confirms, as such) | § 17.11 |
 | V22 | The dilation axis is signed `h`, not `K_dil` | an axis has to invert | `h` | `K_dil` loses the sign, § 3.1 |
 | V23 | Aliases are one row, not two: body 2, `γ_ρ`, `K_rot`, `K_dil`, elongation; the midpoint angle at `m₀ = m₁` only; Hill's distance at a frozen mass | one quantity, one row; `pair_table_complete` agrees | aliased | § 3.1, identities to 10⁻¹³ |
 | V24 | Every § 3.1 and § 3.2 row is CPU batch | the cap's slots are taken | CPU batch | § 11 |
@@ -1638,7 +1738,7 @@ Each states its criterion, written first, then the result. Any may be vetoed; ea
 | V26 | Stored entries at most `K = H`, by distinct boundary, the required set being the rows' boundaries; `2H` a labelled extra | closest to the temporal note; `T` the stored top | `H` | § 18.3 |
 | V27 | Transport stays paused on leaving the mode | a frozen playhead never restarts on its own | paused | § 19 |
 | V28 | `t_lo` is new beside the horizon; the window `t_lo, t_hi` a view, off the sim key, a Navigate lane field | zoom in time is navigation; `T` stays on the key | as such | § 18.2 |
-| V29 | Time morphs need equal windows and warps; else a cut | "time fixed" | cut | § 18.4 |
+| ~~V29~~ | ~~Time morphs need equal windows and warps; else a cut~~ | ~~"time fixed"~~ | retired 11 Nov 2026 (R-926 item 3: time blends linearly, so two time windows blend like any two windows; applied per R-369, listed for veto) | § 18.4 |
 | V30 | Time up the vertical axis, `t_lo` at the bottom; time on either axis allowed | the order's "vertical" | vertical | § 19 |
 | V31 | `Ctrl + / −` zooms time | a proposed binding, for the gui reviewer to check against §G3 | `Ctrl` | § 19 |
 | V32 | `√chazy_qk[2]` is the third body's speed row | the corpus's own ratio | as such | § 3.1 |
@@ -1987,17 +2087,64 @@ only: the frame **is** a plain view and its `SimConfig` is that view's. Only `Li
 `PlaneRotation` put a morph in the sim key, a new `ChartSpec` arm, so an old file's key doesn't move.
 
 **"Valid" holds in this sense:** every pixel decodes to a system or is tagged, and one record gives one image at one
-lowering. **It does not hold as contract Part 5's well-posedness**: "all 8 DOF are determined exactly once" is a check on swept
-axes and blocks, and a frame has neither; a blend touches every block. Part 5's check runs on A and B. A frame's
-`system_image` is unknown, since a blend may fold (§ 17.6), so `measure` is `none`, no statistic is admitted
-(`admit_statistic` refuses), and axes carry no ticks, only "A, B, `s`". Contours of a primitive still work: they read the
-decoded state (§ 10.2). **Saving a mid frame** gives a frame record, reopened as CPU batch, with no tilt or slice: its chart
-has no hidden coordinate to turn. That is reduced capability, a label.
+lowering.
 
-*Read with R-902 (8 Nov 2026):* a tilt or slice made **mid-morph**, on a live path rather than a saved frame, goes to both
-endpoint charts of the morph, each in its own hidden coordinates and R-474 map, about the pinned state, and the morph
-continues from its parameter between the tilted ends. No hidden coordinate is invented for the blend, so the sentence
-above stands as written.
+**A frame is a chart: what it does, item by item** *(11 Nov 2026; R-944, the owner's principle of 10 Nov 2026: "Every
+pixel of a morph frame is a valid system, so a morph frame is a chart and every feature that works on a chart works on a
+morph frame")*. Each limitation this section stated is closed below, naming its mechanism, or kept as the one accepted
+exception. What the section said before is kept as *Was*, after the list.
+
+1. **Area statistics: kept, the one accepted exception** (R-936, RQ-760 (iii-a); R-944). A frame's `system_image` is
+   unknown: a blend may fold (§ 17.6), and it can show the same systems twice without a fold. So `measure` is `none` and
+   no statistic is admitted (`admit_statistic` refuses). The two end charts keep their own statistics.
+2. **Well-posedness: a fact, and nothing is refused by it** (wording, applied per R-369, listed for veto). Contract Part
+   5's "all 8 DOF are determined exactly once" is a check on swept axes and blocks, and a frame has neither; a blend
+   touches every block. Part 5's check runs on A and B. A blend is well-posed when both ends are and its path meets
+   R-943's three conditions: both ends are exactly the end charts, every in-between frame is a valid system, and it is
+   continuous. That is the blend's Part 5.
+3. **Axes: closed** (R-940, R-942). A frame carries a dual ruler, one axis line with the starting chart's real ticks on
+   one side and the target chart's on the other, each fading with its share; hover gives every true value. A `gauge`
+   end's paper scale: § 17.11.
+4. **Contours: closed** (R-952; `principia_lines.md` § 4.1, § 4.2). A contour of a primitive reads the decoded state (§
+   10.2), evaluated on the CPU in f64 as on every chart. A Chart or Latent variable has one value per end chart and is
+   drawn once per end at that end's share, so the grid is both ends' grids, each at its own ruler's ticks (applied per
+   R-369, listed for veto).
+5. **Traces: closed** (R-947, R-948; `principia_lines.md` § 8). Each sample is placed by § 10.6's nearest-point route;
+   the first vertex of a hover trace is the hovered pixel. Whether a trace breaks or jumps on a blend is measured, P2
+   and P4, reported and not gates (R-951).
+6. **Marks and the symmetry filter: closed** (R-947; § 10.4, § 10.5). Marks are found by § 10.6's placement, as on any
+   chart with no inverse. That they meet the lock's tolerance mid-morph, and that the filter is on, is applied per
+   R-369, listed for veto, and conditional on physics review.
+7. **Tilt and slice on a live path** (R-902, 8 Nov 2026): a tilt or slice made mid-morph goes to both endpoint charts of
+   the morph, each in its own hidden coordinates and R-474 map, about the pinned state, and the morph continues from its
+   parameter between the tilted ends. No hidden coordinate is invented for the blend.
+8. **Saving a mid frame: closed** (R-944, amending R-902's "§17.5 stands as written"). Saving a mid frame gives a frame
+   record. Reopened, it is a blend chart like a live one, at its saved `s`, and every chart feature works on it, area
+   statistics excepted. A tilt or a slice of a saved frame goes to both end charts, each in its own hidden coordinates
+   and its own R-474 map, as item 7 has it for a live morph: the record holds both ends whole, so nothing is missing.
+   Under a lock the edit is about the pinned state; without a lock it is about each end's own centre, the pixel at the
+   window's centre, as a tilt of that chart alone turns (the unlocked pivot: applied per R-369, the owner's "is fine
+   too", listed for veto). An end that can't take the tilt (no free hidden coordinate in that direction) holds, and
+   under a lock the anchor slides (R-849). The tilted frame saves again as a record of the tilted ends at the same `s`.
+   A saved frame may also be morphed on: a path from it is a blend whose end is a blend. "Reopened as CPU batch" is
+   moot: every chart is evaluated on the CPU (R-926 item 5).
+9. **Repeats** (a statement this section lacked; applied per R-369, listed for veto, a mechanical consequence: a blend's
+   pixel shows the same system again only where both ends do). A blend repeats where both ends repeat with the same
+   lattice in pixel space; elsewhere it is affine past its square, and its traces are drawn in the images it has
+   (`principia_lines.md` § 8, "Repeats").
+10. **Never scored: kept** (R-669, below). Not a feature a frame lacks: a replication score is an area statistic on a
+    paper's chart, so it falls under item 1, and no paper's chart is a blend.
+
+*Was (before 11 Nov 2026), the rest of the paragraph "Valid" opens:* "**It does not hold as contract Part 5's
+well-posedness**: "all 8 DOF are determined exactly once" is a check on swept axes and blocks, and a frame has neither;
+a blend touches every block. Part 5's check runs on A and B. A frame's `system_image` is unknown, since a blend may fold
+(§ 17.6), so `measure` is `none`, no statistic is admitted (`admit_statistic` refuses), and axes carry no ticks, only
+"A, B, `s`". Contours of a primitive still work: they read the decoded state (§ 10.2). **Saving a mid frame** gives a
+frame record, reopened as CPU batch, with no tilt or slice: its chart has no hidden coordinate to turn. That is reduced
+capability, a label." And the note under it: "*Read with R-902 (8 Nov 2026):* a tilt or slice made **mid-morph**, on a
+live path rather than a saved frame, goes to both endpoint charts of the morph, each in its own hidden coordinates and
+R-474 map, about the pinned state, and the morph continues from its parameter between the tilted ends. No hidden
+coordinate is invented for the blend, so the sentence above stands as written."
 
 *10 Nov 2026 (R-944, the owner's principle; R-936; R-940, R-942):* "Every pixel of a morph frame is a valid system, so a
 morph frame is a chart", and every feature that works on a chart works on a morph frame. So this section's limitations
@@ -2006,7 +2153,8 @@ dual ruler, each end chart's own ticks fading with its share (R-940, R-942); and
 slice" and its "reduced capability, a label" no longer stand as the answer, a saved morph frame tilting and slicing as a
 live one does. One limitation is kept, the owner's one accepted exception: no area statistic on a mid-morph frame,
 `measure` staying `none`, the two end charts keeping their own (R-936, RQ-760 (iii-a)). This note does not rewrite the
-section: the chart re-plan's addition does, item by item, with the tasks affected.
+section: the chart re-plan's addition does, item by item, with the tasks affected. *11 Nov 2026:* done, in the list
+above.
 
 **R-669.** A frame is never a target's chart and never scored (replication rule 6, R-649). A morph doesn't make a refused
 chart reachable as a chart: each end has to be built, and `excluded_primitives` still holds. It can pass close to a refused
@@ -2163,6 +2311,13 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
 - **Out of feasible.** Tagged, never dropped (contract, "tagged, never dropped"). **A blank can open mid-path**: at
   `E* = −0.3`, equal masses, 1,173 of 1,748 pixels feasible at both ends are infeasible at `s = ½`, since the blended shape
   has a higher `U`.
+  *11 Nov 2026 (R-926 item 3, R-943; a record correction applied per R-369, listed for veto):* that count was a hold run
+  on a blended configuration. The state blend runs no hold: masses blend in log-ratios, shape on the great circle,
+  momenta and time linearly, and "every in-between frame is a valid system" (R-943), so no blank opens mid-path on the
+  default path. One case is the physics reviewer's to confirm where the blend chart is built: a great-circle path can
+  pass through one of the shape sphere's three binary-collision points, so isolated pixels of a frame may show two
+  bodies at one place; under R-933 that is a collision at `t = 0`, recorded with the least separation and the pair, not
+  a blank.
 - **Blank or forbidden at an end.** A pixel in a morph frame is in only if it's in both ends. No state exists for a blank end
   to blend from, and substituting the other end invents a continuity (R-470, R-467). So the blank is held for every `0 < s <
   1` and resolves at the end frame, a step at each end. A region-D mask behaves so: outside D blank at every `s < 1`.
@@ -2172,6 +2327,13 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
   just-feasible one has `η ≈ 0`, a jump of all of it, 0.19 of 0.19; and on a blended configuration R-82's seed for a constructed
   axis can flip, which § 17.2's "nothing special happens" doesn't cover: such a flip is a declared seam. `path_small_step` has
   a fixture for each. Rest is the default `z₀`, so this is the common case, and it stays blank to `s = 1`.
+  *11 Nov 2026, on this bullet and the one above (applied per R-369, listed for the owner's veto, and conditional on
+  physics review):* under the state blend P3's reason, a hold run on the blend, is gone: a rest end's zero momenta blend
+  as `(1 − s)·0 + s·p_B`, continuous, a valid system. So a pixel is blank mid-path only where an end has no state at it,
+  and a tagged end that carries a state blends as one. The condition: the physics reviewer confirms, tag by tag for the
+  decoder's five tags, that the tag carries a state that may be blended, where TASK-M2-81 builds it. Until then V21
+  stands as written, and this is not recorded as settled. Under R-932 an end pixel with no state is left only where a
+  chart's own validity fails (R-467).
 - **Held quantities mid-morph.**
 
 | Held | Mid-morph |
@@ -2184,6 +2346,12 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
 | `I = 1` | always, by `place` and `C` |
 
   A `gauge` axis's paper scale has no meaning mid-path, so `t` is canonical time only, and region D's `t_paper` isn't drawn.
+  *11 Nov 2026 (R-944: the table above is kept).* It says which systems a frame shows, not something a frame cannot do:
+  every feature that reads a held quantity, a contour of `E` or the hover readout, works mid-morph and reads the true
+  value. A path that holds a quantity is one of R-943's other paths, allowed and not built now.
+  *11 Nov 2026, the gauge axis (R-940; applied per R-369, listed for veto):* with the dual ruler each side of an axis
+  carries its own end's real ticks, so a `gauge` end's paper scale is drawn on that end's side, fading with its share,
+  and region D's `t_paper` with it; canonical time stays the blend's own. *Was:* the sentence above.
 - **One colour window per morph.** The window is `RenderState.frozen_ranges` (R-581 to R-583), frozen once for the segment,
   from `s = 0`. Measured windows would re-range per frame and manufacture motion.
 - **Optional simultaneous playhead change.** Part 3's policies, unchanged: hold, advance, set. Cost per Part 2 (b).
@@ -2198,9 +2366,21 @@ in all, with `s` a uniform. **So mid-morph frames don't count against the cap**,
 unbaked end is CPU batch: that's "on the GPU when both ends are closed-form", narrowed to "and baked". `stage_blend` costs the
 module about one pair, an estimate, so under § 11's C2 it uses the cap's fourth slot.
 
+*11 Nov 2026 (R-926 items 5 and 6; a record correction applied per R-369, listed for veto):* every chart, every blend
+included, is evaluated on the CPU in f64 and sent to the integrator as forward tables. So no blend needs a GPU entry,
+`stage_blend` is moot, and no end is "CPU batch" as a lesser route: the label goes, here, in § 17.5 and under "CPU-only
+ends" below. A frame's speed is the CPU evaluator's, measured by the chart re-plan
+(`plan/charts/m2-chart-system-replan.md`).
+
 It runs under the two-regime policy (caching contract): in motion the coarse cover, at rest refinement. A frame is a new
 identity, as a tilt's is, its covers flotsam. It isn't re-addressable: pan and zoom inside a morph frame re-integrate, unlike
 R-92's plane, except on `PlaneRotation`.
+
+*11 Nov 2026 (R-926 item 3; R-935, RQ-770 (a); applied per R-369, listed for veto):* a blend is a chart, and a pan or
+zoom on it is one pixel-space edit of both ends, moving the blend's window as it moves any chart's. So a pan or zoom
+inside a morph frame re-addresses the quads already integrated on the same plane, as on any chart (R-92). It changes
+cost, not results. *Was:* "It isn't re-addressable: pan and zoom inside a morph frame re-integrate, unlike R-92's plane,
+except on `PlaneRotation`."
 
 **The target, written before measuring** (`docs/incoming/2026-11-06_chart_composition/checks/frame-criterion.md`): one coarse cover's chart side
 (1920×1080 at 1/8 linear, 32,400 samples) within 4 ms on this Mac, a quarter of a 60 Hz frame, so a morph leaves the
@@ -2226,7 +2406,7 @@ numerical end's solve wasn't measured.
 | export contract Part 3 | "chart *switches* are cuts or dissolves (two renders composited), never parameter interpolation across chart types"; Part 2 (b) itself says "the chart morphs" | morph |
 | REQ-TOOL-075 | "treat chart switches as cuts or dissolves, never parameter interpolation" | morph |
 | principia_sequence § 3.4; REQ-GUI-379 | "live playback shows a dissolve as a cut at the second keyframe, as it shows every chart switch" | live first-class |
-| R-520 F1; REQ-TOOL-175 | "A changed link id is a cut everywhere … there is nothing between two links to interpolate" | **stands**: the ruling wins. `Line` could cross it, its blocks being link-free with `μ` (P4), but a morph across a link id stays a cut unless ruled |
+| R-520 F1; REQ-TOOL-175 | "A changed link id is a cut everywhere … there is nothing between two links to interpolate" | **morph** (R-949, the owner, 10 Nov 2026: "blend, don't cut"): a chart change that changes a link id morphs like any chart change, a blend of the two charts' states; R-520's rule for link parameters inside one chart stands. *Was:* "**stands**: the ruling wins. `Line` could cross it, its blocks being link-free with `μ` (P4), but a morph across a link id stays a cut unless ruled" |
 | export contract Part 3 | "none has a second curve" | re-timing |
 | export contract Part 3 | basis by geodesic, where `Path::Tilt` eases `τ`, and they differ on Lean (P10) | `Path::Tilt` keeps R-474's map; a Part 3 basis field keeps its geodesic in `Path::PerField` |
 
@@ -2257,6 +2437,10 @@ chart-change segment: morph**, a default change, so it's the owner's. Cut marks 
 preview` then drives the morph live rather than cutting, and the banner's words change. Reel takeover (REQ-GUI-383) on a
 morph frame loads that frame, then R-624's hold-and-cut.
 
+*11 Nov 2026 (R-949):* a changed link id no longer forces a cut: a chart change that changes a link id morphs like any
+chart change, with cut still on offer, and a cut mark only on what is a cut. *Was:* "A changed link id stays a cut
+(R-520)."
+
 REQ-GUI-374, REQ-GUI-376, REQ-GUI-379, REQ-GUI-381 and REQ-TOOL-075 change only after the ruling.
 
 ### 17.14 Tests
@@ -2269,6 +2453,10 @@ prevents bitwise goes to the owner, never loosened to the lock's tolerance. R2, 
 only where an undo feature exists. "Round trips across paths" read as M2's gate G4 has it: the ends bitwise, tilt, zoom, pan
 and slice frames plain views, the record bitwise, and a blend frame, which has no inverse, read to pixel resolution
 (R-899 Q8).
+
+*11 Nov 2026 (R-944, R-947):* "a blend frame, which has no inverse, read to pixel resolution (R-899 Q8)" is a gap to
+close: a blend frame is read through § 10.6's placement (the lock's tolerance as the marks' standard mid-morph is
+applied per R-369 and conditional on physics review, § 10.5). `blend_entry_counted` is moot (§ 17.12; R-926 item 5).
 
 | Test | Asserts | Control |
 |---|---|---|
@@ -2284,10 +2472,10 @@ and slice frames plain views, the record bitwise, and a blend frame, which has n
 | `path_record_round_trip` | `(A, B, path, s)` round-trips bitwise and re-renders one image at one lowering; absent, old bytes | `s` written at f32 |
 | `path_gram_flags` | sphere to plane flags a degenerate frame; a linear pair-map blend flags folds; the bend doesn't; a vortex flags on the upper arm | the flag removed |
 | `path_retime` | speed spread at most 1.25 on the saturated fixture; `g` pinned at both ends | the table off |
-| `path_blank_ends` | a pixel blank or tagged at either end is blank for `0 < s < 1`, tagged, never dropped | substituting the other end |
+| `path_blank_ends` | a pixel blank or tagged at either end is blank for `0 < s < 1`, tagged, never dropped. *11 Nov 2026:* a tagged end that carries a state blends, continuous by `path_small_step`; a no-state end stays blank (applied per R-369, conditional on physics review, § 17.11; until it confirms, as written) | substituting the other end |
 | `path_hold_table` | each row of § 17.11's table | the step before the blend |
-| `path_links_cut` | a changed link id is a cut, live and export | a morph across it |
-| `blend_entry_counted` | `stage_blend` is the only morph entry; the cap test unchanged | a baked `(A, B)` entry |
+| `path_links_cut`; *11 Nov 2026 (R-949):* `path_links_morph` | across a changed link id the ends are exact and `path_small_step` holds. *Was:* "a changed link id is a cut, live and export" | a frame that interpolates the link function itself. *Was:* "a morph across it" |
+| `blend_entry_counted` | `stage_blend` is the only morph entry; the cap test unchanged. *11 Nov 2026:* moot, no blend has a GPU entry (R-926 item 5) | a baked `(A, B)` entry |
 
 *8 Nov 2026 (R-897, R-873):* `path_lock_centre` reads the recorded state at the pin, not a probe at `(½, ½)`, the area
 factor taken at the pin; and `path_tilt_bitwise`, `path_zoom_bitwise`, `path_lock_bitwise`, `path_save_view_bitwise`,
@@ -2409,8 +2597,8 @@ The same script's second part is a bookkeeping model over random events, 1,500 a
 | Tilt | the IC axis only. Time is never a tilt target, and the compass says so ("time is not tiltable in this chart"). The tilt plane is `z(u)` with the slice's normal |
 | Time zoom and pan | § 18.3. The window is a view; integration always starts at `t = 0`; zoom floors at one boundary. A window moved past a column's front marches that column on from it. Raising `T` marches nothing by itself; a window then past `f` marches the column on, bitwise a continuation (§ 18.2): regularised occupants to R-610's cap; unregularised to `T = 65.535`, past it a new run, labelled |
 | IC zoom and pan | new columns, each a run from `t = 0` to `t_hi`, its front until the window passes it (§ 18.3). Rows' times stay |
-| Morph, time to time | allowed when both have the same time window and warp: time fixed, the IC axis morphs by § 17's arms. Every frame is a new set of columns, class (b). Different windows: a cut |
-| Morph, time to IC-only | **a chart discontinuity: a hard cut,** shown with Sequence's cut mark. No dissolve is offered: `TimeToIcCut`, named in the planner row. This replaces part D's "refused for now" |
+| Morph, time to time | allowed when both have the same time window and warp: time fixed, the IC axis morphs by § 17's arms. Every frame is a new set of columns, class (b). Different windows: a cut. *11 Nov 2026 (R-926 item 3; applied per R-369, listed for veto):* time blends linearly, so two time windows blend like any two windows; "Different windows: a cut" and V29 are retired |
+| Morph, time to IC-only | **a chart discontinuity: a hard cut,** shown with Sequence's cut mark. No dissolve is offered: `TimeToIcCut`, named in the planner row. This replaces part D's "refused for now". *11 Nov 2026 (R-926 items 2 and 3, as the status block has it; R-950):* gives way: time is a coordinate of every map and the morph runs; under a lock the anchor slides and no jump stays |
 | The hybrid | blending readout time towards a fixed playhead: **recorded as a possible future option, not designed.** No field, no test |
 
 ### 18.5 Cost per column
@@ -2445,7 +2633,7 @@ TASK-M8-113's (REQ-CHART-178), after M2, on the real integrator through the same
 | `time_jitter_ic_only` | copies differ in the IC coordinate only, with Time on either axis | a `t` offset; `u` hard-wired to the horizontal axis |
 | `time_two_axes_refused` | `TwoTimeAxes`, by name | a second time axis accepted |
 | `time_window_frozen` | one window over all rows | `per_frame` |
-| `time_morph_rules` | time to time needs equal windows; time to IC-only is a cut, `TimeToIcCut` | a dissolve offered |
+| `time_morph_rules` | time to time needs equal windows; time to IC-only is a cut, `TimeToIcCut`. *11 Nov 2026 (R-926 item 3):* a time-to-time morph with different windows runs, its ends exact, and time to IC-only morphs (§ 18.4) | a dissolve offered. *11 Nov 2026:* a cut |
 | `time_anchor` | a lock reads `(IC, t)` bitwise across navigation | `t` on the sim key |
 | `time_memory_budget` | the store is `min(H, B)` per column up to `K`, each row with its word when symbolic features are active; after any order of § 18.3's events, the entries are at most `K`, every required boundary is held or its row is "arriving", the required set equals across columns up to their fronts, and one live state per column sits beside them; it honours the tier's budget | no ceiling; a required entry evicted while one outside the set remains |
 

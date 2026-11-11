@@ -32,6 +32,10 @@ override a measured or ruled section.** The proofs below stand on the corrected 
 4. **Blanks mid-morph can come from a held constraint** (§17.11), not only from a chart's mask. Corollary 1
    is withdrawn. Corollary 2 is strengthened: under a common hold, blending can leave the feasible set, and
    those pixels are blank and tagged.
+   *11 Nov 2026 (R-926 item 3, R-943; a record correction applied per R-369, listed for veto):* that was a held
+   constraint run on a blended configuration. Under the state blend no hold runs mid-morph, and every in-between frame
+   is a valid system (R-943), so Corollary 1 holds again for the state blend; `principia_chart_composition.md` § 17.11
+   has the note and the one case left to physics review.
 5. **In the gauge, `L_z`'s sign isn't preserved:** the encode's mirror flips it. The scale-free invariant
    overlap is `L_z²E` and the sign of `E` only (§6b corrected below).
 6. **Symmetry acts on starting states only (owner rule, 7 Nov).** Every symmetry reduction (translation,
@@ -426,3 +430,9 @@ chart can't, the anchor slides continuously to the target's nearest admissible p
 Held quantities aren't preserved mid-morph. Time-to-IC morphs are possible but cut by choice. In floating
 point, family membership means "same formula, same evaluation order", the anchor is carried as stored words,
 and seams belong to charts, not paths.
+
+*11 Nov 2026 (R-926 items 2 and 3; R-950; R-925):* "Time-to-IC morphs are possible but cut by choice" gives way: time is
+the last coordinate of every map and blends like any other, and under the lock no jump stays, the leftover one from a
+time-axis chart to one with no time axis removed by the owner (R-950). "Held quantities aren't preserved mid-morph"
+stands. "Morph" names the system blend, the blend of two charts' states (R-925, R-926), where this paragraph has "blend
+in latent space".

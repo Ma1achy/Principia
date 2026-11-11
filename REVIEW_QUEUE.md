@@ -761,3 +761,47 @@ energy its shape allows, was just given a drawn stand-in by the owner. Nobody bu
   R-932 names this entry and amends nothing in R-598.
 - **Waits:** nothing built waits. The chart addendum's N12 (the kinds in the contracts) and N14 (the kinds in the
   evaluator) and TASK-M8-57 build R-598's arm as it stands until this is answered.
+
+## RQ-785: At what picture size P2's and P4's pixels are counted: the owner's "more than 8 pixels apart" names none *(silence, a missing definition, R-72; a one-way door, what a reported measurement means; R-951, R-947, R-583, R-649; context: the re-plan addition's measurement task, TASK-M8-49, TASK-M8-58)*
+
+*Queued 11 Nov 2026 with the plan PR for the chart re-plan's addition, as the orchestrator's answer to the first
+hand-back asked; each quote below re-read on that PR's branch. Nothing is chosen here.*
+
+*In plain English: before the trace tasks are built, the owner wants two measurements of how a trajectory's trace
+behaves on a half-morphed chart. One counts how often two neighbouring points of the trace land "more than 8 pixels
+apart"; the other gives a jump "in pixels". A pixel is a different distance on a small picture and on a large one, and
+the owner's words do not say how big the picture is. Only the owner may say which size they meant.*
+
+- **File, section:**
+  - `decisions.md` § R-951 (the two measurements, P2 and P4), the owner's words: "on the same fixtures and blend pairs,
+    at s = 0.25, 0.5 and 0.75, the share of neighbouring trace vertices that land more than 8 pixels apart on the blend,
+    set against the same share on each end chart's own trace" and "Do not pick thresholds or fallbacks yourself."
+  - `decisions.md` § R-951, *What it decides*, on P2: "the on-screen jump between an end chart's own trace (`s = 0`) and
+    the blend's (`s = 10⁻⁶`), median and worst, in pixels per vertex".
+  - `decisions.md` § R-583 (one size rule, base px), *What it decides*: "**`RenderState.base_width`** is the figure's
+    width in logical px (the scale factor removed) when saved or exported; a spec with no view (the reel, headless) and
+    older records take 1024."
+  - `docs/design/principia_chart_composition.md` § "17.12 Performance", the one place the chart-path design names a
+    picture size for a measurement: "one coarse cover's chart side (1920×1080 at 1/8 linear, 32,400 samples)".
+- **The silence:** the measurements run headless, on fixtures with no window. Nothing in the owner's words, in R-951 or
+  in the trajectory fixtures (R-919's F18, TASK-M2-82) says how many pixels wide and high the chart's window is drawn
+  when a vertex's place is turned into pixels, nor whether "pixels" are R-583's base px. The share P4 reports changes
+  with that size: the same trace has fewer vertex pairs "more than 8 pixels apart" on a smaller picture.
+- **The question:** at what window size and resolution are P2's and P4's pixels counted?
+- **Options seen:**
+  - (a) Base px, as R-583 has every mark length: the chart's window drawn 1024 base px wide, the width R-583 gives a
+    spec with no view. The corpus names that width and no height for a headless spec, so the owner would still state the
+    shape: square, 1024 × 1024, or another.
+  - (b) The picture the owner looks at: 1920 × 1080, the size design § 17.12's coarse-cover measurement is written at.
+  - (c) Reported at several sizes rather than one, each labelled: P2 and P4 at each of 512 × 512, 1024 × 1024 and 1920 ×
+    1080, so the owner reads the share where they would look at the trace.
+  - (d) Another size, stated by the owner.
+- **Recommended:** (a) with a square window, because base px is the corpus's one size rule and a trace's marks are
+  already sized in it, so "8 pixels" then means the same length on screen and in any export. Against it: the owner may
+  have meant the screen they morph on, which is (b). The measurable alternative is (c): the report gives both
+  measurements at all three sizes, and the owner reads the one they meant; it costs three placements of each trace
+  instead of one, and no choice.
+- **Applied meanwhile:** nothing. P2 and P4 are not run, and no size is assumed; the measurement task carries a
+  definition requirement (R-72) for the size, and R-951's "8 pixels" stands as the owner wrote it.
+- **Waits:** the re-plan addition's measurement task (P2 and P4), and through its report TASK-M8-49 and TASK-M8-58,
+  which R-951 holds until the owner has seen both.
