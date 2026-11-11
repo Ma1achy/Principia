@@ -283,3 +283,65 @@ negative_control!(
         passes(&queue_ending("ctl_each_wrapped", &each_wrapped("R-701", 6)));
     }
 );
+
+// ---- A wrapped item edited on two sides: its short tails differ in words ---------------------------------------------
+
+/// One item of a list at `n`, wrapped to a short tail `tail`, as this queue's 120-column wrap leaves it.
+fn wrapped_item(n: u32, tail: &str) -> Vec<String> {
+    vec![
+        format!("- at N = {n} the run holds in every long test of it, and is kept"),
+        format!("  {tail}."),
+    ]
+}
+
+/// The real queue, its last entry ending with `wrapped_item(6, "as it was")` on `main`; branch `a` rewrites both lines
+/// to `wrapped_item(8, ours)` and branch `b` to `wrapped_item(10, theirs)`, so the union keeps both versions whole.
+fn item_edited_on_two_sides(name: &str, ours: &str, theirs: &str) -> PathBuf {
+    let dir = copy(name);
+    let real = fs::read_to_string(dir.join("REVIEW_QUEUE.md")).expect("queue read");
+    let write = |lines: Vec<String>| {
+        fs::write(dir.join("REVIEW_QUEUE.md"), queue_with_text(&real, &lines))
+            .expect("queue written");
+    };
+    git(&dir, &["init", "-q", "-b", "main"]);
+    write(wrapped_item(6, "as it was"));
+    git(&dir, &["add", "."]);
+    git(&dir, &["commit", "-qm", "base"]);
+    for (branch, n, tail) in [("a", 8, ours), ("b", 10, theirs)] {
+        git(&dir, &["checkout", "-q", "-b", branch, "main"]);
+        write(wrapped_item(n, tail));
+        git(&dir, &["commit", "-qam", branch]);
+        let (passed, out) = check(&dir);
+        assert!(passed, "branch {branch} fails alone:\n{out}");
+    }
+    git(&dir, &["merge", "-q", "--no-edit", "a"]);
+    let merged = fs::read_to_string(dir.join("REVIEW_QUEUE.md")).expect("queue read");
+    let (a, b) = (
+        wrapped_item(8, ours).join("\n"),
+        wrapped_item(10, theirs).join("\n"),
+    );
+    assert!(
+        merged.contains(&format!("{a}\n{b}")) || merged.contains(&format!("{b}\n{a}")),
+        "the union did not keep both versions whole, one after the other:\n{merged}"
+    );
+    dir
+}
+
+#[test]
+fn a_wrapped_item_whose_two_versions_differ_in_words_is_caught() {
+    // One side says the item is kept "in full", the other "in part": a difference in words, not only in a plain
+    // number, so the two runs are not a list's siblings but two versions of one text, as they are on one line
+    // ("- at N = 8 … kept in full." next to "- at N = 10 … kept in part."). Where the wrap falls must not hide it.
+    let dir = item_edited_on_two_sides("wrapped_versions", "in full", "in part");
+    fails_naming(&dir, "are two versions of one text");
+}
+
+negative_control!(
+    a_wrapped_item_whose_two_versions_differ_in_words_is_caught,
+    "the same two items with tails differing only in a plain number are siblings, which pass",
+    expected = "queue check passed",
+    {
+        let dir = item_edited_on_two_sides("ctl_wrapped_versions", "in 2 runs", "in 3 runs");
+        fails_naming(&dir, "are two versions of one text");
+    }
+);
