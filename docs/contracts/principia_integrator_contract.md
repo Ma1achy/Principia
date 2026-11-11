@@ -273,6 +273,36 @@ driver.
 > a backlog for code that is about to be replaced. Filed as rules, the new kernel does not
 > reintroduce them — which is the only outcome that matters.
 
+**`dt_max`: its home, and the "no usable step" sentinel.** Rule 4's `dt_max` is defined here (a definition, R-72;
+REQ-TOOL-039, REQ-TOOL-125).
+
+- **What it is.** `dt_max` is, for one trajectory, the largest physical step its occupant took: the maximum, over the
+  steps of its march, of the physical time each one advanced.
+- **Its home is an occupant diagnostic, outside the payload:** `kernel::regularisation::dt_max::DtMax`. It is not a
+  ledger field and takes no payload bytes, so nothing here goes through the generation root; it is not on the sim key
+  and is not hashed. The occupant that forms the physical steps feeds it one step at a time, in march order, and whoever
+  runs the occupant reads it afterwards. Placing it in the payload would be a ledger change and needs a ruling.
+- **A usable step is a finite one,** as Part 2b's step 8 folds it ("folded into `dt_max` when finite"). A step whose
+  exponent field is all ones, a NaN or `±∞`, is unusable and is skipped. That is decided on the step's bits, before any
+  comparison (`IeeeBits::non_finite_bits`; R-114, R-538; `principia_gpu_determinism_note.md` § "The discipline",
+  rule 4): never by a float compared with itself, and with no precision-dependent constant in the branch (rule 1). Every
+  finite step is usable and is reported as it stands, never judged, clamped or filtered: a zero step, a negative one,
+  and the overflow `2.209e128`, which is finite at f64 and is reported as itself. At f32 `2.209e128` is `+∞`, so there
+  it is skipped and counted.
+- **A skipped step is not reported as `dt_max`; it is reported by a count.** Beside the largest usable step the
+  diagnostic reports how many steps it skipped, so a march with a non-finite step reads apart from the same march
+  without it, and a skipped step is never invisible (`principia_01_pitfalls.md` §9). The count is a `u32` that
+  saturates at its largest value: past that many it says "at least this many".
+- **The fold is reseeded from the first usable step** (rule 4): the first usable step becomes the maximum, whatever its
+  value, and a later usable step replaces it only where it compares greater (`dt > dt_max`). That comparison only ever
+  sees finite operands, the non-finite steps having been skipped on their bits before it. No `0.0`, no infinity and no
+  other seed value takes part.
+- **"No usable step" is an explicit sentinel, never a number.** A trajectory that took no step, or whose every step was
+  unusable, reports `DtMaxReport::NoUsableStep { skipped }`; one with a usable step reports
+  `DtMaxReport::Largest { dt_max, skipped }`. So "no usable step" cannot be read as "the largest step was `0.0`", which
+  is the report of a trajectory whose largest usable step was zero (`principia_01_pitfalls.md` §9). At f32 a trajectory
+  whose every step overflowed reports the sentinel with their count.
+
 #### And FMA contraction is a live question
 
 A backend that fuses `a*b+c` changes the result, which changes a comparison, which changes a
