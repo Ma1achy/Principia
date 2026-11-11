@@ -9,7 +9,7 @@
 #                      scripts/wsl/manifest.sha256 and the image's manifest has it, and unless the copy's bytes are the
 #                      ones built. Refuses if the distro exists, unless WSL_REPLACE is `true`. After the import it
 #                      derives the manifest again inside the distro, from what is really there, and unregisters it if
-#                      that differs from the pin.
+#                      that differs from the pin, or if deriving it fails or stops short.
 #   wsl.ps1 proofs     The six proofs RQ-751 (c) needs before it can replace (b), each reported PASS or FAIL with its
 #                      evidence; exits 0 only if all six pass. WSL_PARITY_COMMIT and WSL_HOSTED_PARITY (the hosted
 #                      runner's results, this run's) feed proof 6; WSL_IMAGE (this run's rebuild) feeds proof 5.
@@ -195,12 +195,32 @@ switch ($verb) {
         "wsl --import $Distro $Disk (WSL 2), as $([Environment]::UserName)"
         & wsl.exe --import $Distro $Disk $rootfs --version 2
         if ($LASTEXITCODE -ne 0) { Fail "wsl --import: exit $LASTEXITCODE" }
-        $live = Get-LiveManifest
-        $liveHash = if ($live) { Get-TextSha256 $live } else { 'none' }
-        Stop-Distro
-        if ($liveHash -ne $pinned) {
-            & wsl.exe --unregister $Distro | Out-Null
-            Fail "inside the imported distro the manifest derives to $liveHash, not the pinned ${pinned}: unregistered it"
+        # From here the distro is registered but unverified. Unless the manifest derived inside it is the pin, the
+        # `finally` stops and unregisters it, whatever ended the `try`: a mismatch, or a terminating error (a throw, or a
+        # cmdlet or native stderr under $ErrorActionPreference 'Stop'), which `catch` turns into the reason. Nothing in
+        # the `try` calls `Fail` or `exit`; the one `Fail` comes after the `finally` has run.
+        $verified = $false
+        $why = 'verifying the imported distro stopped before it finished'
+        try {
+            $live = Get-LiveManifest
+            $liveHash = if ($live) { Get-TextSha256 $live } else { 'none' }
+            Stop-Distro
+            if ($liveHash -eq $pinned) {
+                $verified = $true
+            } else {
+                $why = "inside the imported distro the manifest derives to $liveHash, not the pinned $pinned"
+            }
+        } catch {
+            $why = "verifying the imported distro failed: $_"
+        } finally {
+            if (-not $verified) {
+                try { Stop-Distro } catch { }
+                $unregistered = try { & wsl.exe --unregister $Distro | Out-Null; $LASTEXITCODE -eq 0 } catch { $false }
+            }
+        }
+        if (-not $verified) {
+            if ($unregistered) { Fail "${why}: unregistered it" }
+            Fail "${why}; wsl --unregister $Distro failed too: unregister it by hand before registering again"
         }
         "registered ${Distro}: its manifest, derived inside it, is the pinned $pinned"
         exit 0
