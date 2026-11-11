@@ -346,32 +346,84 @@ fn any_step32() -> impl Strategy<Value = f32> {
     ]
 }
 
-#[test]
-fn qa_m307_dt_max_property_f64() {
+/// Checks a fold over arbitrary f64 marches against the model, and that reversing a march leaves the value reported.
+fn check_property64(fold: impl Fn(&[f64]) -> Key) {
     prop::run(&proptest::collection::vec(any_step64(), 0..48), |steps| {
         let model_steps: Vec<Step> = steps.iter().copied().map(step64).collect();
         let (best, skipped) = model(&model_steps);
         let want: Key = (best.map(|k| model_steps[k].bits), skipped);
-        prop_assert_eq!(kernel64(&steps), want);
+        prop_assert_eq!(fold(&steps), want, "{}", MSG);
         // Feeding the steps in reverse changes at most which of two equal zeros is reported, never the value.
         let rev: Vec<f64> = steps.iter().rev().copied().collect();
-        let (a, b) = (kernel64(&steps), kernel64(&rev));
+        let (a, b) = (fold(&steps), fold(&rev));
         prop_assert_eq!(a.1, b.1);
         prop_assert_eq!(a.0.map(f64::from_bits), b.0.map(f64::from_bits));
         Ok(())
     });
 }
 
-#[test]
-fn qa_m307_dt_max_property_f32() {
+/// Checks a fold over arbitrary f32 marches against the model.
+fn check_property32(fold: impl Fn(&[f32]) -> Key) {
     prop::run(&proptest::collection::vec(any_step32(), 0..48), |steps| {
         let model_steps: Vec<Step> = steps.iter().copied().map(step32).collect();
         let (best, skipped) = model(&model_steps);
         let want: Key = (best.map(|k| model_steps[k].bits), skipped);
-        prop_assert_eq!(kernel32(&steps), want);
+        prop_assert_eq!(fold(&steps), want, "{}", MSG);
         Ok(())
     });
 }
+
+#[test]
+fn qa_m307_dt_max_property_f64() {
+    check_property64(kernel64);
+}
+
+#[test]
+fn qa_m307_dt_max_property_f32() {
+    check_property32(kernel32);
+}
+
+/// A fold seeded by the march's first step whether or not it is usable (a NaN or `±∞` first step seeds it, uncounted),
+/// where Part 2c seeds from the first usable step.
+#[cfg(feature = "controls")]
+fn seeded_by_first_step(steps: &[f64]) -> Key {
+    let mut best: Option<f64> = None;
+    let mut skipped = 0;
+    for &x in steps {
+        match best {
+            None => best = Some(x),
+            Some(_) if !x.is_finite() => skipped += 1,
+            Some(b) if x > b => best = Some(x),
+            Some(_) => {}
+        }
+    }
+    (best.map(f64::to_bits), skipped)
+}
+
+/// A fold that skips a NaN with its sign bit set without counting it, where Part 2c counts every non-usable step.
+#[cfg(feature = "controls")]
+fn negative_nan_uncounted(steps: &[f32]) -> Key {
+    let kept: Vec<f32> = steps
+        .iter()
+        .copied()
+        .filter(|x| !(x.is_nan() && x.is_sign_negative()))
+        .collect();
+    kernel32(&kept)
+}
+
+negative_control!(
+    qa_m307_dt_max_property_f64,
+    "a fold seeded by the first step even when it is not usable",
+    expected = "the report is not the contract's dt_max",
+    check_property64(seeded_by_first_step)
+);
+
+negative_control!(
+    qa_m307_dt_max_property_f32,
+    "a fold that skips a negative NaN without counting it",
+    expected = "the report is not the contract's dt_max",
+    check_property32(negative_nan_uncounted)
+);
 
 // ── REQ-TOOL-039: no usable step reads apart from a step of zero ───────────────────────────────────────────────────
 
