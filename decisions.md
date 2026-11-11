@@ -37178,8 +37178,12 @@ and, the same day, their follow-up on point 7, verbatim and whole, which superse
 - **The is-finite guard arm (the follow-up's first point).** The owner: "The guard arm should test the is-finite
   check, not just the floor … 1e-37 × 1e-37 underflows to zero". The physics consult shows the explicit finiteness test
   is not in the inverse map (`lc.rs:49-69`, `system.rs:65-86` have none) but in the RK4 loop (`driver.rs:1000-1001`),
-  and that what it catches is a doubly degenerate `A·B`, both factors floored at `TINY` and their product underflowing
-  at f32 (prin-rs `NOTES.md:629-632`, `driver.rs:244-246`): the Aarseth–Zare floor of integrator contract Part 6.
+  and that what it catches is an entry size made non-finite by a small `A·B`: at f32 the floored product below about
+  `η·dt_left/FLT_MAX` (about `3e-43` at `η·dt_left ≈ 1e-4`), which needs neither factor below `TINY`, so `ab_floored`
+  need not fire; a doubly degenerate `A·B`, both factors floored at `TINY` and their product underflowing at f32
+  (prin-rs `NOTES.md:629-632`, `driver.rs:244-246`), is one case of it: the Aarseth–Zare floor of integrator contract
+  Part 6. *Was (corrected 11 Nov 2026 by the physics review of PR #488; this record's own text):* "what it catches is
+  a doubly degenerate `A·B`, both factors floored at `TINY` and their product underflowing at f32".
   Applied where the owner's concern takes effect: the arm that exercises the finiteness test on a doubly degenerate
   state goes on that floor's requirement, REQ-INT-105, whose Aarseth–Zare part TASK-M3-68 builds, not on REQ-INT-044.
   Its fixture is **degenerate at the interval's entry**, at registration: under the default per-step rule a state
