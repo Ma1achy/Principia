@@ -1,8 +1,8 @@
 # TASK-M2-84 — The symmetry filter's maths: the mask, the partner check and the statistics, on a synthetic payload (R-916)
 
 - **Milestone:** M2
-- **Closes:** REQ-CHART-135, REQ-CHART-137, REQ-CHART-150, REQ-CHART-175, REQ-CHART-176
-- **Depends on:** TASK-M2-77, TASK-M2-81
+- **Closes:** REQ-CHART-135, REQ-CHART-137, REQ-CHART-150, REQ-CHART-175, REQ-CHART-176, REQ-CHART-209
+- **Depends on:** TASK-M2-77, TASK-M2-81, TASK-M2-99
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -31,7 +31,9 @@ The symmetry filter's maths on a synthetic payload: the per-chart declaration, t
 - `cargo test -p engine mirror_pairs_statistic` — on a mirror-symmetric rest preset the default statistic counts every start, and with the option on the paired count is half the full count up to the pixels on the mirror line, the legend and the sidecar saying so; the option is off by default; controls: the option on by default fails, a paired count that drops a start from the computed chart fails, the statement missing from the sidecar fails (REQ-CHART-150).
 - `cargo test -p engine symmetry_mask_synthetic` — a third-body rest chart declaring the mirror only, one copy, on a synthetic payload whose pairs carry mirrored fields, filtered, plus its mirror, is the full chart bitwise, outcome fields equal, signed fields flipped; mutations: a signed field not flipped fails, the canonical side off by one row fails (REQ-CHART-175).
 - `cargo test -p engine symmetry_region_d_area` — the filtered area at equal masses and exact rest within the derived pixel bound of π/6 − √3/8; control: the mask with one body swap undeclared fails (REQ-CHART-176).
+- *11 Nov 2026 (R-947, R-944):* Definition: chart_composition § 10.4 states the canonical representative of a mirror pair on a blend, approved by the physics reviewer; the filter's mask test on a blend of two mirror-declaring charts blanks a pair only where the partner check passes (control: a blend that breaks the mirror blanks nothing). **The condition written in: the filter runs on a blend under (D) only once physics review confirms the mechanism and approves this definition (R-72); else the filter is off mid-morph, as R-899's Q8 (a) has it** (REQ-CHART-209).
 
 ## Notes
 - Split from TASK-M8-120 by R-916 (9 Nov 2026): REQ-CHART-175 is the owner's rest test on a synthetic payload (F7), REQ-CHART-176 the 0.307 area; TASK-M8-120 keeps REQ-CHART-136, REQ-CHART-138 and REQ-GUI-424.
 - **Build order (R-916):** stage 5; TASK-M2-85 depends on it.
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-947):* the partner is found by `place`, `place(g·D(φ(u)), chart)` (TASK-M2-99, a new dependency). The filter on a blend is (D), applied per R-369 and conditional on physics review: the frame declares the symmetries either end declares, and the canonical representative on a blend is a definition owed (REQ-CHART-209). *Was (Depends on):* "TASK-M2-77, TASK-M2-81"; *was (Closes):* "REQ-CHART-135, REQ-CHART-137, REQ-CHART-150, REQ-CHART-175, REQ-CHART-176".

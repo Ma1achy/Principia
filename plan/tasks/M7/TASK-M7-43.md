@@ -1,10 +1,10 @@
 # TASK-M7-43 — Contours: the expression's variables and totality, evaluation on the decode, levels, marching squares, and energy contours that follow the active mapping (R-476, principia_lines.md §4) ⚑
 
 - **Milestone:** M7
-- **Closes:** REQ-RENDER-092, REQ-RENDER-093, REQ-RENDER-094, REQ-RENDER-095, REQ-RENDER-096
-- **Depends on:** TASK-M7-42, TASK-M2-37, TASK-M2-25
+- **Closes:** REQ-RENDER-092, REQ-RENDER-093, REQ-RENDER-094, REQ-RENDER-095, REQ-RENDER-096, REQ-PERF-123
+- **Depends on:** TASK-M7-42, TASK-M2-37, TASK-M2-67, TASK-M2-90
 - **Needs (earlier milestones):** REQ-CHART-067, REQ-CHART-069
-- **Reviewers:** code, qa, gui, physics
+- **Reviewers:** code, qa, gui, physics, perf
 - **Pitfalls:** none
 - **Size:** ~900 lines, the tests included
 
@@ -31,9 +31,12 @@ Contours of any expression over §4.1's variables, total; starting-state contour
 - `cargo test -p render contour_levels` — REQ-RENDER-094's verify.
 - `cargo test -p render contour_extract` — REQ-RENDER-095's verify (exactness, totality).
 - `cargo test -p render energy_contours` — REQ-RENDER-096's verify (L4).
+- *11 Nov 2026 (R-952):* `cargo test -p render contour_blend_ends` — REQ-RENDER-092's verify as it now reads, the per-end evaluation of Chart and Latent variables on a blend ((C), applied per R-369) (REQ-RENDER-092); `contour_eval` reads REQ-RENDER-093's verify as it now reads: the CPU's f64 screen grid, the check at a depth where f64 itself rounds reported and never asserted against a fixed depth, the control (a contour read from the quads' payload moves with refinement) kept (REQ-RENDER-093).
+- *11 Nov 2026 (R-952):* `cargo xtask bench contour_pass` — REQ-PERF-123's verify: R-952's 8.3 ms criterion on the half-resolution grid, 960 × 540, on the three test charts, kept as written and not adjusted after the run; the report says what the owner will see while moving on each chart. **Owed, the owner's:** R-952 gives no rule for a quarter-resolution grid that also misses 8.3 ms; if that happens it is reported with the numbers and the owner decides, nothing stepped down further meanwhile; benchmark: waits for the human's Mac (R-186) (REQ-PERF-123).
 
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics. It covers L4, the energy contours on a tilted plane (R-476 M7).
 - **RQ-377 (1), (2)** wait (REQ-RENDER-097, TASK-M8-51); meanwhile §4.1's tree and its named fields.
 - **R-509 (20 Oct 2026) rules RQ-377 (1) and (2):** contours reuse the stain's expression syntax, and the playhead reads any field the ledger declares; nothing waits (REQ-RENDER-097, TASK-M8-51). The note above is kept as history (code review 5587720942 of PR #255, F7).
 - Chart composition (6 Nov 2026): §4.1's variables grow by TASK-M7-72, after this task.
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-952):* starting-state contours are evaluated on the CPU's f64 screen grid for every chart, a blend included; no GPU contour pass is planned (the GPU decode entries stay test entries only, R-935 under RQ-765 (a)). Its dependence on TASK-M2-25 (the generated WGSL decode) is dropped; it depends on TASK-M2-67 (the CPU evaluator) and TASK-M2-90 (the blend chart). It gains a benchmark (REQ-PERF-123), so `perf` reviews it. Playhead contours, read from the resident quads' payload, are unchanged. Where a dated line under Acceptance tests differs from an earlier line for the same requirement, the dated line binds and the earlier one is kept as its *Was*. *Was (Depends on):* "TASK-M7-42, TASK-M2-37, TASK-M2-25"; *was (Closes):* "REQ-RENDER-092, REQ-RENDER-093, REQ-RENDER-094, REQ-RENDER-095, REQ-RENDER-096"; *was (Reviewers):* "code, qa, gui, physics".

@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-DEC-055, REQ-DEC-056
-- **Depends on:** TASK-M2-40, TASK-M2-65
+- **Depends on:** TASK-M2-40
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -194,3 +194,4 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   "state in at least one bit; if a link has none, the fixture is written again through the baseline commit's decoder
   with more pixels, never edited by hand; controls: a fixture state with one bit flipped fails the first arm, and a
   fixture holding only pixels where conversion is exact fails the second (R-921; REQ-TOOL-172)."
+- *11 Nov 2026 (the re-plan's § A.1 and § B.1 item 3, KEEP; the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4):* its edge to TASK-M2-65 is dropped so it lands before TASK-M2-61's baseline, as TASK-M2-93 does, and the baseline is frozen once (applied per R-369: task scoping). *Was (Depends on):* "TASK-M2-40, TASK-M2-65".

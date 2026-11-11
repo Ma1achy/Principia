@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-COL-133, REQ-COL-134, REQ-COL-163
-- **Depends on:** TASK-M2-25, TASK-M2-26
+- **Depends on:** TASK-M2-25, TASK-M2-26, TASK-M2-99
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -46,3 +46,4 @@ One Rust source for SM1's `P_T`, "the target chart's projection, the one the tra
 - **Ruled by R-558 as applied meanwhile:** RQ-498 (a), the shape-sphere target from the signed n̂; RQ-503 (a), main's `α_min = 0`.
 - *5 Nov 2026 (R-793, closing RQ-680 (a)):* the targets are the app's own charts, through `encode_into` and `curve::nearest`; SM1's two dilation rows are the prototype's record, and the wait on RQ-680 ends.
 - *7 Nov 2026 (R-853, R-854):* the one projection reads a state at `t > 0` signed and unfolded on every target, so Chart position and the trace are continuous through syzygies; a mirror-identified reading only as a declared optional view, labelled, off by default (REQ-COL-163). How a lower-half state reads on a latent target's coordinates is a definition (R-72) this task writes under physics review before building it.
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-947):* this task narrows to the fragment's generated half of TASK-M2-99 (the one placement function): the WGSL generation and the native-against-WGSL test. **Its CPU half moves into M2, as TASK-M2-99**, which it now depends on; R-542 H11's "never a second implementation" is kept. REQ-COL-133 (the leaving rule's definition), REQ-COL-134 (the one projection) and REQ-COL-163 (later states read signed) stay here: the sources do not move them (applied per R-369). The deliverables above that build the CPU source read as TASK-M2-99's. *Was (Depends on):* "TASK-M2-25, TASK-M2-26".

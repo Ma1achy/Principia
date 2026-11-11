@@ -37,3 +37,4 @@ Power and log as options per axis, polar and log-polar on any pair, each declare
 - Was TASK-M8-100's maths (R-916, 9 Nov 2026). TASK-M8-100 is retired: REQ-CHART-132 went to TASK-M3-14 (R-918), and V1's decode time, the old acceptance's perf clause, to TASK-M4-33's REQ-PERF-116 (applied per R-369).
 - Reviewed under RQ-720's reading of R-594 item 5.
 - **Build order (R-916):** stage 3.
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.5; R-936, R-944):* REQ-CHART-131 (a statistic's measure) gains: a mid-morph frame admits no area statistic, its `measure` `none`, the two end charts keeping their own. The blend chart is TASK-M2-90's; this task's `statistic_measure` reads the requirement as it now is.

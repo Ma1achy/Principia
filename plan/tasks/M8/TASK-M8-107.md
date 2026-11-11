@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-PERF-117
-- **Depends on:** TASK-M2-81, TASK-M4-33
+- **Depends on:** TASK-M2-81, TASK-M4-33, TASK-M2-89, TASK-M2-90
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -19,8 +19,9 @@ A path between two baked ends runs live like a tilt: coarse in motion, refining 
 - The dispatch of three stages per quad; the label for a CPU-only end.
 
 ## Acceptance tests
-- `cargo test -p engine blend_entry_counted` — stage_blend the only morph entry; control: a baked (A, B) entry (REQ-PERF-117).
+- *Was, moot since 11 Nov 2026 (R-926 items 5 and 6: there is no GPU blend entry):* `cargo test -p engine blend_entry_counted` — stage_blend the only morph entry; control: a baked (A, B) entry (REQ-PERF-117).
 - `cargo xtask bench path_cover` — one coarse cover against the design's target; benchmark: waits for the human's Mac (R-186), which closes it; the Windows runner's arm is a separate labelled measurement that closes nothing, a named measurement and never a required check (R-711, R-860) (REQ-PERF-117).
+- *11 Nov 2026 (R-926):* `cargo xtask bench path_cover` on a blend — the coarse cover's timing for a blend, the CPU's evaluation sent as forward tables, read with measurement M-A (REQ-PERF-121); benchmark: waits for the human's Mac (R-186) (REQ-PERF-117).
 
 ## Notes
 - **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
@@ -30,3 +31,4 @@ A path between two baked ends runs live like a tilt: coarse in motion, refining 
 - *8 Nov 2026 (R-873):* **Build order:** stage 4, through TASK-M8-106 (now TASK-M2-81), which now depends on every stage-3 task (RQ-744 (A) (a)); R-901: easing is TASK-M2-61's, a property of each path segment, so nothing here adds easing beside it.
 - *9 Nov 2026 (R-916):* the line above is a record: TASK-M2-81 is M2's and depends on M2's stage-3 tasks, TASK-M2-66 to TASK-M2-80, not on those outside M2 (TASK-M4-33, TASK-M4-34, TASK-M7-72, TASK-M8-102, TASK-M8-103, TASK-M8-104, TASK-M8-118, TASK-M8-126). This task depends on TASK-M2-81 and TASK-M4-33.
 - *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M4-37, TASK-M8-106".
+- *11 Nov 2026 (the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-926 items 5 and 6):* its `stage_blend` entry and `blend_entry_counted` are moot; what stays is the coarse cover's timing for a blend, read with the re-plan's M-A. Both † edges are kept (applied per R-369: task scoping): the cover is TASK-M2-89's builder run on TASK-M2-90's blend chart. *Was (Depends on):* "TASK-M2-81, TASK-M4-33".

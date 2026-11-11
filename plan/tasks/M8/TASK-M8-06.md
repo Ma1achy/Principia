@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161, REQ-GUI-345
-- **Depends on:** TASK-M8-05, TASK-M6-26, TASK-M6-38, TASK-M2-22, TASK-M2-23, TASK-M2-17, TASK-M2-14, TASK-M2-28, TASK-M2-64
+- **Depends on:** TASK-M8-05, TASK-M6-26, TASK-M6-38, TASK-M2-22, TASK-M2-23, TASK-M2-17, TASK-M2-14, TASK-M2-28, TASK-M2-64, TASK-M2-98
 - **Needs (earlier milestones):** REQ-GUI-002, REQ-GUI-003, REQ-GUI-006, REQ-CHART-005, REQ-CHART-012, REQ-CHART-028, REQ-SYS-014, REQ-CHART-002, REQ-RENDER-026
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -54,3 +54,4 @@ The left panel is one "Manifold view" group in the order §G2 gives: Chart (pres
 - R-627: TASK-M2-22, TASK-M2-23, TASK-M2-17, TASK-M2-14, TASK-M2-28 (merged) are named in Depends on so the Needs they close stay reachable now that the chain through TASK-M8-05's old dependencies is gone (applied per R-369). *Was:* "- **Depends on:** TASK-M8-05, TASK-M6-26, TASK-M6-38".
 - R-627, gui review 5664362471 of R-627's port (G1, applied per R-369): the deliverables say what this track task builds on the mock; TASK-M8-01 and TASK-M8-03 are no longer dependencies, and the real-engine part (TASK-M8-01's SetField paths, TASK-M8-03's per-field metadata and warning, the axis labels on the real chart) is TASK-M8-89's. *Was:* "each control emits SetField on the SimConfig paths from TASK-M8-01; each shows the per-field warning from TASK-M8-03."; "`crates/gui/src/explore/axis_labels.rs`, the track's axis labels (TASK-M6-26, R-390) wired to the real chart —".
 - *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M8-05, TASK-M6-26, TASK-M6-38, TASK-M2-22, TASK-M2-23, TASK-M2-17, TASK-M2-14, TASK-M2-28".
+- *11 Nov 2026 (the addendum's § A.8, CHANGE; the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4; R-940, R-942):* the figure's axis labels (REQ-GUI-084) come from TASK-M2-98's computed axis: name and range computed from the window, mixed names included. It depends on TASK-M2-98 (computed axes, the maths); TASK-M8-130 then draws the computed axes on the figure. *Was (Depends on):* "TASK-M8-05, TASK-M6-26, TASK-M6-38, TASK-M2-22, TASK-M2-23, TASK-M2-17, TASK-M2-14, TASK-M2-28, TASK-M2-64".
