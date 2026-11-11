@@ -92,7 +92,29 @@ EOF
 in_root apt-get -q update
 in_root apt-get -q -y -o Dpkg::Options::=--force-confold dist-upgrade
 in_root apt-get -q -y --no-install-recommends install "${PACKAGES[@]}"
-in_root apt-get -q -y purge sudo
+# sudo's pre-removal script refuses while root's password is locked, as the base's is (`root:*:` in /etc/shadow), and
+# SUDO_FORCE_REMOVE=yes is the bypass it names, for whoever has another way to root: here the chroot, and in the
+# distro `wsl -u root`. Set for this command only; root's password stays locked.
+in_root env SUDO_FORCE_REMOVE=yes apt-get -q -y purge sudo
+# Proved, not taken from apt's exit: the package is gone from dpkg's database, conffiles too (a purge leaves no `rc`),
+# and neither a sudo on PATH nor /usr/bin/sudo nor /etc/sudoers is left, by any package. The check has to run and
+# pass: a chroot or a dpkg-query that fails to run fails the build too.
+in_root sh -eu -s << 'EOF' || {
+dpkg-query --version > /dev/null
+state=$(dpkg-query -W -f '${db:Status-Status}' sudo 2> /dev/null || true)
+case "$state" in
+  "" | not-installed) ;;
+  *) echo "dpkg still holds sudo: $state" && exit 1 ;;
+esac
+if command -v sudo; then echo "a sudo is on PATH" && exit 1; fi
+for f in /usr/bin/sudo /etc/sudoers; do
+  if [ -e "$f" ] || [ -L "$f" ]; then echo "$f is left" && exit 1; fi
+done
+echo "sudo: purged; no package, no binary, no /etc/sudoers"
+EOF
+  echo "::error::build-image.sh: sudo isn't proved gone from the image after the purge"
+  exit 1
+}
 in_root apt-get -q -y clean
 sudo rm -rf "$root/var/lib/apt/lists/"*
 
