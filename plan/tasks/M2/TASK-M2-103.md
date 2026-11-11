@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-CHART-206
-- **Depends on:** TASK-M2-66, TASK-M2-67
+- **Depends on:** TASK-M2-95, TASK-M2-66, TASK-M2-67
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -31,3 +31,4 @@ The saturate kind of chart edge in the CPU evaluator (R-932), for every chart's 
 - **Entered, not released (R-923).** R-923 (integrator work before charts, for now) holds the chart tasks TASK-M2-57 to TASK-M2-85, TASK-M2-82 excepted, and allows no new chart task meanwhile. Entering this task in `plan/tasks.yaml` does not lift the hold: it is a chart task, entered held, and it is not dispatched until the owner lifts R-923's hold.
 - Split from N14 (the addendum § C item 3, per-edge extensions in the CPU evaluator and the count) by the kinds R-932 declares, every chart's edges being built now (R-938) (applied per R-369: task scoping). The per-edge declarations go with each kind's own task; the view state's override, blank's two controls and the debug view's per-pixel kind go with TASK-M2-105.
 - A row whose default is still open under RQ-779 (each edge's default kind) is built to R-932's rule as R-941 says: the mass simplex saturates, and the owner confirms the rest by eye when the charts render. Which mechanism a row uses where the rule leaves a choice is physics review's call. Time before zero shows the starting state; the backward run comes later (R-938).
+- *11 Nov 2026 (the physics review of PR #482, review 5852979675, P3):* gains TASK-M2-95 (the extension kinds in the contracts) in Depends on. This task builds the per-edge declarations for the rows that take its kind, and which edges take a kind, its band and its place in R-408's order are TASK-M2-95's per-edge table, physics-reviewed under R-407's clause 3 (REQ-CHART-194); the addendum orders N12, then N13, then N14. Unfold and clamp reach TASK-M2-95 through TASK-M2-96; this kind did not. *Was (Depends on):* "TASK-M2-66, TASK-M2-67".

@@ -1,7 +1,7 @@
 # TASK-M2-99 — The one placement function, `place(state, chart) → {point, sheet, residual, route, status}`, and the two definitions it owes (R-947)
 
 - **Milestone:** M2
-- **Closes:** REQ-CHART-199, REQ-CHART-200
+- **Closes:** REQ-CHART-199, REQ-CHART-200, REQ-COL-133, REQ-COL-163
 - **Depends on:** TASK-M2-90, TASK-M2-92, TASK-M2-94, TASK-M2-96, TASK-M2-67
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -21,16 +21,25 @@ One function for "where is this state on this chart" (R-947): one Rust source in
 - `docs/design/principia_chart_composition.md` § "10.6 Placement: one function for "where is this state on this chart""
 - `docs/design/principia_chart_composition.md` § "10.5 Points of interest"
 - `docs/design/principia_chart_composition.md` § "17.5 A frame: valid, reproducible, recorded"
+- `docs/design/principia_state_map.md` § "SM1. Definition"
+- `docs/design/principia_state_map.md` § "SM5. The four results of a projection"
+- `docs/contracts/principia_inverse_encode_contract.md` § "Part 3 — Block inverses (closed forms, with their forward mates)"
+- `docs/design/principia_lines.md` § "8. Traces"
 
 ## Deliverables
 - `place` in `crates/kernel`. *The encode reading:* the encode, read on the shown axes, the hidden coordinates giving the off-slice distance (R-542 H11's one projection and R-538 TF2's per-axis reading, unchanged on every chart that has it). *The nearest point:* the chart point whose decoded state is nearest the state, found by the lock's solver (TASK-M2-94) on the chart's own f64 forward map, seeded by the caller's hint (a trace's previous sample, a lock's previous centre) or by the backwards table (TASK-M2-92); its residual is the off-slice distance.
 - On the CPU every route refines to the lock's tolerance (REQ-CHART-158), mid-morph included; R-926 item 7's "Approximate is acceptable during a morph" binds the fragment's table route only.
 - `status`: `placed`, `left` (the leaving rule, or a failed solve) or `ill-conditioned` (below the floor R-935 has under RQ-767 (a)). On a chart with a second sheet `sheet` names it (TASK-M2-96). Where a blend folds and more than one point lies within the lock's tolerance, every such point is returned and the consumer applies its own rule. At `s = 0` and `s = 1`, selected exactly, the end chart's own route answers, bitwise.
 - The two definitions of REQ-CHART-200, written into the composition design § 10.6 under physics review.
+- The leave definition, written into `docs/design/principia_state_map.md` SM5 with the porting rule's "Removed lines" note: `status`'s `left` on main's clamped encode, the clamp per link and its margin (REQ-COL-133).
+- The reading of a state at `t > 0`, signed and unfolded on every target, and the definition (R-72) of how a lower-half state reads on a latent target's coordinates, written under physics review before it is built (REQ-COL-163).
 
 ## Acceptance tests
 - `cargo test -p kernel place_routes` — for each kernel chart of the first slice (the latent chart, the shape sphere's exponential map, the `(L_z, E)` chart) and each of two blend pairs (the latent chart to the shape sphere's exponential map, and the `(L_z, E)` chart to the shape sphere's exponential map) at `s = 0.25`, `0.5` and `0.75`, on a 64 × 64 pixel grid: `place` of each pixel's own decoded state returns that pixel with its residual within the lock's tolerance (REQ-CHART-158), or, where the blend folds, a set containing it; at `s = 0.0` and `1.0` the end chart's own answer, bitwise; on a chart with an inverse the encode route's answer equals the one projection (REQ-COL-134) bitwise. Controls: a `place` that returns its table seed unrefined fails the residual check on at least one blend (if none fails, the table already meets the tolerance and the control is reported void, not passed); an answer one pixel off fails. It checks only states on the chart's image, and is not read as passing on a nearest-point route until REQ-CHART-200's two definitions are written and approved (REQ-CHART-199).
 - Definition: chart_composition § 10.6 states the metric "nearest" is measured in and which nearest point answers for a state off the chart's image; the physics reviewer approved each; REQ-GUI-427 (the definitions points of interest owe) reads its nearest chart point and its off-slice metric from them (REQ-CHART-200).
+- *11 Nov 2026 (R-935, under RQ-767 (a)):* `place_routes` reads "refined to the lock's tolerance" as REQ-CHART-199 now states it: on the chart's image the residual is held to the tolerance; off the image the residual is the projection distance, never an error and never bounded by the tolerance, convergence judged by first-order optimality, so a state off the image is `placed` when the solve converges and `left` only when it does not (REQ-CHART-199).
+- *11 Nov 2026:* Review checklist: the leave definition is written into SM5 with the clamp per link and its margin, cites R-72 and R-538 TF1, and the four results' and the status tests read it; the physics reviewer checks it against the inverse encode contract's clamps (REQ-COL-133).
+- *11 Nov 2026:* `cargo test -p kernel signed_later_states` — on the latent momenta chart, `place`'s point for a trajectory's states through a syzygy is continuous, its two samples either side within the step's motion; the mirror-identified reading is a declared option of the call, off by default; control: the canonical mirror applied to a later state makes the place jump and fails (REQ-COL-163).
 
 ## Notes
 - Entered 11 Nov 2026 as N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) (applied per R-369: task scoping); its acceptance is the addition's § A.3, "Acceptance" (`place_routes`), with the composition design § 10.6. The plan documents are under `plan/charts/`; the lines above carry what they say.
@@ -38,4 +47,5 @@ One function for "where is this state on this chart" (R-947): one Rust source in
 - Not taken (R-947): a blend's trace placed by the share-weighted mix of the two ends' readings; the nearest point on every chart; a mechanism per consumer.
 - Consumers, each a caller of `place`: Chart position and the state map (TASK-M7-47; TASK-M7-74 holds the fragment's table route to `place` on the CPU); hover, pinned and kept traces (TASK-M8-10, TASK-M8-49, TASK-M8-58); points of interest's marks (TASK-M2-80, TASK-M8-126); the symmetry filter's partner check (TASK-M2-84, TASK-M8-120); the time-axis IC Inspector's "off this chart" (`place`'s status).
 - What `place` does off the chart's image is P2's and P4's to report (TASK-M2-100), not this task's to assert.
-- REQ-COL-133 (the leaving rule's definition), REQ-COL-134 (the one projection, compiled to WGSL) and REQ-COL-163 (later states read signed) stay with TASK-M7-52: the sources do not move them (applied per R-369).
+- *11 Nov 2026 (the physics review of PR #482, review 5852979675, P2):* REQ-COL-133 (the leaving rule's definition) and REQ-COL-163 (later states read signed) move here from TASK-M7-52, with their milestone, M7 to M2: this task's `status` is `left`, the leaving rule, and its input is a signed state, so it builds the source both define, and TASK-M7-52 depends on it. Each link's margin since R-481 (`tanh_q` and `softsign_q` at `q_max(1 − ε_q)`) is written into SM5 here. REQ-COL-134 (the one projection, compiled to WGSL) stays with TASK-M7-52. On a chart showing `z_β` a signed lower-half state has no `z_β`, so continuity there waits on this task's definition and RQ-739, as REQ-COL-163's note has it. *Was (the decision of 11 Nov 2026, withdrawn):* "REQ-COL-133 (the leaving rule's definition), REQ-COL-134 (the one projection, compiled to WGSL) and REQ-COL-163 (later states read signed) stay with TASK-M7-52: the sources do not move them (applied per R-369)." *Was (Closes):* "REQ-CHART-199, REQ-CHART-200".
+- *When its two definitions are written (the physics review's point 5):* the physics reviewer will ask for the state's gauge (a trajectory state taken to `I = 1` through signed `C`, the mirror not quotiented), and how the metric relates to REQ-CHART-146's "nearest point in B", REQ-CHART-124 and REQ-GUI-427, since the lock's re-solve is a consumer of `place` and cannot have a second meaning of "nearest".

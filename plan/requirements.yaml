@@ -144,19 +144,22 @@
   milestone: M2
 - id: REQ-DEC-007
   area: DEC
-  statement: "Link selection and chart type must be baked (monomorphised Rust variants), z₀, q₁, q₂ and slice values must be uniforms, and DECODE_MODE (full vs linearised) must be a per-quad workgroup-uniform flag."
+  statement: "Link selection and chart type must be baked (monomorphised Rust variants) wherever chart code is compiled: under R-926 item 5 that is the CPU's evaluator and the fragment's generated code, and the decode stage's GPU entry only as a test and parity entry (R-935, under RQ-765 (a)), never the integrator, whose entry reads the records the CPU wrote and holds no chart code, which is REQ-INT-115's to require; z₀, q₁, q₂ and slice values must be uniforms, and DECODE_MODE (full vs linearised) must be a per-quad workgroup-uniform flag, in every entry that decodes."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: "2. Consolidated contract (every clause that binds this component)"
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: "Design axioms (the six that must survive contact with a code agent)"
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
   verify:
     method: review checklist
-    detail: "kernel has one monomorphised variant per chart/link set; no runtime axis-kind interpreter; changing z₀/q/slice does not recompile"
+    detail: "kernel has one monomorphised variant per chart/link set; no runtime axis-kind interpreter; changing z₀/q/slice does not recompile; that the integrator's entry holds no chart code and never decodes is REQ-INT-115's check, not this one's"
   rulings:
   - R-926
+  - R-935
   milestone: M2
-  note: "*11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE: baked for the CPU and the fragment, not the integrator. Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M2-06 rewrites them under the ruling, and where they differ from it the ruling binds."
+  note: "*11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE: baked for the CPU and the fragment, not the integrator. *11 Nov 2026 (the code review of PR #482 (review 5852985982), F1):* reworded here under R-926 item 5, since TASK-M2-06 (the kernel decode stage on the GPU), which closes it, is built and rewrites nothing. The statement's own obligation is baking wherever chart code is compiled, which is what TASK-M2-06 built and what stays true of its entry as a test and parity entry, so TASK-M2-06 still closes it; the new half, an integrator that holds no chart code, is REQ-INT-115's, closed by TASK-M2-87 (the CPU-to-GPU record and table contract), which is not built and whose file carries the note. Its closing was not moved to TASK-M2-87: TASK-M4-03 (the determinism pin) needs this requirement as built, and `plan/check_plan.py` refuses the move unless that integrator task gains an edge onto a held chart task. *Was (statement):* \"Link selection and chart type must be baked (monomorphised Rust variants), z₀, q₁, q₂ and slice values must be uniforms, and DECODE_MODE (full vs linearised) must be a per-quad workgroup-uniform flag.\" *Was (verify):* \"kernel has one monomorphised variant per chart/link set; no runtime axis-kind interpreter; changing z₀/q/slice does not recompile\" *Was (note, its last sentence):* \"Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M2-06 rewrites them under the ruling, and where they differ from it the ruling binds.\""
 - id: REQ-DEC-008
   area: DEC
   statement: "Invalid decodes must be tagged, never dropped: DEGENERATE(reason) must be a decode-time terminal label with a narrow, enumerated cause set, and every pixel must receive a label."
@@ -1191,7 +1194,26 @@
   - R-937
   - R-948
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-96 (N13 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+  note: "Added 11 Nov 2026 with TASK-M2-96 (N13 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P6 (a)):* \"the sign of its seed component\" is undefined at `p·w = 0`, signed zero included; the rule there is a definition owed (R-72), REQ-DEC-062, written by this requirement's task under physics review."
+- id: REQ-DEC-062
+  area: DEC
+  kind: definition
+  statement: "A state's sheet at a zero seed component must be defined (R-72): R-948's (i-a) reads the sheet from the sign of the state's momentum along the construction's seed, which is undefined at `p·w = 0`, `+0` and `−0` included, and that case is not rare, every rest start having it and every cell of the untilted `t = 0` row being the rest start, shown at `s` and at `2 − s`; the rule must be one pure function shared by the decode and `place`, written into principia_lines.md § 8 (\"At the new edges\") by the task that builds the sheet's one source and approved by the physics reviewer; nothing is chosen until then."
+  source:
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-948 — Traces at the new edges, the re-plan addition's question (B): (i-a), (ii-a), (iii-a); a state's sheet is set by whether the system is growing or shrinking, the trace jumps at the fold with an optional tick, off by default, and nothing is drawn inside a clamped or saturated area, physics review confirming *(no RQ; answers the re-plan addition's question (B); refines R-538)*"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  verify:
+    method: review checklist
+    detail: "lines § 8 states which sheet a state with `p·w = 0` is on, for `+0` and for `−0`; the decode and `place` call one pure function for it (a test places every cell of the untilted `t = 0` row and reads the same sheet from both); the physics reviewer approved it"
+  rulings:
+  - R-72
+  - R-948
+  milestone: M2
+  note: "Added 11 Nov 2026 (the physics review of PR #482 (review 5852979675), P6 (a)), on TASK-M2-96 (the second sheet and a state's sheet from one source), which closes it. A condition of the physics review's confirmation of R-948 (i-a)."
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
@@ -4233,7 +4255,7 @@
   note: "R-873 (8 Nov 2026, RQ-744 (B) (a)): TASK-M2-81 is split, and these tests are stage 1's, closed by TASK-M2-61, not TASK-M2-81. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-61; the stale rq fields (RQ-721, each ruled) cleared."
 - id: REQ-CHART-114
   area: CHART
-  statement: "A path frame must flag seams and degenerate frames by the Gram area factor, tag infeasible pixels and never drop them, keep a pixel blank mid-path where an end carries no state, a tagged end that carries a state blending as one ((F), applied per R-369 and conditional on the physics reviewer confirming it tag by tag: until they confirm, and for a tag they do not, a pixel blank or tagged at either end stays blank mid-path, V21 as written), report what each held quantity means, take one colour window for the segment, admit no statistic, carry no \"no tilt or slice\" label (R-944), and let a changed link id morph, the ends exact (R-949)."
+  statement: "A path frame must flag seams and degenerate frames by the Gram area factor, tag infeasible pixels and never drop them, keep a pixel blank mid-path where an end carries no state, a tagged end that carries a state blending as one ((F), applied per R-369 and listed for veto, as the physics reviewer confirmed it tag by tag in chart_composition § 17.11's table: `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE` and `INVARIANT_INFEASIBLE`'s arm `K* < L_z²/(2I)` blend, the state blended being the one the end chart itself draws at that pixel once R-932's kinds apply, never the tagged decode's raw output where the two differ; for every other tag, `INVARIANT_INFEASIBLE`'s arm with no finite `2K*`, `NO_QUALIFYING_SEED` and `M01_TINY`, a pixel blank or tagged at either end stays blank mid-path, V21 as written), declare and draw as a seam the jump across an end's feasibility boundary, which survives mid-path at weight `(1 − s)`, report what each held quantity means, take one colour window for the segment, admit no statistic, carry no \"no tilt or slice\" label (R-944), and let a changed link id morph, the ends exact (R-949)."
   source:
   - file: docs/design/principia_chart_composition.md
     section: 17.11 Honesty
@@ -4245,7 +4267,7 @@
     section: "R-949 — A changed link id mid-morph, the re-plan addition's question (G): option (a), blend, don't cut; a chart change that changes a link id morphs like any chart change, and R-520's rule for interpolating link parameters inside one chart stands *(no RQ; answers the re-plan addition's question (G); amends R-520 and R-483)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine -- path_gram_flags path_blank_ends path_hold_table path_small_step path_links_morph: each per its row; controls: the flag removed, the other end substituted, the step before the blend, an undeclared seam, a frame that interpolates the link function itself; `path_links_morph`: across a changed link id the ends are exact and `path_small_step` holds; `path_blank_ends` under (F): a tagged end that carries a state blends, continuous by `path_small_step`, a no-state end stays blank, once the physics reviewer has confirmed it tag by tag, and V21 as written until then"
+    detail: "cargo test -p engine -- path_gram_flags path_blank_ends path_hold_table path_small_step path_links_morph: each per its row; controls: the flag removed, the other end substituted, the step before the blend, an undeclared seam, a frame that interpolates the link function itself; `path_links_morph`: across a changed link id the ends are exact and `path_small_step` holds; `path_blank_ends` under (F), per tag as § 17.11's table has it: an end tagged `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE` or `INVARIANT_INFEASIBLE` on the arm `K* < L_z²/(2I)` blends, the state blended equal to the one the end chart draws at that pixel, so the frame at `s → 0` converges on the frame at `s = 0`; an end tagged on the arm with no finite `2K*`, `NO_QUALIFYING_SEED` or `M01_TINY`, and a no-state end, stays blank; control: the tagged decode's raw output blended where the end chart draws another state; `path_small_step` has a fixture across an end's feasibility boundary, where the jump is a declared seam, drawn, and undeclared it fails"
   rulings:
   - R-369
   - R-467
@@ -4255,7 +4277,7 @@
   - R-944
   - R-949
   milestone: M2
-  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-81; the stale rq fields (RQ-721, each ruled) cleared. *11 Nov 2026:* a changed link id morphs (R-949); a tagged end that carries a state blends under (F), the condition carried; no \"no tilt or slice\" label (R-944) (the addition § A.4, § B B1 and B9, § F.5). *Was (statement, the clause):* \"keep a pixel blank or tagged at either end blank mid-path,\" *Was (statement, the clause):* \"and keep a changed link id a cut.\" *Was (verify, the clause):* \"path_small_step path_links_cut:\" *Was (verify, the clause):* \"an undeclared seam, a morph across a link id\""
+  note: "R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-81; the stale rq fields (RQ-721, each ruled) cleared. *11 Nov 2026:* a changed link id morphs (R-949); a tagged end that carries a state blends under (F), the condition carried; no \"no tilt or slice\" label (R-944) (the addition § A.4, § B B1 and B9, § F.5). *Was (statement, the clause):* \"keep a pixel blank or tagged at either end blank mid-path,\" *Was (statement, the clause):* \"and keep a changed link id a cut.\" *Was (verify, the clause):* \"path_small_step path_links_cut:\" *Was (verify, the clause):* \"an undeclared seam, a morph across a link id\" *11 Nov 2026 (the physics review of PR #482 (review 5852979675), its confirmation 3):* (F) answered per tag, three blending and three not, with two conditions, both carried above; the feasibility-boundary jump is the one of P3's three cases the state blend does not remove. *Was (statement, the clause):* \"((F), applied per R-369 and conditional on the physics reviewer confirming it tag by tag: until they confirm, and for a tag they do not, a pixel blank or tagged at either end stays blank mid-path, V21 as written)\" *Was (verify, the clause):* \"a tagged end that carries a state blends, continuous by `path_small_step`, a no-state end stays blank, once the physics reviewer has confirmed it tag by tag, and V21 as written until then\""
 - id: REQ-CHART-115
   area: CHART
   statement: "Under a lock a path must be a based homotopy: the anchor stored as the signed starting state, its mirror half kept, not as a latent point (R-867), its recorded state at the pin stored at the path's start and taken at the pin's pixel on every frame (R-897, RQ-749 (a)), ends included, where the anchor stays in B; where it can't exist in B (region D, rest, Burrau and other constrained charts), the anchor must slide continuously to its nearest point in B, by REQ-CHART-146's definition, and the pin's pixel follow it, with no labelled jump, the jump kept only for a time-axis chart to an IC-only chart (R-849); about the current pin with an excursion, the area factor at the pin within 0.5 of the ends' on swapped and orthogonal planes, snap-back as REQ-GUI-425 defines it, a chart-mode switch under a lock recording the words. What `z_locked` still serves beside the stored state (the sliders' re-basing, snap-back, a chart-mode switch) must be written into chart_composition § 17.8 and approved by the physics reviewer (R-72). The pin's screen position must be stored in the lock's record, the centre labelled \"assumed\" where no pixel can be derived (an old lock on a degenerate view, or a reset landing a locked view on one) (R-899, Q4 (a) with (a-i)); the line on blocks must be built here as the locked path's carrier (R-899, Q9 (a))."
@@ -5703,16 +5725,19 @@
     section: 17.2 The mechanism
   verify:
     method: unit test
-    detail: "cargo test -p engine blend_chart: the ends bitwise (G4; REQ-CHART-113's exact selection); a blend nests (a blend's end may be a blend); pan, zoom and rotate on a blend reach both ends; the blend's f64 forward map and decode are exposed; a fixture whose path crosses a binary-collision point of the shape sphere has the outcome a collision at `t = 0` (R-933), physics review confirming. Measurement, reported, labelled, not a gate (R-850: mid-morph frames never claim held values): the held-`E*` miss mid-morph (composition § 17.6's 0.054 median), its subject this task's own blend (the miss is the state blend's own)"
+    detail: "cargo test -p engine blend_chart: the ends bitwise (G4; REQ-CHART-113's exact selection); a blend nests (a blend's end may be a blend); pan, zoom and rotate on a blend reach both ends; the blend's f64 forward map and decode are exposed; a fixture whose path crosses a binary-collision point of the shape sphere has the outcome a collision at `t = 0` (R-933) on every pixel with two bodies within `r_coll`, a small disc of them, recorded with the pair and the least separation, never a blank and never `decode_failed` (confirmed by the physics review of PR #482 (review 5852979675)); a fixture whose path takes `M₀₁` below `ε_M01` between two valid ends, the physics review's example, on a chart that sets its masses directly (the edge-reaching simplex link), end A `μ = (−L, 0)` and end B `μ = (L, L)` in `μ_k = ln(m_k/m₀)` with `L > 24.4`, so that at `s = ½` `μ = (0, L/2)` and `M₀₁ = 2/(2 + e^{L/2}) < 10⁻⁵`: both ends are valid, and the midpoint pixel raises `M01_TINY`, tagged, never NaN and never dropped; what that pixel shows waits on RQ-787 and is not asserted here; control: the same pair with `L` small enough that `M₀₁` stays at or above `ε_M01` for every `s` raises no tag. Measurement, reported, labelled, not a gate (R-850: mid-morph frames never claim held values): the held-`E*` miss mid-morph (composition § 17.6's 0.054 median), its subject this task's own blend (the miss is the state blend's own)"
   rulings:
   - R-925
   - R-926
+  - R-932
   - R-933
   - R-936
   - R-943
   - R-944
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-90 (N5 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+  rq:
+  - RQ-787
+  note: "Added 11 Nov 2026 with TASK-M2-90 (N5 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P1 and its confirmation 4):* the collision fixture is confirmed, a small disc of pixels and not only isolated ones; a second fixture is added, `M01_TINY` opening between two valid ends, since `M₀₁` along the path is convex in `s`. What such a pixel shows is the owner's (RQ-787); the fixture asserts the tag and no more. *Was (verify, the clause):* \"a fixture whose path crosses a binary-collision point of the shape sphere has the outcome a collision at `t = 0` (R-933), physics review confirming.\""
 - id: REQ-CHART-190
   area: CHART
   kind: definition
@@ -5895,7 +5920,7 @@
   note: "Added 11 Nov 2026 with TASK-M2-98 (N16 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
 - id: REQ-CHART-199
   area: CHART
-  statement: "\"Where is this state on this chart\" must be answered by one placement function, `place(state, chart) → {point, sheet, residual, route, status}`, one Rust source in `crates/kernel` that every consumer calls, never a second implementation (R-947): two routes chosen by the chart, never by the consumer, the encode reading where the chart has a closed-form or registered numerical inverse and the nearest point everywhere else, every blend included, each refined on the CPU to the lock's tolerance (REQ-CHART-158), mid-morph included."
+  statement: "\"Where is this state on this chart\" must be answered by one placement function, `place(state, chart) → {point, sheet, residual, route, status}`, one Rust source in `crates/kernel` that every consumer calls, never a second implementation (R-947): two routes chosen by the chart, never by the consumer, the encode reading where the chart has a closed-form or registered numerical inverse and the nearest point everywhere else, every blend included, each refined on the CPU to the lock's tolerance (REQ-CHART-158), mid-morph included. What that refinement tests follows R-935's split under RQ-767 (a): on the chart's image the residual is held to the tolerance; off the image the converged residual is the projection distance, a measured quantity never read as solver error and never bounded by the tolerance, convergence judged by first-order optimality, so a state off the image is `placed` when the solve converges, whatever its residual, and `left` by a failed solve means the solve did not converge."
   source:
   - file: decisions.md
     section: "R-947 — Placement, the re-plan addition's question (A): option (a), one placement function for \"where is this state on this chart\", two routes chosen by the chart, the existing reading where a chart has an inverse and the nearest point everywhere else, every blend included, refined to the lock's precision on the CPU *(no RQ; answers the re-plan addition's question (A); refines R-542 and R-926)*"
@@ -5912,7 +5937,7 @@
   - R-945
   - R-947
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
+  note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P7):* the statement gains R-935's split under RQ-767 (a), recorded in `decisions.md` § R-935, the bullet \"RQ-767, the table route's accuracy outside a morph: (a)\", and now in chart_composition § 10.6, \"Accuracy\": without it a reader taking the tolerance as a bound on the residual would mark almost every trace vertex `left`. *11 Nov 2026 (the same review, P2):* REQ-COL-133 (the leaving rule's definition) and REQ-COL-163 (later states read signed) move to TASK-M2-99 with this requirement, since `place`'s `status` and its signed input implement them."
 - id: REQ-CHART-200
   area: CHART
   kind: definition
@@ -5935,7 +5960,7 @@
   note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
 - id: REQ-CHART-201
   area: CHART
-  statement: "P2 and P4 must be measured and reported, not gates (R-951), and shown to the owner before TASK-M8-49 and TASK-M8-58 are built: P2, the on-screen jump between an end chart's own trace (`s = 0`) and the blend's (`s = 10⁻⁶`), median and worst, in pixels per vertex; P4, at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices that land more than 8 pixels apart on the blend, set against the same share on each end chart's own trace, with the median and worst residual (how far off the surface each vertex is); no threshold and no fallback picked by anyone but the owner."
+  statement: "P2 and P4 must be measured and reported, not gates (R-951), and shown to the owner before TASK-M8-49 and TASK-M8-58 are built: P2, the on-screen jump between an end chart's own trace (`s = 0`) and the blend's (`s = 10⁻⁶`), median and worst, in pixels per vertex; P4, at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices that land more than 8 pixels apart on the blend, set against the same share on each end chart's own trace, with the median and worst residual (how far off the surface each vertex is); no threshold and no fallback picked by anyone but the owner. With them the report must carry P3's timing, the time to place a trace on a blend frame, a number with no pass line: it is not R-951's, which rules P2 and P4 only; it is carried here by the orchestrator's decision (applied per R-369: task scoping, listed for veto), and the trace's length is REQ-CHART-210's definition."
   source:
   - file: decisions.md
     section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
@@ -5943,13 +5968,13 @@
     section: "R-947 — Placement, the re-plan addition's question (A): option (a), one placement function for \"where is this state on this chart\", two routes chosen by the chart, the existing reading where a chart has an inverse and the nearest point everywhere else, every blend included, refined to the lock's precision on the CPU *(no RQ; answers the re-plan addition's question (A); refines R-542 and R-926)*"
   verify:
     method: review checklist
-    detail: "the report exists with every number: P2 (median and worst jump in pixels per vertex between `s = 0` and `s = 10⁻⁶`); P4 (at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices more than 8 pixels apart on the blend, against the same share on each end chart's own trace; the median and worst residual); P3's timing (the time to place a trace of a stated length on a blend frame, on the Mac (R-186), one thread, the slowest of five warm runs, a number with no pass line); each at the picture size the owner states (REQ-CHART-202); no pass line anywhere; and it has been shown to the owner"
+    detail: "the report exists with every number: P2 (median and worst jump in pixels per vertex between `s = 0` and `s = 10⁻⁶`); P4 (at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices more than 8 pixels apart on the blend, against the same share on each end chart's own trace; the median and worst residual); P3's timing (the time to place a trace of the length REQ-CHART-210 defines on a blend frame, on the Mac (R-186), one thread, the slowest of five warm runs, a number with no pass line); each at the picture size the owner states (REQ-CHART-202); no pass line anywhere; and it has been shown to the owner"
   rulings:
   - R-649
   - R-947
   - R-951
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
+  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the code review of PR #482 (review 5852985982), F3):* the statement now names P3's timing, which the verify already asked for, and says whose decision it is; R-951 does not rule P3. \"A trace of a stated length\" named no one to state it: the length is a definition owed (R-72), REQ-CHART-210, and the draft's 5,000 vertices is a proposal nothing adopts. *Was (verify, the clause):* \"the time to place a trace of a stated length on a blend frame\""
 - id: REQ-CHART-202
   area: CHART
   kind: definition
@@ -5966,11 +5991,13 @@
   - R-72
   - R-951
   milestone: M2
+  rq:
+  - RQ-785
   note: "Waits on RQ-785. Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
 - id: REQ-CHART-203
   area: CHART
   kind: definition
-  statement: "Two points of P2's and P4's set-up that the sources do not settle must be defined (R-72) by the owner and written into the measurement task's file before any run: what a seeded pixel contributes (the sources have \"over the trajectory fixtures … and 16 seeded pixels per chart pair\" and say no more), and whether P2 is also read at the other end, `s = 1` against `s = 1 − 10⁻⁶` (R-951 defines it at `s = 0` only, and the owner's words have \"as a morph starts or ends\"); nothing is assumed meanwhile."
+  statement: "The points of P2's and P4's set-up that the sources do not settle must be defined (R-72) by the owner's answers to RQ-785's further questions and written into the measurement task's file before any run: what a seeded pixel contributes (the sources have \"over the trajectory fixtures … and 16 seeded pixels per chart pair\" and say no more), and whether P2 is also read at the other end, `s = 1` against `s = 1 − 10⁻⁶` (R-951 defines it at `s = 0` only, and the owner's words have \"as a morph starts or ends\"); and the trace's vertex spacing in time and the window the charts are read in (the home window at zoom 1, or another), both of which move P4's share and which no source gives; nothing is assumed meanwhile."
   source:
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
@@ -5978,12 +6005,14 @@
     section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
   verify:
     method: review checklist
-    detail: "the owner has stated what a seeded pixel contributes and whether P2 is also read at `s = 1` against `s = 1 − 10⁻⁶`, and both are written into this file before any run"
+    detail: "RQ-785's further questions are answered by the owner: what a seeded pixel contributes, whether P2 is also read at `s = 1` against `s = 1 − 10⁻⁶`, and the trace's vertex spacing in time and the window; each answer is written into this file before any run, and nothing was run before them"
   rulings:
   - R-72
   - R-951
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
+  rq:
+  - RQ-785
+  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. Waits on RQ-785. *11 Nov 2026 (the code review of PR #482 (review 5852985982), F2; the physics review of PR #482 (review 5852979675), its point 10):* the two set-up points are now asked of the owner, as further questions on RQ-785, each with its options and nothing chosen; the trace's vertex spacing in time and the window are added, the physics review having found that both move P4's share. *Was (statement, the opening):* \"Two points of P2's and P4's set-up that the sources do not settle must be defined (R-72) by the owner and written into the measurement task's file before any run:\" *Was (verify):* \"the owner has stated what a seeded pixel contributes and whether P2 is also read at `s = 1` against `s = 1 − 10⁻⁶`, and both are written into this file before any run\""
 - id: REQ-CHART-204
   area: CHART
   statement: "Past an edge that declares unfold, the CPU evaluator must show the chart's second sheet (R-932, R-937): a sample at `s = 1 + δ` must equal sheet 2 at `1 − δ` bitwise, the kind applied before `Φ` in R-407's order, each registry row and shipped chart that takes it declaring it per edge."
@@ -6088,7 +6117,7 @@
 - id: REQ-CHART-209
   area: CHART
   kind: definition
-  statement: "The canonical representative of a mirror pair on a blend, which the symmetry filter keeps while it blanks the partner, must be defined (R-72): proposed in chart_composition § 10.4 (the partner whose pixel comes first in the frame's row-major order) for the physics reviewer to approve where the task that builds the filter's maths builds it; not settled until they approve."
+  statement: "The canonical representative of a mirror pair on a blend, which the symmetry filter keeps while it blanks the partner, must be defined (R-72), written into chart_composition § 10.4 and approved by the physics reviewer where the task that builds the filter's maths builds it. The physics review of PR #482 (review 5852979675) approved the mechanism, the partner as `place(g·D(φ(u)), frame)` with § 10.4's correctness rule unchanged, and found the proposal, the partner whose pixel comes first in the frame's row-major order, acceptable as a gauge choice; the written definition must state: (a) that the order is a strict total order on chart points in the frame's window coordinates (row first, then column), not on a resolution-dependent pixel index, so it is unchanged by pan, zoom and picture size; (b) that the rule is \"blank `u` iff an equivalent point strictly precedes it\", so the least member of each orbit is kept, an orbit having more than two members where a body swap and the mirror are both declared and `place` returning several points where a blend folds; (c) that a self-partner is kept, as on an end; (d) that the partner relation is tested to be symmetric at the tolerance, the control a pair with both members blanked; (e) that the legend names the rule, as § 10.4 requires."
   source:
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
@@ -6098,13 +6127,31 @@
     section: 10.4 The symmetry filter
   verify:
     method: review checklist
-    detail: "chart_composition § 10.4 states the canonical representative of a mirror pair on a blend; the physics reviewer approved it; the measurement that informs it: the filter's mask test on a blend of two mirror-declaring charts, a pair blanked only where the partner check passes; control: a blend that breaks the mirror blanks nothing"
+    detail: "chart_composition § 10.4 states the canonical representative of a mirror pair on a blend with its five points: (a) a strict total order on chart points in the frame's window coordinates, unchanged by pan, zoom and picture size; (b) \"blank `u` iff an equivalent point strictly precedes it\", the least member of each orbit kept, orbits of more than two members and a fold's several points covered; (c) a self-partner kept; (d) the partner relation symmetric at the tolerance, the control a pair with both members blanked; (e) the legend naming the rule; the physics reviewer approved it; the measurement that informs it: the filter's mask test on a blend of two mirror-declaring charts, a pair blanked only where the partner check passes; control: a blend that breaks the mirror blanks nothing"
   rulings:
   - R-72
   - R-369
   - R-944
   milestone: M2
-  note: "Added 11 Nov 2026 with the change to TASK-M2-84 (the addition § A.5, § B B6, § F.5), which closes it. Under (D), applied per R-369 and conditional on physics review."
+  note: "Added 11 Nov 2026 with the change to TASK-M2-84 (the addition § A.5, § B B6, § F.5), which closes it. Under (D), applied per R-369 and conditional on physics review. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), its confirmation 2):* the mechanism approved and the proposal acceptable as a gauge choice; the definition's required content, (a) to (e), is stated as the physics review gave it, and the definition is still written and approved in TASK-M2-84. *Was (statement):* \"The canonical representative of a mirror pair on a blend, which the symmetry filter keeps while it blanks the partner, must be defined (R-72): proposed in chart_composition § 10.4 (the partner whose pixel comes first in the frame's row-major order) for the physics reviewer to approve where the task that builds the filter's maths builds it; not settled until they approve.\" *Was (verify):* \"chart_composition § 10.4 states the canonical representative of a mirror pair on a blend; the physics reviewer approved it; the measurement that informs it: the filter's mask test on a blend of two mirror-declaring charts, a pair blanked only where the partner check passes; control: a blend that breaks the mirror blanks nothing\""
+- id: REQ-CHART-210
+  area: CHART
+  kind: definition
+  statement: "The length of the trace P3's timing is taken at must be defined (R-72): written into the measurement task's file by that task before any run, with its reason, and checked by its reviewers; no length is chosen in the plan, and the draft's 5,000 vertices is a proposal nothing adopts, never the length by default."
+  source:
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
+  verify:
+    method: review checklist
+    detail: "the task's file states the trace length P3's timing is taken at, with its reason, written before any run; the reviewers checked it; the report gives the timing at that length"
+  rulings:
+  - R-72
+  - R-369
+  - R-649
+  milestone: M2
+  note: "Added 11 Nov 2026 (the code review of PR #482 (review 5852985982), F3), on TASK-M2-100 (the measurements P2 and P4), which closes it. P3's timing is the orchestrator's addition to that task (applied per R-369: task scoping, listed for veto), not R-951's; R-951 is its source only for the task it sits in."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -16196,7 +16243,7 @@
   note: "R-476 L1, M7. Closed by TASK-M7-43. The surface syntax and the playhead list wait for RQ-377 (1), (2): REQ-RENDER-097; meanwhile §4.1's tree and its named fields. *11 Nov 2026:* the Chart and Latent variables on a blend, one value per end chart ((C), applied per R-369; R-940, R-944) (the addition § A.2, § F.5)."
 - id: REQ-RENDER-093
   area: RENDER
-  statement: "Starting-state contours must be evaluated on the chart's decode only, on a screen-resolution grid independent of the quadtree, by the CPU's f64 evaluation of the chart, the evaluator that fills the quads' forward tables, run on the screen grid, the expression evaluated on the decoded state on the CPU, one route for every chart, a chart with no shader code and a blend included, with no reduced resolution forced by a chart's kind (R-952), half resolution in motion and refined at rest; playhead contours must read the resident quads' payload at the displayed texels."
+  statement: "Starting-state contours must be evaluated on the chart's decode only, on the decode's precision path (the route the picture's forward table takes, the one-cell patch that is the linearised decoder included where R-90's switch fires; R-926 item 11, R-935 under RQ-766 (a)), on a screen-resolution grid independent of the quadtree, by the CPU's f64 evaluation of the chart, the evaluator that fills the quads' forward tables, run on the screen grid, the expression evaluated on the decoded state on the CPU, one route for every chart, a chart with no shader code and a blend included, with no reduced resolution forced by a chart's kind (R-952), half resolution in motion and refined at rest; playhead contours must read the resident quads' payload at the displayed texels."
   source:
   - file: decisions.md
     section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
@@ -16206,13 +16253,14 @@
     section: "R-952 — Contours are evaluated on the CPU for every chart, as R-926 item 5 has it; the 8.3 ms criterion is kept as written, and its report says plainly what the owner will see while moving, half or quarter resolution, on each of the three test charts *(no RQ; amends R-476)*"
   verify:
     method: unit test
-    detail: "cargo test -p render contour_eval: a starting-state contour is the CPU's f64 evaluation of the chart on the screen grid, so its depth-30 check on the latent chart against the CPU f64 decode's level set is an identity, and it gains a check at a depth where f64 itself rounds, reported with the level reached and never asserted against a fixed depth; it is unchanged by a refinement of the quadtree; control: a contour read from the quads' payload moves with refinement"
+    detail: "cargo test -p render contour_eval: a starting-state contour is the CPU's evaluation of the chart on the screen grid by the route the picture's forward table takes; at depth 30 on the latent chart it matches the CPU f64 decode's level set to one grid cell; past R-90's switch it is checked against the level set of the one-cell patch the picture itself uses, the depth reached reported; control: a contour from the plain f64 map alone, which stops resolving where f64 rounds while the picture goes on; it is unchanged by a refinement of the quadtree; control: a contour read from the quads' payload moves with refinement"
   rulings:
   - R-476
   - R-926
+  - R-935
   - R-952
   milestone: M7
-  note: "R-476 L1. Closed by TASK-M7-43. *11 Nov 2026:* contours are evaluated on the CPU for every chart (R-952, following R-926 item 5), in place of a GPU pass with a CPU fallback at reduced resolution (the addition § A.2, § E item 12, § F.5). *Was (statement, the clause):* \"on the decode's precision path, as a GPU pass on the shared decode with a CPU fallback at reduced resolution, half resolution in motion and refined at rest;\" *Was (verify, the clause):* \"a starting-state contour at depth 30 on the latent chart matches the CPU f64 decode's level set to one grid cell;\" *Was (verify, the clause):* \"the CPU fallback agrees with the GPU pass at its resolution;\""
+  note: "R-476 L1. Closed by TASK-M7-43. *11 Nov 2026:* contours are evaluated on the CPU for every chart (R-952, following R-926 item 5), in place of a GPU pass with a CPU fallback at reduced resolution (the addition § A.2, § E item 12, § F.5). *Was (statement, the clause):* \"on the decode's precision path, as a GPU pass on the shared decode with a CPU fallback at reduced resolution, half resolution in motion and refined at rest;\" *Was (verify, the clause):* \"a starting-state contour at depth 30 on the latent chart matches the CPU f64 decode's level set to one grid cell;\" *Was (verify, the clause):* \"the CPU fallback agrees with the GPU pass at its resolution;\" *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P4):* \"on the decode's precision path\" is restored. R-952 moves where contours are evaluated, to the CPU; the owner's words do not reach which precision path they follow, and a contour from the plain f64 map would stop resolving where f64 rounds while the picture goes on, so \"exact at any zoom and any depth\" would stop being true. *Was (verify, the clause, this PR's earlier commit):* \"a starting-state contour is the CPU's f64 evaluation of the chart on the screen grid, so its depth-30 check on the latent chart against the CPU f64 decode's level set is an identity, and it gains a check at a depth where f64 itself rounds, reported with the level reached and never asserted against a fixed depth;\""
 - id: REQ-RENDER-094
   area: RENDER
   statement: "Contour levels must be given by count (n even across the values in view), step (start, step) or list, with linear or log spacing, and follow the view's range only when asked (off by default, levels staying put when panning)."
@@ -17013,7 +17061,7 @@
   note: "Render contract Part 4's named exceptions read past seam 6, each excepted by the task that builds it: ROUNDTRIP and DECODE, and Chart position (R-558, RQ-489; REQ-COL-141)."
 - id: REQ-COL-006
   area: COL
-  statement: "The chart decode and encode must be available to the fragment as WGSL generated from the one Rust source (R-116), so fragment presets can recompute decode(z) and encode(decode(z)) from ctx.chart.z, including agreement presets that check the translation by comparing fragment decode against the kernel payload. At ε ≠ 0 (R-670), the fragment decode takes ε as an input and forms the softened V, finite at a zero pair separation, so no −∞ is selected and the agreement preset compares as at any other pixel; at ε = 0 every clause stands."
+  statement: "The chart decode and encode must be available to the fragment as WGSL generated from the one Rust source (R-116) for every chart that has closed-form shader code (R-925, which amends R-116 in part: a chart with none reaches the fragment through CPU-built tables, which are not generated code, and is never refused, and that route is REQ-RENDER-125's), so fragment presets can recompute decode(z) and encode(decode(z)) from ctx.chart.z, including agreement presets that check the translation by comparing fragment decode against the kernel payload. At ε ≠ 0 (R-670), the fragment decode takes ε as an input and forms the softened V, finite at a zero pair separation, so no −∞ is selected and the agreement preset compares as at any other pixel; at ε = 0 every clause stands."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 3. The `ctx` contract
@@ -17051,7 +17099,7 @@
   - R-670
   - R-925
   milestone: M2
-  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them. R-628: the descriptor's rho_angle is read from the configuration block's own (ρ̃, λ̃), so the pole test holds it strictly. Verify *Was:* \"… and agrees with the CPU there, ±0 operands included (R-438)\". R-670 (2 Nov 2026, RQ-656 (5)(i)): the ε ≠ 0 sentence is added, verified by TASK-M9-39's ε ≠ 0 arm of cargo xtask gate decode-agreement, on gpu-metal, gpu-lavapipe and the CPU twin, the zero-separation pixel included (physics review 5771183527 of PR #408, F5), since no softened run exists before it; the statement and verify at ε = 0 are unchanged. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the β = π̂ select on the −x half-axis changes with the full-circle link; the statement stands as written until then (physics review 5817348709 of PR #449, P2). *11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE: generated where there is a closed form; tables otherwise (R-925 amends R-116). Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M2-25 rewrites them under the ruling, and where they differ from it the ruling binds."
+  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them. R-628: the descriptor's rho_angle is read from the configuration block's own (ρ̃, λ̃), so the pole test holds it strictly. Verify *Was:* \"… and agrees with the CPU there, ±0 operands included (R-438)\". R-670 (2 Nov 2026, RQ-656 (5)(i)): the ε ≠ 0 sentence is added, verified by TASK-M9-39's ε ≠ 0 arm of cargo xtask gate decode-agreement, on gpu-metal, gpu-lavapipe and the CPU twin, the zero-separation pixel included (physics review 5771183527 of PR #408, F5), since no softened run exists before it; the statement and verify at ε = 0 are unchanged. R-865 (8 Nov 2026), conditionally: when TASK-M2-57 merges, the β = π̂ select on the −x half-axis changes with the full-circle link; the statement stands as written until then (physics review 5817348709 of PR #449, P2). *11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE: generated where there is a closed form; tables otherwise (R-925 amends R-116). *11 Nov 2026 (the code review of PR #482 (review 5852985982), F1):* reworded here under R-925, in the words of its amendment of R-116, since TASK-M2-25 (the generated WGSL decode) is built and rewrites nothing. The statement's own obligation is now the generated code of a chart that has closed-form shader code, which is what TASK-M2-25 built, so TASK-M2-25 still closes it; the tables half is REQ-RENDER-125's, closed by TASK-M7-74 (the fragment table route), which is not built and whose file carries the note. *Was (statement, the clause):* \"generated from the one Rust source (R-116), so fragment presets\" *Was (note, its last sentence):* \"Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M2-25 rewrites them under the ruling, and where they differ from it the ruling binds.\""
 - id: REQ-COL-007
   area: COL
   statement: "A category must never be interpolated: mixed categorical pixels must be resolved by per-sample colour then SSAA resolve, never by averaging state indices or by majority + desaturation."
@@ -19632,8 +19680,9 @@
   rulings:
   - R-72
   - R-542
-  milestone: M7
-  note: "PR #270's physics review, P4 (R-542 H12). Since R-481 the links clamp at different margins (tanh_q and softsign_q at q_max(1 − ε_q)); the task writes each link's margin into SM5 (physics re-review note). Closed by TASK-M7-52."
+  - R-947
+  milestone: M2
+  note: "PR #270's physics review, P4 (R-542 H12). Since R-481 the links clamp at different margins (tanh_q and softsign_q at q_max(1 − ε_q)); the task writes each link's margin into SM5 (physics re-review note). Closed by TASK-M7-52. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P2; R-947):* moved from TASK-M7-52 and M7 to TASK-M2-99 (the one placement function) and M2: `place`'s `status` is this leaving rule, and TASK-M2-99 builds that source before TASK-M7-52 runs, so the definition is written into SM5 by TASK-M2-99. The decision recorded on 11 Nov to leave it with TASK-M7-52 is withdrawn. *Was (milestone):* M7. *Was (note, its last sentence):* \"Closed by TASK-M7-52.\""
 - id: REQ-COL-134
   area: COL
   statement: "The target chart's projection, the leaving rule and a curve axis's nearest point must be one Rust source in crates/kernel, beside the encode (the placement function `place`, REQ-CHART-199; R-947), compiled natively for the host and by rust-gpu to WGSL emitted to crates/render/wgsl/ (R-116), never hand-written."
@@ -20294,13 +20343,14 @@
     section: SM1. Definition
   verify:
     method: unit test
-    detail: "cargo test -p engine signed_later_states: on the latent momenta chart, a trace through a syzygy is continuous, its two samples either side within the step's motion, and Chart position's colour there at the same samples is continuous; the mirror-identified view, when on, is labelled and off by default; controls: the canonical mirror applied to a later state makes the trace jump and fails"
+    detail: "cargo test -p kernel signed_later_states: on the latent momenta chart, `place`'s point for a trajectory's states through a syzygy is continuous, its two samples either side within the step's motion; that point is what the trace draws and what Chart position colours, so both are continuous there; the mirror-identified reading is a declared option of the call, off by default, for its consumers to label; controls: the canonical mirror applied to a later state makes the place jump and fails"
   rulings:
   - R-544
   - R-853
   - R-854
-  milestone: M7
-  note: "Closed by TASK-M7-52, the one projection Chart position and the trace both read; its reading of a lower-half state on a latent target is a definition (R-72) it writes under physics review. The test is scoped to the latent momenta chart (physics review of PR #443, P2): on a chart showing z_β, β = π·σ(z_β) sends z_β to ±∞ at a syzygy and a signed lower-half state has no z_β, so continuity there waits on TASK-M7-52's definition and RQ-739 (its one-way dependency). *Was (verify):* \"a latent-chart trace through a syzygy is continuous, its two samples either side within the step's motion; Chart position's colour at the same samples is continuous;\""
+  - R-947
+  milestone: M2
+  note: "Closed by TASK-M7-52, the one projection Chart position and the trace both read; its reading of a lower-half state on a latent target is a definition (R-72) it writes under physics review. The test is scoped to the latent momenta chart (physics review of PR #443, P2): on a chart showing z_β, β = π·σ(z_β) sends z_β to ±∞ at a syzygy and a signed lower-half state has no z_β, so continuity there waits on TASK-M7-52's definition and RQ-739 (its one-way dependency). *Was (verify):* \"a latent-chart trace through a syzygy is continuous, its two samples either side within the step's motion; Chart position's colour at the same samples is continuous;\" *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P2; R-947):* moved from TASK-M7-52 and M7 to TASK-M2-99 (the one placement function) and M2: `place`'s input is a signed state (R-854), and TASK-M2-99 builds that source before TASK-M7-52 runs, so the reading of a lower-half later state on a latent target, a definition (R-72), is written by TASK-M2-99 under physics review. The verify is restated on `place`'s point, the one thing the trace and Chart position both read; its label in the GUI is the consumers'. The decision recorded on 11 Nov to leave it with TASK-M7-52 is withdrawn. *Was (milestone):* M7. *Was (verify):* \"cargo test -p engine signed_later_states: on the latent momenta chart, a trace through a syzygy is continuous, its two samples either side within the step's motion, and Chart position's colour there at the same samples is continuous; the mirror-identified view, when on, is labelled and off by default; controls: the canonical mirror applied to a later state makes the trace jump and fails\""
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -25284,7 +25334,7 @@
   - R-569
   - R-948
   milestone: M8
-  note: "R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a), ruled by R-553 as applied meanwhile. R-538 TF1 (J3): where the trace leaves is REQ-GUI-277's. R-569 (21 Oct 2026): each of its icons is placed wholly on screen by its measured extent, the start icon pinned like the others (REQ-GUI-356's set; not the seam ticks, which are line marks drawn at their points as before, R-569 PB10); paused at t = 0 the dashed stretches are drawn dotted with the rest of the line, their rings and \"?\" still marking them (REQ-GUI-355). PR #278's fix round 3, code review 5624320665 F2, applied per R-369: the note follows PB10's set. *Was (note, before fix round 3):* \"R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a), ruled by R-553 as applied meanwhile. R-538 TF1 (J3): where the trace leaves is REQ-GUI-277's. R-569 (21 Oct 2026): each marker is placed wholly on screen by its measured extent, the start icon pinned like the others (REQ-GUI-356); paused at t = 0 the dashed stretches are drawn dotted with the rest of the line, their rings and \"?\" still marking them (REQ-GUI-355).\" *11 Nov 2026:* gains the fold tick, optional and off by default (R-948), with `trace_fold` (the addition § A.1, § F.5). *Was (statement, the clause):* \"the optional window chevrons and seam ticks,\""
+  note: "R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a), ruled by R-553 as applied meanwhile. R-538 TF1 (J3): where the trace leaves is REQ-GUI-277's. R-569 (21 Oct 2026): each of its icons is placed wholly on screen by its measured extent, the start icon pinned like the others (REQ-GUI-356's set; not the seam ticks, which are line marks drawn at their points as before, R-569 PB10); paused at t = 0 the dashed stretches are drawn dotted with the rest of the line, their rings and \"?\" still marking them (REQ-GUI-355). PR #278's fix round 3, code review 5624320665 F2, applied per R-369: the note follows PB10's set. *Was (note, before fix round 3):* \"R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a), ruled by R-553 as applied meanwhile. R-538 TF1 (J3): where the trace leaves is REQ-GUI-277's. R-569 (21 Oct 2026): each marker is placed wholly on screen by its measured extent, the start icon pinned like the others (REQ-GUI-356); paused at t = 0 the dashed stretches are drawn dotted with the rest of the line, their rings and \"?\" still marking them (REQ-GUI-355).\" *11 Nov 2026:* gains the fold tick, optional and off by default (R-948), with `trace_fold` (the addition § A.1, § F.5). *Was (statement, the clause):* \"the optional window chevrons and seam ticks,\" *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P6 (b) and (c)):* `trace_fold` runs at the register's defaults, the warp; what the fold line and the floor are read at under the linear mapping, and where the trace of a hover on a clamped or saturated pixel starts, are definitions owed (R-72), REQ-GUI-435, under which `trace_fold` gains its linear-mapping arm."
 - id: REQ-GUI-273
   area: GUI
   statement: "When syzygy markers are on (R-538 TM5), each syzygy, a sign change of R-14's w between consecutive states, must be marked where the drawn line crosses w = 0, interpolated between the two samples, never at a sample; Principia's and Arrows' o–o–o must draw three discs in the body colours in the order the bodies lie on the line (the outer pair lowest-numbered first, the middle body in the centre), on a line #D6D3CB, dark-haloed; a stutter (the same middle body twice running) must be drawn faded unless that option is off; where a syzygy and an end event coincide the end event draws on top (RQ-414 (a))."
@@ -28038,6 +28088,27 @@
   - R-948
   milestone: M8
   note: "Added 11 Nov 2026 with the change to TASK-M8-58 (the addition § A.1, § A.5, § F.5), which closes it. The draft's figure (4 ulps of `max(1, |s|)`) is a proposal nothing adopts."
+- id: REQ-GUI-435
+  area: GUI
+  kind: definition
+  statement: "Two points of a trace at the new edges that R-948 leaves open must be defined (R-72), written into principia_lines.md § 8 (\"At the new edges\") by the task that builds the trace's markers and leaving rule and approved by the physics reviewer, nothing chosen until then: (b) under the linear mapping, where `s ↦ 2 − s` (written in the warp's `s`) does not say it, that the fold line and the floor are read at the state's own `U` and `I` (its encode), never the slice picture's, with `trace_fold` testing more than the warp, which is all \"at the register's defaults\" covers; (c) that a hover on a clamped or saturated pixel starts its trace at the edge point the pixel repeats, the drawn system's own place, not under the pointer, with lines § 12's \"a trace's first vertex lands on the hovered pixel exactly\" gaining that exception."
+  source:
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-948 — Traces at the new edges, the re-plan addition's question (B): (i-a), (ii-a), (iii-a); a state's sheet is set by whether the system is growing or shrinking, the trace jumps at the fold with an optional tick, off by default, and nothing is drawn inside a clamped or saturated area, physics review confirming *(no RQ; answers the re-plan addition's question (B); refines R-538)*"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: docs/design/principia_lines.md
+    section: 12. Tests (each with an arm that can fail)
+  verify:
+    method: review checklist
+    detail: "lines § 8 states (b) and (c) and lines § 12's trace-projection test carries the exception; `trace_fold` has an arm under the linear mapping, the fold line and the floor read at the state's own `U` and `I` (control: read at the slice picture's, it fails); a hover on a clamped and on a saturated pixel starts its trace at the edge point the pixel repeats (control: started under the pointer, it fails); the physics reviewer approved each"
+  rulings:
+  - R-72
+  - R-948
+  milestone: M8
+  note: "Added 11 Nov 2026 (the physics review of PR #482 (review 5852979675), P6 (b) and (c)), on TASK-M8-58 (the trace's markers and leaving rule), which closes it. Conditions of the physics review's confirmation of R-948 (ii-a) and (iii-a)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
