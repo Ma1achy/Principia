@@ -2981,12 +2981,13 @@ exception: it files R-237's add-only rule in REVIEW_QUEUE. PR #80 merged as 7e55
 it only when the content differs, so an unchanged file keeps its mtime and forces no rebuild. Medium priority.
 
 ## R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys
-*Amended by R-320, R-326 and R-656.*
+*Amended by R-320, R-326, R-656 and R-967.*
 *Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached;
 R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version; R-326 saves caches only on
 pushes to `main`, and pull-request runs restore only; R-656 approves in principle a bounded build-target cache, saved
 from `main` only, keyed on `Cargo.lock` and the toolchain, for the 2–3 slowest jobs, with eviction keeping the total
-well under 10 GB, built in a later PR, and until then no target directory is cached.*
+well under 10 GB, built in a later PR, and until then no target directory is cached; R-967 (11 Nov 2026) adds the
+Mesa (lavapipe) packages of `gpu-lavapipe` and the release jobs, keyed on the package list and the runner's image.*
 *30 Sep 2026 · applied in REQ-SYS-073 and TASK-M0-42 (new)*
 
 "CI cache: cache only the cargo registry and the fixture pool, not whole target dirs, with per-job keys, to stay well
@@ -29145,10 +29146,13 @@ label off; `reviews.yml` cancels its superseded runs per pull request and event)
 runner, whose jobs have their own workflow file; `ci.yml`, its counts and gates are unchanged).*
 *Refined by R-859 (8 Nov 2026: from the anchor move R-711's runner runs its jobs as named measurements, never as
 required checks; moving required or heavy CI work to it is not approved).*
+*Amended in part by R-970 (11 Nov 2026: a run clearly hung or stuck because of a bug is caught and cancelled, on
+`main` too).*
 *Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's and R-677's,
 how the merge-ready head's mutants run and `reviews.yml`'s concurrency, which are R-676's, and which heads' mutants run,
 which is R-677's, and which of `gui`'s paths are GPU paths, which is R-692's: the push trigger, the cancelled runs, the in-job skips under each required check's own name, mutants
-on the merge-ready head, the approved target cache, no paid runner, and no self-hosted runner but R-711's.*
+on the merge-ready head, the approved target cache, no paid runner, and no self-hosted runner but R-711's; a run on
+`main` is never cancelled unless it is clearly hung or stuck because of a bug, which is R-970's.*
 *30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
 (below), `plan/OPERATIONS.md`, `plan/WORKFLOW.md`, `docs/contracts/principia_parity_contract.md` §6, eight
@@ -30586,7 +30590,9 @@ R-680 is in the "process" group of `plan/rule_groups.yaml`.
 ## R-681 — Standing rules: while `main` is red, or a required check is stuck, agents open and update no other pull request, and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is cleared by re-running only the job that reports it, never the whole pipeline *(refines R-369)*
 *Refined by R-904 (8 Nov 2026: a slow-tier test failing on `main` is a red `main`).*
 *Amended in part by R-907 (8 Nov 2026: a red `main` is a correctness failure on `main`, physics, validation, bit-for-bit or golden; any other failure there files a top-priority task without freezing pull-request work).*
-*Still in force: all of it, a red `main` read as a correctness failure there (R-907, R-909): while it lasts, or while a required check is stuck, no other pull request is opened or updated and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is re-run alone.*
+*Refined by R-966 (11 Nov 2026: the merge watcher checks `main`'s status before every merge and refuses the merge
+while it is red or unknown, in place of a hold list).*
+*Still in force: all of it, a red `main` read as a correctness failure there (R-907, R-909): while it lasts, or while a required check is stuck, no other pull request is opened or updated and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is re-run alone; and the merge watcher refuses every merge while `main` is red or unknown (R-966).*
 *3 Nov 2026 · the owner's three messages of that day on `main`'s red `xtask-ci` and the stuck `mutants-check`; ported
 3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph and step 6's pointer) and § "Autonomy (R-369)" (a
 line), R-369's and R-633's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
@@ -31322,6 +31328,9 @@ The owner's words, 4 Nov 2026, verbatim:
 R-713 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-714 — A failed CI job is retried automatically only on a runner-level fault, in at most two retries, never on a real test failure or a flake, the classifier a script tested on saved logs; every CI speed-up step reports disk use and must reduce or hold it; lands in `plan/OPERATIONS.md` § "Merging"
+*Extended by R-968 (11 Nov 2026: a job whose only failure is the package-install step is re-run once, on
+GitHub-hosted runners, marked as a re-run).*
+*Still in force: all of it, R-968 adding a failure of the install step alone, re-run once.*
 *4 Nov 2026 · the owner's three messages of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement; built by PR #392*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -37434,3 +37443,163 @@ No item needed a choice between readings, so RQ-738 closes. Nothing is built fro
 the rulings stood meanwhile, and stand.
 
 R-965 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-966 — The merge watcher checks `main`'s status before every merge and refuses the merge while `main` is red or unknown, in place of a hold list; `merge-ready` is counted from green, or put on only once the head is green *(refines R-681)*
+*11 Nov 2026 · the owner's two messages of that day on CI, after the report on PR #488 and the report on CI since PR
+#457; applied in the forward and "Still in force" lines of R-681, `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim, the message that opens "Good account of #488":
+
+> Good account of #488. Replace the hold list with a guard: the watcher checks main's status before every merge and refuses if it is red or unknown (R-681), so nothing depends on remembering a list. On timings: split the ci job as planned and judge the 30-minute target only after a week of runs on the split. Count merge-ready from green, or apply the label only once green. And add one automatic re-run, on GitHub-hosted runners, for a job whose only failure is the package-install cap, so an outage costs minutes, not hours; it is marked as a re-run and never turns a real failure green.
+
+And the owner's second message of that day, pasted with it, verbatim:
+
+> Read the full since-457 report. Four things, plus the earlier ones.
+> (1) xtask-ci (2) failed at the cargo xtask ci step on #482's and #487's merges, not at apt, and is marked not investigated. Confirm from those logs that it is the review-queue false alarm #492 fixes; if it is anything else, main has a real red the outage is hiding.
+> (2) #481's clippy failed and then passed on re-run of the same commit. Find out why (cache or toolchain drift); lint should be deterministic.
+> (3) Cache the Mesa packages for gpu-lavapipe and the release jobs, keyed on the package list, so CI no longer fetches from Ubuntu's archive each run; keep one automatic re-run, on GitHub-hosted runners, for a job whose only failure is the install step, marked as a re-run and never turning a real failure green.
+> (4) Replace the hold list with a guard: the watcher refuses any merge while main is red or unknown (R-681).
+> Split the ci job as planned, and judge the 30-minute target after a week of runs on the split. Count merge-ready from green, or label only once green.
+
+R-967, R-968 and R-969 rest on the same two messages.
+
+*What it decides:*
+
+- **The guard.** Before every merge, the merge watcher checks `main`'s CI status and refuses the merge while it is red
+  or unknown (R-681), so nothing depends on remembering a list. It replaces the hold list, the orchestrator's list of
+  pull requests held by hand while `main` was red (outside the repo).
+- **`merge-ready` from green.** The time to merge is counted from the head's required checks going green, or the
+  `merge-ready` label goes on only once they are green.
+
+*What it refines:* **R-681**, under which no other pull request merges while `main` is red: the merge step now checks
+it before each merge, and "unknown" is refused as "red" is. What reads as red is unchanged (R-681, R-907).
+
+R-966 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-967 — CI caches the Mesa (lavapipe) packages of `gpu-lavapipe` and the release jobs, keyed on the package list, so a run no longer fetches them from Ubuntu's archive *(amends R-285)*
+*11 Nov 2026 · the owner's two messages of that day on CI (R-966 quotes them); applied in the forward and "Still in
+force" lines of R-285, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement; the CI change is
+PR #495's*
+
+The owner's words (11 Nov 2026), verbatim, item (3) of the second message:
+
+> (3) Cache the Mesa packages for gpu-lavapipe and the release jobs, keyed on the package list, so CI no longer fetches from Ubuntu's archive each run; keep one automatic re-run, on GitHub-hosted runners, for a job whose only failure is the install step, marked as a re-run and never turning a real failure green.
+
+*What it decides:* the Mesa packages that `gpu-lavapipe` and the release jobs install are cached, keyed on the package
+list, so CI no longer fetches them from Ubuntu's archive on each run. The re-run in the same item is R-968's.
+
+*Applied per R-369:* the cache is saved only on a push to `main`, pull-request runs restoring it only, as every CI
+cache is (R-326), under a key naming its job (R-285); the key names the runner's image as well as the package list,
+since the packages are fetched for one image.
+
+*What it amends:* **R-285**'s list of what CI caches (the cargo registry and the fixture pool, and R-320's rust-gpu
+build) gains the Mesa packages. R-829's "R-285 unchanged" was about the kernel's built output, and stands.
+
+R-967 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-968 — A job whose only failure is the package-install step is re-run once, automatically, on GitHub-hosted runners, marked as a re-run and never turning a real failure green; the per-merge verdict is unchanged, RQ-789 open *(extends R-714)*
+*11 Nov 2026 · the owner's two messages of that day on CI (R-966 quotes them); applied in the forward and "Still in
+force" lines of R-714, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement; the CI change is
+PR #495's*
+
+The owner's words (11 Nov 2026), verbatim, from the first message:
+
+> And add one automatic re-run, on GitHub-hosted runners, for a job whose only failure is the package-install cap, so an outage costs minutes, not hours; it is marked as a re-run and never turns a real failure green.
+
+And from item (3) of the second:
+
+> keep one automatic re-run, on GitHub-hosted runners, for a job whose only failure is the install step, marked as a re-run and never turning a real failure green.
+
+*What it decides:*
+
+- **One re-run.** A job whose only failure is the package-install step (the step's own time limit, the "cap", or its
+  fetch failing) is re-run once, automatically, so an outage costs minutes, not hours.
+- **On GitHub-hosted runners only**, never on R-711's self-hosted runner.
+- **Marked as a re-run, never turning a real failure green:** a job with any other failure beside the install step is
+  not re-run, and its failure stands.
+
+*What it extends:* **R-714**, under which a failed job is re-run only on a runner-level fault, in at most two retries,
+by the classifier script tested on saved logs: the install step's failure is added, re-run once, by the same script.
+
+*What it does not change:* REQ-TOOL-223 (a failure of the release-build jobs is a correctness failure and a red `main`)
+and the per-merge verdict that applies it; whether an install-step failure there reads "no result" is **RQ-789**, open
+(R-971).
+
+R-968 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-969 — The `ci` job is split as planned, and the 30-minute target is judged only after a week of runs on the split; the timings are reported now against the 30-minute and one-hour targets, from what merged since #457, the outage runs shown apart
+*11 Nov 2026 · the owner's three messages of that day on CI (R-966 and R-971 quote them); applied in
+`plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim, from the first message:
+
+> On timings: split the ci job as planned and judge the 30-minute target only after a week of runs on the split.
+
+The last line of the second:
+
+> Split the ci job as planned, and judge the 30-minute target after a week of runs on the split. Count merge-ready from green, or label only once green.
+
+And item (2) of the third (R-971):
+
+> (2) Report the timings now against the 30-minute and one-hour targets, from whatever has merged since #457, with today's outage runs shown separately.
+
+*What it decides:*
+
+- **The split.** The `ci` job is split as planned (PR #495), and R-908's 30-minute target for pull-request feedback is
+  judged only after a week of runs on the split.
+- **The timings now.** They are reported now against R-908's two targets, pull-request feedback in under 30 minutes
+  and merge-ready to merge in under an hour, from what has merged since PR #457, with that day's outage runs shown
+  apart. The report is information; the judgement of the 30-minute target waits for the week.
+- **Items (1) and (2) of the second message** are that day's orders of work, not standing rules: confirm from the logs
+  of #482's and #487's merges that the failure of `xtask-ci (2)` at its `cargo xtask ci` step is the review-queue false
+  alarm #492 fixes, a real red on `main` if it is anything else; and find why #481's Clippy run failed and then passed
+  on a re-run of the same commit, lint being meant to be deterministic.
+
+R-969 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-970 — A CI run clearly hung or stuck because of a bug is caught and cancelled, on `main` too; every other run on `main` is still never cancelled *(amends R-656)*
+*11 Nov 2026 · the owner's reply of that day on a hung Windows run; applied in the forward and "Still in force" lines
+of R-656, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> cancel it, also lol that rule is too strict, if a run is clearly hung/stuck bc of a bug it should be caught and cancelled
+
+*Context.* "It" was a scheduled `win-gpu` run on R-711's runner whose `win-tests` job sat 3.6 hours on one test (job
+130531059795; PR #495, item 4). "That rule" is the rule that a CI run on `main` is never cancelled (R-656's "never a
+run on `main`", which R-713's quote restates), kept by the orchestrator for a pull request's current head as well.
+
+*What it decides:* a run clearly hung or stuck because of a bug is caught and cancelled, on `main`, on a pull request's
+current head or on a schedule. Only such a run: one that is slow but progressing is not cancelled, and R-656 stands
+for every other run on `main`.
+
+*Applied per R-369:* "caught" is read as caught where it can be by a limit that ends a hung test or job (as PR #495's
+per-test limit on `win-tests`), and otherwise by the orchestrator, who cancels without asking and records it; the
+cause of the hang is then traced.
+
+*What it amends:* **R-656**, its "never a run on `main`".
+
+R-970 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-971 — The per-merge verdict fix and the `plan/requirements.yaml`-only move come to the owner as rulings, through RQ-789 and RQ-790, which stay open; neither goes straight into a CI pull request
+*11 Nov 2026 · the owner's message of that day on CI's order of work; applied in `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (11 Nov 2026), verbatim:
+
+> Agreed on the order. Three points. (1) The verdict fix amends REQ-TOOL-223, so it goes through reqio with a queue entry and comes to me as a ruling, not straight into the CI PR; and it must be narrow (only the install step's network and archive failures count as infrastructure) and must make the verdict "no result", never green. (2) Report the timings now against the 30-minute and one-hour targets, from whatever has merged since #457, with today's outage runs shown separately. (3) Put the requirements.yaml-only move in the rulings report; my lean is yes, provided the per-merge run still runs those tests on every merge and the PR run keeps anything that reads requirements.yaml directly.
+
+*What it decides:*
+
+- **"Agreed on the order"** agrees to the order of the CI work proposed to the owner that day (outside the repo); it is
+  no standing rule.
+- **Point (1).** The verdict fix amends REQ-TOOL-223, so it comes to the owner as a ruling, through
+  `plan/tools/reqio.py` and a queue entry, not straight into the CI pull request; narrow, and "no result", never green.
+  That entry is **RQ-789**, which quotes the point and stays open; REQ-TOOL-223 holds as written until it is ruled.
+- **Point (2)** is R-969's.
+- **Point (3).** The `plan/requirements.yaml`-only move goes in the rulings report, with the owner's lean and its two
+  conditions. That entry is **RQ-790**, which quotes the point and stays open; such a change runs every product test
+  on the pull request until it is ruled.
+
+R-971 is in the "ci" group of `plan/rule_groups.yaml`.
