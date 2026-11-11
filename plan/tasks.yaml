@@ -1858,7 +1858,7 @@
   title: "Flat-grid compute: in-kernel decode from chart uniforms, one workgroup per quad, an in-place march"
   depends_on: [TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66, TASK-M2-87]  # R-916
   needs: [REQ-SCHED-001, REQ-SYS-012, REQ-CHART-003, REQ-INT-026, REQ-PAY-025, REQ-PAY-038, REQ-PAY-037, REQ-PAY-014, REQ-SYS-003, REQ-SCHED-003, REQ-DEC-007]
-  requirements: [REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008]
+  requirements: [REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008, REQ-INT-116]  # REQ-INT-116: the built entry never decodes (11 Nov 2026)
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M4-06
@@ -3318,7 +3318,7 @@
   title: "The fragment table route: the GPU side of the backwards table, for Chart position and the presets (R-925 items 1 and 2)"
   depends_on: [TASK-M2-92, TASK-M2-99]  # N9, the re-plan § B.6 item 22
   needs: []
-  requirements: [REQ-RENDER-125, REQ-PERF-122]
+  requirements: [REQ-RENDER-125, REQ-PERF-122, REQ-RENDER-126]  # REQ-RENDER-126: R-935's three tolerances, a calibration (11 Nov 2026)
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M8-01

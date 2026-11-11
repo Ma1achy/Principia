@@ -390,10 +390,10 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
   dispatch waits for M2's gate (R-917), as does TASK-M4-06 and the 217 tasks R-914 released.
 
 <!-- gate:M4 -->
-**Exit gate — 117 requirements** (and every earlier gate still green):
+**Exit gate — 118 requirements** (and every earlier gate still green):
 
 - CHART (6): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-100, REQ-CHART-152, REQ-CHART-165
-- INT (17): REQ-INT-057…069, REQ-INT-071, REQ-INT-083, REQ-INT-112…113
+- INT (18): REQ-INT-057…069, REQ-INT-071, REQ-INT-083, REQ-INT-112…113, REQ-INT-116
 - EVT (1): REQ-EVT-021
 - PAY (2): REQ-PAY-074, REQ-PAY-085
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
@@ -503,13 +503,13 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   REQ-RENDER-110 (TASK-M7-69, a leaf), and so this gate, until it is ruled."
 
 <!-- gate:M7 -->
-**Exit gate — 265 requirements** (and every earlier gate still green):
+**Exit gate — 266 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
 - PAY (10): REQ-PAY-099…108
 - GEN (5): REQ-GEN-019…022, REQ-GEN-043
 - SCHED (1): REQ-SCHED-072
-- RENDER (48): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096, REQ-RENDER-101…115, REQ-RENDER-118, REQ-RENDER-120…121, REQ-RENDER-124…125
+- RENDER (49): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096, REQ-RENDER-101…115, REQ-RENDER-118, REQ-RENDER-120…121, REQ-RENDER-124…126
 - COL (125): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…132, REQ-COL-134, REQ-COL-136…159, REQ-COL-162
 - GUI (23): REQ-GUI-016…031, REQ-GUI-151…152, REQ-GUI-335…338, REQ-GUI-340
 - TOOL (30): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151, REQ-TOOL-171…174, REQ-TOOL-179…181, REQ-TOOL-186

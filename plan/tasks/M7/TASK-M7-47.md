@@ -33,7 +33,7 @@ The Chart position source: per sample, `colour = C_T(fold_T(P_T(E(x(t)))))`'s po
 - Tests `chart_position_status`, `chart_position_identity`, `chart_position_edge_clamp`, `chart_position_four_results`, `chart_position_invariance`, `chart_position_conserved`, `chart_position_frame`.
 
 ## Acceptance tests
-- `cargo test -p render chart_position_status` — REQ-COL-113's verify.
+- `cargo test -p render chart_position_status` — REQ-COL-113's verify, its arm for the mirror-identified colouring included: when on, labelled as such in the node, and off by default; control: the option on with no label fails.
 - Review checklist — REQ-COL-114's verify (the layout diff empty across the PR).
 - `cargo test -p render chart_position_identity` — REQ-COL-115's verify.
 - `cargo test -p render chart_position_edge_clamp` — REQ-COL-116's verify.
@@ -54,3 +54,5 @@ The Chart position source: per sample, `colour = C_T(fold_T(P_T(E(x(t)))))`'s po
 - **R-544 (21 Oct 2026)** settles RQ-498 and RQ-504 where they turn on the hemisphere: the shape-sphere target is the whole sphere with the signed `n̂`, and REQ-COL-115's identity holds point for point on the shape sphere, a lower-hemisphere pixel against its own point (REQ-COL-113, REQ-COL-115). It needs TASK-M2-43's signed decode and lookup, hence that dependency (applied per R-369). RQ-498's other parts stay open.
 - *5 Nov 2026 (R-793, closing RQ-680 (a)):* the targets are the app's own charts, so this task's `θ × h` and `ν × h` arms go, and the wait on RQ-680 ends (REQ-COL-113, REQ-COL-115, REQ-COL-129).
 - *6 Nov 2026 (R-793; physics review 5805354224 of PR #430, F6; code review 5805379312, C5):* REQ-COL-117's past-edge arm moves to the `(ν, K)` target.
+- *11 Nov 2026 (the code re-check of PR #482, review 5853463481, N2):* `chart_position_status` gains Chart position's half of REQ-COL-163's "labelled" (R-853, R-854: a mirror-identified colouring only as a declared, optional view, labelled, never the default), through REQ-COL-113's verify. REQ-COL-163's kernel half, the declared option of `place` off by default, is TASK-M2-99's. *Was (acceptance):* "`cargo test -p render chart_position_status` — REQ-COL-113's verify."
+- *11 Nov 2026 (the code re-check of PR #482, review 5853463481, N3):* REQ-COL-133 (the leaving rule's definition) is TASK-M2-99's, in M2, and no longer names `chart_position_four_results`; the four results' reading of the definition is REQ-COL-117's, here.

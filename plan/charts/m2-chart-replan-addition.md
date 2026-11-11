@@ -155,6 +155,41 @@ is marked the owner's.**
   half pointed at the unbuilt task that carries it. § F.7.
 - **The owner's: N20's set-up points** (code review, F2) are asked as further questions on RQ-785. § A.5.
 
+**After the re-checks, 11 Nov 2026.** The physics re-check (review 5853427038) and the code re-check (review
+5853463481) of the same PR each asked for more. Each is applied per R-369 and listed for veto; none chooses anything
+that is the owner's.
+
+- **The fragment table route has R-935's criterion outside a morph** (physics re-check, P8; code re-check, N4; the bot
+  Codex's comment on TASK-M7-74). REQ-RENDER-125 (the fragment's table route) and TASK-M7-74 (N9) had "the sources give
+  no bound", citing R-926 item 7, which permits approximation during a morph only. They now have three cases. Outside a
+  morph, on a chart with generated forward code, the table seeds Newton steps and R-935's on-image and off-image
+  criteria (under RQ-767 (a)) are asserted, with the unrefined-seed control, the off-image arm not read as passing
+  until REQ-CHART-200's two definitions (the metric, which nearest point) are approved. Outside a morph, on a chart
+  with no forward code at all, the table alone answers, reported and labelled, none asserted (RQ-767 (a)'s "the table
+  alone only where none exists"). On a morph frame R-926 item 7 applies, reported, none asserted. The three tolerances
+  R-935 names (`ε_res`, the `σ_min(J)` floor, the optimality tolerance) are a calibration (R-71), REQ-RENDER-126
+  (new), on TASK-M7-74, no value chosen. § F.7.
+- **The `M01_TINY` dip is not rare, and its share is not known until measured** (physics re-check, P9, correcting its
+  own P1). No extreme mass is needed: two ends at the band's edge whose light pair differs in `m₁/m₀` dip in between,
+  saturated ends included. RQ-787's recommendation no longer says "the share may be small"; its option (a) states the
+  physics review's condition on any mechanism and marks one of the two named as failing continuity; its option (c) has
+  the fact that it is clean only if it replaces R-936's log-ratio path for every pair. REQ-CHART-189 (a blend is a
+  chart) and TASK-M2-90 (N5) gain two arms of the fixture, each asserting only the tag and valid ends. Design § 17.11
+  case 2; § B, B2.
+- **The check that the built integrator entry never decodes has an owner** (code re-check, N1): REQ-INT-116 (new), on
+  TASK-M4-05 (flat-grid compute), which builds the entry. REQ-INT-115 (the record contract) is contract text and checks
+  no code, and TASK-M4-05 had lost REQ-INT-070's acceptance line with nothing in its place. § F.7.
+- **The check that a mirror-identified view is labelled has an owner again** (code re-check, N2): the trace's label on
+  REQ-GUI-279 (trace mix read in the chart's own frame; TASK-M8-58), Chart position's on REQ-COL-113 (Chart position's
+  four statuses; TASK-M7-47); REQ-COL-163's kernel half stays on TASK-M2-99 (N19). § F.7.
+- **REQ-COL-133's verify is split** (code re-check, N3): M2's half is the definition in SM5 and a status test on
+  `place`, `cargo test -p kernel place_leaving_rule`; the four results' reading stays with REQ-COL-117 (the four
+  results apart; TASK-M7-47, M7). § F.7.
+- **Two notes from the physics re-check, carried where they bind:** the plain-f64 control of `contour_eval` can fail
+  only past the depth where f64 rounds, so it runs there or is reported void (REQ-RENDER-093, TASK-M7-43); and
+  REQ-CHART-210's length sets only P3's trace, P2 and P4 being taken on the traces RQ-785's question 4 defines, never
+  cut or padded to P3's length, the report also giving the time per vertex (TASK-M2-100).
+
 ## 0. Ids used here, each with a plain-English gloss (R-693)
 
 **Rulings.** R-71, a missing value is a calibration requirement; R-72, a missing definition is written by the task that
@@ -575,7 +610,7 @@ ten items) and the sections named.
 | # | The limitation, as the design had it | Outcome | Closed by, or why kept | Design, as it now reads |
 |---|---|---|---|---|
 | B1 | A pixel blank or tagged at either end is blank mid-path | **Closed, conditionally** | (F), applied per R-369 (the orchestrator's two-way decisions): a tagged end that carries a state blends as one; only a no-state end stays blank. TASK-M2-81 (path re-timing and frame flags), `path_blank_ends`. Conditional on physics review, tag by tag; until it confirms, V21 stands. *11 Nov 2026:* the physics review of this PR answered per tag: three tags blend, three do not and keep V21, with two conditions, one of them a declared seam at an end's feasibility boundary (design § 17.11's table) | § 17.11, the dated note; § 13, V21; § 17.14, `path_blank_ends` |
-| B2 | "A blank can open mid-path" | **Closed for the hold's blank** (a record correction, applied per R-369); **open for `M01_TINY`, RQ-787.** *Was:* "**Closed**" | That count was a hold run on a blended configuration; the state blend runs no hold (R-926 item 3; R-943, the general rule for a morph). N5 (the blend chart) adds a fixture whose path crosses a binary-collision point of the shape sphere, its outcome a collision at `t = 0` (R-933), physics review confirming. *11 Nov 2026, the physics review of this PR, P1:* the collision case is confirmed, a small disc of pixels and not only isolated ones. A second way a blank opens was missed: `M₀₁` along the path is convex in `s`, the masses blending in log-ratios, so `M01_TINY` can be raised between two valid ends of a chart that sets its masses directly (its example: `μ = (−L, 0)` to `μ = (L, L)`, `L > 24.4`). N5 gains that fixture (REQ-CHART-189), which asserts the tag and no more; what the pixel shows is the owner's, RQ-787 | § 17.11, the dated note; `principia_chart_space_model.md` § 0 |
+| B2 | "A blank can open mid-path" | **Closed for the hold's blank** (a record correction, applied per R-369); **open for `M01_TINY`, RQ-787.** *Was:* "**Closed**" | That count was a hold run on a blended configuration; the state blend runs no hold (R-926 item 3; R-943, the general rule for a morph). N5 (the blend chart) adds a fixture whose path crosses a binary-collision point of the shape sphere, its outcome a collision at `t = 0` (R-933), physics review confirming. *11 Nov 2026, the physics review of this PR, P1:* the collision case is confirmed, a small disc of pixels and not only isolated ones. A second way a blank opens was missed: `M₀₁` along the path is convex in `s`, the masses blending in log-ratios, so `M01_TINY` can be raised between two valid ends of a chart that sets its masses directly (its example: `μ = (−L, 0)` to `μ = (L, L)`, `L > 24.4`). N5 gains that fixture (REQ-CHART-189), which asserts the tag and no more; what the pixel shows is the owner's, RQ-787. *11 Nov 2026, the physics re-check, P9:* that example is not the typical case; the dip needs no extreme mass (ends ∝ `(1, 0.01, 10⁵)` and ∝ `(0.01, 1, 10⁵)` dip from `M₀₁ = 1.01·10⁻⁵` to `2·10⁻⁶`) and reaches saturated ends, so the region can be the whole overlap of the two ends' saturated bands; its share is not known until measured, and the fixture has three arms | § 17.11, the dated note; `principia_chart_space_model.md` § 0 |
 | B3 | Held quantities are not held mid-morph | **Kept: not a limitation** | It says which systems a frame shows. Every feature that reads a held quantity works mid-morph and reads the true value. A path that holds a quantity is one of R-943's other paths, allowed and not built now. TASK-M2-61 (the chart-path object) must not assume the default path: a review point | § 17.11, the dated note under the table |
 | B4 | A `gauge` axis's paper scale has no meaning mid-path | **Closed** (applied per R-369) | The dual ruler (R-940): the paper scale is drawn on its own end's side, fading with its share. N16 and N17 (computed axes), TASK-M8-115 (time-axis mode in the GUI) | § 17.11, the dated note |
 | B5 | A morph frame's axes carry no ticks | **Closed** | R-940 (the dual ruler) and R-942 (the computed axis is the primary scale on every frame). N16, N17 | § 17.5, item 3 |
@@ -839,7 +874,7 @@ is entered held (§ F.6): entering a task does not release it.
 | N6 | TASK-M2-91 | Time as the last coordinate: the map's time coordinate, the playhead the window's centre, a target time to an integer index (R-926 item 2) | M2 | TASK-M2-82, TASK-M2-61 | code, qa, physics | REQ-CHART-191 |
 | N7 | TASK-M2-92 | The backwards table on the CPU: bake, key, fold flag, search (R-926 item 7) | M2 | TASK-M2-86 (N1), TASK-M2-89 (N4), TASK-M2-101 (N14a), TASK-M2-102 (N14b), TASK-M2-103 (N14c), TASK-M2-104 (N14d) | code, qa, physics | REQ-CHART-192 |
 | N8 | TASK-M7-73 | The five table debug views (R-925 item 6, R-926 item 10) | M7 | TASK-M2-89 (N4), TASK-M2-92 (N7), TASK-M7-74 (N9) | code, qa, physics | REQ-RENDER-124 |
-| N9 | TASK-M7-74 | The fragment table route: the GPU side of the backwards table, for Chart position and the presets (R-925 items 1 and 2) | M7 | TASK-M2-92 (N7), TASK-M2-99 (N19) | code, qa, physics, perf | REQ-RENDER-125, REQ-PERF-122 |
+| N9 | TASK-M7-74 | The fragment table route: the GPU side of the backwards table, for Chart position and the presets (R-925 items 1 and 2) | M7 | TASK-M2-92 (N7), TASK-M2-99 (N19) | code, qa, physics, perf | REQ-RENDER-125, REQ-PERF-122, REQ-RENDER-126 |
 | N10 | TASK-M2-93 | The seed conversion: `w = r/√I` everywhere, every changed golden and reference image a recorded conversion (R-934, R-931) | M2 | none | code, qa, physics | REQ-DEC-021, REQ-DEC-060 |
 | N11 | TASK-M2-94 | The lock's solver core, from TASK-M2-73 (R-926 item 4) | M2 | TASK-M2-61 | code, qa, physics | REQ-CHART-193 |
 | N12 | TASK-M2-95 | The extension kinds in the contracts: the kinds per edge, each shipped chart's per-edge table, the second sheet and the clamp's metric defined (R-932, R-937, R-938) | M2 | TASK-M2-58 | code, qa, physics | REQ-CHART-194, REQ-CHART-195 |
@@ -861,7 +896,10 @@ N14c and N14d gain TASK-M2-95 (N12) in Depends on (*was:* "TASK-M2-66, TASK-M2-6
 REQ-COL-163 (*was:* "REQ-CHART-199, REQ-CHART-200"); N20's title no longer cites R-951 for P3 and it gains
 REQ-CHART-210 (*was:* "The measurements P2 and P4, reported to the owner, with P3's timing (R-951)", closing
 "REQ-CHART-201, REQ-CHART-202, REQ-CHART-203"). TASK-M8-58 (the trace's markers and leaving rule) gains REQ-GUI-435,
-and TASK-M7-52 (the one projection) closes REQ-COL-134 alone.
+and TASK-M7-52 (the one projection) closes REQ-COL-134 alone. *11 Nov 2026, after the re-checks:* N9 gains
+REQ-RENDER-126, the calibration of R-935's three tolerances (*was:* "REQ-RENDER-125, REQ-PERF-122"), and TASK-M4-05
+(flat-grid compute), an existing task, gains REQ-INT-116 (the built integrator entry holds no chart code and never
+decodes).
 
 **Decided when the tasks were entered (applied per R-369, the orchestrator's two-way decisions: task scoping; each
 listed for the owner's veto):**
@@ -920,14 +958,23 @@ listed for the owner's veto):**
   fragment's generated code, never the integrator; REQ-COL-006 to generated code for every chart that has closed-form
   shader code, in the words of R-925's amendment of R-116. The new half of each is already an unbuilt task's own
   requirement, and that task's file says so: an integrator that holds no chart code is REQ-INT-115's, closed by N2
-  (TASK-M2-87); a chart with no closed-form code reaching the fragment through tables is REQ-RENDER-125's, closed by N9
+  (TASK-M2-87) (*11 Nov 2026, the code re-check, N1:* REQ-INT-115 states it in the contract and checks no code; the
+  built entry is checked by REQ-INT-116, new, closed by TASK-M4-05 (flat-grid compute), which builds it, beside
+  REQ-SYS-022 (no interpreter on the GPU); TASK-M4-05 had lost REQ-INT-070's acceptance line with nothing in its
+  place); a chart with no closed-form code reaching the fragment through tables is REQ-RENDER-125's, closed by N9
   (TASK-M7-74). So each built task still closes its requirement. Their closing was not moved as REQ-DEC-021's was:
   TASK-M4-03 (the determinism pin, integrator work) needs REQ-DEC-007 as built, and `plan/check_plan.py` refuses the
   move unless that task gains an edge onto a held chart task; and no unbuilt M2 task builds the fragment's decode, N9
   being in M7, so moving REQ-COL-006 would take a built requirement out of M2's gate.
+- **After the re-checks (11 Nov 2026):** REQ-INT-116 is a new requirement on TASK-M4-05 and not a clause on
+  REQ-SYS-022, whose statement still has the decode lowering into the compute pipeline until TASK-M4-05 rewrites it.
+  The label of a mirror-identified view is checked in the task that draws it: REQ-GUI-279 on TASK-M8-58 for the trace,
+  REQ-COL-113 on TASK-M7-47 for Chart position, not on TASK-M7-52, which now only generates the WGSL.
+  REQ-COL-133's M2 half is a new test name on N19, `place_leaving_rule`. REQ-RENDER-126 sits on N9, the task that
+  builds the route it calibrates, and is confirmed at M7's gate as every calibration is.
 - **Test names** not given by the plans (`first_slice`, `forward_table_builder`, `blend_chart` and the like) are named
   in the task files: naming.
 
 **Owed to the owner, nothing chosen:** RQ-785 (the picture size of P2's and P4's pixels, and, from 11 Nov 2026, its three further questions on N20's set-up); RQ-787 (what a blend's interior pixel shows when its blended masses raise `M01_TINY` between two valid ends; 11 Nov 2026); N20's two set-up points above;
-N16's tick tolerance and TASK-M8-58's `trace_fold` tolerance (calibrations, R-71); N18's dim or hatch (a screenshot
+N16's tick tolerance, TASK-M8-58's `trace_fold` tolerance and, from the re-checks of 11 Nov 2026, N9's three tolerances of R-935's criterion (REQ-RENDER-126) (calibrations, R-71); N18's dim or hatch (a screenshot
 pair); R-952's case of a quarter-resolution grid that still misses 8.3 ms (reported, the owner decides).
