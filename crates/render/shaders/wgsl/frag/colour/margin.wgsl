@@ -1,8 +1,13 @@
 // The margin, a built-in occupant of the `colour` slot (render_gui_spec Part II §5, §3.1, §15 item 6; R-813;
 // TASK-M7-12): a multi-source mapping. It declares two field inputs, `top1` and `top2`, so its node has two `field`
 // in-ports, each taking one wire, never two wires on one port (§6), and shows the margin `top1 − top2`, each input's
-// value its field's `.x`, on the greyscale ramp, `ramp_grey`, which clamps it to [0, 1]. A source keeps no input
-// (§3.1): the two fields reach the margin as two wires from two sources, or from one (§5: fan-out is free).
+// value its field's `.x`. A source keeps no input (§3.1): the two fields reach the margin as two wires from two
+// sources, or from one (§5: fan-out is free).
+//
+// **The map is provisional, pending RQ-787.** The corpus names the node and its two inputs and gives the margin no
+// colour map, range or polarity; until the owner answers RQ-787 the margin is drawn on the greyscale ramp,
+// `ramp_grey`, which clamps it to [0, 1], so a margin below 0 draws the ramp's black and one above 1 its white. Only
+// the last line below is the provisional map; the two inputs and the tests before it are settled.
 //
 // It is a presentation view and draws no hatch (R-467), so it guards itself, as the outcome state and a field ramp
 // do (render contract "Presentation layer"; render_gui_spec §G1, §13 "Validity-first"): a pixel the chart classifies
@@ -34,5 +39,5 @@ fn colour(ctx: Ctx) -> vec3<f32> {
         note_non_finite();
         return PRESENT_INVALID;
     }
-    return ramp_grey(margin);
+    return ramp_grey(margin); // provisional, pending RQ-787
 }
