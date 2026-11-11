@@ -14,8 +14,9 @@
 //! **`inputDomains` (R-53; R-815).** An input that declares its domain, `// @input <name> [<lo>, <hi>]`, maps from
 //! it. An input that declares none is untransformed: its entry records "inherits" ([`Input::domain`] `None`), and its
 //! domain is resolved per wire, at assembly, from the manifest range of the field wired to it ([`resolve`]): the
-//! range's `[lo, hi]`, and `range_norm`'s `(0, 1)` ([`UNIT_DOMAIN`]) for a field with no finite `[lo, hi]`, as the
-//! generator's fallback has it (`ledger::gen::numeric::NumericView::u_range_default`).
+//! range's `[lo, hi]` where both ends are finite, and `range_norm`'s `(0, 1)` ([`UNIT_DOMAIN`]) for a field whose
+//! range is `Range::UNBOUNDED`. For any other range, one with exactly one finite end, the corpus defines no domain
+//! (RQ-786): [`resolve`] chooses none and returns [`Unruled`].
 
 use std::fmt;
 use std::path::PathBuf;
@@ -150,26 +151,50 @@ impl Entry {
     }
 
     /// The domain input `input` maps from when the field wired to it has the manifest range `wired` ([`resolve`]);
-    /// `None` if the entry has no such input.
+    /// `None` if the entry has no such input, or if no domain is defined for that wire yet ([`Unruled`], RQ-786:
+    /// [`resolve`] on the input's own `domain` tells the two apart).
     pub fn domain(&self, input: usize, wired: Range) -> Option<(f64, f64)> {
         self.input_domains
             .get(input)
-            .map(|i| resolve(i.domain, wired))
+            .and_then(|i| resolve(i.domain, wired).ok())
     }
 }
 
-/// `range_norm`'s unit interval: the domain an untransformed input inherits from a field with no finite `[lo, hi]`
-/// (R-815). Interface data, as the generator's fallback is, not a register constant.
+/// `range_norm`'s unit interval: the domain an untransformed input inherits from a field whose range is
+/// `Range::UNBOUNDED` (R-815). Interface data, as the generator's fallback is, not a register constant.
 pub const UNIT_DOMAIN: (f64, f64) = (0.0, 1.0);
 
+/// No domain is defined yet for an untransformed input wired to a field with this manifest range: it neither has two
+/// finite ends nor is `Range::UNBOUNDED` (RQ-786, open: R-815 rules only those two). The caller handles it; nothing
+/// stands in for the domain.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Unruled(pub Range);
+
+impl fmt::Display for Unruled {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "no domain is defined for an untransformed input wired to a field of range {}, which has neither two \
+             finite ends nor none (RQ-786)",
+            self.0
+        )
+    }
+}
+
+impl std::error::Error for Unruled {}
+
 /// The domain of an input wired to a field whose manifest range is `wired` (R-53; R-815): the `declared` one, a node
-/// that transforms its field declaring its own; else inherited, the range's `[lo, hi]` where both ends are finite,
-/// and [`UNIT_DOMAIN`] where either is not.
-pub fn resolve(declared: Option<(f64, f64)>, wired: Range) -> (f64, f64) {
-    declared.unwrap_or(match (finite(wired.lo), finite(wired.hi)) {
-        (Some(lo), Some(hi)) => (lo, hi),
-        _ => UNIT_DOMAIN,
-    })
+/// that transforms its field declaring its own; else inherited, the range's `[lo, hi]` where both ends are finite and
+/// [`UNIT_DOMAIN`] where the range is `Range::UNBOUNDED`. Any other range has no ruled domain ([`Unruled`]).
+pub fn resolve(declared: Option<(f64, f64)>, wired: Range) -> Result<(f64, f64), Unruled> {
+    if let Some(own) = declared {
+        return Ok(own);
+    }
+    match (finite(wired.lo), finite(wired.hi)) {
+        (Some(lo), Some(hi)) => Ok((lo, hi)),
+        _ if wired == Range::UNBOUNDED => Ok(UNIT_DOMAIN),
+        _ => Err(Unruled(wired)),
+    }
 }
 
 /// The slot functions `source` defines, in order: each `fn colour`, `fn brightness`, `fn combine` and `fn post`

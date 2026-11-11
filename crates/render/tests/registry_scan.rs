@@ -6,7 +6,8 @@
 //! - REQ-GEN-021: an occupant is valid only in its slot, a colour occupant refused in the brightness slot, and every
 //!   entry carries all six fields;
 //! - REQ-GEN-019: every entry has `inputDomains`, an untransformed input recording "inherits"; resolved on a wire, its
-//!   domain is the manifest `[lo, hi]` of the wired field, and `(0, 1)` for a field with no finite `[lo, hi]` (R-815).
+//!   domain is the manifest `[lo, hi]` of the wired field and `(0, 1)` for an unbounded field (R-815); for a field
+//!   with one finite end no domain is defined yet, and none is given (RQ-786).
 //!
 //! Each test has a registered negative control (R-176).
 
@@ -15,7 +16,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ledger::schema::{Bound, Range};
 use render::assemble::{Declaration, Kind, Occupant, MAX_INPUTS};
-use render::registry::{self, Category, Entry, RegistryError};
+use render::registry::{self, Category, Entry, RegistryError, Unruled};
 use validation::negative_control;
 
 /// A fresh scratch directory named after `case`.
@@ -636,13 +637,18 @@ fn manifest(range: Range) -> Option<(f64, f64)> {
     end(range.lo).zip(end(range.hi))
 }
 
+/// How `node`'s input `input` resolves on a wire to a field of manifest range `range`.
+type Resolved = Result<(f64, f64), Unruled>;
+
 /// The entry `node`, wired to each of the manifest's fields in turn, `resolved(node, input, range)` its domain there:
-/// its untransformed input `inherits` has the field's manifest `[lo, hi]`, `(0, 1)` where the field has none, and its
-/// input `declares` keeps the domain `own` whatever is wired. The manifest has fields of each kind.
+/// its untransformed input `inherits` has the field's manifest `[lo, hi]`, `(0, 1)` where the field is unbounded, and
+/// no domain, [`Unruled`] naming the range, where the field has one finite end (RQ-786); its input `declares` keeps
+/// the domain `own` whatever is wired. [`Entry::domain`] gives the same, `None` for no domain. The manifest has fields
+/// of each kind.
 fn check_wired(
     node: &Entry,
     (inherits, declares, own): (usize, usize, (f64, f64)),
-    resolved: impl Fn(&Entry, usize, Range) -> Option<(f64, f64)>,
+    resolved: impl Fn(&Entry, usize, Range) -> Resolved,
 ) {
     assert_eq!(
         node.input_domains[inherits].domain, None,
@@ -655,27 +661,33 @@ fn check_wired(
         let expected = match manifest(field.range) {
             Some(range) => {
                 bounded += 1;
-                range
+                Ok(range)
+            }
+            None if field.range == Range::UNBOUNDED => {
+                unbounded += 1;
+                Ok((0.0, 1.0))
             }
             None => {
-                if field.range == Range::UNBOUNDED {
-                    unbounded += 1;
-                } else {
-                    half += 1;
-                }
-                (0.0, 1.0)
+                half += 1;
+                Err(Unruled(field.range))
             }
         };
         assert_eq!(
             resolved(node, inherits, field.range),
-            Some(expected),
+            expected,
             "an untransformed input wired to `{}`, whose manifest range is {}",
             field.name,
             field.range
         );
         assert_eq!(
+            node.domain(inherits, field.range),
+            expected.ok(),
+            "`Entry::domain` of an untransformed input wired to `{}`",
+            field.name
+        );
+        assert_eq!(
             resolved(node, declares, field.range),
-            Some(own),
+            Ok(own),
             "a declared domain, wired to `{}`",
             field.name
         );
@@ -686,32 +698,35 @@ fn check_wired(
     );
 }
 
+/// `node`'s input `input` on a wire to `range`, as the registry resolves it.
+fn on_wire(node: &Entry, input: usize, range: Range) -> Resolved {
+    registry::resolve(node.input_domains[input].domain, range)
+}
+
+fn our_colour() -> Entry {
+    one_of_each()
+        .into_iter()
+        .find(|e| e.id == "colour/c")
+        .expect("the colour")
+}
+
 #[test]
 fn registry_input_domains_resolve_per_wire() {
-    let ours = one_of_each();
-    let colour = ours
-        .iter()
-        .find(|e| e.id == "colour/c")
-        .expect("the colour");
-    check_wired(colour, (1, 0, (2.0, 5.0)), Entry::domain);
+    let colour = our_colour();
+    check_wired(&colour, (1, 0, (2.0, 5.0)), on_wire);
     assert_eq!(colour.domain(2, Range::int(0, 9)), None, "no third input");
 
-    // The ends of the range, each kind of bound.
+    // The two ruled kinds of range, each kind of bound.
     let range = |lo, hi| Range { lo, hi };
-    let (open, closed, none) = (Bound::Open, Bound::Closed, Bound::Unbounded);
     for (wired, expected) in [
         (Range::int(0, 65535), (0.0, 65535.0)),
-        (range(closed(-1.5), open(4.0)), (-1.5, 4.0)),
-        (range(open(0.0), closed(2.0)), (0.0, 2.0)),
+        (range(Bound::Closed(-1.5), Bound::Open(4.0)), (-1.5, 4.0)),
+        (range(Bound::Open(0.0), Bound::Closed(2.0)), (0.0, 2.0)),
         (Range::UNBOUNDED, (0.0, 1.0)),
-        (range(closed(3.0), none), (0.0, 1.0)),
-        (range(none, closed(-3.0)), (0.0, 1.0)),
-        (range(closed(3.0), closed(f64::INFINITY)), (0.0, 1.0)),
-        (range(open(f64::NEG_INFINITY), closed(7.0)), (0.0, 1.0)),
     ] {
         assert_eq!(
             registry::resolve(None, wired),
-            expected,
+            Ok(expected),
             "inherited from {wired}"
         );
         assert_eq!(
@@ -721,7 +736,7 @@ fn registry_input_domains_resolve_per_wire() {
         );
         assert_eq!(
             registry::resolve(Some((8.0, 9.0)), wired),
-            (8.0, 9.0),
+            Ok((8.0, 9.0)),
             "declared, on {wired}"
         );
     }
@@ -741,12 +756,57 @@ negative_control!(
     registry_input_domains_resolve_per_wire,
     "an input that resolves to the unit interval on every wire does not inherit its field's range",
     expected = "an untransformed input wired to",
-    check_wired(
-        one_of_each()
-            .iter()
-            .find(|e| e.id == "colour/c")
-            .expect("the colour"),
-        (1, 0, (2.0, 5.0)),
-        |node, input, _| node.domain(input, Range::UNBOUNDED)
-    )
+    check_wired(&our_colour(), (1, 0, (2.0, 5.0)), |node, input, _| on_wire(
+        node,
+        input,
+        Range::UNBOUNDED
+    ))
+);
+
+/// Each range with exactly one finite end, an end at `±∞` counted as none: `resolved(range)`, an untransformed
+/// input's domain on a wire to it, is no domain, [`Unruled`] naming the range (RQ-786, open: nothing is chosen, so
+/// neither `(0, 1)` nor the finite end stands in).
+fn check_one_finite_end(resolved: impl Fn(Range) -> Resolved) {
+    let range = |lo, hi| Range { lo, hi };
+    let none = Bound::Unbounded;
+    for wired in [
+        range(Bound::Closed(3.0), none),
+        range(Bound::Open(0.0), none),
+        range(none, Bound::Closed(-3.0)),
+        range(none, Bound::Open(0.0)),
+        range(Bound::Closed(3.0), Bound::Closed(f64::INFINITY)),
+        range(Bound::Open(f64::NEG_INFINITY), Bound::Closed(7.0)),
+    ] {
+        assert_eq!(
+            resolved(wired),
+            Err(Unruled(wired)),
+            "a range with one finite end, {wired}, was given a domain"
+        );
+    }
+}
+
+#[test]
+fn registry_input_domains_one_finite_end_is_unruled() {
+    let colour = our_colour();
+    check_one_finite_end(|wired| registry::resolve(None, wired));
+    check_one_finite_end(|wired| on_wire(&colour, 1, wired));
+    // `Entry::domain` gives no domain there, and the node's declared input keeps its own.
+    let k0 = Range {
+        lo: Bound::Closed(0.0),
+        hi: Bound::Unbounded,
+    };
+    assert_eq!(colour.domain(1, k0), None);
+    assert_eq!(colour.domain(0, k0), Some((2.0, 5.0)));
+    assert_eq!(registry::resolve(Some((2.0, 5.0)), k0), Ok((2.0, 5.0)));
+    // The refusal names the range and the queue entry.
+    let text = Unruled(k0).to_string();
+    assert!(text.contains(&k0.to_string()), "{text}");
+    assert!(text.ends_with("(RQ-786)"), "{text}");
+}
+
+negative_control!(
+    registry_input_domains_one_finite_end_is_unruled,
+    "a range with one finite end silently given the unit interval is a chosen default",
+    expected = "was given a domain",
+    check_one_finite_end(|_| Ok(registry::UNIT_DOMAIN))
 );

@@ -33,7 +33,7 @@ use crate::debug_bake::ViewGenerator;
 pub mod entry;
 mod scan;
 
-pub use entry::{resolve, slot_functions, Category, Entry, RegistryError, UNIT_DOMAIN};
+pub use entry::{resolve, slot_functions, Category, Entry, RegistryError, Unruled, UNIT_DOMAIN};
 pub use scan::{
     occupant_files, shipped_table, Found, ScanError, GENERATED_DIR, OCCUPANT_DIR, REDUCTIONS_DIR,
     ROOTS,
