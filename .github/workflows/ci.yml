@@ -440,6 +440,16 @@ jobs:
       - name: Dependencies without debug info, every profile
         if: env.RUN == 'true'
         uses: ./.github/actions/cargo-ci-config
+      # The crates fetched first, then offline, as `clippy`, `build` and `process` do: `tests` runs on no push, so its
+      # registry key is never saved, and each shard otherwise downloads the registry inside its nextest step, where a
+      # curl 56 or 16 fails the required `ci` and `ci_retry.py` never re-runs it (code review of #495, finding 4).
+      # Applied per R-369/R-812.
+      - name: cargo fetch --locked (up to three tries)
+        if: env.RUN == 'true'
+        timeout-minutes: 10
+        env:
+          CARGO_HTTP_MULTIPLEXING: "false"
+        run: for attempt in 1 2 3; do cargo fetch --locked && { echo "CARGO_NET_OFFLINE=true" >> "$GITHUB_ENV"; exit 0; }; echo "attempt $attempt of 3 of cargo fetch failed"; done; exit 1
       # The fixture pool the `ci` shards save on `main`, restored only, under their key (R-270, R-285, R-337).
       - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: env.RUN == 'true'

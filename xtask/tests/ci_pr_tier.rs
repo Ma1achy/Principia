@@ -30,9 +30,9 @@
 //!   owner, 11 Nov 2026: "split the ci job as planned"): each nextest step runs its `hash:` slice of 3, the doctests run
 //!   in shard 1, `ci` passes only when the shards' matrix succeeded, and each reader binary a partitioned step names
 //!   holds a test.
-//! - `ci_pr_tier_crates_are_fetched_first`: `clippy`, `build` and `process` fetch the crates first, up to three tries
-//!   over HTTP/1.1, then run offline, each keeping the registry cache under a key naming its own job (R-285; #481's
-//!   `clippy` failed at crates.io, curl 56, before anything compiled).
+//! - `ci_pr_tier_crates_are_fetched_first`: `clippy`, `build`, `process` and the `ci` shards (`tests`) fetch the crates
+//!   first, up to three tries over HTTP/1.1, then run offline, each keeping the registry cache under a key naming its
+//!   own job (R-285; #481's `clippy` failed at crates.io, curl 56, before anything compiled).
 //!
 //! Each test has its registered negative control (R-176), which feeds the same check a configuration or workflow
 //! differing in the one respect it turns on.
@@ -1597,7 +1597,7 @@ negative_control!(
 // ---- The crates fetched first, then offline (#481's `clippy`, curl 56; the CI diagnosis of 11 Nov 2026) -------------
 
 /// The jobs that fetch the crates before their own work.
-const FETCHING: [&str; 3] = ["clippy", "build", "process"];
+const FETCHING: [&str; 4] = ["clippy", "build", "process", "tests"];
 
 const FETCH_STEP: &str = "      - name: cargo fetch --locked (up to three tries)";
 
@@ -1772,6 +1772,24 @@ mod fetch_after_the_lint {
         {
             let text = read(".github/workflows/ci.yml");
             let at = text.find("\n  process:\n").expect("the job");
+            let (head, tail) = text.split_at(at);
+            check_fetch_first(&format!(
+                "{head}{}",
+                tail.replacen(FETCH_STEP, "      - name: fetch", 1)
+            ))
+        }
+    );
+}
+
+mod shards_fetch_online {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_crates_are_fetched_first,
+        "The `ci` shards with no fetch step, downloading the registry inside nextest, where a network error fails `ci`.",
+        expected = "tests fetches no crates first",
+        {
+            let text = read(".github/workflows/ci.yml");
+            let at = text.find("\n  tests:\n").expect("the job");
             let (head, tail) = text.split_at(at);
             check_fetch_first(&format!(
                 "{head}{}",
