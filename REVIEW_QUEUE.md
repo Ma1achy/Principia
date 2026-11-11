@@ -789,3 +789,80 @@ tests that read the file, and to leave the rest to the run made after each merge
   - (b) Keep it as it is: such a pull request runs every product test.
 - **Applied meanwhile:** as it is: a `plan/requirements.yaml` change runs every product test on the pull request.
 - **Waits:** the CI change to the selection (`.github/scripts/ci_quick_crates.py`, with `scripts/ci_changes.sh`).
+
+## RQ-791: What the FTLE reads when only the Benettin shadow reaches a terminal state, or only the shadow's sum goes non-finite: no ruling says, and today the value reads valid and is not an exponent *(silence, a missing definition, R-72; a one-way door, it changes what the instrument computes and what `ftle_valid` means; W13, R-253, R-254, R-255, R-79, W17; REQ-INT-039, REQ-INT-043, REQ-PAY-032; physics review 5864212047 of PR #493, F1, open points B and C; context: TASK-M3-14, TASK-M3-18)*
+
+*Queued 11 Nov 2026 from the physics review of TASK-M3-14 (the Benettin FTLE shadow), PR #493, review 5864212047,
+finding F1; each quote below re-read on `main` at c096a83b, and the code on that PR's head. Nothing is chosen here.*
+
+*In plain English: the FTLE (the finite-time Lyapunov exponent, how fast nearby starts pull apart) is measured by
+running a second, "shadow" copy of each sample a tiny distance away and watching the gap grow. Each copy is checked for
+collisions on its own. When the shadow collides and the sample doesn't, the shadow stops moving, but the code keeps
+measuring the gap as though it were still a neighbour, so the number becomes the sample's travel distance, not a rate of
+separation, and it is still marked valid. Every map and statistic built from the FTLE would take it in. The same
+question arises if the shadow's running sum becomes infinite or NaN while the sample is fine. Which of several honest
+answers to pick changes what the instrument shows, so it is the owner's call.*
+
+- **File, section:**
+  - `docs/design/principia_dd_integrator.md` § "3.4 COM projection (per `STEP`; the policy is integrator contract Part
+    1)": "a pixel carries several independent trajectories — the base, its Benettin FTLE shadow, ... **Each is
+    projected independently, every step** ... The wrapper runs the full per-`STEP` sequence (project, monitor, detect)
+    on every marching trajectory it owns". It says the shadow is detected; it never says what the shadow's terminal
+    does.
+  - `plan/requirements.yaml`, REQ-INT-039 (each trajectory projected, monitored and detected on its own): "Each
+    marching trajectory (the base, each Benettin shadow, each ensemble copy and its shadow) must be CoM-projected,
+    monitored and detected independently every step". The same silence.
+  - `docs/design/principia_dd_integrator.md` § "3.8 Co-computations (tier-gated, ride the forward pass)": "every
+    n_renorm steps: δ⃗ = x' − x ; δ = ‖δ⃗‖ ; S += log(δ/δ₀) ; x' ← x + δ₀·(δ⃗/δ)", which presumes a shadow that moves.
+  - `docs/design/principia_dd_simstate_payload.md` § "6. Accessors", `ftle_valid`: "return ftle_tier_on &&
+    !sd_is_failed(state) && n > 0u && benettin_renorms > 0u;", with no clause for the shadow; and § "5. Derived":
+    `ftle` "reads NaN whenever `ftle_valid` is false ... never 0/0 or a value beside a false flag (R-253, R-254)".
+  - `decisions.md` § R-255 (every aggregate over `ftle` excludes samples by `ftle_valid`): "every aggregate over ftle
+    (footprint means and spreads, quad reductions, histograms, statistics) excludes samples by ftle_valid explicitly".
+  - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants", wall 13 (W13): "Never blank,
+    never lies, never freezes".
+  - `decisions.md` § R-79 (NaN and sentinels), with W17 (no NaN in storage): "Storage never holds NaN. A blown-up
+    sample stores the defined failed-state values." It speaks of a sample's blow-up; a shadow's non-finite `S` with a
+    healthy sample is not a failed sample, and TASK-M3-18 (the failure path: `sim_failed`, NaN-free storage and the
+    failed-state values) does not cover it as written.
+- **The case, from the physics review (F1, open point B):** on PR #493's head (d3a94daf), once the shadow's own
+  cadence is done, today by a shadow-only collision (the shadow inside `r_coll`, the sample not), the shadow takes no
+  substeps (`crates/kernel/src/driver/benettin.rs:230`, `Limited::done`) and stays where it stopped, but the sample's
+  macro-steps still count, and every `n_renorm` steps `renormalise` (`:418–421`, `:324`) adds `ln(|x' − x|/δ₀)` with
+  `x'` frozen, then resets `x'` beside the sample, where it again does not move. Each interval then adds the log of
+  the distance the sample travels in `n_renorm` steps over `δ₀`: at the proposed values about `ln(0.3/3·10⁻³) ≈ 4.6`
+  per 0.3 time units, so a sample whose shadow collided at `t_c` reads `λ ≈ 15·(T − t_c)/T` beside a true `ftle_valid`
+  and a non-failed state. Not an exponent of anything; through R-255 it enters every FTLE aggregate. Every test of that
+  PR runs at `CollisionRadius::none()`, so the path is untested.
+- **The case, open point C:** a non-finite `S` from the shadow alone, the sample healthy: the same question.
+- **The question:** when only the shadow reaches a terminal state (collision today; any terminal its detectors raise),
+  or only the shadow's `S` goes non-finite, what does the sample's `ftle` read, and what does `ftle_valid` say?
+- **Options seen:**
+  - (a) The FTLE is invalid from `t_c`: `ftle_valid` gains a clause, false once the shadow alone is terminal or its `S`
+    non-finite, so `ftle` reads NaN (R-254) and every aggregate drops the sample (R-255). *Consequence:* changes payload
+    § 6's predicate, and needs one stored bit or a derivable mark for the shadow's terminal; the sample's other fields
+    are untouched; samples whose shadows meet a close encounter lose their FTLE, which can be the chaotic regions the
+    FTLE is meant to show.
+  - (b) The FTLE is finalised over `[0, t_c]` and flagged: `S` and the elapsed time freeze at the shadow's terminal,
+    the partial interval finalised there (REQ-INT-043's finalisation, the Benettin formula with partial-interval
+    finalisation), as escape latches its time averages (payload § "8. Build-time settles", "After escape fires (R-31,
+    R-95, R-103)"); `ftle = S_final(t_c)/t_c`, with a flag that it covers a shorter window. *Consequence:* the value is a
+    true exponent, of a shorter window; it needs `t_c` (or its step) stored and a flag bit, a payload change; aggregates
+    mix windows unless they read the flag, so R-255's rule would need a companion; a non-finite `S` (C) freezes at the
+    last finite interval.
+  - (c) The sample is treated as terminal too: the shadow's terminal ends the sample's march. *Consequence:* a
+    co-computation changes the sample's own outcome, state and every other field, against REQ-INT-039's independence;
+    the FTLE then reads as at any terminal.
+  - (d) The shadow's detectors monitor only, and the shadow marches on through what would be its terminal.
+    *Consequence:* no new field; the shadow's march through a close approach can blow up, which brings back C, so (d)
+    still needs one of (a) to (c) for the non-finite case.
+  - (e) Another, stated by the owner.
+- **Recommended:** (a), for both B and C: it is the smallest change, it never shows a value that is not an exponent
+  (W13), and R-254 and R-255 already carry an invalid FTLE through every consumer. Against it: it can drop the FTLE where
+  the dynamics are most chaotic. The measurable alternative: TASK-M3-14's calibration sweep, at a nonzero `r_coll`,
+  reports the share of samples whose shadow alone reaches a terminal or a non-finite `S`, per orbit family and over the
+  region of a chaotic chart; if that share is large where the FTLE matters, (b) keeps those samples, at the cost of a
+  flag and a stored step. The owner chooses with that number.
+- **Applied meanwhile:** nothing is merged: PR #493 is not merged and builds nothing for this case. The physics review
+  asks for a test at a nonzero `r_coll` that drives a shadow-only collision and pins whatever is ruled.
+- **Waits:** TASK-M3-14 (the Benettin FTLE shadow).
