@@ -316,6 +316,21 @@ fn calibration_gate() {
     assert_eq!(calibration_config().threshold.value, PROPOSED_TOLERANCE);
     check_gate_test10(Verdict::Fail);
     assert!(calibration_orbit("kepler").is_some() && calibration_orbit("burrau").is_some());
+    // The calibration orbits are the three their doc names, at their masses.
+    for (key, want) in [
+        ("kepler", kepler_embedded()),
+        ("burrau", burrau()),
+        (
+            "lagrange",
+            lagrange("Lagrange, equal masses", [1.0 / 3.0; 3], LAGRANGE_HORIZON),
+        ),
+    ] {
+        let got = calibration_orbit(key).expect("a calibration orbit");
+        assert!(
+            got.name == want.name && got.ic == want.ic && got.horizon == want.horizon,
+            "the calibration orbit `{key}` is not the orbit its name says"
+        );
+    }
     // The sweep: the rule picks the proposal, and the gate's tolerance is the rule's.
     assert_eq!(
         run(serde_json::json!({ "kind": "sweep", "description": "t" })),
