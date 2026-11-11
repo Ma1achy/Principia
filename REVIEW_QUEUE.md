@@ -693,3 +693,225 @@ that case, and say nothing about the middle of a morph. Only the owner may say w
   (saturate in the CPU evaluator), which builds the saturated pixels it blends; so REQ-CHART-211 and, through it,
   TASK-M2-103 wait for that pixel alone as well. REQ-CHART-189 and TASK-M2-90 keep the other two arms. No option
   changes.
+
+## RQ-789: Whether a per-merge run whose only failure is the install step's network or archive fetch reads "no result" rather than red: REQ-TOOL-223 makes every failure of `ci-release` a correctness failure *(the owner's queued question, 11 Nov 2026, point (1); a one-way door, it amends a requirement and what a red `main` means; R-809, R-907, R-908, R-909, R-681; REQ-TOOL-223; context: `.github/scripts/ci_per_merge.py`)*
+
+*Queued 11 Nov 2026 from the owner's message of that day, point (1), verbatim: "The verdict fix amends REQ-TOOL-223, so
+it goes through reqio with a queue entry and comes to me as a ruling, not straight into the CI PR; and it must be narrow
+(only the install step's network and archive failures count as infrastructure) and must make the verdict "no result",
+never green." Nothing is chosen here.*
+
+*In plain English: after each merge, the per-merge check on `main` (`ci_per_merge.py`, which decides whether a failed
+run means the code is wrong) reads any failure of the release-build jobs as a real failure, so `main` goes red. On 11
+Nov those jobs failed before building anything, because Ubuntu's package mirror was down while they installed the
+software GPU driver. `main` read red three times, each time from the outage alone: on the first two of those merges a
+tooling check (`xtask-ci (2)`'s controls run) failed as well, but the check files that as a tooling task and never reads
+it red, so no product code was shown wrong. REQ-TOOL-223 (a release-build failure is always a correctness failure) says
+that red is right, so changing it is the owner's call.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-TOOL-223 (a failure of the release-build jobs fails the run and makes `main` red), its
+    statement: "its failure is a failed run on `main`, a correctness failure and so a red `main` (R-681, as R-907 reads
+    it)".
+  - `.github/scripts/ci_per_merge.py`, its docstring: "RELEASE_JOBS fail as correctness, whatever failed: REQ-TOOL-223
+    makes every failure of `ci-release`, a shard or its archive, a correctness failure and so a red `main`."; and the
+    verdict's values: "verdict=red|task|green".
+  - `decisions.md` § R-907 (each merge to `main` tested on its own), its heading: "each merge to `main` is tested on its
+    own, advisory, a correctness failure making `main` red and any other filing a top-priority task".
+- **The evidence:** three per-merge runs on `main`, 11 Nov 2026, read red during Ubuntu's mirror outage, every
+  `ci-release` failure at the step "Install Mesa (lavapipe)", before any build. What each run's per-merge verdict
+  printed (the `per-merge` job's log, `ci_per_merge.py decide`):
+  - cf75b5f7 (run 43026202826): "verdict=red"; "job=ci-release (1): correctness: Install Mesa (lavapipe): every
+    release-profile failure is one (REQ-TOOL-223)"; the one other failed job, "job=xtask-ci (2): other: cargo xtask
+    ci --partition 2/4: not a correctness job", failed at its test step (the controls run), not at the install step.
+  - 5e776987 (run 43026967872): "verdict=red"; `ci-release (1)` and `(2)` correctness, at the install step, as above;
+    `xtask-ci (2)` other, at its controls step, as above; `gpu-lavapipe` and `ci (1)` to `(4)` other, at the install
+    step, each "no test step failed".
+  - 7ddcca15 (run 43029168415): "verdict=red"; `ci-release (1)` and `(2)` correctness, at the install step; every
+    other failed job (`ci (1)` to `(4)`, `ci-workspace`, `gpu-lavapipe`, `gpu-lavapipe suites`, `gpu-kernel suites`,
+    `xtask-ci (1)` to `(4)`) other, at the install step, "no test step failed" or "not a correctness job".
+  In all three, `ci-release` was the only job classed as a correctness failure, so it alone made the verdict red. On
+  cf75b5f7 and 5e776987 the red came beside a real failure of `xtask-ci (2)`'s controls run, which the verdict reads
+  as another kind (a process failure, filed as a task, never red).
+- **The question:** does a `ci-release` failure confined to the install step's network or archive fetch stay a
+  correctness failure (red `main`), or read as "no result"?
+- **Options seen:**
+  - (a) As the owner framed it: amend REQ-TOOL-223 (through `plan/tools/reqio.py`) so that only the install step's
+    network and archive failures count as infrastructure, and make the verdict for them "no result", never green; any
+    other failure of `ci-release` stays a correctness failure and a red `main`.
+  - (b) Leave REQ-TOOL-223 as it is: an outage at the install step reads red, as on 11 Nov.
+- **Applied meanwhile:** REQ-TOOL-223 as written: every failure of `ci-release` is a correctness failure and a red
+  `main`.
+- **Waits:** the CI change to `.github/scripts/ci_per_merge.py` (the "no result" verdict and the narrow install-step
+  class).
+
+## RQ-790: Whether the product tests a `plan/requirements.yaml`-only change selects move from the pull request's run to the per-merge run *(the owner's queued question, 11 Nov 2026, point (3); a one-way door, it changes what is tested where and reads R-677's "full CI" for that file more narrowly; R-677, R-907, R-908, R-909; context: `.github/scripts/ci_quick_crates.py`, `scripts/ci_changes.sh`)*
+
+*Queued 11 Nov 2026 from the owner's message of that day, point (3), verbatim: "Put the requirements.yaml-only move in
+the rulings report; my lean is yes, provided the per-merge run still runs those tests on every merge and the PR run keeps
+anything that reads requirements.yaml directly." Nothing is chosen here.*
+
+*In plain English: a pull request that changes only the requirements list (`plan/requirements.yaml`) runs today every
+product test of every crate, about 4,870 tests, though most of them never read that file; the tooling (`xtask`) and
+some validation tests do. Those runs take 30 to 58 minutes. The proposal is to run, on such a pull request, only the
+tests that read the file, and to leave the rest to the run made after each merge.*
+
+- **File, section:**
+  - `decisions.md` § R-677 (the three CI tiers), its heading: "a change to Principia's code runs full CI as before; one
+    to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read
+    what it changed".
+  - `decisions.md` § R-907, its heading: "each merge to `main` is tested on its own, advisory, a correctness failure
+    making `main` red".
+  - The CI diagnosis of 10 Nov 2026 (the orchestrator's measurement notes, outside the repo), § 5 "Proposed changes",
+    item 7: "A PR whose only code-tier path is `plan/requirements.yaml` selects xtask, not all eight crates. ... On such
+    a PR the product tests of engine, gui, kernel, ledger, prin, render and validation (about 4,870 tests) no longer run
+    on the PR; they run on the merge. Validation's `part6_catalogue` and the xtask readers still run. This reads R-677's
+    "full CI" for that file (the three-tier classification ruling) more narrowly, so it is the owner's call."
+- **The evidence:** the same diagnosis, § 1: six of 28 verdict runs (#465, the chart-core rulings; #471, a docs
+  transcription) changed `plan/requirements.yaml` and ran all the product tests, 30 to 58 minutes each. Its pass
+  criterion, written before any change: no file under `crates/` reads the file (checked by a test); such a pull
+  request's `ci` at most 15 minutes; the per-merge run on its merge commit passes. *Correction, re-read on `main` at
+  c096a83b when this entry was queued:* the diagnosis's "on `origin/main` the only code that reads
+  `plan/requirements.yaml` is in xtask" does not hold. Sixteen files under `crates/` name it, and test files among
+  them read it directly or copy it into a scratch tree: `crates/ledger/tests/qa_TASK-M3-06_tau.rs`,
+  `crates/validation/src/gate/mod.rs`, and under `crates/validation/tests/`: `convergence.rs`, `cross_backend.rs`,
+  `decode_f32_eps_gpu.rs`, `decode_sanity_gate.rs`, `eps_phys_gate.rs`, `gate_report.rs`, `inspector_gates.rs`,
+  `invariant_gradient_gpu.rs`, `oklab_roundtrip_gate.rs`, `part6_catalogue.rs`, `projection_parity_gate.rs`,
+  `qa_TASK-M0-05.rs`, `qa_TASK-M2-50_fix.rs`, `shape_roundtrip_gate.rs`. So option (a)'s second condition keeps more
+  on the pull request than the xtask readers and `part6_catalogue`, and the criterion's first clause fails as written;
+  which of these files read the file and which only name it is for the CI change to establish.
+- **The question:** on a pull request whose only code-tier path is `plan/requirements.yaml`, do the product tests that
+  do not read it move from the pull request's run to the per-merge run?
+- **Options seen:**
+  - (a) Move them, under the owner's two conditions: the per-merge run still runs those tests on every merge, and the
+    pull request's run keeps everything that reads `plan/requirements.yaml` directly (the xtask readers and the
+    crates' tests that read it, the evidence above). The owner leans to this.
+  - (b) Keep it as it is: such a pull request runs every product test.
+- **Applied meanwhile:** as it is: a `plan/requirements.yaml` change runs every product test on the pull request.
+- **Waits:** the CI change to the selection (`.github/scripts/ci_quick_crates.py`, with `scripts/ci_changes.sh`).
+
+## RQ-791: What the FTLE reads when only the Benettin shadow reaches a terminal state, or only the shadow's sum goes non-finite: no ruling says, and today the value reads valid and is not an exponent *(silence, a missing definition, R-72; a one-way door, it changes what the instrument computes and what `ftle_valid` means; W13, R-253, R-254, R-255, R-79, W17; REQ-INT-039, REQ-INT-043, REQ-PAY-032; physics review 5864212047 of PR #493, F1, open points B and C; context: TASK-M3-14, TASK-M3-18)*
+
+*Queued 11 Nov 2026 from the physics review of TASK-M3-14 (the Benettin FTLE shadow), PR #493, review 5864212047,
+finding F1; each quote below re-read on `main` at c096a83b, and the code on that PR's head. Nothing is chosen here.*
+
+*In plain English: the FTLE (the finite-time Lyapunov exponent, how fast nearby starts pull apart) is measured by
+running a second, "shadow" copy of each sample a tiny distance away and watching the gap grow. Each copy is checked for
+collisions on its own. When the shadow collides and the sample doesn't, the shadow stops moving, but the code keeps
+measuring the gap as though it were still a neighbour, so the number becomes the sample's travel distance, not a rate of
+separation, and it is still marked valid. Every map and statistic built from the FTLE would take it in. The same
+question arises if the shadow's running sum becomes infinite or NaN while the sample is fine. Which of several honest
+answers to pick changes what the instrument shows, so it is the owner's call.*
+
+- **File, section:**
+  - `docs/design/principia_dd_integrator.md` § "3.4 COM projection (per `STEP`; the policy is integrator contract Part
+    1)": "a pixel carries several independent trajectories — the base, its Benettin FTLE shadow, ... **Each is
+    projected independently, every step** ... The wrapper runs the full per-`STEP` sequence (project, monitor, detect)
+    on every marching trajectory it owns". It says the shadow is detected; it never says what the shadow's terminal
+    does.
+  - `plan/requirements.yaml`, REQ-INT-039 (each trajectory projected, monitored and detected on its own): "Each
+    marching trajectory (the base, each Benettin shadow, each ensemble copy and its shadow) must be CoM-projected,
+    monitored and detected independently every step". The same silence.
+  - `docs/design/principia_dd_integrator.md` § "3.8 Co-computations (tier-gated, ride the forward pass)": "every
+    n_renorm steps: δ⃗ = x' − x ; δ = ‖δ⃗‖ ; S += log(δ/δ₀) ; x' ← x + δ₀·(δ⃗/δ)", which presumes a shadow that moves.
+  - `docs/design/principia_dd_simstate_payload.md` § "6. Accessors", `ftle_valid`: "return ftle_tier_on &&
+    !sd_is_failed(state) && n > 0u && benettin_renorms > 0u;", with no clause for the shadow, as REQ-PAY-032
+    (`ftle_valid`'s clauses, and FTLE aggregates excluding by it) states it; and § "5. Derived": `ftle` "reads NaN
+    whenever `ftle_valid` is false ... never 0/0 or a value beside a false flag (R-253, R-254)", R-253 being the
+    ruling that `ftle` reads NaN at `step_count = 0`, superseded by R-254, that it reads NaN whenever `ftle_valid` is
+    false.
+  - `decisions.md` § R-255 (every aggregate over `ftle` excludes samples by `ftle_valid`): "every aggregate over ftle
+    (footprint means and spreads, quad reductions, histograms, statistics) excludes samples by ftle_valid explicitly".
+  - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants", wall 13 (W13): "Never blank,
+    never lies, never freezes".
+  - `decisions.md` § R-79 (NaN and sentinels): "Storage never holds NaN. A blown-up sample stores the defined
+    failed-state values." With it, `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants",
+    wall 17 (W17, validity by descriptor predicates, NaN on the read side only): "**NaN-sentinel read-side +
+    descriptor-predicate validity** — ... validity via `has_<feature>` + descriptor predicates, never `isnan()`"; the
+    case breaks it, `ftle_valid` reading true beside a value that is not an exponent. R-79 speaks of a sample's
+    blow-up; a shadow's non-finite `S` with a healthy sample is not a failed sample, and TASK-M3-18 (the failure path:
+    `sim_failed`, NaN-free storage and the failed-state values) does not cover it as written.
+- **The case, from the physics review (F1, open point B):** on PR #493's head (d3a94daf), once the shadow's own
+  cadence is done, today by a shadow-only collision (the shadow inside `r_coll`, the sample not), the shadow takes no
+  substeps (`crates/kernel/src/driver/benettin.rs:230`, `Limited::done`) and stays where it stopped, but the sample's
+  macro-steps still count, and every `n_renorm` steps `renormalise` (`:418–421`, `:324`) adds `ln(|x' − x|/δ₀)` with
+  `x'` frozen, then resets `x'` beside the sample, where it again does not move. Each interval then adds the log of
+  the distance the sample travels in `n_renorm` steps over `δ₀`: at the proposed values about `ln(0.3/3·10⁻³) ≈ 4.6`
+  per 0.3 time units at unit phase-space speed. A sample whose shadow collided at `t_c` then reads
+  `λ ≈ [S(t_c) + Σ ln(|x(t + Δ) − x(t)|/δ₀)]/T`: the genuine part `S(t_c)/T`, plus a spurious part of order
+  `15·(T − t_c)/T` that grows with the logarithm of the sample's phase-space speed `v` (each interval adds about
+  `ln(v·Δ/δ₀) = ln v + 4.6`), so it is larger just after the encounter that set it off; all beside a true
+  `ftle_valid` and a non-failed state. *Refined 11 Nov 2026 (physics reviews 5864352921, N1, and 5864440456, n1).
+  Was:* "reads `λ ≈ 15·(T − t_c)/T`"; then "that scales with the sample's phase-space speed". The spurious part is
+  not an exponent of anything; through R-255 it enters every FTLE aggregate. Every test of that PR runs at
+  `CollisionRadius::none()`, so the path is untested.
+- **The case, open point C:** a non-finite `S` from the shadow alone, the sample healthy: the same question.
+- **The question:** when only the shadow reaches a terminal state (collision today; any terminal its detectors raise),
+  or only the shadow's `S` goes non-finite, what does the sample's `ftle` read, and what does `ftle_valid` say?
+- **Options seen:**
+  - (a) The FTLE is invalid from `t_c`: `ftle_valid` gains a clause, false once the shadow alone is terminal or its `S`
+    non-finite, so `ftle` reads NaN (R-254) and every aggregate drops the sample (R-255). *Consequence:* changes payload
+    § 6's predicate, and needs one stored bit or a derivable mark for the shadow's terminal; the sample's other fields
+    are untouched; samples whose shadows meet a close encounter lose their FTLE, which can be the chaotic regions the
+    FTLE is meant to show.
+  - (b) The FTLE is finalised over `[0, t_c]` and flagged: `S` and the elapsed time freeze at the shadow's terminal,
+    the partial interval finalised there (REQ-INT-043's finalisation, the Benettin formula with partial-interval
+    finalisation), as escape latches its time averages (payload § "8. Build-time settles", "After escape fires (R-31,
+    R-95, R-103)"); `ftle = S_final(t_c)/t_c`, with a flag that it covers a shorter window. *Consequence:* the value is a
+    true exponent, of a shorter window; it needs `t_c` (or its step) stored and a flag bit, a payload change; aggregates
+    mix windows unless they read the flag, so R-255's rule would need a companion; a non-finite `S` (C) freezes at the
+    last finite interval.
+  - (c) The sample is treated as terminal too: the shadow's terminal ends the sample's march. *Consequence:* a
+    co-computation changes the sample's own outcome, state and every other field, against REQ-INT-039's independence;
+    and the sample's outcome would then depend on whether the FTLE tier is on, where § 3.8 has co-computations
+    "tier-gated, ride the forward pass", so a tier change would alter fields outside the tier. The FTLE then reads as
+    at any terminal.
+  - (d) The shadow's detectors monitor only, and the shadow marches on through what would be its terminal.
+    *Consequence:* no new field; the shadow's march through a close approach can blow up, which brings back C, so (d)
+    still needs one of (a) to (c) for the non-finite case.
+  - (e) Re-seed the shadow and re-arm its detectors, the standard Benettin remedy (*added 11 Nov 2026, physics review
+    5864352921, F1; the direction and the costs corrected by physics review 5864440456, F1 to F3*): at the shadow's
+    terminal, finalise the interval as a renormalisation (`S += ln(δ/δ₀)` with `δ` at the terminal), reset `x'` beside
+    the sample at distance `‖δ₀‖`, and clear the shadow's done latch, so it marches again as a fresh neighbour. The
+    reset's direction is a sub-option:
+    - (e1) Along the current direction `δ⃗/δ`, as § 3.8's renormalisation has it (`x' ← x + δ₀·(δ⃗/δ)`): the terminal
+      is treated as an ordinary renormalisation. In case B `δ⃗` is finite at the terminal; only in case C, where it is
+      not, does the reset fall back to `u`, § 3.8's initial direction (REQ-INT-077, the definition of `δ₀`'s
+      direction), the last finite `S` kept. This is the smallest code change from what PR #493's head does: its
+      `renormalise` already resets `x'` along `δ⃗/δ`, and only the latch stays set.
+    - (e2) Always along `u`. *Its own cost:* each re-seed throws away the shadow's alignment with the most-expanding
+      direction, so each is followed by a re-alignment transient lasting about `1/(λ₁ − λ₂)` (the inverse gap between
+      the two largest exponents), under-counting by about the log of `u`'s projection on that direction; the cost
+      recurs at every re-seed and falls on the encounter samples.
+
+    *Consequence (both):* the sample's outcome is unchanged; where it does not fall back, the sample keeps its
+    full-window FTLE with no change to `ftle`'s denominator. The bias does not come from the extra renormalisation,
+    which in the linear regime is sum-of-logs bookkeeping and leaves `λ` unbiased; it comes from (i) the interval that
+    ends at a shadow-only collision, whose `ln(δ/δ₀)` is a nonlinear, saturated separation (the shadow reached `r_coll`
+    and the sample did not), not tangent growth, and can read high or low; and (ii) under (e2), the direction reset
+    above. A shadow re-seeded within about `‖δ₀‖` of `r_coll` re-terminates within a step (at once if seeded inside
+    it), each such re-seed adding about `ln 1 = 0` over a short time and dragging `λ` toward 0; so (e) needs a cap on
+    re-seeds and, past it, (a) or (b) as a fallback. Its full cost therefore includes the fallback's: a re-seed
+    counter or cap, plus (a)'s stored bit or mark and new `ftle_valid` clause, or (b)'s stored `t_c`, flag bit and
+    companion to R-255. (e) does not avoid a new field; the measurement below decides how often the fallback fires.
+    The shadow's terminal latch must become re-armable, a change to the cadence's per-trajectory meaning (§ 3.4: the
+    shadow is "detected", not "ended").
+  - (f) Another, stated by the owner.
+- **Recommended:** (a), for both B and C: it is the smallest change, it never shows a value that is not an exponent
+  (W13), and R-254 and R-255 already carry an invalid FTLE through every consumer. Against it: it can drop the FTLE where
+  the dynamics are most chaotic. The measurable alternative: TASK-M3-14's calibration sweep, at a nonzero `r_coll`,
+  reports the share of samples whose shadow alone reaches a terminal or a non-finite `S`, per orbit family and over the
+  region of a chaotic chart; if that share is large where the FTLE matters, (b) keeps those samples, at the cost of a
+  flag and a stored step. The same measurement weighs (e) against (a): on the samples it finds, the share that reach
+  (e)'s re-seed cap and fall back, and the bias of the re-seeded FTLE (each of (e1) and (e2)) against a reference.
+  The reference is the shadow marched with its terminal disabled (`CollisionRadius::none()`, which is option (d) and
+  leaves the sample's own march unchanged, the sample never having collided); it can itself blow up on exactly these
+  samples, so the share of selected samples whose reference goes non-finite is counted and reported on its own, and
+  those samples are left out of the bias; and the reference is accepted on the rest only where it has converged, its
+  `λ` unchanged, within the tolerance REQ-INT-076 (the calibration of `‖δ₀‖` and `n_renorm`) sets, when `‖δ₀‖` is
+  halved and `n_renorm` doubled, as in dd test 10, the share failing that reported as well. A small bias, a small fallback
+  share and a small unreferenced share favour (e), which then keeps most samples' full-window FTLE, its fallback's
+  field still added. The owner chooses with those numbers.
+- **Applied meanwhile:** nothing is merged: PR #493 is not merged and builds nothing for this case. The physics review
+  asks for a test at a nonzero `r_coll` that drives a shadow-only collision and pins whatever is ruled.
+- **Waits:** TASK-M3-14 (the Benettin FTLE shadow).
