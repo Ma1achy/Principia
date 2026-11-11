@@ -1,0 +1,45 @@
+# TASK-M2-90 — The blend chart: the state blend, nested blends, both ends navigated, the ends exact, a signed fold indicator defined (R-926 item 3)
+
+- **Milestone:** M2
+- **Closes:** REQ-CHART-189, REQ-CHART-190
+- **Depends on:** TASK-M2-61
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** none
+- **Size:** one task: the plans give no natural split; the implementer splits before review if the diff would give more than about 500 mutants
+
+## Goal
+A blend is a chart (R-925 item 4, R-926 item 3): the state blend of two charts at a share `s`, its default path per block the shortest in each block's natural geometry (R-943), the mass block blending the logs of the mass ratios (R-936). A morph frame is a chart and every chart feature works on it, area statistics the one exception (R-944).
+
+## References
+- `decisions.md` § "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, "this pixel shows this system", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+- `decisions.md` § "R-925 — Shader features work on every chart with no refusal, by the chart's closed-form shader code where it has some and otherwise by tables the CPU builds; Chart position stays, a table search its fallback where a chart has no backwards formula; the forward direction needs no table, the CPU evaluating the chart per quad and sending the result with the quad; "morph" means the system blend, a blend is a chart, and a window turn on one map is a tilt; a morph supports time running and time is a supported chart axis; debug views of the tables are required *(amends R-116 and R-850; refines R-542)*"
+- `decisions.md` § "R-936 — RQ-760, what a state blend leaves open: the other path arms are retired as morphs and offered as maps; the mass block blends the mass coordinates, the logs of the mass ratios, "linear in masses" having been loose wording for that; no area statistics on a mid-morph frame, the two end charts keeping their own; where a blend folds there is no true copy, the backwards answer the nearest one, labelled *(closes RQ-760; refines R-926)*"
+- `decisions.md` § "R-943 — The general rule for a morph: a morph moves each pixel's system from its system on chart A to its system on chart B along a path, defined by the pairing (the same pixel on both charts), the path (by default the shortest in each block's natural geometry) and the easing (timing and nothing else); any other path is allowed if both ends are exactly the end charts, every in-between frame is a valid system and it is continuous; a path is the owner's choice, not physics *(no RQ; refines R-926)*"
+- `decisions.md` § "R-944 — The principle: every pixel of a morph frame is a valid system, so a morph frame is a chart, and every feature that works on a chart works on a morph frame: traces, contours, marks, hover, tilt, slice, save; where the design says a mid-morph frame can't do something, that is a gap to close, not a limitation to label; the one accepted exception is area statistics on a mid-morph frame *(no RQ; amends R-899 and R-902; refines R-925)*"
+- `decisions.md` § "R-933 — Starting collided: if bodies start already collided, double or triple, it is a collision at `t = 0`, and the least separation and the pair are recorded *(no RQ)*"
+- `decisions.md` § "R-850 — Chart paths: the morph is the general form, one path abstraction for every view edit, special cases run by their own code as exact specialisations, each operation tested bitwise against today and against its own path family's formula, never across families *(closes RQ-721)*"
+- `decisions.md` § "R-923 — Integrator work before charts, for now: R-917's order (charts first, then integrator, then visuals) is set aside for now, on the owner's say; only integrator tasks that don't depend on the points the owner hasn't decided are taken, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; TASK-M3-14 stays stopped under R-918; no new chart task starts meanwhile *(amends R-917 in part, for now; no RQ)*"
+- `docs/design/principia_chart_composition.md` § "17.2 The mechanism"
+- `docs/design/principia_chart_composition.md` § "17.4 `s = 0` and `s = 1`"
+- `docs/design/principia_chart_composition.md` § "17.6 Per-axis and pair-map morphs"
+- `docs/design/principia_chart_composition.md` § "17.11 Honesty"
+
+## Deliverables
+- The blend chart in `crates/engine`: the state blend; a blend's end may be a blend; pan, zoom and rotate on a blend reach both ends; `s = 0` and `s = 1` selected exactly (REQ-CHART-113).
+- The blend's f64 forward map and decode, exposed to TASK-M2-99 (placement) and to `computeIC` (TASK-M8-09).
+- The signed fold indicator's definition, written into the composition design § 17.11 under physics review (REQ-CHART-190).
+- The report of the held-`E*` miss mid-morph.
+
+## Acceptance tests
+- `cargo test -p engine blend_chart` — the ends bitwise (G4; REQ-CHART-113's exact selection); a blend nests (a blend's end may be a blend); pan, zoom and rotate on a blend reach both ends; the blend's f64 forward map and decode are exposed; a fixture whose path crosses a binary-collision point of the shape sphere has the outcome a collision at `t = 0` (R-933), physics review confirming. Measurement, reported, labelled, not a gate (R-850: mid-morph frames never claim held values): the held-`E*` miss mid-morph (composition § 17.6's 0.054 median), its subject this task's own blend (the miss is the state blend's own) (REQ-CHART-189).
+- Definition: composition § 17.11 states the signed fold indicator on a blend chart; the physics reviewer approved it (REQ-CHART-190).
+
+## Notes
+- Entered 11 Nov 2026 as N5 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`) (applied per R-369: task scoping); its acceptance is the re-plan's § B.3 item 11, with the addition's § A.1 (it exposes its forward map and decode) and § B, B2 (the collision fixture). The plan documents are under `plan/charts/`; the lines above carry what they say.
+- **Entered, not released (R-923).** R-923 (integrator work before charts, for now) holds the chart tasks TASK-M2-57 to TASK-M2-85, TASK-M2-82 excepted, and allows no new chart task meanwhile. Entering this task in `plan/tasks.yaml` does not lift the hold: it is a chart task, entered held, and it is not dispatched until the owner lifts R-923's hold.
+- The † edge to TASK-M2-61 (the chart-path object) is kept (applied per R-369: task scoping): the blend is of that object's maps and windows, and its ends are selected by REQ-CHART-113, which TASK-M2-61 closes.
+- The plan's item 11 covers this task and TASK-M2-65 (paths under a lock): G8, G9 and the owner's lock-with-morphs test are TASK-M2-65's, which depends on this task.
+- The held-`E*` measurement stays here as written (11 Nov 2026, applied per R-369, a record correction): § 17.6 gives the 0.054 median as the miss of "a chart-level blend", which is the state blend; the arm that holds `E*` is one of the arms R-936 offers as maps, not morphs.
+- R-943: this task builds the default path per block; another path is allowed, not built now and not designed out. No area statistic is admitted on a mid-morph frame (R-936, R-944).
+- The re-plan's open item O5 is this task's implementer's: the lifted-blend check, the jump between neighbouring pixels at mid-morph, lifted against per-pixel shortest arc (prototype: 3.14 rad against 0.002, a prototype figure and no threshold). O4 and O6 read the folded share by REQ-CHART-190's indicator.

@@ -433,7 +433,7 @@
   milestone: M2
 - id: REQ-DEC-021
   area: DEC
-  statement: "Seed selection must take, among the seeds with ‖w⁽²⁾‖²_m > ε_w, the one with the largest ‖w⁽²⁾‖_m, breaking ties by seed order ((ρ,0), (0,λ), (Jρ,0), (0,Jλ)), and must emit DEGENERATE only when no seed qualifies."
+  statement: "The seed of the deterministic momentum construction must be the uniform expansion `w = r/√I` on every chart that uses the construction, the invariant charts and Burrau's included, `NO_QUALIFYING_SEED` unreachable for `I > 0` (R-934); R-82's rule must stay as a named legacy option with its seam declared: among the seeds with ‖w⁽²⁾‖²_m > ε_w, the one with the largest ‖w⁽²⁾‖_m, breaking ties by seed order ((ρ,0), (0,λ), (Jρ,0), (0,Jλ)), emitting DEGENERATE only when no seed qualifies."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 3.4 Momentum
@@ -447,14 +447,17 @@
     section: R-82 — One mirror test, one seed rule *(closes RQ-33)*
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-934 — RQ-764, the momentum seed: option (a), the expansion seed `w = r/√I` takes the place of the largest-norm rule of R-82 everywhere, the invariant charts and Burrau's included; the seam is not physics; every image it changes is a recorded conversion, updated under R-931; R-82's rule is kept as a named option with its seam declared *(closes RQ-764; amends R-82)*"
   verify:
     method: unit test
-    detail: "a fixture where several seeds qualify selects the largest-norm one, not the first; an exact-tie fixture selects the earlier seed; forcing the primary seed to degenerate (ρ = 0) selects a fallback, not DEGENERATE; DEGENERATE fires only where no seed has ‖w⁽²⁾‖²_m > ε_w"
+    detail: "cargo test -p kernel seed_selection: under the seed in force the construction takes `w = r/√I` on every chart that uses it, `NO_QUALIFYING_SEED` unreachable for `I > 0`; under the named legacy option (R-82's rule) a fixture where several seeds qualify selects the largest-norm one, not the first; an exact-tie fixture selects the earlier seed; forcing the primary seed to degenerate (ρ = 0) selects a fallback, not DEGENERATE; DEGENERATE fires only where no seed has ‖w⁽²⁾‖²_m > ε_w"
   rulings:
   - R-72
   - R-82
+  - R-934
   milestone: M2
-  note: "The DEGENERATE reason this emits: REQ-DEC-038 (definition)."
+  note: "The DEGENERATE reason this emits: REQ-DEC-038 (definition). *11 Nov 2026:* brought into line with R-934 (RQ-764 (a): the seed `w = r/√I` everywhere, R-82's rule the named legacy option) and moved from TASK-M2-09, which is built, to TASK-M2-93 (the seed conversion), the task that builds the new behaviour (the addition § F.5). *Was (statement, the clause):* \"Seed selection must take, among the seeds with ‖w⁽²⁾‖²_m > ε_w, the one with the largest ‖w⁽²⁾‖_m, breaking ties by seed order ((ρ,0), (0,λ), (Jρ,0), (0,Jλ)), and must emit DEGENERATE only when no seed qualifies.\" *Was (verify, the clause):* \"a fixture where several seeds qualify selects the largest-norm one, not the first; an exact-tie fixture selects the earlier seed;\""
 - id: REQ-DEC-022
   area: DEC
   statement: "An invariant-momentum pixel with K* < L_z²/2I must be tagged as infeasible (terminal, labelled), exactly on that inequality, and never dropped or NaN."
@@ -1091,6 +1094,94 @@
   - R-898
   milestone: M2
   note: "Added by R-865 (8 Nov 2026). Closed by TASK-M2-57. Waits on RQ-750: which link (migrate the stored z, another coordinate for the lower half, or a periodic z_β) is the owner's choice; this definition is written to their answer, never chosen by the task. R-898 (8 Nov 2026): RQ-750 ruled (a) + (c), not (b). *Was (statement, the clause):* \"which replaces `β = π·σ(z_β)` with `β ∈ [0, π]` (R-865),\" and \"how a `β ∈ [0, π]` start keeps its bits,\"; *was (verify, the clause):* \"why a β in [0, π] start keeps its bits,\"."
+- id: REQ-DEC-057
+  area: DEC
+  statement: "The first slice must put the kernel's latent chart (`crates/kernel/src/chart/latent.rs`), the shape sphere's exponential map (`chart/shape_sphere.rs`) and the `(L_z, E)` chart (`chart/energy.rs`) through the route R-926 rules (the CPU's f64 evaluation at each sample, the per-quad forward table the `Ic<f64>` of each sample, each narrowed once to `Ic<f32>` and written as the record, integrated by the CPU reference at f32 for a fixed horizon), on one quad grid of 256 × 256 samples over each chart's home window and the same at zoom 2¹⁰ and 2²⁰ about an O(1) point (each latent coordinate 0.7) and about the chart's origin, with four predicates holding bit for bit, the difference from today's f32 decode and from the GPU decode stage on Metal measured and reported, never asserted, and its outcome PASS, EXPLAINED DIVERGENCE or UNEXPLAINED by a criterion written before any run, nothing tuned to pass."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-935 — The chart re-plan's one-way questions, the plan's recommendation on each: exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (RQ-758); the lock's re-solve follows its local minimiser continuously, stops where that ends, and keeps the offered re-centre, the navigation stop and the stored-words select (RQ-759); a per-sample stop index on the integrator's grid with a new label \"reached its time\", the zoom along time floored at one boundary (RQ-761); the window's scale is R-507's and R-920's unit, time's the home time window (RQ-762); stage 1 measures each operation against its generic edit first (RQ-763); the GPU decode entries stay as test entries and R-837's cap is retired once measured (RQ-765); a large quad's forward table has one exact node per sample, R-90's trigger read on the narrowed f32 records (RQ-766); the table seeds a refinement on the chart's forward code (RQ-767); `ctx.chart.z` stays the forward value, carried in the table (RQ-768); stage 3 runs beside stages 1 and 2 (RQ-769); an in-plane pan or zoom still re-addresses the cache (RQ-770) *(closes RQ-758, RQ-759, RQ-761, RQ-762, RQ-763, RQ-765, RQ-766, RQ-767, RQ-768, RQ-769 and RQ-770; amends R-837, R-849, R-863 and R-864; refines R-90 and R-926)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine first_slice: predicates, PASS required: (1) the host-written records of a quad equal `write_ic` of the same narrowed `Ic<f32>`, word for word; (2) two runs of the slice give the same records, bitwise; (3) each narrowed component is the correctly rounded value of its f64 evaluation (within half an f32 ulp of it); (4) equal records integrate to equal `SimState`s, bitwise. Compared by bound, measured and reported, not asserted: the narrowed f64 records against today's CPU f32 decode (`sample_with::<…, f32>`) and against the GPU decode stage on Metal (`DecodeStage::run`), per component in f32 ulps at `max(1, |x|)`; the branch selects (pole and upper/lower selects, and on the `(L_z, E)` chart its feasibility and sheet selects) that differ between the two; for differing records, the integrated outcome class and `t_end_step` after `T`; and at each zoom (home, 2¹⁰, 2²⁰, where 2²⁰ is R-90's `ℓ_switch = 20`) the share of neighbouring sample pairs whose narrowed records are bitwise identical. The control arm, measured beside the comparison (R-84): the same narrowed records each moved by one f32 ulp in one component, integrated for the same `T`; the share of outcome-class and `t_end_step` flips it gives is the chaos baseline, and a flip rate between today's f32 decode and the narrowed f64 records is read against this baseline, never alone. Criterion, written before any run: PASS if predicates 1 to 4 hold, no branch select differs between today's f32 decode and the narrowed f64 records, every record where the two differ is listed with its size, and REQ-PERF-120's rate is met on all three charts; EXPLAINED DIVERGENCE if a predicate fails, or a branch select differs, with a named cause (for example the f32 `atan2`'s integer path at a pole select, R-437), or the rate falls short with a named cost; UNEXPLAINED otherwise. The Mac only; no Windows runner job"
+  rulings:
+  - R-649
+  - R-926
+  - R-935
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-86 (N1 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-DEC-058
+  area: DEC
+  statement: "Each map must declare its slope tier, exact (dual numbers), implicit or none (R-926 item 9: a map with no exact slopes is still a valid chart); a tier-1 or tier-2 map must set a flag at each kink site (the feasibility boundary, `k = 0`, `warped_k` at `d = 0`, `normalise`'s edges, the exponential map's `r = 0`, the poles, the seed switches); a tier-3 map must be accepted with no slope, each sample evaluated on the CPU."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-935 — The chart re-plan's one-way questions, the plan's recommendation on each: exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (RQ-758); the lock's re-solve follows its local minimiser continuously, stops where that ends, and keeps the offered re-centre, the navigation stop and the stored-words select (RQ-759); a per-sample stop index on the integrator's grid with a new label \"reached its time\", the zoom along time floored at one boundary (RQ-761); the window's scale is R-507's and R-920's unit, time's the home time window (RQ-762); stage 1 measures each operation against its generic edit first (RQ-763); the GPU decode entries stay as test entries and R-837's cap is retired once measured (RQ-765); a large quad's forward table has one exact node per sample, R-90's trigger read on the narrowed f32 records (RQ-766); the table seeds a refinement on the chart's forward code (RQ-767); `ctx.chart.z` stays the forward value, carried in the table (RQ-768); stage 3 runs beside stages 1 and 2 (RQ-769); an in-plane pan or zoom still re-addresses the cache (RQ-770) *(closes RQ-758, RQ-759, RQ-761, RQ-762, RQ-763, RQ-765, RQ-766, RQ-767, RQ-768, RQ-769 and RQ-770; amends R-837, R-849, R-863 and R-864; refines R-90 and R-926)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel slope_tiers: each map declares its tier; a tier-1 or tier-2 map sets the flag at each listed kink site; a tier-3 map is accepted with no slope, each sample evaluated on the CPU. Measurement M-B, for each tier-1 or tier-2 map: the dual slope against a central difference at R-633's step, `h_k = ε^{1/3}·max(1, |x_k|)` in f64 (the step REQ-DEC-034 names), at points away from the flagged sites by more than that step; criterion, written before the run: per column, agreement within the central difference's error at that step, its truncation `h_k²·|f'''|/6` plus its rounding `ε·|f|/h_k`, each of order `ε^{2/3}`, with `|f'''|` bounded from the map's own closed form and stated before the run; the control flips the sign of a column whose norm is at least 100 times that bound, and must fail"
+  rulings:
+  - R-633
+  - R-926
+  - R-935
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-88 (N3 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-DEC-059
+  area: DEC
+  statement: "A quad's forward table must be built on the CPU from `decode_only_with` on threads and narrowed once, bitwise equal to the per-sample evaluation (R-926 item 6), one exact node per sample (R-935, under RQ-766 (a))."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine forward_table_builder: a quad's table built from `decode_only_with` on threads, narrowed once, is bitwise equal to the per-sample evaluation"
+  rulings:
+  - R-926
+  - R-935
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-89 (N4 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-DEC-060
+  area: DEC
+  statement: "Every golden and reference image the seed `w = r/√I` changes must be rebuilt as a recorded conversion under R-931, the proof stated in the PR and the `BASELINES.md` row, before TASK-M2-61 records its baseline, and the seam R-82's rule draws where its choice of seed flips must be gone, shown by a measurement whose control, the same measurement under R-82's legacy rule, fails the same criterion."
+  source:
+  - file: decisions.md
+    section: "R-934 — RQ-764, the momentum seed: option (a), the expansion seed `w = r/√I` takes the place of the largest-norm rule of R-82 everywhere, the invariant charts and Burrau's included; the seam is not physics; every image it changes is a recorded conversion, updated under R-931; R-82's rule is kept as a named option with its seam declared *(closes RQ-764; amends R-82)*"
+  - file: decisions.md
+    section: "R-931 — Goldens: a golden or reference image that is provably wrong is fixed, everything that depends on it is updated, and tests run against the fixed version; an incorrect thing is never treated as correct, and a bug is never replicated for the sake of matching it *(no RQ; refines R-110)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.2 Deterministic momentum construction
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel seed_conversion: the conversion test of every invariant and mixed-energy chart image where `K* > K_min`; the legacy rule a named option. Measurement: the seam jump in the decoded velocity across `z_α = 0` on the kernel's `(L_z, E)` chart; criterion, written before any run: after the change no neighbouring pair of pixels across the line differs in decoded velocity by more than the largest neighbouring difference within 8 pixels of it on either side. Control (the measurement shown able to fire): the same measurement under R-82's legacy rule, the named option, must fail the same criterion; if it passes, the criterion cannot see the seam and the result is void. Under the legacy rule the decoded velocity is predicted to jump by `2√(K*−K_min)` at each pixel on the line (1.9545 at the chart review's one point, a prototype figure, R-649); no threshold depends on that number. With it (R-934): at the invariant charts' default pin, the equal-mass Lagrange triangle, every pixel starts a homographic orbit whose break-up is set by rounding, labelled"
+  rulings:
+  - R-82
+  - R-649
+  - R-931
+  - R-934
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-93 (N10 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-DEC-061
+  area: DEC
+  statement: "The invariant construction must take a sheet input from one source for f32 and f64, sheet 1 bitwise the baseline (the construction at this task's start) on every shipped chart, and sheet 2 the time-reversed sheet built by negating `a` in the same expression (R-937), and must expose a state's sheet, the sign of its seed component, from one source with the construction."
+  source:
+  - file: decisions.md
+    section: "R-937 — RQ-771, the invariant charts' second sheet: option (a), the spin edges unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ`, on the warped and the linear mapping, its meaning read from the seed R-934 rules; below the floor at a non-zero spin, where the lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin, everywhere there, on the linear `(L_z, E)` and `(L_z, K)` charts and on Burrau `Φ_θ,L_z`, physics review agreeing with conditions C1 to C7; REQ-ENC-030's class rule binds lookups and the lock, never a drawn extension *(closes RQ-771; amends R-471 and R-508)*"
+  - file: decisions.md
+    section: "R-934 — RQ-764, the momentum seed: option (a), the expansion seed `w = r/√I` takes the place of the largest-norm rule of R-82 everywhere, the invariant charts and Burrau's included; the seam is not physics; every image it changes is a recorded conversion, updated under R-931; R-82's rule is kept as a named option with its seam declared *(closes RQ-764; amends R-82)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.2 Deterministic momentum construction
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel invariant_second_sheet: sheet 1 bitwise the baseline on every shipped chart (control: sheet 2 as default must fail that check); on sheet 2, chart_reference § 2.2's three checks (`Σpᵢ = 0`, `L_z(p)`, `K(p)`) to machine precision; the feasibility branch identical on both sheets for the same `(L_z, K*)`; the time-reversal identity, bitwise: `a` coming from `mul_add(−L_z, L_z, 2K*)`, which is even in `L_z`, sheet 2 at `L_z` decodes to positions bitwise equal to, and momenta bitwise equal to the negation of, sheet 1 at `−L_z`, on both backends, a component whose sum is exactly zero compared by `==` (`+0` against `−0`) (control: a sheet 2 built as sheet 1 mirrored in `s`, a repeat, must fail it). Measurement M-C, criterion written before any run: on `InvariantLE` at the register's defaults, 256 × 256 samples over `s ∈ [1, 2]`, `t ∈ [0, 1]`, the share of pixels whose decoded state equals a state of the square's 256 × 256 grid, positions bitwise equal (`==` per component), a pixel matching a grid state when `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂`, the Euclidean norm over all six momentum components, `p` the grid state's (a zero `p`, the rest start, matches only an exactly equal one); PASS if only pixels on the fold columns (`s = 1, 2`) and the `t = 0` row match; the control (sheet 1 mirrored) must match 100%, else the measurement cannot see a repeat and the result is void. Precondition, checked before the run and reported: the register's default configuration has a qualifying seed, so its outcome is not `Outcome::Degenerate`; a degenerate default configuration makes the result void, not PASS"
+  rulings:
+  - R-649
+  - R-934
+  - R-937
+  - R-948
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-96 (N13 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
@@ -5526,6 +5617,402 @@
   - R-920
   milestone: M2
   note: "Added by R-919 (9 Nov 2026, F14). Closed by TASK-M2-63. R-920 (9 Nov 2026): the owner confirmed the physics reviewer's proposal on RQ-679, all six points, and RQ-679 is closed. *Was:* \"The physics reviewer's proposal is on RQ-679, for the owner to confirm on the rulings PR; until then the spans are per RQ-679, awaiting the owner's confirmation.\"; statement *was:* \"must be defined per RQ-679, awaiting the owner's confirmation: written into render_gui_spec § G2 and chart_reference § 2.1 as the owner rules it (R-72), and used by the engine's tilt into each held coordinate.\" Physics review 5834538186 of PR #465 (9 Nov 2026): the held K's rail is fixed per preset, as the proposal's § 3 had it; a slice moves the handle, not the rail. *Was (statement):* \"its handle in t, the rail drawn evenly in t, its number box in K;\"."
+- id: REQ-CHART-189
+  area: CHART
+  statement: "A blend must be a chart (R-925 item 4, R-926 item 3): the state blend of two charts, whose end may itself be a blend, on which pan, zoom and rotate reach both ends and whose ends `s = 0` and `s = 1` are exactly the end charts (REQ-CHART-113), exposing its f64 forward map and its decode to placement and to the hover integration."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-936 — RQ-760, what a state blend leaves open: the other path arms are retired as morphs and offered as maps; the mass block blends the mass coordinates, the logs of the mass ratios, \"linear in masses\" having been loose wording for that; no area statistics on a mid-morph frame, the two end charts keeping their own; where a blend folds there is no true copy, the backwards answer the nearest one, labelled *(closes RQ-760; refines R-926)*"
+  - file: decisions.md
+    section: "R-943 — The general rule for a morph: a morph moves each pixel's system from its system on chart A to its system on chart B along a path, defined by the pairing (the same pixel on both charts), the path (by default the shortest in each block's natural geometry) and the easing (timing and nothing else); any other path is allowed if both ends are exactly the end charts, every in-between frame is a valid system and it is continuous; a path is the owner's choice, not physics *(no RQ; refines R-926)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 17.2 The mechanism
+  verify:
+    method: unit test
+    detail: "cargo test -p engine blend_chart: the ends bitwise (G4; REQ-CHART-113's exact selection); a blend nests (a blend's end may be a blend); pan, zoom and rotate on a blend reach both ends; the blend's f64 forward map and decode are exposed; a fixture whose path crosses a binary-collision point of the shape sphere has the outcome a collision at `t = 0` (R-933), physics review confirming. Measurement, reported, labelled, not a gate (R-850: mid-morph frames never claim held values): the held-`E*` miss mid-morph (composition § 17.6's 0.054 median), its subject this task's own blend (the miss is the state blend's own)"
+  rulings:
+  - R-925
+  - R-926
+  - R-933
+  - R-936
+  - R-943
+  - R-944
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-90 (N5 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-CHART-190
+  area: CHART
+  kind: definition
+  statement: "A signed fold indicator on a blend chart must be defined (R-72), the Gram area factor being unsigned (composition § 17.11): for example the sign of the 2 × 2 Jacobian determinant of a fixed 2D key of the swept state composed with the chart, written into the design by the task that builds the blend chart and approved by the physics reviewer."
+  source:
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 17.11 Honesty
+  verify:
+    method: review checklist
+    detail: "composition § 17.11 states the signed fold indicator on a blend chart; the physics reviewer approved it"
+  rulings:
+  - R-72
+  - R-926
+  - R-936
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-90 (N5 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-CHART-191
+  area: CHART
+  statement: "Time must be the map's last coordinate (R-926 item 2), the playhead the window's centre along it: a tilt toward time at 90° must equal the time axis at its home extent (R-935, under RQ-762 (a): time's scale is the home time window), and a target time must map to the latest boundary at or before it in integers (R-935, under RQ-761 (a))."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-935 — The chart re-plan's one-way questions, the plan's recommendation on each: exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (RQ-758); the lock's re-solve follows its local minimiser continuously, stops where that ends, and keeps the offered re-centre, the navigation stop and the stored-words select (RQ-759); a per-sample stop index on the integrator's grid with a new label \"reached its time\", the zoom along time floored at one boundary (RQ-761); the window's scale is R-507's and R-920's unit, time's the home time window (RQ-762); stage 1 measures each operation against its generic edit first (RQ-763); the GPU decode entries stay as test entries and R-837's cap is retired once measured (RQ-765); a large quad's forward table has one exact node per sample, R-90's trigger read on the narrowed f32 records (RQ-766); the table seeds a refinement on the chart's forward code (RQ-767); `ctx.chart.z` stays the forward value, carried in the table (RQ-768); stage 3 runs beside stages 1 and 2 (RQ-769); an in-plane pan or zoom still re-addresses the cache (RQ-770) *(closes RQ-758, RQ-759, RQ-761, RQ-762, RQ-763, RQ-765, RQ-766, RQ-767, RQ-768, RQ-769 and RQ-770; amends R-837, R-849, R-863 and R-864; refines R-90 and R-926)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 18.5 Cost per column
+  verify:
+    method: unit test
+    detail: "cargo test -p engine time_coordinate: G11 (`plan/MILESTONES.md`); a tilt toward time at 90° equals the time axis at its home extent (RQ-762's check); a target time maps to the latest boundary at or before it in integers. Measurement: composition § 18.5's C1 with per-sample stops, criterion as C1 wrote it: every row bitwise against a run with that row as horizon, `bounded` excepted"
+  rulings:
+  - R-918
+  - R-926
+  - R-935
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-91 (N6 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-CHART-192
+  area: CHART
+  statement: "A chart's backwards table (bake, key, fold flag) and its search must be built on the CPU and never refuse (R-925 items 1 and 2; R-926 items 7 and 8), serving every consumer that places a running or saved state on a chart (R-945): for each of the kernel's latent chart, the shape sphere's exponential map and the `(L_z, E)` chart, a baked backwards table and search on the CPU must return every forward node to its own cell."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-925 — Shader features work on every chart with no refusal, by the chart's closed-form shader code where it has some and otherwise by tables the CPU builds; Chart position stays, a table search its fallback where a chart has no backwards formula; the forward direction needs no table, the CPU evaluating the chart per quad and sending the result with the quad; \"morph\" means the system blend, a blend is a chart, and a window turn on one map is a tilt; a morph supports time running and time is a supported chart axis; debug views of the tables are required *(amends R-116 and R-850; refines R-542)*"
+  - file: decisions.md
+    section: "R-945 — R-926 item 7's \"ONLY\" list was not exhaustive: the backwards direction serves anything that places a running or saved state on a chart, traces and marks on the CPU among them *(no RQ; refines R-926)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine backwards_table_cpu: for each kernel chart of the first slice, a baked backwards table and search on the CPU return every forward node to its own cell. Measurement: at `t = 0` and after a run, 256 × 256 samples, table 64, scan 16 (the prototype's sensible point, re-measured, not adopted): the wrong share (a worse match than an exhaustive search of the same table) and the round-trip error in cells; criterion written before any run: PASS if the wrong share at `t = 0` is at most the prototype's figure for the same kind of chart (0.00% on the plain sphere and latent charts, 0.12% on `(L_z, E)`); EXPLAINED DIVERGENCE if worse with a named cause; else UNEXPLAINED. The accuracy outside a morph is R-935's (under RQ-767 (a): the table seeds a refinement on the chart's forward code)"
+  rulings:
+  - R-649
+  - R-925
+  - R-926
+  - R-935
+  - R-945
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-92 (N7 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-CHART-193
+  area: CHART
+  statement: "The lock's solver core must be a least-squares solve over a map with a recorded branch rule, convergence reported per call and failures tagged, following its local minimiser continuously and stopping where that ends (R-926 item 4; R-935, under RQ-759 (a))."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-935 — The chart re-plan's one-way questions, the plan's recommendation on each: exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (RQ-758); the lock's re-solve follows its local minimiser continuously, stops where that ends, and keeps the offered re-centre, the navigation stop and the stored-words select (RQ-759); a per-sample stop index on the integrator's grid with a new label \"reached its time\", the zoom along time floored at one boundary (RQ-761); the window's scale is R-507's and R-920's unit, time's the home time window (RQ-762); stage 1 measures each operation against its generic edit first (RQ-763); the GPU decode entries stay as test entries and R-837's cap is retired once measured (RQ-765); a large quad's forward table has one exact node per sample, R-90's trigger read on the narrowed f32 records (RQ-766); the table seeds a refinement on the chart's forward code (RQ-767); `ctx.chart.z` stays the forward value, carried in the table (RQ-768); stage 3 runs beside stages 1 and 2 (RQ-769); an in-plane pan or zoom still re-addresses the cache (RQ-770) *(closes RQ-758, RQ-759, RQ-761, RQ-762, RQ-763, RQ-765, RQ-766, RQ-767, RQ-768, RQ-769 and RQ-770; amends R-837, R-849, R-863 and R-864; refines R-90 and R-926)*"
+  - file: docs/design/principia_chart_composition.md
+    section: "17.8 Lock: a based homotopy"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine lock_solver_core: a least-squares solve over a map with a recorded branch rule, convergence reported per call, failures tagged. Measurement: the share of re-solves along a 64-frame morph that change basin under a four-seed restart against a continued solve; criterion: reported, and RQ-759 (a)'s continuity holds if the continued solve's largest step falls to at most 0.6 of the previous each time the frame step halves, twice (G8's criterion)"
+  rulings:
+  - R-649
+  - R-926
+  - R-935
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-94 (N11 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-CHART-194
+  area: CHART
+  statement: "The contracts must state the extension kinds per chart edge (R-932): affine, periodic, pole-crossing, unfold, clamp, saturate and blank (R-407's \"bounded\", under the one name \"blank\"), declared per edge, each with its primary range and its place in R-408's classification order, and each shipped chart's per-edge table, every chart's edges (R-938), physics-reviewed under R-407's clause 3."
+  source:
+  - file: decisions.md
+    section: "R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*"
+  - file: decisions.md
+    section: "R-938 — RQ-772, which edges are built: every chart's edges now, not a first few; the time axis before zero shows the starting state now, the backward run later, reusing the one designed for the final-condition charts *(closes RQ-772)*"
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 3 — Charts
+  verify:
+    method: review checklist
+    detail: "`principia_chart_decoder_contract.md` Part 3 and `principia_chart_reference.md` § 5.4 are rewritten from the answers, each replaced line kept as *Was*: the kinds, declared per edge, each with its primary range and its place in R-408's classification order; each shipped chart's per-edge table, physics-reviewed under R-407's clause 3; REQ-ENC-030's metric named as the clamp's where the clamp projects; REQ-CHART-054 and REQ-CHART-056 in line with it; no measurement"
+  rulings:
+  - R-407
+  - R-932
+  - R-937
+  - R-938
+  - R-941
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-95 (N12 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-CHART-195
+  area: CHART
+  kind: definition
+  statement: "The invariant construction's second sheet, and the clamp below the floor with its metric `|ΔE|` at fixed `L_z`, beside REQ-ENC-030's metric and never as it, must be defined (R-72) in chart_reference § 2.2 as R-937 rules them, by the task that writes the extension kinds into the contracts, and approved by the physics reviewer."
+  source:
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-937 — RQ-771, the invariant charts' second sheet: option (a), the spin edges unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ`, on the warped and the linear mapping, its meaning read from the seed R-934 rules; below the floor at a non-zero spin, where the lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin, everywhere there, on the linear `(L_z, E)` and `(L_z, K)` charts and on Burrau `Φ_θ,L_z`, physics review agreeing with conditions C1 to C7; REQ-ENC-030's class rule binds lookups and the lock, never a drawn extension *(closes RQ-771; amends R-471 and R-508)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.2 Deterministic momentum construction
+  verify:
+    method: review checklist
+    detail: "chart_reference § 2.2 defines the second sheet (R-937: the spin edges unfold onto the time-reversed sheet, its meaning read from the seed R-934 rules) and the clamp below the floor with its metric `|ΔE|` at fixed `L_z`; the physics reviewer approved"
+  rulings:
+  - R-72
+  - R-934
+  - R-937
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-95 (N12 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-CHART-196
+  area: CHART
+  statement: "The backwards table on a chart with an unfolded edge must hold sheet 1 only, each state looked up as itself and as its time reverse (R-942, under RQ-776 (a)): on `InvariantLE` with the spin edges unfolded, every forward node of both sheets must return to its own cell or, where cells decode to equal states, to a cell whose state equals its own."
+  source:
+  - file: decisions.md
+    section: "R-942 — The chart addendum's remaining questions, the plan's recommendation on each: the per-edge choice lives in the registry row and, as an override, in the view state, a re-addressing kind off the sim key and a kind that shows new systems on it (RQ-775); the backwards table holds sheet 1 only, a state looked up as itself and as its time reverse (RQ-776); no small term is dropped from an axis's name (RQ-778); the computed axis is the primary scale on every chart and every frame, the no-ticks rule mid-morph withdrawn (RQ-780); the view's centre may cross onto an unfold sheet and stops at a clamped or saturated area (RQ-781); RQ-778 and RQ-780 read with the dual ruler *(closes RQ-775, RQ-776, RQ-778, RQ-780 and RQ-781; amends R-472; refines R-469, R-476 and R-926)*"
+  - file: decisions.md
+    section: "R-937 — RQ-771, the invariant charts' second sheet: option (a), the spin edges unfold onto the time-reversed sheet `vᵢ = vᵢ^(L) − a·wᵢ`, on the warped and the linear mapping, its meaning read from the seed R-934 rules; below the floor at a non-zero spin, where the lookup rule rejects, the drawn extension is the rigid rotation at the pixel's own spin, everywhere there, on the linear `(L_z, E)` and `(L_z, K)` charts and on Burrau `Φ_θ,L_z`, physics review agreeing with conditions C1 to C7; REQ-ENC-030's class rule binds lookups and the lock, never a drawn extension *(closes RQ-771; amends R-471 and R-508)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine backwards_table_extended: on `InvariantLE` with the spin edges unfolded, every forward node of both sheets returns to its own cell or, where cells decode to equal states, to a cell whose state equals its own by M-C's match rule (positions bitwise equal, `==` per component; `‖Δp‖₂ ≤ 10⁻¹²·‖p‖₂`); criterion written before any run: the equal-state cells are the untilted `t = 0` row (every cell the rest start), the fold columns (sheet 2 at `s = 2` equal to sheet 1 at `s = 0`, `s = −1` to `s = 1`) and the period-equivalent cells (the unfold's declared period, 2 in `s` on the warped mapping and the same period in `L_z/L_max(E)` under the linear option, so over `s ∈ [−1, 2]` a cell whose `s` differs from the sampled cell's by a whole number of that period is the same system on the same sheet); a return is correct if it is the sampled cell or a period-equivalent cell; an equal-state return outside the fold cells, the rest row and the period-equivalent cells fails; a mapping whose spin edges declare no unfold has no period, and the rule there is the sampled cell, the rest row and the fold cells alone. Measurement, criterion written before any run: TASK-M2-92's set-up (256 × 256 samples, table 64, scan 16) over `s ∈ [−1, 2]`, at `t = 0` of the run and after it: the wrong share (a worse match than an exhaustive search of the same table) and the round-trip error in cells, measured to the nearest representative, reported separately for pixels within 2 pixels of a fold and for the rest; PASS if the rest's wrong share is at most the same run's figure over the square alone; EXPLAINED DIVERGENCE if worse with a named cause; else UNEXPLAINED. The near-fold share is reported, not judged"
+  rulings:
+  - R-649
+  - R-935
+  - R-937
+  - R-942
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-97 (N15 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-CHART-197
+  area: CHART
+  statement: "Each screen edge's axis must be computed from the window `(c, Q)`, the chart or blend and its share, each coordinate's scale and the edges' kinds: its terms (coordinate, coefficient, sign), its name with no small term dropped (R-942), the value along the edge, the tick positions and values, and the marks (a wrap's seam, an unfold's fold, a clamp's constant run, a saturated stretch); in a blend it must be a dual ruler and never a summed number (R-940)."
+  source:
+  - file: decisions.md
+    section: "R-940 — RQ-777, mixed axis numbers: not the summed number; in a blend a dual ruler, one axis line with the starting chart's real ticks on one side and the target chart's on the other, each fading with its share; on a tilt or rotation within one chart, one number in window units; hover gives every true value *(closes RQ-777)*"
+  - file: decisions.md
+    section: "R-942 — The chart addendum's remaining questions, the plan's recommendation on each: the per-edge choice lives in the registry row and, as an override, in the view state, a re-addressing kind off the sim key and a kind that shows new systems on it (RQ-775); the backwards table holds sheet 1 only, a state looked up as itself and as its time reverse (RQ-776); no small term is dropped from an axis's name (RQ-778); the computed axis is the primary scale on every chart and every frame, the no-ticks rule mid-morph withdrawn (RQ-780); the view's centre may cross onto an unfold sheet and stops at a clamped or saturated area (RQ-781); RQ-778 and RQ-780 read with the dual ruler *(closes RQ-775, RQ-776, RQ-778, RQ-780 and RQ-781; amends R-472; refines R-469, R-476 and R-926)*"
+  - file: docs/design/principia_lines.md
+    section: 8b. Axes
+  verify:
+    method: unit test
+    detail: "cargo test -p engine computed_axes: seven tests, each with a control: (1) ends exact: at a morph's `s = 0` and `1`, selected by REQ-CHART-113's exact comparison, the name and every tick value bitwise the unblended chart's (control: the arithmetic blend at `s = 1`, which differs on some pairs); (2) linear coordinates: the chart's own coordinate, evaluated by the CPU evaluator at each tick's screen position, equals the tick's round value within 4 ulps of `max(1, |v|)` (control: ticks offset by one pixel); (3) warped and per-pixel quantities (`E` on `InvariantLE` under a tilt, R-471 E3): ticks placed by lines § 8b's solve, the residual within REQ-CHART-198's tolerance, and this test waits for that value (control: placement linear in `t`); (4) navigation: a pan moves each linear coordinate's tick values by the pan's component along it, a zoom by 2 halves the spacing, a rotation and a tilt under either R-474 map give the terms of `Q`'s columns; (5) marks: a seam where the value crosses a period, a fold at `L_z = ±L_max`, a clamp run of constant values, a saturated stretch only where REQ-CHART-088's tolerance or R-599's judgement puts it, never a hand-picked point (control: each mark suppressed is detected); (6) exactness on a mixed axis: a contour of the axis's own expression lies on its major ticks (lines § 12; control `h + 0.001`); (7) terms: with no drop, the named shares sum to 1. Measurement, criterion written before any run: over a 64-frame morph from the shape sphere's exponential map to `InvariantLE` and a tilt swept 0° to 90° in 1° steps under each R-474 map, the terms per edge and the longest name in characters, reported only (it informs TASK-M8-130's layout)"
+  rulings:
+  - R-649
+  - R-932
+  - R-940
+  - R-942
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-98 (N16 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-CHART-198
+  area: CHART
+  kind: calibration
+  statement: "The tolerance of the tick-placement solve for a warped or per-pixel quantity, which lines § 8b does not state, must be calibrated (R-71): proposed with its evidence by the task that builds the computed axes, checked by the physics reviewer, set by the owner and never by the implementer, its criterion written first."
+  source:
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-942 — The chart addendum's remaining questions, the plan's recommendation on each: the per-edge choice lives in the registry row and, as an override, in the view state, a re-addressing kind off the sim key and a kind that shows new systems on it (RQ-775); the backwards table holds sheet 1 only, a state looked up as itself and as its time reverse (RQ-776); no small term is dropped from an axis's name (RQ-778); the computed axis is the primary scale on every chart and every frame, the no-ticks rule mid-morph withdrawn (RQ-780); the view's centre may cross onto an unfold sheet and stops at a clamped or saturated area (RQ-781); RQ-778 and RQ-780 read with the dual ruler *(closes RQ-775, RQ-776, RQ-778, RQ-780 and RQ-781; amends R-472; refines R-469, R-476 and R-926)*"
+  - file: docs/design/principia_lines.md
+    section: 8b. Axes
+  verify:
+    method: review checklist
+    detail: "the proposal gives the tick-placement solve's tolerance and its evidence; checked by the physics reviewer; confirmed by the owner; recorded in decisions.md; never a value chosen in the PR (R-71)"
+  rulings:
+  - R-71
+  - R-649
+  - R-942
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-98 (N16 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-CHART-199
+  area: CHART
+  statement: "\"Where is this state on this chart\" must be answered by one placement function, `place(state, chart) → {point, sheet, residual, route, status}`, one Rust source in `crates/kernel` that every consumer calls, never a second implementation (R-947): two routes chosen by the chart, never by the consumer, the encode reading where the chart has a closed-form or registered numerical inverse and the nearest point everywhere else, every blend included, each refined on the CPU to the lock's tolerance (REQ-CHART-158), mid-morph included."
+  source:
+  - file: decisions.md
+    section: "R-947 — Placement, the re-plan addition's question (A): option (a), one placement function for \"where is this state on this chart\", two routes chosen by the chart, the existing reading where a chart has an inverse and the nearest point everywhere else, every blend included, refined to the lock's precision on the CPU *(no RQ; answers the re-plan addition's question (A); refines R-542 and R-926)*"
+  - file: decisions.md
+    section: "R-945 — R-926 item 7's \"ONLY\" list was not exhaustive: the backwards direction serves anything that places a running or saved state on a chart, traces and marks on the CPU among them *(no RQ; refines R-926)*"
+  - file: docs/design/principia_chart_composition.md
+    section: "10.6 Placement: one function for \"where is this state on this chart\""
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel place_routes: for each kernel chart of the first slice (the latent chart, the shape sphere's exponential map, the `(L_z, E)` chart) and each of two blend pairs (the latent chart to the shape sphere's exponential map, and the `(L_z, E)` chart to the shape sphere's exponential map) at `s = 0.25`, `0.5` and `0.75`, on a 64 × 64 pixel grid: `place` of each pixel's own decoded state returns that pixel with its residual within the lock's tolerance (REQ-CHART-158), or, where the blend folds, a set containing it; at `s = 0.0` and `1.0` the end chart's own answer, bitwise; on a chart with an inverse the encode route's answer equals the one projection (REQ-COL-134) bitwise. Controls: a `place` that returns its table seed unrefined fails the residual check on at least one blend (if none fails, the table already meets the tolerance and the control is reported void, not passed); an answer one pixel off fails. It checks only states on the chart's image, and is not read as passing on a nearest-point route until REQ-CHART-200's two definitions are written and approved"
+  rulings:
+  - R-542
+  - R-935
+  - R-945
+  - R-947
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
+- id: REQ-CHART-200
+  area: CHART
+  kind: definition
+  statement: "The two definitions placement owes must be written (R-72) into chart_composition § 10.6 by the task that builds the placement function and approved, each, by the physics reviewer: the metric \"nearest\" is measured in (§ 10.6 says where it starts, REQ-CHART-124's mass-weighted metric on the `I = 1` state; R-947 fixes that there is one function and which route a chart takes, not the metric's weights), and which nearest point answers for a state off the chart's image (as R-935 has it under RQ-767 (a))."
+  source:
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-947 — Placement, the re-plan addition's question (A): option (a), one placement function for \"where is this state on this chart\", two routes chosen by the chart, the existing reading where a chart has an inverse and the nearest point everywhere else, every blend included, refined to the lock's precision on the CPU *(no RQ; answers the re-plan addition's question (A); refines R-542 and R-926)*"
+  - file: docs/design/principia_chart_composition.md
+    section: "10.6 Placement: one function for \"where is this state on this chart\""
+  verify:
+    method: review checklist
+    detail: "chart_composition § 10.6 states the metric \"nearest\" is measured in and which nearest point answers for a state off the chart's image; the physics reviewer approved each; REQ-GUI-427 (the definitions points of interest owe) reads its nearest chart point and its off-slice metric from them"
+  rulings:
+  - R-72
+  - R-935
+  - R-947
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
+- id: REQ-CHART-201
+  area: CHART
+  statement: "P2 and P4 must be measured and reported, not gates (R-951), and shown to the owner before TASK-M8-49 and TASK-M8-58 are built: P2, the on-screen jump between an end chart's own trace (`s = 0`) and the blend's (`s = 10⁻⁶`), median and worst, in pixels per vertex; P4, at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices that land more than 8 pixels apart on the blend, set against the same share on each end chart's own trace, with the median and worst residual (how far off the surface each vertex is); no threshold and no fallback picked by anyone but the owner."
+  source:
+  - file: decisions.md
+    section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
+  - file: decisions.md
+    section: "R-947 — Placement, the re-plan addition's question (A): option (a), one placement function for \"where is this state on this chart\", two routes chosen by the chart, the existing reading where a chart has an inverse and the nearest point everywhere else, every blend included, refined to the lock's precision on the CPU *(no RQ; answers the re-plan addition's question (A); refines R-542 and R-926)*"
+  verify:
+    method: review checklist
+    detail: "the report exists with every number: P2 (median and worst jump in pixels per vertex between `s = 0` and `s = 10⁻⁶`); P4 (at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices more than 8 pixels apart on the blend, against the same share on each end chart's own trace; the median and worst residual); P3's timing (the time to place a trace of a stated length on a blend frame, on the Mac (R-186), one thread, the slowest of five warm runs, a number with no pass line); each at the picture size the owner states (REQ-CHART-202); no pass line anywhere; and it has been shown to the owner"
+  rulings:
+  - R-649
+  - R-947
+  - R-951
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
+- id: REQ-CHART-202
+  area: CHART
+  kind: definition
+  statement: "The picture size at which P2's and P4's pixels are counted, which R-951 does not give (\"more than 8 pixels apart\" and \"in pixels\" name no picture size, and the measurements run headless), must be defined (R-72) by the owner's answer to RQ-785 and written into the measurement task's file before any run; nothing is assumed meanwhile."
+  source:
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
+  verify:
+    method: review checklist
+    detail: "RQ-785 is answered by the owner and the picture size is written into this file before any run; nothing was run before it"
+  rulings:
+  - R-72
+  - R-951
+  milestone: M2
+  note: "Waits on RQ-785. Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
+- id: REQ-CHART-203
+  area: CHART
+  kind: definition
+  statement: "Two points of P2's and P4's set-up that the sources do not settle must be defined (R-72) by the owner and written into the measurement task's file before any run: what a seeded pixel contributes (the sources have \"over the trajectory fixtures … and 16 seeded pixels per chart pair\" and say no more), and whether P2 is also read at the other end, `s = 1` against `s = 1 − 10⁻⁶` (R-951 defines it at `s = 0` only, and the owner's words have \"as a morph starts or ends\"); nothing is assumed meanwhile."
+  source:
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
+  verify:
+    method: review checklist
+    detail: "the owner has stated what a seeded pixel contributes and whether P2 is also read at `s = 1` against `s = 1 − 10⁻⁶`, and both are written into this file before any run"
+  rulings:
+  - R-72
+  - R-951
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
+- id: REQ-CHART-204
+  area: CHART
+  statement: "Past an edge that declares unfold, the CPU evaluator must show the chart's second sheet (R-932, R-937): a sample at `s = 1 + δ` must equal sheet 2 at `1 − δ` bitwise, the kind applied before `Φ` in R-407's order, each registry row and shipped chart that takes it declaring it per edge."
+  source:
+  - file: decisions.md
+    section: "R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*"
+  - file: decisions.md
+    section: "R-938 — RQ-772, which edges are built: every chart's edges now, not a first few; the time axis before zero shows the starting state now, the backward run later, reusing the one designed for the final-condition charts *(closes RQ-772)*"
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine edge_unfold: unfold: samples past each edge that declares it, `s = 1 + δ` equal to sheet 2 at `1 − δ` bitwise; control: the unfold arm swapped for blank must fail; inside `[0,1]²` every chart bitwise unchanged (REQ-CHART-058's sweep still 0)"
+  rulings:
+  - R-407
+  - R-932
+  - R-937
+  - R-938
+  - R-941
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-101 (N14a of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-CHART-205
+  area: CHART
+  statement: "Past an edge that declares clamp, the CPU evaluator must show the clamped chart point (R-932), equal bitwise to the REQ-ENC-030 projection where it projects, and below the floor at a non-zero spin the rigid rotation at the pixel's own spin (R-937), meeting the physics reviewer's conditions C1 to C7 as R-937 records them."
+  source:
+  - file: decisions.md
+    section: "R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*"
+  - file: decisions.md
+    section: "R-938 — RQ-772, which edges are built: every chart's edges now, not a first few; the time axis before zero shows the starting state now, the backward run later, reusing the one designed for the final-condition charts *(closes RQ-772)*"
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine edge_clamp: clamp: equal bitwise to the REQ-ENC-030 projection where it projects (every pixel of the warped energy charts; under the linear option and on `Φ_θ,L_z`, the pixels with `K* > 0`, or `K* < 0` with `L_z = 0`), to R-937's ruled rule on the rest (`K* ≤ 0` with `L_z ≠ 0`: the rigid rotation at the pixel's own spin), and to the clamped chart point elsewhere; control: the clamp arm swapped for blank must fail. R-937's conditions, the physics reviewer's: C1 the clamp arm selects `a = 0` directly, takes no sheet input, and its momenta are bitwise the existing infeasible arm's at f32 and f64 (controls that must fail: a rest-start clamp, and a fixed-`E` horizontal clamp); C2 chart_reference § 2.2's three checks to machine precision on clamped pixels; C3 the `L_z = 0` column decodes to `p = 0`, equal to REQ-ENC-030's apex projection, and the decoded `sign(L_z)` matches the pixel's own through REQ-ENC-036's zero band; C4 membership decided on the computed `K*`'s sign together with the existing exact test, one branch per input at each precision and on each backend; C5 under a tilt that moves the shape a clamped pixel equals the construction at its own configuration (control: the window centre's configuration fails); C6 the Inspector and hover show the drawn system's own `E' = U + L_z²/2I` and its class with a \"clamped to the floor\" flag, the debug view shows the clamp kind, clamped pixels stay out of `energy::count`, and the test output reports the share of clamped pixels with `E' ≥ 0`; C7 a click or re-centre on a clamped pixel never locks the drawn `E ≥ 0` system while showing the row's `E < 0`, and the lock is refused there (R-942, under RQ-781 (a)). The seam along `E = U` is shown in the debug kind map; no pixel is averaged across sheets; a pixel whose `L_z²` has no finite float at the chart's precision stays not a system; inside `[0,1]²` every chart bitwise unchanged (REQ-CHART-058's sweep still 0)"
+  rulings:
+  - R-407
+  - R-932
+  - R-937
+  - R-938
+  - R-941
+  - R-942
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-102 (N14b of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-CHART-206
+  area: CHART
+  statement: "Past an edge that declares saturate, the CPU evaluator must show a system that is monotone in the coordinate and inside its declared band (R-932); the mass simplex must saturate, like the latent mass plane (R-941), and under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` must saturate in place of drawing as not a system (R-932)."
+  source:
+  - file: decisions.md
+    section: "R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*"
+  - file: decisions.md
+    section: "R-938 — RQ-772, which edges are built: every chart's edges now, not a first few; the time axis before zero shows the starting state now, the backward run later, reusing the one designed for the final-condition charts *(closes RQ-772)*"
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine edge_saturate: saturate: samples past each edge that declares it are monotone and inside its declared band; the mass simplex saturates (R-941); under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` (R-597, REQ-CHART-087) saturates; control: the saturate arm swapped for blank must fail; inside `[0,1]²` every chart bitwise unchanged (REQ-CHART-058's sweep still 0)"
+  rulings:
+  - R-407
+  - R-932
+  - R-938
+  - R-941
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-103 (N14c of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-CHART-207
+  area: CHART
+  statement: "Past an edge whose coordinate repeats, the CPU evaluator must wrap (R-932): on a periodic edge `s` and `s + 1` must be equal bitwise, and a pole-crossing edge must behave as today."
+  source:
+  - file: decisions.md
+    section: "R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*"
+  - file: decisions.md
+    section: "R-938 — RQ-772, which edges are built: every chart's edges now, not a first few; the time axis before zero shows the starting state now, the backward run later, reusing the one designed for the final-condition charts *(closes RQ-772)*"
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine edge_wrap: periodic: `s` and `s + 1` equal bitwise; pole-crossing as today; control: the periodic arm swapped for blank must fail; inside `[0,1]²` every chart bitwise unchanged (REQ-CHART-058's sweep still 0)"
+  rulings:
+  - R-407
+  - R-932
+  - R-938
+  - R-941
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-104 (N14d of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-CHART-208
+  area: CHART
+  statement: "`energy::count` must count an unfold sheet, must not count a clamped pixel or a blank pixel, and must count a saturated pixel only where its system isn't shown inside the square (R-932); no edit may leave the view's centre on a clamped or saturated pixel, and a pan across a fold must land on sheet 2 with `validate` passing (R-942, under RQ-781 (a)); the view state must be able to override an edge's kind, and switching a re-addressing kind must request no new quad (R-942, under RQ-775 (a))."
+  source:
+  - file: decisions.md
+    section: "R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*"
+  - file: decisions.md
+    section: "R-942 — The chart addendum's remaining questions, the plan's recommendation on each: the per-edge choice lives in the registry row and, as an override, in the view state, a re-addressing kind off the sim key and a kind that shows new systems on it (RQ-775); the backwards table holds sheet 1 only, a state looked up as itself and as its time reverse (RQ-776); no small term is dropped from an axis's name (RQ-778); the computed axis is the primary scale on every chart and every frame, the no-ticks rule mid-morph withdrawn (RQ-780); the view's centre may cross onto an unfold sheet and stops at a clamped or saturated area (RQ-781); RQ-778 and RQ-780 read with the dual ruler *(closes RQ-775, RQ-776, RQ-778, RQ-780 and RQ-781; amends R-472; refines R-469, R-476 and R-926)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine edge_kinds_count_nav_key: `energy::count` extended per R-932; the navigation stop (TASK-M2-38's fuzz extended: no edit leaves the centre on a clamped or saturated pixel; a pan across the fold lands on sheet 2 with `validate` passing); the view state's override, and the sim key (switching a re-addressing kind requests no new quad); blank as today, with its own two controls, each of which must fail: its arm swapped for clamp (a pixel past a blank edge drawn as a system), and a blank pixel counted by `energy::count`; the debug view's per-pixel kind; inside `[0,1]²` every chart bitwise unchanged (REQ-CHART-058's sweep still 0)"
+  rulings:
+  - R-469
+  - R-932
+  - R-938
+  - R-942
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-105 (N14e of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -6871,6 +7358,7 @@
     detail: "no IC buffer exists; per-frame CPU work is a uniform write and dispatch"
   rulings: []
   milestone: M4
+  retired: "R-926 item 5: the integrator's entry reads records the CPU wrote and never decodes; replaced by REQ-INT-115 (the record contract), which TASK-M2-87 closes (the chart re-plan § A.2, DROP)"
 - id: REQ-INT-071
   area: INT
   statement: "Kernel loops over a small fixed iteration count (such as the three body pairs) must use constant indices or unrolled pairs, never runtime-indexed arrays that inject implicit bounds-check exits."
@@ -7748,6 +8236,24 @@
   - R-927
   milestone: M3
   note: "R-927 (10 Nov 2026, RQ-756 (2)(a)): \"provided the gate threshold is re-measured\" under the reference code, the Rust driver. Closed by TASK-M3-68. RQ-756 stays open on (5) 6, the predictive limit's `v_rel`: the proposal states whether that limit bound any step of the run."
+- id: REQ-INT-115
+  area: INT
+  statement: "The integrator's entry must read records the CPU wrote and must never decode (R-926 items 5 and 6): the record contract must give the record as REQ-DEC-005's `(m, r, p)`, its descriptor and tag words, a branch word and the stop index of RQ-761 (R-935, a per-sample stop index), with `SimState` a separate buffer (REQ-SCHED-012)."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-935 — The chart re-plan's one-way questions, the plan's recommendation on each: exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (RQ-758); the lock's re-solve follows its local minimiser continuously, stops where that ends, and keeps the offered re-centre, the navigation stop and the stored-words select (RQ-759); a per-sample stop index on the integrator's grid with a new label \"reached its time\", the zoom along time floored at one boundary (RQ-761); the window's scale is R-507's and R-920's unit, time's the home time window (RQ-762); stage 1 measures each operation against its generic edit first (RQ-763); the GPU decode entries stay as test entries and R-837's cap is retired once measured (RQ-765); a large quad's forward table has one exact node per sample, R-90's trigger read on the narrowed f32 records (RQ-766); the table seeds a refinement on the chart's forward code (RQ-767); `ctx.chart.z` stays the forward value, carried in the table (RQ-768); stage 3 runs beside stages 1 and 2 (RQ-769); an in-plane pan or zoom still re-addresses the cache (RQ-770) *(closes RQ-758, RQ-759, RQ-761, RQ-762, RQ-763, RQ-765, RQ-766, RQ-767, RQ-768, RQ-769 and RQ-770; amends R-837, R-849, R-863 and R-864; refines R-90 and R-926)*"
+  - file: docs/design/principia_core_design.md
+    section: 3. Kernel eats chart params, decodes in-kernel
+  verify:
+    method: review checklist
+    detail: "the contracts state the record and table contract: the record's content (REQ-DEC-005's `(m, r, p)`, the descriptor and tag words, a branch word, the stop index of RQ-761), `SimState` a separate buffer (REQ-SCHED-012), each replaced line kept as *Was*; no measurement"
+  rulings:
+  - R-926
+  - R-935
+  milestone: M2
+  note: "Replaces REQ-INT-070 (decode in the kernel, never an IC buffer), reversed by R-926 item 5 and retired (the re-plan § A.2). Added 11 Nov 2026 with TASK-M2-87 (N2 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -16235,6 +16741,45 @@
   rq:
   - RQ-714
   note: "Split from REQ-RENDER-082 by R-914 (9 Nov 2026, RQ-752 (a)): region D's GPU reference moves from TASK-M4-06 into TASK-M4-34, the edge from TASK-M4-06 to TASK-M4-34 dropped."
+- id: REQ-RENDER-124
+  area: RENDER
+  statement: "Five table debug views must exist (R-925 item 6; R-926 item 10): the forward table by block, the forward-table check, the backwards table over its key, the route, and the distance off the chart."
+  source:
+  - file: decisions.md
+    section: "R-925 — Shader features work on every chart with no refusal, by the chart's closed-form shader code where it has some and otherwise by tables the CPU builds; Chart position stays, a table search its fallback where a chart has no backwards formula; the forward direction needs no table, the CPU evaluating the chart per quad and sending the result with the quad; \"morph\" means the system blend, a blend is a chart, and a window turn on one map is a tilt; a morph supports time running and time is a supported chart axis; debug views of the tables are required *(amends R-116 and R-850; refines R-542)*"
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render table_debug_views: for each of the five views (the forward table by block, the forward-table check, the backwards table over its key, the route, the distance off the chart), a test that renders a known table and reads back its colours, with a control (a table off by one node) that fails"
+  rulings:
+  - R-917
+  - R-925
+  - R-926
+  milestone: M7
+  note: "Added 11 Nov 2026 with TASK-M7-73 (N8 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-RENDER-125
+  area: RENDER
+  statement: "Chart position and the presets must work on a chart with no closed-form shader code by the fragment's table route, the GPU side of the backwards table, never a refusal (R-925 items 1 and 2; R-926 items 7 and 8), and the route must be measured against the placement function on the CPU (R-947)."
+  source:
+  - file: decisions.md
+    section: "R-925 — Shader features work on every chart with no refusal, by the chart's closed-form shader code where it has some and otherwise by tables the CPU builds; Chart position stays, a table search its fallback where a chart has no backwards formula; the forward direction needs no table, the CPU evaluating the chart per quad and sending the result with the quad; \"morph\" means the system blend, a blend is a chart, and a window turn on one map is a tilt; a morph supports time running and time is a supported chart axis; debug views of the tables are required *(amends R-116 and R-850; refines R-542)*"
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-947 — Placement, the re-plan addition's question (A): option (a), one placement function for \"where is this state on this chart\", two routes chosen by the chart, the existing reading where a chart has an inverse and the nearest point everywhere else, every blend included, refined to the lock's precision on the CPU *(no RQ; answers the re-plan addition's question (A); refines R-542 and R-926)*"
+  - file: docs/design/principia_chart_composition.md
+    section: "10.6 Placement: one function for \"where is this state on this chart\""
+  verify:
+    method: unit test
+    detail: "cargo test -p render fragment_table_route: on a chart with no closed-form shader code, Chart position and the presets read the backwards table in the fragment and nothing is refused; the route's answer is measured against `place` on the CPU (REQ-CHART-199) and the difference reported. The sources give no bound for that difference (R-926 item 7: approximate is acceptable during a morph, which binds this route only): none is asserted and none is chosen here"
+  rulings:
+  - R-925
+  - R-926
+  - R-945
+  - R-947
+  milestone: M7
+  note: "Added 11 Nov 2026 with TASK-M7-74 (N9 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -27295,6 +27840,43 @@
   - R-919
   milestone: M8
   note: "Split by R-916 and R-919 (9 Nov 2026) from REQ-CHART-156, its D19 and D23 arms. Closed by TASK-M8-129."
+- id: REQ-GUI-432
+  area: GUI
+  statement: "The figure must draw the computed axes (REQ-CHART-197): the line system's primary scale on each side must be the computed axis, on every chart and frame, a morph frame included (R-942, R-944), a mixed name drawn as the computed axis gives it, in a blend the dual ruler (R-940), with a taller tick at a seam and at a fold, constant numbers on a clamp run, a thicker axis line on a saturated stretch, each term's marks fainter by its coefficient, every length in base px, and no domain words on any axis."
+  source:
+  - file: decisions.md
+    section: "R-940 — RQ-777, mixed axis numbers: not the summed number; in a blend a dual ruler, one axis line with the starting chart's real ticks on one side and the target chart's on the other, each fading with its share; on a tilt or rotation within one chart, one number in window units; hover gives every true value *(closes RQ-777)*"
+  - file: decisions.md
+    section: "R-942 — The chart addendum's remaining questions, the plan's recommendation on each: the per-edge choice lives in the registry row and, as an override, in the view state, a re-addressing kind off the sim key and a kind that shows new systems on it (RQ-775); the backwards table holds sheet 1 only, a state looked up as itself and as its time reverse (RQ-776); no small term is dropped from an axis's name (RQ-778); the computed axis is the primary scale on every chart and every frame, the no-ticks rule mid-morph withdrawn (RQ-780); the view's centre may cross onto an unfold sheet and stops at a clamped or saturated area (RQ-781); RQ-778 and RQ-780 read with the dual ruler *(closes RQ-775, RQ-776, RQ-778, RQ-780 and RQ-781; amends R-472; refines R-469, R-476 and R-926)*"
+  - file: docs/design/principia_lines.md
+    section: 8b. Axes
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui computed_axes_drawn: the line system's primary scale on each side is the computed axis; a mixed name drawn as it gives it; a taller tick at a seam and at a fold, constant numbers on a clamp run, a thicker axis line on a saturated stretch, each term's marks fainter by its coefficient, every length in base px (R-583); the Ends only preset reads the computed axis; no domain words on any axis; in a blend the dual ruler, a `gauge` end's paper scale on its own side fading with its share. Screenshot tests, each with a control: the latent chart at home, at ×1000, at a 30° rotation, at a 40° tilt with a rotation; `InvariantLE` with its spin edges unfolded; a morph paused part-way; a long mixed name never overlaps the Home button's rect (R-466; control: the name drawn untruncated does). No measurement"
+  rulings:
+  - R-466
+  - R-940
+  - R-942
+  - R-944
+  milestone: M8
+  note: "Added 11 Nov 2026 with TASK-M8-130 (N17 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
+- id: REQ-GUI-433
+  area: GUI
+  statement: "An Overlays › Chart toggle, off by default, must mark exactly the pixels the edge kinds class clamped or saturated, drawn over the field as R-470's forbidden-region overlay is (R-939)."
+  source:
+  - file: decisions.md
+    section: "R-939 — RQ-774, marking clamped and saturated areas: a toggle, off by default *(closes RQ-774)*"
+  - file: decisions.md
+    section: "R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*"
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui mark_clamped_saturated: an Overlays › Chart toggle, off by default, dimming or hatching exactly the pixels TASK-M2-102, TASK-M2-103 and TASK-M2-105 class clamped or saturated, drawn over the field as R-470's forbidden-region overlay is; control: a toggle that also dims a system pixel inside the square fails; the dim and the hatch shown to the owner as a screenshot pair, their choice recorded. No measurement"
+  rulings:
+  - R-470
+  - R-932
+  - R-939
+  milestone: M8
+  note: "Added 11 Nov 2026 with TASK-M8-131 (N18 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`)), which closes it."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -42289,6 +42871,61 @@
   - R-826
   milestone: M8
   note: "Closed by TASK-M8-121; TASK-M8-86, which built the panel, has merged."
+- id: REQ-PERF-120
+  area: PERF
+  statement: "The first slice's CPU evaluation must be timed on the human's Mac on 1920 × 1080 samples on each of its three charts, one thread, five warm runs, every run's rate reported, and read on the slowest run against 8.1·10⁶ samples a second (M-A's in-motion figure), the criterion written before any run and never changed after it."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench first_slice: on the Mac (R-186), 1920 × 1080 samples per chart, one thread, five warm runs, every run's rate reported; the slice's PASS needs the slowest of the five to reach 8.1·10⁶ samples a second on all three charts; a shortfall is reported with its named cost (EXPLAINED DIVERGENCE) or as UNEXPLAINED, and nothing is tuned to pass"
+  rulings:
+  - R-186
+  - R-649
+  - R-926
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-86 (N1 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-PERF-121
+  area: PERF
+  statement: "The forward-table builder's rate (measurement M-A) must be measured on the human's Mac on each chart of the first slice, 1920 × 1080 samples per chart, 5 warm runs, every run's rate reported with their median and the slowest, on one thread against 8.1·10⁶ samples a second (composition § 17.12's in-motion coarse cover, 32,400 samples in 4 ms) and on all cores against 4.97·10⁸ a second (the whole screen at High, N = 16, E = 3, 16.7 ms), each criterion written before any run, nothing tuned to pass and no criterion changed after the run."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+  - file: docs/design/principia_chart_composition.md
+    section: 17.12 Performance
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench forward_table: on the Mac, 1920 × 1080 samples per chart, 5 warm runs, every run's rate reported with their median and the slowest. One thread: PASS if the slowest of the 5 runs reaches 8.1·10⁶ samples a second on every chart of the first slice, never read off the median alone. All cores, the whole-screen criterion: PASS if the slowest of the 5 all-core runs reaches 4.97·10⁸ samples a second on every chart; otherwise SHORT, reported with every run's rate and the factor short per chart"
+  rulings:
+  - R-186
+  - R-649
+  - R-926
+  - R-935
+  milestone: M2
+  note: "Added 11 Nov 2026 with TASK-M2-89 (N4 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+- id: REQ-PERF-122
+  area: PERF
+  statement: "The per-sample cost of the fragment's backwards pass must be measured on Metal at 512 × 512 on the human's Mac and reported against the 16.7 ms frame budget, the criterion written before any run."
+  source:
+  - file: decisions.md
+    section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
+  - file: decisions.md
+    section: "R-186 — GitHub-hosted runners first; no self-hosted runner *(amends R-110, R-169, R-174)*"
+  verify:
+    method: benchmark
+    detail: "cargo xtask bench backwards_pass: the per-sample cost of the backwards pass on Metal at 512 × 512, reported against the 16.7 ms frame budget; PASS if the pass takes at most a quarter of it"
+  rulings:
+  - R-186
+  - R-649
+  - R-925
+  - R-926
+  milestone: M7
+  note: "Added 11 Nov 2026 with TASK-M7-74 (N9 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."

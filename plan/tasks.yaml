@@ -714,7 +714,7 @@
   title: "Invariant-momentum construction: rigid rotation, the seed family and feasibility"
   depends_on: [TASK-M2-03, TASK-M2-06]
   needs: [REQ-PAY-014, REQ-PAY-004]
-  requirements: [REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-040, REQ-DEC-046]
+  requirements: [REQ-DEC-020, REQ-DEC-022, REQ-DEC-040, REQ-DEC-046]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10, PIT-9]
 - id: TASK-M2-10
@@ -1293,6 +1293,166 @@
   requirements: [REQ-CHART-151, REQ-CHART-162]
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M2-86
+  milestone: M2
+  title: "The first slice: one real chart through CPU f64, the per-quad table, records and the integrator, against today's decode (R-926)"
+  depends_on: []  # N1, the re-plan § C
+  needs: []
+  requirements: [REQ-DEC-057, REQ-PERF-120]
+  reviewers: [code, qa, physics, perf]
+  pitfalls: []
+- id: TASK-M2-87
+  milestone: M2
+  title: "The CPU-to-GPU record and table contract (R-926 items 5 and 6)"
+  depends_on: [TASK-M2-58]  # N2, the re-plan § B.2 item 5
+  needs: []
+  requirements: [REQ-INT-115]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-88
+  milestone: M2
+  title: "Slopes in three tiers: exact (dual numbers), implicit or none, a flag at each kink site (R-926 item 9)"
+  depends_on: [TASK-M2-66, TASK-M2-67]  # N3, the re-plan § B.4 item 13
+  needs: []
+  requirements: [REQ-DEC-058]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-89
+  milestone: M2
+  title: "The per-quad forward-table builder on the CPU, and measurement M-A (R-926 item 6)"
+  depends_on: [TASK-M2-86]  # N4, the re-plan § B.4 item 14
+  needs: []
+  requirements: [REQ-DEC-059, REQ-PERF-121]
+  reviewers: [code, qa, physics, perf]
+  pitfalls: []
+- id: TASK-M2-90
+  milestone: M2
+  title: "The blend chart: the state blend, nested blends, both ends navigated, the ends exact, a signed fold indicator defined (R-926 item 3)"
+  depends_on: [TASK-M2-61]  # N5, the re-plan § B.3 item 11
+  needs: []
+  requirements: [REQ-CHART-189, REQ-CHART-190]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-91
+  milestone: M2
+  title: "Time as the last coordinate: the map's time coordinate, the playhead the window's centre, a target time to an integer index (R-926 item 2)"
+  depends_on: [TASK-M2-82, TASK-M2-61]  # N6, the re-plan § B.5 item 19
+  needs: []
+  requirements: [REQ-CHART-191]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-92
+  milestone: M2
+  title: "The backwards table on the CPU: bake, key, fold flag, search (R-926 item 7)"
+  depends_on: [TASK-M2-86, TASK-M2-89, TASK-M2-101, TASK-M2-102, TASK-M2-103, TASK-M2-104]  # N7, the re-plan § B.4 item 16
+  needs: []
+  requirements: [REQ-CHART-192]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-93
+  milestone: M2
+  title: "The seed conversion: `w = r/√I` everywhere, every changed golden and reference image a recorded conversion (R-934, R-931)"
+  depends_on: []  # N10, the re-plan § B.1 item 4
+  needs: []
+  requirements: [REQ-DEC-021, REQ-DEC-060]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-94
+  milestone: M2
+  title: "The lock's solver core, from TASK-M2-73 (R-926 item 4)"
+  depends_on: [TASK-M2-61]  # N11, the re-plan § B.3 item 10
+  needs: []
+  requirements: [REQ-CHART-193]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-95
+  milestone: M2
+  title: "The extension kinds in the contracts: the kinds per edge, each shipped chart's per-edge table, the second sheet and the clamp's metric defined (R-932, R-937, R-938)"
+  depends_on: [TASK-M2-58]  # N12, the addendum § C item 1
+  needs: []
+  requirements: [REQ-CHART-194, REQ-CHART-195]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-96
+  milestone: M2
+  title: "The invariant construction's second sheet, and a state's sheet from one source with it (R-937)"
+  depends_on: [TASK-M2-95, TASK-M2-93, TASK-M2-66, TASK-M2-67]  # N13, the addendum § C item 2
+  needs: []
+  requirements: [REQ-DEC-061]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-97
+  milestone: M2
+  title: "The backwards table on an extended chart: sheet 1 only, a state looked up as itself and as its time reverse (R-942)"
+  depends_on: [TASK-M2-92, TASK-M2-96, TASK-M2-101]  # N15, the addendum § C item 4
+  needs: []
+  requirements: [REQ-CHART-196]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-98
+  milestone: M2
+  title: "Computed axes, the maths: terms, name, ticks and marks from the window; the dual ruler in a blend (R-940, R-942)"
+  depends_on: [TASK-M2-61, TASK-M2-90, TASK-M2-101, TASK-M2-102, TASK-M2-103, TASK-M2-104]  # N16, the addendum § C item 5
+  needs: []
+  requirements: [REQ-CHART-197, REQ-CHART-198]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-99
+  milestone: M2
+  title: "The one placement function, `place(state, chart) → {point, sheet, residual, route, status}`, and the two definitions it owes (R-947)"
+  depends_on: [TASK-M2-90, TASK-M2-92, TASK-M2-94, TASK-M2-96, TASK-M2-67]  # N19, the addition § A.3
+  needs: []
+  requirements: [REQ-CHART-199, REQ-CHART-200]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-100
+  milestone: M2
+  title: "The measurements P2 and P4, reported to the owner, with P3's timing (R-951)"
+  depends_on: [TASK-M2-99, TASK-M2-90, TASK-M2-82]  # N20, the addition § A.5
+  needs: []
+  requirements: [REQ-CHART-201, REQ-CHART-202, REQ-CHART-203]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-101
+  milestone: M2
+  title: "Unfold in the CPU evaluator: past a fold the chart shows its second sheet (R-932, R-937)"
+  depends_on: [TASK-M2-96, TASK-M2-66, TASK-M2-67]  # N14a, the addendum § C item 3
+  needs: []
+  requirements: [REQ-CHART-204]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-102
+  milestone: M2
+  title: "Clamp in the CPU evaluator, the clamp below the floor included (R-932, R-937)"
+  depends_on: [TASK-M2-96, TASK-M2-66, TASK-M2-67]  # N14b, the addendum § C item 3
+  needs: []
+  requirements: [REQ-CHART-205]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-103
+  milestone: M2
+  title: "Saturate in the CPU evaluator (R-932, R-941)"
+  depends_on: [TASK-M2-66, TASK-M2-67]  # N14c, the addendum § C item 3
+  needs: []
+  requirements: [REQ-CHART-206]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-104
+  milestone: M2
+  title: "Wrap in the CPU evaluator: periodic and pole-crossing edges (R-932)"
+  depends_on: [TASK-M2-66, TASK-M2-67]  # N14d, the addendum § C item 3
+  needs: []
+  requirements: [REQ-CHART-207]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M2-105
+  milestone: M2
+  title: "The edge kinds' count, navigation stop and sim key: `energy::count`, the view state's override, blank's controls (R-932, R-942)"
+  depends_on: [TASK-M2-101, TASK-M2-102, TASK-M2-103, TASK-M2-104, TASK-M2-38]  # N14e, the addendum § C item 3
+  needs: []
+  requirements: [REQ-CHART-208]
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -1696,9 +1856,9 @@
 - id: TASK-M4-05
   milestone: M4
   title: "Flat-grid compute: in-kernel decode from chart uniforms, one workgroup per quad, an in-place march"
-  depends_on: [TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66]  # R-916
+  depends_on: [TASK-M4-01, TASK-M3-06, TASK-M3-15, TASK-M2-66, TASK-M2-87]  # R-916
   needs: [REQ-SCHED-001, REQ-SYS-012, REQ-CHART-003, REQ-INT-026, REQ-PAY-025, REQ-PAY-038, REQ-PAY-037, REQ-PAY-014, REQ-SYS-003, REQ-SCHED-003, REQ-DEC-007]
-  requirements: [REQ-INT-070, REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008]
+  requirements: [REQ-PERF-012, REQ-PERF-013, REQ-SCHED-012, REQ-SYS-022, REQ-SCHED-010, REQ-SCHED-011, REQ-PERF-008]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M4-06
@@ -3145,6 +3305,22 @@
   requirements: [REQ-RENDER-121]
   reviewers: [code, qa, gui, physics]
   pitfalls: []
+- id: TASK-M7-73
+  milestone: M7
+  title: "The five table debug views (R-925 item 6, R-926 item 10)"
+  depends_on: [TASK-M2-89, TASK-M2-92, TASK-M7-74]  # N8, the re-plan § B.6 item 22
+  needs: []
+  requirements: [REQ-RENDER-124]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M7-74
+  milestone: M7
+  title: "The fragment table route: the GPU side of the backwards table, for Chart position and the presets (R-925 items 1 and 2)"
+  depends_on: [TASK-M2-92, TASK-M2-99]  # N9, the re-plan § B.6 item 22
+  needs: []
+  requirements: [REQ-RENDER-125, REQ-PERF-122]
+  reviewers: [code, qa, physics, perf]
+  pitfalls: []
 - id: TASK-M8-01
   milestone: M8
   title: "The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot"
@@ -4041,6 +4217,22 @@
   needs: []
   requirements: [REQ-GUI-431]  # R-916
   reviewers: [code, qa, physics, gui]
+  pitfalls: []
+- id: TASK-M8-130
+  milestone: M8
+  title: "The figure draws the computed axes: the dual ruler, the edge marks, mixed names (R-940, R-942)"
+  depends_on: [TASK-M2-98, TASK-M8-06, TASK-M8-50]  # N17, the addendum § C item 6
+  needs: []
+  requirements: [REQ-GUI-432]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []
+- id: TASK-M8-131
+  milestone: M8
+  title: "Marking clamped and saturated areas: a toggle, off by default (R-939)"
+  depends_on: [TASK-M2-102, TASK-M2-103, TASK-M2-105]  # N18, the addendum § C item 7
+  needs: []
+  requirements: [REQ-GUI-433]
+  reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M9-01
   milestone: M9
