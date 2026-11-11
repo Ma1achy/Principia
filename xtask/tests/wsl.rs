@@ -12,9 +12,10 @@
 //! entry, the purge forced past sudo's own guard for that command alone and the build failing unless sudo is then gone;
 //! the base and rustup are pinned by hash and checked before use, the packages come from one dated snapshot,
 //! the toolchain is `rust-toolchain.toml`'s; the image installs the Vulkan packages `ci.yml`'s lavapipe steps install,
-//! and `inside.sh` selects the backend those jobs select; registration refuses without a pinned manifest hash; proof 3 tries the
-//! host over WSL's virtual switch, at the distro's gateway and on SMB's 445, as well as over the LAN; and proof 4 runs
-//! the unprivileged check and fails unless the processes outside survive it, inside and on Windows.
+//! and `inside.sh` selects the backend those jobs select; registration refuses without a pinned manifest hash, and
+//! unregisters an import it could not verify; proof 3 tries the host over WSL's virtual switch, at the distro's gateway
+//! and on SMB's 445, as well as over the LAN; and proof 4 runs the unprivileged check and fails unless the processes
+//! outside survive it, inside and on Windows.
 
 use std::path::{Path, PathBuf};
 
@@ -819,7 +820,7 @@ fn check_register(script: &str) {
         register
             .find("$live = Get-LiveManifest")
             .is_some_and(|l| l > import)
-            && register.contains("if ($liveHash -ne $pinned) {"),
+            && register.contains("if ($liveHash -eq $pinned) {"),
         "register doesn't derive the manifest again inside the distro"
     );
     assert!(
@@ -851,6 +852,147 @@ mod unchecked_copy {
         "the copy's hash never compared",
         expected = "register imports before checking the image against the pin",
         check_register(&edited(&read(PS), "if ($copied -ne $built)", "if ($false)"))
+    );
+}
+
+/// After a successful `wsl --import`, everything up to the success line runs in a `try` whose `finally` stops and
+/// unregisters the distro unless the manifest derived inside it was the pin: a throw, a mismatch or an interrupted
+/// check leaves no unverified distro registered. No `Fail` or `exit` sits inside the `try`; the arm fails after the
+/// `finally` has run, and the success line is reached only verified.
+fn check_register_guard(script: &str) {
+    let register = arm(script, "register");
+    let import = register
+        .find("if ($LASTEXITCODE -ne 0) { Fail \"wsl --import: exit $LASTEXITCODE\" }")
+        .expect("no import check");
+    let after = &register[import..];
+    let at = |needle: &str| after.find(needle);
+    let (Some(unset), Some(try_at), Some(finally_at), Some(success)) = (
+        at("$verified = $false"),
+        at("\n        try {\n"),
+        at("\n        } finally {\n"),
+        at("\"registered ${Distro}: its manifest, derived inside it, is the pinned $pinned\""),
+    ) else {
+        panic!("the import isn't followed by a guard that unregisters on failure");
+    };
+    assert!(
+        unset < try_at && try_at < finally_at && finally_at < success,
+        "the import isn't followed by a guard that unregisters on failure"
+    );
+    let guarded = &after[try_at..finally_at];
+    assert!(
+        guarded.find("$live = Get-LiveManifest").is_some() && guarded.find("Stop-Distro").is_some(),
+        "the check of the imported distro runs outside the guard"
+    );
+    assert!(
+        guarded.contains("if ($liveHash -eq $pinned) {\n                $verified = $true\n")
+            && after.matches("$verified = $true").count() == 1,
+        "the guard counts the distro verified without the pin"
+    );
+    assert!(
+        !guarded.contains("Fail ") && !guarded.contains("exit"),
+        "the guarded check exits from inside the guard"
+    );
+    let cleanup = &after[finally_at..success];
+    let cleanup = &cleanup[..cleanup
+        .find("\n        }\n")
+        .expect("the finally block ends")];
+    assert!(
+        cleanup.contains("if (-not $verified) {")
+            && cleanup.contains("try { Stop-Distro } catch { }")
+            && cleanup.contains("& wsl.exe --unregister $Distro"),
+        "the guard doesn't stop and unregister an unverified distro"
+    );
+    let verdict = &after[finally_at..success];
+    assert!(
+        verdict.contains("\n        if (-not $verified) {\n            if ($unregistered) { Fail ")
+            && verdict.contains("\n            Fail \"${why}; wsl --unregister"),
+        "an unverified distro reaches the success line"
+    );
+}
+
+#[test]
+fn wsl_register_unregisters_a_half_done_import() {
+    check_register_guard(&read(PS));
+}
+
+negative_control!(
+    wsl_register_unregisters_a_half_done_import,
+    "the finally keeps the distro",
+    expected = "the guard doesn't stop and unregister an unverified distro",
+    check_register_guard(&edited(
+        &read(PS),
+        "$unregistered = try { & wsl.exe --unregister $Distro | Out-Null; $LASTEXITCODE -eq 0 } catch { $false }",
+        "$unregistered = $true"
+    ))
+);
+
+mod register_unguarded {
+    use super::*;
+    negative_control!(
+        wsl_register_unregisters_a_half_done_import,
+        "no guard after the import",
+        expected = "the import isn't followed by a guard that unregisters on failure",
+        check_register_guard(&edited(
+            &read(PS),
+            "\n        } finally {\n",
+            "\n        }\n        {\n"
+        ))
+    );
+}
+
+mod register_check_outside {
+    use super::*;
+    negative_control!(
+        wsl_register_unregisters_a_half_done_import,
+        "the live manifest derived before the guard",
+        expected = "the check of the imported distro runs outside the guard",
+        check_register_guard(&edited(
+            &read(PS),
+            "        try {\n            $live = Get-LiveManifest\n",
+            "        $live = Get-LiveManifest\n        try {\n"
+        ))
+    );
+}
+
+mod register_verified_unconditionally {
+    use super::*;
+    negative_control!(
+        wsl_register_unregisters_a_half_done_import,
+        "verified whatever the hash",
+        expected = "the guard counts the distro verified without the pin",
+        check_register_guard(&edited(
+            &read(PS),
+            "if ($liveHash -eq $pinned) {\n                $verified = $true\n",
+            "if ($true) {\n                $verified = $true\n"
+        ))
+    );
+}
+
+mod register_fails_inside {
+    use super::*;
+    negative_control!(
+        wsl_register_unregisters_a_half_done_import,
+        "a Fail inside the try",
+        expected = "the guarded check exits from inside the guard",
+        check_register_guard(&edited(
+            &read(PS),
+            "$why = \"inside the imported distro the manifest derives to $liveHash, not the pinned $pinned\"",
+            "Fail \"inside the imported distro the manifest derives to $liveHash, not the pinned $pinned\""
+        ))
+    );
+}
+
+mod register_success_unverified {
+    use super::*;
+    negative_control!(
+        wsl_register_unregisters_a_half_done_import,
+        "the failure verdict dropped",
+        expected = "an unverified distro reaches the success line",
+        check_register_guard(&edited(
+            &read(PS),
+            "            if ($unregistered) { Fail ",
+            "            if ($unregistered) { \"\" + "
+        ))
     );
 }
 
