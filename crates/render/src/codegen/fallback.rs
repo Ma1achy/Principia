@@ -15,6 +15,18 @@
 //! style's two greys, the NaN / Inf style's two colours, the fallback tint `#FF69FF`, the outcome palette's two sets,
 //! the Okabe–Ito palette, the canvas background, black and white), 0.193 from the nearest, Okabe–Ito's yellow
 //! `#F0E442`. `crates/render/tests/stain_graph.rs` measures the four required distances.
+//!
+//! **What the M7 gate confirms**, the proposal whole:
+//! - the colour, `#00FF00`;
+//! - the floor: the fallback is at least 0.2 in OKLab from each of the four colours it must be told from
+//!   (`MIN_DISTANCE` in `crates/render/tests/stain_graph.rs`). The floor is asked of those four only. Three reserved
+//!   colours sit under it: Okabe–Ito's yellow `#F0E442`, 0.1929 away, and two of the outcome palette's, colours the
+//!   default view fills regions with, escape body 1's yellow `#F0DE32`, 0.1960 away, and collision 1–3's green
+//!   `#2EBC4E`, 0.1976 away;
+//! - what it covers: the fallback is flat over the whole figure, every pixel, a pixel that is not a system included
+//!   (no canvas background, no hatch), in a presentation view and in View › Debug view alike, and it binds and shows
+//!   no Debug-key counts. An invalid graph is no stain, so there is no sample treatment to keep over it (§13; §G2's
+//!   debug view is defined over the active stain).
 
 use crate::present;
 
