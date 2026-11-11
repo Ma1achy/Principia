@@ -1066,7 +1066,7 @@ mod stall_shard_step_zero {
                     (timeout-minutes: 0)",
         check_step_limits(&edited(
             "mutants.yml",
-            "        timeout-minutes: 5\n        run: bounded() {",
+            "        timeout-minutes: 8\n        run: bounded() {",
             "        timeout-minutes: 0\n        run: bounded() {"
         ))
     );

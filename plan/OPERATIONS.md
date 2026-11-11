@@ -493,8 +493,10 @@ a required check is never a job skipped at job level. No job polls or waits on a
 head it supersedes: under `always()` that run's jobs ran to their end and the ones not yet started still started, and
 the new head waited behind them (applied per R-369/R-812, the CI diagnosis of 10 Nov 2026). Every job of the PR tier
 has a `timeout-minutes` (`ci.yml`'s header gives each with its measured basis), and every step that installs from apt,
-in every workflow, bounds each `apt-get` call at 120 s, tries it three times and has a step limit of its own: two
-runs had waited six hours in `apt-get update`. `xtask/tests/ci_pr_tier.rs` pins the three.
+in every workflow, bounds each `apt-get` call (`apt-get update` at 90 s, `apt-get install` at 420 s, each past the
+longest passing call of 654 measured steps), tries it three times and has a step limit of its own, 8 minutes: two
+runs had waited six hours in `apt-get update`, where a hung one now costs 5 minutes at most. `xtask/tests/ci_pr_tier.rs`
+pins the three.
 
 What a pull request leaves to a merge runs on every push to `main`: the slow tier, the in-depth GPU suites on lavapipe
 and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xtask golden --all`, `cargo xtask gate

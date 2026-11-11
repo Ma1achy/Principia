@@ -796,12 +796,25 @@ mod a_pull_request_job_without_a_measured_limit {
     );
 }
 
-/// The shell function every apt step calls `apt-get` through: each call under `timeout`, 120 s and a kill 10 s later,
-/// tried three times.
-const BOUNDED: &str = "bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 \"$@\" && return; \
-                       echo \"attempt $attempt of 3 failed or ran past 120 s, $*\"; done; return 1; }";
+/// The shell function every apt step calls `apt-get` through: each call under `timeout`, the seconds its first argument
+/// gives and a kill 10 s later, tried three times.
+const BOUNDED: &str = "bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 \"$limit\" \"$@\" && \
+                       return; echo \"attempt $attempt of 3 failed or ran past $limit s, $*\"; done; return 1; }";
 
-/// The most minutes a step that installs from apt may take.
+/// An apt step's update, through [`BOUNDED`] at 90 s: 1.5 times the longest passing update of the 654 Mesa steps
+/// measured, each under 60 s.
+const BOUNDED_UPDATE: &str = "bounded 90 apt-get update";
+
+/// The start of an apt step's install, through [`BOUNDED`] at 420 s: 1.2 times the longest passing install of those
+/// steps, 348 s (job 129595574396), and what [`APT_STEP_LIMIT`] leaves after a slow update. The packages follow it.
+const BOUNDED_INSTALL: &str = "bounded 420 apt-get install -y ";
+
+/// The end of an apt step's install: it waits up to 60 s for dpkg's lock, which a dpkg left by a call cut at its limit
+/// holds until it finishes (run 42938963594).
+const LOCK_WAIT: &str = " -oDPkg::Lock::Timeout=60";
+
+/// The most minutes a step that installs from apt may take, the diagnosis's "Mesa step max ≤ 8 min": 1.36 times the
+/// longest passing Mesa step, 354 s.
 const APT_STEP_LIMIT: u32 = 8;
 
 /// Each step of a workflow that names `apt-get` outside a comment, as (its lines to its `run:`, its script's lines).
@@ -849,6 +862,14 @@ fn package_or_option(word: &str) -> bool {
         .all(|c| c.is_ascii_alphanumeric() || "-.+".contains(c))
 }
 
+/// Whether `rest`, what follows [`BOUNDED_INSTALL`], is one package or more, options among them, and then
+/// [`LOCK_WAIT`].
+fn packages_then_lock_wait(rest: &str) -> bool {
+    rest.strip_suffix(LOCK_WAIT).is_some_and(|packages| {
+        !packages.trim().is_empty() && packages.split_whitespace().all(package_or_option)
+    })
+}
+
 /// In every workflow, a step that installs from apt has a limit of its own of at most [`APT_STEP_LIMIT`] minutes and
 /// calls `apt-get` only through [`BOUNDED`], first to update and then to install: `sudo apt-get update` alone stalled
 /// three jobs for six hours (jobs 129651506462, 129651506556, 129653679613).
@@ -871,18 +892,19 @@ fn check_apt_bounded(workflows: &[(String, String)]) {
                 .last()
                 .and_then(|l| l.strip_prefix("run: "))
                 .and_then(|l| l.strip_prefix(BOUNDED))
-                .and_then(|l| {
-                    l.strip_prefix("; bounded apt-get update && bounded apt-get install -y ")
-                })
-                .is_some_and(|packages| packages.split_whitespace().all(package_or_option))
+                .and_then(|l| l.strip_prefix("; "))
+                .and_then(|l| l.strip_prefix(BOUNDED_UPDATE))
+                .and_then(|l| l.strip_prefix(" && "))
+                .and_then(|l| l.strip_prefix(BOUNDED_INSTALL))
+                .is_some_and(packages_then_lock_wait)
                 && script.iter().all(|l| !l.contains("apt-get"));
             let block = head.last().is_some_and(|l| l == "run: |")
                 && script.len() >= 3
                 && script[0] == BOUNDED
-                && script[1] == "bounded apt-get update"
+                && script[1] == BOUNDED_UPDATE
                 && script[2]
-                    .strip_prefix("bounded apt-get install -y ")
-                    .is_some_and(|packages| packages.split_whitespace().all(package_or_option))
+                    .strip_prefix(BOUNDED_INSTALL)
+                    .is_some_and(packages_then_lock_wait)
                 && script[3..].iter().all(|l| !l.contains("apt-get"));
             assert!(
                 one_line || block,
@@ -936,7 +958,7 @@ negative_control!(
     expected = "ci.yml's step `Install Mesa (lavapipe)` calls apt-get outside `bounded`",
     check_apt_bounded(&all_workflows_edited(
         "ci.yml",
-        &format!("        run: {BOUNDED}; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers\n"),
+        &format!("        run: {BOUNDED}; {BOUNDED_UPDATE} && {BOUNDED_INSTALL}mesa-vulkan-drivers{LOCK_WAIT}\n"),
         "        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers\n",
     ))
 );
@@ -977,8 +999,50 @@ mod an_apt_call_after_the_install {
         expected = "gate.yml's step `Install Mesa (lavapipe)` calls apt-get outside `bounded`",
         check_apt_bounded(&all_workflows_edited(
             "gate.yml",
-            "bounded apt-get install -y mesa-vulkan-drivers\n",
-            "bounded apt-get install -y mesa-vulkan-drivers && sudo apt-get clean\n",
+            "mesa-vulkan-drivers -oDPkg::Lock::Timeout=60\n",
+            "mesa-vulkan-drivers -oDPkg::Lock::Timeout=60 && sudo apt-get clean\n",
+        ))
+    );
+}
+
+mod an_install_cut_before_the_longest_passing_one {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_apt_installs_are_bounded,
+        "A nightly job's Mesa install limited to 120 s, which 20 of the 654 passing steps measured ran past.",
+        expected = "nightly.yml's step `Install Mesa (lavapipe)` calls apt-get outside `bounded`",
+        check_apt_bounded(&all_workflows_edited(
+            "nightly.yml",
+            "bounded 420 apt-get install",
+            "bounded 120 apt-get install",
+        ))
+    );
+}
+
+mod an_update_under_the_install_s_limit {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_apt_installs_are_bounded,
+        "The soak's Mesa step with its update given the install's limit, a hung one then the whole of the step's 8 minutes.",
+        expected = "stand-in-soak.yml's step `Install Mesa (lavapipe)` calls apt-get outside `bounded`",
+        check_apt_bounded(&all_workflows_edited(
+            "stand-in-soak.yml",
+            "bounded 90 apt-get update",
+            "bounded 420 apt-get update",
+        ))
+    );
+}
+
+mod an_install_that_does_not_wait_for_the_lock {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_apt_installs_are_bounded,
+        "The progress banner's librsvg install with no wait for dpkg's lock.",
+        expected = "progress.yml's step `Install rsvg-convert` calls apt-get outside `bounded`",
+        check_apt_bounded(&all_workflows_edited(
+            "progress.yml",
+            "librsvg2-bin -oDPkg::Lock::Timeout=60\n",
+            "librsvg2-bin\n",
         ))
     );
 }
@@ -1003,12 +1067,13 @@ fn apt_step_run(script: &str, fail: &[u32]) -> (bool, Vec<String>) {
     (out.status.success(), calls)
 }
 
-/// An apt step's script, installing `packages`: each `apt-get` call runs under `timeout -k 10 120`; a call that fails
-/// is tried again, three times in all; a third failure fails the step there, the install not tried after a failed
-/// update.
+/// An apt step's script, installing `packages`: each `apt-get` call runs under `timeout -k 10`, the update at 90 s and
+/// the install at 420 s; a call that fails is tried again, three times in all; a third failure fails the step there,
+/// the install not tried after a failed update.
 fn check_apt_retries(script: &str, packages: &str) {
-    let update = "timeout -k 10 120 apt-get update";
-    let install = format!("timeout -k 10 120 apt-get install -y {packages}");
+    let update = "timeout -k 10 90 apt-get update";
+    let install =
+        format!("timeout -k 10 420 apt-get install -y {packages} -oDPkg::Lock::Timeout=60");
     let install = install.as_str();
     assert_eq!(
         apt_step_run(script, &[]),
@@ -1090,7 +1155,7 @@ mod an_apt_call_without_its_timeout {
         expected =
             "the Mesa step, every call passing, is not one bounded update and one bounded install",
         check_apt_retries(
-            &mesa_script().replace("sudo timeout -k 10 120 ", "sudo "),
+            &mesa_script().replace("sudo timeout -k 10 \"$limit\" ", "sudo "),
             MESA
         )
     );
@@ -1104,10 +1169,140 @@ mod an_install_after_a_failed_update {
         expected = "the Mesa step does not fail at its update's third failure",
         check_apt_retries(
             &mesa_script().replace(
-                " && bounded apt-get install",
-                " || true; bounded apt-get install"
+                " && bounded 420 apt-get install",
+                " || true; bounded 420 apt-get install"
             ),
             MESA
+        )
+    );
+}
+
+/// `script` run as a step is, with `apt-get` stood in by a program that records its arguments and, on the calls `hang`
+/// numbers, from 1, sleeps 5 s before it passes; `sudo` only runs its arguments, and `timeout` is the machine's, or,
+/// where it has none (macOS), a function that ends the command the same way, TERM at the limit and KILL after `-k`'s
+/// seconds, and returns 124. Whether the step passed, each call, and whether any stand-in was still running at the end.
+fn apt_step_run_hanging(case: &str, script: &str, hang: &[u32]) -> (bool, Vec<String>, bool) {
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("ci_pr_tier_{case}"));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).expect("a scratch directory");
+    let apt_get = dir.join("apt-get");
+    std::fs::write(
+        &apt_get,
+        "#!/bin/bash\necho \"$*\" >> \"$CALLS\"\necho $$ >> \"$CALLS.pids\"\n\
+         case \" $HANG \" in *\" $(($(wc -l < \"$CALLS\"))) \"*) exec sleep 5 ;; esac\n",
+    )
+    .expect("the stand-in is written");
+    let stand_ins = "chmod 755 \"$APT_GET\"\nsudo() { \"$@\"; }\n\
+        command -v timeout > /dev/null || timeout() { local kill_after=$2 limit=$3 status=0; shift 3; \"$@\" & \
+        local pid=$!; ( sleep \"$limit\"; kill -TERM \"$pid\"; sleep \"$kill_after\"; kill -KILL \"$pid\" ) \
+        > /dev/null 2>&1 & local watch=$!; wait \"$pid\" || status=$?; kill \"$watch\" 2> /dev/null || true; \
+        [ \"$status\" -lt 128 ] || status=124; return \"$status\"; }\n";
+    let calls = dir.join("calls");
+    let path = std::env::var("PATH").expect("a PATH");
+    let hang: Vec<String> = hang.iter().map(u32::to_string).collect();
+    let out = std::process::Command::new("bash")
+        .args(["--noprofile", "--norc", "-eo", "pipefail", "-c"])
+        .arg(format!("{stand_ins}{script}"))
+        .env("PATH", format!("{}:{path}", dir.display()))
+        .env("APT_GET", &apt_get)
+        .env("CALLS", &calls)
+        .env("HANG", hang.join(" "))
+        .output()
+        .expect("bash runs");
+    let lines = |file: PathBuf| -> Vec<String> {
+        std::fs::read_to_string(file)
+            .unwrap_or_default()
+            .lines()
+            .map(str::to_owned)
+            .collect()
+    };
+    let running = lines(dir.join("calls.pids")).iter().any(|pid| {
+        std::process::Command::new("kill")
+            .args(["-0", pid])
+            .stderr(std::process::Stdio::null())
+            .status()
+            .expect("kill runs")
+            .success()
+    });
+    (out.status.success(), lines(calls), running)
+}
+
+/// `script`, an apt step's, with each call's limit a second and its kill a second later, so that a stand-in that hangs
+/// for 5 s is past it.
+fn at_one_second(script: &str) -> String {
+    for limit in ["bounded 90 ", "bounded 420 "] {
+        assert!(
+            script.contains(limit),
+            "ci_pr_tier: the apt step has no `{limit}`: {script}"
+        );
+    }
+    script
+        .replace("-k 10 ", "-k 1 ")
+        .replace("bounded 90 ", "bounded 1 ")
+        .replace("bounded 420 ", "bounded 1 ")
+}
+
+/// An apt step's script, its limits at a second, with a call that really hangs: the call is ended at its limit and
+/// tried again, the update or the install, and the step passes; three hung updates fail the step, the install not
+/// tried; and no call is left running. `apt-get update` hung so for six hours in jobs 129651506462, 129651506556 and
+/// 129653679613.
+fn check_apt_cuts(case: &str, script: &str) {
+    let script = at_one_second(script);
+    let update = "update";
+    let install = "install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60";
+    assert_eq!(
+        apt_step_run_hanging(&format!("{case}_update"), &script, &[1]),
+        (
+            true,
+            [update, update, install].map(str::to_owned).to_vec(),
+            false
+        ),
+        "ci_pr_tier: a hung update is not ended at its limit and tried again"
+    );
+    assert_eq!(
+        apt_step_run_hanging(&format!("{case}_install"), &script, &[2]),
+        (
+            true,
+            [update, install, install].map(str::to_owned).to_vec(),
+            false
+        ),
+        "ci_pr_tier: a hung install is not ended at its limit and tried again"
+    );
+    assert_eq!(
+        apt_step_run_hanging(&format!("{case}_thrice"), &script, &[1, 2, 3]),
+        (
+            false,
+            [update, update, update].map(str::to_owned).to_vec(),
+            false
+        ),
+        "ci_pr_tier: three hung updates do not fail the step there, each ended at its limit"
+    );
+}
+
+#[test]
+fn ci_pr_tier_apt_call_that_hangs_is_cut_and_tried_again() {
+    check_apt_cuts("cuts", &mesa_script());
+}
+
+negative_control!(
+    ci_pr_tier_apt_call_that_hangs_is_cut_and_tried_again,
+    "The Mesa step's calls under no timeout, the hung update running to its own end.",
+    expected = "a hung update is not ended at its limit and tried again",
+    check_apt_cuts(
+        "cuts_control_no_timeout",
+        &mesa_script().replace("sudo timeout -k 10 \"$limit\" ", "sudo ")
+    )
+);
+
+mod a_limit_the_function_does_not_pass_on {
+    use super::*;
+    negative_control!(
+        ci_pr_tier_apt_call_that_hangs_is_cut_and_tried_again,
+        "The Mesa step's function ending every call at 120 s whatever limit it is given.",
+        expected = "a hung update is not ended at its limit and tried again",
+        check_apt_cuts(
+            "cuts_control_fixed_limit",
+            &mesa_script().replace("timeout -k 10 \"$limit\" ", "timeout -k 10 120 ")
         )
     );
 }

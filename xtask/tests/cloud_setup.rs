@@ -767,8 +767,8 @@ validation::negative_control!(
 /// and the same end as the lines of a `run: |` block whose `apt-get install` continues, after a `\`, onto a line
 /// naming one more package.
 const LAVAPIPE_LINE: &str =
-    "; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers\n";
-const LAVAPIPE_CONTINUED: &str = "\n          bounded apt-get update\n          bounded apt-get install -y \\\n            mesa-vulkan-drivers xvfb\n";
+    "; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60\n";
+const LAVAPIPE_CONTINUED: &str = "\n          bounded 90 apt-get update\n          bounded 420 apt-get install -y \\\n            mesa-vulkan-drivers xvfb\n";
 
 /// `text` with each lavapipe step's `run:` opened as a block and its install continued (`LAVAPIPE_CONTINUED`).
 fn continue_lavapipe(text: &str) -> String {

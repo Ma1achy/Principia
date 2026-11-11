@@ -84,9 +84,9 @@ jobs:
       - name: Install rsvg-convert
         timeout-minutes: 8
         run: |
-          bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }
-          bounded apt-get update
-          bounded apt-get install -y --no-install-recommends librsvg2-bin
+          bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }
+          bounded 90 apt-get update
+          bounded 420 apt-get install -y --no-install-recommends librsvg2-bin -oDPkg::Lock::Timeout=60
           fc-list : family | grep -E "Helvetica|Arial|Liberation Sans|Arimo|Nimbus Sans|DejaVu Sans" | sort -u || true
       - name: Render the PNGs
         run: |

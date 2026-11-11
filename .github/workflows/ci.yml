@@ -120,10 +120,19 @@
 # rounded up to 5 minutes, and the diagnosis's own figure: `changes` 5 (longest 0.9 min), `fmt` 5 (1.0), `clippy` 10
 # (3.5), `build` 25 (14.5), `ci` 90 (58.9), `process` 60 (38.9), `gpu-lavapipe` 25 (16.6, a run that built rust-gpu
 # with no cache), `gpu-metal` 20 (12.5, the same) and `web-skeleton` 10 (2.4).
-# Every step that installs from apt, in every workflow, calls `apt-get` through one shell function, `bounded`: each call
-# ends within 120 s (`timeout`, then a kill 10 s later) and is tried three times, and the step has a limit of 8 minutes
-# (5 in `mutants.yml`, whose steps' limits were set before). `apt-get update` is what stalled those two runs for six
-# hours, three jobs; a passing install took 12 s at the median.
+# Every step that installs from apt, in every workflow, calls `apt-get` through one shell function, `bounded`, which
+# ends a call at its limit (`timeout`, then a kill 10 s later) and tries it three times: `apt-get update` at 90 s,
+# `apt-get install` at 420 s, and the step at 8 minutes. `apt-get update` is what stalled those two runs for six
+# hours, three jobs; a hung one now costs 5 minutes at most, three attempts of 100 s, and a hung install the step's 8.
+# The basis is the 654 passing Mesa steps of the same 100 runs: 12 s at the median, 354 s the longest (job
+# 129595574396, a download at 51 kB/s), 20 of them over 120 s. The longest passing update took under 60 s (35 s in the
+# 44 steps over a minute), and its limit is 1.5 times that. The longest passing install took 348 s; 1.5 times that is
+# past the 8 minutes the diagnosis set as the step's most, so the install has the 7 minutes the step leaves after a
+# slow update, 1.2 times the longest, and the step 1.36 times its longest. None of the 654 would have been cut. An
+# install cut at 420 s leaves its partial download, which the next attempt resumes (run 42938534395). A call cut inside
+# dpkg, the last 2-3 s of an install, leaves dpkg running, in a process group of its own, to finish with the lock held,
+# so the install waits up to 60 s for that lock (`DPkg::Lock::Timeout`) where it would fail at once: three of three
+# such cuts then installed the package (run 42938963594).
 name: ci
 
 on:
@@ -411,7 +420,7 @@ jobs:
       - name: Install Mesa (lavapipe)
         if: env.RUN == 'true'
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         if: env.RUN == 'true'
         with:
@@ -539,7 +548,7 @@ jobs:
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -620,7 +629,7 @@ jobs:
       - name: Install Mesa (lavapipe)
         if: env.RUN == 'true'
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         if: env.RUN == 'true'
         with:
@@ -911,7 +920,7 @@ jobs:
       # here they run on lavapipe; metal_hosted_probe is ignored off macOS.
       - name: Install Mesa (lavapipe)
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -1015,7 +1024,7 @@ jobs:
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -1285,7 +1294,7 @@ jobs:
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -1407,7 +1416,7 @@ jobs:
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
@@ -1521,7 +1530,7 @@ jobs:
           key: rust-gpu-xtask-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
@@ -1735,7 +1744,7 @@ jobs:
           key: rust-gpu-gpu-lavapipe-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
       - name: Install Mesa (lavapipe)
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146

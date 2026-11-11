@@ -254,8 +254,8 @@ jobs:
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         if: steps.diff.outputs.rust == 'true'
-        timeout-minutes: 5
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       # Debug info: line tables only, set for the whole workflow (R-374). The baseline's full debug info filled the
       # runner: `target/` reached 110G, 75G of it the test binaries, each linking wgpu, and 22G the alias test's own
       # build, until a link in a test's child build died with SIGBUS (the linker writes its output through a memory
@@ -483,8 +483,8 @@ jobs:
         run: python3 -m pip install pyyaml
       - name: Install Mesa (lavapipe)
         if: steps.diff.outputs.rust == 'true'
-        timeout-minutes: 5
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        timeout-minutes: 8
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - name: cargo run --quiet --package xtask -- build-kernel
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 20

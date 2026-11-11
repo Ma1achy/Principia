@@ -61,7 +61,7 @@ jobs:
         uses: ./.github/actions/cargo-ci-config
       - name: Install Mesa (lavapipe)
         timeout-minutes: 8
-        run: bounded() { for attempt in 1 2 3; do sudo timeout -k 10 120 "$@" && return; echo "attempt $attempt of 3 failed or ran past 120 s, $*"; done; return 1; }; bounded apt-get update && bounded apt-get install -y mesa-vulkan-drivers
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - name: cargo xtask screenshot --all
         run: cargo xtask screenshot --all
       - name: Upload the captures
