@@ -1952,3 +1952,43 @@
   section: "R-946 — \"Windows once proven\" counts the PC's CPU-only tiers alone: the slow tier, the mutation runs and the process tests may move to the PC's per-merge run without waiting for the card, containment first and unchanged, and only once the CPU tiers repeat, three runs on one commit of `main` with the same result for every test and every hosted-Linux pass passing on all three; the PC's GPU results stay measurements until each of the four failing steps is explained, sorted by running it under lavapipe as well as on the RTX *(no RQ; refines R-909; amends R-719)*"
   reason: informative only
   note: "the Windows PC's CPU-only tiers may move to its per-merge run alone, containment first and the three-run repeat criterion met; the four failing GPU steps sorted by a lavapipe run on the PC; recorded in plan/OPERATIONS.md § \"Windows GPU results (R-719)\" and § \"The Windows runner's work (R-859)\""
+- file: decisions.md
+  section: "R-955 — RQ-784: option (a), R-598 stands; a latent pixel energy normalisation cannot reach is a validity failure, not an edge, and stays not a system with the reason in the readout; R-932's \"No blank areas\" is about edges and their extensions *(closes RQ-784; refines R-932)*"
+  reason: informative only
+  note: "RQ-784 (a): R-598 stands, a pixel energy normalisation cannot reach stays not a system; \"No blank areas\" is about edges; recorded in the chart decoder contract and the chart reference; no requirement changes"
+- file: decisions.md
+  section: "R-956 — Whether a record made before R-926's f64 decode route re-runs bit for bit is deferred to M2 *(defers RQ-783)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-957 — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-958 — GPU `sin` and `cos` near π/2 stay deferred to M4 *(defers RQ-629)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-959 — Whether the kernel takes its own f32 `sin` and `cos` stays deferred to M4 *(defers RQ-687)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-960 — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-961 — The rest of TASK-M9-01's gaps stay deferred to M9 *(defers RQ-681)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-963 — The default extension kind of each edge, the owner's check by eye, stays open, deferred to M2 *(defers RQ-779)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-964 — Whether the presentation frames become a stage after the Print graph is deferred to M7, in place of the exporter's design *(defers RQ-391; amends R-706, R-803, R-825 and R-890)*"
+  reason: informative only
+  note: "a deferral, to M7 in place of the exporter's design; no requirement changes"
+- file: decisions.md
+  section: "R-965 — RQ-738, the chart-space model's correction list: the owner's \"correct the wording as listed\"; items 2 to 11 are corrected in the model as record corrections, each with its *Was*, item 1 having been settled by R-868 *(closes RQ-738)*"
+  reason: informative only
+  note: "record corrections to docs/design/principia_chart_space_model.md, RQ-738's items 2 to 11; nothing is built from the model's wording; no requirement changes"
