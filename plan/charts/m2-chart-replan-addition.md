@@ -997,6 +997,12 @@ listed for the owner's veto):**
   their controls and point at REQ-CHART-211 for arm (3); the sentence "not read as passing until … merged" is
   gone from both, kept as a *Was*. `rq: RQ-787` is on both requirements. The N5 row above is unchanged: TASK-M2-90
   still closes REQ-CHART-189 and REQ-CHART-190.
+  *Corrected 11 Nov 2026 (the physics review 5858443185 of this PR, P11):* "its words unchanged" above was wrong. The
+  qualifier "on a chart that sets its masses directly (the edge-reaching simplex link)" covered all three arms and did
+  not move with arm (3), so REQ-CHART-211 and TASK-M2-103's line lost the chart the arm needs: a saturated end sits on the
+  band's edge, `M₀₁ = ε_M01`, only under that link (R-597), latent-link ends cannot reach it (composition § 17.11
+  case 2), and on a latent chart the arm could not be met. Both gain the qualifier in the physics reviewer's words, and
+  REQ-CHART-211 gains R-597; on REQ-CHART-189 and TASK-M2-90 it covers arms (1) and (2), as before for them.
 - **Test names** not given by the plans (`first_slice`, `forward_table_builder`, `blend_chart` and the like) are named
   in the task files: naming.
 
