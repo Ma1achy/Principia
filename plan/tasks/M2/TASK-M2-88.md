@@ -22,9 +22,11 @@ Each map declares its slope tier (R-926 item 9): exact, by a dual-number type ov
 - The dual-number type over the four bit-level traits, and each map's declared tier in its registry row (TASK-M2-66's rows).
 - The flag a tier-1 or tier-2 map sets at each kink site.
 - Measurement M-B's test and its report.
+- The registry-wide test that every registered map declares its tier, and its control.
 
 ## Acceptance tests
 - `cargo test -p kernel slope_tiers` — each map declares its tier; a tier-1 or tier-2 map sets the flag at each listed kink site; a tier-3 map is accepted with no slope, each sample evaluated on the CPU. Measurement M-B, for each tier-1 or tier-2 map: the dual slope against a central difference at R-633's step, `h_k = ε^{1/3}·max(1, |x_k|)` in f64 (the step REQ-DEC-034 names), at points away from the flagged sites by more than that step; criterion, written before the run: per column, agreement within the central difference's error at that step, its truncation `h_k²·|f'''|/6` plus its rounding `ε·|f|/h_k`, each of order `ε^{2/3}`, with `|f'''|` bounded from the map's own closed form and stated before the run; the control flips the sign of a column whose norm is at least 100 times that bound, and must fail (REQ-DEC-058).
+- `cargo test -p engine slope_tier_declared` — registry-wide, it enumerates every map registered in the primitive registry (TASK-M2-66's rows, `crates/engine/src/chart_authoring/registry.rs`) and fails on any map without a declared slope tier, so a map a later task adds is caught with no wiring of its own; control: a tierless map registered must fail (REQ-DEC-058).
 
 ## Notes
 - Entered 11 Nov 2026 as N3 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`) (applied per R-369: task scoping); its acceptance is the re-plan's § B.4 item 13, with measurement M-B. The plan documents are under `plan/charts/`; the lines above carry what they say.
@@ -32,3 +34,4 @@ Each map declares its slope tier (R-926 item 9): exact, by a dual-number type ov
 - Both † edges are kept (applied per R-369: task scoping): the tier is declared in TASK-M2-66's registry rows, and a tier-3 map's samples are TASK-M2-67's CPU evaluator's.
 - REQ-DEC-034 and REQ-DEC-036 (`J_D` by central differences) are brought into line with R-935 and stay with their closing tasks, TASK-M6-07 and TASK-M5-04, which read this task's slopes.
 - The re-plan's open item O2 (exact slopes not built in the prototype) is closed by M-B.
+- *11 Nov 2026 (the owner's chart re-plan corrections, item 2; applied per R-369: tests):* REQ-DEC-058 (each map declares its slope tier) is closed by this task alone, and no map task depends on it or carries the requirement, so the registry-wide test `slope_tier_declared` and its control are added to the Deliverables and the Acceptance tests, and to REQ-DEC-058's verify line (through `plan/tools/reqio.py`). Nothing here changes behaviour; R-923's hold (integrator work before charts) still holds this task.
