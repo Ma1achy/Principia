@@ -131,6 +131,13 @@ the picture size their pixels are counted at is open, RQ-785. Contours are evalu
 § 10.2 and `principia_lines.md` § 4.2. § 17.5 is rewritten item by item under R-944, each stated mid-morph limitation
 closed, naming its mechanism, or kept as the one accepted exception, area statistics.
 
+**The physics review of PR #482 (review 5852979675, 11 Nov 2026), on what waited for it.** R-948's three answers are
+confirmed, (i-a), (ii-a) and (iii-a), with three points of definition owed (`principia_lines.md` § 8, "Owed"). (D): the
+mechanism is approved, and the row-major representative is acceptable as a gauge choice, with what the written
+definition must state (§ 10.4). (F): answered tag by tag, three tags blending and three not, with two conditions
+(§ 17.11). The collision-point case of § 17.11 is confirmed, and a second case, `M01_TINY` between two valid ends, is
+open as RQ-787. Where the paragraph below says "not settled until it confirms", read it with these.
+
 **Decided per R-369 on the way, each listed for the owner's veto.** The owner's words on the first five (10 Nov 2026),
 verbatim, under their heading "THE FOUR YOU DECIDE":
 
@@ -145,7 +152,9 @@ system caused by a playing morph does not restart the trace (`principia_lines.md
 and carries a state blends as a state, only an end pixel with no state staying blank mid-path (§ 17.11, V21),
 conditional on physics review, tag by tag, and not settled until it confirms; the unlocked pivot of a saved frame's
 tilt, each end about its own centre (§ 17.5). Applied per R-369 as mechanical consequences of the rulings named at each,
-and listed for veto with them: no blank opens mid-path under the state blend (§ 17.11; R-926 item 3, R-943); a `gauge`
+and listed for veto with them: the hold's blank does not open mid-path under the state blend (§ 17.11; R-926 item 3,
+R-943; *was:* "no blank opens mid-path under the state blend", which the physics review of PR #482 found incomplete:
+`M01_TINY` can open between two valid ends, RQ-787); a `gauge`
 end's paper scale is drawn on its own side of the dual ruler (§ 17.11; R-940); a pan or zoom on a blend re-addresses the
 cache as on any chart (§ 17.12; R-935); the "CPU batch" label and the GPU blend entry are moot (§ 17.12; R-926 items 5
 and 6); two time windows blend like any two windows, V29 retired (§ 18.4; R-926 item 3); a blend's well-posedness, in
@@ -1380,6 +1389,26 @@ frame's row-major order, a pure function of the pixel, for the physics reviewer 
 Until physics review confirms the mechanism and that definition, the filter on a mid-morph frame is not recorded as
 settled.
 
+*11 Nov 2026, the physics review of PR #482 (review 5852979675, its confirmation 2).* The mechanism is approved: the
+partner as `place(g·D(φ(u)), frame)` with the correctness rule above unchanged, so nothing is blanked unless its partner
+is shown, and a symmetry the blend breaks blanks nothing. Either representative of a pair is physically correct, so a
+pure order on the pixel is admissible, and the row-major proposal is acceptable as a gauge choice. The written
+definition (REQ-CHART-209) is still owed and still approved where TASK-M2-84 builds it, and the physics review holds it
+to five points, which it must state:
+
+- (a) the order is a strict total order on chart points in the frame's window coordinates (row first, then column), not
+  on a resolution-dependent pixel index, so it is unchanged by pan, zoom and picture size;
+- (b) the rule is "blank `u` iff an equivalent point strictly precedes it", so the least member of each orbit is kept:
+  with a body swap and the mirror both declared an orbit has more than two members, and where a blend folds `place`
+  returns several points;
+- (c) a self-partner is kept, as on an end;
+- (d) the partner relation is tested to be symmetric at the tolerance, the control a pair with both members blanked;
+- (e) the legend names the rule, as "The canonical choice is stated" above requires.
+
+Two things follow from the owner's own rulings and are theirs to know, not physics: with the filter on, the kept half of
+a mirror pair changes from `η ≥ 0` at `s = 0` to the row-major half at `s = 0⁺`, and it depends on the window's
+in-plane rotation.
+
 **Display only.** Nothing computed changes: not the sim key, the payload, refinement, an outcome or a statistic. It is a mask read by the display pass and the export writer, built on the CPU from the chart's map, off the sim key. So **R-408's statistics are unchanged**: a transparent pixel is still counted, and the optional "mirror pairs counted once" is the mirror-step proposal's, not this. The legend says its shares are of the computed chart. **Replication changes nothing:** a target scores what's computed, in its paper's measure (§ 6.4), selected by `in_region_d` or its own domain, never by what the filter drew. A paper-frame preset does compute more: the lens is 1.228 against D's 0.307, four times, and the box 1.732, 5.64 times.
 
 **Checked against.**
@@ -1463,7 +1492,15 @@ draws a star at each, the lock follows its local minimiser (R-935, RQ-759 (a)). 
 at `s = 0` and `s = 1` the end chart's own route answers, bitwise.
 
 **Accuracy.** On the CPU every route refines to the lock's tolerance, mid-morph included. "Approximate is acceptable
-during a morph" (R-926 item 7) binds the fragment's table route only, which is measured against this function. **The
+during a morph" (R-926 item 7) binds the fragment's table route only, which is measured against this function. **What
+"refines to the lock's tolerance" tests depends on where the state is,** as R-935 has it under RQ-767 (a) (`decisions.md`
+§ R-935, the bullet "RQ-767, the table route's accuracy outside a morph: (a)", its criterion "on-chart and off-chart
+apart"). On the chart's image the test is the residual: "on the chart's image the residual in state reaches f32
+rounding", here held to the lock's tolerance. Off the image the residual is not an error and is never bounded by the
+tolerance: "off the image the converged residual is the projection distance `‖r‖_W`, a measured quantity never read as
+solver error, convergence judged by first-order optimality". So a trace vertex off the image, which is almost every
+one, is `placed` when the solve meets first-order optimality, whatever its residual; `left` by "a failed solve" means
+the solve did not converge, never that the residual is large. **The
 fragment** reads the same function's generated WGSL where the chart has closed-form code, and the backwards table with
 its search where it has none (R-925).
 
@@ -2313,11 +2350,26 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
   has a higher `U`.
   *11 Nov 2026 (R-926 item 3, R-943; a record correction applied per R-369, listed for veto):* that count was a hold run
   on a blended configuration. The state blend runs no hold: masses blend in log-ratios, shape on the great circle,
-  momenta and time linearly, and "every in-between frame is a valid system" (R-943), so no blank opens mid-path on the
-  default path. One case is the physics reviewer's to confirm where the blend chart is built: a great-circle path can
-  pass through one of the shape sphere's three binary-collision points, so isolated pixels of a frame may show two
-  bodies at one place; under R-933 that is a collision at `t = 0`, recorded with the least separation and the pair, not
-  a blank.
+  momenta and time linearly, and "every in-between frame is a valid system" (R-943), so the hold's blank does not open
+  mid-path on the default path. *Was, before the physics review of PR #482 (review 5852979675, its confirmation 4 and
+  finding P1):* "so no blank opens mid-path on the default path. One case is the physics reviewer's to confirm where the
+  blend chart is built", with "isolated pixels of a frame" for the collision case. Two cases are left, and the second
+  shows that the statement as first written was not complete:
+  1. **A collision point: confirmed by physics review.** A great-circle path can pass through one of the shape sphere's
+     three binary-collision points. The pixels there, a small disc of them, everything with two bodies within `r_coll`
+     and not only isolated pixels, have finite `(m, r, p)`: under R-933, R-60 and R-13 that is a collision at `t = 0`,
+     recorded with the pair and the least separation, never a blank and never `decode_failed`. The antipodal case
+     `n̂_B = −n̂_A` is § 17.2's declared tie.
+  2. **`M01_TINY` between two valid ends: a blank can open mid-path, and what the pixel shows is open (RQ-787).** The
+     masses blend linearly in `μ_k = ln(m_k/m₀)`. Then `M₀₁ = g/(1 + g)` with `g(s) = e^{−μ₂(s)} + e^{μ₁(s) − μ₂(s)}`,
+     a sum of exponentials of linear functions: convex in `s`, so it can dip below both ends. The physics review's
+     example: end A `μ = (−L, 0)` (`M₀₁ ≈ ½`), end B `μ = (L, L)` (`M₀₁ ≈ ½`); at `s = ½`, `μ = (0, L/2)` and
+     `M₀₁ = 2/(2 + e^{L/2})`, below `10⁻⁵` for `L > 24.4`. Both ends are valid pixels of a chart that sets its masses
+     directly (the edge-reaching simplex link); the midpoint raises `M01_TINY`, "on the emitted masses of every chart"
+     (`principia_dd_decoder.md` § 2), and no edge kind saturates a blend's interior pixel. Latent-link ends cannot
+     reach it (`|μ| ≤ 5` gives `g ≥ e^{−5}`). No ruling says what such a pixel shows: it is the owner's, RQ-787, and
+     nothing is chosen here. Meanwhile the decoder's rule stands as written: the pixel is tagged `M01_TINY`, never
+     dropped and never NaN, and the blend chart's fixture for this case (TASK-M2-90) asserts the tag and no more.
 - **Blank or forbidden at an end.** A pixel in a morph frame is in only if it's in both ends. No state exists for a blank end
   to blend from, and substituting the other end invents a continuity (R-470, R-467). So the blank is held for every `0 < s <
   1` and resolves at the end frame, a step at each end. A region-D mask behaves so: outside D blank at every `s < 1`.
@@ -2328,12 +2380,35 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
   axis can flip, which § 17.2's "nothing special happens" doesn't cover: such a flip is a declared seam. `path_small_step` has
   a fixture for each. Rest is the default `z₀`, so this is the common case, and it stays blank to `s = 1`.
   *11 Nov 2026, on this bullet and the one above (applied per R-369, listed for the owner's veto, and conditional on
-  physics review):* under the state blend P3's reason, a hold run on the blend, is gone: a rest end's zero momenta blend
-  as `(1 − s)·0 + s·p_B`, continuous, a valid system. So a pixel is blank mid-path only where an end has no state at it,
-  and a tagged end that carries a state blends as one. The condition: the physics reviewer confirms, tag by tag for the
-  decoder's five tags, that the tag carries a state that may be blended, where TASK-M2-81 builds it. Until then V21
-  stands as written, and this is not recorded as settled. Under R-932 an end pixel with no state is left only where a
-  chart's own validity fails (R-467).
+  physics review, which answered tag by tag on PR #482, review 5852979675, its confirmation 3):* under the state blend
+  two of P3's three cases are gone, the third is not. Gone: the rest end, whose zero momenta blend as
+  `(1 − s)·0 + s·p_B`, continuous, a valid system; and the seed's flip on a blended configuration. **Not gone:** across
+  an end's feasibility boundary "a tagged pixel keeps its momenta where a just-feasible one has `η ≈ 0`", a jump in
+  space that belongs to the end and survives mid-path at weight `(1 − s)`. It is a declared seam of the frame, drawn as
+  an end's branch seam is (§ 17.2), with a `path_small_step` fixture. *Was, before that review:* "under the state blend
+  P3's reason, a hold run on the blend, is gone". So a pixel is blank mid-path only where an end has no state at it, and
+  a tagged end that carries a state blends as one. Which tags carry one, as the physics review gave it, over
+  `principia_dd_decoder.md` § 2's closed set of five:
+
+  | Tag at an end | Blends? | Why |
+  |---|---|---|
+  | `ENERGY_UNSCALABLE` | yes | the rest start, or an already-collided start: finite `(m, r, p)`, a real system (a collision at `t = 0` at the pole, R-933) |
+  | `ENERGY_INFEASIBLE` | yes | the momenta as decoded, a real system that misses the target `E*`; mid-morph no held value is claimed (R-850) |
+  | `INVARIANT_INFEASIBLE`, the arm `K* < L_z²/(2I)` | yes | the rigid rotation at the pixel's own `L_z`, the same state R-937's clamp draws |
+  | `INVARIANT_INFEASIBLE`, the arm "`2K*` has no finite float" | **no** | its `L_z` is replaced by 0 by a select; R-937 keeps it "not a system" |
+  | `NO_QUALIFYING_SEED` | **no** | no construction ran; unreachable under R-934's seed, reachable only under the legacy option |
+  | `M01_TINY` | **no** | the Jacobi construction is not valid there; under R-932 the end saturates instead, and then the saturated state is what blends, untagged |
+
+  Code 0 (a non-finite decode) has no state. Two conditions bind the "yes" rows, and the physics review holds
+  TASK-M2-81 to both. (i) The state blended is the one the end chart itself draws at that pixel once R-932's kinds
+  apply, never the tagged decode's raw output where the two differ; otherwise the frame at `s → 0` does not converge on
+  the frame at `s = 0` (R-943's continuity). (ii) The feasibility-boundary seam above is declared and drawn, with its
+  `path_small_step` fixture. For the three "no" rows V21 stands as written. *Was, the condition as first recorded:*
+  "The condition: the physics reviewer confirms, tag by tag for the decoder's five tags, that the tag carries a state
+  that may be blended, where TASK-M2-81 builds it. Until then V21 stands as written, and this is not recorded as
+  settled." Under R-932 an end pixel with no state is left only where a chart's own validity fails (R-467). A blend's
+  interior pixel that raises `M01_TINY` between two valid ends is another matter, the bullet "Out of feasible" above
+  and RQ-787.
 - **Held quantities mid-morph.**
 
 | Held | Mid-morph |

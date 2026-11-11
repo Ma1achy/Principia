@@ -36797,6 +36797,9 @@ R-947 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes no requirement here: REQ-GUI-427 and REQ-CHART-172 change, and N19's requirement is added, with the tasks in the
 addition's plan PR (applied per R-369: task scoping, as R-932).
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-CHART-199 and REQ-CHART-200 (new: the placement function and the two definitions it owes), REQ-CHART-201 and REQ-RENDER-125 (new, naming it), REQ-CHART-172, REQ-COL-134, REQ-GUI-245, REQ-GUI-426 and REQ-GUI-427 (changed), and REQ-COL-133 and REQ-COL-163, moved with their milestone to TASK-M2-99, the task that now builds the source they define (physics review, P2); `plan/tasks.yaml` and the task files of TASK-M2-99 (new, N19), TASK-M2-100, TASK-M2-58, TASK-M2-80, TASK-M2-84, TASK-M2-94, TASK-M7-52, TASK-M7-74, TASK-M8-10, TASK-M8-49, TASK-M8-58, TASK-M8-120 and TASK-M8-126; `docs/design/principia_chart_composition.md` § 10.6, "Accuracy", which now carries R-935's split under RQ-767 (a), the residual on the chart's image and first-order optimality off it (physics review, P7). `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
 ## R-948 — Traces at the new edges, the re-plan addition's question (B): (i-a), (ii-a), (iii-a); a state's sheet is set by whether the system is growing or shrinking, the trace jumps at the fold with an optional tick, off by default, and nothing is drawn inside a clamped or saturated area, physics review confirming *(no RQ; answers the re-plan addition's question (B); refines R-538)*
 *10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in
 `docs/design/principia_lines.md` § "8. Traces" (the markers table's fold row and a dated bullet after "Repeats"),
@@ -36857,6 +36860,11 @@ R-948 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes no requirement here: REQ-GUI-272 changes with TASK-M8-58 in the addition's plan PR (applied per R-369: task
 scoping, as R-932).
+
+*11 Nov 2026, physics review confirmed:* the physics review of the plan PR that records this ruling (PR #482, review 5852979675) confirmed (i-a), (ii-a) and (iii-a), with conditions. They are three points of definition the rules above leave open, owed under R-72 and written under physics review by the task that builds each, nothing chosen meanwhile: (a) the sheet at `p·w = 0`, signed zero included, one pure function shared by the decode and `place` (REQ-DEC-062, TASK-M2-96); (b) under the linear mapping the fold line and the floor are read at the state's own `U` and `I`, and `trace_fold` tests more than the warp (REQ-GUI-435, TASK-M8-58); (c) a hover on a clamped or saturated pixel starts its trace at the edge point the pixel repeats, the exception lines § 12's first-vertex rule needs (REQ-GUI-435, TASK-M8-58). `docs/design/principia_lines.md` § 8, "At the new edges", lists them as owed.
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-GUI-272 (changed: the fold tick and `trace_fold`), REQ-GUI-434 (new: the tolerance of `trace_fold`'s comparison, a calibration, R-71), REQ-DEC-061 (new, naming it for the sheet reading), and REQ-DEC-062 and REQ-GUI-435 (new: the three points above, definitions, R-72); `plan/tasks.yaml` and the task files of TASK-M2-96 and TASK-M8-58; `docs/design/principia_lines.md` § 8 and § 12. `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
 ## R-949 — A changed link id mid-morph, the re-plan addition's question (G): option (a), blend, don't cut; a chart change that changes a link id morphs like any chart change, and R-520's rule for interpolating link parameters inside one chart stands *(no RQ; answers the re-plan addition's question (G); amends R-520 and R-483)*
 *10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in
 `docs/design/principia_chart_composition.md` (the status block, § "17.12 Performance" (the conflicts table's R-520 row),
@@ -36903,6 +36911,9 @@ R-949 is in the "design" group of `plan/rule_groups.yaml`, with R-520.
 
 Changes no requirement here: REQ-TOOL-175 changes with TASK-M2-81 and TASK-M8-108 in the addition's plan PR (applied per
 R-369: task scoping, as R-932).
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-TOOL-175, REQ-CHART-114 (`path_links_morph` in place of `path_links_cut`) and REQ-GUI-421 (the Sequence's chart-change segment, its "a link-id change still a cut") (changed); the task files of TASK-M2-81, TASK-M8-108 and TASK-M8-31. `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
 ## R-950 — The lock's leftover jump, the re-plan addition's question (H): option (a), the labelled jump from a time-axis chart to one with no time axis is removed; under a lock every pair of charts slides *(no RQ; answers the re-plan addition's question (H); amends R-849 and R-901)*
 *10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in
 `docs/design/principia_chart_composition.md` (the status block), `docs/design/principia_chart_space_model.md` § "9.
@@ -36945,6 +36956,9 @@ R-950 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes no requirement here: REQ-CHART-161 changes with TASK-M2-65 in the addition's plan PR (applied per R-369: task
 scoping, as R-932).
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-CHART-161 and REQ-CHART-123 (changed); the task files of TASK-M2-65 and TASK-M2-83. `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
 ## R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*
 *10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in `REVIEW_QUEUE.md`
 (RQ-785, new), `docs/design/principia_lines.md` § "8. Traces" (the dated paragraph at "Projection"),
@@ -37001,6 +37015,9 @@ R-951 is in the "design" group of `plan/rule_groups.yaml`.
 Changes no requirement here: the measurement task's requirement and its definition requirement are added, and
 TASK-M8-49's and TASK-M8-58's dependencies change, in the addition's plan PR (applied per R-369: task scoping, as
 R-932).
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-CHART-201 (new: the report of P2 and P4), REQ-CHART-202 and REQ-CHART-203 (new: the picture size and the two set-up points, definitions, R-72, each waiting on RQ-785) and REQ-GUI-245 (changed); `plan/tasks.yaml` and the task files of TASK-M2-100 (new, the measurement task), TASK-M8-49 and TASK-M8-58; `REVIEW_QUEUE.md`, RQ-785, which gains the two set-up points as further questions (code review, F2). Fading a blend's trace by its residual, which the PR's first commit had drawn as the trace's ordinary fade, is withdrawn: it is the fallback the owner's words above keep for them, and a blend's trace is drawn unfaded until they have seen P2 and P4 (physics review, P5; `docs/design/principia_lines.md` § 8). `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*
+
 ## R-952 — Contours are evaluated on the CPU for every chart, as R-926 item 5 has it; the 8.3 ms criterion is kept as written, and its report says plainly what the owner will see while moving, half or quarter resolution, on each of the three test charts *(no RQ; amends R-476)*
 *10 Nov 2026 · the owner's reply of that day to the draft of the chart re-plan's addition; applied in
 `docs/design/principia_lines.md` § "4.2 Evaluation" (the Starting-state bullet, its earlier words kept as *Was*),
@@ -37050,3 +37067,7 @@ R-952 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes no requirement here: REQ-RENDER-093 and REQ-RENDER-121 change with TASK-M7-43 and TASK-M7-72 in the addition's
 plan PR (applied per R-369: task scoping, as R-932).
+
+*Corrected 11 Nov 2026 (the physics review of PR #482, review 5852979675, P4):* "What it amends" above reaches further than the owner's words. They agree that contours are evaluated on the CPU for every chart; where a contour is evaluated is not which precision path it follows, and their words do not reach that. So of the two sentences of `principia_lines.md` § 4.2 named there, only "It runs as a GPU pass on the shared decode, with a CPU fallback at reduced resolution" gives way. "It uses the same precision path as the decode (the linearised decoder at depth)" stands, and § 4.2 keeps it: the contour's decode is the route the picture's forward table takes, the one-cell patch included where R-90's switch fires (R-926 item 11; R-935, under RQ-766 (a)), which is what keeps § 4.2's "exact at any zoom and any depth of refinement" true. The owner's words quoted above are unchanged.
+
+*Also applied 11 Nov 2026, by the later commits of the same PR (#482) and its fix round after the code review 5852985982 (F6) and the physics review 5852979675: `plan/requirements.yaml`, through reqio: REQ-RENDER-093 and REQ-RENDER-121 (changed), REQ-PERF-123 (new: the 8.3 ms criterion and its report, a benchmark) and REQ-RENDER-092 (it gains a clause: the Chart and Latent variables on a blend, (C), applied per R-369); the task files of TASK-M7-43, TASK-M7-72 and TASK-M2-58. `plan/section_notes.yaml` no longer carries this heading: its note gave way to the requirements, which name the heading as a source, so "changes no requirement here" above describes the first commit only.*

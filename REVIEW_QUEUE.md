@@ -805,3 +805,99 @@ the owner's words do not say how big the picture is. Only the owner may say whic
   definition requirement (R-72) for the size, and R-951's "8 pixels" stands as the owner wrote it.
 - **Waits:** the re-plan addition's measurement task (P2 and P4), and through its report TASK-M8-49 and TASK-M8-58,
   which R-951 holds until the owner has seen both.
+- **11 Nov 2026, three further questions on the same set-up, asked with the first** (the code review of PR #482, review
+  5852985982, F2; the physics review of the same PR, review 5852979675, its point 10). Each is a silence in the same
+  place, a missing definition (R-72) only the owner can state, since each changes what their measurement means.
+  REQ-CHART-203 (the set-up's definitions) carries them and waits on this entry, as REQ-CHART-202 (the picture size)
+  does. Nothing is chosen, and nothing is run until all are answered.
+  - **Question 2: what a seeded pixel contributes.** `plan/charts/m2-chart-replan-addition.md` § "A.5 The
+    measurements: P2 and P4, reported and not gates; and the proposals nothing adopts": "**16 seeded pixels per
+    pair.** The seed is written into N20's task file before any run." and "what a seeded pixel contributes (the draft
+    has "over the trajectory fixtures … and 16 seeded pixels per chart pair" and says no more)". The owner's words
+    (R-951) have "on the same fixtures and blend pairs" and name no seeded pixel. *Options seen:* (2a) a pinned
+    trace: the system the pixel shows on the starting chart, integrated once and placed again at every `s`, measured
+    as the two fixtures are; (2b) a hover trace: the blend's own system at that pixel, another trajectory at each
+    `s`, as a hover shows while a morph plays; (2c) its starting state only, one vertex on the surface, the
+    off-surface numbers coming from the two fixtures alone; (2d) another, stated by the owner. *Recommended:* (2a),
+    because P2 sets one trajectory at `s = 0` against the same trajectory at `s = 10⁻⁶`, which needs a fixed system.
+    The measurable alternative: the report gives (2a) and (2b) side by side, labelled.
+  - **Question 3: whether P2 is also read at the other end.** `decisions.md` § R-951, *What it decides*, defines P2
+    at one end: "the on-screen jump between an end chart's own trace (`s = 0`) and the blend's (`s = 10⁻⁶`)". The
+    owner's words there: "the whole trace may jump as a morph starts or ends." *Options seen:* (3a) at `s = 0` only,
+    as R-951 defines it; (3b) at both ends, `s = 1` against `s = 1 − 10⁻⁶` as well, each reported apart; (3c)
+    another, stated by the owner. *Recommended:* (3b): "starts or ends" names both, and it costs one more placement of
+    each trace. The measurable alternative is the same report: both are given and the owner reads the one they
+    meant.
+  - **Question 4: the trace's vertex spacing in time, and the window.** The physics review: "RQ-785 or REQ-CHART-203
+    should also name the trace's vertex spacing in time and the window (home, zoom 1?): both move P4's share." P4
+    counts "neighbouring trace vertices", and nothing says how far apart in time two neighbours are, nor which
+    window of each chart the trace is drawn in. *Options seen:* (4a) the trajectory fixture's own output steps
+    (TASK-M2-82), each chart in its home window at zoom 1; (4b) vertices at equal steps of time, the step stated by
+    the owner, in the home window; (4c) reported at more than one spacing, each labelled (the fixture's own steps,
+    and every second and every fourth of them), in the home window; (4d) another spacing or window, stated by the
+    owner. *Recommended:* (4a), the trace as the fixture gives it, with (4c) the measurable alternative: it shows how
+    far P4's share moves with the spacing, at the cost of three placements of each trace.
+  - **Applied meanwhile:** nothing, as above. **Waits:** as above.
+
+## RQ-787: What a blend's interior pixel shows when its blended masses raise `M01_TINY` between two valid ends: no ruling says, and there "every in-between frame is a valid system" does not hold *(silence, a missing definition, R-72; a one-way door, it changes what a chart draws; R-943, R-926 item 3, R-936, R-932, R-597, R-467, R-944; REQ-CHART-189; physics review 5852979675 of PR #482, P1; context: TASK-M2-90, TASK-M2-81)*
+
+*Queued 11 Nov 2026 by the fix round on the plan PR for the chart re-plan's addition (#482), from its physics review
+5852979675, finding P1; each quote below re-read on that PR's branch. Nothing is chosen here.*
+
+*In plain English: a morph moves every pixel's system from one chart's to the other's, and the rule is that every frame
+on the way shows a valid system. The masses are moved in a way that can, on some pairs of charts, squeeze two of the
+three bodies' masses to almost nothing partway through, although both ends are fine. The decoder cannot build a system
+there, so the pixel would go blank in the middle of the morph. The owner's rules say what happens at a chart's edge in
+that case, and say nothing about the middle of a morph. Only the owner may say what such a pixel shows.*
+
+- **File, section:**
+  - `decisions.md` § R-943 (the general rule for a morph), its heading: "any other path is allowed if both ends are
+    exactly the end charts, every in-between frame is a valid system and it is continuous".
+  - `decisions.md` § R-936 (what a state blend leaves open), its heading: "the mass block blends the mass coordinates,
+    the logs of the mass ratios".
+  - `docs/design/principia_dd_decoder.md` § "2. Consolidated contract (every clause that binds this component)", the
+    tag table: "`M01_TINY` | the mass block: `M₀₁ < ε_M01` (§3.1), on the emitted masses of every chart, a chart that
+    sets its masses directly included".
+  - `decisions.md` § R-932 (chart edges), the owner's words: "which mechanism is used on a given edge is physics
+    review's call (saturate wherever the edge system itself is not a valid system, such as a zero mass)."
+  - `decisions.md` § R-597, its heading: "under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` is genuinely
+    degenerate and draws as not a system, with the reason in the readout", which R-932 turns into a saturation at
+    that link's edge.
+  - `docs/design/principia_chart_composition.md` § "17.11 Honesty", the bullet "Out of feasible", its dated note,
+    case 2, which sets out the case.
+- **The case, from the physics review:** masses blend linearly in `μ_k = ln(m_k/m₀)`. Then `M₀₁ = g/(1 + g)` with
+  `g(s) = e^{−μ₂(s)} + e^{μ₁(s) − μ₂(s)}`, a sum of exponentials of linear functions: convex in `s`, so it can dip
+  below both ends. Example: end A `μ = (−L, 0)` (`M₀₁ ≈ ½`), end B `μ = (L, L)` (`M₀₁ ≈ ½`); at `s = ½`,
+  `μ = (0, L/2)` and `M₀₁ = 2/(2 + e^{L/2})`, below `10⁻⁵` for `L > 24.4`. Both ends are valid pixels of a chart that
+  sets its masses directly (the edge-reaching simplex link). Latent-link ends cannot reach it (`|μ| ≤ 5` gives
+  `g ≥ e^{−5}`).
+- **The silence:** R-932 and R-597 say what a chart draws at its own edge where `M₀₁` is tiny, and each edge has a
+  declared kind. A blend's interior pixel is on no edge, and no edge kind applies to it. R-943 requires every
+  in-between frame to be a valid system, and on the default path of the mass block (R-936) this pixel is not one. No
+  ruling says what it shows.
+- **The question:** what does a blend's interior pixel show where its blended masses give `M₀₁ < ε_M01` and both ends
+  are valid?
+- **Options seen:**
+  - (a) It saturates, as rule 2 treats a zero mass at an edge (R-932, with R-597): the pixel shows a valid system and
+    is never blank. What it saturates to is then to state, and R-932 leaves the mechanism to physics review: the
+    masses held at the band's edge with the rest of the blend unchanged, or the pixel's own system at the nearest `s`
+    on its path where `M₀₁` is still large enough.
+  - (b) It is blank, a validity failure (R-467): tagged `M01_TINY`, drawn as not a system with the reason in the
+    readout, as R-597 had it. A blank then opens mid-path on these pairs, an exception to R-943's "every in-between
+    frame is a valid system" and to R-944 that the owner would be accepting.
+  - (c) Another path for the mass block on such a pair: R-943 allows any path whose in-between frames are all valid,
+    so the masses could take a path that does not dip (straight on the simplex, in the masses themselves) where the
+    log-ratio path would. That changes R-936's answer for those pairs.
+  - (d) Another, stated by the owner.
+- **Recommended:** (a), because the owner's rule 2 names the same failure at an edge ("saturate wherever the edge
+  system itself is not a valid system, such as a zero mass") and R-943 asks for a valid system on every frame; the
+  mechanism would then go to physics review, as R-932 has it. Against it: no ruling yet reaches inside a blend, and (c)
+  removes the case rather than covering it. The measurable alternative: TASK-M2-90's fixture reports, on the pairs of
+  shipped charts that set their masses directly, the share of pixels and the range of `s` where `M₀₁ < ε_M01`, and the
+  owner chooses with that number; the case needs `L > 24.4` in the example, so the share may be small.
+- **Applied meanwhile:** nothing new. The decoder's rule stands as written: such a pixel is tagged `M01_TINY`, never
+  dropped and never NaN. The blend chart's fixture (REQ-CHART-189, TASK-M2-90) asserts the tag and that both ends are
+  valid, and asserts nothing about what is drawn; no saturation of a blend's interior pixel is built. Nothing is
+  built at all while R-923's hold stands.
+- **Waits:** REQ-CHART-189's arm for this pixel (`rq: RQ-787`), and through it TASK-M2-90 (the blend chart) for that
+  pixel alone; TASK-M2-81's `path_blank_ends` reads the answer for a blend's interior pixel.

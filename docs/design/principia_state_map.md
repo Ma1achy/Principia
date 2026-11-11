@@ -127,7 +127,7 @@ colour(sample, t) = C_T( fold_T( P_T( E( x(t) ) ) ) )
   canonical mirror applies to it on any target, so the colour is continuous through syzygies. The mirror fold applies
   only to how a latent chart encodes a starting state at `t = 0`. A mirror-identified colouring may remain only as a
   declared, optional view, labelled as such, never the default. How a lower-half state is read on a latent target's
-  coordinates is a definition (R-72) its task writes under physics review (TASK-M7-52).
+  coordinates is a definition (R-72) its task writes under physics review (TASK-M2-99, the one placement function, since 11 Nov 2026, R-947: it builds the source that reads the state; *was:* TASK-M7-52).
 
 **The target is the view's own chart by default.** Then, at `t = 0`, every sample sits where it started, and the
 picture is the colour map itself, i.e. the legend. As the playhead moves, it flows.
