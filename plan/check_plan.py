@@ -202,10 +202,17 @@ def twins(body):
     """(line, line) for each run of lines in `body`, a list of (line number, text), directly followed by a run that
     reads nearly the same, of the same length or one line more or less, since an edit can rewrap: what a union merge
     leaves of text edited on two sides. Lines that differ only in the digits of plain numbers are a list's siblings,
-    not versions; a difference in an id or a `line N` is a disagreement (TWIN_NAME)."""
+    not versions; a difference in an id or a `line N` is a disagreement (TWIN_NAME). Two runs that meet at a pair of
+    siblings, the end of the first and the start of the second, are those siblings with their neighbours, not two
+    versions: a short line before them, the tail of the paragraph above, would else carry them past the ratio."""
     out = []
     plain = [(n, t) for n, t in body if t.strip()]
     join = lambda lines: " ".join(" ".join(t.split()) for _, t in lines)
+
+    def meet_at_siblings(first, second):  # some run ending `first` and some run starting `second` are siblings
+        return any(siblings(join(first[-p:]), join(second[:q]))
+                   for p in range(1, len(first) + 1) for q in range(1, len(second) + 1))
+
     i = 0
     while i < len(plain):
         found = None
@@ -214,7 +221,7 @@ def twins(body):
                 if m < 1 or i + k + m > len(plain):
                     continue
                 a, b = join(plain[i:i + k]), join(plain[i + k:i + k + m])
-                if len(a) < TWIN_MIN or len(b) < TWIN_MIN or siblings(a, b):
+                if len(a) < TWIN_MIN or len(b) < TWIN_MIN or meet_at_siblings(plain[i:i + k], plain[i + k:i + k + m]):
                     continue
                 d = difflib.SequenceMatcher(None, a, b, autojunk=False)
                 if d.quick_ratio() >= TWIN_RATIO and d.ratio() >= TWIN_RATIO:
@@ -301,6 +308,15 @@ def queue_self_test():
         ("well formed", good, None),
         ("sibling lines differing in a plain number", good.replace(
             line, sibling.format(6) + "\n" + sibling.format(12)), None),
+        ("siblings after a paragraph's short tail", good.replace(
+            line, line + "\n  it.\n" + sibling.format(12) + "\n" + sibling.format(6)), None),
+        ("siblings before a short line", good.replace(
+            line, sibling.format(6) + "\n" + sibling.format(12) + "\n  it."), None),
+        ("two-line siblings after a short tail", good.replace(
+            line, line + "\n  it.\n" + sibling.format(12) + "\n  and more, at 12.\n" + sibling.format(6)
+            + "\n  and more, at 6."), None),
+        ("versions after a paragraph's short tail", good.replace(
+            line, line + "\n  it.\n" + versions.format("R-100", "R-101")), "two versions of one text"),
         ("versions differing in a ruling", good.replace(line, versions.format("R-100", "R-101")),
          "two versions of one text"),
         ("versions differing in an RQ", good.replace(line, versions.format("RQ-100", "RQ-101")),
