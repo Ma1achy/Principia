@@ -176,6 +176,9 @@ that is the owner's.
   the fact that it is clean only if it replaces R-936's log-ratio path for every pair. REQ-CHART-189 (a blend is a
   chart) and TASK-M2-90 (N5) gain two arms of the fixture, each asserting only the tag and valid ends. Design § 17.11
   case 2; § B, B2.
+  *Later on 11 Nov 2026 (code review 5854054751, N6):* the arm with both ends saturated is REQ-CHART-211's (a blend
+  of two saturated pixels raises the tag), checked by TASK-M2-103 (N14c, saturate), which builds the pixels it
+  blends; REQ-CHART-189 and TASK-M2-90 keep the other two. § F.7.
 - **The check that the built integrator entry never decodes has an owner** (code re-check, N1): REQ-INT-116 (new), on
   TASK-M4-05 (flat-grid compute), which builds the entry. REQ-INT-115 (the record contract) is contract text and checks
   no code, and TASK-M4-05 had lost REQ-INT-070's acceptance line with nothing in its place. § F.7.
@@ -885,7 +888,7 @@ is entered held (§ F.6): entering a task does not release it.
 | N13 | TASK-M2-96 | The invariant construction's second sheet, and a state's sheet from one source with it (R-937) | M2 | TASK-M2-95 (N12), TASK-M2-93 (N10), TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-DEC-061, REQ-DEC-062 |
 | N14a | TASK-M2-101 | Unfold in the CPU evaluator: past a fold the chart shows its second sheet (R-932, R-937) | M2 | TASK-M2-96 (N13), TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-CHART-204 |
 | N14b | TASK-M2-102 | Clamp in the CPU evaluator, the clamp below the floor included (R-932, R-937) | M2 | TASK-M2-96 (N13), TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-CHART-205 |
-| N14c | TASK-M2-103 | Saturate in the CPU evaluator (R-932, R-941) | M2 | TASK-M2-95 (N12), TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-CHART-206 |
+| N14c | TASK-M2-103 | Saturate in the CPU evaluator (R-932, R-941) | M2 | TASK-M2-95 (N12), TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-CHART-206, REQ-CHART-211 (11 Nov 2026: arm (3) of N5's `M01_TINY` fixture; *was:* "REQ-CHART-206") |
 | N14d | TASK-M2-104 | Wrap in the CPU evaluator: periodic and pole-crossing edges (R-932) | M2 | TASK-M2-95 (N12), TASK-M2-66, TASK-M2-67 | code, qa, physics | REQ-CHART-207 |
 | N14e | TASK-M2-105 | The edge kinds' count, navigation stop and sim key: `energy::count`, the view state's override, blank's controls (R-932, R-942) | M2 | TASK-M2-101 (N14a), TASK-M2-102 (N14b), TASK-M2-103 (N14c), TASK-M2-104 (N14d), TASK-M2-38 | code, qa, physics | REQ-CHART-208 |
 | N15 | TASK-M2-97 | The backwards table on an extended chart: sheet 1 only, a state looked up as itself and as its time reverse (R-942) | M2 | TASK-M2-92 (N7), TASK-M2-96 (N13), TASK-M2-101 (N14a) | code, qa, physics | REQ-CHART-196 |
@@ -984,6 +987,16 @@ listed for the owner's veto):**
   verify and the task's line say instead that arm (3)'s ends are the evaluator's own saturated pixels and that the arm
   is not read as passing until both are merged, as REQ-RENDER-125's arm (ii) waits on its definitions. What arm (3)
   asserts is unchanged.
+  *Corrected 11 Nov 2026 (the code review 5854054751 of this PR, N6 not closed; applied per R-369: task scoping):*
+  that wording left the arm with no task that could ever read it, since TASK-M2-103 stands on TASK-M2-90 (through
+  TASK-M2-66 and TASK-M2-65) and so is built after it. Arm (3) moves, its words unchanged, to a new requirement,
+  REQ-CHART-211 (a blend of two saturated pixels raises the tag), closed by TASK-M2-103 (N14c), whose acceptance
+  gains `cargo test -p engine blend_saturated_ends` with the arm's `q = 1` reported case, its control and the
+  physics reviewer's note for the build (review 5854043330: a margin inside the edge; the range of `s` reported).
+  TASK-M2-103 already depends on TASK-M2-95 (N12). REQ-CHART-189 and TASK-M2-90 (N5) keep arms (1) and (2) with
+  their controls and point at REQ-CHART-211 for arm (3); the sentence "not read as passing until … merged" is
+  gone from both, kept as a *Was*. `rq: RQ-787` is on both requirements. The N5 row above is unchanged: TASK-M2-90
+  still closes REQ-CHART-189 and REQ-CHART-190.
 - **Test names** not given by the plans (`first_slice`, `forward_table_builder`, `blend_chart` and the like) are named
   in the task files: naming.
 

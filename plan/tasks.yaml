@@ -1434,7 +1434,7 @@
   title: "Saturate in the CPU evaluator (R-932, R-941)"
   depends_on: [TASK-M2-95, TASK-M2-66, TASK-M2-67]  # N14c, the addendum § C item 3; TASK-M2-95: the per-edge table (physics review 5852979675 of PR #482, P3)
   needs: []
-  requirements: [REQ-CHART-206]
+  requirements: [REQ-CHART-206, REQ-CHART-211]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M2-104
