@@ -171,19 +171,9 @@ pub fn ftle<R: WrapperReal>(s_sum: R, delta: R, delta_0: R, n: u32, dt_macro: R)
     (s_sum + Float::ln(delta / delta_0)) / (R::count(n) * dt_macro)
 }
 
-/// The renormalisations completed by step `n`, `n / n_renorm` (payload §5), none at `n_renorm = 0`.
-#[inline]
-pub fn completed_renorms(n: u32, n_renorm: u32) -> u32 {
-    // The guard is written out, not as `n.checked_div(n_renorm)` as the lint suggests: rust-gpu 0.10.0-alpha.1, the
-    // backend the kernel builds with (R-169), leaves the checked intrinsics unimplemented, as `advance.rs` notes for
-    // `saturating_sub`.
-    #[allow(clippy::manual_checked_ops)]
-    if n_renorm == 0 {
-        0
-    } else {
-        n / n_renorm
-    }
-}
+/// The renormalisations completed by step `n` (payload §5): the generated read side's, one source for the kernel's
+/// count and the read's.
+pub use crate::payload::completed_renorms;
 
 /// The FTLE read from a stored sample `s` (payload §5): [`ftle`] from `S` and the stored shadow's `δ`, at `step_count
 /// = t_end_step`; NaN whenever `ftle_valid` is false: a failed sample, `step_count = 0`, or no completed
