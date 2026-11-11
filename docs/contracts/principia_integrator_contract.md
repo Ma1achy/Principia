@@ -264,6 +264,27 @@ driver.
 > a backlog for code that is about to be replaced. Filed as rules, the new kernel does not
 > reintroduce them — which is the only outcome that matters.
 
+**`dt_max`: its home, and the "no usable step" sentinel.** Rule 4's `dt_max` is defined here (a definition, R-72;
+REQ-TOOL-039, REQ-TOOL-125).
+
+- **What it is.** `dt_max` is, for one trajectory, the largest physical step its occupant took: the maximum, over the
+  steps of its march, of the physical time each one advanced.
+- **Its home is an occupant diagnostic, outside the payload:** `kernel::regularisation::dt_max::DtMax`. It is not a
+  ledger field and takes no payload bytes, so nothing here goes through the generation root; it is not on the sim key
+  and is not hashed. The occupant that forms the physical steps feeds it one step at a time, in march order, and whoever
+  runs the occupant reads it afterwards. Placing it in the payload would be a ledger change and needs a ruling.
+- **A usable step is one that is a number:** `dt == dt`, a comparison (rule 2), with no constant in it (rule 1). A NaN
+  step is unusable and is skipped. Every other value is usable and is reported as it stands, never judged, clamped or
+  filtered: a zero step, a negative one, the overflow `2.209e128` and `±∞` (which is what `2.209e128` is at f32). The
+  diagnostic exists to show such a step, so it must not hide one.
+- **The fold is reseeded from the first usable step** (rule 4): the first usable step becomes the maximum, whatever its
+  value, and a later usable step replaces it only where it compares greater (`dt > dt_max`). No `0.0`, no infinity and
+  no other seed value takes part.
+- **"No usable step" is an explicit sentinel, never a number.** A trajectory that took no step, or whose every step was
+  unusable, reports `DtMaxReport::NoUsableStep`; one with a usable step reports `DtMaxReport::Largest(dt_max)`. So "no
+  usable step" cannot be read as "the largest step was `0.0`", which is the report of a trajectory whose largest usable
+  step was zero (`principia_01_pitfalls.md` §9).
+
 #### And FMA contraction is a live question
 
 A backend that fuses `a*b+c` changes the result, which changes a comparison, which changes a
