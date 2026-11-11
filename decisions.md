@@ -37139,10 +37139,16 @@ and, the same day, their follow-up on point 7, verbatim and whole, which superse
   `dt <= f*d_min/|v_rel|_max`", "`phys_from_state` returns `(R1, R2, V1, V2)`") and `driver.rs:82` are wrong, and the
   code is the rule, so nobody "fixes" it later. The physics consult adds, recorded with R-927: the difference from
   R-160's `|v_rel|` is more than a label. The momenta are mass-weighted, `P = K·V`, so `f·d_min/|P|_max` is a length
-  over a momentum, not a crossing time, and `P₂ − P₁` is not proportional to `v_c − v_b` (at equal unit masses
-  `P₁ = (2V₁ − V₂)/3`). Under Aarseth–Zare the limit therefore differs from R-160's formula by an order-one,
-  mass-dependent factor, and the reference code's form is the rule. Heggie's and logH's limits read velocities, and
-  R-160's formula stands for them.
+  over a momentum, not a crossing time, and it is not covariant under a rescaling of the masses: masses `×λ` at fixed
+  lengths scale time by `λ^(−1/2)`, `V` by `λ^(1/2)` and `P` by `λ^(3/2)`, so the limit moves by `λ⁻¹` against the
+  dynamical time. In the `M = 1` gauge at equal masses `P₁ = (2V₁ − V₂)/9` and `P₂ − P₁ = (V₂ − V₁)/3`, so the limit
+  is three times looser or more than R-160's at the same `f`; at Burrau's masses 3, 4, 5 (`M = 12`) it is tighter.
+  `P₂ − P₁` is proportional to `V₂ − V₁` exactly when `m_b = m_c`. Under Aarseth–Zare `f = 0.02` is therefore tied to
+  `M = 1` (R-668's gauge): its evidence, prin-rs FINDINGS § 3.3 on `config_stability`, is a latent decode whose
+  masses sum to 1. The reference code's form is the rule. Heggie's and logH's limits read velocities, and R-160's
+  formula stands for them. *Was (corrected 11 Nov 2026 by the physics review of PR #488; this record's own text, not
+  the owner's words):* "`P₂ − P₁` is not proportional to `v_c − v_b` (at equal unit masses `P₁ = (2V₁ − V₂)/3`).
+  Under Aarseth–Zare the limit therefore differs from R-160's formula by an order-one, mass-dependent factor".
 - **(5) 7: the inverse map's guards are the floor `TINY`.** The reply's "1e-37 at f32, 1e-300 at f64" is read, by the
   follow-up, as the existing floor: `lc.rs` tests `u0 > T::TINY` (`lc.rs:55`) and `u1.abs() > T::TINY` (`lc.rs:63`),
   and `T::TINY` is the floor `TINY` the contract already uses (Part 3, Part 6; one value per working precision, a

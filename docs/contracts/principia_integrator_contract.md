@@ -367,9 +367,16 @@ below with its *Was*:
   velocities: **the comment is wrong and the code is the rule** (the owner having checked the code, R-953). The
   difference from R-160's `|v_rel|` is more than a label (R-927, R-953): the momenta are mass-weighted, `P = K·V`
   (`K` the velocity-space mass matrix above), so `f·d_min/|P|_max` is a length over a momentum, not a crossing time, and
-  `P₂ − P₁` is not proportional to `v_c − v_b` (at equal unit masses `P₁ = (2V₁ − V₂)/3`). The limit therefore differs
-  from R-160's by a mass-dependent factor of order one, and the reference code's form is the rule here. Nobody is to
-  "fix" it to velocities.
+  it is not covariant under a rescaling of the masses: masses `×λ` at fixed lengths scale time by `λ^(−1/2)`, `V` by
+  `λ^(1/2)` and `P` by `λ^(3/2)`, so the limit moves by `λ⁻¹` against the dynamical time. In the `M = 1` gauge at equal
+  masses `P₁ = (2V₁ − V₂)/9` and `P₂ − P₁ = (V₂ − V₁)/3`, so the limit is three times looser or more than R-160's at
+  the same `f`; at Burrau's masses 3, 4, 5 (`M = 12`, `tools/xcheck/cases.py:160`) it is tighter. `P₂ − P₁` is
+  proportional to `V₂ − V₁` exactly when `m_b = m_c`. So under Aarseth–Zare `f = 0.02` is tied to `M = 1` (the
+  kernel's gauge, R-668): its evidence, FINDINGS § 3.3 on `config_stability`, is a latent decode (`grid.rs:430-461`)
+  whose masses sum to 1 (`grid.rs:639`). The reference code's form is the rule here. Nobody is to "fix" it to
+  velocities. *Was (corrected 11 Nov 2026 by the physics review of PR #488):* "`P₂ − P₁` is not proportional to
+  `v_c − v_b` (at equal unit masses `P₁ = (2V₁ − V₂)/3`). The limit therefore differs from R-160's by a mass-dependent
+  factor of order one".
 - **The inverse map's guards are `TINY`.** `lc.rs`'s conditioned inverse tests `u0 > T::TINY` (`lc.rs:55`) and
   `u1.abs() > T::TINY` (`lc.rs:63`), and its retained unstable form `u0 > T::TINY` (`lc.rs:78-79`), where `tb_lc.py`
   has the literal `1e-300`. `T::TINY` is the floor `TINY` of Part 3 and Part 6, one value per working precision, a
@@ -515,9 +522,13 @@ these defaults (`tb_az.py:153-238`, the march at `tb_az.py:253-331`), flooring a
    finite (`driver.rs:627-631`). `f = 0.02` (R-160). **The comment above `predictive_dtau` is wrong** and the code is the
    rule (R-953): `driver.rs:607-608` says "a physical bound `dt <= f*d_min/|v_rel|_max`" and "`phys_from_state` returns
    `(R1, R2, V1, V2)`", and `driver.rs:82` "`f * d_min / |v_rel|_max`", but the values read are momenta, not velocities.
-   The difference from R-160's `|v_rel|` is more than a label: momenta are mass-weighted (`P = K·V`), so this limit
-   differs from a velocity limit by an order-one, mass-dependent factor (at equal unit masses `P₁ = (2V₁ − V₂)/3`), and
-   this is the rule (R-927, R-953). The kernel reads `P₁, P₂`; it is not to be "fixed" to velocities. *Was:*
+   The difference from R-160's `|v_rel|` is more than a label: momenta are mass-weighted (`P = K·V`), so this limit is
+   not covariant under a rescaling of the masses (masses `×λ` move it by `λ⁻¹` against the dynamical time); in the
+   `M = 1` gauge at equal masses (`P₁ = (2V₁ − V₂)/9`, `P₂ − P₁ = (V₂ − V₁)/3`) it is three times looser or more than a
+   velocity limit at the same `f`, at Burrau's masses 3, 4, 5 tighter, and `f = 0.02` is tied to `M = 1` (the dated
+   R-953 paragraph above); this is the rule (R-927, R-953). The kernel reads `P₁, P₂`; it is not to be "fixed" to
+   velocities. *Was (corrected 11 Nov 2026 by the physics review of PR #488):* "this limit differs from a velocity
+   limit by an order-one, mass-dependent factor (at equal unit masses `P₁ = (2V₁ − V₂)/3`)". *Was:*
    "`c₂ = f·d_min/(v_max·ab)` … and `v_max = max(|V₁|, |V₂|, |V₂ − V₁|)`, the pair `(V₁, V₂)` being the second half of
    the system's `phys_from_state` … *(RQ-756: whether `V₁, V₂` are velocities or the conjugate momenta `P₁, P₂`.)*".
 5. **The step.** One classical RK4 step of the equations above, on `(u₁, p₁, u₂, p₂, t)` with `E` held, from the
