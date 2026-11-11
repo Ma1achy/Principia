@@ -815,14 +815,19 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
   - `docs/design/principia_dd_integrator.md` § "3.8 Co-computations (tier-gated, ride the forward pass)": "every
     n_renorm steps: δ⃗ = x' − x ; δ = ‖δ⃗‖ ; S += log(δ/δ₀) ; x' ← x + δ₀·(δ⃗/δ)", which presumes a shadow that moves.
   - `docs/design/principia_dd_simstate_payload.md` § "6. Accessors", `ftle_valid`: "return ftle_tier_on &&
-    !sd_is_failed(state) && n > 0u && benettin_renorms > 0u;", with no clause for the shadow; and § "5. Derived":
-    `ftle` "reads NaN whenever `ftle_valid` is false ... never 0/0 or a value beside a false flag (R-253, R-254)".
+    !sd_is_failed(state) && n > 0u && benettin_renorms > 0u;", with no clause for the shadow, as REQ-PAY-032
+    (`ftle_valid`'s clauses, and FTLE aggregates excluding by it) states it; and § "5. Derived": `ftle` "reads NaN
+    whenever `ftle_valid` is false ... never 0/0 or a value beside a false flag (R-253, R-254)", R-253 being the
+    ruling that `ftle` reads NaN at `step_count = 0` and R-254 that it reads NaN whenever `ftle_valid` is false.
   - `decisions.md` § R-255 (every aggregate over `ftle` excludes samples by `ftle_valid`): "every aggregate over ftle
     (footprint means and spreads, quad reductions, histograms, statistics) excludes samples by ftle_valid explicitly".
   - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants", wall 13 (W13): "Never blank,
     never lies, never freezes".
-  - `decisions.md` § R-79 (NaN and sentinels), with W17 (no NaN in storage): "Storage never holds NaN. A blown-up
-    sample stores the defined failed-state values." It speaks of a sample's blow-up; a shadow's non-finite `S` with a
+  - `decisions.md` § R-79 (NaN and sentinels): "Storage never holds NaN. A blown-up sample stores the defined
+    failed-state values." With it, `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants",
+    wall 17 (W17, validity by descriptor predicates, NaN on the read side only): "**NaN-sentinel read-side +
+    descriptor-predicate validity** — ... validity via `has_<feature>` + descriptor predicates, never `isnan()`"; the
+    case breaks it, `ftle_valid` reading true beside a value that is not an exponent. R-79 speaks of a sample's blow-up; a shadow's non-finite `S` with a
     healthy sample is not a failed sample, and TASK-M3-18 (the failure path: `sim_failed`, NaN-free storage and the
     failed-state values) does not cover it as written.
 - **The case, from the physics review (F1, open point B):** on PR #493's head (d3a94daf), once the shadow's own
@@ -831,8 +836,11 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
   macro-steps still count, and every `n_renorm` steps `renormalise` (`:418–421`, `:324`) adds `ln(|x' − x|/δ₀)` with
   `x'` frozen, then resets `x'` beside the sample, where it again does not move. Each interval then adds the log of
   the distance the sample travels in `n_renorm` steps over `δ₀`: at the proposed values about `ln(0.3/3·10⁻³) ≈ 4.6`
-  per 0.3 time units, so a sample whose shadow collided at `t_c` reads `λ ≈ 15·(T − t_c)/T` beside a true `ftle_valid`
-  and a non-failed state. Not an exponent of anything; through R-255 it enters every FTLE aggregate. Every test of that
+  per 0.3 time units at unit phase-space speed. A sample whose shadow collided at `t_c` then reads
+  `λ ≈ [S(t_c) + Σ ln(|x(t + Δ) − x(t)|/δ₀)]/T`: the genuine part `S(t_c)/T`, plus a spurious part of order
+  `15·(T − t_c)/T` that scales with the sample's phase-space speed, so it is larger just after the encounter that set it
+  off; all beside a true `ftle_valid` and a non-failed state. *Refined 11 Nov 2026 (physics review 5864352921, N1).
+  Was:* "reads `λ ≈ 15·(T − t_c)/T`". The spurious part is not an exponent of anything; through R-255 it enters every FTLE aggregate. Every test of that
   PR runs at `CollisionRadius::none()`, so the path is untested.
 - **The case, open point C:** a non-finite `S` from the shadow alone, the sample healthy: the same question.
 - **The question:** when only the shadow reaches a terminal state (collision today; any terminal its detectors raise),
@@ -852,17 +860,34 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
     last finite interval.
   - (c) The sample is treated as terminal too: the shadow's terminal ends the sample's march. *Consequence:* a
     co-computation changes the sample's own outcome, state and every other field, against REQ-INT-039's independence;
-    the FTLE then reads as at any terminal.
+    and the sample's outcome would then depend on whether the FTLE tier is on, where § 3.8 has co-computations
+    "tier-gated, ride the forward pass", so a tier change would alter fields outside the tier. The FTLE then reads as
+    at any terminal.
   - (d) The shadow's detectors monitor only, and the shadow marches on through what would be its terminal.
     *Consequence:* no new field; the shadow's march through a close approach can blow up, which brings back C, so (d)
     still needs one of (a) to (c) for the non-finite case.
-  - (e) Another, stated by the owner.
+  - (e) Re-seed the shadow and re-arm its detectors, the standard Benettin remedy (*added 11 Nov 2026, physics review
+    5864352921, F1*): at the shadow's terminal, finalise the interval as a renormalisation (`S += ln(δ/δ₀)` with `δ` at
+    the terminal), reset `x' = x + ‖δ₀‖·u` with `u` § 3.8's direction (REQ-INT-077, the definition of `δ₀`'s
+    direction), and clear the shadow's done latch, so it marches again as a fresh neighbour. Case C reduces to the
+    same re-seed, the last finite `S` kept. *Consequence:* every sample keeps its full-window FTLE, with no payload
+    field, no change to R-255 and no change to the sample's outcome; the interval that spans the encounter is cut short
+    at the terminal, so the shadow's growth through the close approach is likely under-counted, a bias largest where
+    the FTLE matters; where the sample is within about `‖δ₀‖` of `r_coll` the re-seeded shadow can re-terminate every
+    interval, so it needs (a) or (b) as a fallback (for instance after a stated number of re-seeds); the shadow's
+    terminal latch must become re-armable, a change to the cadence's per-trajectory meaning (§ 3.4: the shadow is
+    "detected", not "ended"); it is the smallest code change from what PR #493's head does, whose `renormalise`
+    already resets `x'` beside the sample and only the latch stays set.
+  - (f) Another, stated by the owner.
 - **Recommended:** (a), for both B and C: it is the smallest change, it never shows a value that is not an exponent
   (W13), and R-254 and R-255 already carry an invalid FTLE through every consumer. Against it: it can drop the FTLE where
   the dynamics are most chaotic. The measurable alternative: TASK-M3-14's calibration sweep, at a nonzero `r_coll`,
   reports the share of samples whose shadow alone reaches a terminal or a non-finite `S`, per orbit family and over the
   region of a chaotic chart; if that share is large where the FTLE matters, (b) keeps those samples, at the cost of a
-  flag and a stored step. The owner chooses with that number.
+  flag and a stored step. The same measurement weighs (e) against (a): on the samples it finds, the bias of the
+  re-seeded FTLE against a reference with the shadow's terminal disabled (`CollisionRadius::none()`), and the share
+  that re-terminate repeatedly; a small bias and a small repeat share favour (e), which keeps every sample's FTLE with
+  no new field. The owner chooses with those numbers.
 - **Applied meanwhile:** nothing is merged: PR #493 is not merged and builds nothing for this case. The physics review
   asks for a test at a nonzero `r_coll` that drives a shadow-only collision and pins whatever is ruled.
 - **Waits:** TASK-M3-14 (the Benettin FTLE shadow).
