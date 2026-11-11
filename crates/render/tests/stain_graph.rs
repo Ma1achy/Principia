@@ -8,7 +8,9 @@
 //!   None, the greyscale of the brightness; so do a deleted source and a deleted mid-chain post render by identity
 //!   (`stain_delete_mid_node_*`);
 //! - REQ-GUI-024: picking a vector field sets the source's subtype to vector; one source wired to a colour and a
-//!   brightness node renders both; the margin node has two field in-ports (`stain_fanout_*`; R-813);
+//!   brightness node renders both; the margin node has two field in-ports, both reaching its colour, blanks a pixel
+//!   that is not a system and draws a failed or non-finite sample `#141418` (`stain_fanout_*`; R-813; R-467, R-470,
+//!   R-511);
 //! - REQ-COL-025: a 9th post in the chain is refused, the chain composes in declaration order, and reordering two
 //!   posts or inserting one changes the output accordingly (`post_chain_order_*`);
 //! - REQ-RENDER-072, REQ-RENDER-081: a node list that is no graph renders the defined fallback, never an error, and
@@ -41,22 +43,38 @@ const N: [f32; 3] = [0.25, 0.5, 0.75];
 const FTLE: f32 = 0.5;
 const DIFFUSION: f32 = 0.125;
 
-/// The entry appended to an assembled stain: `shade()`'s colour at the pixel, its bits, for the sample above.
-const ENTRY: &str = r"
+/// The entry appended to an assembled stain: `shade()`'s colour at the pixel, its bits, for the sample above, then
+/// `sample`'s statements, which set what a draw's sample holds beyond it (its `state`, its validity lane, a field).
+fn entry(sample: &str) -> String {
+    format!(
+        r"
 @fragment
-fn t_shade(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {
+fn t_shade(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {{
     var ctx: Ctx;
     ctx.frag_xy = pos.xy;
     ctx.sample.n = vec3<f32>(0.25, 0.5, 0.75);
     ctx.sample.ftle = 0.5;
     ctx.sample.diffusion = 0.125;
+    {sample}
     return vec4<u32>(bitcast<vec3<u32>>(shade(ctx)), 0u);
+}}
+"
+    )
 }
-";
 
 /// `fragment` drawn: `shade()`'s linear RGB at one pixel, each node's uniforms at their defaults.
 fn draw(gpu: &GpuHarness, fragment: &Fragment) -> [f32; 3] {
-    let source = fragment.source.clone() + ENTRY;
+    draw_sample(gpu, fragment, "", [0.0; 3])
+}
+
+/// [`draw`] for a sample `sample`'s statements alter ([`entry`]), the canvas background `background`.
+fn draw_sample(
+    gpu: &GpuHarness,
+    fragment: &Fragment,
+    sample: &str,
+    background: [f32; 3],
+) -> [f32; 3] {
+    let source = fragment.source.clone() + &entry(sample);
     let mut kinds = vec![BindingKind::Uniform];
     kinds.extend(fragment.uniforms.iter().map(|_| BindingKind::Uniform));
     let kernel = gpu
@@ -78,7 +96,7 @@ fn draw(gpu: &GpuHarness, fragment: &Fragment) -> [f32; 3] {
                 .collect()
         })
         .collect();
-    let prelude_words = prelude::uniform_words(0);
+    let prelude_words = prelude::uniform_words_with(0, background);
     let mut group: Vec<&[u32]> = vec![&prelude_words];
     group.extend(blocks.iter().map(|w| &w[..]));
     let px = kernel.draw(&[&group]).unwrap_or_else(|e| panic!("{e}"));
@@ -652,6 +670,144 @@ negative_control!(
     "a colour declaring one input is no margin node",
     expected = "a margin node has two field in-ports",
     check_margin(&custom(COLOUR))
+);
+
+/// A sample the margin does not draw on its map, as the entry's statements that make it one ([`entry`]).
+const FORBIDDEN: &str = "ctx.validity.forbidden = true;";
+const DECODE_FAILED: &str = "ctx.sample.state = STATE_DECODE_FAILED;";
+const SIM_FAILED: &str = "ctx.sample.state = STATE_SIM_FAILED;";
+const RESERVED_6: &str = "ctx.sample.state = 6u;";
+const RESERVED_7: &str = "ctx.sample.state = 7u;";
+const TOP1_INF: &str = "ctx.sample.ftle = bitcast<f32>(0x7f800000u);";
+/// Two finite inputs whose difference is not: `f32::MAX − (−f32::MAX)`.
+const OVERFLOW: &str =
+    "ctx.sample.ftle = bitcast<f32>(0x7f7fffffu); ctx.sample.diffusion = bitcast<f32>(0xff7fffffu);";
+const TOP2_NAN: &str = "ctx.sample.diffusion = bitcast<f32>(0x7fc00000u);";
+
+/// The margin's two wirings its guards are drawn over: two sources, the margin 0.375, and one source fanned into both
+/// ports, the margin 0, which an unguarded map draws at its zero.
+fn margin_wirings(occupant: &Occupant) -> [(&'static str, Fragment); 2] {
+    [
+        (
+            "two sources",
+            assembled(&margin_graph(occupant, Some(0), Some(1))),
+        ),
+        (
+            "one source in both ports",
+            assembled(&margin_graph(occupant, Some(0), Some(0))),
+        ),
+    ]
+}
+
+/// The margin `occupant` over a pixel that is not a system (render contract "Presentation layer"; render_gui_spec §G1,
+/// §13; R-467, R-470, R-511): a sample the chart classifies as forbidden and a `decode_failed` sample draw the canvas
+/// background, the caller's, its bits, never a place on the map, whatever the two inputs hold; and a sample that is
+/// neither draws something else.
+fn check_margin_blank(occupant: &Occupant) {
+    let gpu = GpuHarness::new().expect("a GPU device");
+    let background = present::canvas_background();
+    for (wiring, fragment) in margin_wirings(occupant) {
+        for (what, sample) in [
+            ("a forbidden sample", FORBIDDEN),
+            ("a decode_failed sample", DECODE_FAILED),
+            (
+                "a forbidden sample whose state is sim_failed",
+                "ctx.validity.forbidden = true; ctx.sample.state = STATE_SIM_FAILED;",
+            ),
+        ] {
+            let got = draw_sample(&gpu, &fragment, sample, background);
+            assert_eq!(
+                got.map(f32::to_bits),
+                background.map(f32::to_bits),
+                "{what}, {wiring}: the margin draws {got:?}, not the canvas background {background:?}"
+            );
+        }
+        let got = draw_sample(&gpu, &fragment, "", background);
+        assert_ne!(
+            got, background,
+            "a valid sample, {wiring}: the margin draws the canvas background"
+        );
+    }
+}
+
+#[test]
+fn stain_fanout_margin_blanks_a_pixel_that_is_not_a_system() {
+    check_margin_blank(&builtin("margin"));
+}
+
+/// The margin with no guard of its own, as it was first built: its map over every sample.
+const MARGIN_UNGUARDED: &str = "// @input top1
+// @input top2
+fn colour(ctx: Ctx) -> vec3<f32> { return ramp_grey(ctx.inputs[0].x - ctx.inputs[1].x); }";
+
+negative_control!(
+    stain_fanout_margin_blanks_a_pixel_that_is_not_a_system,
+    "a margin with no guard draws a forbidden sample on its map",
+    expected = "a forbidden sample, two sources: the margin draws",
+    check_margin_blank(&custom(MARGIN_UNGUARDED))
+);
+
+/// The margin `occupant` over a sample with no value (render contract "Presentation layer"; R-467, R-511): a
+/// `sim_failed` sample and a reserved `state` code (6, 7), whatever the inputs hold, and a margin that is not finite
+/// (an input `+∞` or NaN) draw the presentation views' `#141418`, its bits, never the hatch and never a place on the
+/// map; `running`, the code under `sim_failed`, is a sample like any other and draws what a valid sample does.
+fn check_margin_invalid(occupant: &Occupant) {
+    let gpu = GpuHarness::new().expect("a GPU device");
+    let background = present::canvas_background();
+    let invalid = present::present_invalid().map(|c| c as f32);
+    for (wiring, fragment) in margin_wirings(occupant) {
+        for (what, sample) in [
+            ("a sim_failed sample", SIM_FAILED),
+            ("a reserved state code, 6", RESERVED_6),
+            ("a reserved state code, 7", RESERVED_7),
+            ("a top1 of +∞", TOP1_INF),
+            ("a top2 of NaN", TOP2_NAN),
+            ("a difference that overflows", OVERFLOW),
+        ] {
+            // One source in both ports reads `ftle` alone, so `diffusion` does not reach it. Its `top1` of +∞ is
+            // ∞ − ∞, which a backend's fast-math may fold to 0: the margin tests its inputs' bits too, so it draws
+            // #141418 on every backend.
+            if wiring == "one source in both ports" && [TOP2_NAN, OVERFLOW].contains(&sample) {
+                continue;
+            }
+            let got = draw_sample(&gpu, &fragment, sample, background);
+            assert_eq!(
+                got.map(f32::to_bits),
+                invalid.map(f32::to_bits),
+                "{what}, {wiring}: the margin draws {got:?}, not #141418, {invalid:?}"
+            );
+        }
+        let valid = draw_sample(&gpu, &fragment, "", background);
+        let running = draw_sample(
+            &gpu,
+            &fragment,
+            "ctx.sample.state = STATE_RUNNING;",
+            background,
+        );
+        assert_eq!(
+            running, valid,
+            "a running sample, {wiring}: not drawn as a valid sample is"
+        );
+    }
+}
+
+#[test]
+fn stain_fanout_margin_draws_a_failed_sample_invalid() {
+    check_margin_invalid(&builtin("margin"));
+}
+
+negative_control!(
+    stain_fanout_margin_draws_a_failed_sample_invalid,
+    "a margin that blanks a pixel that is not a system and tests no more draws a sim_failed sample on its map",
+    expected = "a sim_failed sample, two sources: the margin draws",
+    check_margin_invalid(&custom(
+        "// @input top1
+// @input top2
+fn colour(ctx: Ctx) -> vec3<f32> {
+    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) { return canvas_background(); }
+    return ramp_grey(ctx.inputs[0].x - ctx.inputs[1].x);
+}"
+    ))
 );
 
 // ── REQ-COL-025: the post chain ──────────────────────────────────────────────────────────────────────────────────

@@ -4,14 +4,33 @@
 // value its field's `.x`, on the greyscale ramp, `ramp_grey`, which clamps it to [0, 1]. A source keeps no input
 // (§3.1): the two fields reach the margin as two wires from two sources, or from one (§5: fan-out is free).
 //
-// A margin that is not finite, by its bits, has no value: it is noted for the debug view (`note_non_finite()`) and
-// draws the presentation views' invalid colour, `PRESENT_INVALID`, #141418 (R-467; render_gui_spec §13,
-// "Validity-first"), never a place on the ramp.
+// It is a presentation view and draws no hatch (R-467), so it guards itself, as the outcome state and a field ramp
+// do (render contract "Presentation layer"; render_gui_spec §G1, §13 "Validity-first"): a pixel the chart classifies
+// as not a system, `ctx.validity.forbidden`, and a `decode_failed` sample draw the canvas background, blank, never a
+// place on the map (R-467, R-470, R-511); a `sim_failed` sample and a reserved `state` code draw the presentation
+// views' invalid colour, `PRESENT_INVALID`, #141418, whatever the inputs hold; and a margin that is not finite has
+// no value: it is noted for the debug view (`note_non_finite()`) and draws #141418 too. Not finite is an input that
+// is not finite or a difference that is not (two finite inputs may overflow), each by its bits: the inputs are
+// tested themselves because a backend's fast-math may fold `x − x` to 0 where one source feeds both ports, and ∞ − ∞
+// must not draw the map's zero on one backend and #141418 on another.
 // @input top1
 // @input top2
+// Whether `x` is ±∞ or a NaN, by its bits: every exponent bit set.
+fn margin_non_finite(x: f32) -> bool {
+    return (bitcast<u32>(x) & 0x7f800000u) == 0x7f800000u;
+}
+
 fn colour(ctx: Ctx) -> vec3<f32> {
-    let margin = ctx.inputs[0].x - ctx.inputs[1].x;
-    if ((bitcast<u32>(margin) & 0x7f800000u) == 0x7f800000u) {
+    if (ctx.validity.forbidden || ctx.sample.state == STATE_DECODE_FAILED) {
+        return canvas_background();
+    }
+    if (ctx.sample.state == STATE_SIM_FAILED || ctx.sample.state > STATE_DECODE_FAILED) {
+        return PRESENT_INVALID;
+    }
+    let top1 = ctx.inputs[0].x;
+    let top2 = ctx.inputs[1].x;
+    let margin = top1 - top2;
+    if (margin_non_finite(top1) || margin_non_finite(top2) || margin_non_finite(margin)) {
         note_non_finite();
         return PRESENT_INVALID;
     }
