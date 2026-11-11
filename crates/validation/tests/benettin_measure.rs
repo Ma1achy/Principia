@@ -20,10 +20,10 @@ use kernel::decode::Ic;
 use validation::gate::Gate;
 use validation::gate::{self, GateSpec, MeasurementGate, Verdict};
 use validation::measure::benettin::{
-    burrau, calibration_orbit, figure_eight, kepler_embedded, lagrange, lagrange_exponent, lambda,
-    periodic_set, routh_beta, select, sweep_confirms, tolerance, BenettinCalibrationGate,
-    Candidate, FormRow, Precision, ShadowFormGate, Test10, LAGRANGE_HORIZON, PROPOSED_DELTA_0,
-    PROPOSED_N_RENORM, PROPOSED_TOLERANCE,
+    burrau, calibration_orbit, figure_eight, finite_time_gaps, kepler_embedded, lagrange,
+    lagrange_exponent, lambda, periodic_set, routh_beta, select, sweep_confirms, tolerance,
+    BenettinCalibrationGate, Candidate, FormRow, GapRow, Orbit, Precision, ShadowFormGate, Test10,
+    GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0, PROPOSED_N_RENORM, PROPOSED_TOLERANCE,
 };
 use validation::negative_control;
 
@@ -354,10 +354,12 @@ fn check_form_controls(doubled: f64) {
         control(serde_json::json!({ "kind": "periodic-set", "description": "p" })).expect("runs");
     assert_eq!(set.verdict, Verdict::Pass);
     for o in periodic_set() {
+        // Each orbit in both form tables; an unstable one in both gap tables too.
+        let unstable = o.known.is_some_and(|k| k > 0.0);
         assert_eq!(
             set.markdown.matches(o.name).count(),
-            2,
-            "{} not measured twice",
+            if unstable { 4 } else { 2 },
+            "{} not measured at each ‖δ₀‖ in each of its tables",
             o.name
         );
     }
@@ -369,6 +371,32 @@ fn check_form_controls(doubled: f64) {
 fn shadow_form_gate() {
     check_form_controls(2.0);
     assert_eq!(ShadowFormGate.name(), "shadow-form");
+    // The finite-time gap (physics N3): the unstable orbits alone, each measured at both horizons.
+    let gaps = finite_time_gaps(PROPOSED_DELTA_0, PROPOSED_N_RENORM);
+    assert_eq!(
+        gaps.iter().map(|g| g.orbit).collect::<Vec<_>>(),
+        ["Lagrange, equal masses", "Lagrange, (0.5, 0.3, 0.2)"]
+    );
+    let equal = periodic_set()[0];
+    for (k, horizon) in GAP_HORIZONS.into_iter().enumerate() {
+        let at = Orbit { horizon, ..equal };
+        assert_eq!(
+            gaps[0].lambdas[k].to_bits(),
+            lambda(&at, Precision::F64, PROPOSED_DELTA_0, PROPOSED_N_RENORM).to_bits(),
+            "the gap row's λ_T at T = {horizon} is not the f64 measurement there"
+        );
+    }
+    assert_eq!(GAP_HORIZONS, [LAGRANGE_HORIZON, 2.0 * LAGRANGE_HORIZON]);
+    let row = GapRow {
+        orbit: "g",
+        known: 0.5,
+        lambdas: [0.25, 0.375],
+    };
+    assert_eq!(row.gaps(), [0.25, 0.125]);
+    assert_eq!(
+        row.line(),
+        "| g | 0.50000 | 0.25000 (+0.25000, ×T +7.500) | 0.37500 (+0.12500, ×T +7.500) | 0.500 |"
+    );
     // The set is the four orbits its doc names, at their masses.
     let named = [
         lagrange("Lagrange, equal masses", [1.0 / 3.0; 3], LAGRANGE_HORIZON),

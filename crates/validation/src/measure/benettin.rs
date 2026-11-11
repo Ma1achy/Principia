@@ -451,6 +451,70 @@ pub fn shadow_forms(delta_0: f64, n_renorm: u32) -> Vec<FormRow> {
         .collect()
 }
 
+/// The two horizons the finite-time gap to Routh's exponent is read at: [`LAGRANGE_HORIZON`] and twice it, both short
+/// enough at f64 for the march to stay on the unstable orbit (`e^{λT}` times f64's rounding stays below `10⁻⁸`).
+pub const GAP_HORIZONS: [f64; 2] = [LAGRANGE_HORIZON, 2.0 * LAGRANGE_HORIZON];
+
+/// One unstable Lagrange orbit's f64 absolute `λ_T` at the two [`GAP_HORIZONS`], against its known exponent.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GapRow {
+    pub orbit: &'static str,
+    pub known: f64,
+    pub lambdas: [f64; 2],
+}
+
+impl GapRow {
+    /// Measures `orbit` at `(delta_0, n_renorm)` at each horizon.
+    pub fn run(orbit: &Orbit, delta_0: f64, n_renorm: u32) -> Self {
+        GapRow {
+            orbit: orbit.name,
+            known: orbit.known.unwrap_or(f64::NAN),
+            lambdas: GAP_HORIZONS.map(|horizon| {
+                let o = Orbit { horizon, ..*orbit };
+                measure::<Yoshida4, f64, Absolute>(&o, delta_0, n_renorm).lambda
+            }),
+        }
+    }
+
+    /// `known − λ_T` at each horizon.
+    pub fn gaps(&self) -> [f64; 2] {
+        self.lambdas.map(|l| self.known - l)
+    }
+
+    /// The row: `λ_T`, the gap and the gap times `T` at each horizon, and the ratio of the two gaps, ½ for a gap that
+    /// falls as `1/T`.
+    pub fn line(&self) -> String {
+        let [g0, g1] = self.gaps();
+        let [t0, t1] = GAP_HORIZONS;
+        format!(
+            "| {} | {:.5} | {:.5} ({:+.5}, ×T {:+.3}) | {:.5} ({:+.5}, ×T {:+.3}) | {:.3} |",
+            self.orbit,
+            self.known,
+            self.lambdas[0],
+            g0,
+            g0 * t0,
+            self.lambdas[1],
+            g1,
+            g1 * t1,
+            g1 / g0
+        )
+    }
+}
+
+/// The finite-time table's header.
+pub const GAP_HEADER: &str =
+    "| orbit | known λ | f64 λ_T at T = 30 (gap, gap × T) | f64 λ_T at T = 60 (gap, gap × T) \
+                              | gap ratio |\n|---|---|---|---|---|";
+
+/// The unstable orbits of the periodic set (`27β > 1`) at `(delta_0, n_renorm)` and the two horizons.
+pub fn finite_time_gaps(delta_0: f64, n_renorm: u32) -> Vec<GapRow> {
+    periodic_set()
+        .iter()
+        .filter(|o| o.known.is_some_and(|k| k > 0.0))
+        .map(|o| GapRow::run(o, delta_0, n_renorm))
+        .collect()
+}
+
 // ── The gates ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `cargo xtask gate benettin-calibration` (REQ-INT-076): dd test 10 at the proposed `(‖δ₀‖, n_renorm)` on each
@@ -660,6 +724,19 @@ impl MeasurementGate for ShadowFormGate {
                     let table: Vec<String> = rows.iter().map(FormRow::line).collect();
                     markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{FORM_HEADER}\n{}\n", table.join("\n"));
                     every.extend(rows);
+                }
+                markdown += "\nThe displacement column holds δ⃗ but forms x + δ⃗ at each macro-step and marches that \
+                             absolute state, so it agrees with the absolute column by construction (PR #493, physics \
+                             F2): the table does not settle REQ-VAL-038.\n";
+                markdown += "\nThe gap to Routh's exponent at two horizons, f64, the absolute form (a measurement, \
+                             R-649: reported, never tuned). A gap that is finite-time falls as 1/T, a ratio near ½ \
+                             and gap × T near constant.\n";
+                for d in FORM_DELTA_0 {
+                    let table: Vec<String> = finite_time_gaps(d, PROPOSED_N_RENORM)
+                        .iter()
+                        .map(GapRow::line)
+                        .collect();
+                    markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{GAP_HEADER}\n{}\n", table.join("\n"));
                 }
                 let finite = every.iter().all(FormRow::finite);
                 print!("{markdown}");
