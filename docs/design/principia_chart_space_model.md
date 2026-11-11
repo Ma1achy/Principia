@@ -381,9 +381,10 @@ There are three kinds of quantity. The same function can belong to more than one
    and the syzygy word. These depend on the whole trajectory. **They are excluded as axes**, a design rule, and are
    colourings and plots of results only: they are discontinuous, their level sets are fractal, and they have no
    tractable section. Being many-to-one is not the reason (every axis quantity is many-to-one on the 8D state), and
-   where `d_min` or `t_end` is smooth the implicit function theorem gives a local inverse. *(11 Nov 2026, R-965, RQ-738 item 6;
-   was: "are many-to-one, with no inverse even locally. **They can never be axes**, only colourings and plots of
-   results.")*
+   where `d_min` or `t_end` is smooth with non-zero gradient the implicit function theorem gives a local section.
+   *(11 Nov 2026, R-965, RQ-738 item 6; was: "are many-to-one, with no inverse even locally. **They can never be
+   axes**, only colourings and plots of results."; corrected 11 Nov 2026 by the physics review of PR #488, was: "where
+   `d_min` or `t_end` is smooth the implicit function theorem gives a local inverse")*
 
 **Theorem 11 (a state function at time `T` can be an axis).** A chart whose axes are state functions
 evaluated at time `T` (for example "shape-sphere position at `T = 5`") is the IC chart
