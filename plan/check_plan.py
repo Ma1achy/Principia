@@ -223,10 +223,12 @@ def twins(body):
                 if m < 1 or i + k + m > len(plain):
                     continue
                 a, b = join(plain[i:i + k]), join(plain[i + k:i + k + m])
-                if len(a) < TWIN_MIN or len(b) < TWIN_MIN or meet_at_siblings(plain[i:i + k], plain[i + k:i + k + m]):
+                if len(a) < TWIN_MIN or len(b) < TWIN_MIN:
                     continue
                 d = difflib.SequenceMatcher(None, a, b, autojunk=False)
-                if d.quick_ratio() >= TWIN_RATIO and d.ratio() >= TWIN_RATIO:
+                # The sibling test only ever cancels a match, so it runs on a match alone: it costs many joins.
+                if (d.quick_ratio() >= TWIN_RATIO and d.ratio() >= TWIN_RATIO
+                        and not meet_at_siblings(plain[i:i + k], plain[i + k:i + k + m])):
                     found = k, m
                     break
             if found:
