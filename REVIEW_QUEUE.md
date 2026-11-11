@@ -693,3 +693,87 @@ that case, and say nothing about the middle of a morph. Only the owner may say w
   (saturate in the CPU evaluator), which builds the saturated pixels it blends; so REQ-CHART-211 and, through it,
   TASK-M2-103 wait for that pixel alone as well. REQ-CHART-189 and TASK-M2-90 keep the other two arms. No option
   changes.
+
+## RQ-789: Whether a per-merge run whose only failure is the install step's network or archive fetch reads "no result" rather than red: REQ-TOOL-223 makes every failure of `ci-release` a correctness failure *(the owner's queued question, 11 Nov 2026, point (1); a one-way door, it amends a requirement and what a red `main` means; R-809, R-907, R-908, R-909, R-681; REQ-TOOL-223; context: `.github/scripts/ci_per_merge.py`)*
+
+*Queued 11 Nov 2026 from the owner's message of that day, point (1), verbatim: "The verdict fix amends REQ-TOOL-223, so
+it goes through reqio with a queue entry and comes to me as a ruling, not straight into the CI PR; and it must be narrow
+(only the install step's network and archive failures count as infrastructure) and must make the verdict "no result",
+never green." Nothing is chosen here.*
+
+*In plain English: after each merge, the per-merge check on `main` (`ci_per_merge.py`, which decides whether a failed
+run means the code is wrong) reads any failure of the release-build jobs as a real failure, so `main` goes red. On 11
+Nov those jobs failed before building anything, because Ubuntu's package mirror was down while they installed the
+software GPU driver. `main` read red three times with nothing wrong in the code. REQ-TOOL-223 (a release-build failure
+is always a correctness failure) says that is right, so changing it is the owner's call.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-TOOL-223 (a failure of the release-build jobs fails the run and makes `main` red), its
+    statement: "its failure is a failed run on `main`, a correctness failure and so a red `main` (R-681, as R-907 reads
+    it)".
+  - `.github/scripts/ci_per_merge.py`, its docstring: "RELEASE_JOBS fail as correctness, whatever failed: REQ-TOOL-223
+    makes every failure of `ci-release`, a shard or its archive, a correctness failure and so a red `main`."; and the
+    verdict's values: "verdict=red|task|green".
+  - `decisions.md` § R-907 (each merge to `main` tested on its own), its heading: "each merge to `main` is tested on its
+    own, advisory, a correctness failure making `main` red and any other filing a top-priority task".
+- **The evidence:** three per-merge runs on `main`, 11 Nov 2026, read red during Ubuntu's mirror outage, every
+  `ci-release` failure at the step "Install Mesa (lavapipe)", before any build: cf75b5f7 (run 43026202826:
+  `ci-release (1)`), 5e776987 (run 43026967872: `ci-release (1)` and `(2)`), 7ddcca15 (run 43029168415: `ci-release
+  (1)` and `(2)`, and every other test job at the same step). In each run the other test jobs' install failures read as
+  another kind (a download), so `ci-release` alone made the verdict red.
+- **The question:** does a `ci-release` failure confined to the install step's network or archive fetch stay a
+  correctness failure (red `main`), or read as "no result"?
+- **Options seen:**
+  - (a) As the owner framed it: amend REQ-TOOL-223 (through `plan/tools/reqio.py`) so that only the install step's
+    network and archive failures count as infrastructure, and make the verdict for them "no result", never green; any
+    other failure of `ci-release` stays a correctness failure and a red `main`.
+  - (b) Leave REQ-TOOL-223 as it is: an outage at the install step reads red, as on 11 Nov.
+- **Applied meanwhile:** REQ-TOOL-223 as written: every failure of `ci-release` is a correctness failure and a red
+  `main`.
+- **Waits:** the CI change to `.github/scripts/ci_per_merge.py` (the "no result" verdict and the narrow install-step
+  class).
+
+## RQ-790: Whether the product tests a `plan/requirements.yaml`-only change selects move from the pull request's run to the per-merge run *(the owner's queued question, 11 Nov 2026, point (3); a one-way door, it changes what is tested where and reads R-677's "full CI" for that file more narrowly; R-677, R-907, R-908, R-909; context: `.github/scripts/ci_quick_crates.py`, `scripts/ci_changes.sh`)*
+
+*Queued 11 Nov 2026 from the owner's message of that day, point (3), verbatim: "Put the requirements.yaml-only move in
+the rulings report; my lean is yes, provided the per-merge run still runs those tests on every merge and the PR run keeps
+anything that reads requirements.yaml directly." Nothing is chosen here.*
+
+*In plain English: a pull request that changes only the requirements list (`plan/requirements.yaml`) runs today every
+product test of every crate, about 4,870 tests, though most of them never read that file; the tooling (`xtask`) and
+some validation tests do. Those runs take 30 to 58 minutes. The proposal is to run, on such a pull request, only the
+tests that read the file, and to leave the rest to the run made after each merge.*
+
+- **File, section:**
+  - `decisions.md` § R-677 (the three CI tiers), its heading: "a change to Principia's code runs full CI as before; one
+    to the plan's task data or the GUI's artboards and references runs only the cheap checks and the tests that read
+    what it changed".
+  - `decisions.md` § R-907, its heading: "each merge to `main` is tested on its own, advisory, a correctness failure
+    making `main` red".
+  - The CI diagnosis of 10 Nov 2026 (the orchestrator's measurement notes, outside the repo), § 5 "Proposed changes",
+    item 7: "A PR whose only code-tier path is `plan/requirements.yaml` selects xtask, not all eight crates. ... On such
+    a PR the product tests of engine, gui, kernel, ledger, prin, render and validation (about 4,870 tests) no longer run
+    on the PR; they run on the merge. Validation's `part6_catalogue` and the xtask readers still run. This reads R-677's
+    "full CI" for that file (the three-tier classification ruling) more narrowly, so it is the owner's call."
+- **The evidence:** the same diagnosis, § 1: six of 28 verdict runs (#465, the chart-core rulings; #471, a docs
+  transcription) changed `plan/requirements.yaml` and ran all the product tests, 30 to 58 minutes each. Its pass
+  criterion, written before any change: no file under `crates/` reads the file (checked by a test); such a pull
+  request's `ci` at most 15 minutes; the per-merge run on its merge commit passes. *Correction, re-read on `main` at
+  c096a83b when this entry was queued:* the diagnosis's "on `origin/main` the only code that reads
+  `plan/requirements.yaml` is in xtask" does not hold. Sixteen files under `crates/` name it, and test files among
+  them read it directly or copy it into a scratch tree: `crates/ledger/tests/qa_TASK-M3-06_tau.rs`,
+  `crates/validation/src/gate/mod.rs`, and under `crates/validation/tests/`: `convergence.rs`, `cross_backend.rs`,
+  `decode_f32_eps_gpu.rs`, `decode_sanity_gate.rs`, `eps_phys_gate.rs`, `gate_report.rs`, `inspector_gates.rs`,
+  `invariant_gradient_gpu.rs`, `oklab_roundtrip_gate.rs`, `part6_catalogue.rs`, `projection_parity_gate.rs`,
+  `qa_TASK-M0-05.rs`, `qa_TASK-M2-50_fix.rs`, `shape_roundtrip_gate.rs`. So option (a)'s second condition keeps more
+  on the pull request than the xtask readers and `part6_catalogue`, and the criterion's first clause fails as written;
+  which of these files read the file and which only name it is for the CI change to establish.
+- **The question:** on a pull request whose only code-tier path is `plan/requirements.yaml`, do the product tests that
+  do not read it move from the pull request's run to the per-merge run?
+- **Options seen:**
+  - (a) Move them, under the owner's two conditions: the per-merge run still runs those tests on every merge, and the
+    pull request's run keeps everything that reads `plan/requirements.yaml` directly (the xtask readers and the
+    crates' tests that read it, the evidence above). The owner leans to this.
+  - (b) Keep it as it is: such a pull request runs every product test.
+- **Applied meanwhile:** as it is: a `plan/requirements.yaml` change runs every product test on the pull request.
+- **Waits:** the CI change to the selection (`.github/scripts/ci_quick_crates.py`, with `scripts/ci_changes.sh`).
