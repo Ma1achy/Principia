@@ -75,10 +75,16 @@ impl<R: IeeeBits> DtMax<R> {
     /// through it.
     #[inline]
     pub fn skipping(self, more: u32) -> Self {
-        DtMax {
-            skipped: self.skipped.saturating_add(more),
-            ..self
-        }
+        // The saturation is written out, not as `self.skipped.saturating_add(more)`: rust-gpu 0.10.0-alpha.1, the
+        // backend the kernel builds with (R-169), leaves the `saturating_add` intrinsic unimplemented, a zombie that
+        // fails the SPIR-V build where it is reached (its `builder/intrinsics.rs`), as `driver/advance.rs` records
+        // for `saturating_sub`.
+        let skipped = if more > u32::MAX - self.skipped {
+            u32::MAX
+        } else {
+            self.skipped + more
+        };
+        DtMax { skipped, ..self }
     }
 
     /// The largest usable step, or the sentinel where there was none, each with the count of skipped steps.
