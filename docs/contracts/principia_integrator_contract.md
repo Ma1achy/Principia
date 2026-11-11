@@ -279,15 +279,20 @@ REQ-TOOL-039, REQ-TOOL-125).
   rule 4): never by a float compared with itself, and with no precision-dependent constant in the branch (rule 1). Every
   finite step is usable and is reported as it stands, never judged, clamped or filtered: a zero step, a negative one,
   and the overflow `2.209e128`, which is finite at f64 and is reported as itself. At f32 `2.209e128` is `+∞`, so there
-  it is skipped.
+  it is skipped and counted.
+- **A skipped step is not reported as `dt_max`; it is reported by a count.** Beside the largest usable step the
+  diagnostic reports how many steps it skipped, so a march with a non-finite step reads apart from the same march
+  without it, and a skipped step is never invisible (`principia_01_pitfalls.md` §9). The count is a `u32` that
+  saturates at its largest value: past that many it says "at least this many".
 - **The fold is reseeded from the first usable step** (rule 4): the first usable step becomes the maximum, whatever its
   value, and a later usable step replaces it only where it compares greater (`dt > dt_max`). That comparison only ever
   sees finite operands, the non-finite steps having been skipped on their bits before it. No `0.0`, no infinity and no
   other seed value takes part.
 - **"No usable step" is an explicit sentinel, never a number.** A trajectory that took no step, or whose every step was
-  unusable, reports `DtMaxReport::NoUsableStep`; one with a usable step reports `DtMaxReport::Largest(dt_max)`. So "no
-  usable step" cannot be read as "the largest step was `0.0`", which is the report of a trajectory whose largest usable
-  step was zero (`principia_01_pitfalls.md` §9). At f32 a trajectory whose every step overflowed reports the sentinel.
+  unusable, reports `DtMaxReport::NoUsableStep { skipped }`; one with a usable step reports
+  `DtMaxReport::Largest { dt_max, skipped }`. So "no usable step" cannot be read as "the largest step was `0.0`", which
+  is the report of a trajectory whose largest usable step was zero (`principia_01_pitfalls.md` §9). At f32 a trajectory
+  whose every step overflowed reports the sentinel with their count.
 
 #### And FMA contraction is a live question
 
