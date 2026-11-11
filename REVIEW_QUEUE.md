@@ -702,6 +702,73 @@ the old way is kept for it.*
 - **Waits:** TASK-M7-45's retired-link arm; N2's record contract (whether a record carries its decode route);
   TASK-M4-05's switch to records.
 
+## RQ-786: The domain an untransformed slot input inherits from a field whose manifest range has exactly one finite end *(silence; a one-way door, a default the legend samples over; R-815, R-53; REQ-GEN-019; gui_state_contract § 3; render_gui_spec § 10.1; context: TASK-M7-13, TASK-M8-22, TASK-M8-93)*
+
+*Queued 11 Nov 2026 by TASK-M7-13's fix round, from code review 5852530981 of PR #481, F1; each quote re-read on the
+PR's branch. Nothing is chosen here.*
+
+*In plain English: a colour node that does not say what range of values it expects takes that range from the field
+plugged into it. The owner ruled what happens when the field's range has two finite ends (use them) and when it has
+none (use 0 to 1). Some fields have one finite end only, such as a kinetic energy that is at least 0 with no upper
+limit. Nothing written says what range the node takes then. The legend, built later, draws each node over that range,
+so the choice changes what the legend shows.*
+
+- **File, section:**
+  - `decisions.md` § "R-815 — An untransformed slot input's default domain is "inherits", resolved per wire at
+    assembly, an unbounded field taking `(0, 1)` …": "the registry records "inherits" for an untransformed input, the
+    domain resolved per wire at assembly from the wired field's manifest range, and a field whose range is
+    `Range::UNBOUNDED` takes `range_norm`'s `(0, 1)`, the generator's own fallback."
+  - `docs/contracts/principia_gui_state_contract.md` § "3. The registry is the scanned filesystem — for the *fragment*
+    side; compute occupants are Rust build variants": "an untransformed input's registry entry records "inherits",
+    and its domain is resolved per wire at assembly from the wired field's manifest range; a field whose range is
+    unbounded (`Range::UNBOUNDED`) takes `range_norm`'s `(0, 1)`, as the generator's fallback does."
+  - `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library": "`[lo, hi]` is the ledger range's
+    finite ends; a step index's is `[0, horizon_steps]`"; "the one-signed `K_0` `[0, ∞)` and `V_0` `(−∞, 0]` are
+    `lin`, on `ramp_viridis`"; and "An end with no finite bound takes the measured end, and a field whose ledger
+    range is unbounded defaults to `RANGE_AUTO = 1`".
+  - `plan/requirements.yaml` REQ-GEN-019, its verify: "on a wired node its domain equals the manifest [lo, hi] of its
+    field, and a field whose range is unbounded takes (0, 1) (R-815)".
+  - `crates/ledger/src/schema.rs`, `Range::UNBOUNDED`: both ends `Bound::Unbounded`. A range with one finite end is
+    not it.
+- **The silence:** R-815 and the contract give `(0, 1)` to `Range::UNBOUNDED` only, and `[lo, hi]` needs two finite
+  ends. For a field with one finite end, § 10.1 says what `range_norm` does in a view (the finite end is kept and the
+  other is the measured one, per draw), which is not `(0, 1)`. A registry domain resolved at assembly is static: it
+  cannot hold an end that is measured per draw. No document says what an untransformed input's domain is on such a
+  wire. A range whose non-finite end is written as a closed or open `±∞` rather than `Bound::Unbounded` is in the same
+  place.
+- **The question:** what domain does an untransformed input have when the field wired to it has exactly one finite
+  end?
+- **Options seen:**
+  - (a) `(0, 1)`, as for an unbounded field: R-815's fallback read as "no finite `[lo, hi]`". Consequences: static, no
+    new mechanism; the legend samples `K_0` over `(0, 1)` whatever its values are, and `V_0`, which is never positive, over
+    a range it never reaches; the field's one known end is not used.
+  - (b) The finite end kept, the other end the measured one, as § 10.1 has `range_norm` do. Consequences: the domain is
+    no longer a pair of numbers fixed at assembly. `inputDomains` would need an end that reads "measured", resolved
+    per draw from the reduction that fills `u_range`, and the legend (TASK-M8-22) would sample over a range that moves
+    with the data, or over the frozen one (R-581) when a range is frozen. R-815's "resolved per wire at assembly" is
+    amended for these fields.
+  - (c) The wire refused: an untransformed input cannot take a field with one finite end; the node must declare its
+    domain (`// @input <name> [<lo>, <hi>]`) to be wired to it. Consequences: static and explicit; the generated views
+    are not affected (they read their field from `ctx`, not the wire), but a user's untransformed colour node cannot
+    be wired to `K_0` or `V_0` until it declares a domain, a validation error the stain editor must show.
+  - (d) Another definition, stated by the owner.
+- **Recommended:** (b) in substance, held until the legend's task, with (c) meanwhile: § 10.1 already says what these
+  fields' range is everywhere else in the instrument, so a legend drawn over `(0, 1)` for a field whose values are
+  nowhere near it would misstate the map; but (b) needs a mechanism this task has no deliverable for. If the owner
+  wants a static rule now, (c) is the one that cannot draw a wrong legend.
+- **Measurement:** the measurable alternative: when the legend lands (TASK-M8-22), for each manifest field with one
+  finite end that a source can be wired to, the share of a reference run's finite values of that field lying inside
+  `(0, 1)`. Criterion, written before any run: if every such field has at least 99% of its values inside `(0, 1)`,
+  option (a) samples the legend where the data is and is adequate; any field below that shows (a) draws a legend off
+  the data, and (b) or (c) is needed. The field count itself is a `cargo test` away:
+  `registry_input_domains_resolve_per_wire` asserts the manifest has such fields.
+- **Applied meanwhile:** nothing is chosen. `render::registry::resolve` returns `Err(Unruled)`, an error naming this
+  entry, for an untransformed input wired to a range that neither has two finite ends nor is `Range::UNBOUNDED`, and
+  `Entry::domain` gives no domain there; the two ruled arms are built as ruled (TASK-M7-13, PR #481). Nothing shipped
+  samples a domain yet: the assembler does not call `resolve`, and the first readers are the legend (TASK-M8-22) and
+  the Stain canvas on the real engine (TASK-M8-93), both of which need REQ-GEN-019.
+- **Waits:** REQ-GEN-019's arm for a field with one finite end (`rq: RQ-786`); TASK-M8-22's legend over such a wire;
+  TASK-M8-93 where it wires one. TASK-M7-13's other arms do not wait.
 ## RQ-788: The built-in margin node's colour map, range and polarity are not in the corpus *(silence; a one-way door, a shipped look; R-813, R-467; REQ-GUI-024; context: TASK-M7-12, PR #483, gui review 5853011099 F1)*
 
 *Raised by the gui review of PR #483 (finding F1) and filed by TASK-M7-12's implementer. For the human: yes; the

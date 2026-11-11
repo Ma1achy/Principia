@@ -10887,6 +10887,8 @@
   - R-53
   - R-815
   milestone: M7
+  rq:
+  - RQ-786
   note: "R-53 is recorded against colour_composition §1.2 and §3, but those sections do not yet state it; the requirement follows the ruling."
 - id: REQ-GEN-020
   area: GEN
