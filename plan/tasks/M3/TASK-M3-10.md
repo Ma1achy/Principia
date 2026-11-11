@@ -18,6 +18,7 @@
 - `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
 - `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored"
 - `docs/design/principia_dd_generation_root.md` § "3.1 `sample_descriptor` (u32)"
+- `decisions.md` § "R-933 — Starting collided: if bodies start already collided, double or triple, it is a collision at `t = 0`, and the least separation and the pair are recorded *(no RQ)*"
 
 ## Deliverables
 - `crates/kernel/src/driver/latch.rs` — the local-f32 latches, persisted at write-out via the generated pack functions with the clamp and failed-state rule.
@@ -33,3 +34,4 @@
 ## Notes
 - Applied per R-271 (30 Sep 2026): the failed-state value of `d_min` is its unset value f16 +inf (bits `0x7C00`), not 0.0; readers test the bits.
 - TASK-M0-09's generated struct derives `Default`, which gives `packed_a = 0` and so `d_min` bits `0x0000`, a value R-271 says never appears. The latch's initial and failed-state writes set `d_min` unset explicitly and never rely on `Default` (found in PR #78's review).
+- R-933 (10 Nov 2026): a sample that starts collided is a collision at `t = 0` with its least separation recorded, so its persisted `d_min` is that separation, never the unset value; the unset value stays the failed states' alone (R-271).

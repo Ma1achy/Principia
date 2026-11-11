@@ -22,6 +22,11 @@ The `Chart` / axis-kind abstraction (raw, derived-in-block, invariant, curve) is
 ### 3. Kernel eats chart params, decodes in-kernel
 **10 Nov 2026 (R-926, R-925).** The CPU evaluates the chart in f64, and the GPU only integrates records: each quad goes to the GPU with its forward table, built on the CPU from the chart's evaluation, and no chart code is in the integrator. R-926 item 6 says pan, zoom, tilt, slice and morph "just recompute the chart and re-integrate", with no inverse on that path; whether an in-plane pan or zoom still only re-addresses the cache, as R-92 and the caching contract's invalidation table say, is open (RQ-770). The integrator's one input type stays the decoder's canonical `(m, r, p)` (seam 5). The fragment side keeps the chart's generated shader code where it has closed-form code, and reads CPU-built tables where it has none (R-925). R-839, which held this seam for live views, is superseded by R-926. The heading above is kept for the sections that cite it.
 
+**10 Nov 2026 (R-935, the owner's answer on RQ-770).** The point left open above is ruled, option (a): an in-plane pan
+or zoom still only re-addresses the cache, as R-92 and the caching contract's invalidation table say. R-926 item 6 says
+how a changed view is computed (the CPU re-evaluates, the GPU re-integrates, no inverse on that path); a quad already
+integrated on the same plane is reused, and a tilt, slice, morph or rotation is a new plane and re-integrates, as today.
+
 *Was (before R-926):* Kernel input = the chart description in a uniform: `z₀`, basis vectors, chart id + params. Per pixel: **map → z → decode → (m, r, p) → integrate**, in the compiled Rust kernel (→ SPIR-V on the GPU, native on the CPU). *Not* a pre-decoded IC buffer — pan/zoom/tilt change every pixel's IC every frame, so precompute is impossible at scale. Per-frame CPU cost stays O(1): write a uniform, dispatch.
 
 ### 4. Integrate and colour are separate passes — and now separate *mechanisms*

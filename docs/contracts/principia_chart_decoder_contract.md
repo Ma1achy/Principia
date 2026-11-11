@@ -178,6 +178,22 @@ Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop 
 
 ### Past the unit square — each axis's extension type (R-407)
 
+*10 Nov 2026 (R-932, the owner's rule on chart edges, with R-937 to R-939, R-941 and R-942):* **no blank areas.** Every
+edge of a chart's primary range declares an extension: past a true edge the chart saturates, where there is a second
+sheet it unfolds onto it, and where the coordinate repeats it wraps; which mechanism an edge uses is the physics
+reviewer's call, saturating wherever the edge system itself is not a valid system, such as a zero mass. The four types
+below gain unfold, clamp and saturate as declared kinds per edge (clause 3's physics review for each); blank ("bounded")
+is no edge's default, and is drawn only for a validity failure or an edge switched to blank. The count: an unfold sheet
+is inside the primary range and counted, a clamped pixel is not, a saturated pixel only where its system is not shown
+inside the square. The choice lives in the registry row, with a per-edge override in the view state; the centre may
+cross onto an unfold sheet and stops at a clamped or saturated area; an optional Overlays › Chart toggle, off by
+default, marks clamped and saturated pixels. Under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` (R-597)
+saturates, the physics reviewer's call under this rule, in place of drawing as not a system; whether the rule reaches a
+pixel whose target energy cannot be reached with η_E on (R-598) is RQ-784, R-598 standing meanwhile. The section below
+is the text in force for what is built today; the chart
+addendum's N12 rewrites it from these rulings, each replaced line kept as *Was*, and N14 builds it
+(`plan/charts/m2-chart-addendum-extensions-axes.md`).
+
 The figure can show more than the chart's `[0,1]²`: wherever the view reaches past `[0,1]²`, by pan, by zoom out, or
 by F3 Extend (R-537; F3 and present mode fill the window at the same scale, R-406), its samples take `(s,t)` beyond
 `[0,1]` on either axis. **The extension is a property of the chart, not of F3** (R-537): it is drawn wherever the view
