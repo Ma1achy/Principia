@@ -110,9 +110,9 @@
 #
 # Runner disk (the CI study of 9 Nov 2026, applied per R-369/R-812): the ubuntu-24.04 image starts with about 85 GB
 # free, and freeing the disk costs 160-175 s a job, most of it `docker image prune`. The PR tier's jobs that grow by
-# 40 GB or less (`fmt`, `clippy`, `gpu-lavapipe`) free nothing; the ones near `ci-quick`'s and `ci-workspace`'s 69-91 GB
-# (`build`, `ci`, `process`) remove the largest toolsets without the prune. The per-merge tier's jobs keep the steps
-# they had as the full suite.
+# 40 GB or less (`fmt`, `clippy`, `gpu-lavapipe` and, measured at 28-31 GB in four jobs of 10 Nov 2026, `ci`) free
+# nothing; the ones near `ci-workspace`'s 69 GB (`build`, `process`) remove the largest toolsets without the prune. The
+# per-merge tier's jobs keep the steps they had as the full suite.
 #
 # Time limits (the CI diagnosis of 10 Nov 2026, applied per R-369/R-812): every job of the PR tier has a
 # `timeout-minutes`, where GitHub's default is 360, which two runs reached (42760984954, 42759947849). Each is the
@@ -354,8 +354,11 @@ jobs:
   # and the HTML references' tests. On a docs change, none.
   # Built here, not from an archive, so the tests that run cargo on the workspace's own target have its build state.
   # Runner disk: `ci-quick`, the job this replaces, grew 20-91 GB (runner-disk artefacts of 9 Nov 2026, 6 runs), most
-  # of it the process tests' cargo runs, which run here no more; the image starts with about 85 GB free. So it frees
-  # the short list, without `docker image prune`, the step's slow part. Applied per R-369/R-812.
+  # of it the process tests' cargo runs, which run here no more; the image starts with about 85 GB free. This job grew
+  # 28-31 GB at its largest sample (jobs 129477740831, 129590408874, 129638775481 and 129899725782 of 10 Nov 2026, the
+  # second a change to the plan's task data), which leaves 54 GB or more free, so it frees nothing: the step took 34 to
+  # 140 s a job. The plan's task data's readers' steps run outside the sampler; the `df` after the tests reads the disk
+  # at their end. Applied per R-369/R-812.
   tests:
     name: ci
     needs: changes
@@ -374,12 +377,6 @@ jobs:
         run: '[ "$CHANGES" = success ] || { echo "changes ended $CHANGES: no verdict to skip on"; exit 1; }'
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         if: env.RUN == 'true'
-      - name: Free runner disk
-        if: env.RUN == 'true'
-        run: |
-          df -h /
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
-          df -h /
       - name: rustup toolchain install (rust-toolchain.toml)
         if: env.RUN == 'true'
         id: toolchain
