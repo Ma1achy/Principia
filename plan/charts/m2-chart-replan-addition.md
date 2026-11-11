@@ -976,6 +976,14 @@ listed for the owner's veto):**
   REQ-COL-113 on TASK-M7-47 for Chart position, not on TASK-M7-52, which now only generates the WGSL.
   REQ-COL-133's M2 half is a new test name on N19, `place_leaving_rule`. REQ-RENDER-126 sits on N9, the task that
   builds the route it calibrates, and is confirmed at M7's gate as every calibration is.
+- **Arm (3) of N5's `M01_TINY` fixture waits on N12 and N14c, with no edge (11 Nov 2026; the code review 5853977854 of
+  this PR, N6; applied per R-369: task scoping, listed for veto):** the arm reads TASK-M2-95's (N12, the kinds in the
+  contracts) saturate definition and takes its ends from the saturated pixels TASK-M2-103 (N14c, saturate) builds.
+  Giving TASK-M2-90 (N5, the blend chart) those two edges was tried first and `plan/check_plan.py` refuses it:
+  "dependency cycle: TASK-M2-55 → TASK-M2-65 → TASK-M2-90 → TASK-M2-103 → TASK-M2-66 → TASK-M2-65". So REQ-CHART-189's
+  verify and the task's line say instead that arm (3)'s ends are the evaluator's own saturated pixels and that the arm
+  is not read as passing until both are merged, as REQ-RENDER-125's arm (ii) waits on its definitions. What arm (3)
+  asserts is unchanged.
 - **Test names** not given by the plans (`first_slice`, `forward_table_builder`, `blend_chart` and the like) are named
   in the task files: naming.
 
