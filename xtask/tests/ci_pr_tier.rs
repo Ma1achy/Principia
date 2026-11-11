@@ -31,8 +31,8 @@
 //!   in shard 1, `ci` passes only when the shards' matrix succeeded, and each reader binary a partitioned step names
 //!   holds a test.
 //! - `ci_pr_tier_crates_are_fetched_first`: `clippy`, `build` and `process` fetch the crates first, up to three tries
-//!   over HTTP/1.1, then run offline, and restore the registry `ci` saves on `main`, restore-only (#481's `clippy` failed
-//!   at crates.io, curl 56, before anything compiled).
+//!   over HTTP/1.1, then run offline, each keeping the registry cache under a key naming its own job (R-285; #481's
+//!   `clippy` failed at crates.io, curl 56, before anything compiled).
 //!
 //! Each test has its registered negative control (R-176), which feeds the same check a configuration or workflow
 //! differing in the one respect it turns on.
@@ -1602,8 +1602,8 @@ const FETCHING: [&str; 3] = ["clippy", "build", "process"];
 const FETCH_STEP: &str = "      - name: cargo fetch --locked (up to three tries)";
 
 /// Each of [`FETCHING`] fetches the crates in a step of its own before any other cargo step, over HTTP/1.1, and that
-/// step alone turns the job's later cargo runs offline; each restores the registry `ci` saves on `main`, never saving
-/// one of its own.
+/// step alone turns the job's later cargo runs offline; each keeps its registry cache under a key naming its own job
+/// (R-285, REQ-SYS-073), saved only on a push to `main` (R-326).
 fn check_fetch_first(workflow: &str) {
     let jobs = jobs(workflow);
     for id in FETCHING {
@@ -1631,16 +1631,16 @@ fn check_fetch_first(workflow: &str) {
                 && step_key(fetch, "timeout-minutes").is_some(),
             "ci_pr_tier: {id}'s fetch is not over HTTP/1.1 under a limit"
         );
+        let keys: Vec<&str> = lines
+            .iter()
+            .filter_map(|l| l.strip_prefix("          shared-key: "))
+            .collect();
         assert!(
-            lines.iter().any(|l| l == "          shared-key: ci")
+            keys == [id]
                 && lines
                     .iter()
-                    .any(|l| l.trim() == "save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}")
-                && lines
-                    .iter()
-                    .find_map(|l| l.strip_prefix("    if: "))
-                    .is_some_and(|c| c.contains("github.event_name == 'pull_request'")),
-            "ci_pr_tier: {id} does not restore the registry `ci` saves on main, restore-only"
+                    .any(|l| l.trim() == "save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}"),
+            "ci_pr_tier: {id} does not keep its registry under a key of its own, saved only on main"
         );
     }
 }
@@ -1745,8 +1745,8 @@ mod own_registry {
     use super::*;
     negative_control!(
         ci_pr_tier_crates_are_fetched_first,
-        "clippy under a registry key of its own, which nothing ever saves.",
-        expected = "clippy does not restore the registry `ci` saves on main",
+        "clippy restoring another job's registry key, which R-285 gives each job its own of.",
+        expected = "clippy does not keep its registry under a key of its own",
         {
             let text = read(".github/workflows/ci.yml");
             let at = text.find("\n  clippy:\n").expect("the job");
@@ -1754,8 +1754,8 @@ mod own_registry {
             check_fetch_first(&format!(
                 "{head}{}",
                 tail.replacen(
-                    "          shared-key: ci\n",
                     "          shared-key: clippy\n",
+                    "          shared-key: ci\n",
                     1
                 )
             ))

@@ -250,13 +250,11 @@ jobs:
       - name: rustup toolchain install (rust-toolchain.toml)
         if: needs.changes.outputs.docs_only != 'true'
         run: rustup toolchain install
-      # The registry the `ci` shards save on `main`, restored only (R-337): this job runs on no push, so a key of its own
-      # was never saved, and every run downloaded the registry from crates.io. Applied per R-369/R-812.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         if: needs.changes.outputs.docs_only != 'true'
         with:
           prefix-key: cargo-registry
-          shared-key: ci
+          shared-key: clippy
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
@@ -311,12 +309,10 @@ jobs:
           df -h /
       - name: rustup toolchain install (rust-toolchain.toml)
         run: rustup toolchain install
-      # The registry the `ci` shards save on `main`, restored only (R-337): this job runs on no push, so a key of its own
-      # was never saved, and every run downloaded the registry from crates.io. Applied per R-369/R-812.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
-          shared-key: ci
+          shared-key: build
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
@@ -607,12 +603,10 @@ jobs:
         run: |
           rustup toolchain install
           echo "cachekey=$({ rustc --version --verbose; env | grep -E '^CARGO_(INCREMENTAL|PROFILE)' | sort; cat .github/actions/cargo-ci-config/config.sh; } | sha256sum | cut -c1-20)" >> "$GITHUB_OUTPUT"
-      # The registry the `ci` shards save on `main`, restored only (R-337): this job runs on no push, so a key of its own
-      # was never saved, and every run downloaded the registry from crates.io. Applied per R-369/R-812.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           prefix-key: cargo-registry
-          shared-key: ci
+          shared-key: process
           cache-targets: "false"
           cache-bin: "false"
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
