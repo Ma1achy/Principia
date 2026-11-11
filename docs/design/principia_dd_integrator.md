@@ -308,6 +308,25 @@ every n_renorm steps:  δ⃗ = x' − x ;  δ = ‖δ⃗‖ ;  S += log(δ/δ₀
 ```
 Renormalisation is what makes λ an intrinsic flow quantity; it is also exactly why the Benettin endpoint is not a valid neighbourhood sample.
 
+*δ₀'s direction (TASK-M3-14's definition, R-72, REQ-INT-077).* The offset is in the positions alone, the momenta
+taking none: `x'₀ = x₀ + ‖δ₀‖·u`, with
+
+```
+u:  δr₀ = (+½, 0),  δr₁ = (−½, +½),  δr₂ = (0, −½),  δp₀ = δp₁ = δp₂ = (0, 0)
+```
+
+a unit vector over the twelve phase-space components `(r, p)` that `δ = ‖δ⃗‖` is taken over (payload §5), applied to the
+decoded IC `x₀`, each offset component one rounded multiply-add `xₖ + ‖δ₀‖·uₖ`. It is a constant, the same for every
+sample, chart, precision and backend: never drawn at random, never a function of the chart. Its entries `±½` and 0 are
+exact at f32 and f64 and `‖δ₀‖·uₖ` is exact, so CPU and GPU form bit-identical offsets from identical inputs. It moves
+no body's momentum, so no light body is given a large velocity: a momentum offset `‖δ₀‖/2` on a body of mass `mᵢ` is a
+velocity offset `‖δ₀‖/2mᵢ`, which on the Kepler-embedded orbit's `m₂ → ε` would swamp the first interval's growth. Its
+unweighted sum is zero in each component; its mass-weighted sum, the shadow's CoM offset, is zero at equal masses and
+otherwise removed by the shadow's own projection after its first step (§3.4), which leaves a nonzero separation, since
+`u` moves the bodies by different amounts. Any direction with a component along the most expanding one converges to
+the largest exponent under renormalisation; a fixed one makes the shadow a deterministic function of the sample's
+state. `‖δ₀‖` and `n_renorm` are calibrated (REQ-INT-076, R-71).
+
 **Ensemble sensitivity** (E copies per nominal sample, full samples jittered within the footprint at fixed Halton (2,3) offsets — copy 0 the un-jittered centre, copies 1..E at Halton points 1..E centred and scaled to the footprint, R-80 — no intervention):
 ```
 outcome entropy   H = −Σᵢ pᵢ log pᵢ            (categorical final diagnostics)
