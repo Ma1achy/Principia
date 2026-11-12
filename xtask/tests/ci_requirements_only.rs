@@ -13,6 +13,8 @@
 //!   a binary that reads it or uses such a module; each xtask module's own test where the module reads it; and a test
 //!   including a support module that reads it. RQ-790's evidence, the test files under `crates/` that name the file,
 //!   are among them, and no crate without a reader has a test in it.
+//! - `ci_requirements_only_untrusted_scan_runs_every_crate`: the scan prints nothing on a workspace with a `[[test]]`
+//!   target at a path of its own, and when it prints nothing `decide` falls back to every crate.
 //! - `ci_requirements_only_no_doctest_reads_the_file`: no doc comment in a crate's or xtask's `src/` holds a path to the
 //!   file, so the doctests the selection leaves out read none of it.
 //! - `ci_requirements_only_per_merge_runs_everything`: on a push, `decide` names every crate whatever changed, and the
@@ -610,6 +612,105 @@ mod no_filterset {
             &edited(TIER, "  packages=\"${pkgs# }$tests -E ${filter#|}\"\n", "  packages=\"${pkgs# }$tests\"\n"),
             &read(CRATES),
             &scan()
+        )
+    );
+}
+
+// ---- A scan it cannot trust -------------------------------------------------------------------------------------
+
+/// What `crates --readers` prints on a scratch workspace of one member, `a`, whose test `r` names the file, and which
+/// has a `[[test]]` target at a path of its own.
+fn readers_beside_a_test_target(crates: &str) -> String {
+    let dir = Scratch::new("ci_requirements_only_test_target");
+    std::fs::create_dir_all(dir.join("a/tests")).expect("scratch");
+    std::fs::write(dir.join("Cargo.toml"), "[workspace]\nmembers = [\"a\"]\n").expect("manifest");
+    std::fs::write(
+        dir.join("a/Cargo.toml"),
+        "[package]\nname = \"a\"\n\n[[test]]\nname = \"t\"\npath = \"x/t.rs\"\n",
+    )
+    .expect("member");
+    std::fs::write(
+        dir.join("a/tests/r.rs"),
+        "const R: &str = \"plan/requirements.yaml\";\n",
+    )
+    .expect("test");
+    let script = dir.join("ci_quick_crates.py");
+    std::fs::write(&script, crates).expect("crates script");
+    let out = Command::new("python3")
+        .arg("-I")
+        .arg(&script)
+        .arg("--root")
+        .arg(&*dir)
+        .arg("--readers")
+        .timed_output()
+        .expect("ci_requirements_only: python3 ran");
+    assert!(
+        out.status.success(),
+        "ci_requirements_only: --readers failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8_lossy(&out.stdout).trim().to_owned()
+}
+
+const ALL_PACKAGES: &str =
+    "-p engine -p gui -p kernel -p ledger -p prin -p render -p validation -p xtask";
+const ALL_LIBRARY_PACKAGES: &str =
+    "-p engine -p gui -p kernel -p ledger -p render -p validation -p xtask";
+
+fn check_untrusted(tier: &str, crates: &str) {
+    assert_eq!(
+        readers_beside_a_test_target(crates),
+        "",
+        "ci_requirements_only: the scan lists readers on a workspace with a `[[test]]` target it cannot place"
+    );
+    let silent = crates.replacen(
+        "        print(\" \".join(readers(args.root) or []))\n",
+        "        print(\"\")\n",
+        1,
+    );
+    assert_ne!(
+        silent, crates,
+        "ci_requirements_only: the scan's print is gone"
+    );
+    assert_eq!(
+        decide(&read(CHANGES), tier, &silent, "pull_request", ONLY),
+        (ALL_PACKAGES.to_owned(), ALL_LIBRARY_PACKAGES.to_owned()),
+        "ci_requirements_only: a scan that prints nothing does not fall back to every crate"
+    );
+}
+
+#[test]
+fn ci_requirements_only_untrusted_scan_runs_every_crate() {
+    check_untrusted(&read(TIER), &read(CRATES));
+}
+
+negative_control!(
+    ci_requirements_only_untrusted_scan_runs_every_crate,
+    "the scan blind to a `[[test]]` target at a path of its own",
+    expected = "the scan lists readers on a workspace with a `[[test]]` target",
+    check_untrusted(
+        &read(TIER),
+        &edited(
+            CRATES,
+            "        if \"test\" in doc:\n            return None\n",
+            ""
+        )
+    )
+);
+
+mod empty_scan_taken {
+    use super::*;
+    negative_control!(
+        ci_requirements_only_untrusted_scan_runs_every_crate,
+        "the tier script taking an empty scan as the selection",
+        expected = "a scan that prints nothing does not fall back to every crate",
+        check_untrusted(
+            &edited(
+                TIER,
+                "  ids=$(python3 -I \"$3\" --root \"$4\" --readers) && [ -n \"$ids\" ] || return 1\n",
+                "  ids=$(python3 -I \"$3\" --root \"$4\" --readers) || return 1\n"
+            ),
+            &read(CRATES)
         )
     );
 }
