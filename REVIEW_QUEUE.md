@@ -698,8 +698,8 @@ library; this would do the same for every maths function the chart code can reac
     needs a ruling.
 - **The conflict:** under R-926 item 5 every record is the CPU's f64 evaluation, narrowed. On the host every
   `Float::` transcendental, and every inherent `f64` one, goes through std to the platform library (macOS, glibc,
-  Windows, wasm). Where two platforms' f64 values differ, narrowing flips at an f32 rounding midpoint with probability
-  about `2⁻²⁸` per differing component; the overall rate is (the share of calls that differ by platform) × (the
+  Windows, wasm). Where two platforms' f64 values differ by one f64 ulp, narrowing flips at an f32 rounding midpoint
+  with probability about `2⁻²⁹` per differing component (one f64 ulp in the `2²⁹` f64 ulps of an f32 ulp); the overall rate is (the share of calls that differ by platform) × (the
   amplification through the chart) × that, *inferred*. Rare, but not zero, so R-521's and R-921's recreation,
   REQ-CHART-099's digest written on the Mac and checked on Linux CI, REQ-CHART-155's native-to-wasm comparison and the
   export contract's re-render (:156) hold only per machine. The lock and placement solves, the backwards search and
