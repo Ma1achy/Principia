@@ -975,7 +975,10 @@ under that rule yet; a sub-question asks the owner what they do.*
     0, so under (b) as written such a pair reads as the f64 floor and warns; RQ-553's central difference read 0 there
     and counted it as saturation. So at flagged sites (b) changes RQ-553's meaning. The entry does not choose between
     leaving it so and excluding such pairs (as REQ-CHART-130 masks seams from refinement); the measurement lists them
-    apart (below).
+    apart (below). Left so, the cost (physics review 5877369526, F4): a pair equal by symmetry is neither saturation
+    nor the floor and occurs at any depth, so it raises the precision warning at shallow depths where nothing has run
+    out, wherever a flagged fold lies on a sample-grid symmetry line (a mirror axis at `θ = 0`, for example), against
+    W13 ("never lies").
   - **(c) The dual `J_D` as is.** Warns falsely in the saturated field; against W13.
 - **Q-T3, the tier-3 gap in (b) (physics review 5877078565 of the pull request that filed this entry, P1):** (b)'s slope
   condition reads `J_dual,k`, the dual (tier 1) or implicit (tier 2) slope, and a tier-3 map has none. Tier-3 maps
