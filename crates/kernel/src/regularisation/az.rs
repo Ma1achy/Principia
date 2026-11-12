@@ -861,13 +861,17 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
             kept_q = q;
             kept_p = p;
             landed = q.t >= land_at;
+            // `done` is read before the landing: a terminal that fires on the landing step ends the march there, its
+            // state latched, never marched on into the next interval (Part 2a § "The sync grid is a fixed quantum of
+            // physical time (R-565)": "a terminal event … still latches at the step it fires on"; code review
+            // 5880407311 of PR #502, F2).
             if over_budget(count.steps, t0 + q.t, params) {
                 count.end = End::Exhausted;
                 go = false;
-            } else if landed {
-                go = false;
             } else if cadence.done() {
                 count.end = End::Done;
+                go = false;
+            } else if landed {
                 go = false;
             }
         } else {

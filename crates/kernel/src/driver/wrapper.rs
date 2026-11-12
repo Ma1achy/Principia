@@ -33,8 +33,9 @@
 //! `macro`, which still advances past it, bounds the loop only. **A march that ended** ([`Reached::ended`]) is never
 //! run on: the loop stops at the macro-step it ended in, which is not completed, its state the one the occupant
 //! latched (Part 2a § "The sync grid is a fixed quantum of physical time (R-565)": "a terminal event … still latches
-//! at the step it fires on"). A non-finite one writes `sim_failed` with its detail (`failed_detail`; payload §2), and
-//! a spent budget leaves `state` `running`, as it stood (Part 7; R-603, whose `budget_exhausted` flag is
+//! at the step it fires on"). A non-finite one writes `sim_failed` with its detail (`failed_detail`; payload §2) read
+//! on the latched, finite state, so 2 for Aarseth–Zare: that detail is interim until RQ-806 is ruled (physics review
+//! 5879658175 of PR #502, P1; the failure path is TASK-M3-18's). A spent budget leaves `state` `running`, as it stood (Part 7; R-603, whose `budget_exhausted` flag is
 //! TASK-M3-41's). [`integrate`] writes the monitored fields from
 //! its cadence's monitor ([`monitored`]; Part 1, "COM projection and invariant monitoring"): `E_0` and `Lz_0`, stored
 //! before the loop, and `packed_b`'s `dE_max` and `dLz_max`, the maxima latched at `Real` during the march and packed

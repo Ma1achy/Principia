@@ -44,15 +44,17 @@
 //!   that reached its boundary is completed, `t_end_step` and the Welford samples counting it; a spent budget stops
 //!   the copy, `running` as it stood; a march stopped on `done` is not completed. Their controls drop the end (the
 //!   stepper's rule) or count a short call completed.
+//! - `az_done_on_landing`: a seam call spanning several sync boundaries with a terminal on a landing step ends there,
+//!   latched; its control leaves the terminal's `done` unread.
 //! - `regularisation_owning_default_end`, `regularisation_none_keeps_count`: the default end of an occupant owning
 //!   its time mapping, and `none` bitwise the stepper's own run; their controls swap the two rules.
 
 use std::cell::Cell;
 
 use kernel::decode::Ic;
-use kernel::driver::advance::{Advance, AdvanceParams, Advanced, Cadence, Count};
 #[cfg(feature = "controls")]
-use kernel::driver::advance::{AdvanceReal, Reached};
+use kernel::driver::advance::AdvanceReal;
+use kernel::driver::advance::{Advance, AdvanceParams, Advanced, Cadence, Count, Reached};
 use kernel::driver::substep::NsubThresholds;
 use kernel::driver::welford::{self, Welford};
 use kernel::driver::wrapper::{integrate, integrate_with, WrapperReal, WrapperUniforms};
@@ -2377,6 +2379,10 @@ impl AzConfig for Spent {
 /// Aarseth–Zare + RK4 on a budget of 4 steps.
 type SpentRk4 = Composed<Rk4, AarsethZare<Spent>>;
 
+/// The budget here is `N_min = 4` at rate 0, so one seam call's fresh count spends it whatever the time: the cumulative
+/// budget across seam calls at `step_budget_rate > 0` (R-604) is TASK-M3-41's, with the count carried through the seam
+/// (code review 5880407311 of PR #502, F1).
+///
 /// Burrau's state through the wrapper as in [`check_completes`] on a budget of 4 steps: the first macro-step takes no
 /// step and is completed, the second's march spends its budget, and the copy is never run on (R-604): the run stops
 /// there, `running` as it stood (Part 7; R-603's flag being TASK-M3-41's), at `t_end_step = 1`, with the state and
@@ -2583,4 +2589,72 @@ negative_control!(
     "none read by the rule of an occupant owning its time mapping",
     expected = "none completes a macro-step whose N_sub substeps were taken",
     check_none_keeps_count(run_by::<Shorting<Composed<Rk4, NoRegularisation>>, f64, DoneAfter>)
+);
+
+/// A cadence that is never done, whatever it is told: a terminal's `done` left unread (a control's).
+#[cfg(feature = "controls")]
+struct Unread(DoneAfter);
+
+#[cfg(feature = "controls")]
+impl<R> Cadence<R> for Unread {
+    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.0.after_step(state, geom);
+    }
+    fn done(&self) -> bool {
+        false
+    }
+}
+
+/// One seam call spanning four sync boundaries (`dt_macro = 1/2`, `Δ_sync = 1/8`) with a terminal that fires on the
+/// first interval's landing step (the cadence done from the call that follows that step): the march ends there, its
+/// state the landing's, latched, never marched on into the next interval, and the call is short of its target (Part
+/// 2a § "The sync grid is a fixed quantum of physical time (R-565)": "a terminal event … still latches at the step it
+/// fires on"; code review 5880407311 of PR #502, F2). `cadence(n)` is the cadence done from its `n`-th call.
+fn check_done_on_landing<C: Cadence<f64>>(cadence: fn(u32) -> C) {
+    let s = burrau::<f64>();
+    let first = march::<Rk4, f64, Counting, ExplicitTest>(
+        &s,
+        0,
+        1,
+        AzCount::new(),
+        &params(),
+        &mut Counting::default(),
+        &mut ExplicitTest,
+    );
+    assert_eq!(first.boundary, 1, "the first interval lands");
+    let n = first.count.accepted;
+    let mut c = cadence(n);
+    let (out, reached) = <AzRk4 as Advance>::advance_reaching(
+        &s,
+        &Geom::new(&s.m, &s.r),
+        0,
+        1,
+        &AdvanceParams {
+            dt_macro: 0.5,
+            n_sub: 4,
+        },
+        &mut c,
+    );
+    assert_eq!(
+        (out.substeps, bits(&out.state)),
+        (n, bits(&first.state)),
+        "the march stops at the landing step its terminal fired on"
+    );
+    assert_eq!(
+        reached,
+        Reached::Short,
+        "a call ended by a terminal is short"
+    );
+}
+
+#[test]
+fn az_done_on_landing() {
+    check_done_on_landing(DoneAfter::new);
+}
+
+negative_control!(
+    az_done_on_landing,
+    "the terminal's done left unread, the march carried on past it",
+    expected = "the march stops at the landing step its terminal fired on",
+    check_done_on_landing(|n| Unread(DoneAfter::new(n)))
 );
