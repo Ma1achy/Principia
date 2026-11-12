@@ -369,16 +369,26 @@ head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose su
 verdict cover every job so the two can't disagree."):* any failed job of `ci.yml`'s run on `main` is a red `main`, a
 process test, the lints, `cargo xtask ci` or the web skeleton as much as a product test; an install step's network or
 archive-download failure reads "no result", never green, and holds as red does (R-979, a reading flagged for the
-owner). Until TASK-M0-59 makes the verdict cover every job, the orchestrator reads every job of the run itself. The vetoed
+owner). The built verdict (TASK-M0-59, `.github/scripts/ci_per_merge.py`) covers every job of the run: red when any job
+failed but by an install outage, which fails `per-merge`; "no result" when every failed job is an install outage, which
+fails `per-merge` too, under its own summary line, never passing; green when no job failed, which alone passes it. An
+install outage is narrow: the job's one unfinished step is `Install Mesa (lavapipe)`, and that step's own part of the
+log shows `bounded`'s last try failing on an `apt-get` call, an apt fetch or network error (an `Ign:` or `Err:` line on
+a URL, `Failed to fetch`, a name not resolved, a connection refused or timed out) and no package error; the summary
+names the step and those two lines. Anything else fails towards red. *Was:* "Until TASK-M0-59 makes the verdict cover
+every job, the orchestrator reads every job of the run itself." The vetoed
 policy is kept as its *Was*: "A
 run of `ci` on `main` that failed with `per-merge` passing is not red `main`: its failures are outside correctness (a
 process test, the lints and build beside the tests, `cargo xtask ci`, the web skeleton, a runner or setup step), filed
 as one issue labelled `per-merge`, a top-priority task the orchestrator works without stopping pull-request work. The
 run's own conclusion can't carry this: the jobs that run the product suite run process tests too, and none of them may
 pass with a failing step (REQ-TOOL-223, R-235, R-335). Applied per R-369/R-812."
-What follows describes the verdict as built today, and stands until TASK-M0-59 changes it to cover every job (R-982);
-it is not the vetoed policy. The verdict reads each failed test step in its own part of the job's log, and is red whenever part of the product
-suite did not run: a test step skipped after a failed one (but a step of process tests alone), or nextest counting
+Each failed job's line in the summary also gives its kind, for the reader, both kinds red: `correctness` (a product
+test, the release profile, a job the verdict does not know) or `other` (a process test, the lints and build, `cargo
+xtask ci`, the web skeleton, a step outside the tests). *Was:* "What follows describes the verdict as built today, and
+stands until TASK-M0-59 changes it to cover every job (R-982); it is not the vetoed policy." The verdict reads each
+failed test step in its own part of the job's log, and calls the job `correctness` whenever part of the product
+suite did not run (*was:* "and is red whenever part of the product suite did not run"): a test step skipped after a failed one (but a step of process tests alone), or nextest counting
 fewer tests run than it selected. The `ci`, `ci-workspace` and `gpu-kernel` profiles run every test after a failure
 (`fail-fast = false`), and each later product test step of their jobs runs whatever an earlier one ended in, but for
 one: in `ci`'s first shard the doctests run before the shard's nextest run, which a failing doctest skips, leaving that
@@ -520,8 +530,8 @@ controls run among it, and every process test. They are `ci.yml`'s per-merge tie
 order step 3), the full suite's jobs, on a push only, each merge commit in a run of its own, bearing no required check,
 and last `per-merge`, their verdict. *12 Nov 2026 (R-982, the owner's veto of D-2 of that day's report):* any failed job
 of the run is a red `main`, an install step's network or archive-download failure reading "no result", never green
-(R-979; § "Merging", what is red `main`); the built verdict follows once TASK-M0-59 lands, and until then the
-orchestrator reads every job itself. *Was:* "a correctness failure fails it, a red `main`; any other failure is filed as
+(R-979; § "Merging", what is red `main`), the built verdict since TASK-M0-59. *Was (12 Nov 2026, until TASK-M0-59):*
+"the built verdict follows once TASK-M0-59 lands, and until then the orchestrator reads every job itself." *Was:* "a correctness failure fails it, a red `main`; any other failure is filed as
 a top-priority task, an issue labelled `per-merge` (§ "Merging")". A head that changes only prose a test reads does not run that test unless it changes the
 machinery, so a contract's renamed heading can turn `main` red after a green pull request (R-662). New code that loads
 a data file for behaviour adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a
@@ -559,6 +569,7 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 **Automatic retries and disk (R-714).** `retry.yml` re-runs failed jobs only on a runner-level fault, in at most two retries, never on a real test failure or a flake; its classifier is tested on saved logs. Every CI speed-up step reports the lowest free disk per job, before and after, and must reduce or hold it.
 *11 Nov 2026 (R-968):* a job whose only failure is the package-install step is also re-run, once, automatically, on GitHub-hosted runners only, marked as a re-run; any other failure beside it stands, so a real failure never turns green. The per-merge verdict on such a failure is unchanged (REQ-TOOL-223; RQ-789, open).
+*12 Nov 2026 (R-979, RQ-789 (a), built by TASK-M0-59):* the per-merge verdict reads an install step's network or archive-download failure as "no result", never green, in any job (§ "Merging", what is red `main`); the re-run above is unchanged.
 
 **The Mesa package cache (R-967).** CI caches the Mesa (lavapipe) packages that `gpu-lavapipe` and the release jobs install, keyed on the package list and, applied per R-369 (R-967), the runner's image, saved only on a push to `main` and restored by pull-request runs (R-326), so a run no longer fetches them from Ubuntu's archive. It joins R-285's cargo registry and fixture pool and R-320's rust-gpu build; no target directory is cached (R-285, R-656).
 
