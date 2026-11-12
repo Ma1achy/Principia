@@ -742,7 +742,7 @@ fn check_e_only(script: &str) {
     );
     let limit = function(script, "Limit-Cache");
     assert!(
-        limit.contains("Get-ChildItem -LiteralPath $CacheRoot -Directory | Where-Object { $_.Name -match '^[0-9a-f]{64}(\\.partial)?$' }"),
+        limit.contains("Get-ChildItem -LiteralPath $CacheRoot -Directory | Where-Object { $_.Name -cmatch '^[0-9a-f]{64}(\\.partial)?$' }"),
         "Limit-Cache removes what the cache didn't name"
     );
 }
@@ -804,8 +804,8 @@ mod removes_anything {
         expected = "Limit-Cache removes what the cache didn't name",
         check_e_only(&edited(
             &read(PS),
-            "Where-Object { $_.Name -match '^[0-9a-f]{64}(\\.partial)?$' }",
-            "Where-Object { $_.Name -match '.' }"
+            "Where-Object { $_.Name -cmatch '^[0-9a-f]{64}(\\.partial)?$' }",
+            "Where-Object { $_.Name -cmatch '.' }"
         ))
     );
 }
@@ -813,14 +813,26 @@ mod removes_anything {
 // ---- At most two images -----------------------------------------------------------------------------------------
 
 /// `Limit-Cache` marks this recipe's image as just used, keeps it and the one other complete image used last, and
-/// removes every other image and every half-filled one; `register` runs it on every registration, hit or miss, once the
-/// image is checked and before the import.
+/// removes every other image and every half-filled one, matching names case-sensitively (`-cmatch`), so a folder named
+/// in capitals, no key's, is left alone; `register` runs it on every registration, hit or miss, once the image is
+/// checked and before the import.
 fn check_keep_two(script: &str) {
     let limit = statements(function(script, "Limit-Cache"));
     let has = |s: &str| limit.contains(&s);
     assert!(
+        limit
+            .iter()
+            .filter(|l| l.contains(" -cmatch '^[0-9a-f]{64}"))
+            .count()
+            == 2
+            && !limit
+                .iter()
+                .any(|l| l.contains(" -match ") || l.contains(" -imatch ")),
+        "Limit-Cache matches the cache's names regardless of case"
+    );
+    assert!(
         has("(Get-Item -LiteralPath (Join-Path $CacheRoot $Current)).LastWriteTimeUtc = [DateTime]::UtcNow")
-            && has("$previous = @($entries | Where-Object { $_.Name -match '^[0-9a-f]{64}$' -and $_.Name -ne $Current } |")
+            && has("$previous = @($entries | Where-Object { $_.Name -cmatch '^[0-9a-f]{64}$' -and $_.Name -ne $Current } |")
             && has("Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1 | ForEach-Object { $_.Name })")
             && has("$keep = @($Current) + $previous")
             && has("if ($keep -notcontains $e.Name) {")
@@ -861,6 +873,18 @@ mod never_limited {
         "a registration that doesn't limit the cache",
         expected = "register doesn't limit the cache on every registration",
         check_keep_two(&edited(&read(PS), "        Limit-Cache $key\n", ""))
+    );
+}
+
+#[cfg(feature = "controls")]
+mod any_case {
+    use super::*;
+    // `-match` ignores case: a hand-made folder named in capital hex would be removed.
+    negative_control!(
+        wsl_cache_keeps_this_image_and_the_one_before,
+        "names matched regardless of case",
+        expected = "Limit-Cache matches the cache's names regardless of case",
+        check_keep_two(&read(PS).replace(" -cmatch '^[0-9a-f]{64}", " -match '^[0-9a-f]{64}"))
     );
 }
 

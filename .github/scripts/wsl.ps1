@@ -189,12 +189,13 @@ function Save-Image([string]$From, [string]$Entry, [string]$Pinned) {
 }
 
 # At most two images in the cache: $Current, marked as just used, and the one used last before it. Only folders named
-# as the cache names them are touched; anything else in the folder is left alone.
+# as the cache names them, a recipe key in lowercase hex (`-cmatch`: a folder named in capitals is no key's) or one
+# being filled, are touched; anything else in the folder is left alone.
 function Limit-Cache([string]$Current) {
     Assert-Cache
     (Get-Item -LiteralPath (Join-Path $CacheRoot $Current)).LastWriteTimeUtc = [DateTime]::UtcNow
-    $entries = @(Get-ChildItem -LiteralPath $CacheRoot -Directory | Where-Object { $_.Name -match '^[0-9a-f]{64}(\.partial)?$' })
-    $previous = @($entries | Where-Object { $_.Name -match '^[0-9a-f]{64}$' -and $_.Name -ne $Current } |
+    $entries = @(Get-ChildItem -LiteralPath $CacheRoot -Directory | Where-Object { $_.Name -cmatch '^[0-9a-f]{64}(\.partial)?$' })
+    $previous = @($entries | Where-Object { $_.Name -cmatch '^[0-9a-f]{64}$' -and $_.Name -ne $Current } |
             Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1 | ForEach-Object { $_.Name })
     $keep = @($Current) + $previous
     foreach ($e in $entries) {
