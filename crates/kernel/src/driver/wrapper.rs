@@ -33,9 +33,11 @@
 //! before the loop, and `packed_b`'s `dE_max` and `dLz_max`, the maxima latched at `Real` during the march and packed
 //! to f16 once, here (payload §1, the precision rule's option (a)); `ΔE_final` and `ΔL_z` final are not stored, the read
 //! side derives them from the final state (payload §5). [`monitored`] also writes the detector's: `dmin_pair`, the
-//! latched pair (payload §2), and a collision's `state` and `detail` over `running` (Part 7; [`crate::detect`]).
-//! `integrate_with` writes `dmin_pair`'s sentinel, 3, and `d_min` unset, so a run whose cadence latches nothing keeps
-//! them; `d_min`'s value is TASK-M3-10's latch writer's, `t_dmin_step` TASK-M3-17's, and escape's label TASK-M3-12's.
+//! latched pair (payload §2), `d_min`, the `√` of its latched least `d²`, and a collision's `state` and `detail` over
+//! `running` (Part 7; [`crate::detect`]). The three latches are packed through [`super::latch::Latches`], which clamps
+//! them and writes the failed-state values (payload §1; R-271). `integrate_with` writes `dmin_pair`'s sentinel, 3, and
+//! `d_min` unset, so a run whose cadence latches nothing keeps them; `t_dmin_step` is TASK-M3-17's, and escape's label
+//! TASK-M3-12's.
 //!
 //! **`r_coll`** (Part 7): [`integrate_detecting`] takes the sim key's collision threshold ([`CollisionRadius`]),
 //! carried beside the loop's uniforms, and [`integrate`] is the run at `r_coll = 0`, Part 7's "refuse to regularise",
@@ -51,6 +53,7 @@ use spirv_std::num_traits::Float;
 
 use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence};
 use super::cadence::{WordCadence, WrapperCadence};
+use super::latch::Latches;
 use super::substep::{NsubThresholds, Quantise, SubstepState};
 use super::welford::{self, Welford};
 use crate::decode::Ic;
@@ -58,7 +61,7 @@ use crate::detect::collision::CollisionRadius;
 use crate::generated::links::LinkReal;
 use crate::occupant::{Geom, State};
 use crate::payload::{
-    pack_packed_b, pack_times, set_d_min_unset, set_detail, set_dmin_pair, set_state, PayloadReal,
+    pack_times, set_d_min_unset, set_detail, set_dmin_pair, set_state, DminCounters, PayloadReal,
     SimStateBaseOf, SD_DMIN_PAIR_SENTINEL, STATE_BOUNDED, STATE_RUNNING, STATE_SIM_FAILED,
 };
 use crate::real::IeeeBits;
@@ -114,34 +117,45 @@ pub fn integrate_detecting<A: Advance, R: WrapperReal>(
 /// `out` with the monitored fields of the run `cadence` followed (Part 1, "COM projection and invariant monitoring";
 /// payload §1, §2): `E_0` and `Lz_0` as stored before the loop, and `packed_b` holding `dE_max = max|ΔE|` and
 /// `dLz_max = max|ΔL_z|`, rounded to f32 and then packed to f16 (clamped to binary16's finite range first); and its
-/// detector's fields (Part 7; [`crate::detect::collision::Detector::label`]): `dmin_pair` the latched pair, and where a
-/// collision fired, `state` `collision` and its `detail`.
+/// detector's fields (Part 7; [`crate::detect::collision::Detector::label`]): `dmin_pair` the latched pair, `d_min` the
+/// `√` of the latched least `d²`, the IC's included, so a start already collided stores its least separation (R-933),
+/// and where a collision fired, `state` `collision` and its `detail`. The latches are packed by
+/// [`Latches::persist`] (payload §1's semantics (a)). Rounding the `Real` maxima to f32 at write-out gives what an f32
+/// latch of the f32-rounded drifts would hold, since rounding is monotone.
 ///
 /// **A run whose monitor latched a non-finite value** is marked, never stored as measured: `state` `sim_failed`, with
-/// its detail by what failed (payload §2: `failed_detail`), over a collision too (R-30: `sim_failed` first), both
-/// latches the defined failed-state 0.0 (payload §1, "Failed-state contents are defined"; R-79, R-271; `d_min` is unset
-/// already), and `dmin_pair` its sentinel, 3, unset as `d_min` is. The rest of the failure path, the terminal that ends
-/// the march and the other fields' failed-state values, is TASK-M3-17's and TASK-M3-18's.
+/// its detail by what failed (payload §2: `failed_detail`), over a collision too (R-30: `sim_failed` first), the
+/// latches the defined failed-state values, 0.0 in both drift halves and `d_min` unset (payload §1, "Failed-state
+/// contents are defined"; R-79, R-271), and `dmin_pair` its sentinel, 3, unset as `d_min` is. The rest of the failure
+/// path, the terminal that ends the march and the other fields' failed-state values, is TASK-M3-17's and TASK-M3-18's.
+///
+/// The `d_min` counters [`Latches::persist`] counts into are a pair of this write's own: the latch admits no NaN `d²`
+/// and the detector's quantised `d²` is never negative (`crate::driver::substep::square`), so `√` gives neither a NaN
+/// nor a negative value and neither counter can count here (R-288).
 #[inline]
 pub fn monitored<R: WrapperReal>(
     out: SimStateBaseOf<R>,
     cadence: &WrapperCadence<R>,
 ) -> SimStateBaseOf<R> {
     let m = cadence.monitor_state();
-    let failed = m.non_finite();
-    let detected = cadence.detector().label(out.packed_a);
-    let (packed_a, de_max, dlz_max) = if failed {
+    let detector = cadence.detector();
+    let detected = detector.label(out.packed_a);
+    let labelled = if m.non_finite() {
         let marked = set_state(detected, STATE_SIM_FAILED);
         let marked = set_dmin_pair(marked, SD_DMIN_PAIR_SENTINEL);
-        (set_detail(marked, failed_detail(&out.r, &out.p)), 0.0, 0.0)
+        set_detail(marked, failed_detail(&out.r, &out.p))
     } else {
-        (detected, m.de_max().quantise(), m.dlz_max().quantise())
+        detected
     };
+    let mut latches = Latches::unset();
+    latches.separation_squared(detector.latch().d2());
+    latches.drift(m.de_max().quantise(), m.dlz_max().quantise());
+    let (packed_a, packed_b) = latches.persist(labelled, &DminCounters::new());
     SimStateBaseOf {
         E_0: m.e_0(),
         Lz_0: m.lz_0(),
         packed_a,
-        packed_b: pack_packed_b(de_max, dlz_max),
+        packed_b,
         ..out
     }
 }

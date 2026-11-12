@@ -478,3 +478,7 @@ justification = "the mutants job runs on ubuntu-24.04, which has no sw_vers, so 
 [[equivalent]]
 mutant = "crates/engine/src/trajectory.rs:281:14: replace < with <= in eccentric_anomaly"
 justification = "f == 0.0 has already returned mid, so f <= 0.0 and f < 0.0 agree on every f that reaches the sign test"
+
+[[equivalent]]
+mutant = "crates/kernel/src/driver/latch.rs:100:48: replace < with <= in Latches::separation_squared"
+justification = "the mutant differs only where d2 == d2_min (seen already true), where it writes back an equal value; +0.0 and -0.0 compare equal but each √s to a zero that set_d_min floors to 0x0001, so no persisted bit and no live value but the sign of a zero d_min changes"
