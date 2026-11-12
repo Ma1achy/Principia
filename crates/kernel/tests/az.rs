@@ -38,10 +38,25 @@
 //!   to `u32::MAX`; their controls a NaN sent to the top, a negative by its magnitude, and a clamp with no select.
 //! - `az_clamp_off_tolerance`: with the clamp off the landing tolerance is 0, a copy landing only at the boundary; its
 //!   control keeps the tolerance.
+//! - `az_seam_non_finite_fails`, `az_seam_completes`, `az_seam_exhausted_stops`, `az_seam_done_short`: through the
+//!   wrapper (`integrate_with`), the seam's end (Part 2a, Cost 2; § "The sync grid is a fixed quantum of physical time
+//!   (R-565)"): a march ended non-finite fails the run, `sim_failed` at the macro-step it ended in; every macro-step
+//!   that reached its boundary is completed, `t_end_step` and the Welford samples counting it; a spent budget stops
+//!   the copy, `running` as it stood; a march stopped on `done` is not completed. Their controls drop the end (the
+//!   stepper's rule) or count a short call completed.
+//! - `regularisation_owning_default_end`, `regularisation_none_keeps_count`: the default end of an occupant owning
+//!   its time mapping, and `none` bitwise the stepper's own run; their controls swap the two rules.
 
 use std::cell::Cell;
 
+use kernel::decode::Ic;
 use kernel::driver::advance::{Advance, AdvanceParams, Advanced, Cadence, Count};
+#[cfg(feature = "controls")]
+use kernel::driver::advance::{AdvanceReal, Reached};
+use kernel::driver::substep::NsubThresholds;
+use kernel::driver::welford::{self, Welford};
+use kernel::driver::wrapper::{integrate, integrate_with, WrapperReal, WrapperUniforms};
+use kernel::generated::nsub_thresholds::NSUB_TABLE_ROWS;
 use kernel::occupant::euler::Euler;
 use kernel::occupant::kdk::Kdk;
 use kernel::occupant::rk4::Rk4;
@@ -50,6 +65,10 @@ use kernel::occupant::yoshida6::Yoshida6;
 use kernel::occupant::{
     CapabilityProfile, DebugOccupant, Geom, Occupant, Selection, State, Stepper,
 };
+use kernel::payload::{
+    sd_detail, sd_dmin_pair, sd_state, tm_t_end_step, SimStateBaseOf, SD_DMIN_PAIR_SENTINEL,
+    STATE_BOUNDED, STATE_RUNNING, STATE_SIM_FAILED,
+};
 use kernel::regularisation::az::{
     boundary_at_or_before, entry_size, lc, lc_inverse, lc_inverse_unstable, march, over_budget,
     reference_body, register, step_size, AarsethZare, AzAdvanced, AzConfig, AzCount, AzP, AzParams,
@@ -57,7 +76,9 @@ use kernel::regularisation::az::{
 };
 use kernel::regularisation::form::{Flow, Form};
 use kernel::regularisation::pairs::{Choice, Pair, PairTable, Status};
-use kernel::regularisation::{Composed, Kind, Regularisation};
+use kernel::regularisation::{Composed, Kind, NoRegularisation, Regularisation};
+use kernel::shape::shape;
+use spirv_std::glam::UVec4;
 use validation::negative_control;
 
 // ── Precisions and fixtures ────────────────────────────────────────────────────────────────────────────────────
@@ -2032,4 +2053,534 @@ negative_control!(
         forms[3].0 = Form::Yoshida4;
         forms
     })
+);
+
+// ── The seam's end, through the wrapper ────────────────────────────────────────────────────────────────────────
+
+/// A sim key for the wrapper's loop: `dt_macro`, `horizon_steps`, and `N_sub = n_max` throughout (every threshold the
+/// largest finite f32, so every finite `d²` is below them all), so that an occupant's step count is never `N_sub` by
+/// accident.
+fn key<R: AzReal>(dt_macro: f64, horizon_steps: u32, n_max: u32) -> WrapperUniforms<R> {
+    WrapperUniforms {
+        dt_macro: v(dt_macro),
+        horizon_steps,
+        n_max,
+        thresholds: NsubThresholds {
+            rows: [UVec4::splat(f32::MAX.to_bits()); NSUB_TABLE_ROWS],
+        },
+    }
+}
+
+/// The IC of the state `s`.
+fn ic_of<R: Copy>(s: &State<R>) -> Ic<R> {
+    Ic {
+        m: s.m,
+        r: s.r,
+        p: s.p,
+    }
+}
+
+/// The wrapper's run of `ic` under `uniforms` by the occupant under test, with the cadence `C`.
+type WrapperRun<R, C> = fn(&Ic<R>, &WrapperUniforms<R>, &mut C) -> SimStateBaseOf<R>;
+
+/// The wrapper's run by `A`.
+fn run_by<A: Advance, R: WrapperReal, C: Cadence<R>>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    cadence: &mut C,
+) -> SimStateBaseOf<R> {
+    integrate_with::<A, R, C>(ic, uniforms, cadence)
+}
+
+/// A cadence that counts its calls and is done from its `n`-th on.
+struct DoneAfter {
+    n: u32,
+    calls: u32,
+}
+
+impl DoneAfter {
+    fn new(n: u32) -> Self {
+        DoneAfter { n, calls: 0 }
+    }
+}
+
+impl<R> Cadence<R> for DoneAfter {
+    fn after_step(&mut self, _state: &mut State<R>, _geom: &mut Geom<R>) {
+        self.calls += 1;
+    }
+    fn done(&self) -> bool {
+        self.calls >= self.n
+    }
+}
+
+/// The occupant `A` read by the stepper's rule alone, its end dropped: a macro-step completed when the steps taken are
+/// `N_sub`, and no march ever ended (a control's; the seam before PR #502's fix).
+#[cfg(feature = "controls")]
+struct Dropping<A>(core::marker::PhantomData<A>);
+
+#[cfg(feature = "controls")]
+impl<A: Advance> Advance for Dropping<A> {
+    fn advance<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> Advanced<R> {
+        A::advance(state, geom, t_now, t_target, params, cadence)
+    }
+}
+
+/// The occupant `A` with a call that stopped short counted as its target reached (a control's).
+#[cfg(feature = "controls")]
+struct Overclaiming<A>(core::marker::PhantomData<A>);
+
+#[cfg(feature = "controls")]
+impl<A: Advance> Advance for Overclaiming<A> {
+    fn advance<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> Advanced<R> {
+        A::advance(state, geom, t_now, t_target, params, cadence)
+    }
+
+    fn advance_reaching<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> (Advanced<R>, Reached) {
+        let (out, reached) = A::advance_reaching(state, geom, t_now, t_target, params, cadence);
+        let reached = if reached == Reached::Short {
+            Reached::Target
+        } else {
+            reached
+        };
+        (out, reached)
+    }
+}
+
+/// The occupant `A` read by the rule of an occupant that owns its time mapping, short only on the cadence's `done`
+/// (a control's, for `none`).
+#[cfg(feature = "controls")]
+struct Shorting<A>(core::marker::PhantomData<A>);
+
+#[cfg(feature = "controls")]
+impl<A: Advance> Advance for Shorting<A> {
+    fn advance<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> Advanced<R> {
+        A::advance(state, geom, t_now, t_target, params, cadence)
+    }
+
+    fn advance_reaching<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> (Advanced<R>, Reached) {
+        let out = A::advance(state, geom, t_now, t_target, params, cadence);
+        let reached = if cadence.done() {
+            Reached::Short
+        } else {
+            Reached::Target
+        };
+        (out, reached)
+    }
+}
+
+/// Aarseth–Zare + RK4, the composed occupant through the seam.
+type AzRk4 = Composed<Rk4, Az>;
+
+/// The degenerate fixture through the wrapper at `dt_macro = 1/16` (`Δ_sync = 1/8`), eight macro-steps, `N_sub = 4`:
+/// the first macro-step's target is before the first boundary, so it takes no step and is completed; the second's
+/// march registers the degenerate state and ends at the explicit finiteness test. The run is `sim_failed`, never
+/// `bounded`: latched at the macro-step it ended in, which is not completed (`t_end_step = 1`), its state the march's
+/// latched finite one, its detail 2 (a non-finite derived quantity on a finite state, payload §2), and, through
+/// [`integrate`]'s monitored fields, `dmin_pair` its sentinel (Part 2a § "The sync grid is a fixed quantum of physical
+/// time (R-565)": "a terminal event … still latches at the step it fires on").
+fn check_non_finite_fails(
+    run: WrapperRun<f32, Counting>,
+    monitored: fn(&Ic<f32>) -> SimStateBaseOf<f32>,
+) {
+    let ic = ic_of(&degenerate());
+    let out = run(&ic, &key(1.0 / 16.0, 8, 4), &mut Counting::default());
+    assert_eq!(
+        sd_state(out.packed_a),
+        STATE_SIM_FAILED,
+        "a march ended non-finite fails the run: state {}",
+        sd_state(out.packed_a)
+    );
+    assert_eq!(
+        tm_t_end_step(out.times),
+        1,
+        "the run latches at the macro-step its march ended in"
+    );
+    assert_eq!(
+        sd_detail(out.packed_a),
+        2,
+        "a non-finite step from a finite state"
+    );
+    assert_eq!(out.total_substeps, 0, "no non-finite step is kept");
+    let latched = degenerate_march(ExplicitTest).state;
+    assert_eq!(
+        bits(&State {
+            m: latched.m,
+            r: out.r,
+            p: out.p
+        }),
+        bits(&latched),
+        "the state is the march's latched finite one"
+    );
+    let full = monitored(&ic);
+    assert_eq!(
+        sd_state(full.packed_a),
+        STATE_SIM_FAILED,
+        "monitored keeps sim_failed"
+    );
+    assert_eq!(sd_detail(full.packed_a), 2, "monitored keeps the detail");
+    assert_eq!(
+        sd_dmin_pair(full.packed_a),
+        SD_DMIN_PAIR_SENTINEL,
+        "a failed run's dmin_pair is its sentinel"
+    );
+}
+
+/// The wrapper's own run of `ic` by Aarseth–Zare + RK4, its monitored fields written, at `r_coll = 0`.
+fn monitored_az(ic: &Ic<f32>) -> SimStateBaseOf<f32> {
+    integrate::<AzRk4, f32>(ic, &key(1.0 / 16.0, 8, 4))
+}
+
+#[test]
+fn az_seam_non_finite_fails() {
+    check_non_finite_fails(run_by::<AzRk4, f32, Counting>, monitored_az);
+}
+
+negative_control!(
+    az_seam_non_finite_fails,
+    "a seam that drops the march's end, the run labelled bounded",
+    expected = "a march ended non-finite fails the run",
+    check_non_finite_fails(run_by::<Dropping<AzRk4>, f32, Counting>, |ic| {
+        integrate::<Dropping<AzRk4>, f32>(ic, &key(1.0 / 16.0, 8, 4))
+    })
+);
+
+/// The seam's calls of a run of Burrau's state at `dt_macro = 1/16`, eight macro-steps, replayed one by one: the
+/// state each returns, the steps taken, and the Welford co-moments after each as a completed macro-step (payload §4).
+fn replay() -> (State<f64>, u32, Welford<f64>) {
+    let s0 = burrau::<f64>();
+    let n_0 = shape(s0.r, s0.m);
+    let (mut s, mut steps, mut w) = (s0, 0, Welford::default());
+    let mut cadence = Counting::default();
+    for k in 0..8 {
+        let out = <AzRk4 as Advance>::advance(
+            &s,
+            &Geom::new(&s.m, &s.r),
+            k,
+            k + 1,
+            &AdvanceParams {
+                dt_macro: 1.0 / 16.0,
+                n_sub: 4,
+            },
+            &mut cadence,
+        );
+        s = out.state;
+        steps += out.substeps;
+        w = w.update(welford::y(s.r, s.m, n_0), k + 1, 1.0 / 16.0);
+    }
+    (s, steps, w)
+}
+
+/// Burrau's state through the wrapper at `dt_macro = 1/16` (`Δ_sync = 1/8`), eight macro-steps (`t = 1/2`, four
+/// boundaries), `N_sub = 4`, which Aarseth–Zare's step count never is: every macro-step reaches its boundary at or
+/// before its target (R-565) and is completed, whatever the steps it took (Part 2a, Cost 2), so the run is `bounded`
+/// with `t_end_step = 8` and eight Welford samples, each on the state the seam returned (payload §2, §4), bitwise the
+/// replay's.
+fn check_completes(run: WrapperRun<f64, Counting>) {
+    let out = run(
+        &ic_of(&burrau::<f64>()),
+        &key(1.0 / 16.0, 8, 4),
+        &mut Counting::default(),
+    );
+    let (s, steps, w) = replay();
+    assert_eq!(
+        tm_t_end_step(out.times),
+        8,
+        "every macro-step that reached its boundary is completed"
+    );
+    assert_eq!(
+        sd_state(out.packed_a),
+        STATE_BOUNDED,
+        "a run to the horizon is bounded"
+    );
+    assert!(steps > 0, "the march stepped");
+    assert_eq!(out.total_substeps, steps, "the steps are the seam's");
+    assert_eq!(
+        (out.mean_y.to_bits(), out.C_ty.to_bits()),
+        (w.mean_y.to_bits(), w.c_ty.to_bits()),
+        "the diffusion takes one sample per completed macro-step: {} {} against {} {}",
+        out.mean_y,
+        out.C_ty,
+        w.mean_y,
+        w.c_ty
+    );
+    assert!(w.mean_y > 0.0, "the samples see the shape move");
+    assert_eq!(
+        (bits(&State {
+            m: s.m,
+            r: out.r,
+            p: out.p
+        })),
+        bits(&s),
+        "the state is the seam's"
+    );
+}
+
+#[test]
+fn az_seam_completes() {
+    check_completes(run_by::<AzRk4, f64, Counting>);
+}
+
+negative_control!(
+    az_seam_completes,
+    "a seam read by the stepper's rule, a macro-step completed only at N_sub steps",
+    expected = "every macro-step that reached its boundary is completed",
+    check_completes(run_by::<Dropping<AzRk4>, f64, Counting>)
+);
+
+/// The test values with a budget of 4 steps, which the first interval's march spends.
+struct Spent;
+
+impl AzConfig for Spent {
+    fn params<R: AzReal>() -> AzParams<R> {
+        let mut p = params::<R>();
+        p.n_min = 4;
+        p.step_budget_rate = R::default();
+        p
+    }
+}
+
+/// Aarseth–Zare + RK4 on a budget of 4 steps.
+type SpentRk4 = Composed<Rk4, AarsethZare<Spent>>;
+
+/// Burrau's state through the wrapper as in [`check_completes`] on a budget of 4 steps: the first macro-step takes no
+/// step and is completed, the second's march spends its budget, and the copy is never run on (R-604): the run stops
+/// there, `running` as it stood (Part 7; R-603's flag being TASK-M3-41's), at `t_end_step = 1`, with the state and
+/// steps of that one march.
+fn check_exhausted_stops(run: WrapperRun<f64, Counting>) {
+    let out = run(
+        &ic_of(&burrau::<f64>()),
+        &key(1.0 / 16.0, 8, 4),
+        &mut Counting::default(),
+    );
+    assert_eq!(
+        sd_state(out.packed_a),
+        STATE_RUNNING,
+        "a spent copy stops as it stood: state {}",
+        sd_state(out.packed_a)
+    );
+    assert_eq!(
+        tm_t_end_step(out.times),
+        1,
+        "the spent macro-step is not completed"
+    );
+    let s = burrau::<f64>();
+    let once = <SpentRk4 as Advance>::advance(
+        &s,
+        &Geom::new(&s.m, &s.r),
+        1,
+        2,
+        &AdvanceParams {
+            dt_macro: 1.0 / 16.0,
+            n_sub: 4,
+        },
+        &mut Counting::default(),
+    );
+    assert_eq!(out.total_substeps, once.substeps, "one march, never run on");
+    assert_eq!(
+        (bits(&State {
+            m: s.m,
+            r: out.r,
+            p: out.p
+        })),
+        bits(&once.state),
+        "the state the march latched"
+    );
+}
+
+#[test]
+fn az_seam_exhausted_stops() {
+    check_exhausted_stops(run_by::<SpentRk4, f64, Counting>);
+}
+
+negative_control!(
+    az_seam_exhausted_stops,
+    "a seam that drops the spent budget, the copy run on",
+    expected = "a spent copy stops as it stood",
+    check_exhausted_stops(run_by::<Dropping<SpentRk4>, f64, Counting>)
+);
+
+/// Burrau's state through the wrapper as in [`check_completes`] with a cadence done from its first call: the first
+/// macro-step takes no step and is completed, the second's march stops on `done` after one step, short of its
+/// boundary, and is not completed: `running` at `t_end_step = 1`.
+fn check_done_short(run: WrapperRun<f64, DoneAfter>) {
+    let mut cadence = DoneAfter::new(1);
+    let out = run(
+        &ic_of(&burrau::<f64>()),
+        &key(1.0 / 16.0, 8, 4),
+        &mut cadence,
+    );
+    assert_eq!(cadence.calls, 1, "the march stopped on done");
+    assert_eq!(sd_state(out.packed_a), STATE_RUNNING);
+    assert_eq!(
+        tm_t_end_step(out.times),
+        1,
+        "a march stopped on done is not completed"
+    );
+}
+
+#[test]
+fn az_seam_done_short() {
+    check_done_short(run_by::<AzRk4, f64, DoneAfter>);
+}
+
+negative_control!(
+    az_seam_done_short,
+    "a seam that counts a march stopped on done as completed",
+    expected = "a march stopped on done is not completed",
+    check_done_short(run_by::<Overclaiming<AzRk4>, f64, DoneAfter>)
+);
+
+/// A stand-in regularisation that owns its time mapping and keeps the default end ([`Regularisation`]'s
+/// `advance_reaching`): each call one step that leaves the state as it was, the cadence after it.
+struct Held;
+
+impl Regularisation for Held {
+    const KIND: Kind = Kind::Heggie;
+
+    fn profile<S: Stepper>() -> CapabilityProfile {
+        Az::profile::<S>()
+    }
+
+    fn advance<S: Stepper, R: kernel::driver::advance::AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        _t_now: u32,
+        _t_target: u32,
+        _params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> Advanced<R> {
+        let (mut s, mut g) = (*state, *geom);
+        cadence.after_step(&mut s, &mut g);
+        Advanced {
+            state: s,
+            geom: g,
+            substeps: 1,
+        }
+    }
+}
+
+/// The default end of an occupant that owns its time mapping, through the wrapper at `N_sub = 4` (its one step never
+/// `N_sub`): every call reaches its target, eight macro-steps completed and `bounded`, unless the cadence's `done`
+/// stopped it, when none is (`running`, `t_end_step = 0`).
+fn check_owning_default(run: WrapperRun<f64, Counting>, run_done: WrapperRun<f64, DoneAfter>) {
+    let ic = ic_of(&burrau::<f64>());
+    let out = run(&ic, &key(1.0 / 16.0, 8, 4), &mut Counting::default());
+    assert_eq!(
+        (tm_t_end_step(out.times), sd_state(out.packed_a)),
+        (8, STATE_BOUNDED),
+        "an occupant owning its time mapping completes each macro-step it reaches"
+    );
+    let out = run_done(&ic, &key(1.0 / 16.0, 8, 4), &mut DoneAfter::new(1));
+    assert_eq!(
+        (tm_t_end_step(out.times), sd_state(out.packed_a)),
+        (0, STATE_RUNNING),
+        "a call stopped on done completes nothing"
+    );
+}
+
+#[test]
+fn regularisation_owning_default_end() {
+    check_owning_default(
+        run_by::<Composed<Rk4, Held>, f64, Counting>,
+        run_by::<Composed<Rk4, Held>, f64, DoneAfter>,
+    );
+}
+
+negative_control!(
+    regularisation_owning_default_end,
+    "the stepper's rule for an occupant owning its time mapping",
+    expected = "an occupant owning its time mapping completes each macro-step it reaches",
+    check_owning_default(
+        run_by::<Dropping<Composed<Rk4, Held>>, f64, Counting>,
+        run_by::<Composed<Rk4, Held>, f64, DoneAfter>,
+    )
+);
+
+negative_control!(
+    regularisation_owning_default_end_done,
+    "a call stopped on done counted as completed",
+    expected = "a call stopped on done completes nothing",
+    check_owning_default(
+        run_by::<Composed<Rk4, Held>, f64, Counting>,
+        run_by::<Overclaiming<Composed<Rk4, Held>>, f64, DoneAfter>,
+    )
+);
+
+/// `none` keeps the stepper's rule, bitwise the stepper's own run: under a cadence done from its fourth call at
+/// `N_sub = 4`, the first macro-step's fourth substep fires `done` and the macro-step, all its substeps taken, is
+/// completed (`t_end_step = 1`), where the rule of an occupant owning its time mapping would count it short.
+fn check_none_keeps_count(run: WrapperRun<f64, DoneAfter>) {
+    let ic = ic_of(&burrau::<f64>());
+    let out = run(&ic, &key(1.0 / 16.0, 8, 4), &mut DoneAfter::new(4));
+    assert_eq!(
+        tm_t_end_step(out.times),
+        1,
+        "none completes a macro-step whose N_sub substeps were taken"
+    );
+    let own =
+        integrate_with::<Rk4, f64, DoneAfter>(&ic, &key(1.0 / 16.0, 8, 4), &mut DoneAfter::new(4));
+    assert_eq!(
+        format!("{out:?}"),
+        format!("{own:?}"),
+        "none is the stepper's own run"
+    );
+    let out = run(&ic, &key(1.0 / 16.0, 8, 4), &mut DoneAfter::new(u32::MAX));
+    let own = integrate_with::<Rk4, f64, DoneAfter>(
+        &ic,
+        &key(1.0 / 16.0, 8, 4),
+        &mut DoneAfter::new(u32::MAX),
+    );
+    assert_eq!(
+        format!("{out:?}"),
+        format!("{own:?}"),
+        "none is the stepper's own run to the horizon"
+    );
+    assert_eq!(tm_t_end_step(own.times), 8);
+}
+
+#[test]
+fn regularisation_none_keeps_count() {
+    check_none_keeps_count(run_by::<Composed<Rk4, NoRegularisation>, f64, DoneAfter>);
+}
+
+negative_control!(
+    regularisation_none_keeps_count,
+    "none read by the rule of an occupant owning its time mapping",
+    expected = "none completes a macro-step whose N_sub substeps were taken",
+    check_none_keeps_count(run_by::<Shorting<Composed<Rk4, NoRegularisation>>, f64, DoneAfter>)
 );

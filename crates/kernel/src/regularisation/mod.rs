@@ -25,7 +25,7 @@ pub mod pairs;
 
 use core::marker::PhantomData;
 
-use crate::driver::advance::{Advance, AdvanceParams, AdvanceReal, Advanced, Cadence};
+use crate::driver::advance::{Advance, AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
 use crate::occupant::{CapabilityProfile, Geom, State, Stepper};
 
 /// The regularisation slot's four kinds (Part 2b).
@@ -71,6 +71,32 @@ pub trait Regularisation {
         params: &AdvanceParams<R>,
         cadence: &mut C,
     ) -> Advanced<R>;
+
+    /// The pair's `ADVANCE` with how the call ended ([`Advance::advance_reaching`]). This default is the kind's rule. An
+    /// occupant that owns its time mapping reached its target unless the cadence's `done` stopped it: its march stops
+    /// only on the sync grid, at the latest boundary at or before `t_target` (Part 2a § "The sync grid is a fixed
+    /// quantum of physical time (R-565)"), and the steps it took there are its own, not the wrapper's `N_sub` (Part 2a,
+    /// Cost 2). `none` keeps the stepper's rule ([`Reached::by_count`]). A regularisation whose march can end on a
+    /// failure reports it in its own ([`az::AarsethZare`]).
+    #[inline]
+    fn advance_reaching<S: Stepper, R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> (Advanced<R>, Reached) {
+        let out = Self::advance::<S, R, C>(state, geom, t_now, t_target, params, cadence);
+        let reached = if !Self::KIND.owns_time_mapping() {
+            Reached::by_count(out.substeps, params.n_sub)
+        } else if cadence.done() {
+            Reached::Short
+        } else {
+            Reached::Target
+        };
+        (out, reached)
+    }
 }
 
 /// `none`: no regularisation. The pair with a stepper is the stepper itself (Part 2b: "The `none` pairs are separable,
@@ -126,5 +152,17 @@ impl<S: Stepper, G: Regularisation> Advance for Composed<S, G> {
         cadence: &mut C,
     ) -> Advanced<R> {
         G::advance::<S, R, C>(state, geom, t_now, t_target, params, cadence)
+    }
+
+    #[inline]
+    fn advance_reaching<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> (Advanced<R>, Reached) {
+        G::advance_reaching::<S, R, C>(state, geom, t_now, t_target, params, cadence)
     }
 }

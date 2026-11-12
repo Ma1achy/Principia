@@ -51,7 +51,7 @@ use core::marker::PhantomData;
 use super::dt_max::DtMax;
 use super::form::Flow;
 use super::{Kind, Regularisation};
-use crate::driver::advance::{AdvanceParams, AdvanceReal, Advanced, Cadence};
+use crate::driver::advance::{AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
 use crate::occupant::{CapabilityProfile, Geom, State, Stepper};
 use crate::physics::PairGeom;
 
@@ -1034,11 +1034,40 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
         params: &AdvanceParams<R>,
         cadence: &mut Cd,
     ) -> Advanced<R> {
+        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence).0
+    }
+
+    /// The seam's `ADVANCE` with how the march ended: a landing on the boundary at or before `t_target`
+    /// is the target reached, whatever the steps it took (Part 2a, Cost 2), and a march ended non-finite or by its
+    /// budget ends the run, latched where it stopped (Part 2a § "The sync grid is a fixed quantum of physical time
+    /// (R-565)").
+    #[inline]
+    fn advance_reaching<S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
+        state: &State<R>,
+        _geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut Cd,
+    ) -> (Advanced<R>, Reached) {
         advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence)
     }
 }
 
-/// [`AarsethZare`]'s seam `ADVANCE`.
+/// How a march that ended at `end` ended its seam call: [`End::Marching`], every interval landed up to the boundary at
+/// or before the target, is the target reached; [`End::Done`] stopped short on the cadence; [`End::NonFinite`] and
+/// [`End::Exhausted`] end the copy's march.
+#[inline]
+fn reached(end: End) -> Reached {
+    match end {
+        End::Marching => Reached::Target,
+        End::Done => Reached::Short,
+        End::NonFinite => Reached::NonFinite,
+        End::Exhausted => Reached::Exhausted,
+    }
+}
+
+/// [`AarsethZare`]'s seam `ADVANCE`, with how its march ended ([`reached`]).
 #[inline]
 fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     state: &State<R>,
@@ -1046,7 +1075,7 @@ fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     t_target: u32,
     params: &AdvanceParams<R>,
     cadence: &mut Cd,
-) -> Advanced<R> {
+) -> (Advanced<R>, Reached) {
     let out = AarsethZare::<C>::advance_to::<S, R, Cd>(
         state,
         R::count(t_now) * params.dt_macro,
@@ -1054,9 +1083,12 @@ fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
         AzCount::new(),
         cadence,
     );
-    Advanced {
-        state: out.state,
-        geom: out.geom,
-        substeps: out.count.accepted,
-    }
+    (
+        Advanced {
+            state: out.state,
+            geom: out.geom,
+            substeps: out.count.accepted,
+        },
+        reached(out.count.end),
+    )
 }
