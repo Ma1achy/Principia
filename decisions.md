@@ -38037,3 +38037,54 @@ dispatched.
 R-984 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203. R-984 was reserved for this follow-up.
+
+## R-985 — On a view tilted toward time the stop index `k_stop` stays in the record and only that word is rewritten each frame; a final-condition chart is a tier-3 map like any other, with no label of its own as a route *(the owner's directions of 12 Nov 2026 on the chart audit's F8 and F17)*
+*12 Nov 2026 · the owner's follow-up of 12 Nov 2026 on the chart audit they ordered; applied in `plan/rule_groups.yaml`,
+REQ-INT-115 and REQ-CHART-153 (reqio: this ruling as a source and a dated note each, their statements unchanged); the
+doc edits it implies are the chart audit's record-corrections pull request's, not this one's; changes no requirement
+statement*
+
+The owner's words (12 Nov 2026), verbatim, from their follow-up on the chart audit:
+
+> Next, still no chart task and R-923 stands:
+> 1. Revise report.md and rq-drafts.md with both reviewers' corrections folded in: … F8 by the two-way route (k_stop stays in the record, that word rewritten per frame); … F17 as a tier-3 map like any other; …
+
+*A prose ruling of the owner, not a reply line:* the words are two directions inside the owner's message on the chart
+audit, not an `RQ-n: …` or `D-n: …` line of a reply to a rulings report, so no reply parser read them and no review
+queue entry closes. R-985 was reserved for them.
+
+*What it decides,* two findings of the chart audit, each a two-way door the owner walked through:
+
+- **F8, the stop index on a view tilted toward time.** R-935 (under RQ-761) puts a per-sample stop index `k_stop`, a
+  `u32`, in the record, and REQ-INT-115 names it among the record's words; R-926 item 2 makes the playhead the window's
+  centre along time. On a view tilted toward time with the playhead running, every sample's target time moves each
+  frame. Decided: `k_stop` stays in the record, as R-935 rules; on a view tilted toward time only that word is rewritten
+  each frame, from the pixel and the playhead on the host, and the record's other words are unchanged. A sample behind
+  its new target resumes and one ahead of it re-boots from `t = 0`, as R-935 rules ("a target below the current state
+  re-boots from `t = 0` (R-565, bitwise)"). Any fallback for backward play other than that re-boot is not decided here
+  and would be a one-way question.
+- **F17, final-condition charts.** R-879 builds them "as a CPU batch chart" (TASK-M8-128, REQ-CHART-153: flip the
+  momenta, integrate forward `T`, flip back), and R-926's *What it supersedes* reads: "every view, live or not, is
+  filled from the CPU's f64 evaluation narrowed to the integrator's records, so a CPU-batch view is no longer a
+  separate, labelled route that a gesture never reaches."
+  Decided: a final-condition chart is a tier-3 map like any other (no slope of its own, R-926 item 9), evaluated on the
+  CPU as every chart is; R-879's "CPU batch chart" reads as that evaluation. It takes the coarse cover in motion and
+  is exact at rest (REQ-SCHED-020), and carries no label of its own as a route ("not live", "CPU batch" or the like).
+  R-879's other decisions stand as written, the per-pixel horizon labelled as the final-condition charts' exception and
+  the round-trip miss measured and large misses masked among them. Its measure weight is RQ-800's (the measure weight
+  per sample, on a tier-3 map by central difference) hard case, and waits on that entry.
+
+*Read with:* R-935 (under RQ-761) and R-926 items 2 and 9 for F8; R-879 and R-926's *What it supersedes* for F17. Each
+stands as written; R-985 decides only what the two directions say.
+
+*Not in this pull request:* the doc edits R-985 implies: the scheduler contract's Part 7 and the caching contract's
+Part 1 for F8 (a dated note on "never present mixed time" for tilted views, where each pixel shows its own time by
+design), and the dated note on TASK-M8-128 and REQ-CHART-153's statement for F17. They are the chart audit's
+record-corrections pull request's, which the owner ordered in the same message. Until it lands, REQ-INT-115 and
+REQ-CHART-153 carry a dated note naming R-985. R-923's hold on the chart tasks is unchanged: no chart task is
+dispatched or re-scoped.
+
+R-985 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement statement; REQ-INT-115 and REQ-CHART-153 gain this ruling as a source, with a dated note. R-985
+was reserved for these directions.
