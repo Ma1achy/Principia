@@ -25,20 +25,48 @@
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.
 
 use super::substep::{d2_quantised, Quantise};
+use crate::generated::constants::{U32_RANGE_END_F32, U32_TOP_F32, U32_TOP_F64};
 use crate::occupant::{Geom, State, StepReal, Stepper};
 use crate::payload::{PayloadReal, SimStateBaseOf};
+use crate::real::IeeeBits;
 
 /// A step count as the float type it divides: `n` converted, exact for `n ≤ 2²⁴` at f32, and `N_sub ≤ L_max` is far
-/// below it.
+/// below it. And back: a float truncated to a count, as a regularised occupant finds its sync boundary.
 pub trait Count: Sized {
     /// `n` as `Self`.
     fn count(n: u32) -> Self;
+
+    /// `self` truncated toward zero to a `u32`, clamped into range in the float type before the cast
+    /// (gpu_determinism_note § "The discipline", rule 3: an out-of-range float-to-unsigned conversion is undefined on
+    /// the GPU, so the cast never sees one): a NaN, tested on its bits, is sent to `0` first; a value below `0` gives
+    /// `0`; one at or above `2³²` gives `u32::MAX`; and one in between its truncation, which the cast then forms. The
+    /// result is these selects', the same on every backend, not the CPU cast's saturation. The bounds are the register's
+    /// `u32_range_end` at each width (`U32_RANGE_END_F32`, `U32_TOP_F32`, `U32_TOP_F64`).
+    fn whole(self) -> u32;
 }
 
 impl Count for f32 {
     #[inline]
     fn count(n: u32) -> Self {
         n as f32
+    }
+
+    #[inline]
+    fn whole(self) -> u32 {
+        let bits = self.to_bits();
+        let x = f32::from_bits(if bits & 0x7FFF_FFFF > 0x7F80_0000 {
+            0
+        } else {
+            bits
+        });
+        let above = x >= U32_RANGE_END_F32;
+        let x = if x > 0.0 { x } else { 0.0 };
+        let x = if x < U32_TOP_F32 { x } else { U32_TOP_F32 };
+        if above {
+            u32::MAX
+        } else {
+            x as u32
+        }
     }
 }
 
@@ -47,12 +75,49 @@ impl Count for f64 {
     fn count(n: u32) -> Self {
         n as f64
     }
+
+    #[inline]
+    fn whole(self) -> u32 {
+        let bits = self.to_bits();
+        let x = f64::from_bits(if bits & 0x7FFF_FFFF_FFFF_FFFF > 0x7FF0_0000_0000_0000 {
+            0
+        } else {
+            bits
+        });
+        let x = if x > 0.0 { x } else { 0.0 };
+        let x = if x < U32_TOP_F64 { x } else { U32_TOP_F64 };
+        x as u32
+    }
 }
 
-/// The float type an occupant advances at: a stepper's ([`StepReal`]), with step counts converted ([`Count`]).
-pub trait AdvanceReal: StepReal + Count {}
+/// A configuration value given at each width, read at this one: a regularised occupant's configuration states each of
+/// its values at f32 and at f64, and the occupant reads its own width's, never one converted from the other.
+pub trait Width: Sized {
+    /// `single` at f32, `double` at f64.
+    fn at_width(single: f32, double: f64) -> Self;
+}
 
-impl<R: StepReal + Count> AdvanceReal for R {}
+impl Width for f32 {
+    #[inline]
+    fn at_width(single: f32, _double: f64) -> Self {
+        single
+    }
+}
+
+impl Width for f64 {
+    #[inline]
+    fn at_width(_single: f32, double: f64) -> Self {
+        double
+    }
+}
+
+/// The float type an occupant advances at: a stepper's ([`StepReal`]), with step counts converted ([`Count`]), its
+/// values' bits read ([`IeeeBits`]), so that a regularised occupant tests its state's finiteness on its bits
+/// (integrator_contract Part 2b, the Aarseth–Zare step control's step 7; Part 2c's `dt_max`), and its configuration read
+/// at its width ([`Width`]). f32 and f64 are both.
+pub trait AdvanceReal: StepReal + Count + IeeeBits + Width {}
+
+impl<R: StepReal + Count + IeeeBits + Width> AdvanceReal for R {}
 
 /// The per-substep cadence the wrapper passes into the occupant (integrator_contract Part 2a, Cost 1; R-19): the work
 /// that runs after every internal step, and the `done` flag that ends the march.
@@ -122,6 +187,61 @@ pub trait Advance {
         params: &AdvanceParams<R>,
         cadence: &mut C,
     ) -> Advanced<R>;
+
+    /// [`Advance::advance`], with how the call ended ([`Reached`]), which the wrapper reads to count the macro-step
+    /// completed or to end the run. This default is the stepper's rule: the call reached `t_target` when it took the
+    /// `N_sub` steps it was asked for ([`Reached::by_count`]). An occupant whose march can end on a failure, or whose
+    /// steps are not `N_sub`'s, reports its own ([`crate::regularisation::Composed`]).
+    #[inline]
+    fn advance_reaching<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> (Advanced<R>, Reached) {
+        let out = Self::advance(state, geom, t_now, t_target, params, cadence);
+        let reached = Reached::by_count(out.substeps, params.n_sub);
+        (out, reached)
+    }
+}
+
+/// How an `ADVANCE` call ended (integrator_contract Part 2a, Part 7): at its target; short of it, the run able to go
+/// on; or with the copy's march ended, which latches at the step it fired on and is never run on (Part 2a § "The sync
+/// grid is a fixed quantum of physical time (R-565)": "a terminal event (a collision, a non-finite state, the step
+/// budget run out, Part 6 and Part 7) still latches at the step it fires on").
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Reached {
+    /// The call reached `t_target`: the macro-step is completed (payload §2, `t_end_step`) and takes its Welford sample
+    /// (payload §4).
+    Target,
+    /// The call stopped short of `t_target`, on the cadence's `done` (a terminal fired, Part 7) or with fewer steps than
+    /// asked: the macro-step is not completed.
+    Short,
+    /// The occupant's state was not finite: the run is `sim_failed` (payload §2), its state the last finite one.
+    NonFinite,
+    /// The step budget ran out (R-604): the copy stops, undetermined, its `state` as it stood (Part 7; R-603, whose
+    /// sticky `budget_exhausted` flag is TASK-M3-41's).
+    Exhausted,
+}
+
+impl Reached {
+    /// The stepper's rule: `Target` where the `substeps` taken are the `n_sub` asked for, else `Short`.
+    #[inline]
+    pub fn by_count(substeps: u32, n_sub: u32) -> Reached {
+        if substeps == n_sub {
+            Reached::Target
+        } else {
+            Reached::Short
+        }
+    }
+
+    /// Whether the copy's march has ended, never to be run on: [`Reached::NonFinite`] or [`Reached::Exhausted`].
+    #[inline]
+    pub fn ended(self) -> bool {
+        matches!(self, Reached::NonFinite | Reached::Exhausted)
+    }
 }
 
 /// A stepper's `ADVANCE`: the fixed `N_sub` `STEP` loop (integrator_contract Part 1, Part 2a). Over a span of

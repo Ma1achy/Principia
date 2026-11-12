@@ -10,6 +10,7 @@
 //! `k₁` reads the force evaluation it is given; `k₂`, `k₃` and `k₄` take one each, and the end state the fourth.
 
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};
+use crate::regularisation::form::Form;
 
 /// The classical fourth-order Runge–Kutta method.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -80,6 +81,9 @@ fn weighted<R: StepReal>(
 }
 
 impl Stepper for Rk4 {
+    /// The form under a regularisation (integrator_contract Part 2b; [`crate::regularisation::form`]).
+    const FORM: Form = Form::Rk4;
+
     #[inline]
     fn profile() -> CapabilityProfile {
         CapabilityProfile {

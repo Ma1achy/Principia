@@ -1,0 +1,8 @@
+{
+  "gate": "separation-floor",
+  "inputs": ["above.json", "reference.json"],
+  "measurement": {
+    "requirement": "REQ-INT-105",
+    "ruling": "R-71"
+  }
+}
