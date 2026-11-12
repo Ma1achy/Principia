@@ -656,6 +656,10 @@ const SAVED: [&str; 3] = [
     "saved_oblique_words",
 ];
 
+/// The end of `u32`'s range (TASK-M3-68; gpu_determinism_note § "The discipline", rule 3): the bound a float holding a
+/// count is clamped to before its cast to `u32`, which decides no stored bit's meaning, so it is not hashed.
+const COUNT_CAST: [&str; 1] = ["u32_range_end"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -673,7 +677,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // (TASK-M2-18), or the substep law's (TASK-M3-03), or the view window's square (TASK-M2-21), or the slice
     // frame's default axis (TASK-M6-38), or the wrapper's loop parameters (TASK-M3-06), or the tilt's angles
     // (TASK-M2-36), or the construction charts' hidden indices (TASK-M2-52), or a saved chart's word counts
-    // (TASK-M2-40), or the invariant monitor's and the drift views' (TASK-M3-05).
+    // (TASK-M2-40), or the invariant monitor's and the drift views' (TASK-M3-05), or the end of `u32`'s range
+    // (TASK-M3-68).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -693,7 +698,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 || TILT.contains(&k.name)
                 || HIDDEN.contains(&k.name)
                 || MONITOR.contains(&k.name)
-                || SAVED.contains(&k.name),
+                || SAVED.contains(&k.name)
+                || COUNT_CAST.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -786,6 +792,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the saved chart's word count `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in COUNT_CAST {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the count cast's bound `{name}` is not an unhashed register entry"
         );
     }
 }

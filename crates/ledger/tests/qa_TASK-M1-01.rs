@@ -421,7 +421,7 @@ fn needs(field: &str, tier: Tier) -> Option<(Vec<&'static str>, Vec<char>)> {
         "closure_step" => st(&["closure_step_reserved"]),
         "diffusion" => st(&["C_ty", "times"]),
         "ftle" if tier.has_ftle => st(&["r", "p", "r_sh", "p_sh", "S", "packed_a", "times"]),
-        "ftle_valid" if tier.has_ftle => st(&["packed_a", "times"]),
+        "ftle_valid" if tier.has_ftle => st(&["packed_a", "times", "S"]),
         "ftle" | "ftle_valid" | "ensemble_spread" => st(&[]),
         "r_sh" if tier.has_ftle => st(&["r_sh"]),
         "p_sh" if tier.has_ftle => st(&["p_sh"]),

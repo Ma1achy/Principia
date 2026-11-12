@@ -377,6 +377,20 @@ pub const F16_MIN_SUBNORMAL: ConstantBuilder = maximum(
     },
 );
 
+/// `2³²`, the end of `u32`'s range: the least value a float holding a count may not be cast to `u32` from. A float is
+/// clamped into `u32`'s range in its own type before the cast, as an out-of-range float-to-unsigned conversion is
+/// undefined on the GPU (gpu_determinism_note § "The discipline", rule 3): `kernel::driver::advance::Count::whole`
+/// reads it at each width, through the generated `U32_RANGE_END_F32` and its greatest float below, `U32_TOP_F32`
+/// (`2³² − 2⁸`) and `U32_TOP_F64` (`2³² − 1`, `u32::MAX`). Admissible as the format's achievable extreme.
+pub const U32_RANGE_END: ConstantBuilder = maximum(
+    "u32_range_end",
+    4_294_967_296.0,
+    Citation::Corpus {
+        file: "docs/notes/principia_gpu_determinism_note.md",
+        section: "The discipline (each rule = one measured failure)",
+    },
+);
+
 /// A settled number of the chart (dd_decoder §3), admissible as expressed in canonical units (`G = M = I = 1`;
 /// philosophy §4.2), with its citation. The link registry reads it by name (dd_generation_root §3.9).
 const fn chart(name: &'static str, value: f64, citation: Citation) -> ConstantBuilder {
@@ -1619,6 +1633,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     MAX_CROSSINGS_PER_SUBSTEP,
     F16_FINITE_MAX,
     F16_MIN_SUBNORMAL,
+    U32_RANGE_END,
     MU_MAX,
     Q_MAX,
     ALPHA_MIN,

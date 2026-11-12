@@ -1,0 +1,5 @@
+{
+  "description": "The reference's TINY, 1e-300 at f64 (R-953), on the same passage: far below every pre-floor A and B, it floors no step, so the control's count reads zero and it fails.",
+  "tiny": "reference",
+  "expected": "fail"
+}

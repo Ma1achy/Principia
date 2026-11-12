@@ -1245,3 +1245,151 @@ answer, and the chart value shaders read (`ctx.chart.z`), get the same treatment
   choosing.
 - **Waits:** TASK-M7-74 (M-E's quad-local arm), TASK-M7-47 (the View frame past `ℓ_switch`), TASK-M7-52 (the
   generated projection's reading past `ℓ_switch`); RQ-797 (whether the per-quad `x₀` and `J_D` are uploaded at all).
+
+## RQ-795: Aarseth–Zare's landing tolerance `LAND_EPS_REL`: the step control branches on it, rule 1 forbids it in a branch, and the corpus gives it no value *(conflict and silence, a missing value, R-71; a one-way door, it changes when a sync interval counts as landed and so what the occupant computes, at both precisions; Part 2b steps 6 and 7, Part 2c rule 1; R-927, R-953; REQ-INT-049, REQ-INT-114; context: TASK-M3-68)*
+
+*Queued 11 Nov 2026 by the implementer of TASK-M3-68 (the Aarseth–Zare occupant); each quote re-read on `main` at
+50f406e4. Nothing is chosen here.*
+
+*In plain English: Aarseth–Zare marches each sync interval in small steps of a stretched time, and stops when the
+clock has reached the interval's end "closely enough". The contract's transcription of the step control says how close
+with a tolerance, `LAND_EPS_REL`, in three places, but the contract's own rule 1 forbids exactly that constant in a
+branch, and it gives no value for it. The march cannot be built without some landing test, so the choice of test (and,
+if it is a tolerance, its value) is the owner's.*
+
+- **File, section:**
+  - `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference body, the
+    Levi-Civita inverse and the step control (transcribed)", step 6, "The landing secant": "When the step just taken
+    reaches the boundary (`t_s ≥ dt_left − dt_left·LAND_EPS_REL`) … stop if `got` is not finite, `got ≤ 0`, or
+    `|got − want| ≤ dt_left·LAND_EPS_REL`"; and step 7, "The exit": "The march ends when
+    `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, or the state is not finite, or the budget is spent".
+  - The same section, after step 8: "`SYNC_EPS` and `LAND_EPS_REL` are the reference's precision-dependent constants
+    that Part 2c rule 1 forbids in a branch; their values are not part of this transcription."
+  - The same contract, § "Rules the new kernel must hold by construction", rule 1: "prin-rs gives `f32` and `f64`
+    different `SYNC_EPS` (1e-6 / 1e-15) and `LAND_EPS_REL` (1e-5 / 1e-14), **both sitting directly in branch
+    conditions.** … If a tolerance must scale with precision, it belongs where the *value* is used, never where the
+    *branch* is taken."; and R-953's note there: "Rule 1's text stands for every other constant: `SYNC_EPS` and
+    `LAND_EPS_REL` stay forbidden in a branch."
+- **The conflict:** steps 6 and 7 branch on `LAND_EPS_REL`; rule 1 and R-953 forbid it in a branch; neither says what
+  the landing test is instead. **The silence:** no value is given (the values rule 1 quotes are prin-rs's, described as
+  the defect).
+- **`SYNC_EPS` does not need a ruling:** TASK-M3-68 replaces the reference's `t ≥ t_target − SYNC_EPS` (step 1) by
+  integer sync-boundary indices, so no tolerance reaches that branch (applied per R-369, an implementation choice that
+  changes no result on the grid R-565 fixes).
+- **Options (measurable):** (a) one tolerance for both precisions, set where the value is used, as rule 1 allows, a
+  calibration with its value proposed (R-71); (b) no tolerance: the interval lands when the secant's last retake ends
+  the interval clock at or past `dt_left`, the clamp then setting the remainder exactly, so the branch compares `t_s`
+  with `dt_left` alone; (c) the reference's per-precision values, which needs rule 1 amended. Each changes the
+  trajectory by at most the landing residual, which the `az-final-step` gate measures; the figure-eight closure under
+  each can be run on request.
+- **Applied meanwhile:** TASK-M3-68 takes the tolerance as a parameter of the occupant's configuration
+  (`AzParams::land_eps_rel`), with no value in the kernel and no production configuration; the gates and tests that
+  run the occupant state the reference's values (`1e-5`, `1e-14`) as their run condition, marked with this entry.
+- **Waits:** the occupant's production configuration (its `AzConfig`), with REQ-INT-080 and REQ-INT-105's values;
+  TASK-M3-68 itself does not wait.
+
+## RQ-796: Aarseth–Zare's floor on `|R₃|` in the equations of motion has an f64 value only, `1e-300`, which is 0 at f32: the corpus gives no f32 value *(silence, a missing value, R-71; a one-way door, it changes what the occupant computes at f32 near a close approach of the unregularised side; Part 2b § "The equations of motion in fictitious time `τ`"; R-953; REQ-INT-105; code review 5873667061 of PR #502, C3; context: TASK-M3-68, TASK-M3-08)*
+
+*Queued 12 Nov 2026 by the implementer of TASK-M3-68 (the Aarseth–Zare occupant), fix round 1; each quote re-read on
+`main` at 416e5cd7. Nothing is chosen here.*
+
+*In plain English: Aarseth–Zare removes the singularity of two of the three pairs, but the third side, between the two
+bodies other than the reference body, keeps its `1/|R₃|` term. The equations guard it with a tiny floor so that a
+division by zero cannot happen. The contract gives that floor as `1e-300`, a double-precision number; in single
+precision, which the GPU runs, `1e-300` rounds to exactly 0, so there is no floor at all. The contract gives no
+single-precision value, so which value to use there is the owner's.*
+
+- **File, section:** `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference
+  body, the Levi-Civita inverse and the step control (transcribed)", "The equations of motion in fictitious time `τ`":
+  "on the state `(u₁, p₁, u₂, p₂, t)` with `E` held, `A` and `B` here not floored and `|R₃|` floored at `1e-300`
+  (`tb_az.py:114-118`)"; the same section, on the reference body: "Hence the floor on `|R₃|` (`tb_az.py:118`) and
+  `|R₂ − R₁|` in the predictive limit's `d_min`".
+- **The neighbouring rule:** the same section, R-953's note on the inverse map's guards: "`system.rs` floors at `TINY`
+  too, where `tb_az.py` floors at `1e-300`: `A` and `B` in `phys_from_state` (`system.rs:93-94`) and the three
+  separations in `energy_phys` (`system.rs:109-111`)". `TINY` is "one value per working precision, a calibration (R-71,
+  REQ-INT-105)", the owner's numbers `1e-37` at f32 and `1e-300` at f64. The note names no floor for `|R₃|` in the
+  equations of motion, so the transcription's `1e-300` stands there, an f64 value.
+- **The silence:** `1e-300` is below f32's least subnormal (about `1.4e-45`), so at f32 it is `0`, and no f32 value is
+  given.
+- **Options (measurable):** (a) the floor is `TINY` at each width (`1e-37` at f32, `1e-300` at f64 in the reference's
+  values), as R-953 maps `tb_az.py`'s other `1e-300` floors onto `TINY`, its value then following REQ-INT-105's
+  proposal; (b) a calibration of its own per width, proposed from the least pre-floor `|R₃|` over the close-encounter
+  fixtures, as REQ-INT-105's verify does for `A` and `B`; (c) no floor at f32, a non-finite `|R₃|` term then caught by
+  the march's explicit finiteness test (Part 2b, step 7). Each can be measured on `separation-floor --propose`'s
+  fixtures: the floored-step count and the least `|R₃|` reached at f32.
+- **Recommendation:** (a), as the reading most consistent with R-953, which treats `tb_az.py`'s `1e-300` floors as
+  `TINY` at each width.
+- **Applied meanwhile:** TASK-M3-68's kernel takes the floor as a parameter of the occupant's configuration
+  (`AzParams::r3_floor`), with no value in the kernel and no production configuration. Its tests and gates run with
+  `1e-300` at f64 and **no floor (0) at f32**, and say so in their module notes and in `separation-floor --propose`'s
+  output, until this entry is ruled.
+- **Waits:** the occupant's production configuration (its `AzConfig`), with REQ-INT-080's and REQ-INT-105's values;
+  TASK-M3-68 itself does not wait.
+
+## RQ-806: Which `sim_failed` detail code a regularised march's non-finite exit writes, when the state it stores is the latched finite one *(silence and conflict, a meaning, R-72; a one-way door, it changes what the instrument records for a failed sample; payload §2, §8; integrator contract Part 2b step 7, Part 7; R-30; physics review 5879658175 of PR #502, P1; context: TASK-M3-68, TASK-M3-18)*
+
+*Queued 12 Nov 2026 from physics review 5879658175 on PR #502 (TASK-M3-68, the Aarseth–Zare occupant); each quote
+re-read on `main` at 54fa96fc. Nothing is chosen here.*
+
+*In plain English: when a regularised march breaks down numerically, it stops and keeps its last good state, and the
+sample is marked failed with a small code saying what went wrong: 0 for a NaN in the state, 1 for an infinity in the
+state, 2 for a blown-up derived quantity such as the energy or force. What broke is the march's own internal state,
+which held NaN or infinity, but what is stored is the last good state, which holds neither. So the code can be read off
+the stored state (2), off the broken internal state (0 or 1), or off the cause. Which one the instrument records is the
+owner's.*
+
+- **File, section:**
+  - `docs/design/principia_dd_simstate_payload.md` § "2. Bit layouts (the packed u32s)" (:296): "**`sim_failed`**
+    (state 4, numerical breakdown *during integration*): `0` = NaN in state; `1` = Inf/overflow in state; `2` =
+    non-finite derived quantity (energy/force blew up); `3` = reserved."
+  - The same file, § "8. Build-time settles" (:753): "**Failure `detail` enum** — the sim_failed/decode_failed category
+    codes (§2) are drawn from the integrator contract's actual failure modes; confirm they match the contract's
+    enumeration when it's finalised."
+  - `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference body, the
+    Levi-Civita inverse and the step control (transcribed)", step 7, "The exit": "The march ends when
+    `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, or the state is not finite, or the budget is spent"; and, for an entry
+    size that is not finite: "The entry size is then infinite and the step's state is not finite".
+  - The same contract, Part 7 (:1093): "`sim_failed` (NaN/Inf during integration) and `decode_failed` … are lifecycle
+    states".
+  - The latch, as built (`crates/kernel/src/regularisation/az.rs`, `End::NonFinite`): "The state was not finite at the
+    explicit test (Part 2b, step 7): the copy stopped, its state latched at the last finite one."
+- **The silence:** the codes are defined on "the state", and a regularised march has two: the regularised `(Q, P, t)`
+  the step-7 test rejected, non-finite, and the stored Cartesian state, finite by construction. Payload §8 leaves the
+  codes open, and TASK-M3-18 owns their cross-check against the contract's failure enumeration.
+- **Options:**
+  - (i) 2, read on the stored state, as built (`failed_detail` on the latched state);
+  - (ii) 0 or 1, read on the first non-finite regularised state the step-7 test rejected (0 if any component is NaN,
+    else 1);
+  - (iii) by cause: 2 where the step size `h` was not finite, else 0 or 1 read on the stepped state as in (ii).
+- **Measured** (the `az_doubly_degenerate_is_finite` fixture, f32, three bodies within `3e-38` at rest, TASK-M3-68's
+  test values; a throwaway probe, not committed, run through the job queue as job 5298 on 3ae7ae9e): the entry size `dτ_entry` is
+  `+∞`, so the step size `h` is `+∞`; RK4's step from the registered state gives all nine components of
+  `(u₁, p₁, u₂, p₂, t)` NaN (bits `0x7fc00000`), none infinite. So this fixture writes **2** under (i), **0** under (ii)
+  and **2** under (iii). Under (i) and (iii) the code is the same here; they differ on a finite step whose stepped state
+  overflows.
+- **Measured over the separation-floor and close-encounter fixtures at f32** (physics review 5880652590's measurable
+  alternative; a throwaway probe, not committed, job 5312 on 2424506a; each fixture as `separation-floor --propose` runs
+  it, Aarseth–Zare + RK4 at `η = 0.01`, `Δ_sync = 0.125`, the reference's `TINY` and landing tolerance, no `|R₃|`
+  floor at f32):
+
+  | fixture | end at f32 | steps | (i) | (ii) | (iii) |
+  |---|---|---|---|---|---|
+  | the radial collision passage, to `t = 2` | marching, landed | 2528 | — | — | — |
+  | test 7's close-encounter hierarchy, to `t = 10` | marching, landed | 8463 | — | — | — |
+  | Burrau's (3, 4, 5) from rest, to `t = 20` | marching, landed | 22097 | — | — | — |
+  | the doubly degenerate state (`separation-floor --propose`'s, unit masses) | non-finite after 1 step | 1 | 2 | 0 | 2 |
+  | `az_doubly_degenerate_is_finite`'s fixture (masses `1/3`) | non-finite after 1 step | 1 | 2 | 0 | 2 |
+
+  None of the three close-encounter fixtures fails at f32, so no option writes a detail there. In both degenerate
+  states the step size `h` was not finite: the entry size and `c₀` were both unusable. So **(i) and (iii) never differ
+  on these fixtures**, and (ii) differs from both (0 against 2).
+- **Recommendation (physics review 5880652590 of PR #502):** option (iii), by cause. Payload §8 (:753) says the codes
+  "are drawn from the integrator contract's actual failure modes", and Part 2b step 7 names this failure's mode as an
+  entry size that is not finite, a derived quantity, which is payload §2's code 2. (iii) records that mode, and records 0
+  or 1 when a finite step overflows the state. (i) writes 2 for every regularised failure, so a later state overflow
+  cannot be told apart from it. (ii) writes 0 in the doubly degenerate case, although the step size failed first. Its
+  measurable alternative is above: (i) and (iii) agree on every fixture, so (i) is adequate for now.
+- **Applied meanwhile:** 2, option (i), as built by TASK-M3-68 (`crates/kernel/src/driver/wrapper.rs` `integrate_with`,
+  its doc comment marking the detail interim until this entry is ruled), as TASK-M3-05's interim writer was.
+- **Waits:** TASK-M3-18 (the one `sim_failed` writer and the cross-check of payload §2's codes); TASK-M3-68 itself does
+  not wait.

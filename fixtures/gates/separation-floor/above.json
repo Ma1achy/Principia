@@ -1,0 +1,5 @@
+{
+  "description": "The control can fire: a TINY ten times the radial collision passage's least pre-floor A or B, at f64, so the floor binds there and its floored steps are counted and reported (R-563, integrator contract Part 6).",
+  "tiny": "above",
+  "expected": "pass"
+}
