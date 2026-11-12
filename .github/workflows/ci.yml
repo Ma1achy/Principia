@@ -19,8 +19,9 @@
 # - `ci` (the job `tests-verdict`, over the 3 shards of the job `tests`): the product tests of the changed crates and
 #   their reverse dependencies (`.github/scripts/ci_tier.sh`, `.github/scripts/ci_quick_crates.py`) under the `pr`
 #   nextest profile, every test but the process tests, the in-depth GPU tests, the golden and screenshot runners' and the
-#   slow tier, each test measured over 60 s (`.config/nextest.toml` names them), with their doctests (R-231); on a data
-#   change the tests of the code that reads it (R-677);
+#   slow tier, each test measured over 60 s (`.config/nextest.toml` names them), with their doctests (R-231); on a
+#   change whose only code-tier path is `plan/requirements.yaml`, only the tests that read it, the per-merge tier running
+#   the rest on every merge (R-980); on a data change the tests of the code that reads it (R-677);
 # - `gpu-lavapipe` and `gpu-metal`: on a change with a GPU-path file (`gpu`), the GPU smoke set on lavapipe and on
 #   Metal, one fast test of each GPU stage after `cargo xtask build-kernel` (the `gpu-smoke` profile), and on lavapipe
 #   every numerical gate but `decode-agreement`; on a push too, to keep their rust-gpu caches warm on `main`;
@@ -385,6 +386,8 @@ jobs:
   # changed crates and their reverse dependencies (`changes`' `packages`) under the `pr` nextest profile, every test but
   # the process tests, the in-depth GPU tests, the golden and screenshot runners' and the slow tier
   # (`.config/nextest.toml`), and their doctests (R-231); the GPU harness's tests among them run on lavapipe (R-169).
+  # On a change whose only code-tier path is `plan/requirements.yaml`, `packages` names only the tests that read it, as
+  # `.github/scripts/ci_quick_crates.py --readers` scans them, under the same profile, and no doctest (R-980).
   # On a data change (R-677), and beside code, the tests of the code that reads what changed: for the plan's task data,
   # xtask's readers and validation's Part 6 catalogue, and for the GUI's artboards and references the screenshot tests
   # and the HTML references' tests. On a docs change, none.

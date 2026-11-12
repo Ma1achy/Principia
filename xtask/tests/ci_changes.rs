@@ -73,6 +73,9 @@
 //! - `ci_changes_process_runs_on_the_machinery`: `scripts/ci_changes.sh process` is true exactly when a path is under
 //!   `.github/`, `xtask/`, `scripts/`, `plan/` or `docs/`, or is `decisions.md` or `REVIEW_QUEUE.md`, and when the
 //!   change cannot be read.
+//! - `scripts/ci_changes.sh requirements`, whether a change's only code-tier path is `plan/requirements.yaml`, so its
+//!   pull request runs only the tests that read that file (R-980), is `xtask/tests/ci_requirements_only.rs`'s, with
+//!   the selection it leads to.
 //! - `ci_changes_mutants_fixture_runs_on_the_gates_own_files`: `mutants.yml`'s `mutants-fixture`, the gate's self-test
 //!   on its fixtures, runs every step after its classification on a change to the gate's configuration
 //!   (`.cargo/mutants.toml`, `fixtures/mutants/untested/`, `fixtures/mutants/caps/`), which has no Rust under
