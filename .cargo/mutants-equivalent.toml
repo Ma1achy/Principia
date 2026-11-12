@@ -490,3 +490,7 @@ justification = "b == a returns b in place of a, the same value; the callers' op
 [[equivalent]]
 mutant = "crates/kernel/src/regularisation/az.rs:126:10: replace < with <= in abs"
 justification = "x == 0 returns -x = -0 in place of +0; abs's every caller compares its magnitude (|u1| > TINY, |got - want| <= land_tol), where -0 and +0 compare alike"
+
+[[equivalent]]
+mutant = "crates/kernel/src/regularisation/az.rs:729:35: replace < with <= in size"
+justification = "c1 == h assigns h = c1, the value h already holds, and sets have, already true there (h holds c0 only when c0 was usable); a tie leaves h and have unchanged"

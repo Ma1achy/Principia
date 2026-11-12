@@ -718,7 +718,7 @@ fn usable<R: AzReal>(c: R) -> bool {
 /// The step's size before the clamp: the least of the usable constraints, and whether it was the predictive limit's;
 /// where none is usable, the entry size `c₁` as it stands, which is then not finite (Part 2b, step 7).
 #[inline]
-fn size<R: AzReal>(c0: R, c1: R, c2: R, predictive: bool) -> (R, bool) {
+fn size<R: AzReal>(c0: R, c1: R, c2: R) -> (R, bool) {
     let mut h = c1;
     let mut have = false;
     let mut by_limit = false;
@@ -730,7 +730,7 @@ fn size<R: AzReal>(c0: R, c1: R, c2: R, predictive: bool) -> (R, bool) {
         h = c1;
         have = true;
     }
-    if predictive && usable(c2) && (!have || c2 < h) {
+    if usable(c2) && (!have || c2 < h) {
         h = c2;
         by_limit = true;
     }
@@ -738,17 +738,16 @@ fn size<R: AzReal>(c0: R, c1: R, c2: R, predictive: bool) -> (R, bool) {
 }
 
 /// The predictive limit (Part 2b, step 4): `f·d_min/(P_max·ab)`, `d_min = min(|R₁|, |R₂|, |R₂ − R₁|)` and
-/// `P_max = max(|P₁|, |P₂|, |P₂ − P₁|)` on the relative momenta (R-953); `None` where `f ≤ 0`, the denominator is not
-/// positive, or `d_min` or the denominator is not finite.
+/// `P_max = max(|P₁|, |P₂|, |P₂ − P₁|)` on the relative momenta (R-953). Where `f ≤ 0`, the denominator is not
+/// positive, or `d_min` or the denominator is not finite, the value is not finite or not positive, so step 3's usable
+/// test drops it and the limit is off.
 #[inline]
-fn predictive<R: AzReal>(system: &AzSystem<R>, q: &AzQ<R>, p: &AzP<R>, f: R, ab: R) -> (R, bool) {
+fn predictive<R: AzReal>(system: &AzSystem<R>, q: &AzQ<R>, p: &AzP<R>, f: R, ab: R) -> R {
     let [r1, r2, p1, p2] = system.phys(q, p);
     let d_min = least(least(norm(r1), norm(r2)), norm(sub(r2, r1)));
     let (n1, n2, n3) = (norm(p1), norm(p2), norm(sub(p2, p1)));
     let p_max = floored(floored(n1, n2), n3);
-    let den = p_max * ab;
-    let on = f > R::default() && den > R::default() && finite(d_min) && finite(den);
-    (f * d_min / den, on)
+    f * d_min / (p_max * ab)
 }
 
 /// Whether the running total `steps` exceeds the budget `max(N_min, rate·t)` at physical time `t` (R-604). An allowance
@@ -789,8 +788,8 @@ pub fn step_size<R: AzReal>(
     let (a, b) = AzSystem::ab(q);
     let ab = floored(a, params.tiny) * floored(b, params.tiny);
     let c0 = params.eta * params.delta_sync / ab;
-    let (c2, on) = predictive(system, q, p, params.predictive_f, ab);
-    let (mut h, by_limit) = size(c0, entry, c2, on);
+    let c2 = predictive(system, q, p, params.predictive_f, ab);
+    let (mut h, by_limit) = size(c0, entry, c2);
     if params.clamp {
         h = least(h, floored(params.delta_sync - q.t, R::default()) / ab);
     }

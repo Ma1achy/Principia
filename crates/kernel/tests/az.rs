@@ -35,9 +35,9 @@ use kernel::occupant::{
     CapabilityProfile, DebugOccupant, Geom, Occupant, Selection, State, Stepper,
 };
 use kernel::regularisation::az::{
-    boundary_at_or_before, entry_size, lc, lc_inverse, lc_inverse_unstable, march, reference_body,
-    register, step_size, AarsethZare, AzAdvanced, AzConfig, AzCount, AzP, AzParams, AzQ, AzReal,
-    AzStepper, AzSystem, End, ExplicitTest, StepSize, Watch,
+    boundary_at_or_before, entry_size, lc, lc_inverse, lc_inverse_unstable, march, over_budget,
+    reference_body, register, step_size, AarsethZare, AzAdvanced, AzConfig, AzCount, AzP, AzParams,
+    AzQ, AzReal, AzStepper, AzSystem, End, ExplicitTest, StepSize, Watch,
 };
 use kernel::regularisation::form::{Flow, Form};
 use kernel::regularisation::pairs::{Choice, Pair, PairTable, Status};
@@ -1118,6 +1118,53 @@ fn check_signals(size: Size) {
         0.0,
         "past the boundary, no step"
     );
+    // A's own floor test: with u₁ and u₂ swapped, A and B swap.
+    let swapped = AzQ {
+        u1: q.u2,
+        u2: q.u1,
+        ..q
+    };
+    let (sa, sb) = AzSystem::ab(&swapped);
+    t.tiny = sa.min(sb);
+    assert!(
+        !size(&sys, &swapped, &pm, entry, &t).floored,
+        "swapped: at TINY, not below it"
+    );
+    t.tiny = sa.min(sb).next_up();
+    assert!(
+        size(&sys, &swapped, &pm, entry, &t).floored,
+        "swapped: just above it, floored"
+    );
+    // The least of the usable constraints, the predictive limit off (f = 0): an entry size not usable (0, NaN,
+    // negative) is skipped for c₀; one above c₀ loses to it.
+    let mut off = p;
+    off.predictive_f = 0.0;
+    let c0 = p.eta * p.delta_sync / (a * b);
+    for bad in [0.0, f64::NAN, -1.0, 2.0 * c0] {
+        let sized = size(&sys, &q, &pm, bad, &off);
+        assert_eq!(sized.h, c0, "entry {bad}: c₀ is the least usable");
+        assert!(!sized.by_limit);
+    }
+    // The predictive limit's value, f·d_min/(P_max·A·B), and a tie with the entry size, which it does not set.
+    let mut lim = p;
+    lim.predictive_f = 1e-9;
+    let alone = size(&sys, &q, &pm, 1e300, &lim);
+    let [r1, r2, p1, p2] = sys.phys(&q, &pm);
+    let n = |v: [f64; 2]| (v[0] * v[0] + v[1] * v[1]).sqrt();
+    let d = |x: [f64; 2], y: [f64; 2]| [x[0] - y[0], x[1] - y[1]];
+    let d_min = n(r1).min(n(r2)).min(n(d(r2, r1)));
+    let p_max = n(p1).max(n(p2)).max(n(d(p2, p1)));
+    let want = 1e-9 * d_min / (p_max * a * b);
+    assert!(
+        alone.by_limit && (alone.h - want).abs() <= 1e-12 * want,
+        "c₂ {} against {want}",
+        alone.h
+    );
+    let tie = size(&sys, &q, &pm, alone.h, &lim);
+    assert!(
+        tie.h == alone.h && !tie.by_limit,
+        "a tie with the entry size: {tie:?}"
+    );
 }
 
 #[test]
@@ -1351,4 +1398,50 @@ negative_control!(
     "the energy without its potential",
     expected = "E on registration",
     check_against_cartesian(|s| com_energy(s) + 1.0)
+);
+
+/// The budget at its edge, `steps` against `max(N_min, rate·t)`, exceeded only above it, and a NaN allowance spent;
+/// the explicit finiteness test false on a NaN in any one of the nine components.
+fn check_guards(test: &mut dyn FnMut(&AzQ<f64>, &AzP<f64>) -> bool) {
+    let mut p = params::<f64>();
+    p.n_min = 100;
+    p.step_budget_rate = 1000.0;
+    assert!(!over_budget(100, 0.05, &p), "at N_min, not over");
+    assert!(over_budget(101, 0.05, &p), "past N_min");
+    assert!(
+        !over_budget(200, 0.2, &p) && over_budget(201, 0.2, &p),
+        "at and past rate·t"
+    );
+    assert!(over_budget(0, f64::NAN, &p), "a NaN allowance is spent");
+    let s = burrau::<f64>();
+    let (_, q, pm) = register(&s, p.tiny, p.r3_floor);
+    assert!(test(&q, &pm), "a finite state is finite");
+    for i in 0..9 {
+        let (mut q1, mut p1) = (q, pm);
+        let slot = match i {
+            0 => &mut q1.u1[0],
+            1 => &mut q1.u1[1],
+            2 => &mut q1.u2[0],
+            3 => &mut q1.u2[1],
+            4 => &mut q1.t,
+            5 => &mut p1.p1[0],
+            6 => &mut p1.p1[1],
+            7 => &mut p1.p2[0],
+            _ => &mut p1.p2[1],
+        };
+        *slot = f64::NAN;
+        assert!(!test(&q1, &p1), "a NaN in component {i} is not finite");
+    }
+}
+
+#[test]
+fn az_guards() {
+    check_guards(&mut |q, p| ExplicitTest.finite(q, p));
+}
+
+negative_control!(
+    az_guards,
+    "a test that reads only u₁",
+    expected = "is not finite",
+    check_guards(&mut |q, _| q.u1.iter().all(|x| x.is_finite()))
 );
