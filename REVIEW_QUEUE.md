@@ -921,6 +921,13 @@ step; otherwise it is precision running out, and the warning is shown.*
     Exact, and costs one comparison per component on pairs already found equal. It is a definition under R-72; the
     physics reviewer confirms it on the pull request that files this entry, as the owner directed. It replaces the
     `J_D` wording in REQ-GUI-012, R-599's applied note and deep_zoom §4.
+
+    Pairs across a flagged fold: a pair placed symmetrically about a fold REQ-DEC-058 flags can have bitwise-equal f64
+    ICs by symmetry at any depth. There the dual slope at each sample is about the slope one spacing from the fold, not
+    0, so under (b) as written such a pair reads as the f64 floor and warns; RQ-553's central difference read 0 there
+    and counted it as saturation. So at flagged sites (b) changes RQ-553's meaning. The entry does not choose between
+    leaving it so and excluding such pairs (as REQ-CHART-130 masks seams from refinement); the measurement lists them
+    apart (below).
   - **(c) The dual `J_D` as is.** Warns falsely in the saturated field; against W13.
 - **Recommended:** (b), with its slope condition, the audit's recommendation (the slope condition the owner's). It
   needs no central difference, so it does not stretch R-935's
@@ -939,7 +946,8 @@ step; otherwise it is precision running out, and the warning is shown.*
   - *Criterion:* (a) and (b) classify every collapsed pair alike on every arm; the pairs where they differ are counted
     and listed. On arm (f), (b) classifies every such pair as the f64 floor and the warning is raised. If none differ,
     (b) keeps RQ-553's meaning on those arms; any pair that differs shows where the meaning changes, and it goes to the
-    owner with that pair.
+    owner with that pair. Pairs whose two samples lie on either side of a REQ-DEC-058 flagged site are counted and
+    listed apart, with how (a) and (b) each classify them; reported, not judged.
   - *Control on arm (f), failing voids the arm:* the rule without the slope condition (equal f64 ICs at distinct
     points are saturation) reads arm (f)'s pairs as saturated and drops the warning.
 - **Applied meanwhile:** nothing.
