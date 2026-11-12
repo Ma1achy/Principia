@@ -924,3 +924,80 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
 - **Applied meanwhile:** nothing is merged: PR #493 is not merged and builds nothing for this case. The physics review
   asks for a test at a nonzero `r_coll` that drives a shadow-only collision and pins whatever is ruled.
 - **Waits:** TASK-M3-14 (the Benettin FTLE shadow).
+
+## RQ-792: Where the collision test's floor is recorded so that every output carries it: R-954's "the floor is recorded with the run" and REQ-EVT-035 ask for a per-output record, and the payload has no free bit or byte to hold one *(silence, a missing definition, R-72, whose storage is a one-way door, a payload format change; R-954, R-547, R-545, R-397; REQ-EVT-035, REQ-EVT-004; context: TASK-M3-71)*
+
+*Queued 12 Nov 2026 by TASK-M3-71's implementer, before anything was built; each quote below re-read on `main` at
+0a1a62a3. Nothing is chosen here, and nothing is built for it.*
+
+*In plain English: the collision test compares the bodies' distance with the collision radius `r_coll` using positions
+rounded to single precision, so below a certain size, which depends on where the bodies are, it can only tell
+"rounded positions equal" from "different". The owner ruled that each output must record whether its `r_coll` lay
+below that size. Where the bodies are changes along a run, so the size that matters is the one at the moment the test
+came closest to firing (the closest approach, or the collision itself), and only the march sees it. To carry it on
+every output it must be stored with each sample, and every bit of the per-sample record is already spent; adding a
+field changes the stored format on the CPU and the GPU, which is the owner's call, not a definition this task can
+write on its own.*
+
+- **File, section:**
+  - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer", R-954's
+    bullet: "**The floor is recorded with the run,** beside `r_coll`, so an output says whether its `r_coll` lay below
+    what the test resolves; what is recorded, and how it is computed from the run, is a definition TASK-M3-71 writes
+    into this Part under physics review (R-72; REQ-EVT-035)."
+  - The same Part, the collision bullet: "`r_coll` is a **recorded parameter carried on every output**, not a physical
+    constant." It is carried on the sim key (`engine::dispatch::validate::Validated::collision_radius`'s note: "`r_coll`
+    itself stays on the sim key (`SimUniforms::sim_key_bytes`), which every output is keyed by"); the floor is not a
+    sim-key value but a result of the march, per sample.
+  - `plan/requirements.yaml`, REQ-EVT-035: "the run records, beside r_coll, what it needs for an output to say whether
+    its r_coll lay below what the test resolves; the definition states what is recorded (a value, a flag or both), how
+    it is computed from the run, the floor varying with the pair's coordinates along it, and where it is stored". Its
+    verify: "the record is carried on every output beside r_coll, bit for bit as defined; controls: a recorder that
+    reads only r_coll's value and not the coordinates misreports a run whose bodies lie at |x| in [1, 2) with r_coll
+    between the two spacings, and fails".
+  - `docs/design/principia_dd_simstate_payload.md` § "1. `SimState` — the hot struct", "The recheck, on spending
+    `_reserved` (R-397; REQ-PAY-009)": "So **at f32 any new field now costs 8 B**, whatever its width up to 8 B: the
+    next one takes `SimStateFTLE` to 152 and `SimStateBase` to 104." And § "2. Bit layouts", `sample_descriptor`: bits
+    10–14 `I_max` and bit 15 `departed`, "a deliberate, versioned assignment" (R-545); `packed_a`'s high half is
+    `d_min`, `packed_b` is `dE_max` and `dLz_max`, `times` is `t_end_step` and `t_dmin_step`. No bit is free.
+  - `docs/design/principia_dd_simstate_payload.md` § "2. Bit layouts", `last_symbol`'s note: "spending 8–9 is a format
+    change" (a binary-format version bump).
+- **The silence:** what the floor is at one state is settled by R-954 and the code: the test reads `d²` formed from
+  each position cast to f32, one subtraction per axis, each square by `kernel::driver::substep::square`, which returns
+  0 below `2⁻⁴⁰`, so the test resolves a pair's separation only to the larger of the f32 spacing at the pair's largest
+  coordinate and `2⁻⁴⁰` (the second binds only for a pair within about `2⁻¹⁷` of the origin). Along a run that floor
+  varies, and the state where it bears on the outcome is the one the `d_min` latch holds: the collision's state for a
+  collision (the latch is set there, its `d²` being below every earlier one), the closest approach otherwise (where a
+  pass at `r_coll` below the floor is as unresolved as a firing; R-954's "`d_min` is resolved only to that spacing").
+  That state's coordinates are seen only during the march and are not stored (only `d_min`, `dmin_pair` and
+  `t_dmin_step` are), so no output can derive the record at read time, except a collision's, from its stored final
+  positions. A per-output record therefore needs per-sample storage, and the payload has none free: a new field is a
+  format change of `SimState` on the CPU and the GPU, the export decoder and the schema hash, outside Part 7, and a
+  one-way door (stored GPU bits). R-954's own words, "recorded with the run", and REQ-EVT-035's "the run records" read
+  as a run-level record; its verify, "on every output", as a per-output one; a run-level record that reads the
+  coordinates needs a reduction over the dispatch's samples, which nothing has either.
+- **The question:** where, and in what form, is the floor recorded so that every output says whether its `r_coll` lay
+  below what the test resolves?
+- **Options seen:**
+  - (a) **Per sample, a new payload field at the `d_min` latch:** the floor at the latched pair's coordinates on the
+    state the latch holds, a power of two stored as its exponent (one byte holds `2⁻⁴⁰` to `2¹⁰⁴`), latched with
+    `d_min`; each output's flag derived at read as `r_coll < floor` from the sim key's `r_coll`, exactly. A payload
+    format bump (8 B at f32 under R-397's recheck, or a share of TASK-M3-41's 8 B if it fits there), generated for CPU
+    and GPU, with the export decoder and the schema hash.
+  - (b) **Per sample, one stored bit:** "`r_coll` lay below the floor at the latched state", formed in the kernel from
+    the f32 threshold `r_coll²` against the floor's exact square. The same format bump for one bit, and the floor's
+    value is lost.
+  - (c) **No new storage, derived at read:** a collision output derives the floor from its stored final positions and
+    its `detail`'s pair (the state the test fired on); every other output records "not recorded". Against it: an escape
+    or bounded output whose closest approach lay below the floor reads as resolved when it was not.
+  - (d) **Run level:** each sample's latched floor reduced over the dispatch to the run's largest, recorded with the
+    run beside `r_coll` (its provenance), and every output of the run reads "`r_coll` lay below the floor somewhere in
+    this run" where `r_coll` is below it. Conservative, not per output; it needs a per-dispatch reduction buffer.
+  - (e) Another, stated by the owner.
+- **Recommended:** (a): it records exactly what R-954 names, per output, on every pipeline, and the flag is formed
+  exactly on the host. The measurable alternative is (c), which changes no stored format: the measurement is the share
+  of non-collision samples, over a default chart sweep at a small `r_coll` (say `10⁻⁷`), whose latched closest approach
+  lay below the floor at the latched pair's coordinates (a CPU run that keeps the latch's coordinates); if that share is
+  negligible at every `r_coll` a user would set, (c) loses little.
+- **Applied meanwhile:** nothing: TASK-M3-71 builds nothing and writes no definition into Part 7 until this is ruled.
+  The test itself is unchanged (TASK-M3-09); R-954's floor bullet in Part 7 stands as written.
+- **Waits:** TASK-M3-71 (the collision test's floor, recorded with the run).
