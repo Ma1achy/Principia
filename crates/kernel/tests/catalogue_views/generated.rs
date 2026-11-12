@@ -653,7 +653,13 @@ fn check_ftle(p: &Probe) {
     let s = &reference.s;
     let params = &reference.params;
     let n = tm_t_end_step(s.times);
-    let ftle_ok = ftle_valid(s.packed_a, true, n, completed_renorms(n, params.n_renorm));
+    let ftle_ok = ftle_valid(
+        s.packed_a,
+        true,
+        n,
+        completed_renorms(n, params.n_renorm),
+        s.S,
+    );
     let delta = benettin_delta(s.r, s.p, s.r_sh, s.p_sh);
     let expected: f32 = ftle(s.S, delta, params.delta_0, n, params.dt_macro, ftle_ok);
     expect(

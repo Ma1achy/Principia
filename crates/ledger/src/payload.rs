@@ -758,6 +758,16 @@ pub const fn canonical_qnan_bits() -> u32 {
     0x7fc0_0000
 }
 
+/// The bits of `S`'s failed-state value, `S_FAILED`, `f32::MAX`'s, `0x7f7f_ffff`: the mark a sample's `S` stores once
+/// its Benettin shadow's finalised sum has gone non-finite, never NaN (R-79), so that payload §6's `ftle_valid` is
+/// false from then on (R-972, pending in the rulings PR; the owner's words of 12 Nov 2026 on RQ-791, option (a)). A
+/// real `S` is bounded far below it (`|S| ≤ 65535 · 103 ≈ 6.8e6`, `kernel::driver::benettin`'s note). Interface data
+/// written into the read side, as the canonical quiet NaN is; not a register constant. *Applied per R-369: the
+/// smallest mark that changes no other field.*
+pub const fn s_failed_bits() -> u32 {
+    f32::MAX.to_bits()
+}
+
 /// Payload §3's frozen symbol codes, each symbol at its code: `a = 0, A = 1, b = 2, B = 3` ("part of the binary
 /// format"). `inverse` and the digit maps are over these codes; `last_symbol` stores one (payload §2).
 pub const fn symbols() -> [&'static str; 4] {

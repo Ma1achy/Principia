@@ -273,6 +273,7 @@ fn indent(text: &str, pad: &str) -> String {
 /// unpacks, `no_std` and rustfmt's layout.
 pub fn rust(words: &[Word], entries: &[Entry]) -> Generated {
     let qnan = crate::payload::canonical_qnan_bits();
+    let s_failed = crate::payload::s_failed_bits();
     let unbound = match unbound_word(entries) {
         Ok(w) => format!(
             "[{}, {}, {}, 0x{:04x}_{:04x}]",
@@ -304,6 +305,10 @@ pub use crate::shape::shape;
 /// Part 3a; R-72, R-79). A tier-absent derived scalar and an invalid read hold exactly these bits.
 pub const CANONICAL_QNAN_BITS: u32 = 0x{:04x}_{:04x};
 
+/// The bits of `S`'s failed-state value, `f32::MAX`'s: the mark a sample's `S` stores once its Benettin shadow's
+/// finalised sum has gone non-finite, never NaN (R-79), so `ftle_valid` is false from then on (payload §6; R-972).
+pub const S_FAILED_BITS: u32 = 0x{:04x}_{:04x};
+
 /// The word an unbound word buffer reads: payload zero, `length_raw` the truncation sentinel, so every word-derived
 /// validity predicate reads it as invalid (lowering Part 3a; R-72).
 pub const FGW_UNBOUND: [u32; 4] = {unbound};
@@ -332,6 +337,8 @@ pub struct SimState {{
 "#,
         qnan >> 16,
         qnan & 0xffff,
+        s_failed >> 16,
+        s_failed & 0xffff,
     );
     for m in &members {
         let _ = writeln!(out, "    pub {}: {},", m.name, m.rust);
@@ -379,7 +386,7 @@ fn rust_unpack(s: &Struct, members: &[ReadMember]) -> String {
          #[inline]\n\
          pub fn {}(\n    s: &{},\n    word: [u32; 4],\n    has_word: bool,\n    ensemble_spread: f32,\n    has_ensemble: bool,\n    \
          masses: [f32; 3],\n    params: &ReadParams,\n) -> SimState {{\n    let n = tm_t_end_step(s.times);\n    \
-         let ftle_ok = ftle_valid(s.packed_a, {shadow}, n, completed_renorms(n, params.n_renorm));\n",
+         let ftle_ok = ftle_valid(\n        s.packed_a,\n        {shadow},\n        n,\n        completed_renorms(n, params.n_renorm),\n        s.S,\n    );\n",
         unpack_name(s),
         s.name,
     );
@@ -417,11 +424,22 @@ pub fn completed_renorms(n: u32, n_renorm: u32) -> u32 {
     n.checked_div(n_renorm).unwrap_or(0)
 }
 
-/// Whether `ftle` is usable: the FTLE tier on, the sample not failed, at least one step and at least one completed
-/// renormalisation (payload §6). Derived, never stored; `ftle` reads NaN whenever it is false (R-254).
+/// Whether `ftle` is usable: the FTLE tier on, the sample not failed, at least one step, at least one completed
+/// renormalisation, and the shadow's sum `s_sum` not the mark `S_FAILED_BITS` (payload §6; R-972). Derived, never
+/// stored; `ftle` reads NaN whenever it is false (R-254).
 #[inline]
-pub fn ftle_valid(state: u32, ftle_tier_on: bool, n: u32, benettin_renorms: u32) -> bool {
-    ftle_tier_on && !sd_is_failed(state) && n > 0 && benettin_renorms > 0
+pub fn ftle_valid(
+    state: u32,
+    ftle_tier_on: bool,
+    n: u32,
+    benettin_renorms: u32,
+    s_sum: f32,
+) -> bool {
+    ftle_tier_on
+        && !sd_is_failed(state)
+        && n > 0
+        && benettin_renorms > 0
+        && s_sum.to_bits() != S_FAILED_BITS
 }
 
 /// The shadow's current separation `δ = ‖x' − x‖`, the Euclidean norm of the shadow's offset over the twelve
@@ -785,6 +803,7 @@ impl Needs {
     fn ftle_ok(&mut self) {
         self.ftle_ok = true;
         self.load("packed_a");
+        self.load("S");
         self.n();
     }
 
@@ -994,7 +1013,7 @@ fn sample_read(members: &[ReadMember], tier: Tier, fields: &[&str]) -> Result<St
         // The tier as the assembler bakes it, `has_ftle` (lowering Part 3a): `ftle_valid`'s tier clause.
         let _ = writeln!(
             out,
-            "    let ftle_ok = ftle_valid(s_packed_a, {}, n, completed_renorms(n, params.n_renorm));",
+            "    let ftle_ok = ftle_valid(s_packed_a, {}, n, completed_renorms(n, params.n_renorm), s_S);",
             tier.has_ftle
         );
     }
@@ -1045,6 +1064,7 @@ pub fn wgsl_for(
     fields: &[&str],
 ) -> Result<String, String> {
     let qnan = crate::payload::canonical_qnan_bits();
+    let s_failed = crate::payload::s_failed_bits();
     let unbound = match unbound_word(entries) {
         Ok(w) => format!(
             "vec4<u32>({}u, {}u, {}u, {:#010x}u)",
@@ -1062,6 +1082,10 @@ pub fn wgsl_for(
 // The canonical quiet NaN's f32 bits: sign 0, exponent all ones, the quiet bit alone in the significand (lowering
 // Part 3a; R-72, R-79). A tier-absent derived scalar and an invalid read hold exactly these bits.
 const CANONICAL_QNAN_BITS: u32 = {qnan:#010x}u;
+
+// The bits of `S`'s failed-state value, `f32::MAX`'s: the mark a sample's `S` stores once its Benettin shadow's
+// finalised sum has gone non-finite, never NaN (R-79), so `ftle_valid` is false from then on (payload §6; R-972).
+const S_FAILED_BITS: u32 = {s_failed:#010x}u;
 
 // The word an unbound word buffer reads: payload zero, `length_raw` the truncation sentinel, so every word-derived
 // validity predicate reads it as invalid (lowering Part 3a; R-72).
@@ -1121,10 +1145,12 @@ const WGSL_HELPERS: &str = r"
 // `n_renorm` is 0.
 fn completed_renorms(n: u32, n_renorm: u32) -> u32 { return select(0u, n / max(n_renorm, 1u), n_renorm > 0u); }
 
-// Whether `ftle` is usable: the FTLE tier on, the sample not failed, at least one step and at least one completed
-// renormalisation (payload §6). Derived, never stored; `ftle` reads NaN whenever it is false (R-254).
-fn ftle_valid(state: u32, ftle_tier_on: bool, n: u32, benettin_renorms: u32) -> bool {
-    return ftle_tier_on && !sd_is_failed(state) && n > 0u && benettin_renorms > 0u;
+// Whether `ftle` is usable: the FTLE tier on, the sample not failed, at least one step, at least one completed
+// renormalisation, and the shadow's sum `s_sum` not the mark `S_FAILED_BITS`, compared by its bits (payload §6;
+// R-972). Derived, never stored; `ftle` reads NaN whenever it is false (R-254).
+fn ftle_valid(state: u32, ftle_tier_on: bool, n: u32, benettin_renorms: u32, s_sum: f32) -> bool {
+    return ftle_tier_on && !sd_is_failed(state) && n > 0u && benettin_renorms > 0u
+        && bitcast<u32>(s_sum) != S_FAILED_BITS;
 }
 
 // The shadow's current separation `δ = ‖x' − x‖`, the Euclidean norm of the shadow's offset over the twelve
