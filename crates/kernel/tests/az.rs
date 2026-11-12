@@ -46,6 +46,9 @@
 //!   stepper's rule) or count a short call completed.
 //! - `az_done_on_landing`: a seam call spanning several sync boundaries with a terminal on a landing step ends there,
 //!   latched; its control leaves the terminal's `done` unread.
+//! - `az_done_on_target_landing`: a terminal on the landing step of the call's own target boundary, at
+//!   `Δ_sync = dt_macro` and at the last of four boundaries, registers the landing at its exact time, reaches the
+//!   target, and through the wrapper completes the macro-step with its Welford sample; its control reads it short.
 //! - `regularisation_owning_default_end`, `regularisation_none_keeps_count`: the default end of an occupant owning
 //!   its time mapping, and `none` bitwise the stepper's own run; their controls swap the two rules.
 
@@ -2657,4 +2660,102 @@ negative_control!(
     "the terminal's done left unread, the march carried on past it",
     expected = "the march stops at the landing step its terminal fired on",
     check_done_on_landing(|n| Unread(DoneAfter::new(n)))
+);
+
+/// The seam call from macro index 0 to 1 at `dt_macro` by `A`, from Burrau's state, with `cadence`.
+fn reach_by<A: Advance>(dt_macro: f64, cadence: &mut DoneAfter) -> (Advanced<f64>, Reached) {
+    let s = burrau::<f64>();
+    A::advance_reaching(
+        &s,
+        &Geom::new(&s.m, &s.r),
+        0,
+        1,
+        &AdvanceParams { dt_macro, n_sub: 4 },
+        cadence,
+    )
+}
+
+/// The seam's call under test, [`reach_by`] for an occupant.
+type Reach = fn(f64, &mut DoneAfter) -> (Advanced<f64>, Reached);
+
+/// A terminal that fires on the landing step of the call's own target boundary, `boundaries` sync intervals away
+/// (`dt_macro = boundaries·Δ_sync`): the landing is registered, the boundary reached at its time exactly, then the march
+/// ends (`Done`), and the call reports its target reached, as a stepper's terminal on its last substep completes the
+/// macro-step; through the wrapper the macro-step is completed (`t_end_step = 1`) with its Welford sample on the
+/// landing state, the run `running` for the terminal's label (physics review 5880652590 of PR #502, P3; code review
+/// 5880701680, F3).
+fn check_done_on_target(boundaries: u32, reach: Reach, run: WrapperRun<f64, DoneAfter>) {
+    let s = burrau::<f64>();
+    let dt_macro = 0.125 * f64::from(boundaries);
+    let free = march::<Rk4, f64, Counting, ExplicitTest>(
+        &s,
+        0,
+        boundaries,
+        AzCount::new(),
+        &params(),
+        &mut Counting::default(),
+        &mut ExplicitTest,
+    );
+    assert_eq!(free.boundary, boundaries, "the free march lands");
+    let n = free.count.accepted;
+    let (out, reached) = reach(dt_macro, &mut DoneAfter::new(n));
+    assert_eq!(
+        reached,
+        Reached::Target,
+        "a terminal on the target boundary's landing step reaches the target ({boundaries} boundaries)"
+    );
+    assert_eq!(
+        (out.substeps, bits(&out.state)),
+        (n, bits(&free.state)),
+        "the landing state, latched"
+    );
+    let latched = march::<Rk4, f64, DoneAfter, ExplicitTest>(
+        &s,
+        0,
+        boundaries,
+        AzCount::new(),
+        &params(),
+        &mut DoneAfter::new(n),
+        &mut ExplicitTest,
+    );
+    assert_eq!(
+        (latched.count.end, latched.boundary),
+        (End::Done, boundaries),
+        "the landing is registered, then the march ends"
+    );
+    assert_eq!(
+        latched.t.to_bits(),
+        (0.125 * f64::from(boundaries)).to_bits(),
+        "the time is the boundary's exactly: {}",
+        latched.t
+    );
+    let got = run(&ic_of(&s), &key(dt_macro, 8, 4), &mut DoneAfter::new(n));
+    assert_eq!(
+        (tm_t_end_step(got.times), sd_state(got.packed_a)),
+        (1, STATE_RUNNING),
+        "the macro-step is completed"
+    );
+    let y = welford::y(free.state.r, s.m, shape(s.r, s.m));
+    assert_eq!(
+        (got.mean_y.to_bits(), got.C_ty.to_bits()),
+        (y.to_bits(), 0f64.to_bits()),
+        "its Welford sample is taken on the landing state"
+    );
+}
+
+#[test]
+fn az_done_on_target_landing() {
+    check_done_on_target(1, reach_by::<AzRk4>, run_by::<AzRk4, f64, DoneAfter>);
+    check_done_on_target(4, reach_by::<AzRk4>, run_by::<AzRk4, f64, DoneAfter>);
+}
+
+negative_control!(
+    az_done_on_target_landing,
+    "a terminal on the target boundary's landing step read as short, the macro-step dropped",
+    expected = "a terminal on the target boundary's landing step reaches the target",
+    check_done_on_target(
+        1,
+        reach_by::<Shorting<AzRk4>>,
+        run_by::<Shorting<AzRk4>, f64, DoneAfter>,
+    )
 );

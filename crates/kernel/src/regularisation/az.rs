@@ -810,7 +810,9 @@ pub fn entry_size<R: AzReal>(q: &AzQ<R>, params: &AzParams<R>) -> R {
     params.eta * params.delta_sync / (floored(a0, params.tiny) * floored(b0, params.tiny))
 }
 
-/// What one interval's march left: the last finite state, its interval clock, and whether it landed.
+/// What one interval's march left: the last finite state, its interval clock, and whether it landed: on its boundary
+/// with the march going on, or with a terminal that fired on the landing step itself (the landing registered, then the
+/// march ended).
 struct Interval<R> {
     q: AzQ<R>,
     p: AzP<R>,
@@ -864,7 +866,9 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
             // `done` is read before the landing: a terminal that fires on the landing step ends the march there, its
             // state latched, never marched on into the next interval (Part 2a § "The sync grid is a fixed quantum of
             // physical time (R-565)": "a terminal event … still latches at the step it fires on"; code review
-            // 5880407311 of PR #502, F2).
+            // 5880407311 of PR #502, F2). The landing itself still counts ([`Interval::landed`]): the boundary is
+            // reached, its time exact, and the march then ends (physics review 5880652590, P3; code review 5880701680,
+            // F3).
             if over_budget(count.steps, t0 + q.t, params) {
                 count.end = End::Exhausted;
                 go = false;
@@ -921,7 +925,7 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     Interval {
         q: kept_q,
         p: kept_p,
-        landed: landed && count.end == End::Marching,
+        landed: landed && (count.end == End::Marching || count.end == End::Done),
     }
 }
 
@@ -1058,14 +1062,22 @@ impl<C: AzConfig> Regularisation for AarsethZare<C> {
     }
 }
 
-/// How a march that ended at `end` ended its seam call: [`End::Marching`], every interval landed up to the boundary at
-/// or before the target, is the target reached; [`End::Done`] stopped short on the cadence; [`End::NonFinite`] and
+/// How a march that ended at `end` on boundary `boundary` ended its seam call, its target boundary `target`:
+/// [`End::Marching`], every interval landed up to the boundary at or before the target, is the target reached;
+/// [`End::Done`] is the target reached where the terminal fired on the target boundary's landing step, as a stepper's
+/// terminal on its last substep completes the macro-step, and short of it otherwise; [`End::NonFinite`] and
 /// [`End::Exhausted`] end the copy's march.
 #[inline]
-fn reached(end: End) -> Reached {
+fn reached(end: End, boundary: u32, target: u32) -> Reached {
     match end {
         End::Marching => Reached::Target,
-        End::Done => Reached::Short,
+        End::Done => {
+            if boundary == target {
+                Reached::Target
+            } else {
+                Reached::Short
+            }
+        }
         End::NonFinite => Reached::NonFinite,
         End::Exhausted => Reached::Exhausted,
     }
@@ -1080,19 +1092,21 @@ fn advance_seam<C: AzConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     params: &AdvanceParams<R>,
     cadence: &mut Cd,
 ) -> (Advanced<R>, Reached) {
+    let t_target = R::count(t_target) * params.dt_macro;
     let out = AarsethZare::<C>::advance_to::<S, R, Cd>(
         state,
         R::count(t_now) * params.dt_macro,
-        R::count(t_target) * params.dt_macro,
+        t_target,
         AzCount::new(),
         cadence,
     );
+    let target = boundary_at_or_before(t_target, C::params::<R>().delta_sync);
     (
         Advanced {
             state: out.state,
             geom: out.geom,
             substeps: out.count.accepted,
         },
-        reached(out.count.end),
+        reached(out.count.end, out.boundary, target),
     )
 }
