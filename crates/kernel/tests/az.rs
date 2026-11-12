@@ -36,6 +36,8 @@
 //! - `az_whole_nan`, `az_whole_negative`, `az_whole_above`: `Count::whole` clamps in the float type before the cast
 //!   (gpu_determinism_note § "The discipline", rule 3): a NaN on its bits to `0`, a negative to `0`, at or above `2³²`
 //!   to `u32::MAX`; their controls a NaN sent to the top, a negative by its magnitude, and a clamp with no select.
+//! - `az_clamp_off_tolerance`: with the clamp off the landing tolerance is 0, a copy landing only at the boundary; its
+//!   control keeps the tolerance.
 
 use std::cell::Cell;
 
@@ -1820,6 +1822,52 @@ negative_control!(
     expected = "the secant's one retake",
     check_secant(&|c, k, mut p| {
         p.secant_tries = 0;
+        script(c, k, p)
+    })
+);
+
+/// With the clamp off the landing tolerance is 0 (the reference driver's; physics review 5873527379 of PR #502,
+/// point 2): a clock that stops within `Δ·LAND_EPS_REL` of the boundary, short of it, lands with the clamp on but not
+/// with it off, where the copy steps on until its budget (3 steps) is spent; a clock that reaches the boundary lands
+/// either way. `run` is the scripted march under test.
+fn check_clamp_off_tolerance(run: ScriptRun<'_>) {
+    let short = 0.125 - 0.125 * 0.5e-14;
+    let mut p = scripted();
+    p.secant_tries = 0;
+    p.n_min = 3;
+    p.step_budget_rate = 0.0;
+    let (out, _) = run(Clock::To(short), 0, p);
+    assert_eq!(
+        (out.count.end, out.boundary),
+        (End::Marching, 1),
+        "the clamp on lands within the tolerance"
+    );
+    p.clamp = false;
+    let (out, _) = run(Clock::To(short), 0, p);
+    assert_eq!(
+        (out.count.end, out.boundary),
+        (End::Exhausted, 0),
+        "with the clamp off a copy lands only at the boundary"
+    );
+    let (out, _) = run(Clock::To(0.125), 0, p);
+    assert_eq!(
+        (out.count.end, out.boundary),
+        (End::Marching, 1),
+        "with the clamp off the boundary itself lands"
+    );
+}
+
+#[test]
+fn az_clamp_off_tolerance() {
+    check_clamp_off_tolerance(&script);
+}
+
+negative_control!(
+    az_clamp_off_tolerance,
+    "the clamp-off run keeping the landing tolerance",
+    expected = "with the clamp off a copy lands only at the boundary",
+    check_clamp_off_tolerance(&|c, k, mut p| {
+        p.clamp = true;
         script(c, k, p)
     })
 );

@@ -579,7 +579,8 @@ pub struct AzParams<R> {
     /// The step budget's floor `N_min` (R-604; REQ-INT-108, a calibration).
     pub n_min: u32,
     /// Whether the landing clamp is on (Part 2b, step 3; the default). Off only to measure the closure without the
-    /// landing fix (REQ-INT-049).
+    /// landing fix (REQ-INT-049); with it off the landing tolerance is 0, as the reference driver has it, and
+    /// [`AzParams::land_eps_rel`] is not read.
     pub clamp: bool,
     /// The landing secant's most retakes (Part 2b, step 6: `land_max_iters`, 4); `0` turns it off.
     pub secant_tries: u32,
@@ -829,8 +830,15 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     watch: &mut X,
 ) -> Interval<R> {
     let dt_left = params.delta_sync;
-    let land_at = dt_left - dt_left * params.land_eps_rel;
-    let land_tol = dt_left * params.land_eps_rel;
+    // With the clamp off the landing tolerance is 0, the reference driver's (`land_tol` is 0 unless the clamp is on;
+    // physics review 5873527379 of PR #502, point 2): the run without the landing fix lands only at `dt_left`.
+    let land_eps = if params.clamp {
+        params.land_eps_rel
+    } else {
+        R::default()
+    };
+    let land_at = dt_left - dt_left * land_eps;
+    let land_tol = dt_left * land_eps;
     let t0 = R::count(k) * dt_left;
     let entry = entry_size(&q, params);
     if !finite(entry) {
