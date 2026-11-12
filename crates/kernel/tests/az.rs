@@ -24,6 +24,15 @@
 //!   rule with its tie-break, the conditioned inverse's branches, registration and return, and the interval's energy;
 //!   their controls a last-maximum tie-break, the unstable inverse, a quarter-turned `u₁` and a flow whose energy is
 //!   not the state's.
+//! - `az_landing_secant`: on a scripted clock, the landing secant's retake, its tries and its stop on a clock that does
+//!   not move, the budget's physical time, a copy spent as it lands, and the overshoot's edge; its control turns the
+//!   secant off.
+//! - `az_boundary_corrected`, `az_seam_index`: the boundary's corrections of the quotient both ways and before `0`,
+//!   and the seam's `ADVANCE` from a later macro index; their controls the uncorrected quotient and a seam from 0.
+//! - `az_form_orders`: each stepper's form at its own order on the harmonic oscillator (KDK second order there, being
+//!   separable); its control takes Yoshida-4's form for Yoshida-6.
+
+use std::cell::Cell;
 
 use kernel::driver::advance::{Advance, AdvanceParams, Advanced, Cadence};
 use kernel::occupant::euler::Euler;
@@ -1217,6 +1226,11 @@ fn check_counts(over: Over<'_>) {
         "one registration per interval"
     );
     assert!(switches > 0, "the fixture switches reference body");
+    assert!(
+        whole.count.cap_hits > 0 && whole.count.predictive_bound > 0,
+        "the cap hits and the predictive limit's steps counted: {:?}",
+        whole.count
+    );
     assert_eq!(
         whole.count.switches, switches,
         "the switches between registrations"
@@ -1444,4 +1458,369 @@ negative_control!(
     "a test that reads only u₁",
     expected = "is not finite",
     check_guards(&mut |q, _| q.u1.iter().all(|x| x.is_finite()))
+);
+
+// ── The interval's control on a scripted clock ─────────────────────────────────────────────────────────────────
+
+/// How [`Scripted`] moves the interval clock, `x = A·B·h` being the step's physical size to first order; the
+/// regularised positions and momenta stay as they are, so that `A·B` and the step sizes are the registration's.
+#[derive(Clone, Copy)]
+enum Clock {
+    /// `t + κ·x`: a clock running `κ` times as fast as the step control reckons.
+    Scale(f64),
+    /// `t + x + c`: every step jumps `c` besides.
+    Jump(f64),
+    /// `T`, whatever the step.
+    To(f64),
+    /// `t + 2x` where `x ≥ 3Δ_sync/4`, else `t`: a short step leaves the clock where it was.
+    Stall,
+}
+
+thread_local! {
+    /// The clock [`Scripted`] runs (each test thread its own).
+    static CLOCK: Cell<Clock> = const { Cell::new(Clock::Scale(1.0)) };
+}
+
+/// A stepper whose step moves only the interval clock, by [`CLOCK`]'s rule: the step control's landing, secant,
+/// budget and counts, on values worked by hand.
+struct Scripted;
+
+impl AzStepper for Scripted {
+    fn pair_profile() -> CapabilityProfile {
+        <Rk4 as AzStepper>::pair_profile()
+    }
+
+    fn regularised_step<R: AzReal>(
+        _system: &AzSystem<R>,
+        q: &AzQ<R>,
+        p: &AzP<R>,
+        h: R,
+    ) -> (AzQ<R>, AzP<R>) {
+        let (a, b) = AzSystem::ab(q);
+        let x = a * b * h;
+        let t = match CLOCK.with(Cell::get) {
+            Clock::Scale(k) => q.t + v::<R>(k) * x,
+            Clock::Jump(c) => q.t + x + v::<R>(c),
+            Clock::To(t) => v(t),
+            Clock::Stall => {
+                if x >= v(0.75 * 0.125) {
+                    q.t + v::<R>(2.0) * x
+                } else {
+                    q.t
+                }
+            }
+        };
+        (AzQ { t, ..*q }, *p)
+    }
+}
+
+/// A finiteness test that records the interval clock of every state it is shown.
+#[derive(Default)]
+struct Clocks {
+    t: Vec<f64>,
+}
+
+impl Watch<f64> for Clocks {
+    fn finite(&mut self, q: &AzQ<f64>, p: &AzP<f64>) -> bool {
+        self.t.push(q.t);
+        ExplicitTest.finite(q, p)
+    }
+}
+
+/// The scripted tests' values: [`params`] with `η = 10`, so that the clamp sets the first step, `x = Δ_sync`, and the
+/// predictive limit off.
+fn scripted() -> AzParams<f64> {
+    let mut p = params::<f64>();
+    p.eta = 10.0;
+    p.predictive_f = 0.0;
+    p
+}
+
+/// A march of Burrau's state over the one interval from boundary `k` under `clock` with `params`: its end, and the
+/// clocks the finiteness test was shown.
+type ScriptRun<'a> = &'a dyn Fn(Clock, u32, AzParams<f64>) -> (AzAdvanced<f64>, Vec<f64>);
+
+/// The scripted march.
+fn script(clock: Clock, k: u32, params: AzParams<f64>) -> (AzAdvanced<f64>, Vec<f64>) {
+    CLOCK.with(|c| c.set(clock));
+    let mut watch = Clocks::default();
+    let out = march::<Scripted, f64, Counting, Clocks>(
+        &burrau(),
+        k,
+        k + 1,
+        AzCount::new(),
+        &params,
+        &mut Counting::default(),
+        &mut watch,
+    );
+    (out, watch.t)
+}
+
+/// The landing secant and what the interval counts around it (Part 2b, steps 5 and 6; R-604), `Δ_sync = 1/8`:
+/// - a clock twice as fast: the clamped step reaches `2Δ`, one retake at half the size lands within the tolerance
+///   `Δ·LAND_EPS_REL`, two steps counted, one kept, the interval's two its largest;
+/// - a clock that jumps `Δ/2` each step never lands within the tolerance: the secant stops after its tries (3 here),
+///   at `31Δ/30` by hand, four steps;
+/// - a retake that leaves the clock where it was stops the secant at once, and the interval starts again (a budget of
+///   4 ends it: three tries of two steps);
+/// - a copy whose budget is spent as it lands is not counted landed: it stays at boundary 3, its time `3Δ` plus its
+///   clock;
+/// - the budget reads the physical time `k·Δ + t`: from boundary 4 at 4 steps per unit time the allowance is
+///   `4·(1/2 + t)`, and the interval's two steps land;
+/// - a step to exactly `2Δ` is not an overshoot, and one to `0.3` is.
+fn check_secant(run: ScriptRun<'_>) {
+    let tol = 0.125 * 1e-14;
+    let (out, t) = run(Clock::Scale(2.0), 0, scripted());
+    assert_eq!(
+        (
+            out.count.steps,
+            out.count.accepted,
+            out.count.largest_interval
+        ),
+        (2, 1, 2),
+        "the secant's one retake: two steps, one kept, the interval's two ({t:?})"
+    );
+    assert_eq!((out.boundary, out.count.end), (1, End::Marching));
+    assert_eq!(t.len(), 2, "the registration and the landed state: {t:?}");
+    assert!(
+        (t[1] - 0.125).abs() <= tol,
+        "the retake lands within Δ·LAND_EPS_REL: {:e}",
+        t[1] - 0.125
+    );
+
+    let mut p = scripted();
+    p.secant_tries = 3;
+    let (out, t) = run(Clock::Jump(0.0625), 0, p);
+    assert_eq!(
+        (out.count.steps, out.count.largest_interval),
+        (4, 4),
+        "the secant stops after its tries ({t:?})"
+    );
+    assert!(
+        (t[1] - 31.0 / 30.0 * 0.125).abs() <= 1e-15,
+        "the third retake's clock, 31Δ/30: {}",
+        t[1]
+    );
+
+    let mut p = scripted();
+    p.n_min = 4;
+    p.step_budget_rate = 0.0;
+    let (out, t) = run(Clock::Stall, 0, p);
+    assert_eq!(
+        (out.count.end, out.count.steps, out.count.accepted),
+        (End::Exhausted, 6, 3),
+        "a retake that leaves the clock stops the secant ({t:?})"
+    );
+
+    let mut p = scripted();
+    p.n_min = 1;
+    p.step_budget_rate = 0.0;
+    let (out, _) = run(Clock::Scale(2.0), 3, p);
+    assert_eq!(
+        (out.count.end, out.boundary),
+        (End::Exhausted, 3),
+        "a copy spent as it lands stays at its boundary"
+    );
+    assert!(
+        (out.t - 0.5).abs() <= tol,
+        "its time the boundary's plus its clock: {}",
+        out.t
+    );
+
+    let mut p = scripted();
+    p.n_min = 0;
+    p.step_budget_rate = 4.0;
+    let (out, _) = run(Clock::Scale(2.0), 4, p);
+    assert_eq!(
+        (out.count.end, out.boundary),
+        (End::Marching, 5),
+        "the allowance at k·Δ + t"
+    );
+
+    let mut p = scripted();
+    p.secant_tries = 0;
+    let (out, _) = run(Clock::To(0.25), 0, p);
+    assert_eq!(
+        out.count.overshoots, 0,
+        "a step to exactly 2Δ is no overshoot"
+    );
+    let (out, _) = run(Clock::To(0.3), 0, p);
+    assert_eq!(out.count.overshoots, 1, "a step past 2Δ is an overshoot");
+}
+
+#[test]
+fn az_landing_secant() {
+    check_secant(&script);
+}
+
+negative_control!(
+    az_landing_secant,
+    "a march without the secant",
+    expected = "the secant's one retake",
+    check_secant(&|c, k, mut p| {
+        p.secant_tries = 0;
+        script(c, k, p)
+    })
+);
+
+// ── The boundary's corrections and the seam's index ────────────────────────────────────────────────────────────
+
+/// Where the quotient's whole count misses the boundary, the products correct it: `25.7/0.1` gives 257 and
+/// `257 × 0.1` is above `25.7`; `18.7/0.1` gives 186 and `187 × 0.1` is `18.7`; and a time before `0` has the first
+/// boundary.
+fn check_boundary_corrected(boundary: fn(f64, f64) -> u32) {
+    assert_eq!(
+        boundary(25.7, 0.1),
+        256,
+        "one boundary back from the quotient's"
+    );
+    assert_eq!(
+        boundary(18.7, 0.1),
+        187,
+        "one boundary on from the quotient's"
+    );
+    assert_eq!(boundary(-0.05, 0.125), 0, "before 0, the first boundary");
+}
+
+#[test]
+fn az_boundary_corrected() {
+    check_boundary_corrected(boundary_at_or_before::<f64>);
+}
+
+negative_control!(
+    az_boundary_corrected,
+    "the quotient's whole count, uncorrected",
+    expected = "one boundary back from the quotient's",
+    check_boundary_corrected(|t, d| (t / d) as u32)
+);
+
+/// The seam's `ADVANCE` from macro index 32 to 64 at `dt_macro = 1/128` (`t = 1/4` to `1/2`): the march from
+/// boundary 2 to 4, bitwise, the cadence's steps its kept ones. `seam(t_now, t_target)` is the seam under test.
+fn check_seam_index(seam: &dyn Fn(u32, u32) -> Advanced<f64>) {
+    let out = march::<Rk4, f64, Counting, ExplicitTest>(
+        &burrau(),
+        2,
+        4,
+        AzCount::new(),
+        &params(),
+        &mut Counting::default(),
+        &mut ExplicitTest,
+    );
+    let via = seam(32, 64);
+    assert_eq!(
+        bits(&via.state),
+        bits(&out.state),
+        "the seam from index 32 at dt_macro = 1/128 marches boundary 2 to 4"
+    );
+    assert_eq!(via.substeps, out.count.accepted);
+}
+
+/// The seam's `ADVANCE` of Burrau's state at `dt_macro = 1/128`.
+fn seam_at(t_now: u32, t_target: u32) -> Advanced<f64> {
+    let s = burrau::<f64>();
+    <Composed<Rk4, Az> as Advance>::advance(
+        &s,
+        &Geom::new(&s.m, &s.r),
+        t_now,
+        t_target,
+        &AdvanceParams {
+            dt_macro: 1.0 / 128.0,
+            n_sub: 1,
+        },
+        &mut Counting::default(),
+    )
+}
+
+#[test]
+fn az_seam_index() {
+    check_seam_index(&seam_at);
+}
+
+negative_control!(
+    az_seam_index,
+    "a seam that starts from index 0",
+    expected = "the seam from index 32",
+    check_seam_index(&|_, t| seam_at(0, t))
+);
+
+// ── Each form's order ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// The harmonic oscillator `q̇ = p`, `ṗ = −q`: separable, so that the KDK form is Störmer–Verlet, second order, and
+/// the Yoshida compositions reach their own orders.
+struct Spring;
+
+impl Flow<f64> for Spring {
+    type Q = f64;
+    type P = f64;
+
+    fn q_rate(&self, _q: &f64, p: &f64) -> f64 {
+        *p
+    }
+
+    fn p_rate(&self, q: &f64, _p: &f64) -> f64 {
+        -*q
+    }
+
+    fn q_add(q: &f64, h: f64, dq: &f64) -> f64 {
+        q + h * dq
+    }
+
+    fn p_add(p: &f64, h: f64, dp: &f64) -> f64 {
+        p + h * dp
+    }
+
+    fn q_weighted(two: f64, k: [&f64; 4]) -> f64 {
+        k[0] + two * k[1] + two * k[2] + k[3]
+    }
+
+    fn p_weighted(two: f64, k: [&f64; 4]) -> f64 {
+        k[0] + two * k[1] + two * k[2] + k[3]
+    }
+}
+
+/// `form`'s error at `t = 1` from `(1, 0)` in `n` steps, against `(cos 1, −sin 1)`.
+fn spring_error(form: Form, n: u32) -> f64 {
+    let h = 1.0 / f64::from(n);
+    let (mut q, mut p) = (1.0, 0.0);
+    for _ in 0..n {
+        (q, p) = form.step(&Spring, &q, &p, h);
+    }
+    (q - 1f64.cos()).hypot(p + 1f64.sin())
+}
+
+/// Each form's order on the oscillator, from 8 and 16 steps, within a quarter of its own: Euler 1, KDK 2, Yoshida-4 4,
+/// Yoshida-6 6, RK4 4 (`forms` the form taken for each).
+fn check_orders(forms: [(Form, &str, f64); 5]) {
+    for (form, name, order) in forms {
+        let measured = (spring_error(form, 8) / spring_error(form, 16)).log2();
+        assert!(
+            (measured - order).abs() <= 0.25,
+            "the order of {name} on the oscillator: {measured:.3}, not {order}"
+        );
+    }
+}
+
+/// The forms and their orders.
+const FORMS: [(Form, &str, f64); 5] = [
+    (Form::Euler, "Euler", 1.0),
+    (Form::Kdk, "KDK", 2.0),
+    (Form::Yoshida4, "Yoshida-4", 4.0),
+    (Form::Yoshida6, "Yoshida-6", 6.0),
+    (Form::Rk4, "RK4", 4.0),
+];
+
+#[test]
+fn az_form_orders() {
+    check_orders(FORMS);
+}
+
+negative_control!(
+    az_form_orders,
+    "Yoshida-4's form taken for Yoshida-6",
+    expected = "the order of Yoshida-6",
+    check_orders({
+        let mut forms = FORMS;
+        forms[3].0 = Form::Yoshida4;
+        forms
+    })
 );
