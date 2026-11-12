@@ -1073,12 +1073,14 @@ answer, and the chart value shaders read (`ctx.chart.z`), get the same treatment
   point. At `|u|` in `[0.5, 1)` and `N = 16` a correctly rounded answer stops separating adjacent samples at depth 20
   (R-395's arithmetic), about `2^(ℓ−20)` samples sharing each answer past it; the f32 solve is not correctly rounded,
   and SM7's identity errors reach one sample spacing at about depth 17 (latent), 15 (sphere, tilted E, F) and 14
-  (simplex) (*inferred*, F23). The View frame's `x − view centre` then shows blocks; the round-trip preset reads the
-  floor. On a closed-form chart `ctx.chart.z` is `D ∘ Φ` at an absolute `ctx.chart.slice_uv`, which R-395 rules out past
-  `ℓ_switch`, and on a table-route chart its nodes are absolute f32, so it collapses near 20 at O(1) `z`. A backwards
-  answer can never beat its input: the f32 state separates samples only to `ℓ_k ≈ 19 + log₂(|∂x_k/∂u| / |x₀,k|)`, so a
-  quad-local answer gains depth past ~20 only where a component is small relative to its slope, and gains the solve's
-  lost digits everywhere.
+  (simplex) (*inferred*, F23, assuming SM7's chart units are the quadtree's units, a root quad of width 1 and a sample
+  spacing of `2^−(ℓ+4)` at `N = 16`: 4e-7 is `2^−21.25`, so depth 17; if a chart's home window spans `W` chart units,
+  every one of these depths shifts by `log₂ W`). The View frame's `x − view centre` then shows blocks; the round-trip
+  preset reads the floor. On a closed-form chart `ctx.chart.z` is `D ∘ Φ` at an absolute `ctx.chart.slice_uv`, which
+  R-395 rules out past `ℓ_switch`, and on a table-route chart its nodes are absolute f32, so it collapses near 20 at
+  O(1) `z`. A backwards answer can never beat its input: the f32 state separates samples only to `ℓ_k ≈ 19 +
+  log₂(|∂x_k/∂u| / |x₀,k|)`, so a quad-local answer gains depth past ~20 only where a component is small relative to its
+  slope, and gains the solve's lost digits everywhere.
 - **The question:** Q1, past `ℓ_switch`, is the fragment's backwards answer absolute f32 or quad-local? Q2, is
   `ctx.chart.z` past `ℓ_switch` one absolute f32 value, or does it gain a quad-local lane?
 - **Options seen:**
