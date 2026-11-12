@@ -985,9 +985,15 @@ under that rule yet; a sub-question asks the owner what they do.*
     warning, saying precision has run out where the field is flat, against W13 ("never lies").
   - **(ii) A central difference at R-633's step, on tier-3 maps only,** as RQ-800 (a) admits one per sample for the
     measure weight. Keeps RQ-553's meaning on tier 3, at the cost of the owner's "no central difference" on those maps,
-    which only the owner can extend. A tier-3 central difference carries the solve's `τ/h` error and is not reliable on
-    a chaotic flow map (RQ-800's silence); where it misreads the floor as saturation it silences the warning at the
-    floor, against W13 ("never lies").
+    which only the owner can extend. It fails in two directions (physics review 5877369526, F3). Under (ii) the
+    condition reduces to `|f(u+h) − f(u−h)| < ulp_f64`, which holds only if the two tier-3 solves agree to an f64 ulp.
+    Where saturation comes before the solve (a solve composed after saturating links), the solve's inputs at the two
+    samples are bitwise equal, so its outputs are too, and (ii) reads saturation correctly. Where the solve's own
+    output saturates, the two solves differ by up to the solve's tolerance `τ`, far above an f64 ulp, so (ii) reads the
+    saturated pair as the floor and warns falsely, as (i) does, against W13 ("never lies"). The opposite error, the
+    floor read as saturation, which would silence the warning at the floor, needs the central difference to read about
+    0 where the true slope is about 1; the `τ/h` error (about `τ/2⁻¹⁷`) is far below 1, so it is the less likely case,
+    needing another mechanism such as chaos at R-633's step on a chaotic flow map (RQ-800's silence).
   - **(iii) Another rule, stated by the owner.**
 
   No recommendation on Q-T3: the audit gives none, and physics review gave none. Until Q-T3 is answered, (b) has no
