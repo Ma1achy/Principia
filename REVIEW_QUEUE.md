@@ -581,7 +581,28 @@ owner's.*
   `(u₁, p₁, u₂, p₂, t)` NaN (bits `0x7fc00000`), none infinite. So this fixture writes **2** under (i), **0** under (ii)
   and **2** under (iii). Under (i) and (iii) the code is the same here; they differ on a finite step whose stepped state
   overflows.
-- **Recommendation:** none. Physics review 5879658175 gave none ("it is a one-way door and not mine to settle").
+- **Measured over the separation-floor and close-encounter fixtures at f32** (physics review 5880652590's measurable
+  alternative; a throwaway probe, not committed, job 5312 on 2424506a; each fixture as `separation-floor --propose` runs
+  it, Aarseth–Zare + RK4 at `η = 0.01`, `Δ_sync = 0.125`, the reference's `TINY` and landing tolerance, no `|R₃|`
+  floor at f32):
+
+  | fixture | end at f32 | steps | (i) | (ii) | (iii) |
+  |---|---|---|---|---|---|
+  | the radial collision passage, to `t = 2` | marching, landed | 2528 | — | — | — |
+  | test 7's close-encounter hierarchy, to `t = 10` | marching, landed | 8463 | — | — | — |
+  | Burrau's (3, 4, 5) from rest, to `t = 20` | marching, landed | 22097 | — | — | — |
+  | the doubly degenerate state (`separation-floor --propose`'s, unit masses) | non-finite after 1 step | 1 | 2 | 0 | 2 |
+  | `az_doubly_degenerate_is_finite`'s fixture (masses `1/3`) | non-finite after 1 step | 1 | 2 | 0 | 2 |
+
+  None of the three close-encounter fixtures fails at f32, so no option writes a detail there. In both degenerate
+  states the step size `h` was not finite: the entry size and `c₀` were both unusable. So **(i) and (iii) never differ
+  on these fixtures**, and (ii) differs from both (0 against 2).
+- **Recommendation (physics review 5880652590 of PR #502):** option (iii), by cause. Payload §8 (:753) says the codes
+  "are drawn from the integrator contract's actual failure modes", and Part 2b step 7 names this failure's mode as an
+  entry size that is not finite, a derived quantity, which is payload §2's code 2. (iii) records that mode, and records 0
+  or 1 when a finite step overflows the state. (i) writes 2 for every regularised failure, so a later state overflow
+  cannot be told apart from it. (ii) writes 0 in the doubly degenerate case, although the step size failed first. Its
+  measurable alternative is above: (i) and (iii) agree on every fixture, so (i) is adequate for now.
 - **Applied meanwhile:** 2, option (i), as built by TASK-M3-68 (`crates/kernel/src/driver/wrapper.rs` `integrate_with`,
   its doc comment marking the detail interim until this entry is ruled), as TASK-M3-05's interim writer was.
 - **Waits:** TASK-M3-18 (the one `sim_failed` writer and the cross-check of payload §2's codes); TASK-M3-68 itself does
