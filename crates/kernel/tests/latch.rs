@@ -9,6 +9,8 @@
 //!   march's own measurements (REQ-PAY-044).
 //! - `f16_clamp_fuzz`: on inputs that include ±10⁶, ±∞ and NaN, a valid state's halves are finite and the clamp of the
 //!   live latch; a failed state's are exactly 0.0 and `0x7C00`, tested by the bits (REQ-PAY-045).
+//! - `latch_live_f32`: the latches' accessors give the live f32 values, never their f16 packing, which is what the
+//!   march's decisions read (REQ-PAY-044, REQ-INT-045).
 //! - `latches_vs_offline`: the latches a march stores equal the f16 of the offline least separation and greatest
 //!   drifts over its whole recorded trajectory, the IC included (REQ-PAY-050).
 //! - `latch_t0_collision_d_min`: a start already collided is a collision at `t = 0` that stores its least separation
@@ -244,6 +246,61 @@ negative_control!(
     })
 );
 
+// ── latch_live_f32 (REQ-PAY-044, REQ-INT-045) ───────────────────────────────────────────────────────────────────
+
+/// The live values a reader `get` gives of latches: `(d_min, dE_max, dLz_max)`.
+type Live = fn(&Latches) -> (f32, f32, f32);
+
+/// The latches' own accessors: the live f32 values.
+fn live(l: &Latches) -> (f32, f32, f32) {
+    (l.d_min(), l.de_max(), l.dlz_max())
+}
+
+/// Asserts that `get` gives the live f32 latches, not their f16 packing: values no f16 holds read back as themselves
+/// (`d_min` as `√` of its latched `d²`); before any observation `d_min` reads `+∞`, unset, and the drifts 0; and the
+/// default latches are the unset ones.
+fn check_live(get: Live) {
+    let (d, de, dlz) = (1.0001f32, -1.0001f32, 3.0001f32);
+    let l = latches(d, de, dlz);
+    assert_eq!(
+        get(&l),
+        ((d * d).sqrt(), de.abs(), dlz),
+        "the latches read are not the live f32 values"
+    );
+    let u = Latches::unset();
+    assert_eq!(
+        (
+            get(&u).0.to_bits(),
+            get(&u).1,
+            get(&u).2,
+            u.d_min_set(),
+            l.d_min_set()
+        ),
+        (0x7f80_0000, 0.0, 0.0, false, true),
+        "unobserved latches do not read d_min unset (+inf) and the drifts 0"
+    );
+    assert_eq!(
+        Latches::default(),
+        u,
+        "the default latches are not the unset ones"
+    );
+}
+
+#[test]
+fn latch_live_f32() {
+    check_live(live);
+}
+
+negative_control!(
+    latch_live_f32,
+    "a reader of the unpacked f16 halves reads the packing, not the live f32",
+    expected = "are not the live f32 values",
+    check_live(|l| {
+        let (a, b) = persist(l, descriptor(STATE_RUNNING));
+        (pa_d_min(a), pb_dE_max(b), pb_dLz_max(b))
+    })
+);
+
 // ── f16_clamp_fuzz (REQ-PAY-045) ─────────────────────────────────────────────────────────────────────────────────
 
 /// An input value: often one of the edges (±10⁶, ±∞, NaN, ±65504 and its rounding edge, ±0, the subnormal floor),
@@ -471,10 +528,13 @@ negative_control!(
 
 // ── latches_vs_offline (REQ-PAY-050) ─────────────────────────────────────────────────────────────────────────────
 
+/// A state's positions and momenta.
+type Phase<R> = ([[R; 2]; 3], [[R; 2]; 3]);
+
 /// A recorded march: the masses, the IC and each post-projection state the cadence saw.
 struct Trace<R> {
     m: [R; 3],
-    states: Vec<([[R; 2]; 3], [[R; 2]; 3])>,
+    states: Vec<Phase<R>>,
 }
 
 impl<R: WrapperReal> Trace<R> {
@@ -500,7 +560,7 @@ impl<R: WrapperReal> Trace<R> {
 /// A cadence that records each state the wrapper's cadence leaves, after its projection, and does what it does.
 struct Recording<R> {
     inner: WrapperCadence<R>,
-    states: Vec<([[R; 2]; 3], [[R; 2]; 3])>,
+    states: Vec<Phase<R>>,
 }
 
 impl<R: WrapperReal> Cadence<R> for Recording<R> {
