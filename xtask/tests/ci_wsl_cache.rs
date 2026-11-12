@@ -814,8 +814,8 @@ mod removes_anything {
 
 /// `Limit-Cache` marks this recipe's image as just used, keeps it and the one other complete image used last, and
 /// removes every other image and every half-filled one, matching names case-sensitively (`-cmatch`), so a folder named
-/// in capitals, no key's, is left alone; `register` runs it on every registration, hit or miss, once the image is
-/// checked and before the import.
+/// in capitals, no key's, is left alone; `register` runs it on every registration, hit or miss, once the image is in
+/// the cache and before the check, so that a failed check leaves at most two, and the import still follows the check.
 fn check_keep_two(script: &str) {
     let limit = statements(function(script, "Limit-Cache"));
     let has = |s: &str| limit.contains(&s);
@@ -841,11 +841,16 @@ fn check_keep_two(script: &str) {
     );
     let register = arm(script, "register");
     let limited = register.find("        Limit-Cache $key\n");
+    let saved = register.find("Save-Image $env:WSL_IMAGE $image $pinned");
     let checked = register.rfind("        Assert-Image $image\n");
     let import = register.find("& wsl.exe --import");
     assert!(
-        limited.is_some_and(|l| checked.is_some_and(|c| c < l) && import.is_some_and(|i| l < i)),
-        "register doesn't limit the cache on every registration"
+        limited.is_some_and(|l| {
+            saved.is_some_and(|s| s < l)
+                && checked.is_some_and(|c| l < c)
+                && import.is_some_and(|i| l < i)
+        }),
+        "register doesn't limit the cache on every registration, before the check"
     );
 }
 
@@ -873,6 +878,22 @@ mod never_limited {
         "a registration that doesn't limit the cache",
         expected = "register doesn't limit the cache on every registration",
         check_keep_two(&edited(&read(PS), "        Limit-Cache $key\n", ""))
+    );
+}
+
+#[cfg(feature = "controls")]
+mod limited_after_check {
+    use super::*;
+    // The sweep after the check: a check that fails leaves the old images and the new one, three.
+    negative_control!(
+        wsl_cache_keeps_this_image_and_the_one_before,
+        "the sweep after the check",
+        expected = "register doesn't limit the cache on every registration, before the check",
+        check_keep_two(&edited(
+            &edited(&read(PS), "        Limit-Cache $key\n", ""),
+            "        \"the image's manifest matches the pin: $hash\"\n",
+            "        \"the image's manifest matches the pin: $hash\"\n        Limit-Cache $key\n"
+        ))
     );
 }
 

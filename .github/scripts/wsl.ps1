@@ -305,13 +305,15 @@ switch ($verb) {
             "cache miss: caching this run's image as recipe $key"
             Save-Image $env:WSL_IMAGE $image $pinned
         }
+        # The sweep runs before the check, so that a check that fails still leaves at most two images; it keeps this
+        # one, and the import below still waits on the check.
+        Limit-Cache $key
         $rootfs = Join-Path $image 'rootfs.tar.gz'
         $manifest = Join-Path $image 'manifest.txt'
         Assert-Image $image
         $hash = Get-Sha256 $manifest
         if ($hash -ne $pinned) { Fail "the image's manifest is $hash, the pin is ${pinned}: refusing it" }
         "the image's manifest matches the pin: $hash"
-        Limit-Cache $key
         if ((Get-Distros) -contains $Distro) {
             if ($env:WSL_REPLACE -ne 'true') { Fail "$Distro is registered already; dispatch with replace: true to replace it" }
             "replacing ${Distro}: unregistering it"
