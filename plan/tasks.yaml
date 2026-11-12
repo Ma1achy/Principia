@@ -493,6 +493,14 @@
   requirements: [REQ-TOOL-229]  # R-980 (12 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-61
+  milestone: M0
+  title: "Windows runner: R-986 concurrency, one re-run, time limits"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-TOOL-230, REQ-TOOL-231, REQ-TOOL-232]  # R-986, R-988 (12 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"

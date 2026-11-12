@@ -437,7 +437,9 @@ R-656), so a push cancels the run on the head it supersedes; a run on `main` is 
 hung or stuck because of a bug, which is caught and cancelled, on `main`, a pull request's current head or a schedule
 alike (R-970, 11 Nov 2026; *was:* "a run on `main` is never cancelled"). "Caught", applied per R-369 (R-970): by a
 limit that ends a hung test or job where one can be set, and otherwise by the orchestrator, who cancels without asking
-and records it; the cause of the hang is then traced. `reviews.yml` keeps one
+and records it; the cause of the hang is then traced. The one other exception is the Windows runner's 85-minute run,
+`win-gpu.yml`'s `win-vulkan`: a newer run of it cancels an older one, on `main` too (R-986, 12 Nov 2026; *was:* "a run
+on `main` is never cancelled unless it is clearly hung or stuck because of a bug"). `reviews.yml` keeps one
 group per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs
 the `pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job
 classifies the change with `scripts/ci_changes.sh` (the pull request's merge commit against the base it merges onto)
@@ -559,6 +561,7 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 **Automatic retries and disk (R-714).** `retry.yml` re-runs failed jobs only on a runner-level fault, in at most two retries, never on a real test failure or a flake; its classifier is tested on saved logs. Every CI speed-up step reports the lowest free disk per job, before and after, and must reduce or hold it.
 *11 Nov 2026 (R-968):* a job whose only failure is the package-install step is also re-run, once, automatically, on GitHub-hosted runners only, marked as a re-run; any other failure beside it stands, so a real failure never turns green. The per-merge verdict on such a failure is unchanged (REQ-TOOL-223; RQ-789, open).
+*12 Nov 2026 (R-988):* a job on the Windows runner that stops unclearly, on a runner-level fault, is re-run once, automatically, by a hosted job of its own, `win-retry`, never by `retry.yml`; a hung one ends at its time limit and is not re-run; both are logged. § "The Windows runner's work (R-859)" has the detail; TASK-M0-61 builds it.
 
 **The Mesa package cache (R-967).** CI caches the Mesa (lavapipe) packages that `gpu-lavapipe` and the release jobs install, keyed on the package list and, applied per R-369 (R-967), the runner's image, saved only on a push to `main` and restored by pull-request runs (R-326), so a run no longer fetches them from Ubuntu's archive. It joins R-285's cargo registry and fixture pool and R-320's rust-gpu build; no target directory is cached (R-285, R-656).
 
@@ -1061,9 +1064,27 @@ every test that passes on the hosted Linux run of that commit passes on all thre
 differ the tier does not move and the owner is told which tests differed. The RTX's GPU tests wait on § "Windows GPU
 results (R-719)"'s sorting of the four failing steps.
 
+*12 Nov 2026 (R-986, the owner's ruling):* the 85-minute run, `win-gpu.yml`'s `win-vulkan`, runs on merges to `main`,
+nightly and by dispatch only, never on a branch push, and a newer run of it cancels an older one, on `main` too
+(`cancel-in-progress: true` on that job alone; every other job on the runner keeps `false`). A run cancelled so is no
+failure and is not re-run. TASK-M0-61 sets it (REQ-TOOL-230).
+
+*12 Nov 2026 (R-988, the owner's item 5, a reading to confirm):* a job on the runner that stops unclearly, on a
+runner-level fault (the runner lost, offline or shut down mid-job, its communication lost, its process killed from
+outside), is re-run once, automatically, by the hosted job `win-retry` (`workflow_run` on `win-gpu.yml` and
+`runner-proof.yml`, never a `pull_request` trigger), only for a push to `main`, schedule or dispatch run at its first
+attempt and while no newer run of that job has started. Never re-run: a test or step failing on its own output, a flake,
+a hang, a run cancelled by a newer one, a job no runner took. A hang ends at its time limit: every job, and every step
+that builds or runs tests, carries `timeout-minutes` of 1.5 times its measured time (the slowest of its last five
+recorded completed runs, written down with their run ids before the limit is set, R-649), rounded up to a whole minute.
+`win-retry`'s run summary logs every unclear stop and every hang it sees, and the re-run marks itself as one.
+TASK-M0-61 builds it (REQ-TOOL-231, REQ-TOOL-232). Until then nothing re-runs a job on the PC automatically, and a hang there
+is caught as R-970 says, by the job's present limit or by the orchestrator.
+
 - **From the anchor move** (the owner's move of the PC hook's signing-gate anchor; before it the hook refuses `main`'s
   merges), it may run, each as a named measurement reporting under its own name and never a required check, gathered
-  or read by any gate (R-649, R-711 item 1):
+  or read by any gate, re-run only by R-988's `win-retry`, once (R-649, R-711 item 1; *was, 12 Nov 2026:* "never a
+  required check, gathered or read by any gate (R-649, R-711 item 1)"):
   - the GPU suites, nightly and on pushes to `main`: Vulkan now, DX12 from Phase 2, once its opt-in lands (R-862: a
     cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default, "local testing only, untested in CI", in no required or
     hosted job; TASK-M0-57 builds it, TASK-M0-58 the runner's DX12 run);
