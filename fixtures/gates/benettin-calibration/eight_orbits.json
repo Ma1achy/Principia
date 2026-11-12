@@ -1,0 +1,5 @@
+{
+  "expected": "pass",
+  "kind": "eight-orbits",
+  "description": "the grid on eight starting conditions (Kepler-embedded, Lagrange and six Pythagorean triangles at rest) at f32 and f64, each candidate's change and bias over the six chaotic ones, and the rule's pick with each left out"
+}

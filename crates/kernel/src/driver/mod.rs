@@ -7,10 +7,12 @@
 //! table ([`nsub_table`]; R-502), which the SPIR-V build does not take. The Welford diffusion's per-macro-step update
 //! and closed-form time moments ([`welford`]; payload §4). The monotone latches `d_min`, `dE_max` and `dLz_max`, local
 //! f32s packed to the payload's f16 halves at a persist boundary and reloaded from them at a resume ([`latch`]; payload
-//! §1, §2). Like the physics layer, it allocates nothing
+//! §1, §2). The FTLE tier's Benettin shadow, marched beside the sample through its own cadence ([`benettin`];
+//! TASK-M3-14). Like the physics layer, it allocates nothing
 //! (Part 2c rule 5; `cargo xtask lint no-alloc`).
 
 pub mod advance;
+pub mod benettin;
 pub mod cadence;
 pub mod latch;
 pub mod monitor;

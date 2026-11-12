@@ -8,7 +8,9 @@
 //! - REQ-PAY-027: a resumed `total_substeps` equals the uninterrupted sum; the proxy is ⌊log₂⌋ over all of u32
 //!   (`total_substeps_resume`).
 //! - REQ-PAY-030: `diffusion` is NaN and invalid for `n < 2`; a latched sample uses its own `n` (`diffusion_slope`).
-//! - REQ-PAY-032: `ftle_valid`'s truth table (`ftle_valid_truth_table`).
+//! - REQ-PAY-032: `ftle_valid`'s truth table (`ftle_valid_truth_table`), with R-972's clause: false where `S` is the
+//!   mark of a shadow whose sum went non-finite, `S_FAILED_BITS`, and only there (`ftle_valid_rust_false_on_the_failed_sum`,
+//!   `s_failed_bits_are_f32_max`).
 //! - REQ-RENDER-013: the tier-absent reads are lowering Part 3a's bits (`tier_absent_nan_bits`).
 //! - REQ-RENDER-019: the time fractions at a zero horizon and at it (`time_fraction`).
 //! - REQ-PAY-031: the current drifts `energy_drift = H(r, p) − E_0` and `Lz_drift = L_z(r, p) − Lz_0`, computed at read
@@ -633,36 +635,44 @@ negative_control!(
 
 // ── ftle_valid_truth_table (REQ-PAY-032) ──────────────────────────────────────────────────────────────────────────
 
-/// Every tier, state code 0–7, `n` and `n_renorm` of the table: `ftle_valid` is the tier on, the state not failed,
-/// `n > 0` and `n / n_renorm > 0` (none when `n_renorm` is 0); `ftle` is the canonical quiet NaN exactly when it is
-/// false (R-254); and the state predicates follow the code (payload §6).
+/// Every tier, state code 0–7, `n`, `n_renorm` and `S` (a sum, or the mark `S_FAILED_BITS`) of the table:
+/// `ftle_valid` is the tier on, the state not failed, `n > 0`, `n / n_renorm > 0` (none when `n_renorm` is 0) and `S`
+/// not the mark (R-972); `ftle` is the canonical quiet NaN exactly when it is false (R-254); and the state predicates
+/// follow the code (payload §6).
 fn check_truth_table(read: Read) {
     for tier in [true, false] {
         for state in 0..8 {
             for n in [0, 1, 15, 16, 17, 40, 65535] {
                 for n_renorm in [0, 1, 16] {
-                    let mut c = at_step(marching(40, 50.0), n);
-                    c.state.packed_a = set_state(c.state.packed_a, state);
-                    c.ftle_variant = tier;
-                    c.params.n_renorm = n_renorm;
-                    let got = read(&c);
-                    let renorms = n.checked_div(n_renorm).unwrap_or(0);
-                    let valid = tier && state <= 3 && n > 0 && renorms > 0;
-                    let row = format!("tier {tier}, state {state}, n {n}, n_renorm {n_renorm}");
-                    assert_eq!(got.ftle_valid, valid, "ftle_valid at {row}");
-                    assert_eq!(
-                        got.ftle.to_bits() == QNAN,
-                        !valid,
-                        "ftle is NaN exactly when ftle_valid is false, at {row}"
+                    for marked in [false, true] {
+                        let mut c = at_step(marching(40, 50.0), n);
+                        c.state.packed_a = set_state(c.state.packed_a, state);
+                        c.ftle_variant = tier;
+                        c.params.n_renorm = n_renorm;
+                        if marked {
+                            c.state.S = f32::from_bits(S_FAILED_BITS);
+                        }
+                        let got = read(&c);
+                        let renorms = n.checked_div(n_renorm).unwrap_or(0);
+                        let valid = tier && state <= 3 && n > 0 && renorms > 0 && !marked;
+                        let row = format!(
+                        "tier {tier}, state {state}, n {n}, n_renorm {n_renorm}, S marked {marked}"
                     );
-                    let predicates = [state <= 2, state == 3, state >= 4, state != 3];
-                    let got_predicates = [
-                        got.is_resolved_outcome,
-                        got.is_running,
-                        got.is_failed,
-                        got.is_finished,
-                    ];
-                    assert_eq!(got_predicates, predicates, "the state predicates at {row}");
+                        assert_eq!(got.ftle_valid, valid, "ftle_valid at {row}");
+                        assert_eq!(
+                            got.ftle.to_bits() == QNAN,
+                            !valid,
+                            "ftle is NaN exactly when ftle_valid is false, at {row}"
+                        );
+                        let predicates = [state <= 2, state == 3, state >= 4, state != 3];
+                        let got_predicates = [
+                            got.is_resolved_outcome,
+                            got.is_running,
+                            got.is_failed,
+                            got.is_finished,
+                        ];
+                        assert_eq!(got_predicates, predicates, "the state predicates at {row}");
+                    }
                 }
             }
         }
@@ -682,9 +692,75 @@ negative_control!(
         let mut s = generated_read(c);
         let n = tm_t_end_step(c.state.times);
         let renorms = completed_renorms(n, c.params.n_renorm);
-        s.ftle_valid = ftle_valid(STATE_BOUNDED, c.ftle_variant, n, renorms);
+        s.ftle_valid = ftle_valid(STATE_BOUNDED, c.ftle_variant, n, renorms, c.state.S);
         s
     })
+);
+
+#[test]
+fn ftle_valid_rust_false_on_the_failed_sum() {
+    check_failed_sum(generated_read);
+}
+
+/// A sample valid on every other clause (the FTLE tier, bounded, step 40, `n_renorm` 16): with `S` the mark
+/// `S_FAILED_BITS`, `ftle_valid` is false and `ftle` the canonical quiet NaN (R-972, R-254); with `S` the largest
+/// finite value below it, or a plain sum, it is valid and `ftle` not NaN: the clause is the mark's bits alone.
+fn check_failed_sum(read: Read) {
+    for (bits, marked) in [
+        (S_FAILED_BITS, true),
+        (S_FAILED_BITS - 1, false),
+        (2f32.to_bits(), false),
+        ((-2f32).to_bits(), false),
+    ] {
+        let mut c = at_step(marching(40, 50.0), 40);
+        c.params.n_renorm = 16;
+        c.state.S = f32::from_bits(bits);
+        let got = read(&c);
+        assert_eq!(
+            got.ftle_valid, !marked,
+            "ftle_valid with S's bits {bits:#010x} is not the failed sum's clause (R-972)"
+        );
+        assert_eq!(
+            got.ftle.to_bits() == QNAN,
+            marked,
+            "ftle with S's bits {bits:#010x} is NaN where ftle_valid is true, or not where it is false"
+        );
+    }
+}
+
+negative_control!(
+    ftle_valid_rust_false_on_the_failed_sum,
+    "an ftle_valid that ignores the shadow's failed sum (R-972) must fail",
+    expected = "is not the failed sum's clause",
+    check_failed_sum(|c| {
+        let mut s = generated_read(c);
+        let n = tm_t_end_step(c.state.times);
+        let renorms = completed_renorms(n, c.params.n_renorm);
+        let state = sd_state(c.state.packed_a);
+        s.ftle_valid = ftle_valid(state, c.ftle_variant, n, renorms, 2.0);
+        s
+    })
+);
+
+#[test]
+fn s_failed_bits_are_f32_max() {
+    check_s_failed_bits(S_FAILED_BITS);
+}
+
+/// The mark `S_FAILED_BITS` is `f32::MAX`'s bits, a finite value, never NaN (R-79, R-972).
+fn check_s_failed_bits(bits: u32) {
+    let v = f32::from_bits(bits);
+    assert!(
+        v.is_finite() && v == f32::MAX,
+        "the mark S_FAILED is {v}, not f32::MAX"
+    );
+}
+
+negative_control!(
+    s_failed_bits_are_f32_max,
+    "a mark that is +inf must fail",
+    expected = "not f32::MAX",
+    check_s_failed_bits(f32::INFINITY.to_bits())
 );
 
 #[test]
@@ -692,15 +768,15 @@ fn ftle_valid_truth_table_rust_accessor_takes_the_tier() {
     check_accessor_tier(ftle_valid);
 }
 
-/// `ftle_valid(state, tier, n, renorms)`, payload §6's accessor, is false with the tier off and true with it on, for
-/// a bounded sample at step 40 with 2 completed renorms.
-fn check_accessor_tier(valid: fn(u32, bool, u32, u32) -> bool) {
+/// `ftle_valid(state, tier, n, renorms, S)`, payload §6's accessor, is false with the tier off and true with it on,
+/// for a bounded sample at step 40 with 2 completed renorms and `S = 2`.
+fn check_accessor_tier(valid: fn(u32, bool, u32, u32, f32) -> bool) {
     assert!(
-        valid(STATE_BOUNDED, true, 40, 2),
+        valid(STATE_BOUNDED, true, 40, 2, 2.0),
         "ftle_valid is false with the tier on"
     );
     assert!(
-        !valid(STATE_BOUNDED, false, 40, 2),
+        !valid(STATE_BOUNDED, false, 40, 2, 2.0),
         "ftle_valid is true with the tier off"
     );
 }
@@ -709,7 +785,7 @@ negative_control!(
     ftle_valid_truth_table_rust_accessor_takes_the_tier,
     "an accessor that ignores the tier must fail",
     expected = "ftle_valid is true with the tier off",
-    check_accessor_tier(|s, _, n, r| ftle_valid(s, true, n, r))
+    check_accessor_tier(|s, _, n, r, sum| ftle_valid(s, true, n, r, sum))
 );
 
 // ── tier_absent_nan_bits (REQ-RENDER-013) ─────────────────────────────────────────────────────────────────────────

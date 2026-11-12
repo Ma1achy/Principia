@@ -29,7 +29,7 @@ Every sample carries its own Benettin shadow (FTLE tier): one shadow renormalise
 ## Deliverables
 - `crates/kernel/src/driver/benettin.rs` — the shadow march through the same wrapper cadence (own projection), renormalisation, finalisation at read.
 - Doc change: `docs/design/principia_dd_integrator.md` §3.8 — δ₀'s direction, deterministic and the same on CPU and GPU (definition, REQ-INT-077).
-- `crates/validation/src/measure/benettin.rs` + `fixtures/gates/benettin/` — dd test 10 at candidate (‖δ₀‖, n_renorm), f32 and f64; displacement vs absolute shadow FTLE error on known-Lyapunov periodic orbits.
+- `crates/validation/src/measure/benettin.rs` + `fixtures/gates/benettin-calibration/` and `fixtures/gates/shadow-form/` — dd test 10 at candidate (‖δ₀‖, n_renorm), f32 and f64; displacement vs absolute shadow FTLE error on known-Lyapunov periodic orbits. *11 Nov 2026, applied per R-369 (record correction, PR #493's code and qa reviews):* the fixtures sit under the two gates' names, as the acceptance commands name them. *Was:* "`crates/validation/src/measure/benettin.rs` + `fixtures/gates/benettin/` — dd test 10 at candidate (‖δ₀‖, n_renorm), f32 and f64; displacement vs absolute shadow FTLE error on known-Lyapunov periodic orbits."
 - Calibration proposal for ‖δ₀‖ and `n_renorm` with the evidence, for decisions.md at the M3 gate.
 
 ## Acceptance tests

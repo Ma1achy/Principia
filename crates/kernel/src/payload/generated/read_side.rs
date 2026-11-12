@@ -16,6 +16,10 @@ pub use crate::shape::shape;
 /// Part 3a; R-72, R-79). A tier-absent derived scalar and an invalid read hold exactly these bits.
 pub const CANONICAL_QNAN_BITS: u32 = 0x7fc0_0000;
 
+/// The bits of `S`'s failed-state value, `f32::MAX`'s: the mark a sample's `S` stores once its Benettin shadow's
+/// finalised sum has gone non-finite, never NaN (R-79), so `ftle_valid` is false from then on (payload §6; R-972).
+pub const S_FAILED_BITS: u32 = 0x7f7f_ffff;
+
 /// The word an unbound word buffer reads: payload zero, `length_raw` the truncation sentinel, so every word-derived
 /// validity predicate reads it as invalid (lowering Part 3a; R-72).
 pub const FGW_UNBOUND: [u32; 4] = [0, 0, 0, 0xfe00_0000];
@@ -91,11 +95,22 @@ pub fn completed_renorms(n: u32, n_renorm: u32) -> u32 {
     n.checked_div(n_renorm).unwrap_or(0)
 }
 
-/// Whether `ftle` is usable: the FTLE tier on, the sample not failed, at least one step and at least one completed
-/// renormalisation (payload §6). Derived, never stored; `ftle` reads NaN whenever it is false (R-254).
+/// Whether `ftle` is usable: the FTLE tier on, the sample not failed, at least one step, at least one completed
+/// renormalisation, and the shadow's sum `s_sum` not the mark `S_FAILED_BITS` (payload §6; R-972). Derived, never
+/// stored; `ftle` reads NaN whenever it is false (R-254).
 #[inline]
-pub fn ftle_valid(state: u32, ftle_tier_on: bool, n: u32, benettin_renorms: u32) -> bool {
-    ftle_tier_on && !sd_is_failed(state) && n > 0 && benettin_renorms > 0
+pub fn ftle_valid(
+    state: u32,
+    ftle_tier_on: bool,
+    n: u32,
+    benettin_renorms: u32,
+    s_sum: f32,
+) -> bool {
+    ftle_tier_on
+        && !sd_is_failed(state)
+        && n > 0
+        && benettin_renorms > 0
+        && s_sum.to_bits() != S_FAILED_BITS
 }
 
 /// The shadow's current separation `δ = ‖x' − x‖`, the Euclidean norm of the shadow's offset over the twelve
@@ -266,7 +281,13 @@ pub fn sim_state_from_ftle(
     params: &ReadParams,
 ) -> SimState {
     let n = tm_t_end_step(s.times);
-    let ftle_ok = ftle_valid(s.packed_a, true, n, completed_renorms(n, params.n_renorm));
+    let ftle_ok = ftle_valid(
+        s.packed_a,
+        true,
+        n,
+        completed_renorms(n, params.n_renorm),
+        s.S,
+    );
     let delta = benettin_delta(s.r, s.p, s.r_sh, s.p_sh);
     SimState {
         r: s.r,
@@ -333,7 +354,13 @@ pub fn sim_state_from_base(
     params: &ReadParams,
 ) -> SimState {
     let n = tm_t_end_step(s.times);
-    let ftle_ok = ftle_valid(s.packed_a, false, n, completed_renorms(n, params.n_renorm));
+    let ftle_ok = ftle_valid(
+        s.packed_a,
+        false,
+        n,
+        completed_renorms(n, params.n_renorm),
+        s.S,
+    );
     SimState {
         r: s.r,
         p: s.p,
