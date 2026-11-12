@@ -21,6 +21,7 @@ The f32 Benettin shadow's displacement form, as RQ-793's ruling defines it (what
 - `docs/contracts/principia_integrator_contract.md` § "Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-649 — Replication and verification targets are measurements, not gates: failing one never blocks building; each declares the tier it binds, (a) the GPU explorer, agreeing statistically or qualitatively only, or (b) the CPU IC inspector, where exact targets bind; three outcomes, PASS, EXPLAINED DIVERGENCE (shown by a measurement) and UNEXPLAINED (open, labelled, non-blocking); no default, physics, criterion, architecture or tolerance is changed and nothing is tuned per target in pursuit of a pass; a comparison is checked like-for-like before anything is called a failure; verification deepening comes after the core build *(amends R-594, R-636, R-637 and R-639 for external targets; applies to RQ-598's targets and every target in force)*"
 - `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
 
 ## Deliverables
@@ -30,10 +31,11 @@ The f32 Benettin shadow's displacement form, as RQ-793's ruling defines it (what
 - TASK-M3-14's `Displacement` variant, the `shadow-form` gate's column of that name and `shadow_forms_agree` replaced by the real form or removed (physics N6).
 
 ## Acceptance tests
-- `cargo xtask gate shadow-form` — FTLE error vs the known exponent for both shadow forms on the periodic-orbit set; the switch to displacement is made only if accuracy meaningfully improves, the result recorded (REQ-VAL-038). The measurement is the one RQ-793 names, its criterion written before the run (R-649): `|λ_T(f32) − λ_T(f64)|` on the shadow-form set at ‖δ₀‖ = 1e-5, against the absolute form's +0.023, +0.055, −0.014 and +0.204; whether Burrau at f32 stays finite at ‖δ₀‖ ≤ 1e-5; and a control that fails when the displacement form is bit-identical to the absolute form on every orbit.
+- `cargo xtask gate shadow-form` — FTLE error vs the known exponent for both shadow forms on the periodic-orbit set; the switch to displacement is made only if accuracy meaningfully improves, the result recorded (REQ-VAL-038). The measurement is the one RQ-793 names, its criterion written before the run (R-649): the signed gap `λ_T(f32) − λ_T(f64)` on the shadow-form set at ‖δ₀‖ = 1e-5, judged by its magnitude, against the absolute form's +0.023, +0.055, −0.014 and +0.204; whether Burrau at f32 stays finite at ‖δ₀‖ ≤ 1e-5; and a control that fails when the displacement form is bit-identical to the absolute form on every orbit.
 - § 3.8 states the displacement form as RQ-793's ruling defines it; physics reviewer approved (REQ-VAL-038).
 
 ## Notes
 - New (12 Nov 2026), applied per R-369 (task re-scoping, physics's recommendation in review 5866988394 of PR #493, § (4)): REQ-VAL-038 and its `shadow-form` acceptance arm moved here from TASK-M3-14, whose other deliverables do not depend on the form. The arm is TASK-M3-14's, unchanged, with the measurement and control RQ-793 names added.
 - Waits on RQ-793 (what the displacement form is; a one-way door). Whether a gain is "meaningful" stays REQ-PAY-085's calibration, at M4 (TASK-M4-13, which depends on this task).
 - RQ-794 (what REQ-INT-076 proposes for ‖δ₀‖ and `n_renorm`) waits on RQ-793 as well; where its re-run lands is that ruling's.
+- *12 Nov 2026 (PR #497's code review 5867138483, notes 1 and 2):* the measurement is written as the signed gap, its figures being signed, and R-649 joins References. *Was:* "`|λ_T(f32) − λ_T(f64)|` on the shadow-form set at ‖δ₀‖ = 1e-5".

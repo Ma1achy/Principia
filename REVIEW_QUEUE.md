@@ -933,11 +933,13 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
 *In plain English: the collision test compares the bodies' distance with the collision radius `r_coll` using positions
 rounded to single precision, so below a certain size, which depends on where the bodies are, it can only tell
 "rounded positions equal" from "different". The owner ruled that each output must record whether its `r_coll` lay
-below that size. Where the bodies are changes along a run, so the size that matters is the one at the moment the test
-came closest to firing (the closest approach, or the collision itself), and only the march sees it. To carry it on
+below that size. Where the bodies are changes along a run, so the size that matters is the one at every moment the
+test came close to firing, not only at the closest approach or the collision itself, and only the march sees it. To
+carry it on
 every output it must be stored with each sample, and every bit of the per-sample record is already spent; adding a
 field changes the stored format on the CPU and the GPU, which is the owner's call, not a definition this task can
-write on its own.*
+write on its own. Corrected 12 Nov 2026 (physics review 5867123883 of PR #497, F1). Was:* "so the size that matters
+is the one at the moment the test came closest to firing (the closest approach, or the collision itself)".
 
 - **File, section:**
   - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer", R-954's
@@ -965,12 +967,23 @@ write on its own.*
   each position cast to f32, one subtraction per axis, each square by `kernel::driver::substep::square`, which returns
   0 below `2⁻⁴⁰`, so the test resolves a pair's separation only to the larger of the f32 spacing at the pair's largest
   coordinate and `2⁻⁴⁰` (the second binds only for a pair within about `2⁻¹⁷` of the origin). Along a run that floor
-  varies, and the state where it bears on the outcome is the one the `d_min` latch holds: the collision's state for a
-  collision (the latch is set there, its `d²` being below every earlier one), the closest approach otherwise (where a
-  pass at `r_coll` below the floor is as unresolved as a firing; R-954's "`d_min` is resolved only to that spacing").
-  That state's coordinates are seen only during the march and are not stored (only `d_min`, `dmin_pair` and
-  `t_dmin_step` are), so no output can derive the record at read time, except a collision's, from its stored final
-  positions. A per-output record therefore needs per-sample storage, and the payload has none free: a new field is a
+  varies. The state the `d_min` latch holds is the one that bounds `d_min`'s own resolution (R-954's "`d_min` is
+  resolved only to that spacing"): the collision's state for a collision (the latch is set there, its `d²` being below
+  every earlier one), the closest approach otherwise. It covers a spurious firing, since the latch moves to the firing
+  state, but not a missed one: a miss at a state `s` needs `d_true(s) < r_coll ≤ d_quant(s)` with `r_coll` below
+  `floor(s)`, and the latch can later move to another state `s'` with a smaller `d_quant`, near the origin, where
+  `floor(s')` is below `r_coll`. Read off the latched state, that output reads "resolved" when its outcome was
+  unresolved at `s`; the same gap reaches a collision output, an unresolved miss followed by a later firing. So the
+  comparison's resolution is a property of every state at which the test was near firing (`d_quant(s) < r_coll +
+  floor(s)`), as well as of the latched state. Those states' coordinates are seen only during the march and are not
+  stored (only `d_min`, `dmin_pair` and `t_dmin_step` are), so no output can derive the record at read time, not even
+  a collision's from its stored final positions, which give only the firing state's floor. *Corrected 12 Nov 2026
+  (physics review 5867123883 of PR #497, F1). Was:* "the state where it bears on the outcome is the one the `d_min`
+  latch holds: the collision's state for a collision (the latch is set there, its `d²` being below every earlier one),
+  the closest approach otherwise (where a pass at `r_coll` below the floor is as unresolved as a firing; R-954's
+  "`d_min` is resolved only to that spacing"). That state's coordinates are seen only during the march and are not
+  stored (only `d_min`, `dmin_pair` and `t_dmin_step` are), so no output can derive the record at read time, except a
+  collision's, from its stored final positions." A per-output record therefore needs per-sample storage, and the payload has none free: a new field is a
   format change of `SimState` on the CPU and the GPU, the export decoder and the schema hash, outside Part 7, and a
   one-way door (stored GPU bits). R-954's own words, "recorded with the run", and REQ-EVT-035's "the run records" read
   as a run-level record; its verify, "on every output", as a per-output one; a run-level record that reads the
@@ -982,10 +995,17 @@ write on its own.*
     state the latch holds, a power of two stored as its exponent (one byte holds `2⁻⁴⁰` to `2¹⁰⁴`), latched with
     `d_min`; each output's flag derived at read as `r_coll < floor` from the sim key's `r_coll`, exactly. A payload
     format bump (8 B at f32 under R-397's recheck, or a share of TASK-M3-41's 8 B if it fits there), generated for CPU
-    and GPU, with the export decoder and the schema hash.
+    and GPU, with the export decoder and the schema hash. *Its conservative form, at the same cost (added 12 Nov 2026,
+    physics review 5867123883 of PR #497, F1):* the byte latches the largest floor over every state at which the test
+    was near firing (`d_quant(s) < r_coll + floor(s)`, `r_coll` already being the kernel's threshold) and over the
+    `d_min` state, so a missed firing and `d_min`'s own resolution are both covered; the read-side flag stays
+    `r_coll < floor`. Latched at the `d_min` state alone, (a) misses an unresolved miss followed by a later, smaller
+    `d_quant` (the silence above).
   - (b) **Per sample, one stored bit:** "`r_coll` lay below the floor at the latched state", formed in the kernel from
     the f32 threshold `r_coll²` against the floor's exact square. The same format bump for one bit, and the floor's
-    value is lost.
+    value is lost. *Its conservative form (added 12 Nov 2026, physics review 5867123883 of PR #497, F1):* a sticky bit,
+    set at any near-firing state (`d_quant(s) < r_coll + floor(s)`) or the `d_min` state where `r_coll` is below
+    `floor(s)`.
   - (c) **No new storage, derived at read:** a collision output derives the floor from its stored final positions and
     its `detail`'s pair (the state the test fired on); every other output records "not recorded". Against it: an escape
     or bounded output whose closest approach lay below the floor reads as resolved when it was not.
@@ -993,11 +1013,16 @@ write on its own.*
     run beside `r_coll` (its provenance), and every output of the run reads "`r_coll` lay below the floor somewhere in
     this run" where `r_coll` is below it. Conservative, not per output; it needs a per-dispatch reduction buffer.
   - (e) Another, stated by the owner.
-- **Recommended:** (a): it records exactly what R-954 names, per output, on every pipeline, and the flag is formed
-  exactly on the host. The measurable alternative is (c), which changes no stored format: the measurement is the share
-  of non-collision samples, over a default chart sweep at a small `r_coll` (say `10⁻⁷`), whose latched closest approach
-  lay below the floor at the latched pair's coordinates (a CPU run that keeps the latch's coordinates); if that share is
-  negligible at every `r_coll` a user would set, (c) loses little.
+- **Recommended:** (a) in its conservative form (physics's, review 5867123883 of PR #497, F1): the exponent byte,
+  latched as the largest floor over the near-firing states and the `d_min` state, so it covers a missed firing as well
+  as `d_min`'s resolution, per output, on every pipeline, with the flag formed exactly on the host. The bit-level choice
+  is the owner's. The measurable alternative is (c), which changes no stored format: the measurement is the share of
+  non-collision samples, over a default chart sweep at a small `r_coll` (say `10⁻⁷`), whose `r_coll` lay below the
+  floor at the latched state or at any near-firing state (a CPU run that keeps those states' coordinates), both
+  counted; if that share is negligible at every `r_coll` a user would set, (c) loses little. *Corrected 12 Nov 2026
+  (physics review 5867123883 of PR #497, F1). Was:* "(a): it records exactly what R-954 names, per output, on every
+  pipeline, and the flag is formed exactly on the host"; "whose latched closest approach lay below the floor at the
+  latched pair's coordinates (a CPU run that keeps the latch's coordinates)".
 - **Applied meanwhile:** nothing: TASK-M3-71 builds nothing and writes no definition into Part 7 until this is ruled.
   The test itself is unchanged (TASK-M3-09); R-954's floor bullet in Part 7 stands as written.
 - **Waits:** TASK-M3-71 (the collision test's floor, recorded with the run).
@@ -1056,11 +1081,22 @@ construction, so the comparison has not been run. Which form to define is the ow
     as the sample; changes the occupant interface (integrator contract Part 2 and Part 2a), with a displacement step
     for each of KDK, Yoshida-4, Yoshida-6 and RK4 (which is not a splitting method), and for the default regularised
     occupant (Part 2b, R-560); the shadow's projection, energy and collision test are formed from `x + δ⃗` where they
-    need absolute positions, which is to be defined with it.
+    need absolute positions, which is to be defined with it. *A sub-choice (a) must state, which the owner rules with the
+    interface (added 12 Nov 2026, physics review 5867123883 of PR #497, F2):* how the force difference is evaluated.
+    (a1) Naively in f32, `f(rᵢⱼ + δᵢⱼ) − f(rᵢⱼ)`: the argument rounds to the spacing of `|rᵢⱼ|` and the subtraction
+    cancels, a relative error of about `ε·|rᵢⱼ|/|δᵢⱼ|`, about 6e-3 per evaluation at ‖δ₀‖ = 1e-5 and `|rᵢⱼ|` ~ 1, the
+    same order as the absolute form's rounding of `x'`; pair separations then gain only at close encounters, where
+    `|rᵢⱼ| ≪ |x|`, not on the drift elsewhere. (a2) In a cancellation-free algebraic form, the classical Encke problem
+    (for example Battin's `f(q)` rewriting of the difference of `1/r³` terms), which avoids that cancellation at the
+    cost of the rewriting in each force evaluation. Which of the two is built sets the gain the measurement finds.
   - (b) The tangent-map (variational) form: `δ⃗' = J(x)·δ⃗`, renormalised only against overflow. *Consequence:* a
     different estimator: ‖δ₀‖ drops out, so dd test 10's halving of `δ₀` becomes trivial and changes meaning, and
     REQ-INT-076's calibration of ‖δ₀‖ loses half its subject; it needs the Jacobian of each occupant's map and is no
-    longer the finite-difference shadow § 3.8 describes.
+    longer the finite-difference shadow § 3.8 describes. *Its advantage (added 12 Nov 2026, physics review 5867123883
+    of PR #497, F3):* the tangent map has no finite-difference cancellation at all, which is exactly the f32 failure
+    this entry describes, and it is the standard variational method; the Jacobian's cost is met by applying each
+    occupant's own stages to the variational equations (the tangent map of the discrete map), not by a separate
+    Jacobian derivation.
   - (c) A separate shadow integrator that marches `δ⃗` outside the shared occupant. *Consequence:* the shadow is no
     longer the same discrete map as the sample, against the payload's "marches in lockstep" and physics's approved
     point A on PR #493; the shadow's FTLE then measures that integrator's error as well as the flow's.
@@ -1070,11 +1106,14 @@ construction, so the comparison has not been run. Which form to define is the ow
   - (e) Another, stated by the owner.
 - **Recommended:** (a), physics's recommendation (review 5866988394, § (4)): it keeps the estimator, ‖δ₀‖'s meaning
   and dd test 10 as they are, and the sample's march untouched. The measurable alternative: (b), the tangent map. Either
-  form is judged by the same written measurement, run against the absolute form now: `|λ_T(f32) − λ_T(f64)|` on the
-  shadow-form set at ‖δ₀‖ = 1e-5 (today +0.023, +0.055, −0.014 and +0.204); whether Burrau at f32 stays finite at
+  form is judged by the same written measurement, run against the absolute form now: the signed gap
+  `λ_T(f32) − λ_T(f64)` on the shadow-form set at ‖δ₀‖ = 1e-5, judged by its magnitude (today +0.023, +0.055, −0.014
+  and +0.204); whether Burrau at f32 stays finite at
   ‖δ₀‖ ≤ 1e-5 (today non-finite); and a control that the new form differs bitwise from the absolute form on some orbit,
   the check whose absence let PR #493's `Displacement` through. Whether a gain is "meaningful" stays REQ-PAY-085's
-  calibration (M4); the criterion is written before the run (R-649).
+  calibration (M4); the criterion is written before the run (R-649). *Corrected 12 Nov 2026 (PR #497's code review
+  5867138483, note 1: the figures are signed). Was:* "`|λ_T(f32) − λ_T(f64)|` on the shadow-form set at ‖δ₀‖ = 1e-5
+  (today +0.023, +0.055, −0.014 and +0.204)".
 - **Applied meanwhile:** applied per R-369 (task re-scoping, physics's recommendation): REQ-VAL-038 moves from
   TASK-M3-14 to its own M3 task, TASK-M3-72, which builds the form this entry rules and waits on it; TASK-M3-14's other
   deliverables do not depend on it. PR #493 keeps the absolute form only, and its gate says so; nothing named
@@ -1143,9 +1182,15 @@ meanwhile is the owner's call.*
 - **Recommended:** (c), the implementer's and physics's recommendation (review 5866988394, § (4)): it changes no
   criterion after the results, claims nothing the evidence does not support, and re-runs the same calibration once
   the two causes are ruled. The measurable alternative: once RQ-791 is ruled, re-run the same pre-registered sweep at
-  the default `r_coll` = 1e-3 (REQ-EVT-022), the absolute form, the criterion unchanged. If some candidate passes
-  there, the calibration closes at the production collision radius without the displacement form; if none does, the
-  displacement form is shown to be needed.
+  the default `r_coll` = 1e-3 (REQ-EVT-022), the absolute form, the criterion unchanged. Stated before that run
+  (added 12 Nov 2026, physics review 5867123883 of PR #497, F4): the sweep reports how many of the eight orbits ran to
+  T without terminating (the sample, or, once RQ-791 is ruled, the shadow), and a candidate passes only if
+  `min_regions` ≥ 6 is met by orbits that ran to T, so a pass cannot come from the chaotic orbits colliding out of the
+  calibration; and `r_coll` = 1e-3 is a run condition chosen after the results were seen, defensible as the production
+  default but the owner's to accept under R-649. If some candidate passes so, the calibration closes at the production
+  collision radius without the displacement form; if none does, the displacement form is shown to be needed. *Was:*
+  "If some candidate passes there, the calibration closes at the production collision radius without the displacement
+  form; if none does, the displacement form is shown to be needed."
 - **Applied meanwhile:** nothing chosen. PR #493's gate and constants are unchanged: `cargo xtask gate
   benettin-calibration` reports on the three original orbits, the proposal (3e-3, 300, 0.2) marked provisional
   (REQ-INT-076, R-71). Physics F5 asks that PR #493 carry the six-orbit evidence, reproducible, with the rule's pick
