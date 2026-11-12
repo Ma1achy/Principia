@@ -335,6 +335,13 @@ it:
   pieces mid-morph and may jump as a morph starts or ends. P2 and P4 report how often; they are not gates, the owner
   sees both before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is chosen by anyone else. The
   picture size their pixels are counted at is RQ-785.
+  *12 Nov 2026 (R-977, the owner's answer on RQ-785):* P4's gaps are counted as a fraction of the picture width and
+  their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; each
+  seeded pixel gives a pinned trace, P2 is read at both ends, and the vertices are the trajectory fixture's own output
+  steps, each chart at its home window, zoom 1.
+  *12 Nov 2026, later the same day (R-984, the owner's follow-up on RQ-785, which closes):* P2's jump is measured as a
+  fraction of the picture width too, its median and worst read in px at the same three sizes. *Was:* "P2's unit stays
+  open on RQ-785."
 - **Fade off the plane.** Opacity per vertex falls with the state's distance from the slice, down to a floor (0.18 in
   the mock). See §11 Q3 for what "distance" should be in general.
 - **Breaks.** The line breaks where the path leaves the chart and resumes where it comes back. It is never joined across

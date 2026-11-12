@@ -2830,6 +2830,8 @@ in bits 16–31 of `packed_a`), not by a float comparison, which WGSL's finite-m
 reader that flushes a stored subnormal on unpack sees 0 for display only; the unset test never confuses the two.
 
 ## R-272 — Throwaway `measure/` branches are allowed; the ubuntu mutants timing runs on one *(closes RQ-164)*
+*Refined by R-983 (12 Nov 2026, D-26 stands: the orchestrator may delete its own measurement branch once its commit is recorded; deleting anything else asks the owner first).*
+*Still in force: all of it, the deletion made once the branch's commit is recorded (R-983).*
 *30 Sep 2026 · applied in TASK-M0-23 (PR #65)*
 
 "RQ-164: covered by the measure/ branch rule; run the ubuntu mutants timing."
@@ -30062,7 +30064,8 @@ passed by its job, not posted).*
 *Refined by R-684 (3 Nov 2026: tier (a)'s "full CI" on a code head reads R-684's two tiers, full on a merge candidate and `main`, quick on any other head; the classifier is unchanged).*
 *Amended in part by R-790 (4 Nov 2026: `.claude/` is tier (c), docs, no longer an unnamed path that runs full CI).*
 *Amended in part by R-909 (9 Nov 2026: a head that changes `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` also runs the process tests; tier (a)'s code tiers read R-909's pull-request tier).*
-*Still in force: all of it, the `mutants-check` of a head with no `.rs` file under `crates/` reported passed at once, "not applicable", by `mutants.yml`'s job (R-678) rather than posted, while `mutants-check` runs; tier (a) reading R-909's pull-request tier in place of R-684's two code tiers; a head of tier (b) or (c) running the process tests where R-909's paths say; and `.claude/` in tier (c), docs (R-790), rather than an unnamed path.*
+*Refined by R-980 (12 Nov 2026, RQ-790 (a): a change to `plan/requirements.yaml` alone runs on the pull request only the tests that read that file, the tooling's and the product crates' alike, the per-merge run still running the rest on every merge).*
+*Still in force: all of it, the `mutants-check` of a head with no `.rs` file under `crates/` reported passed at once, "not applicable", by `mutants.yml`'s job (R-678) rather than posted, while `mutants-check` runs; tier (a) reading R-909's pull-request tier in place of R-684's two code tiers; a head of tier (b) or (c) running the process tests where R-909's paths say; `.claude/` in tier (c), docs (R-790), rather than an unnamed path; and a `plan/requirements.yaml`-only change running on the pull request only the tests that read it (R-980).*
 *2 Nov 2026 · the owner's message of that day, item 3, and his two replies on `plan/requirements.yaml` later that day;
 applied in `scripts/ci_changes.sh`, `scripts/ci_req_fields.py`, `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `xtask/tests/ci_changes.rs`, `xtask/tests/merge_ready.rs`,
@@ -30592,7 +30595,8 @@ R-680 is in the "process" group of `plan/rule_groups.yaml`.
 *Amended in part by R-907 (8 Nov 2026: a red `main` is a correctness failure on `main`, physics, validation, bit-for-bit or golden; any other failure there files a top-priority task without freezing pull-request work).*
 *Refined by R-966 (11 Nov 2026: the merge watcher checks `main`'s status before every merge and refuses the merge
 while it is red or unknown, in place of a hold list).*
-*Still in force: all of it, a red `main` read as a correctness failure there (R-907, R-909): while it lasts, or while a required check is stuck, no other pull request is opened or updated and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is re-run alone; and the merge watcher refuses every merge while `main` is red or unknown (R-966).*
+*Refined by R-982 (12 Nov 2026, D-2 vetoed: any red job on `main` is a red `main`, and the per-merge verdict covers every job of the run; R-979's install-step "no result" holds as red does).*
+*Still in force: all of it, a red `main` read as any red job of `main`'s run (R-982), R-979's "no result" holding as red does: while it lasts, or while a required check is stuck, no other pull request is opened or updated and the owner is told in one message; a CI-tooling pull request shows its own `xtask-ci` passing before it merges; a stuck check is re-run alone; and the merge watcher refuses every merge while `main` is red or unknown (R-966).*
 *3 Nov 2026 · the owner's three messages of that day on `main`'s red `xtask-ci` and the stuck `mutants-check`; ported
 3 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (a paragraph and step 6's pointer) and § "Autonomy (R-369)" (a
 line), R-369's and R-633's forward lines, `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement*
@@ -31940,6 +31944,8 @@ The owner's words (7 Nov 2026), verbatim:
 R-814 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-815 — An untransformed slot input's default domain is "inherits", resolved per wire at assembly, an unbounded field taking `(0, 1)`; TASK-M7-13's scan is decided by the written relocated-binary and wasm criterion *(closes RQ-677)*
+*Amended by R-978 (12 Nov 2026, RQ-786 (b): for a field with exactly one finite end the domain keeps that end and takes the other as the measured one per draw, built with TASK-M8-22's legend; until then such a wire stays refused, as built).*
+*Still in force: all of it, but for a field with exactly one finite end, whose domain is R-978's.*
 *7 Nov 2026 · the owner's reply to the report of 7 Nov 2026; applied in `docs/archive/review_queue/M0.md` (RQ-677 moved), `docs/contracts/principia_gui_state_contract.md` § 3, TASK-M7-13, REQ-GEN-019 (reqio), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
 changes REQ-GEN-019's verify*
 
@@ -34499,7 +34505,8 @@ Changes REQ-VAL-148, REQ-VAL-150 and REQ-VAL-180 (statement, verify, source, rul
 ## R-907 — CI restructure: pull-request CI is a sanity check (build, fmt, Clippy, the normal suite, a lavapipe GPU smoke set); process tests run on a pull request only when it changes `.github/`, `xtask/`, `scripts/` or plan files, and nightly on `main`; each merge to `main` is tested on its own, advisory, a correctness failure making `main` red and any other filing a top-priority task; a 36-hour no-run alert, with lavapipe's full GPU suite as the fallback; no lavapipe-versus-RTX week *(amends R-305, R-376, R-678, R-681, R-684, R-904 and R-905)*
 *Amended in part by R-908 (8 Nov 2026: process tests may also be retired where history shows high cost and no product catch; the split is applied, then reported; the required checks are named).*
 *Amended in part by R-909 (9 Nov 2026: the approved CI model governs where they differ, process tests also running on a pull request that changes `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/`).*
-*Still in force: pull-request CI as a sanity check, with no mutants, no slow tier, no in-depth GPU tests and process tests only by the path rule; each merge commit to `main` tested individually and advisory, a correctness failure (physics, validation, bit-for-bit, golden) red under R-681 and any other failure filing a top-priority task without freezing pull-request work; the 36-hour alert and its lavapipe fallback; no lavapipe-versus-RTX week until a renderer exists, then as its own task; item 5's audit, a report. Not its reporting before applying, and the path rule as R-909 widens it.*
+*Amended in part by R-982 (12 Nov 2026, D-2 vetoed: any red job on `main` is a red `main`, so a failure on `main` other than a correctness failure no longer leaves pull-request work running).*
+*Still in force: pull-request CI as a sanity check, with no mutants, no slow tier, no in-depth GPU tests and process tests only by the path rule; each merge commit to `main` tested individually and advisory, any failed job of its run red under R-681 (R-982); the 36-hour alert and its lavapipe fallback; no lavapipe-versus-RTX week until a renderer exists, then as its own task; item 5's audit, a report. Not its reporting before applying, and the path rule as R-909 widens it.*
 *8 Nov 2026 · the owner's message of that day, "CI restructure, owner's decision"; applied in the forward lines of
 R-305, R-376, R-678, R-681, R-684, R-904 and R-905, REQ-VAL-148 and REQ-VAL-149 (reqio) and `plan/rule_groups.yaml`; built
 by the PR-tier restructure and the per-merge workflow; changes REQ-VAL-148 and REQ-VAL-149*
@@ -34555,8 +34562,9 @@ R-907 is in the "ci" group of `plan/rule_groups.yaml`.
 Changes REQ-VAL-148 (statement, verify, source, rulings, note) and REQ-VAL-149 (source, rulings, note).
 
 ## R-908 — CI: decide and act: pull-request feedback in under 30 minutes and merge-ready to merge in under an hour; the required checks become build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set and reviews; process tests move off the pull-request path, or are retired where history shows high cost and no product catch, each in its own commit; mutation, in-depth GPU tests and the slow tier leave the pull-request path; product-correctness tests are never retired *(amends R-196, R-202, R-302, R-305, R-376, R-678, R-683, R-684, R-904, R-905 and R-907)*
+*Amended in part by R-982 (12 Nov 2026, D-2 vetoed: "A failing process test never makes main red; it files a task" no longer holds; any red job on `main` is a red `main`).*
 *Amended in part by R-909 (9 Nov 2026: the approved CI model governs where they differ).*
-*Still in force: its goal and its limits: product-correctness tests (kernel, physics, validation algebra, FD against analytic, goldens, cross-backend) run on every pull request or every merge to `main`, none retired; reviews and the runner's security rules unchanged; no spending; a retired test deleted in its own commit; a failing process test filing a task, never making `main` red; a test that may be product correctness asked of the owner; the report after, with before and after times. Its required checks and its moves read as R-909's model has them.*
+*Still in force: its goal and its limits: product-correctness tests (kernel, physics, validation algebra, FD against analytic, goldens, cross-backend) run on every pull request or every merge to `main`, none retired; reviews and the runner's security rules unchanged; no spending; a retired test deleted in its own commit; a failing process test on a pull request read and fixed there, and on `main` a red `main` (R-982); a test that may be product correctness asked of the owner; the report after, with before and after times. Its required checks and its moves read as R-909's model has them.*
 *8 Nov 2026 · the owner's message of that day, "CI: decide and act, don't ask"; applied in the forward lines of R-196,
 R-202, R-302, R-305, R-376, R-678, R-684, R-904, R-905 and R-907, REQ-VAL-148 and REQ-VAL-149 (reqio) and
 `plan/rule_groups.yaml`; built by the PR-tier restructure, the per-merge workflow and the retirements; changes REQ-VAL-148
@@ -37607,3 +37615,425 @@ The owner's words (11 Nov 2026), verbatim:
   on the pull request until it is ruled.
 
 R-971 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-972 — RQ-791, the FTLE when only its shadow reaches a terminal or goes non-finite: (d) + (a); the shadow's detectors monitor only and the shadow marches on through what would be its terminal, and once the shadow's `S` is non-finite `ftle_valid` is false, `ftle` reads NaN and every aggregate drops the sample *(closes RQ-791)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-791 moved),
+`docs/archive/review_queue/M0.md` (RQ-791 with its ruling), `docs/design/principia_dd_integrator.md` § 3.4 and § 3.8
+(each a dated paragraph), `docs/design/principia_dd_simstate_payload.md` § 6 (`ftle_valid`'s clause, a dated
+paragraph), REQ-INT-039 and REQ-PAY-032 (reqio), TASK-M3-14 and `plan/rule_groups.yaml`; changes REQ-INT-039 and
+REQ-PAY-032*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-791: (d) + (a). The shadow's collision check only watches and the shadow carries on through; if its sum goes non-finite, (a).
+
+*What it decides:* the two options together, each for one of the entry's two cases, as the owner's sentence assigns
+them.
+
+- **Case B, only the shadow reaches a terminal: option (d).** "The shadow's detectors monitor only, and the shadow
+  marches on through what would be its terminal." The option names all the shadow's detectors; the owner's sentence
+  names the collision check, which is today the shadow's only terminal (the shadow takes no escape of its own: escape
+  is the sample's, and freezes the sample's time averages, FTLE's `S/T` among them, R-31, R-95, R-103). Read together:
+  every detector run on the shadow watches and never ends the shadow's march; the shadow is still projected, monitored
+  and detected on its own every step (§ 3.4, REQ-INT-039), and a detector firing on it changes nothing in the sample's
+  march, outcome or fields. The sample's own detectors are unchanged. So `ftle` keeps measuring a moving neighbour:
+  the spurious "distance travelled" term of the entry's case B does not arise.
+- **Case C, only the shadow's `S` goes non-finite, including after a blow-up while marching through: option (a).**
+  "`ftle_valid` gains a clause, false once the shadow alone is terminal or its `S` non-finite, so `ftle` reads NaN
+  (R-254) and every aggregate drops the sample (R-255)." Under (d) the shadow is never terminal, so the clause reads
+  "false once the shadow's `S` is non-finite". It needs one stored bit or a derivable mark, since storage never holds
+  NaN (R-79); which, and its encoding, is TASK-M3-14's to define, under physics review. The sample's other fields are
+  untouched.
+
+Option (d)'s own consequence, that a march through a close approach can blow up, is exactly case C, which (a) covers,
+as the option itself says (d) needs.
+
+*Applied:* `docs/design/principia_dd_integrator.md` § 3.4 (the shadow is detected, monitor-only) and § 3.8 (the shadow
+alone at a would-be terminal, or with `S` non-finite), and `docs/design/principia_dd_simstate_payload.md` § 6
+(`ftle_valid`'s new clause, in words), each with its *Was*. REQ-INT-039 and REQ-PAY-032 name this ruling; REQ-INT-039's
+verify gains two arms at a nonzero `r_coll`: a shadow-only collision, where the shadow marches on and the value stays
+valid, and a non-finite shadow `S`, where `ftle_valid` is false and `ftle` reads NaN. TASK-M3-14 (the Benettin FTLE
+shadow, PR #493) builds both; its file's notes say so. This pull request changes no code.
+
+R-972 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-039 and REQ-PAY-032. The parse printed R-972 for this answer.
+
+## R-973 — RQ-792, where the collision test's floor is recorded: option (a) in its cautious form, a per-sample exponent byte latched as the largest floor over every near-firing state and the `d_min` state, each output's flag read as `r_coll < floor`; its placement and bit-level definition are TASK-M3-71's, under physics review *(closes RQ-792)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-792 moved),
+`docs/archive/review_queue/M0.md` (RQ-792 with its ruling), `docs/design/principia_dd_simstate_payload.md` § 1 and
+§ 2 (each a dated line), `docs/contracts/principia_integrator_contract.md` Part 7 (R-954's bullet, a dated line),
+REQ-EVT-035 (reqio), TASK-M3-71 and `plan/rule_groups.yaml`; changes REQ-EVT-035*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-792: (a), cautious form.
+
+*What it decides:* RQ-792's option (a), "Per sample, a new payload field at the `d_min` latch", in "its conservative
+form": "the byte latches the largest floor over every state at which the test was near firing
+(`d_quant(s) < r_coll + floor(s)`, `r_coll` already being the kernel's threshold) and over the `d_min` state, so a
+missed firing and `d_min`'s own resolution are both covered; the read-side flag stays `r_coll < floor`." The floor is
+a power of two stored as its exponent (one byte holds `2⁻⁴⁰` to `2¹⁰⁴`), the flag derived exactly at read from the sim
+key's `r_coll`. It is a payload format change, generated for CPU and GPU, with the export decoder and the schema hash.
+
+Option (a) names two placements: "8 B at f32 under R-397's recheck, or a share of TASK-M3-41's 8 B if it fits there".
+The owner chose neither, and the option leaves the choice to where it fits, so it is TASK-M3-71's, with the bit-level
+definition, written into integrator contract Part 7 and the payload under physics review before it is built
+(REQ-EVT-035, R-72). The report said "the bit-level layout is still yours to approve"; the owner's answer approves the
+form, and the layout comes back only if TASK-M3-71's definition needs a choice no ruling made.
+
+*Applied:* payload § 1 and § 2, and integrator contract Part 7's R-954 bullet, gain a dated line that the form is ruled
+and TASK-M3-71 writes the bit-level definition. REQ-EVT-035 names this ruling and states the form. TASK-M3-71 no longer
+waits.
+
+R-973 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-EVT-035. The parse printed R-973 for this answer.
+
+## R-974 — RQ-793, the displacement form of the FTLE shadow: option (a), a joint step on the occupant interface; whether the force difference is formed plainly in f32 (a1) or cancellation-free (a2) is chosen by a measurement whose criterion TASK-M3-72 writes before any run, physics-reviewed *(closes RQ-793)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-793 moved),
+`docs/archive/review_queue/M0.md` (RQ-793 with its ruling), `docs/design/principia_dd_simstate_payload.md` § 8 (a
+dated line), `docs/contracts/principia_integrator_contract.md` Part 2 (a dated line) and Part 2a (two dated lines, the second on
+the same physical time), REQ-VAL-038 (reqio), REQ-VAL-355 (reqio, new), TASK-M3-72, `plan/tasks.yaml`,
+`plan/MILESTONES.md` and `plan/rule_groups.yaml`; changes REQ-VAL-038; adds REQ-VAL-355*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-793: (a); let the pre-registered measurement choose between a1 and a2.
+
+*What it decides:* RQ-793's option (a): "A joint step on the occupant interface: each occupant gains a step that
+marches `(x, δ⃗)` together, `x` bit-identical to `step(x)`, and `δ⃗` advanced through the same stages, with the force
+difference formed from pair separations, `f(rᵢⱼ + δᵢⱼ) − f(rᵢⱼ)`, never from an absolute `x'`." It keeps the
+finite-difference estimator, ‖δ₀‖'s meaning and dd test 10, and changes the occupant interface (integrator contract
+Part 2 and Part 2a), with a displacement step for each of KDK, Yoshida-4, Yoshida-6 and RK4 and for the default
+regularised occupant (Part 2b, R-560). The shadow's projection, energy and collision test are formed from `x + δ⃗`
+where they need absolute positions, "to be defined with it": TASK-M3-72 defines them, under physics review (R-72).
+
+**The sub-choice.** (a1), the difference formed plainly in f32, or (a2), in a cancellation-free form (the Encke
+problem), is chosen by a measurement, as the owner says: TASK-M3-72 writes its criterion into its task file before any
+run (R-649), physics review checks it, and both forms are built far enough to be measured. The measurement compares
+each against the absolute form on the shadow-form set, as RQ-793's recommended measurement has it. Whether the chosen
+form's gain is "meaningful" enough to switch the shipped form stays REQ-PAY-085's calibration, at M4 (TASK-M4-13).
+
+*Applied:* payload § 8's line on the displacement-vs-absolute experiment, and integrator contract Part 2 and Part 2a,
+gain a dated line naming this ruling. REQ-VAL-038 names it and loses `rq: RQ-793`. TASK-M3-72 no longer waits on
+RQ-793; it gains the pre-registration step and the (a1)/(a2) measurement.
+
+*A recorded consequence (12 Nov 2026, physics review 5875695467 of PR #503, F1; the owner's words and the option are
+unchanged):* the joint step reaches the default occupant, Heggie × RK4, which owns its time mapping
+(`dτ = S^{3/2}/(R₁R₂R₃) dt`, Part 2b, R-161; logH alike). Stepped by the same `Δτ` through "the same stages", the sample
+and its shadow move by different physical `Δt`, so `δ⃗` gains a component along the flow, `ẋ·(Δt′ − Δt)`, and the
+finite-difference estimator, ‖δ₀‖'s meaning and dd test 10, which option (a) keeps, would not hold there. So how the
+joint step keeps the sample and its shadow at the same physical time under an occupant that owns its time mapping is a
+definition (R-72) TASK-M3-72 writes under physics review, its options including carrying `δt` as a component of the
+displacement, resynchronised at each renormalisation, or stepping the shadow's `τ` so that it lands on the sample's `t`;
+it is recorded in integrator contract Part 2a's dated line, in REQ-VAL-355 (new, reqio) and in TASK-M3-72, whose
+acceptance gains an arm on the Heggie occupant that fails when the shadow's elapsed `t` differs from the sample's at a
+renormalisation, with its control.
+
+R-974 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-VAL-038; adds REQ-VAL-355. The parse printed R-974 for this answer.
+
+## R-975 — RQ-787, a blend's interior pixel whose blended masses raise `M01_TINY` between two valid ends: option (a), it saturates and is never blank, by physics review's smooth hold: the blended ratio of the two light masses kept and the pair lifted just to the allowed minimum, the rest of the blend unchanged *(closes RQ-787)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-787 moved),
+`docs/archive/review_queue/M0.md` (RQ-787 with its ruling), `docs/design/principia_chart_composition.md` (the dated
+paragraph on PR #482's physics review, the R-369 paragraph's note, § 17.11's "Out of feasible", case 2, and the
+last note under "Tagged at an end", each with its *Was*), `docs/design/principia_chart_space_model.md` (§ 0's note and
+Corollary 1's note, each with its *Was*), `plan/charts/m2-chart-replan-addition.md` (its list of open entries),
+REQ-CHART-189 and REQ-CHART-211 (reqio), TASK-M2-90, TASK-M2-81, TASK-M2-103 and `plan/rule_groups.yaml`; changes
+REQ-CHART-189 and REQ-CHART-211*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-787: (a), with physics review's smooth hold.
+
+*What it decides:* RQ-787's option (a): "It saturates, as rule 2 treats a zero mass at an edge (R-932, with R-597): the
+pixel shows a valid system and is never blank." Of the two mechanisms the option named, the owner takes physics
+review's: "Holding the blended `m₁ : m₀` and lifting the pair to `M₀₁ = ε_M01`, the rest of the blend unchanged",
+which meets physics review's condition on any mechanism (review 5853427038, P9): "it is continuous in `s` and across
+pixels, and equals the plain blend where the dip begins and ends (R-943's continuity)". The other, "the pixel's own
+system at the nearest `s` where `M₀₁` is still large enough", "fails continuity" and is not taken. So every in-between
+frame is a valid system on these pairs too (R-943, R-944), and R-936's log-ratio path for the mass block stands for
+every pair.
+
+How the lifted state sits against the guard (`M₀₁ < ε_M01` fires strictly below, `principia_dd_decoder.md` § 3.1),
+so that rounding never re-tags it, is the building task's definition, under physics review, as TASK-M2-95's saturate
+definition does for an edge.
+
+*Applied:* the chart composition design's blends (§ 17.11, "Out of feasible", case 2, and the notes that cite RQ-787)
+and the chart-space model's two notes, each with its *Was*. REQ-CHART-189 (arms (1) and (2), TASK-M2-90, the blend
+chart) and REQ-CHART-211 (arm (3), TASK-M2-103, saturate in the CPU evaluator) lose `rq: RQ-787`, and their arms now
+assert the hold where they asserted only the tag; TASK-M2-81's `path_blank_ends` reads the answer for a blend's
+interior pixel: not blank. R-923 (integrator work before charts, for now) is unchanged: nothing is dispatched.
+
+R-975 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-189 and REQ-CHART-211. The parse printed R-975 for this answer.
+
+## R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-794 moved),
+`docs/archive/review_queue/M0.md` (RQ-794 with its ruling), REQ-INT-076 (reqio, its note), REQ-GUI-437 to REQ-GUI-442
+and REQ-VAL-356 (reqio, new), TASK-M3-73 (new), TASK-M3-72, TASK-M3-14, TASK-M4-13, TASK-M8-11, TASK-M8-22,
+TASK-M8-76, TASK-M8-80, TASK-M9-41, `plan/tasks.yaml`, `plan/MILESTONES.md` and `plan/rule_groups.yaml`; changes
+REQ-INT-076; adds REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-794: (c).
+
+*What it decides:* RQ-794's option (c): "Keep (3e-3, 300, 0.2) marked provisional and stated as unsupported on
+close-encounter chaotic orbits; re-run the pre-registered eight-orbit calibration, unchanged, once RQ-791 and RQ-793
+are ruled, then propose `min_regions` ≥ 6." With its consequence: "the M3 gate confirms no final value for REQ-INT-076
+until the re-run; the provisional value and its unsupported region are stated wherever the FTLE is shown." Nothing in
+the criterion changes after the results (R-649). RQ-791 and RQ-793 are ruled today (R-972, R-974).
+
+*Applied per R-369 (task scoping):* the re-run belongs to TASK-M3-72 (the displacement form), run after that form is
+built and R-972's (d) + (a) is in (TASK-M3-14, on which TASK-M3-72 depends), since those two rulings are the cures the
+entry names and a re-run before they are built measures nothing new. TASK-M3-14 keeps the provisional proposal and its
+eight-orbit evidence (REQ-INT-076). "Stated wherever the FTLE is shown" is a new requirement, REQ-GUI-437, closed by
+TASK-M4-13 (FTLE on the GPU, the first task that puts the FTLE in a view and a legend); every later view of the FTLE
+reads it.
+
+*Applied per R-369, later the same day (task scoping; code review 5875707244 of PR #503, F4):* REQ-GUI-437 is split per
+surface, each closed by the task that builds it: the horizon map and its legend stay REQ-GUI-437's (TASK-M4-13); the
+FTLE views already built and the statement's one source are REQ-GUI-438's (TASK-M3-73, new, after TASK-M3-14), so the
+statement stands from the moment real FTLE values show; the generated legend REQ-GUI-439 (TASK-M8-22), the Trajectory
+panel's summary REQ-GUI-440 (TASK-M8-11), the trust line REQ-GUI-441 (TASK-M8-76), an export's block REQ-GUI-442
+(TASK-M8-80), and TASK-M9-41's FTLE maps REQ-VAL-356. *Was:* "every later view of the FTLE reads it", with no task
+named for the later views.
+
+R-976 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-076 (its note and `rq`); adds REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356. The parse printed R-976 for this answer.
+
+## R-977 — RQ-785, P4's unit and the set-up of P2 and P4: P4's gaps counted as a fraction of picture width with their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; a pinned trace (2a), P2 at both ends (3b), the fixture's own output steps at each chart's home window, zoom 1 (4a); P2's unit left open, then settled by R-984 *(on RQ-785, which R-984 closes)*
+*Extended by R-984 (12 Nov 2026, the owner's follow-up on RQ-785: P2's jump is measured as a fraction of picture width
+and read in px at 512×512, 1024×1024 and 1920×1080, as P4's gaps are; RQ-785 closes).*
+*Still in force: all of it; what it left open, P2's unit, is R-984's.*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-785, a dated line),
+`docs/design/principia_chart_composition.md` (the dated paragraph on the owner's reply of 10 Nov),
+`docs/design/principia_lines.md` (P2 and P4's line), `plan/charts/m2-chart-replan-addition.md` (its list of open
+entries), REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203 (reqio), TASK-M2-100 and `plan/rule_groups.yaml`; changes
+REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-785: Count gaps as a fraction of picture width and report the distribution; read the share over 8 px at 512×512, 1024×1024 and 1920×1080 from the same run. With (2a), (3b), (4a).
+
+*What it decides:* the owner's own definition for question 1, their option (d), stated: P4's gaps between neighbouring
+trace vertices are counted as a fraction of the picture width, and their distribution is reported; the share over
+8 px is read at 512×512, 1024×1024 and 1920×1080 from the same run, 8 px being taken over each picture's own width.
+And for questions 2 to 4:
+
+- **(2a)** a pinned trace: the system the seeded pixel shows on the starting chart, integrated once and placed again at
+  every `s`.
+- **(3b)** P2 at both ends, `s = 1` against `s = 1 − 10⁻⁶` as well as `s = 0` against `s = 10⁻⁶`, each reported apart.
+- **(4a)** the trajectory fixture's own output steps (TASK-M2-82), each chart in its home window at zoom 1.
+
+*What it leaves open:* P2's unit. The owner's words define the unit for gaps (P4) and do not name P2's on-screen jump,
+which R-951 gives "in pixels per vertex". RQ-785 stays open with a dated line: "12 Nov 2026, R-977 settles P4's unit
+and questions 2 to 4; left open: whether P2's jump is also reported as a fraction of picture width, read in px at the
+three sizes", with the recommendation that it is, for the next report.
+*12 Nov 2026, later the same day:* the owner's follow-up settled it, as recommended: R-984, P2's jump measured as a
+fraction of picture width and read in px at the three sizes; RQ-785 closes under R-984.
+
+*Applied:* REQ-CHART-202 (P4's unit) and REQ-CHART-203 (questions 2 to 4) name this ruling; REQ-CHART-202 keeps
+`rq: RQ-785` for P2's unit, and REQ-CHART-203 loses it. TASK-M2-100's file records the answers. R-923's hold on the
+chart tasks is unchanged.
+
+R-977 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203. The parse printed R-977 for this answer.
+
+## R-978 — RQ-786, the domain an untransformed input inherits from a field with one finite end: option (b), the finite end kept and the other the measured one per draw, built with TASK-M8-22's legend; until then such a wire stays refused, as built *(closes RQ-786; amends R-815)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-786 moved),
+`docs/archive/review_queue/M0.md` (RQ-786 with its ruling), `docs/contracts/principia_gui_state_contract.md` § 3 and
+`docs/gui/principia_render_gui_spec.md` § 10.1 (each a dated line), the forward and "Still in force" lines of R-815,
+REQ-GEN-019 (reqio), a new requirement (reqio), TASK-M8-22, `plan/tasks.yaml` and `plan/rule_groups.yaml`; changes
+REQ-GEN-019; adds REQ-GEN-046*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-786: (b), built with TASK-M8-22's legend; until then a one-ended field on an inheriting input stays refused, as built.
+
+*What it decides:* RQ-786's option (b): "The finite end kept, the other end the measured one, as § 10.1 has
+`range_norm` do." The domain is then no longer a pair of numbers fixed at assembly: `inputDomains` gains an end that
+reads "measured", resolved per draw from the reduction that fills `u_range`, and the legend samples over a range that
+moves with the data, or over the frozen one (R-581) when a range is frozen. It is built with TASK-M8-22 (the generated
+legend), its first reader. Until then, an untransformed input wired to a field with exactly one finite end stays
+refused, as TASK-M7-13 built it (`render::registry::resolve` returns `Err(Unruled)`).
+
+*Applied per R-369 (task scoping):* the built refusal's text names RQ-786; changing it to cite R-978 is a code change,
+so this pull request makes none: TASK-M8-22 replaces the refusal with (b) and the citation goes with it. A new
+requirement, REQ-GEN-046, carries (b) and is closed by TASK-M8-22; REQ-GEN-019 names this ruling and loses
+`rq: RQ-786`, its one-ended arm being the built refusal until REQ-GEN-046 replaces it. TASK-M8-93 (the colour-graph
+editor on the real engine) meets the refusal as a validation error until TASK-M8-22 lands, as RQ-786 had it.
+
+*What it amends:* **R-815**, its "resolved per wire at assembly", for a field with exactly one finite end.
+
+R-978 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GEN-019; adds REQ-GEN-046. The parse printed R-978 for this answer.
+
+## R-979 — RQ-789: option (a), REQ-TOOL-223 amended: only the release-build install step's network and archive-download failures count as infrastructure, and their verdict is "no result", never green; any other release-build failure stays red *(closes RQ-789)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-789 moved),
+`docs/archive/review_queue/M0.md` (RQ-789 with its ruling), REQ-TOOL-223 (reqio), REQ-TOOL-228 (reqio, new, with
+R-982), TASK-M0-59 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; changes
+REQ-TOOL-223; adds REQ-TOOL-228 with R-982*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-789: (a).
+
+*What it decides:* RQ-789's option (a): "amend REQ-TOOL-223 (through `plan/tools/reqio.py`) so that only the install
+step's network and archive failures count as infrastructure, and make the verdict for them "no result", never green;
+any other failure of `ci-release` stays a correctness failure and a red `main`." It is the owner's own framing of
+11 Nov (R-971).
+
+*Read with R-982 (applied):* the owner vetoed D-2 the same day, so the per-merge verdict now covers every job of the
+run and any red job on `main` is red. Read together, that narrow failure, the install step's network or archive fetch,
+reads "no result" in any job of the run, never green, and every other failure of any job reads red. The corpus does not
+say what "no result" does under R-681's hold: R-966 has the merge watcher refuse a merge while `main` is "red or
+unknown", and nothing names "no result". So it is read here as not green, holding as red does under R-681 (no other
+pull request opened, updated or merged while it lasts), since green is the only state the owner lets work proceed on;
+this reading is flagged on the pull request for the owner to confirm.
+
+*Applied:* REQ-TOOL-223's statement is amended, with its *Was*. The CI change is built by a new task, TASK-M0-59, with
+R-982's, under one new requirement, REQ-TOOL-228 (applied per R-369: task scoping, the two being one change to the
+per-merge verdict script). This pull request changes no workflow.
+
+R-979 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-223; adds REQ-TOOL-228 with R-982. The parse printed R-979 for this answer.
+
+## R-980 — RQ-790: option (a), a `plan/requirements.yaml`-only change runs on the pull request only the tests that read that file, the tooling's and the product crates' alike; the per-merge run still runs the rest on every merge *(closes RQ-790; refines R-677)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-790 moved),
+`docs/archive/review_queue/M0.md` (RQ-790 with its ruling), the forward and "Still in force" lines of R-677, a new
+requirement (reqio), TASK-M0-60 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-TOOL-229*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-790: (a).
+
+*What it decides:* RQ-790's option (a): "Move them, under the owner's two conditions: the per-merge run still runs
+those tests on every merge, and the pull request's run keeps everything that reads `plan/requirements.yaml` directly
+(the xtask readers and the crates' tests that read it, the evidence above)." Which of the sixteen files under `crates/`
+that name the file actually read it is for the CI change to establish, as the entry says; one that reads it stays on
+the pull request.
+
+*What it refines:* **R-677**, its "full CI" for a change to Principia's code, read more narrowly for a change to
+`plan/requirements.yaml` alone.
+
+*Applied:* a new requirement, REQ-TOOL-229, closed by a new task, TASK-M0-60 (applied per R-369: task scoping, a change
+to the pull-request selection apart from TASK-M0-59's verdict). This pull request changes no workflow.
+
+R-980 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-229. The parse printed R-980 for this answer.
+
+## R-981 — The orchestrator never exceeds the heavy-agent cap, not even while the job queue runs the builds one after another *(the report's D-1, which stands)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `plan/OPERATIONS.md` § "Resources" (a
+dated line beside the cap), `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> D-1: stands. Don't exceed the agent limit again.
+
+*What it decides:* the report's D-1, "I once ran six compiling agents at the same time, over the limit of four" (the
+code and qa reviewers on #500, the three reviewers on #502 and the fix round on #499, 12 Nov at about 11:05), stands:
+nothing is undone. The owner's second sentence is a standing rule on the orchestrator: never exceed the heavy-agent cap
+in force (§ "Resources"), whatever the job queue does with the builds; a dispatch that would exceed it waits for a slot.
+
+R-981 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-982 — Any red job on `main` is a red `main`; the per-merge verdict covers every job of the per-merge run, so the verdict and the run's jobs cannot disagree *(vetoes D-2 of the report of 12 Nov 2026; amends R-907 and R-908; refines R-681)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (what is red
+`main`, the `process` job's line and the per-merge tier's paragraph, each with its *Was*), the forward and "Still in force" lines of R-681, R-907 and
+R-908, REQ-TOOL-228 (reqio, new, with R-979), REQ-TOOL-224 (reqio), TASK-M0-59 (new), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; adds REQ-TOOL-228 with R-979; changes REQ-TOOL-224*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> D-2: veto. Any red job on main is red; make the per-merge verdict cover every job so the two can't disagree.
+
+*What it decides:* the report's decision D-2, "I treated `main` as not red when its per-merge verdict was green and only
+the process shard failed, so pushes went ahead" (`main` on 12 Nov at 04:00, the process shard's failure that #501
+fixed; #493 and #500 kept pushing), is vetoed. Now:
+
+- **Any red job on `main` is red.** A failed job of `ci.yml`'s run on `main` is a red `main` under R-681, whatever its
+  kind: a process test, the lints, `cargo xtask ci` or the web skeleton as much as a product test. The process-tier
+  rule that "a failing process test never makes main red; it files a task" (R-908) and R-907's "any other failure files
+  a top-priority task without freezing PR work" no longer hold on `main`.
+- **The per-merge verdict covers every job of the run,** so a red job and a green verdict cannot both stand: the verdict
+  is red whenever any job of the run failed.
+
+*Read with R-979 (applied):* R-979's narrow failure, the install step's network or archive-download fetch, reads
+"no result", never green, and with the verdict now covering every job it reads so in any job of the run. "No result"
+holds as red does under R-681 (R-979, a reading flagged for the owner's confirmation).
+
+*Applied per R-369:* "main" here is `ci.yml`'s run on `main`, the run D-2 concerned and the per-merge verdict reads; the
+Windows runner's named measurements in their own workflows (R-711, R-859, R-860) stay measurements, never required and
+never red, until the per-merge suite moves to that runner, when its per-merge jobs join the run and this rule
+(REQ-TOOL-224). This is a reading to confirm, flagged on the pull request.
+
+*Applied:* `plan/OPERATIONS.md` § "Merging", where red `main` is defined, and its `process` job's line; REQ-TOOL-224's
+clause for the runner's per-merge jobs. The CI change, the verdict over every job with R-979's "no result", is a new
+task, TASK-M0-59, under a new requirement, REQ-TOOL-228. Until it merges, the orchestrator reads every job of `main`'s
+run itself and holds as R-681 says on any red one. This pull request changes no workflow.
+
+*What it amends:* **R-907**, its "any other failure files a top-priority task without freezing PR work", and **R-908**,
+the owner's "A failing process test never makes main red; it files a task". *What it refines:* **R-681**, what reads as
+a red `main`.
+
+R-982 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-228 with R-979; changes REQ-TOOL-224. The parse printed R-982 for this answer.
+
+## R-983 — The orchestrator may delete its own measurement branch once its commit is recorded; deleting anything else asks first *(the report's D-26, which stands; refines R-272)*
+*12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `plan/OPERATIONS.md` § "`measure/` branches
+(R-272)" (a dated line), the forward and "Still in force" lines of R-272, `plan/section_notes.yaml` and
+`plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> D-26: stands. Deleting your own measurement branch is fine when its commit is recorded; anything else asks first.
+
+*What it decides:* the report's D-26, "I deleted my own throwaway branch `measure/ci-cancel-probe` on GitHub" (a
+measurement branch made for #479, its result already recorded), stands. As a standing rule: the orchestrator may delete
+a measurement branch it made itself once that branch's commit is recorded (in the pull request or `decisions.md`, as
+R-272 has the number recorded), so it can be restored; deleting any other branch, or a measurement branch whose commit
+is not recorded, is asked of the owner first.
+
+*What it refines:* **R-272**, its "deleted right after": the deletion waits until the commit is recorded.
+
+R-983 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-984 — RQ-785, P2's unit: P2's on-screen jump is measured as a fraction of picture width, as P4's gaps are, and its median and worst read in px at 512×512, 1024×1024 and 1920×1080 *(closes RQ-785)*
+*12 Nov 2026 · the owner's follow-up of 12 Nov 2026 to their reply to the report of 12 Nov 2026; applied in
+`REVIEW_QUEUE.md` (RQ-785 moved, its dated line noted as settled), `docs/archive/review_queue/M0.md` (RQ-785 with its
+ruling), `decisions.md` § R-977 (its heading, forward and "Still in force" lines, and a dated line on what it left
+open), `docs/design/principia_lines.md` § 8 and `docs/design/principia_chart_composition.md` (each a dated line),
+`plan/charts/m2-chart-replan-addition.md` (its lists of open entries), REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203
+(reqio), TASK-M2-100 and `plan/rule_groups.yaml`; changes REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-785: P2 too — measured as a fraction of picture width, read off at the same three sizes.
+
+*What it decides:* the point R-977 left open on RQ-785, P2's unit, which R-951 gives "in pixels per vertex". P2, the
+on-screen jump between an end chart's own trace and the blend's next to it (at both ends, R-977's (3b)), is measured as
+a fraction of the picture width, as P4's gaps are under R-977; its median and worst are read off in px at the same three
+sizes, 512×512, 1024×1024 and 1920×1080, from the same run, each at that picture's own width. This is the
+recommendation R-977's dated line put to the owner. With it every question on RQ-785 is answered, and the entry closes.
+
+*What it extends:* R-984 extends R-977, settling the one point it left open; R-977 stands in full.
+
+*Applied:* REQ-CHART-202 states P2's unit beside P4's and names this ruling; its `rq: RQ-785` is removed. REQ-CHART-202
+and REQ-CHART-203 cite R-977 under its new heading. TASK-M2-100's file records P2's unit before any run; it no longer
+waits on RQ-785. R-923's hold on the chart tasks is unchanged: TASK-M2-100 is still entered held, and nothing is
+dispatched.
+
+R-984 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203. R-984 was reserved for this follow-up.

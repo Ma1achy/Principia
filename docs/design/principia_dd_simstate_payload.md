@@ -140,6 +140,12 @@ the next one takes `SimStateFTLE` to 152 and `SimStateBase` to 104. The other pr
 `Real` costs 8 B at f64 and 16 B at DoubleF64. A new member's recheck is therefore made per precision row. The
 schema version changes with the ledger, as R-36 makes it (§2). These are R-397's figures, before R-603's and R-605's
 two u32s; the current widths are the next recheck's, below (perf review 5662126729 of PR #293, the sweep).
+*12 Nov 2026 (R-973, the owner's answer on RQ-792, option (a) in its cautious form):* the collision test's floor is
+recorded per sample as a new field, its exponent in one byte (`2⁻⁴⁰` to `2¹⁰⁴`), latched as the largest floor over every
+state at which the test was near firing and over the `d_min` state; each output's flag is read as `r_coll < floor`. Its
+placement, 8 B at f32 under the recheck above or a share of TASK-M3-41's 8 B below if it fits there, and its bit-level
+definition are TASK-M3-71's, written with integrator contract Part 7 under physics review (REQ-EVT-035), with the
+recheck that placement makes.
 
 **The recheck, on R-603's and R-605's two u32s (REQ-PAY-009, REQ-PAY-110, REQ-PAY-111; perf review 5661999637 of PR #293, P1,
 applied per R-369).** From TASK-M3-41 on, which builds them; until then the generated layout is the one above at every row. `budget_word` and `dE_reg` are one u32 each, in the hot struct, after `total_substeps` with the
@@ -280,6 +286,9 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
 *Was (before R-545):* "| *reserved* | 10–15 | 6 | `total_substeps_log2` derived at read from the exact `total_substeps` u32 (§1), not stored (a log accumulator is not resumable). Reserved, decode as zero, never opportunistically reused |". `total_substeps_log2` is still derived at read from the exact `total_substeps` u32 (§1), not stored (a log accumulator is not resumable).
 
 > **`last_symbol` (bits 8–9) is a deliberate, versioned assignment — a binary-format version bump, not an opportunistic reuse of reserved space.** Bits 8–15 were held "decode as zero, never opportunistically reused"; spending 8–9 is a format change on the same footing as changing the frozen continuation table (§3) — every reader must agree on the new layout, so it carries a format-version change (automatic: the version is the ledger's content hash, R-36). The remaining 10–15 stayed reserved under the same rule until R-545 (RQ-310) assigned them on the same footing: 10–14 to `I_max`, 15 to the departed bit. The field is a *redundant cache* of the sidecar word's final symbol (§3): it adds no new physical information (the word `W` already determines it), only O(1) fragment access; a reader that ignores it loses only the cheap last-symbol read, never correctness.
+
+*12 Nov 2026 (R-973):* the collision floor's per-sample byte (§1's dated line) takes no bit of `sample_descriptor`,
+which has none free; its layout is TASK-M3-71's definition, a format change like `last_symbol`'s.
 
 > **`bounded` (state 1) is a FINITE-HORIZON classification, not a proof of permanent boundedness.** It means: neither escape nor collision occurred **within horizon `T`** (which lives in the sim key). Permanent boundedness is (in general) **not decidable** for the three-body problem — no finite integration can certify it — so `bounded` is the standard field term for "survived to `T`" and carries no claim about `t > T`. This is not a limitation being papered over: finite-horizon outcome *is* the only well-posed classification the system admits. Consequences: basin fractions, ML labels, and quad impurity are all "at horizon `T`"; cross-horizon comparison must account for `T` (the sim key carries it, so a single dataset is automatically horizon-consistent). The UI may render `bounded` as "bounded over the selected horizon." The term stays `bounded` (literature-standard — Lehto et al. etc.); it is not renamed to `survived_horizon`, which would fix nothing (the same might-escape-later caveat applies) while breaking legibility with the field.
 
@@ -667,6 +676,12 @@ fn fgw_retained_prefix_length(w:vec4u)->u32 { return select(fgw_length_raw(w), 7
 // fgw_decode(w) → symbols: sequential base-3 unpack (Horner) + continuation_symbol replay
 ```
 
+*12 Nov 2026 (R-972, the owner's answer on RQ-791, option (a) for a non-finite shadow `S`):* `ftle_valid` gains a
+clause: it is **false once the shadow's `S` is non-finite**, marked as TASK-M3-14 defines (R-79: storage never holds
+NaN), so `ftle` reads NaN (R-254) and every aggregate drops the sample (R-255). A shadow that would reach a terminal
+does not end (R-972, option (d); `principia_dd_integrator.md` §3.4), so no clause reads a shadow's terminal. The
+illustration above shows the clauses before it. *Was:* `ftle_valid` had no clause for the shadow.
+
 **Kernel-side write (authoritative — Rust; the WGSL `sd_set_last_symbol` above is illustrative parity).** The `last_symbol` cache is written by the march, not the fragment side; the setter lives in the Rust layout definition alongside the pack routines:
 ```rust
 #[inline]
@@ -726,6 +741,11 @@ Span ~96 MB (phone: FTLE-off E=0 720p, hot only) to ~5.6 GB (4K FTLE-on E=3) fro
 - Word truncation rate (drives whether 76 symbols suffices; mixed-radix is the alternative to widening).
 - Crossing distribution (whether symbolic-spread `S_word` is additive to outcome-impurity).
 - Displacement-vs-absolute f32 shadow: test against known-Lyapunov periodic orbits; switch to displacement only if FTLE accuracy meaningfully improves (accuracy question, not memory — f32 retained either way; shadow-precision experiment).
+  *12 Nov 2026 (R-974, the owner's answer on RQ-793, option (a)):* the displacement form is a joint step on the occupant
+  interface, `x` bit-identical to `step(x)` and `δ⃗` advanced through the same stages, its force difference formed from
+  pair separations; whether that difference is formed plainly in f32 (a1) or cancellation-free (a2) is chosen by a
+  measurement whose criterion TASK-M3-72 writes before any run (R-649). TASK-M3-72 builds it and writes the definition
+  into `principia_dd_integrator.md` §3.8 (R-72).
 - Quality controller thresholds/ladder; device-characterisation budget heuristics (unified vs discrete memory).
 - f16 latch semantics (a) vs (b) — confirm the local-f32-pack-at-persist path (a) is what's implemented (§1).
 - **Branch-cut crossing detection at every accepted substep** (not per-macro-step) OR a proof that each tested segment holds ≤1 crossing (§3) — required for topological adequacy.
