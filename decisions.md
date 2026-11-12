@@ -37785,7 +37785,10 @@ R-976 is in the "values" group of `plan/rule_groups.yaml`.
 
 Changes REQ-INT-076 (its note and `rq`); adds REQ-GUI-437. The parse printed R-976 for this answer.
 
-## R-977 — RQ-785, P4's unit and the set-up of P2 and P4: P4's gaps counted as a fraction of picture width with their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; a pinned trace (2a), P2 at both ends (3b), the fixture's own output steps at each chart's home window, zoom 1 (4a); P2's unit left open *(on RQ-785, which stays open)*
+## R-977 — RQ-785, P4's unit and the set-up of P2 and P4: P4's gaps counted as a fraction of picture width with their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; a pinned trace (2a), P2 at both ends (3b), the fixture's own output steps at each chart's home window, zoom 1 (4a); P2's unit left open, then settled by R-984 *(on RQ-785, which R-984 closes)*
+*Extended by R-984 (12 Nov 2026, the owner's follow-up on RQ-785: P2's jump is measured as a fraction of picture width
+and read in px at 512×512, 1024×1024 and 1920×1080, as P4's gaps are; RQ-785 closes).*
+*Still in force: all of it; what it left open, P2's unit, is R-984's.*
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-785, a dated line),
 `docs/design/principia_chart_composition.md` (the dated paragraph on the owner's reply of 10 Nov),
 `docs/design/principia_lines.md` (P2 and P4's line), `plan/charts/m2-chart-replan-addition.md` (its list of open
@@ -37810,6 +37813,8 @@ And for questions 2 to 4:
 which R-951 gives "in pixels per vertex". RQ-785 stays open with a dated line: "12 Nov 2026, R-977 settles P4's unit
 and questions 2 to 4; left open: whether P2's jump is also reported as a fraction of picture width, read in px at the
 three sizes", with the recommendation that it is, for the next report.
+*12 Nov 2026, later the same day:* the owner's follow-up settled it, as recommended: R-984, P2's jump measured as a
+fraction of picture width and read in px at the three sizes; RQ-785 closes under R-984.
 
 *Applied:* REQ-CHART-202 (P4's unit) and REQ-CHART-203 (questions 2 to 4) name this ruling; REQ-CHART-202 keeps
 `rq: RQ-785` for P2's unit, and REQ-CHART-203 loses it. TASK-M2-100's file records the answers. R-923's hold on the
@@ -37981,3 +37986,32 @@ is not recorded, is asked of the owner first.
 *What it refines:* **R-272**, its "deleted right after": the deletion waits until the commit is recorded.
 
 R-983 is in the "process" group of `plan/rule_groups.yaml`.
+
+## R-984 — RQ-785, P2's unit: P2's on-screen jump is measured as a fraction of picture width, as P4's gaps are, and its median and worst read in px at 512×512, 1024×1024 and 1920×1080 *(closes RQ-785)*
+*12 Nov 2026 · the owner's follow-up of 12 Nov 2026 to their reply to the report of 12 Nov 2026; applied in
+`REVIEW_QUEUE.md` (RQ-785 moved, its dated line noted as settled), `docs/archive/review_queue/M0.md` (RQ-785 with its
+ruling), `decisions.md` § R-977 (its heading, forward and "Still in force" lines, and a dated line on what it left
+open), `docs/design/principia_lines.md` § 8 and `docs/design/principia_chart_composition.md` (each a dated line),
+`plan/charts/m2-chart-replan-addition.md` (its lists of open entries), REQ-CHART-202 and REQ-CHART-203 (reqio),
+TASK-M2-100 and `plan/rule_groups.yaml`; changes REQ-CHART-202 and REQ-CHART-203*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> RQ-785: P2 too — measured as a fraction of picture width, read off at the same three sizes.
+
+*What it decides:* the point R-977 left open on RQ-785, P2's unit, which R-951 gives "in pixels per vertex". P2, the
+on-screen jump between an end chart's own trace and the blend's next to it (at both ends, R-977's (3b)), is measured as
+a fraction of the picture width, as P4's gaps are under R-977; its median and worst are read off in px at the same three
+sizes, 512×512, 1024×1024 and 1920×1080, from the same run, each at that picture's own width. This is the
+recommendation R-977's dated line put to the owner. With it every question on RQ-785 is answered, and the entry closes.
+
+*What it extends:* R-984 extends R-977, settling the one point it left open; R-977 stands in full.
+
+*Applied:* REQ-CHART-202 states P2's unit beside P4's and names this ruling; its `rq: RQ-785` is removed. REQ-CHART-202
+and REQ-CHART-203 cite R-977 under its new heading. TASK-M2-100's file records P2's unit before any run; it no longer
+waits on RQ-785. R-923's hold on the chart tasks is unchanged: TASK-M2-100 is still entered held, and nothing is
+dispatched.
+
+R-984 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-202 and REQ-CHART-203. R-984 was reserved for this follow-up.
