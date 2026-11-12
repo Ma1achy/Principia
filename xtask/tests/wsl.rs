@@ -231,11 +231,370 @@ mod another_run {
         check_no_credential(
             &edited(
                 &read(WORKFLOW),
-                "          path: ${{ runner.temp }}/wsl-image\n      - name: Register principia-wsl\n",
-                "          path: ${{ runner.temp }}/wsl-image\n          run-id: 1\n      - name: Register principia-wsl\n"
+                "          path: ${{ runner.temp }}/wsl-image\n      - name: This run's image, again if the first download didn't finish\n",
+                "          path: ${{ runner.temp }}/wsl-image\n          run-id: 1\n      - name: This run's image, again if the first download didn't finish\n"
             ),
             &scripts()
         )
+    );
+}
+
+// ---- Downloads that end short, and job-only re-runs ---------------------------------------------------------------
+
+/// The download action, pinned in the workflow.
+const DOWNLOAD: &str = "actions/download-artifact@";
+
+fn is_download(step: &Yaml) -> bool {
+    step["uses"]
+        .as_str()
+        .is_some_and(|u| u.starts_with(DOWNLOAD))
+}
+
+/// Every download in the distro's jobs is followed by the same download again, run only if the first set no
+/// `download-path` (download-artifact v4.3.0 sets it only once a download has finished, and can stall, exit 0 and pass
+/// over part of a file), and then by a step that fails the job naming it if neither set one. The three downloads are
+/// the image, the manifest and the parity results.
+fn check_downloads(text: &str) {
+    let doc = parse(text);
+    let mut seen = 0;
+    for (job, _) in JOBS {
+        let steps = doc["jobs"][job]["steps"].as_vec().expect("steps");
+        let mut at = 0;
+        while at < steps.len() {
+            let first = &steps[at];
+            if !is_download(first) {
+                at += 1;
+                continue;
+            }
+            seen += 1;
+            let what = first["with"]["name"].as_str().unwrap_or("");
+            let id = first["id"].as_str().unwrap_or_else(|| {
+                panic!("{job}'s download of {what} has no id, so nothing can see it didn't finish")
+            });
+            let unfinished = format!("steps.{id}.outputs.download-path == ''");
+            let again = steps
+                .get(at + 1)
+                .filter(|s| {
+                    is_download(s)
+                        && s["uses"] == first["uses"]
+                        && s["with"] == first["with"]
+                        && s["if"].as_str() == Some(unfinished.as_str())
+                })
+                .unwrap_or_else(|| {
+                    panic!("{job}'s download of {what} isn't run again when it didn't finish")
+                });
+            let again_id = again["id"]
+                .as_str()
+                .unwrap_or_else(|| panic!("{job}'s second download of {what} has no id"));
+            let neither = format!("{unfinished} && steps.{again_id}.outputs.download-path == ''");
+            assert!(
+                steps.get(at + 2).is_some_and(|s| {
+                    s["if"].as_str() == Some(neither.as_str())
+                        && s["run"].as_str().is_some_and(|r| {
+                            r.contains("::error::") && r.trim_end().lines().last() == Some("exit 1")
+                        })
+                }),
+                "{job} goes on when neither download of {what} finished"
+            );
+            at += 3;
+        }
+    }
+    assert_eq!(
+        seen, 3,
+        "the distro's jobs download {seen} artifacts, not the image, the manifest and the parity results"
+    );
+}
+
+#[test]
+fn wsl_downloads_run_again_and_stop_if_neither_finished() {
+    check_downloads(&read(WORKFLOW));
+}
+
+negative_control!(
+    wsl_downloads_run_again_and_stop_if_neither_finished,
+    "the parity results downloaded once",
+    expected = "wsl-proofs's download of wsl-parity-${{ github.run_id }} isn't run again when it didn't finish",
+    check_downloads(&edited(
+        &read(WORKFLOW),
+        "        if: steps.parity.outputs.download-path == ''\n",
+        "        if: steps.parity.outputs.download-path != ''\n"
+    ))
+);
+
+mod download_unnamed {
+    use super::*;
+    negative_control!(
+        wsl_downloads_run_again_and_stop_if_neither_finished,
+        "the image's download with no id",
+        expected = "wsl-register's download of wsl-image-${{ github.run_id }} has no id",
+        check_downloads(&edited(&read(WORKFLOW), "        id: image\n", ""))
+    );
+}
+
+mod download_again_other {
+    use super::*;
+    negative_control!(
+        wsl_downloads_run_again_and_stop_if_neither_finished,
+        "a second download of another artifact",
+        expected = "wsl-proofs's download of wsl-manifest-${{ github.run_id }} isn't run again",
+        check_downloads(&edited(
+            &read(WORKFLOW),
+            "        if: steps.manifest.outputs.download-path == ''\n        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0\n        with:\n          name: wsl-manifest-",
+            "        if: steps.manifest.outputs.download-path == ''\n        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0\n        with:\n          name: wsl-other-"
+        ))
+    );
+}
+
+mod download_again_unnamed {
+    use super::*;
+    negative_control!(
+        wsl_downloads_run_again_and_stop_if_neither_finished,
+        "a second download with no id",
+        expected = "wsl-register's second download of wsl-image-${{ github.run_id }} has no id",
+        check_downloads(&edited(&read(WORKFLOW), "        id: image-again\n", ""))
+    );
+}
+
+mod neither_passes {
+    use super::*;
+    negative_control!(
+        wsl_downloads_run_again_and_stop_if_neither_finished,
+        "a job that goes on with neither download finished",
+        expected =
+            "wsl-register goes on when neither download of wsl-image-${{ github.run_id }} finished",
+        check_downloads(&edited(
+            &read(WORKFLOW),
+            "neither attempt set download-path, so the download stopped short'\n          exit 1\n",
+            "neither attempt set download-path, so the download stopped short'\n          exit 0\n"
+        ))
+    );
+}
+
+mod neither_unchecked {
+    use super::*;
+    negative_control!(
+        wsl_downloads_run_again_and_stop_if_neither_finished,
+        "a stop that looks only at the first download",
+        expected = "wsl-proofs goes on when neither download of wsl-parity-${{ github.run_id }} finished",
+        check_downloads(&edited(
+            &read(WORKFLOW),
+            "        if: steps.parity.outputs.download-path == '' && steps.parity-again.outputs.download-path == ''\n",
+            "        if: steps.parity.outputs.download-path == ''\n"
+        ))
+    );
+}
+
+mod download_dropped {
+    use super::*;
+    negative_control!(
+        wsl_downloads_run_again_and_stop_if_neither_finished,
+        "the parity results never downloaded",
+        expected = "the distro's jobs download 2 artifacts",
+        {
+            let text = read(WORKFLOW);
+            let from = text
+                .find("      - name: The hosted runner's parity results\n")
+                .expect("the parity download");
+            let to = text
+                .find("      - name: The six proofs\n")
+                .expect("the proofs step");
+            check_downloads(&format!("{}{}", &text[..from], &text[to..]));
+        }
+    );
+}
+
+/// What is downloaded is found again by a re-run of the failed jobs alone: each name a download asks for is uploaded in
+/// this workflow, names the run and not the attempt (attempt 2 asks for attempt 1's artifact, as the hosted job isn't
+/// re-run), and is uploaded with `overwrite: true`, so a re-run of the hosted job replaces it rather than failing.
+fn check_names(text: &str) {
+    let doc = parse(text);
+    let jobs = doc["jobs"].as_hash().expect("the jobs");
+    let steps = |job: &Yaml| {
+        job["steps"]
+            .as_vec()
+            .map_or(&[][..], Vec::as_slice)
+            .to_vec()
+    };
+    let mut uploads = Vec::new();
+    let mut downloads = Vec::new();
+    for (id, job) in jobs {
+        let id = id.as_str().unwrap_or("");
+        for step in steps(job) {
+            let name = step["with"]["name"].as_str().unwrap_or("").to_string();
+            if step["uses"]
+                .as_str()
+                .is_some_and(|u| u.starts_with("actions/upload-artifact@"))
+            {
+                uploads.push((id.to_string(), name, step["with"]["overwrite"].as_bool()));
+            } else if is_download(&step) {
+                downloads.push((id.to_string(), name));
+            }
+        }
+    }
+    let mut names: Vec<&str> = downloads.iter().map(|(_, n)| n.as_str()).collect();
+    names.sort_unstable();
+    names.dedup();
+    assert_eq!(
+        names.len(),
+        3,
+        "the workflow downloads {names:?}, not three artifacts"
+    );
+    for (job, name) in &downloads {
+        assert!(
+            name.contains("${{ github.run_id }}") && !name.contains("github.run_attempt"),
+            "{job} downloads {name}, which names the attempt or not the run: a re-run of the failed jobs alone can't find the first attempt's"
+        );
+        let (from, _, overwrite) = uploads
+            .iter()
+            .find(|(_, n, _)| n == name)
+            .unwrap_or_else(|| panic!("{job} downloads {name}, which no job uploads"));
+        assert_eq!(
+            *overwrite,
+            Some(true),
+            "{name}'s upload doesn't overwrite: a re-run of {from} would fail on the first attempt's"
+        );
+    }
+}
+
+#[test]
+fn wsl_artifacts_are_found_by_a_rerun_of_the_failed_jobs() {
+    check_names(&read(WORKFLOW));
+}
+
+negative_control!(
+    wsl_artifacts_are_found_by_a_rerun_of_the_failed_jobs,
+    "the image named by its attempt, on both sides",
+    expected = "wsl-register downloads wsl-image-${{ github.run_id }}-${{ github.run_attempt }}, which names the attempt",
+    check_names(&read(WORKFLOW).replace(
+        "name: wsl-image-${{ github.run_id }}\n",
+        "name: wsl-image-${{ github.run_id }}-${{ github.run_attempt }}\n"
+    ))
+);
+
+mod upload_kept {
+    use super::*;
+    negative_control!(
+        wsl_artifacts_are_found_by_a_rerun_of_the_failed_jobs,
+        "the manifest's upload without overwrite",
+        expected = "wsl-manifest-${{ github.run_id }}'s upload doesn't overwrite: a re-run of wsl-image would fail",
+        check_names(&edited(
+            &read(WORKFLOW),
+            "          path: ${{ runner.temp }}/wsl-image/manifest.txt\n          retention-days: 90\n          overwrite: true\n",
+            "          path: ${{ runner.temp }}/wsl-image/manifest.txt\n          retention-days: 90\n"
+        ))
+    );
+}
+
+mod upload_other {
+    use super::*;
+    negative_control!(
+        wsl_artifacts_are_found_by_a_rerun_of_the_failed_jobs,
+        "the parity results uploaded under another name",
+        expected = "wsl-proofs downloads wsl-parity-${{ github.run_id }}, which no job uploads",
+        check_names(&edited(
+            &read(WORKFLOW),
+            "          name: wsl-parity-${{ github.run_id }}\n          path: ${{ runner.temp }}/wsl-parity\n          retention-days: 90\n",
+            "          name: wsl-parity-${{ github.run_id }}-hosted\n          path: ${{ runner.temp }}/wsl-parity\n          retention-days: 90\n"
+        ))
+    );
+}
+
+mod download_unrun {
+    use super::*;
+    negative_control!(
+        wsl_artifacts_are_found_by_a_rerun_of_the_failed_jobs,
+        "a download named without the run",
+        expected = "wsl-register downloads wsl-image, which names the attempt or not the run",
+        check_names(&read(WORKFLOW).replace(
+            "name: wsl-image-${{ github.run_id }}\n",
+            "name: wsl-image\n"
+        ))
+    );
+}
+
+/// `build-image.sh` records the tarball's length beside its hash, and `wsl.ps1 register` reads it and fails naming a
+/// short copy, N of M bytes, before it hashes the copy.
+fn check_short_copy(build: &str, script: &str) {
+    let tar = build
+        .find("sudo tar --numeric-owner -czf \"$out/rootfs.tar.gz\"")
+        .expect("no tarball");
+    assert!(
+        build
+            .find("wc -c < \"$out/rootfs.tar.gz\" | tr -d '[:space:]' > \"$out/rootfs.bytes\"\n")
+            .is_some_and(|w| w > tar),
+        "{BUILD} doesn't record the tarball's length"
+    );
+    let register = arm(script, "register");
+    let hashed = register
+        .find("$copied = Get-Sha256 $rootfs")
+        .expect("register hashes no copy");
+    let short = register
+        .find("if ($copiedLength -lt [int64]$length) { Fail \"rootfs.tar.gz is a short copy, $copiedLength of $length bytes:");
+    assert!(
+        register.contains("$copiedLength = (Get-Item -LiteralPath $rootfs).Length")
+            && register.contains("if ($length -notmatch '^[0-9]+$') { Fail")
+            && short.is_some_and(|s| s < hashed),
+        "register doesn't name a short copy before hashing it"
+    );
+}
+
+#[test]
+fn wsl_register_names_a_short_copy() {
+    check_short_copy(&read(BUILD), &read(PS));
+}
+
+negative_control!(
+    wsl_register_names_a_short_copy,
+    "no length recorded",
+    expected = "doesn't record the tarball's length",
+    check_short_copy(
+        &edited(
+            &read(BUILD),
+            "wc -c < \"$out/rootfs.tar.gz\" | tr -d '[:space:]' > \"$out/rootfs.bytes\"\n",
+            ""
+        ),
+        &read(PS)
+    )
+);
+
+mod length_unchecked {
+    use super::*;
+    negative_control!(
+        wsl_register_names_a_short_copy,
+        "the length never compared",
+        expected = "register doesn't name a short copy before hashing it",
+        check_short_copy(
+            &read(BUILD),
+            &edited(
+                &read(PS),
+                "if ($copiedLength -lt [int64]$length)",
+                "if ($false)"
+            )
+        )
+    );
+}
+
+mod length_after_hash {
+    use super::*;
+    negative_control!(
+        wsl_register_names_a_short_copy,
+        "the length compared after the hash",
+        expected = "register doesn't name a short copy before hashing it",
+        {
+            let ps = read(PS);
+            let line = ps
+                .lines()
+                .find(|l| l.contains("if ($copiedLength -lt [int64]$length)"))
+                .expect("the length check")
+                .to_string();
+            let moved = edited(&ps, &format!("{line}\n"), "");
+            let moved = edited(
+                &moved,
+                "        $copied = Get-Sha256 $rootfs\n",
+                &format!("        $copied = Get-Sha256 $rootfs\n{line}\n"),
+            );
+            check_short_copy(&read(BUILD), &moved);
+        }
     );
 }
 

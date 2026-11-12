@@ -63,6 +63,11 @@
 # The image can't come from another run: a run's artifact downloads only with a token, and no job here holds one. So
 # each of the first two jobs needs a hosted job of the same run, the only hosted jobs in this file. They carry the
 # runner's guard, run only when dispatched, and build no kernel.
+# Each download of their artifacts runs a second time if the first didn't finish, and the job then fails naming it if
+# neither did: download-artifact v4.3.0 can stall mid-stream and still end with exit 0, its step green over part of a
+# file (run 43128608743's image), and it sets `download-path` only once a download has finished. Those artifacts' names
+# carry the run but not the attempt, so a re-run of the failed jobs alone finds the first attempt's; their uploads
+# overwrite, so a re-run of the hosted job replaces them. `wsl.ps1 register` still checks the image's length and hash.
 #
 # The paths: what `scripts/ci_changes.sh` calls a GPU path, written as a filter, less R-692's five paths of `gui`. Docs-only
 # pushes run nothing (R-711 item 5); nor do `gui` and `prin`, which no job here builds. `schedule` and
@@ -496,16 +501,18 @@ jobs:
       - name: The image
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: wsl-image-${{ github.run_id }}-${{ github.run_attempt }}
+          name: wsl-image-${{ github.run_id }}
           path: ${{ runner.temp }}/wsl-image
           retention-days: 7
           compression-level: 0
+          overwrite: true
       - name: The manifest alone
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: wsl-manifest-${{ github.run_id }}-${{ github.run_attempt }}
+          name: wsl-manifest-${{ github.run_id }}
           path: ${{ runner.temp }}/wsl-image/manifest.txt
           retention-days: 90
+          overwrite: true
 
   # Proof 6's hosted side: at WSL_PARITY_COMMIT, `cargo nextest run -p kernel --profile ci`, as `scripts/wsl/inside.sh
   # parity` runs it in the distro, its per-test results as this run's artifact. Kernel's tests: CPU only, deterministic,
@@ -535,9 +542,10 @@ jobs:
           bash scripts/wsl/inside.sh parity "$WSL_PARITY_COMMIT" > "$RUNNER_TEMP/wsl-parity/hosted.tsv"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: wsl-parity-${{ github.run_id }}-${{ github.run_attempt }}
+          name: wsl-parity-${{ github.run_id }}
           path: ${{ runner.temp }}/wsl-parity
           retention-days: 90
+          overwrite: true
 
   # Registers `principia-wsl` from this run's image (`.github/scripts/wsl.ps1 register`), as gh-runner, its disk under
   # E:\wsl\principia-wsl\, never C:. The step ends `registered principia-wsl: ...` and exit 0, or exit 125 naming why
@@ -578,10 +586,23 @@ jobs:
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
           exit $LASTEXITCODE
       - name: This run's image
+        id: image
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: wsl-image-${{ github.run_id }}-${{ github.run_attempt }}
+          name: wsl-image-${{ github.run_id }}
           path: ${{ runner.temp }}/wsl-image
+      - name: This run's image, again if the first download didn't finish
+        id: image-again
+        if: steps.image.outputs.download-path == ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-image-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-image
+      - name: This run's image, never downloaded
+        if: steps.image.outputs.download-path == '' && steps.image-again.outputs.download-path == ''
+        run: |
+          Write-Output '::error::download-artifact ended twice without finishing (the image): neither attempt set download-path, so the download stopped short'
+          exit 1
       - name: Register principia-wsl
         env:
           WSL_IMAGE: ${{ runner.temp }}/wsl-image
@@ -640,15 +661,41 @@ jobs:
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
           exit $LASTEXITCODE
       - name: This run's rebuilt manifest
+        id: manifest
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: wsl-manifest-${{ github.run_id }}-${{ github.run_attempt }}
+          name: wsl-manifest-${{ github.run_id }}
           path: ${{ runner.temp }}/wsl-image
-      - name: The hosted runner's parity results
+      - name: This run's rebuilt manifest, again if the first download didn't finish
+        id: manifest-again
+        if: steps.manifest.outputs.download-path == ''
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          name: wsl-parity-${{ github.run_id }}-${{ github.run_attempt }}
+          name: wsl-manifest-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-image
+      - name: This run's rebuilt manifest, never downloaded
+        if: steps.manifest.outputs.download-path == '' && steps.manifest-again.outputs.download-path == ''
+        run: |
+          Write-Output '::error::download-artifact ended twice without finishing (the rebuilt manifest): neither attempt set download-path, so the download stopped short'
+          exit 1
+      - name: The hosted runner's parity results
+        id: parity
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-parity-${{ github.run_id }}
           path: ${{ runner.temp }}/wsl-parity
+      - name: The hosted runner's parity results, again if the first download didn't finish
+        id: parity-again
+        if: steps.parity.outputs.download-path == ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-parity-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-parity
+      - name: The hosted runner's parity results, never downloaded
+        if: steps.parity.outputs.download-path == '' && steps.parity-again.outputs.download-path == ''
+        run: |
+          Write-Output '::error::download-artifact ended twice without finishing (the parity results): neither attempt set download-path, so the download stopped short'
+          exit 1
       - name: The six proofs
         env:
           WSL_IMAGE: ${{ runner.temp }}/wsl-image

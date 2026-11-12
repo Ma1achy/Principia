@@ -176,9 +176,14 @@ switch ($verb) {
         $image = $env:WSL_IMAGE
         $rootfs = Join-Path $image 'rootfs.tar.gz'
         $manifest = Join-Path $image 'manifest.txt'
-        foreach ($f in $rootfs, $manifest, (Join-Path $image 'rootfs.sha256')) {
+        foreach ($f in $rootfs, $manifest, (Join-Path $image 'rootfs.sha256'), (Join-Path $image 'rootfs.bytes')) {
             if (-not (Test-Path -LiteralPath $f)) { Fail "the image has no $f" }
         }
+        # The length first: a download that stopped short names itself here, before the hash says only that it differs.
+        $length = (Get-Content -LiteralPath (Join-Path $image 'rootfs.bytes') -Raw).Trim()
+        if ($length -notmatch '^[0-9]+$') { Fail "rootfs.bytes holds no length: '$length'" }
+        $copiedLength = (Get-Item -LiteralPath $rootfs).Length
+        if ($copiedLength -lt [int64]$length) { Fail "rootfs.tar.gz is a short copy, $copiedLength of $length bytes: the download stopped short" }
         $built = (Get-Content -LiteralPath (Join-Path $image 'rootfs.sha256') -Raw).Trim()
         $copied = Get-Sha256 $rootfs
         if ($copied -ne $built) { Fail "rootfs.tar.gz is $copied here, $built as built: the copy is not the image" }
