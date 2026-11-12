@@ -496,8 +496,8 @@ mutant = "crates/kernel/src/regularisation/az.rs:729:35: replace < with <= in si
 justification = "c1 == h assigns h = c1, the value h already holds, and sets have, already true there (h holds c0 only when c0 was usable); a tie leaves h and have unchanged"
 
 [[equivalent]]
-mutant = "crates/kernel/src/regularisation/az.rs:963:42: replace > with >= in boundary_at_or_before"
-justification = "only a tie k·Δ_sync == t takes the mutant's extra step back, to k - 1, and the upward correction below then finds (k - 1 + 1)·Δ_sync == t <= t and steps on to k again, so every t gives the same boundary (k - 1 < u32::MAX, as k >= 1 there)"
+mutant = "crates/kernel/src/regularisation/az.rs:972:42: replace > with >= in boundary_at_or_before"
+justification = "equivalent on the domain where R::count is exact, every t whose boundary k < 2^24 at f32 (Count's doc: exact for n <= 2^24) and every t at f64 (k <= u32::MAX < 2^53): there only a tie k·Δ_sync == t takes the mutant's extra step back, to k - 1, and the upward correction below then finds (k - 1 + 1)·Δ_sync == t <= t and steps on to k again, so every such t gives the same boundary (k - 1 < u32::MAX, as k >= 1 there). Outside it, at f32 with k >= 2^24, count(k) rounds and the two can differ (t = 2^24, Δ_sync = 1: 2^24 + 1 against 2^24; qa review 5874131255 of PR #502), a boundary index far past any run's: the horizon is at most T = 200 (R-610), 1000 intervals at the proposed Δ_sync = 0.2 (REQ-INT-080), and 2^24 intervals would need Δ_sync below 1.2e-5"
 
 [[equivalent]]
 mutant = "crates/kernel/src/regularisation/az.rs:402:31: replace * with + in <impl Flow<R> for AzSystem<R>>::q_rate"
