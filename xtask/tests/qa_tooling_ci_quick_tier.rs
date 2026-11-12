@@ -646,7 +646,8 @@ exit 101
 /// Runs the steps of `ci.yml`'s `tests` job (the required check `ci`) that doctest, given the `changes` job's outputs on
 /// a code change: each step's `env`, its `if:` over those outputs and the job's `CODE`, and the script itself under
 /// `bash -e`, in `work`, with nothing of this process's environment but `PATH` led by `bin`. Prints each step's exit
-/// status. (`ci-quick.yml`'s, until the owner's CI model of 9 Nov 2026 moved the step here.)
+/// status. (`ci-quick.yml`'s, until the owner's CI model of 9 Nov 2026 moved the step here.) Since the split of PR #495
+/// (11 Nov 2026) `tests` is the matrix of shards under `tests-verdict`, which bears `ci`; its `if:` read at shard 1.
 const DRIVER: &str = r#"
 import json, os, re, subprocess, sys, yaml
 ci, outputs, work, bin_dir = yaml.safe_load(open(sys.argv[1])), json.loads(sys.argv[2]), sys.argv[3], sys.argv[4]
@@ -655,6 +656,10 @@ def out(text):
 def holds(cond):
     e = re.sub(r"needs\.changes\.outputs\.(\w+)", lambda m: repr(outputs.get(m[1], "")), str(cond))
     e = e.replace("env.CODE", "'true'").replace("env.RUN", "'true'").replace("&&", "and").replace("||", "or")
+    # The shards' matrix (PR #495, 11 Nov 2026), at shard 1, the one leg that runs the doctests (nextest cannot
+    # partition them); that no other leg runs them `qa_ci_split_mesa_rerun.rs` checks. R-290's exception, named by the
+    # orchestrator for PR #495.
+    e = e.replace("matrix.shard", "1")
     return bool(eval(e, {"__builtins__": {}}))
 for step in ci["jobs"]["tests"]["steps"]:
     if "--doc" not in str(step.get("run", "")):
@@ -1033,6 +1038,7 @@ fn check_quick_steps(yml: &str) {
         ("the build", "build", &["cargo build", "--workspace"]),
         ("the tests", "ci", &["cargo nextest run", "$PACKAGES"]),
     ];
+    let tests_id = "tests".to_owned();
     for (what, check, words) in wanted {
         let (id, job) = jobs
             .iter()
@@ -1042,6 +1048,35 @@ fn check_quick_steps(yml: &str) {
             job.get("continue-on-error").is_none(),
             "qa: the PR tier's `{id}` may fail"
         );
+        // The split (PR #495, 11 Nov 2026): `ci` is borne by a verdict job of `run:` steps alone, which runs no test
+        // itself; its work is in the one job it waits on beside `changes`, the shards, whose failure turns it red
+        // (`qa_ci_split_mesa_rerun.rs`). That job, too, may not fail softly. R-290's exception, named by the
+        // orchestrator for PR #495.
+        let verdict_only = job["steps"]
+            .as_array()
+            .is_some_and(|st| st.iter().all(|s| s.get("uses").is_none()));
+        let (id, job) = if verdict_only && check == "ci" {
+            let needs: Vec<&str> = job["needs"]
+                .as_array()
+                .expect("qa: the verdict's needs")
+                .iter()
+                .filter_map(Value::as_str)
+                .filter(|n| *n != "changes")
+                .collect();
+            assert_eq!(
+                needs,
+                ["tests"],
+                "qa: `ci`'s verdict ({id}) does not wait on the shards alone"
+            );
+            let shards = &jobs["tests"];
+            assert!(
+                shards.get("continue-on-error").is_none(),
+                "qa: the PR tier's `tests` may fail"
+            );
+            (&tests_id, shards)
+        } else {
+            (id, job)
+        };
         let steps = job["steps"].as_array().expect("qa: steps");
         let found: Vec<&Value> = steps
             .iter()
@@ -1051,7 +1086,10 @@ fn check_quick_steps(yml: &str) {
                     .all(|w| s["run"].as_str().is_some_and(|r| r.contains(w)))
             })
             .collect();
-        assert!(!found.is_empty(), "qa: the PR tier does not run {what}");
+        assert!(
+            !found.is_empty(),
+            "qa: the PR tier does not run {what} (in `{id}`)"
+        );
         let hard = found
             .iter()
             .find(|s| {
@@ -1087,6 +1125,20 @@ negative_control!(
         "        run: cargo fmt --all --check\n        continue-on-error: true\n"
     ))
 );
+
+mod soft_shards {
+    use super::*;
+    negative_control!(
+        qa_the_quick_tier_runs_what_the_ruling_lists,
+        "a PR tier whose test shards may fail",
+        expected = "the PR tier's `tests` may fail",
+        check_quick_steps(&edited(
+            CI,
+            "  tests:\n    name: ci shard ${{ matrix.shard }}/3\n    needs: changes\n",
+            "  tests:\n    name: ci shard ${{ matrix.shard }}/3\n    needs: changes\n    continue-on-error: true\n"
+        ))
+    );
+}
 
 // `check_life` and `qa_no_head_passes_until_its_own_full_tier_has`, one pull request's life through the quick run,
 // the merge-ready label's re-run and the full tier's statuses, are retired with that path (the owner's CI model,

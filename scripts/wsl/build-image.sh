@@ -6,8 +6,8 @@
 #
 #   scripts/wsl/build-image.sh <out-dir>
 #
-# writes <out-dir>/rootfs.tar.gz, the image `wsl --import` takes; <out-dir>/rootfs.sha256, its bytes' SHA-256, for the
-# copy's integrity; and <out-dir>/manifest.txt, `manifest.sh`'s description of what is in it. The manifest's SHA-256 is
+# writes <out-dir>/rootfs.tar.gz, the image `wsl --import` takes; <out-dir>/rootfs.sha256, its bytes' SHA-256, and
+# <out-dir>/rootfs.bytes, its length, for the copy's integrity; and <out-dir>/manifest.txt, `manifest.sh`'s description of what is in it. The manifest's SHA-256 is
 # the image's pinned value, `scripts/wsl/manifest.sha256`: the tarball's bytes vary from build to build (times, logs),
 # what the manifest lists doesn't. The script prints the manifest's hash and the pinned one, and fails if a pin is set
 # and differs (proof 5).
@@ -159,6 +159,7 @@ done
 sudo find "$root/tmp" "$root/var/tmp" -mindepth 1 -delete
 sudo tar --numeric-owner -czf "$out/rootfs.tar.gz" -C "$root" .
 (cd "$out" && sha256sum rootfs.tar.gz | cut -d' ' -f1 > rootfs.sha256)
+wc -c < "$out/rootfs.tar.gz" | tr -d '[:space:]' > "$out/rootfs.bytes"
 
 hash=$(sha256sum < "$out/manifest.txt" | cut -d' ' -f1)
 pinned=$(tr -d '[:space:]' < "$here/manifest.sha256")

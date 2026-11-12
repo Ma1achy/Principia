@@ -5,8 +5,8 @@
 //! position-quantised form (`crate::driver::substep`: each position cast to f32, one subtraction per axis, each square
 //! by `square`, one addition; R-547). The collision test reads them, the `dmin_pair` latch reads their least, and the
 //! next macro-step's `N_sub` bucket reads that same least through the cadence (`Cadence::bucket_d2`), so no second
-//! `d²` of the state is formed. `d_min` is the latch's `√`, packed by TASK-M3-10's latch writer; until then the
-//! payload's `d_min` half stays unset.
+//! `d²` of the state is formed. `d_min` is the latch's `√`, packed by the latch writer
+//! (`crate::driver::latch::Latches`).
 //!
 //! **Count before classifying** (Part 7, pending change 7, landed): each pair `k` is tested `d²ₖ < r_coll²`, strictly,
 //! against the sim key's threshold ([`CollisionRadius`]). Exactly one pair below it is `collision` with `detail` that
@@ -184,7 +184,8 @@ impl DminLatch {
         }
     }
 
-    /// The least quantised `d²` met so far: `d_min²`, the value TASK-M3-10's latch writer packs as `d_min = √`.
+    /// The least quantised `d²` met so far: `d_min²`, the value the latch writer packs as `d_min = √`
+    /// (`crate::driver::latch::Latches`).
     #[inline]
     pub fn d2(&self) -> f32 {
         self.d2

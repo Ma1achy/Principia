@@ -2,7 +2,7 @@
 
 - **Milestone:** M4
 - **Closes:** REQ-PAY-085, REQ-TOOL-043, REQ-TOOL-126
-- **Depends on:** TASK-M4-06, TASK-M4-04, TASK-M3-36
+- **Depends on:** TASK-M4-06, TASK-M4-04, TASK-M3-36, TASK-M3-72
 - **Needs (earlier milestones):** REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-PAY-021, REQ-PAY-032, REQ-VAL-035, REQ-RENDER-013, REQ-TOOL-009
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -36,3 +36,4 @@ The Benettin FTLE as the GPU computes it. The f32 shadow is run in both forms â€
 - REQ-PAY-085 is a calibration (R-71): the PR carries the proposed value, its evidence and the reviewer's check, marked pending; the human confirms it at the M4 gate and it is then recorded in decisions.md.
 - Gap: which `eps` the horizon map uses is not stated by the corpus.
 - Closes, for gaps the corpus leaves open: REQ-TOOL-126 (R-72 definition) (classification accepted by R-132).
+- Applied per R-369 (12 Nov 2026), a consequence of REQ-VAL-038's move from TASK-M3-14 to TASK-M3-72: TASK-M3-72 joins Depends on, since this task needs REQ-VAL-038 and builds its displacement-form shadow to the definition RQ-793 rules there. *Was:* "Depends on: TASK-M4-06, TASK-M4-04, TASK-M3-36".

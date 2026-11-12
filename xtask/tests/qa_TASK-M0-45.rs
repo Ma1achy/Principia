@@ -373,8 +373,8 @@ negative_control!(
     expected = "can be skipped when the job it needs fails",
     {
         let workflow = the_workflow().replacen(
-            "    name: ci\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
-            "    name: ci\n    needs: changes\n    if: github.event_name == 'pull_request'\n",
+            "    name: ci\n    needs: [changes, tests]\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
+            "    name: ci\n    needs: [changes, tests]\n    if: github.event_name == 'pull_request'\n",
             1,
         );
         for check in REQUIRED {

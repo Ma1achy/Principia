@@ -4,10 +4,10 @@
 // value its field's `.x`. A source keeps no input (§3.1): the two fields reach the margin as two wires from two
 // sources, or from one (§5: fan-out is free).
 //
-// **The map is provisional, pending RQ-788.** The corpus names the node and its two inputs and gives the margin no
-// colour map, range or polarity; until the owner answers RQ-788 the margin is drawn on the greyscale ramp,
-// `ramp_grey`, which clamps it to [0, 1], so a margin below 0 draws the ramp's black and one above 1 its white. Only
-// the last line below is the provisional map; the two inputs and the tests before it are settled.
+// **The map is R-962's** (colour_composition §1.2, "Default ramps by field role"): the margin is drawn on the
+// greyscale ramp, `ramp_grey`, OKLab L equal to `top1 − top2` clamped to [0, 1], white where `top1` is far above
+// `top2`, so a margin below 0 draws the ramp's black (a swapped pair of wires is all black) and one above 1 its white.
+// The last line below is that map; the two inputs and the guards before it are the node's.
 //
 // It is a presentation view and draws no hatch (R-467), so it guards itself, as the outcome state and a field ramp
 // do (render contract "Presentation layer"; render_gui_spec §G1, §13 "Validity-first"): a pixel the chart classifies
@@ -39,5 +39,5 @@ fn colour(ctx: Ctx) -> vec3<f32> {
         note_non_finite();
         return PRESENT_INVALID;
     }
-    return ramp_grey(margin); // provisional, pending RQ-788
+    return ramp_grey(margin); // the map R-962 rules
 }

@@ -7625,6 +7625,8 @@
   rulings:
   - R-71
   milestone: M3
+  rq:
+  - RQ-794
 - id: REQ-INT-077
   area: INT
   kind: definition
@@ -32911,7 +32913,9 @@
   rulings:
   - R-71
   milestone: M3
-  note: "'Meaningfully': REQ-PAY-085 (calibration)."
+  rq:
+  - RQ-793
+  note: "'Meaningfully': REQ-PAY-085 (calibration). 12 Nov 2026, applied per R-369 (task re-scoping, physics review 5866988394 of PR #493): closed by TASK-M3-72 (was TASK-M3-14), which waits on RQ-793, the displacement form's definition (R-72)."
 - id: REQ-VAL-039
   area: VAL
   statement: "The `sim_failed`/`decode_failed` detail codes must be confirmed against the integrator contract's failure enumeration once finalised."

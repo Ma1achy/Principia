@@ -33,6 +33,12 @@
 //!   (`.cargo/mutants.toml`, `fixtures/mutants/`, `scripts/contain.sh`, `mutants.yml`, xtask's `mutants_check.rs`) a
 //!   verdict it runs on (R-677 as amended after PR #382's code review: tier (a) is "full CI as now").
 //!
+//! The split of `ci` into three shards under `tests-verdict`, which bears `ci`, and the Mesa cache's step before each apt
+//! step (PR #495, 11 Nov 2026): the walk runs every step of a job that builds nothing and reads the Mesa step's output on
+//! a cold cache; a reader runs where its failure is a red required check, by bearing one or by a run where its job alone
+//! fails turning one red; a failed shard turns `ci` red. Each change has its control (R-290's exception, named by the
+//! orchestrator for this PR).
+//!
 //! Every path under `docs/` these name for the classifier is a made-up one or a directory walker's, so this file is no
 //! reader of a real data file. Each test has its negative control (R-176).
 
@@ -926,6 +932,16 @@ impl Walk {
             ["github", "event_name"] => "pull_request".to_owned(),
             ["github", "ref"] => "refs/pull/1/merge".to_owned(),
             ["env", key] => self.env.get(*key).cloned().unwrap_or_default(),
+            // The Mesa cache's step (`.github/actions/mesa-debs`, 11 Nov 2026) on a cold cache, which outputs
+            // `installed=false`: the apt step after it installs as before. Only this one step output is known; any
+            // other still stops the walk (R-290's exception for the split, named by the orchestrator).
+            ["steps", "mesa", "outputs", "installed"] => "false".to_owned(),
+            // The shards' matrix (11 Nov 2026), read at its first leg, which runs every step any leg runs (the
+            // doctests run there alone); that the legs' partitions cover every test once `qa_ci_split_mesa_rerun.rs`
+            // checks.
+            ["matrix", "shard"] => "1".to_owned(),
+            // A number, as `matrix.shard == 1` compares the leg with.
+            [n] if !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) => (*n).to_owned(),
             // A step's status functions, in a run with no failed step, which is the run this walk is of.
             ["always()"] => "true".to_owned(),
             ["failure()"] => "false".to_owned(),
@@ -1002,21 +1018,33 @@ fn walk(yml: &Value, verdict: &[(&str, &str)], fail: &[&str]) -> Walk {
                 "skipped"
             } else if fail.contains(&id.as_str()) {
                 "failure"
-            } else if let Some(env) = job["steps"][0]
+            } else if job["steps"][0]
                 .get("env")
-                .filter(|e| e.get("CHANGES").is_some())
+                .is_some_and(|e| e.get("CHANGES").is_some())
             {
-                let mut cmd = Command::new("bash");
-                cmd.args(["-e", "-c", &s(&job["steps"][0]["run"])]);
-                for (k, v) in env.as_object().expect("env") {
-                    cmd.env(k, w.eval(&s(v)));
+                // The classification check; and, in a job of `run:` steps alone that builds nothing (`tests-verdict`,
+                // the split's `ci` over its shards, 11 Nov 2026), every step after it too, each with its own env.
+                let steps = job["steps"].as_array().expect("qa_r677: steps");
+                let verdict_only = steps.iter().all(|st| st.get("uses").is_none());
+                let mut result = "success";
+                for step in steps
+                    .iter()
+                    .take(if verdict_only { steps.len() } else { 1 })
+                {
+                    let mut cmd = Command::new("bash");
+                    cmd.args(["-e", "-c", &s(&step["run"])]);
+                    if let Some(env) = step["env"].as_object() {
+                        for (k, v) in env {
+                            cmd.env(k, w.eval(&s(v)));
+                        }
+                    }
+                    let out = cmd.timed_output().expect("qa_r677: bash ran");
+                    if !out.status.success() {
+                        result = "failure";
+                        break;
+                    }
                 }
-                let out = cmd.timed_output().expect("qa_r677: bash ran");
-                if out.status.success() {
-                    "success"
-                } else {
-                    "failure"
-                }
+                result
             } else if let Some(env) = job["steps"][0]
                 .get("env")
                 .filter(|e| e.get("RESULTS").is_some())
@@ -1273,9 +1301,19 @@ fn check_required(ci: &str) {
         if tier == "code" {
             // "(a) CODE … full CI as now": on a pull request, the PR tier's product tests of the changed crates (the
             // owner's CI model, 9 Nov 2026), the full suite on `main`.
+            // Whole, or exactly as the split's shards' partitions (11 Nov 2026), whose covering every test once
+            // `qa_ci_split_mesa_rerun.rs` checks.
             assert!(
-                runs.iter().any(|r| r.trim() == "cargo nextest run $PACKAGES"),
+                runs.iter().any(|r| r.trim() == "cargo nextest run $PACKAGES"
+                    || r.trim() == "cargo nextest run $PACKAGES --partition hash:${{ matrix.shard }}/3"),
                 "qa_r677: on {what}, the PR tier does not run the changed crates' tests:\n{runs:#?}"
+            );
+            // A shard that fails is a red `ci`.
+            let shard_failed = walk(&yml, &verdict, &["tests"]);
+            assert_eq!(
+                check_result(&yml, &shard_failed, "ci"),
+                "failure",
+                "qa_r677: on {what}, the required check `ci` is not red when a shard failed"
             );
             continue;
         }
@@ -1296,7 +1334,8 @@ fn check_required(ci: &str) {
                 "fmt",
                 "gpu-lavapipe-smoke",
                 "gpu-metal-smoke",
-                "tests"
+                "tests",
+                "tests-verdict"
             ],
             "qa_r677: {what} ran other jobs"
         );
@@ -1353,14 +1392,22 @@ fn check_required(ci: &str) {
             );
         }
         // A failing reader is a red required check, never hidden by the skips: every reader's run is in a job that
-        // bears one (`ci-workspace`'s failure turned `ci` red before the owner's CI model).
+        // bears one, or, as the split's shards (11 Nov 2026) through `tests-verdict`, whose failure alone turns one
+        // red (`ci-workspace`'s failure turned `ci` red before the owner's CI model).
         for (id, run) in by_job
             .iter()
             .filter(|(_, r)| r.starts_with("cargo nextest run"))
         {
             let job = &yml["jobs"][id.as_str()];
+            let reaches = GATES.contains(&reported_name(id, job).as_str()) || {
+                let failed = walk(&yml, &verdict, &[id.as_str()]);
+                GATES.iter().any(|gate| {
+                    check_result(&yml, &w, gate) == "success"
+                        && check_result(&yml, &failed, gate) == "failure"
+                })
+            };
             assert!(
-                GATES.contains(&reported_name(id, job).as_str()),
+                reaches,
                 "qa_r677: on {what}, `{run}` runs in `{id}`, which bears no required check"
             );
         }
@@ -1388,8 +1435,8 @@ negative_control!(
     check_required(
         &swap(
             &read(".github/workflows/ci.yml"),
-            "        if: needs.changes.outputs.plan_data == 'true'\n        env:\n          NEXTEST_PROFILE: ci\n        run: cargo nextest run -p xtask",
-            "        if: needs.changes.outputs.tier == 'code' && needs.changes.outputs.plan_data == 'true'\n        env:\n          NEXTEST_PROFILE: ci\n        run: cargo nextest run -p xtask"
+            "        if: needs.changes.outputs.plan_data == 'true'\n        env:\n          NEXTEST_PROFILE: ci\n          NEXTEST_NO_TESTS: pass\n        run: cargo nextest run -p xtask",
+            "        if: needs.changes.outputs.tier == 'code' && needs.changes.outputs.plan_data == 'true'\n        env:\n          NEXTEST_PROFILE: ci\n          NEXTEST_NO_TESTS: pass\n        run: cargo nextest run -p xtask"
     ))
 );
 
@@ -1403,6 +1450,20 @@ mod checks_on_data {
             &read(".github/workflows/ci.yml"),
             "      - name: cargo build --workspace\n        if: needs.changes.outputs.docs_only != 'true'\n",
             "      - name: cargo build --workspace\n"
+        ))
+    );
+}
+
+mod reader_shard_unseen {
+    use super::*;
+    negative_control!(
+        qa_r677_required_checks_on_every_tier,
+        "ci.yml's `ci` (`tests-verdict`) passing whatever its shards ended in",
+        expected = "the required check `ci` is not red when a shard failed",
+        check_required(&swap(
+            &read(".github/workflows/ci.yml"),
+            "        run: '[ \"$SHARDS\" = success ] || { echo \"the product test shards ended $SHARDS: every shard must pass\"; exit 1; }'\n",
+            "        run: 'true'\n"
         ))
     );
 }

@@ -1562,7 +1562,7 @@
   title: The Benettin FTLE shadow
   depends_on: [TASK-M3-05, TASK-M3-06]  # R-369, following R-924: TASK-M2-71 (R-918) dropped with REQ-CHART-132
   needs: [REQ-PAY-021, REQ-PAY-026, REQ-PAY-032]
-  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038]  # R-369, following R-924: REQ-CHART-132 to TASK-M3-69
+  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077]  # R-369, following R-924: REQ-CHART-132 to TASK-M3-69; R-369 (12 Nov 2026, RQ-793): REQ-VAL-038 to TASK-M3-72
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-15
@@ -1829,6 +1829,14 @@
   requirements: [REQ-EVT-035]
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M3-72
+  milestone: M3
+  title: "The displacement form of the FTLE shadow (REQ-VAL-038, waits on RQ-793)"
+  depends_on: [TASK-M3-14]  # R-369 (12 Nov 2026): split from TASK-M3-14, physics review 5866988394 of PR #493
+  needs: []
+  requirements: [REQ-VAL-038]
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
@@ -1928,7 +1936,7 @@
 - id: TASK-M4-13
   milestone: M4
   title: "FTLE on the GPU: the f32 shadow form and the horizon map"
-  depends_on: [TASK-M4-06, TASK-M4-04, TASK-M3-36]
+  depends_on: [TASK-M4-06, TASK-M4-04, TASK-M3-36, TASK-M3-72]  # TASK-M3-72: R-369 (12 Nov 2026), REQ-VAL-038 moved there
   needs: [REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-PAY-021, REQ-PAY-032, REQ-VAL-035, REQ-RENDER-013, REQ-TOOL-009]
   requirements: [REQ-PAY-085, REQ-TOOL-043, REQ-TOOL-126]
   reviewers: [code, qa, physics]

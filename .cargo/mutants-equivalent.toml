@@ -530,3 +530,7 @@ justification = "only x == 0 (+0 or -0, NaN having been sent to +0 on its bits) 
 [[equivalent]]
 mutant = "crates/kernel/src/driver/advance.rs:96:22: replace < with <= in <impl Count for f64>::whole"
 justification = "only x == TOP_F64 takes the other arm, which selects TOP_F64 in place of x, the same value"
+
+[[equivalent]]
+mutant = "crates/kernel/src/driver/latch.rs:100:48: replace < with <= in Latches::separation_squared"
+justification = "the mutant differs only where d2 == d2_min (seen already true), where it writes back an equal value; +0.0 and -0.0 compare equal but each √s to a zero that set_d_min floors to 0x0001, so no persisted bit and no live value but the sign of a zero d_min changes"

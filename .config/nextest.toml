@@ -204,6 +204,20 @@ default-filter = """
 """
 fail-fast = false
 
+# A per-test hang limit on Windows, where the `ci` profile runs on the self-hosted PC (`win-gpu.yml`'s `win-tests`, its
+# `cargo nextest run --workspace` step), and only there: a hung test there is ended and reported `TMT`, where it held the
+# runner. On 11 Nov 2026 one kernel GPU test, `kernel::qa_TASK-M0-13 qa_gpu_accessors_zero_extend_at_payload_bit_positions`,
+# hung on the RTX for 3.6 h until the job was cancelled (job 130531059795). The limit, 15 periods of 60 s (900 s), is 2.6
+# times the longest passing test of that run on the PC (`xtask::qa_TASK-M0-20 qa_cli_screenshot_all_runs_selftest`,
+# 342.9 s) and 1.8 times its longest failing one (505.0 s); the 60 s period keeps nextest's `SLOW` notice each minute.
+# The job queue's tests keep their own, tighter limit (the default profile's override above), which a profile's own
+# override would otherwise take the place of. GitHub-hosted runners, all Linux or macOS, are untouched. Applied per
+# R-369/R-812.
+[[profile.ci.overrides]]
+platform = "cfg(windows)"
+filter = "not (binary_id(=xtask::jobq) | binary_id(/^xtask::qa_R-658/))"
+slow-timeout = { period = "60s", terminate-after = 15 }
+
 # The tests that run cargo on the workspace's own target directory from xtask (the override above), among them the
 # screenshot runner's `gui` surface tests, which run gui's capture mode through `cargo run` (RQ-252), which CI's
 # `ci-workspace` job runs on a build of its own, beside the `ci` shards (R-372, REQ-SYS-078): the shards run from an

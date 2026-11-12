@@ -82,7 +82,14 @@ jobs:
       # keep R-374's line tables (`.github/actions/cargo-ci-config`).
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
       - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - name: Build the stand-in tests

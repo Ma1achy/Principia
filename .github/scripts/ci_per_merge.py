@@ -346,25 +346,44 @@ def task_text(judged, repo, run_id, sha):
     return title, "\n".join(body) + "\n"
 
 
-def file_task(repo, title, body):
-    """Open the issue, or comment on the open one of the same title: None, or why it could not be filed."""
-    # The label, made if it is missing; a label that exists makes the request fail, which changes nothing.
+def label_ready(repo):
+    """Make the label if it is missing, and only then: asked to make a label that exists, the API answers 422
+    (`Validation Failed`, `already_exists`), which `gh` prints as an error though nothing failed (run 43073329906, whose
+    task was filed, as a comment on #490). A label that cannot be read or made is no reason not to file: opening the
+    issue with it makes it."""
+    out = subprocess.run(["gh", "api", f"repos/{repo}/labels/{LABEL}"], capture_output=True)
+    if out.returncode == 0:
+        return
     gh(["--method", "POST", f"repos/{repo}/labels", "-f", f"name={LABEL}", "-f", f"color={LABEL_COLOUR}",
         "-f", f"description={LABEL_TEXT}"])
+
+
+def file_task(repo, title, body):
+    """Open the issue, or comment on the open one of the same title: None and where it was filed, or why it could not
+    be filed and None."""
+    label_ready(repo)
     listed = gh(["--paginate", f"repos/{repo}/issues?labels={LABEL}&state=open&per_page=100"])
     if listed is None:
-        return "the open issues could not be read"
+        return "the open issues could not be read", None
     try:
         issues = [i for page in values(listed) for i in page]
     except (ValueError, TypeError):
-        return "the open issues could not be read"
+        return "the open issues could not be read", None
     same = [i for i in issues if isinstance(i, dict) and i.get("title") == title and "number" in i]
     if same:
         done = gh(["--method", "POST", f"repos/{repo}/issues/{same[0]['number']}/comments", "-f", f"body={body}"])
-        return None if done is not None else f"the comment on #{same[0]['number']} could not be posted"
+        if done is None:
+            return f"the comment on #{same[0]['number']} could not be posted", None
+        return None, f"a comment on #{same[0]['number']}"
     done = gh(["--method", "POST", f"repos/{repo}/issues", "-f", f"title={title}", "-f", f"body={body}",
                "-f", f"labels[]={LABEL}"])
-    return None if done is not None else "the issue could not be opened"
+    if done is None:
+        return "the issue could not be opened", None
+    try:
+        number = json.loads(done).get("number")
+    except (ValueError, AttributeError):
+        number = None
+    return None, f"#{number}" if number else "a new issue"
 
 
 def decide():
@@ -403,13 +422,14 @@ def decide():
     if any(kind == "other" for _, kind, _ in judged):
         title, body = task_text(judged, repo, run_id, sha)
         if file_tasks:
-            why = file_task(repo, title, body)
+            why, where = file_task(repo, title, body)
             if why:
                 # Seen, never silent, and no red `main`: the error annotation is on the run's page.
                 print(f"::error::the per-merge task was not filed: {why}")
                 summary.append(f"The task **was not filed**: {why}. Title: {title}")
             else:
-                summary.append(f"Filed: {title}")
+                print(f"filed: {where}: {title}")
+                summary.append(f"Filed: {title} ({where})")
         else:
             summary.append(f"Not on `main`, so not filed: {title}")
             sys.stdout.write(f"would file: {title}\n{body}")
