@@ -4,10 +4,12 @@
 
 use std::path::{Path, PathBuf};
 
+use kernel::regularisation::az::End;
 use serde_json::json;
 use validation::az::{
-    closure, convergence, figure_eight, lc_error, orbit, radial, AzFinalStepGate, LcInverseGate,
-    SeparationFloorGate, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME,
+    closure, convergence, decide_sync, doubly_degenerate, figure_eight, lc_error, orbit,
+    propose_final_step_with, propose_floor, propose_sync_with, radial, round_up, AzFinalStepGate,
+    LcInverseGate, SeparationFloorGate, SyncRow, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME, SYNC_ERROR,
 };
 use validation::gate::{self, Gate, GateConfig, GateSpec, MeasurementGate, Verdict};
 use validation::negative_control;
@@ -221,4 +223,164 @@ negative_control!(
     "the reference's TINY as the control that must bind",
     expected = "the floor binds above the least value",
     check_floor("reference")
+);
+
+/// A table of REQ-INT-080's measurement at the quanta `0.40625` (the coarse grid) and `0.1`, the `η` ladder
+/// `[0.02, 0.01]`: `(error, rate)` at 0.1 for each rung, and the coarse grid's.
+fn table(tenth: [(f64, f64); 2], coarse: [(f64, f64); 2]) -> Vec<SyncRow> {
+    let mut t = Vec::new();
+    for (delta, rows) in [(0.1, tenth), (0.40625, coarse)] {
+        for (eta, (error, rate)) in [0.02, 0.01].into_iter().zip(rows) {
+            t.push(SyncRow {
+                delta,
+                eta,
+                error,
+                rate,
+            });
+        }
+    }
+    t
+}
+
+/// A decision on a table, a ladder and the coarse grid: `(η, Δ_sync)`.
+type Decide = fn(&[SyncRow], &[f64], f64) -> (f64, f64);
+
+/// REQ-INT-080's decision at its criteria's edges: `η` the largest rung at most `1e-9` at 0.1, the last where none
+/// is; 0.1 kept at exactly 10× the coarse error and 1.1× its cost, and not past either, a zero coarse error read as
+/// `1e-16`; the round-up of REQ-INT-114's threshold.
+fn check_decisions(decide: Decide) {
+    let ladder = [0.02, 0.01];
+    let at = |tenth, coarse| decide(&table(tenth, coarse), &ladder, 0.40625);
+    let (ce, cr) = (1e-11, 100.0);
+    let c = (ce, cr);
+    let keep = (10.0 * ce, 1.1 * cr);
+    assert_eq!(
+        at([keep, keep], [c, c]),
+        (0.02, 0.1),
+        "at the edges, 0.1 kept"
+    );
+    assert_eq!(
+        at([(SYNC_ERROR, keep.1), keep], [c, c]),
+        (0.02, 0.2),
+        "η at 1e-9; the error past 10×"
+    );
+    assert_eq!(
+        at([(keep.0.next_up(), keep.1), keep], [c, c]),
+        (0.02, 0.2),
+        "just past 10×"
+    );
+    assert_eq!(
+        at([(keep.0, keep.1.next_up()), keep], [c, c]),
+        (0.02, 0.2),
+        "just past 1.1×"
+    );
+    assert_eq!(
+        at([(SYNC_ERROR.next_up(), 1.0), keep], [c, c]),
+        (0.01, 0.1),
+        "the first rung at most 1e-9"
+    );
+    assert_eq!(
+        at([(2e-9, 1.0), (2e-9, 1.0)], [c, c]),
+        (0.01, 0.2),
+        "none at 1e-9: the last rung"
+    );
+    let zero = (0.0, cr);
+    assert_eq!(
+        at([(10.0 * 1e-16, 1.0), keep], [zero, c]),
+        (0.02, 0.1),
+        "a zero coarse error, as 1e-16"
+    );
+    assert_eq!(
+        at([((10.0 * 1e-16f64).next_up(), 1.0), keep], [zero, c]),
+        (0.02, 0.2),
+        "past 10 × 1e-16"
+    );
+    assert_eq!(
+        decide(&table([keep, keep], [c, c]), &ladder, 0.2),
+        (0.02, 0.2),
+        "no coarse row: 0.2"
+    );
+    assert_eq!(format!("{:.1e}", round_up(2.0 * 5.0253e-8)), "1.1e-7");
+    assert_eq!(format!("{:.1e}", round_up(2.34e3)), "2.4e3");
+    assert_eq!(round_up(0.5), 0.5);
+}
+
+#[test]
+fn az_sync_decision() {
+    check_decisions(decide_sync);
+}
+
+negative_control!(
+    az_sync_decision,
+    "a decision that always keeps 0.1",
+    expected = "η at 1e-9; the error past 10×",
+    check_decisions(|t, l, c| (decide_sync(t, l, c).0, 0.1))
+);
+
+/// The proposals' texts: REQ-INT-114's names its threshold, the IC's own closure and both ladders; REQ-INT-080's its
+/// criteria, its decision and the window's mapping; REQ-INT-105's its fixtures, the doubly degenerate march and the
+/// reference's values.
+fn check_proposals(final_step: &str, sync: &str, floor: &str) {
+    let o = orbit().expect("the orbit");
+    let c = closure(&o, 0.01, 8, true);
+    for needle in [
+        format!("**Proposed threshold:** {:.1e}", round_up(2.0 * c.closure)),
+        "the IC's own closure, Cartesian RK4 at dt = T/4096".to_owned(),
+        "## The convergence ladder, with the landing fix (errors against η = 0.005, landing on)"
+            .to_owned(),
+        "## The convergence ladder, without it".to_owned(),
+        "| 0.02 | ".to_owned(),
+    ] {
+        assert!(
+            final_step.contains(&needle),
+            "REQ-INT-114's proposal lacks `{needle}`:\n{final_step}"
+        );
+    }
+    for needle in [
+        "**Proposed:** η = 0.02; Δ_sync = 0.2. The closure window's 0.4 time units are 2.00 boundaries at Δ_sync = 0.2",
+        "(0.4/Δ_sync at each quantum: 0.40625: 0.98, 0.2: 2.00, 0.1: 4.00)",
+        "steps per unit time against the 0.40625 grid's: 0.40625: 1.00×, 0.2: ",
+        "| 0.1 | 0.01 | 6.300000 | ",
+    ] {
+        assert!(sync.contains(needle), "REQ-INT-080's proposal lacks `{needle}`:\n{sync}");
+    }
+    for needle in [
+        "**Proposed:** TINY = 1e-37 at f32 and 1e-300 at f64",
+        "| the radial collision passage | f32 | ",
+        "| test 7's close-encounter hierarchy | f64 | ",
+        "| Burrau's (3, 4, 5) from rest | f32 | ",
+        "TINY·TINY at the reference's values: 0e0 at f32",
+        "(NonFinite, 1, 1)",
+    ] {
+        assert!(
+            floor.contains(needle),
+            "REQ-INT-105's proposal lacks `{needle}`:\n{floor}"
+        );
+    }
+    assert_eq!(doubly_degenerate(), (End::NonFinite, 1, 1));
+}
+
+/// The three proposals, at a small configuration for the first two.
+fn proposals() -> (String, String, String) {
+    (
+        propose_final_step_with(0.01, 8, &[0.02, 0.01], 0.005, 4096).expect("REQ-INT-114's"),
+        propose_sync_with(&[0.02, 0.01], &[0.40625, 0.2, 0.1], 0.005).expect("REQ-INT-080's"),
+        propose_floor().expect("REQ-INT-105's"),
+    )
+}
+
+#[test]
+fn az_proposals() {
+    let (f, s, t) = proposals();
+    check_proposals(&f, &s, &t);
+}
+
+negative_control!(
+    az_proposals,
+    "REQ-INT-080's text in REQ-INT-114's place",
+    expected = "REQ-INT-114's proposal lacks",
+    {
+        let (_, s, t) = proposals();
+        check_proposals(&s, &s, &t)
+    }
 );

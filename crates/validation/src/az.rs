@@ -29,13 +29,21 @@ use kernel::driver::advance::Cadence;
 use kernel::occupant::rk4::Rk4;
 use kernel::occupant::{Geom, State};
 use kernel::regularisation::az::{
-    lc, lc_inverse, lc_inverse_unstable, march, register, AzAdvanced, AzCount, AzP, AzParams, AzQ,
-    AzReal, End, ExplicitTest, Watch,
+    lc, lc_inverse, lc_inverse_unstable, march, AzAdvanced, AzCount, AzP, AzParams, AzQ, AzReal,
+    End, ExplicitTest, Watch,
 };
 use kernel::regularisation::dt_max::DtMaxReport;
 
 use crate::gate::report::{GateReport, RegionCount, Regions, Verdict};
 use crate::gate::{Gate, GateConfig, MeasurementConfig, MeasurementControl, MeasurementGate};
+
+/// Appends one formatted line to a proposal's text.
+macro_rules! say {
+    ($out:expr, $($arg:tt)*) => {{
+        $out.push_str(&format!($($arg)*));
+        $out.push('\n');
+    }};
+}
 
 /// A cadence that keeps nothing and never ends the march.
 #[derive(Clone, Copy, Debug, Default)]
@@ -515,8 +523,8 @@ impl Gate for AzFinalStepGate {
 
     fn flags(&self, _root: &Path, args: &[&str]) -> Result<(), String> {
         match args {
-            ["--propose"] => propose_final_step(),
-            ["--propose-sync"] => propose_sync(),
+            ["--propose"] => propose_final_step().map(|s| print!("{s}")),
+            ["--propose-sync"] => propose_sync().map(|s| print!("{s}")),
             _ => Err(format!(
                 "gate {FINAL_STEP_NAME}: unrecognised flags `{}`; usage: --propose | --propose-sync",
                 args.join(" ")
@@ -533,41 +541,74 @@ pub const MARGIN: f64 = 2.0;
 
 /// REQ-INT-114's proposal: the closure at `η = 0.001`, `n = 32`, the convergence ladder, the closure without the
 /// landing fix beside it, and the threshold proposed from the measured closure with its margin.
-pub fn propose_final_step() -> Result<(), String> {
+pub fn propose_final_step() -> Result<String, String> {
+    propose_final_step_with(0.001, 32, &LADDER, REFERENCE_ETA, 1 << 16)
+}
+
+/// REQ-INT-114's proposal at `eta` on `n` intervals, over `ladder` against a run at `reference_eta`, the IC's own
+/// closure under Cartesian RK4 at `T/ic_steps`.
+pub fn propose_final_step_with(
+    eta: f64,
+    n: u32,
+    ladder: &[f64],
+    reference_eta: f64,
+    ic_steps: u32,
+) -> Result<String, String> {
+    let mut out = String::new();
     let o = orbit()?;
-    println!(
+    say!(
+        out,
         "# REQ-INT-114: the figure-eight closure threshold, proposed (az-final-step --propose)\n"
     );
-    println!("{}\n", o.description);
-    let c = closure(&o, 0.001, 32, true);
-    let off = closure(&o, 0.001, 32, false);
-    println!("- the closure under the rule in force: {}", describe(&c));
-    println!("- the closure without the landing fix: {}", describe(&off));
-    let on = convergence(&o, &LADDER, REFERENCE_ETA, 32, true);
-    let without = convergence(&o, &LADDER, REFERENCE_ETA, 32, false);
+    say!(out, "{}\n", o.description);
+    let c = closure(&o, eta, n, true);
+    let off = closure(&o, eta, n, false);
+    say!(
+        out,
+        "- the closure under the rule in force: {}",
+        describe(&c)
+    );
+    say!(
+        out,
+        "- the closure without the landing fix: {}",
+        describe(&off)
+    );
+    let on = convergence(&o, ladder, reference_eta, n, true);
+    let without = convergence(&o, ladder, reference_eta, n, false);
     for (what, conv) in [("with the landing fix", &on), ("without it", &without)] {
-        println!("\n## The convergence ladder, {what} (errors against η = {REFERENCE_ETA}, landing on)\n");
-        println!("| η | closure | error | steps | re-registrations | predictive limit bound |");
-        println!("|---|---|---|---|---|---|");
+        say!(out, "\n## The convergence ladder, {what} (errors against η = {reference_eta}, landing on)\n");
+        say!(
+            out,
+            "| η | closure | error | steps | re-registrations | predictive limit bound |"
+        );
+        say!(out, "|---|---|---|---|---|---|");
         for (r, e) in &conv.rungs {
-            println!(
+            say!(
+                out,
                 "| {} | {:.4e} | {e:.3e} | {} | {} | {} |",
-                r.eta, r.closure, r.count.steps, r.count.re_registrations, r.count.predictive_bound
+                r.eta,
+                r.closure,
+                r.count.steps,
+                r.count.re_registrations,
+                r.count.predictive_bound
             );
         }
-        println!("\norder over the ladder: {:.3}", conv.order);
+        say!(out, "\norder over the ladder: {:.3}", conv.order);
     }
-    println!("\nreference run: {}", describe(&on.reference));
+    say!(out, "\nreference run: {}", describe(&on.reference));
     // The IC's own closure: Cartesian RK4 at a fine fixed step, no regularisation.
-    let floor = cartesian_closure(&o, 1 << 16);
-    println!(
-        "\nthe IC's own closure, Cartesian RK4 at dt = T/65536 with no regularisation: {floor:.4e}; the published IC \
+    let floor = cartesian_closure(&o, ic_steps);
+    say!(out,
+        "\nthe IC's own closure, Cartesian RK4 at dt = T/{ic_steps} with no regularisation: {floor:.4e}; the published IC \
          and period are given to 8 and 9 digits, so no integrator closes it below this"
     );
     for r in &o.reference {
-        println!("the reference's figure, a measurement, never the threshold: {r}");
+        say!(
+            out,
+            "the reference's figure, a measurement, never the threshold: {r}"
+        );
     }
-    println!(
+    say!(out,
         "\n**Proposed threshold:** {:.1e}, {MARGIN}× the measured closure {:.4e} rounded up; the order criterion: above \
          1.5 (measured {:.3} with the fix, {:.3} without)",
         round_up(MARGIN * c.closure),
@@ -575,11 +616,11 @@ pub fn propose_final_step() -> Result<(), String> {
         on.order,
         without.order
     );
-    Ok(())
+    Ok(out)
 }
 
 /// `x` rounded up to two significant digits.
-fn round_up(x: f64) -> f64 {
+pub fn round_up(x: f64) -> f64 {
     let e = x.log10().floor() - 1.0;
     let scale = 10f64.powf(e);
     (x / scale).ceil() * scale
@@ -621,73 +662,114 @@ pub fn on_grid(o: &Orbit, eta: f64, delta_sync: f64) -> (AzAdvanced<f64>, f64) {
     (out, de)
 }
 
-/// REQ-INT-080's proposal: `Δ_sync` and `η` for Aarseth–Zare, from the figure-eight's error and drift over the `η`
-/// and `Δ_sync` ladders and the cost in steps per unit time, under the criteria fixed before the run (the PR's).
-pub fn propose_sync() -> Result<(), String> {
-    let o = orbit()?;
-    println!(
-        "# REQ-INT-080: Aarseth–Zare's Δ_sync and η, proposed (az-final-step --propose-sync)\n"
-    );
-    println!(
-        "The figure-eight (unit masses) from t = 0 to the last boundary at or before its period, each run against \
-         one at η = {REFERENCE_ETA} on the same grid; the error is |r − r_ref| over every position component.\n"
-    );
-    println!("| Δ_sync | η | t reached | error | \\|ΔE/E\\| | steps per unit time | re-registrations | switches |");
-    println!("|---|---|---|---|---|---|---|---|");
-    let mut table = Vec::new();
-    for &d in &SYNC_LADDER {
-        let (reference, _) = on_grid(&o, REFERENCE_ETA, d);
-        for &eta in &LADDER {
-            let (out, de) = on_grid(&o, eta, d);
-            let err = distance(&positions(&out.state), &positions(&reference.state));
-            let rate = f64::from(out.count.steps) / out.t;
-            println!(
-                "| {d} | {eta} | {:.6} | {err:.3e} | {de:.2e} | {rate:.1} | {} | {} |",
-                out.t, out.count.re_registrations, out.count.switches
-            );
-            table.push((d, eta, err, rate));
-        }
-    }
-    let at_tenth = |eta: f64| table.iter().find(|r| r.0 == 0.1 && r.1 == eta).copied();
-    let eta = LADDER
+/// One row of REQ-INT-080's measurement: the quantum, the step factor, the error against the reference run and the
+/// cost in steps per unit time.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct SyncRow {
+    pub delta: f64,
+    pub eta: f64,
+    pub error: f64,
+    pub rate: f64,
+}
+
+/// The largest error at `Δ_sync = 0.1` the proposed `η` may have (the criterion fixed before the run).
+pub const SYNC_ERROR: f64 = 1e-9;
+
+/// REQ-INT-080's decision on `table`, under the criteria fixed before the run: `η` the first of `ladder` (largest
+/// first) whose error at `Δ_sync = 0.1` is at most [`SYNC_ERROR`], the last rung where none is; `Δ_sync` 0.1 if, at
+/// that `η`, its error is within 10× and its cost within 1.1× of the grid `coarse`'s, else 0.2, the next larger
+/// quantum.
+pub fn decide_sync(table: &[SyncRow], ladder: &[f64], coarse: f64) -> (f64, f64) {
+    let at = |d: f64, e: f64| table.iter().find(|r| r.delta == d && r.eta == e).copied();
+    let eta = ladder
         .iter()
         .copied()
-        .find(|&e| at_tenth(e).is_some_and(|r| r.2 <= 1e-9))
-        .unwrap_or(LADDER[LADDER.len() - 1]);
-    let row = |d: f64| table.iter().find(|r| r.0 == d && r.1 == eta).copied();
-    let (coarse, tenth) = (row(SYNC_LADDER[0]), row(0.1));
-    let keep_tenth = match (coarse, tenth) {
-        (Some(c), Some(t)) => t.2 <= 10.0 * c.2.max(1e-16) && t.3 <= 1.1 * c.3,
+        .find(|&e| at(0.1, e).is_some_and(|r| r.error <= SYNC_ERROR))
+        .unwrap_or(ladder[ladder.len() - 1]);
+    let keep_tenth = match (at(coarse, eta), at(0.1, eta)) {
+        (Some(c), Some(t)) => t.error <= 10.0 * c.error.max(1e-16) && t.rate <= 1.1 * c.rate,
         _ => false,
     };
-    println!(
-        "\nThe criteria, fixed before the run: η is the largest on the ladder whose error at Δ_sync = 0.1 is at most \
-         1e-9; Δ_sync is 0.1 if, at that η, its error is within 10× and its cost within 1.1× of the 13/32 grid's, \
-         else the next larger quantum on the ladder."
+    (eta, if keep_tenth { 0.1 } else { 0.2 })
+}
+
+/// REQ-INT-080's proposal: `Δ_sync` and `η` for Aarseth–Zare, from the figure-eight's error and drift over the `η`
+/// and `Δ_sync` ladders and the cost in steps per unit time, under the criteria fixed before the run (the PR's).
+pub fn propose_sync() -> Result<String, String> {
+    propose_sync_with(&LADDER, &SYNC_LADDER, REFERENCE_ETA)
+}
+
+/// REQ-INT-080's proposal over the `η` ladder `ladder` and the quanta `sync` (the first the coarse grid), each run
+/// against one at `reference_eta`.
+pub fn propose_sync_with(
+    ladder: &[f64],
+    sync: &[f64],
+    reference_eta: f64,
+) -> Result<String, String> {
+    let mut out = String::new();
+    let o = orbit()?;
+    say!(
+        out,
+        "# REQ-INT-080: Aarseth–Zare's Δ_sync and η, proposed (az-final-step --propose-sync)\n"
     );
-    let proposed = if keep_tenth { 0.1 } else { 0.2 };
-    println!(
+    say!(out,
+        "The figure-eight (unit masses) from t = 0 to the last boundary at or before its period, each run against \
+         one at η = {reference_eta} on the same grid; the error is |r − r_ref| over every position component.\n"
+    );
+    say!(out, "| Δ_sync | η | t reached | error | \\|ΔE/E\\| | steps per unit time | re-registrations | switches |");
+    say!(out, "|---|---|---|---|---|---|---|---|");
+    let mut table = Vec::new();
+    for &d in sync {
+        let (reference, _) = on_grid(&o, reference_eta, d);
+        for &eta in ladder {
+            let (run, de) = on_grid(&o, eta, d);
+            let error = distance(&positions(&run.state), &positions(&reference.state));
+            let rate = f64::from(run.count.steps) / run.t;
+            say!(
+                out,
+                "| {d} | {eta} | {:.6} | {error:.3e} | {de:.2e} | {rate:.1} | {} | {} |",
+                run.t,
+                run.count.re_registrations,
+                run.count.switches
+            );
+            table.push(SyncRow {
+                delta: d,
+                eta,
+                error,
+                rate,
+            });
+        }
+    }
+    let coarse = sync[0];
+    let (eta, proposed) = decide_sync(&table, ladder, coarse);
+    say!(out,
+        "\nThe criteria, fixed before the run: η is the largest on the ladder whose error at Δ_sync = 0.1 is at most \
+         {SYNC_ERROR:e}; Δ_sync is 0.1 if, at that η, its error is within 10× and its cost within 1.1× of the {coarse} \
+         grid's, else 0.2, the next larger quantum on the ladder."
+    );
+    say!(out,
         "\n**Proposed:** η = {eta}; Δ_sync = {proposed}. The closure window's 0.4 time units are {:.2} boundaries at \
          Δ_sync = {proposed} (0.4/Δ_sync at each quantum: {}).",
         0.4 / proposed,
-        SYNC_LADDER.iter().map(|d| format!("{d}: {:.2}", 0.4 / d)).collect::<Vec<_>>().join(", ")
+        sync.iter().map(|d| format!("{d}: {:.2}", 0.4 / d)).collect::<Vec<_>>().join(", ")
     );
-    let base = coarse.map_or(f64::NAN, |c| c.3);
-    println!(
-        "Aarseth–Zare's cost at η = {eta}, steps per unit time against the 13/32 grid's: {} (its entry size \
+    let row = |d: f64| table.iter().find(|r| r.delta == d && r.eta == eta).copied();
+    let base = row(coarse).map_or(f64::NAN, |c| c.rate);
+    say!(out,
+        "Aarseth–Zare's cost at η = {eta}, steps per unit time against the {coarse} grid's: {} (its entry size \
          η·Δ_sync/(A·B) scales with Δ_sync, so its steps per interval do not).",
-        SYNC_LADDER
+        sync
             .iter()
-            .filter_map(|&d| row(d).map(|r| format!("{d}: {:.2}×", r.3 / base)))
+            .filter_map(|&d| row(d).map(|r| format!("{d}: {:.2}×", r.rate / base)))
             .collect::<Vec<_>>()
             .join(", ")
     );
-    println!(
+    say!(out,
         "Part 2a's cost and label-flip evidence (Heggie, prin-rs sync_grid_probe): 0.1 costs 1–3% more steps than the \
          13/32 grid, 0.025 17–25%, 0.0125 40–52%; 0, at most 1 and at most 4 of 1024 outcome labels flip. Aarseth–Zare's \
          own label flips are not measured here: no detector runs under a regularised occupant yet."
     );
-    Ok(())
+    Ok(out)
 }
 
 // ── separation-floor ───────────────────────────────────────────────────────────────────────────────────────────
@@ -849,19 +931,21 @@ fn show(x: Option<f64>) -> String {
 /// REQ-INT-105's proposal for Aarseth–Zare: `TINY` at f32 and f64, from each fixture's least pre-floor `A`, `B`,
 /// `A·B` and guarded component, the floored steps, the underflow of `TINY·TINY`, the least `A·B` against
 /// `η·dt_left/FLT_MAX` and the non-finite entry steps; the reference's values beside.
-pub fn propose_floor() -> Result<(), String> {
-    println!(
+pub fn propose_floor() -> Result<String, String> {
+    let mut out = String::new();
+    say!(
+        out,
         "# REQ-INT-105: the floor TINY for Aarseth–Zare, proposed (separation-floor --propose)\n"
     );
-    println!(
+    say!(out,
         "Each fixture run under Aarseth–Zare + RK4 at η = {FLOOR_ETA}, Δ_sync = 0.125, with TINY the reference's \
          (1e-37 at f32, 1e-300 at f64; R-953), the landing tolerance the reference's (RQ-792).\n"
     );
-    println!(
+    say!(out,
         "| fixture | width | least A | least B | least A·B | least guarded component | floored | non-finite entries \
          | steps | end |"
     );
-    println!("|---|---|---|---|---|---|---|---|---|---|");
+    say!(out, "|---|---|---|---|---|---|---|---|---|---|");
     let fixtures = [radial(), hierarchy(), burrau()];
     let mut least_f32 = Least::default();
     let mut least_f64 = Least::default();
@@ -870,7 +954,8 @@ pub fn propose_floor() -> Result<(), String> {
             ("f32", floor_run::<f32>(f, None), &mut least_f32),
             ("f64", floor_run::<f64>(f, None), &mut least_f64),
         ] {
-            println!(
+            say!(
+                out,
                 "| {} | {width} | {} | {} | {} | {} | {} | {} | {} | {:?} at t = {:.4} |",
                 f.name,
                 show(run.least.a),
@@ -896,24 +981,24 @@ pub fn propose_floor() -> Result<(), String> {
     }
     let tiny32 = 1e-37f32;
     let entry_floor = FLOOR_ETA * 0.125 / f64::from(f32::MAX);
-    println!(
+    say!(out,
         "\nTINY·TINY at the reference's values: {:e} at f32 (1e-37·1e-37) and {:e} at f64 (1e-300·1e-300); where it is 0, \
          a step with both factors floored has an infinite entry size at that width.",
         tiny32 * tiny32,
         1e-300f64 * 1e-300
     );
-    println!(
+    say!(out,
         "A step with both factors floored at f32 has an infinite entry size and ends its march at the explicit \
          finiteness test, its state latched (kernel test az_doubly_degenerate_is_finite): {:?}",
         doubly_degenerate()
     );
-    println!(
+    say!(out,
         "The least pre-floor A·B at f32 over the fixtures, {}, against η·dt_left/FLT_MAX = {entry_floor:.3e}, below which \
          the f32 entry size is not finite with neither factor floored.",
         show(least_f32.ab)
     );
     let decades = |least: Option<f64>, tiny: f64| least.map_or(f64::NAN, |l| (l / tiny).log10());
-    println!(
+    say!(out,
         "\n**Proposed:** TINY = 1e-37 at f32 and 1e-300 at f64, the reference's values: the least pre-floor A and B \
          over the fixtures sit {:.1} and {:.1} decades above them at f32, {:.1} and {:.1} at f64, so no step of these \
          fixtures is floored, and the floor stays a guard against a degenerate state, not a step-size rule.",
@@ -922,7 +1007,7 @@ pub fn propose_floor() -> Result<(), String> {
         decades(least_f64.a, 1e-300),
         decades(least_f64.b, 1e-300)
     );
-    Ok(())
+    Ok(out)
 }
 
 /// The doubly degenerate f32 state's march (the kernel test's fixture): its end, steps and non-finite entries.
@@ -1007,22 +1092,11 @@ impl MeasurementGate for SeparationFloorGate {
 
     fn flags(&self, _root: &Path, args: &[&str]) -> Result<(), String> {
         match args {
-            ["--propose"] => propose_floor(),
+            ["--propose"] => propose_floor().map(|s| print!("{s}")),
             _ => Err(format!(
                 "gate {FLOOR_NAME}: unrecognised flags `{}`; usage: --propose",
                 args.join(" ")
             )),
         }
     }
-}
-
-/// The registration of `s` at f64 with the reference's `TINY`, for the tests.
-pub fn registered(
-    s: &State<f64>,
-) -> (
-    kernel::regularisation::az::AzSystem<f64>,
-    AzQ<f64>,
-    AzP<f64>,
-) {
-    register(s, 1e-300, 1e-300)
 }
