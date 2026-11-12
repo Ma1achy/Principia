@@ -209,6 +209,8 @@ tiers' `N` is 8 or 16 (R-132 caps Ultra and Extreme at 16; memory-tiers §4).
 
 **The principle: never present mixed time.** Every temporal glitch (frozen rectangle in a live field, region snapping forward, children popping in behind the playhead) is one sin — presenting pixels from different moments as one moment. The barrier makes it unrepresentable. *(The one deliberate, bounded exception is checkerboard motion acceleration — a uniform one-`dt` half-frame skew only while the playhead advances, self-erasing at every rest/pause/endpoint, off in export — `principia_checkerboard_contract.md` §6.)*
 
+*12 Nov 2026 (R-985, the owner's direction on the chart audit's F8):* on a view tilted toward time each pixel shows its own time by design, so "never present mixed time" there means each sample at its own target time, never a sample presented at a time other than its own. The stop index `k_stop` stays in the record (R-935 under RQ-761), and with the playhead running only that word is rewritten each frame, from the pixel and the playhead on the host; the record's other words are unchanged. A sample behind its new target resumes, and one ahead of it re-boots from `t = 0` (R-935: "a target below the current state re-boots from `t = 0` (R-565, bitwise)"). Any other fallback for backward play is not decided here. *Was:* the principle stands as written for views not tilted toward time.
+
 **Two tiers — barrier over the LIVE SET, catch-up OFF-LOOP** (a hard barrier over everything would let one slow reveal freeze the loop):
 
 ```

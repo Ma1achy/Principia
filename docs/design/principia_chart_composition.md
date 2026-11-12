@@ -1334,6 +1334,8 @@ pixel whose backward run ends in a collision or an escape is blank, counted apar
 declared. `φ_T`'s dynamical folds aren't seams, so refinement chases them and spread reads them (§ 7.4). Jitter stays in `ψ`'s
 coordinates. Functionals stay excluded at every `T`.
 
+*12 Nov 2026 (R-985, the owner's direction on the chart audit's F17):* under R-926 a final-condition chart is a tier-3 map like any other (no slope of its own, R-926 item 9), evaluated on the CPU as every chart is; R-879's "CPU batch chart" reads as that evaluation. It takes the coarse cover in motion and is exact at rest (REQ-SCHED-020), and carries no label of its own as a route ("not live", "CPU batch" or the like). R-879's other decisions stand as written, the per-pixel horizon labelled as the final-condition charts' exception and the round-trip miss measured and large misses masked among them. Its measure weight is RQ-800's hard case and waits on it. *Was:* the paragraph above stands as written.
+
 **The mirror half.** `Enc` mirrors a start with `λ̃_y < −δ_λ` (encode contract Part 6 step 3), and clamps one past `q_max`
 (§ 17.2). The owner's rider to RQ-736 says the mirror half is never dropped or folded, in any chart. So a start found stays in
 the signed state: it takes the signed `C` of § 17.2 and fills the IC from the state through CPU batch, with no `z`, so neither
