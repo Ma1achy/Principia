@@ -632,7 +632,14 @@ variant also checks the midpoints of the square's four edges, which catches it, 
     (any harmonic component) passes every corner while samples near the edge midpoints are off by about `½h²|H_uu|`.
     For example, on a log-polar pair `(s, θ)`, `x = e^s·cos θ` has `H_ss = x` and `H_θθ = −x`, and at `θ = 0`
     `H_sθ = 0`: every corner passes while the samples along the `s` and `θ` axes are off by `½h²·x`. Under (a′) such
-    quads take the patch with that error.
+    quads take the patch with that error. Its scale (physics review 5877369526, F2): the miss is `½h²·|H_uu|/|x|`
+    relative to the component's own value. On the log-polar example that is `½h²`, about `2⁻⁴⁵` at depth 21
+    (`h = 2⁻²²`), roughly `2⁻²¹` of an f32 ulp, harmless at every depth from 21 to 30. The gap bites only where
+    `½h²·|H_uu|/|x|` reaches an f32 ulp of the component's own value (`2⁻²⁴` relative), where the curvature is large
+    against the value: near a point where a component and its gradient both vanish with saddle-shaped curvature
+    (`x ≈ u² − v²`, whose miss `h²` against `|x| ≈ r²` reaches `2⁻²⁴` within about `r ≲ 2¹²·h`, some `2¹²`
+    half-widths of the point), or in an indefinite strip beside a singular site, as the `√` strip is beside its edge
+    (*inferred*).
   - **(a″) The four corners and the four edge midpoints, plus the footprint test (physics review 5877078565, P2).** As
     (a′), with the exact f64 evaluation and the patch's f64 prediction compared at the four edge midpoints as well as
     the four corners, under the same bound, tag, branch and sheet agreement and footprint test. The midpoints give
@@ -664,9 +671,14 @@ variant also checks the midpoints of the square's four edges, which catches it, 
     depth 30"); an arm at a depth no component admits is reported void, never passed.
   - *Setup:* the `(L_z, E)` chart at depths 21 to 30, `N = 16`, the CPU expansion of RQ-797 (a). Straddling set:
     512 quads whose footprint meets the feasibility edge. Away set: 512 quads at distance at least `2¹¹·h` from it,
-    the bound above. Indefinite set: 512 quads at depths 21 to 30 on a chart with a component of indefinite curvature
-    (for example `x = e^s·cos θ` on a log-polar pair near `θ = 0`), because the feasibility edge's curvature is
-    semidefinite and the two sets above alone would pass a corners-only check that is wrong elsewhere. The fixture
+    the bound above. Indefinite set: 512 quads at depths 21 to 30 centred within about `2¹²·h` of a point where a
+    component and its gradient both vanish with saddle-shaped curvature, the fixture stating before its run, under the
+    fixture rule, that `½h²·|H_uu|` reaches an f32 ulp of that component's own value there; it is needed because the
+    feasibility edge's curvature is semidefinite and the two sets above alone would pass a corners-only check that is
+    wrong elsewhere. The log-polar example would not serve: its miss is about `2⁻²¹` of an f32 ulp, so it reports no
+    difference under (a′) or (a″). Whether any chart in the corpus has such a point past depth 20 is not established
+    here; finding one is M-K's first step, and if none exists the run says so, the indefinite set is void, and (a′)'s
+    gap is exercised by control (iii) alone, which the owner should know when weighing (a′) against (a″). The fixture
     follows the fixture rule above. Patch records and
     exact narrowed records compared sample by sample, as are the held quantities `E` and `L_z` of the patch records
     against `E*` and `L_z*`.
