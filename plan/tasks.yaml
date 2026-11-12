@@ -1802,7 +1802,7 @@
   title: The Aarseth–Zare occupant
   depends_on: [TASK-M3-07]  # split from TASK-M3-07, 10 Nov 2026 (R-369)
   needs: [REQ-DEC-005, REQ-INT-002]
-  requirements: [REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-080, REQ-INT-114]  # REQ-INT-114: R-927
+  requirements: [REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-080, REQ-INT-114, REQ-INT-117]  # REQ-INT-114: R-927; REQ-INT-117: fix round 1 of PR #502 (R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.1, PIT-9]
 - id: TASK-M3-69

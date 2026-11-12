@@ -8453,6 +8453,22 @@
   - R-935
   milestone: M4
   note: "Added 11 Nov 2026 (the code re-check of PR #482 (review 5853463481), N1), on TASK-M4-05 (flat-grid compute), which closes it (applied per R-369: task scoping). REQ-INT-070 (decode in the kernel, never an IC buffer) was retired under R-926 item 5 and its acceptance line on TASK-M4-05 with it, with nothing in its place; REQ-INT-115, which replaced it, is closed by TASK-M2-87 (the CPU-to-GPU record and table contract), contract text with no code, and its verify reads the contracts only. So no verify checked the built entry. This requirement is that check, on the task that builds the entry; REQ-SYS-022 (no interpreter on the GPU), on the same task, stands beside it."
+- id: REQ-INT-117
+  area: INT
+  kind: calibration
+  statement: "The lc-inverse gate's minimum number of regions, the cases its verdict on REQ-INT-044 must cover before it stands, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate lc-inverse prints the regions it ran (the round trip at f32 and at f64) and their count against the minimum, and flags a verdict drawn from fewer; the proposal states the minimum with its evidence; recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  milestone: M3
+  note: "Added by TASK-M3-68 (applied per R-369, as REQ-INT-110 was for projection-parity): the gate framework names a calibration requirement for every gate's region minimum, and REQ-INT-044, the gate's threshold requirement, is not one; the gate had named REQ-INT-105 (the floor TINY), which has nothing to do with it (physics review 5873527379 of PR #502, point 4). Proposed at 2: the two widths, f32 and f64, at which REQ-INT-044's verify states its figures."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
