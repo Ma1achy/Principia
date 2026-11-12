@@ -23,6 +23,8 @@
 //! - `shadow_failed_sum` (R-972, RQ-791 case C, option (a)): at a nonzero `r_coll`, a shadow whose sum goes non-finite
 //!   stores the failed-state values, never NaN (R-79): `S` the mark `s_failed` and `r_sh`, `p_sh` the sample's own;
 //!   `ftle_valid` is false and `ftle` NaN, in the kernel's read and the generated read side; the sample is untouched.
+//! - `shadow_tiny_delta0_finite` (R-972's mark, its boundary): a finite finalised sum is not marked where `δ·δ₀`
+//!   would underflow, and `‖δ₀‖ = 0` is.
 //!
 //! **Domain** (pitfalls §10): Yoshida-4, the steppers' march at `r_coll = 0`, so no terminal fires, but for the two
 //! R-972 tests, which run the close pair at a nonzero `r_coll`; the orbits are `validation::measure::benettin`'s,
@@ -1124,8 +1126,10 @@ fn check_failed_sum(write: Writer) {
             base_bits(&base),
             "n_renorm {n_renorm}: the shadow's failed sum reached the sample"
         );
+        // Read at a nonzero `‖δ₀‖`, so only the mark makes the read NaN: without its clause, `S_FAILED + ln(0)`
+        // reads −∞.
         let params = BenettinParams {
-            delta_0: 0.0,
+            delta_0: 1e-3,
             n_renorm,
         };
         assert!(
@@ -1165,8 +1169,12 @@ fn shadow_failed_sum() {
         horizon_steps: key.horizon_steps,
     };
     let read = sim_state_from_ftle(&s, [0; 4], false, 0.0, false, ic32.m, &rp);
+    let at = BenettinParams {
+        delta_0: 1e-3f32,
+        ..params
+    };
     assert!(
-        !read.ftle_valid && read.ftle.is_nan() && ftle_read(&s, &params, key.dt_macro).is_nan(),
+        !read.ftle_valid && read.ftle.is_nan() && ftle_read(&s, &at, key.dt_macro).is_nan(),
         "the generated read side or the kernel's reads the f32 mark as valid"
     );
     let below = SimStateFTLEOf {
@@ -1200,4 +1208,55 @@ negative_control!(
             ..s
         }
     })
+);
+
+// ── shadow_tiny_delta0_finite (R-972's mark, its boundary) ────────────────────────────────────────────────────────
+
+/// Whether a shadow's finalised sum is finite beside the state `x`.
+type SumFinite = fn(&Benettin<f64, Absolute>, &State<f64>) -> bool;
+
+/// A fresh shadow at `‖δ₀‖ = 10⁻²⁵⁰` about the zero state, read beside a state `10⁻¹⁰⁰` from it: `δ/δ₀ = 10¹⁵⁰`, so
+/// its finalised sum, `0 + ln(δ/δ₀)`, is finite and the mark is not set, though `δ·δ₀` underflows to zero. At
+/// `‖δ₀‖ = 0`, `ln(δ/0)` is not finite.
+fn check_tiny_delta0(finite: SumFinite) {
+    let zero = [[0.0; 2]; 3];
+    let ic = Ic {
+        m: [1.0 / 3.0; 3],
+        r: zero,
+        p: zero,
+    };
+    let mut x = State {
+        m: ic.m,
+        r: zero,
+        p: zero,
+    };
+    x.r[0][0] = 1e-100;
+    let at = |delta_0: f64| {
+        let params = BenettinParams {
+            delta_0,
+            n_renorm: 1,
+        };
+        Benettin::<f64, Absolute>::new(&ic, CollisionRadius::none(), params)
+    };
+    let tiny = at(1e-250);
+    assert!(
+        tiny.separation(&x) > 0.0 && finite(&tiny, &x),
+        "a shadow at ‖δ₀‖ = 1e-250, δ = 1e-100, reads a non-finite sum: the mark would be set on a finite S"
+    );
+    assert!(
+        !finite(&at(0.0), &x),
+        "a shadow at ‖δ₀‖ = 0 reads a finite sum"
+    );
+}
+
+#[test]
+fn shadow_tiny_delta0_finite() {
+    check_tiny_delta0(|b, x| b.sum_finite(x));
+}
+
+negative_control!(
+    shadow_tiny_delta0_finite,
+    "a finalised sum formed with δ·δ₀ in place of δ/δ₀ must fail",
+    expected = "the mark would be set on a finite S",
+    check_tiny_delta0(|b, x| (b.s_sum() + (b.separation(x) * 1e-250).ln()).is_finite())
 );
