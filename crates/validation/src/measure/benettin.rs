@@ -9,12 +9,13 @@ use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
 use kernel::driver::advance::Advance;
 use kernel::driver::benettin::{
-    integrate_ftle_with, Absolute, BenettinParams, Displacement, ShadowForm,
+    completed_renorms, integrate_ftle_with, sum_failed, Absolute, BenettinParams, Displacement,
+    ShadowForm,
 };
 use kernel::driver::wrapper::WrapperReal;
 use kernel::occupant::yoshida4::Yoshida4;
 use kernel::occupant::State;
-use kernel::payload::tm_t_end_step;
+use kernel::payload::{sd_is_failed, tm_t_end_step};
 
 use std::path::Path;
 use std::sync::OnceLock;
@@ -141,7 +142,9 @@ pub struct Ftle {
 
 /// `λ_T` of `orbit` by the occupant `A` at `R`, the shadow in the form `F`, at `‖δ₀‖ = delta_0` and `n_renorm`, through
 /// `kernel::driver::benettin::integrate_ftle_with` at the orbit's sim key ([`sim_key`]) with no collision: the FTLE
-/// finalised at the run's end, in the form's own `δ`.
+/// finalised at the run's end, in the form's own `δ`; NaN, as `kernel::driver::benettin::ftle_read` reads it, whenever
+/// payload §6's `ftle_valid` is false: a failed sample, no completed renormalisation (`n_renorm` 0 or beyond the run's
+/// macro-steps; R-253, R-254), or a shadow whose sum went non-finite (R-972).
 pub fn measure<A: Advance, R: WrapperReal + Into<f64>, F: ShadowForm>(
     orbit: &Orbit,
     delta_0: f64,
@@ -163,8 +166,15 @@ where
         p: out.p,
     };
     let steps = tm_t_end_step(out.times);
+    // `ftle_read`'s predicate on the written state; the value is the form's own, so it is read from the shadow.
+    let valid =
+        !sd_is_failed(out.packed_a) && completed_renorms(steps, n_renorm) > 0 && !sum_failed(out.S);
     Ftle {
-        lambda: shadow.ftle(&x, steps, key.dt_macro).into(),
+        lambda: if valid {
+            shadow.ftle(&x, steps, key.dt_macro).into()
+        } else {
+            f64::NAN
+        },
         s_sum: shadow.s_sum().into(),
         steps,
         delta: shadow.separation(&x).into(),

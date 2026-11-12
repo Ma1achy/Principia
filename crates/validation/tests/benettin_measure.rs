@@ -2,6 +2,8 @@
 //! - `lagrange_known_exponent`: Routh's exponent of Lagrange's orbit, `½·√(√(27β) − 1)·ω` where `27β > 1` and 0 where
 //!   not, at the equal-mass, `(0.5, 0.3, 0.2)` and `(0.98, 0.01, 0.01)` masses, against the roots of the rotating
 //!   frame's characteristic equation (computed independently, to f64 rounding); the orbit's canonical `ω`.
+//! - `measure_validity`: the measurement reads NaN, as `ftle_read` does, with no completed renormalisation:
+//!   `n_renorm` 0 or one beyond the run's macro-steps, in both forms; at `n_renorm` equal to them it is finite.
 //! - `test10_change`: dd test 10's change is the largest of the three variants' differences over `max(|λ_T|, 1/T)`,
 //!   infinite where a read is not finite.
 //! - `calibration_rule`: the rule picks the smallest worst change, ties at two significant digits going to the larger
@@ -37,6 +39,10 @@ use validation::measure::benettin::{
     PROPOSED_N_RENORM, PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
 };
 use validation::negative_control;
+
+use kernel::driver::benettin::{Absolute, Displacement};
+use kernel::occupant::yoshida4::Yoshida4;
+use validation::measure::benettin::measure;
 
 fn root() -> &'static Path {
     Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../.."))
@@ -112,6 +118,51 @@ negative_control!(
             0.0
         }
     })
+);
+
+// ── measure_validity ────────────────────────────────────────────────────────────────────────────────────────────
+
+/// A read of `λ_T` on `orbit` at `n_renorm`: the form's measurement, or a stand-in.
+type Read = fn(&Orbit, u32) -> f64;
+
+fn check_validity(reads: [Read; 2]) {
+    // A short run: a few macro-steps, so that `n_renorm` can reach past them.
+    let orbit = figure_eight(0.01);
+    let steps = measure::<Yoshida4, f64, Absolute>(&orbit, 1e-3, 1).steps;
+    assert!(steps > 1, "the run completes {steps} macro-steps");
+    for read in reads {
+        for n in [0, steps + 1] {
+            let l = read(&orbit, n);
+            assert!(
+                l.is_nan(),
+                "n_renorm = {n} past {steps} steps reads {l}, not NaN"
+            );
+        }
+        for n in [1, steps] {
+            let l = read(&orbit, n);
+            assert!(l.is_finite(), "n_renorm = {n} of {steps} steps reads {l}");
+        }
+    }
+}
+
+fn absolute(o: &Orbit, n: u32) -> f64 {
+    measure::<Yoshida4, f64, Absolute>(o, 1e-3, n).lambda
+}
+
+fn displacement(o: &Orbit, n: u32) -> f64 {
+    measure::<Yoshida4, f32, Displacement>(o, 1e-3, n).lambda
+}
+
+#[test]
+fn measure_validity() {
+    check_validity([absolute, displacement]);
+}
+
+negative_control!(
+    measure_validity,
+    "a read finite with no completed renormalisation must fail",
+    expected = "not NaN",
+    check_validity([|o, n| absolute(o, n.max(1)), displacement])
 );
 
 // ── test10_change ───────────────────────────────────────────────────────────────────────────────────────────────
