@@ -37693,8 +37693,9 @@ Changes REQ-EVT-035. The parse printed R-973 for this answer.
 ## R-974 — RQ-793, the displacement form of the FTLE shadow: option (a), a joint step on the occupant interface; whether the force difference is formed plainly in f32 (a1) or cancellation-free (a2) is chosen by a measurement whose criterion TASK-M3-72 writes before any run, physics-reviewed *(closes RQ-793)*
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-793 moved),
 `docs/archive/review_queue/M0.md` (RQ-793 with its ruling), `docs/design/principia_dd_simstate_payload.md` § 8 (a
-dated line), `docs/contracts/principia_integrator_contract.md` Part 2 and Part 2a (each a dated line), REQ-VAL-038
-(reqio), TASK-M3-72, `plan/tasks.yaml` and `plan/rule_groups.yaml`; changes REQ-VAL-038*
+dated line), `docs/contracts/principia_integrator_contract.md` Part 2 (a dated line) and Part 2a (two dated lines, the second on
+the same physical time), REQ-VAL-038 (reqio), REQ-VAL-355 (reqio, new), TASK-M3-72, `plan/tasks.yaml`,
+`plan/MILESTONES.md` and `plan/rule_groups.yaml`; changes REQ-VAL-038; adds REQ-VAL-355*
 
 The owner's words (12 Nov 2026), verbatim:
 
@@ -37732,7 +37733,7 @@ renormalisation, with its control.
 
 R-974 is in the "physics" group of `plan/rule_groups.yaml`.
 
-Changes REQ-VAL-038. The parse printed R-974 for this answer.
+Changes REQ-VAL-038; adds REQ-VAL-355. The parse printed R-974 for this answer.
 
 ## R-975 — RQ-787, a blend's interior pixel whose blended masses raise `M01_TINY` between two valid ends: option (a), it saturates and is never blank, by physics review's smooth hold: the blended ratio of the two light masses kept and the pair lifted just to the allowed minimum, the rest of the blend unchanged *(closes RQ-787)*
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-787 moved),
@@ -37772,9 +37773,10 @@ Changes REQ-CHART-189 and REQ-CHART-211. The parse printed R-975 for this answer
 
 ## R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-794 moved),
-`docs/archive/review_queue/M0.md` (RQ-794 with its ruling), REQ-INT-076 (reqio, its note), a new requirement (reqio),
-TASK-M3-72, TASK-M3-14, TASK-M4-13, `plan/tasks.yaml` and `plan/rule_groups.yaml`; changes REQ-INT-076; adds
-REQ-GUI-437*
+`docs/archive/review_queue/M0.md` (RQ-794 with its ruling), REQ-INT-076 (reqio, its note), REQ-GUI-437 to REQ-GUI-442
+and REQ-VAL-356 (reqio, new), TASK-M3-73 (new), TASK-M3-72, TASK-M3-14, TASK-M4-13, TASK-M8-11, TASK-M8-22,
+TASK-M8-76, TASK-M8-80, TASK-M9-41, `plan/tasks.yaml`, `plan/MILESTONES.md` and `plan/rule_groups.yaml`; changes
+REQ-INT-076; adds REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356*
 
 The owner's words (12 Nov 2026), verbatim:
 
@@ -37803,7 +37805,7 @@ named for the later views.
 
 R-976 is in the "values" group of `plan/rule_groups.yaml`.
 
-Changes REQ-INT-076 (its note and `rq`); adds REQ-GUI-437. The parse printed R-976 for this answer.
+Changes REQ-INT-076 (its note and `rq`); adds REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356. The parse printed R-976 for this answer.
 
 ## R-977 — RQ-785, P4's unit and the set-up of P2 and P4: P4's gaps counted as a fraction of picture width with their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; a pinned trace (2a), P2 at both ends (3b), the fixture's own output steps at each chart's home window, zoom 1 (4a); P2's unit left open, then settled by R-984 *(on RQ-785, which R-984 closes)*
 *Extended by R-984 (12 Nov 2026, the owner's follow-up on RQ-785: P2's jump is measured as a fraction of picture width
@@ -37812,8 +37814,8 @@ and read in px at 512×512, 1024×1024 and 1920×1080, as P4's gaps are; RQ-785 
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-785, a dated line),
 `docs/design/principia_chart_composition.md` (the dated paragraph on the owner's reply of 10 Nov),
 `docs/design/principia_lines.md` (P2 and P4's line), `plan/charts/m2-chart-replan-addition.md` (its list of open
-entries), REQ-CHART-202 and REQ-CHART-203 (reqio), TASK-M2-100 and `plan/rule_groups.yaml`; changes REQ-CHART-202 and
-REQ-CHART-203*
+entries), REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203 (reqio), TASK-M2-100 and `plan/rule_groups.yaml`; changes
+REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203*
 
 The owner's words (12 Nov 2026), verbatim:
 
@@ -37842,7 +37844,7 @@ chart tasks is unchanged.
 
 R-977 is in the "design" group of `plan/rule_groups.yaml`.
 
-Changes REQ-CHART-202 and REQ-CHART-203. The parse printed R-977 for this answer.
+Changes REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203. The parse printed R-977 for this answer.
 
 ## R-978 — RQ-786, the domain an untransformed input inherits from a field with one finite end: option (b), the finite end kept and the other the measured one per draw, built with TASK-M8-22's legend; until then such a wire stays refused, as built *(closes RQ-786; amends R-815)*
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-786 moved),
@@ -37947,7 +37949,7 @@ R-981 is in the "process" group of `plan/rule_groups.yaml`.
 
 ## R-982 — Any red job on `main` is a red `main`; the per-merge verdict covers every job of the per-merge run, so the verdict and the run's jobs cannot disagree *(vetoes D-2 of the report of 12 Nov 2026; amends R-907 and R-908; refines R-681)*
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `plan/OPERATIONS.md` § "Merging" (what is red
-`main`, and the `process` job's line), the forward and "Still in force" lines of R-681, R-907 and
+`main`, the `process` job's line and the per-merge tier's paragraph, each with its *Was*), the forward and "Still in force" lines of R-681, R-907 and
 R-908, REQ-TOOL-228 (reqio, new, with R-979), REQ-TOOL-224 (reqio), TASK-M0-59 (new), `plan/tasks.yaml` and
 `plan/rule_groups.yaml`; adds REQ-TOOL-228 with R-979; changes REQ-TOOL-224*
 
@@ -38012,8 +38014,8 @@ R-983 is in the "process" group of `plan/rule_groups.yaml`.
 `REVIEW_QUEUE.md` (RQ-785 moved, its dated line noted as settled), `docs/archive/review_queue/M0.md` (RQ-785 with its
 ruling), `decisions.md` § R-977 (its heading, forward and "Still in force" lines, and a dated line on what it left
 open), `docs/design/principia_lines.md` § 8 and `docs/design/principia_chart_composition.md` (each a dated line),
-`plan/charts/m2-chart-replan-addition.md` (its lists of open entries), REQ-CHART-202 and REQ-CHART-203 (reqio),
-TASK-M2-100 and `plan/rule_groups.yaml`; changes REQ-CHART-202 and REQ-CHART-203*
+`plan/charts/m2-chart-replan-addition.md` (its lists of open entries), REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203
+(reqio), TASK-M2-100 and `plan/rule_groups.yaml`; changes REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203*
 
 The owner's words (12 Nov 2026), verbatim:
 
@@ -38034,4 +38036,4 @@ dispatched.
 
 R-984 is in the "design" group of `plan/rule_groups.yaml`.
 
-Changes REQ-CHART-202 and REQ-CHART-203. R-984 was reserved for this follow-up.
+Changes REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203. R-984 was reserved for this follow-up.
