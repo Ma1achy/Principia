@@ -23,7 +23,7 @@
 //! time to the same grid time, with the sample's `N_sub`, and it takes no more substeps than the sample took: a
 //! macro-step the sample's `done` cut short stops the shadow at the same substep, so `δ` is always read between two
 //! states at one time. Taking the sample's `N_sub` makes the two the same discrete map, whose separation the exponent
-//! is of. The shadow's detectors only watch (R-972, pending in the rulings PR; the owner's words of 12 Nov 2026 on
+//! is of. The shadow's detectors only watch (R-972; the owner's words of 12 Nov 2026 on
 //! RQ-791: "The shadow's collision check only watches and the shadow carries on through"): what would be the shadow's
 //! terminal neither stops the shadow nor touches the sample, whose own detectors and outcome are its own. A shadow that
 //! marches through a close approach can blow up; that is the next note's.
