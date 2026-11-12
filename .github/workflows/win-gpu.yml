@@ -50,10 +50,12 @@
 #
 # The WSL2 distro `principia-wsl` (RQ-751 option (c), built in parallel to replace (b) and never blocking; the owner's
 # words of 9 Nov 2026), dispatched by hand alone, each job by `only` naming it, never on a push, the schedule or `all`:
-# - `wsl-register` imports the image this run's hosted `wsl-image` job builds (`scripts/wsl/build-image.sh`) to
-#   E:\wsl\principia-wsl\, as gh-runner: `gh workflow run win-gpu.yml --ref main -f only=wsl-register`, with
-#   `-f replace=true` to replace a registered one. It refuses an image whose manifest isn't the one pinned in
-#   `scripts/wsl/manifest.sha256`, and so refuses every image until a reviewed PR pins one.
+# - `wsl-register` imports the image of this commit's recipe to E:\wsl\principia-wsl\, as gh-runner: `gh workflow run
+#   win-gpu.yml --ref main -f only=wsl-register`, with `-f replace=true` to replace a registered one. The image comes
+#   from the PC's cache, E:\runner-tools\wsl-cache\, when it holds one of this recipe, and otherwise from this run's
+#   hosted `wsl-image` job (`scripts/wsl/build-image.sh`), downloaded and cached (below). It refuses an image whose
+#   manifest isn't the one pinned in `scripts/wsl/manifest.sha256`, and so refuses every image until a reviewed PR pins
+#   one.
 # - `wsl-proofs` runs the six proofs, each reported PASS or FAIL with its evidence in its log and in `wsl-proofs.txt` in
 #   its artifact: `gh workflow run win-gpu.yml --ref main -f only=wsl-proofs`. Proof 5 compares this run's rebuild, and
 #   proof 6 this run's hosted `wsl-parity`, with what is in the distro.
@@ -70,6 +72,18 @@
 # SHA-256 against those built (`wsl.ps1 check-image`), and tried again if it isn't whole. Those artifacts' names
 # carry the run but not the attempt, so a re-run of the failed jobs alone finds the first attempt's; their uploads
 # overwrite, so a re-run of the hosted job replaces them. `wsl.ps1 register` still checks the image's length and hash.
+#
+# The image cache (the owner's words of 12 Nov 2026: "stop moving the image every run"). The image's bytes differ from
+# build to build (run 43312851701: tar order, times, logs), so `wsl-register` files it on the PC by its recipe, the
+# SHA-256 of `build-image.sh`, the files of the repository it reads and the manifest's pin (`wsl.ps1`'s
+# `Get-RecipeKey`), in E:\runner-tools\wsl-cache\<recipe key>\ with the length and SHA-256 it had when built. The
+# owner makes that folder, writable by gh-runner; if it isn't there, the job's first step after the checkout's record
+# fails, naming it, and nothing is written anywhere else. On a hit the job downloads nothing; on a miss it downloads as
+# above, and `register` checks the download and moves it into the cache. Either way the cache's copy is checked, its
+# length and SHA-256 against those recorded, before it is imported: never trusted by its name. The cache keeps this
+# image and the one used before it, no more. The hosted job still builds on every `wsl-register` dispatch: no job may
+# wait on a self-hosted one (`ci_self_hosted.rs`: never gathered), and a run reads another's artifacts only with a
+# token, so the hosted side can't know what the PC holds. `wsl-proofs` builds as before: proof 5 is this run's rebuild.
 #
 # The paths: what `scripts/ci_changes.sh` calls a GPU path, written as a filter, less R-692's five paths of `gui`. Docs-only
 # pushes run nothing (R-711 item 5); nor do `gui` and `prin`, which no job here builds. `schedule` and
@@ -549,21 +563,22 @@ jobs:
           retention-days: 90
           overwrite: true
 
-  # Registers `principia-wsl` from this run's image (`.github/scripts/wsl.ps1 register`), as gh-runner, its disk under
-  # E:\wsl\principia-wsl\, never C:. The step ends `registered principia-wsl: ...` and exit 0, or exit 125 naming why
-  # it refused.
-#
-# The image's download gets 25 minutes a try: 1.5 times the slower of the two whole downloads of it on the PC, 15 min
-# 51.5 s (run 42944409475) and 16 min 27.8 s (run 42954587933), each about 982.8 MB, rounded up to the minute. One try
-# ended short after 31 min 13 s (run 43128608743) and one hung until the job's limit, 57 min 49 s (run 43146846084).
-# The job's 90 minutes: the 4 minutes the PC has taken to reach the download (3 min 59 s at most), the two tries' 50,
-# 5 for the two checks' SHA-256 of the image, and the 31 the old limit of 60 left the registration after a 25-minute
-# download.
+  # Registers `principia-wsl` from the cached image of this commit's recipe (`.github/scripts/wsl.ps1 register`), as
+  # gh-runner, its disk under E:\wsl\principia-wsl\, never C:. The step ends `registered principia-wsl: ...` and exit
+  # 0, or exit 125 naming why it refused. Its log says `cache hit` or `cache miss`.
+  #
+  # The image's download gets 25 minutes a try: 1.5 times the slower of the two whole downloads of it on the PC, 15 min
+  # 51.5 s (run 42944409475) and 16 min 27.8 s (run 42954587933), each about 982.8 MB, rounded up to the minute. One
+  # try ended short after 31 min 13 s (run 43128608743) and one hung until the job's limit, 57 min 49 s (run
+  # 43146846084). Run 43312851701's took 12 min 56 s; the limit stays on the slower until the cache's misses time more.
+  # The job's 95 minutes: the 4 minutes the PC has taken to reach the download (3 min 59 s at most), the cache lookup's
+  # 5, the two tries' 50, 5 for the two checks' SHA-256 of the image, and the 31 the old limit of 60 left the
+  # registration after a 25-minute download, which now holds the move into the cache and its check as well.
   wsl-register:
     if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-register'
     needs: [wsl-image]
     runs-on: [self-hosted, windows, nvidia]
-    timeout-minutes: 90
+    timeout-minutes: 95
     concurrency:
       group: wsl-register
       cancel-in-progress: false
@@ -594,9 +609,21 @@ jobs:
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
           exit $LASTEXITCODE
+      - name: The image cache on E:, there and writable
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 cache-ready
+          exit $LASTEXITCODE
+      - name: This run's recipe, its image in the cache and whole
+        id: cache
+        timeout-minutes: 5
+        continue-on-error: true
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 cache-lookup
+          exit $LASTEXITCODE
       - name: This run's image
         id: image
         timeout-minutes: 25
+        if: steps.cache.outcome != 'success'
         continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -614,6 +641,7 @@ jobs:
       - name: This run's image, again if the first download didn't finish whole
         id: image-again
         if: steps.image-check.outcome != 'success'
+          && steps.cache.outcome != 'success'
         timeout-minutes: 25
         continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -630,13 +658,14 @@ jobs:
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 check-image
           exit $LASTEXITCODE
       - name: This run's image, never downloaded whole
-        if: steps.image-check.outcome != 'success' && steps.image-check-again.outcome != 'success'
+        if: steps.image-check.outcome != 'success' && steps.image-check-again.outcome != 'success' && steps.cache.outcome != 'success'
         run: |
           Write-Output '::error::download-artifact failed, hung or ended short twice (the image): neither attempt gave an image of the length and SHA-256 built'
           exit 1
       - name: Register principia-wsl
         env:
           WSL_IMAGE: ${{ runner.temp }}/wsl-image
+          WSL_CACHE_HIT: ${{ steps.cache.outcome }}
           WSL_REPLACE: ${{ inputs.replace }}
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run wsl-register powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 register
