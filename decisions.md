@@ -37725,8 +37725,8 @@ Changes REQ-VAL-038. The parse printed R-974 for this answer.
 ## R-975 — RQ-787, a blend's interior pixel whose blended masses raise `M01_TINY` between two valid ends: option (a), it saturates and is never blank, by physics review's smooth hold: the blended ratio of the two light masses kept and the pair lifted just to the allowed minimum, the rest of the blend unchanged *(closes RQ-787)*
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-787 moved),
 `docs/archive/review_queue/M0.md` (RQ-787 with its ruling), `docs/design/principia_chart_composition.md` (the dated
-paragraph on PR #482's physics review, the R-369 paragraph's note, and § 17.11's "Out of feasible", case 2, and the
-tag table's `M01_TINY` row, each with its *Was*), `docs/design/principia_chart_space_model.md` (§ 0's note and
+paragraph on PR #482's physics review, the R-369 paragraph's note, § 17.11's "Out of feasible", case 2, and the
+last note under "Tagged at an end", each with its *Was*), `docs/design/principia_chart_space_model.md` (§ 0's note and
 Corollary 1's note, each with its *Was*), `plan/charts/m2-chart-replan-addition.md` (its list of open entries),
 REQ-CHART-189 and REQ-CHART-211 (reqio), TASK-M2-90, TASK-M2-81, TASK-M2-103 and `plan/rule_groups.yaml`; changes
 REQ-CHART-189 and REQ-CHART-211*
@@ -37852,7 +37852,7 @@ Changes REQ-GEN-019; adds REQ-GEN-046. The parse printed R-978 for this answer.
 ## R-979 — RQ-789: option (a), REQ-TOOL-223 amended: only the release-build install step's network and archive-download failures count as infrastructure, and their verdict is "no result", never green; any other release-build failure stays red *(closes RQ-789)*
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-789 moved),
 `docs/archive/review_queue/M0.md` (RQ-789 with its ruling), REQ-TOOL-223 (reqio), REQ-TOOL-228 (reqio, new, with
-R-982), TASK-M0-59 (new), `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes
+R-982), TASK-M0-59 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; changes
 REQ-TOOL-223; adds REQ-TOOL-228 with R-982*
 
 The owner's words (12 Nov 2026), verbatim:
