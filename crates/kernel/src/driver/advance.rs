@@ -35,9 +35,23 @@ pub trait Count: Sized {
     /// `n` as `Self`.
     fn count(n: u32) -> Self;
 
-    /// `self` truncated toward zero to a `u32`: `0` for a NaN or a negative, `u32::MAX` above it.
+    /// `self` truncated toward zero to a `u32`, clamped into range in the float type before the cast
+    /// (gpu_determinism_note § "The discipline", rule 3: an out-of-range float-to-unsigned conversion is undefined on
+    /// the GPU, so the cast never sees one): a NaN, tested on its bits, is sent to `0` first; a value below `0` gives
+    /// `0`; one at or above `2³²` gives `u32::MAX`; and one in between its truncation, which the cast then forms. The
+    /// result is these selects', the same on every backend, not the CPU cast's saturation.
     fn whole(self) -> u32;
 }
+
+/// `2³²`, the least f32 above `u32`'s range.
+const TWO_32_F32: f32 = 4_294_967_296.0;
+
+/// The greatest f32 below `2³²`, `2³² − 2⁸`: the top of the range an f32 is clamped into before the cast.
+const TOP_F32: f32 = 4_294_967_040.0;
+
+/// `u32::MAX`, exact at f64: the top of the range an f64 is clamped into before the cast, every f64 at or above it
+/// truncating to it.
+const TOP_F64: f64 = 4_294_967_295.0;
 
 impl Count for f32 {
     #[inline]
@@ -47,7 +61,20 @@ impl Count for f32 {
 
     #[inline]
     fn whole(self) -> u32 {
-        self as u32
+        let bits = self.to_bits();
+        let x = f32::from_bits(if bits & 0x7FFF_FFFF > 0x7F80_0000 {
+            0
+        } else {
+            bits
+        });
+        let above = x >= TWO_32_F32;
+        let x = if x > 0.0 { x } else { 0.0 };
+        let x = if x < TOP_F32 { x } else { TOP_F32 };
+        if above {
+            u32::MAX
+        } else {
+            x as u32
+        }
     }
 }
 
@@ -59,7 +86,15 @@ impl Count for f64 {
 
     #[inline]
     fn whole(self) -> u32 {
-        self as u32
+        let bits = self.to_bits();
+        let x = f64::from_bits(if bits & 0x7FFF_FFFF_FFFF_FFFF > 0x7FF0_0000_0000_0000 {
+            0
+        } else {
+            bits
+        });
+        let x = if x > 0.0 { x } else { 0.0 };
+        let x = if x < TOP_F64 { x } else { TOP_F64 };
+        x as u32
     }
 }
 

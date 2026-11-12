@@ -31,10 +31,13 @@
 //!   and the seam's `ADVANCE` from a later macro index; their controls the uncorrected quotient and a seam from 0.
 //! - `az_form_orders`: each stepper's form at its own order on the harmonic oscillator (KDK second order there, being
 //!   separable); its control takes Yoshida-4's form for Yoshida-6.
+//! - `az_whole_nan`, `az_whole_negative`, `az_whole_above`: `Count::whole` clamps in the float type before the cast
+//!   (gpu_determinism_note § "The discipline", rule 3): a NaN on its bits to `0`, a negative to `0`, at or above `2³²`
+//!   to `u32::MAX`; their controls a NaN sent to the top, a negative by its magnitude, and a clamp with no select.
 
 use std::cell::Cell;
 
-use kernel::driver::advance::{Advance, AdvanceParams, Advanced, Cadence};
+use kernel::driver::advance::{Advance, AdvanceParams, Advanced, Cadence, Count};
 use kernel::occupant::euler::Euler;
 use kernel::occupant::kdk::Kdk;
 use kernel::occupant::rk4::Rk4;
@@ -1327,6 +1330,138 @@ negative_control!(
     "a rule one boundary short",
     expected = "the boundary at or before",
     check_boundary_f32(|t, d| boundary_at_or_before::<f32>(t, d).saturating_sub(1))
+);
+
+// ── The whole count, clamped before the cast (gpu_determinism_note § "The discipline", rule 3) ─────────────────
+
+/// `Count::whole` at f32 and at f64, the rules under test.
+struct Whole {
+    single: fn(f32) -> u32,
+    double: fn(f64) -> u32,
+}
+
+/// The kernel's `Count::whole`.
+const WHOLE: Whole = Whole {
+    single: Count::whole,
+    double: Count::whole,
+};
+
+/// A NaN, of either sign and any payload, is sent to `0` (tested on its bits before the cast).
+fn check_whole_nan(w: &Whole) {
+    for bits in [0x7FC0_0000u32, 0xFFC0_0000, 0x7F80_0001, 0xFFFF_FFFF] {
+        assert_eq!(
+            (w.single)(f32::from_bits(bits)),
+            0,
+            "a NaN at f32 ({bits:#x}) is 0"
+        );
+    }
+    for bits in [
+        0x7FF8_0000_0000_0000u64,
+        0xFFF8_0000_0000_0000,
+        0x7FF0_0000_0000_0001,
+        0xFFFF_FFFF_FFFF_FFFF,
+    ] {
+        assert_eq!(
+            (w.double)(f64::from_bits(bits)),
+            0,
+            "a NaN at f64 ({bits:#x}) is 0"
+        );
+    }
+}
+
+/// A value below `0` is `0`, `−∞` and `−0` among them; one at or just above `0` truncates.
+fn check_whole_negative(w: &Whole) {
+    for x in [-1.5f32, -0.5, -0.0, -1e30, f32::NEG_INFINITY, f32::MIN] {
+        assert_eq!((w.single)(x), 0, "a negative at f32 ({x}) is 0");
+    }
+    for x in [-1.5f64, -0.5, -0.0, -1e300, f64::NEG_INFINITY, f64::MIN] {
+        assert_eq!((w.double)(x), 0, "a negative at f64 ({x}) is 0");
+    }
+    assert_eq!((w.single)(0.0), 0);
+    assert_eq!((w.single)(2.75), 2, "in range, truncated, at f32");
+    assert_eq!((w.double)(0.0), 0);
+    assert_eq!((w.double)(2.75), 2, "in range, truncated, at f64");
+}
+
+/// A value at or above `2³²` is `u32::MAX`; the greatest float below it truncates to itself (`2³² − 2⁸` at f32,
+/// `u32::MAX` at f64, and `u32::MAX + ½` truncates to `u32::MAX`).
+fn check_whole_above(w: &Whole) {
+    for x in [4_294_967_296.0f32, 1e30, f32::MAX, f32::INFINITY] {
+        assert_eq!(
+            (w.single)(x),
+            u32::MAX,
+            "above range at f32 ({x}) is u32::MAX"
+        );
+    }
+    assert_eq!(
+        (w.single)(4_294_967_040.0),
+        4_294_967_040,
+        "the greatest f32 below 2^32 is itself"
+    );
+    for x in [
+        4_294_967_296.0f64,
+        4_294_967_295.5,
+        1e300,
+        f64::MAX,
+        f64::INFINITY,
+    ] {
+        assert_eq!(
+            (w.double)(x),
+            u32::MAX,
+            "above range at f64 ({x}) is u32::MAX"
+        );
+    }
+    assert_eq!((w.double)(4_294_967_295.0), u32::MAX);
+    assert_eq!(
+        (w.double)(4_294_967_294.5),
+        u32::MAX - 1,
+        "just below, truncated, at f64"
+    );
+}
+
+#[test]
+fn az_whole_nan() {
+    check_whole_nan(&WHOLE);
+}
+
+negative_control!(
+    az_whole_nan,
+    "a NaN sent to the top of the range",
+    expected = "a NaN at f32",
+    check_whole_nan(&Whole {
+        single: |x| if x.is_nan() { u32::MAX } else { x.whole() },
+        double: |x| if x.is_nan() { u32::MAX } else { x.whole() },
+    })
+);
+
+#[test]
+fn az_whole_negative() {
+    check_whole_negative(&WHOLE);
+}
+
+negative_control!(
+    az_whole_negative,
+    "a negative taken by its magnitude",
+    expected = "a negative at f32",
+    check_whole_negative(&Whole {
+        single: |x| x.abs().whole(),
+        double: |x| x.abs().whole(),
+    })
+);
+
+#[test]
+fn az_whole_above() {
+    check_whole_above(&WHOLE);
+}
+
+negative_control!(
+    az_whole_above,
+    "a value above range clamped to the greatest float below 2^32 and cast, with no select of u32::MAX",
+    expected = "above range at f32",
+    check_whole_above(&Whole {
+        single: |x| x.min(4_294_967_040.0).whole(),
+        double: Count::whole,
+    })
 );
 
 /// Masses that do not sum to one, with momenta, at f64.
