@@ -1223,3 +1223,32 @@ negative_control!(
         out
     })
 );
+
+/// The latest boundary at or before `t` at f32 as at f64 (the width's own whole count, `Count::whole`): `boundary` the
+/// rule under test.
+fn check_boundary_f32(boundary: fn(f32, f32) -> u32) {
+    for (t, k) in [(0.8f32, 6), (0.75, 6), (2.0, 16), (0.1, 0), (10.0, 80)] {
+        assert_eq!(
+            boundary(t, 0.125),
+            k,
+            "the boundary at or before {t} on 1/8, at f32"
+        );
+    }
+    assert_eq!(
+        boundary(1e9, 0.125),
+        u32::MAX,
+        "beyond u32's range, its last"
+    );
+}
+
+#[test]
+fn az_boundary_f32() {
+    check_boundary_f32(boundary_at_or_before::<f32>);
+}
+
+negative_control!(
+    az_boundary_f32,
+    "a rule one boundary short",
+    expected = "the boundary at or before",
+    check_boundary_f32(|t, d| boundary_at_or_before::<f32>(t, d).saturating_sub(1))
+);
