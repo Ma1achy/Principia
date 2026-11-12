@@ -1972,6 +1972,9 @@ const NOT_A_CLASSIFIER_TEST: (&str, &str) = (
      fn statement(line: &str) -> bool { line.starts_with(\"  statement: \") }\n",
 );
 
+/// What ends each nextest step of the `tests` job's shards: the shard's slice of 3.
+const SLICE: &str = " --partition hash:${{ matrix.shard }}/3";
+
 /// The step condition the `tests` job runs a tier (b) flag's readers' tests on, beside code or not.
 fn data_condition(flag: &str) -> String {
     format!("needs.changes.outputs.{flag} == 'true'")
@@ -1990,6 +1993,14 @@ fn data_tests(wf: &Value, flag: &str) -> Vec<(String, String)> {
         .filter(|s| text(&s["if"]) == data_condition(flag))
     {
         let run = text(&step["run"]);
+        // Each shard's slice of the step (the owner, 11 Nov 2026: "split the ci job as planned"): together the slices
+        // run the step's tests once.
+        let run = run
+            .strip_suffix(SLICE)
+            .unwrap_or_else(|| {
+                panic!("ci_changes: the {flag} step `{run}` is not run as each shard's slice")
+            })
+            .to_owned();
         let words: Vec<&str> = run.split_whitespace().collect();
         let (package, tests) = match words.as_slice() {
             ["cargo", "nextest", "run", "-p", package, tests @ ..] => (*package, tests),
@@ -2163,8 +2174,8 @@ mod gui_reader_dropped {
             &read("scripts/ci_changes.sh"),
             &edited(
                 ".github/workflows/ci.yml",
-                "        run: cargo nextest run -p render --test qa_TASK-M1-03\n",
-                "        run: cargo nextest run -p render --test qa_TASK-M7-02\n"
+                "        run: cargo nextest run -p render --test qa_TASK-M1-03 --partition hash:${{ matrix.shard }}/3\n",
+                "        run: cargo nextest run -p render --test qa_TASK-M7-02 --partition hash:${{ matrix.shard }}/3\n"
             ),
             &named_files(),
             &test_sources(),
@@ -2182,8 +2193,8 @@ mod workspace_build {
             &read("scripts/ci_changes.sh"),
             &edited(
                 ".github/workflows/ci.yml",
-                "        run: cargo nextest run -p validation --test part6_catalogue\n",
-                "        run: cargo nextest run -p validation --workspace --test part6_catalogue\n"
+                "        run: cargo nextest run -p validation --test part6_catalogue --partition hash:${{ matrix.shard }}/3\n",
+                "        run: cargo nextest run -p validation --workspace --test part6_catalogue --partition hash:${{ matrix.shard }}/3\n"
             ),
             &named_files(),
             &test_sources(),
@@ -2233,6 +2244,15 @@ fn jobs(wf: &Value) -> Vec<(String, Value)> {
         .iter()
         .map(|(k, v)| (k.clone(), v.clone()))
         .collect()
+}
+
+/// The jobs a job's `needs:` names, one or a list.
+fn needs_of(job: &Value) -> Vec<String> {
+    match &job["needs"] {
+        Value::Array(a) => a.iter().map(text).collect(),
+        Value::Null => Vec::new(),
+        one => vec![text(one)],
+    }
 }
 
 // ---- The jobs the classification steers ---------------------------------------------------------------------------
@@ -2521,8 +2541,8 @@ mod a_required_job_skips_on_the_verdict {
         expected = "skips on `${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}` under the required name `ci`",
         check_required(&workflows_edited(
             "ci.yml",
-            "    name: ci\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
-            "    name: ci\n    needs: changes\n    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}\n",
+            "    name: ci\n    needs: [changes, tests]\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
+            "    name: ci\n    needs: [changes, tests]\n    if: ${{ !cancelled() && needs.changes.outputs.docs_only != 'true' }}\n",
         ))
     );
 }
@@ -2710,6 +2730,18 @@ fn pr_holds(
         if let Some(key) = term.strip_prefix("env.") {
             return env.get(key).cloned().unwrap_or_default();
         }
+        // A number, as a matrix's shard is compared with.
+        if term.parse::<u32>().is_ok() {
+            return term.to_owned();
+        }
+        // A matrix job's shard, which `pr_job` sets in the job's `env` it reads, under this name.
+        if term == "matrix.shard" {
+            return env.get("matrix.shard").cloned().unwrap_or_default();
+        }
+        // The Mesa cache's restore (`.github/actions/mesa-debs`): a miss, so the apt install runs.
+        if term == "steps.mesa.outputs.installed" {
+            return String::new();
+        }
         panic!("ci_changes: an expression this test does not read: `{term}`")
     };
     let value = |term: &str| -> String {
@@ -2775,15 +2807,27 @@ fn pr_job(
         && check.contains("[ \"$CHANGES\" = success ] ||")
         && changes != "success";
     let mut commands = Vec::new();
+    // A matrix of shards runs as each shard: its commands are every shard's, once, each nextest step's slice read as
+    // the step (`SLICE`), which together they run once.
+    let shards: Vec<String> = job["strategy"]["matrix"]["shard"]
+        .as_array()
+        .map(|a| a.iter().map(text).collect())
+        .unwrap_or_else(|| vec![String::new()]);
     if runs && !fails_first {
-        for step in steps {
-            let cond = text(&step["if"]);
-            if cond.is_empty() || pr_holds(&cond, changes, outputs, &env) == "true" {
-                commands.push(format!(
-                    "{}{}",
-                    text(&step["run"]).trim(),
-                    text(&step["uses"])
-                ));
+        for shard in &shards {
+            env.insert("matrix.shard".to_owned(), shard.clone());
+            for step in steps {
+                let cond = text(&step["if"]);
+                if cond.is_empty() || pr_holds(&cond, changes, outputs, &env) == "true" {
+                    let command = format!(
+                        "{}{}",
+                        text(&step["run"]).trim().replace(SLICE, ""),
+                        text(&step["uses"])
+                    );
+                    if !commands.contains(&command) {
+                        commands.push(command);
+                    }
+                }
             }
         }
     }
@@ -2885,12 +2929,25 @@ fn check_every_tier(yml: &str, script: &str) {
         );
         for check in CI_REQUIRED {
             let id = bearing(check);
-            let run = pr_job(&wf, &id, "success", &outputs);
+            let mut run = pr_job(&wf, &id, "success", &outputs);
             assert!(
                 run.runs && !run.fails_first,
                 "ci_changes: `{check}` ({id}) does not report a pass on {}",
                 change.what
             );
+            // A verdict over other jobs (`ci` over its shards, `tests`): their work is the check's, and each runs.
+            for need in needs_of(&wf["jobs"][id.as_str()]) {
+                if need == "changes" {
+                    continue;
+                }
+                let gathered = pr_job(&wf, &need, "success", &outputs);
+                assert!(
+                    gathered.runs && !gathered.fails_first,
+                    "ci_changes: `{check}` ({id})'s `{need}` does not pass on {}",
+                    change.what
+                );
+                run.commands.extend(gathered.commands);
+            }
             for (owed_by, command, owed) in OWED {
                 if owed_by != check {
                     continue;

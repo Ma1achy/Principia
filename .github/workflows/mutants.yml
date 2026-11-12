@@ -252,8 +252,15 @@ jobs:
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 5
         run: python3 -m pip install pyyaml
-      - name: Install Mesa (lavapipe)
+      - name: Restore the Mesa packages
+        id: mesa
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+      - name: Install Mesa (lavapipe)
+        if: steps.diff.outputs.rust == 'true' && steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       # Debug info: line tables only, set for the whole workflow (R-374). The baseline's full debug info filled the
@@ -481,8 +488,15 @@ jobs:
         if: steps.diff.outputs.rust == 'true'
         timeout-minutes: 5
         run: python3 -m pip install pyyaml
-      - name: Install Mesa (lavapipe)
+      - name: Restore the Mesa packages
+        id: mesa
         if: steps.diff.outputs.rust == 'true'
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+      - name: Install Mesa (lavapipe)
+        if: steps.diff.outputs.rust == 'true' && steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - name: cargo run --quiet --package xtask -- build-kernel
