@@ -23,7 +23,25 @@
 //! time to the same grid time, with the sample's `N_sub`, and it takes no more substeps than the sample took: a
 //! macro-step the sample's `done` cut short stops the shadow at the same substep, so `δ` is always read between two
 //! states at one time. Taking the sample's `N_sub` makes the two the same discrete map, whose separation the exponent
-//! is of. The shadow's detector ends the shadow's march only: a shadow terminal freezes the shadow, never the sample.
+//! is of. The shadow's detectors only watch (R-972, pending in the rulings PR; the owner's words of 12 Nov 2026 on
+//! RQ-791: "The shadow's collision check only watches and the shadow carries on through"): what would be the shadow's
+//! terminal neither stops the shadow nor touches the sample, whose own detectors and outcome are its own. A shadow that
+//! marches through a close approach can blow up; that is the next note's.
+//!
+//! **A non-finite sum** (R-972, option (a) of RQ-791: "if its sum goes non-finite, (a)"). Once the shadow's finalised
+//! sum `S + ln(δ/δ₀)` is non-finite, the FTLE is invalid from then on: a non-finite value stays non-finite under the
+//! sums and the march, so the mark is derived at write, with no latch. Storage never holds NaN (R-79), so the sample's
+//! `S` then stores [`s_failed`], `R`'s largest finite value (`f32::MAX`, the generated read side's `S_FAILED_BITS`; at
+//! f64, `f64::MAX`), and `r_sh`, `p_sh` the sample's own `r`, `p`: failed-state values, every other field the
+//! sample's. A real `S` never reaches it: each renormalisation adds `ln(δ/δ₀)`, and for a finite, nonzero f32 `δ`
+//! (from the smallest subnormal, `1.4e-45`, to `f32::MAX`) and `‖δ₀‖` in the calibration's range `[1e-6, 1e-2]`
+//! that lies in `[ln(1.4e-45/1e-2), ln(f32::MAX/1e-6)] ≈ [−98.7, 102.5]`; there is at most one per macro-step and at
+//! most 65535 macro-steps (`t_end_step` is a u16, payload §2), so `|S| ≤ 65535 · 103 ≈ 6.8e6`, 31 orders below
+//! `f32::MAX`. At f64 the same count gives `|S| ≤ 65535 · 760 ≈ 5.0e7` (`ln(f64::MAX) ≈ 709.8`, the smallest
+//! subnormal's log `≈ −744.4`), far below `f64::MAX`. Payload §6's `ftle_valid` gains the
+//! clause `S ≠ S_FAILED` (compared by its bits), so `ftle` reads NaN (R-254) and every aggregate drops the sample
+//! (R-255); payload §5's `S` is the stored sum or the mark. *Applied per R-369 (the smallest mark that changes no
+//! other field: no new field and no new bit, the descriptor's 16 bits being assigned, R-545); physics checks it.*
 //!
 //! **Renormalisation** at the end of every `n_renorm`-th completed macro-step, counted by an integer counter, so the
 //! decision is a comparison of integers (integrator_contract Part 4): `completed_renorms = step_count / n_renorm`, as
@@ -175,9 +193,24 @@ pub fn ftle<R: WrapperReal>(s_sum: R, delta: R, delta_0: R, n: u32, dt_macro: R)
 /// count and the read's.
 pub use crate::payload::completed_renorms;
 
+/// `S`'s failed-state value, the mark of a shadow whose finalised sum went non-finite (R-972; the module's note):
+/// `R`'s largest finite value, `f32::MAX` (the generated read side's `S_FAILED_BITS`) or `f64::MAX`. Never NaN (R-79),
+/// and never a real `S`, whose magnitude is bounded far below it.
+#[inline]
+pub fn s_failed<R: WrapperReal>() -> R {
+    R::max_value()
+}
+
+/// Whether a stored `S` is the mark [`s_failed`]: the shadow's sum went non-finite, so the FTLE is invalid (R-972;
+/// payload §6's `ftle_valid`, its clause `S ≠ S_FAILED`).
+#[inline]
+pub fn sum_failed<R: WrapperReal>(s_sum: R) -> bool {
+    s_sum == s_failed::<R>()
+}
+
 /// The FTLE read from a stored sample `s` (payload §5): [`ftle`] from `S` and the stored shadow's `δ`, at `step_count
-/// = t_end_step`; NaN whenever `ftle_valid` is false: a failed sample, `step_count = 0`, or no completed
-/// renormalisation (R-253, R-254).
+/// = t_end_step`; NaN whenever `ftle_valid` is false: a failed sample, `step_count = 0`, no completed
+/// renormalisation (R-253, R-254), or a shadow whose sum went non-finite, `S` the mark [`s_failed`] (R-972).
 #[inline]
 pub fn ftle_read<R: WrapperReal>(
     s: &SimStateFTLEOf<R>,
@@ -186,7 +219,8 @@ pub fn ftle_read<R: WrapperReal>(
 ) -> R {
     let n = tm_t_end_step(s.times);
     // `step_count ≥ 1` (R-253) is implied: a completed renormalisation needs `n ≥ n_renorm ≥ 1`.
-    let valid = !sd_is_failed(s.packed_a) && completed_renorms(n, params.n_renorm) > 0;
+    let valid =
+        !sd_is_failed(s.packed_a) && completed_renorms(n, params.n_renorm) > 0 && !sum_failed(s.S);
     if valid {
         let d = delta(&s.r, &s.p, &s.r_sh, &s.p_sh);
         ftle(s.S, d, params.delta_0, n, dt_macro)
@@ -202,8 +236,9 @@ pub fn pool_member<R: PayloadReal>(s: &SimStateFTLEOf<R>) -> ([[R; 2]; 3], [[R; 
     (s.r, s.p)
 }
 
-/// The shadow's cadence for one macro-step: its own [`WrapperCadence`], done once it is or once it has taken `left`
-/// more substeps, the sample's count. The shadow's `N_sub` is the sample's, so no bucket is read from it.
+/// The shadow's cadence for one macro-step: its own [`WrapperCadence`], done once it has taken `left` more substeps,
+/// the sample's count. Its detectors only watch (R-972): what would be the shadow's terminal never ends its march. The
+/// shadow's `N_sub` is the sample's, so no bucket is read from it.
 struct Limited<'a, C> {
     inner: &'a mut C,
     left: u32,
@@ -218,7 +253,7 @@ impl<R: WrapperReal, C: Cadence<R>> Cadence<R> for Limited<'_, C> {
 
     #[inline]
     fn done(&self) -> bool {
-        self.left == 0 || self.inner.done()
+        self.left == 0
     }
 }
 
@@ -342,8 +377,17 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
         )
     }
 
+    /// Whether the sum finalised beside the sample's `x`, `S + ln(δ/δ₀)`, is finite: false once the shadow's sum has
+    /// gone non-finite, and from then on (R-972; the module's note).
+    #[inline]
+    pub fn sum_finite(&self, x: &State<R>) -> bool {
+        let finalised = self.s_sum + Float::ln(self.separation(x) / self.params.delta_0);
+        finalised.is_finite()
+    }
+
     /// The FTLE tier's `SimState`: the sample's `out`, every field kept, with the shadow's absolute state in `r_sh`,
-    /// `p_sh` and `S`.
+    /// `p_sh` and `S`; or, once the shadow's finalised sum is non-finite, the failed-state values: `S` the mark
+    /// [`s_failed`] and `r_sh`, `p_sh` the sample's own `r`, `p`, never NaN (R-79, R-972).
     #[inline]
     pub fn write(&self, out: SimStateBaseOf<R>) -> SimStateFTLEOf<R> {
         let x = State {
@@ -351,13 +395,17 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
             r: out.r,
             p: out.p,
         };
-        let sh = self.shadow(&x);
+        let (sh, s_sum) = if self.sum_finite(&x) {
+            (self.shadow(&x), self.s_sum)
+        } else {
+            (x, s_failed())
+        };
         SimStateFTLEOf {
             r: out.r,
             p: out.p,
             r_sh: sh.r,
             p_sh: sh.p,
-            S: self.s_sum,
+            S: s_sum,
             theta: out.theta,
             mean_y: out.mean_y,
             C_ty: out.C_ty,

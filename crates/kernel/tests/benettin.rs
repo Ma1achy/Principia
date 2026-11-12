@@ -17,9 +17,16 @@
 //!   macro-step, not completed, is not counted towards a renormalisation.
 //! - `shadow_forms_agree` (REQ-VAL-038's forms): at f64 the displacement form reads the absolute form's `λ_T`, to
 //!   rounding.
+//! - `shadow_terminal_only_watches` (R-972, RQ-791 case B, option (d)): at a nonzero `r_coll` that only the shadow
+//!   comes inside, the shadow's detector fires and the shadow marches on, bit for bit as at `r_coll = 0`; the sample is
+//!   untouched and its FTLE valid and finite.
+//! - `shadow_failed_sum` (R-972, RQ-791 case C, option (a)): at a nonzero `r_coll`, a shadow whose sum goes non-finite
+//!   stores the failed-state values, never NaN (R-79): `S` the mark `s_failed` and `r_sh`, `p_sh` the sample's own;
+//!   `ftle_valid` is false and `ftle` NaN, in the kernel's read and the generated read side; the sample is untouched.
 //!
-//! **Domain** (pitfalls §10): Yoshida-4, the steppers' march at `r_coll = 0`, so no terminal fires; the orbits are
-//! `validation::measure::benettin`'s, which the calibration gate runs.
+//! **Domain** (pitfalls §10): Yoshida-4, the steppers' march at `r_coll = 0`, so no terminal fires, but for the two
+//! R-972 tests, which run the close pair at a nonzero `r_coll`; the orbits are `validation::measure::benettin`'s,
+//! which the calibration gate runs.
 
 use std::cell::RefCell;
 
@@ -28,18 +35,18 @@ use kernel::detect::collision::CollisionRadius;
 use kernel::driver::advance::{Advance, AdvanceParams, Cadence};
 use kernel::driver::benettin::{
     completed_renorms, delta, ftle, ftle_read, integrate_ftle, integrate_ftle_with, offset,
-    pool_member, Absolute, Benettin, BenettinParams, Displacement,
+    pool_member, s_failed, sum_failed, Absolute, Benettin, BenettinParams, Displacement,
 };
 use kernel::driver::cadence::WrapperCadence;
 use kernel::driver::project::ComProjection;
 use kernel::driver::wrapper::{
-    integrate_detecting, integrate_with_co, CoMarch, WrapperReal, WrapperUniforms,
+    integrate_detecting, integrate_with_co, monitored, CoMarch, WrapperReal, WrapperUniforms,
 };
 use kernel::occupant::yoshida4::Yoshida4;
 use kernel::occupant::{Geom, State};
 use kernel::payload::{
-    set_state, sim_state_from_ftle, tm_t_end_step, ReadParams, SimStateBaseOf, SimStateFTLEOf,
-    STATE_SIM_FAILED,
+    sd_state, set_state, sim_state_from_ftle, tm_t_end_step, ReadParams, SimStateBaseOf,
+    SimStateFTLEOf, STATE_COLLISION, STATE_SIM_FAILED, S_FAILED_BITS,
 };
 use spirv_std::num_traits::Float;
 use validation::drift::{ic_at, sim_key, AsR};
@@ -933,4 +940,264 @@ negative_control!(
         &lagrange("Lagrange, equal masses", [1.0 / 3.0; 3], 30.0),
         2.0
     )
+);
+
+// ── shadow_terminal_only_watches (R-972; RQ-791 case B, option (d)) ────────────────────────────────────────────────
+
+/// An FTLE-tier run of the shadow at f64: the sample's `SimState` and the shadow.
+type Run = fn(
+    &Ic<f64>,
+    &WrapperUniforms<f64>,
+    CollisionRadius,
+    BenettinParams<f64>,
+) -> (SimStateFTLEOf<f64>, Benettin<f64, Absolute>);
+
+/// The kernel's run, [`integrate_ftle_with`].
+fn kernel_run(
+    ic: &Ic<f64>,
+    key: &WrapperUniforms<f64>,
+    radius: CollisionRadius,
+    params: BenettinParams<f64>,
+) -> (SimStateFTLEOf<f64>, Benettin<f64, Absolute>) {
+    integrate_ftle_with::<Yoshida4, f64, Absolute>(ic, key, radius, params)
+}
+
+/// The close pair's Benettin values for the R-972 tests: `‖δ₀‖ = 10⁻³`, which brings the shadow's pair about `‖δ₀‖`
+/// closer than the sample's (`u` moves body 0 by `+½` and body 1 by `−½` along the pair's axis), renormalised every
+/// 10 macro-steps.
+fn pair_params() -> BenettinParams<f64> {
+    BenettinParams {
+        delta_0: 1e-3,
+        n_renorm: 10,
+    }
+}
+
+/// The close pair's least `d²` over a run at `r_coll = 0`, the sample's and the shadow's, each as its own detector
+/// latched it.
+fn least_d2(ic: &Ic<f64>, key: &WrapperUniforms<f64>) -> (f32, f32) {
+    let mut cadence = WrapperCadence::new(&ic.m, &ic.r, &ic.p);
+    let mut shadow = Benettin::<f64, Absolute>::new(ic, CollisionRadius::none(), pair_params());
+    integrate_with_co::<Yoshida4, f64, _, _>(ic, key, &mut cadence, &mut shadow);
+    (
+        cadence.detector().latch().d2(),
+        shadow.cadence().detector().latch().d2(),
+    )
+}
+
+/// At a nonzero `r_coll²` between the shadow's least `d²` and the sample's, only the shadow comes inside: its
+/// detector fires, and under `run` it marches on through, its `S`, `r_sh` and `p_sh` bit for bit those at
+/// `r_coll = 0`; the sample's fields are the base tier's at that `r_coll`, not a collision, and its FTLE valid and
+/// finite (R-972).
+fn check_only_watches(run: Run) {
+    let ic = close_pair();
+    let key = sim_key::<f64>(1.0);
+    let (sample_d2, shadow_d2) = least_d2(&ic, &key);
+    assert!(
+        shadow_d2 < sample_d2,
+        "the shadow's least d² {shadow_d2} is not below the sample's {sample_d2}: no shadow-only collision"
+    );
+    let radius = CollisionRadius::from_squared(0.5 * (shadow_d2 + sample_d2));
+    assert!(radius.squared() > 0.0, "r_coll is zero");
+    let (free, _) = kernel_run(&ic, &key, CollisionRadius::none(), pair_params());
+    let (s, shadow) = run(&ic, &key, radius, pair_params());
+    assert!(
+        shadow.cadence().detector().fired(),
+        "the shadow's own detector did not fire: no shadow-only terminal"
+    );
+    assert!(
+        bits6(&s.r_sh) == bits6(&free.r_sh)
+            && bits6(&s.p_sh) == bits6(&free.p_sh)
+            && s.S.bits() == free.S.bits(),
+        "the shadow stopped at its own terminal: its state or S differs from the run at r_coll = 0"
+    );
+    let base = integrate_detecting::<Yoshida4, f64>(&ic, &key, radius);
+    assert!(
+        ftle_sample_bits(&s) == base_bits(&base) && sd_state(s.packed_a) != STATE_COLLISION,
+        "the shadow's terminal reached the sample"
+    );
+    let lambda = ftle_read(&s, &pair_params(), key.dt_macro);
+    assert!(
+        lambda.is_finite() && !sum_failed(s.S),
+        "the FTLE beside a shadow-only collision reads {lambda}, not a valid finite value"
+    );
+}
+
+#[test]
+fn shadow_terminal_only_watches() {
+    check_only_watches(kernel_run);
+}
+
+/// A co-march that stops the shadow at its own terminal, as before R-972: once its detector has fired, the shadow
+/// takes no more macro-steps.
+#[cfg(feature = "controls")]
+struct Frozen(Benettin<f64, Absolute>);
+
+#[cfg(feature = "controls")]
+impl CoMarch<f64> for Frozen {
+    fn after_macro<A: Advance>(
+        &mut self,
+        start: &State<f64>,
+        end: &State<f64>,
+        t_now: u32,
+        params: &AdvanceParams<f64>,
+        taken: u32,
+    ) {
+        if !self.0.cadence().done() {
+            self.0.after_macro::<A>(start, end, t_now, params, taken);
+        }
+    }
+}
+
+negative_control!(
+    shadow_terminal_only_watches,
+    "a shadow frozen at its own terminal must fail",
+    expected = "the shadow stopped at its own terminal",
+    check_only_watches(|ic, key, radius, params| {
+        let mut cadence = WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius);
+        let mut shadow = Frozen(Benettin::new(ic, radius, params));
+        let out = integrate_with_co::<Yoshida4, f64, _, _>(ic, key, &mut cadence, &mut shadow);
+        let out = monitored(out, &cadence);
+        (shadow.0.write(out), shadow.0)
+    })
+);
+
+// ── shadow_failed_sum (R-972; RQ-791 case C, option (a)) ───────────────────────────────────────────────────────────
+
+/// The close pair at a nonzero `r_coll` that neither the sample nor the shadow comes inside (`r_coll = 0.01`, the pair
+/// at 0.03), its shadow at `‖δ₀‖ = 0`, so `δ = 0` and the sum goes non-finite (`ln(0/0)`): at the first
+/// renormalisation (`n_renorm = 10`), or only in the finalised sum at write (`n_renorm` beyond the run). Each run
+/// through `write`, beside the base tier's at that `r_coll`.
+fn failed_runs(write: Writer) -> Vec<(u32, SimStateFTLEOf<f64>, SimStateBaseOf<f64>)> {
+    let ic = close_pair();
+    let key = sim_key::<f64>(1.0);
+    let radius = CollisionRadius::from_squared(1e-4);
+    [10, 100_000]
+        .into_iter()
+        .map(|n_renorm| {
+            let params = BenettinParams {
+                delta_0: 0.0,
+                n_renorm,
+            };
+            let mut cadence = WrapperCadence::with_radius(&ic.m, &ic.r, &ic.p, radius);
+            let mut shadow = Benettin::<f64, Absolute>::new(&ic, radius, params);
+            let out = integrate_with_co::<Yoshida4, f64, _, _>(&ic, &key, &mut cadence, &mut shadow);
+            let out = monitored(out, &cadence);
+            let x = State {
+                m: ic.m,
+                r: out.r,
+                p: out.p,
+            };
+            assert!(
+                !shadow.sum_finite(&x) && !cadence.detector().fired(),
+                "n_renorm {n_renorm}: the shadow's sum did not go non-finite, or the sample collided"
+            );
+            let base = integrate_detecting::<Yoshida4, f64>(&ic, &key, radius);
+            (n_renorm, write(&shadow, out), base)
+        })
+        .collect()
+}
+
+/// A shadow whose sum went non-finite stores the failed-state values (R-79, R-972): `S` the mark [`s_failed`] and
+/// `r_sh`, `p_sh` the sample's own `r`, `p`, so no stored field is NaN; the sample's fields are the base tier's; and
+/// the kernel's read is NaN, `ftle_valid` false.
+fn check_failed_sum(write: Writer) {
+    for (n_renorm, s, base) in failed_runs(write) {
+        let stored: Vec<f64> = [s.r, s.p, s.r_sh, s.p_sh]
+            .iter()
+            .flatten()
+            .flatten()
+            .copied()
+            .chain([s.S, s.theta, s.mean_y, s.C_ty, s.E_0, s.Lz_0, s.closure_min])
+            .collect();
+        assert!(
+            stored.iter().all(|v| !v.is_nan()),
+            "n_renorm {n_renorm}: storage holds NaN (R-79)"
+        );
+        assert!(
+            s.S.bits() == s_failed::<f64>().bits()
+                && bits6(&s.r_sh) == bits6(&s.r)
+                && bits6(&s.p_sh) == bits6(&s.p),
+            "n_renorm {n_renorm}: the failed sum's stored values are not the mark and the sample's state"
+        );
+        assert_eq!(
+            ftle_sample_bits(&s),
+            base_bits(&base),
+            "n_renorm {n_renorm}: the shadow's failed sum reached the sample"
+        );
+        let params = BenettinParams {
+            delta_0: 0.0,
+            n_renorm,
+        };
+        assert!(
+            ftle_read(&s, &params, 1e-3).is_nan(),
+            "n_renorm {n_renorm}: a failed sum reads a value, not NaN"
+        );
+    }
+}
+
+#[test]
+fn shadow_failed_sum() {
+    check_failed_sum(|b, out| b.write(out));
+    // At f32, the payload's precision: the mark is `S_FAILED_BITS`, and the generated read side reads `ftle_valid`
+    // false and `ftle` NaN, as the kernel's read does; the largest value below the mark stays valid.
+    let ic = close_pair();
+    let ic32 = Ic {
+        m: ic.m.map(|m| m as f32),
+        r: ic.r.map(|v| v.map(|x| x as f32)),
+        p: ic.p.map(|v| v.map(|x| x as f32)),
+    };
+    let key = sim_key::<f32>(1.0);
+    let params = BenettinParams {
+        delta_0: 0.0f32,
+        n_renorm: 10,
+    };
+    let s =
+        integrate_ftle::<Yoshida4, f32>(&ic32, &key, CollisionRadius::from_squared(1e-4), params);
+    assert_eq!(
+        s.S.to_bits(),
+        S_FAILED_BITS,
+        "the f32 mark is not S_FAILED_BITS"
+    );
+    let rp = ReadParams {
+        dt_macro: key.dt_macro,
+        delta_0: 1e-3,
+        n_renorm: 10,
+        horizon_steps: key.horizon_steps,
+    };
+    let read = sim_state_from_ftle(&s, [0; 4], false, 0.0, false, ic32.m, &rp);
+    assert!(
+        !read.ftle_valid && read.ftle.is_nan() && ftle_read(&s, &params, key.dt_macro).is_nan(),
+        "the generated read side or the kernel's reads the f32 mark as valid"
+    );
+    let below = SimStateFTLEOf {
+        S: f32::from_bits(S_FAILED_BITS - 1),
+        r_sh: [[0.5; 2]; 3],
+        ..s
+    };
+    let read = sim_state_from_ftle(&below, [0; 4], false, 0.0, false, ic32.m, &rp);
+    assert!(
+        read.ftle_valid && !sum_failed(below.S),
+        "S one below the mark reads invalid"
+    );
+}
+
+negative_control!(
+    shadow_failed_sum,
+    "a writer that stores the shadow's raw sum and state must fail",
+    expected = "storage holds NaN",
+    check_failed_sum(|b, out| {
+        let s = b.write(out);
+        let x = State {
+            m: [1.0 / 3.0; 3],
+            r: out.r,
+            p: out.p,
+        };
+        let sh = b.shadow(&x);
+        SimStateFTLEOf {
+            S: b.s_sum(),
+            r_sh: sh.r,
+            p_sh: sh.p,
+            ..s
+        }
+    })
 );
