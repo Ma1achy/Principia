@@ -479,7 +479,7 @@ the DECODE preset use the pixel's `ctx.chart.slice_uv` (physics review 566652141
 
 *12 Nov 2026 (R-926 item 5; R-935 under RQ-765; the chart audit's F14):* the compute side decodes nothing; an agreement preset compares the fragment's generated decode with the CPU's f64 record narrowed once; a table-route chart has no fragment decode to compare and shows the table check instead (R-926 item 10). *Was:* "where the kernel decoded it (R-80, copy 0)", which stands as written.
 
-*12 Nov 2026 (R-395; R-935 under RQ-768; the chart audit's F23):* past `ℓ_switch` the generated `D ∘ Φ` evaluated at an absolute `ctx.chart.slice_uv` meets R-395's rule (never an absolute f32 `u` past `ℓ_switch`), and a table-route `z` is absolute f32 at each node, so `ctx.chart.z` collapses near depth 20 at O(1) `z`; how it is formed there is RQ-805's Q2.
+*12 Nov 2026 (R-395; R-935 under RQ-768; the chart audit's F23):* past `ℓ_switch` the generated `D ∘ Φ` evaluated at an absolute `ctx.chart.slice_uv` is what R-395's rule rules out past `ℓ_switch` (never an absolute f32 `u` there), and a table-route `z` is absolute f32 at each node, so `ctx.chart.z` collapses near depth 20 at O(1) `z`; how it is formed there is RQ-805's Q2.
 
 Per row of lowering's appendix (`principia_lowering_contract.md`, "Appendix — worked enumeration of the current chart
 set"):
