@@ -380,11 +380,12 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
     /// Whether the sum finalised beside the sample's `x`, `S + ln(δ/δ₀)`, is finite: false once the shadow's sum has
     /// gone non-finite, and from then on (R-972; the module's note). Tested term by term: the sum of two finite terms
     /// is finite, `|S|` being bounded far below overflow (the module's note), and a non-finite term makes it
-    /// non-finite.
+    /// non-finite. Each term is tested on its bits ([`crate::real::IeeeBits::non_finite_bits`]), never by `is_finite`, which lowers
+    /// to a comparison with an infinite literal (gpu_determinism_note § "The discipline", rule 4).
     #[inline]
     pub fn sum_finite(&self, x: &State<R>) -> bool {
         let partial = Float::ln(self.separation(x) / self.params.delta_0);
-        self.s_sum.is_finite() && partial.is_finite()
+        !(self.s_sum.non_finite_bits() || partial.non_finite_bits())
     }
 
     /// The FTLE tier's `SimState`: the sample's `out`, every field kept, with the shadow's absolute state in `r_sh`,
