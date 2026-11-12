@@ -1408,3 +1408,57 @@ owner's.*
   its doc comment marking the detail interim until this entry is ruled), as TASK-M3-05's interim writer was.
 - **Waits:** TASK-M3-18 (the one `sim_failed` writer and the cross-check of payload §2's codes); TASK-M3-68 itself does
   not wait.
+
+## RQ-807: The WSL image's download can't resume, and its hosted build can't be skipped, within the PC's runner rules: ranged requests need a token or a local action, skipping the build needs a job to wait on the PC, and proof 5 is "this run's rebuild" *(conflict; a one-way door, it widens what a job on the owner's PC holds, or publishes the image, or changes what proof 5 proves; R-711 items 1 and 5, the owner's job rules of 5 Nov 2026; the owner's words of 12 Nov 2026 on the WSL image, items 3 and 4; RQ-751; context: the win-wsl-cache Phase B PR, run 43312851701)*
+
+*Queued 12 Nov 2026 by the implementer of the WSL image cache (Phase B), each quote re-read on `main` at 709ac1c0.
+Built meanwhile: the cache on E: (the owner's item 2), keyed on the recipe; the parts below are not built.*
+
+*In plain English: the owner asked for three things beyond the cache: a download that picks up where it stalled, a
+hosted build that runs only when the recipe changes, and proof runs that don't need Ubuntu's snapshot server. The
+first needs the PC job to hold a token (or run code the PC's rules refuse); the second needs the hosted job to wait for
+the PC, which the PC's rules also refuse; and the third would change what proof 5 proves. Each is the owner's call.*
+
+- **File, section:**
+  - The owner's words of 12 Nov 2026 (`orch/r630/owner-win-wsl-cache-12nov.txt`): "3. … If not, key the image on the
+    recipe (build script + Ubuntu snapshot date) and build it only when that changes, so proof runs don't depend on
+    Ubuntu's snapshot server. 4. Make the download resumable (ranged requests, continue after a stall rather than
+    restart)", "within the runner rules: no secrets, no new triggers, E: only".
+  - `.github/workflows/win-gpu.yml`, its header (R-711 items 1 and 5): "No credential reaches a job: `contents: read`,
+    no repository secret, and checkout with `persist-credentials: false`. Every action is pinned to a full commit SHA",
+    and, of the WSL jobs: "The image can't come from another run: a run's artifact downloads only with a token, and no
+    job here holds one."
+  - `xtask/tests/ci_self_hosted.rs` (the owner's guard, 5 Nov 2026: "fails if any workflow … uses an unpinned action in
+    a self-hosted job, or makes any self-hosted job required or gathered"): `check_no_credential` refuses any string
+    naming `github.token` in the file and any permission but `contents: read`, its control "a second permission" being
+    `actions: read`; `check_pins` refuses a local action; `check_not_gathered` refuses any job that `needs` a
+    self-hosted one.
+  - `.github/scripts/wsl.ps1`, proof 5: "the manifest after a rebuild (this run's hosted build) and the registered
+    distro's, derived inside it, each equal to the pin."
+- **The conflict:**
+  - (a) Resume. A ranged request needs the artifact's blob URL. The REST API gives it only to a token with
+    `actions: read`; download-artifact's own runtime token reaches an action, never a `run` step, and on the PC a local
+    action is refused and a third-party one would be new code on the owner's machine.
+  - (b) Build only on change. Only the PC knows whether it holds this recipe's image. The hosted job could learn it only
+    by waiting on a self-hosted job (gathering it) or by reading another run's artifact (a token).
+  - (c) Proof runs. `wsl-proofs` downloads only the 1 KB manifest, never the image; it builds the image for proof 5,
+    whose definition is this run's rebuild reproducing the pin. Skipping the build there changes what proof 5 proves.
+- **Options:**
+  - (1) The PC's `wsl-register` alone holds its own run's `GITHUB_TOKEN` with `actions: read`, to fetch the artifact's
+    blob URL and download it with HTTP ranges, resuming after 60 s without growth; the guard allows exactly that one job
+    and permission. Covers (a), not (b).
+  - (2) The hosted job publishes each recipe's image as a release asset (`contents: write` on the hosted job only), and
+    the PC fetches it by plain ranged HTTP with no token; the hosted job builds only when no release of the recipe
+    exists. Covers (a) and (b). It publishes an Ubuntu image with its packages (a licence question, R-643), and Phase A
+    measured that path at 5.64 MiB/s against the artifact's 1.21 MiB/s (run 43312851701).
+  - (3) As built: the cache on E: keyed on the recipe, a miss downloading with download-artifact's two tries (#500), no
+    resume, the hosted build on every register dispatch.
+  - For (c): (i) `wsl-proofs` rebuilds as now, proof 5 unchanged; (ii) proof 5 reads the cached image's build-time
+    manifest, and `wsl-proofs` builds nothing.
+- **Recommendation:** (3) and (i) until the register runs measure the cache's misses. A miss is a recipe change or a
+  first registration; run 43225140437's four failures were one recipe's download stalling four times, which the cache
+  doesn't prevent on a miss: it serves every registration after the first whole download. If misses still stall, (1)
+  is the narrowest widening: one job, read-only, its own run. The measurable alternative: count, over the next
+  register runs, the misses whose download fails against all misses.
+- **Applied meanwhile:** (3) and (i).
+- **Waits:** nothing; the cache is built and the register run waits only for the owner's folder.
