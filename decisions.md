@@ -37793,6 +37793,14 @@ eight-orbit evidence (REQ-INT-076). "Stated wherever the FTLE is shown" is a new
 TASK-M4-13 (FTLE on the GPU, the first task that puts the FTLE in a view and a legend); every later view of the FTLE
 reads it.
 
+*Applied per R-369, later the same day (task scoping; code review 5875707244 of PR #503, F4):* REQ-GUI-437 is split per
+surface, each closed by the task that builds it: the horizon map and its legend stay REQ-GUI-437's (TASK-M4-13); the
+FTLE views already built and the statement's one source are REQ-GUI-438's (TASK-M3-73, new, after TASK-M3-14), so the
+statement stands from the moment real FTLE values show; the generated legend REQ-GUI-439 (TASK-M8-22), the Trajectory
+panel's summary REQ-GUI-440 (TASK-M8-11), the trust line REQ-GUI-441 (TASK-M8-76), an export's block REQ-GUI-442
+(TASK-M8-80), and TASK-M9-41's FTLE maps REQ-VAL-356. *Was:* "every later view of the FTLE reads it", with no task
+named for the later views.
+
 R-976 is in the "values" group of `plan/rule_groups.yaml`.
 
 Changes REQ-INT-076 (its note and `rq`); adds REQ-GUI-437. The parse printed R-976 for this answer.
