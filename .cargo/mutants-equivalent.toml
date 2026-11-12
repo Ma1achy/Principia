@@ -498,3 +498,11 @@ justification = "c1 == h assigns h = c1, the value h already holds, and sets hav
 [[equivalent]]
 mutant = "crates/kernel/src/regularisation/az.rs:963:42: replace > with >= in boundary_at_or_before"
 justification = "only a tie k·Δ_sync == t takes the mutant's extra step back, to k - 1, and the upward correction below then finds (k - 1 + 1)·Δ_sync == t <= t and steps on to k again, so every t gives the same boundary (k - 1 < u32::MAX, as k >= 1 there)"
+
+[[equivalent]]
+mutant = "crates/kernel/src/regularisation/az.rs:402:31: replace * with + in <impl Flow<R> for AzSystem<R>>::q_rate"
+justification = "the line is four = two * two with two = 1 + 1; two + two is 4 as well, exactly, at f32 and f64"
+
+[[equivalent]]
+mutant = "crates/kernel/src/regularisation/az.rs:428:24: replace * with + in <impl Flow<R> for AzSystem<R>>::p_rate"
+justification = "the line is four = two * two with two = 1 + 1; two + two is 4 as well, exactly, at f32 and f64"
