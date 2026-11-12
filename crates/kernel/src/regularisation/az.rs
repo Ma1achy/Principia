@@ -28,7 +28,7 @@
 //!
 //! **No precision-dependent constant in a branch** (Part 2c rule 1). The interval skip of step 1 (`SYNC_EPS`) is an
 //! integer test on the grid's boundary index; the landing tolerance (`LAND_EPS_REL`), whose value Part 2b leaves out of
-//! the transcription, is [`AzParams::land_eps_rel`], supplied by the caller (RQ-792). `TINY` is the one excepted floor.
+//! the transcription, is [`AzParams::land_eps_rel`], supplied by the caller (RQ-795). `TINY` is the one excepted floor.
 //!
 //! **The step budget** (Part 6; R-604): a copy's running total of steps, every RK4 call and secant retake counted,
 //! is checked at every step against `max(N_min, step_budget_rate·t)`, `t` its physical time since `t = 0`; a copy that
@@ -43,7 +43,7 @@
 //! corpus and none is built (R-162; REQ-INT-024).
 //!
 //! The values the step control reads (`η`, `Δ_sync`, `TINY`, `N_min`, the budget's rate, the landing tolerance) are
-//! calibrations (R-71: REQ-INT-080, REQ-INT-105, REQ-INT-108, REQ-INT-103; RQ-792), so the occupant reads them from its
+//! calibrations (R-71: REQ-INT-080, REQ-INT-105, REQ-INT-108, REQ-INT-103; RQ-795), so the occupant reads them from its
 //! [`AzConfig`], never from a literal here.
 
 use core::marker::PhantomData;
@@ -570,7 +570,7 @@ pub struct AzParams<R> {
     pub predictive_f: R,
     /// The equations of motion's floor on `|R₃|` (Part 2b: `1e-300`, after `tb_az.py`).
     pub r3_floor: R,
-    /// The landing tolerance, relative to `dt_left`, the reference's `LAND_EPS_REL` (RQ-792): one value, read where the
+    /// The landing tolerance, relative to `dt_left`, the reference's `LAND_EPS_REL` (RQ-795): one value, read where the
     /// landing is tested and where the secant stops.
     pub land_eps_rel: R,
     /// The step budget's rate, steps per unit physical time per copy (R-564; REQ-INT-103, a calibration).

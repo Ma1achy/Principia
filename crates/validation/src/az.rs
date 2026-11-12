@@ -18,7 +18,7 @@
 //!
 //! **The conditions every run states.** The values the step control reads are calibrations, so each run here names
 //! the ones it ran at: `TINY` the reference's (`1e-37` at f32, `1e-300` at f64; R-953) unless the run varies it, the
-//! landing tolerance the reference's `LAND_EPS_REL` (`1e-5`, `1e-14`; RQ-792), R-160's `f = 0.02`, Part 2b's
+//! landing tolerance the reference's `LAND_EPS_REL` (`1e-5`, `1e-14`; RQ-795), R-160's `f = 0.02`, Part 2b's
 //! `|R₃|` floor `1e-300`, a step budget that does not bind, and the stepper RK4 (Part 2a's validation-grade pair).
 
 use std::path::Path;
@@ -959,7 +959,7 @@ pub fn propose_floor() -> Result<String, String> {
     );
     say!(out,
         "Each fixture run under Aarseth–Zare + RK4 at η = {FLOOR_ETA}, Δ_sync = 0.125, with TINY the reference's \
-         (1e-37 at f32, 1e-300 at f64; R-953), the landing tolerance the reference's (RQ-792).\n"
+         (1e-37 at f32, 1e-300 at f64; R-953), the landing tolerance the reference's (RQ-795).\n"
     );
     say!(out,
         "| fixture | width | least A | least B | least A·B | least guarded component | floored | non-finite entries \

@@ -78,7 +78,7 @@ fn v<R: AzReal>(x: f64) -> R {
 }
 
 /// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8` (exact in binary), the reference's `TINY` (`1e-37` at
-/// f32, `1e-300` at f64, R-953) and landing tolerance (`1e-5`, `1e-14`; RQ-792), R-160's `f = 0.02`, Part 2b's `|R₃|`
+/// f32, `1e-300` at f64, R-953) and landing tolerance (`1e-5`, `1e-14`; RQ-795), R-160's `f = 0.02`, Part 2b's `|R₃|`
 /// floor `1e-300`, a budget that does not bind, the clamp and the secant on. Test inputs, not the calibrations.
 fn params<R: AzReal>() -> AzParams<R> {
     AzParams {

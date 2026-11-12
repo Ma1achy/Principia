@@ -916,7 +916,7 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
   asks for a test at a nonzero `r_coll` that drives a shadow-only collision and pins whatever is ruled.
 - **Waits:** TASK-M3-14 (the Benettin FTLE shadow).
 
-## RQ-792: Aarseth–Zare's landing tolerance `LAND_EPS_REL`: the step control branches on it, rule 1 forbids it in a branch, and the corpus gives it no value *(conflict and silence, a missing value, R-71; a one-way door, it changes when a sync interval counts as landed and so what the occupant computes, at both precisions; Part 2b steps 6 and 7, Part 2c rule 1; R-927, R-953; REQ-INT-049, REQ-INT-114; context: TASK-M3-68)*
+## RQ-795: Aarseth–Zare's landing tolerance `LAND_EPS_REL`: the step control branches on it, rule 1 forbids it in a branch, and the corpus gives it no value *(conflict and silence, a missing value, R-71; a one-way door, it changes when a sync interval counts as landed and so what the occupant computes, at both precisions; Part 2b steps 6 and 7, Part 2c rule 1; R-927, R-953; REQ-INT-049, REQ-INT-114; context: TASK-M3-68)*
 
 *Queued 11 Nov 2026 by the implementer of TASK-M3-68 (the Aarseth–Zare occupant); each quote re-read on `main` at
 50f406e4. Nothing is chosen here.*
