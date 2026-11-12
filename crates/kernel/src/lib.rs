@@ -16,6 +16,7 @@ pub mod occupant;
 pub mod payload;
 pub mod physics;
 pub mod real;
+pub mod regularisation;
 pub mod shape;
 pub mod stage;
 pub mod toolchain;

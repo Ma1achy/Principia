@@ -1,7 +1,7 @@
 # TASK-M2-09 — Invariant-momentum construction: rigid rotation, the seed family and feasibility
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-040, REQ-DEC-046
+- **Closes:** REQ-DEC-020, REQ-DEC-022, REQ-DEC-040, REQ-DEC-046
 - **Depends on:** TASK-M2-03, TASK-M2-06
 - **Needs (earlier milestones):** REQ-PAY-014, REQ-PAY-004
 - **Reviewers:** code, qa, physics
@@ -39,3 +39,4 @@ The momentum stage for invariant charts follows chart_reference §2.2 exactly: v
 ## Notes
 - Payload §2's `decode_failed` detail codes are 0 non-finite, 1 degenerate configuration, 2 invalid mass construction, 3 other/reserved; the definition must say whether an infeasible pixel is `decode_failed` (and which code) or another label. The full DEGENERATE reason map is REQ-DEC-038 (TASK-M2-24).
 - Gap G9: decoder test 8's "to tolerance" for L_z and K has no value beyond "machine precision" in §5.2.
+- *11 Nov 2026 (R-934):* REQ-DEC-021 (the momentum seed) is brought into line with R-934, the seed `w = r/√I` everywhere, and moves to TASK-M2-93 (the seed conversion), which builds the new behaviour. This task is built and is not rewritten: its `seed_selection` line above is what it built, R-82's rule, now the named legacy option. *Was (Closes):* "REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-040, REQ-DEC-046".

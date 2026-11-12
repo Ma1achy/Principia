@@ -39,3 +39,4 @@ R-894: right after stage 1 and before stage 2, the chart-path leaves collapse to
 - The outcome-class arm of the conversion test needs integrated outcomes: M2 checks the decoded state within `ε_phys`, and TASK-M3-67 checks the class (R-918).
 - A difference that isn't rounding is not merged and not patched around: stop and bring it back (R-864 item 4).
 - **Build order (R-916):** between stages 1 and 2; TASK-M2-65 depends on it.
+- *11 Nov 2026 (the re-plan's § A.1, CHANGE; entered by the re-plan's addition, `plan/charts/m2-chart-replan-addition.md` § F.4):* the end state is window edits (move `c`, scale `Q`, rotate `Q` per R-474 map, cut, rebase, lock, re-solve, set `s`); `engine::nav::directions`' "morph" is renamed a tilt (R-925 item 4; applied per R-369: naming). The lines above stand as written until this task's file is rewritten under those rulings; where they differ, the rulings bind.

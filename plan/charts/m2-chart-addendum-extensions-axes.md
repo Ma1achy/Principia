@@ -38,7 +38,9 @@ with its topic ("RQ-762, the window's per-coordinate scale").
 § D but RQ-779 (the default behaviour of each edge) is closed. This document still builds and dispatches nothing. N12 to
 N18 are not in `plan/tasks.yaml` yet: the owner's reply to the draft of the re-plan's addition puts the chart plans'
 `tasks.yaml` changes in that addition's own PR and nowhere else, so they land there, with their requirements (applied
-per R-369: task scoping). The body below is kept as proposed, with a dated note where an answer changes it; where it
+per R-369: task scoping). *11 Nov 2026:* the addition is `plan/charts/m2-chart-replan-addition.md`; its § F lists N12
+to N18 as entered, N14 split by kind, and marks TASK-M8-58 CHANGE under R-948 (traces at the new edges), where § A.8
+below has KEEP. The body below is kept as proposed, with a dated note where an answer changes it; where it
 says "only under RQ-n", "directions, not rulings" or "waits on RQ-n", read the row here.
 
 | Question | Answer | Ruling |
@@ -64,8 +66,9 @@ What the answers change in § C's tasks:
   (the linear option's infeasible pixels, "not a system") is amended, those pixels taking their edge's declared kind;
   and under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` (R-597, REQ-CHART-087, REQ-GUI-357) saturates in
   place of drawing as not a system, physics review's call under the rule, N12 writing the definition. A pixel that
-  energy normalisation cannot reach (R-598) stays not a system until RQ-784 (whether "No blank areas" reaches it) is
-  answered.
+  energy normalisation cannot reach (R-598) stays not a system, R-955 having answered RQ-784 with option (a): "No blank
+  areas" is about edges and their extensions (11 Nov 2026; *was:* "stays not a system until RQ-784 (whether "No blank
+  areas" reaches it) is answered").
 - **N13** (the second sheet) is built: RQ-771 (a). It starts from the construction as N10 (the seed conversion, R-934)
   leaves it, with the seed `w = r/√I`.
 - **N14** (the kinds in the CPU evaluator, and the count) builds every chart's edges now, each row of RQ-779's table to

@@ -9,7 +9,7 @@
 - **Size:** ~400 lines
 
 ## Goal
-Every row of the registry's 6 Nov table, each as an axis on CPU batch, an alias or a forward-only overlay, as its verdict says.
+Every row of the registry's 6 Nov table, each as a map coordinate in the registry, an alias or a forward-only overlay, as its verdict says; evaluated like every chart, through its map and the window, in f64 on the CPU, with no route of its own (R-925, R-926 item 5).
 
 ## References
 - `docs/design/principia_chart_composition.md` § "3.1 The primitives of 6 Nov"
@@ -33,3 +33,4 @@ Every row of the registry's 6 Nov table, each as an axis on CPU batch, an alias 
 - *7 Nov 2026 (R-847, R-848, R-844):* RQ-723 is ruled (b): inner and outer orbital elements are axes at a labelled pair, plus the overlays; `h` is a builder axis, its range under physics review (RQ-724); Hill's threshold takes the labelled pair (RQ-730 (a)).
 - *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-109; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Closes: REQ-CHART-117, REQ-CHART-118"; "Depends on: TASK-M4-37, TASK-M4-33, TASK-M8-100, TASK-M7-72, TASK-M8-117".
 - *9 Nov 2026 (R-916):* REQ-CHART-184, the round-trip tolerance § 12 gives only as measured worsts, is this task's calibration, its criterion written first, set by measurement (R-649/650), confirmed at the M2 gate (G5).
+- *11 Nov 2026 (the owner's chart re-plan corrections, item 1; applied per R-369: wording):* the Goal is rewritten against the map, window and registry object: under R-925 (shader features on every chart, by the chart's closed-form code or by tables the CPU builds) and R-926 (the new chart system: a map composed with a flat window, evaluated by the CPU in f64) every chart is CPU-evaluated and numerical inverses take the table route, so "CPU batch" names no separate path and would invite one. Nothing here changes behaviour; R-923's hold (integrator work before charts) still holds this task. *Was (Goal):* "Every row of the registry's 6 Nov table, each as an axis on CPU batch, an alias or a forward-only overlay, as its verdict says."

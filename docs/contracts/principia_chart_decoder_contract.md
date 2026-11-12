@@ -189,7 +189,9 @@ inside the square. The choice lives in the registry row, with a per-edge overrid
 cross onto an unfold sheet and stops at a clamped or saturated area; an optional Overlays › Chart toggle, off by
 default, marks clamped and saturated pixels. Under the edge-reaching simplex link a pixel with `M₀₁ < 10⁻⁵` (R-597)
 saturates, the physics reviewer's call under this rule, in place of drawing as not a system; whether the rule reaches a
-pixel whose target energy cannot be reached with η_E on (R-598) is RQ-784, R-598 standing meanwhile. The section below
+pixel whose target energy cannot be reached with η_E on (R-598): R-598 stands, such a pixel a validity failure, not an
+edge, drawn as not a system with the reason in the readout, "no blank areas" being about edges and their extensions
+(R-955, the owner's answer on RQ-784, 11 Nov 2026; *was:* "is RQ-784, R-598 standing meanwhile"). The section below
 is the text in force for what is built today; the chart
 addendum's N12 rewrites it from these rulings, each replaced line kept as *Was*, and N14 builds it
 (`plan/charts/m2-chart-addendum-extensions-axes.md`).

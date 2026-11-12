@@ -32,6 +32,18 @@ override a measured or ruled section.** The proofs below stand on the corrected 
 4. **Blanks mid-morph can come from a held constraint** (§17.11), not only from a chart's mask. Corollary 1
    is withdrawn. Corollary 2 is strengthened: under a common hold, blending can leave the feasible set, and
    those pixels are blank and tagged.
+   *11 Nov 2026 (R-926 item 3, R-943; a record correction applied per R-369, listed for veto):* that was a held
+   constraint run on a blended configuration. Under the state blend no hold runs mid-morph, and every in-between frame
+   is a valid system (R-943), so Corollary 1 holds again for the state blend; `principia_chart_composition.md` § 17.11
+   has the note and the one case left to physics review.
+   *11 Nov 2026, later (the physics review of PR #482, review 5852979675, P1, and its re-check, review 5853427038,
+   P9):* that note went too far. The state blend removes the held-constraint blanks, and no more: Corollary 1 does not
+   hold without exception. One decoder-side case remains, the mass guard's: the masses blend in log-ratios, so a
+   blend's interior pixel can raise `M01_TINY` between two valid ends, and commonly, wherever two ends at the band's
+   edge differ in `m₁/m₀`, saturated ends included (`principia_chart_composition.md` § 17.11, "Out of feasible", case
+   2). Such a pixel is tagged, never dropped and never NaN; what it shows is the owner's, RQ-787, and nothing is
+   chosen here. *Was, the two sentences as the note above has them:* "every in-between frame is a valid system
+   (R-943), so Corollary 1 holds again for the state blend" and "the one case left to physics review".
 5. **In the gauge, `L_z`'s sign isn't preserved:** the encode's mirror flips it. The scale-free invariant
    overlap is `L_z²E` and the sign of `E` only (§6b corrected below).
 6. **Symmetry acts on starting states only (owner rule, 7 Nov).** Every symmetry reduction (translation,
@@ -62,7 +74,8 @@ override a measured or ruled section.** The proofs below stand on the corrected 
 
 ## 1. Objects
 
-**Latent space.** `Z = R^8`, the latent chart (`z_α, z_β, z_q0..z_q3, z_μ1, z_μ2`).
+**Latent space.** `Z = ℝ × S¹ × ℝ⁶`, the latent chart (`z_α, z_β, z_q0..z_q3, z_μ1, z_μ2`), `z_β` a periodic angle
+over the full circle (R-898), so `Z` is not convex. *(11 Nov 2026, R-965, RQ-738 item 11; was: "`Z = R^8`".)*
 
 **Decoder.** `D : Z → Sys`, from a latent point to a canonical three-body system. Two facts from the existing
 contracts are all the model needs:
@@ -74,9 +87,12 @@ contracts are all the model needs:
 
 **Square.** `U = [-1,1]^2`, the view's pixel coordinates. The centre pixel is `u = 0`.
 
-**Chart (as a view).** A continuous map `φ : U → Z`. A pixel `u` shows the system `D(φ(u))`. Every chart
-Principia has fits this, including the curved and physical ones: those are `φ = E ∘ Φ`, where `Φ` builds a
-physical state and `E` encodes it to `Z`. Masks (blank, uncounted pixels) are a subset `M_φ ⊆ U` carried
+**Chart (as a view).** A continuous map `φ : U → Z`. A pixel `u` shows the system `D(φ(u))`. Not every chart
+Principia has fits this: a chart maps into the signed state `S` (§ 0.1), and `D(Z)` misses some of its targets. The
+curved and physical charts that fit it are `φ = Enc ∘ Φ`, where `Φ` builds a physical state and `Enc` encodes it to
+`Z` (`Enc`, not `E`, which names the energy). *(11 Nov 2026, R-965, RQ-738 items 2 and 9; was: "Every chart Principia has fits this,
+including the curved and physical ones: those are `φ = E ∘ Φ`, where `Φ` builds a physical state and `E` encodes it to
+`Z`.")* Masks (blank, uncounted pixels) are a subset `M_φ ⊆ U` carried
 alongside. They don't affect anything below.
 
 **Chart space.** `𝒞 = C(U, Z)`, all continuous maps `U → Z`.
@@ -98,20 +114,36 @@ straight-line morph
 
 is one, and every frame decodes to a valid system.
 
-*Proof.* `Z = R^8` is convex, so `L(s,u) ∈ Z` for all `s, u`. `L` is continuous, being built from continuous
+*Proof.* The proof in force is § 0.1's, block by block in the signed state. In `Z`: the coordinates other than `z_β`
+form a convex `ℝ⁷`, and `z_β` is a circle (R-898), so `L` is taken on `z_β` on a lift of the angle, where a wrap enters
+it being TASK-M2-57's definition (R-898; REQ-DEC-056); then `L(s,u) ∈ Z` for all `s, u`. *(11 Nov 2026, R-965, RQ-738 item 11; was:
+"`Z = R^8` is convex, so `L(s,u) ∈ Z` for all `s, u`.")* `L` is continuous, being built from continuous
 maps by continuous operations, and `L₀ = φ`, `L₁ = ψ`. By (D1), `D(L(s,u))` exists for every `(s,u)`. By
 (D2), `s ↦ D(L(s,u))` is continuous, so each pixel's system moves continuously. ∎
 
-**Why this matters.** The morph is possible *only because* the decoder is total on all of `R^8` and the blend
+**Why this matters.** The morph is possible *only because* the decoder is total on all of `Z` and the blend
 is done in `Z`. Blending in physical space would not have this property: bodies pass through collisions, and
-masses can leave the simplex. **Rule: always blend in `Z`, never in physical coordinates.**
+masses can leave the simplex. **Rule (§ 0.1): blend each block in its own signed state; "always blend in `Z`" is
+withdrawn.** This paragraph holds for the latent line `L` only. A morph blends each block in its own signed state
+(§ 0.1; R-926 item 3, the state blend): masses in log-ratios, so they stay on the simplex, shape on the sphere's great
+circle, momenta and time linearly. *(11 Nov 2026, R-965, RQ-738 items 2 and 11; was: "the decoder is total on all of `R^8`" and
+"**Rule: always blend in `Z`, never in physical coordinates.**")*
 
 **Corollary 1 (no frame is invalid).** A morph never produces a "not a system" pixel from the decoder side.
-Blank pixels mid-morph come only from a chart's own mask (`M_φ`, `M_ψ`), interpolated as a display choice.
+Blank pixels mid-morph come only from a chart's own mask (`M_φ`, `M_ψ`): a pixel blank at an end is held blank for
+every `0 < s < 1` and resolves at the end frame (design § 17.11; R-470). *(11 Nov 2026, R-965, RQ-738 item 4; was: "interpolated as
+a display choice".)*
+*11 Nov 2026 (§ 0, correction 4, and its notes of this date):* this does not hold without exception. § 0 withdrew it
+for a held constraint run on a blended configuration; the state blend (R-926 item 3, R-943) removes those blanks, but
+a blend's interior pixel can still raise the mass guard's `M01_TINY` between two valid ends
+(`principia_chart_composition.md` § 17.11, "Out of feasible", case 2): tagged, its display the owner's under RQ-787.
 
 **Corollary 2 (held quantities are not conserved).** If `φ` holds energy at `E₀` and `ψ` holds `L_z` at `L₀`,
 the frames in between generally hold neither. The set `{z : E(D(z)) = E₀}` isn't convex in `Z`, so the
-straight line leaves it. This is a theorem, not a defect. Mid-morph frames must not claim a held value.
+straight line leaves it. This is a theorem, not a defect. Mid-morph frames must not claim a held value unless the
+path holds it: a path that holds the same `E*` (or `L*`) at both ends holds it, within feasibility (design § 17.11's
+table; such a path is one R-943 allows and R-944 notes is not built now), and the default state blend holds none.
+*(11 Nov 2026, R-965, RQ-738 item 4; was: "Mid-morph frames must not claim a held value.")*
 
 ---
 
@@ -124,10 +156,14 @@ Each operation is a path `H` with a closed form. Here `s ∈ [0,1]`.
 | Pan by `a` | `H_s(u) = φ(u + s a)` | reparametrisation |
 | Zoom by factor `k > 0` about the centre | `H_s(u) = φ(k^s u)` | reparametrisation |
 | Tilt of an affine chart by angle `θ` towards `t` | `H_s(u) = z₀ + R(sθ) Q u`, with `R` a rotation in the plane of `(q_i, t)` | latent plane geodesic |
-| Tilt of a curved chart | the same rotation, applied to the chart's own parameters (R-473), then `Φ`, `E` | chart-parameter geodesic |
+| Tilt of a curved chart | the same rotation, applied to the chart's own parameters (R-473), then `Φ`, `Enc` (*11 Nov 2026, R-965, RQ-738 item 9; was:* "`Φ`, `E`") | chart-parameter geodesic |
 | Slice (excursion `δ`) | `H_s(u) = φ(u) + s δ` | latent translation |
 | Chart switch (today) | a jump `φ → ψ`: the path's interior is skipped | — |
 | Morph | any path, default `L` or a geodesic | general |
+
+Pan, and a zoom out, evaluate `φ` outside `U`: there `φ` is the chart's declared extension past the unit square
+(`principia_chart_decoder_contract.md` Part 3, § "Past the unit square — each axis's extension type (R-407)").
+*(11 Nov 2026, R-965, RQ-738 item 9: the table's "Pan by `a`" and "Zoom by factor `k > 0`" leave `U`.)*
 
 **Theorem 2 (tilt is a geodesic morph, exactly).** Let `φ(u) = z₀ + Q u` and `ψ = z₀ + Q' u` with
 `Q' = R(θ) Q`. The tilt path *is* the morph along the latent plane geodesic between the two planes, and it
@@ -136,8 +172,12 @@ preserves the frame's area at every `s`:
     area(H_s) = sqrt(det(Q_sᵀ Q_s)) = sqrt(det(Qᵀ Q))    (since R(sθ) is orthogonal)
 
 The straight-line morph `L` between the same two charts does **not** preserve area. Take `Q = [e₁ e₂]` and
-`Q' = [e₂ e₁]`, which is the same plane with its axes swapped (a 90° rotation in the plane plus a mirror). At
-`s = ½` both columns of `Q_s` are `(e₁+e₂)/2`, so it has rank 1 and **area 0**: the picture collapses to a line.
+`Q' = [e₂ e₁]`, the same plane with its axes swapped: not a tilt in a plane `(q_i, t)`, but `R(π)` in another plane,
+that of `(e₁ − e₂)/√2` and a direction normal to the slice. At `s = ½` both columns of `Q_s` are `(e₁+e₂)/2`, so it
+has rank 1 and **area 0**: the picture collapses to a line. The stronger fact is that every tilt fails: for an
+orthonormal `Q` tilted by `θ` in the plane of `(q_i, t)`, the straight-line blend's midpoint frame has area `cos(θ/2)`
+of the ends'. *(11 Nov 2026, R-965, RQ-738 item 9; was: "which is the same plane with its axes swapped (a 90° rotation in the plane
+plus a mirror)".)*
 
 *Proof.* Rotations preserve inner products, so `Q_sᵀ Q_s = Qᵀ R(sθ)ᵀ R(sθ) Q = Qᵀ Q`. The swapped case is
 direct computation. ∎
@@ -147,11 +187,13 @@ is *any* homotopy, and tilt is the member of the geodesic family, exactly, not a
 blend is a different member with the same endpoints. So the rule from 6 Nov, "rotate, never squash", isn't
 a preference: it's the condition under which tilt is literally a special case.
 
-**Theorem 3 (curved tilt is its own family; the 0.197 is not rounding).** For a curved chart, tilt rotates
-the *chart's parameters*, so its frames are `E(Φ(R(sθ)·params))`. The latent geodesic between the endpoints
-is a different path with the same ends. The two agree to first order in `θ` (same endpoints and same tangent
-at `s = 0`), and differ at second order. That matches the Mac's measurement: 0.197 at `τ = 1.2`, falling as
-`τ²`.
+**Theorem 3 (curved tilt is its own family; the gap is not rounding).** For a curved chart, tilt rotates
+the *chart's parameters*, so its frames are `Enc(Φ(R(sθ)·params))`. The latent geodesic between the endpoints
+is a different path with the same ends. The two have the same endpoints, and their tangents at `s = 0` agree only
+to `O(θ²)`; they differ at second order. Design § 17.3 measures the gap: 0.016 median, 0.124 worst in `n̂`, over
+3,000 sphere pixels. *(11 Nov 2026, R-965, RQ-738 items 8 and 9; was: "the 0.197 is not rounding", "`E(Φ(R(sθ)·params))`", "The
+two agree to first order in `θ` (same endpoints and same tangent at `s = 0`), and differ at second order. That matches
+the Mac's measurement: 0.197 at `τ = 1.2`, falling as `τ²`." The figure 0.197 is in no file of the repo.)*
 
 *Proof sketch.* Both paths are smooth in `θ` with the same value and first derivative at `θ = 0`, so their
 difference is `O(θ²)`. ∎
@@ -182,7 +224,7 @@ it optionally includes a pair map (polar, curved) applied to `(x₁, x₂)` firs
 continuous, and `A` is continuous on the region the chart visits, then `φ` is a chart (continuous), and all of
 §2–§6 applies to it unchanged. Where `A` is discontinuous (a numerical solve switching branch, the encode's
 mirror deadband, a collision degeneracy), `φ` is continuous **away from a declared seam set** `Σ_φ ⊂ U`, and
-every theorem holds on `U \ Σ_φ`.
+every theorem holds on `U \ Σ_φ`; for a morph between `φ` and `ψ`, on `U \ (Σ_φ ∪ Σ_ψ)`. *(11 Nov 2026, R-965, RQ-738 item 9.)*
 
 *Proof.* A composition of continuous maps is continuous; restrict to the complement of `Σ_φ`. ∎
 
@@ -194,7 +236,9 @@ never hidden.
 gives a new chart `φ'`. By Theorem 1 there's always a path `φ → φ'`. Two canonical forms:
 
 - **Per-axis morph, in quantity space:** `x₁ˢ = (1−s) x₁ + s y₁` (or a geodesic for angle-like
-  quantities), axis 2 fixed, then `A`. This is a path whenever `A` is continuous along it. It keeps the
+  quantities), axis 2 fixed, then `A`. This is a path whenever `A` is continuous along it and keeps full rank: `A`
+  depends on `s`, and a blend can lose rank (`(K, E) → (U, E)` gives axis 1 `= E/2` at `s = ½`, dependent on axis 2).
+  *(11 Nov 2026, R-965, RQ-738 item 9; was: "This is a path whenever `A` is continuous along it.")* It keeps the
   *meaning* of the untouched axis exactly, because axis 2's value per pixel never changes.
 - **Per-axis morph, in latent space:** `(1−s) φ + s φ'`. Always a path (Thm 1), but axis 2's displayed
   quantity may wander mid-morph, since latent blending doesn't respect what the axes mean.
@@ -236,8 +280,9 @@ charts in the same order, and has the same endpoints.
 
 **Corollary.** Easing can never move a keyframe. That's the guarantee to state in Sequence's spec.
 
-**Spline paths (waypoint or control charts)** are paths by Theorem 1 for latent splines (`Z` is convex, so
-any spline in `Z` stays in `Z`). For the geodesic families, use rotation splines, as in Theorem 2, to keep
+**Spline paths (waypoint or control charts)** are paths by Theorem 1 for latent splines (a spline in `Z` stays in
+`Z`: on the `ℝ⁷` coordinates by convexity, on `z_β` taken on the lift of Theorem 1's proof, R-898). *(11 Nov 2026, R-965, RQ-738
+item 11; was: "`Z` is convex, so any spline in `Z` stays in `Z`".)* For the geodesic families, use rotation splines, as in Theorem 2, to keep
 area.
 
 ---
@@ -258,7 +303,10 @@ area.
 
 This is the contract's "anchor-preserving" against "excursion" split, now proved rather than asserted.
 
-**Snap-back.** Setting `δ ← 0` restores `φ(0) = a` exactly. Excursions compose additively
+**Snap-back** undoes the slice only (R-899, Q2 (a)): it clears the hidden part of `δ` and leaves the pin where it is
+on screen. "Centre on pin" (§ 0.7) clears the in-plane part, and the two together set `δ ← 0`, restoring `φ(0) = a`,
+exactly in exact arithmetic; on an oblique basis splitting `δ` is a projection, exact in floating point only to
+rounding (R-899). *(11 Nov 2026, R-965, RQ-738 item 10; was: "Setting `δ ← 0` restores `φ(0) = a` exactly.")* Excursions compose additively
 (`δ₁ + δ₂`), so any order of slice steps followed by snap-back returns the same state.
 
 **Based morph.** A path `H` with `H_s(0) = a` for all `s` (a *based homotopy*).
@@ -304,7 +352,8 @@ A time chart is `τ : U → Z × [0, T]`, with `τ(u) = (φ(u₁), t(u₂))`, an
 - Between time charts `(φ, t)` and `(ψ, t)` with the same time axis, `(L_s, t)` is a path: the time axis is
   fixed and the IC axis morphs.
 - Between a time chart and `ι(ψ)`, a path also exists, for example the "hybrid"
-  `((1−s)φ + sψ, (1−s) t(u₂) + s t_play)`, because `Z × [0,T]` is convex.
+  `((1−s)φ + sψ, (1−s) t(u₂) + s t_play)`, which stays in `Z × [0,T]` (on `z_β`, on the lift of Theorem 1's proof,
+  R-898). *(11 Nov 2026, R-965, RQ-738 item 11; was: "because `Z × [0,T]` is convex".)*
 
 So the 6 Nov decision to **cut** between them is a *product choice* (hybrid frames are hard to read and
 costly), not a mathematical impossibility. The design should say so.
@@ -329,8 +378,13 @@ There are three kinds of quantity. The same function can belong to more than one
    *Corrected 7 Nov: an earlier version called `L_z²E` approximate, which was wrong, and claimed `E` and `L_z`
    stay fixed in the gauge, which holds only in physical units.*
 3. **Trajectory functionals**, such as minimum separation, lifetime `t_end`, outcome class, Lyapunov exponent
-   and the syzygy word. These depend on the whole trajectory and are many-to-one, with no inverse even
-   locally. **They can never be axes**, only colourings and plots of results.
+   and the syzygy word. These depend on the whole trajectory. **They are excluded as axes**, a design rule, and are
+   colourings and plots of results only: they are discontinuous, their level sets are fractal, and they have no
+   tractable section. Being many-to-one is not the reason (every axis quantity is many-to-one on the 8D state), and
+   where `d_min` or `t_end` is smooth with non-zero gradient the implicit function theorem gives a local section.
+   *(11 Nov 2026, R-965, RQ-738 item 6; was: "are many-to-one, with no inverse even locally. **They can never be
+   axes**, only colourings and plots of results."; corrected 11 Nov 2026 by the physics review of PR #488, was: "where
+   `d_min` or `t_end` is smooth the implicit function theorem gives a local inverse")*
 
 **Theorem 11 (a state function at time `T` can be an axis).** A chart whose axes are state functions
 evaluated at time `T` (for example "shape-sphere position at `T = 5`") is the IC chart
@@ -345,16 +399,22 @@ computes it: flip the momenta, integrate forward by `T`, flip back.
 
 **What that buys:** "final-condition" charts. Pick where the system *is* at time `T`, on the shape sphere or
 in `(L_z, K)` or any state axes, and see which starts lead there and what happened before and after. All of
-§2–§6 applies, because `φ_T` is a chart.
+§2–§6 applies, because `φ_T` is a chart, off the encode's mirror seam where the start goes through `Enc` (design
+§ 10.3; § 0.6). *(11 Nov 2026, R-965, RQ-738 item 7.)*
 
 **Its limits, stated:**
-- `φ_T` is continuous only where the backward trajectory survives `[0, T]` without a triple collision or an
-  escape. Those pixels are masked and declared, never dropped.
+- `φ_T` is continuous wherever the backward flow is: a triple collision breaks it; an escape does not break the
+  flow's continuity, and binary collisions regularise. Masking a backward trajectory that escapes, or meets a binary
+  collision, before `T` is an app limit, not the flow's. Masked pixels are declared, never dropped. *(11 Nov 2026, R-965, RQ-738
+  item 7; was: "`φ_T` is continuous only where the backward trajectory survives `[0, T]` without a triple collision or
+  an escape. Those pixels are masked and declared, never dropped.")*
 - Chaos is symmetric in time: states that are close at `T` can come from starts far apart. So `φ_T` can be
   wildly folded even when `ψ` is smooth. That's real structure, not error.
 - Its cost is one extra integration of length `T` per pixel before the usual forward run.
-- `T = 0` recovers the ordinary chart. The built-in check is that scale-free conserved quantities (`L_z²E`,
-  the signs of `E` and `L_z`) are independent of `T`. `E` and `L_z` themselves are independent of `T` only
+- `T = 0` recovers the ordinary chart within `ε_phys`, not bitwise (`Enc(D(z)) ≠ z` bitwise, § 8). The built-in
+  check is that scale-free conserved quantities (`L_z²E` and the sign of `E`; `L_z`'s sign flips under the encode's
+  mirror, § 0.5) are independent of `T`. *(11 Nov 2026, R-965, RQ-738 item 3; was: "`T = 0` recovers the ordinary chart." and
+  "(`L_z²E`, the signs of `E` and `L_z`)".)* `E` and `L_z` themselves are independent of `T` only
   before the `I = 1` rescale.
 - **Theorem 11 is exact for the true flow; the app's integrators aren't run-reversible.** The default
   (Heggie regularisation with RK4, adaptive steps) isn't time-symmetric, so flip, run, flip is an
@@ -371,18 +431,18 @@ in `(L_z, K)` or any state axes, and see which starts lead there and what happen
 
 | Claim | Status |
 |---|---|
-| Any chart can morph into any other | **Proved** (Thm 1): requires blending in `Z` and the decoder being total |
+| Any chart can morph into any other | **Proved** (Thm 1, in § 0.1's form): block by block, each block in its own signed state (*11 Nov 2026, R-965, RQ-738 item 2; was:* "requires blending in `Z` and the decoder being total") |
 | Composed and physical-quantity axes (E, L_z, angles, ratios) are charts like any other | **Proved** (Thm 10), continuous away from declared seams of the assembly |
 | Changing one axis can keep the other's meaning exactly | **Proved** (§3b): per-axis morph in quantity space |
-| Conserved quantities are both IC and dynamical | **Proved** (§6b): E and L_z in physical units; in the I = 1 gauge only the scale-free L_z²E and the signs |
+| Conserved quantities are both IC and dynamical | **Proved** (§6b): E and L_z in physical units; in the I = 1 gauge only the scale-free L_z²E and the sign of E (*11 Nov 2026, R-965, RQ-738 item 3; was:* "and the signs") |
 | A state function at a later time can be an axis | **Proved for the true flow** (Thm 11); in the app it's an approximate inverse (the integrator isn't reversible), with the round-trip miss measured per pixel |
-| Trajectory functionals (lifetime, outcome, Lyapunov, minimum distance) as axes | **Impossible**: many-to-one; colourings and plots only |
-| Continuous vs smooth | Continuity proved everywhere; smoothness wherever the maps are differentiable (§3b) |
+| Trajectory functionals (lifetime, outcome, Lyapunov, minimum distance) as axes | **Excluded**, a design rule: discontinuous, fractal level sets, no tractable section; colourings and plots only (*11 Nov 2026, R-965, RQ-738 item 6; was:* "**Impossible**: many-to-one") |
+| Continuous vs smooth | Continuity proved away from the declared seams (`Σ_φ ∪ Σ_ψ` for a morph); smoothness wherever the maps are differentiable (§3b) (*11 Nov 2026, R-965, RQ-738 item 9; was:* "Continuity proved everywhere") |
 | Tilt, zoom, pan and slice are special cases of the path model | **Proved** (Thm 2, 6; table in §3), each as an exact member of a named family |
 | "Never squash" is necessary for tilt to be a special case | **Proved** (Thm 2): the straight-line blend collapses swapped planes to a line |
 | Curved tilt vs latent morph tolerance | **Not a tolerance**: different families (Thm 3). Test each operation against its own family |
 | Easing can't move keyframes | **Proved** (Thm 5) |
-| Snap-back is exact, and excursions compose | **Proved** (§5) |
+| Snap-back undoes the slice exactly in exact arithmetic (R-899), and excursions compose | **Proved** (§5) (*11 Nov 2026, R-965, RQ-738 item 10; was:* "Snap-back is exact") |
 | A based morph exists iff both ends contain the anchor | **Proved** (Thm 7) |
 | No jumps under the lock | **Proved possible** (Thm 8, sliding anchor) |
 | Held values survive a morph | **False in general** (Cor. 2): frames must not claim them |
@@ -400,29 +460,44 @@ Everything above is exact. In f32 and f64:
   implementation of family *k* reproduces the *family k formula*. Bitwise where it's the same code path;
   otherwise within a measured per-operation tolerance (R-71). Never compare across families.
 - **The anchor's bits.** Theorems 6–8 hold exactly for `φ(0)`. In floating point, a re-centred nonlinear chart
-  doesn't return the anchor's bits (`E(D(z)) ≠ z` bitwise: the Mac measured 0 of 20,000 samples). So the
+  doesn't return the anchor's bits (`Enc(D(z)) ≠ z` bitwise: the Mac measured 0 of 20,000 samples; *11 Nov 2026, R-965, RQ-738 item
+  9, was:* "`E(D(z))`"). So the
   anchor is carried as **stored words**, which is §17.8's design. The model says *what* must be constant, and
   stored words are *how*.
-- **Continuity becomes "small step, small change except at declared seams".** The encode `E` has genuine
-  discontinuities: the mirror deadband (`λ̃_y = 0`, gone if the mirror step is removed, §0.6) and collision
+- **Continuity becomes "small step, small change except at declared seams".** The encode `Enc` has genuine
+  discontinuities, facts of exact arithmetic and not of floating point, listed here for what they do to a built chart:
+  the mirror deadband (`λ̃_y = 0`, gone if the mirror step is removed, §0.6) and collision
   degeneracies. These affect only how `φ` is
-  *built* for a nonlinear chart, never the morph itself, which is continuous in `Z` (Thm 1). Seams belong to
-  charts, not to paths.
+  *built* for a nonlinear chart, never the morph itself, which is continuous block by block in the signed state
+  (§ 0.1, Thm 1). Seams belong to charts, not to paths, except a per-axis morph in quantity space, whose blend can lose
+  rank mid-path (§ 3b). *(11 Nov 2026, R-965, RQ-738 items 2, 5 and 9; was: "The encode `E` has genuine discontinuities:", "which is
+  continuous in `Z` (Thm 1)" and "Seams belong to charts, not to paths.")*
 
 ---
 
 ## 9. One-paragraph version for the agents
 
 A view is a continuous map from the unit square into the 8D latent space, and every edit is a continuous path
-of such maps: a homotopy. A path always exists, because the latent space is convex and the decoder is defined
-everywhere on it; blend in latent space, never in physical space. Pan, zoom, tilt and slice are exact members
+of such maps: a homotopy. A path always exists, because each block of the signed state is path-connected (§ 0.1);
+blend each block in its own signed state. Pan, zoom, tilt and slice are exact members
 of named path families: reparametrisation, the latent plane geodesic, the chart-parameter geodesic and latent
 translation. Morph is the general case, with the latent line and the geodesics as canonical families, and
 each operation is tested against its own family, never another's. Composed and physical-quantity axes are
 charts through an assembly map, continuous away from declared seams; changing one axis morphs in quantity
 space, so the other axis keeps its meaning. Easing reparametrises time and can't move
 keyframes. Under the lock, a morph keeps the anchor exactly when both charts contain it. When the target
-chart can't, the anchor slides continuously to the target's nearest admissible point, so there are no jumps.
+chart can't, the anchor slides continuously to the target's admissible point `π(a)` (the nearest one for coordinate
+constraints, § 5), so there are no jumps.
 Held quantities aren't preserved mid-morph. Time-to-IC morphs are possible but cut by choice. In floating
 point, family membership means "same formula, same evaluation order", the anchor is carried as stored words,
-and seams belong to charts, not paths.
+and seams belong to charts, not paths, but for a per-axis morph in quantity space (§ 3b).
+
+*11 Nov 2026, R-965, RQ-738 items 2, 9 and 11:* this paragraph's "the latent space is convex and the decoder is defined everywhere on
+it; blend in latent space, never in physical space", "the target's nearest admissible point" and "seams belong to
+charts, not paths." are corrected above as § 0.1, R-898 and § 3b have it.
+
+*11 Nov 2026 (R-926 items 2 and 3; R-950; R-925):* "Time-to-IC morphs are possible but cut by choice" gives way: time is
+the last coordinate of every map and blends like any other, and under the lock no jump stays, the leftover one from a
+time-axis chart to one with no time axis removed by the owner (R-950). "Held quantities aren't preserved mid-morph"
+stands. "Morph" names the system blend, the blend of two charts' states (R-925, R-926), where this paragraph has "blend
+in latent space".

@@ -19,6 +19,12 @@
 //! this file as what answers to it: `ruling` gains `r692_gpu_path`, and every other path of `crates/gui/` stays off the
 //! GPU suites (R-692's exception to R-290).
 //!
+//! The split of `ci` into three shards under `tests-verdict`, which bears `ci`, and the Mesa cache's step before each apt
+//! step (PR #495, 11 Nov 2026): the walk runs every step of a job that builds nothing, reads the Mesa step's output on a
+//! cold cache, and takes a job's failure as a red required check when it bears one or a run where it alone fails turns
+//! one red; the mutants shard's steps may join more to the diff's verdict with `&&`. Each change has its control (R-290's
+//! exception, named by the orchestrator for this PR).
+//!
 //! - `qa_r662_every_tracked_path_classifies_as_the_ruling_says`: every path `git ls-files` lists, against this file's
 //!   own reading of the ruling's lists (`ruling`).
 //! - `qa_r662_unknown_paths_run_everything`: paths the ruling names nowhere, alone and beside a cheap path.
@@ -541,6 +547,16 @@ impl Walk {
             ["github", "event_name"] => "pull_request".to_owned(),
             ["github", "ref"] => "refs/pull/1/merge".to_owned(),
             ["env", key] => self.env.get(*key).cloned().unwrap_or_default(),
+            // The Mesa cache's step (`.github/actions/mesa-debs`, 11 Nov 2026) on a cold cache, which outputs
+            // `installed=false`: the apt step after it installs as before. Only this one step output is known; any
+            // other still stops the walk (R-290's exception for the split, named by the orchestrator).
+            ["steps", "mesa", "outputs", "installed"] => "false".to_owned(),
+            // The shards' matrix (11 Nov 2026), read at its first leg, which runs every step any leg runs (the
+            // doctests run there alone); that the legs' partitions cover every test once `qa_ci_split_mesa_rerun.rs`
+            // checks.
+            ["matrix", "shard"] => "1".to_owned(),
+            // A number, as `matrix.shard == 1` compares the leg with.
+            [n] if !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) => (*n).to_owned(),
             // A step's status functions, in a run with no failed step, which is the run this walk is of.
             ["always()"] => "true".to_owned(),
             ["failure()"] => "false".to_owned(),
@@ -611,21 +627,33 @@ fn walk(yml: &Value, verdict: (bool, bool), fail: &[&str]) -> Walk {
                 "skipped"
             } else if fail.contains(&id.as_str()) {
                 "failure"
-            } else if let Some(env) = job["steps"][0]
+            } else if job["steps"][0]
                 .get("env")
-                .filter(|e| e.get("CHANGES").is_some())
+                .is_some_and(|e| e.get("CHANGES").is_some())
             {
-                let mut cmd = Command::new("bash");
-                cmd.args(["-e", "-c", &s(&job["steps"][0]["run"])]);
-                for (k, v) in env.as_object().expect("env") {
-                    cmd.env(k, w.eval(&s(v)));
+                // The classification check; and, in a job of `run:` steps alone that builds nothing (`tests-verdict`,
+                // the split's `ci` over its shards, 11 Nov 2026), every step after it too, each with its own env.
+                let steps = job["steps"].as_array().expect("qa_r662: steps");
+                let verdict_only = steps.iter().all(|st| st.get("uses").is_none());
+                let mut result = "success";
+                for step in steps
+                    .iter()
+                    .take(if verdict_only { steps.len() } else { 1 })
+                {
+                    let mut cmd = Command::new("bash");
+                    cmd.args(["-e", "-c", &s(&step["run"])]);
+                    if let Some(env) = step["env"].as_object() {
+                        for (k, v) in env {
+                            cmd.env(k, w.eval(&s(v)));
+                        }
+                    }
+                    let out = cmd.timed_output().expect("qa_r662: bash ran");
+                    if !out.status.success() {
+                        result = "failure";
+                        break;
+                    }
                 }
-                let out = cmd.timed_output().expect("qa_r662: bash ran");
-                if out.status.success() {
-                    "success"
-                } else {
-                    "failure"
-                }
+                result
             } else if let Some(env) = job["steps"][0]
                 .get("env")
                 .filter(|e| e.get("RESULTS").is_some())
@@ -803,6 +831,20 @@ fn unconditional(wf: &str, check: &str) -> Value {
     job
 }
 
+/// Whether the job `id`'s failure is a red required check on `verdict`: it bears one, or, as the split's shards do
+/// through `tests-verdict` (11 Nov 2026), a run where it alone fails turns one of them from success to failure.
+fn reaches_gate(yml: &Value, verdict: (bool, bool), id: &str) -> bool {
+    if GATES.contains(&reported_name(id, &yml["jobs"][id]).as_str()) {
+        return true;
+    }
+    let clean = walk(yml, verdict, &[]);
+    let failed = walk(yml, verdict, &[id]);
+    GATES.iter().any(|gate| {
+        check_result(yml, &clean, gate) == "success"
+            && check_result(yml, &failed, gate) == "failure"
+    })
+}
+
 fn check_required(ci: &str, mutants: &str) {
     let yml = parse(ci);
     // The cheap path: every gate reports success, and nothing but `changes` and the PR tier's required jobs, which skip
@@ -830,7 +872,8 @@ fn check_required(ci: &str, mutants: &str) {
             "fmt",
             "gpu-lavapipe-smoke",
             "gpu-metal-smoke",
-            "tests"
+            "tests",
+            "tests-verdict"
         ],
         "qa_r662: the cheap path ran other jobs"
     );
@@ -841,11 +884,10 @@ fn check_required(ci: &str, mutants: &str) {
             by.is_some(),
             "qa_r662: the cheap path does not run `{want}`:\n{runs:#?}"
         );
-        // A failed cheap check is a red required check: the job running it bears one.
+        // A failed cheap check is a red required check: the job running it bears one, or its failure turns one red.
         let (id, _) = by.expect("checked");
-        let job = &yml["jobs"][id.as_str()];
         assert!(
-            GATES.contains(&reported_name(id, job).as_str()),
+            reaches_gate(&yml, (true, false), id),
             "qa_r662: the cheap path's `{want}` runs in `{id}`, which bears no required check"
         );
     }
@@ -890,6 +932,7 @@ fn check_required(ci: &str, mutants: &str) {
             "gpu-lavapipe-smoke",
             "gpu-metal-smoke",
             "tests",
+            "tests-verdict",
             "web-skeleton"
         ],
         "qa_r662: a code pull request skipped a PR-tier job or ran another: {:?}",
@@ -903,10 +946,28 @@ fn check_required(ci: &str, mutants: &str) {
         "cargo nextest run $PACKAGES",
         "cargo xtask build-kernel",
     ] {
+        // The changed crates' tests, whole or, since the split (PR #495, 11 Nov 2026), exactly as the shards'
+        // partitions, whose covering every test once `qa_ci_split_mesa_rerun.rs` checks.
+        let sharded = if want == "cargo nextest run $PACKAGES" {
+            format!("{want} --partition hash:${{{{ matrix.shard }}}}/3")
+        } else {
+            want.to_owned()
+        };
         assert!(
-            runs.iter().any(|(_, r)| r.trim() == want),
+            runs.iter()
+                .any(|(_, r)| r.trim() == want || r.trim() == sharded),
             "qa_r662: a code pull request does not run `{want}`:\n{runs:#?}"
         );
+        // Each runs where its failure is a red required check.
+        for (id, _) in runs
+            .iter()
+            .filter(|(_, r)| r.trim() == want || r.trim() == sharded)
+        {
+            assert!(
+                reaches_gate(&yml, (false, true), id),
+                "qa_r662: a code pull request's `{want}` runs in `{id}`, whose failure turns no required check red"
+            );
+        }
     }
     // A classification that failed is no cheap path: every gate turns red, and none reports a skip.
     let lost = walk(&yml, (true, false), &["changes"]);
@@ -915,6 +976,16 @@ fn check_required(ci: &str, mutants: &str) {
             check_result(&yml, &lost, gate),
             "failure",
             "qa_r662: the required check `{gate}` is not red when the classification failed"
+        );
+    }
+    // The split (11 Nov 2026): `ci`'s product tests run in shards, and a shard that fails turns `ci` red, on code and on
+    // the cheap path alike; a shard that never ran (skipped) does too.
+    for verdict in [(false, true), (true, false)] {
+        let shard_failed = walk(&yml, verdict, &["tests"]);
+        assert_eq!(
+            check_result(&yml, &shard_failed, "ci"),
+            "failure",
+            "qa_r662: the required check `ci` is not red when a shard failed ({verdict:?})"
         );
     }
     // Retired with the full tier from the pull request's path (the owner's CI model, 9 Nov 2026): "a code change
@@ -1020,6 +1091,23 @@ mod mutants_on_a_pull_request {
                 "on:\n  workflow_dispatch:\n",
                 "on:\n  workflow_dispatch:\n  pull_request:\n"
             )
+        )
+    );
+}
+
+mod a_verdict_that_ignores_its_shards {
+    use super::*;
+    negative_control!(
+        qa_r662_required_checks_report_on_the_cheap_path,
+        "ci.yml's `ci` (`tests-verdict`) passing whatever its shards ended in",
+        expected = "runs in `tests`, whose failure turns no required check red",
+        check_required(
+            &swap(
+                &read(".github/workflows/ci.yml"),
+                "        run: '[ \"$SHARDS\" = success ] || { echo \"the product test shards ended $SHARDS: every shard must pass\"; exit 1; }'\n",
+                "        run: 'true'\n"
+            ),
+            &read(".github/workflows/mutants.yml")
         )
     );
 }
@@ -1195,9 +1283,15 @@ fn check_shard(mutants: &str) {
         {
             continue;
         }
-        assert_eq!(
-            s(&step["if"]),
-            "steps.diff.outputs.rust == 'true'",
+        // The diff's verdict alone, or joined by `&&` to more (the Mesa cache's own skip, 11 Nov 2026), which can
+        // only hold a step back further.
+        let cond = s(&step["if"]);
+        let gate = "steps.diff.outputs.rust == 'true'";
+        assert!(
+            cond == gate
+                || cond
+                    .strip_prefix(gate)
+                    .is_some_and(|rest| rest.starts_with(" && ") && !rest.contains("||")),
             "qa_r662: the shard's step `{name}{uses}` does not wait on the diff's verdict"
         );
     }
@@ -1218,6 +1312,20 @@ negative_control!(
         "\"?b/(crates|xtask)/.*\\.rs"
     ))
 );
+
+mod a_mesa_step_off_the_diff {
+    use super::*;
+    negative_control!(
+        qa_r662_mutants_shard_skips_only_rust_not_principias,
+        "mutants.yml's apt step for Mesa waiting on the Mesa cache alone, not on the diff's verdict",
+        expected = "the shard's step `Install Mesa (lavapipe)` does not wait on the diff's verdict",
+        check_shard(&swap(
+            &read(".github/workflows/mutants.yml"),
+            "        if: steps.diff.outputs.rust == 'true' && steps.mesa.outputs.installed != 'true'\n",
+            "        if: steps.mesa.outputs.installed != 'true'\n"
+        ))
+    );
+}
 
 // ---- detect, on real merge commits -----------------------------------------------------------------------------------
 

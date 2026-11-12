@@ -135,6 +135,10 @@ segments 6 and 5, and the labels sum to the spec's frames from the first keyfram
 for a new such segment where the ends allow, cut and dissolve still offered and old specs untouched; a changed link id
 stays a cut (R-520). TASK-M2-60 carries it into this section and § 3.3.
 
+*11 Nov 2026 (R-949, the owner's answer of 10 Nov 2026: "blend, don't cut"):* a changed link id no longer forces a cut:
+a chart change that changes a link id may morph like any chart change, a blend of the two charts' states, with cut and
+dissolve still offered. § 3.3's cut mark stays on what is a cut. *Was:* "a changed link id stays a cut (R-520)".
+
 **Easing is set per segment, between keyframes (R-576).** The spec object carries one segment between each pair of
 neighbouring keyframes, each with its own easing curve, which gives the segment's progress `s ∈ [0, 1]` at each frame
 for every eased field (Part 3), the link parameters of R-520 included. The curves offered and the default are a

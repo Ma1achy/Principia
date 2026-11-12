@@ -9,7 +9,7 @@
 - **Size:** ~400 lines
 
 ## Goal
-Each row of the full order's table, as its verdict says, on CPU batch.
+Each row of the full order's table, as its verdict says, as a map coordinate in the registry; evaluated like every chart, through its map and the window, in f64 on the CPU, with no route of its own (R-925, R-926 item 5).
 
 ## References
 - `docs/design/principia_chart_composition.md` § "3.2 The primitives of the full order"
@@ -30,3 +30,4 @@ Each row of the full order's table, as its verdict says, on CPU batch.
 - *7 Nov 2026 (R-847):* RQ-725 and RQ-726 are ruled (b), R-669 reversed: the scattering rows and fixed-`k` are axes, and their charts are TASK-M2-78's and TASK-M2-79's.
 - *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-111; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Closes: REQ-CHART-119, REQ-CHART-120".
 - *9 Nov 2026 (R-916):* REQ-CHART-185, the round-trip tolerance § 12 gives only as measured worsts, is this task's calibration, its criterion written first, set by measurement (R-649/650), confirmed at the M2 gate (G5).
+- *11 Nov 2026 (the owner's chart re-plan corrections, item 1; applied per R-369: wording):* the Goal is rewritten against the map, window and registry object: under R-925 (shader features on every chart, by the chart's closed-form code or by tables the CPU builds) and R-926 (the new chart system: a map composed with a flat window, evaluated by the CPU in f64) every chart is CPU-evaluated and numerical inverses take the table route, so "CPU batch" names no separate path and would invite one. Nothing here changes behaviour; R-923's hold (integrator work before charts) still holds this task. *Was (Goal):* "Each row of the full order's table, as its verdict says, on CPU batch."

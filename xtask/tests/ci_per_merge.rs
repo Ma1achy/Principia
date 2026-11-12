@@ -1282,8 +1282,9 @@ fn decide(script: &str, run: &Run, issues: &str, env: &[(&str, &str)]) -> Decide
          { printf '\\036'; printf '%s ' \"$@\"; } >> \"$STUB_CALLS\"\n\
          args=\"$*\"\n\
          case \"$args\" in\n\
+           'api repos/o/r/labels/per-merge') [ -n \"$STUB_LABEL_EXISTS\" ] || { echo 'gh: Not Found (HTTP 404)' >&2; exit 1; }; echo '{}' ;;\n\
            'api --method POST repos/o/r/labels '*) [ -z \"$STUB_LABEL_ERR\" ] || { echo \"$STUB_LABEL_ERR\" >&2; exit 1; } ;;\n\
-           'api --method POST '*) [ -z \"$STUB_POST_ERR\" ] || { echo \"$STUB_POST_ERR\" >&2; exit 1; }; echo '{}' ;;\n\
+           'api --method POST '*) [ -z \"$STUB_POST_ERR\" ] || { echo \"$STUB_POST_ERR\" >&2; exit 1; }; echo '{\"number\": 12}' ;;\n\
            *'/attempts/'*'/jobs'*)\n\
              [ -z \"$STUB_JOBS_ERR\" ] || { echo \"$STUB_JOBS_ERR\" >&2; exit 1; }\n\
              cat \"$STUB_DATA/pages\" ;;\n\
@@ -1345,8 +1346,15 @@ fn process_run() -> Run {
 
 const TITLE: &str = "per-merge: ci failed on main (not a correctness failure)";
 
-fn check_files(env: &[(&str, &str)]) {
-    let done = decide(&script(), &process_run(), "[]", env);
+/// `decide` opens the task, labelled, naming its run and failure, says where it filed it, and asks to make the label
+/// `label_posts` times: once when it is missing, never when it exists, where the API answers a request to make it with a
+/// 422 (run 43073329906, whose task was filed all the same, as a comment on #490).
+fn check_files(env: &[(&str, &str)], label_posts: usize) {
+    check_files_with(&script(), env, label_posts)
+}
+
+fn check_files_with(script: &str, env: &[(&str, &str)], label_posts: usize) {
+    let done = decide(script, &process_run(), "[]", env);
     assert!(done.ok, "ci_per_merge: decide failed on a task");
     assert_eq!(
         done.posts_to("repos/o/r/issues"),
@@ -1366,36 +1374,65 @@ fn check_files(env: &[(&str, &str)]) {
         "ci_per_merge: the task does not name its run, its failure and its label"
     );
     assert!(
-        done.posts_to("repos/o/r/labels") == 1 && done.summary.contains(&format!("Filed: {TITLE}")),
-        "ci_per_merge: decide did not make its label or say it filed the task"
+        done.summary.contains(&format!("Filed: {TITLE} (#12)"))
+            && done.out.contains("filed: #12: "),
+        "ci_per_merge: decide did not say where it filed the task"
+    );
+    assert_eq!(
+        done.posts_to("repos/o/r/labels"),
+        label_posts,
+        "ci_per_merge: decide did not ask to make its label only when it is missing"
     );
 }
 
 #[test]
 fn ci_per_merge_decide_files_one_task_on_main() {
-    check_files(&[]);
+    check_files(&[], 1);
 }
 
 negative_control!(
     ci_per_merge_decide_files_one_task_on_main,
     "decide off `main`",
     expected = "ci_per_merge: decide did not open the task",
-    check_files(&[("FILE_TASKS", "false")])
+    check_files(&[("FILE_TASKS", "false")], 1)
 );
 
 #[test]
 fn ci_per_merge_decide_files_the_task_when_its_label_exists() {
-    check_files(&[("STUB_LABEL_ERR", "gh: Validation Failed (HTTP 422)")]);
+    check_files(&[("STUB_LABEL_EXISTS", "1")], 0);
 }
 
 negative_control!(
     ci_per_merge_decide_files_the_task_when_its_label_exists,
-    "decide off `main`, the label existing",
+    "decide asking to make the label whether or not it exists, which the API refuses with a 422",
+    expected = "ci_per_merge: decide did not ask to make its label only when it is missing",
+    check_files_with(
+        &edit(
+            &script(),
+            "    if out.returncode == 0:\n        return\n",
+            ""
+        ),
+        &[
+            ("STUB_LABEL_EXISTS", "1"),
+            ("STUB_LABEL_ERR", "gh: Validation Failed (HTTP 422)")
+        ],
+        0
+    )
+);
+
+#[test]
+fn ci_per_merge_decide_files_the_task_when_its_label_cannot_be_made() {
+    check_files(&[("STUB_LABEL_ERR", "gh: HTTP 403")], 1);
+}
+
+negative_control!(
+    ci_per_merge_decide_files_the_task_when_its_label_cannot_be_made,
+    "decide off `main`, the label not made",
     expected = "ci_per_merge: decide did not open the task",
-    check_files(&[
-        ("STUB_LABEL_ERR", "gh: Validation Failed (HTTP 422)"),
-        ("FILE_TASKS", "false")
-    ])
+    check_files(
+        &[("STUB_LABEL_ERR", "gh: HTTP 403"), ("FILE_TASKS", "false")],
+        1
+    )
 );
 
 fn check_comment(open_title: &str) {

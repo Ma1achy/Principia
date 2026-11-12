@@ -9,7 +9,7 @@
 - **Size:** ~350 lines, the tests included
 
 ## Goal
-The first registered closed-form pair on the CPU: `(ξ, η)` through the explicit-configuration path at any masses, region D as a preset of it (the full disc, unmasked, R-871), exact rest and, at equal masses, eq. 3's velocities, the closed rows' round trips, and stage 2's region-D slide arm (F9). Its baked entry, GPU reference and lowering row stay TASK-M4-34's.
+The first registered closed-form pair on the CPU: `(ξ, η)` through the explicit-configuration path at any masses, region D as a preset of it (the full disc, unmasked, R-871), exact rest and, at equal masses, eq. 3's velocities, the closed rows' round trips, and stage 2's region-D slide arm (F9). Its baked entry, GPU reference and fragment route (what its lowering row becomes: RQ-765, on the lowering label, answered by R-935) stay TASK-M4-34's.
 
 ## References
 - `docs/design/principia_chart_composition.md` § "8.3 The pairs it carries"
@@ -43,3 +43,4 @@ The first registered closed-form pair on the CPU: `(ξ, η)` through the explici
 - Split from TASK-M4-34 by R-916 (9 Nov 2026): REQ-CHART-171 is REQ-CHART-100's CPU half; REQ-CHART-101 and REQ-CHART-142 move here. Stage 2's region-D slide arm moves here from TASK-M2-65, since region D lands in stage 3 (F9).
 - The preset's base point, centre and window: RQ-711, ruled (R-888).
 - **Build order (R-916):** stage 3.
+- *11 Nov 2026 (the owner's chart re-plan corrections, item 1, the sweep of the re-plan's § A.1 KEEP tasks; applied per R-369: wording):* "lowering row" in the Goal is renamed the fragment route, as the re-plan's § A.1 renames the lowering label for TASK-M2-66 (the primitive registry): under R-926 (the new chart system) the CPU evaluates every chart in f64 and the fragment reaches it by closed form or table, so a "lowering" names no separate path. What stays TASK-M4-34's (region D's GPU side) is unchanged; nothing here changes behaviour; R-923's hold (integrator work before charts) still holds this task. *Was (Goal, its last sentence):* "Its baked entry, GPU reference and lowering row stay TASK-M4-34's."

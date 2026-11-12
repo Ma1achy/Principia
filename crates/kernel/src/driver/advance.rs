@@ -19,7 +19,7 @@
 //! blanket impl: `N_sub` `STEP` calls per macro-step of the span at the fixed `dt_macro / N_sub`, the callback after
 //! each, a `while` loop bounded by the count (Part 2c rule 3). The occupant reads only the state `(m, r, p)`, the step
 //! `dt`, and `G`, which is 1 in the force (Part 3, Part 5); no chart reaches it (seam 3). The regularised occupants,
-//! which own their time mapping, implement `ADVANCE` themselves (TASK-M3-07).
+//! which own their time mapping, implement `ADVANCE` themselves, as [`crate::regularisation::Composed`].
 //!
 //! **Determinism** (REQ-INT-007, REQ-INT-023): the number and size of the steps are a function of the integer span, the
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.

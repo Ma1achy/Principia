@@ -1933,65 +1933,17 @@
   reason: informative only
   note: "a dispatch order, set for now; recorded in plan/OPERATIONS.md § Dispatching; no requirement, task or edge changes"
 - file: decisions.md
-  section: "R-925 — Shader features work on every chart with no refusal, by the chart's closed-form shader code where it has some and otherwise by tables the CPU builds; Chart position stays, a table search its fallback where a chart has no backwards formula; the forward direction needs no table, the CPU evaluating the chart per quad and sending the result with the quad; \"morph\" means the system blend, a blend is a chart, and a window turn on one map is a tilt; a morph supports time running and time is a supported chart axis; debug views of the tables are required *(amends R-116 and R-850; refines R-542)*"
-  reason: "planned (the plan PR)"
-  note: "the owner's six decisions of 10 Nov 2026 on the chart prototype (no fragment refusal, a table route; Chart position's table fallback; forward per quad; morph the system blend; time an axis; table debug views); docs first, then the plan: plan/charts/m2-chart-system-replan.md proposes the requirements and tasks, which follow once the one-way items it files are answered (R-369, task scoping)"
-- file: decisions.md
-  section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
-  reason: "planned (the plan PR)"
-  note: "the owner's eleven decisions of 10 Nov 2026 on the new chart system (map composed with a flat window; time the last coordinate; morph a state blend; one lock constraint; CPU f64 evaluation, GPU integrates records; per-quad forward tables; fragment-only backwards tables; no refusal; slope tiers; table debug views; the one-cell linearised decoder); docs first, then the plan: plan/charts/m2-chart-system-replan.md proposes the requirements and tasks, which follow once the one-way items it files are answered (R-369, task scoping)"
-- file: decisions.md
   section: "R-931 — Goldens: a golden or reference image that is provably wrong is fixed, everything that depends on it is updated, and tests run against the fixed version; an incorrect thing is never treated as correct, and a bug is never replicated for the sake of matching it *(no RQ; refines R-110)*"
   reason: informative only
   note: "the goldens rule: a provably wrong golden or reference image is fixed, its dependents updated, tests run against the fixed version; a standing process rule, read from plan/CURRENT_RULES.md; its first uses are the seed conversion's images (R-934) and any golden TASK-M3-70 moves"
-- file: decisions.md
-  section: "R-932 — Chart edges: no blank areas; past every true edge the chart saturates, where there is a second sheet it unfolds onto it, and where the coordinate repeats it wraps; smearing and saturating are the same idea, and which mechanism an edge uses is physics review's call, saturating wherever the edge system itself is not a valid system; RQ-773 option (a): unfold, clamp and saturate become declared kinds per edge, and an unfold sheet is counted, a clamped pixel is not, a saturated pixel only where its system is not shown inside the square *(closes RQ-773; amends R-407, R-470, R-471, R-472, R-503, R-506, R-508, R-512, R-537, R-554, R-597 and R-708; refines R-408)*"
-  reason: "planned (the plan PR)"
-  note: "the owner's rule on chart edges and RQ-773 (a): no blank areas; unfold, clamp and saturate as declared kinds, the count per kind; plan/charts/m2-chart-addendum-extensions-axes.md's N12 and N14 carry it, their requirements and REQ-CHART-054, REQ-CHART-056, REQ-CHART-087, REQ-GUI-180, REQ-GUI-268 and REQ-GUI-357 following with the chart plans' tasks (R-369, task scoping); whether the rule reaches R-598's pixels is RQ-784"
 - file: decisions.md
   section: "R-933 — Starting collided: if bodies start already collided, double or triple, it is a collision at `t = 0`, and the least separation and the pair are recorded *(no RQ)*"
   reason: informative only
   note: "starting collided is a collision at t = 0 with its least separation and pair recorded; REQ-EVT-002, REQ-EVT-003, REQ-EVT-004 and REQ-EVT-009 already ask it (TASK-M3-09, built); TASK-M3-10 cites it"
 - file: decisions.md
-  section: "R-934 — RQ-764, the momentum seed: option (a), the expansion seed `w = r/√I` takes the place of the largest-norm rule of R-82 everywhere, the invariant charts and Burrau's included; the seam is not physics; every image it changes is a recorded conversion, updated under R-931; R-82's rule is kept as a named option with its seam declared *(closes RQ-764; amends R-82)*"
-  reason: "planned (the plan PR)"
-  note: "RQ-764 (a): the seed w = r/√I everywhere, the images updated under R-931; plan/charts/m2-chart-system-replan.md's N10 carries it, REQ-DEC-021 changing with its task (R-369, task scoping)"
-- file: decisions.md
-  section: "R-935 — The chart re-plan's one-way questions, the plan's recommendation on each: exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (RQ-758); the lock's re-solve follows its local minimiser continuously, stops where that ends, and keeps the offered re-centre, the navigation stop and the stored-words select (RQ-759); a per-sample stop index on the integrator's grid with a new label \"reached its time\", the zoom along time floored at one boundary (RQ-761); the window's scale is R-507's and R-920's unit, time's the home time window (RQ-762); stage 1 measures each operation against its generic edit first (RQ-763); the GPU decode entries stay as test entries and R-837's cap is retired once measured (RQ-765); a large quad's forward table has one exact node per sample, R-90's trigger read on the narrowed f32 records (RQ-766); the table seeds a refinement on the chart's forward code (RQ-767); `ctx.chart.z` stays the forward value, carried in the table (RQ-768); stage 3 runs beside stages 1 and 2 (RQ-769); an in-plane pan or zoom still re-addresses the cache (RQ-770) *(closes RQ-758, RQ-759, RQ-761, RQ-762, RQ-763, RQ-765, RQ-766, RQ-767, RQ-768, RQ-769 and RQ-770; amends R-837, R-849, R-863 and R-864; refines R-90 and R-926)*"
-  reason: "planned (the plan PR)"
-  note: "the chart re-plan's eleven one-way answers (RQ-758, RQ-759, RQ-761 to RQ-763, RQ-765 to RQ-770), each the plan's recommendation; plan/charts/m2-chart-system-replan.md § A.2 lists the requirements that change, which follow with the chart plans' tasks (R-369, task scoping)"
-- file: decisions.md
-  section: "R-936 — RQ-760, what a state blend leaves open: the other path arms are retired as morphs and offered as maps; the mass block blends the mass coordinates, the logs of the mass ratios, \"linear in masses\" having been loose wording for that; no area statistics on a mid-morph frame, the two end charts keeping their own; where a blend folds there is no true copy, the backwards answer the nearest one, labelled *(closes RQ-760; refines R-926)*"
-  reason: "planned (the plan PR)"
-  note: "RQ-760: the other arms as maps, the mass block in log-ratios, no area statistics mid-morph, no true copy at a fold; REQ-CHART-112 and REQ-CHART-131 change with the chart plans' tasks (R-369, task scoping)"
-- file: decisions.md
-  section: "R-938 — RQ-772, which edges are built: every chart's edges now, not a first few; the time axis before zero shows the starting state now, the backward run later, reusing the one designed for the final-condition charts *(closes RQ-772)*"
-  reason: "planned (the plan PR)"
-  note: "RQ-772: every chart's edges built now, time before zero the starting state; plan/charts/m2-chart-addendum-extensions-axes.md's N12 and N14 carry it"
-- file: decisions.md
-  section: "R-939 — RQ-774, marking clamped and saturated areas: a toggle, off by default *(closes RQ-774)*"
-  reason: "planned (the plan PR)"
-  note: "RQ-774 (b): a marking toggle, off by default; the addendum's N18 carries it, after M2's gate"
-- file: decisions.md
-  section: "R-940 — RQ-777, mixed axis numbers: not the summed number; in a blend a dual ruler, one axis line with the starting chart's real ticks on one side and the target chart's on the other, each fading with its share; on a tilt or rotation within one chart, one number in window units; hover gives every true value *(closes RQ-777)*"
-  reason: "planned (the plan PR)"
-  note: "RQ-777: no summed axis number; a dual ruler in a blend, window units on a tilt or rotation, every true value on hover; the addendum's N16 and N17 carry it, REQ-GUI-084 and REQ-GUI-246 changing with their tasks"
-- file: decisions.md
   section: "R-941 — RQ-779, the default extension of each edge: per R-932; the mass simplex saturates, like the latent mass plane; the rest is confirmed by eye when the real charts render *(on RQ-779, which stays open)*"
   reason: informative only
   note: "the owner's answer on the per-edge defaults: per R-932, the mass simplex saturating, the rest confirmed by eye when the charts render; the entry stays open and the addendum's N14 builds each row to the rule meanwhile"
-- file: decisions.md
-  section: "R-942 — The chart addendum's remaining questions, the plan's recommendation on each: the per-edge choice lives in the registry row and, as an override, in the view state, a re-addressing kind off the sim key and a kind that shows new systems on it (RQ-775); the backwards table holds sheet 1 only, a state looked up as itself and as its time reverse (RQ-776); no small term is dropped from an axis's name (RQ-778); the computed axis is the primary scale on every chart and every frame, the no-ticks rule mid-morph withdrawn (RQ-780); the view's centre may cross onto an unfold sheet and stops at a clamped or saturated area (RQ-781); RQ-778 and RQ-780 read with the dual ruler *(closes RQ-775, RQ-776, RQ-778, RQ-780 and RQ-781; amends R-472; refines R-469, R-476 and R-926)*"
-  reason: "planned (the plan PR)"
-  note: "the addendum's five remaining answers (RQ-775, RQ-776, RQ-778, RQ-780, RQ-781), each option (a), RQ-778 and RQ-780 read with the dual ruler; the addendum's N14 to N17 carry them, with the tick-tolerance calibration (R-71) added with N16's task"
-- file: decisions.md
-  section: "R-943 — The general rule for a morph: a morph moves each pixel's system from its system on chart A to its system on chart B along a path, defined by the pairing (the same pixel on both charts), the path (by default the shortest in each block's natural geometry) and the easing (timing and nothing else); any other path is allowed if both ends are exactly the end charts, every in-between frame is a valid system and it is continuous; a path is the owner's choice, not physics *(no RQ; refines R-926)*"
-  reason: "planned (the plan PR)"
-  note: "the general rule for a morph: pairing, path, easing; the default path per block, other paths allowed and not built; plan/charts/m2-chart-system-replan.md's N5 carries it"
-- file: decisions.md
-  section: "R-944 — The principle: every pixel of a morph frame is a valid system, so a morph frame is a chart, and every feature that works on a chart works on a morph frame: traces, contours, marks, hover, tilt, slice, save; where the design says a mid-morph frame can't do something, that is a gap to close, not a limitation to label; the one accepted exception is area statistics on a mid-morph frame *(no RQ; amends R-899 and R-902; refines R-925)*"
-  reason: "planned (the plan PR)"
-  note: "the principle: a morph frame is a chart and every chart feature works on it, area statistics the one exception; the chart re-plan's addition closes each stated mid-morph limitation, item by item, in its own plan PR"
 - file: decisions.md
   section: "R-945 — R-926 item 7's \"ONLY\" list was not exhaustive: the backwards direction serves anything that places a running or saved state on a chart, traces and marks on the CPU among them *(no RQ; refines R-926)*"
   reason: informative only
@@ -2000,3 +1952,67 @@
   section: "R-946 — \"Windows once proven\" counts the PC's CPU-only tiers alone: the slow tier, the mutation runs and the process tests may move to the PC's per-merge run without waiting for the card, containment first and unchanged, and only once the CPU tiers repeat, three runs on one commit of `main` with the same result for every test and every hosted-Linux pass passing on all three; the PC's GPU results stay measurements until each of the four failing steps is explained, sorted by running it under lavapipe as well as on the RTX *(no RQ; refines R-909; amends R-719)*"
   reason: informative only
   note: "the Windows PC's CPU-only tiers may move to its per-merge run alone, containment first and the three-run repeat criterion met; the four failing GPU steps sorted by a lavapipe run on the PC; recorded in plan/OPERATIONS.md § \"Windows GPU results (R-719)\" and § \"The Windows runner's work (R-859)\""
+- file: decisions.md
+  section: "R-955 — RQ-784: option (a), R-598 stands; a latent pixel energy normalisation cannot reach is a validity failure, not an edge, and stays not a system with the reason in the readout; R-932's \"No blank areas\" is about edges and their extensions *(closes RQ-784; refines R-932)*"
+  reason: informative only
+  note: "RQ-784 (a): R-598 stands, a pixel energy normalisation cannot reach stays not a system; \"No blank areas\" is about edges; recorded in the chart decoder contract and the chart reference; no requirement changes"
+- file: decisions.md
+  section: "R-956 — Whether a record made before R-926's f64 decode route re-runs bit for bit is deferred to M2 *(defers RQ-783)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-957 — The precision-ladder proposal's seven questions stay deferred to M3 *(defers RQ-577)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-958 — GPU `sin` and `cos` near π/2 stay deferred to M4 *(defers RQ-629)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-959 — Whether the kernel takes its own f32 `sin` and `cos` stays deferred to M4 *(defers RQ-687)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-960 — The collinear statistical targets' cap question stays deferred to M9 *(defers RQ-643)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-961 — The rest of TASK-M9-01's gaps stay deferred to M9 *(defers RQ-681)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-963 — The default extension kind of each edge, the owner's check by eye, stays open, deferred to M2 *(defers RQ-779)*"
+  reason: informative only
+  note: "a deferral; no requirement changes"
+- file: decisions.md
+  section: "R-964 — Whether the presentation frames become a stage after the Print graph is deferred to M7, in place of the exporter's design *(defers RQ-391; amends R-706, R-803, R-825 and R-890)*"
+  reason: informative only
+  note: "a deferral, to M7 in place of the exporter's design; no requirement changes"
+- file: decisions.md
+  section: "R-965 — RQ-738, the chart-space model's correction list: the owner's \"correct the wording as listed\"; items 2 to 11 are corrected in the model as record corrections, each with its *Was*, item 1 having been settled by R-868 *(closes RQ-738)*"
+  reason: informative only
+  note: "record corrections to docs/design/principia_chart_space_model.md, RQ-738's items 2 to 11; nothing is built from the model's wording; no requirement changes"
+- file: decisions.md
+  section: "R-966 — The merge watcher checks `main`'s status before every merge and refuses the merge while `main` is red or unknown, in place of a hold list; `merge-ready` is counted from green, or put on only once the head is green *(refines R-681)*"
+  reason: informative only
+  note: "the owner's order of 11 Nov 2026: the merge watcher's guard on `main`'s status and `merge-ready` from green; process; changes no requirement"
+- file: decisions.md
+  section: "R-967 — CI caches the Mesa (lavapipe) packages of `gpu-lavapipe` and the release jobs, keyed on the package list, so a run no longer fetches them from Ubuntu's archive *(amends R-285)*"
+  reason: informative only
+  note: "the owner's order of 11 Nov 2026: CI caches the Mesa packages, amending R-285; ci; changes no requirement"
+- file: decisions.md
+  section: "R-968 — A job whose only failure is the package-install step is re-run once, automatically, on GitHub-hosted runners, marked as a re-run and never turning a real failure green; the per-merge verdict is unchanged, RQ-789 open *(extends R-714)*"
+  reason: informative only
+  note: "the owner's order of 11 Nov 2026: one automatic re-run of an install-only failure, extending R-714; REQ-TOOL-223 unchanged, RQ-789 open; ci; changes no requirement"
+- file: decisions.md
+  section: "R-969 — The `ci` job is split as planned, and the 30-minute target is judged only after a week of runs on the split; the timings are reported now against the 30-minute and one-hour targets, from what merged since #457, the outage runs shown apart"
+  reason: informative only
+  note: "the owner's orders of 11 Nov 2026: the ci job split, the 30-minute target judged after a week, the timings reported now; ci; changes no requirement"
+- file: decisions.md
+  section: "R-970 — A CI run clearly hung or stuck because of a bug is caught and cancelled, on `main` too; every other run on `main` is still never cancelled *(amends R-656)*"
+  reason: informative only
+  note: "the owner's word of 11 Nov 2026: a clearly hung or stuck run is cancelled, amending R-656; ci; changes no requirement"
+- file: decisions.md
+  section: "R-971 — The per-merge verdict fix and the `plan/requirements.yaml`-only move come to the owner as rulings, through RQ-789 and RQ-790, which stay open; neither goes straight into a CI pull request"
+  reason: informative only
+  note: "the owner's message of 11 Nov 2026: RQ-789 and RQ-790 come as rulings and stay open; ci; changes no requirement"

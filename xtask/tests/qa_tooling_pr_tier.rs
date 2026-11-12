@@ -429,10 +429,42 @@ negative_control!(
 /// their doctests.
 fn check_ci_tests(ci: &str) {
     let (id, lines) = the_job(ci, "ci.yml", "ci");
+    // The split (PR #495, 11 Nov 2026): `ci` is borne by `tests-verdict`, a verdict over the shards of `tests`, the one
+    // job it waits on beside `changes`, whose failure turns it red (`qa_ci_split_mesa_rerun.rs`); the tests are read
+    // there, each nextest run exactly its shard's partition. R-290's exception, named by the orchestrator for PR #495.
+    let (id, lines, nextest) = if runs(&lines).iter().any(|c| c.contains("nextest")) {
+        (id, lines, "cargo nextest run $PACKAGES".to_owned())
+    } else {
+        let needs: Vec<String> = lines
+            .iter()
+            .find_map(|l| l.trim().strip_prefix("needs:"))
+            .unwrap_or_default()
+            .trim()
+            .trim_start_matches('[')
+            .trim_end_matches(']')
+            .split(',')
+            .map(|n| n.trim().to_owned())
+            .filter(|n| n != "changes")
+            .collect();
+        assert_eq!(
+            needs,
+            ["tests"],
+            "qa pr tier: `ci` ({id}) runs no tests and waits on no shards"
+        );
+        let shards = jobs(ci)
+            .into_iter()
+            .find(|(j, _)| j == "tests")
+            .expect("qa pr tier: no `tests` job");
+        (
+            shards.0,
+            shards.1,
+            "cargo nextest run $PACKAGES --partition hash:${{ matrix.shard }}/3".to_owned(),
+        )
+    };
     let text = lines.join("\n");
     assert!(
         text.contains("PACKAGES: ${{ needs.changes.outputs.packages }}")
-            && runs(&lines).iter().any(|c| c == "cargo nextest run $PACKAGES"),
+            && runs(&lines).contains(&nextest),
         "qa pr tier: `ci` ({id}) does not run nextest over the changed crates and their reverse dependencies"
     );
     let step = text
@@ -467,6 +499,20 @@ negative_control!(
         "          NEXTEST_PROFILE: ci\n          NEXTEST_NO_TESTS: pass\n",
     ))
 );
+
+mod ci_shards_unpartitioned {
+    use super::*;
+    negative_control!(
+        qa_pr_tier_ci_runs_the_pr_profile_on_the_changed_crates,
+        "ci.yml with the shards each running every changed crate's tests, unpartitioned",
+        expected = "does not run nextest over the changed crates and their reverse dependencies",
+        check_ci_tests(&swap(
+            &ci(),
+            "        run: cargo nextest run $PACKAGES --partition hash:${{ matrix.shard }}/3\n",
+            "        run: cargo nextest run $PACKAGES\n",
+        ))
+    );
+}
 
 // ---------------------------------------------------------------------------------------------------------------------
 // No mutants, no full tier, no controls run on a pull request.
@@ -1418,11 +1464,11 @@ fn qa_pr_tier_no_pull_request_check_gathers_the_release_run() {
 
 negative_control!(
     qa_pr_tier_no_pull_request_check_gathers_the_release_run,
-    "ci.yml whose `ci` check needs the release shards again",
-    expected = "`tests`, which runs on a pull request, gathers the release run",
+    "ci.yml whose `ci` check (`tests-verdict` since the split of PR #495) needs the release shards again",
+    expected = "`tests-verdict`, which runs on a pull request, gathers the release run",
     check_release_blocks(&swap(
         &ci(),
-        "  tests:\n    name: ci\n    needs: changes\n",
-        "  tests:\n    name: ci\n    needs: [changes, ci-release]\n",
+        "  tests-verdict:\n    name: ci\n    needs: [changes, tests]\n",
+        "  tests-verdict:\n    name: ci\n    needs: [changes, tests, ci-release]\n",
     ))
 );

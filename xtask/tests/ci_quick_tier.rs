@@ -740,7 +740,8 @@ fn check_doctests(files: &[(String, String)]) {
     );
     assert_eq!(
         str_of(&steps[0]["if"]),
-        "env.CODE == 'true' && needs.changes.outputs.doc_packages != ''",
+        // In shard 1 alone (the owner, 11 Nov 2026: "split the ci job as planned"): the doctests have no partition.
+        "env.CODE == 'true' && needs.changes.outputs.doc_packages != '' && matrix.shard == 1",
         "ci_quick_tier: the doctest step runs with no package, on the whole default set"
     );
     assert_eq!(
@@ -777,8 +778,8 @@ mod doctests_on_nothing {
         expected = "ci_quick_tier: the doctest step runs with no package",
         check_doctests(&with_edit(
             "ci.yml",
-            "        if: env.CODE == 'true' && needs.changes.outputs.doc_packages != ''\n",
-            "        if: env.CODE == 'true'\n"
+            "        if: env.CODE == 'true' && needs.changes.outputs.doc_packages != '' && matrix.shard == 1\n",
+            "        if: env.CODE == 'true' && matrix.shard == 1\n"
         ))
     );
 }

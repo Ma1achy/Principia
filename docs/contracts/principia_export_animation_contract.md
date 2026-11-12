@@ -113,6 +113,9 @@ Keyframes are unchanged in *what they describe*, changed only in *how frames are
   serialisation, links included (`principia_gui_state_contract.md` §2; no second copy, X1). A change of a link, or of a
   link parameter, between keyframes is a sim-key change at that keyframe: a cut, as a chart switch is, in live
   playback and wherever a link id changes.
+  *11 Nov 2026 (R-949, amending R-520 F1 and R-483 X7):* a change of a link id may morph, as a chart switch may (R-850):
+  the morph blends the two charts' states and interpolates no link function. It is still a sim-key change at that
+  keyframe, and a cut where the segment is a cut. *Was:* "and wherever a link id changes", an unconditional cut.
 - **Link parameters interpolate in a blocking export only, flagged (R-520).** Between two keyframes whose link ids are
   the same and whose link parameters differ, a blocking export (Part 4) eases each differing parameter linearly in its
   value (`μ_max`, `q_max`) and re-integrates every frame at its own values. **The segment chooses** (R-623, closing

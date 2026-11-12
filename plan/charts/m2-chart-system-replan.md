@@ -29,7 +29,9 @@ made before the new decode route recreates bit for bit) is answered, and the ans
 document still builds and dispatches nothing. Its N1 to N11 are not in `plan/tasks.yaml` yet: the owner's reply to the
 draft of this plan's addition (the plan that closes each stated mid-morph limitation, R-944) puts the chart plans'
 `tasks.yaml` changes in that addition's own PR and nowhere else, so they land there, with their requirements (applied
-per R-369: task scoping). The body below is kept as proposed, with a dated note where an answer changes it; where the
+per R-369: task scoping). *11 Nov 2026:* the addition is `plan/charts/m2-chart-replan-addition.md`; its § F lists N1 to
+N11 as entered, with the tasks § A.1 below does not list (TASK-M8-107, the contour and trace tasks, TASK-M7-52).
+The body below is kept as proposed, with a dated note where an answer changes it; where the
 body says "waits on RQ-n" or "under RQ-n (a)", read the row here.
 
 | Question | Answer | Ruling |
@@ -368,6 +370,10 @@ integrator work (TASK-M4-05) carries on as agreed.
     the Gram area factor is unsigned, § 17.11), for example the sign of the 2 × 2 Jacobian determinant of a fixed 2D key
     of the swept state composed with the chart, under physics review. Measurement: the held-`E*` miss mid-morph (§ 17.6's 0.054 median) reported, labelled, not a
     gate (R-850: mid-morph frames never claim held values). Door: one-way, RQ-759 and RQ-760.
+    *11 Nov 2026 (R-936; applied per R-369, a record correction, listed for veto):* the measurement stands as written
+    and its subject is N5's own blend. Design § 17.6 gives the 0.054 median as the miss of "a chart-level blend", the
+    blended state between two pixels at one `E*`, which is the state blend; the arm that holds `E*` is one of the arms
+    R-936 offers as maps, not morphs. The addition's § E, item 14, has the reasoning.
 
 ### B.4 Stage 3: the registry and the maps (beside stages 1 and 2 under RQ-769 (a))
 
