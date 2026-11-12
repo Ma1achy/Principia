@@ -872,6 +872,20 @@ fn check_lc_inverse(inverse: fn([f64; 2], f64) -> [f64; 2]) {
         [a, b],
         "u₀ ≤ TINY: u₁ = b"
     );
+    // At TINY exactly the guard takes the other root: on y < 0, b where y/(2a) is −b; and, on x < 0 with y = −0, a = +0
+    // where y/(2u₁) is −0.
+    assert_eq!(inverse([0.0, -2.0], 1.0), [1.0, 1.0], "a = TINY: u₁ = b");
+    assert_eq!(
+        lc_inverse_unstable([0.0, -2.0], 1.0),
+        [1.0, 1.0],
+        "u₀ = TINY: u₁ = b"
+    );
+    let u = inverse([-4.0, -0.0], 2.0);
+    assert_eq!(
+        (u[0].to_bits(), u[1]),
+        (0.0f64.to_bits(), 2.0),
+        "|u₁| = TINY: u₀ = a = +0"
+    );
 }
 
 #[test]
@@ -897,6 +911,7 @@ fn check_round_trip(image: impl Fn(&AzSystem<f64>, &AzQ<f64>, &AzP<f64>) -> Stat
             [[0.4, -0.2], [-0.7, 0.1], [0.2, 0.9]],
             [[0.1, 0.2], [-0.3, 0.05], [0.0, -0.1]],
         ),
+        unnormalised(),
     ] {
         let (system, q, pm) = register(&s, p.tiny, p.r3_floor);
         let back = image(&system, &q, &pm);
@@ -1251,4 +1266,89 @@ negative_control!(
     "a rule one boundary short",
     expected = "the boundary at or before",
     check_boundary_f32(|t, d| boundary_at_or_before::<f32>(t, d).saturating_sub(1))
+);
+
+/// Masses that do not sum to one, with momenta, at f64.
+fn unnormalised() -> State<f64> {
+    state(
+        [0.3, 0.5, 0.9],
+        [[0.4, -0.2], [-0.7, 0.1], [0.2, 0.9]],
+        [[0.1, 0.2], [-0.3, 0.05], [0.0, -0.1]],
+    )
+}
+
+/// The Cartesian energy of `s` in its centre-of-momentum frame, computed apart from the occupant.
+fn com_energy(s: &State<f64>) -> f64 {
+    let mt: f64 = s.m.iter().sum();
+    let pc = [0, 1].map(|j| s.p.iter().map(|p| p[j]).sum::<f64>());
+    let kinetic: f64 = (0..3)
+        .map(|i| {
+            let q = [0, 1].map(|j| s.p[i][j] - s.m[i] / mt * pc[j]);
+            (q[0] * q[0] + q[1] * q[1]) / (2.0 * s.m[i])
+        })
+        .sum();
+    let d = |i: usize, j: usize| {
+        ((s.r[i][0] - s.r[j][0]).powi(2) + (s.r[i][1] - s.r[j][1]).powi(2)).sqrt()
+    };
+    kinetic - s.m[0] * s.m[1] / d(0, 1) - s.m[0] * s.m[2] / d(0, 2) - s.m[1] * s.m[2] / d(1, 2)
+}
+
+/// Positions shifted to their centre of mass.
+fn centred(s: &State<f64>) -> [[f64; 2]; 3] {
+    let mt: f64 = s.m.iter().sum();
+    let rc = [0, 1].map(|j| (0..3).map(|i| s.m[i] * s.r[i][j]).sum::<f64>() / mt);
+    s.r.map(|r| [r[0] - rc[0], r[1] - rc[1]])
+}
+
+/// The registration against the Cartesian state, computed apart: its energy `E` is the state's centre-of-momentum
+/// energy; and Aarseth–Zare's march over one interval (`t = 1/8`) lands where Cartesian RK4 at `dt = 1/65536` does,
+/// within `1e-9`, at unit and other mass totals.
+fn check_against_cartesian(e_of: fn(&State<f64>) -> f64) {
+    let p = params::<f64>();
+    for s in [burrau::<f64>(), unnormalised()] {
+        let (sys, _, _) = register(&s, p.tiny, p.r3_floor);
+        assert!(
+            (sys.e - e_of(&s)).abs() < 1e-13,
+            "E on registration: {} against {}",
+            sys.e,
+            e_of(&s)
+        );
+        let out = march::<Rk4, f64, Counting, ExplicitTest>(
+            &s,
+            0,
+            1,
+            AzCount::new(),
+            &p,
+            &mut Counting::default(),
+            &mut ExplicitTest,
+        );
+        let mut c = s;
+        let mut g = Geom::new(&c.m, &c.r);
+        for _ in 0..8192 {
+            (c, g) = Rk4::step(&c, 0.125 / 8192.0, &g);
+        }
+        let (a, b) = (centred(&out.state), centred(&c));
+        for i in 0..3 {
+            for j in 0..2 {
+                assert!(
+                    (a[i][j] - b[i][j]).abs() < 1e-9,
+                    "r[{i}][{j}]: {} against {}",
+                    a[i][j],
+                    b[i][j]
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn az_against_cartesian() {
+    check_against_cartesian(com_energy);
+}
+
+negative_control!(
+    az_against_cartesian,
+    "the energy without its potential",
+    expected = "E on registration",
+    check_against_cartesian(|s| com_energy(s) + 1.0)
 );

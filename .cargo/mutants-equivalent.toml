@@ -478,3 +478,15 @@ justification = "the mutants job runs on ubuntu-24.04, which has no sw_vers, so 
 [[equivalent]]
 mutant = "crates/engine/src/trajectory.rs:281:14: replace < with <= in eccentric_anomaly"
 justification = "f == 0.0 has already returned mid, so f <= 0.0 and f < 0.0 agree on every f that reaches the sign test"
+
+[[equivalent]]
+mutant = "crates/kernel/src/regularisation/az.rs:106:14: replace > with >= in floored"
+justification = "floor == x returns floor in place of x, the same value; they differ in bits only for a signed-zero pair, and every caller's floor is TINY (positive) or +0 against a difference dt - t, which IEEE gives as +0 when equal"
+
+[[equivalent]]
+mutant = "crates/kernel/src/regularisation/az.rs:116:10: replace < with <= in least"
+justification = "b == a returns b in place of a, the same value; the callers' operands are lengths, step sizes and the clamp's remainder, none -0 (a difference of equal values is +0 under IEEE round-to-nearest), so no tie is a signed-zero pair"
+
+[[equivalent]]
+mutant = "crates/kernel/src/regularisation/az.rs:126:10: replace < with <= in abs"
+justification = "x == 0 returns -x = -0 in place of +0; abs's every caller compares its magnitude (|u1| > TINY, |got - want| <= land_tol), where -0 and +0 compare alike"
