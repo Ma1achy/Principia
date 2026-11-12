@@ -637,7 +637,14 @@ variant also checks the midpoints of the square's four edges, which catches it, 
     (a′), with the exact f64 evaluation and the patch's f64 prediction compared at the four edge midpoints as well as
     the four corners, under the same bound, tag, branch and sheet agreement and footprint test. The midpoints give
     `H_uu` and `H_vv` and the corners `H_uv`, so the quadratic error over the square is bounded, for example by
-    `½h²(|H_uu| + 2|H_uv| + |H_vv|)`. Cost: 8 evaluations against `N² = 256` at `N = 16`, 1/32 of an exact quad.
+    `½h²(|H_uu| + 2|H_uv| + |H_vv|)`. Admission bounds the square at 5/4 of the bound checked at the eight points, not
+    at the bound itself (physics review 5877369526, F1): along each edge the error is a quadratic checked at three
+    points, the two corners and the midpoint, and the interpolation constant on nodes `{−1, 0, 1}` is `5/4`, reached
+    at `t = ½`. For example, in units of the bound, `½h²H_uu = 1`, `h²H_uv = 1` and `½h²H_vv = −1` pass all eight
+    points, while on the edge `u = h` the error is `1 + s − s²` (`s = v/h`), `5/4` at `s = ½`. So where the patch is
+    admitted its records are within 5/4 f32 ulp of the exact ones, where (a′) on semidefinite curvature gives one
+    (a convex error peaks at a vertex); comparing at 4/5 of the bound would restore one ulp, a variant the owner may
+    name. Cost: 8 evaluations against `N² = 256` at `N = 16`, 1/32 of an exact quad.
     Covers kinks, folds, sheets and the high-curvature strip of either sign. R-90 gains a named exception, and the
     record's bits change on the quads it sends back to exact.
   - **(b) Keep the patch, and set each sample's tag, branch and sheet by a cheap exact predicate per sample.**
@@ -667,7 +674,9 @@ variant also checks the midpoints of the square's four edges, which catches it, 
     hide its error. The strip bound, PASS and the controls are all in this one unit; each difference is also reported,
     not judged, at `max(1, |x|)`, TASK-M2-86:28's unit, for comparison only.
   - *PASS under (a′) or (a″):* on every quad the check admits, no sample differs in tag, branch or sheet, and no
-    component differs by more than one f32 ulp of its own value (half an ulp each side, predicate (3)). The share of
+    component differs by more than one f32 ulp of its own value (half an ulp each side, predicate (3)) under (a′), or
+    5/4 f32 ulp under (a″), (a″)'s interpolation constant above, so that PASS cannot fail by construction on a quad
+    (a″) admits. The share of
     straddling and of away quads the check sends to exact is reported.
   - *Positive controls, any failing voids the run:* (i) one sample's tag flipped on purpose in an admitted quad is
     detected; (ii) one quad's `x₀` offset by two f32 ulps of the component's own value is rejected by the check;
@@ -1066,9 +1075,11 @@ untrue. The question is whether to stop warning at a switch where no pixels have
     freezes**".
 - **The conflict:** the warning at an `ℓ_switch` switch was derived when the full decoder ran in f32 on the GPU and the
   switch marked its precision running out. Under R-926 the records above the switch are correctly rounded f64
-  evaluations, and below it the patch's records are within one f32 ulp of the exact ones wherever RQ-798 (a″)'s check
-  (four corners and four edge midpoints) admits the patch (M-K measures it). Under RQ-798 (a′), four corners only, that
-  holds only where each component's curvature is semidefinite: where it is indefinite the corners can pass while samples
+  evaluations, and below it the patch's records are within 5/4 f32 ulp of the exact ones wherever RQ-798 (a″)'s check
+  (four corners and four edge midpoints) admits the patch (5/4 being its interpolation constant along an edge, physics
+  review 5877369526, F1; one ulp if it compares at 4/5 of its bound, a variant the owner may name), and M-K measures
+  it. Under RQ-798 (a′), four corners only, the records are within one f32 ulp only where each component's curvature
+  is semidefinite: where it is indefinite the corners can pass while samples
   near the edge midpoints are off by about `½h²|H_uu|` (physics review 5877078565, P2). So a switch at `ℓ_switch` with
   no collapsed pair loses nothing a user could see, and a warning there says f32 has run out where it has not, against
   W13. A switch triggered by collapse is, on exact records, the floor itself (F11), and still warns unless every
@@ -1093,10 +1104,10 @@ untrue. The question is whether to stop warning at a switch where no pixels have
   is extended by physics review 5877078565 of the pull request that filed this entry, P2, after the audit: (a) holds
   under RQ-798 (a″), and under (a′) only where every component's curvature is semidefinite; (b) otherwise. The audit
   gave its recommendation before that review found that four corners miss indefinite curvature; the choice is the
-  owner's. Measurable alternative, written before any run:
-  RQ-798's M-K's and RQ-797's M-S's share of patched samples differing from the exact records by more than one f32 ulp
-  of their own value; criterion: if that share is 0 on every admitted quad, a switch with no collapse has nothing to
-  warn about.
+  owner's. Measurable alternative, written before any run: RQ-798's M-K's and RQ-797's M-S's share of patched samples
+  differing from the exact records by more than the admitting check's figure, one f32 ulp of their own value under (a′)
+  or 5/4 under (a″); criterion: if that share is 0 on every admitted quad, a switch with no collapse has nothing to warn
+  about.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M6-21; RQ-798 and RQ-802.
 
