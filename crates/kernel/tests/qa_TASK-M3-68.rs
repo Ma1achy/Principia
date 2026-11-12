@@ -25,12 +25,20 @@
 //!   symplectic, not step- or run-reversible, owns its time mapping), and the slot accepts a stepper type that is not a
 //!   Cartesian `Stepper` (the Mikkola–Tanikawa leapfrog's place), with its own row.
 //!
+//! - Added in fix round 2 (PR #502): Part 2b's landing with the clamp off (`qa_m368_clamp_off_reads_no_tolerance`):
+//!   the run without the landing fix lands only at `dt_left`, the reference driver's `land_tol` being 0 there, so the
+//!   landing tolerance is not read and two tolerances give the same bits (physics review 5873527379, point 2); and
+//!   `Count::whole` (`qa_m368_whole_is_clamped`), which forms the boundary index, against a model written from
+//!   gpu_determinism_note § "The discipline", rule 3: clamped into range in the float type before the cast, so a NaN
+//!   and a negative give `0`, a value at or above `2³²` gives `u32::MAX`, and one in range its truncation, swept over
+//!   f32 bit patterns and fuzzed f64s.
+//!
 //! Each check takes the code under test as a function, so its negative control (R-176) runs the same check on a faulty
 //! one.
 
 use std::cell::Cell;
 
-use kernel::driver::advance::Cadence;
+use kernel::driver::advance::{Cadence, Count};
 use kernel::occupant::rk4::Rk4;
 #[cfg(feature = "controls")]
 use kernel::occupant::Stepper;
@@ -1078,4 +1086,173 @@ negative_control!(
     "the stepper's own row reported for the pair",
     expected = "not Part 2a's row",
     check_profile(Rk4::profile())
+);
+
+// ── qa_m368_clamp_off_reads_no_tolerance ─────────────────────────────────────────────────────────────────────────
+
+/// One interval of the march at `η = 0.01` from the generic state, the clamp as given, the landing tolerance `eps`.
+type Landing = fn(bool, f64) -> AzAdvanced<f64>;
+
+fn one_interval(clamp: bool, eps: f64) -> AzAdvanced<f64> {
+    let mut p = params64(0.01);
+    p.clamp = clamp;
+    p.land_eps_rel = eps;
+    march::<Rk4, f64, Quiet, ExplicitTest>(
+        &generic(),
+        0,
+        1,
+        AzCount::new(),
+        &p,
+        &mut Quiet,
+        &mut ExplicitTest,
+    )
+}
+
+/// Part 2b's run without the landing fix lands only at `dt_left` (the reference driver's `land_tol` is 0 unless the
+/// clamp is on): with the clamp off, a landing tolerance of `1e-14` and one of `0.3` give the same march, bit for bit,
+/// ending on the boundary at exactly `Δ_sync`.
+fn check_clamp_off(run: Landing) {
+    let small = run(false, 1e-14);
+    let large = run(false, 0.3);
+    assert_eq!(
+        small.count.end,
+        End::Marching,
+        "the run without the fix does not land"
+    );
+    assert_eq!(
+        (small.boundary, small.t),
+        (1, 0.125),
+        "the run without the fix ends off the boundary"
+    );
+    let bits = |a: &AzAdvanced<f64>| {
+        (
+            a.t.to_bits(),
+            a.boundary,
+            a.count.steps,
+            a.state.r.map(|x| x.map(f64::to_bits)),
+            a.state.p.map(|x| x.map(f64::to_bits)),
+        )
+    };
+    assert_eq!(
+        bits(&small),
+        bits(&large),
+        "with the clamp off the landing tolerance was read"
+    );
+}
+
+#[test]
+fn qa_m368_clamp_off_reads_no_tolerance() {
+    check_clamp_off(one_interval);
+}
+
+#[cfg(feature = "controls")]
+/// The control: a march that reads the tolerance while "off" (the clamp left on, where the tolerance is read).
+fn reads_tolerance(_clamp: bool, eps: f64) -> AzAdvanced<f64> {
+    one_interval(true, eps)
+}
+
+negative_control!(
+    qa_m368_clamp_off_reads_no_tolerance,
+    "the landing tolerance read with the clamp off",
+    expected = "with the clamp off the landing tolerance was read",
+    check_clamp_off(reads_tolerance)
+);
+
+// ── qa_m368_whole_is_clamped ─────────────────────────────────────────────────────────────────────────────────────
+
+/// gpu_determinism_note § "The discipline", rule 3, written here as a model at f64 (which holds every f32 exactly):
+/// a NaN is `0`, a value below `1` (negatives, `−∞`, `±0`) is `0`, one at or above `2³²` (`+∞`) is `u32::MAX`, and one
+/// in range its truncation toward zero.
+fn model_whole(x: f64) -> u32 {
+    if x.is_nan() || x < 1.0 {
+        0
+    } else if x >= 4_294_967_296.0 {
+        u32::MAX
+    } else {
+        // In range: the truncation is exact and fits, by the tests above.
+        x.trunc() as u32
+    }
+}
+
+/// `whole` at f32 and at f64, the rules under test.
+type Wholes = (fn(f32) -> u32, fn(f64) -> u32);
+
+/// Every f32 bit pattern on a stride of 4093 through the whole space (NaNs of both signs, subnormals, the range
+/// edges among them), the named edges, and fuzzed f64s over every exponent, each against the model.
+fn check_whole((w32, w64): Wholes) {
+    let edges32 = [
+        0.0f32,
+        -0.0,
+        0.5,
+        1.0,
+        1.5,
+        16_777_217.0,
+        4_294_967_040.0,
+        4_294_967_296.0,
+        f32::MAX,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::NAN,
+        -f32::NAN,
+        f32::MIN_POSITIVE,
+        -1.0,
+    ];
+    let strided = (0..=u32::MAX / 4093).map(|i| f32::from_bits(i * 4093));
+    for x in edges32.into_iter().chain(strided) {
+        assert_eq!(
+            w32(x),
+            model_whole(f64::from(x)),
+            "whole at f32 is not rule 3's clamp-then-cast at {x:e} ({:#x})",
+            x.to_bits()
+        );
+    }
+    let edges64 = [
+        0.0f64,
+        -0.0,
+        4_294_967_294.5,
+        4_294_967_295.0,
+        4_294_967_295.5,
+        4_294_967_295.999_999,
+        4_294_967_296.0,
+        f64::MAX,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+        f64::NAN,
+        -f64::NAN,
+    ];
+    for x in edges64 {
+        assert_eq!(
+            w64(x),
+            model_whole(x),
+            "whole at f64 is not rule 3's clamp-then-cast at {x:e}"
+        );
+    }
+    prop::run(&any::<u64>().prop_map(f64::from_bits), |x| {
+        prop_assert_eq!(
+            w64(x),
+            model_whole(x),
+            "whole at f64 is not rule 3's clamp-then-cast at {:e}",
+            x
+        );
+        Ok(())
+    });
+}
+
+#[test]
+fn qa_m368_whole_is_clamped() {
+    check_whole((Count::whole, Count::whole));
+}
+
+#[cfg(feature = "controls")]
+/// The control: a count that wraps above range (through `i64`) in place of clamping, as an unclamped GPU conversion
+/// may.
+fn wraps(x: f32) -> u32 {
+    (x as i64) as u32
+}
+
+negative_control!(
+    qa_m368_whole_is_clamped,
+    "a count that wraps above range in place of clamping",
+    expected = "whole at f32 is not rule 3's clamp-then-cast",
+    check_whole((wraps, Count::whole))
 );
