@@ -856,14 +856,18 @@ proposal is a weight per pixel from each pixel's own slopes, with a check for th
   alternative, written before any run:
   - *Per tier-1 and tier-2 map:* per-sample weight against the per-quad weight on shallow quads, the spread of their
     ratio reported.
-  - *Per tier-3 map:* a Richardson check, the weight at `h` and `h/2`, `h` R-633's step; criterion: their difference
-    `|W(h) − W(h/2)|` within the column errors carried through the Gram area factor, `e_u·‖J_v‖ + ‖J_u‖·e_v +
-    e_u·e_v` (the weight is `‖J_u ∧ J_v‖`, and that bounds how far it moves when its columns move by at most `e_u`
-    and `e_v`), where `e_c`, column `c`'s error, is the Euclidean norm over components of M-B's bound form
-    (REQ-DEC-058: `h²·|f'''|/6 + ε·|f|/h`) plus the solve's `τ/h`, each term stated per map before the run. Both
-    sides are in the weight's units, so rescaling the map's outputs scales both alike; the difference is also
-    reported as a ratio of the weight, not judged. A map that fails takes (c), labelled. Positive control: an error
-    planted in one map's evaluation, of 100 times that bound (M-B's control factor), must fail the check.
+  - *Per tier-3 map:* a Richardson check, the weight at `h` and `h/2`, `h` R-633's step; criterion, fixed before any
+    run (R-649): `|W(h) − W(h/2)| ≤ B(h) + B(h/2)`, since each of the two weights is within its own bound of the true
+    weight. `B(s)` is the column errors at step `s` carried through the Gram area factor, `e_u(s)·‖J_v‖ + ‖J_u‖·e_v(s)
+    + e_u(s)·e_v(s)` (the weight is `‖J_u ∧ J_v‖`, and that bounds how far it moves when its columns move by at most
+    `e_u` and `e_v`), where `e_c(s)`, column `c`'s error at step `s`, is the Euclidean norm over components `k` of
+    M-B's bound form (REQ-DEC-058: `s²·|f_k'''|/6 + ε·|f_k|/s`) plus the solve's `τ_k/s`, added per component inside
+    the norm: the corpus defines no tier-3 solve tolerance on the norm, so `τ_k` is the solve's tolerance on component
+    `k`. Each term is taken at its own step, so from `h` to `h/2` the truncation part falls by four and the rounding
+    and `τ/s` parts double; each is stated per map before the run. Both sides are in the weight's units, so rescaling
+    the map's outputs scales both alike; the difference is also reported as a ratio of the weight, not judged. A map
+    that fails takes (c), labelled. Positive control: an error planted in one map's evaluation, of
+    `100·(B(h) + B(h/2))` (M-B's control factor on the criterion's sum), must fail the check.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M6-09; TASK-M8-128's statistics.
 
