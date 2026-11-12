@@ -283,6 +283,11 @@ pub struct Orbit {
 pub fn orbit() -> Result<Orbit, String> {
     let o: Orbit =
         serde_json::from_str(ORBIT).map_err(|e| format!("az-figure-eight/orbit.json: {e}"))?;
+    checked(o)
+}
+
+/// `o`, refused where its IC or period differs from `ledger::fixtures`'s figure-eight.
+pub fn checked(o: Orbit) -> Result<Orbit, String> {
     let f = ledger::fixtures::figure_eight();
     if o.x1 != f.x1 || o.v3 != f.v3 || o.period != f.period {
         return Err(
@@ -316,6 +321,8 @@ pub struct Closure {
     pub energy: f64,
     /// The positions at `T`.
     pub end: [[f64; 2]; 3],
+    /// The state at `T`.
+    pub state: State<f64>,
     /// What the march counted.
     pub count: AzCount<f64>,
 }
@@ -340,6 +347,7 @@ pub fn closure(o: &Orbit, eta: f64, n: u32, landing: bool) -> Closure {
         closure: distance(&positions(&out.state), &positions(&s0)),
         energy: ((energy(&out.state) - energy(&s0)) / energy(&s0)).abs(),
         end: positions(&out.state),
+        state: out.state,
         count: out.count,
     }
 }
@@ -403,7 +411,7 @@ pub struct FinalStepInput {
 }
 
 /// The lines describing one run.
-fn describe(c: &Closure) -> String {
+pub fn describe(c: &Closure) -> String {
     let dt_max = match c.count.dt_max.report() {
         DtMaxReport::Largest { dt_max, skipped } => {
             format!("dt_max {dt_max:.3e} ({skipped} skipped)")
@@ -522,14 +530,36 @@ impl Gate for AzFinalStepGate {
     }
 
     fn flags(&self, _root: &Path, args: &[&str]) -> Result<(), String> {
-        match args {
-            ["--propose"] => propose_final_step().map(|s| print!("{s}")),
-            ["--propose-sync"] => propose_sync().map(|s| print!("{s}")),
-            _ => Err(format!(
-                "gate {FINAL_STEP_NAME}: unrecognised flags `{}`; usage: --propose | --propose-sync",
-                args.join(" ")
-            )),
-        }
+        let text = match proposal(args)? {
+            Proposal::FinalStep => {
+                propose_final_step_with(0.001, 32, &LADDER, REFERENCE_ETA, 65_536)
+            }
+            Proposal::Sync => propose_sync_with(&LADDER, &SYNC_LADDER, REFERENCE_ETA),
+        }?;
+        print!("{text}");
+        Ok(())
+    }
+}
+
+/// The proposals `az-final-step` gives.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Proposal {
+    /// `--propose`: REQ-INT-114's, at `η = 0.001`, `n = 32`, the ladder [`LADDER`] against [`REFERENCE_ETA`], the IC's
+    /// own closure at `T/65536`.
+    FinalStep,
+    /// `--propose-sync`: REQ-INT-080's, over [`LADDER`] and [`SYNC_LADDER`] against [`REFERENCE_ETA`].
+    Sync,
+}
+
+/// The proposal `args` asks `az-final-step` for, or the usage.
+pub fn proposal(args: &[&str]) -> Result<Proposal, String> {
+    match args {
+        ["--propose"] => Ok(Proposal::FinalStep),
+        ["--propose-sync"] => Ok(Proposal::Sync),
+        _ => Err(format!(
+            "gate {FINAL_STEP_NAME}: unrecognised flags `{}`; usage: --propose | --propose-sync",
+            args.join(" ")
+        )),
     }
 }
 
@@ -539,14 +569,9 @@ pub const REFERENCE_ETA: f64 = 1e-4;
 /// The proposed threshold's margin over the measured closure (REQ-INT-114).
 pub const MARGIN: f64 = 2.0;
 
-/// REQ-INT-114's proposal: the closure at `η = 0.001`, `n = 32`, the convergence ladder, the closure without the
-/// landing fix beside it, and the threshold proposed from the measured closure with its margin.
-pub fn propose_final_step() -> Result<String, String> {
-    propose_final_step_with(0.001, 32, &LADDER, REFERENCE_ETA, 1 << 16)
-}
-
-/// REQ-INT-114's proposal at `eta` on `n` intervals, over `ladder` against a run at `reference_eta`, the IC's own
-/// closure under Cartesian RK4 at `T/ic_steps`.
+/// REQ-INT-114's proposal: the closure at `eta` on `n` intervals (the flag's `η = 0.001`, `n = 32`), the convergence
+/// over `ladder` against a run at `reference_eta`, the closure without the landing fix beside it, the IC's own closure
+/// under Cartesian RK4 at `T/ic_steps`, and the threshold proposed from the measured closure with its margin.
 pub fn propose_final_step_with(
     eta: f64,
     n: u32,
@@ -694,13 +719,8 @@ pub fn decide_sync(table: &[SyncRow], ladder: &[f64], coarse: f64) -> (f64, f64)
 }
 
 /// REQ-INT-080's proposal: `Δ_sync` and `η` for Aarseth–Zare, from the figure-eight's error and drift over the `η`
-/// and `Δ_sync` ladders and the cost in steps per unit time, under the criteria fixed before the run (the PR's).
-pub fn propose_sync() -> Result<String, String> {
-    propose_sync_with(&LADDER, &SYNC_LADDER, REFERENCE_ETA)
-}
-
-/// REQ-INT-080's proposal over the `η` ladder `ladder` and the quanta `sync` (the first the coarse grid), each run
-/// against one at `reference_eta`.
+/// ladder `ladder` and the quanta `sync` (the first the coarse grid), each run against one at `reference_eta`, and the
+/// cost in steps per unit time, under the criteria fixed before the run ([`decide_sync`]).
 pub fn propose_sync_with(
     ladder: &[f64],
     sync: &[f64],
@@ -924,7 +944,7 @@ pub fn floor_run<R: Width>(f: &FloorFixture, tiny: Option<f64>) -> FloorRun {
 }
 
 /// `Some(x)` as `x:e`, `None` as "none".
-fn show(x: Option<f64>) -> String {
+pub fn show(x: Option<f64>) -> String {
     x.map_or_else(|| "none".to_owned(), |x| format!("{x:.3e}"))
 }
 
@@ -1010,11 +1030,11 @@ pub fn propose_floor() -> Result<String, String> {
     Ok(out)
 }
 
-/// The doubly degenerate f32 state's march (the kernel test's fixture): its end, steps and non-finite entries.
+/// The doubly degenerate f32 state's march (the kernel test's positions, at unit masses, which the degeneracy does not
+/// depend on): its end, steps and non-finite entries.
 pub fn doubly_degenerate() -> (End, u32, u32) {
-    let m = 1.0f32 / 3.0;
     let s = State {
-        m: [m; 3],
+        m: [1.0; 3],
         r: [[0.0, 0.0], [1e-38, 0.0], [0.0, 2e-38]],
         p: [[0.0; 2]; 3],
     };

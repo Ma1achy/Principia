@@ -4,12 +4,16 @@
 
 use std::path::{Path, PathBuf};
 
+use kernel::driver::advance::Cadence;
 use kernel::regularisation::az::End;
+use kernel::regularisation::az::Watch;
 use serde_json::json;
 use validation::az::{
-    closure, convergence, decide_sync, doubly_degenerate, figure_eight, lc_error, orbit,
-    propose_final_step_with, propose_floor, propose_sync_with, radial, round_up, AzFinalStepGate,
-    LcInverseGate, SeparationFloorGate, SyncRow, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME, SYNC_ERROR,
+    cartesian_closure, checked, closure, convergence, decide_sync, describe, distance,
+    doubly_degenerate, energy, figure_eight, floor_run, lc_error, on_grid, orbit, proposal,
+    propose_final_step_with, propose_floor, propose_sync_with, radial, reference_tiny, round_up,
+    show, AzFinalStepGate, LcInverseGate, Orbit, Proposal, Quiet, Recorder, SeparationFloorGate,
+    SyncRow, Width, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME, SYNC_ERROR,
 };
 use validation::gate::{self, Gate, GateConfig, GateSpec, MeasurementGate, Verdict};
 use validation::negative_control;
@@ -45,7 +49,31 @@ fn lc_verdict(form: &str, threshold: f64) -> Result<Verdict, String> {
 /// width's error passes and just below it fails; an unknown form is refused; the runner gives each fixture its
 /// expected outcome.
 fn check_lc(conditioned: &str) {
+    assert_eq!(
+        (f32::UNIT, f64::UNIT),
+        (2f64.powi(-24), 2f64.powi(-53)),
+        "the unit round-offs"
+    );
+    assert_eq!(
+        (reference_tiny::<f32>(), reference_tiny::<f64>()),
+        (1e-37, 1e-300),
+        "the reference's TINY"
+    );
     let (c32, c64) = (lc_error::<f32>(179.9, true), lc_error::<f64>(179.9, true));
+    assert_eq!(
+        (c32.ulps, c64.ulps),
+        (1.0, 0.0),
+        "one unit in the last place at f32, none at f64"
+    );
+    let input = json!({ "description": "a test input", "form": "conditioned", "angle": 179.9 });
+    let report = LcInverseGate
+        .run(&config(LC_NAME, 1.0), "t", &input)
+        .expect("a report");
+    assert!(
+        report.scatter[0].contains("the unstable form there: relative error 2.213e-2"),
+        "the other form beside: {}",
+        report.scatter[0]
+    );
     let (u32_, u64_) = (lc_error::<f32>(179.9, false), lc_error::<f64>(179.9, false));
     assert!(
         c32.ulps <= 1.0 && c64.ulps <= 1.0,
@@ -209,8 +237,34 @@ fn check_floor(tiny: &str) {
     );
     assert_eq!(control("reference"), Ok(Verdict::Fail));
     assert!(control("other").unwrap_err().contains("no TINY `other`"));
-    assert_eq!(radial().state.m, [1.0 / 3.0; 3]);
+    let passage = radial();
+    assert_eq!(passage.state.m, [1.0 / 3.0; 3]);
+    assert_eq!(passage.state.r, [[-0.5, 0.0], [0.5, 0.0], [0.0, 20.0]]);
+    let run = floor_run::<f64>(&passage, None);
+    let (a, b, ab) = (
+        run.least.a.unwrap(),
+        run.least.b.unwrap(),
+        run.least.ab.unwrap(),
+    );
+    assert!(
+        ab >= a * b && ab < b,
+        "the least A·B: {ab:e} against A {a:e}, B {b:e}"
+    );
+    assert!(
+        run.least.guard.is_some_and(|g| g > 0.0),
+        "the guarded component: {:?}",
+        run.least.guard
+    );
+    let md = SeparationFloorGate
+        .control(&c, "t", &json!({ "description": "", "tiny": "above" }))
+        .expect("the control")
+        .markdown;
+    assert!(
+        md.contains(&format!("TINY = {:.3e}", 10.0 * a.min(b))),
+        "{md}"
+    );
     gate::run(&root(), FLOOR_NAME, &out("floor")).expect("each control its expected outcome");
+    gate::run_flags(&root(), FLOOR_NAME, &["--propose"]).expect("--propose runs");
 }
 
 #[test]
@@ -339,7 +393,7 @@ fn check_proposals(final_step: &str, sync: &str, floor: &str) {
     for needle in [
         "**Proposed:** η = 0.02; Δ_sync = 0.2. The closure window's 0.4 time units are 2.00 boundaries at Δ_sync = 0.2",
         "(0.4/Δ_sync at each quantum: 0.40625: 0.98, 0.2: 2.00, 0.1: 4.00)",
-        "steps per unit time against the 0.40625 grid's: 0.40625: 1.00×, 0.2: ",
+        "steps per unit time against the 0.40625 grid's: 0.40625: 1.00×, 0.2: 2.01×, 0.1: 3.96×",
         "| 0.1 | 0.01 | 6.300000 | ",
     ] {
         assert!(sync.contains(needle), "REQ-INT-080's proposal lacks `{needle}`:\n{sync}");
@@ -351,6 +405,8 @@ fn check_proposals(final_step: &str, sync: &str, floor: &str) {
         "| Burrau's (3, 4, 5) from rest | f32 | ",
         "TINY·TINY at the reference's values: 0e0 at f32",
         "(NonFinite, 1, 1)",
+        "η·dt_left/FLT_MAX = 3.673e-42",
+        "sit 18.6 and 35.2 decades above them at f32",
     ] {
         assert!(
             floor.contains(needle),
@@ -382,5 +438,108 @@ negative_control!(
     {
         let (_, s, t) = proposals();
         check_proposals(&s, &s, &t)
+    }
+);
+
+/// The helpers the gates read: the distance, the energy, the figure-eight's state from its orbit (at unit masses and
+/// others), the orbit's check against `ledger`, a closure's and a grid run's energy drift, the IC's own closure, the
+/// recorder's finiteness test, the quiet cadence, the run's description and the flags' proposals.
+fn check_helpers(o: Orbit) {
+    assert!(checked(o.clone()).is_ok(), "the orbit is ledger's");
+    for change in 0..3 {
+        let mut bad = o.clone();
+        match change {
+            0 => bad.x1[0] += 1e-9,
+            1 => bad.v3[1] += 1e-9,
+            _ => bad.period += 1e-9,
+        }
+        assert!(checked(bad).is_err(), "change {change} refused");
+    }
+    let zero = [[0.0; 2]; 3];
+    assert_eq!(distance(&[[3.0, 0.0], [0.0, 4.0], [0.0, 0.0]], &zero), 5.0);
+    assert_eq!(
+        distance(&zero, &[[1.0, 0.0], [0.0, 0.0], [0.0, -1.0]]),
+        2f64.sqrt()
+    );
+    let s = figure_eight::<f64>(&o);
+    let [x, y] = o.x1;
+    let [vx, vy] = o.v3;
+    assert_eq!(s.r, [[x, y], [-x, -y], [0.0, 0.0]]);
+    assert_eq!(
+        s.p,
+        [[-vx / 2.0, -vy / 2.0], [-vx / 2.0, -vy / 2.0], [vx, vy]]
+    );
+    assert!(
+        (energy(&s) - o.energy).abs() < 1e-9,
+        "the figure-eight's energy {}",
+        energy(&s)
+    );
+    let mut heavy = o.clone();
+    heavy.masses = [2.0, 3.0, 4.0];
+    let h = figure_eight::<f64>(&heavy);
+    assert_eq!(h.p[0], [-vx, -vy], "p = m·v");
+    assert_eq!(h.p[2], [4.0 * vx, 4.0 * vy]);
+    let kinetic = (vx * vx + vy * vy) * (2.0 * 0.25 / 2.0 + 3.0 * 0.25 / 2.0 + 4.0 / 2.0);
+    let d01 = 2.0 * x.hypot(y);
+    let d0 = x.hypot(y);
+    let potential = 6.0 / d01 + 8.0 / d0 + 12.0 / d0;
+    assert!(
+        (energy(&h) - (kinetic - potential)).abs() < 1e-12,
+        "unequal masses: {}",
+        energy(&h)
+    );
+    let c = closure(&o, 0.02, 8, true);
+    let drift =
+        |end: &kernel::occupant::State<f64>| ((energy(end) - energy(&s)) / energy(&s)).abs();
+    assert_eq!(c.energy, drift(&c.state), "the closure's drift");
+    assert_eq!(c.end, c.state.r);
+    let (run, de) = on_grid(&o, 0.02, 0.2);
+    assert_eq!(de, drift(&run.state), "the grid run's drift");
+    assert_eq!(run.boundary, 31, "the last boundary at or before T on 0.2");
+    let ic = cartesian_closure(&o, 65_536);
+    assert!(ic > 5.02e-8 && ic < 5.03e-8, "the IC's own closure {ic:e}");
+    let text = describe(&c);
+    for needle in [
+        "η = 0.02, n = 8, landing fix on: closure ",
+        " re-registrations",
+        "dt_max ",
+    ] {
+        assert!(text.contains(needle), "{text}");
+    }
+    assert!(describe(&closure(&o, 0.02, 8, false)).contains("landing fix off"));
+    assert!(
+        !Cadence::<f64>::done(&Quiet),
+        "the quiet cadence never ends a march"
+    );
+    let (_, q, p) = kernel::regularisation::az::register(&s, 1e-300, 1e-300);
+    let mut watch = Recorder::default();
+    assert!(Watch::<f64>::finite(&mut watch, &q, &p));
+    let mut nan = q;
+    nan.u2[1] = f64::NAN;
+    assert!(
+        !Watch::<f64>::finite(&mut watch, &nan, &p),
+        "a NaN is not finite"
+    );
+    assert_eq!(
+        (show(Some(1.5e-3)), show(None)),
+        ("1.500e-3".to_owned(), "none".to_owned())
+    );
+    assert_eq!(proposal(&["--propose"]), Ok(Proposal::FinalStep));
+    assert_eq!(proposal(&["--propose-sync"]), Ok(Proposal::Sync));
+}
+
+#[test]
+fn az_helpers() {
+    check_helpers(orbit().expect("the orbit"));
+}
+
+negative_control!(
+    az_helpers,
+    "an orbit whose period is not ledger's",
+    expected = "the orbit is ledger's",
+    {
+        let mut o = orbit().expect("the orbit");
+        o.period += 1.0;
+        check_helpers(o)
     }
 );
