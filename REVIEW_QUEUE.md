@@ -856,10 +856,14 @@ proposal is a weight per pixel from each pixel's own slopes, with a check for th
   alternative, written before any run:
   - *Per tier-1 and tier-2 map:* per-sample weight against the per-quad weight on shallow quads, the spread of their
     ratio reported.
-  - *Per tier-3 map:* a Richardson check, the weight at `h` and `h/2`, `h` R-633's step; criterion: their difference,
-    as a ratio of the weight, within M-B's bound form (REQ-DEC-058: `h²·|f'''|/6 + ε·|f|/h`) plus the solve's `τ/h`,
-    each term stated per map before the run. A map that fails takes (c), labelled. Positive control: an error planted
-    in one map's evaluation, of 100 times that bound (M-B's control factor), must fail the check.
+  - *Per tier-3 map:* a Richardson check, the weight at `h` and `h/2`, `h` R-633's step; criterion: their difference
+    `|W(h) − W(h/2)|` within the column errors carried through the Gram area factor, `e_u·‖J_v‖ + ‖J_u‖·e_v +
+    e_u·e_v` (the weight is `‖J_u ∧ J_v‖`, and that bounds how far it moves when its columns move by at most `e_u`
+    and `e_v`), where `e_c`, column `c`'s error, is the Euclidean norm over components of M-B's bound form
+    (REQ-DEC-058: `h²·|f'''|/6 + ε·|f|/h`) plus the solve's `τ/h`, each term stated per map before the run. Both
+    sides are in the weight's units, so rescaling the map's outputs scales both alike; the difference is also
+    reported as a ratio of the weight, not judged. A map that fails takes (c), labelled. Positive control: an error
+    planted in one map's evaluation, of 100 times that bound (M-B's control factor), must fail the check.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M6-09; TASK-M8-128's statistics.
 
