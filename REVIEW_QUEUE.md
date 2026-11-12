@@ -856,7 +856,8 @@ fix it: go back to estimating the slope for this test, or look directly at wheth
 equal before rounding. Equal is not enough on its own: zoomed deep enough (about depth 48 for ordinary numbers), even
 the exact starting systems of neighbouring pixels become equal because precision has run out, not because the picture
 is flat. So equal counts as flat only where the exact slope is too small to change any number over the standard
-step; otherwise it is precision running out, and the warning is shown.*
+step; otherwise it is precision running out, and the warning is shown. Charts with no exact slopes at all have no answer
+under that rule yet; a sub-question asks the owner what they do.*
 
 - **File, section:**
   - `plan/requirements.yaml` REQ-GUI-012 (the precision warning), statement: "a collapse between adjacent samples
@@ -883,7 +884,9 @@ step; otherwise it is precision running out, and the warning is shown.*
   in the saturated field the test finds no saturation and the warning says f32 has run out where the cause is
   saturation, against W13. TASK-M6-07's "the step is at least the quad's sample spacing" has no step to read now.
   R-599's per-axis stop reads the same test.
-- **The question:** what test tells a saturation collapse from the genuine floor?
+- **The question:** what test tells a saturation collapse from the genuine floor? And a sub-question, Q-T3: on a
+  tier-3 map, which has no slope (R-926 item 9; R-935, under RQ-758: "A tier-3 map gets no one-cell patch"), how is a
+  pair of bitwise-equal f64 ICs at distinct f64 sample points classified?
 - **Options seen:**
   - **(a) A central-difference `J_D` at R-633's step, for this test only.** Preserves RQ-553's test exactly. Extends
     R-935's "central differences only the check" to one more use, which reads the owner's words (both reviewers).
@@ -929,11 +932,27 @@ step; otherwise it is precision running out, and the warning is shown.*
     leaving it so and excluding such pairs (as REQ-CHART-130 masks seams from refinement); the measurement lists them
     apart (below).
   - **(c) The dual `J_D` as is.** Warns falsely in the saturated field; against W13.
+- **Q-T3, the tier-3 gap in (b) (physics review 5877078565 of the pull request that filed this entry, P1):** (b)'s slope
+  condition reads `J_dual,k`, the dual (tier 1) or implicit (tier 2) slope, and a tier-3 map has none. Tier-3 maps
+  reach the f64 floor (about depth 48) like any other, and can also saturate (a solve composed after saturating links,
+  for example). Options seen, none chosen:
+  - **(i) The floor: such a pair warns.** Never silent at the floor; but in a saturated tier-3 field it raises a false
+    warning, saying precision has run out where the field is flat, against W13 ("never lies").
+  - **(ii) A central difference at R-633's step, on tier-3 maps only,** as RQ-800 (a) admits one per sample for the
+    measure weight. Keeps RQ-553's meaning on tier 3, at the cost of the owner's "no central difference" on those maps,
+    which only the owner can extend. A tier-3 central difference carries the solve's `τ/h` error and is not reliable on
+    a chaotic flow map (RQ-800's silence); where it misreads the floor as saturation it silences the warning at the
+    floor, against W13 ("never lies").
+  - **(iii) Another rule, stated by the owner.**
+
+  No recommendation on Q-T3: the audit gives none, and physics review gave none. Until Q-T3 is answered, (b) has no
+  answer on a tier-3 map, and RQ-804 (a), which inherits (b)'s definition, inherits Q-T3.
 - **Recommended:** (b), with its slope condition, the audit's recommendation (the slope condition the owner's). It
   needs no central difference, so it does not stretch R-935's
   words, and it reads what REQ-GUI-012 already names (the f64 sample points and the records) plus the dual slope R-935
   makes `J_D`. It depends on RQ-797 (a) past `ℓ_switch`; under (b) or (c) of RQ-797 the f64 IC of a patched sample
-  is still the CPU's `x₀ + J_D·δ` in f64. Measurable alternative, written before any run:
+  is still the CPU's `x₀ + J_D·δ` in f64. It answers tier-1 and tier-2 maps only; Q-T3 is the owner's, with no
+  recommendation. Measurable alternative, written before any run:
   - *Arms:* REQ-GUI-012's arms (a) to (e), and an arm (f) past the f64 floor: an unsaturated quad at depths 49 to 52,
     `N = 16`, at a centre where every component with a non-zero in-plane slope reaches its f64 level `ℓ_k` (above,
     `ℓ_k ≈ 48 + log₂(|∂x_k/∂u| / |x₀,k|)`) at or before the arm's depth, for example `|x₀,k|` in `[1, 2)` with an
@@ -950,6 +969,8 @@ step; otherwise it is precision running out, and the warning is shown.*
     listed apart, with how (a) and (b) each classify them; reported, not judged.
   - *Control on arm (f), failing voids the arm:* the rule without the slope condition (equal f64 ICs at distinct
     points are saturation) reads arm (f)'s pairs as saturated and drops the warning.
+  - *Tier-3 arm:* an arm on a tier-3 map, saturated and at the f64 floor, is entered void until Q-T3 is answered; its
+    criterion is written then, before its run.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M6-21, TASK-M6-08 (R-599's per-axis stop), TASK-M6-07's note.
 
@@ -1034,7 +1055,10 @@ whether to stop warning at a switch where no pixels have merged.*
     pair's direction, R-633's step, no central difference); otherwise it is the f64 floor and warns, as do the f32
     floor and coincident sample points. A switch at `ℓ_switch` with no collapse raises none. R-54's "Raised on
     `DECODE_SWITCHOVER`" reads "on a `DECODE_SWITCHOVER` triggered by collapse"; REQ-GUI-012's arm (e) is inverted.
-    Safe only with RQ-798 (a′); without it the crease strips lose precision silently.
+    Safe only with RQ-798 (a′); without it the crease strips lose precision silently. On a tier-3 map, which has no
+    slope, (a) inherits RQ-802's sub-question Q-T3 (how an equal pair is classified there: (i) the floor, warning;
+    (ii) a central difference at R-633's step on tier-3 maps only; (iii) another, stated by the owner), with no
+    recommendation; until it is answered, (a)'s saturation exception has no answer on a tier-3 map.
   - **(b) Keep it as written.** The warning fires at depth 20 on every view, with nothing lost.
   - **(c) Replace it with an informational route mark** (the route debug view, R-926 item 10), not a precision
     warning.
