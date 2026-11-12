@@ -1,7 +1,7 @@
 # TASK-M4-13 — FTLE on the GPU: the f32 shadow form and the horizon map
 
 - **Milestone:** M4
-- **Closes:** REQ-PAY-085, REQ-TOOL-043, REQ-TOOL-126
+- **Closes:** REQ-PAY-085, REQ-TOOL-043, REQ-TOOL-126, REQ-GUI-437
 - **Depends on:** TASK-M4-06, TASK-M4-04, TASK-M3-36, TASK-M3-72
 - **Needs (earlier milestones):** REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-PAY-021, REQ-PAY-032, REQ-VAL-035, REQ-RENDER-013, REQ-TOOL-009
 - **Reviewers:** code, qa, physics
@@ -21,6 +21,7 @@ The Benettin FTLE as the GPU computes it. The f32 shadow is run in both forms �
 - `docs/design/principia_dd_predictability_horizon.md` § "4.1 The two kernels have different horizons"
 - `docs/design/principia_dd_predictability_horizon.md` § "1. The result"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
 
 ## Deliverables
 - `crates/kernel`: the displacement-form shadow as a build-time alternative for the measurement (the shipped form unchanged until the ruling).
@@ -31,9 +32,11 @@ The Benettin FTLE as the GPU computes it. The f32 shadow is run in both forms �
 - `cargo xtask gate ftle-shadow-form` — FTLE of both shadow forms against known-Lyapunov periodic orbits, and the improvement the switch requires, proposed with evidence, checked by the physics reviewer and confirmed by the human at the M4 gate (REQ-PAY-085, calibrated).
 - `cargo test -p render horizon_map` — the horizon map equals `ln(1/eps)/ftle` per sample; no code path feeds it ensemble spread; the finite-time-λ caveat travels with the view (REQ-TOOL-043).
 - Definition: the horizon map's eps written into dd_predictability_horizon §4.2 and approved by the physics reviewer (REQ-TOOL-126).
+- `cargo test -p render ftle_provisional_stated` — while REQ-INT-076's values are unconfirmed, every view of `ftle`, the horizon map's legend and the export header state the calibration (3e-3, 300, 0.2) as provisional and unsupported on close-encounter chaotic orbits, from one source; controls: a view without it, and the statement kept once the values are confirmed, each fail (REQ-GUI-437).
 
 ## Notes
 - REQ-PAY-085 is a calibration (R-71): the PR carries the proposed value, its evidence and the reviewer's check, marked pending; the human confirms it at the M4 gate and it is then recorded in decisions.md.
 - Gap: which `eps` the horizon map uses is not stated by the corpus.
 - Closes, for gaps the corpus leaves open: REQ-TOOL-126 (R-72 definition) (classification accepted by R-132).
 - Applied per R-369 (12 Nov 2026), a consequence of REQ-VAL-038's move from TASK-M3-14 to TASK-M3-72: TASK-M3-72 joins Depends on, since this task needs REQ-VAL-038 and builds its displacement-form shadow to the definition RQ-793 rules there. *Was:* "Depends on: TASK-M4-06, TASK-M4-04, TASK-M3-36".
+- *12 Nov 2026 (R-976, RQ-794 (c); applied per R-369: task scoping):* Closes gains REQ-GUI-437, the provisional status of the FTLE shadow's calibration stated wherever the FTLE is shown; this is the first task that puts the FTLE in a view and a legend, and later views read the same statement. *Was:* "Closes: REQ-PAY-085, REQ-TOOL-043, REQ-TOOL-126".

@@ -364,7 +364,13 @@ or unknown, so nothing depends on remembering a list; it replaces the orchestrat
 counted from the head's required checks going green, or `merge-ready` goes on only once they are green.
 What is red `main` (R-907: "a correctness failure (physics, validation, bit-for-bit, golden) is red main under R-681;
 any other failure files a top-priority task without freezing PR work"): `ci.yml`'s `per-merge` job failing on `main`'s
-head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose summary names each failed job and why. A
+head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose summary names each failed job and why.
+*12 Nov 2026 (R-982, the owner's veto of D-2 of that day's report: "Any red job on main is red; make the per-merge
+verdict cover every job so the two can't disagree."):* any failed job of `ci.yml`'s run on `main` is a red `main`, a
+process test, the lints, `cargo xtask ci` or the web skeleton as much as a product test; an install step's network or
+archive-download failure reads "no result", never green, and holds as red does (R-979, a reading flagged for the
+owner). Until TASK-M0-59 makes the verdict cover every job, the orchestrator reads every job of the run itself. The
+rest of this paragraph is kept as its *Was*: "A
 run of `ci` on `main` that failed with `per-merge` passing is not red `main`: its failures are outside correctness (a
 process test, the lints and build beside the tests, `cargo xtask ci`, the web skeleton, a runner or setup step), filed
 as one issue labelled `per-merge`, a top-priority task the orchestrator works without stopping pull-request work. The
@@ -486,9 +492,10 @@ On a code change the jobs run in parallel:
   class: CI's own tests, the plan checks', the negative-control registry's, the job queue's, the deps rules' synthetic
   workspaces' and the like), less their own slow tier, only when the change touches `.github/`, `xtask/`, `scripts/`,
   `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` (`scripts/ci_changes.sh`'s `process`). A failing process test
-  is read and fixed in its pull request. On `main`, the per-merge tier's verdict brings the owner's "A failing
+  is read and fixed in its pull request. On `main`, a process test failing is a red `main` (R-982, 12 Nov 2026;
+  § "Merging", what is red `main`). *Was:* "On `main`, the per-merge tier's verdict brings the owner's "A failing
   process test never makes main red; it files a task" (8 Nov 2026): a process test failing there is filed as a task,
-  and `per-merge` passes (§ "Merging", what is red `main`). The orchestrator's merge script
+  and `per-merge` passes (§ "Merging", what is red `main`)." The orchestrator's merge script
   refuses a merge with a red `process` job on the head, though branch protection does not require it;
 - `web-skeleton`, advisory: the v1 web skeleton's wasm build.
 Every job bearing a required check runs on every pull request whose run is not cancelled, `if: !cancelled()`,
@@ -803,6 +810,10 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 | Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"` |
 | Build settings | heavy commands through the job queue only, each job with `CARGO_BUILD_JOBS` and `RUST_TEST_THREADS` at the core count (R-658, below); `CARGO_INCREMENTAL=0` | the same |
 
+*12 Nov 2026 (R-981, the owner's word on D-1 of that day's report: "Don't exceed the agent limit again."):* the
+heavy-agent cap in force is never exceeded, not even while the job queue runs the builds one after another; a dispatch
+that would exceed it waits for a slot.
+
 **The swap check (R-391, a trial from 6 Oct 2026; Mac only).** At warning, before each dispatch, read "Pageouts" from
 `vm_stat` twice, 60 s apart (`vm_stat | awk '/Pageouts/ {print $2}'`; wait with Monitor, not a foreground `sleep`).
 If it rose by more than 1000 in that minute (about 16 MB a minute at the Mac's 16 KB pages), the Mac is swapping: allow
@@ -1114,6 +1125,10 @@ A throwaway `measure/<what>` branch may be pushed so that CI takes a measurement
 RQ-164's ubuntu mutants timing were taken this way). Record the number in the PR or `decisions.md`, delete the branch
 straight after, and never open a PR from it. If the permission classifier refuses the push, show the human the rule;
 don't route around it.
+*12 Nov 2026 (R-983, the owner's word on D-26 of that day's report: "Deleting your own measurement branch is fine when
+its commit is recorded; anything else asks first."):* the orchestrator deletes a measurement branch it made itself only
+once that branch's commit is recorded, in the PR or `decisions.md`, so it can be restored; deleting any other branch,
+or one whose commit is not recorded, is asked of the owner first.
 
 ## Pitfalls
 

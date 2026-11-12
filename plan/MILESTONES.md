@@ -98,13 +98,13 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 127 requirements** (and every earlier gate still green):
+**Exit gate — 129 requirements** (and every earlier gate still green):
 
 - PAY (22): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091…092
 - GEN (13): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029, REQ-GEN-031…032
 - SCHED (1): REQ-SCHED-001
 - RENDER (3): REQ-RENDER-001…002, REQ-RENDER-083
-- TOOL (24): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223…226
+- TOOL (26): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223…226, REQ-TOOL-228…229
 - VAL (38): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167, REQ-VAL-169, REQ-VAL-175…176, REQ-VAL-178…181
 - SYS (26): REQ-SYS-001…008, REQ-SYS-063…079, REQ-SYS-097
 <!-- /gate:M0 -->
@@ -390,7 +390,7 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
   dispatch waits for M2's gate (R-917), as does TASK-M4-06 and the 217 tasks R-914 released.
 
 <!-- gate:M4 -->
-**Exit gate — 118 requirements** (and every earlier gate still green):
+**Exit gate — 119 requirements** (and every earlier gate still green):
 
 - CHART (6): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-100, REQ-CHART-152, REQ-CHART-165
 - INT (18): REQ-INT-057…069, REQ-INT-071, REQ-INT-083, REQ-INT-112…113, REQ-INT-116
@@ -398,6 +398,7 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
 - PAY (2): REQ-PAY-074, REQ-PAY-085
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
 - RENDER (13): REQ-RENDER-029…036, REQ-RENDER-078, REQ-RENDER-082, REQ-RENDER-099, REQ-RENDER-122…123
+- GUI (1): REQ-GUI-437
 - TOOL (9): REQ-TOOL-040…045, REQ-TOOL-126…127, REQ-TOOL-221
 - VAL (33): REQ-VAL-056…079, REQ-VAL-112, REQ-VAL-125, REQ-VAL-137, REQ-VAL-140…141, REQ-VAL-177, REQ-VAL-347…349
 - PERF (14): REQ-PERF-005…013, REQ-PERF-077, REQ-PERF-081, REQ-PERF-086, REQ-PERF-094, REQ-PERF-116
@@ -572,12 +573,12 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   each, and the orchestrator enters them in systems_architecture §3; the gate does not pass until both are recorded".
 
 <!-- gate:M8 -->
-**Exit gate — 497 requirements** (and every earlier gate still green):
+**Exit gate — 498 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (22): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057, REQ-CHART-071, REQ-CHART-079…080, REQ-CHART-083…084, REQ-CHART-087…088, REQ-CHART-126, REQ-CHART-129…130, REQ-CHART-134, REQ-CHART-136, REQ-CHART-138, REQ-CHART-153…155, REQ-CHART-178…179
 - INT (3): REQ-INT-093, REQ-INT-096, REQ-INT-107
-- GEN (1): REQ-GEN-023
+- GEN (2): REQ-GEN-023, REQ-GEN-046
 - SCHED (5): REQ-SCHED-073, REQ-SCHED-101…102, REQ-SCHED-104…105
 - REF (1): REQ-REF-054
 - RENDER (8): REQ-RENDER-073…074, REQ-RENDER-097…098, REQ-RENDER-100, REQ-RENDER-116…117, REQ-RENDER-119
