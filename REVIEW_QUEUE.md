@@ -580,7 +580,8 @@ and its code reviewer's additions; each quote re-read on origin/main 54fa96fc. (
 the chart, such as the edge of the allowed region, a fold, a pole or a switch between formulas, the shortcut gives the
 wrong kind of system on part of the square. Near an edge shaped like a square root it is also wrong in value, not just
 in kind, over a band hundreds of squares wide. The proposed fix checks each square's four corners against the exact
-answer before trusting the shortcut.*
+answer before trusting the shortcut. Four corners can miss a saddle-shaped error, which cancels at every corner; a
+variant also checks the midpoints of the square's four edges, which catches it, at twice the cost.*
 
 - **File, section:**
   - `decisions.md` § R-90 (the decoder switchover trigger): "Switch to the linearised decoder when the full decoder's
@@ -622,14 +623,30 @@ answer before trusting the shortcut.*
     an f32 ulp of the component's own value in every component (predicate (3)'s bound), agree in tag, branch and
     sheet, and its footprint meets no flagged site (REQ-DEC-058's flags, consumed by extending REQ-CHART-129's
     per-footprint flag and REQ-CHART-130's `Seam` mask). Otherwise it is exact per sample. Cost: 4 evaluations against
-    `N² = 256` at `N = 16`, 1/64 of an exact quad. Covers kinks, folds, sheets and the high-curvature strip; keeps R-926
-    item 11's "one-cell patches for small ones" wherever the patch is right. R-90 gains a named exception, and the
+    `N² = 256` at `N = 16`, 1/64 of an exact quad. Covers kinks, folds and sheets, and the high-curvature strip where
+    the curvature has one sign (semidefinite, as at the `√` edge above); keeps R-926 item 11's "one-cell patches for
+    small ones" wherever the patch is right. R-90 gains a named exception, and the record's bits change on the quads
+    it sends back to exact. **The gap (physics review 5877078565 of the pull request that filed this entry, P2):** four
+    corners do not bound the patch's error where a component's curvature is indefinite. The error is `½·δᵀHδ + O(δ³)`,
+    at the corners `(±h, ±h)` it is `½h²(H_uu + H_vv ± 2H_uv)`, so a component with `H_uu = −H_vv` and `H_uv` small
+    (any harmonic component) passes every corner while samples near the edge midpoints are off by about `½h²|H_uu|`.
+    For example, on a log-polar pair `(s, θ)`, `x = e^s·cos θ` has `H_ss = x` and `H_θθ = −x`, and at `θ = 0`
+    `H_sθ = 0`: every corner passes while the samples along the `s` and `θ` axes are off by `½h²·x`. Under (a′) such
+    quads take the patch with that error.
+  - **(a″) The four corners and the four edge midpoints, plus the footprint test (physics review 5877078565, P2).** As
+    (a′), with the exact f64 evaluation and the patch's f64 prediction compared at the four edge midpoints as well as
+    the four corners, under the same bound, tag, branch and sheet agreement and footprint test. The midpoints give
+    `H_uu` and `H_vv` and the corners `H_uv`, so the quadratic error over the square is bounded, for example by
+    `½h²(|H_uu| + 2|H_uv| + |H_vv|)`. Cost: 8 evaluations against `N² = 256` at `N = 16`, 1/32 of an exact quad.
+    Covers kinks, folds, sheets and the high-curvature strip of either sign. R-90 gains a named exception, and the
     record's bits change on the quads it sends back to exact.
   - **(b) Keep the patch, and set each sample's tag, branch and sheet by a cheap exact predicate per sample.**
     Continuous values stay linearised, wrong across the strip.
   - **(c) Keep the patch and label the strip.** Wrong classifications are drawn and only labelled.
 - **Recommended:** (a′), recommended by the owner, 12 Nov 2026 (their words in this entry's header). Measurable
   alternative, measurement M-K, criterion written before any run:
+  - **12 Nov 2026:** the owner recommended (a′), 12 Nov 2026, before physics review 5877078565 found that four corners
+    miss indefinite curvature; (a″) closes it. The choice between (a′) and (a″) is the owner's.
   - *Fixture rule (this entry's and RQ-797's, RQ-801's, RQ-802's and RQ-805's):* a fixture past R-90's switch states,
     before its run, `|x₀,k|` and the in-plane slopes `|∂x_k/∂u|`, `|∂x_k/∂v|` from the f64 evaluation for each of the
     record's 15 components, and for each the deepest level at which it still separates adjacent samples,
@@ -640,17 +657,24 @@ answer before trusting the shortcut.*
     depth 30"); an arm at a depth no component admits is reported void, never passed.
   - *Setup:* the `(L_z, E)` chart at depths 21 to 30, `N = 16`, the CPU expansion of RQ-797 (a). Straddling set:
     512 quads whose footprint meets the feasibility edge. Away set: 512 quads at distance at least `2¹¹·h` from it,
-    the bound above. The fixture follows the fixture rule above. Patch records and
+    the bound above. Indefinite set: 512 quads at depths 21 to 30 on a chart with a component of indefinite curvature
+    (for example `x = e^s·cos θ` on a log-polar pair near `θ = 0`), because the feasibility edge's curvature is
+    semidefinite and the two sets above alone would pass a corners-only check that is wrong elsewhere. The fixture
+    follows the fixture rule above. Patch records and
     exact narrowed records compared sample by sample, as are the held quantities `E` and `L_z` of the patch records
     against `E*` and `L_z*`.
   - *Ulp convention:* the component's own f32 ulp, because near the edge `|p| ∝ √d` is small and `max(1, |x|)` would
     hide its error. The strip bound, PASS and the controls are all in this one unit; each difference is also reported,
     not judged, at `max(1, |x|)`, TASK-M2-86:28's unit, for comparison only.
-  - *PASS under (a′):* on every quad the corner check admits, no sample differs in tag, branch or sheet, and no
+  - *PASS under (a′) or (a″):* on every quad the check admits, no sample differs in tag, branch or sheet, and no
     component differs by more than one f32 ulp of its own value (half an ulp each side, predicate (3)). The share of
     straddling and of away quads the check sends to exact is reported.
-  - *Positive controls, either failing voids the run:* (i) one sample's tag flipped on purpose in an admitted quad is
-    detected; (ii) one quad's `x₀` offset by two f32 ulps of the component's own value is rejected by the corner check.
+  - *Positive controls, any failing voids the run:* (i) one sample's tag flipped on purpose in an admitted quad is
+    detected; (ii) one quad's `x₀` offset by two f32 ulps of the component's own value is rejected by the check;
+    (iii) a planted saddle-shaped second-order error `κ(δu² − δv²)` in one quad's patch, above the bound at the edge
+    midpoints and 0 at the corners, is rejected by (a″)'s check. (ii) is first-order and cannot exercise this. Under
+    (a′), (iii) is admitted by construction: that arm reports it as (a′)'s gap, and its rejection is asserted only
+    under (a″).
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M2-87 (the record contract), TASK-M2-88's flag consumer, TASK-M6-08.
 
@@ -696,16 +720,16 @@ library; this would do the same for every maths function the chart code can reac
     (`atan2` in `C`'s step 2, the chart inverses) or another build".
   - `decisions.md` § R-197 (who may configure a lint): changing lint configuration (`clippy.toml`, `[lints]` tables)
     needs a ruling.
-- **The conflict:** under R-926 item 5 every record is the CPU's f64 evaluation, narrowed. On the host every
-  `Float::` transcendental, and every inherent `f64` one, goes through std to the platform library (macOS, glibc,
-  Windows, wasm). Where two platforms' f64 values differ by one f64 ulp, narrowing flips at an f32 rounding midpoint
-  with probability about `2⁻²⁹` per differing component (one f64 ulp in the `2²⁹` f64 ulps of an f32 ulp); the overall rate is (the share of calls that differ by platform) × (the
-  amplification through the chart) × that, *inferred*. Rare, but not zero, so R-521's and R-921's recreation,
-  REQ-CHART-099's digest written on the Mac and checked on Linux CI, REQ-CHART-155's native-to-wasm comparison and the
-  export contract's re-render (:156) hold only per machine. The lock and placement solves, the backwards search and
-  R-952's contours call the evaluator, so they inherit it too (iteration counts and branches can change). ic_save
-  :82–84 already concedes the residual for chart inverses; R-926 extends it to every pixel. The comment at
-  `real.rs:49–50` reads as if the pinned crate were used, when the default goes through std.
+- **The conflict:** under R-926 item 5 every record is the CPU's f64 evaluation, narrowed. On the host every `Float::`
+  transcendental, and every inherent `f64` one, goes through std to the platform library (macOS, glibc, Windows, wasm).
+  Where two platforms' f64 values differ by one f64 ulp, narrowing flips at an f32 rounding midpoint with probability
+  about `2⁻²⁹` per differing component (one f64 ulp in the `2²⁹` f64 ulps of an f32 ulp); the overall rate is (the share
+  of calls that differ by platform) × (the amplification through the chart) × that, *inferred*. Rare, but not zero, so
+  R-521's and R-921's recreation, REQ-CHART-099's digest written on the Mac and checked on Linux CI, REQ-CHART-155's
+  native-to-wasm comparison and the export contract's re-render (:156) hold only per machine. The lock and placement
+  solves, the backwards search and R-952's contours call the evaluator, so they inherit it too (iteration counts and
+  branches can change). ic_save :82–84 already concedes the residual for chart inverses; R-926 extends it to every
+  pixel. The comment at `real.rs:49–50` reads as if the pinned crate were used, when the default goes through std.
 - **The question:** does every transcendental reachable from the CPU evaluator go through the pinned libm, enforced?
 - **Options seen:**
   - **(a) Pin, enforced.** Every f64 transcendental reachable from the CPU evaluator (sin, cos, sin_cos, tan, atan2,
@@ -1024,9 +1048,9 @@ RQ-802's definition is inherited here, as the owner directed ("[RQ-804] inherits
 audit's. Nothing is chosen here.*
 
 *In plain English: the program warns about precision whenever it switches to the centre-plus-slopes shortcut at depth
-20, even when nothing has been lost. Under the new chart system, with the corner check of RQ-798, that switch loses
-nothing beyond the final rounding every pixel has anyway, so the warning would say something untrue. The question is
-whether to stop warning at a switch where no pixels have merged.*
+20, even when nothing has been lost. Under the new chart system, with RQ-798's check of corners and edge midpoints (its
+(a″)), that switch loses nothing beyond the final rounding every pixel has anyway, so the warning would say something
+untrue. The question is whether to stop warning at a switch where no pixels have merged.*
 
 - **File, section:**
   - `decisions.md` § R-54 (the precision warning is event-driven): "Raised on `DECODE_SWITCHOVER` over visible quads
@@ -1042,11 +1066,13 @@ whether to stop warning at a switch where no pixels have merged.*
     freezes**".
 - **The conflict:** the warning at an `ℓ_switch` switch was derived when the full decoder ran in f32 on the GPU and the
   switch marked its precision running out. Under R-926 the records above the switch are correctly rounded f64
-  evaluations, and below it the patch's records are within one f32 ulp of the exact ones wherever RQ-798 (a′)'s corner
-  check admits the patch (M-K measures it). So a switch at `ℓ_switch` with no collapsed pair loses nothing a user could
-  see, and a warning there says f32 has run out where it has not, against W13. A switch triggered by collapse is, on
-  exact records, the floor itself (F11), and still warns unless every collapsed pair is a saturation collapse under
-  RQ-802 (b)'s definition.
+  evaluations, and below it the patch's records are within one f32 ulp of the exact ones wherever RQ-798 (a″)'s check
+  (four corners and four edge midpoints) admits the patch (M-K measures it). Under RQ-798 (a′), four corners only, that
+  holds only where each component's curvature is semidefinite: where it is indefinite the corners can pass while samples
+  near the edge midpoints are off by about `½h²|H_uu|` (physics review 5877078565, P2). So a switch at `ℓ_switch` with
+  no collapsed pair loses nothing a user could see, and a warning there says f32 has run out where it has not, against
+  W13. A switch triggered by collapse is, on exact records, the floor itself (F11), and still warns unless every
+  collapsed pair is a saturation collapse under RQ-802 (b)'s definition.
 - **The question:** does a switch at `ℓ_switch` with no collapsed pair still raise the precision warning?
 - **Options seen:**
   - **(a) No.** The warning is raised at a collapse (on either route) and at `AT_F32_FLOOR`, saturation excepted by
@@ -1055,17 +1081,19 @@ whether to stop warning at a switch where no pixels have merged.*
     pair's direction, R-633's step, no central difference); otherwise it is the f64 floor and warns, as do the f32
     floor and coincident sample points. A switch at `ℓ_switch` with no collapse raises none. R-54's "Raised on
     `DECODE_SWITCHOVER`" reads "on a `DECODE_SWITCHOVER` triggered by collapse"; REQ-GUI-012's arm (e) is inverted.
-    Safe only with RQ-798 (a′); without it the crease strips lose precision silently. On a tier-3 map, which has no
+    Safe only with RQ-798 (a″), or with (a′) where every component's curvature is semidefinite; otherwise the crease
+    strips, and under (a′) the quads of indefinite curvature, lose precision silently. On a tier-3 map, which has no
     slope, (a) inherits RQ-802's sub-question Q-T3 (how an equal pair is classified there: (i) the floor, warning;
     (ii) a central difference at R-633's step on tier-3 maps only; (iii) another, stated by the owner), with no
     recommendation; until it is answered, (a)'s saturation exception has no answer on a tier-3 map.
   - **(b) Keep it as written.** The warning fires at depth 20 on every view, with nothing lost.
   - **(c) Replace it with an informational route mark** (the route debug view, R-926 item 10), not a precision
     warning.
-- **Recommended:** (a), conditional on RQ-798 (a′); (b) if (a′) is not taken; the audit's recommendation. Measurable
-  alternative, written before any run: RQ-798's M-K's and RQ-797's M-S's share of patched samples differing from the
-  exact records by more than one f32 ulp of their
-  own value; criterion: if that share is 0 on every admitted quad, a switch with no collapse has nothing to warn about.
+- **Recommended:** (a), conditional on RQ-798 (a″), or on (a′) only where it bounds the error (not where a component's
+  curvature is indefinite); (b) otherwise; the audit's recommendation. Measurable alternative, written before any run:
+  RQ-798's M-K's and RQ-797's M-S's share of patched samples differing from the exact records by more than one f32 ulp
+  of their own value; criterion: if that share is 0 on every admitted quad, a switch with no collapse has nothing to
+  warn about.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M6-21; RQ-798 and RQ-802.
 
