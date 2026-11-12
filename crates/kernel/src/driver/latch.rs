@@ -37,7 +37,7 @@
 use super::monitor::{latched, magnitude};
 use crate::payload::{
     clamp_f16, pa_d_min, pa_d_min_is_unset, pack_packed_b, pb_dE_max, pb_dLz_max, sd_is_failed,
-    set_d_min, set_d_min_unset, DminCounters, PA_D_MIN_SENTINEL,
+    set_d_min, set_d_min_unset, DminCounters,
 };
 use crate::real::{IeeeBits, RealOps};
 
@@ -117,14 +117,12 @@ impl Latches {
         self.seen
     }
 
-    /// The live `d_min`, `√` of the least `d²` met; `+∞`, the unset value's, before the first (R-271).
+    /// The live `d_min`, `√` of the least `d²` met; `+∞`, the unset value's, before the first (R-271). The `+∞` is
+    /// formed from its bits at run time ([`IeeeBits::or_pos_inf`]), never a non-finite constant, which a shader cannot
+    /// hold (gpu_determinism_note rule 4).
     #[inline]
     pub fn d_min(&self) -> f32 {
-        if self.seen {
-            self.d2_min.square_root()
-        } else {
-            PA_D_MIN_SENTINEL
-        }
+        self.d2_min.square_root().or_pos_inf(!self.seen)
     }
 
     /// The live `dE_max`.
