@@ -928,8 +928,10 @@ step; otherwise it is precision running out, and the warning is shown.*
   makes `J_D`. It depends on RQ-797 (a) past `ℓ_switch`; under (b) or (c) of RQ-797 the f64 IC of a patched sample
   is still the CPU's `x₀ + J_D·δ` in f64. Measurable alternative, written before any run:
   - *Arms:* REQ-GUI-012's arms (a) to (e), and an arm (f) past the f64 floor: an unsaturated quad at depths 49 to 52,
-    `N = 16`, at a centre whose components have `|x₀,k|` in `[1, 2)` and in-plane dual slopes about 1, and whose f64
-    sample points stay distinct there (`|u|` and `|v|` of the sample points below `2⁻⁴`, so the spacing `2^−(ℓ+4)`
+    `N = 16`, at a centre where every component with a non-zero in-plane slope reaches its f64 level `ℓ_k` (above,
+    `ℓ_k ≈ 48 + log₂(|∂x_k/∂u| / |x₀,k|)`) at or before the arm's depth, for example `|x₀,k|` in `[1, 2)` with an
+    in-plane dual slope about 1 (components with a zero in-plane slope are unconstrained), and whose f64 sample points
+    stay distinct there (`|u|` and `|v|` of the sample points below `2⁻⁴`, so the spacing `2^−(ℓ+4)`
     stays at least f64's ulp at `u` to depth 52). Each fixture states `|x₀|` and the slopes per component before the
     run. Arm (f) asserts its precondition first: at least one adjacent pair whose f64 ICs are bitwise equal at distinct
     f64 sample points. Like arms (b) to (e), it may feed the trigger synthetic quad facts, here built from the CPU's f64
