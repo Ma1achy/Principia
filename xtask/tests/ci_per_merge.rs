@@ -575,7 +575,8 @@ const OTHER_JUDGED: [(&str, &str, &str); 4] = [
     ("changes", "other", "not a correctness job"),
 ];
 
-/// OTHER_JUDGED, and a job the classifier does not know read as one of them.
+/// OTHER_JUDGED, and a job the classifier does not know read as one of them: the control's.
+#[cfg(feature = "controls")]
 const UNKNOWN_JUDGED: [(&str, &str, &str); 5] = [
     OTHER_JUDGED[0],
     OTHER_JUDGED[1],
