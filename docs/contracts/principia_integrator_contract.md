@@ -795,6 +795,13 @@ close-encounter drift spikes that recover before termination, which is the regim
 
 *12 Nov 2026 (R-974):* the joint step of Part 2's dated line widens this seam as well: an occupant that implements
 `ADVANCE` marches the shadow's `(x, δ⃗)` with the sample, `x` bit-identical to its `ADVANCE`, as TASK-M3-72 defines it.
+*12 Nov 2026 (R-974, physics review 5875695467 of PR #503, F1, a recorded consequence):* under an occupant that owns
+its time mapping (Heggie × RK4, the default, `dτ = S^{3/2}/(R₁R₂R₃) dt`, Part 2b, R-161; logH alike), stepping the
+sample and its shadow by the same `Δτ` moves them by different `Δt`, so `δ⃗` gains a component along the flow and is no
+longer a separation at equal physical time; the finite-difference estimator, ‖δ₀‖'s meaning and dd test 10 then fail.
+How the joint step keeps the sample and its shadow at the same physical time under such an occupant is a definition
+(R-72) TASK-M3-72 writes under physics review, its options including: carry `δt` as a component of the displacement
+and resynchronise it at each renormalisation, or step the shadow's `τ` so that it lands on the sample's `t`.
 
 **Cost 2 — the wrapper can no longer verify `N_sub`.** It must trust the occupant's reported
 `total_substeps`. That number is not cosmetic: measured across 68,685 leaves it is **bimodal with a

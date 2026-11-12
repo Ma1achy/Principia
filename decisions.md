@@ -37718,6 +37718,18 @@ form's gain is "meaningful" enough to switch the shipped form stays REQ-PAY-085'
 gain a dated line naming this ruling. REQ-VAL-038 names it and loses `rq: RQ-793`. TASK-M3-72 no longer waits on
 RQ-793; it gains the pre-registration step and the (a1)/(a2) measurement.
 
+*A recorded consequence (12 Nov 2026, physics review 5875695467 of PR #503, F1; the owner's words and the option are
+unchanged):* the joint step reaches the default occupant, Heggie × RK4, which owns its time mapping
+(`dτ = S^{3/2}/(R₁R₂R₃) dt`, Part 2b, R-161; logH alike). Stepped by the same `Δτ` through "the same stages", the sample
+and its shadow move by different physical `Δt`, so `δ⃗` gains a component along the flow, `ẋ·(Δt′ − Δt)`, and the
+finite-difference estimator, ‖δ₀‖'s meaning and dd test 10, which option (a) keeps, would not hold there. So how the
+joint step keeps the sample and its shadow at the same physical time under an occupant that owns its time mapping is a
+definition (R-72) TASK-M3-72 writes under physics review, its options including carrying `δt` as a component of the
+displacement, resynchronised at each renormalisation, or stepping the shadow's `τ` so that it lands on the sample's `t`;
+it is recorded in integrator contract Part 2a's dated line, in REQ-VAL-355 (new, reqio) and in TASK-M3-72, whose
+acceptance gains an arm on the Heggie occupant that fails when the shadow's elapsed `t` differs from the sample's at a
+renormalisation, with its control.
+
 R-974 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes REQ-VAL-038. The parse printed R-974 for this answer.
