@@ -670,6 +670,8 @@
   rulings:
   - R-90
   milestone: M6
+  rq:
+  - RQ-797
 - id: REQ-DEC-034
   area: DEC
   statement: "The linearised decode must replace the decode with x₀ + J_D·δ, where J_D is the map's exact (dual-number) or implicit slopes (R-935; REQ-DEC-058), central differences of the full chart→IC composite in f64 with deep_zoom §2's step rule (h_k = ε^{1/3}·max(1, |x_k|) in f64 along each input coordinate, divided by the step actually taken, (x + h) − (x − h); R-633) being only the check, chart-agnostic with no per-axis-kind special-casing, and |det J_D| must double as the measure weight."
@@ -703,6 +705,8 @@
   - R-926
   - R-935
   milestone: M6
+  rq:
+  - RQ-800
   note: "Slope tolerance of the h² fit: REQ-DEC-042 (calibration). R-633 (28 Oct 2026, RQ-600 (a)): J_D's step is the encode contract's, written into deep_zoom §2; a secant at the quad's half-width is rejected. *Was (statement):* \"The linearised decode must replace the decode with x₀ + J_D·δ, where J_D is central differences of the full chart→IC composite in f64, chart-agnostic with no per-axis-kind special-casing, and |det J_D| must double as the measure weight.\" *11 Nov 2026:* brought into line with R-935 (under RQ-758 (a)): exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (TASK-M2-88 builds the slopes; the re-plan § A.2, CHANGE; the addition § F.5). *Was (statement, the clause):* \"where J_D is central differences of the full chart→IC composite in f64 with deep_zoom §2's step rule (h_k = ε^{1/3}·max(1, |x_k|) in f64 along each input coordinate, divided by the step actually taken, (x + h) − (x − h); R-633),\""
 - id: REQ-DEC-035
   area: DEC
@@ -715,6 +719,8 @@
     detail: "CPU quadtree types are f64; GPU uniforms are f32 c, h, x₀, J_D; inspector integrates in f64"
   rulings: []
   milestone: M6
+  rq:
+  - RQ-797
 - id: REQ-DEC-036
   area: DEC
   statement: "The linearised decoder must compute x₀ = D(c_u, c_v) in f64 on the CPU and J_D from the map's exact (dual-number) or implicit slopes (R-935; REQ-DEC-058), central differences in f64 with deep_zoom §2's step rule (h_k = ε^{1/3}·max(1, |x_k|) in f64 along each input coordinate, divided by the step actually taken, (x + h) − (x − h); R-633) being only the check, per deep quad, and the GPU must evaluate x = x₀ + J_D·δ without running the nonlinear decode pipeline."
@@ -742,6 +748,8 @@
   - R-926
   - R-935
   milestone: M5
+  rq:
+  - RQ-797
   note: "R-113 (RQ-99 M5-2, option a): moved to M5 (TASK-M5-04); the switchover (REQ-DEC-033/037) and the error-fit tests (REQ-DEC-034, REQ-DEC-042) stay in M6. R-632 (27 Oct 2026, RQ-578 (a) with (c)): on the f32 GPU path the linear path's floor is the measured value, quoted with |x₀| (REQ-DEC-051, measured by REQ-DEC-052's gate), not depth 50; a floor near ~50 needs an f64 sum and integration. *Was (verify):* \"over a depth sweep, linear vs full decode agree to O(h²) (R-154; the check at the switchover depth is REQ-DEC-037's); the linear path distinguishes adjacent samples to depth ≥ 50\" R-633 (28 Oct 2026, RQ-600 (a)): the step is written (applied per R-369: TASK-M5-04 computes J_D). *Was (statement):* \"The linearised decoder must compute x₀ = D(c_u, c_v) and J_D by central differences in f64 on the CPU per deep quad, and the GPU must evaluate x = x₀ + J_D·δ without running the nonlinear decode pipeline.\" *11 Nov 2026:* brought into line with R-935 (under RQ-758 (a)), as REQ-DEC-034 (the re-plan § A.2, CHANGE; the addition § F.5). *Was (statement, the clause):* \"must compute x₀ = D(c_u, c_v) and J_D by central differences in f64 on the CPU, with deep_zoom §2's step rule (h_k = ε^{1/3}·max(1, |x_k|) in f64 along each input coordinate, divided by the step actually taken, (x + h) − (x − h); R-633), per deep quad,\""
 - id: REQ-DEC-037
   area: DEC
@@ -1016,6 +1024,8 @@
   - R-71
   - R-632
   milestone: M5
+  rq:
+  - RQ-797
   note: "R-632 (27 Oct 2026, RQ-578 (a) with (c)): the docs and the gates take this measured value, deep zoom §2's \"~50+\" replaced; a floor near ~50 needs an f64 sum and integration (on the CPU, or RQ-577's ladder after M3). Closed by TASK-M5-04 (applied per R-369); read by REQ-DEC-036, TASK-M6-07 and TASK-M6-08."
 - id: REQ-DEC-052
   area: DEC
@@ -1037,6 +1047,9 @@
   rulings:
   - R-632
   milestone: M5
+  rq:
+  - RQ-797
+  - RQ-803
   note: "R-632 (27 Oct 2026, RQ-578 (c)). Closed by TASK-M5-04, which builds the linear path and linear-decode-depth (applied per R-369). The coordinate magnitudes are the task's, checked by the physics reviewer (applied per R-369)."
 - id: REQ-DEC-053
   area: DEC
@@ -1140,6 +1153,8 @@
   - R-926
   - R-935
   milestone: M2
+  rq:
+  - RQ-798
   note: "Added 11 Nov 2026 with TASK-M2-88 (N3 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the owner's chart re-plan corrections, item 2; applied per R-369: tests):* the registry-wide test and its control added to the verify line, so a map added later is caught without per-task wiring. *Was (verify, its end):* \"…and the control flips the sign of a column whose norm is at least 100 times that bound, and must fail\""
 - id: REQ-DEC-059
   area: DEC
@@ -3994,6 +4009,8 @@
   - R-484
   - R-916
   milestone: M2
+  rq:
+  - RQ-799
   note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66; the stale rq fields (RQ-716, RQ-722, each ruled) cleared."
 - id: REQ-CHART-100
   area: CHART
@@ -4540,6 +4557,8 @@
   - R-80
   - R-100
   milestone: M8
+  rq:
+  - RQ-798
 - id: REQ-CHART-130
   area: CHART
   statement: "Declared seams must be masked from the refinement criterion: on a flagged footprint unresolved(f) must not fire from spread, event class, the latch or a composed chart's own mask, a quad with any flagged footprint and none unresolved must take the decision Seam with its count n_seam reported, the added QuadReduction slot and CPU batch's branch word being a schema change, its coherence must not raise its priority, and a chart of today's registry must be bitwise unchanged."
@@ -4551,6 +4570,8 @@
     detail: "cargo test -p engine seam_refinement_masked: a flagged footprint leaves n_unresolved, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes the decision Seam, a mixed quad included, with n_seam counted, and coherence gives it no priority; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart of today's registry decides bitwise as REQ-REF-022; controls: the mask removed splits quads along the seam at every depth, the mask applied to an unflagged footprint fails, Keep taken for Seam, Seam taken only when every footprint is flagged fails"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-798
 - id: REQ-CHART-131
   area: CHART
   statement: "Any statistic over a composed or warped chart must either be weighted by the chart's area factor, the Gram determinant, into a named reference measure, or be labelled per pixel of this chart; refinement density must never feed it, and a replication fraction must use its paper's own measure; a mid-morph frame, a blend chart at `0 < s < 1`, must admit no area statistic, its `measure` `none`, the two end charts keeping their own (R-936, R-944)."
@@ -4950,14 +4971,17 @@
     section: "R-879 — Final-condition charts are built after the M8 charts, as a CPU batch chart on the default integrator, the round-trip miss measured per pixel and large misses masked; the standard size is kept at the chosen state, with a per-pixel horizon as a labelled exception for final-condition charts only; the rejection of \"anything measured after `t = 0`\" narrows to trajectory functionals and event reads *(closes RQ-734)*"
   - file: docs/design/principia_chart_composition.md
     section: 10.3 Final-condition charts
+  - file: decisions.md
+    section: "R-985 — On a view tilted toward time the stop index `k_stop` stays in the record and only that word is rewritten each frame; a final-condition chart is a tier-3 map like any other, with no label of its own as a route *(the owner's directions of 12 Nov 2026 on the chart audit's F8 and F17)*"
   verify:
     method: unit test
     detail: "cargo test -p engine final_condition_chart: on a small grid each pixel's round trip is measured and reported, pixels past the threshold masked and labelled; a conserved axis (L_z²E, the sign of E) reads the same at two T; the per-pixel horizon labelled; controls: a pixel past the threshold drawn unmasked fails, a single global horizon on this chart where the rescale differs per pixel fails, an unsigned (mirrored) start fails"
   rulings:
   - R-852
   - R-879
+  - R-985
   milestone: M8
-  note: "Added by R-879 (8 Nov 2026). Closed by TASK-M8-128. The owner wrote \"may use a per-pixel horizon\"; the control that a single global horizon fails where the rescale differs per pixel is applied per R-369 (P8 of physics review 5820410914, PR #455), with I = 1 kept at the chosen state."
+  note: "Added by R-879 (8 Nov 2026). Closed by TASK-M8-128. The owner wrote \"may use a per-pixel horizon\"; the control that a single global horizon fails where the rescale differs per pixel is applied per R-369 (P8 of physics review 5820410914, PR #455), with I = 1 kept at the chosen state. R-985 (12 Nov 2026, the owner's direction on the chart audit's F17): a final-condition chart is a tier-3 map like any other, evaluated on the CPU as every chart is under R-926, R-879's \"CPU batch chart\" read as that evaluation; the coarse cover in motion, exact at rest (REQ-SCHED-020), with no label of its own as a route; R-879's per-pixel horizon, labelled, and its masked misses stand. The statement stands as written until the chart audit's record-corrections pull request carries the docs, and where it differs from R-985 the ruling binds. Its measure weight waits on RQ-800."
 - id: REQ-CHART-154
   area: CHART
   kind: calibration
@@ -4989,6 +5013,8 @@
   - R-889
   - R-926
   milestone: M8
+  rq:
+  - RQ-799
   note: "Added by R-889 (8 Nov 2026). Closed by TASK-M8-102. *11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE: every chart is CPU-evaluated in the browser too. Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M8-102 rewrites them under the ruling, and where they differ from it the ruling binds."
 - id: REQ-CHART-156
   area: CHART
@@ -8450,14 +8476,17 @@
     section: "R-935 — The chart re-plan's one-way questions, the plan's recommendation on each: exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (RQ-758); the lock's re-solve follows its local minimiser continuously, stops where that ends, and keeps the offered re-centre, the navigation stop and the stored-words select (RQ-759); a per-sample stop index on the integrator's grid with a new label \"reached its time\", the zoom along time floored at one boundary (RQ-761); the window's scale is R-507's and R-920's unit, time's the home time window (RQ-762); stage 1 measures each operation against its generic edit first (RQ-763); the GPU decode entries stay as test entries and R-837's cap is retired once measured (RQ-765); a large quad's forward table has one exact node per sample, R-90's trigger read on the narrowed f32 records (RQ-766); the table seeds a refinement on the chart's forward code (RQ-767); `ctx.chart.z` stays the forward value, carried in the table (RQ-768); stage 3 runs beside stages 1 and 2 (RQ-769); an in-plane pan or zoom still re-addresses the cache (RQ-770) *(closes RQ-758, RQ-759, RQ-761, RQ-762, RQ-763, RQ-765, RQ-766, RQ-767, RQ-768, RQ-769 and RQ-770; amends R-837, R-849, R-863 and R-864; refines R-90 and R-926)*"
   - file: docs/design/principia_core_design.md
     section: 3. Kernel eats chart params, decodes in-kernel
+  - file: decisions.md
+    section: "R-985 — On a view tilted toward time the stop index `k_stop` stays in the record and only that word is rewritten each frame; a final-condition chart is a tier-3 map like any other, with no label of its own as a route *(the owner's directions of 12 Nov 2026 on the chart audit's F8 and F17)*"
   verify:
     method: review checklist
     detail: "the contracts state the record and table contract: the record's content (REQ-DEC-005's `(m, r, p)`, the descriptor and tag words, a branch word, the stop index of RQ-761), `SimState` a separate buffer (REQ-SCHED-012), each replaced line kept as *Was*; no measurement"
   rulings:
   - R-926
   - R-935
+  - R-985
   milestone: M2
-  note: "Replaces REQ-INT-070 (decode in the kernel, never an IC buffer), reversed by R-926 item 5 and retired (the re-plan § A.2). Added 11 Nov 2026 with TASK-M2-87 (N2 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the code re-check of PR #482 (review 5853463481), N1):* this requirement's verify is contract text and checks no code. That the built integrator entry holds no chart code and never decodes is checked by REQ-INT-116, closed by TASK-M4-05 (flat-grid compute), which builds the entry."
+  note: "Replaces REQ-INT-070 (decode in the kernel, never an IC buffer), reversed by R-926 item 5 and retired (the re-plan § A.2). Added 11 Nov 2026 with TASK-M2-87 (N2 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the code re-check of PR #482 (review 5853463481), N1):* this requirement's verify is contract text and checks no code. That the built integrator entry holds no chart code and never decodes is checked by REQ-INT-116, closed by TASK-M4-05 (flat-grid compute), which builds the entry. R-985 (12 Nov 2026, the owner's direction on the chart audit's F8): the stop index stays in the record, and on a view tilted toward time only that word is rewritten each frame, from the pixel and the playhead on the host, the record's other words unchanged; the statement stands as written until the chart audit's record-corrections pull request carries the docs, and where it differs from R-985 the ruling binds."
 - id: REQ-INT-116
   area: INT
   statement: "The built integrator's compute entry must hold no chart code and must never decode (R-926 item 5): its starting states are the records the CPU wrote, read as REQ-INT-115's contract gives them."
@@ -10415,6 +10444,8 @@
     detail: "the QuadRequest struct has no x₀/J_D fields; the linear-path bind group binds the uniform and the full-decoder bind group does not"
   rulings: []
   milestone: M6
+  rq:
+  - RQ-797
 - id: REQ-PAY-070
   area: PAY
   kind: definition
@@ -12534,6 +12565,8 @@
     detail: "per-quad uniforms carry c, h, x₀, J_D; kernel computes only x₀ + J_D·δ"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-797
 - id: REQ-SCHED-025
   area: SCHED
   statement: "In-plane pan and zoom must only change which quad addresses are asked for — the addresses themselves are fixed in the slice plane's own frame, relative to the plane anchor — slicing out of the plane, tilting and rotating must request new identities whose quads integrate fresh, the lock must change neither key, and no navigation may invalidate a cached payload; revealed quads catch up to the playhead off-loop."
@@ -13150,6 +13183,8 @@
   - R-599
   - R-686
   milestone: M6
+  rq:
+  - RQ-803
   note: "R-599 (25 Oct 2026, RQ-554 (c)): collapse is judged per axis; the switchover is unchanged; the readout's naming of the saturated axis is REQ-GUI-397 (applied per R-369). RQ-554 was (R-570's port, perf review 5624936602 of PR #279, P2): a band quad at 10⁴·ê_k, every collapsed pair along the saturated axis, switches, collapses again on the linear path and stops terminally here above the screen floor, while its other axis stays structured; whether such a quad keeps refining along the unsaturated direction is open. The terminal stop stands as written meanwhile; a ruling for RQ-554's (a) changes this requirement for band quads. *Was (statement):* \"The full decoder must switch to the linearised decoder once `quad.collapsed` is set (its adjacent samples give bitwise-identical ICs) or at depth ℓ_switch = 20 (lowering's SWITCH), whichever comes first, and sample collapse on the linearised decoder must fire AT_F32_FLOOR, a terminal stop cached as a quad fact, so the response to sample collapse keys off which decoder is active.\" *Was (verify):* \"force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full\" R-686 (4 Nov 2026): the bitwise agreement this switch reads must be tested on NVIDIA specifically: a Windows run of quad.collapsed over the same quads, compared with the other backends and posted to #390 (TASK-M6-08's notes). It blocks nothing; bitwise switchover on CI backends stays blocking (R-686, the owner's acceptance)."
 - id: REQ-SCHED-063
   area: SCHED
@@ -17065,6 +17100,8 @@
   - R-945
   - R-947
   milestone: M7
+  rq:
+  - RQ-805
   note: "Added 11 Nov 2026 with TASK-M7-74 (N9 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the physics re-check of PR #482 (review 5853427038), P8; the code re-check (review 5853463481), N4; Codex's inline comment 4533257731):* the verify said the sources give no bound and cited R-926 item 7, which permits approximation during a morph only, while its subject was a chart outside a morph. Outside a morph R-935 keeps a criterion (under RQ-767 (a)): the three cases above are the physics reviewer's, each line R-935's, and nothing is chosen. The tolerances are REQ-RENDER-126's calibrations. *Was (statement):* \"Chart position and the presets must work on a chart with no closed-form shader code by the fragment's table route, the GPU side of the backwards table, never a refusal (R-925 items 1 and 2; R-926 items 7 and 8), and the route must be measured against the placement function on the CPU (R-947).\" *Was (verify):* \"cargo test -p render fragment_table_route: on a chart with no closed-form shader code, Chart position and the presets read the backwards table in the fragment and nothing is refused; the route's answer is measured against `place` on the CPU (REQ-CHART-199) and the difference reported. The sources give no bound for that difference (R-926 item 7: approximate is acceptable during a morph, which binds this route only): none is asserted and none is chosen here\""
 - id: REQ-RENDER-126
   area: RENDER
@@ -18180,6 +18217,8 @@
   rulings:
   - R-72
   milestone: M2
+  rq:
+  - RQ-805
 - id: REQ-COL-058
   area: COL
   kind: definition
@@ -20695,6 +20734,9 @@
   - R-54
   - R-570
   milestone: M6
+  rq:
+  - RQ-802
+  - RQ-804
   note: "RQ-553 (a), decided per R-369 by the orchestrator on PR #279 (23 Oct 2026, not a human ruling; physics review 5624721489, P4): a saturation collapse raises no precision warning, recorded against R-54 and R-570 item 5. *Was (statement):* \"The deep-zoom precision warning must be event-driven: raised when DECODE_SWITCHOVER fires on visible quads and when AT_F32_FLOOR is hit, not by fixed depth thresholds.\" *Was (verify):* \"zoom a visible region through the switchover and to the linear floor; the warning event is raised exactly at each event and not at any fixed depth when the events do not fire (e.g. early switchover at shallow depth with tiny q)\" Fix round 3 of PR #279 (physics review 5624781454, P5; gui review 5624788928, G5 and G6; applied per R-369): the test per direction, so the bands along the axes are covered; the band arm; the genuine floor split into two cases whose controls can fail; z₀ set by SetField. *Was (statement):* \"The deep-zoom precision warning must be event-driven: raised when DECODE_SWITCHOVER fires on visible quads and when AT_F32_FLOOR is hit, not by fixed depth thresholds; and it must not be raised for a saturation collapse, a quad at which f64 J_D's columns along the view's plane are 0 while the quad's f64 sample points are distinct (RQ-553 (a), decided per R-369; R-570 item 5, W13), the genuine floor, where J_D ≠ 0, still raising it.\" *Was (verify):* \"zoom a visible region through the switchover and to the linear floor; the warning event is raised exactly at each event and not at any fixed depth when the events do not fire (e.g. early switchover at shallow depth with tiny q); saturation arm (RQ-553): on the latent chart at the decoder's default links with E* = None, a view at the home zoom centred at 10⁴·d (d's component on each coordinate the plane varies at least 0.1, as REQ-CHART-087's) raises no warning while DECODE_SWITCHOVER and AT_F32_FLOOR fire there; genuine-floor arm: a view zoomed to the linear floor at a centre where the f64 decodes are distinct and unsaturated (J_D ≠ 0) still raises it; control: an executor that suppresses the warning on identical f64 decodes (RQ-553 (a)'s old wording) drops the genuine-floor warning and fails, and one that never suppresses it warns in the saturated view and fails\" Fix round 4 of PR #279 (gui review 5624846336, G8; applied per R-369): at least one collapsed pair is required, so an ℓ_switch switchover with none still warns; arm (e). *Was (statement):* \"The deep-zoom precision warning must be event-driven: raised when DECODE_SWITCHOVER fires on visible quads and when AT_F32_FLOOR is hit, not by fixed depth thresholds; and it must not be raised for a quad every collapsed adjacent pair of which is a saturation collapse, a collapse between adjacent samples along in-plane direction k being one when f64 J_D's column along k is 0 while those two f64 sample points are distinct (RQ-553 (a), decided per R-369, per direction; R-570 item 5, W13), the genuine floor, where J_D's column along a collapsed pair's direction is non-zero or the pair's f64 sample points coincide, still raising it.\" *Was (verify):* \"zoom a visible region through the switchover and to the linear floor; the warning event is raised exactly at each event and not at any fixed depth when the events do not fire (e.g. early switchover at shallow depth with tiny q); (a) saturated arm: on the latent chart at the decoder's default links with E* = None, z₀ = 10⁴·d set by SetField at the home zoom (d's component on each coordinate the plane varies at least 0.1, as REQ-CHART-087's) raises no warning while DECODE_SWITCHOVER and AT_F32_FLOOR fire there; control: an executor that never suppresses warns there and fails; (b) band arm: on a plane containing ê_k, z₀ = 10⁴·ê_k set by SetField, a quad whose collapsed pairs all lie along ê_k (J_D's ê_k column 0, the other column non-zero, the pair's f64 sample points distinct) raises no warning, and a quad in the same view that also has a genuine-floor collapse along the other axis (pairs there bitwise identical, J_D's column along it non-zero) still warns; controls: an executor that suppresses only when every in-plane column is 0 warns on the band quad and fails, and one that suppresses when any collapsed pair is a saturation collapse drops the mixed quad's warning and fails; (c) genuine floor, case (i): an unsaturated quad at the linear floor whose adjacent f64 sample decodes are bitwise identical while f64 J_D's in-plane columns are non-zero, AT_F32_FLOOR set, still warns; control: an executor that suppresses on identical f64 decodes (RQ-553 (a)'s round-1 wording) drops it and fails; (d) genuine floor, case (ii): an unsaturated quad at the linear floor whose f64 sample points are not distinct (c ± h rounding to c), J_D's central differences reading 0, AT_F32_FLOOR set, still warns; control: an executor without the distinct-points clause drops it and fails; each arm asserts its own precondition (the collapse, J_D's columns, the points' distinctness) before its assertion, so none passes vacuously; (b) to (d) may feed the trigger synthetic quad facts\" Fix round 5 of PR #279 (gui review 5624873208, G9; applied per R-369): arm (e) may use synthetic quad facts too, as TASK-M6-21's acceptance line says; it tests the trigger's logic, which synthetic facts exercise fully, and arm (a) stays the real-engine arm. *Was (verify):* \"zoom a visible region through the switchover and to the linear floor; the warning event is raised exactly at each event and not at any fixed depth when the events do not fire (e.g. early switchover at shallow depth with tiny q); (a) saturated arm: on the latent chart at the decoder's default links with E* = None, z₀ = 10⁴·d set by SetField at the home zoom (d's component on each coordinate the plane varies at least 0.1, as REQ-CHART-087's) raises no warning while DECODE_SWITCHOVER and AT_F32_FLOOR fire there; control: an executor that never suppresses warns there and fails; (b) band arm: on a plane containing ê_k, z₀ = 10⁴·ê_k set by SetField, a quad whose collapsed pairs all lie along ê_k (J_D's ê_k column 0, the other column non-zero, the pair's f64 sample points distinct) raises no warning, and a quad in the same view that also has a genuine-floor collapse along the other axis (pairs there bitwise identical, J_D's column along it non-zero) still warns; controls: an executor that suppresses only when every in-plane column is 0 warns on the band quad and fails, and one that suppresses when any collapsed pair is a saturation collapse drops the mixed quad's warning and fails; (c) genuine floor, case (i): an unsaturated quad at the linear floor whose adjacent f64 sample decodes are bitwise identical while f64 J_D's in-plane columns are non-zero, AT_F32_FLOOR set, still warns; control: an executor that suppresses on identical f64 decodes (RQ-553 (a)'s round-1 wording) drops it and fails; (d) genuine floor, case (ii): an unsaturated quad at the linear floor whose f64 sample points are not distinct (c ± h rounding to c), J_D's central differences reading 0, AT_F32_FLOOR set, still warns; control: an executor without the distinct-points clause drops it and fails; (e) a visible quad at an unsaturated centre switching at ℓ_switch = 20 with no collapsed adjacent pair still warns; its precondition asserts that no pair collapsed; control: an executor that classifies an empty collapse record as saturated drops the warning and fails; each arm asserts its own precondition (the collapse, J_D's columns, the points' distinctness) before its assertion, so none passes vacuously; (b) to (d) may feed the trigger synthetic quad facts\""
 - id: REQ-GUI-013
   area: GUI
@@ -30933,6 +30975,8 @@
   - R-90
   - R-395
   milestone: M5
+  rq:
+  - RQ-797
   note: "R-395, the second half of REQ-TOOL-019's \"no banding\" (RQ-242), split per the human's \"M5/M6\": this requirement is the per-quad local path, kernel and fragment, and REQ-TOOL-159 the routing of every quad past ℓ_switch onto it (DECODE_MODE, REQ-DEC-037, TASK-M6-08). Closed by TASK-M5-04, which owns the per-quad uniforms, the quad-local sample positions and REQ-DEC-031's depth-30 gate, and with them the UV preset's per-quad uniforms (REQ-TOOL-019's note) (applied per R-369); TASK-M6-07's linearised decoder consumes δ."
 - id: REQ-TOOL-159
   area: TOOL
@@ -31258,6 +31302,7 @@
   milestone: M7
   rq:
   - RQ-755
+  - RQ-801
   note: "R-483 X4's per-link arm; R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026); no longer waits. The writing side is REQ-TOOL-186. Physics review is required (⚑): which records recreate. *Was:* \"A record whose link's registry entry content differs from the writer's must be refused as \\\"state present, cannot recreate\\\", naming exactly the changed link.\", the verify's \"a record whose recorded entry hash for the masses differs from the build's is refused naming the masses' link; control: an unchanged entry recreates\", and \"waits on RQ-385 (meanwhile the schema-version refusal of REQ-TOOL-171, 20 Oct 2026).\" Physics review P2 of PR #265 (applied per R-369): an entry's hash also covers the registry constants its decode reaches (tanh_sat, ε_M01, δ_λ, ε_w; dd_generation_root §3.9), the recreate arm names a payload-only ledger change, and a control refuses a tanh_sat or δ_λ change. *Was:* the verify's \"(an unrelated ledger entry changed)\" and its controls without the constants' arm. Physics review P6 and P7 of PR #265 (applied per R-369): δ_λ and ε_w go into every entry as a conservative choice (δ_λ is read only by dd_decoder §3.3, ε_w only by §3.4), the refusal names the constants as well as the link, and the verify gains the constants' scope arms (ε_M01, ε_w, tanh_sat) and their controls; added, nothing removed. Physics review P8 and P9 of PR #265 (applied per R-369): when all four blocks mismatch, the refusal leads with the constants all four hashes cover, computed from the record's links (tanh_sat too when every link is tanh-bearing), and the verify gains the lead's arms and controls; added, nothing removed. R-919 (RQ-754 Q1 (c), 9 Nov 2026) and physics review 5834538186 of PR #465 (applied per R-369): latent β takes one periodic link, and tanh_beta stays only as a conversion source, not selectable. The verify's all-tanh arm (stick_breaking masses, tanh_alpha, tanh_beta, tanh_q) keeps tanh_beta, read as the β link of a record written before TASK-M2-57 merged, the kind of old record this requirement exists to refuse correctly, checked against the conversion source's entry, which the registry keeps with its forward map and so with its hash. That reading tests what the arm always tested, the refusal's lead computed from the record's links with tanh_sat in it when all four are tanh-bearing. The other reading, the periodic link in tanh_beta's place, would test the same thing only if that link is tanh-bearing, which TASK-M2-57 has not yet defined, so it is not taken. RQ-755 (9 Nov 2026): whether such a record, every hash matching, recreates through the conversion source or is refused is open; the recreate side for it waits on RQ-755. R-921 (10 Nov 2026, closes RQ-755): the owner's option (c). Records store latent coordinates only (dd_image_embedding §6, tier 1; gui_state_contract §2), so a record made under a retired β link recreates by decoding its stored latent coordinates through that exact link, bitwise, with no conversion on recreation; conversion into the periodic β happens only when it is opened as an editable view (R-919 Q3 (a)). The recreate side no longer waits; the statement gains its last sentence and the verify the retired-link recreate arm, nothing removed. *Was:* the statement and verify without them. Physics review 5836519618 of PR #469, P1 and P2 (applied per R-369: the pre-M2-57 fixture): the record writer is built in M7, after TASK-M2-57, so the retired-link arm's expected bits are a fixture captured from a pre-TASK-M2-57 build, fixtures/retired_beta_links/pre_m2_57.json, written on TASK-M2-57's baseline commit: for each of sigmoid_beta, tanh_beta and softsign_beta, the latent coordinates, the four blocks' links and each decoded starting state as bits, with pixels where converting z_β to the periodic link changes at least one bit, so the retained forward maps are not checked against themselves and the converting reader's control cannot pass trivially; TASK-M7-45 depends on TASK-M2-57 for it; added, nothing removed. *Was:* the verify's \"the retired-link recreate arm (R-921): a record made before TASK-M2-57, its β link\", \"equal bit for bit to the state the writing build decoded,\" and \"fails the bitwise arm\". Physics review 5836599062 of PR #469, P3 (applied per R-369: the fixture's bounded search): TASK-M2-57's search for pixels where conversion changes a bit has a fixed budget (257 pixels per link, one extension to 4097); a link with none within it is reported to the owner and its converting-reader control marked not exercisable, never looped on; every bit of the fixture, a rewrite included, comes from the baseline commit's decoder. *Was:* the verify's \"which TASK-M2-57's baseline commit writes through the decoder before any link changes:\" and \"(at least one per retired link, checked by TASK-M2-57)\"."
 - id: REQ-TOOL-173
   area: TOOL
@@ -34040,6 +34085,8 @@
     detail: measure weight equals |det J_D| for the quad; computed once
   rulings: []
   milestone: M6
+  rq:
+  - RQ-800
 - id: REQ-VAL-095
   area: VAL
   statement: "Whether symbolic spread is additive to outcome impurity must be measured once built and the result recorded."
