@@ -292,7 +292,7 @@ mutant = "crates/kernel/src/stage/encode.rs:28:38: replace | with ^ in notices"
 justification = "coincident (bit 0), mirrored (bit 1), rescaled (bit 2) and clamped_controls << 8 (bits 8 to 15, clamped_controls at most 0xFF) share no bit, so ^ is |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/driver/advance.rs:130:32: replace > with >= in <impl Advance for S>::advance"
+mutant = "crates/kernel/src/driver/advance.rs:217:32: replace > with >= in <impl Advance for S>::advance"
 justification = "at t_target == t_now both arms give a span of 0 (t_target - t_now is 0), so > and >= agree on every input"
 
 [[equivalent]]
@@ -492,7 +492,7 @@ mutant = "crates/kernel/src/regularisation/az.rs:126:10: replace < with <= in ab
 justification = "x == 0 returns -x = -0 in place of +0; abs's every caller compares its magnitude (|u1| > TINY, |got - want| <= land_tol), where -0 and +0 compare alike"
 
 [[equivalent]]
-mutant = "crates/kernel/src/regularisation/az.rs:729:35: replace < with <= in size"
+mutant = "crates/kernel/src/regularisation/az.rs:731:35: replace < with <= in size"
 justification = "c1 == h assigns h = c1, the value h already holds, and sets have, already true there (h holds c0 only when c0 was usable); a tie leaves h and have unchanged"
 
 [[equivalent]]
