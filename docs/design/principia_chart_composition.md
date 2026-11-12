@@ -127,7 +127,7 @@ an optional tick, and nothing is drawn inside a clamped or saturated area, physi
 conflicts table, § 17.13 and § 17.14. The lock's leftover jump from a time-axis chart to one with no time axis is
 removed (R-950): the first paragraph's "the jump kept only for time-axis to IC-only charts" no longer holds. Two
 measurements, P2 and P4, are reported and are not gates, shown to the owner before the trace tasks are built (R-951);
-the picture size their pixels are counted at is open, RQ-785. Contours are evaluated on the CPU for every chart (R-952):
+P4's unit and the set-up are R-977's (*12 Nov 2026, the owner's answer on RQ-785:* P4's gaps are counted as a fraction of the picture width, their distribution reported and the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; a pinned trace, P2 at both ends, the fixture's own output steps at each chart's home window, zoom 1; *later the same day, R-984, the owner's follow-up, which closes RQ-785:* P2's jump is measured as a fraction of the picture width too, its median and worst read in px at the same three sizes; *was (R-977's line):* "P2's unit stays open on RQ-785"; *was:* "the picture size their pixels are counted at is open, RQ-785"). Contours are evaluated on the CPU for every chart (R-952):
 § 10.2 and `principia_lines.md` § 4.2. § 17.5 is rewritten item by item under R-944, each stated mid-morph limitation
 closed, naming its mechanism, or kept as the one accepted exception, area statistics.
 
@@ -136,7 +136,7 @@ confirmed, (i-a), (ii-a) and (iii-a), with three points of definition owed (`pri
 mechanism is approved, and the row-major representative is acceptable as a gauge choice, with what the written
 definition must state (§ 10.4). (F): answered tag by tag, three tags blending and three not, with two conditions
 (§ 17.11). The collision-point case of § 17.11 is confirmed, and a second case, `M01_TINY` between two valid ends, is
-open as RQ-787. Where the paragraph below says "not settled until it confirms", read it with these.
+open as RQ-787 (*12 Nov 2026:* ruled by R-975, the pixel saturating by physics review's smooth hold, § 17.11). Where the paragraph below says "not settled until it confirms", read it with these.
 
 **Decided per R-369 on the way, each listed for the owner's veto.** The owner's words on the first five (10 Nov 2026),
 verbatim, under their heading "THE FOUR YOU DECIDE":
@@ -154,7 +154,7 @@ conditional on physics review, tag by tag, and not settled until it confirms; th
 tilt, each end about its own centre (§ 17.5). Applied per R-369 as mechanical consequences of the rulings named at each,
 and listed for veto with them: the hold's blank does not open mid-path under the state blend (§ 17.11; R-926 item 3,
 R-943; *was:* "no blank opens mid-path under the state blend", which the physics review of PR #482 found incomplete:
-`M01_TINY` can open between two valid ends, RQ-787); a `gauge`
+`M01_TINY` can open between two valid ends, RQ-787, where the pixel saturates by R-975 of 12 Nov 2026); a `gauge`
 end's paper scale is drawn on its own side of the dual ruler (§ 17.11; R-940); a pan or zoom on a blend re-addresses the
 cache as on any chart (§ 17.12; R-935); the "CPU batch" label and the GPU blend entry are moot (§ 17.12; R-926 items 5
 and 6); two time windows blend like any two windows, V29 retired (§ 18.4; R-926 item 3); a blend's well-posedness, in
@@ -2360,7 +2360,13 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
      and not only isolated pixels, have finite `(m, r, p)`: under R-933, R-60 and R-13 that is a collision at `t = 0`,
      recorded with the pair and the least separation, never a blank and never `decode_failed`. The antipodal case
      `n̂_B = −n̂_A` is § 17.2's declared tie.
-  2. **`M01_TINY` between two valid ends: a blank can open mid-path, and what the pixel shows is open (RQ-787).** The
+  2. **`M01_TINY` between two valid ends: the pixel saturates, never blank (R-975, RQ-787 (a)).** *12 Nov 2026 (R-975,
+     the owner's answer on RQ-787, option (a) with physics review's smooth hold):* such a pixel holds the blended
+     `m₁ : m₀` and lifts the light pair just to the allowed minimum, `M₀₁ = ε_M01`, the rest of the blend unchanged: a
+     valid system, continuous in `s` and across pixels, equal to the plain blend where the dip begins and ends (R-943).
+     How the lifted state sits against the guard, which fires strictly below `ε_M01`, is the building task's
+     definition under physics review. *Was (the bullet's title):* "a blank can open mid-path, and what the pixel shows
+     is open (RQ-787)"; the account below is kept as it was written. The
      masses blend linearly in `μ_k = ln(m_k/m₀)`. Then `M₀₁ = g/(1 + g)` with `g(s) = e^{−μ₂(s)} + e^{μ₁(s) − μ₂(s)}`,
      a sum of exponentials of linear functions: convex in `s`, so it can dip below both ends. The physics review's
      example: end A `μ = (−L, 0)` (`M₀₁ ≈ ½`), end B `μ = (L, L)` (`M₀₁ ≈ ½`); at `s = ½`, `μ = (0, L/2)` and
@@ -2379,12 +2385,14 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
      interior dips for every `0 < s < 1`. The region can be the whole overlap of the two ends' saturated bands, not a
      few deep-zoom pixels, and its share of a frame is not known until measured. The blend chart's fixture therefore
      has three arms: the `L > 24.4` example, the pair above at the band with modest ratios, and one where both ends
-     are saturated pixels with different `m₁/m₀`. No ruling says what such a pixel shows: it is the owner's, RQ-787, and
+     are saturated pixels with different `m₁/m₀`. What such a pixel shows is R-975's, above: it saturates, and the
+     fixture's arms assert the hold. *Was:* "No ruling says what such a pixel shows: it is the owner's, RQ-787, and
      nothing is chosen here. Meanwhile the decoder's rule stands as written: the pixel is tagged `M01_TINY`, never
      dropped and never NaN, and the blend chart's fixture for this case (TASK-M2-90) asserts, on each arm, the tag
-     and that both ends are valid, and nothing about what is drawn.
+     and that both ends are valid, and nothing about what is drawn."
      *(11 Nov 2026: the arm with both ends saturated is checked by TASK-M2-103, the task that builds the saturated
      pixels it blends, under REQ-CHART-211; TASK-M2-90 checks the other two. What each arm asserts is unchanged.)*
+     *(12 Nov 2026, R-975: each arm now asserts the hold, not the tag.)*
 - **Blank or forbidden at an end.** A pixel in a morph frame is in only if it's in both ends. No state exists for a blank end
   to blend from, and substituting the other end invents a continuity (R-470, R-467). So the blank is held for every `0 < s <
   1` and resolves at the end frame, a step at each end. A region-D mask behaves so: outside D blank at every `s < 1`.
@@ -2423,7 +2431,7 @@ identity at `s = 1`, so at `s = 0` it has no weight and at `s = 1` it's gone. Pe
   that may be blended, where TASK-M2-81 builds it. Until then V21 stands as written, and this is not recorded as
   settled." Under R-932 an end pixel with no state is left only where a chart's own validity fails (R-467). A blend's
   interior pixel that raises `M01_TINY` between two valid ends is another matter, the bullet "Out of feasible" above
-  and RQ-787.
+  and RQ-787, ruled by R-975 (12 Nov 2026): it saturates.
 - **Held quantities mid-morph.**
 
 | Held | Mid-morph |

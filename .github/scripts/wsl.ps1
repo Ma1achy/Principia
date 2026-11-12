@@ -4,12 +4,16 @@
 # through `scripts/wsl/inside.sh`, from a clone at the job's own commit; interop is off, so nothing inside can reach
 # Windows, and Windows reads only what `wsl.exe` relays: stdout, and the exit status.
 #
-#   wsl.ps1 register   Imports the image the same run built (WSL_IMAGE: rootfs.tar.gz, rootfs.sha256, manifest.txt),
-#                      as gh-runner, to E:\wsl\principia-wsl\, never C:. Refuses unless a manifest hash is pinned in
-#                      scripts/wsl/manifest.sha256 and the image's manifest has it, and unless the copy's bytes are the
-#                      ones built. Refuses if the distro exists, unless WSL_REPLACE is `true`. After the import it
-#                      derives the manifest again inside the distro, from what is really there, and unregisters it if
-#                      that differs from the pin, or if deriving it fails or stops short.
+#   wsl.ps1 check-image
+#                      Checks that the image a download wrote (WSL_IMAGE) is whole, its length and SHA-256 the ones
+#                      built, and nothing more; the registering job runs it after each download, to try again on a bad
+#                      one.
+#   wsl.ps1 register   Imports the image the same run built (WSL_IMAGE: rootfs.tar.gz, rootfs.sha256, rootfs.bytes and
+#                      manifest.txt), as gh-runner, to E:\wsl\principia-wsl\, never C:. Refuses unless a manifest hash
+#                      is pinned in scripts/wsl/manifest.sha256 and the image's manifest has it, and unless the copy is
+#                      whole, its length and bytes the ones built. Refuses if the distro exists, unless WSL_REPLACE is
+#                      `true`. After the import it derives the manifest again inside the distro, from what is really
+#                      there, and unregisters it if that differs from the pin, or if deriving it fails or stops short.
 #   wsl.ps1 proofs     The six proofs RQ-751 (c) needs before it can replace (b), each reported PASS or FAIL with its
 #                      evidence; exits 0 only if all six pass. WSL_PARITY_COMMIT and WSL_HOSTED_PARITY (the hosted
 #                      runner's results, this run's) feed proof 6; WSL_IMAGE (this run's rebuild) feeds proof 5.
@@ -17,7 +21,8 @@
 #                      passed). Then the CPU tests and the job queue's mutants inside, through `scripts/contain.sh` in
 #                      its unprivileged mode; their results come out as a tar stream on a second `wsl.exe`'s stdout.
 #
-# Every verb ends with `wsl.exe --terminate`, which ends every process in the distro, whatever was left running.
+# Every verb but check-image, which never starts WSL, ends with `wsl.exe --terminate`, which ends every process in the
+# distro, whatever was left running.
 $ErrorActionPreference = 'Stop'
 $verb = $args[0]
 $Distro = 'principia-wsl'
@@ -105,6 +110,24 @@ function Get-Sha256([string]$Path) {
     (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
 }
 
+# The image in $Image is whole: its files are there, rootfs.tar.gz is as long as built, and its bytes hash to what was
+# built. The length comes first, so a download that stopped short names itself before the hash says only that it
+# differs. `check-image` runs it after each download, `register` again before the import.
+function Assert-Image([string]$Image) {
+    $rootfs = Join-Path $Image 'rootfs.tar.gz'
+    foreach ($f in $rootfs, (Join-Path $Image 'manifest.txt'), (Join-Path $Image 'rootfs.sha256'), (Join-Path $Image 'rootfs.bytes')) {
+        if (-not (Test-Path -LiteralPath $f)) { Fail "the image has no $f" }
+    }
+    $length = (Get-Content -LiteralPath (Join-Path $Image 'rootfs.bytes') -Raw).Trim()
+    if ($length -notmatch '^[0-9]+$') { Fail "rootfs.bytes holds no length: '$length'" }
+    $copiedLength = (Get-Item -LiteralPath $rootfs).Length
+    if ($copiedLength -lt [int64]$length) { Fail "rootfs.tar.gz is a short copy, $copiedLength of $length bytes: the download stopped short" }
+    $built = (Get-Content -LiteralPath (Join-Path $Image 'rootfs.sha256') -Raw).Trim()
+    $copied = Get-Sha256 $rootfs
+    if ($copied -ne $built) { Fail "rootfs.tar.gz is $copied here, $built as built: the copy is not the image" }
+    "the image is whole: rootfs.tar.gz is $copiedLength bytes, sha256 $copied, as built"
+}
+
 function Get-TextSha256([string[]]$Lines) {
     $bytes = [Text.Encoding]::UTF8.GetBytes((($Lines -join "`n") + "`n"))
     $sha = [Security.Cryptography.SHA256]::Create()
@@ -171,17 +194,16 @@ function Report([int]$Proof, [bool]$Passed, [string]$Evidence) {
 }
 
 switch ($verb) {
+    'check-image' {
+        Assert-Image $env:WSL_IMAGE
+        exit 0
+    }
     'register' {
         $pinned = Get-Pinned
         $image = $env:WSL_IMAGE
         $rootfs = Join-Path $image 'rootfs.tar.gz'
         $manifest = Join-Path $image 'manifest.txt'
-        foreach ($f in $rootfs, $manifest, (Join-Path $image 'rootfs.sha256')) {
-            if (-not (Test-Path -LiteralPath $f)) { Fail "the image has no $f" }
-        }
-        $built = (Get-Content -LiteralPath (Join-Path $image 'rootfs.sha256') -Raw).Trim()
-        $copied = Get-Sha256 $rootfs
-        if ($copied -ne $built) { Fail "rootfs.tar.gz is $copied here, $built as built: the copy is not the image" }
+        Assert-Image $image
         $hash = Get-Sha256 $manifest
         if ($hash -ne $pinned) { Fail "the image's manifest is $hash, the pin is ${pinned}: refusing it" }
         "the image's manifest matches the pin: $hash"

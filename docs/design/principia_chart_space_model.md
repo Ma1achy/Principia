@@ -44,6 +44,10 @@ override a measured or ruled section.** The proofs below stand on the corrected 
    2). Such a pixel is tagged, never dropped and never NaN; what it shows is the owner's, RQ-787, and nothing is
    chosen here. *Was, the two sentences as the note above has them:* "every in-between frame is a valid system
    (R-943), so Corollary 1 holds again for the state blend" and "the one case left to physics review".
+   *12 Nov 2026 (R-975, the owner's answer on RQ-787, option (a)):* such a pixel saturates, holding the blended
+   `m₁ : m₀` and lifting the light pair to the allowed minimum, the rest of the blend unchanged, so every frame is a
+   valid system on this case too; "what it shows is the owner's, RQ-787, and nothing is chosen here" is kept as its
+   *Was*.
 5. **In the gauge, `L_z`'s sign isn't preserved:** the encode's mirror flips it. The scale-free invariant
    overlap is `L_z²E` and the sign of `E` only (§6b corrected below).
 6. **Symmetry acts on starting states only (owner rule, 7 Nov).** Every symmetry reduction (translation,
@@ -136,7 +140,9 @@ a display choice".)*
 *11 Nov 2026 (§ 0, correction 4, and its notes of this date):* this does not hold without exception. § 0 withdrew it
 for a held constraint run on a blended configuration; the state blend (R-926 item 3, R-943) removes those blanks, but
 a blend's interior pixel can still raise the mass guard's `M01_TINY` between two valid ends
-(`principia_chart_composition.md` § 17.11, "Out of feasible", case 2): tagged, its display the owner's under RQ-787.
+(`principia_chart_composition.md` § 17.11, "Out of feasible", case 2): tagged, its display the owner's under RQ-787. *12 Nov 2026 (R-975):* it saturates, never blank, by physics
+review's smooth hold, so Corollary 1 holds for the state blend once the hold is built; *was:* "its display the owner's
+under RQ-787".
 
 **Corollary 2 (held quantities are not conserved).** If `φ` holds energy at `E₀` and `ψ` holds `L_z` at `L₀`,
 the frames in between generally hold neither. The set `{z : E(D(z)) = E₀}` isn't convex in `Z`, so the
