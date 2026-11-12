@@ -624,7 +624,8 @@ variant also checks the midpoints of the square's four edges, which catches it, 
     sheet, and its footprint meets no flagged site (REQ-DEC-058's flags, consumed by extending REQ-CHART-129's
     per-footprint flag and REQ-CHART-130's `Seam` mask). Otherwise it is exact per sample. Cost: 4 evaluations against
     `N² = 256` at `N = 16`, 1/64 of an exact quad. Covers kinks, folds and sheets, and the high-curvature strip where
-    the curvature has one sign (semidefinite, as at the `√` edge above); keeps R-926 item 11's "one-cell patches for
+    the curvature has one sign (semidefinite, as at the `√` edge above), subject to the binade condition stated under
+    (a″) below; keeps R-926 item 11's "one-cell patches for
     small ones" wherever the patch is right. R-90 gains a named exception, and the record's bits change on the quads
     it sends back to exact. **The gap (physics review 5877078565 of the pull request that filed this entry, P2):** four
     corners do not bound the patch's error where a component's curvature is indefinite. The error is `½·δᵀHδ + O(δ³)`,
@@ -646,13 +647,23 @@ variant also checks the midpoints of the square's four edges, which catches it, 
     `H_uu` and `H_vv` and the corners `H_uv`, so the quadratic error over the square is bounded, for example by
     `½h²(|H_uu| + 2|H_uv| + |H_vv|)`. Admission bounds the square at 5/4 of the bound checked at the eight points, not
     at the bound itself (physics review 5877369526, F1): along each edge the error is a quadratic checked at three
-    points, the two corners and the midpoint, and the interpolation constant on nodes `{−1, 0, 1}` is `5/4`, reached
-    at `t = ½`. For example, in units of the bound, `½h²H_uu = 1`, `h²H_uv = 1` and `½h²H_vv = −1` pass all eight
-    points, while on the edge `u = h` the error is `1 + s − s²` (`s = v/h`), `5/4` at `s = ½`. So where the patch is
-    admitted its records are within 5/4 f32 ulp of the exact ones, where (a′) on semidefinite curvature gives one
-    (a convex error peaks at a vertex); comparing at 4/5 of the bound would restore one ulp, a variant the owner may
-    name. Cost: 8 evaluations against `N² = 256` at `N = 16`, 1/32 of an exact quad.
-    Covers kinks, folds, sheets and the high-curvature strip of either sign. R-90 gains a named exception, and the
+    points, the two corners and the midpoint, and the interpolation constant on nodes `{−1, 0, 1}` is `5/4`, reached at
+    `t = ½`. For example, in units of the bound, `½h²H_uu = 1`, `h²H_uv = 1` and `½h²H_vv = −1` pass all eight points,
+    while on the edge `u = h` the error is `1 + s − s²` (`s = v/h`), `5/4` at `s = ½`. So where the patch is admitted
+    its records are within 5/4 f32 ulp of the exact ones, where (a′) on semidefinite curvature gives one (a convex error
+    peaks at a vertex); comparing at 4/5 of the bound would restore one ulp, a variant the owner may name. **The binade
+    condition (physics review 5877523301, F5), for (a′) and (a″) alike:** both bounds are in the own-value ulp of the
+    checked points, which varies across a quad, so they hold per sample only while each component's samples stay in the
+    checked points' binade; the semidefinite bound is not exact per sample, as an earlier review read it, but holds only
+    under that uniform tolerance. Where a component's magnitude drops a binade inside the quad, interior samples get up
+    to 2 (semidefinite, (a′)) or 5/2 ((a″)) of their own ulp. Where a component changes sign inside the quad, its own
+    ulp at the samples nearest the zero is arbitrarily small, and the error against it is unbounded whatever the
+    curvature's sign: for `x = g·u + ½H·u²` on a quad straddling `u = 0` at depth 30 (`h = 2⁻³¹`), the corners sit at
+    `|x| ≈ |g|h` and pass whenever `h|H|/|g| < 2⁻²⁴`, while a sample at `|x| ≪ |g|h` still carries about `½H·δu²`
+    against `2⁻²⁴·|x|`. Variants the owner may name: comparing at the quad's smallest own-value ulp, estimated from the
+    patch as `|x₀| − |J|·√2·h`; and, where that estimate is at or below 0, so the component may cross zero, exact
+    evaluation per sample or an absolute floor. Cost: 8 evaluations against `N² = 256` at `N = 16`, 1/32 of an exact
+    quad. Covers kinks, folds, sheets and the high-curvature strip of either sign. R-90 gains a named exception, and the
     record's bits change on the quads it sends back to exact.
   - **(b) Keep the patch, and set each sample's tag, branch and sheet by a cheap exact predicate per sample.**
     Continuous values stay linearised, wrong across the strip.
@@ -685,10 +696,12 @@ variant also checks the midpoints of the square's four edges, which catches it, 
   - *Ulp convention:* the component's own f32 ulp, because near the edge `|p| ∝ √d` is small and `max(1, |x|)` would
     hide its error. The strip bound, PASS and the controls are all in this one unit; each difference is also reported,
     not judged, at `max(1, |x|)`, TASK-M2-86:28's unit, for comparison only.
-  - *PASS under (a′) or (a″):* on every quad the check admits, no sample differs in tag, branch or sheet, and no
-    component differs by more than one f32 ulp of its own value (half an ulp each side, predicate (3)) under (a′), or
-    5/4 f32 ulp under (a″), (a″)'s interpolation constant above, so that PASS cannot fail by construction on a quad
-    (a″) admits. The share of
+  - *PASS under (a′) or (a″):* on every quad the check admits on which each component's samples stay in the checked
+    points' binade, no sample differs in tag, branch or sheet, and no component differs by more than one f32 ulp of its
+    own value (half an ulp each side, predicate (3)) under (a′), or 5/4 f32 ulp under (a″), (a″)'s interpolation
+    constant above. Admitted quads on which a component crosses a binade or changes sign are reported apart, each with
+    its worst difference in the quad's smallest own-value ulp, and are not judged against a bound the check cannot give
+    them (the binade condition above). The share of
     straddling and of away quads the check sends to exact is reported.
   - *Positive controls, any failing voids the run:* (i) one sample's tag flipped on purpose in an admitted quad is
     detected; (ii) one quad's `x₀` offset by two f32 ulps of the component's own value is rejected by the check;
@@ -1096,15 +1109,17 @@ untrue. The question is whether to stop warning at a switch where no pixels have
     freezes**".
 - **The conflict:** the warning at an `ℓ_switch` switch was derived when the full decoder ran in f32 on the GPU and the
   switch marked its precision running out. Under R-926 the records above the switch are correctly rounded f64
-  evaluations, and below it the patch's records are within 5/4 f32 ulp of the exact ones wherever RQ-798 (a″)'s check
-  (four corners and four edge midpoints) admits the patch (5/4 being its interpolation constant along an edge, physics
-  review 5877369526, F1; one ulp if it compares at 4/5 of its bound, a variant the owner may name), and M-K measures
-  it. Under RQ-798 (a′), four corners only, the records are within one f32 ulp only where each component's curvature
-  is semidefinite: where it is indefinite the corners can pass while samples
-  near the edge midpoints are off by about `½h²|H_uu|` (physics review 5877078565, P2). So a switch at `ℓ_switch` with
-  no collapsed pair loses nothing a user could see, and a warning there says f32 has run out where it has not, against
-  W13. A switch triggered by collapse is, on exact records, the floor itself (F11), and still warns unless every
-  collapsed pair is a saturation collapse under RQ-802 (b)'s definition.
+  evaluations, and below it, on quads where each component stays in one binade and does not change sign (RQ-798's binade
+  condition, physics review 5877523301, F5), the patch's records are within 5/4 f32 ulp of the exact ones wherever
+  RQ-798 (a″)'s check (four corners and four edge midpoints) admits the patch (5/4 being its interpolation constant
+  along an edge, physics review 5877369526, F1; one ulp if it compares at 4/5 of its bound, a variant the owner may
+  name), and M-K measures it. Under RQ-798 (a′), four corners only, the records are within one f32 ulp only where each
+  component's curvature is semidefinite: where it is indefinite the corners can pass while samples near the edge
+  midpoints are off by about `½h²|H_uu|` (physics review 5877078565, P2). So, off quads where a component crosses a
+  binade or changes sign, a switch at `ℓ_switch` with no collapsed pair loses nothing a user could see, and a warning
+  there says f32 has run out where it has not, against W13. A switch triggered by collapse is, on exact records, the
+  floor itself (F11), and still warns unless every collapsed pair is a saturation collapse under RQ-802 (b)'s
+  definition.
 - **The question:** does a switch at `ℓ_switch` with no collapsed pair still raise the precision warning?
 - **Options seen:**
   - **(a) No.** The warning is raised at a collapse (on either route) and at `AT_F32_FLOOR`, saturation excepted by
