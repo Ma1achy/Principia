@@ -326,8 +326,8 @@ otherwise removed by the shadow's own projection after its first step (§3.4), w
 `u` moves the bodies by different amounts. That separation is `‖δ₀‖·√(1 + 3|c|²)`, `c = Σmᵢuᵢ/M` the offset's
 mass-weighted mean: since `Σuᵢ = 0` and `Σ|uᵢ|² = 1`, removing the translation `‖δ₀‖·c` from each of the three bodies
 only lengthens the offset. As a mass-weighted mean of the `uᵢ`, the longest of which is `|u₁| = 1/√2`, `c` has
-`|c|² ≤ ½`, so the first interval starts between `‖δ₀‖` and `‖δ₀‖·√1.75`. This biases `λ_T` up by at most
-`½·ln 1.75 / T ≈ 0.28/T`, and every later interval starts at `‖δ₀‖` exactly. Any direction with a component along the
+`|c|² ≤ ½`, so the first interval starts between `‖δ₀‖` and `‖δ₀‖·√2.5`. This biases `λ_T` up by at most
+`½·ln 2.5 / T ≈ 0.46/T`, and every later interval starts at `‖δ₀‖` exactly. Any direction with a component along the
 most expanding one converges to the largest exponent under renormalisation; a fixed one makes the shadow a
 deterministic function of the sample's state. `u` lacks that component in one measure-zero case: a state at rest
 (`p = 0`) whose positions about the centre of mass are proportional to `−ẑ × (uᵢ − c)`, at equal masses
