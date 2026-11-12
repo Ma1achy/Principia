@@ -32440,6 +32440,52 @@
   - R-980
   milestone: M0
   note: "12 Nov 2026 (R-980); applied per R-369 (task scoping): closed by TASK-M0-60. The test's name is given here (naming)."
+- id: REQ-TOOL-230
+  area: TOOL
+  statement: "`win-gpu.yml`'s `win-vulkan`, the GPU suites' 85-minute run on R-711's runner, must run on pushes to `main` (merges), the schedule and `workflow_dispatch` only, never on a push to any other branch, and its concurrency group, the job's own, must cancel an older run in progress when a newer one starts, on `main` too (`cancel-in-progress: true`); every other job on the runner keeps `cancel-in-progress: false` (R-986; amends R-656's \"never a run on `main`\" for this job)."
+  source:
+  - file: decisions.md
+    section: "R-986 — The 85-minute run on the Windows PC, `win-vulkan`, runs on merges to `main`, nightly and by dispatch only, never on a branch push, and a newer run of it cancels an older one, on `main` too *(the owner's goal of 12 Nov 2026 for the Windows runner; amends R-656 for this job; read with R-711, R-859, R-946 and R-970)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_have_the_shape_the_runner_needs, `win-vulkan`'s `cancel-in-progress` true and every other self-hosted job's false, and self_hosted_jobs_have_only_the_three_triggers, `win-gpu.yml`'s push trigger limited to `main`; controls: `win-vulkan` with `cancel-in-progress: false` fails (the `cancels` control flipped), another self-hosted job with `cancel-in-progress: true` fails, and a push trigger naming a branch besides `main` fails"
+  rulings:
+  - R-986
+  milestone: M0
+  note: "12 Nov 2026 (R-986, the owner's ruling); closed by TASK-M0-61. The triggers are already as R-986 says; the change is the job's concurrency and the control that pinned it false. The test names are the existing ones (naming)."
+- id: REQ-TOOL-231
+  area: TOOL
+  statement: "A hosted job, `win-retry`, in a workflow of its own, must re-run once, automatically, a job of `win-gpu.yml` or `runner-proof.yml` on R-711's runner that stopped on a runner-level fault (the runner lost, offline or shut down mid-job, its communication with GitHub lost, its process killed from outside), the classifier a script tested on saved logs; it must start by `workflow_run` on those two workflows only, never under a `pull_request` or `pull_request_target` trigger; it must re-run only a run whose event is a push to `main`, the schedule or `workflow_dispatch`, at its first attempt, and only while no newer run of that job has started; it must never re-run a job that failed a test or a step on its own output, a flake, a job cancelled by its time limit (REQ-TOOL-232), one cancelled by a newer run (R-986) or one no runner took; its run summary must log every unclear stop and every hang it sees, with the run, the job, the step where it applies, the signature and the re-run's id, the first attempt's record kept and the re-run marked as one; it gathers nothing and gates nothing, and no other workflow follows the runner's workflows (R-988, R-714, R-859)."
+  source:
+  - file: decisions.md
+    section: "R-988 — A job on the Windows PC that stops unclearly is re-run once, automatically, by a hosted job; a hung one ends at a time limit of 1.5 times its measured time; both are logged *(the owner's goal of 12 Nov 2026, item 5; amends R-859's security rules, the owner's job rules of 5 Nov 2026, for this re-run; extends R-714; refines R-970; read with R-711 and R-968)*"
+  - file: decisions.md
+    section: "R-714 — A failed CI job is retried automatically only on a runner-level fault, in at most two retries, never on a real test failure or a flake, the classifier a script tested on saved logs; every CI speed-up step reports disk use and must reduce or hold it; lands in `plan/OPERATIONS.md` § \"Merging\""
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_win_retry: over saved logs, a runner lost mid-job and a runner shut down mid-job re-run once, and a test failure, a step's time limit, a job's time limit, a run cancelled by a newer one, a job no runner took and a second attempt re-run nothing, each decision logged; the workflow's only trigger is `workflow_run` on `win-gpu` and `runner-proof`, its job hosted; and cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_are_never_required_or_gathered admits `win-retry` as the one reader of the runner's workflows; controls: a `pull_request` trigger added to `win-retry`, a test failure re-run, a hang re-run, a cancelled run re-run, a second attempt re-run, a re-run while a newer run has started, and `retry.yml` following `win-gpu.yml`, each fail"
+  rulings:
+  - R-714
+  - R-859
+  - R-988
+  milestone: M0
+  note: "12 Nov 2026 (R-988, the owner's item 5, a reading to confirm: their words contradict the job rules' \"No job here is gathered, retried or read by any gate\"); closed by TASK-M0-61. Applied per R-369: a hosted job of its own rather than a line in `retry.yml`; the test and workflow names (naming)."
+- id: REQ-TOOL-232
+  area: TOOL
+  statement: "Every job on R-711's runner, and every step of one that builds or runs tests, must carry a time limit (`timeout-minutes`) of 1.5 times its measured time, rounded up to a whole minute, the measured time the slowest of its recorded completed runs on the PC (the last five, or all if fewer), committed with their run ids before the limit is set and never adjusted after seeing a result (R-649); a job or step with no completed run on record keeps its present limit until it has one; a job or step reaching its limit is cancelled, logged by `win-retry` (REQ-TOOL-231) and not re-run (R-988, R-970)."
+  source:
+  - file: decisions.md
+    section: "R-988 — A job on the Windows PC that stops unclearly is re-run once, automatically, by a hosted job; a hung one ends at a time limit of 1.5 times its measured time; both are logged *(the owner's goal of 12 Nov 2026, item 5; amends R-859's security rules, the owner's job rules of 5 Nov 2026, for this re-run; extends R-714; refines R-970; read with R-711 and R-968)*"
+  - file: decisions.md
+    section: "R-970 — A CI run clearly hung or stuck because of a bug is caught and cancelled, on `main` too; every other run on `main` is still never cancelled *(amends R-656)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_have_time_limits, every self-hosted job and every build or test step of one carrying `timeout-minutes` equal to the ceiling of 1.5 times its measured time in the committed table, or its present limit where the table records no completed run; controls: a limit above 1.5 times the measured time, one below it, a build or test step with no limit, and a job missing from the table, each fail"
+  rulings:
+  - R-970
+  - R-988
+  milestone: M0
+  note: "12 Nov 2026 (R-988); closed by TASK-M0-61. Applied per R-369 (CI timing, written before any limit is set): the multiplier 1.5 and the slowest of the last five completed runs; the table's form and the test's name (naming)."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
