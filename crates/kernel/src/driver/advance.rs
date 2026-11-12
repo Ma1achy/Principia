@@ -25,6 +25,7 @@
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.
 
 use super::substep::{d2_quantised, Quantise};
+use crate::generated::constants::{U32_RANGE_END_F32, U32_TOP_F32, U32_TOP_F64};
 use crate::occupant::{Geom, State, StepReal, Stepper};
 use crate::payload::{PayloadReal, SimStateBaseOf};
 use crate::real::IeeeBits;
@@ -39,19 +40,10 @@ pub trait Count: Sized {
     /// (gpu_determinism_note § "The discipline", rule 3: an out-of-range float-to-unsigned conversion is undefined on
     /// the GPU, so the cast never sees one): a NaN, tested on its bits, is sent to `0` first; a value below `0` gives
     /// `0`; one at or above `2³²` gives `u32::MAX`; and one in between its truncation, which the cast then forms. The
-    /// result is these selects', the same on every backend, not the CPU cast's saturation.
+    /// result is these selects', the same on every backend, not the CPU cast's saturation. The bounds are the register's
+    /// `u32_range_end` at each width (`U32_RANGE_END_F32`, `U32_TOP_F32`, `U32_TOP_F64`).
     fn whole(self) -> u32;
 }
-
-/// `2³²`, the least f32 above `u32`'s range.
-const TWO_32_F32: f32 = 4_294_967_296.0;
-
-/// The greatest f32 below `2³²`, `2³² − 2⁸`: the top of the range an f32 is clamped into before the cast.
-const TOP_F32: f32 = 4_294_967_040.0;
-
-/// `u32::MAX`, exact at f64: the top of the range an f64 is clamped into before the cast, every f64 at or above it
-/// truncating to it.
-const TOP_F64: f64 = 4_294_967_295.0;
 
 impl Count for f32 {
     #[inline]
@@ -67,9 +59,9 @@ impl Count for f32 {
         } else {
             bits
         });
-        let above = x >= TWO_32_F32;
+        let above = x >= U32_RANGE_END_F32;
         let x = if x > 0.0 { x } else { 0.0 };
-        let x = if x < TOP_F32 { x } else { TOP_F32 };
+        let x = if x < U32_TOP_F32 { x } else { U32_TOP_F32 };
         if above {
             u32::MAX
         } else {
@@ -93,7 +85,7 @@ impl Count for f64 {
             bits
         });
         let x = if x > 0.0 { x } else { 0.0 };
-        let x = if x < TOP_F64 { x } else { TOP_F64 };
+        let x = if x < U32_TOP_F64 { x } else { U32_TOP_F64 };
         x as u32
     }
 }
