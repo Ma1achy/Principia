@@ -452,7 +452,10 @@ pub fn shadow_forms(delta_0: f64, n_renorm: u32) -> Vec<FormRow> {
 }
 
 /// The two horizons the finite-time gap to Routh's exponent is read at: [`LAGRANGE_HORIZON`] and twice it, both short
-/// enough at f64 for the march to stay on the unstable orbit (`e^{λT}` times f64's rounding stays below `10⁻⁸`).
+/// enough at f64 for the march to stay on the unstable orbit. The march leaves the orbit by `e^{λT}` times each step's
+/// error, rounding and the stepper's truncation alike: at `T = 60` on the equal-mass orbit `e^{λT} ≈ 1.2·10⁸`, so f64's
+/// unit roundoff alone gives about `1.3·10⁻⁸`, and the truncation error adds to it, amplified by the same factor. That
+/// the gap times `T` is the same at both horizons shows the march still on the orbit.
 pub const GAP_HORIZONS: [f64; 2] = [LAGRANGE_HORIZON, 2.0 * LAGRANGE_HORIZON];
 
 /// One unstable Lagrange orbit's f64 absolute `λ_T` at the two [`GAP_HORIZONS`], against its known exponent.
