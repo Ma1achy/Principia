@@ -1089,8 +1089,11 @@ untrue. The question is whether to stop warning at a switch where no pixels have
   - **(b) Keep it as written.** The warning fires at depth 20 on every view, with nothing lost.
   - **(c) Replace it with an informational route mark** (the route debug view, R-926 item 10), not a precision
     warning.
-- **Recommended:** (a), conditional on RQ-798 (a″), or on (a′) only where it bounds the error (not where a component's
-  curvature is indefinite); (b) otherwise; the audit's recommendation. Measurable alternative, written before any run:
+- **Recommended:** (a), conditional on RQ-798 (a′); (b) if (a′) is not taken; the audit's recommendation. Its condition
+  is extended by physics review 5877078565 of the pull request that filed this entry, P2, after the audit: (a) holds
+  under RQ-798 (a″), and under (a′) only where every component's curvature is semidefinite; (b) otherwise. The audit
+  gave its recommendation before that review found that four corners miss indefinite curvature; the choice is the
+  owner's. Measurable alternative, written before any run:
   RQ-798's M-K's and RQ-797's M-S's share of patched samples differing from the exact records by more than one f32 ulp
   of their own value; criterion: if that share is 0 on every admitted quad, a switch with no collapse has nothing to
   warn about.
