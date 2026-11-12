@@ -685,7 +685,13 @@ variant also checks the midpoints of the square's four edges, which catches it, 
     `h = 2^−(ℓ+1)` and sample spacing `2h/N` against f32's ulp at `|x₀,k|`, *inferred*). A depth is admitted when,
     along each in-plane axis, some component varying along it has `ℓ_k` at or past that depth, R-632's rule as
     REQ-TOOL-159's note has it ("use coordinates where the measured f32 floor (REQ-DEC-051, quoted with |x₀|) admits
-    depth 30"); an arm at a depth no component admits is reported void, never passed.
+    depth 30"); an arm at a depth no component admits is reported void, never passed. RQ-802's arm (f) is exempt from
+    this f32 admission, and from it only: it lies past the f64 level of every component with a non-zero in-plane slope
+    by construction, and each component's f32 level comes about 29 levels before its f64 level (`19 + …` against
+    `48 + …`), so the rule would void every arm-(f) fixture. Arm (f) states `|x₀|` and the slopes per component as
+    above, and is admitted by its own preconditions in RQ-802 (each such component at its f64 level by the arm's depth,
+    the f64 sample points distinct, and at least one adjacent pair with bitwise-equal f64 ICs); an arm-(f) fixture
+    that fails them is void, never passed.
   - *Setup:* the `(L_z, E)` chart at depths 21 to 30, `N = 16`, the CPU expansion of RQ-797 (a). Straddling set: 512
     quads whose footprint meets the feasibility edge. Away set: 512 quads at distance at least `2¹¹·h` from it, the
     bound above. Indefinite set: 512 quads at depths 21 to 30 centred within about `2¹²·h` of a point where a component
@@ -1034,9 +1040,10 @@ under that rule yet; a sub-question asks the owner what they do.*
     in-plane dual slope about 1 (components with a zero in-plane slope are unconstrained), and whose f64 sample points
     stay distinct there (`|u|` and `|v|` of the sample points below `2⁻⁴`, so the spacing `2^−(ℓ+4)`
     stays at least f64's ulp at `u` to depth 52). Each fixture states `|x₀|` and the slopes per component before the
-    run. Arm (f) asserts its precondition first: at least one adjacent pair whose f64 ICs are bitwise equal at distinct
-    f64 sample points. Like arms (b) to (e), it may feed the trigger synthetic quad facts, here built from the CPU's f64
-    evaluation at those sample points.
+    run; arm (f) is exempt from the fixture rule's f32 admission (RQ-798's fixture rule says why) and admitted by
+    these preconditions instead. Arm (f) asserts its precondition first: at least one adjacent pair whose f64 ICs are
+    bitwise equal at distinct f64 sample points. Like arms (b) to (e), it may feed the trigger synthetic quad facts,
+    here built from the CPU's f64 evaluation at those sample points.
   - *Criterion:* (a) and (b) classify every collapsed pair alike on every arm; the pairs where they differ are counted
     and listed. On arm (f), (b) classifies every such pair as the f64 floor and the warning is raised. If none differ,
     (b) keeps RQ-553's meaning on those arms; any pair that differs shows where the meaning changes, and it goes to the
