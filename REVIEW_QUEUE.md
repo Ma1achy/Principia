@@ -924,3 +924,277 @@ answers to pick changes what the instrument shows, so it is the owner's call.*
 - **Applied meanwhile:** nothing is merged: PR #493 is not merged and builds nothing for this case. The physics review
   asks for a test at a nonzero `r_coll` that drives a shadow-only collision and pins whatever is ruled.
 - **Waits:** TASK-M3-14 (the Benettin FTLE shadow).
+
+## RQ-792: Where the collision test's floor is recorded so that every output carries it: R-954's "the floor is recorded with the run" and REQ-EVT-035 ask for a per-output record, and the payload has no free bit or byte to hold one *(silence, a missing definition, R-72, whose storage is a one-way door, a payload format change; R-954, R-547, R-545, R-397; REQ-EVT-035, REQ-EVT-004; context: TASK-M3-71)*
+
+*Queued 12 Nov 2026 by TASK-M3-71's implementer, before anything was built; each quote below re-read on `main` at
+0a1a62a3. Nothing is chosen here, and nothing is built for it.*
+
+*In plain English: the collision test compares the bodies' distance with the collision radius `r_coll` using positions
+rounded to single precision, so below a certain size, which depends on where the bodies are, it can only tell
+"rounded positions equal" from "different". The owner ruled that each output must record whether its `r_coll` lay
+below that size. Where the bodies are changes along a run, so the size that matters is the one at every moment the
+test came close to firing, not only at the closest approach or the collision itself, and only the march sees it. To
+carry it on
+every output it must be stored with each sample, and every bit of the per-sample record is already spent; adding a
+field changes the stored format on the CPU and the GPU, which is the owner's call, not a definition this task can
+write on its own. Corrected 12 Nov 2026 (physics review 5867123883 of PR #497, F1). Was:* "so the size that matters
+is the one at the moment the test came closest to firing (the closest approach, or the collision itself)".
+
+- **File, section:**
+  - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer", R-954's
+    bullet: "**The floor is recorded with the run,** beside `r_coll`, so an output says whether its `r_coll` lay below
+    what the test resolves; what is recorded, and how it is computed from the run, is a definition TASK-M3-71 writes
+    into this Part under physics review (R-72; REQ-EVT-035)."
+  - The same Part, the collision bullet: "`r_coll` is a **recorded parameter carried on every output**, not a physical
+    constant." It is carried on the sim key (`engine::dispatch::validate::Validated::collision_radius`'s note: "`r_coll`
+    itself stays on the sim key (`SimUniforms::sim_key_bytes`), which every output is keyed by"); the floor is not a
+    sim-key value but a result of the march, per sample.
+  - `plan/requirements.yaml`, REQ-EVT-035: "the run records, beside r_coll, what it needs for an output to say whether
+    its r_coll lay below what the test resolves; the definition states what is recorded (a value, a flag or both), how
+    it is computed from the run, the floor varying with the pair's coordinates along it, and where it is stored". Its
+    verify: "the record is carried on every output beside r_coll, bit for bit as defined; controls: a recorder that
+    reads only r_coll's value and not the coordinates misreports a run whose bodies lie at |x| in [1, 2) with r_coll
+    between the two spacings, and fails".
+  - `docs/design/principia_dd_simstate_payload.md` § "1. `SimState` — the hot struct", "The recheck, on spending
+    `_reserved` (R-397; REQ-PAY-009)": "So **at f32 any new field now costs 8 B**, whatever its width up to 8 B: the
+    next one takes `SimStateFTLE` to 152 and `SimStateBase` to 104." And § "2. Bit layouts", `sample_descriptor`: bits
+    10–14 `I_max` and bit 15 `departed`, "a deliberate, versioned assignment" (R-545); `packed_a`'s high half is
+    `d_min`, `packed_b` is `dE_max` and `dLz_max`, `times` is `t_end_step` and `t_dmin_step`. No bit is free.
+  - `docs/design/principia_dd_simstate_payload.md` § "2. Bit layouts", `last_symbol`'s note: "spending 8–9 is a format
+    change" (a binary-format version bump).
+- **The silence:** what the floor is at one state is settled by R-954 and the code: the test reads `d²` formed from
+  each position cast to f32, one subtraction per axis, each square by `kernel::driver::substep::square`, which returns
+  0 below `2⁻⁴⁰`, so the test resolves a pair's separation only to the larger of the f32 spacing at the pair's largest
+  coordinate and `2⁻⁴⁰` (the second binds only for a pair within about `2⁻¹⁷` of the origin). Along a run that floor
+  varies. The state the `d_min` latch holds is the one that bounds `d_min`'s own resolution (R-954's "`d_min` is
+  resolved only to that spacing"): the collision's state for a collision (the latch is set there, its `d²` being below
+  every earlier one), the closest approach otherwise. It covers a spurious firing, since the latch moves to the firing
+  state, but not a missed one: a miss at a state `s` needs `d_true(s) < r_coll ≤ d_quant(s)` with `r_coll` below
+  `floor(s)`, and the latch can later move to another state `s'` with a smaller `d_quant`, near the origin, where
+  `floor(s')` is below `r_coll`. Read off the latched state, that output reads "resolved" when its outcome was
+  unresolved at `s`; the same gap reaches a collision output, an unresolved miss followed by a later firing. So the
+  comparison's resolution is a property of every state at which the test was near firing (`d_quant(s) < r_coll +
+  floor(s)`), as well as of the latched state. Those states' coordinates are seen only during the march and are not
+  stored (only `d_min`, `dmin_pair` and `t_dmin_step` are), so no output can derive the record at read time, not even
+  a collision's from its stored final positions, which give only the firing state's floor. *Corrected 12 Nov 2026
+  (physics review 5867123883 of PR #497, F1). Was:* "the state where it bears on the outcome is the one the `d_min`
+  latch holds: the collision's state for a collision (the latch is set there, its `d²` being below every earlier one),
+  the closest approach otherwise (where a pass at `r_coll` below the floor is as unresolved as a firing; R-954's
+  "`d_min` is resolved only to that spacing"). That state's coordinates are seen only during the march and are not
+  stored (only `d_min`, `dmin_pair` and `t_dmin_step` are), so no output can derive the record at read time, except a
+  collision's, from its stored final positions." A per-output record therefore needs per-sample storage, and the payload has none free: a new field is a
+  format change of `SimState` on the CPU and the GPU, the export decoder and the schema hash, outside Part 7, and a
+  one-way door (stored GPU bits). R-954's own words, "recorded with the run", and REQ-EVT-035's "the run records" read
+  as a run-level record; its verify, "on every output", as a per-output one; a run-level record that reads the
+  coordinates needs a reduction over the dispatch's samples, which nothing has either.
+- **The question:** where, and in what form, is the floor recorded so that every output says whether its `r_coll` lay
+  below what the test resolves?
+- **Options seen:**
+  - (a) **Per sample, a new payload field at the `d_min` latch:** the floor at the latched pair's coordinates on the
+    state the latch holds, a power of two stored as its exponent (one byte holds `2⁻⁴⁰` to `2¹⁰⁴`), latched with
+    `d_min`; each output's flag derived at read as `r_coll < floor` from the sim key's `r_coll`, exactly. A payload
+    format bump (8 B at f32 under R-397's recheck, or a share of TASK-M3-41's 8 B if it fits there), generated for CPU
+    and GPU, with the export decoder and the schema hash. *Its conservative form, at the same cost (added 12 Nov 2026,
+    physics review 5867123883 of PR #497, F1):* the byte latches the largest floor over every state at which the test
+    was near firing (`d_quant(s) < r_coll + floor(s)`, `r_coll` already being the kernel's threshold) and over the
+    `d_min` state, so a missed firing and `d_min`'s own resolution are both covered; the read-side flag stays
+    `r_coll < floor`. Latched at the `d_min` state alone, (a) misses an unresolved miss followed by a later, smaller
+    `d_quant` (the silence above).
+  - (b) **Per sample, one stored bit:** "`r_coll` lay below the floor at the latched state", formed in the kernel from
+    the f32 threshold `r_coll²` against the floor's exact square. The same format bump for one bit, and the floor's
+    value is lost. *Its conservative form (added 12 Nov 2026, physics review 5867123883 of PR #497, F1):* a sticky bit,
+    set at any near-firing state (`d_quant(s) < r_coll + floor(s)`) or the `d_min` state where `r_coll` is below
+    `floor(s)`.
+  - (c) **No new storage, derived at read:** a collision output derives the floor from its stored final positions and
+    its `detail`'s pair (the state the test fired on); every other output records "not recorded". Against it: an escape
+    or bounded output whose closest approach lay below the floor reads as resolved when it was not.
+  - (d) **Run level:** each sample's latched floor reduced over the dispatch to the run's largest, recorded with the
+    run beside `r_coll` (its provenance), and every output of the run reads "`r_coll` lay below the floor somewhere in
+    this run" where `r_coll` is below it. Conservative, not per output; it needs a per-dispatch reduction buffer.
+  - (e) Another, stated by the owner.
+- **Recommended:** (a) in its conservative form (physics's, review 5867123883 of PR #497, F1): the exponent byte,
+  latched as the largest floor over the near-firing states and the `d_min` state, so it covers a missed firing as well
+  as `d_min`'s resolution, per output, on every pipeline, with the flag formed exactly on the host. The bit-level choice
+  is the owner's. The measurable alternative is (c), which changes no stored format: the measurement is the share of
+  non-collision samples, over a default chart sweep at a small `r_coll` (say `10⁻⁷`), whose `r_coll` lay below the
+  floor at the latched state or at any near-firing state (a CPU run that keeps those states' coordinates), both
+  counted; if that share is negligible at every `r_coll` a user would set, (c) loses little. *Corrected 12 Nov 2026
+  (physics review 5867123883 of PR #497, F1). Was:* "(a): it records exactly what R-954 names, per output, on every
+  pipeline, and the flag is formed exactly on the host"; "whose latched closest approach lay below the floor at the
+  latched pair's coordinates (a CPU run that keeps the latch's coordinates)".
+- **Applied meanwhile:** nothing: TASK-M3-71 builds nothing and writes no definition into Part 7 until this is ruled.
+  The test itself is unchanged (TASK-M3-09); R-954's floor bullet in Part 7 stands as written.
+- **Waits:** TASK-M3-71 (the collision test's floor, recorded with the run).
+
+## RQ-793: What the displacement form of the f32 Benettin shadow is: REQ-VAL-038 asks that it be tested against the absolute form, and nothing defines it *(silence, a missing definition, R-72; a one-way door, it changes what the instrument computes and the CPU and GPU bits of the FTLE; R-71, R-72, R-19, R-649; REQ-VAL-038, REQ-PAY-085, REQ-INT-043, REQ-INT-039; PR #493's fix-round comment 6810079580, physics F2; physics review 5866988394 of PR #493, § (4); context: TASK-M3-14, TASK-M3-72, TASK-M4-13)*
+
+*Queued 12 Nov 2026 from PR #493 (TASK-M3-14, the Benettin FTLE shadow): its fix-round comment 6810079580, the stop
+on physics F2, and the physics re-check, review 5866988394, § (4), which confirms the stop as genuine; each quote
+below re-read on `main` at 0a1a62a3. Nothing is chosen here.*
+
+*In plain English: the FTLE (how fast nearby starts pull apart) is measured by marching a second "shadow" copy of each
+sample a tiny distance away. On the GPU it is stored in single precision (f32). The design says to try two ways of
+storing the shadow, as its own position ("absolute") or as its small offset from the sample ("displacement"), and to
+switch to the second only if it measurably helps. Nobody wrote down what the second way is. The integrator's
+building block takes a whole state and returns a whole state, so it cannot step an offset on its own; every way of
+making it do so is a choice that changes what the FTLE computes. PR #493's `Displacement` form is the absolute form by
+construction, so the comparison has not been run. Which form to define is the owner's call.*
+
+- **File, section:**
+  - `docs/design/principia_dd_simstate_payload.md` § "8. Build-time settles (measure / specify once running)":
+    "Displacement-vs-absolute f32 shadow: test against known-Lyapunov periodic orbits; switch to displacement only if
+    FTLE accuracy meaningfully improves (accuracy question, not memory — f32 retained either way; shadow-precision
+    experiment)." The only text on the form; it names it and never defines it.
+  - `plan/requirements.yaml`, REQ-VAL-038: "The displacement-vs-absolute f32 shadow choice must be tested against
+    known-Lyapunov periodic orbits, switching to displacement only if FTLE accuracy meaningfully improves." Its note:
+    "'Meaningfully': REQ-PAY-085 (calibration)", REQ-PAY-085 being the M4 calibration of the improvement that would
+    switch the form.
+  - `docs/design/principia_dd_simstate_payload.md` § "1. `SimState` — the hot struct": the shadow is stored as
+    "BENETTIN SHADOW (f32) — CoM-frame particle coords", `r_sh` and `p_sh`, which "marches in lockstep, also
+    re-projected to CoM each step". The stored shadow is an absolute state.
+  - `docs/contracts/principia_integrator_contract.md` § "Part 1 — The shape: a swappable `step()` slot inside a fixed
+    wrapper": "state ← STEP(state, dt_macro / N_sub, params)   # OCCUPANT — the only swappable line"; and § "Part 2a —
+    Widening the slot: `owns_time_mapping`, and the `advance` signature" (R-19): "ADVANCE(state, t_now, t_target,
+    params)   -> state'    # the occupant seam (R-19)". The occupant is a closed map on the absolute state, not a list
+    of kick and drift stages (in the code, `Stepper::step(s, dt, geom) -> (State, Geom)`), so a shadow marched through
+    the shared occupant forms `x + δ⃗` before the force, which is the absolute form.
+  - `docs/design/principia_dd_integrator.md` § "3.8 Co-computations (tier-gated, ride the forward pass)": "every
+    n_renorm steps: δ⃗ = x' − x ; δ = ‖δ⃗‖ ; S += log(δ/δ₀) ; x' ← x + δ₀·(δ⃗/δ)", a finite-difference estimator in
+    which ‖δ₀‖ matters; and § "5. Unit tests", test 10: "halving `δ₀` and doubling `n_renorm` (within the linear
+    regime) leaves λ_T unchanged within tolerance".
+  - `docs/design/principia_dd_integrator.md` § "3.4 COM projection (per `STEP`; the policy is integrator contract Part
+    1)", with REQ-INT-039: the shadow is projected, monitored and detected on its own every step; the shadow's energy
+    and its collision test need absolute positions.
+- **The case, from PR #493:** the PR's `Displacement` variant (`crates/kernel/src/driver/benettin.rs:82` on its head
+  2d7bbaf6) is the absolute form by construction, and its gate (`cargo xtask gate shadow-form`) now says that its
+  forms' table cannot settle REQ-VAL-038. The absolute form's own figures on the shadow-form set at ‖δ₀‖ = 1e-5,
+  `λ_T(f32) − λ_T(f64)`: +0.023, +0.055, −0.014 and +0.204; Burrau at f32 is non-finite at ‖δ₀‖ ≤ 1e-5.
+- **The question:** what is the displacement form of the f32 shadow that REQ-VAL-038 tests against the absolute form:
+  how is `δ⃗` stepped, how is its force difference formed, and what do the shadow's projection, monitor and detector
+  see?
+- **Options seen:**
+  - (a) A joint step on the occupant interface (physics's recommendation): each occupant gains a step that marches
+    `(x, δ⃗)` together, `x` bit-identical to `step(x)`, and `δ⃗` advanced through the same stages, with the force
+    difference formed from pair separations, `f(rᵢⱼ + δᵢⱼ) − f(rᵢⱼ)`, never from an absolute `x'`. *Consequence:*
+    keeps the finite-difference estimator, ‖δ₀‖'s meaning and dd test 10 unchanged, and keeps "the same discrete map"
+    as the sample; changes the occupant interface (integrator contract Part 2 and Part 2a), with a displacement step
+    for each of KDK, Yoshida-4, Yoshida-6 and RK4 (which is not a splitting method), and for the default regularised
+    occupant (Part 2b, R-560); the shadow's projection, energy and collision test are formed from `x + δ⃗` where they
+    need absolute positions, which is to be defined with it. *A sub-choice (a) must state, which the owner rules with the
+    interface (added 12 Nov 2026, physics review 5867123883 of PR #497, F2):* how the force difference is evaluated.
+    (a1) Naively in f32, `f(rᵢⱼ + δᵢⱼ) − f(rᵢⱼ)`: the argument rounds to the spacing of `|rᵢⱼ|` and the subtraction
+    cancels, a relative error of about `ε·|rᵢⱼ|/|δᵢⱼ|`, about 6e-3 per evaluation at ‖δ₀‖ = 1e-5 and `|rᵢⱼ|` ~ 1, the
+    same order as the absolute form's rounding of `x'`; pair separations then gain only at close encounters, where
+    `|rᵢⱼ| ≪ |x|`, not on the drift elsewhere. (a2) In a cancellation-free algebraic form, the classical Encke problem
+    (for example Battin's `f(q)` rewriting of the difference of `1/r³` terms), which avoids that cancellation at the
+    cost of the rewriting in each force evaluation. Which of the two is built sets the gain the measurement finds.
+  - (b) The tangent-map (variational) form: `δ⃗' = J(x)·δ⃗`, renormalised only against overflow. *Consequence:* a
+    different estimator: ‖δ₀‖ drops out, so dd test 10's halving of `δ₀` becomes trivial and changes meaning, and
+    REQ-INT-076's calibration of ‖δ₀‖ loses half its subject; it needs the Jacobian of each occupant's map and is no
+    longer the finite-difference shadow § 3.8 describes. *Its advantage (added 12 Nov 2026, physics review 5867123883
+    of PR #497, F3):* the tangent map has no finite-difference cancellation at all, which is exactly the f32 failure
+    this entry describes, and it is the standard variational method; the Jacobian's cost is met by applying each
+    occupant's own stages to the variational equations (the tangent map of the discrete map), not by a separate
+    Jacobian derivation.
+  - (c) A separate shadow integrator that marches `δ⃗` outside the shared occupant. *Consequence:* the shadow is no
+    longer the same discrete map as the sample, against the payload's "marches in lockstep" and physics's approved
+    point A on PR #493; the shadow's FTLE then measures that integrator's error as well as the flow's.
+  - (d) Record REQ-VAL-038's experiment as not run at M3, the absolute form kept, and leave the form undefined until
+    REQ-PAY-085's M4 calibration needs it. *Consequence:* REQ-VAL-038 is not met at the M3 gate; TASK-M4-13's
+    "displacement-form shadow as a build-time alternative" then has no definition to build either.
+  - (e) Another, stated by the owner.
+- **Recommended:** (a), physics's recommendation (review 5866988394, § (4)): it keeps the estimator, ‖δ₀‖'s meaning
+  and dd test 10 as they are, and the sample's march untouched. The measurable alternative: (b), the tangent map. Either
+  form is judged by the same written measurement, run against the absolute form now: the signed gap
+  `λ_T(f32) − λ_T(f64)` on the shadow-form set at ‖δ₀‖ = 1e-5, judged by its magnitude (today +0.023, +0.055, −0.014
+  and +0.204); whether Burrau at f32 stays finite at
+  ‖δ₀‖ ≤ 1e-5 (today non-finite); and a control that the new form differs bitwise from the absolute form on some orbit,
+  the check whose absence let PR #493's `Displacement` through. Whether a gain is "meaningful" stays REQ-PAY-085's
+  calibration (M4); the criterion is written before the run (R-649). *Corrected 12 Nov 2026 (PR #497's code review
+  5867138483, note 1: the figures are signed). Was:* "`|λ_T(f32) − λ_T(f64)|` on the shadow-form set at ‖δ₀‖ = 1e-5
+  (today +0.023, +0.055, −0.014 and +0.204)".
+- **Applied meanwhile:** applied per R-369 (task re-scoping, physics's recommendation): REQ-VAL-038 moves from
+  TASK-M3-14 to its own M3 task, TASK-M3-72, which builds the form this entry rules and waits on it; TASK-M3-14's other
+  deliverables do not depend on it. PR #493 keeps the absolute form only, and its gate says so; nothing named
+  `Displacement` that is not one stays once TASK-M3-72 builds the form (physics N6).
+- **Waits:** TASK-M3-72 (the displacement form of the FTLE shadow, REQ-VAL-038); through it TASK-M4-13's
+  displacement-form shadow and REQ-PAY-085's calibration; and RQ-794's re-run of the calibration. Only the owner
+  defers it, by a ruling.
+
+## RQ-794: What REQ-INT-076 proposes for ‖δ₀‖ and `n_renorm`: the pre-registered rule over the eight starting conditions picks (3e-3, n_renorm 1, tolerance 3), which tests nothing *(a calibration, R-71; a one-way door, a calibration value and what the FTLE is claimed for; R-71, R-649; REQ-INT-076, REQ-INT-043, REQ-EVT-022; PR #493's fix-round comment 6810079580, physics F3 (c); physics review 5866988394 of PR #493, § (4) and F5; context: TASK-M3-14, RQ-791, RQ-793)*
+
+*Queued 12 Nov 2026 from PR #493 (TASK-M3-14, the Benettin FTLE shadow): its fix-round comment 6810079580, the stop
+on physics F3 (c), and the physics re-check, review 5866988394, § (4), which confirms the stop as genuine; each quote
+below re-read on `main` at 0a1a62a3. Nothing is chosen here.*
+
+*In plain English: the FTLE needs two settings, how far apart the shadow starts (‖δ₀‖) and how often it is pulled back
+(`n_renorm`). The task proposes them from a sweep, by a rule written before the sweep was run. Run over six chaotic
+starting points as well as the three easy ones, the rule picks settings that pass only because the tolerance it sets
+is huge, so the check tests nothing. The rule may not be changed now that the results are known (R-649). The f32
+shadow fails on the chaotic orbits' close encounters, which two other open questions may cure. What to propose
+meanwhile is the owner's call.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-INT-076: "The Benettin shadow's initial separation ‖δ₀‖ and the renormalisation
+    interval n_renorm must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer,
+    confirmed by the human at the M3 gate and recorded in decisions.md." Its verify: "the proposal shows dd test 10
+    (halving δ₀ and doubling n_renorm leaves λ_T unchanged) at the proposed values at f32 and f64".
+  - `docs/design/principia_dd_integrator.md` § "5. Unit tests", test 10: "halving `δ₀` and doubling `n_renorm`
+    (within the linear regime) leaves λ_T unchanged within tolerance"; § "3.8 Co-computations (tier-gated, ride the
+    forward pass)": "init: x' = x₀ + δ₀ (arbitrary direction, ‖δ₀‖ small)", no value given.
+  - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*":
+    "The task proposes the value with its evidence; a reviewer checks it; the human confirms it at the milestone gate".
+  - `decisions.md` § R-649, as `CLAUDE.md` states its rule: "A measurement decides only against a criterion written
+    before running: decide, report the numbers, and never adjust the criterion after seeing results (R-649)."
+  - `plan/requirements.yaml`, REQ-EVT-022 (`r_coll`): "`r_coll` must be a user-exposed sim-key parameter (default
+    `1e-3` of `R`)"; every calibration run so far used no collision radius.
+- **The evidence (PR #493, job 5022; the criterion written before the run, 11 Nov 2026):** the calibration set gains
+  five rest-start Pythagorean triangles beside Burrau, (5, 12, 13), (15, 8, 17), (7, 24, 25), (21, 20, 29) and
+  (9, 40, 41), at T = 50: eight starting conditions, six chaotic, each one region. The grid, the meter (dd test 10's
+  change), the selection rule and the tolerance rule are unchanged; "Whatever they pick is the proposal". The bias is
+  read against f64 at ‖δ₀‖ = 1e-6, the same `n_renorm`.
+  - No candidate meets dd test 10 on the chaotic family at f32: 39 of 42 candidates give a non-finite λ_T somewhere.
+  - The rule picks ‖δ₀‖ = 3e-3, `n_renorm` = 1, worst change 1.35, so a tolerance of 3. There f32 reads λ_T = −99 on
+    (9, 40, 41), the shadow collapsing onto the sample, and +1.93 on (15, 8, 17) against a reference of 0.42. At f64
+    the same candidate is close to sound on the chaotic family: change 0.011 / 0.045 / 0.286, bias −0.029 / +0.046 /
+    +1.37 (least / median / largest); f32's change there is 0.18 / 1.30 / 1.35.
+  - f64 at ‖δ₀‖ = 3e-3 is outside the linear regime for every `n_renorm` ≥ 10; at the current proposal (3e-3, 300) the
+    bias over the six chaotic orbits is −0.297 / −0.248 / +8.17.
+  - Leaving each chaotic orbit out in turn, five of the six subsets give (3e-3, 1); without (9, 40, 41) the pick is
+    (1e-3, 1000). One orbit moves the pick, so one region does not suffice.
+  - Physics's reading (review 5866988394): the failure is the f32 absolute shadow during close encounters, where
+    f32's rounding of `x'` is relative to `|p|`, which spikes; the encounters are unbounded because `r_coll` = 0. So
+    this entry depends on RQ-791 (a shadow-only terminal) and RQ-793 (the displacement form), not only on the grid.
+- **The question:** what does REQ-INT-076 propose now for ‖δ₀‖, `n_renorm` and dd test 10's tolerance?
+- **Options seen:**
+  - (a) The rule's pick as it stands, (3e-3, 1, tolerance 3). *Consequence:* the criterion is honoured, but a
+    tolerance of 3 on λ_T is not a meaningful calibration: dd test 10 then passes almost anything.
+  - (b) Restrict the calibration region to orbits without close encounters. *Consequence:* narrows what the FTLE is
+    claimed for; the chaotic regions the FTLE is meant to show fall outside its calibrated claim.
+  - (c) Keep (3e-3, 300, 0.2) marked provisional and stated as unsupported on close-encounter chaotic orbits; re-run
+    the pre-registered eight-orbit calibration, unchanged, once RQ-791 and RQ-793 are ruled, then propose
+    `min_regions` ≥ 6. *Consequence:* the M3 gate confirms no final value for REQ-INT-076 until the re-run; the
+    provisional value and its unsupported region are stated wherever the FTLE is shown.
+  - (d) Separate ‖δ₀‖ per precision. *Consequence:* overturns physics's approved point E on PR #493 (one ‖δ₀‖ for
+    both precisions), and the CPU and GPU shadows then differ by design.
+  - (e) Another, stated by the owner.
+- **Recommended:** (c), the implementer's and physics's recommendation (review 5866988394, § (4)): it changes no
+  criterion after the results, claims nothing the evidence does not support, and re-runs the same calibration once
+  the two causes are ruled. The measurable alternative: once RQ-791 is ruled, re-run the same pre-registered sweep at
+  the default `r_coll` = 1e-3 (REQ-EVT-022), the absolute form, the criterion unchanged. Stated before that run
+  (added 12 Nov 2026, physics review 5867123883 of PR #497, F4): the sweep reports how many of the eight orbits ran to
+  T without terminating (the sample, or, once RQ-791 is ruled, the shadow), and a candidate passes only if
+  `min_regions` ≥ 6 is met by orbits that ran to T, so a pass cannot come from the chaotic orbits colliding out of the
+  calibration; and `r_coll` = 1e-3 is a run condition chosen after the results were seen, defensible as the production
+  default but the owner's to accept under R-649. If some candidate passes so, the calibration closes at the production
+  collision radius without the displacement form; if none does, the displacement form is shown to be needed. *Was:*
+  "If some candidate passes there, the calibration closes at the production collision radius without the displacement
+  form; if none does, the displacement form is shown to be needed."
+- **Applied meanwhile:** nothing chosen. PR #493's gate and constants are unchanged: `cargo xtask gate
+  benettin-calibration` reports on the three original orbits, the proposal (3e-3, 300, 0.2) marked provisional
+  (REQ-INT-076, R-71). Physics F5 asks that PR #493 carry the six-orbit evidence, reproducible, with the rule's pick
+  stated beside the proposal; if this entry's ruling moves that calibration to another task, the evidence goes with
+  that task.
+- **Waits:** TASK-M3-14's REQ-INT-076 proposal and its confirmation at the M3 gate; RQ-791 and RQ-793 (this entry's
+  re-run depends on both). Only the owner defers it, by a ruling.
