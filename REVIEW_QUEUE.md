@@ -459,3 +459,667 @@ the old way is kept for it.*
 - **Waits:** TASK-M7-45's retired-link arm; N2's record contract (whether a record carries its decode route);
   TASK-M4-05's switch to records.
 - **Deferred:** deferred to M2 by owner 11 Nov 2026 (R-956, the owner: "RQ-783: defer:M2").
+- **12 Nov 2026:** RQ-801 (records made past the switch to the linearised decoder, and across machines, recreating
+  bit for bit) is an addition to this entry, filed from the chart audit the owner ordered ("RQ-783's addition"); it
+  is read with this entry at M2 (R-956). This entry is not moved.
+
+## RQ-797: Where the one-cell patch `x₀ + J_D·δ` is expanded into the integrator's records: R-926 item 5 and REQ-INT-116 keep chart arithmetic off the GPU, while REQ-SCHED-024, REQ-DEC-036, REQ-DEC-052, TASK-M5-04 and TASK-M6-07 have the GPU form it; and R-935's tier-3 words read as a centre-plus-difference record *(conflict; a one-way door, it sets CPU and GPU bits and reads the owner's words in R-926 item 5 and R-935; R-926 items 5 and 11, R-935, R-90, R-632, R-686, R-142; REQ-INT-115, REQ-INT-116, REQ-SCHED-024, REQ-DEC-035, REQ-DEC-036, REQ-DEC-051, REQ-DEC-052, REQ-TOOL-158, REQ-PAY-069; context: TASK-M2-87, TASK-M4-05, TASK-M5-04, TASK-M6-07, TASK-M6-08, the chart audit's F1)*
+
+*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F1, with the audit's physics and code reviewers'
+corrections; each quote re-read on origin/main 54fa96fc. Q1 (a) and Q2 (i) are recommended by the owner, 12 Nov 2026:
+"patch location (recommend CPU f64)", and "[RQ-797] Q2: recommend (i). The owner doesn't recall the intent of R-935's
+words; (i) keeps the GPU free of chart arithmetic, which is R-926's purpose. Note that forming the sample's chart input
+quad-locally on the CPU (centre + offset, in f64) is compatible with (i)." (the owner's draft id bracketed as filed).
+Nothing is chosen here.*
+
+*In plain English: past zoom depth 20, each square's starting systems come from one centre point plus its slopes, a
+small sum per pixel. The owner ruled that the graphics card only runs the simulation and does no chart arithmetic, but
+older requirements and tasks still have the graphics card doing that sum. Where the sum is done decides whether the
+pictures come out the same bit for bit on every machine, and how much data goes to the graphics card. A second, smaller
+question: the owner's words for charts with no exact slopes say each pixel's record carries "its difference from the
+quad's centre", which reads as the same sum done on the graphics card. The owner doesn't recall what those words were
+meant to say; the recommendation reads them so that the graphics card still does no chart arithmetic: the CPU works out
+each such pixel's own starting system, and may use the centre plus the pixel's offset as its input.*
+
+- **File, section:**
+  - `decisions.md` § R-926 (the new chart system; the CPU evaluates charts, the GPU only integrates), the owner's
+    words, item 5: "The CPU evaluates charts in f64. The GPU only integrates records. No chart code in the
+    integrator."; item 11: "A small quad's table collapses to one cell — that IS the linearised decoder (centre +
+    slopes). Grids for large quads, one-cell patches for small ones."
+  - `decisions.md` § R-935 (the re-plan's eleven answers), under RQ-758 (slopes): "A tier-3 map gets no one-cell
+    patch: every sample is evaluated on the CPU, its record carrying its difference from the quad's centre."
+  - `plan/requirements.yaml` REQ-INT-116 (the integrator entry never decodes), verify: "the integrator entry's
+    source, and everything it calls, contains no chart map, no link and no decode call".
+  - `plan/requirements.yaml` REQ-SCHED-024 (deep zoom's precision split), statement: "give the GPU only quad-local
+    relative arithmetic x = x₀ + J_D·δ in f32, passed as per-quad uniforms"; verify: "kernel computes only x₀ +
+    J_D·δ".
+  - `plan/requirements.yaml` REQ-DEC-036 (`x₀` and `J_D` on the CPU), statement: "the GPU must evaluate x = x₀ +
+    J_D·δ without running the nonlinear decode pipeline".
+  - `plan/requirements.yaml` REQ-DEC-051 (the f32 floor calibration), statement: "x = x₀ + J_D·δ formed in f32".
+  - `plan/requirements.yaml` REQ-DEC-052 (the f32 floor gate), verify, its control: "a measurement that reads the f64
+    sum x₀ + J_D·δ in place of the f32 IC the GPU integrates misses it and fails".
+  - `plan/tasks/M6/TASK-M6-07.md` (the linearised decoder), Goal (:12): "the GPU evaluates `x = x₀ + J_D·δ` in f32
+    and never runs the nonlinear pipeline"; Deliverables (:30): "`crates/kernel/src/decode/linear.rs`: the f32 linear
+    path `x₀ + J_D·δ` in the shared source".
+  - `plan/tasks/M5/TASK-M5-04.md` (the quad request), Goal (:15–16): "the kernel's only use of them is `x₀ + J_D·δ`
+    in f32".
+  - `docs/contracts/principia_lowering_contract.md` § "Part 1 — What lowering is" (:20): "the CPU evaluates them in
+    f64 and sends each quad its forward table, from which the integrator's records are formed". It does not say
+    where they are formed.
+  - `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision" (:76): "A few fused multiply-adds
+    (continuous — the decode is not a branch input, so FMA latitude here is honest divergence, not a determinism
+    concern)"; (:87): "But `x = x₀ + J_D·δ` is an absolute f32 number of order `|x₀|`, and the f32 integrator on the
+    GPU starts from it".
+  - `docs/contracts/principia_scheduler_contract.md` Part 4 (:137), the dated note: "bitwise switchover on CI
+    backends stays blocking (R-686, the owner's acceptance)."
+  - `decisions.md` § R-142 (only the verdict returns from the GPU): "`QuadReduction` stays the sole automatic
+    return."
+- **The conflict:** R-926 item 5 and REQ-INT-116 leave the GPU no chart arithmetic, and the lowering contract forms
+  records from the forward table without saying where. REQ-SCHED-024, REQ-DEC-036, REQ-DEC-051, REQ-DEC-052,
+  TASK-M5-04 and TASK-M6-07 have the GPU form `x₀ + J_D·δ` in f32, TASK-M6-07 in a decode module. If the sum is
+  called from the integrator entry, TASK-M6-07 fails TASK-M4-05's lint (REQ-INT-116); if it is a separate GPU pass,
+  no task builds it. A GPU sum follows each backend's FMA contraction (deep zoom §2:76), and R-90's switch and
+  `AT_F32_FLOOR` branch on the bitwise equality of its results (scheduler Part 4:137–138), which is why R-686 tests it
+  on NVIDIA. Detecting collapse from GPU-formed records needs a readback, against R-142. Separately, R-935's tier-3
+  wording ("its record carrying its difference from the quad's centre") reads as a centre-plus-difference record,
+  which needs a GPU-side add on tier-3 quads too; a difference carried in f32 and summed in f32 before an absolute f32
+  integrator buys no depth (deep zoom §2:87).
+- **The question:** Q1, does the CPU or the GPU expand the patch into records? Q2, what does a tier-3 record carry?
+- **Options seen:**
+  - **Q1 (a) The CPU expands in f64 and narrows once.** The GPU reads only records, so R-926 item 5 and REQ-INT-116
+    hold literally. Each record is the correctly rounded value of its f64 sum (TASK-M2-86's predicate (3), within half
+    an f32 ulp), the same on every backend once RQ-799 (a) pins the maths library, with no quad seam beyond the
+    `O(h²)` linearisation (F10). Collapse and floor detection run on the CPU, with no readback (R-142). R-686's NVIDIA
+    run then measures the integrator only; its words stand. Costs: about 30 FMAs per patched sample, in place of the
+    exact evaluation (about 85 ns, composition §17.12:2496) it replaces, so the CPU cost per patched sample falls; and
+    `N²` records uploaded per patched quad, as for an exact quad, where (b) uploads one `x₀` and `J_D` (about 45 floats,
+    scheduler Part 5:171). Rewritten from the answer: REQ-SCHED-024, REQ-DEC-035, REQ-DEC-036, REQ-DEC-051,
+    REQ-DEC-052's control (the f64 sum, narrowed, becomes the measured path), REQ-TOOL-158, REQ-PAY-069, REQ-DEC-033
+    ("on the full nonlinear decoder"), scheduler Part 4:138's definition of `AT_F32_FLOOR`, deep zoom §2:75–76,
+    TASK-M5-04, TASK-M6-07 and TASK-M6-08. A patched sample's descriptor, tag and branch words must come from
+    somewhere: under RQ-798 (a′) a quad whose samples could differ from the centre's in tag, branch or sheet is
+    exact per sample, so the centre's words are right on every patched quad; TASK-M2-87's contract states it.
+  - **Q1 (b) A separate GPU pass expands into a record buffer before the integrator entry.** REQ-INT-116 holds and the
+    upload stays one `x₀` and `J_D` per quad. Records follow each backend's FMA contraction, so they are not bitwise
+    across backends, and R-686 applies to them. Floor detection needs a readback, against R-142. A new task is needed.
+  - **Q1 (c) The integrator entry calls the patch,** as TASK-M6-07 and TASK-M6-08 have it today. R-926 item 5 and
+    REQ-INT-116 would need amending, and (b)'s bit and readback issues remain.
+  - **Q2 (i) A tier-3 record holds each sample's own f64 evaluation, narrowed once,** the same as an exact record; "its
+    difference from the quad's centre" is read as what the CPU knows and may show (the table debug view, R-926 item
+    10), not what the record carries. Consistent with Q1 (a). The sample's chart input may be formed quad-locally on
+    the CPU, the quad's centre plus the sample's offset, in f64, before the evaluation; that is compatible with (i), the
+    difference from the centre then entering the CPU's evaluation, not the record or the GPU. A reading of the owner's
+    words, so the owner's.
+  - **Q2 (ii) A tier-3 record carries centre plus difference, summed on the GPU.** The words read literally. Needs Q1
+    (b) or (c) for tier-3 quads, with their bit issues, and buys no depth (deep zoom §2:87).
+- **Recommended:** Q1 (a), recommended by the owner, 12 Nov 2026, and Q2 (i), also recommended by the owner, 12 Nov
+  2026 (their words in this entry's header). On Q2: the owner doesn't recall what R-935's words "its record carrying
+  its difference from the quad's centre" were meant to say, and
+  (i) keeps the GPU free of chart arithmetic, which is the purpose of R-926 (item 5: "The GPU only integrates records.
+  No chart code in the integrator."). Forming the sample's chart input quad-locally on the CPU (centre plus offset, in
+  f64) is compatible with (i). Q2 still reads the owner's words, so it is the owner's to rule. Measurable alternative
+  for Q1, written before any run:
+  bytes uploaded per patched quad under (a) and (b), reported as their ratio (expected about `N²·136 B / 180 B`, about
+  190 at `N = 16`, *inferred*) and as a share of the tier's hard cap on bytes (REQ-PERF-040); and M-S, the audit's
+  seam measurement, run under (a) and (b): patch records against exact records on both sides of 1,000 quad edges, on
+  the latent and `(L_z, E)` charts at depths 21 to 25, at fixtures as RQ-798's fixture rule states them, the seam
+  difference per component reported as a ratio to the in-quad adjacent difference at the same depth, and the
+  outcome-flip rate across seams against the in-quad rate and the one-ulp chaos baseline (R-84); positive control, one
+  quad's `x₀` offset by two ulps must show as a seam, or the run is void.
+- **Applied meanwhile:** nothing. The superseded lines are marked *Was* in the chart audit's record-corrections PR (its
+  F7 and F9), without choosing an option.
+- **Waits:** TASK-M2-87 (the record contract), TASK-M4-05 (flat-grid compute), TASK-M5-04, TASK-M6-07, TASK-M6-08; the
+  parts of the chart audit's record corrections F7, F9 and F20 that depend on this answer.
+
+## RQ-798: A patched quad that straddles a crease: R-90 patches every quad past depth 20, "whichever comes first", and nothing consumes REQ-DEC-058's kink flag, so tags, branches and sheets come out as the centre's, and continuous values are wrong across a strip hundreds of quads wide near a square-root edge *(silence; a one-way door, it amends R-90's "whichever comes first" with a named exception, and changes CPU bits; R-90, R-935, R-937, R-926 item 11; REQ-DEC-058, REQ-INT-115, REQ-CHART-129, REQ-CHART-130; context: TASK-M2-87, TASK-M2-88, TASK-M6-08, the chart audit's F2)*
+
+*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F2, with the audit's physics reviewer's option (a′)
+and its code reviewer's additions; each quote re-read on origin/main 54fa96fc. (a′) is recommended by the owner, 12 Nov
+2026: "creases (recommend a′)". Nothing is chosen here.*
+
+*In plain English: deep down, each square gets the centre-plus-slopes shortcut. Where a square straddles a crease in
+the chart, such as the edge of the allowed region, a fold, a pole or a switch between formulas, the shortcut gives the
+wrong kind of system on part of the square. Near an edge shaped like a square root it is also wrong in value, not just
+in kind, over a band hundreds of squares wide. The proposed fix checks each square's four corners against the exact
+answer before trusting the shortcut.*
+
+- **File, section:**
+  - `decisions.md` § R-90 (the decoder switchover trigger): "Switch to the linearised decoder when the full decoder's
+    adjacent samples give bitwise-identical ICs, with ℓ_switch = 20 as an upper bound (whichever comes first)."
+  - `decisions.md` § R-935, under RQ-766 (a large quad's forward table): "One node per sample above R-90's switch,
+    exact; the one-cell patch, a centre and slopes, below it".
+  - `plan/requirements.yaml` REQ-DEC-058 (each map declares its slope tier), statement: "a tier-1 or tier-2 map must
+    set a flag at each kink site (the feasibility boundary, `k = 0`, `warped_k` at `d = 0`, `normalise`'s edges, the
+    exponential map's `r = 0`, the poles, the seed switches)".
+  - `plan/requirements.yaml` REQ-INT-115 (the record contract): "the record as REQ-DEC-005's `(m, r, p)`, its
+    descriptor and tag words, a branch word and the stop index".
+  - `plan/requirements.yaml` REQ-CHART-129 (seams flagged per footprint): "a footprint whose copies straddle a
+    declared seam, a branch or a composed chart's mask must be flagged per pixel, in the resolve pass"; REQ-CHART-130
+    (seams masked from refinement): "Declared seams must be masked from the refinement criterion".
+  - `decisions.md` § R-937 (the invariant charts' second sheet): "the spin edges unfold onto the time-reversed sheet".
+  - `plan/tasks/M2/TASK-M2-86.md` (the first slice), Acceptance (:28): "(3) each narrowed component is the correctly
+    rounded value of its f64 evaluation (within half an f32 ulp of it)"; and "per component in f32 ulps at `max(1,
+    |x|)`".
+- **The silence:** REQ-DEC-058 requires the kink flags; nothing consumes them (in the tasks only TASK-M2-86:25 and
+  TASK-M2-88 mention kinks). R-90 patches every quad past 20. A one-cell patch gives every sample the centre's tag,
+  branch and sheet, so along each kink curve, at every depth past 20, `ENERGY_INFEASIBLE` and `INVARIANT_INFEASIBLE`
+  come out wrong at the `(L_z, E)` feasibility edge, the patch keeps sheet 1 across R-937's unfold line, and branch
+  selects come out wrong at the poles. The continuous error is wider than the tags. Near a `√` edge, `f = √d`; a patch
+  of half-width `h` centred at distance `d` has a relative linearisation error of about `(h/d)²/8`. Holding that under
+  half an f32 ulp of the component's own value (predicate (3)'s bound, `2⁻²⁴` relative) needs `(h/d)² ≤ 2⁻²¹`, so
+  `d ≳ 2^10.5·h ≈ 1,450·h`: about `2¹¹` half-widths (about 720 quad widths) each side of the edge (the physics
+  reviewer's arithmetic, *inferred*). Every figure here is in the component's own ulp, a relative unit, and only `h/d`
+  enters, so the strip is scale-invariant: the same number of half-widths at every depth. The poles behave alike
+  (curvature about `1/r²`).
+- **The question:** when does a quad past R-90's switch take the patch, and when is it exact per sample?
+- **Options seen:**
+  - **(a) Footprint and centre test.** A quad whose footprint meets a flagged site, or whose corner and centre
+    evaluations differ in tag, branch or sheet, is exact per sample at any depth. Fixes the tags where a flagged site
+    lies in the footprint; a tag sliver between sample points can still be missed by the corner test, which the
+    footprint test carries (the code reviewer). Leaves the wide strip of continuous values wrong by more than the
+    narrowing. R-90 gains a named exception.
+  - **(a′) The four-corner check plus the footprint test (the physics reviewer's).** A quad takes the patch only if
+    the exact f64 evaluation at each of its four corners and the patch's f64 prediction there differ by at most half
+    an f32 ulp of the component's own value in every component (predicate (3)'s bound), agree in tag, branch and
+    sheet, and its footprint meets no flagged site (REQ-DEC-058's flags, consumed by extending REQ-CHART-129's
+    per-footprint flag and REQ-CHART-130's `Seam` mask). Otherwise it is exact per sample. Cost: 4 evaluations against
+    `N² = 256` at `N = 16`, 1/64 of an exact quad. Covers kinks, folds, sheets and the high-curvature strip; keeps R-926
+    item 11's "one-cell patches for small ones" wherever the patch is right. R-90 gains a named exception, and the
+    record's bits change on the quads it sends back to exact.
+  - **(b) Keep the patch, and set each sample's tag, branch and sheet by a cheap exact predicate per sample.**
+    Continuous values stay linearised, wrong across the strip.
+  - **(c) Keep the patch and label the strip.** Wrong classifications are drawn and only labelled.
+- **Recommended:** (a′), recommended by the owner, 12 Nov 2026 (their words in this entry's header). Measurable
+  alternative, measurement M-K, criterion written before any run:
+  - *Fixture rule (this entry's and RQ-797's, RQ-801's, RQ-802's and RQ-805's):* a fixture past R-90's switch states,
+    before its run, `|x₀,k|` and the in-plane slopes `|∂x_k/∂u|`, `|∂x_k/∂v|` from the f64 evaluation for each of the
+    record's 15 components, and for each the deepest level at which it still separates adjacent samples,
+    `ℓ_k ≈ 19 + log₂(|∂x_k/∂u| / |x₀,k|)` at `N = 16` (`20 + …` at `N = 8`), to within one level (deep zoom § 1's
+    `h = 2^−(ℓ+1)` and sample spacing `2h/N` against f32's ulp at `|x₀,k|`, *inferred*). A depth is admitted when,
+    along each in-plane axis, some component varying along it has `ℓ_k` at or past that depth, R-632's rule as
+    REQ-TOOL-159's note has it ("use coordinates where the measured f32 floor (REQ-DEC-051, quoted with |x₀|) admits
+    depth 30"); an arm at a depth no component admits is reported void, never passed.
+  - *Setup:* the `(L_z, E)` chart at depths 21 to 30, `N = 16`, the CPU expansion of RQ-797 (a). Straddling set:
+    512 quads whose footprint meets the feasibility edge. Away set: 512 quads at distance at least `2¹¹·h` from it,
+    the bound above. The fixture follows the fixture rule above. Patch records and
+    exact narrowed records compared sample by sample, as are the held quantities `E` and `L_z` of the patch records
+    against `E*` and `L_z*`.
+  - *Ulp convention:* the component's own f32 ulp, because near the edge `|p| ∝ √d` is small and `max(1, |x|)` would
+    hide its error. The strip bound, PASS and the controls are all in this one unit; each difference is also reported,
+    not judged, at `max(1, |x|)`, TASK-M2-86:28's unit, for comparison only.
+  - *PASS under (a′):* on every quad the corner check admits, no sample differs in tag, branch or sheet, and no
+    component differs by more than one f32 ulp of its own value (half an ulp each side, predicate (3)). The share of
+    straddling and of away quads the check sends to exact is reported.
+  - *Positive controls, either failing voids the run:* (i) one sample's tag flipped on purpose in an admitted quad is
+    detected; (ii) one quad's `x₀` offset by two f32 ulps of the component's own value is rejected by the corner check.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M2-87 (the record contract), TASK-M2-88's flag consumer, TASK-M6-08.
+
+## RQ-799: Pin every transcendental reachable from the CPU chart evaluator: on the host, `Float::sin`, `Float::atan2` and the rest call std and so the platform's maths library, so a record is bitwise only per machine *(conflict; a one-way door, CPU bits; R-926 item 5, R-502, R-521, R-921, R-197, R-931; REQ-CHART-099, REQ-CHART-155, REQ-TOOL-172, REQ-INT-091; context: TASK-M2-67, TASK-M2-86, TASK-M2-89, the chart audit's F3)*
+
+*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F3, with the audit's code reviewer's list of
+functions and its physics reviewer's measurement; each quote re-read on origin/main 54fa96fc. (a) is recommended by the
+owner, 12 Nov 2026: "the libm pin (recommend a)". Nothing is chosen here.*
+
+*In plain English: the CPU now works out every pixel's starting system. It uses the computer's own maths library,
+which differs very slightly between Mac, Linux, Windows and the browser, so a saved picture could re-run one bit
+differently on another machine. The project already fixed this in three places by using a pinned software maths
+library; this would do the same for every maths function the chart code can reach, with a test so none slips back.*
+
+- **File, section:**
+  - `crates/kernel/src/real.rs` (:49–50), the doc comment on `arctan2`: "libm's by default, so the f64 path is libm's
+    bit for bit"; the default body (:59): `Float::atan2(self, x)`; `sinc`'s default (:71): `Float::sin(self) / self`.
+  - spirv-std 0.10.0-alpha.1's `Cargo.toml` (the cargo registry, lines 61–63):
+    `[target.'cfg(not(target_arch = "spirv"))'.dependencies.num-traits]`, `default-features = true`. In num-traits
+    0.2.19 (`src/float.rs:835`, `:847`) the `std` implementation is selected when `std` is on, and the `libm` path only
+    under `all(not(std), libm)`.
+  - `crates/kernel/Cargo.toml` (:16–21): "computes its `pow` in f64 through a pinned pure-software libm … with
+    `force-soft-floats`, so no platform libm, compiler intrinsic or architecture-specific instruction computes it, and
+    the native and wasm hosts give the same bits"; `libm = { version = "=0.2.16", default-features = false, features =
+    ["force-soft-floats"] }`. The same pin is at `crates/engine/Cargo.toml:27` and `crates/ledger/Cargo.toml:11`, and
+    `crates/engine/src/trajectory.rs:277` and `:376–393` call `libm::sin` and `libm::cos`.
+  - Chart code calling the platform library on the host: `Float::powf` at `chart/invariant.rs:187`,
+    `construction.rs:946`, `physical.rs:739`, `burrau.rs:557`; `Float::asin` at `shape_sphere.rs:671`; `Float::ln` at
+    `burrau.rs:638`; inherent `f64::ln` at `physical.rs:922–923` and `:962`; `Float::sin`, `cos`, `sin_cos` and
+    `atan2` throughout `shape_sphere.rs`, `tilt.rs`, `burrau.rs` and `burrau_acute.rs`; `Float::hypot` at
+    `chart/tilt.rs:239`, `:288`, `:294`, `:342` and `:438`; `Float::ln_1p` and `Float::exp_m1` in the generated links'
+    `softplus` and `inv_softplus` (`generated/links.rs:219`, `:225`); `Float::cbrt` for the encode's step
+    (`encode/ingest.rs:116`, `:152`); and `Float::cosh`, which the link generator emits for `sech2`
+    (`crates/ledger/src/gen/links.rs:671`).
+  - `decisions.md` § R-502 (the `N_sub` table, pinned libm): "A pinned pure-software libm computes the `pow` (in
+    f64, rounded once to f32), so the native and the wasm hosts give identical bits".
+  - `decisions.md` § R-921 (records under a retired link recreate bitwise): "to the original physical starting
+    state, bitwise, and runs from there".
+  - `plan/requirements.yaml` REQ-CHART-099 (charts reopen bitwise): "Every existing chart, gallery preset and saved
+    chart must reopen bitwise under the composition"; REQ-CHART-155 (the browser CPU route): "whether a wasm f64 solve
+    matches the native one bit for bit is measured and reported".
+  - `docs/design/principia_ic_save.md` (:82–84): "a residual arises only from another platform's maths library
+    (`atan2` in `C`'s step 2, the chart inverses) or another build".
+  - `decisions.md` § R-197 (who may configure a lint): changing lint configuration (`clippy.toml`, `[lints]` tables)
+    needs a ruling.
+- **The conflict:** under R-926 item 5 every record is the CPU's f64 evaluation, narrowed. On the host every
+  `Float::` transcendental, and every inherent `f64` one, goes through std to the platform library (macOS, glibc,
+  Windows, wasm). Where two platforms' f64 values differ, narrowing flips at an f32 rounding midpoint with probability
+  about `2⁻²⁸` per differing component; the overall rate is (the share of calls that differ by platform) × (the
+  amplification through the chart) × that, *inferred*. Rare, but not zero, so R-521's and R-921's recreation,
+  REQ-CHART-099's digest written on the Mac and checked on Linux CI, REQ-CHART-155's native-to-wasm comparison and the
+  export contract's re-render (:156) hold only per machine. The lock and placement solves, the backwards search and
+  R-952's contours call the evaluator, so they inherit it too (iteration counts and branches can change). ic_save
+  :82–84 already concedes the residual for chart inverses; R-926 extends it to every pixel. The comment at
+  `real.rs:49–50` reads as if the pinned crate were used, when the default goes through std.
+- **The question:** does every transcendental reachable from the CPU evaluator go through the pinned libm, enforced?
+- **Options seen:**
+  - **(a) Pin, enforced.** Every f64 transcendental reachable from the CPU evaluator (sin, cos, sin_cos, tan, atan2,
+    asin, acos, exp, exp_m1, ln, ln_1p, powf, hypot, cbrt, sinh, cosh, tanh and any added later) goes through libm
+    0.2.16 with `force-soft-floats` (libm's `expm1` and `log1p` for `exp_m1` and `ln_1p`), through the `Real` trait's
+    methods as `arctan2` and `sinc` already are. `sqrt` is excluded: IEEE 754 requires it correctly rounded, so every
+    platform gives the same bits. Enforced by a test in the `discipline_lint` style: every `Float::` or inherent `f64`
+    transcendental in the evaluator's source outside the `Real` impl fails, `sqrt` excepted, with a control (a planted
+    `Float::sin` fails); a clippy `disallowed-methods` entry would be lint configuration and need a
+    ruling (R-197), so the test is the route. Records become identical on every host. It changes today's f64 bits on
+    some inputs, so a fixture written from the f64 path becomes a recorded conversion (R-931). A software
+    implementation may be slower, which M-A then measures.
+  - **(b) Keep the platform library,** and state that bitwise claims hold per machine and per OS. That amends what
+    R-521 and R-921 claim across machines.
+- **Recommended:** (a), recommended by the owner, 12 Nov 2026 (their words in this entry's header), before any record
+  is written on the new route. Measurable
+  alternative, criterion written before any run:
+  - *Setup:* the first slice's three charts and grids (TASK-M2-86). Count records that differ bitwise, at f64 before
+    narrowing and after narrowing, between the std path and the pinned path on the Mac, and, under each path, across
+    four machines: the Mac, Linux, Windows and wasm (the wasm build, as REQ-CHART-155 compares a wasm f64 solve with the
+    native one), each against the Mac. The wasm runtime and the Windows host are named before the run.
+  - *PASS:* under the pinned path the count against the Mac is 0 on Linux, Windows and wasm, at both levels. The
+    std/pinned counts and the std path's cross-machine counts are reported as the size of the change.
+  - *Control:* a one-ulp perturbation of `sin` gives a non-zero count at the f64 level, or the harness is void. (At the
+    narrowed level it flips about `2⁻²⁹` of components, about 0.03 expected over the slice's roughly `1.8·10⁷`
+    components, so it cannot serve there; the physics reviewer's arithmetic.)
+- **Applied meanwhile:** nothing. The `real.rs:49–50` comment is corrected as a two-way edit, apart from this entry,
+  saying what the default does today.
+- **Waits:** TASK-M2-67, TASK-M2-86, TASK-M2-89.
+
+## RQ-800: The measure weight: REQ-DEC-034 and REQ-VAL-094 take it from "the same J_D the linear decode uses", but under R-926 a `J_D` exists only on patched quads, varies across a shallow quad, and a tier-3 map has none *(silence; a one-way door, what statistics claim, and it extends R-935's "central differences only the check"; R-935, R-633, R-926 items 9 and 11, R-936; REQ-DEC-034, REQ-VAL-094, REQ-GEN-018, REQ-DEC-058; context: TASK-M6-09, TASK-M8-128, the chart audit's F13)*
+
+*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F13, with the audit's physics reviewer's widening;
+each quote re-read on origin/main 54fa96fc. (a) is recommended by the owner, 12 Nov 2026: "the tier-3 measure weight
+(recommend per-sample)". Nothing is chosen here.*
+
+*In plain English: statistics such as "what fraction of this area escapes" need each pixel weighted by how much the
+chart stretches the space of systems there. That weight came from the deep-zoom slopes, worked out once per square. The
+new chart system has those slopes only on the smallest squares, and charts with no exact slopes have none at all. The
+proposal is a weight per pixel from each pixel's own slopes, with a check for the charts that have to estimate them.*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-DEC-034 (the linearised decode), statement: "and |det J_D| must double as the
+    measure weight".
+  - `plan/requirements.yaml` REQ-VAL-094 (the per-quad measure weight), statement: "The per-quad measure weight for
+    quantitative claims must be |det J_D| taken from the same J_D the linear decode uses."
+  - `plan/tasks/M6/TASK-M6-09.md` (the measure weight), Goal (:12): "weighted by `|det J_D|` — taken from the same
+    `J_D` the linear decode uses, computed once"; Acceptance (:30): "measure weight equals |det J_D| for the quad".
+  - `decisions.md` § R-935, under RQ-758: "A tier-3 map gets no one-cell patch"; "Central differences at R-633's step
+    stay as the test that checks a dual slope away from the flagged sites."
+  - `docs/design/principia_deep_zoom.md` § "Couplings to the contract", b: "The CPU already computes `J_D` per deep
+    quad for the linear decode — take `|det J_D|` and the per-quad measure weight is free."
+  - `plan/requirements.yaml` REQ-GEN-018 (`|det J_D|` against the link derivatives), verify: "log √det(J_DᵀJ_D) where
+    J_D is not square".
+  - `plan/requirements.yaml` REQ-DEC-058, verify, M-B's criterion: "agreement within the central difference's error
+    at that step, its truncation `h_k²·|f'''|/6` plus its rounding `ε·|f|/h_k`".
+- **The silence:** the weight is defined from the patch's `J_D`, once per quad. Under R-926 item 11 and R-935 a `J_D`
+  exists only on patched quads (past `ℓ_switch`); on exact quads above it, where `det J` varies across the quad, one
+  weight per quad is wrong; tier-1 and tier-2 maps give a dual slope per sample; a tier-3 map has no slope. A central
+  difference of a tier-3 map (a solve or an integration) carries an error of about `τ/h` from the solve's tolerance `τ`,
+  and for a chaotic flow map (TASK-M8-128's final-condition charts) it is not reliable at R-633's step. "det" here is
+  the Gram area factor `√det(J_DᵀJ_D)` (REQ-GEN-018's form; design §17.11), not a determinant.
+- **The question:** where does the measure weight come from, per sample or per quad, and on a tier-3 map?
+- **Options seen:**
+  - **(a) Per sample.** Each sample's weight is the Gram area factor of its own slope: the dual (tier 1) or implicit
+    (tier 2) slope at the sample; on a tier-3 map, a central difference at R-633's step per sample, labelled "measure
+    by central difference", admitted per map only if it passes the Richardson check below. Extends R-935's "central
+    differences only the check" to the measure on tier 3. REQ-DEC-034's clause, REQ-VAL-094 and TASK-M6-09 are
+    rewritten per sample.
+  - **(b) Per quad, as written,** from the patch's `J_D` where one exists, and per sample from the dual slope
+    elsewhere; tier 3 as (c). Two definitions of one weight.
+  - **(c) Tier-3 charts give area statistics only on the uniform measurement grid (`FULL_RETENTION`), unweighted,**
+    labelled as chart-area fractions.
+  - **(d) No measure-weighted statistics on tier-3 charts.** A refusal, against the no-refusal spirit of R-925 and
+    R-926 item 8.
+- **Recommended:** (a), recommended by the owner, 12 Nov 2026 (their words in this entry's header). Measurable
+  alternative, written before any run:
+  - *Per tier-1 and tier-2 map:* per-sample weight against the per-quad weight on shallow quads, the spread of their
+    ratio reported.
+  - *Per tier-3 map:* a Richardson check, the weight at `h` and `h/2`, `h` R-633's step; criterion: their difference,
+    as a ratio of the weight, within M-B's bound form (REQ-DEC-058: `h²·|f'''|/6 + ε·|f|/h`) plus the solve's `τ/h`,
+    each term stated per map before the run. A map that fails takes (c), labelled. Positive control: an error planted
+    in one map's evaluation, of 100 times that bound (M-B's control factor), must fail the check.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M6-09; TASK-M8-128's statistics.
+
+## RQ-801: An addition to RQ-783 for its M2 answer (R-956): records made past `ℓ_switch` recreate through the exact evaluation, not the patch that was integrated, and across machines through another maths library *(conflict; a one-way door, what a record claims to reproduce; R-521, R-921, R-926, R-956; REQ-TOOL-172; context: RQ-783, TASK-M2-87, TASK-M7-45, the chart audit's F15)*
+
+*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F15, with the audit's physics reviewer's sizing;
+each quote re-read on origin/main 54fa96fc. Filed as the owner directed, 12 Nov 2026: "RQ-783's addition". The
+recommendation is the audit's. Nothing is chosen here; read with RQ-783 at M2, where RQ-783 carries a dated line
+pointing here.*
+
+*In plain English: RQ-783 asks whether pictures saved before the new chart system re-run bit for bit. Two more cases
+need the same answer. A pixel deep in a zoom was simulated from the centre-plus-slopes shortcut, but re-opening it
+works the system out exactly, so it can differ in the last bit. And on another kind of computer the maths library
+can differ (RQ-799). The size is small in smooth regions, about one pixel in a hundred thousand at depth 21 by
+estimate.*
+
+- **File, section:**
+  - `REVIEW_QUEUE.md` § RQ-783 (pre-switch records re-running bit for bit), the question: "does a record written
+    before R-926 item 5's route lands recreate bitwise, and through which decode?"; Deferred: "deferred to M2 by owner
+    11 Nov 2026 (R-956, the owner: "RQ-783: defer:M2")".
+  - `docs/design/principia_ic_save.md` (:15–16): "Integration enters only through `computeIC(chart, uv, simKey)`";
+    (:37): `source:    "built" | { pixel: { chart, uv } }`.
+  - `docs/design/principia_honesty_precision.md` (:191–192): "the f32 run is the survey kernel's one-pixel dispatch
+    through the atlas's decode path, bitwise what coloured the pixel".
+  - `docs/design/principia_trajectory_viewing.md` (:135): "In regular regions, agreement certifies the pipeline
+    (disagreement = a real bug)."
+  - `decisions.md` § R-921: "to the original physical starting state, bitwise, and runs from there".
+- **The conflict:** a record stores `(chart, uv)`, and recreation is an exact f64 evaluation. Past `ℓ_switch` the
+  integrated IC was the patch's, which depends on the quad's level and centre, so an exact recreate can differ from it.
+  honesty_precision :191–192's bitwise claim then fails. trajectory_viewing :135 compares outcome class in regular
+  regions, which a one-ulp IC difference does not flip, so it does not misfire (the physics reviewer). Size: on smooth
+  patched quads about `h²‖D″‖/ulp` per component, about `10⁻⁵` of samples at depth 21, *inferred*, at a fixture whose
+  `|x₀|` per component admits depth 21 (RQ-798's fixture rule). Under RQ-798 (a′) the crease strips are
+  exact per sample, so they recreate. Across machines, RQ-799 decides.
+- **The question:** does a record made past `ℓ_switch` recreate the IC that was integrated, bitwise?
+- **Options seen:**
+  - **(a) The record names its route** (exact or patch) and, for a patch, the quad's level and address, so recreation
+    re-forms the patch and reproduces the integrated IC bitwise; the inspector's one-pixel trace uses the quad's
+    record. With RQ-799 (a), across machines too.
+  - **(b) The exact CPU evaluation is canonical.** Recreation and the inspector use it; a patched pixel's integrated IC
+    is documented as within the linearisation error of the canonical one; honesty_precision's "bitwise what coloured
+    the pixel" is amended past `ℓ_switch`.
+  - **(c) As (b), labelled per record** "recreated from the exact evaluation".
+- **Recommended:** (a), with RQ-799 (a), the audit's recommendation. Measurable alternative, written before any run:
+  on patched quads at depths 21 to 25, at a fixture stating `|x₀|` per component (RQ-798's fixture rule), the share of
+  samples whose exact recreate differs bitwise from
+  the patch record, and the outcome flips that causes against the one-ulp chaos baseline (R-84). Criterion: any
+  non-zero share shows the question is real; the share is reported against the `10⁻⁵` estimate.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M2-87 (whether a record carries its route), TASK-M7-45, RQ-783's M2 answer.
+
+## RQ-802: How the precision warning tells saturation from the floor once `J_D` is the dual slope: REQ-GUI-012's test reads "f64 J_D's column along k is 0", which a dual σ′ does not reach until about 745, where the central difference reached 0 past about 37 *(conflict; a one-way door, a definition the warning rests on (R-72), and it extends R-935's words or replaces RQ-553's test; R-935, R-54, R-570, R-599, R-633, R-72; REQ-GUI-012, REQ-SCHED-062, REQ-DEC-034; context: TASK-M6-07, TASK-M6-21, RQ-553, the chart audit's F12)*
+
+*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F12, with both of the audit's reviewers'
+corrections; each quote re-read on origin/main 54fa96fc. Option (b)'s slope condition is the owner's definition, 12 Nov
+2026, verbatim: "equal f64 ICs at distinct sample points are saturation only if |J_dual,k|·h_633 < ½ ulp_f64(x_k) for
+every component (dual slope, R-633's step; no central difference); otherwise they are the f64 floor and warn. Add an arm
+past the f64 floor to the measurement. Physics confirms the definition. [RQ-804] inherits it." (the owner's draft id
+bracketed as filed). Physics review confirms the definition on the pull request that files this entry. The
+recommendation of (b) is the audit's. Nothing is chosen here.*
+
+*In plain English: far from the centre of some charts the picture is genuinely flat, and the program must not warn
+"precision has run out" there, because that would be untrue. It tells the two apart by whether the chart's slope is
+zero. The new exact slopes are tiny but not zero out there, so the warning would fire falsely. There are two ways to
+fix it: go back to estimating the slope for this test, or look directly at whether the exact starting systems are
+equal before rounding. Equal is not enough on its own: zoomed deep enough (about depth 48 for ordinary numbers), even
+the exact starting systems of neighbouring pixels become equal because precision has run out, not because the picture
+is flat. So equal counts as flat only where the exact slope is too small to change any number over the standard
+step; otherwise it is precision running out, and the warning is shown.*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-GUI-012 (the precision warning), statement: "a collapse between adjacent samples
+    along in-plane direction k being one when f64 J_D's column along k is 0 while those two f64 sample points are
+    distinct (RQ-553 (a), decided per R-369, per direction; R-570 item 5, W13)".
+  - `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound" (:135–137): "`σ` rounds to 1 in f64 past about 37
+    and `tanh` to ±1 past about 19, so `J_D`'s central differences (§2 a) are 0".
+  - `decisions.md` § R-935, under RQ-758: "The linearised decoder's `J_D` is the tier-1 (exact, dual numbers) or tier-2
+    (implicit) slope where a map has one"; "Central differences at R-633's step stay as the test that checks a dual
+    slope away from the flagged sites."
+  - `plan/tasks/M6/TASK-M6-07.md` (:43): "RQ-553's per-direction saturation test (REQ-GUI-012, TASK-M6-21) reads exact
+    zeros of `J_D` and assumes the step is at least the quad's sample spacing".
+  - `decisions.md` § R-599 (collapse judged per axis), its *Applied per R-369*: "'saturated', per axis, is RQ-553's
+    per-direction test (f64 `J_D`'s column along the axis 0 while the two f64 sample points are distinct; deep_zoom
+    §4)".
+  - `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision", R-633's step (`h_633` below):
+    "along input coordinate `k`, `h_k = ε^{1/3}·max(1, |x_k|)` in f64, `ε` f64's machine epsilon and `x_k` the
+    coordinate stepped (`u` or `v` for `J_D`, …)".
+  - `decisions.md` § R-570 (no limit on pan or zoom-out), item 5: "**Precision is not a navigation limit.**"
+  - `docs/contracts/principia_canonical_spec.md` § 9, invariant 13 (W13): "**Never blank, never lies, never
+    freezes**".
+- **The conflict:** RQ-553's test was built on central differences, which read exactly 0 in the saturated far field.
+  Under R-935 `J_D` is the dual slope; a dual `σ′` written as `e^{−x}/(1+e^{−x})²` stays non-zero out to about 745. So
+  in the saturated field the test finds no saturation and the warning says f32 has run out where the cause is
+  saturation, against W13. TASK-M6-07's "the step is at least the quad's sample spacing" has no step to read now.
+  R-599's per-axis stop reads the same test.
+- **The question:** what test tells a saturation collapse from the genuine floor?
+- **Options seen:**
+  - **(a) A central-difference `J_D` at R-633's step, for this test only.** Preserves RQ-553's test exactly. Extends
+    R-935's "central differences only the check" to one more use, which reads the owner's words (both reviewers).
+  - **(b) The direct test on the records, the dual slope deciding equal pairs (both reviewers; the slope condition the
+    owner's).** Above `ℓ_switch` the CPU holds every sample's f64 IC, and under RQ-797 (a) past it too. For a
+    collapsed adjacent pair along in-plane direction `d`:
+    - the f64 sample points equal: the genuine floor (REQ-GUI-012's case (ii)); it warns;
+    - the f64 ICs differ while the narrowed records are equal: the genuine f32 floor; it warns;
+    - the f64 ICs bitwise equal at distinct f64 sample points: a saturation collapse only if
+      `|J_dual,k|·h_633 < ½ ulp_f64(x_k)` for every component `k`, where `J_dual,k` is component `k` of the dual (tier
+      1) or implicit (tier 2) slope's column along `d`, `h_633` is R-633's step along `d` (`ε^{1/3}·max(1, |u_d|)` in
+      f64), and `ulp_f64(x_k)` is f64's ulp at that component's value; no central difference is taken. Otherwise the
+      pair is the f64 floor, and it warns.
+
+    Without the slope condition, equal f64 ICs at distinct points would always read as saturation, and that misreads
+    the f64 floor. Past the depth where adjacent f64 ICs become equal, every pair would read "saturated" and the warning
+    would switch off where precision is most exhausted, against W13. That depth is about 48 at O(1) `|x₀|`, and R-570
+    item 5 lets navigation reach it. The arithmetic, on the basis of RQ-798's fixture rule: at `N = 16` the
+    sample spacing is `2h/N = 2^−(ℓ+4)` (`h = 2^−(ℓ+1)`, deep zoom §1), so adjacent ICs differ by about
+    `|∂x_k/∂u|·2^−(ℓ+4)`. f64's ulp at `|x₀,k|` in `[1, 2)` is `2⁻⁵²`, and the two are equal at `ℓ = 48` for a slope of
+    1.
+    From `ℓ = 49` the spacing is half an ulp or less, and adjacent pairs begin to round equal. In general this is
+    `ℓ_k ≈ 48 + log₂(|∂x_k/∂u| / |x₀,k|)` (`49 + …` at `N = 8`), the f64 counterpart of the fixtures' f32
+    `19 + …`, to within one level (47 at `|x₀,k|` in `[2, 4)`).
+
+    In the saturated far field the condition holds: at REQ-GUI-012's arm (a), `z₀ = 10⁴·d`, the dual `σ′` underflows to
+    0. On an unsaturated field at the f64 floor it fails by many orders: with a slope of 1, `h_633 ≈ 2^−17.3` against
+    `½ ulp_f64 = 2⁻⁵³`. The condition is the dual-slope form of "a central difference at R-633's step reads 0" (which
+    needs `2·|J|·h_633` below about one ulp), so it keeps RQ-553's meaning (*inferred*; the measurement tests it).
+    Exact, and costs one comparison per component on pairs already found equal. It is a definition under R-72; the
+    physics reviewer confirms it on the pull request that files this entry, as the owner directed. It replaces the
+    `J_D` wording in REQ-GUI-012, R-599's applied note and deep_zoom §4.
+  - **(c) The dual `J_D` as is.** Warns falsely in the saturated field; against W13.
+- **Recommended:** (b), with its slope condition, the audit's recommendation (the slope condition the owner's). It
+  needs no central difference, so it does not stretch R-935's
+  words, and it reads what REQ-GUI-012 already names (the f64 sample points and the records) plus the dual slope R-935
+  makes `J_D`. It depends on RQ-797 (a) past `ℓ_switch`; under (b) or (c) of RQ-797 the f64 IC of a patched sample
+  is still the CPU's `x₀ + J_D·δ` in f64. Measurable alternative, written before any run:
+  - *Arms:* REQ-GUI-012's arms (a) to (e), and an arm (f) past the f64 floor: an unsaturated quad at depths 49 to 52,
+    `N = 16`, at a centre whose components have `|x₀,k|` in `[1, 2)` and in-plane dual slopes about 1, and whose f64
+    sample points stay distinct there (`|u|` and `|v|` of the sample points below `2⁻⁴`, so the spacing `2^−(ℓ+4)`
+    stays at least f64's ulp at `u` to depth 52). Each fixture states `|x₀|` and the slopes per component before the
+    run. Arm (f) asserts its precondition first: at least one adjacent pair whose f64 ICs are bitwise equal at distinct
+    f64 sample points. Like arms (b) to (e), it may feed the trigger synthetic quad facts, here built from the CPU's f64
+    evaluation at those sample points.
+  - *Criterion:* (a) and (b) classify every collapsed pair alike on every arm; the pairs where they differ are counted
+    and listed. On arm (f), (b) classifies every such pair as the f64 floor and the warning is raised. If none differ,
+    (b) keeps RQ-553's meaning on those arms; any pair that differs shows where the meaning changes, and it goes to the
+    owner with that pair.
+  - *Control on arm (f), failing voids the arm:* the rule without the slope condition (equal f64 ICs at distinct
+    points are saturation) reads arm (f)'s pairs as saturated and drops the warning.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M6-21, TASK-M6-08 (R-599's per-axis stop), TASK-M6-07's note.
+
+## RQ-803: The collapse test fires late: R-90 and `AT_F32_FLOOR` need every word of adjacent records bitwise equal, while the dominant components are step-quantised levels earlier, undetected *(silence; a one-way door if it becomes a criterion, it amends R-90's trigger and what the floor warning claims; R-90, R-935, R-599, R-632, R-433, R-54; REQ-SCHED-062, REQ-DEC-033, REQ-DEC-052, REQ-TOOL-152, REQ-GUI-012; context: TASK-M5-04, TASK-M6-08, the chart audit's F21 (the physics reviewer's "missed" 3))*
+
+*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F21, the audit's physics reviewer's missed point 3;
+each quote re-read on origin/main 54fa96fc. Filed as the owner directed, 12 Nov 2026: "the collapse-test lateness". The
+recommendation is the audit's. Nothing is chosen here.*
+
+*In plain English: the program decides that precision has run out only when two neighbouring pixels' starting systems
+are identical in every one of their numbers. Long before that, the biggest numbers can already be stuck in steps, so
+neighbouring pixels differ only in their smallest numbers and the picture can show stripes, with no warning. The
+question is whether to keep the strict test, or also count the earlier stepping.*
+
+- **File, section:**
+  - `decisions.md` § R-90: "Switch to the linearised decoder when the full decoder's adjacent samples give
+    bitwise-identical ICs"; refined by R-935: "the trigger's "bitwise-identical ICs" compares the narrowed f32 records".
+  - `docs/contracts/principia_scheduler_contract.md` Part 4 (:138): "Only when the *linearised* decoder's samples
+    collapse to bitwise-identical ICs … is f32 genuinely exhausted".
+  - `plan/requirements.yaml` REQ-TOOL-152 (the banding criterion, confirmed by R-433): "a delta departing from 2h/N by
+    more than 1/16 of the step is banded".
+  - `docs/design/principia_deep_zoom.md` § 1 (:62–65): "A run of reconstructed coordinates is banded, step-quantised,
+    when an adjacent-sample delta departs from the exact step `2h/N` by more than **1/16 of the step** … the criterion
+    holds while the step spans at least 16 ulps."
+- **The silence:** the banding criterion is defined for the chart coordinate `u`, never for the IC's components. A
+  record's components quantise one by one as the depth grows: the dominant ones first, levels before the last component
+  collapses. R-90's switch and `AT_F32_FLOOR` fire only when every word is equal, so the quantised stretch is
+  undetected, and REQ-GUI-012's warning comes late there. (On a 1/16 criterion a component quantises about four levels
+  before it collapses, `log₂ 16`, *inferred*.)
+- **The question:** does the switch or the floor stop also fire on per-component quantisation of the records?
+- **Options seen:**
+  - **(a) Keep R-90's bitwise test as written,** and report beside REQ-DEC-052's first collapsing depth the first depth
+    at which any component, along each in-plane axis, fails REQ-TOOL-152's 1/16 criterion. Nothing changes in what
+    is computed; the gap is measured. Adding a reported column is two-way.
+  - **(b) Add per-component quantisation as a trigger:** a component whose adjacent deltas along an axis fail the 1/16
+    criterion counts as collapsed along that axis, judged per axis as R-599 judges collapse. Amends R-90's trigger and
+    R-54's floor warning; changes when quads stop.
+  - **(c) Quantisation raises the precision warning only,** without changing the switch or the stop. Amends R-54.
+- **Recommended:** (a) now, the audit's recommendation, with (b) the measurable alternative: if (a)'s reported gap
+  exceeds one level at any stated
+  `|x₀|` on the first slice's charts, (b) or (c) comes back to the owner with those numbers. The criterion is written
+  here, before the run.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M5-04 (REQ-DEC-052's gate, where the column is reported), TASK-M6-08.
+
+## RQ-804: REQ-GUI-012's last clause, re-derived: under R-926 a switch at `ℓ_switch` with no collapsed pair costs no precision beyond the narrowing, except where RQ-798's creases are, so the warning it raises claims what is not so *(conflict; a one-way door, it amends R-54's words and what the warning claims; R-54, R-90, R-926 item 11, R-935, R-570; REQ-GUI-012; context: TASK-M6-21, RQ-553, the chart audit's F22 (the physics reviewer's "missed" 4))*
+
+*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F22, the audit's physics reviewer's missed point 4;
+each quote re-read on origin/main 54fa96fc. Filed as the owner directed, 12 Nov 2026: "REQ-GUI-012's re-derivation";
+RQ-802's definition is inherited here, as the owner directed ("[RQ-804] inherits it"). The recommendation is the
+audit's. Nothing is chosen here.*
+
+*In plain English: the program warns about precision whenever it switches to the centre-plus-slopes shortcut at depth
+20, even when nothing has been lost. Under the new chart system, with the corner check of RQ-798, that switch loses
+nothing beyond the final rounding every pixel has anyway, so the warning would say something untrue. The question is
+whether to stop warning at a switch where no pixels have merged.*
+
+- **File, section:**
+  - `decisions.md` § R-54 (the precision warning is event-driven): "Raised on `DECODE_SWITCHOVER` over visible quads
+    and on `AT_F32_FLOOR`."; its refinement line: "every other `DECODE_SWITCHOVER`, an `ℓ_switch` switchover with no
+    collapsed pair included, and every other `AT_F32_FLOOR` raises it as here".
+  - `plan/requirements.yaml` REQ-GUI-012, statement, its last clause: "as does a switchover at ℓ_switch with no
+    collapsed pair (R-90)".
+  - `docs/design/principia_deep_zoom.md` § 4 (:158): "A switchover at `ℓ_switch` with no collapsed pair is not a
+    saturation collapse and warns as R-54 defines it."
+  - `docs/contracts/principia_scheduler_contract.md` Part 4 (:137): "which anchors the precision-critical part in f64
+    on the CPU and restores the distinction".
+  - `docs/contracts/principia_canonical_spec.md` § 9, invariant 13 (W13): "**Never blank, never lies, never
+    freezes**".
+- **The conflict:** the warning at an `ℓ_switch` switch was derived when the full decoder ran in f32 on the GPU and the
+  switch marked its precision running out. Under R-926 the records above the switch are correctly rounded f64
+  evaluations, and below it the patch's records are within one f32 ulp of the exact ones wherever RQ-798 (a′)'s corner
+  check admits the patch (M-K measures it). So a switch at `ℓ_switch` with no collapsed pair loses nothing a user could
+  see, and a warning there says f32 has run out where it has not, against W13. A switch triggered by collapse is, on
+  exact records, the floor itself (F11), and still warns unless every collapsed pair is a saturation collapse under
+  RQ-802 (b)'s definition.
+- **The question:** does a switch at `ℓ_switch` with no collapsed pair still raise the precision warning?
+- **Options seen:**
+  - **(a) No.** The warning is raised at a collapse (on either route) and at `AT_F32_FLOOR`, saturation excepted by
+    RQ-802 (b)'s definition: a collapsed pair whose f64 ICs are bitwise equal at distinct f64 sample points is a
+    saturation collapse only if `|J_dual,k|·h_633 < ½ ulp_f64(x_k)` for every component `k` (the dual slope along the
+    pair's direction, R-633's step, no central difference); otherwise it is the f64 floor and warns, as do the f32
+    floor and coincident sample points. A switch at `ℓ_switch` with no collapse raises none. R-54's "Raised on
+    `DECODE_SWITCHOVER`" reads "on a `DECODE_SWITCHOVER` triggered by collapse"; REQ-GUI-012's arm (e) is inverted.
+    Safe only with RQ-798 (a′); without it the crease strips lose precision silently.
+  - **(b) Keep it as written.** The warning fires at depth 20 on every view, with nothing lost.
+  - **(c) Replace it with an informational route mark** (the route debug view, R-926 item 10), not a precision
+    warning.
+- **Recommended:** (a), conditional on RQ-798 (a′); (b) if (a′) is not taken; the audit's recommendation. Measurable
+  alternative, written before any run: RQ-798's M-K's and RQ-797's M-S's share of patched samples differing from the
+  exact records by more than one f32 ulp of their
+  own value; criterion: if that share is 0 on every admitted quad, a switch with no collapse has nothing to warn about.
+- **Applied meanwhile:** nothing.
+- **Waits:** TASK-M6-21; RQ-798 and RQ-802.
+
+## RQ-805: The fragment's backwards answer and `ctx.chart.z` past `ℓ_switch`: both are absolute f32 values, which R-395 rules out for the forward coordinate there, so Chart position's View frame, the round-trip and decode presets and `ctx.chart.z` stop resolving samples from about depth 20, and the answer sooner on most charts *(silence; a one-way door, it changes what the fragment computes and shows and reads R-947's "the same function's generated WGSL"; R-926 items 7 and 11, R-945, R-947, R-935, R-395, R-394, R-570, R-90; REQ-CHART-199, REQ-COL-134, REQ-RENDER-125, REQ-RENDER-126, REQ-TOOL-158, REQ-COL-063, REQ-COL-057; context: TASK-M2-99, TASK-M7-47, TASK-M7-52, TASK-M7-74, RQ-797, the chart audit's F23)*
+
+*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F23, item 1, on the owner's pass of that day on
+the backwards direction ("file any one-way part with the other eight"); each quote re-read on origin/main 54fa96fc. The
+recommendation is the audit's. Nothing is chosen here.*
+
+*In plain English: to colour a pixel by where its system is now, or to show the round-trip check, the graphics card
+works out a chart position from the system. The graphics card only has single precision, and it returns that position
+as one absolute number. Zoomed in past about level 20 (sooner on most charts, because the solve itself loses a few
+digits) neighbouring pixels get the same answer, so these views go blocky. The owner already ruled the same problem away
+for the forward direction by working relative to each square's centre (R-395). The question is whether the backwards
+answer, and the chart value shaders read (`ctx.chart.z`), get the same treatment.*
+
+- **File, section:**
+  - `decisions.md` § R-926 (the new chart system), the owner's words, item 7: "The backwards direction (running state ->
+    chart position) exists ONLY for the fragment-side needs: chart-position colouring / the state map, ctx.chart.z, and
+    the decode/round-trip debug presets."; item 11: "A small quad's table collapses to one cell — that IS the linearised
+    decoder (centre + slopes)."
+  - `decisions.md` § R-947 (one placement function), and `docs/design/principia_chart_composition.md` § 10.6
+    (:1503–1505): "The fragment reads the same function's generated WGSL where the chart has closed-form code, and the
+    backwards table with its search where it has none".
+  - `decisions.md` § R-935 (the re-plan's eleven answers), under RQ-767: "The table seeds the search, and Newton steps
+    run on the chart's generated forward code where the chart has it"; under RQ-768: `ctx.chart.z` "stays the forward
+    value of colour_composition § 3. On a table-route chart the forward table carries `z` beside the state at each node
+    (eight more f32 words a node)".
+  - `decisions.md` § R-395 (no banding, absolute to `ℓ_switch`, quad-local beyond), the owner's words: "no banding
+    beyond it through the per-quad local coordinates"; its decision: "**Beyond ℓ_switch**, the coordinate is carried as
+    the per-quad local coordinates, the quad's centre `c` (f64 on the CPU) and the f32 offset `δ` … never as an absolute
+    f32 `u`"; its sweep: "N = 16 to ℓ = 19, collapsing at ℓ = 20".
+  - `plan/requirements.yaml` REQ-TOOL-158 (quads past `ℓ_switch` on quad-local coordinates): "in the kernel and in the
+    fragment's UV preset". It covers the forward coordinate only.
+  - `docs/design/principia_colour_composition.md` § 3 (:452–454): "Formed in f32 it is an absolute coordinate, which
+    R-395 keeps free of banding only up to the deep-zoom switchover (ℓ_switch, R-90); past it a fragment works in the
+    quad's local coordinates"; (:460–464) `ctx.chart.z` is obtained "by evaluating the chart's own `D ∘ Φ` in WGSL at
+    the pixel's `ctx.chart.slice_uv`".
+  - `docs/design/principia_state_map.md` SM7 (:416–422): the View frame, "`s = tanh((x − view centre)/view
+    half-width)`", "is needed at depth"; "the state is f32. The `t = 0` identity holds to **4e-7 (latent), 1.5e-6
+    (sphere), 5e-6 (simplex), 2.7e-8 (momenta), 7e-8 (θ × h), 1.9e-6 (tilted E, F)** in chart units".
+- **The silence:** R-395 and REQ-TOOL-158 keep the forward coordinate quad-local past `ℓ_switch`; nothing does so for
+  the fragment's backwards answer or for `ctx.chart.z`. WGSL has no f64, so both fragment routes return an absolute f32
+  point. At `|u|` in `[0.5, 1)` and `N = 16` a correctly rounded answer stops separating adjacent samples at depth 20
+  (R-395's arithmetic), about `2^(ℓ−20)` samples sharing each answer past it; the f32 solve is not correctly rounded,
+  and
+  SM7's identity errors reach one sample spacing at about depth 17 (latent), 15 (sphere, tilted E, F) and 14 (simplex)
+  (*inferred*, F23). The View frame's `x − view centre` then shows blocks; the round-trip preset reads the floor. On a
+  closed-form chart `ctx.chart.z` is `D ∘ Φ` at an absolute `ctx.chart.slice_uv`, which R-395 rules out past
+  `ℓ_switch`, and on a table-route chart its nodes are absolute f32, so it collapses near 20 at O(1) `z`. A backwards
+  answer can never beat its input: the f32 state separates samples only to `ℓ_k ≈ 19 + log₂(|∂x_k/∂u| / |x₀,k|)`, so a
+  quad-local answer gains depth past ~20 only where a component is small relative to its slope, and gains the solve's
+  lost digits everywhere.
+- **The question:** Q1, past `ℓ_switch`, is the fragment's backwards answer absolute f32 or quad-local? Q2, is
+  `ctx.chart.z` past `ℓ_switch` one absolute f32 value, or does it gain a quad-local lane?
+- **Options seen:**
+  - **Q1 (a) Absolute, as now.** Nothing changes; the floor is stated in SM7 (a two-way note) and reported by M-E.
+    Chart position's View frame and the round-trip and decode presets go blocky from about depth 14 to 20 by chart.
+    R-570 (precision never limits navigation) is kept for navigation, not for these views.
+  - **Q1 (b) Quad-local past `ℓ_switch`, absolute beyond the quad's patch.** For a state near its own quad, the
+    fragment solves `δ = J⁺(X − x₀)`, the one-cell patch run backwards (R-926 item 11), and draws `(c_q − c_view) + δ`
+    with `c_q − c_view` formed in f64 on the CPU. `x₀` is sent as two f32 words a component (high and low) so its
+    rounding is no per-quad seam, about 62 f32 words, 248 B, per visible quad (*inferred*); under RQ-797 (a) this is
+    new upload, under (b) the uniforms exist. Validity: the solve's residual in state within `X`'s f32 rounding (R-935's
+    on-image criterion), else the absolute route. A tier-3 map has no `J_D` and keeps the absolute route. Reads R-947's
+    "the same function's generated WGSL": past `ℓ_switch` the fragment places by a linear solve from the one source's
+    `x₀` and `J_D`, not by its generated code. The gain is near `t = 0` and in regular regions; most running states
+    leave
+    their quad and take the absolute route.
+  - **Q1 (c) The CPU places every visible sample with `place` and uploads offsets.** Exact to the lock's tolerance at
+    any depth; about one solve a sample a frame while time runs, several forward evaluations each at about 85 ns
+    (composition §17.12:2496), far past a frame for a whole screen (*inferred*). Not viable while time runs.
+  - **Q2 (i) `ctx.chart.z` stays one absolute f32 vec8.** It collapses near depth 20 at O(1) `z`, stated in colour § 3
+    (a two-way note).
+  - **Q2 (ii) A quad-local `z` lane past `ℓ_switch`, beside the absolute one:** `z₀` per quad from the CPU's f64 (high
+    and
+    low words) and an f32 offset per pixel, `J_z·δ`, as R-395 does for `ctx.chart.slice_uv`. A change to colour § 3's
+    context that every shader can read; the absolute lane stays for shaders that need no depth.
+- **Recommended:** Q1 (b) and Q2 (ii), the audit's recommendation: the forward rule the owner already made (R-395)
+  applied to the backwards answer and to `z`. Measurable alternative, written before any run: M-E, the audit's
+  measurement of the fragment against `place`, run first under (a): per route (the generated encode, the table with
+  Newton steps on generated forward code, the table alone, and a morph frame on both blend pairs), at depths 0, 10, 16,
+  20, 21, 25 and 30, at fixtures stating `|x₀|` and the slopes per component (RQ-798's fixture rule) and `|u|` per
+  axis, 64 × 64 samples at `t = 0` and at a stated `t > 0`, the distance between the fragment's point and `place`'s
+  reported in sample spacings, median and worst per route and depth; positive controls, either failing voids the run: a
+  fragment answer offset by one spacing at depth 10 shows a distance of at least one spacing, and the fragment's
+  algorithm run in f64 on the CPU stays within one spacing at depth 25 where the f32 run does not. If, at
+  every fixture, the first depth at which the worst distance to `place` exceeds one sample spacing is within one level
+  of that fixture's forward floor `ℓ_k`, the absolute answer already reaches what its input allows and (b) adds nothing:
+  (a) is then recommended. Otherwise (b), whose own M-E arm is predicted within one level of `ℓ_k`.
+- **Applied meanwhile:** nothing. Two-way notes in SM7 and colour § 3, apart from this entry, state the floor without
+  choosing.
+- **Waits:** TASK-M7-74 (M-E's quad-local arm), TASK-M7-47 (the View frame past `ℓ_switch`), TASK-M7-52 (the
+  generated projection's reading past `ℓ_switch`); RQ-797 (whether the per-quad `x₀` and `J_D` are uploaded at all).
