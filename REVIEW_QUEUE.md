@@ -957,3 +957,41 @@ if it is a tolerance, its value) is the owner's.*
   run the occupant state the reference's values (`1e-5`, `1e-14`) as their run condition, marked with this entry.
 - **Waits:** the occupant's production configuration (its `AzConfig`), with REQ-INT-080 and REQ-INT-105's values;
   TASK-M3-68 itself does not wait.
+
+## RQ-796: Aarseth–Zare's floor on `|R₃|` in the equations of motion has an f64 value only, `1e-300`, which is 0 at f32: the corpus gives no f32 value *(silence, a missing value, R-71; a one-way door, it changes what the occupant computes at f32 near a close approach of the unregularised side; Part 2b § "The equations of motion in fictitious time `τ`"; R-953; REQ-INT-105; code review 5873667061 of PR #502, C3; context: TASK-M3-68, TASK-M3-08)*
+
+*Queued 12 Nov 2026 by the implementer of TASK-M3-68 (the Aarseth–Zare occupant), fix round 1; each quote re-read on
+`main` at 416e5cd7. Nothing is chosen here.*
+
+*In plain English: Aarseth–Zare removes the singularity of two of the three pairs, but the third side, between the two
+bodies other than the reference body, keeps its `1/|R₃|` term. The equations guard it with a tiny floor so that a
+division by zero cannot happen. The contract gives that floor as `1e-300`, a double-precision number; in single
+precision, which the GPU runs, `1e-300` rounds to exactly 0, so there is no floor at all. The contract gives no
+single-precision value, so which value to use there is the owner's.*
+
+- **File, section:** `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference
+  body, the Levi-Civita inverse and the step control (transcribed)", "The equations of motion in fictitious time `τ`":
+  "on the state `(u₁, p₁, u₂, p₂, t)` with `E` held, `A` and `B` here not floored and `|R₃|` floored at `1e-300`
+  (`tb_az.py:114-118`)"; the same section, on the reference body: "Hence the floor on `|R₃|` (`tb_az.py:118`) and
+  `|R₂ − R₁|` in the predictive limit's `d_min`".
+- **The neighbouring rule:** the same section, R-953's note on the inverse map's guards: "`system.rs` floors at `TINY`
+  too, where `tb_az.py` floors at `1e-300`: `A` and `B` in `phys_from_state` (`system.rs:93-94`) and the three
+  separations in `energy_phys` (`system.rs:109-111`)". `TINY` is "one value per working precision, a calibration (R-71,
+  REQ-INT-105)", the owner's numbers `1e-37` at f32 and `1e-300` at f64. The note names no floor for `|R₃|` in the
+  equations of motion, so the transcription's `1e-300` stands there, an f64 value.
+- **The silence:** `1e-300` is below f32's least subnormal (about `1.4e-45`), so at f32 it is `0`, and no f32 value is
+  given.
+- **Options (measurable):** (a) the floor is `TINY` at each width (`1e-37` at f32, `1e-300` at f64 in the reference's
+  values), as R-953 maps `tb_az.py`'s other `1e-300` floors onto `TINY`, its value then following REQ-INT-105's
+  proposal; (b) a calibration of its own per width, proposed from the least pre-floor `|R₃|` over the close-encounter
+  fixtures, as REQ-INT-105's verify does for `A` and `B`; (c) no floor at f32, a non-finite `|R₃|` term then caught by
+  the march's explicit finiteness test (Part 2b, step 7). Each can be measured on `separation-floor --propose`'s
+  fixtures: the floored-step count and the least `|R₃|` reached at f32.
+- **Recommendation:** (a), as the reading most consistent with R-953, which treats `tb_az.py`'s `1e-300` floors as
+  `TINY` at each width.
+- **Applied meanwhile:** TASK-M3-68's kernel takes the floor as a parameter of the occupant's configuration
+  (`AzParams::r3_floor`), with no value in the kernel and no production configuration. Its tests and gates run with
+  `1e-300` at f64 and **no floor (0) at f32**, and say so in their module notes and in `separation-floor --propose`'s
+  output, until this entry is ruled.
+- **Waits:** the occupant's production configuration (its `AzConfig`), with REQ-INT-080's and REQ-INT-105's values;
+  TASK-M3-68 itself does not wait.

@@ -18,8 +18,10 @@
 //!
 //! **The conditions every run states.** The values the step control reads are calibrations, so each run here names
 //! the ones it ran at: `TINY` the reference's (`1e-37` at f32, `1e-300` at f64; R-953) unless the run varies it, the
-//! landing tolerance the reference's `LAND_EPS_REL` (`1e-5`, `1e-14`; RQ-795), R-160's `f = 0.02`, Part 2b's
-//! `|R₃|` floor `1e-300`, a step budget that does not bind, and the stepper RK4 (Part 2a's validation-grade pair).
+//! landing tolerance the reference's `LAND_EPS_REL` (`1e-5`, `1e-14`; RQ-795), R-160's `f = 0.02`, the `|R₃|` floor
+//! Part 2b's `1e-300` at f64 and **no floor (0) at f32**, a step budget that does not bind, and the stepper RK4 (Part
+//! 2a's validation-grade pair). Part 2b's floor is an f64 value, which is 0 at f32, and the corpus gives none at f32:
+//! every f32 run here has no floor on `|R₃|` until RQ-796 is ruled (R-71).
 
 use std::path::Path;
 
@@ -88,7 +90,8 @@ pub fn conditions<R: AzReal>(eta: f64, delta_sync: f64, landing: bool) -> AzPara
         delta_sync: at(delta_sync),
         tiny: reference_tiny(),
         predictive_f: at(0.02),
-        r3_floor: at(1e-300),
+        // Part 2b's `1e-300` at f64; at f32 no floor (0) until RQ-796 is ruled (the module's note).
+        r3_floor: R::at_width(0.0, 1e-300),
         land_eps_rel: R::at_width(1e-5, 1e-14),
         step_budget_rate: at(0.0),
         n_min: u32::MAX,
@@ -959,7 +962,8 @@ pub fn propose_floor() -> Result<String, String> {
     );
     say!(out,
         "Each fixture run under Aarseth–Zare + RK4 at η = {FLOOR_ETA}, Δ_sync = 0.125, with TINY the reference's \
-         (1e-37 at f32, 1e-300 at f64; R-953), the landing tolerance the reference's (RQ-795).\n"
+         (1e-37 at f32, 1e-300 at f64; R-953), the landing tolerance the reference's (RQ-795), and the |R₃| floor \
+         1e-300 at f64 and none (0) at f32, the corpus giving no f32 value until RQ-796 is ruled.\n"
     );
     say!(out,
         "| fixture | width | least A | least B | least A·B | least guarded component | floored | non-finite entries \

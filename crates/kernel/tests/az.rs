@@ -83,15 +83,16 @@ fn v<R: AzReal>(x: f64) -> R {
 }
 
 /// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8` (exact in binary), the reference's `TINY` (`1e-37` at
-/// f32, `1e-300` at f64, R-953) and landing tolerance (`1e-5`, `1e-14`; RQ-795), R-160's `f = 0.02`, Part 2b's `|R₃|`
-/// floor `1e-300`, a budget that does not bind, the clamp and the secant on. Test inputs, not the calibrations.
+/// f32, `1e-300` at f64, R-953) and landing tolerance (`1e-5`, `1e-14`; RQ-795), R-160's `f = 0.02`, the `|R₃|` floor
+/// Part 2b's `1e-300` at f64 and no floor (0) at f32, the corpus giving no f32 value until RQ-796 is ruled, a budget
+/// that does not bind, the clamp and the secant on. Test inputs, not the calibrations.
 fn params<R: AzReal>() -> AzParams<R> {
     AzParams {
         eta: v(0.01),
         delta_sync: v(0.125),
         tiny: R::at_width(1e-37, 1e-300),
         predictive_f: v(0.02),
-        r3_floor: v(1e-300),
+        r3_floor: R::at_width(0.0, 1e-300),
         land_eps_rel: R::at_width(1e-5, 1e-14),
         step_budget_rate: v(1e7),
         n_min: 1_000_000,

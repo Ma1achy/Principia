@@ -568,7 +568,8 @@ pub struct AzParams<R> {
     pub tiny: R,
     /// The predictive limit's `f` (R-160: 0.02); the limit is off where it is not positive.
     pub predictive_f: R,
-    /// The equations of motion's floor on `|R₃|` (Part 2b: `1e-300`, after `tb_az.py`).
+    /// The equations of motion's floor on `|R₃|` (Part 2b: `1e-300`, after `tb_az.py`, an f64 value; the corpus gives
+    /// none at f32, RQ-796, a calibration, R-71).
     pub r3_floor: R,
     /// The landing tolerance, relative to `dt_left`, the reference's `LAND_EPS_REL` (RQ-795): one value, read where the
     /// landing is tested and where the secant stops.
