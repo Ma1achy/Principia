@@ -43,6 +43,7 @@ use crate::eps_phys::EpsPhysGate;
 use crate::import::LiteratureImportGate;
 use crate::inspector::{InspectorHandlesGate, InspectorRoundtripGate};
 use crate::invariant_gradient::InvariantGradientGate;
+use crate::measure::benettin::{BenettinCalibrationGate, ShadowFormGate};
 use crate::nsub_bucket::NsubBucketGate;
 use crate::oklab::OklabRoundtripGate;
 use crate::projection_parity::ProjectionParityGate;
@@ -78,6 +79,7 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &DecodeAgreementGate,
     &LiteratureImportGate,
     &ProjectionParityGate,
+    &BenettinCalibrationGate,
 ];
 
 /// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.
@@ -109,7 +111,7 @@ pub struct MeasurementControl {
 }
 
 /// The registered measurement gates, in the order `--all` runs them, after [`REGISTRY`].
-pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[&CrossBackendGate];
+pub const MEASUREMENTS: &[&dyn MeasurementGate] = &[&CrossBackendGate, &ShadowFormGate];
 
 /// `gate.json`'s `measurement`: what it is measured under, in place of a threshold.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

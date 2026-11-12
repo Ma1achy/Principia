@@ -613,6 +613,13 @@ R-443 adds `chazy_escaper` and `chazy_qk[k]`, from the live state and the `ICDes
 > ```
 > (Alternative — ignore the partial interval and divide by `N_renorm · M_renorm · h` — is rejected: it discards real growth and makes the denominator not simply `step_count·dt`.) `completed_renorms` need not be stored under a uniform schedule: `completed_renorms = step_count / renorm_interval_steps` (derived). `ftle_valid` requires `completed_renorms > 0` (§6). `ftle` reads NaN whenever `ftle_valid` is false, with no sentinel: at `step_count = 0`, where the quotient is 0/0 (`ftle_valid`'s `n > 0` clause), and before the first completed renorm alike, so no consumer sees a value beside a false validity flag (R-253, R-254; the form R-245 gives `diffusion`).
 
+*12 Nov 2026 (R-972; TASK-M3-14's mark, applied per R-369, under physics review):* once a shadow's finalised sum
+`S + log(δ_current/δ₀)` is non-finite, the sample stores `S = S_FAILED`, `f32::MAX` (bits `0x7f7f_ffff`; `f64::MAX` at
+f64), and `r_sh`, `p_sh` its own `r`, `p`: failed-state values, never NaN (R-79). A real `S` stays far below it
+(`|S| ≤ 65535 · 103 ≈ 6.8e6`: at most one renorm per macro-step, each `|log(δ/δ₀)| ≤ 103` for finite nonzero f32 `δ`
+and `δ₀` in `[1e-6, 1e-2]`), so the mark is derived from `S` alone, with no new field or bit; §6's `ftle_valid` reads
+it by its bits (`S_FAILED_BITS`). *Was:* no failed-state value for `S`.
+
 > **`enc_01/02/12` and `dominant_pair` — MOVED to a separate symbolic-dynamics contract (`principia_symbolic_dynamics_contract.md`), no longer a payload blocker.** These are **not** an authoritative derivation and do not belong in the storage-layout spec: a two-generator (`a/b`) word does not yield three pair-tallies by a symbol histogram — attribution requires the generator↔cut convention, the punctured-sphere relation, and a deterministic third-pair algorithm. That is a topological-dynamics problem, not a payload-bits problem. The payload stores the word (§3); *interpreting* it into pair tallies is specified in the symbolic-dynamics contract. (`dmin_pair` is a *stored* latched fact and is unaffected.)
 
 **Removed from storage entirely** (were eager-era fields): `arc_length_n` (weak/redundant); peak substep (`saturated` + live read replace it); `ftle_valid` (removed as a stored bit; validity is a DERIVED helper — conditional on tier/state/n/renorms, NOT unconditionally true); `energy_drift`/`Lz_drift` current (derived); `orbit_count`/`retrograde`/`encounter_count`/per-pair tallies/`dominant_pair` (derived); ensemble spread (a resolve-stage footprint quantity, not per-sample); the entire `trajectory_stats` u32 (fields derived or moved); `timeout` state (merged into `bounded` — reaching horizon without escape/collision IS bounded).

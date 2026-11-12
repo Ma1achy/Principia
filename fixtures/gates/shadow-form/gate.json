@@ -1,0 +1,5 @@
+{
+  "gate": "shadow-form",
+  "inputs": ["control-self.json", "control-doubled.json", "periodic-set.json"],
+  "measurement": { "requirement": "REQ-VAL-038", "ruling": "R-649" }
+}

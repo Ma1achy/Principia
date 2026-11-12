@@ -210,12 +210,56 @@ where
 }
 
 /// The integration of `ic` under `uniforms` by the occupant `A`, `cadence` the per-substep callback it passes in
-/// (integrator_contract Part 1's loop, under `ADVANCE`; the module's note). The run starts from `ic` alone.
+/// (integrator_contract Part 1's loop, under `ADVANCE`; the module's note). The run starts from `ic` alone, and no
+/// other trajectory marches beside it: [`integrate_with_co`] with none.
 #[inline]
 pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
     ic: &Ic<R>,
     uniforms: &WrapperUniforms<R>,
     cadence: &mut C,
+) -> SimStateBaseOf<R> {
+    integrate_with_co::<A, R, C, ()>(ic, uniforms, cadence, &mut ())
+}
+
+/// A trajectory the wrapper marches beside the sample's own, macro-step by macro-step (dd_integrator §3.4: the
+/// wrapper runs the per-`STEP` sequence on every marching trajectory it owns): the Benettin shadow
+/// ([`super::benettin`]). It is never the sample: nothing it does reaches the sample's state or its cadence.
+pub trait CoMarch<R: AdvanceReal> {
+    /// Runs after the sample's macro-step from the grid's `t_now`: `start` the state it began from, `end` the state it
+    /// reached, `params` its `dt_macro` and `N_sub`, and `taken` the substeps it took, `N_sub` unless its `done` cut
+    /// the macro-step short. `A` is the bound occupant.
+    fn after_macro<A: Advance>(
+        &mut self,
+        start: &State<R>,
+        end: &State<R>,
+        t_now: u32,
+        params: &AdvanceParams<R>,
+        taken: u32,
+    );
+}
+
+/// No trajectory beside the sample's.
+impl<R: AdvanceReal> CoMarch<R> for () {
+    #[inline]
+    fn after_macro<A: Advance>(
+        &mut self,
+        _start: &State<R>,
+        _end: &State<R>,
+        _t_now: u32,
+        _params: &AdvanceParams<R>,
+        _taken: u32,
+    ) {
+    }
+}
+
+/// [`integrate_with`], with `co` marched beside the sample: after each macro-step the sample takes, `co` is handed
+/// the macro-step's start and end states, its parameters and the substeps taken ([`CoMarch::after_macro`]).
+#[inline]
+pub fn integrate_with_co<A: Advance, R: WrapperReal, C: Cadence<R>, M: CoMarch<R>>(
+    ic: &Ic<R>,
+    uniforms: &WrapperUniforms<R>,
+    cadence: &mut C,
+    co: &mut M,
 ) -> SimStateBaseOf<R> {
     let mut state = State {
         m: ic.m,
@@ -240,6 +284,7 @@ pub fn integrate_with<A: Advance, R: WrapperReal, C: Cadence<R>>(
             n_sub,
         };
         let out = A::advance(&state, &geom, macro_step, macro_step + 1, &params, cadence);
+        co.after_macro::<A>(&state, &out.state, macro_step, &params, out.substeps);
         state = out.state;
         geom = out.geom;
         total_substeps += out.substeps;

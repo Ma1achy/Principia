@@ -7,6 +7,10 @@
 // Part 3a; R-72, R-79). A tier-absent derived scalar and an invalid read hold exactly these bits.
 const CANONICAL_QNAN_BITS: u32 = 0x7fc00000u;
 
+// The bits of `S`'s failed-state value, `f32::MAX`'s: the mark a sample's `S` stores once its Benettin shadow's
+// finalised sum has gone non-finite, never NaN (R-79), so `ftle_valid` is false from then on (payload §6; R-972).
+const S_FAILED_BITS: u32 = 0x7f7fffffu;
+
 // The word an unbound word buffer reads: payload zero, `length_raw` the truncation sentinel, so every word-derived
 // validity predicate reads it as invalid (lowering Part 3a; R-72).
 const FGW_UNBOUND: vec4<u32> = vec4<u32>(0u, 0u, 0u, 0xfe000000u);
@@ -71,10 +75,12 @@ struct SimState {
 // `n_renorm` is 0.
 fn completed_renorms(n: u32, n_renorm: u32) -> u32 { return select(0u, n / max(n_renorm, 1u), n_renorm > 0u); }
 
-// Whether `ftle` is usable: the FTLE tier on, the sample not failed, at least one step and at least one completed
-// renormalisation (payload §6). Derived, never stored; `ftle` reads NaN whenever it is false (R-254).
-fn ftle_valid(state: u32, ftle_tier_on: bool, n: u32, benettin_renorms: u32) -> bool {
-    return ftle_tier_on && !sd_is_failed(state) && n > 0u && benettin_renorms > 0u;
+// Whether `ftle` is usable: the FTLE tier on, the sample not failed, at least one step, at least one completed
+// renormalisation, and the shadow's sum `s_sum` not the mark `S_FAILED_BITS`, compared by its bits (payload §6;
+// R-972). Derived, never stored; `ftle` reads NaN whenever it is false (R-254).
+fn ftle_valid(state: u32, ftle_tier_on: bool, n: u32, benettin_renorms: u32, s_sum: f32) -> bool {
+    return ftle_tier_on && !sd_is_failed(state) && n > 0u && benettin_renorms > 0u
+        && bitcast<u32>(s_sum) != S_FAILED_BITS;
 }
 
 // The shadow's current separation `δ = ‖x' − x‖`, the Euclidean norm of the shadow's offset over the twelve
@@ -245,7 +251,7 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f3
     let s_closure_step_reserved = simstate_buffer[i].closure_step_reserved;
     let w = word_buffer[i];
     let n = tm_t_end_step(s_times);
-    let ftle_ok = ftle_valid(s_packed_a, true, n, completed_renorms(n, params.n_renorm));
+    let ftle_ok = ftle_valid(s_packed_a, true, n, completed_renorms(n, params.n_renorm), s_S);
     let delta = benettin_delta(s_r, s_p, s_r_sh, s_p_sh);
     var out: SimState;
     out.r = s_r;
