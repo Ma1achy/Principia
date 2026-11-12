@@ -248,7 +248,11 @@ kernel/  (Φ maps · decode · canonicalise · wrapper · occupants KDK/Yoshida/
 The scanner produces registry entries `{id, slot, source, category, uniformSchema, inputDomains}` keyed by directory (slot) — an occupant is valid only in its slot (its signature). **`inputDomains` (R-53):** each node declares the domain of each input it maps from; by default it inherits the manifest's per-field domain (the fixed `[lo, hi]` of `range_norm`, render_gui_spec §10.1), and a node that transforms its field declares its own. *7 Nov 2026 (R-815, RQ-677 (b)):* an untransformed input's
 registry entry records "inherits", and its domain is resolved per wire at assembly from the wired field's manifest
 range; a field whose range is unbounded (`Range::UNBOUNDED`) takes `range_norm`'s `(0, 1)`, as the generator's fallback
-does. The generated legend samples each node over these domains (render_gui_spec §G6). The slot dropdowns read this registry; the assembler splices from it. **A file appearing in `frag/colour/` is the act of registering a shader.**
+does. *12 Nov 2026 (R-978, the owner's answer on RQ-786, option (b)):* for a field with exactly one finite end the
+domain keeps that end and takes the other as the measured one per draw, resolved from the reduction that fills `u_range`
+(or the frozen range, R-581), so it is no longer fixed at assembly; built with the generated legend (TASK-M8-22,
+REQ-GEN-046). Until then such a wire stays refused, as built (`Err(Unruled)`). *Was:* no domain was stated for such a
+field (RQ-786). The generated legend samples each node over these domains (render_gui_spec §G6). The slot dropdowns read this registry; the assembler splices from it. **A file appearing in `frag/colour/` is the act of registering a shader.**
 
 **The declaration format (R-72; REQ-GEN-027; TASK-M1-04).** An occupant's `.wgsl` file declares its `uniformSchema`
 and `inputDomains` in line comments, so the file stays plain WGSL; the scanner and the assembler read the same lines.

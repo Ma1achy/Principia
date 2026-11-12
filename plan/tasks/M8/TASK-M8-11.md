@@ -1,9 +1,9 @@
 # TASK-M8-11 — The Trajectory panel: summary, real space, the turning shape sphere, kept orbits
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-088, REQ-GUI-089, REQ-GUI-054
-- **Depends on:** TASK-M8-09, TASK-M8-87, TASK-M6-27, TASK-M2-33
-- **Needs (earlier milestones):** REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047, REQ-GUI-188
+- **Closes:** REQ-GUI-088, REQ-GUI-089, REQ-GUI-054, REQ-GUI-440
+- **Depends on:** TASK-M8-09, TASK-M8-87, TASK-M6-27, TASK-M2-33, TASK-M3-73
+- **Needs (earlier milestones):** REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047, REQ-GUI-188, REQ-GUI-438
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
 - **Size:** ~450 lines
@@ -19,6 +19,7 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "05 Inspector — one IC, its trajectory, one timeline"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
+- `decisions.md` § "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
 
 ## Deliverables
 - `crates/gui/src/widgets/shape_sphere.rs` — sphere / unwrapped toggle, landmarks, turn checkbox, view-only rotation.
@@ -31,6 +32,7 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 - `cargo xtask screenshot 01_main` and `cargo xtask screenshot 05_inspectors` (sphere and unwrapped; turn cleared) — screenshots against 01_main.png and 05_inspectors.png in sphere and unwrapped modes; with 'turn' cleared two frames are identical (REQ-GUI-089).
 - `cargo test -p gui sphere_unwrap_agree` — points picked in the 3D view and the unwrap map to the same n; orbiting leaves the stored n(t) unchanged; the figure-eight run through a collinear configuration draws n(t) across φ = π/2 at the signed n̂ in both views, with the canonical bodies shown and hidden; control: a path drawn from the canonical representative's n (|n₂|), which bounces at the equator, fails (REQ-GUI-054, R-544 item 8).
 - Proposal: the shape sphere's rotation rate in degrees per second, frame-rate independent; the human confirms it at the M8 gate (REQ-GUI-157). Proposed by TASK-M6-27 since R-390, the first task to need the value; this task uses it.
+- `cargo test -p gui trajectory_summary_ftle_provisional` — the summary line's FTLE states the calibration as provisional and unsupported on close-encounter chaotic orbits while REQ-INT-076's values are unconfirmed; controls as REQ-GUI-440's verify (REQ-GUI-440).
 
 ## Notes
 - The turning rate ("slowly") is not given. The listen button's sound is TASK-M8-12.
@@ -47,3 +49,4 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
   `E₀`, the playhead, the two buttons) is kept: RQ-462 (a), ruled so by R-556.
 - R-544 (21 Oct 2026) item 8: "Show the canonical bodies" may stay as a view of the bodies, but must not fold the path; REQ-GUI-054 gains the syzygy arm (gui review 5603356729 of PR #273, G4, applied per R-369).
 - R-627 (27 Oct 2026): this task runs on the real engine, so where it depended on a task R-627 moves to the mock it depends on that task's real-engine side, which depends on it: TASK-M8-05 by TASK-M8-87 (applied per R-369). *Was:* "- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33".
+- *12 Nov 2026 (R-976, RQ-794 (c); code review 5875707244 of PR #503, F4; applied per R-369: task scoping):* REQ-GUI-437 is split per surface showing the FTLE; this task closes REQ-GUI-440, the Trajectory panel's summary line where it shows the FTLE, reading the one source REQ-GUI-438 (TASK-M3-73) builds, so TASK-M3-73 joins Depends on. *Was:* "Closes: REQ-GUI-088, REQ-GUI-089, REQ-GUI-054"; "Depends on: TASK-M8-09, TASK-M8-87, TASK-M6-27, TASK-M2-33"; "Needs (earlier milestones): REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047, REQ-GUI-188".

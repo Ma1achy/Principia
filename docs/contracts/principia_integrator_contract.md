@@ -130,6 +130,13 @@ column is the per-stepper binding with regularisation `none` only; it is revisit
 of Heggie's pairs are measured (R-561's table). *Was:* "the default occupant is Heggie × RK4 at every tier meanwhile,
 and whether a tier keeps another default is RQ-529." *Was:* Yoshida-4's row read "Medium–High (default)".
 
+*12 Nov 2026 (R-974, the owner's answer on RQ-793, option (a)):* each occupant gains a **joint step** for the FTLE
+shadow's displacement form, marching `(x, δ⃗)` together: `x` bit-identical to its `STEP`, `δ⃗` advanced through the same
+stages, the force difference formed from pair separations, never from an absolute `x'`; for KDK, Yoshida-4, Yoshida-6
+and RK4, and for the default regularised occupant (Part 2b, R-560). Whether that difference is formed plainly in f32
+(a1) or cancellation-free (a2) is chosen by a measurement whose criterion TASK-M3-72 writes before any run (R-649);
+TASK-M3-72 builds it and defines the shadow's projection, energy and collision test from `x + δ⃗`, under physics review.
+
 **The two reversibility flags (R-500).** `step_reversible` says the occupant's `STEP` is time-symmetric at a fixed
 step: one `STEP(dt)`, momentum negation, `STEP(dt)`, negation returns the state to rounding level, with no wrapper
 projection or substepping (dd_integrator §5, test 3). A symmetric composition is step-reversible whatever the sign of
@@ -786,6 +793,16 @@ must invoke them, so **pass them in rather than doing them after** — otherwise
 silently skip them and nothing catches it. That cadence is load-bearing: it is what catches
 close-encounter drift spikes that recover before termination, which is the regime Burrau lives in.
 
+*12 Nov 2026 (R-974):* the joint step of Part 2's dated line widens this seam as well: an occupant that implements
+`ADVANCE` marches the shadow's `(x, δ⃗)` with the sample, `x` bit-identical to its `ADVANCE`, as TASK-M3-72 defines it.
+*12 Nov 2026 (R-974, physics review 5875695467 of PR #503, F1, a recorded consequence):* under an occupant that owns
+its time mapping (Heggie × RK4, the default, `dτ = S^{3/2}/(R₁R₂R₃) dt`, Part 2b, R-161; logH alike), stepping the
+sample and its shadow by the same `Δτ` moves them by different `Δt`, so `δ⃗` gains a component along the flow and is no
+longer a separation at equal physical time; the finite-difference estimator, ‖δ₀‖'s meaning and dd test 10 then fail.
+How the joint step keeps the sample and its shadow at the same physical time under such an occupant is a definition
+(R-72) TASK-M3-72 writes under physics review, its options including: carry `δt` as a component of the displacement
+and resynchronise it at each renormalisation, or step the shadow's `τ` so that it lands on the sample's `t`.
+
 **Cost 2 — the wrapper can no longer verify `N_sub`.** It must trust the occupant's reported
 `total_substeps`. That number is not cosmetic: measured across 68,685 leaves it is **bimodal with a
 100× p1→p99 range** (`principia_dd_tree_dump_analysis.md` §7), and cost-aware priority depends on it
@@ -1046,6 +1063,7 @@ Escape and collision are where the categorical outcome comes from — every outc
   - **Coupling to `N_max`:** the usable minimum `r_coll` is bounded below by what the substepper resolves before the cap — very small `r_coll` fills the field with **substep-saturated (under-resolved, flagged) samples** (the integration floor, Part 6), not terminations. Either surface the coupling in the UI, or let very-small `r_coll` raise `N_max` at a cost the quality controller accounts for. Under a regularised occupant there is no `N_max`; its bound is Part 6's step budget (R-563). *Was:* "This is the same floor KS regularisation (v2) would lift." (R-562).
   - **Benchmarks pin it:** literature comparisons (Burrau especially — it *is* a close-encounter problem) assume a specific regularisation, so the ground-truth validation suite records the `r_coll` used (`principia_validation_ground_truth_note.md`).
   - **The collision test's floor (a definition; 11 Nov 2026, R-954, the owner's answer on RQ-782).** The test reads the substepper's squared separation, formed from each position cast to f32 (`principia_dd_integrator.md` § 3.3 and § 3.6; R-547), so it resolves a separation only to the f32 spacing of the positions at the pair's coordinates: about `6·10⁻⁸` for `|x|` in `[0.5, 1)` and `1.2·10⁻⁷` in `[1, 2)`, in the `I = 1` gauge (Part 5). **Below that spacing, `r_coll` means "collision at f32 coincidence":** a pair collides when its f32 positions coincide, which can be at a true separation larger than `r_coll`, and `d_min` is resolved only to that spacing. **The slider stays valid to 0,** as above. **The floor is recorded with the run,** beside `r_coll`, so an output says whether its `r_coll` lay below what the test resolves; what is recorded, and how it is computed from the run, is a definition TASK-M3-71 writes into this Part under physics review (R-72; REQ-EVT-035). The default `10⁻³` lies four decades above the floor. The test itself is unchanged: TASK-M3-09's threshold of at least `2⁻¹²⁶` for every `r_coll > 0` stands, so f32-coincident bodies always collide.
+    *12 Nov 2026 (R-973, the owner's answer on RQ-792, option (a) in its cautious form):* the form of the record is ruled: a per-sample byte holding the floor's exponent, latched as the largest floor over every state at which the test was near firing (`d_quant(s) < r_coll + floor(s)`) and over the `d_min` state, each output's flag read as `r_coll < floor`. TASK-M3-71 writes the bit-level definition here, under physics review (REQ-EVT-035).
 
 **Softening, `epsilon` (R-654).** Where `ε ≠ 0` the force law is Plummer's, `V = −Σ mᵢmⱼ/√(r² + ε²)` and `Fᵢ = −∂V/∂rᵢ`, a different force law at any `ε` (generation_root § "Open"), tagged and never pooled with `ε = 0`. `ε` is canonical, a fraction of the initial hyperradius `R` fixed at `t = 0`, never co-moving; like `r_coll` it is a **recorded parameter**, in every output header. The gauge (Part 5, `M = I = 1`) has `R₀ = √(I₀/M) = 1`, so the sim-key value is both the fraction and the length: it is read as given, and never recomputed from the state, whose `I` is 1 only to rounding. `E`, `E₀` and the drift meters of Part 1 read the softened `V`. Runs with `ε ≠ 0` are refused at dispatch until TASK-M9-39 lands. *2 Nov 2026 (R-670, closing RQ-656):* under `ε ≠ 0`, the collision test stays on geometric `r`, `min ‖rᵢ − rⱼ‖ < r_coll`; softening is offered on the unregularised occupants only, and a regularised occupant (Part 2b) refuses `ε ≠ 0` with a typed reason; the Chazy classifier's `E` is the softened `E_0`; `E_rel` and the ionisation gate's three pairwise relative energies take the softened potential, `d` read as `√(d² + ε²)` in the potential term only (identical at `ε = 0`; `tau`'s measured gap and `E_rel`'s to-re-measure note were not taken under softening); the decode's `V₀` is softened (`principia_dd_decoder.md` § 3.6); a view refuses `ε ≠ 0` with any `Some(E*)` (§ 3.7); and the substep law stays on the geometric `d²` and `r_min`. *Was:* "The collision test, the regularised occupants, the Chazy classifier, `E_rel` and the ionisation gate, the decode's `V₀`, `η_E`'s `U` and the substep law under `ε ≠ 0` are RQ-656."
 

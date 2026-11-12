@@ -364,13 +364,20 @@ or unknown, so nothing depends on remembering a list; it replaces the orchestrat
 counted from the head's required checks going green, or `merge-ready` goes on only once they are green.
 What is red `main` (R-907: "a correctness failure (physics, validation, bit-for-bit, golden) is red main under R-681;
 any other failure files a top-priority task without freezing PR work"): `ci.yml`'s `per-merge` job failing on `main`'s
-head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose summary names each failed job and why. A
+head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose summary names each failed job and why.
+*12 Nov 2026 (R-982, the owner's veto of D-2 of that day's report: "Any red job on main is red; make the per-merge
+verdict cover every job so the two can't disagree."):* any failed job of `ci.yml`'s run on `main` is a red `main`, a
+process test, the lints, `cargo xtask ci` or the web skeleton as much as a product test; an install step's network or
+archive-download failure reads "no result", never green, and holds as red does (R-979, a reading flagged for the
+owner). Until TASK-M0-59 makes the verdict cover every job, the orchestrator reads every job of the run itself. The vetoed
+policy is kept as its *Was*: "A
 run of `ci` on `main` that failed with `per-merge` passing is not red `main`: its failures are outside correctness (a
 process test, the lints and build beside the tests, `cargo xtask ci`, the web skeleton, a runner or setup step), filed
 as one issue labelled `per-merge`, a top-priority task the orchestrator works without stopping pull-request work. The
 run's own conclusion can't carry this: the jobs that run the product suite run process tests too, and none of them may
-pass with a failing step (REQ-TOOL-223, R-235, R-335). Applied per R-369/R-812.
-The verdict reads each failed test step in its own part of the job's log, and is red whenever part of the product
+pass with a failing step (REQ-TOOL-223, R-235, R-335). Applied per R-369/R-812."
+What follows describes the verdict as built today, and stands until TASK-M0-59 changes it to cover every job (R-982);
+it is not the vetoed policy. The verdict reads each failed test step in its own part of the job's log, and is red whenever part of the product
 suite did not run: a test step skipped after a failed one (but a step of process tests alone), or nextest counting
 fewer tests run than it selected. The `ci`, `ci-workspace` and `gpu-kernel` profiles run every test after a failure
 (`fail-fast = false`), and each later product test step of their jobs runs whatever an earlier one ended in, but for
@@ -486,9 +493,10 @@ On a code change the jobs run in parallel:
   class: CI's own tests, the plan checks', the negative-control registry's, the job queue's, the deps rules' synthetic
   workspaces' and the like), less their own slow tier, only when the change touches `.github/`, `xtask/`, `scripts/`,
   `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` (`scripts/ci_changes.sh`'s `process`). A failing process test
-  is read and fixed in its pull request. On `main`, the per-merge tier's verdict brings the owner's "A failing
+  is read and fixed in its pull request. On `main`, a process test failing is a red `main` (R-982, 12 Nov 2026;
+  § "Merging", what is red `main`). *Was:* "On `main`, the per-merge tier's verdict brings the owner's "A failing
   process test never makes main red; it files a task" (8 Nov 2026): a process test failing there is filed as a task,
-  and `per-merge` passes (§ "Merging", what is red `main`). The orchestrator's merge script
+  and `per-merge` passes (§ "Merging", what is red `main`)." The orchestrator's merge script
   refuses a merge with a red `process` job on the head, though branch protection does not require it;
 - `web-skeleton`, advisory: the v1 web skeleton's wasm build.
 Every job bearing a required check runs on every pull request whose run is not cancelled, `if: !cancelled()`,
@@ -510,8 +518,11 @@ and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xt
 decode-agreement`), the golden and screenshot runners' self-tests, the release profile (R-547), `cargo xtask ci`, the
 controls run among it, and every process test. They are `ci.yml`'s per-merge tier (the owner's CI model, R-909 item 2,
 order step 3), the full suite's jobs, on a push only, each merge commit in a run of its own, bearing no required check,
-and last `per-merge`, their verdict: a correctness failure fails it, a red `main`; any other failure is filed as a
-top-priority task, an issue labelled `per-merge` (§ "Merging"). A head that changes only prose a test reads does not run that test unless it changes the
+and last `per-merge`, their verdict. *12 Nov 2026 (R-982, the owner's veto of D-2 of that day's report):* any failed job
+of the run is a red `main`, an install step's network or archive-download failure reading "no result", never green
+(R-979; § "Merging", what is red `main`); the built verdict follows once TASK-M0-59 lands, and until then the
+orchestrator reads every job itself. *Was:* "a correctness failure fails it, a red `main`; any other failure is filed as
+a top-priority task, an issue labelled `per-merge` (§ "Merging")". A head that changes only prose a test reads does not run that test unless it changes the
 machinery, so a contract's renamed heading can turn `main` red after a green pull request (R-662). New code that loads
 a data file for behaviour adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a
 literal data path missing from it.
@@ -802,6 +813,10 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 | Agents at once | 3 at normal (R-277); at warning, 3 unless the Mac is swapping, and then 2 (R-391's trial, below; R-277's 2 at warning is the fallback); at critical only the running work finishes (R-277); never more than 3 (R-262) | the same levels as R-277 gives them, 2 at warning (R-391's trial is Mac only), and (R-347) no more agents than `nproc` / 4, R-347's cloud rule, set when each agent built with 4 jobs (R-228, superseded by R-658, whose queue is Mac only) |
 | Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"` |
 | Build settings | heavy commands through the job queue only, each job with `CARGO_BUILD_JOBS` and `RUST_TEST_THREADS` at the core count (R-658, below); `CARGO_INCREMENTAL=0` | the same |
+
+*12 Nov 2026 (R-981, the owner's word on D-1 of that day's report: "Don't exceed the agent limit again."):* the
+heavy-agent cap in force is never exceeded, not even while the job queue runs the builds one after another; a dispatch
+that would exceed it waits for a slot.
 
 **The swap check (R-391, a trial from 6 Oct 2026; Mac only).** At warning, before each dispatch, read "Pageouts" from
 `vm_stat` twice, 60 s apart (`vm_stat | awk '/Pageouts/ {print $2}'`; wait with Monitor, not a foreground `sleep`).
@@ -1114,6 +1129,10 @@ A throwaway `measure/<what>` branch may be pushed so that CI takes a measurement
 RQ-164's ubuntu mutants timing were taken this way). Record the number in the PR or `decisions.md`, delete the branch
 straight after, and never open a PR from it. If the permission classifier refuses the push, show the human the rule;
 don't route around it.
+*12 Nov 2026 (R-983, the owner's word on D-26 of that day's report: "Deleting your own measurement branch is fine when
+its commit is recorded; anything else asks first."):* the orchestrator deletes a measurement branch it made itself only
+once that branch's commit is recorded, in the PR or `decisions.md`, so it can be restored; deleting any other branch,
+or one whose commit is not recorded, is asked of the owner first.
 
 ## Pitfalls
 

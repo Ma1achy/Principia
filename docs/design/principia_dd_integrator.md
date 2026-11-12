@@ -168,6 +168,12 @@ Linear, exact-symmetry housekeeping; keeps f32 dynamic range on internal structu
 
 **Per-trajectory, not per-pixel.** The projection acts on *one* physical system's `{rᵢ, pᵢ}`, and under the uniform-sample model (sampling/SSAA note) a pixel carries several independent trajectories — the base, its Benettin FTLE shadow, and (per nominal sample) E ensemble copies each with their own shadow. **Each is projected independently, every step**, because each is an independent integration whose own CoM drifts under its own roundoff. In particular a **shadow trajectory must be CoM-projected on its own** — if it inherited the base's projection instead of computing its own, its uncorrected drift would corrupt the Benettin separation and thus the FTLE. The wrapper runs the full per-`STEP` sequence (project, monitor, detect) on every marching trajectory it owns; "per `STEP`" means per step *of each trajectory*.
 
+*12 Nov 2026 (R-972, the owner's answer on RQ-791, option (d)):* **a shadow's detectors monitor only.** Every detector
+run on a Benettin shadow watches and never ends the shadow's march: where one would fire (today the collision test, the
+shadow's only terminal), the shadow marches on through, still projected, monitored and detected on its own every step.
+Nothing a shadow's detector does reaches the sample's march, outcome or fields; the sample's own detectors are
+unchanged. *Was:* the paragraph above said the shadow is detected, and nothing of what its terminal does.
+
 ### 3.5 Invariant monitoring (per `STEP`, post-projection)
 
 ```
@@ -314,6 +320,14 @@ outcome entropy   H = −Σᵢ pᵢ log pᵢ            (categorical final diagn
 spread            σ²_T = (1/(E+1)) Σₖ ‖Φ_T(x₀⁽ᵏ⁾) − x̄(T)‖²     (over the footprint's E+1 samples, at resolve)
 ```
 Deliberately resolution-dependent (footprint shrinks with zoom) — a **footprint** quantity (one value per nominal sample, shared by its copies; does not sharp-edge AA), vs FTLE the **point** quantity (per-sample, anti-aliases). Total per nominal sample at full tier: **~2(E+1)** integrations (E+1 samples, each + its Benettin shadow).
+
+**The Benettin shadow alone at a would-be terminal, or with `S` non-finite (12 Nov 2026, R-972, RQ-791 (d) + (a)).**
+Where only the shadow would reach a terminal, it does not: its detectors monitor only (§3.4), and it marches on as a
+moving neighbour, renormalised every `n_renorm` steps as above. Where only the shadow's `S` goes non-finite, the sample
+healthy (a blow-up while marching through a close approach among the causes), the FTLE is invalid from then on:
+`ftle_valid` is false, `ftle` reads NaN and every aggregate drops the sample (payload §6; R-254, R-255). Storage never
+holds NaN (R-79): the mark that records it is TASK-M3-14's to define, under physics review. *Was:* the block above
+presumed a shadow that moves, and said nothing of a shadow that stops or goes non-finite.
 
 ---
 
