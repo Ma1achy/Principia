@@ -81,9 +81,10 @@
 # fails, naming it, and nothing is written anywhere else. On a hit the job downloads nothing; on a miss it downloads as
 # above, and `register` checks the download and moves it into the cache. Either way the cache's copy is checked, its
 # length and SHA-256 against those recorded, before it is imported: never trusted by its name. The cache keeps this
-# image and the one used before it, no more. The hosted job still builds on every `wsl-register` dispatch: no job may
-# wait on a self-hosted one (`ci_self_hosted.rs`: never gathered), and a run reads another's artifacts only with a
-# token, so the hosted side can't know what the PC holds. `wsl-proofs` builds as before: proof 5 is this run's rebuild.
+# image and the one used before it, no more. The hosted job still builds on every `wsl-register` dispatch: it can't
+# learn what the PC holds (no job may wait on a self-hosted one, `ci_self_hosted.rs`: never gathered; and a run reads
+# another's artifacts only with a token), and keeping its own build in the Actions cache waits on RQ-807, as R-285 and
+# R-326 don't allow that cache. `wsl-proofs` builds as before: proof 5 is this run's rebuild.
 #
 # The paths: what `scripts/ci_changes.sh` calls a GPU path, written as a filter, less R-692's five paths of `gui`. Docs-only
 # pushes run nothing (R-711 item 5); nor do `gui` and `prin`, which no job here builds. `schedule` and
