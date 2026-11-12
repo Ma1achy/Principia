@@ -564,9 +564,17 @@ pub fn report_complete(candidates: &[Candidate], orbits: &[Orbit]) -> bool {
         && candidates.iter().all(|c| {
             c.runs.len() == 2 * orbits.len()
                 && orbits.iter().all(|o| {
-                    [Precision::F32, Precision::F64]
+                    // Two runs, one at each precision. Written so (R-197): a count of exactly one per precision, over
+                    // two precisions, passed the same with its precision test inverted, an equivalent mutant.
+                    let mine: Vec<Precision> = c
+                        .runs
                         .iter()
-                        .all(|&p| c.runs.iter().filter(|r| r.0 == o.name && r.1 == p).count() == 1)
+                        .filter(|r| r.0 == o.name)
+                        .map(|r| r.1)
+                        .collect();
+                    mine.len() == 2
+                        && mine.contains(&Precision::F32)
+                        && mine.contains(&Precision::F64)
                 })
         })
 }
