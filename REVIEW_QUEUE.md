@@ -552,20 +552,19 @@ each such pixel's own starting system, and may use the centre plus the pixel's o
     words, so the owner's.
   - **Q2 (ii) A tier-3 record carries centre plus difference, summed on the GPU.** The words read literally. Needs Q1
     (b) or (c) for tier-3 quads, with their bit issues, and buys no depth (deep zoom §2:87).
-- **Recommended:** Q1 (a), recommended by the owner, 12 Nov 2026, and Q2 (i), also recommended by the owner, 12 Nov
-  2026 (their words in this entry's header). On Q2: the owner doesn't recall what R-935's words "its record carrying
-  its difference from the quad's centre" were meant to say, and
-  (i) keeps the GPU free of chart arithmetic, which is the purpose of R-926 (item 5: "The GPU only integrates records.
-  No chart code in the integrator."). Forming the sample's chart input quad-locally on the CPU (centre plus offset, in
-  f64) is compatible with (i). Q2 still reads the owner's words, so it is the owner's to rule. Measurable alternative
-  for Q1, written before any run:
-  bytes uploaded per patched quad under (a) and (b), reported as their ratio (expected about `N²·136 B / 180 B`, about
-  190 at `N = 16`, *inferred*) and as a share of the tier's hard cap on bytes (REQ-PERF-040); and M-S, the audit's
-  seam measurement, run under (a) and (b): patch records against exact records on both sides of 1,000 quad edges, on
-  the latent and `(L_z, E)` charts at depths 21 to 25, at fixtures as RQ-798's fixture rule states them, the seam
-  difference per component reported as a ratio to the in-quad adjacent difference at the same depth, and the
-  outcome-flip rate across seams against the in-quad rate and the one-ulp chaos baseline (R-84); positive control, one
-  quad's `x₀` offset by two ulps must show as a seam, or the run is void.
+- **Recommended:** Q1 (a), recommended by the owner, 12 Nov 2026, and Q2 (i), also recommended by the owner, 12 Nov 2026
+  (their words in this entry's header). On Q2: the owner doesn't recall what R-935's words "its record carrying its
+  difference from the quad's centre" were meant to say, and (i) keeps the GPU free of chart arithmetic, which is the
+  purpose of R-926 (item 5: "The GPU only integrates records. No chart code in the integrator."). Forming the sample's
+  chart input quad-locally on the CPU (centre plus offset, in f64) is compatible with (i). Q2 still reads the owner's
+  words, so it is the owner's to rule. Measurable alternative for Q1, written before any run: bytes uploaded per patched
+  quad under (a) and (b), reported as their ratio (expected about `N²·136 B / 180 B`, about 190 at `N = 16`, *inferred*)
+  and as a share of the tier's hard cap on bytes (REQ-PERF-040); and M-S, the audit's seam measurement, run under (a)
+  and (b): patch records against exact records on both sides of 1,000 quad edges, on the latent and `(L_z, E)` charts at
+  depths 21 to 25, at fixtures as RQ-798's fixture rule states them, the seam difference per component reported as a
+  ratio to the in-quad adjacent difference at the same depth, and the outcome-flip rate across seams against the in-quad
+  rate and the one-ulp chaos baseline (R-84); positive control, one quad's `x₀` offset by two ulps must show as a seam,
+  or the run is void.
 - **Applied meanwhile:** nothing. The superseded lines are marked *Was* in the chart audit's record-corrections PR (its
   F7 and F9), without choosing an option.
 - **Waits:** TASK-M2-87 (the record contract), TASK-M4-05 (flat-grid compute), TASK-M5-04, TASK-M6-07, TASK-M6-08; the
@@ -721,9 +720,8 @@ library; this would do the same for every maths function the chart code can reac
     implementation may be slower, which M-A then measures.
   - **(b) Keep the platform library,** and state that bitwise claims hold per machine and per OS. That amends what
     R-521 and R-921 claim across machines.
-- **Recommended:** (a), recommended by the owner, 12 Nov 2026 (their words in this entry's header), before any record
-  is written on the new route. Measurable
-  alternative, criterion written before any run:
+- **Recommended:** (a), recommended by the owner, 12 Nov 2026 (their words in this entry's header), before any record is
+  written on the new route. Measurable alternative, criterion written before any run:
   - *Setup:* the first slice's three charts and grids (TASK-M2-86). Count records that differ bitwise, at f64 before
     narrowing and after narrowing, between the std path and the pinned path on the Mac, and, under each path, across
     four machines: the Mac, Linux, Windows and wasm (the wasm build, as REQ-CHART-155 compares a wasm f64 solve with the
@@ -833,11 +831,11 @@ estimate.*
     is documented as within the linearisation error of the canonical one; honesty_precision's "bitwise what coloured
     the pixel" is amended past `ℓ_switch`.
   - **(c) As (b), labelled per record** "recreated from the exact evaluation".
-- **Recommended:** (a), with RQ-799 (a), the audit's recommendation. Measurable alternative, written before any run:
-  on patched quads at depths 21 to 25, at a fixture stating `|x₀|` per component (RQ-798's fixture rule), the share of
-  samples whose exact recreate differs bitwise from
-  the patch record, and the outcome flips that causes against the one-ulp chaos baseline (R-84). Criterion: any
-  non-zero share shows the question is real; the share is reported against the `10⁻⁵` estimate.
+- **Recommended:** (a), with RQ-799 (a), the audit's recommendation. Measurable alternative, written before any run: on
+  patched quads at depths 21 to 25, at a fixture stating `|x₀|` per component (RQ-798's fixture rule), the share of
+  samples whose exact recreate differs bitwise from the patch record, and the outcome flips that causes against the
+  one-ulp chaos baseline (R-84). Criterion: any non-zero share shows the question is real; the share is reported against
+  the `10⁻⁵` estimate.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M2-87 (whether a record carries its route), TASK-M7-45, RQ-783's M2 answer.
 
@@ -1074,10 +1072,9 @@ answer, and the chart value shaders read (`ctx.chart.z`), get the same treatment
   the fragment's backwards answer or for `ctx.chart.z`. WGSL has no f64, so both fragment routes return an absolute f32
   point. At `|u|` in `[0.5, 1)` and `N = 16` a correctly rounded answer stops separating adjacent samples at depth 20
   (R-395's arithmetic), about `2^(ℓ−20)` samples sharing each answer past it; the f32 solve is not correctly rounded,
-  and
-  SM7's identity errors reach one sample spacing at about depth 17 (latent), 15 (sphere, tilted E, F) and 14 (simplex)
-  (*inferred*, F23). The View frame's `x − view centre` then shows blocks; the round-trip preset reads the floor. On a
-  closed-form chart `ctx.chart.z` is `D ∘ Φ` at an absolute `ctx.chart.slice_uv`, which R-395 rules out past
+  and SM7's identity errors reach one sample spacing at about depth 17 (latent), 15 (sphere, tilted E, F) and 14
+  (simplex) (*inferred*, F23). The View frame's `x − view centre` then shows blocks; the round-trip preset reads the
+  floor. On a closed-form chart `ctx.chart.z` is `D ∘ Φ` at an absolute `ctx.chart.slice_uv`, which R-395 rules out past
   `ℓ_switch`, and on a table-route chart its nodes are absolute f32, so it collapses near 20 at O(1) `z`. A backwards
   answer can never beat its input: the f32 state separates samples only to `ℓ_k ≈ 19 + log₂(|∂x_k/∂u| / |x₀,k|)`, so a
   quad-local answer gains depth past ~20 only where a component is small relative to its slope, and gains the solve's
@@ -1088,25 +1085,23 @@ answer, and the chart value shaders read (`ctx.chart.z`), get the same treatment
   - **Q1 (a) Absolute, as now.** Nothing changes; the floor is stated in SM7 (a two-way note) and reported by M-E.
     Chart position's View frame and the round-trip and decode presets go blocky from about depth 14 to 20 by chart.
     R-570 (precision never limits navigation) is kept for navigation, not for these views.
-  - **Q1 (b) Quad-local past `ℓ_switch`, absolute beyond the quad's patch.** For a state near its own quad, the
-    fragment solves `δ = J⁺(X − x₀)`, the one-cell patch run backwards (R-926 item 11), and draws `(c_q − c_view) + δ`
-    with `c_q − c_view` formed in f64 on the CPU. `x₀` is sent as two f32 words a component (high and low) so its
-    rounding is no per-quad seam, about 62 f32 words, 248 B, per visible quad (*inferred*); under RQ-797 (a) this is
-    new upload, under (b) the uniforms exist. Validity: the solve's residual in state within `X`'s f32 rounding (R-935's
-    on-image criterion), else the absolute route. A tier-3 map has no `J_D` and keeps the absolute route. Reads R-947's
-    "the same function's generated WGSL": past `ℓ_switch` the fragment places by a linear solve from the one source's
-    `x₀` and `J_D`, not by its generated code. The gain is near `t = 0` and in regular regions; most running states
-    leave
-    their quad and take the absolute route.
+  - **Q1 (b) Quad-local past `ℓ_switch`, absolute beyond the quad's patch.** For a state near its own quad, the fragment
+    solves `δ = J⁺(X − x₀)`, the one-cell patch run backwards (R-926 item 11), and draws `(c_q − c_view) + δ` with `c_q
+    − c_view` formed in f64 on the CPU. `x₀` is sent as two f32 words a component (high and low) so its rounding is no
+    per-quad seam, about 62 f32 words, 248 B, per visible quad (*inferred*); under RQ-797 (a) this is new upload, under
+    (b) the uniforms exist. Validity: the solve's residual in state within `X`'s f32 rounding (R-935's on-image
+    criterion), else the absolute route. A tier-3 map has no `J_D` and keeps the absolute route. Reads R-947's "the same
+    function's generated WGSL": past `ℓ_switch` the fragment places by a linear solve from the one source's `x₀` and
+    `J_D`, not by its generated code. The gain is near `t = 0` and in regular regions; most running states leave their
+    quad and take the absolute route.
   - **Q1 (c) The CPU places every visible sample with `place` and uploads offsets.** Exact to the lock's tolerance at
     any depth; about one solve a sample a frame while time runs, several forward evaluations each at about 85 ns
     (composition §17.12:2496), far past a frame for a whole screen (*inferred*). Not viable while time runs.
   - **Q2 (i) `ctx.chart.z` stays one absolute f32 vec8.** It collapses near depth 20 at O(1) `z`, stated in colour § 3
     (a two-way note).
   - **Q2 (ii) A quad-local `z` lane past `ℓ_switch`, beside the absolute one:** `z₀` per quad from the CPU's f64 (high
-    and
-    low words) and an f32 offset per pixel, `J_z·δ`, as R-395 does for `ctx.chart.slice_uv`. A change to colour § 3's
-    context that every shader can read; the absolute lane stays for shaders that need no depth.
+    and low words) and an f32 offset per pixel, `J_z·δ`, as R-395 does for `ctx.chart.slice_uv`. A change to colour §
+    3's context that every shader can read; the absolute lane stays for shaders that need no depth.
 - **Recommended:** Q1 (b) and Q2 (ii), the audit's recommendation: the forward rule the owner already made (R-395)
   applied to the backwards answer and to `z`. Measurable alternative, written before any run: M-E, the audit's
   measurement of the fragment against `place`, run first under (a): per route (the generated encode, the table with
