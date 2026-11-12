@@ -640,7 +640,13 @@ variant also checks the midpoints of the square's four edges, which catches it, 
     against the value: near a point where a component and its gradient both vanish with saddle-shaped curvature
     (`x ≈ u² − v²`, whose miss `h²` against `|x| ≈ r²` reaches `2⁻²⁴` within about `r ≲ 2¹²·h`, some `2¹²`
     half-widths of the point), or in an indefinite strip beside a singular site, as the `√` strip is beside its edge
-    (*inferred*).
+    (*inferred*). It also bites along a component's zero lines where the gradient is not zero (physics review
+    5877523301, F6): where the curvature in the grid axes is nearly trace-free with a small mixed term, for example
+    `x = g·u + c(u² − v²)`, the corners miss and `|x|` falls to 0 along the line, so the gap opens on strips, not only
+    at points, about `2²⁴·½h²|H_uu|/|∇x|` wide, some `2·|H_uu|/|∇x|` half-widths at depth 21, narrowing with depth
+    (*inferred*); the binade condition under (a″) applies to these quads too. The log-polar position components never
+    bite: `e^s·cos θ` and `e^s·sin θ` are harmonic, at their zero lines `H_ss = H_θθ = 0` and the curvature is purely
+    mixed, which the corners catch, and at their extrema the miss is about `½h²` relative (physics review 5877523301).
   - **(a″) The four corners and the four edge midpoints, plus the footprint test (physics review 5877078565, P2).** As
     (a′), with the exact f64 evaluation and the patch's f64 prediction compared at the four edge midpoints as well as
     the four corners, under the same bound, tag, branch and sheet agreement and footprint test. The midpoints give
@@ -680,19 +686,21 @@ variant also checks the midpoints of the square's four edges, which catches it, 
     along each in-plane axis, some component varying along it has `ℓ_k` at or past that depth, R-632's rule as
     REQ-TOOL-159's note has it ("use coordinates where the measured f32 floor (REQ-DEC-051, quoted with |x₀|) admits
     depth 30"); an arm at a depth no component admits is reported void, never passed.
-  - *Setup:* the `(L_z, E)` chart at depths 21 to 30, `N = 16`, the CPU expansion of RQ-797 (a). Straddling set:
-    512 quads whose footprint meets the feasibility edge. Away set: 512 quads at distance at least `2¹¹·h` from it,
-    the bound above. Indefinite set: 512 quads at depths 21 to 30 centred within about `2¹²·h` of a point where a
-    component and its gradient both vanish with saddle-shaped curvature, the fixture stating before its run, under the
-    fixture rule, that `½h²·|H_uu|` reaches an f32 ulp of that component's own value there; it is needed because the
-    feasibility edge's curvature is semidefinite and the two sets above alone would pass a corners-only check that is
-    wrong elsewhere. The log-polar example would not serve: its miss is about `2⁻²¹` of an f32 ulp, so it reports no
-    difference under (a′) or (a″). Whether any chart in the corpus has such a point past depth 20 is not established
-    here; finding one is M-K's first step, and if none exists the run says so, the indefinite set is void, and (a′)'s
-    gap is exercised by control (iii) alone, which the owner should know when weighing (a′) against (a″). The fixture
-    follows the fixture rule above. Patch records and
-    exact narrowed records compared sample by sample, as are the held quantities `E` and `L_z` of the patch records
-    against `E*` and `L_z*`.
+  - *Setup:* the `(L_z, E)` chart at depths 21 to 30, `N = 16`, the CPU expansion of RQ-797 (a). Straddling set: 512
+    quads whose footprint meets the feasibility edge. Away set: 512 quads at distance at least `2¹¹·h` from it, the
+    bound above. Indefinite set: 512 quads at depths 21 to 30 centred within about `2¹²·h` of a point where a component
+    and its gradient both vanish with saddle-shaped curvature, or on a strip along a component's zero line where the
+    grid-axis curvature is nearly trace-free with a small mixed term (the gap's strips above), the fixture stating
+    before its run, under the fixture rule, that `½h²·|H_uu|` reaches an f32 ulp of that component's own value there; it
+    is needed because the feasibility edge's curvature is semidefinite and the two sets above alone would pass a
+    corners-only check that is wrong elsewhere. The log-polar example would not serve: its miss is about `2⁻²¹` of an
+    f32 ulp, so it reports no difference under (a′) or (a″). Whether any chart in the corpus has such a point or strip
+    past depth 20 is not established here; searching for both is M-K's first step, and if none exists the run says so,
+    the indefinite set is void, and (a′)'s gap is exercised by control (iii) alone, which the owner should know when
+    weighing (a′) against (a″). The set's quads that cross a component's zero are reported apart, as PASS below says,
+    in the quad's smallest own-value ulp. The fixture follows the fixture rule above. Patch records and exact narrowed
+    records compared sample by sample, as are the held quantities `E` and `L_z` of the patch records against `E*` and
+    `L_z*`.
   - *Ulp convention:* the component's own f32 ulp, because near the edge `|p| ∝ √d` is small and `max(1, |x|)` would
     hide its error. The strip bound, PASS and the controls are all in this one unit; each difference is also reported,
     not judged, at `max(1, |x|)`, TASK-M2-86:28's unit, for comparison only.
