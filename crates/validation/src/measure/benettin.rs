@@ -457,7 +457,7 @@ pub fn spread(values: &[f64]) -> [f64; 3] {
 }
 
 /// Over the orbits named in `chaotic`, candidate `c`'s runs at `precision`: the [`spread`] of the change, then of the
-/// bias against the reference ([`reference`], [`bias`]), NaN where there is no reference.
+/// bias against the reference ([`reference()`], [`bias`]), NaN where there is no reference.
 pub fn chaotic_spread(
     candidates: &[Candidate],
     c: &Candidate,
