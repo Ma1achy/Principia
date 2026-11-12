@@ -643,10 +643,10 @@ variant also checks the midpoints of the square's four edges, which catches it, 
   - **(b) Keep the patch, and set each sample's tag, branch and sheet by a cheap exact predicate per sample.**
     Continuous values stay linearised, wrong across the strip.
   - **(c) Keep the patch and label the strip.** Wrong classifications are drawn and only labelled.
-- **Recommended:** (a′), recommended by the owner, 12 Nov 2026 (their words in this entry's header). Measurable
-  alternative, measurement M-K, criterion written before any run:
-  - **12 Nov 2026:** the owner recommended (a′), 12 Nov 2026, before physics review 5877078565 found that four corners
-    miss indefinite curvature; (a″) closes it. The choice between (a′) and (a″) is the owner's.
+- **Recommended:** (a′), recommended by the owner, 12 Nov 2026 (their words in this entry's header). The owner
+  recommended (a′) before physics review 5877078565 found that four corners miss indefinite curvature; (a″) closes it.
+  The choice between (a′) and (a″) is the owner's. Measurable alternative, measurement M-K, criterion written before
+  any run:
   - *Fixture rule (this entry's and RQ-797's, RQ-801's, RQ-802's and RQ-805's):* a fixture past R-90's switch states,
     before its run, `|x₀,k|` and the in-plane slopes `|∂x_k/∂u|`, `|∂x_k/∂v|` from the f64 evaluation for each of the
     record's 15 components, and for each the deepest level at which it still separates adjacent samples,
