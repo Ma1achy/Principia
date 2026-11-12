@@ -2314,7 +2314,9 @@ confirmed entries citing R-428, and `rho_ratio`'s and `r_min_pair_0`'s are marke
 A field carries the `diverging` scale only when its declared range spans zero (R-403; dd_generation_root §3.8), so
 the scale and the ramp agree; the one-signed `K_0` `[0, ∞)` and `V_0` `(−∞, 0]` are `lin`, on `ramp_viridis`, mapped
 monotonically, `V_0`'s most negative value at the dark end.
-An end with no finite bound takes the measured end, and a field whose ledger range
+An end with no finite bound takes the measured end (*12 Nov 2026, R-978:* an untransformed colour node's input
+wired to such a field inherits the same domain, its finite end kept and the other measured per draw, built with
+TASK-M8-22's legend, gui_state_contract §3), and a field whose ledger range
 is unbounded defaults to `RANGE_AUTO = 1`, except a cyclic one, on its fixed `[0, 1]`. `RANGE_AUTO` and `u_range` are
 the view's uniforms, declared in its header (gui_state_contract §3): `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`,
 whose default the generator writes from the node's param and the assembler's declaration parser reads back, and
