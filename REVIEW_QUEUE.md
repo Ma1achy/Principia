@@ -896,7 +896,12 @@ step; otherwise it is precision running out, and the warning is shown.*
       `|J_dual,k|·h_633 < ½ ulp_f64(x_k)` for every component `k`, where `J_dual,k` is component `k` of the dual (tier
       1) or implicit (tier 2) slope's column along `d`, `h_633` is R-633's step along `d` (`ε^{1/3}·max(1, |u_d|)` in
       f64), and `ulp_f64(x_k)` is f64's ulp at that component's value; no central difference is taken. Otherwise the
-      pair is the f64 floor, and it warns.
+      pair is the f64 floor, and it warns. On a tilted view, where `d` moves several chart coordinates at once, `|u_d|`
+      is read as the largest magnitude among the chart coordinates that `d` moves (deep zoom §2's `x_k`, "the
+      coordinate stepped", taken as each coordinate the step moves, the largest giving the step); this is the entry's
+      reading, for the owner with the definition. Little rides on it: the condition's margin is about `2³⁶` on either
+      side (a saturated pair's slope underflows to 0; at the f64 floor with a slope of 1, `h_633 ≈ 2^−17.3` against
+      `2⁻⁵³`).
 
     Without the slope condition, equal f64 ICs at distinct points would always read as saturation, and that misreads
     the f64 floor. Past the depth where adjacent f64 ICs become equal, every pair would read "saturated" and the warning
