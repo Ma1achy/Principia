@@ -124,3 +124,4 @@ alone does not answer the owner's question; the bits at identical operands do, a
 - Applied per R-369 (R-686): its own task, not a part of the fix task, TASK-M6-53, since the mock's fix needs no march.
 - *4 Nov 2026 (R-696):* RQ-687's option (a), the kernel's own `sin` and `cos`, is decided on this check and TASK-M4-27's; the entry stays open for it.
 - *4 Nov 2026 (R-694, R-710):* the kind note reads TASK-M4-29 and the `E_0` exception. *Was:* "which TASK-M4-03 writes and proves" and "named as departing from REQ-INT-064." with no exception.
+- *12 Nov 2026 (R-926 item 5; the chart audit's F7):* no backend decodes its start, so the decoded arm ("decoding its own start state, through TASK-M4-05's survey entry") is moot; the shared arm's starts are the CPU's f64 evaluation narrowed once, the production start, written by `--write-inputs`. *Was:* "**Shared:** CPU f32's decoded state's bits", which stands as written above.
