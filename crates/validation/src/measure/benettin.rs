@@ -1,6 +1,7 @@
 //! The Benettin FTLE shadow measured (TASK-M3-14; `kernel::driver::benettin`): dd_integrator §5 test 10 at candidate
-//! `(‖δ₀‖, n_renorm)`, f32 and f64, behind REQ-INT-076's proposal; and the absolute and displacement f32 shadows'
-//! FTLE error against the known exponent on periodic orbits (payload §8; REQ-VAL-038).
+//! `(‖δ₀‖, n_renorm)`, f32 and f64, behind REQ-INT-076's proposal, and its eight-orbit report (reported, never gated);
+//! and the absolute and displacement f32 shadows' FTLE error against the known exponent on periodic orbits (payload §8;
+//! REQ-VAL-038).
 
 use kernel::burrau::euclid;
 use kernel::canon::canonicalise;
@@ -16,6 +17,7 @@ use kernel::occupant::State;
 use kernel::payload::tm_t_end_step;
 
 use std::path::Path;
+use std::sync::OnceLock;
 
 use serde::Deserialize;
 
@@ -58,16 +60,25 @@ pub fn kepler_embedded() -> Orbit {
 /// The Burrau IC (dd_integrator §5's golden anchor): the (3, 4, 5) triangle at rest, in the normalised convention,
 /// canonicalised, to the default horizon.
 pub fn burrau() -> Orbit {
-    let s = euclid(2, 1)
-        .expect("(2, 1) gives the (3, 4, 5) triple")
-        .burrau::<f64>();
+    pythagorean("Burrau", 2, 1)
+}
+
+/// The rest-start triangle of the Pythagorean family that Euclid's pair `(m, n)` gives (`kernel::burrau::euclid`; the
+/// pair (2, 1) gives Burrau's (3, 4, 5)), in the normalised convention, canonicalised, to the default horizon, named
+/// `name`.
+///
+/// # Panics
+///
+/// Where `(m, n)` is not a Euclid pair (coprime, `m > n`, of opposite parity).
+pub fn pythagorean(name: &'static str, m: u32, n: u32) -> Orbit {
+    let s = euclid(m, n).expect("a Euclid pair").burrau::<f64>();
     let ic = Ic {
         m: s.m,
         r: s.r,
         p: [[0.0; 2]; 3],
     };
     Orbit {
-        name: "Burrau",
+        name,
         ic: canonical(&ic),
         horizon: drift::T_DEFAULT,
         known: None,
@@ -281,10 +292,15 @@ pub struct Candidate {
 impl Candidate {
     /// Runs dd test 10 at `(delta_0, n_renorm)` on every calibration orbit at f32 and f64.
     pub fn run(delta_0: f64, n_renorm: u32) -> Self {
+        Self::run_on(&calibration_orbits(), delta_0, n_renorm)
+    }
+
+    /// Runs dd test 10 at `(delta_0, n_renorm)` on each of `orbits` at f32 and f64, each run under its orbit's name.
+    pub fn run_on(orbits: &[Orbit], delta_0: f64, n_renorm: u32) -> Self {
         let mut runs = Vec::new();
-        for orbit in calibration_orbits() {
+        for orbit in orbits {
             for p in [Precision::F32, Precision::F64] {
-                runs.push((orbit.name, p, Test10::run(&orbit, p, delta_0, n_renorm)));
+                runs.push((orbit.name, p, Test10::run(orbit, p, delta_0, n_renorm)));
             }
         }
         Candidate {
@@ -298,10 +314,31 @@ impl Candidate {
     pub fn worst(&self) -> f64 {
         self.runs.iter().map(|r| r.2.change()).fold(0.0, f64::max)
     }
+
+    /// `λ_T` at the candidate itself on the orbit named `orbit` at `precision`.
+    pub fn lambda(&self, orbit: &str, precision: Precision) -> Option<f64> {
+        self.runs
+            .iter()
+            .find(|r| r.0 == orbit && r.1 == precision)
+            .map(|r| r.2.lambdas[0])
+    }
+
+    /// The candidate with the runs of the orbit named `orbit` left out.
+    pub fn without(&self, orbit: &str) -> Candidate {
+        Candidate {
+            runs: self.runs.iter().filter(|r| r.0 != orbit).cloned().collect(),
+            ..self.clone()
+        }
+    }
 }
 
-/// Every candidate of the grid, each on a thread of its own.
+/// Every candidate of the grid on the calibration orbits, each on a thread of its own.
 pub fn sweep() -> Vec<Candidate> {
+    sweep_on(&calibration_orbits())
+}
+
+/// Every candidate of the grid on `orbits`, each on a thread of its own.
+pub fn sweep_on(orbits: &[Orbit]) -> Vec<Candidate> {
     let pairs: Vec<(f64, u32)> = GRID_DELTA_0
         .iter()
         .flat_map(|&d| GRID_N_RENORM.iter().map(move |&n| (d, n)))
@@ -309,7 +346,7 @@ pub fn sweep() -> Vec<Candidate> {
     std::thread::scope(|s| {
         let handles: Vec<_> = pairs
             .iter()
-            .map(|&(d, n)| s.spawn(move || Candidate::run(d, n)))
+            .map(|&(d, n)| s.spawn(move || Candidate::run_on(orbits, d, n)))
             .collect();
         handles
             .into_iter()
@@ -357,6 +394,244 @@ pub fn sweep_confirms(chosen: &Candidate, tol: f64) -> bool {
         && chosen.n_renorm == PROPOSED_N_RENORM
         && tolerance(chosen.worst()) == tol
         && tol == PROPOSED_TOLERANCE
+}
+
+// ── REQ-INT-076: the eight-orbit report (PR #493, physics F3 (c) and F5; reported, never gated, R-649) ─────────────
+
+/// The chaotic orbits of the eight-orbit report, its regions: Burrau and five more rest-start triangles of the
+/// Pythagorean family ([`pythagorean`]), each a free fall through close encounters, named by their sides `(a, b, c)`.
+pub fn chaotic_orbits() -> [Orbit; 6] {
+    [
+        burrau(),
+        pythagorean("(5, 12, 13) at rest", 3, 2),
+        pythagorean("(15, 8, 17) at rest", 4, 1),
+        pythagorean("(7, 24, 25) at rest", 4, 3),
+        pythagorean("(21, 20, 29) at rest", 5, 2),
+        pythagorean("(9, 40, 41) at rest", 5, 4),
+    ]
+}
+
+/// The report's eight starting conditions: the [`calibration_orbits`], then the [`chaotic_orbits`] after Burrau.
+pub fn eight_orbits() -> Vec<Orbit> {
+    let mut orbits = calibration_orbits().to_vec();
+    orbits.extend(chaotic_orbits().into_iter().skip(1));
+    orbits
+}
+
+/// The `‖δ₀‖` of the converged reference the bias is read against: the grid's smallest, where f64's `λ_T` no longer
+/// moves with `n_renorm` (the linear limit).
+pub const REFERENCE_DELTA_0: f64 = 1e-6;
+
+/// The bias of `lambda` against the reference `reference` over `horizon`, on dd test 10's scale:
+/// `(λ_T − λ_ref) / max(|λ_ref|, 1/T)`.
+pub fn bias(lambda: f64, reference: f64, horizon: f64) -> f64 {
+    (lambda - reference) / reference.abs().max(1.0 / horizon)
+}
+
+/// The reference `λ_T` of the orbit named `orbit` at `n_renorm`: f64 at [`REFERENCE_DELTA_0`], read from `candidates`.
+pub fn reference(candidates: &[Candidate], orbit: &str, n_renorm: u32) -> Option<f64> {
+    candidates
+        .iter()
+        .find(|c| c.delta_0 == REFERENCE_DELTA_0 && c.n_renorm == n_renorm)?
+        .lambda(orbit, Precision::F64)
+}
+
+/// The rule's pick ([`select`]) with the orbit named `orbit` left out of every candidate, `(‖δ₀‖, n_renorm)`.
+pub fn select_without(candidates: &[Candidate], orbit: &str) -> Option<(f64, u32)> {
+    let fewer: Vec<Candidate> = candidates.iter().map(|c| c.without(orbit)).collect();
+    select(&fewer).map(|c| (c.delta_0, c.n_renorm))
+}
+
+/// The least, the median (the upper of the two middle values for an even count) and the largest of `values`, a value
+/// that is not finite sorting as infinite; NaN for none.
+pub fn spread(values: &[f64]) -> [f64; 3] {
+    let mut v: Vec<f64> = values
+        .iter()
+        .map(|x| if x.is_finite() { *x } else { f64::INFINITY })
+        .collect();
+    v.sort_by(f64::total_cmp);
+    match (v.first(), v.get(v.len() / 2), v.last()) {
+        (Some(&lo), Some(&mid), Some(&hi)) => [lo, mid, hi],
+        _ => [f64::NAN; 3],
+    }
+}
+
+/// Over the orbits named in `chaotic`, candidate `c`'s runs at `precision`: the [`spread`] of the change, then of the
+/// bias against the reference ([`reference`], [`bias`]), NaN where there is no reference.
+pub fn chaotic_spread(
+    candidates: &[Candidate],
+    c: &Candidate,
+    precision: Precision,
+    chaotic: &[&str],
+) -> [[f64; 3]; 2] {
+    let runs: Vec<&(&str, Precision, Test10)> = c
+        .runs
+        .iter()
+        .filter(|r| r.1 == precision && chaotic.contains(&r.0))
+        .collect();
+    let changes: Vec<f64> = runs.iter().map(|r| r.2.change()).collect();
+    let biases: Vec<f64> = runs
+        .iter()
+        .map(|r| {
+            reference(candidates, r.0, c.n_renorm)
+                .map_or(f64::NAN, |x| bias(r.2.lambdas[0], x, r.2.horizon))
+        })
+        .collect();
+    [spread(&changes), spread(&biases)]
+}
+
+/// One line per candidate: its worst change and, over the orbits named in `chaotic` at f32 and at f64, the least,
+/// median and largest change and bias ([`chaotic_spread`]).
+pub fn spread_lines(candidates: &[Candidate], chaotic: &[&str]) -> Vec<String> {
+    let fmt = |s: [f64; 3]| format!("{:+.3} / {:+.3} / {:+.3}", s[0], s[1], s[2]);
+    candidates
+        .iter()
+        .map(|c| {
+            let [c32, b32] = chaotic_spread(candidates, c, Precision::F32, chaotic);
+            let [c64, b64] = chaotic_spread(candidates, c, Precision::F64, chaotic);
+            format!(
+                "‖δ₀‖ = {:e}, n_renorm = {}: worst change {:.4}; over the chaotic orbits (least / median / largest) \
+                 f32 change {}, bias {}; f64 change {}, bias {}",
+                c.delta_0,
+                c.n_renorm,
+                c.worst(),
+                fmt(c32),
+                fmt(b32),
+                fmt(c64),
+                fmt(b64)
+            )
+        })
+        .collect()
+}
+
+/// One line per orbit named in `chaotic`: the rule's pick with that orbit left out ([`select_without`]), and whether it
+/// is `chosen`, the full set's pick.
+pub fn leave_one_out_lines(
+    candidates: &[Candidate],
+    chosen: &Candidate,
+    chaotic: &[&str],
+) -> Vec<String> {
+    chaotic
+        .iter()
+        .map(|key| match select_without(candidates, key) {
+            Some((d, n)) => format!(
+                "without {key}: the rule picks ‖δ₀‖ = {d:e}, n_renorm = {n}, {} the full set's pick",
+                if (d, n) == (chosen.delta_0, chosen.n_renorm) {
+                    "which is"
+                } else {
+                    "which is not"
+                }
+            ),
+            None => format!("without {key}: no candidate"),
+        })
+        .collect()
+}
+
+/// One line per candidate: its worst change, and each run's change, `λ_T` and bias against the reference.
+pub fn run_lines(candidates: &[Candidate]) -> Vec<String> {
+    candidates
+        .iter()
+        .map(|c| {
+            let runs: Vec<String> = c
+                .runs
+                .iter()
+                .map(|(o, p, t)| {
+                    let b = reference(candidates, o, c.n_renorm)
+                        .map_or(f64::NAN, |r| bias(t.lambdas[0], r, t.horizon));
+                    format!(
+                        "{o} {}: {:.3} (λ_T {:.4}, bias {b:+.3})",
+                        p.word(),
+                        t.change(),
+                        t.lambdas[0]
+                    )
+                })
+                .collect();
+            format!(
+                "‖δ₀‖ = {:e}, n_renorm = {}: worst change {:.4}; {}",
+                c.delta_0,
+                c.n_renorm,
+                c.worst(),
+                runs.join("; ")
+            )
+        })
+        .collect()
+}
+
+/// Whether `candidates` hold the whole report on `orbits`: at least one candidate, and each with exactly one run of
+/// every orbit at f32 and at f64 and no other run.
+pub fn report_complete(candidates: &[Candidate], orbits: &[Orbit]) -> bool {
+    !candidates.is_empty()
+        && candidates.iter().all(|c| {
+            c.runs.len() == 2 * orbits.len()
+                && orbits.iter().all(|o| {
+                    [Precision::F32, Precision::F64]
+                        .iter()
+                        .all(|&p| c.runs.iter().filter(|r| r.0 == o.name && r.1 == p).count() == 1)
+                })
+        })
+}
+
+/// The eight-orbit report's candidates: `sweep` run on `orbits`, with the runs of the orbit named `drop` left out where
+/// one is named (a control). Refused, before `sweep` runs, where `drop` names none of `orbits`.
+pub fn eight_orbit_candidates(
+    orbits: &[Orbit],
+    drop: Option<&str>,
+    sweep: impl FnOnce(&[Orbit]) -> Vec<Candidate>,
+) -> Result<Vec<Candidate>, String> {
+    match drop {
+        None => Ok(sweep(orbits)),
+        Some(gone) if orbits.iter().any(|o| o.name == gone) => {
+            Ok(sweep(orbits).iter().map(|c| c.without(gone)).collect())
+        }
+        Some(gone) => Err(format!("no orbit `{gone}` to drop")),
+    }
+}
+
+/// The eight-orbit report on `candidates` over `orbits`, its regions the orbits named in `chaotic`, against `config`:
+/// reported, never gated (R-649), its verdict the report's completeness alone ([`report_complete`]). Its description
+/// gives the rule's pick over every orbit and the tolerance the rule gives, beside the proposal, which it leaves as it
+/// is; its negative results, the non-finite count and the pick with each chaotic orbit left out; its scatter, each
+/// candidate's spread over the chaotic orbits and each run. Refused for no candidates.
+pub fn eight_orbit_report(
+    config: &GateConfig,
+    name: &str,
+    description: &str,
+    candidates: &[Candidate],
+    orbits: &[Orbit],
+    chaotic: &[&str],
+) -> Result<GateReport, String> {
+    let chosen = select(candidates).ok_or("the sweep ran no candidate")?;
+    let unfinite = candidates
+        .iter()
+        .filter(|c| c.worst().is_infinite())
+        .count();
+    let mut negative_results = vec![format!(
+        "{unfinite} of {} candidates gave a non-finite λ_T somewhere (the f32 shadow's δ lost to rounding)",
+        candidates.len()
+    )];
+    negative_results.extend(leave_one_out_lines(candidates, chosen, chaotic));
+    let mut scatter = spread_lines(candidates, chaotic);
+    scatter.extend(run_lines(candidates));
+    Ok(report(
+        config,
+        name,
+        format!(
+            "{description}: reported, not gated (R-649; the verdict is the report's completeness alone). Over the \
+             {} starting conditions the rule picks ‖δ₀‖ = {:e}, n_renorm = {} (worst change {:.4}), tolerance {}; \
+             the proposal stays ‖δ₀‖ = {PROPOSED_DELTA_0:e}, n_renorm = {PROPOSED_N_RENORM}, tolerance \
+             {PROPOSED_TOLERANCE}, for the owner at the M3 gate (REQ-INT-076). Bias is against f64 at ‖δ₀‖ = \
+             {REFERENCE_DELTA_0:e} at the same n_renorm",
+            orbits.len(),
+            chosen.delta_0,
+            chosen.n_renorm,
+            chosen.worst(),
+            tolerance(chosen.worst())
+        ),
+        report_complete(candidates, orbits),
+        scatter,
+        negative_results,
+        chaotic.len() as u32,
+    ))
 }
 
 // ── REQ-VAL-038: the absolute and displacement f32 shadows ────────────────────────────────────────────────────────
@@ -521,8 +796,10 @@ pub fn finite_time_gaps(delta_0: f64, n_renorm: u32) -> Vec<GapRow> {
 // ── The gates ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `cargo xtask gate benettin-calibration` (REQ-INT-076): dd test 10 at the proposed `(‖δ₀‖, n_renorm)` on each
-/// calibration orbit at f32 and f64, against the proposed tolerance, the gate's provisional threshold; and the sweep,
-/// which passes only where the rule picks the proposed pair and tolerance.
+/// calibration orbit at f32 and f64, against the proposed tolerance, the gate's provisional threshold; the sweep,
+/// which passes only where the rule picks the proposed pair and tolerance; and the eight-orbit report, the grid on the
+/// [`eight_orbits`] with each candidate's spread over the [`chaotic_orbits`] and the pick with each left out, which
+/// asserts nothing of its results (R-649) and changes neither the proposal nor the other inputs.
 pub struct BenettinCalibrationGate;
 
 /// A `benettin-calibration` input.
@@ -531,6 +808,14 @@ pub struct BenettinCalibrationGate;
 enum CalibrationInput {
     /// The sweep and the rule.
     Sweep { description: String },
+    /// The eight-orbit report, reported and never gated (R-649): its verdict is the report's completeness alone, and
+    /// `drop`, a control, leaves the named orbit's runs out of it.
+    #[serde(rename = "eight-orbits")]
+    EightOrbits {
+        description: String,
+        #[serde(default)]
+        drop: Option<String>,
+    },
     /// dd test 10 on one orbit at one precision, at the proposed values unless named.
     Test10 {
         description: String,
@@ -558,6 +843,7 @@ fn report(
     pass: bool,
     scatter: Vec<String>,
     negative_results: Vec<String>,
+    regions: u32,
 ) -> GateReport {
     GateReport {
         gate: config.gate.clone(),
@@ -567,7 +853,7 @@ fn report(
         threshold: config.threshold.clone(),
         scatter,
         regions: Some(Regions {
-            count: RegionCount::Recorded(1),
+            count: RegionCount::Recorded(regions),
             minimum: config.min_regions.clone(),
         }),
         negative_results,
@@ -617,6 +903,7 @@ impl Gate for BenettinCalibrationGate {
                     vec![format!(
                         "the largest change |λ_T' − λ_T| / max(|λ_T|, 1/T) is {change:.4}, against the tolerance {tol}"
                     )],
+                    1,
                 ))
             }
             CalibrationInput::Sweep { description } => {
@@ -668,7 +955,25 @@ impl Gate for BenettinCalibrationGate {
                         "{unfinite} of {} candidates gave a non-finite λ_T somewhere (the f32 shadow's δ lost to rounding)",
                         candidates.len()
                     )],
+                    1,
                 ))
+            }
+            CalibrationInput::EightOrbits { description, drop } => {
+                // The grid runs once per process, the report and its control sharing it.
+                static SWEEP: OnceLock<Vec<Candidate>> = OnceLock::new();
+                let orbits = eight_orbits();
+                let candidates = eight_orbit_candidates(&orbits, drop.as_deref(), |o| {
+                    SWEEP.get_or_init(|| sweep_on(o)).clone()
+                })
+                .map_err(|e| format!("{name}: {e}"))?;
+                eight_orbit_report(
+                    config,
+                    name,
+                    &description,
+                    &candidates,
+                    &orbits,
+                    &chaotic_orbits().map(|o| o.name),
+                )
             }
         }
     }

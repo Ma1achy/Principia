@@ -13,17 +13,28 @@
 //!   rotation at `ω² = M/a³`, all in the sim's units (`M = 1`, `I = 1`, CoM at rest at the origin).
 //! - `shadow_form_gate`: its controls give their expected outcomes, and its measurement covers the periodic set at both
 //!   `‖δ₀‖`s with every value finite.
+//! - `eight_orbit_set`: the eight-orbit report's chaotic orbits are the Pythagorean triangles at rest their names give,
+//!   Burrau first, and its eight starting conditions are the calibration orbits then the five others.
+//! - `eight_orbit_rules`: the bias against the reference, the reference read, the spread, the pick with an orbit left
+//!   out, the report's lines and its completeness, on synthetic candidates.
+//! - `eight_orbit_gate`: the report's candidates leave out the orbit a control names and refuse an unknown one before
+//!   the sweep runs; the report passes complete, its regions the chaotic orbits, gives the rule's pick beside the
+//!   unchanged proposal, and fails with an orbit left out; on synthetic candidates.
 
 use std::path::Path;
 
 use kernel::decode::Ic;
 use validation::gate::Gate;
+use validation::gate::RegionCount;
 use validation::gate::{self, GateSpec, MeasurementGate, Verdict};
 use validation::measure::benettin::{
-    burrau, calibration_orbit, figure_eight, finite_time_gaps, kepler_embedded, lagrange,
-    lagrange_exponent, lambda, periodic_set, routh_beta, select, sweep_confirms, tolerance,
-    BenettinCalibrationGate, Candidate, FormRow, GapRow, Orbit, Precision, ShadowFormGate, Test10,
-    GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0, PROPOSED_N_RENORM, PROPOSED_TOLERANCE,
+    bias, burrau, calibration_orbit, calibration_orbits, chaotic_orbits, chaotic_spread,
+    eight_orbit_candidates, eight_orbit_report, eight_orbits, figure_eight, finite_time_gaps,
+    kepler_embedded, lagrange, lagrange_exponent, lambda, leave_one_out_lines, periodic_set,
+    pythagorean, reference, report_complete, routh_beta, run_lines, select, select_without, spread,
+    spread_lines, sweep_confirms, tolerance, BenettinCalibrationGate, Candidate, FormRow, GapRow,
+    Orbit, Precision, ShadowFormGate, Test10, GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0,
+    PROPOSED_N_RENORM, PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
 };
 use validation::negative_control;
 
@@ -598,4 +609,371 @@ negative_control!(
         },
         "a unit-I check"
     )
+);
+
+// ── eight_orbit_set ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/// Checks `orbits` against Euclid's pairs `pairs`: each the triangle of sides `(a, b, c) = (m² − n², 2mn, m² + n²)` at
+/// rest, `a` and `b` its legs over the hypotenuse, masses `(c, b, a)/(a + b + c)`, named by its sides (Burrau's by its
+/// own name), in the sim's units.
+fn check_chaotic(orbits: &[Orbit], pairs: &[(u32, u32)]) {
+    assert_eq!(orbits.len(), pairs.len());
+    for (o, &(m, n)) in orbits.iter().zip(pairs) {
+        let (a, b, c) = (
+            f64::from(m * m - n * n),
+            f64::from(2 * m * n),
+            f64::from(m * m + n * n),
+        );
+        let want = if (m, n) == (2, 1) {
+            "Burrau".to_owned()
+        } else {
+            format!("({a}, {b}, {c}) at rest")
+        };
+        assert_eq!(o.name, want, "{} is not the triangle at ({m}, {n})", o.name);
+        let ic = o.ic;
+        check_units(&ic, o.name);
+        assert!(ic.p.iter().flatten().all(|&x| x == 0.0), "{} moves", o.name);
+        let side = |i: usize, j: usize| norm(sub(ic.r[i], ic.r[j]));
+        let (s01, s02, s12) = (side(0, 1), side(0, 2), side(1, 2));
+        assert!(
+            (s01 / s12 - a / c).abs() < 1e-12 && (s02 / s12 - b / c).abs() < 1e-12,
+            "{} is not the triangle at ({m}, {n}): sides {s01} {s02} {s12}",
+            o.name
+        );
+        for (got, want) in ic.m.iter().zip([c, b, a].map(|x| x / (a + b + c))) {
+            assert!(
+                (got - want).abs() < 1e-15,
+                "{} is not the triangle at ({m}, {n}): mass {got}, not {want}",
+                o.name
+            );
+        }
+        assert_eq!(o.horizon, burrau().horizon);
+        assert_eq!(o.known, None);
+    }
+}
+
+const PAIRS: [(u32, u32); 6] = [(2, 1), (3, 2), (4, 1), (4, 3), (5, 2), (5, 4)];
+
+#[test]
+fn eight_orbit_set() {
+    check_chaotic(&chaotic_orbits(), &PAIRS);
+    let same = |a: &Orbit, b: &Orbit| a.name == b.name && a.ic == b.ic && a.horizon == b.horizon;
+    assert!(same(&pythagorean("Burrau", 2, 1), &burrau()));
+    assert!(same(&chaotic_orbits()[0], &burrau()));
+    // The eight: the three calibration orbits, then the five triangles after Burrau.
+    let eight = eight_orbits();
+    let want: Vec<Orbit> = calibration_orbits()
+        .into_iter()
+        .chain(chaotic_orbits().into_iter().skip(1))
+        .collect();
+    assert_eq!(eight.len(), 8);
+    for (o, w) in eight.iter().zip(&want) {
+        assert!(same(o, w), "{} is not {}", o.name, w.name);
+    }
+    // A pair that is not Euclid's is refused.
+    assert!(std::panic::catch_unwind(|| pythagorean("x", 3, 1)).is_err());
+}
+
+negative_control!(
+    eight_orbit_set,
+    "two triangles' pairs swapped must fail",
+    expected = "is not the triangle",
+    check_chaotic(
+        &chaotic_orbits(),
+        &[(2, 1), (4, 1), (3, 2), (4, 3), (5, 2), (5, 4)]
+    )
+);
+
+// ── eight_orbit_rules ───────────────────────────────────────────────────────────────────────────────────────────
+
+/// A synthetic candidate: each run `(orbit, precision, λ_T at the candidate, its change)` over `T = 50`.
+fn syn(delta_0: f64, n_renorm: u32, runs: &[(&'static str, Precision, f64, f64)]) -> Candidate {
+    Candidate {
+        delta_0,
+        n_renorm,
+        runs: runs
+            .iter()
+            .map(|&(o, p, l, change)| {
+                // A change of `change` relative to `max(|λ|, 1/50)`.
+                let d = change * l.abs().max(1.0 / 50.0);
+                (o, p, t10([l, l + d, l, l], 50.0))
+            })
+            .collect(),
+    }
+}
+
+fn synthetic_orbit(name: &'static str) -> Orbit {
+    Orbit { name, ..burrau() }
+}
+
+fn check_eight_orbit_rules(bias: fn(f64, f64, f64) -> f64) {
+    use Precision::{F32, F64};
+    // The bias, on dd test 10's scale, its floor 1/T.
+    for (l, r, t, want) in [
+        (0.6, 0.5, 50.0, 0.2),
+        (-0.4, -0.5, 50.0, 0.2),
+        (0.01, 0.0, 50.0, 0.5),
+        (0.0, 0.01, 50.0, -0.5),
+    ] {
+        let got = bias(l, r, t);
+        assert!(
+            (got - want).abs() < 1e-12,
+            "the bias of {l} against {r} over {t} is {got}, not {want}"
+        );
+    }
+    // The reference: f64 at REFERENCE_DELTA_0 at the same n_renorm, never f32's.
+    let cands = vec![
+        syn(1e-3, 10, &[("A", F64, 0.9, 0.0), ("B", F64, 0.3, 0.0)]),
+        syn(
+            REFERENCE_DELTA_0,
+            10,
+            &[("A", F32, 9.0, 0.0), ("A", F64, 0.5, 0.0)],
+        ),
+        syn(REFERENCE_DELTA_0, 20, &[("A", F64, 0.7, 0.0)]),
+    ];
+    assert_eq!(reference(&cands, "A", 10), Some(0.5));
+    assert_eq!(reference(&cands, "A", 20), Some(0.7));
+    assert_eq!(reference(&cands, "A", 30), None);
+    assert_eq!(reference(&cands, "B", 10), None);
+    assert_eq!(cands[1].lambda("A", F32), Some(9.0));
+    assert_eq!(cands[1].lambda("B", F32), None);
+    assert_eq!(
+        cands[0]
+            .without("A")
+            .runs
+            .iter()
+            .map(|r| r.0)
+            .collect::<Vec<_>>(),
+        ["B"]
+    );
+    // The spread: least, upper median, largest; a non-finite value sorts as infinite; NaN for none.
+    assert_eq!(spread(&[3.0, 1.0, 2.0]), [1.0, 2.0, 3.0]);
+    assert_eq!(spread(&[4.0, 1.0, 3.0, 2.0]), [1.0, 3.0, 4.0]);
+    assert_eq!(
+        spread(&[1.0, f64::NAN]),
+        [1.0, f64::INFINITY, f64::INFINITY]
+    );
+    assert!(spread(&[]).iter().all(|x| x.is_nan()));
+    // The pick with an orbit left out: A's change decides between X and Y.
+    let x = syn(1e-2, 1, &[("A", F64, 0.5, 0.9), ("B", F64, 0.5, 0.1)]);
+    let y = syn(1e-3, 1, &[("A", F64, 0.5, 0.2), ("B", F64, 0.5, 0.3)]);
+    let grid = vec![x.clone(), y.clone()];
+    assert_eq!(select(&grid).map(|c| c.delta_0), Some(1e-3));
+    assert_eq!(select_without(&grid, "A"), Some((1e-2, 1)));
+    assert_eq!(select_without(&grid, "B"), Some((1e-3, 1)));
+    assert_eq!(select_without(&[], "A"), None);
+    assert_eq!(
+        leave_one_out_lines(&grid, &y, &["A", "B"]),
+        [
+            "without A: the rule picks ‖δ₀‖ = 1e-2, n_renorm = 1, which is not the full set's pick",
+            "without B: the rule picks ‖δ₀‖ = 1e-3, n_renorm = 1, which is the full set's pick",
+        ]
+    );
+    assert_eq!(
+        leave_one_out_lines(&[], &y, &["A"]),
+        ["without A: no candidate"]
+    );
+    // The spread over the chaotic orbits alone, at one precision, the bias against the reference.
+    let set = vec![
+        syn(
+            REFERENCE_DELTA_0,
+            1,
+            &[
+                ("A", F32, 0.4, 0.1),
+                ("A", F64, 0.5, 0.2),
+                ("B", F64, 0.25, 0.4),
+                ("K", F64, 0.1, 9.0),
+            ],
+        ),
+        syn(
+            1e-3,
+            1,
+            &[
+                ("A", F32, 0.6, 0.3),
+                ("A", F64, 0.55, 0.0),
+                ("B", F64, 0.3, 0.6),
+                ("K", F64, 0.2, 7.0),
+            ],
+        ),
+    ];
+    let [ch, bi] = chaotic_spread(&set, &set[1], F64, &["A", "B"]);
+    assert!(
+        (ch[0] - 0.0).abs() < 1e-12 && (ch[2] - 0.6).abs() < 1e-12 && ch[1] == ch[2],
+        "{ch:?}"
+    );
+    assert!(
+        (bi[0] - 0.1).abs() < 1e-12 && (bi[2] - 0.2).abs() < 1e-12,
+        "{bi:?}"
+    );
+    let [ch32, bi32] = chaotic_spread(&set, &set[1], F32, &["A", "B"]);
+    assert!(
+        (ch32[0] - 0.3).abs() < 1e-12 && ch32[0] == ch32[2],
+        "{ch32:?}"
+    );
+    // A's f32 run is read against A's f64 reference: (0.6 − 0.5)/0.5.
+    assert!((bi32[0] - 0.2).abs() < 1e-12, "{bi32:?}");
+    // No reference: NaN, which sorts as infinite.
+    let lone = syn(1e-3, 7, &[("A", F64, 0.5, 0.0)]);
+    let [_, nob] = chaotic_spread(std::slice::from_ref(&lone), &lone, F64, &["A"]);
+    assert_eq!(nob, [f64::INFINITY; 3]);
+    assert_eq!(
+        spread_lines(&set[1..], &["A", "B"]),
+        ["‖δ₀‖ = 1e-3, n_renorm = 1: worst change 7.0000; over the chaotic orbits (least / median / largest) \
+          f32 change +0.300 / +0.300 / +0.300, bias +inf / +inf / +inf; f64 change +0.000 / +0.600 / +0.600, \
+          bias +inf / +inf / +inf"]
+    );
+    assert_eq!(
+        run_lines(&set[..1])[0],
+        "‖δ₀‖ = 1e-6, n_renorm = 1: worst change 9.0000; A f32: 0.100 (λ_T 0.4000, bias -0.200); \
+         A f64: 0.200 (λ_T 0.5000, bias +0.000); B f64: 0.400 (λ_T 0.2500, bias +0.000); \
+         K f64: 9.000 (λ_T 0.1000, bias +0.000)"
+    );
+    assert_eq!(
+        run_lines(&[lone])[0],
+        "‖δ₀‖ = 1e-3, n_renorm = 7: worst change 0.0000; A f64: 0.000 (λ_T 0.5000, bias NaN)"
+    );
+    // Completeness: every orbit once at each precision, no other run, at least one candidate.
+    let orbits = [synthetic_orbit("A"), synthetic_orbit("B")];
+    let full = |extra: &[(&'static str, Precision, f64, f64)]| {
+        let mut runs = vec![
+            ("A", F32, 0.5, 0.0),
+            ("A", F64, 0.5, 0.0),
+            ("B", F32, 0.5, 0.0),
+            ("B", F64, 0.5, 0.0),
+        ];
+        runs.extend_from_slice(extra);
+        syn(1e-3, 1, &runs)
+    };
+    assert!(report_complete(&[full(&[])], &orbits));
+    assert!(
+        !report_complete(&[], &orbits),
+        "no candidate reads complete"
+    );
+    assert!(
+        !report_complete(&[full(&[]), full(&[("Z", F32, 0.5, 0.0)])], &orbits),
+        "an extra run reads complete"
+    );
+    assert!(
+        !report_complete(&[full(&[]).without("B")], &orbits),
+        "an orbit left out reads complete"
+    );
+    let mut twice = full(&[]);
+    twice.runs[1].1 = F32;
+    assert!(
+        !report_complete(&[twice], &orbits),
+        "a run twice, another missing, reads complete"
+    );
+}
+
+#[test]
+fn eight_orbit_rules() {
+    check_eight_orbit_rules(bias);
+}
+
+negative_control!(
+    eight_orbit_rules,
+    "a bias without the 1/T floor must fail",
+    expected = "the bias of",
+    check_eight_orbit_rules(|l, r, _| (l - r) / r.abs())
+);
+
+// ── eight_orbit_gate ────────────────────────────────────────────────────────────────────────────────────────────
+
+fn check_eight_orbit_gate(expect_control: Verdict) {
+    use Precision::{F32, F64};
+    let config = calibration_config();
+    let orbits = [
+        synthetic_orbit("A"),
+        synthetic_orbit("B"),
+        synthetic_orbit("K"),
+    ];
+    // Every orbit at both precisions, each run's four λ_T `lambdas`.
+    let every = |delta_0: f64, lambdas: [f64; 4]| Candidate {
+        delta_0,
+        n_renorm: 1,
+        runs: ["A", "B", "K"]
+            .iter()
+            .flat_map(|&o| [F32, F64].map(|p| (o, p, t10(lambdas, 50.0))))
+            .collect(),
+    };
+    let grid = || {
+        vec![
+            every(REFERENCE_DELTA_0, [0.5; 4]),
+            every(1e-3, [0.5, 0.625, 0.5, 0.5]),
+            every(1e-2, [f64::INFINITY; 4]),
+        ]
+    };
+    // The candidates: the sweep's, with a named orbit's runs left out; an unknown name refused before the sweep runs.
+    let ran = std::cell::Cell::new(0);
+    let sweep = |o: &[Orbit]| {
+        ran.set(ran.get() + 1);
+        assert_eq!(o.len(), 3);
+        grid()
+    };
+    assert_eq!(
+        eight_orbit_candidates(&orbits, None, sweep).expect("runs"),
+        grid()
+    );
+    let fewer = eight_orbit_candidates(&orbits, Some("B"), sweep).expect("runs");
+    assert_eq!(
+        fewer,
+        grid().iter().map(|c| c.without("B")).collect::<Vec<_>>()
+    );
+    assert_eq!(ran.get(), 2);
+    assert!(eight_orbit_candidates(&orbits, Some("pluto"), sweep).is_err());
+    assert_eq!(ran.get(), 2, "the sweep ran for an unknown orbit");
+    // The report: complete, its regions the chaotic orbits, a spread line and a run line per candidate, the non-finite
+    // count and a leave-one-out line per chaotic orbit; the rule's pick beside the unchanged proposal.
+    let report =
+        eight_orbit_report(&config, "t", "d", &grid(), &orbits, &["A", "B"]).expect("runs");
+    let regions = report.check().expect("a complete report");
+    assert_eq!(report.verdict, Verdict::Pass);
+    assert_eq!(regions.count, RegionCount::Recorded(2));
+    assert_eq!(report.scatter.len(), 2 * 3);
+    assert_eq!(
+        report.negative_results,
+        [
+            "1 of 3 candidates gave a non-finite λ_T somewhere (the f32 shadow's δ lost to rounding)",
+            "without A: the rule picks ‖δ₀‖ = 1e-6, n_renorm = 1, which is the full set's pick",
+            "without B: the rule picks ‖δ₀‖ = 1e-6, n_renorm = 1, which is the full set's pick",
+        ]
+    );
+    assert_eq!(report.scatter[..3], spread_lines(&grid(), &["A", "B"])[..]);
+    assert_eq!(report.scatter[3..], run_lines(&grid())[..]);
+    assert_eq!(
+        report.description,
+        format!(
+            "d: reported, not gated (R-649; the verdict is the report's completeness alone). Over the 3 starting \
+             conditions the rule picks ‖δ₀‖ = 1e-6, n_renorm = 1 (worst change 0.0000), tolerance 0; the proposal \
+             stays ‖δ₀‖ = 3e-3, n_renorm = 300, tolerance {PROPOSED_TOLERANCE}, for the owner at the M3 gate \
+             (REQ-INT-076). Bias is against f64 at ‖δ₀‖ = 1e-6 at the same n_renorm"
+        )
+    );
+    // Its control: an orbit's runs left out, which the completeness check tells apart.
+    let control =
+        eight_orbit_report(&config, "t", "d", &fewer, &orbits, &["A", "B"]).expect("runs");
+    assert_eq!(
+        control.verdict, expect_control,
+        "the control is not told apart"
+    );
+    assert!(eight_orbit_report(&config, "t", "d", &[], &orbits, &["A"]).is_err());
+    // The gate refuses an unknown orbit to leave out, before it sweeps.
+    let refused = BenettinCalibrationGate.run(
+        &config,
+        "t",
+        &serde_json::json!({ "kind": "eight-orbits", "description": "t", "drop": "pluto" }),
+    );
+    assert!(refused.is_err());
+}
+
+#[test]
+fn eight_orbit_gate() {
+    check_eight_orbit_gate(Verdict::Fail);
+}
+
+negative_control!(
+    eight_orbit_gate,
+    "a report that cannot tell an orbit left out must fail",
+    expected = "the control is not told apart",
+    check_eight_orbit_gate(Verdict::Pass)
 );
