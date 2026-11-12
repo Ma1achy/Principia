@@ -63,9 +63,11 @@
 # The image can't come from another run: a run's artifact downloads only with a token, and no job here holds one. So
 # each of the first two jobs needs a hosted job of the same run, the only hosted jobs in this file. They carry the
 # runner's guard, run only when dispatched, and build no kernel.
-# Each download of their artifacts runs a second time if the first didn't finish, and the job then fails naming it if
-# neither did: download-artifact v4.3.0 can stall mid-stream and still end with exit 0, its step green over part of a
-# file (run 43128608743's image), and it sets `download-path` only once a download has finished. Those artifacts' names
+# Each download of their artifacts has its own time limit and runs a second time if the first failed, hung or didn't
+# finish, and the job then fails naming it if neither did: download-artifact v4.3.0 can stall mid-stream and still end
+# with exit 0, its step green over part of a file (run 43128608743's image), or hang with no output (run 43146846084's),
+# and it sets `download-path` only once a download has finished. The image is checked after each try, its length and
+# SHA-256 against those built (`wsl.ps1 check-image`), and tried again if it isn't whole. Those artifacts' names
 # carry the run but not the attempt, so a re-run of the failed jobs alone finds the first attempt's; their uploads
 # overwrite, so a re-run of the hosted job replaces them. `wsl.ps1 register` still checks the image's length and hash.
 #
@@ -550,11 +552,18 @@ jobs:
   # Registers `principia-wsl` from this run's image (`.github/scripts/wsl.ps1 register`), as gh-runner, its disk under
   # E:\wsl\principia-wsl\, never C:. The step ends `registered principia-wsl: ...` and exit 0, or exit 125 naming why
   # it refused.
+#
+# The image's download gets 25 minutes a try: 1.5 times the slower of the two whole downloads of it on the PC, 15 min
+# 51.5 s (run 42944409475) and 16 min 27.8 s (run 42954587933), each about 982.8 MB, rounded up to the minute. One try
+# ended short after 31 min 13 s (run 43128608743) and one hung until the job's limit, 57 min 49 s (run 43146846084).
+# The job's 90 minutes: the 4 minutes the PC has taken to reach the download (3 min 59 s at most), the two tries' 50,
+# 5 for the two checks' SHA-256 of the image, and the 31 the old limit of 60 left the registration after a 25-minute
+# download.
   wsl-register:
     if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-register'
     needs: [wsl-image]
     runs-on: [self-hosted, windows, nvidia]
-    timeout-minutes: 60
+    timeout-minutes: 90
     concurrency:
       group: wsl-register
       cancel-in-progress: false
@@ -587,21 +596,43 @@ jobs:
           exit $LASTEXITCODE
       - name: This run's image
         id: image
+        timeout-minutes: 25
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: wsl-image-${{ github.run_id }}
           path: ${{ runner.temp }}/wsl-image
-      - name: This run's image, again if the first download didn't finish
-        id: image-again
-        if: steps.image.outputs.download-path == ''
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: wsl-image-${{ github.run_id }}
-          path: ${{ runner.temp }}/wsl-image
-      - name: This run's image, never downloaded
-        if: steps.image.outputs.download-path == '' && steps.image-again.outputs.download-path == ''
+      - name: Check this run's image
+        id: image-check
+        if: steps.image.outputs.download-path != ''
+        continue-on-error: true
+        env:
+          WSL_IMAGE: ${{ runner.temp }}/wsl-image
         run: |
-          Write-Output '::error::download-artifact ended twice without finishing (the image): neither attempt set download-path, so the download stopped short'
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 check-image
+          exit $LASTEXITCODE
+      - name: This run's image, again if the first download didn't finish whole
+        id: image-again
+        if: steps.image-check.outcome != 'success'
+        timeout-minutes: 25
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: wsl-image-${{ github.run_id }}
+          path: ${{ runner.temp }}/wsl-image
+      - name: Check this run's image again
+        id: image-check-again
+        if: steps.image-again.outputs.download-path != ''
+        continue-on-error: true
+        env:
+          WSL_IMAGE: ${{ runner.temp }}/wsl-image
+        run: |
+          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 check-image
+          exit $LASTEXITCODE
+      - name: This run's image, never downloaded whole
+        if: steps.image-check.outcome != 'success' && steps.image-check-again.outcome != 'success'
+        run: |
+          Write-Output '::error::download-artifact failed, hung or ended short twice (the image): neither attempt gave an image of the length and SHA-256 built'
           exit 1
       - name: Register principia-wsl
         env:
@@ -662,6 +693,8 @@ jobs:
           exit $LASTEXITCODE
       - name: This run's rebuilt manifest
         id: manifest
+        timeout-minutes: 5
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: wsl-manifest-${{ github.run_id }}
@@ -669,6 +702,8 @@ jobs:
       - name: This run's rebuilt manifest, again if the first download didn't finish
         id: manifest-again
         if: steps.manifest.outputs.download-path == ''
+        timeout-minutes: 5
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: wsl-manifest-${{ github.run_id }}
@@ -676,10 +711,12 @@ jobs:
       - name: This run's rebuilt manifest, never downloaded
         if: steps.manifest.outputs.download-path == '' && steps.manifest-again.outputs.download-path == ''
         run: |
-          Write-Output '::error::download-artifact ended twice without finishing (the rebuilt manifest): neither attempt set download-path, so the download stopped short'
+          Write-Output '::error::download-artifact failed, hung or ended short twice (the rebuilt manifest): neither attempt set download-path'
           exit 1
       - name: The hosted runner's parity results
         id: parity
+        timeout-minutes: 5
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: wsl-parity-${{ github.run_id }}
@@ -687,6 +724,8 @@ jobs:
       - name: The hosted runner's parity results, again if the first download didn't finish
         id: parity-again
         if: steps.parity.outputs.download-path == ''
+        timeout-minutes: 5
+        continue-on-error: true
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: wsl-parity-${{ github.run_id }}
@@ -694,7 +733,7 @@ jobs:
       - name: The hosted runner's parity results, never downloaded
         if: steps.parity.outputs.download-path == '' && steps.parity-again.outputs.download-path == ''
         run: |
-          Write-Output '::error::download-artifact ended twice without finishing (the parity results): neither attempt set download-path, so the download stopped short'
+          Write-Output '::error::download-artifact failed, hung or ended short twice (the parity results): neither attempt set download-path'
           exit 1
       - name: The six proofs
         env:
