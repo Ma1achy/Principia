@@ -905,9 +905,7 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
             stepped = true;
         }
     }
-    if here > count.largest_interval {
-        count.largest_interval = here;
-    }
+    count.largest_interval = count.largest_interval.max(here);
     Interval {
         q: kept_q,
         p: kept_p,

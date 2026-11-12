@@ -37,7 +37,7 @@ use kernel::occupant::{
 use kernel::regularisation::az::{
     boundary_at_or_before, entry_size, lc, lc_inverse, lc_inverse_unstable, march, reference_body,
     register, step_size, AarsethZare, AzAdvanced, AzConfig, AzCount, AzP, AzParams, AzQ, AzReal,
-    AzStepper, AzSystem, End, ExplicitTest, Watch,
+    AzStepper, AzSystem, End, ExplicitTest, StepSize, Watch,
 };
 use kernel::regularisation::form::{Flow, Form};
 use kernel::regularisation::pairs::{Choice, Pair, PairTable, Status};
@@ -1035,4 +1035,191 @@ negative_control!(
     "the flow's energy moved by 0.1 from the state's",
     expected = "ṗ[",
     check_energy(0.1)
+);
+
+// ── The step's signals and the march's counts ──────────────────────────────────────────────────────────────────
+
+/// A step-size rule, [`step_size`]'s signature.
+type Size = fn(&AzSystem<f64>, &AzQ<f64>, &AzP<f64>, f64, &AzParams<f64>) -> StepSize<f64>;
+
+/// The step's signals at their edges (Part 2b, steps 3 and 4; Part 6): at the interval's entry `c₀` is the entry size,
+/// not a cap hit, and below the entry size it is; `A` or `B` at `TINY` is not floored and just below it is; a tiny
+/// predictive `f` sets the size and an `f` of 0 turns the limit off; the clamp takes the remainder `(Δ_sync − t)/(A·B)`,
+/// and none past the boundary.
+fn check_signals(size: Size) {
+    let mut p = params::<f64>();
+    p.clamp = false;
+    let s = burrau::<f64>();
+    let (sys, q, pm) = register(&s, p.tiny, p.r3_floor);
+    let entry = entry_size(&q, &p);
+    let at_entry = size(&sys, &q, &pm, entry, &p);
+    assert!(
+        !at_entry.cap_hit,
+        "at the entry c₀ is the entry size, not above it"
+    );
+    assert!(!at_entry.floored && !at_entry.by_limit, "{at_entry:?}");
+    let capped = size(&sys, &q, &pm, entry / 2.0, &p);
+    assert!(
+        capped.cap_hit && capped.h == entry / 2.0,
+        "below the entry size: {capped:?}"
+    );
+    let (a, b) = AzSystem::ab(&q);
+    let mut t = p;
+    t.tiny = a.min(b);
+    assert!(
+        !size(&sys, &q, &pm, entry, &t).floored,
+        "A or B at TINY is not below it"
+    );
+    t.tiny = a.min(b).next_up();
+    assert!(
+        size(&sys, &q, &pm, entry, &t).floored,
+        "just above it, floored"
+    );
+    let mut f = p;
+    f.predictive_f = 1e-9;
+    let limited = size(&sys, &q, &pm, entry, &f);
+    assert!(
+        limited.by_limit && limited.h < entry,
+        "a tiny f sets the size: {limited:?}"
+    );
+    f.predictive_f = 0.0;
+    assert!(
+        !size(&sys, &q, &pm, entry, &f).by_limit,
+        "f = 0: the limit is off"
+    );
+    let mut c = p;
+    c.clamp = true;
+    let mut near = q;
+    near.t = c.delta_sync - 1e-9;
+    let clamped = size(&sys, &near, &pm, entry, &c);
+    assert_eq!(
+        clamped.h,
+        (c.delta_sync - near.t) / (a * b),
+        "the clamp takes the remainder"
+    );
+    near.t = c.delta_sync + 1e-9;
+    assert_eq!(
+        size(&sys, &near, &pm, entry, &c).h,
+        0.0,
+        "past the boundary, no step"
+    );
+}
+
+#[test]
+fn az_step_signals() {
+    check_signals(step_size);
+}
+
+negative_control!(
+    az_step_signals,
+    "a rule that counts every step a cap hit",
+    expected = "at the entry c₀ is the entry size, not above it",
+    check_signals(|s, q, p, e, a| StepSize {
+        cap_hit: true,
+        ..step_size(s, q, p, e, a)
+    })
+);
+
+/// A march over `[k, k + n)` from `s` carrying `c`: its state, its counts.
+type Over<'a> = &'a dyn Fn(&State<f64>, u32, u32, AzCount<f64>) -> AzAdvanced<f64>;
+
+/// Burrau over 80 sync intervals (`t = 10`) in one march, against the same marched one interval at a time: the same
+/// state, bit for bit; the same steps; one registration per interval; the switches of reference body counted between
+/// registrations, not at the first; the largest interval's steps; `dt_max` positive and at most `Δ_sync`. Without the
+/// clamp or the predictive limit and with a large `η`, a step past `2·Δ_sync` is an overshoot.
+fn check_counts(over: Over<'_>) {
+    let p = params::<f64>();
+    let s = burrau::<f64>();
+    let n = 80;
+    let whole = over(&s, 0, n, AzCount::new());
+    let (mut st, mut c) = (s, AzCount::new());
+    let (mut switches, mut largest, mut last) = (0, 0, 3);
+    for k in 0..n {
+        let before = c.steps;
+        let out = over(&st, k, k + 1, c);
+        largest = largest.max(out.count.steps - before);
+        if last != 3 && out.count.reference != last {
+            switches += 1;
+        }
+        last = out.count.reference;
+        (st, c) = (out.state, out.count);
+    }
+    assert_eq!(
+        bits(&whole.state),
+        bits(&st),
+        "one march or one interval at a time, the same state"
+    );
+    assert_eq!(whole.count.steps, c.steps);
+    assert_eq!(
+        whole.count.re_registrations, n,
+        "one registration per interval"
+    );
+    assert!(switches > 0, "the fixture switches reference body");
+    assert_eq!(
+        whole.count.switches, switches,
+        "the switches between registrations"
+    );
+    assert_eq!(
+        whole.count.largest_interval, largest,
+        "the largest interval"
+    );
+    match whole.count.dt_max.report() {
+        kernel::regularisation::dt_max::DtMaxReport::Largest { dt_max, skipped } => {
+            assert!(
+                dt_max > 0.0 && dt_max <= p.delta_sync && skipped == 0,
+                "dt_max {dt_max:e}"
+            );
+        }
+        other => panic!("no usable step: {other:?}"),
+    }
+    let mut loose = p;
+    loose.clamp = false;
+    loose.secant_tries = 0;
+    loose.eta = 50.0;
+    loose.predictive_f = 0.0;
+    let wild = march::<Rk4, f64, Counting, ExplicitTest>(
+        &s,
+        0,
+        1,
+        AzCount::new(),
+        &loose,
+        &mut Counting::default(),
+        &mut ExplicitTest,
+    );
+    assert!(
+        wild.count.overshoots > 0,
+        "a step past 2·Δ_sync: {:?}",
+        wild.count
+    );
+}
+
+/// The occupant's march over `[k, k + n)`.
+fn marched(s: &State<f64>, k: u32, n: u32, c: AzCount<f64>) -> AzAdvanced<f64> {
+    march::<Rk4, f64, Counting, ExplicitTest>(
+        s,
+        k,
+        n,
+        c,
+        &params(),
+        &mut Counting::default(),
+        &mut ExplicitTest,
+    )
+}
+
+#[test]
+fn az_counts() {
+    check_counts(&marched);
+}
+
+negative_control!(
+    az_counts,
+    "a march that counts the first registration a switch",
+    expected = "the switches between registrations",
+    check_counts(&|s, k, n, c| {
+        let mut out = marched(s, k, n, c);
+        if k == 0 {
+            out.count.switches += 1;
+        }
+        out
+    })
 );
