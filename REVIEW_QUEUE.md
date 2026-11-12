@@ -539,3 +539,50 @@ single-precision value, so which value to use there is the owner's.*
   output, until this entry is ruled.
 - **Waits:** the occupant's production configuration (its `AzConfig`), with REQ-INT-080's and REQ-INT-105's values;
   TASK-M3-68 itself does not wait.
+
+## RQ-806: Which `sim_failed` detail code a regularised march's non-finite exit writes, when the state it stores is the latched finite one *(silence and conflict, a meaning, R-72; a one-way door, it changes what the instrument records for a failed sample; payload §2, §8; integrator contract Part 2b step 7, Part 7; R-30; physics review 5879658175 of PR #502, P1; context: TASK-M3-68, TASK-M3-18)*
+
+*Queued 12 Nov 2026 from physics review 5879658175 on PR #502 (TASK-M3-68, the Aarseth–Zare occupant); each quote
+re-read on `main` at 54fa96fc. Nothing is chosen here.*
+
+*In plain English: when a regularised march breaks down numerically, it stops and keeps its last good state, and the
+sample is marked failed with a small code saying what went wrong: 0 for a NaN in the state, 1 for an infinity in the
+state, 2 for a blown-up derived quantity such as the energy or force. What broke is the march's own internal state,
+which held NaN or infinity, but what is stored is the last good state, which holds neither. So the code can be read off
+the stored state (2), off the broken internal state (0 or 1), or off the cause. Which one the instrument records is the
+owner's.*
+
+- **File, section:**
+  - `docs/design/principia_dd_simstate_payload.md` § "2. Bit layouts (the packed u32s)" (:296): "**`sim_failed`**
+    (state 4, numerical breakdown *during integration*): `0` = NaN in state; `1` = Inf/overflow in state; `2` =
+    non-finite derived quantity (energy/force blew up); `3` = reserved."
+  - The same file, § "8. Build-time settles" (:753): "**Failure `detail` enum** — the sim_failed/decode_failed category
+    codes (§2) are drawn from the integrator contract's actual failure modes; confirm they match the contract's
+    enumeration when it's finalised."
+  - `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference body, the
+    Levi-Civita inverse and the step control (transcribed)", step 7, "The exit": "The march ends when
+    `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, or the state is not finite, or the budget is spent"; and, for an entry
+    size that is not finite: "The entry size is then infinite and the step's state is not finite".
+  - The same contract, Part 7 (:1093): "`sim_failed` (NaN/Inf during integration) and `decode_failed` … are lifecycle
+    states".
+  - The latch, as built (`crates/kernel/src/regularisation/az.rs`, `End::NonFinite`): "The state was not finite at the
+    explicit test (Part 2b, step 7): the copy stopped, its state latched at the last finite one."
+- **The silence:** the codes are defined on "the state", and a regularised march has two: the regularised `(Q, P, t)`
+  the step-7 test rejected, non-finite, and the stored Cartesian state, finite by construction. Payload §8 leaves the
+  codes open, and TASK-M3-18 owns their cross-check against the contract's failure enumeration.
+- **Options:**
+  - (i) 2, read on the stored state, as built (`failed_detail` on the latched state);
+  - (ii) 0 or 1, read on the first non-finite regularised state the step-7 test rejected (0 if any component is NaN,
+    else 1);
+  - (iii) by cause: 2 where the step size `h` was not finite, else 0 or 1 read on the stepped state as in (ii).
+- **Measured** (the `az_doubly_degenerate_is_finite` fixture, f32, three bodies within `3e-38` at rest, TASK-M3-68's
+  test values; a throwaway probe, not committed, run through the job queue as job 5298 on 3ae7ae9e): the entry size `dτ_entry` is
+  `+∞`, so the step size `h` is `+∞`; RK4's step from the registered state gives all nine components of
+  `(u₁, p₁, u₂, p₂, t)` NaN (bits `0x7fc00000`), none infinite. So this fixture writes **2** under (i), **0** under (ii)
+  and **2** under (iii). Under (i) and (iii) the code is the same here; they differ on a finite step whose stepped state
+  overflows.
+- **Recommendation:** none. Physics review 5879658175 gave none ("it is a one-way door and not mine to settle").
+- **Applied meanwhile:** 2, option (i), as built by TASK-M3-68 (`crates/kernel/src/driver/wrapper.rs` `integrate_with`,
+  its doc comment marking the detail interim until this entry is ruled), as TASK-M3-05's interim writer was.
+- **Waits:** TASK-M3-18 (the one `sim_failed` writer and the cross-check of payload §2's codes); TASK-M3-68 itself does
+  not wait.
