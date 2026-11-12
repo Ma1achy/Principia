@@ -74,6 +74,15 @@ fn check_lc(conditioned: &str) {
         "the other form beside: {}",
         report.scatter[0]
     );
+    assert!(
+        report.scatter[1].contains("the unstable form there: relative error 3.975e-12"),
+        "the other form beside, at f64: {}",
+        report.scatter[1]
+    );
+    assert!(
+        c32.relative > 2f64.powi(-24),
+        "relative to |R|, just below 1: {c32:?}"
+    );
     let (u32_, u64_) = (lc_error::<f32>(179.9, false), lc_error::<f64>(179.9, false));
     assert!(
         c32.ulps <= 1.0 && c64.ulps <= 1.0,
