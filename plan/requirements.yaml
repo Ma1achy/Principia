@@ -5961,21 +5961,27 @@
   note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
 - id: REQ-CHART-201
   area: CHART
-  statement: "P2 and P4 must be measured and reported, not gates (R-951), and shown to the owner before TASK-M8-49 and TASK-M8-58 are built: P2, the on-screen jump between an end chart's own trace (`s = 0`) and the blend's (`s = 10⁻⁶`), median and worst, in pixels per vertex; P4, at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices that land more than 8 pixels apart on the blend, set against the same share on each end chart's own trace, with the median and worst residual (how far off the surface each vertex is); no threshold and no fallback picked by anyone but the owner. With them the report must carry P3's timing, the time to place a trace on a blend frame, a number with no pass line: it is not R-951's, which rules P2 and P4 only; it is carried here by the orchestrator's decision (applied per R-369: task scoping, listed for veto), and the trace's length is REQ-CHART-210's definition."
+  statement: "P2 and P4 must be measured and reported, not gates (R-951), and shown to the owner before TASK-M8-49 and TASK-M8-58 are built: P2, the on-screen jump between an end chart's own trace and the blend's next to it, at both ends (`s = 0` against `s = 10⁻⁶`, and `s = 1` against `s = 1 − 10⁻⁶`, each reported apart; R-977 (3b)), median and worst, measured as a fraction of picture width and read in px at 512×512, 1024×1024 and 1920×1080 from the same run (R-984); P4, at `s = 0.25`, `0.5` and `0.75`, the gaps between neighbouring trace vertices counted as a fraction of picture width and their distribution reported, with the share more than 8 px apart on the blend at each of the three sizes (R-977), set against the same share on each end chart's own trace, with the median and worst residual (how far off the surface each vertex is); no threshold and no fallback picked by anyone but the owner. With them the report must carry P3's timing, the time to place a trace on a blend frame, a number with no pass line: it is not R-951's, which rules P2 and P4 only; it is carried here by the orchestrator's decision (applied per R-369: task scoping, listed for veto), and the trace's length is REQ-CHART-210's definition."
   source:
   - file: decisions.md
     section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
   - file: decisions.md
     section: "R-947 — Placement, the re-plan addition's question (A): option (a), one placement function for \"where is this state on this chart\", two routes chosen by the chart, the existing reading where a chart has an inverse and the nearest point everywhere else, every blend included, refined to the lock's precision on the CPU *(no RQ; answers the re-plan addition's question (A); refines R-542 and R-926)*"
+  - file: decisions.md
+    section: "R-977 — RQ-785, P4's unit and the set-up of P2 and P4: P4's gaps counted as a fraction of picture width with their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; a pinned trace (2a), P2 at both ends (3b), the fixture's own output steps at each chart's home window, zoom 1 (4a); P2's unit left open, then settled by R-984 *(on RQ-785, which R-984 closes)*"
+  - file: decisions.md
+    section: "R-984 — RQ-785, P2's unit: P2's on-screen jump is measured as a fraction of picture width, as P4's gaps are, and its median and worst read in px at 512×512, 1024×1024 and 1920×1080 *(closes RQ-785)*"
   verify:
     method: review checklist
-    detail: "the report exists with every number: P2 (median and worst jump in pixels per vertex between `s = 0` and `s = 10⁻⁶`); P4 (at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices more than 8 pixels apart on the blend, against the same share on each end chart's own trace; the median and worst residual); P3's timing (the time to place a trace of the length REQ-CHART-210 defines on a blend frame, on the Mac (R-186), one thread, the slowest of five warm runs, a number with no pass line); each at the picture size the owner states (REQ-CHART-202); no pass line anywhere; and it has been shown to the owner"
+    detail: "the report exists with every number: P2 (median and worst jump, as a fraction of picture width and in px at 512×512, 1024×1024 and 1920×1080, between `s = 0` and `s = 10⁻⁶` and, reported apart, between `s = 1` and `s = 1 − 10⁻⁶`; R-977, R-984); P4 (at `s = 0.25`, `0.5` and `0.75`, the distribution of the gaps between neighbouring trace vertices as a fraction of picture width, and the share more than 8 px apart on the blend at each of the three sizes, against the same share on each end chart's own trace; the median and worst residual); P3's timing (the time to place a trace of the length REQ-CHART-210 defines on a blend frame, on the Mac (R-186), one thread, the slowest of five warm runs, a number with no pass line); P2 and P4 at the three sizes R-977 and R-984 state (REQ-CHART-202), from the same run; no pass line anywhere; and it has been shown to the owner"
   rulings:
   - R-649
   - R-947
   - R-951
+  - R-977
+  - R-984
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the code review of PR #482 (review 5852985982), F3):* the statement now names P3's timing, which the verify already asked for, and says whose decision it is; R-951 does not rule P3. \"A trace of a stated length\" named no one to state it: the length is a definition owed (R-72), REQ-CHART-210, and the draft's 5,000 vertices is a proposal nothing adopts. *Was (verify, the clause):* \"the time to place a trace of a stated length on a blend frame\""
+  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the code review of PR #482 (review 5852985982), F3):* the statement now names P3's timing, which the verify already asked for, and says whose decision it is; R-951 does not rule P3. \"A trace of a stated length\" named no one to state it: the length is a definition owed (R-72), REQ-CHART-210, and the draft's 5,000 vertices is a proposal nothing adopts. *Was (verify, the clause):* \"the time to place a trace of a stated length on a blend frame\" *12 Nov 2026 (R-977 (3b), R-984; code review 5875707244 of PR #503, F3):* P2 at both ends, as a fraction of picture width read in px at three sizes, and P4's gaps as a fraction of picture width with their distribution. *Was (statement):* \"P2 and P4 must be measured and reported, not gates (R-951), and shown to the owner before TASK-M8-49 and TASK-M8-58 are built: P2, the on-screen jump between an end chart's own trace (`s = 0`) and the blend's (`s = 10⁻⁶`), median and worst, in pixels per vertex; P4, at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices that land more than 8 pixels apart on the blend, set against the same share on each end chart's own trace, with the median and worst residual (how far off the surface each vertex is); no threshold and no fallback picked by anyone but the owner. With them the report must carry P3's timing, the time to place a trace on a blend frame, a number with no pass line: it is not R-951's, which rules P2 and P4 only; it is carried here by the orchestrator's decision (applied per R-369: task scoping, listed for veto), and the trace's length is REQ-CHART-210's definition.\" *Was (verify):* \"the report exists with every number: P2 (median and worst jump in pixels per vertex between `s = 0` and `s = 10⁻⁶`); P4 (at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices more than 8 pixels apart on the blend, against the same share on each end chart's own trace; the median and worst residual); P3's timing (the time to place a trace of the length REQ-CHART-210 defines on a blend frame, on the Mac (R-186), one thread, the slowest of five warm runs, a number with no pass line); each at the picture size the owner states (REQ-CHART-202); no pass line anywhere; and it has been shown to the owner\""
 - id: REQ-CHART-202
   area: CHART
   kind: definition
@@ -28269,7 +28275,7 @@
   note: "R-962 (11 Nov 2026, RQ-788 (a)): the map is as TASK-M7-12 built it; TASK-M7-75 drops the \"provisional pending RQ-788\" wording and renames the test from stain_fanout_margin_provisional_map_is_the_grey_ramp."
 - id: REQ-GUI-437
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, every place the FTLE is shown (each view of `ftle`, the horizon map and its legend, the Trajectory panel's summary, and an export's header) must state that the shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the horizon map and its legend must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
@@ -28277,11 +28283,76 @@
     section: 3.8 Co-computations (tier-gated, ride the forward pass)
   verify:
     method: unit test
-    detail: "cargo test -p render ftle_provisional_stated: every view the registry offers that reads `ftle`, the horizon map's legend and the export header carry the provisional statement, read from one source; controls: a view of `ftle` without it, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+    detail: "cargo test -p render ftle_provisional_stated: the horizon map's view and its legend carry the provisional statement from REQ-GUI-438's source; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
   milestone: M4
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping): closed by TASK-M4-13, the first task that puts the FTLE in a view and a legend; later views of the FTLE read the same statement. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping): closed by TASK-M4-13, the first task that puts the FTLE in a view and a legend; later views of the FTLE read the same statement. The test's name is given here (naming). *12 Nov 2026, later (code review 5875707244 of PR #503, F4; applied per R-369: task scoping):* split per surface, so each task that builds a surface showing the FTLE closes its own arm: this one keeps the horizon map and its legend (TASK-M4-13); REQ-GUI-438 the existing field views and the one source (a new task, TASK-M3-73), REQ-GUI-439 the generated legend (TASK-M8-22), REQ-GUI-440 the Trajectory panel's summary (TASK-M8-11), REQ-GUI-441 the click inspector's trust line (TASK-M8-76), REQ-GUI-442 an export's block (TASK-M8-80), REQ-VAL-356 TASK-M9-41's FTLE maps. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, every place the FTLE is shown (each view of `ftle`, the horizon map and its legend, the Trajectory panel's summary, and an export's header) must state that the shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits (R-976, RQ-794 (c)).\" *Was (verify):* \"cargo test -p render ftle_provisional_stated: every view the registry offers that reads `ftle`, the horizon map's legend and the export header carry the provisional statement, read from one source; controls: a view of `ftle` without it, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail\""
+- id: REQ-GUI-438
+  area: GUI
+  statement: "There must be one source for the statement that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, which every surface showing the FTLE reads and which falls silent once REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run; until then every field view of `ftle` already built (TASK-M1-12's finalised `ftle` and running `S/t` views, and every catalogue view that reads `ftle`) must state it (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render ftle_views_state_provisional: every catalogue view that reads `ftle` carries the statement, from the one source; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M3
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M3-73. The test's name is given here (naming)."
+- id: REQ-GUI-439
+  area: GUI
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the generated legend of a stain that reads `ftle` (a preset such as n̂ × FTLE among them) must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render legend_ftle_provisional: the legend of a stain reading `ftle` carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M8
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-22. The test's name is given here (naming)."
+- id: REQ-GUI-440
+  area: GUI
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the Trajectory panel's summary line where it shows the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui trajectory_summary_ftle_provisional: the summary's FTLE carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M8
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-11. The test's name is given here (naming)."
+- id: REQ-GUI-441
+  area: GUI
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the click inspector's trust line where it reads the FTLE estimate must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui trust_line_ftle_provisional: the trust line's FTLE-based reading carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M8
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-76. The test's name is given here (naming)."
+- id: REQ-GUI-442
+  area: GUI
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, an export's block, where the export carries the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render export_block_ftle_provisional: an export of a stain reading `ftle` carries the statement in its export block; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M8
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-80. The test's name is given here (naming)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -41365,6 +41436,38 @@
   - R-916
   milestone: M2
   note: "Closed by TASK-M2-79. R-669 had not built it. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-79."
+- id: REQ-VAL-355
+  area: VAL
+  kind: definition
+  statement: "How R-974's joint step keeps the sample and its FTLE shadow at the same physical time under an occupant that owns its time mapping (Heggie × RK4, the default, `dτ = S^{3/2}/(R₁R₂R₃) dt`, integrator contract Part 2b, R-161; logH alike) must be defined (R-72) in `principia_dd_integrator.md` §3.8 by the task that builds the joint step and reviewed by the physics reviewer before merge: stepped by one `Δτ`, the two move by different `Δt`, and `δ⃗` gains a component along the flow that breaks the finite-difference estimator, ‖δ₀‖'s meaning and dd test 10. The options include carrying `δt` as a component of the displacement, resynchronised at each renormalisation, or stepping the shadow's `τ` so that it lands on the sample's `t`."
+  source:
+  - file: decisions.md
+    section: "R-974 — RQ-793, the displacement form of the FTLE shadow: option (a), a joint step on the occupant interface; whether the force difference is formed plainly in f32 (a1) or cancellation-free (a2) is chosen by a measurement whose criterion TASK-M3-72 writes before any run, physics-reviewed *(closes RQ-793)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: unit test
+    detail: "Review (physics): §3.8 carries the definition. cargo test -p kernel displacement_shadow_same_time: on the Heggie × RK4 occupant, at every renormalisation of a joint-step run, the shadow's elapsed physical time equals the sample's (to the definition's stated tolerance, or bitwise if it lands on the same `t`); control: a joint step that advances the shadow by the sample's `Δτ` alone, its elapsed `t` drifting from the sample's, fails"
+  rulings:
+  - R-72
+  - R-974
+  milestone: M3
+  note: "12 Nov 2026 (R-974, physics review 5875695467 of PR #503, F1): a recorded consequence of R-974, closed by TASK-M3-72. The test's name is given here (naming)."
+- id: REQ-VAL-356
+  area: VAL
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, TASK-M9-41's per-point FTLE maps and their report must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: review checklist
+    detail: "Review (physics): the report and each map's caption carry the statement where REQ-INT-076's values are still unconfirmed; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M9
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M9-41. The test's name is given here (naming)."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
