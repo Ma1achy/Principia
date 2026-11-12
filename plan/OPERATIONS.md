@@ -369,14 +369,15 @@ head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose su
 verdict cover every job so the two can't disagree."):* any failed job of `ci.yml`'s run on `main` is a red `main`, a
 process test, the lints, `cargo xtask ci` or the web skeleton as much as a product test; an install step's network or
 archive-download failure reads "no result", never green, and holds as red does (R-979, a reading flagged for the
-owner). Until TASK-M0-59 makes the verdict cover every job, the orchestrator reads every job of the run itself. The
-rest of this paragraph is kept as its *Was*: "A
+owner). Until TASK-M0-59 makes the verdict cover every job, the orchestrator reads every job of the run itself. The vetoed
+policy is kept as its *Was*: "A
 run of `ci` on `main` that failed with `per-merge` passing is not red `main`: its failures are outside correctness (a
 process test, the lints and build beside the tests, `cargo xtask ci`, the web skeleton, a runner or setup step), filed
 as one issue labelled `per-merge`, a top-priority task the orchestrator works without stopping pull-request work. The
 run's own conclusion can't carry this: the jobs that run the product suite run process tests too, and none of them may
-pass with a failing step (REQ-TOOL-223, R-235, R-335). Applied per R-369/R-812.
-The verdict reads each failed test step in its own part of the job's log, and is red whenever part of the product
+pass with a failing step (REQ-TOOL-223, R-235, R-335). Applied per R-369/R-812."
+What follows describes the verdict as built today, and stands until TASK-M0-59 changes it to cover every job (R-982);
+it is not the vetoed policy. The verdict reads each failed test step in its own part of the job's log, and is red whenever part of the product
 suite did not run: a test step skipped after a failed one (but a step of process tests alone), or nextest counting
 fewer tests run than it selected. The `ci`, `ci-workspace` and `gpu-kernel` profiles run every test after a failure
 (`fail-fast = false`), and each later product test step of their jobs runs whatever an earlier one ended in, but for
@@ -517,8 +518,11 @@ and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xt
 decode-agreement`), the golden and screenshot runners' self-tests, the release profile (R-547), `cargo xtask ci`, the
 controls run among it, and every process test. They are `ci.yml`'s per-merge tier (the owner's CI model, R-909 item 2,
 order step 3), the full suite's jobs, on a push only, each merge commit in a run of its own, bearing no required check,
-and last `per-merge`, their verdict: a correctness failure fails it, a red `main`; any other failure is filed as a
-top-priority task, an issue labelled `per-merge` (§ "Merging"). A head that changes only prose a test reads does not run that test unless it changes the
+and last `per-merge`, their verdict. *12 Nov 2026 (R-982, the owner's veto of D-2 of that day's report):* any failed job
+of the run is a red `main`, an install step's network or archive-download failure reading "no result", never green
+(R-979; § "Merging", what is red `main`); the built verdict follows once TASK-M0-59 lands, and until then the
+orchestrator reads every job itself. *Was:* "a correctness failure fails it, a red `main`; any other failure is filed as
+a top-priority task, an issue labelled `per-merge` (§ "Merging")". A head that changes only prose a test reads does not run that test unless it changes the
 machinery, so a contract's renamed heading can turn `main` red after a green pull request (R-662). New code that loads
 a data file for behaviour adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a
 literal data path missing from it.
