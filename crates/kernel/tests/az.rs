@@ -31,6 +31,8 @@
 //!   and the seam's `ADVANCE` from a later macro index; their controls the uncorrected quotient and a seam from 0.
 //! - `az_form_orders`: each stepper's form at its own order on the harmonic oscillator (KDK second order there, being
 //!   separable); its control takes Yoshida-4's form for Yoshida-6.
+//! - `az_stepper_forms`: each stepper type names its own form (`Stepper::FORM`, fixed at compile time); its control
+//!   has Yoshida-6 name Yoshida-4's.
 //! - `az_whole_nan`, `az_whole_negative`, `az_whole_above`: `Count::whole` clamps in the float type before the cast
 //!   (gpu_determinism_note § "The discipline", rule 3): a NaN on its bits to `0`, a negative to `0`, at or above `2³²`
 //!   to `u32::MAX`; their controls a NaN sent to the top, a negative by its magnitude, and a clamp with no select.
@@ -476,15 +478,6 @@ fn regularisation_compose_az_profile() {
     );
     assert_eq!(evals(Composed::<Yoshida4, Az>::profile()), (1, 9));
     assert_eq!(evals(Composed::<Yoshida6, Az>::profile()), (1, 21));
-    for (form, stepper) in [
-        (Form::Euler, Euler::profile()),
-        (Form::Kdk, Kdk::profile()),
-        (Form::Yoshida4, Yoshida4::profile()),
-        (Form::Yoshida6, Yoshida6::profile()),
-        (Form::Rk4, Rk4::profile()),
-    ] {
-        assert_eq!(Form::of(&stepper), form, "each stepper's form is its own");
-    }
     // The slot takes a Mikkola–Tanikawa leapfrog type, with the table's row: symplectic and step-reversible.
     let leapfrog = <MikkolaTanikawaStandIn as AzStepper>::pair_profile();
     assert!(leapfrog.symplectic && leapfrog.step_reversible && !leapfrog.run_reversible);
@@ -507,6 +500,38 @@ negative_control!(
     "the pair reporting its stepper's own row, KDK's, symplectic",
     expected = "the explicit composition is not symplectic",
     check_pair_profile("KDK", Kdk::profile())
+);
+
+/// Checks that each stepper type names its own form (`Stepper::FORM`, fixed at compile time): `named` pairs each
+/// stepper's expected form with the one it names.
+fn check_forms(named: [(Form, Form); 5]) {
+    for (want, got) in named {
+        assert_eq!(got, want, "each stepper's form is its own");
+    }
+}
+
+#[test]
+fn az_stepper_forms() {
+    check_forms([
+        (Form::Euler, Euler::FORM),
+        (Form::Kdk, Kdk::FORM),
+        (Form::Yoshida4, Yoshida4::FORM),
+        (Form::Yoshida6, Yoshida6::FORM),
+        (Form::Rk4, Rk4::FORM),
+    ]);
+}
+
+negative_control!(
+    az_stepper_forms,
+    "Yoshida-6 naming Yoshida-4's form",
+    expected = "each stepper's form is its own",
+    check_forms([
+        (Form::Euler, Euler::FORM),
+        (Form::Kdk, Kdk::FORM),
+        (Form::Yoshida4, Yoshida4::FORM),
+        (Form::Yoshida6, Yoshida4::FORM),
+        (Form::Rk4, Rk4::FORM),
+    ])
 );
 
 // ── ADVANCE on the sync grid ───────────────────────────────────────────────────────────────────────────────────

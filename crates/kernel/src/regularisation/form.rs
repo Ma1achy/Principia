@@ -58,7 +58,10 @@ pub trait Flow<R> {
     fn p_weighted(two: R, k: [&Self::P; 4]) -> Self::P;
 }
 
-/// A stepper's form on a regularised system: one per stepper of Part 2's table (integrator_contract Part 2b).
+/// A stepper's form on a regularised system: one per stepper of Part 2's table (integrator_contract Part 2b). Each
+/// stepper type names its own as the associated constant [`crate::occupant::Stepper::FORM`], so the form a march takes
+/// is fixed when the march is compiled for that stepper, never read from a profile at run time; a stepper that names
+/// none fails to build under a regularisation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Form {
     /// Explicit Euler on the whole state.
@@ -74,21 +77,6 @@ pub enum Form {
 }
 
 impl Form {
-    /// The form of the stepper whose profile is `profile`, by its row of Part 2's table (dd_integrator §3.2): order 1
-    /// with one evaluation, Euler; order 2 with one, KDK; order 4 with three, Yoshida-4; order 6 with seven, Yoshida-6;
-    /// and RK4 otherwise, order 4 with four evaluations among them, the classical form a profile outside the table's
-    /// five rows takes too.
-    #[inline]
-    pub const fn of(profile: &CapabilityProfile) -> Form {
-        match (profile.order, profile.force_evals) {
-            (1, 1) => Form::Euler,
-            (2, 1) => Form::Kdk,
-            (4, 3) => Form::Yoshida4,
-            (6, 7) => Form::Yoshida6,
-            _ => Form::Rk4,
-        }
-    }
-
     /// The profile of this stepper composed with a non-separable regularisation (the module's note).
     #[inline]
     pub const fn pair_profile(self) -> CapabilityProfile {
@@ -109,8 +97,10 @@ impl Form {
         }
     }
 
-    /// One step `h` of this form on `flow` from `(q, p)`.
-    #[inline]
+    /// One step `h` of this form on `flow` from `(q, p)`. Under a regularisation `self` is a stepper's
+    /// [`crate::occupant::Stepper::FORM`], a constant of the monomorphised march, so the match below selects one arm
+    /// at compile time.
+    #[inline(always)]
     pub fn step<R: StepReal, F: Flow<R>>(self, flow: &F, q: &F::Q, p: &F::P, h: R) -> (F::Q, F::P) {
         match self {
             Form::Euler => euler(flow, q, p, h),

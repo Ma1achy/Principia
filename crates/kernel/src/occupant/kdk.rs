@@ -12,12 +12,16 @@
 //! compositions, written out stage by stage so that every coefficient is read at a constant index.
 
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};
+use crate::regularisation::form::Form;
 
 /// The KDK leapfrog.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Kdk;
 
 impl Stepper for Kdk {
+    /// The form under a regularisation (integrator_contract Part 2b; [`crate::regularisation::form`]).
+    const FORM: Form = Form::Kdk;
+
     #[inline]
     fn profile() -> CapabilityProfile {
         CapabilityProfile {

@@ -540,7 +540,7 @@ pub trait AzStepper {
 impl<S: Stepper> AzStepper for S {
     #[inline]
     fn pair_profile() -> CapabilityProfile {
-        S::form().pair_profile()
+        S::FORM.pair_profile()
     }
 
     #[inline]
@@ -550,7 +550,7 @@ impl<S: Stepper> AzStepper for S {
         p: &AzP<R>,
         h: R,
     ) -> (AzQ<R>, AzP<R>) {
-        S::form().step(system, q, p, h)
+        S::FORM.step(system, q, p, h)
     }
 }
 

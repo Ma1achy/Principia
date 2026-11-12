@@ -182,12 +182,11 @@ pub trait Stepper {
     fn step<R: StepReal>(s: &State<R>, dt: R, geom: &Geom<R>) -> (State<R>, Geom<R>);
 
     /// The stepper's form on a regularised, non-separable system, the stepper slot under a regularisation
-    /// (integrator_contract Part 2b, "Every stepper × regularisation pair runs"): its profile's row of Part 2's table
-    /// ([`Form::of`]), so that a stepper delegating its profile delegates its form too.
-    #[inline]
-    fn form() -> Form {
-        Form::of(&Self::profile())
-    }
+    /// (integrator_contract Part 2b, "Every stepper × regularisation pair runs"; "Every pair is defined exactly"): a
+    /// property of the type, which each stepper names, fixed at compile time. A stepper that names none has no form,
+    /// and composing it with a regularisation fails to build (this default is evaluated only where a regularised march
+    /// reads it, and it fails there); no form is inferred from a profile.
+    const FORM: Form = panic!("this stepper names no form on a regularised system (Stepper::FORM)");
 }
 
 /// The production steppers (integrator_contract Part 2): the occupants a tier binds by default or a user selects.
