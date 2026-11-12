@@ -49,3 +49,4 @@ resident address unchanged. No manifold-level hierarchy exists.
   needs `x₀ + J_D·δ`; the linearised decoder's x₀/J_D computation lands in TASK-M5-04 (REQ-DEC-036) and the switchover in M6 (REQ-DEC-033/037). This task asserts it with a fixture
   `x₀`/`J_D` computed on the CPU by finite differences of the full decoder (see Gaps in the milestone report).
 - RQ-99 ruled: R-113, option (a) — REQ-DEC-036 moves to M5, closed by TASK-M5-04 (which depends on this task); this task's third assertion keeps its fixture `x₀`/`J_D`.
+- *12 Nov 2026 (the chart audit's F7):* where `x₀ + J_D·δ` is formed is RQ-797's question (where the one-cell patch is expanded); the f64 quantities above stand.

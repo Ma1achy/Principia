@@ -168,6 +168,8 @@ function resolve(vs: ViewState, sk: SimKey, rc: RenderConfig): Lowered {
 }
 ```
 
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (`chartUniformsFrom` among the compute uniforms, the per-quad `x0`, `J` and `decodeMode`) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
 **The stain graph's canonical form (R-72; REQ-RENDER-075; TASK-M1-04).** `canonical(rc.stainGraph)` is the graph as
 it lowers, whatever order it was built in: node ids, the order nodes and wires were added in and canvas positions are
 not in it, so two constructions of one graph have one form.
@@ -220,6 +222,8 @@ The rules above, applied. Columns: axis kinds → which Φ map the chart monomor
 | **Anosova physical-frame** | physical × physical | physical (m,r,p) construction → **canonicalise entry** → standard pipeline | — (R-871: no region-D mask uniform, the full disc unmasked; *was:* "region D bounds") | enters through the one seam; integrator unaware, as always; region D's third-body pair, lowered by TASK-M4-34 through `region_d_variant` with the signed canonicalisation, never folded to `(ξ, −η)` (R-914; REQ-CHART-165) |
 
 Every row ends in the same `canonicalise → (m,r,p) → wrapper(occupant)`. The rows differ only in the Φ map and its uniforms — which is the whole point.
+
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (the appendix's Φ maps lowered into the compute kernel, and the invariant charts' "infeasible pixels **write tagged payloads** in-kernel") are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
 
 ---
 

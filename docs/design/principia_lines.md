@@ -248,6 +248,7 @@ styling, so that dashes and labels run continuously along the whole line.
 
 - **Polylines in screen space, dashes by arc length.** The dash pattern continues along the whole line instead of
   restarting per segment. The mock-up's first cut restarted it, and dashed lines rendered solid.
+  *12 Nov 2026 (R-947, R-395; the chart audit's F23; applied per R-369: an implementation choice that changes no result):* trace and mark vertices reach the GPU in screen space, formed on the CPU in f64 from `place`'s point less the view's centre, never as absolute f32 chart coordinates.
 - **Outline first, then stroke,** with the same dash pattern and phase. Dash lengths do not scale with width, so a wider
   outline stays aligned with its stroke.
 - **Opacity per vertex** (traces): consecutive vertices of equal ink and quantised opacity are drawn as one run, which

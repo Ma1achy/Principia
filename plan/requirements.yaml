@@ -638,7 +638,7 @@
   rulings:
   - R-395
   milestone: M5
-  note: "R-395: past ℓ_switch (R-90) the sample position is carried as the per-quad local coordinates, the centre (f64 on the CPU, its f32 uniform on the GPU) and the f32 offset δ = half·(2t − 1), and is never summed into an absolute f32 u, which bands from about ℓ = 19 near u ≈ 0.6 (RQ-242, PR #160's measurement); the formula defines the position. This needs no RQ: R-395 answers RQ-242's question (b), which named this wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch (REQ-TOOL-159 routes every quad there onto δ). The depth-30 verify does not settle it alone: near the origin (the k = 0 quad at any N; for N = 8, any u below 2^−10) the absolute f32 sum is itself exact."
+  note: "R-395: past ℓ_switch (R-90) the sample position is carried as the per-quad local coordinates, the centre (f64 on the CPU, its f32 uniform on the GPU) and the f32 offset δ = half·(2t − 1), and is never summed into an absolute f32 u, which bands from about ℓ = 19 near u ≈ 0.6 (RQ-242, PR #160's measurement); the formula defines the position. This needs no RQ: R-395 answers RQ-242's question (b), which named this wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch (REQ-TOOL-159 routes every quad there onto δ). The depth-30 verify does not settle it alone: near the origin (the k = 0 quad at any N; for N = 8, any u below 2^−10) the absolute f32 sum is itself exact. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"the GPU must compute sample positions\" is the retired compute-side route; it stands as its *Was* until TASK-M5-04 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-DEC-032
   area: DEC
   statement: "CPU quad centres/half-widths and the GPU quad-local sample coordinate must share the Y-up UV convention, with the single flip v = 1 − frag_coord.y/H at the framebuffer seam, so ICs are not mirrored within a quad."
@@ -652,6 +652,7 @@
     detail: "an asymmetric IC fixture decodes to the same IC at a given UV on CPU and GPU; exported image orientation matches the reference"
   rulings: []
   milestone: M5
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"the GPU quad-local sample coordinate\" and the Y-up seam on the GPU side is the retired compute-side route; it stands as its *Was* until TASK-M5-03 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-DEC-033
   area: DEC
   statement: "Sample collapse on the full nonlinear decoder — adjacent samples giving bitwise-identical ICs — must trigger DECODE_SWITCHOVER to the linearised decoder with refinement continuing, never a refinement stop."
@@ -672,6 +673,7 @@
   milestone: M6
   rq:
   - RQ-797
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"DECODE_SWITCHOVER to the linearised decoder\" as a GPU decode mode is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-DEC-034
   area: DEC
   statement: "The linearised decode must replace the decode with x₀ + J_D·δ, where J_D is the map's exact (dual-number) or implicit slopes (R-935; REQ-DEC-058), central differences of the full chart→IC composite in f64 with deep_zoom §2's step rule (h_k = ε^{1/3}·max(1, |x_k|) in f64 along each input coordinate, divided by the step actually taken, (x + h) − (x − h); R-633) being only the check, chart-agnostic with no per-axis-kind special-casing, and |det J_D| must double as the measure weight."
@@ -772,6 +774,7 @@
   - R-90
   - R-154
   milestone: M6
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"signalled by QuadRequest DECODE_MODE\" to a GPU decode is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-DEC-038
   area: DEC
   kind: definition
@@ -879,6 +882,7 @@
   rulings:
   - R-71
   milestone: M2
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F14):* re-scoped to the fragment's generated code against the CPU record (R-935 under RQ-765); the compute side decodes nothing."
 - id: REQ-DEC-044
   area: DEC
   kind: calibration
@@ -1026,7 +1030,7 @@
   milestone: M5
   rq:
   - RQ-797
-  note: "R-632 (27 Oct 2026, RQ-578 (a) with (c)): the docs and the gates take this measured value, deep zoom §2's \"~50+\" replaced; a floor near ~50 needs an f64 sum and integration (on the CPU, or RQ-577's ladder after M3). Closed by TASK-M5-04 (applied per R-369); read by REQ-DEC-036, TASK-M6-07 and TASK-M6-08."
+  note: "R-632 (27 Oct 2026, RQ-578 (a) with (c)): the docs and the gates take this measured value, deep zoom §2's \"~50+\" replaced; a floor near ~50 needs an f64 sum and integration (on the CPU, or RQ-577's ladder after M3). Closed by TASK-M5-04 (applied per R-369); read by REQ-DEC-036, TASK-M6-07 and TASK-M6-08. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"x = x₀ + J_D·δ formed in f32\" on the GPU is the retired compute-side route; it stands as its *Was* until TASK-M5-04 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-DEC-052
   area: DEC
   statement: "A gate must measure the f32 GPU path's distinguishable depth on the linearised decoder as integrated — the depth at which adjacent samples' ICs, x = x₀ + J_D·δ formed in f32, first reach the f32 GPU integrator as bitwise-identical values — over a depth sweep past ℓ_switch at stated coordinate magnitudes |x₀|, each depth quoted with its |x₀|, so that the docs and the gates take the measured value (REQ-DEC-051) (R-632)."
@@ -1979,6 +1983,7 @@
     detail: "the compute kernel contains no runtime dispatch on axis kind or chart id; every chart is a generic instantiation"
   rulings: []
   milestone: M2
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"Each chart must lower to a monomorphised Rust variant\" on the compute side is the retired compute-side route; it stands as its *Was* until it is rewritten under R-926 (TASK-M2-06, which closed it, is built); where they differ, R-926 binds."
 - id: REQ-CHART-002
   area: CHART
   statement: "The shape sphere chart must be the whole sphere (R-544): R-14's φ = π(1 − t), pole to pole, is its only φ span, and a pixel (θ, φ) and its mirror (θ, π − φ) decode to two systems, each its own, so the spherical map's system_image is bijective, θ's period and the poles being R-407's types and not a fold; the chart must render both hemispheres, with no hemisphere label, no redundancy flag and no one-hemisphere view."
@@ -2058,6 +2063,7 @@
   milestone: M2
   rq:
   - RQ-712
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"lowered by monomorphisation to a specialised decode+map per chart\" is the retired compute-side route; it stands as its *Was* until it is rewritten under R-926 (TASK-M2-14, which closed it, is built); where they differ, R-926 binds."
 - id: REQ-CHART-005
   area: CHART
   statement: "A derived-in-block (kind 2) axis must declare and label its residual convention for the leftover within-block DOF, and encode must use the same convention as the forward axis."
@@ -2671,7 +2677,7 @@
   - R-544
   - R-914
   milestone: M4
-  note: "R-104: the appendix's shape-sphere row names DoubleCover (2-to-1 over the φ hemispheres). R-117: that row is conformed to R-14's (θ, φ) map. The appendix row's value is the untilted chart's. Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics; accepted by R-559). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold; accepted by R-559): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\". R-544 (21 Oct 2026): the shape sphere's row is bijective over the whole sphere (*was:* n-to-1, n = 2, R-141); the tilted fold above no longer applies to it. Physics review 5603309678 of PR #273, P3: the baked GPU variant, generated from the shared source, skips C's mirror step on the shape sphere, so it never restores R-141's gauge (TASK-M4-06). R-914 (9 Nov 2026, RQ-752 (a); physics review 5829515661, P1): the Anosova physical-frame row is region D's third-body pair, which TASK-M4-34 builds, so its clause is REQ-CHART-165, closed there; this requirement keeps the other eight rows. *Was (statement, the clause):* \"Burrau integer lattice per-cell dispatch, Anosova physical-frame through canonicalise)\" Code review 5829649251 (R-914): the statement and verify now name the exception. *Was (statement, the opening):* \"Each chart in the lowering appendix must lower\"; *was (verify):* \"one row per chart checked against the chart registry and kernel variants; the shape-sphere row lowers (s,t) → (θ,φ) → n → (ρ̃, λ̃) (R-117); the int (m,n) lattice's system_image is bijective (R-113)\""
+  note: "R-104: the appendix's shape-sphere row names DoubleCover (2-to-1 over the φ hemispheres). R-117: that row is conformed to R-14's (θ, φ) map. The appendix row's value is the untilted chart's. Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics; accepted by R-559). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold; accepted by R-559): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\". R-544 (21 Oct 2026): the shape sphere's row is bijective over the whole sphere (*was:* n-to-1, n = 2, R-141); the tilted fold above no longer applies to it. Physics review 5603309678 of PR #273, P3: the baked GPU variant, generated from the shared source, skips C's mirror step on the shape sphere, so it never restores R-141's gauge (TASK-M4-06). R-914 (9 Nov 2026, RQ-752 (a); physics review 5829515661, P1): the Anosova physical-frame row is region D's third-body pair, which TASK-M4-34 builds, so its clause is REQ-CHART-165, closed there; this requirement keeps the other eight rows. *Was (statement, the clause):* \"Burrau integer lattice per-cell dispatch, Anosova physical-frame through canonicalise)\" Code review 5829649251 (R-914): the statement and verify now name the exception. *Was (statement, the opening):* \"Each chart in the lowering appendix must lower\"; *was (verify):* \"one row per chart checked against the chart registry and kernel variants; the shape-sphere row lowers (s,t) → (θ,φ) → n → (ρ̃, λ̃) (R-117); the int (m,n) lattice's system_image is bijective (R-113)\" *12 Nov 2026 (R-926 item 5; the chart audit's F7):* each chart lowered \"to its stated Φ map, extra uniforms and flags\" in the compute kernel, infeasible pixels written in-kernel is the retired compute-side route; it stands as its *Was* until TASK-M4-06 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-CHART-038
   area: CHART
   statement: "Every navigation gesture must be a CPU-side edit of the one chart uniform (z₀, q₁, q₂) — pan/slice edit z₀, zoom/tilt edit the basis, the lock pins the centre — with non-raw slice/tilt directions taken as tangents at the centre, and the GPU must have no locked mode, view mode, camera object or second code path."
@@ -2701,7 +2707,7 @@
   - R-69
   - R-92
   milestone: M5
-  note: "The lock is chart construction, held in SimConfig and undoable (R-69; systems_architecture §6 now says so). Which gestures re-integrate and which re-address is R-92's: the slice plane is on the sim key."
+  note: "The lock is chart construction, held in SimConfig and undoable (R-69; systems_architecture §6 now says so). Which gestures re-integrate and which re-address is R-92's: the slice plane is on the sim key. *12 Nov 2026 (R-926 item 1; the chart audit's F7):* every gesture is an edit of the window `(c, Q)` (TASK-M2-61's object); the chart-uniform model of the statement is its *Was*."
 - id: REQ-CHART-039
   area: CHART
   statement: "Validation must be CPU-side through each chart's validate(u, v) -> ValidationResult so the GPU never sees an invalid IC, and the quadtree, lookup/lock and the legend must query the same function (the quadtree to skip quads entirely outside the feasible region)."
@@ -4037,7 +4043,7 @@
   - R-914
   - R-916
   milestone: M4
-  note: "R-871 (8 Nov 2026, RQ-714 (b) with RQ-738 conflict 3 read as its (c)): the preset is the full disc, unmasked, the symmetry filter (TASK-M8-120) giving exactly D; until it lands D is a contour and TASK-M4-06's golden reads in_region_d. *Was (statement, the clause):* \"with its region-D preset as RQ-714 and RQ-736 rule,\". R-914 (9 Nov 2026, RQ-752 (a)): that golden, region D's GPU reference, is TASK-M4-34's own (REQ-RENDER-123), and TASK-M4-06 gains no edge to TASK-M4-34. R-916 (9 Nov 2026): the pair's CPU decode, its presets and region_d_plane are REQ-CHART-171 (TASK-M2-68, M2); this requirement keeps the baked entry, TASK-M4-34's; the stale rq fields cleared. *Was (verify):* \"cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state …\", now REQ-CHART-171's."
+  note: "R-871 (8 Nov 2026, RQ-714 (b) with RQ-738 conflict 3 read as its (c)): the preset is the full disc, unmasked, the symmetry filter (TASK-M8-120) giving exactly D; until it lands D is a contour and TASK-M4-06's golden reads in_region_d. *Was (statement, the clause):* \"with its region-D preset as RQ-714 and RQ-736 rule,\". R-914 (9 Nov 2026, RQ-752 (a)): that golden, region D's GPU reference, is TASK-M4-34's own (REQ-RENDER-123), and TASK-M4-06 gains no edge to TASK-M4-34. R-916 (9 Nov 2026): the pair's CPU decode, its presets and region_d_plane are REQ-CHART-171 (TASK-M2-68, M2); this requirement keeps the baked entry, TASK-M4-34's; the stale rq fields cleared. *Was (verify):* \"cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state …\", now REQ-CHART-171's. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"a closed-form baked pair\" decoding on the GPU is the retired compute-side route; it stands as its *Was* until TASK-M4-34 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-CHART-101
   area: CHART
   statement: "Each closed-form primitive and pair must round-trip, forward(inverse(x)) = x over its domain at f64 and at f32, the interior angles and the side ratios among them, each with its mass-weighted form onto the shape sphere."
@@ -4981,7 +4987,9 @@
   - R-879
   - R-985
   milestone: M8
-  note: "Added by R-879 (8 Nov 2026). Closed by TASK-M8-128. The owner wrote \"may use a per-pixel horizon\"; the control that a single global horizon fails where the rescale differs per pixel is applied per R-369 (P8 of physics review 5820410914, PR #455), with I = 1 kept at the chosen state. R-985 (12 Nov 2026, the owner's direction on the chart audit's F17): a final-condition chart is a tier-3 map like any other, evaluated on the CPU as every chart is under R-926, R-879's \"CPU batch chart\" read as that evaluation; the coarse cover in motion, exact at rest (REQ-SCHED-020), with no label of its own as a route; R-879's per-pixel horizon, labelled, and its masked misses stand. The statement stands as written until the chart audit's record-corrections pull request carries the docs, and where it differs from R-985 the ruling binds. Its measure weight waits on RQ-800."
+  rq:
+  - RQ-800
+  note: "Added by R-879 (8 Nov 2026). Closed by TASK-M8-128. The owner wrote \"may use a per-pixel horizon\"; the control that a single global horizon fails where the rescale differs per pixel is applied per R-369 (P8 of physics review 5820410914, PR #455), with I = 1 kept at the chosen state. R-985 (12 Nov 2026, the owner's direction on the chart audit's F17): a final-condition chart is a tier-3 map like any other, evaluated on the CPU as every chart is under R-926, R-879's \"CPU batch chart\" read as that evaluation; the coarse cover in motion, exact at rest (REQ-SCHED-020), with no label of its own as a route; R-879's per-pixel horizon, labelled, and its masked misses stand. The statement stands as written until the chart audit's record-corrections pull request carries the docs, and where it differs from R-985 the ruling binds. Its measure weight waits on RQ-800. *12 Nov 2026 (the chart audit's record-corrections pull request):* the docs now carry R-985: TASK-M8-128's Notes and `principia_chart_composition.md` § 10.3 each have a dated note; the statement stands as written, and where it differs from R-985 the ruling binds. The measure weight is linked to RQ-800."
 - id: REQ-CHART-154
   area: CHART
   kind: calibration
@@ -5069,7 +5077,7 @@
   - R-902
   - R-916
   milestone: M2
-  note: "Added by R-899 and R-902 (8 Nov 2026). Closed by TASK-M2-65. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65. *Was (statement, the clause):* \"confirmed by the owner at the M8 gate\" (R-916, R-919)."
+  note: "Added by R-899 and R-902 (8 Nov 2026). Closed by TASK-M2-65. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65. *Was (statement, the clause):* \"confirmed by the owner at the M8 gate\" (R-916, R-919). *12 Nov 2026 (the chart audit's F23):* the proposal also states the tolerance's depth reach, the depth at which `tol / σ_min(J)` equals one sample spacing, a reported quantity; no value is chosen here. `place_routes` (TASK-M2-99) gains M-E's CPU half at depths 21 and 30."
 - id: REQ-CHART-159
   area: CHART
   statement: "Stage 2's rewrite of every saved record's text must be handled as RQ-750 (R-900, R-898): the saved-file format's version bumped, old files converted on load, a conversion test in place of the bitwise check (each converted record decoding to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state; its outcome class REQ-CHART-177's), and any golden hash it changes regenerated with a recorded reason."
@@ -5204,7 +5212,7 @@
   - R-871
   - R-914
   milestone: M4
-  note: "Split from REQ-CHART-037 by R-914 (9 Nov 2026, RQ-752 (a); physics review 5829515661 of the rulings PR, P1): the Anosova row's lowering goes with region D's GPU reference (REQ-RENDER-123) to TASK-M4-34."
+  note: "Split from REQ-CHART-037 by R-914 (9 Nov 2026, RQ-752 (a); physics review 5829515661 of the rulings PR, P1): the Anosova row's lowering goes with region D's GPU reference (REQ-RENDER-123) to TASK-M4-34. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* the row lowered at the compute kernel's canonicalise entry is the retired compute-side route; it stands as its *Was* until TASK-M4-34 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-CHART-166
   area: CHART
   statement: "Locking must not move the view (R-866) in the engine: a lock must edit neither z₀, the basis nor a nonlinear chart's window; the pin must be the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre; tilt and zoom must turn about the pin; on nonlinear charts the pin must be exact, or the task must state why it can't be, an inexact pin's bound REQ-GUI-429's calibration, how the pin is held written into chart_decoder_contract Part 4 (R-72) and approved by the physics reviewer; snap-back must undo the slice only, centre on pin clearing the in-plane part, the two together z₀ ← z_locked bitwise by assignment, snap-back alone exact to the rounding bound derived from its construction and stated by the task, a bound that can't be derived a calibration (R-71) (R-899, Q2 (a))."
@@ -5816,7 +5824,7 @@
     section: "R-945 — R-926 item 7's \"ONLY\" list was not exhaustive: the backwards direction serves anything that places a running or saved state on a chart, traces and marks on the CPU among them *(no RQ; refines R-926)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine backwards_table_cpu: for each kernel chart of the first slice, a baked backwards table and search on the CPU return every forward node to its own cell. Measurement: at `t = 0` and after a run, 256 × 256 samples, table 64, scan 16 (the prototype's sensible point, re-measured, not adopted): the wrong share (a worse match than an exhaustive search of the same table) and the round-trip error in cells; criterion written before any run: PASS if the wrong share at `t = 0` is at most the prototype's figure for the same kind of chart (0.00% on the plain sphere and latent charts, 0.12% on `(L_z, E)`); EXPLAINED DIVERGENCE if worse with a named cause; else UNEXPLAINED. The accuracy outside a morph is R-935's (under RQ-767 (a): the table seeds a refinement on the chart's forward code)"
+    detail: "cargo test -p engine backwards_table_cpu: for each kernel chart of the first slice, a baked backwards table and search on the CPU return every forward node to its own cell. Measurement: at `t = 0` and after a run, 256 × 256 samples, table 64, scan 16 (the prototype's sensible point, re-measured, not adopted): the wrong share (a worse match than an exhaustive search of the same table) and the round-trip error in cells; criterion written before any run: PASS if the wrong share at `t = 0` is at most the prototype's figure for the same kind of chart (0.00% on the plain sphere and latent charts, 0.12% on `(L_z, E)`); EXPLAINED DIVERGENCE if worse with a named cause; else UNEXPLAINED. The accuracy outside a morph is R-935's (under RQ-767 (a): the table seeds a refinement on the chart's forward code). Also (the chart audit's F23, 12 Nov 2026): cargo test -p engine backwards_table_blend: the re-plan's open item O4, the latent chart to the exponential-map sphere at s = 0.25, 0.5 and 0.75, table 64 and 128, scan 16, at t = 0, 256 × 256 samples: the wrong share by route, and the folded share by TASK-M2-90's signed fold indicator; PASS if the wrong share outside folded cells is at most the plain charts' figure (0.00% on the plain sphere and latent charts), EXPLAINED DIVERGENCE if the excess lies in folded cells (R-936) or has another cause the physics reviewer names, else UNEXPLAINED; positive control: a table off by one node raises the wrong share, or the run is void. cargo test -p engine backwards_table_size_gauge: O9's two checks (the chart point at I ≠ 1 equals the one for the state rescaled to I = 1, within the stated tolerance; the decode equals the state's canonical form, REQ-ENC-006); control: an unrescaled lookup fails the first check"
   rulings:
   - R-649
   - R-925
@@ -5824,7 +5832,7 @@
   - R-935
   - R-945
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-92 (N7 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+  note: "Added 11 Nov 2026 with TASK-M2-92 (N7 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *12 Nov 2026 (the chart audit's F23):* the verify gains `backwards_table_blend` (the re-plan's open item O4, its criterion and control), and `backwards_table_size_gauge` (O9's two checks and control), as TASK-M2-92's acceptance; the table is the chart's, one per chart plane at home scale (R-947; R-942 under RQ-776 (a)). *12 Nov 2026 (Codex's review of PR #508; applied per R-369: task scoping):* the arms that read `place` (measurement M-D, `backwards_table_depth`, and O4's share still wrong after `place` refines it, `backwards_table_blend_place`) move to REQ-CHART-199's verify and TASK-M2-99, which builds `place` and depends on TASK-M2-92."
 - id: REQ-CHART-193
   area: CHART
   statement: "The lock's solver core must be a least-squares solve over a map with a recorded branch rule, convergence reported per call and failures tagged, following its local minimiser continuously and stopping where that ends (R-926 item 4; R-935, under RQ-759 (a))."
@@ -5957,14 +5965,14 @@
     section: "10.6 Placement: one function for \"where is this state on this chart\""
   verify:
     method: unit test
-    detail: "cargo test -p kernel place_routes: for each kernel chart of the first slice (the latent chart, the shape sphere's exponential map, the `(L_z, E)` chart) and each of two blend pairs (the latent chart to the shape sphere's exponential map, and the `(L_z, E)` chart to the shape sphere's exponential map) at `s = 0.25`, `0.5` and `0.75`, on a 64 × 64 pixel grid: `place` of each pixel's own decoded state returns that pixel with its residual within the lock's tolerance (REQ-CHART-158), or, where the blend folds, a set containing it; at `s = 0.0` and `1.0` the end chart's own answer, bitwise; on a chart with an inverse the encode route's answer equals the one projection (REQ-COL-134) bitwise. Controls: a `place` that returns its table seed unrefined fails the residual check on at least one blend (if none fails, the table already meets the tolerance and the control is reported void, not passed); an answer one pixel off fails. It checks only states on the chart's image, and is not read as passing on a nearest-point route until REQ-CHART-200's two definitions are written and approved"
+    detail: "cargo test -p kernel place_routes: for each kernel chart of the first slice (the latent chart, the shape sphere's exponential map, the `(L_z, E)` chart) and each of two blend pairs (the latent chart to the shape sphere's exponential map, and the `(L_z, E)` chart to the shape sphere's exponential map) at `s = 0.25`, `0.5` and `0.75`, on a 64 × 64 pixel grid: `place` of each pixel's own decoded state returns that pixel with its residual within the lock's tolerance (REQ-CHART-158), or, where the blend folds, a set containing it; at `s = 0.0` and `1.0` the end chart's own answer, bitwise; on a chart with an inverse the encode route's answer equals the one projection (REQ-COL-134) bitwise. Controls: a `place` that returns its table seed unrefined fails the residual check on at least one blend (if none fails, the table already meets the tolerance and the control is reported void, not passed); an answer one pixel off fails. It checks only states on the chart's image, and is not read as passing on a nearest-point route until REQ-CHART-200's two definitions are written and approved. Also (the chart audit's F23, 12 Nov 2026, moved from REQ-CHART-192 by Codex's review of PR #508): cargo test -p engine backwards_table_blend_place: O4's blend, the latent chart to the exponential-map sphere at s = 0.25, 0.5 and 0.75, table 64 and 128, scan 16, at t = 0, 256 × 256 samples: the share still wrong after `place` refines TASK-M2-92's table answer, reported beside its wrong share by route and folded share. cargo test -p engine backwards_table_depth: measurement M-D, the fragment's algorithm on the CPU in f64 and f32 emulation against `place` at depths 0 to 40; PASS on the image in f64 at the count the fragment uses, every sample at every admitted depth within one sample spacing of `place`, and builds none on pan, zoom or the playhead, one per tilt, slice and morph frame; off-image shares and the f32 arm reported, never asserted (R-935); positive controls: the unrefined seed fails at depth 10; a table off by one node raises the not-within share"
   rulings:
   - R-542
   - R-935
   - R-945
   - R-947
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P7):* the statement gains R-935's split under RQ-767 (a), recorded in `decisions.md` § R-935, the bullet \"RQ-767, the table route's accuracy outside a morph: (a)\", and now in chart_composition § 10.6, \"Accuracy\": without it a reader taking the tolerance as a bound on the residual would mark almost every trace vertex `left`. *11 Nov 2026 (the same review, P2):* REQ-COL-133 (the leaving rule's definition) and REQ-COL-163 (later states read signed) move to TASK-M2-99 with this requirement, since `place`'s `status` and its signed input implement them."
+  note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P7):* the statement gains R-935's split under RQ-767 (a), recorded in `decisions.md` § R-935, the bullet \"RQ-767, the table route's accuracy outside a morph: (a)\", and now in chart_composition § 10.6, \"Accuracy\": without it a reader taking the tolerance as a bound on the residual would mark almost every trace vertex `left`. *11 Nov 2026 (the same review, P2):* REQ-COL-133 (the leaving rule's definition) and REQ-COL-163 (later states read signed) move to TASK-M2-99 with this requirement, since `place`'s `status` and its signed input implement them. *12 Nov 2026 (Codex's review of PR #508; applied per R-369: task scoping):* the verify gains `backwards_table_blend_place` and `backwards_table_depth` (measurement M-D), moved from REQ-CHART-192 with TASK-M2-92's acceptance lines, since they read `place`."
 - id: REQ-CHART-200
   area: CHART
   kind: definition
@@ -8486,7 +8494,7 @@
   - R-935
   - R-985
   milestone: M2
-  note: "Replaces REQ-INT-070 (decode in the kernel, never an IC buffer), reversed by R-926 item 5 and retired (the re-plan § A.2). Added 11 Nov 2026 with TASK-M2-87 (N2 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the code re-check of PR #482 (review 5853463481), N1):* this requirement's verify is contract text and checks no code. That the built integrator entry holds no chart code and never decodes is checked by REQ-INT-116, closed by TASK-M4-05 (flat-grid compute), which builds the entry. R-985 (12 Nov 2026, the owner's direction on the chart audit's F8): the stop index stays in the record, and on a view tilted toward time only that word is rewritten each frame, from the pixel and the playhead on the host, the record's other words unchanged; the statement stands as written until the chart audit's record-corrections pull request carries the docs, and where it differs from R-985 the ruling binds."
+  note: "Replaces REQ-INT-070 (decode in the kernel, never an IC buffer), reversed by R-926 item 5 and retired (the re-plan § A.2). Added 11 Nov 2026 with TASK-M2-87 (N2 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the code re-check of PR #482 (review 5853463481), N1):* this requirement's verify is contract text and checks no code. That the built integrator entry holds no chart code and never decodes is checked by REQ-INT-116, closed by TASK-M4-05 (flat-grid compute), which builds the entry. R-985 (12 Nov 2026, the owner's direction on the chart audit's F8): the stop index stays in the record, and on a view tilted toward time only that word is rewritten each frame, from the pixel and the playhead on the host, the record's other words unchanged; the statement stands as written until the chart audit's record-corrections pull request carries the docs, and where it differs from R-985 the ruling binds. *12 Nov 2026 (the chart audit's record-corrections pull request):* the docs now carry R-985: the scheduler contract's Part 7 and the caching contract's Part 1 each have a dated note."
 - id: REQ-INT-116
   area: INT
   statement: "The built integrator's compute entry must hold no chart code and must never decode (R-926 item 5): its starting states are the records the CPU wrote, read as REQ-INT-115's contract gives them."
@@ -10462,6 +10470,7 @@
   milestone: M6
   rq:
   - RQ-797
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"x₀ and the Jacobian J_D must travel in a separate uniform buffer\" is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-PAY-070
   area: PAY
   kind: definition
@@ -12845,7 +12854,7 @@
   - R-97
   - R-100
   milestone: M5
-  note: "There is no hash seed (R-100). The frame's level-0 cell size: see the definition requirement for the slice-plane frame's scale."
+  note: "There is no hash seed (R-100). The frame's level-0 cell size: see the definition requirement for the slice-plane frame's scale. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"the GPU quad uniforms\" sharing the address convention is the retired compute-side route; it stands as its *Was* until TASK-M5-03 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-SCHED-041
   area: SCHED
   statement: "Ensemble copies must be full uniform `SimState`s at copy_index 1..E, offset to Halton (2,3) points 1..E centred and scaled to the footprint (copy_index 0 = the un-jittered nominal), must be scheduler leaves that never spawn their own ensemble, and must carry no per-sample ensemble tag."
@@ -13201,7 +13210,7 @@
   milestone: M6
   rq:
   - RQ-803
-  note: "R-599 (25 Oct 2026, RQ-554 (c)): collapse is judged per axis; the switchover is unchanged; the readout's naming of the saturated axis is REQ-GUI-397 (applied per R-369). RQ-554 was (R-570's port, perf review 5624936602 of PR #279, P2): a band quad at 10⁴·ê_k, every collapsed pair along the saturated axis, switches, collapses again on the linear path and stops terminally here above the screen floor, while its other axis stays structured; whether such a quad keeps refining along the unsaturated direction is open. The terminal stop stands as written meanwhile; a ruling for RQ-554's (a) changes this requirement for band quads. *Was (statement):* \"The full decoder must switch to the linearised decoder once `quad.collapsed` is set (its adjacent samples give bitwise-identical ICs) or at depth ℓ_switch = 20 (lowering's SWITCH), whichever comes first, and sample collapse on the linearised decoder must fire AT_F32_FLOOR, a terminal stop cached as a quad fact, so the response to sample collapse keys off which decoder is active.\" *Was (verify):* \"force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full\" R-686 (4 Nov 2026): the bitwise agreement this switch reads must be tested on NVIDIA specifically: a Windows run of quad.collapsed over the same quads, compared with the other backends and posted to #390 (TASK-M6-08's notes). It blocks nothing; bitwise switchover on CI backends stays blocking (R-686, the owner's acceptance)."
+  note: "R-599 (25 Oct 2026, RQ-554 (c)): collapse is judged per axis; the switchover is unchanged; the readout's naming of the saturated axis is REQ-GUI-397 (applied per R-369). RQ-554 was (R-570's port, perf review 5624936602 of PR #279, P2): a band quad at 10⁴·ê_k, every collapsed pair along the saturated axis, switches, collapses again on the linear path and stops terminally here above the screen floor, while its other axis stays structured; whether such a quad keeps refining along the unsaturated direction is open. The terminal stop stands as written meanwhile; a ruling for RQ-554's (a) changes this requirement for band quads. *Was (statement):* \"The full decoder must switch to the linearised decoder once `quad.collapsed` is set (its adjacent samples give bitwise-identical ICs) or at depth ℓ_switch = 20 (lowering's SWITCH), whichever comes first, and sample collapse on the linearised decoder must fire AT_F32_FLOOR, a terminal stop cached as a quad fact, so the response to sample collapse keys off which decoder is active.\" *Was (verify):* \"force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full\" R-686 (4 Nov 2026): the bitwise agreement this switch reads must be tested on NVIDIA specifically: a Windows run of quad.collapsed over the same quads, compared with the other backends and posted to #390 (TASK-M6-08's notes). It blocks nothing; bitwise switchover on CI backends stays blocking (R-686, the owner's acceptance). *12 Nov 2026 (R-926 item 5; the chart audit's F7):* the switch between GPU decoders and `AT_F32_FLOOR` read on the GPU's linear decode is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-SCHED-063
   area: SCHED
   statement: "A quad at the integration floor must be stopped there: flagged floor-limited, not re-queued as refinable, while its samples keep their real (low-confidence) outcomes rather than being terminated. The floor follows the occupant (R-563): with regularisation off, samples substep-saturated with suspect_fraction staying high, unchanged; under a regularised occupant, the stop reading saturated, set when either counted signal (the separation floor, the entry-cap hits) fires, and suspect_fraction, as for every occupant (R-603); and a footprint undetermined by its budget (budget_exhausted) must take the refinement policy's Undetermined decision, never split, never discarded and never treated as resolved, its remedy finer steps only as an explicit re-run, never an automatic one (R-603)."
@@ -15354,7 +15363,7 @@
   - R-75
   - R-113
   milestone: M2
-  note: "UV / DECODE / ROUNDTRIP are fragment presets, not kernel variants (R-75). R-113 (RQ-95): the Burrau int lattice and the Anosova physical-frame chart are a separate M4 requirement."
+  note: "UV / DECODE / ROUNDTRIP are fragment presets, not kernel variants (R-75). R-113 (RQ-95): the Burrau int lattice and the Anosova physical-frame chart are a separate M4 requirement. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"without special-casing\", read against a compute-side decode is the retired compute-side route; it stands as its *Was* until it is rewritten under R-926 (TASK-M2-25, which closed it, is built); where they differ, R-926 binds."
 - id: REQ-RENDER-028
   area: RENDER
   statement: "The diffusion validity must use the streaming slope defined by the payload ledger: the predicate n ≥ 2, with NaN for an invalid fit (R-17, R-245)."
@@ -17073,7 +17082,7 @@
   milestone: M4
   rq:
   - RQ-714
-  note: "Split from REQ-RENDER-082 by R-914 (9 Nov 2026, RQ-752 (a)): region D's GPU reference moves from TASK-M4-06 into TASK-M4-34, the edge from TASK-M4-06 to TASK-M4-34 dropped."
+  note: "Split from REQ-RENDER-082 by R-914 (9 Nov 2026, RQ-752 (a)): region D's GPU reference moves from TASK-M4-06 into TASK-M4-34, the edge from TASK-M4-06 to TASK-M4-34 dropped. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* its GPU reference read from a GPU decode of region D is the retired compute-side route; it stands as its *Was* until TASK-M4-34 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-RENDER-124
   area: RENDER
   statement: "Five table debug views must exist (R-925 item 6; R-926 item 10): the forward table by block, the forward-table check, the backwards table over its key, the route, and the distance off the chart."
@@ -17118,7 +17127,7 @@
   milestone: M7
   rq:
   - RQ-805
-  note: "Added 11 Nov 2026 with TASK-M7-74 (N9 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the physics re-check of PR #482 (review 5853427038), P8; the code re-check (review 5853463481), N4; Codex's inline comment 4533257731):* the verify said the sources give no bound and cited R-926 item 7, which permits approximation during a morph only, while its subject was a chart outside a morph. Outside a morph R-935 keeps a criterion (under RQ-767 (a)): the three cases above are the physics reviewer's, each line R-935's, and nothing is chosen. The tolerances are REQ-RENDER-126's calibrations. *Was (statement):* \"Chart position and the presets must work on a chart with no closed-form shader code by the fragment's table route, the GPU side of the backwards table, never a refusal (R-925 items 1 and 2; R-926 items 7 and 8), and the route must be measured against the placement function on the CPU (R-947).\" *Was (verify):* \"cargo test -p render fragment_table_route: on a chart with no closed-form shader code, Chart position and the presets read the backwards table in the fragment and nothing is refused; the route's answer is measured against `place` on the CPU (REQ-CHART-199) and the difference reported. The sources give no bound for that difference (R-926 item 7: approximate is acceptable during a morph, which binds this route only): none is asserted and none is chosen here\""
+  note: "Added 11 Nov 2026 with TASK-M7-74 (N9 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the physics re-check of PR #482 (review 5853427038), P8; the code re-check (review 5853463481), N4; Codex's inline comment 4533257731):* the verify said the sources give no bound and cited R-926 item 7, which permits approximation during a morph only, while its subject was a chart outside a morph. Outside a morph R-935 keeps a criterion (under RQ-767 (a)): the three cases above are the physics reviewer's, each line R-935's, and nothing is chosen. The tolerances are REQ-RENDER-126's calibrations. *Was (statement):* \"Chart position and the presets must work on a chart with no closed-form shader code by the fragment's table route, the GPU side of the backwards table, never a refusal (R-925 items 1 and 2; R-926 items 7 and 8), and the route must be measured against the placement function on the CPU (R-947).\" *Was (verify):* \"cargo test -p render fragment_table_route: on a chart with no closed-form shader code, Chart position and the presets read the backwards table in the fragment and nothing is refused; the route's answer is measured against `place` on the CPU (REQ-CHART-199) and the difference reported. The sources give no bound for that difference (R-926 item 7: approximate is acceptable during a morph, which binds this route only): none is asserted and none is chosen here\" *12 Nov 2026 (the chart audit's F23):* M-E, the fragment against `place` by depth, is TASK-M7-74's `fragment_place_depth`: PASS where arm (1) and REQ-COL-134 already assert, at depths 0 to 16, and bitwise at `s = 0` and 1; the rest reported; its quad-local arm waits on RQ-805."
 - id: REQ-RENDER-126
   area: RENDER
   kind: calibration
@@ -18293,7 +18302,7 @@
   - R-358
   - R-436
   milestone: M2
-  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note). R-436: a pixel with a non-finite operand is invalid, so it is no sample of the tolerance. The tolerance is the factor times colour_composition §6's conditioning-aware scale, eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²) from the fragment decode's own (m, r), an R-72 definition written by TASK-M2-29 (RQ-623, option (b), decided by the orchestrator per R-369 and listed for the owner's veto at the M2 gate); the factor is calibrated in that scale."
+  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note). R-436: a pixel with a non-finite operand is invalid, so it is no sample of the tolerance. The tolerance is the factor times colour_composition §6's conditioning-aware scale, eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²) from the fragment decode's own (m, r), an R-72 definition written by TASK-M2-29 (RQ-623, option (b), decided by the orchestrator per R-369 and listed for the owner's veto at the M2 gate); the factor is calibrated in that scale. *12 Nov 2026 (R-926 item 5; R-935 under RQ-765; the chart audit's F14):* the factor `F` (TASK-M2-29's) was measured on the old pair, the kernel's decode against the fragment's; it is re-measured on the new pair, the fragment's generated decode against the CPU's narrowed record, as a proposal, the owner's at the gate (R-71)."
 - id: REQ-COL-061
   area: COL
   kind: calibration
@@ -30413,7 +30422,7 @@
   - R-72
   - R-574
   milestone: M4
-  note: "R-574 (21 Oct 2026): the trace writes r_i(t) too, takes the nudge, and its criterion is the two marks (10⁻³, 0.1, the human's values, not R-71 calibrations). Was: \"how the survey kernel writes the dense n(t) series …, the shared times at which it is compared with the CPU f64 curve, and the criterion that reads the divergence time off the two traces\" and, in the verify, \"the divergence-time criterion (any threshold in it is a value proposed under R-71 at the M4 gate); REQ-TOOL-040 and REQ-VAL-106 use it\". Fix round 9 of PR #283 (perf review 5627960807, P1; applied per R-369): the trace's dispatch is bounded in chunks that carry state, with a test; TASK-M4-16 names perf. Fix round 10 of PR #283 (perf review 5628071919, Q2; applied per R-369): trace_chunked asserts each dispatch is within the chunk planner's bound and the count is ⌈steps / bound⌉; a fixed two-way split fails."
+  note: "R-574 (21 Oct 2026): the trace writes r_i(t) too, takes the nudge, and its criterion is the two marks (10⁻³, 0.1, the human's values, not R-71 calibrations). Was: \"how the survey kernel writes the dense n(t) series …, the shared times at which it is compared with the CPU f64 curve, and the criterion that reads the divergence time off the two traces\" and, in the verify, \"the divergence-time criterion (any threshold in it is a value proposed under R-71 at the M4 gate); REQ-TOOL-040 and REQ-VAL-106 use it\". Fix round 9 of PR #283 (perf review 5627960807, P1; applied per R-369): the trace's dispatch is bounded in chunks that carry state, with a test; TASK-M4-16 names perf. Fix round 10 of PR #283 (perf review 5628071919, Q2; applied per R-369): trace_chunked asserts each dispatch is within the chunk planner's bound and the count is ⌈steps / bound⌉; a fixed two-way split fails. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"after its own decode\" is the retired compute-side route; it stands as its *Was* until TASK-M4-16 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-TOOL-128
   area: TOOL
   kind: definition
@@ -30993,7 +31002,7 @@
   milestone: M5
   rq:
   - RQ-797
-  note: "R-395, the second half of REQ-TOOL-019's \"no banding\" (RQ-242), split per the human's \"M5/M6\": this requirement is the per-quad local path, kernel and fragment, and REQ-TOOL-159 the routing of every quad past ℓ_switch onto it (DECODE_MODE, REQ-DEC-037, TASK-M6-08). Closed by TASK-M5-04, which owns the per-quad uniforms, the quad-local sample positions and REQ-DEC-031's depth-30 gate, and with them the UV preset's per-quad uniforms (REQ-TOOL-019's note) (applied per R-369); TASK-M6-07's linearised decoder consumes δ."
+  note: "R-395, the second half of REQ-TOOL-019's \"no banding\" (RQ-242), split per the human's \"M5/M6\": this requirement is the per-quad local path, kernel and fragment, and REQ-TOOL-159 the routing of every quad past ℓ_switch onto it (DECODE_MODE, REQ-DEC-037, TASK-M6-08). Closed by TASK-M5-04, which owns the per-quad uniforms, the quad-local sample positions and REQ-DEC-031's depth-30 gate, and with them the UV preset's per-quad uniforms (REQ-TOOL-019's note) (applied per R-369); TASK-M6-07's linearised decoder consumes δ. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* the per-quad local coordinates \"in the kernel\" is the retired compute-side route; it stands as its *Was* until TASK-M5-04 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-TOOL-159
   area: TOOL
   statement: "Every quad deeper than the deep-zoom switchover ℓ_switch (R-90) must take the per-quad local path of REQ-TOOL-158 (DECODE_MODE = LIN, REQ-DEC-037), so that no quad past ℓ_switch has its sample positions formed as an absolute f32 u (R-395)."
@@ -31016,7 +31025,7 @@
   - R-395
   - R-632
   milestone: M6
-  note: "R-395, the routing half of REQ-TOOL-019's second half (the human's \"M5/M6\"); REQ-TOOL-158 is the path itself. Closed by TASK-M6-08, which builds DECODE_MODE's switchover (REQ-DEC-037) (applied per R-369). R-632 (27 Oct 2026, RQ-578): the fixtures' quads at depths 21 and 30 with distinct adjacent ICs use coordinates where the measured f32 floor (REQ-DEC-051, quoted with |x₀|) admits depth 30."
+  note: "R-395, the routing half of REQ-TOOL-019's second half (the human's \"M5/M6\"); REQ-TOOL-158 is the path itself. Closed by TASK-M6-08, which builds DECODE_MODE's switchover (REQ-DEC-037) (applied per R-369). R-632 (27 Oct 2026, RQ-578): the fixtures' quads at depths 21 and 30 with distinct adjacent ICs use coordinates where the measured f32 floor (REQ-DEC-051, quoted with |x₀|) admits depth 30. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* the routing \"DECODE_MODE = LIN\" to a GPU linear decode is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-TOOL-160
   area: TOOL
   kind: calibration
@@ -32769,7 +32778,7 @@
   milestone: M2
   rq:
   - RQ-715
-  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): branch inputs are built only from operations every IEEE backend rounds alike, with no subnormal intermediate; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration). TASK-M2-24 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-48, which re-proves test 12 with the rewritten M₀₁ (applied per R-369). *Was:* \"R-34 extends explicit fma to every multi-op branch input\" and the verify's \"feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs\" (stale value, replaced by R-547). Fix round 1 of PR #274 (qa Q5, applied per R-369). *Was (verify):* \"decoder test 12: fuzz z on all backends (Metal and lavapipe beside the CPU); continuous outputs within f32-eps-scaled tolerance; branch tags bitwise equal; every branch input formed as dd_decoder §2's enumerated table gives it, each built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), feasibility K* ≥ L_z²/2 among them\". RQ-621, decided by the orchestrator per R-369 (a test decision, option (a), 30 Oct 2026, TASK-M2-48): test 12's inputs gain TASK-M2-02's onset crossings and the emulations gain \"contracted (fused)\". *Was (verify):* \"control: on the same fuzzed inputs the superseded forms (the explicit fma(m₁, 1, m₀), a plain float subtract or compare), evaluated on the CPU under an unfused or flush-to-zero emulation, give a different tag from the unflushed CPU on at least one input\"."
+  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): branch inputs are built only from operations every IEEE backend rounds alike, with no subnormal intermediate; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration). TASK-M2-24 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-48, which re-proves test 12 with the rewritten M₀₁ (applied per R-369). *Was:* \"R-34 extends explicit fma to every multi-op branch input\" and the verify's \"feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs\" (stale value, replaced by R-547). Fix round 1 of PR #274 (qa Q5, applied per R-369). *Was (verify):* \"decoder test 12: fuzz z on all backends (Metal and lavapipe beside the CPU); continuous outputs within f32-eps-scaled tolerance; branch tags bitwise equal; every branch input formed as dd_decoder §2's enumerated table gives it, each built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), feasibility K* ≥ L_z²/2 among them\". RQ-621, decided by the orchestrator per R-369 (a test decision, option (a), 30 Oct 2026, TASK-M2-48): test 12's inputs gain TASK-M2-02's onset crossings and the emulations gain \"contracted (fused)\". *Was (verify):* \"control: on the same fuzzed inputs the superseded forms (the explicit fma(m₁, 1, m₀), a plain float subtract or compare), evaluated on the CPU under an unfused or flush-to-zero emulation, give a different tag from the unflushed CPU on at least one input\". *12 Nov 2026 (R-926 item 5; the chart audit's F14):* re-scoped to the fragment's generated code against the CPU record (R-935 under RQ-765); the compute side decodes nothing."
 - id: REQ-VAL-018
   area: VAL
   statement: "z = 0 must decode to the canonical golden IC — masses (⅓,⅓,⅓), α = π/4, β = π/2, rest (q = 0), I = 1 — with every derived value asserted in f64 and f32."
@@ -42224,6 +42233,7 @@
     detail: "given synthetic throughput numbers the solver returns the expected three axes in order"
   rulings: []
   milestone: M6
+  note: "*12 Nov 2026 (R-926 items 5 and 6; the chart audit's F16):* the probe gains a CPU-evaluator leg, samples per second per core on the slice charts, and the cost model a CPU term; its values come from measurement (M-A, TASK-M2-89)."
 - id: REQ-PERF-042
   area: PERF
   statement: "Tiers must ship with defaults keyed on crude specs (VRAM/unified memory, core counts, backend), with tier boundaries then found from data."
@@ -42440,6 +42450,7 @@
     detail: "same model value → same rung; sensor updates change the model, never knobs directly"
   rulings: []
   milestone: M6
+  note: "*12 Nov 2026 (R-926 items 5 and 6; the chart audit's F16):* the probe gains a CPU-evaluator leg, samples per second per core on the slice charts, and the cost model a CPU term; its values come from measurement (M-A, TASK-M2-89)."
 - id: REQ-PERF-058
   area: PERF
   statement: "The controller's output must be one integer rung on an offline-designed ladder of ~8–12 complete presets in total, the six named tiers pinned rungs on it, with monotonic cost, degrading E/edge quality and render_scale before structural sample density."
@@ -42725,6 +42736,7 @@
   rulings:
   - R-72
   milestone: M4
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the chart axis of the \"(chart × occupant × tier × links)\" variant set is the retired compute-side route; it stands as its *Was* until TASK-M4-07 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-PERF-078
   area: PERF
   kind: calibration
@@ -44038,6 +44050,7 @@
     detail: "CPU reference and GPU kernel build from the same crate; no WGSL compute source exists"
   rulings: []
   milestone: M4
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"one monomorphised Rust kernel generic over … chart\" is the retired compute-side route; it stands as its *Was* until TASK-M4-01 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-SYS-024
   area: SYS
   statement: "Compute-side lowering must bake chart type, link selection, integrator occupant and the FTLE shadow co-computation as monomorphised variants, and must pass wrapper config (T, dt, N_max, r_*, eps_*, n_renorm) as SimUniforms, chart params (z0, q1, q2, slice values, curve tangent, invariant targets) as uniforms and the ensemble's copy_index as a uniform."
@@ -44054,6 +44067,7 @@
   rulings:
   - R-102
   milestone: M4
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"bake chart type, link selection … as monomorphised variants\", with chart params as compute uniforms is the retired compute-side route; it stands as its *Was* until TASK-M4-06 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-SYS-025
   area: SYS
   statement: "The physics kernel must be one Rust source, generic over `Real` and monomorphised, compiled to both the CPU-f64 build and the GPU-f32 build, with no second implementation of any physics or wrapper logic."
@@ -44271,7 +44285,7 @@
   rulings:
   - R-90
   milestone: M6
-  note: "The switch fires when the full decoder's adjacent samples give bitwise-identical ICs, or past SWITCH = ℓ_switch = 20 (an upper bound), whichever comes first (R-90)."
+  note: "The switch fires when the full decoder's adjacent samples give bitwise-identical ICs, or past SWITCH = ℓ_switch = 20 (an upper bound), whichever comes first (R-90). *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"Decode mode (full vs linearised) must be a per-quad workgroup-uniform flag\" in the compute kernel is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-SYS-039
   area: SYS
   statement: "The whole frame loop (WebGPU device, scheduler, cache, quadtree, compute and render) must run in the wasm engine in a Web Worker via `OffscreenCanvas`, while the main thread holds the GUI's own wasm context (egui), a loader and the input pump, and owns no simulation state (R-620)."

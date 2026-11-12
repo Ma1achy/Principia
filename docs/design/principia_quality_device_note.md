@@ -80,6 +80,8 @@ Each leg covers the others' blind spot. **Limits gate (anti-crash), probe measur
    → sane default. User can override (custom).
 ```
 
+*12 Nov 2026 (R-926 items 5 and 6; the chart audit's F16):* the probe gains a CPU-evaluator leg, samples per second per core on the slice charts, and the cost model a CPU term; its values come from measurement (M-A, TASK-M2-89). The steps above stand as written for the GPU leg.
+
 ### The five ways the probe can lie (guard each)
 1. **Cost is wildly non-uniform** across the manifold (smooth interior vs Burrau close-encounter = 1–2 orders of magnitude). A random quad is not representative → profile a **spread** (cheap + expensive), calibrate to a **high percentile**, size for the worst.
 2. **Under-counting co-computations** — probe must run the **real trajectory count** (`2(E+1)`, shadows + ensemble), or probe base × known factor.
