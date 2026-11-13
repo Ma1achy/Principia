@@ -171,7 +171,7 @@ pub fn check_the_case_fails(case: &str, root: &Path, krate: &str, lib: &str, arg
         "{case}: stderr does not show the compiler's error:\n{stderr}"
     );
     assert!(
-        stderr.contains(lib),
+        validation::paths::slashed(&stderr).contains(lib),
         "{case}: the compiler's error does not name {lib}:\n{stderr}"
     );
 }

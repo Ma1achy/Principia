@@ -31,11 +31,14 @@ const SLACK: Duration = Duration::from_secs(5);
 /// The grace `run_sleeper` gives the helper in place of R-217's 5 s, so no test waits it (R-231).
 const SHORT_GRACE: Duration = Duration::from_secs(2);
 
+/// The workspace root, without Windows' verbatim prefix (REQ-TOOL-237).
 fn root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .unwrap()
+    validation::paths::plain(
+        &Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()
+            .unwrap(),
+    )
 }
 
 /// A fresh scratch directory under the target's tmp dir.
@@ -272,8 +275,10 @@ fn build_old_form(add_expected: bool) -> Output {
     let own = if add_expected { "control" } else { "test" };
     let read = |file: &str| std::fs::read_to_string(fixture.join(file)).unwrap();
     let validation = root().join("crates/validation");
-    let manifest =
-        read("Cargo.toml").replace("../../../crates/validation", validation.to_str().unwrap());
+    let manifest = read("Cargo.toml").replace(
+        "../../../crates/validation",
+        &validation::paths::escaped(&validation),
+    );
     let mut body = read("tests/double.rs");
     if add_expected {
         let description = "\"a doubling that adds one must fail the check\",";
@@ -325,7 +330,8 @@ fn check_refused_by_the_macro(o: &Output) {
         "a control without an expected message compiled:\n{stderr}"
     );
     assert!(
-        stderr.contains("no rules expected") && stderr.contains("tests/double.rs"),
+        stderr.contains("no rules expected")
+            && validation::paths::slashed(&stderr).contains("tests/double.rs"),
         "the build failed, but not at negative_control!:\n{stderr}"
     );
 }

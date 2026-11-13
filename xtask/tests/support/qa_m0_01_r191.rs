@@ -113,7 +113,7 @@ pub fn fails_with_compiler_error(case: &str, root: &Path, krate: &str, file: &st
         "{case}: stderr does not show the compiler's error:\n{stderr}"
     );
     assert!(
-        stderr.contains(file),
+        validation::paths::slashed(&stderr).contains(file),
         "{case}: the compiler's error does not name {file}:\n{stderr}"
     );
     compiles_with_the_dependency(case, root, krate);

@@ -115,9 +115,12 @@ fn assert_declares_controls(package: &str) {
     );
     let dev = tree(&["--edges", "dev", "--depth", "1"]);
     assert!(dev.status.success(), "cargo tree failed");
-    let validation_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .canonicalize()
-        .unwrap();
+    // Without Windows' verbatim prefix, which `canonicalize` adds there and cargo tree never prints (REQ-TOOL-237).
+    let validation_dir = validation::paths::plain(
+        &Path::new(env!("CARGO_MANIFEST_DIR"))
+            .canonicalize()
+            .unwrap(),
+    );
     let wanted = format!("({})", validation_dir.display());
     let stdout = String::from_utf8_lossy(&dev.stdout);
     assert!(

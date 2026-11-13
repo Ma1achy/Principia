@@ -434,8 +434,10 @@ fn frame_location(text: &str, symbol: &str) -> Option<String> {
         .map(str::to_owned)
 }
 
-/// R-374 and the owner's item 3 on what the build with `config` printed.
+/// R-374 and the owner's item 3 on what the build with `config` printed, its paths read with `/` (Windows prints
+/// `src\lib.rs`, REQ-TOOL-237).
 fn check_backtrace(text: &str) {
+    let text = &validation::paths::slashed(text);
     assert!(
         text.contains("panicked at src/lib.rs:3:"),
         "the panic message does not name its file and line:\n{text}"

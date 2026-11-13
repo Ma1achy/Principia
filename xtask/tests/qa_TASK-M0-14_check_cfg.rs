@@ -34,7 +34,7 @@ fn sources() -> Vec<(String, String)> {
                     walk(&p, root, out);
                 }
             } else if name.ends_with(".rs") || name == "Cargo.toml" {
-                let rel = p.strip_prefix(root).unwrap().to_string_lossy().into_owned();
+                let rel = xtask::repo_path(p.strip_prefix(root).unwrap());
                 if rel != "xtask/tests/qa_TASK-M0-14_check_cfg.rs" {
                     if let Ok(t) = std::fs::read_to_string(&p) {
                         out.push((rel, t));

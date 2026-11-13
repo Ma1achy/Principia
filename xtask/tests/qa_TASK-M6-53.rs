@@ -185,7 +185,7 @@ fn includes(path: &str, text: &str) -> Vec<String> {
                     joined.push(part);
                 }
             }
-            joined.to_string_lossy().into_owned()
+            xtask::repo_path(&joined)
         })
         .collect()
 }

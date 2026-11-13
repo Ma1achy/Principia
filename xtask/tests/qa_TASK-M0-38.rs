@@ -60,7 +60,7 @@ fn verdict() -> &'static Verdict {
                 *bytes = String::from_utf8_lossy(bytes)
                     .replace(
                         "../../../crates/validation",
-                        root.join("crates/validation").to_str().unwrap(),
+                        &validation::paths::escaped(&root.join("crates/validation")),
                     )
                     .into_bytes();
             }

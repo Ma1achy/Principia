@@ -12,12 +12,14 @@ use validation::spawn::Spawn;
 mod own_target;
 use own_target::{fixture_files, Lease, FIXTURES};
 
-/// The workspace root (this crate is `crates/validation`).
+/// The workspace root (this crate is `crates/validation`), without Windows' verbatim prefix (REQ-TOOL-237).
 fn root() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../..")
-        .canonicalize()
-        .unwrap()
+    validation::paths::plain(
+        &Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()
+            .unwrap(),
+    )
 }
 
 pub fn cargo() -> String {
@@ -81,7 +83,7 @@ impl Copy {
                 .map(|(path, bytes)| match path.file_name() {
                     Some(file) if file == "Cargo.toml" => {
                         let text = String::from_utf8(bytes).unwrap();
-                        let text = absolutise(&text, validation.to_str().unwrap());
+                        let text = absolutise(&text, &validation::paths::escaped(&validation));
                         (path, text.into_bytes())
                     }
                     _ => (path, bytes),

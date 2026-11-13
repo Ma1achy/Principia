@@ -113,7 +113,7 @@ fn check_tree(root: &Path, want: &[&str]) {
     let found: Vec<String> = check(root, &[])
         .expect("lint ran")
         .iter()
-        .map(|f| format!("{}: {}", f.path.display(), f.name))
+        .map(|f| format!("{}: {}", xtask::repo_path(&f.path), f.name))
         .collect();
     assert_eq!(
         found, want,
