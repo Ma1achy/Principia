@@ -38,6 +38,8 @@ source:    "built" | { pixel: { chart, uv } }
 sim:       SimConfig (canonical) ; build, schema, label, made   (made outside the identity)
 ```
 
+*13 Nov 2026 (R-995, RQ-801 (a)):* a picked pixel's record also names the route its starting state was formed by, exact or the one-cell patch, and for a patch the quad's level and address, so recreating it re-forms the patch and reproduces bitwise the state that was integrated, on every machine with R-991's pinned maths library. Where these fields go in `principia.ic/1` is the record contract's (TASK-M2-87, REQ-INT-115).
+
 The **primary** is `as_built` for a built IC, and `source.pixel` with `sim` for a picked one; everything else is
 re-derived on load and compared. The primary velocity variable is `v`, `p = m·v` derived (the draft's open question 2,
 (a): `p = m·v` is not bitwise invertible, so only one variable can be primary). **Bitwise at f64**: JCS's shortest
@@ -81,7 +83,7 @@ is missing, a value is non-finite, or a field re-derived exactly from the primar
 (`mirrored`, `hemisphere`, or `source`'s kind against the fields present). `canonical.z = E(as_built)` is a
 deterministic f64 function, so reopened on the build and platform that saved it the recomputed `z` is bitwise the
 stored one and the residual is exactly 0; a residual arises only from another platform's maths library (`atan2` in
-`C`'s step 2, the chart inverses) or another build. The stored `z` against the recomputed is that residual, measured
+`C`'s step 2, the chart inverses) or another build (*13 Nov 2026, R-991:* every f64 transcendental the CPU chart evaluator reaches goes through the pinned pure-software libm, `sqrt` excepted, so another platform's maths library no longer gives one; only another build does). The stored `z` against the recomputed is that residual, measured
 as `‖Δz‖`, the norm REQ-VAL-022 gates `‖z − z′‖` by: within its bound the record is recovered with the residual
 shown, beyond it corrupt (fix round 4 of PR #287, physics review 5638148080, P4, applied per R-369). *Was:* "`canonical.z` is re-derived through the decoder,
 which is not bitwise, so the stored `z` against the recomputed is a residual: within its bound the record is

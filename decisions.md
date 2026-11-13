@@ -482,6 +482,9 @@ The manifest's per-field domain is the default a node inherits. Files: gui_state
 colour_composition §1.2, §3; dd_colouring :119; debug_tooling_plan :43–44.
 
 ## R-54 — The precision warning is event-driven *(GU-3 (b))*
+*Refined by R-1001 (13 Nov 2026; RQ-802 (b): a collapsed pair whose f64 ICs are equal at distinct f64 sample points is saturation only if the dual or implicit slope satisfies `|J_dual,k|·h_633 < ½ ulp_f64(x_k)` for every component; a pair placed symmetrically about a flagged fold is excluded; a tier-3 map's case, Q-T3, deferred to M6).*
+*Amended by R-1002 (13 Nov 2026; RQ-804 (a): "Raised on `DECODE_SWITCHOVER`" reads "on a `DECODE_SWITCHOVER` triggered by collapse": a switch at `ℓ_switch` with no collapse raises no warning).*
+*Still in force: all of it but a switchover with no collapse raising the warning: event-driven, raised at a collapse and on `AT_F32_FLOOR`, saturation excepted as R-1001 defines it.*
 *24 Sep 2026 · recorded; applied in step 6*
 *Refined by RQ-553's decision per R-369 (23 Oct 2026, PR #279; the orchestrator's, not a human ruling): a quad that has
 at least one collapsed adjacent pair, every one of which is a saturation collapse, f64 `J_D`'s column along the pair's
@@ -782,7 +785,8 @@ excludes E. The ladder has ~8–12 rungs in total.
 ## R-90 — The decoder switchover trigger *(closes RQ-41)*
 *Refined by R-599 (collapse is judged per in-plane axis: a quad stops at `AT_F32_FLOOR` only when every axis along which the field varies has collapsed, or at the screen floor).*
 *Refined by R-935 (10 Nov 2026; RQ-766 (a): the trigger's "bitwise-identical ICs" compares the narrowed f32 records, the ICs the integrator starts from).*
-*Still in force: all of it; the terminal stop's collapse is judged per in-plane axis, a saturated axis not counting (R-599); the trigger compares the narrowed f32 records (R-935).*
+*Amended by R-990 (13 Nov 2026; RQ-798 (a″): a named exception to "whichever comes first": past the switch a quad takes the one-cell patch only where the eight-point check at 4/5 of the bound admits it and its footprint meets no flagged site, and is exact per sample elsewhere, at any depth).*
+*Still in force: all of it but the patch on every quad past `ℓ_switch`; the terminal stop's collapse is judged per in-plane axis, a saturated axis not counting (R-599); the trigger compares the narrowed f32 records (R-935); past `ℓ_switch` a quad takes the patch only where R-990's check admits it.*
 *25 Sep 2026 · applied in step 7*
 
 Switch to the linearised decoder when the full decoder's adjacent samples give bitwise-identical ICs, with ℓ_switch = 20 as
@@ -2983,13 +2987,13 @@ exception: it files R-237's add-only rule in REVIEW_QUEUE. PR #80 merged as 7e55
 it only when the content differs, so an unchanged file keeps its mtime and forces no rebuild. Medium priority.
 
 ## R-285 — CI caches only the cargo registry and the fixture pool, with per-job keys
-*Amended by R-320, R-326, R-656 and R-967.*
+*Amended by R-320, R-326, R-656, R-967 and R-1004.*
 *Still in force: no whole target directories cached; per-job keys; the cargo registry and the fixture pool cached;
 R-320 adds the rust-gpu build (`~/.cache/rust-gpu`), keyed on the pinned toolchain version; R-326 saves caches only on
 pushes to `main`, and pull-request runs restore only; R-656 approves in principle a bounded build-target cache, saved
 from `main` only, keyed on `Cargo.lock` and the toolchain, for the 2–3 slowest jobs, with eviction keeping the total
 well under 10 GB, built in a later PR, and until then no target directory is cached; R-967 (11 Nov 2026) adds the
-Mesa (lavapipe) packages of `gpu-lavapipe` and the release jobs, keyed on the package list and the runner's image.*
+Mesa (lavapipe) packages of `gpu-lavapipe` and the release jobs, keyed on the package list and the runner's image; R-1004 (13 Nov 2026) adds the WSL image's build, `wsl-image-<recipe key>`, saved from a `wsl-register` dispatch on `main`.*
 *30 Sep 2026 · applied in REQ-SYS-073 and TASK-M0-42 (new)*
 
 "CI cache: cache only the cargo registry and the fixture pool, not whole target dirs, with per-job keys, to stay well
@@ -3837,9 +3841,9 @@ job is not a required status check until the human adds it to branch protection 
 so.
 
 ## R-326 — Actions caches are saved only on pushes to `main`; pull-request jobs restore only *(amends R-285, R-320)*
-*Amended by R-337.*
+*Amended by R-337 and R-1004.*
 *Still in force: every cache step restores in every run and saves only in a run on a push to `main`; R-337 makes a
-workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml` job saves there.*
+workflow that never runs on a push to `main` restore, read-only, a key a `ci.yml` job saves there; R-1004 (13 Nov 2026) saves the WSL image's `wsl-image-<recipe key>` entry from a `wsl-register` dispatch on `main`, its one exception.*
 *1 Oct 2026 · applied in REQ-SYS-073, REQ-SYS-075 and TASK-M0-14 (PR #96)*
 
 "Actions cache: caches are saved only on pushes to main; PR jobs restore only. The rust-gpu cache keeps its own key."
@@ -16208,6 +16212,8 @@ changes the work is RQ-400.
 
 R-499 is in the "design" group of `plan/rule_groups.yaml`.
 ## R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*
+*Refined by R-993 (13 Nov 2026; RQ-809 (a): the "TTL leapfrog" is the reference's drift–kick–drift leapfrog with `W` advanced at the midpoint velocity, logH's own method, selected as logH × KDK).*
+*Still in force: all of it; its "TTL leapfrog" is the drift–kick–drift R-993 names.*
 *20 Oct 2026 · applied in `docs/contracts/principia_integrator_contract.md` § "Part 2 — Occupants and the capability
 profile" (the table's column split, a paragraph defining the flags, the profile and the reversibility bullet), § "Part
 2b — Regularisation is a SECOND swappable axis, not a property of the stepper" (logH's row), § "The table gains two
@@ -26246,6 +26252,8 @@ R-598 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-CHART-087 and REQ-GUI-357 (with R-597).
 
 ## R-599 — Collapse is judged per axis: an axis along which the field is saturated and the samples are identical is genuinely flat and does not count; a quad stops only when every axis along which the field varies has collapsed, or at the screen floor; the readout names the saturated axis *(closes RQ-554; refines R-90's terminal stop)*
+*Refined by R-1001 (13 Nov 2026; RQ-802 (b): "saturated", per axis, is now R-1001's test, the dual or implicit slope's condition on pairs with equal f64 ICs at distinct points, in place of RQ-553's test on f64 `J_D`'s column).*
+*Still in force: all of it; its per-axis saturation read by R-1001's test.*
 *25 Oct 2026 · applied in `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound" ((iv) and the band
 paragraph), `docs/archive/review_queue/M0.md` (RQ-554, moved with its ruling), REQ-SCHED-062 (reqio), REQ-GUI-397
 (reqio, new), TASK-M6-08 and TASK-M8-57 and `plan/rule_groups.yaml`; built by TASK-M6-08 and TASK-M8-57*
@@ -35219,6 +35227,7 @@ Adds REQ-CHART-166 to REQ-CHART-188 and REQ-GUI-431; moves 60 requirements to M2
 split requirements, REQ-PERF-116 and the moved calibrations.
 
 ## R-917 — The build order: the chart system and its encoder and decoder, complete and tested, as M2; then the integrator; then everything visual; work in flight or approved finishes, and no new integrator or visual task starts until M2's gate passes, but fixes and what M2's own tests need; M2's gate, "fully working and tested", is the checklist G1 to G14 in `plan/MILESTONES.md`, the owner's lock-with-morphs test among it *(amends R-390 and R-627: the GUI track's exception, for new dispatch; refines R-914: the 217 tasks it released wait for the gate)*
+*Read with R-987 (13 Nov 2026): R-923 lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges; its order is not restored as to agent slots, integrator (M3) tasks keeping priority over chart tasks.*
 *Amended in part by R-923 (10 Nov 2026): its order set aside for now, on the owner's say: integrator tasks that don't touch the undecided points go ahead before M2's gate, GUI work too (the owner's reply about 05:00), no new chart task starting meanwhile.*
 *Still in force: M2's gate, "fully working and tested", and its checklist G1 to G14 (R-923 passes no gate); what
 finishes; CI and tooling outside the order; R-914's release holding in the graph. Its order and its hold on new
@@ -35523,10 +35532,11 @@ R-922 is in the "design" group of `plan/rule_groups.yaml`.
 Changes no requirement.
 
 ## R-923 — Integrator work before charts, for now: R-917's order (charts first, then integrator, then visuals) is set aside for now, on the owner's say; only integrator tasks that don't depend on the points the owner hasn't decided are taken, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; TASK-M3-14 stays stopped under R-918; no new chart task starts meanwhile *(amends R-917 in part, for now; no RQ)*
+*Amended by R-987 (13 Nov 2026, the owner's message of 12 Nov 2026): lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges; integrator (M3) tasks keep priority over chart tasks for agent slots, and a task tied to an unanswered question waits for its ruling.*
 *Amended in part by R-924 (10 Nov 2026: TASK-M3-14, the Benettin FTLE shadow, resumes now; this ruling's "TASK-M3-14 stays stopped under R-918" no longer holds).*
 *Read with R-925 and R-926 (10 Nov 2026, that afternoon, the owner's six chart decisions and eleven chart-system decisions). Of this ruling's "not decided" list, they decide four points: "Whether the CPU or a GPU decode fills the integrator's starting states", by R-926 item 5 (the CPU evaluates charts in f64, the GPU only integrates records); "Morph meaning the system blend, with a window turn treated as a tilt", by R-925 item 4 and R-926 item 3; "Time as an ordinary chart coordinate", by R-925 item 5 and R-926 item 2; "The lock as one constraint and one solve", by R-926 item 4. "The seed, and the default tilt" neither decides; the seed is RQ-764, the momentum seed. This ruling's hold on "anything that fixes how starting states reach the integrator on the GPU" is now addressed by R-926 item 5, which rules the route (the CPU fills records, the integrator reads them); the record's contract is proposed in `plan/charts/m2-chart-system-replan.md` (N2), with RQ-761 (time on the integer step grid), RQ-765 (what the GPU decode entries become) and RQ-783 (recreating records made before the switch) open on it. Whether that lifts the hold is the dispatcher's call or the owner's, not made here; the hold and the pause on new chart tasks stand as written.*
 *Confirmed by the owner (10 Nov 2026, the reply to the report of 10 Nov 2026, on its D-23, "Your 05:00 reply read as allowing GUI work beside the integrator"): "D-23: yes, GUI work can run alongside the integrator."*
-*Still in force: all of it but its TASK-M3-14 line: R-917's order and its hold set aside for now; only integrator tasks that don't depend on the undecided points, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; GUI work going ahead; no new chart task meanwhile; the undecided points recorded as open; M2's gate and its checklist G1 to G14.*
+*Still in force: until the pull request porting the owner's answers to RQ-797 to RQ-806 merges (R-987), all of it but its TASK-M3-14 line: R-917's order and its hold set aside for now; only integrator tasks that don't depend on the undecided points, nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch; GUI work going ahead; no new chart task meanwhile; the undecided points recorded as open; M2's gate and its checklist G1 to G14. From that merge, nothing of it but its record: integrator tasks first for agent slots and tasks tied to an unanswered question waiting are R-987's.*
 *10 Nov 2026 · the owner's message of that morning (about 04:40), and their reply about 05:00; applied in R-917's
 forward and "Still in force" lines, `plan/OPERATIONS.md` § "Dispatching" (a dated line after R-917's hold),
 `plan/section_notes.yaml` and `plan/rule_groups.yaml`; and in dated lines beside R-917's hold in `plan/OPERATIONS.md`
@@ -35703,7 +35713,8 @@ Changes no requirement here: the requirements and `plan/tasks.yaml` follow once 
 *Refined by R-943 (10 Nov 2026; the general rule for a morph: item 3's blend is the default path, the shortest in each block's natural geometry; other paths allowed, not built now).*
 *Refined by R-945 (10 Nov 2026; the owner's clarification: item 7's "ONLY" list was not exhaustive; the backwards direction serves anything that places a running or saved state on a chart).*
 *Refined by R-947 (10 Nov 2026; the re-plan addition's question (A): one placement function with two routes; item 7's "Approximate is acceptable during a morph" binds the fragment's table route, a placement on the CPU refined to the lock's precision).*
-*Still in force: all of it, its eleven items as the owner wrote them; item 3's "linear in masses" read as linear in the mass coordinates, the log-ratios (R-936, R-943), and item 7's list of the backwards direction's uses read as not exhaustive (R-945), its "Approximate is acceptable during a morph" read as the fragment's table route only, a placement on the CPU refined to the lock's precision (R-947); its open readings answered by R-935 and R-942, RQ-783 alone still open.*
+*Refined by R-989 (13 Nov 2026; RQ-797 Q1 (a): item 5 read literally past R-90's switch, the CPU expanding each patched sample's `x₀ + J_D·δ` in f64 and narrowing it once, the GPU reading only finished records).*
+*Still in force: all of it, its eleven items as the owner wrote them; item 3's "linear in masses" read as linear in the mass coordinates, the log-ratios (R-936, R-943), and item 7's list of the backwards direction's uses read as not exhaustive (R-945), its "Approximate is acceptable during a morph" read as the fragment's table route only, a placement on the CPU refined to the lock's precision (R-947); its open readings answered by R-935 and R-942, RQ-783 alone still open; item 5's one-cell patch expanded on the CPU in f64 and narrowed once (R-989).*
 *10 Nov 2026 · the owner's re-plan task of that afternoon, sent after the "read and report" message (R-925): its
 decisions block; applied in `docs/design/principia_core_design.md` § "3. Kernel eats chart params, decodes in-kernel"
 (a dated paragraph, the old one kept as *Was*), `docs/contracts/principia_lowering_contract.md` § "Part 1 — What
@@ -36166,6 +36177,9 @@ Changes no requirement here: REQ-DEC-021 changes with N10's task in `plan/tasks.
 as R-932).
 
 ## R-935 — The chart re-plan's one-way questions, the plan's recommendation on each: exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (RQ-758); the lock's re-solve follows its local minimiser continuously, stops where that ends, and keeps the offered re-centre, the navigation stop and the stored-words select (RQ-759); a per-sample stop index on the integrator's grid with a new label "reached its time", the zoom along time floored at one boundary (RQ-761); the window's scale is R-507's and R-920's unit, time's the home time window (RQ-762); stage 1 measures each operation against its generic edit first (RQ-763); the GPU decode entries stay as test entries and R-837's cap is retired once measured (RQ-765); a large quad's forward table has one exact node per sample, R-90's trigger read on the narrowed f32 records (RQ-766); the table seeds a refinement on the chart's forward code (RQ-767); `ctx.chart.z` stays the forward value, carried in the table (RQ-768); stage 3 runs beside stages 1 and 2 (RQ-769); an in-plane pan or zoom still re-addresses the cache (RQ-770) *(closes RQ-758, RQ-759, RQ-761, RQ-762, RQ-763, RQ-765, RQ-766, RQ-767, RQ-768, RQ-769 and RQ-770; amends R-837, R-849, R-863 and R-864; refines R-90 and R-926)*
+*Refined by R-989 (13 Nov 2026; RQ-797 Q2 (i): under RQ-758, a tier-3 record holds the sample's own f64 evaluation, narrowed once; "its record carrying its difference from the quad's centre" reads as what the CPU knows and may show, the CPU free to form the chart input as the centre plus the offset in f64).*
+*Extended by R-996 (13 Nov 2026; RQ-800 (a): "central differences only as the check" extended to the measure weight on a tier-3 map, per sample, admitted per map only by the Richardson check written before any run).*
+*Still in force: all of it; the tier-3 sentence under RQ-758 read as R-989 has it, and central differences on a tier-3 map also give its measure weight where R-996's check admits them.*
 *10 Nov 2026 · the owner's reply to the report of 10 Nov 2026, confirmed in session that day; applied in
 `REVIEW_QUEUE.md` (the eleven entries moved), `docs/archive/review_queue/M0.md` (each with its ruling),
 `docs/design/principia_chart_composition.md` (the status block), `docs/design/principia_core_design.md` § "3. Kernel
@@ -38167,6 +38181,7 @@ R-986 is in the "ci" group of `plan/rule_groups.yaml`.
 Adds REQ-TOOL-230. R-986 was reserved for this line; the number between it and R-988 is on another branch, so R-988 follows it in this file.
 
 ## R-988 — A job on the Windows PC that stops unclearly is re-run once, automatically, by a hosted job; a hung one ends at a time limit of 1.5 times its measured time; both are logged *(the owner's goal of 12 Nov 2026, item 5; amends R-859's security rules, the owner's job rules of 5 Nov 2026, for this re-run; extends R-714; refines R-970; read with R-711 and R-968)*
+*Confirmed by the owner (13 Nov 2026, the reply to the report of 13 Nov 2026, on its D-15; R-1005): "D-15: stands. R-988 is confirmed as my item 5." The reading flagged on #507 is settled; the text below is unchanged.*
 *12 Nov 2026 · the owner's goal of that day for the Windows runner's CI, item 5; applied in the forward and "Still in
 force" lines of R-711, R-714, R-859, R-968 and R-970, `plan/OPERATIONS.md` § "Merging" (R-714's paragraph, a dated
 line) and § "The Windows runner's work (R-859)" (a dated bullet, and the bullet on what the runner may run, with its
@@ -38231,3 +38246,582 @@ R-988 is in the "ci" group of `plan/rule_groups.yaml`.
 
 Adds REQ-TOOL-231 and REQ-TOOL-232. R-988 was the next free number (`plan/tools/rulings_reply.py next-id`), reserved
 for this item.
+
+## R-987 — R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges, and chart dispatch starts then; integrator (M3) tasks keep priority over chart tasks for agent slots; a task tied to an unanswered question waits for its ruling *(the owner's message of 12 Nov 2026; amends R-923; read with R-917)*
+*13 Nov 2026 · the owner's message of 12 Nov 2026 on R-923, ported with their reply of 13 Nov 2026; applied in the
+forward and "Still in force" lines of R-917 and R-923, `plan/OPERATIONS.md` § "Dispatching" (a dated line after
+R-923's) and its GUI track's R-923 line, `plan/MILESTONES.md` (a dated line after each of R-923's three lines),
+`plan/WORKFLOW.md` § "Human checkpoints: the milestone gates" (a dated line after R-923's), the chart task files whose
+Notes say "Entered, not released (R-923)" (a dated line each), `plan/section_notes.yaml` and `plan/rule_groups.yaml`;
+changes no requirement*
+
+The owner's words (12 Nov 2026), verbatim:
+
+> Yes. When the PR porting my answers to RQ-797–806 merges, R-923 is lifted; start dispatching then. Integrator (M3) tasks keep priority over chart tasks for agent slots. Tasks tied to an unanswered question wait for their ruling.
+
+*A prose ruling of the owner, not a reply line:* the words are a message of 12 Nov 2026, not an `RQ-n: …` or `D-n: …`
+line of a reply to a rulings report, so no reply parser read them and no review queue entry closes. R-987 was reserved
+for them, and they are ported with the reply they name.
+
+*What it decides:*
+
+- **When.** R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges: this one,
+  which ports the owner's reply of 13 Nov 2026 (R-989 to R-1005). Until it merges, R-923 stands as written. From its
+  merge, chart tasks are dispatched again, TASK-M2-57 to TASK-M2-85 and the chart tasks entered held since, as their
+  dependencies allow.
+- **Lifted in full.** R-923's pause on chart tasks ends, and so do its limits on which integrator tasks are taken
+  ("nothing that fixes how starting states reach the integrator on the GPU or the horizon as one value per dispatch");
+  R-926 item 5 and R-989 now rule the first of those.
+- **Priority.** Integrator (M3) tasks keep priority over chart tasks for agent slots: where an M3 task and a chart task
+  can both start, the M3 task takes the slot. So R-917's order (charts first) is not restored by the lift.
+- **What waits.** A task tied to a question the owner hasn't answered waits for its ruling, as it would under
+  `CLAUDE.md` § "Never guess, never defer". At this merge that includes TASK-M6-21 (the precision warning), tied to
+  RQ-802's and RQ-804's Q-T3, deferred to M6 (R-1001, R-1002), and the tasks tied to RQ-783 (pre-switch records,
+  deferred to M2, R-956).
+
+*What it amends:* **R-923**, lifted when this pull request merges. *Read with* **R-917**: its order stays set aside as
+far as agent slots go, integrator tasks first.
+
+R-987 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes no requirement. R-987 was reserved for this message; the numbers after R-988 are this reply's, so R-987 follows
+R-988 in this file.
+
+## R-989 — RQ-797, where the one-cell patch is expanded: Q1 (a) and Q2 (i); the CPU expands each patched sample's `x₀ + J_D·δ` in f64 and narrows it once into its record, the GPU reading only finished records; a tier-3 record holds the sample's own f64 evaluation, narrowed once *(closes RQ-797; refines R-926 and R-935)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-797 moved),
+`docs/archive/review_queue/M0.md` (RQ-797 with its ruling), the forward and "Still in force" lines of R-926 and R-935,
+`docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision" (the CPU precompute and GPU kernel
+bullets, each with its *Was*), `docs/contracts/principia_scheduler_contract.md` § "Part 4 — Terminal vs refinable, tied
+to the two floors" and `docs/contracts/principia_lowering_contract.md` § "Part 1 — What lowering is" (a dated line
+each), `docs/design/principia_systems_architecture.md` (a dated line after the 12 Nov one), REQ-SCHED-024,
+REQ-DEC-033, REQ-DEC-035, REQ-DEC-036, REQ-DEC-051, REQ-DEC-052, REQ-TOOL-158, REQ-PAY-069 and REQ-INT-115 (reqio),
+TASK-M2-87, TASK-M5-04, TASK-M6-07 and TASK-M6-08, the dated notes of TASK-M4-05, TASK-M5-03 and TASK-M8-57,
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; changes REQ-SCHED-024, REQ-DEC-033, REQ-DEC-035, REQ-DEC-036,
+REQ-DEC-051, REQ-DEC-052, REQ-TOOL-158, REQ-PAY-069 and REQ-INT-115*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-797: Q1 (a) + Q2 (i).
+
+*Read:* the entry asks two questions, Q1 and Q2, and the answer names one option for each, so it settles the whole
+entry, and the entry closes.
+
+*What it decides:*
+
+- **Q1 (a), "The CPU expands in f64 and narrows once."** Past R-90's switch the CPU forms each patched sample's
+  `x = x₀ + J_D·δ` in f64 and narrows it once to f32: that is the sample's record. The GPU reads only records, so R-926
+  item 5 ("The GPU only integrates records. No chart code in the integrator.") and REQ-INT-116 hold literally, and no
+  `x₀` or `J_D` is uploaded for the integrator. Each record is the correctly rounded value of its f64 sum (TASK-M2-86's
+  predicate (3), within half an f32 ulp), the same on every backend once the maths library is pinned (R-991). Collapse
+  and the floor (`AT_F32_FLOOR`) are detected on the CPU, on the narrowed records, with nothing read back (R-142). R-686's
+  NVIDIA run then measures the integrator only; its words stand.
+- **A patched sample's descriptor, tag and branch words** are the quad centre's: a quad whose samples could differ from
+  the centre's in tag, branch or sheet is exact per sample under RQ-798's check (R-990), so the centre's words are right
+  on every patched quad. TASK-M2-87's contract states it.
+- **Q2 (i), "A tier-3 record holds each sample's own f64 evaluation, narrowed once,"** the same as an exact record. R-935's
+  "its record carrying its difference from the quad's centre" reads as what the CPU knows and may show (the table
+  debug view, R-926 item 10), not what the record carries. The CPU may form the sample's chart input quad-locally, the
+  quad's centre plus the sample's offset, in f64, before the evaluation (the owner's note of 12 Nov 2026, in the entry);
+  the difference from the centre then enters the CPU's evaluation, never the record or the GPU.
+- **The measurements.** The entry's two, written before any run, go to TASK-M6-07, which builds the CPU expansion: the
+  bytes uploaded per patched quad under (a) against the one `x₀` and `J_D` per quad (b) would have uploaded, reported as
+  their ratio (expected about 190 at `N = 16`, *inferred*) and as a share of the tier's hard cap (REQ-PERF-040); and M-S,
+  the audit's seam measurement, its (a) arm, as TASK-M6-07's note of 12 Nov 2026 has it ("The arm under the option of
+  RQ-797 that the owner chooses runs").
+
+*Applied:* the requirements and tasks the entry lists are rewritten from the answer, each replaced line kept as its
+*Was*: REQ-SCHED-024 (the split: the CPU expands, the GPU integrates records), REQ-DEC-035, REQ-DEC-036, REQ-DEC-051
+and REQ-DEC-052 (the sum formed in f64 and narrowed once; REQ-DEC-052's control now the f64 sum before narrowing),
+REQ-TOOL-158 (the sum `c + δ` in f64 on the CPU), REQ-PAY-069 (no `x₀` or `J_D` reaches the integrator), REQ-DEC-033
+(the switch is to the patch, expanded on the CPU), REQ-INT-115 (the record contract), the scheduler contract's
+`AT_F32_FLOOR`, deep zoom §2's two bullets, TASK-M5-04, TASK-M6-07 (title, Goal, Deliverables and its review line) and
+TASK-M6-08. The 12 Nov dated notes that said "RQ-797's answer" in TASK-M4-05, TASK-M5-03 and TASK-M8-57 and in the
+systems architecture each gain a dated line naming this ruling.
+
+*What it refines:* **R-926**, item 5 read literally for the patch past the switch; **R-935**, its tier-3 sentence read
+as Q2 (i) has it.
+
+R-989 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-SCHED-024, REQ-DEC-033, REQ-DEC-035, REQ-DEC-036, REQ-DEC-051, REQ-DEC-052, REQ-TOOL-158, REQ-PAY-069 and
+REQ-INT-115. The parse printed R-989 for this answer.
+
+## R-990 — RQ-798, a patched quad that straddles a crease: (a″), compared at 4/5 of the bound so admitted records are within one f32 step of exact; a quad past R-90's switch takes the one-cell patch only if the patch agrees with the exact f64 evaluation at its four corners and four edge midpoints and its footprint meets no flagged site, and where a component crosses zero inside the quad the comparison is at the quad's smallest value of that component *(closes RQ-798; amends R-90)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-798 moved),
+`docs/archive/review_queue/M0.md` (RQ-798 with its ruling), the forward and "Still in force" lines of R-90,
+`docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision" (a dated line under "Switchover"),
+REQ-DEC-058, REQ-CHART-129, REQ-CHART-130 and REQ-INT-115 (reqio), REQ-DEC-063 (reqio, new), TASK-M2-87, TASK-M2-88
+and TASK-M6-08, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-DEC-063; changes REQ-INT-115*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-798: (a″), with the comparison at 4/5 of the bound so admitted records are within one f32 step of exact. Where a component crosses zero inside a square, compare at the square's smallest value of that component.
+
+*What it decides:* RQ-798's option (a″), with the two variants the entry left for the owner to name, each named:
+
+- **The check (a″).** Past R-90's switch, a quad takes the one-cell patch only if, at each of its four corners and its
+  four edge midpoints, the exact f64 evaluation and the patch's f64 prediction differ by at most the bound in every
+  component, agree in tag, branch and sheet, and its footprint meets no site REQ-DEC-058 flags (the flags consumed by
+  extending REQ-CHART-129's per-footprint flag and REQ-CHART-130's `Seam` mask to the switch's footprint test).
+  Otherwise the quad is exact per sample. Cost: 8 exact evaluations against `N² = 256` at `N = 16`, 1/32 of an exact
+  quad.
+- **The bound, at 4/5.** The bound is half an f32 ulp of the component's own value (TASK-M2-86's predicate (3)); the
+  comparison is made at 4/5 of it. Along each edge the error is a quadratic checked at three points, whose interpolation
+  constant is 5/4 (physics review 5877369526, F1; the report's D-11), so 4/5 of the bound at the eight points bounds the
+  square at the bound itself, and admitted records are within one f32 step of the exact ones, as the owner's words say.
+  This is the variant D-11 named, "compare at 4/5 of the bound".
+- **A component crossing zero.** Where a component crosses zero inside the quad, the comparison for that component is
+  at the f32 ulp of the quad's smallest value of that component, not at the checked points' own values. The entry's
+  estimate of that smallest value from the patch is `|x₀| − |J|·√2·h`; where it is at or below 0, the component may cross
+  zero. This is the first of the entry's two variants ("comparing at the quad's smallest own-value ulp"); the second
+  (exact evaluation per sample or an absolute floor) is not taken.
+- **Not named by the owner's words:** a component that drops a binade inside the quad without crossing zero. That case
+  is checked as (a″) states, at the checked points' own ulp, and M-K reports such quads apart, in the quad's smallest
+  own-value ulp, as the entry's PASS line has it. *Read here, flagged for the owner on the pull request.*
+
+*What follows:* R-90 gains a named exception: past its switch a quad takes the patch only where this check admits it,
+and is exact per sample elsewhere, at any depth. The records' bits change on the quads it sends back to exact. A
+patched quad's samples then share the centre's tag, branch and sheet (R-989). The entry's measurement M-K, criterion
+written before any run, is the check's gate, built by TASK-M6-08 (the switch), its PASS under (a″) now "no component
+differs by more than one f32 ulp of its own value" on admitted quads within one binade, its three positive controls
+as the entry has them, control (iii) (a planted saddle-shaped error) rejected.
+
+*Applied:* a new requirement, REQ-DEC-063 (the admission check and M-K), closed by TASK-M6-08 (applied per R-369: task
+scoping; TASK-M6-08 builds the switch R-90 fires); REQ-INT-115 and TASK-M2-87 state which squares take the patch;
+REQ-DEC-058, REQ-CHART-129 and REQ-CHART-130 each name the ruling with a dated note; TASK-M2-88's flags are read by the
+check.
+
+*What it amends:* **R-90**, "whichever comes first": past `ℓ_switch` the patch is taken only where R-990's check
+admits it.
+
+R-990 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-DEC-063; changes REQ-INT-115. The parse printed R-990 for this answer.
+
+## R-991 — RQ-799, the maths library: option (a), pin, enforced; every f64 transcendental reachable from the CPU chart evaluator goes through the pinned pure-software libm, `sqrt` excepted, a test failing on any stray call with a planted call as its control, so records are identical on every machine; fixtures that change are a recorded conversion *(closes RQ-799)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-799 moved),
+`docs/archive/review_queue/M0.md` (RQ-799 with its ruling), `docs/design/principia_ic_save.md` (a dated line on the
+residual), REQ-CHART-099 and REQ-CHART-155 (reqio), REQ-CHART-212 (reqio, new), TASK-M2-106 (new), TASK-M2-86 (a
+dated line and an edge), `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-212*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-799: (a).
+
+*What it decides:* RQ-799's option (a), "Pin, enforced": every f64 transcendental reachable from the CPU evaluator
+(sin, cos, sin_cos, tan, atan2, asin, acos, exp, exp_m1, ln, ln_1p, powf, hypot, cbrt, sinh, cosh, tanh and any added
+later) goes through libm 0.2.16 with `force-soft-floats` (libm's `expm1` and `log1p` for `exp_m1` and `ln_1p`), through
+the `Real` trait's methods as `arctan2` and `sinc` already are. `sqrt` is excluded: IEEE 754 requires it correctly
+rounded, so every platform gives the same bits. Enforced by a test in the `discipline_lint` style: every `Float::` or
+inherent `f64` transcendental in the evaluator's source outside the `Real` impl fails, `sqrt` excepted, with a control
+(a planted `Float::sin` fails); not a clippy `disallowed-methods` entry, which would be lint configuration (R-197).
+Records become identical on every host, so R-521's and R-921's recreation and REQ-CHART-099's digest hold across
+machines. Today's f64 bits change on some inputs, so a fixture written from the f64 path becomes a recorded conversion
+(R-931). The pin comes before any record is written on the new route (the owner's recommendation of 12 Nov 2026).
+
+*The measurement,* criterion written before any run (the entry's): on the first slice's three charts and grids
+(TASK-M2-86), records that differ bitwise, at f64 and after narrowing, between the std path and the pinned path on the
+Mac, and under each path across the Mac, Linux, Windows and the wasm build, each against the Mac, the wasm runtime and
+the Windows host named before the run. PASS: under the pinned path the count against the Mac is 0 on Linux, Windows and
+wasm at both levels; the other counts reported as the size of the change. Control: a one-ulp perturbation of `sin` gives
+a non-zero count at the f64 level, or the harness is void. The speed cost is measured by the slice's own benchmark.
+
+*Applied:* a new task, TASK-M2-106, builds the pin, the test and the measurement, under a new requirement,
+REQ-CHART-212; TASK-M2-86 (the first slice) depends on it, so no record is written on the new route before the pin
+(applied per R-369: task scoping; TASK-M2-86's chain had no task that builds it). REQ-CHART-099 and REQ-CHART-155 name
+the ruling. The doc comment at `crates/kernel/src/real.rs:49–50` is corrected apart from this ruling (D-12 of the
+report).
+
+R-991 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-212. The parse printed R-991 for this answer.
+
+## R-992 — RQ-808, Heggie's and logH's own state: option (a); each regularised occupant that registers once carries its own state across `ADVANCE` calls in the payload, registered once at `t = 0` (Heggie's `Qᵢ`, `Pᵢ` and `h`; logH's `B` and, in TTL mode, `W`), so neither re-registers and its count is 0; a payload schema change *(closes RQ-808)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-808 moved),
+`docs/archive/review_queue/M0.md` (RQ-808 with its ruling), `docs/contracts/principia_integrator_contract.md` § "Part
+2a — Widening the slot: `owns_time_mapping`, and the `advance` signature" (the seam), § "What this preserves, and what
+it costs" and § "The sync grid is a fixed quantum of physical time (R-565)" (a dated line each, with its *Was* where a
+line is replaced), `docs/design/principia_dd_simstate_payload.md` § "0. The two buffers (split by access pattern)" (a
+dated line), REQ-INT-006, REQ-INT-018 and REQ-INT-073 (reqio), REQ-INT-118 and REQ-PAY-114 (reqio, new),
+`plan/tasks.yaml` (TASK-M3-08's list) and `plan/rule_groups.yaml`; adds REQ-INT-118 and REQ-PAY-114*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-808: (a).
+
+*What it decides:* RQ-808's option (a): "Carry each regularised occupant's own state across `ADVANCE` calls in the
+payload, registered once at `t = 0`: Heggie's `Qᵢ`, `Pᵢ` and `h` (13 numbers and the clock), logH's `B` and, in TTL
+mode, `W`. A schema change; the seam gains the carried state; Heggie's and logH's re-registration count is 0." So Heggie
+stays the method the contract chose it as, registering once and never again, as the reference driver does, and live
+march, catch-up and re-boot after eviction reach the same state bitwise (Part 2a) because the carried state is part of
+the payload `f(IC, sim key, t)`. Aarseth–Zare is unchanged: it re-registers at every sync boundary (Part 2b's table),
+and its count says so.
+
+*Applied per R-369:* the carried state's layout, widths and place in the payload (in `SimState` or a buffer beside
+it) are a definition (R-72) the building task writes in payload § 1, physics- and perf-reviewed, with the memory
+figures of payload § 7 recomputed; REQ-PAY-114 names it. The seam's signature gains the carried state in and out.
+
+*Applied:* two new requirements, REQ-INT-118 (the seam carries the state, count 0) and REQ-PAY-114 (the payload
+field). REQ-INT-018 and REQ-INT-073 record the count's values (0 for Heggie and logH, one per boundary for
+Aarseth–Zare) and REQ-INT-006's seam runs carry the state. The task that builds it is the logH-and-hookup task split
+from TASK-M3-08 (D-22 of the report), TASK-M3-75, written on `task/TASK-M3-08` and not on `main` when this was
+written; until that split merges, the two requirements sit on TASK-M3-08, and the split moves them with REQ-INT-018
+and REQ-INT-073.
+
+R-992 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-INT-118 and REQ-PAY-114. The parse printed R-992 for this answer.
+
+## R-993 — RQ-809, logH's step: option (a); logH's own time modes are the reference's drift–kick–drift leapfrog, `W` advanced at the midpoint velocity in TTL mode, selected as logH × KDK; logH × RK4 is classical RK4 on `(r, v, t, W)`; logH × Euler and × Yoshida wait for TASK-M3-39 *(closes RQ-809; refines R-500)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-809 moved),
+`docs/archive/review_queue/M0.md` (RQ-809 with its ruling), the forward and "Still in force" lines of R-500,
+`docs/contracts/principia_integrator_contract.md` § "Every stepper × regularisation pair runs; the pairs measured not to
+work carry a warning (R-561)" (a dated line), REQ-INT-006, REQ-INT-084 and REQ-VAL-190 (reqio), TASK-M3-39 (a dated
+line) and `plan/rule_groups.yaml`; changes REQ-INT-006*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-809: (a).
+
+*What it decides:* RQ-809's option (a): "logH's own time modes are its leapfrog, the reference's drift–kick–drift (`W`
+at the midpoint velocity in TTL mode), selected as logH × KDK; logH × RK4 is the reference's classical RK4 on
+`(r, v, t, W)`; logH × Euler and × Yoshida wait on TASK-M3-39, and REQ-INT-006's test runs them once it writes them."
+So R-500's "TTL leapfrog" is that drift–kick–drift, step-reversible as R-500 lists it, and logH-TTL's `run_reversible`
+and REQ-VAL-190's logH arms are measured on it. Under logH, "KDK" in the pair table names logH's own leapfrog, not Part
+2b's generic kick–drift–kick form.
+
+*Applied:* REQ-INT-006's every-pair test runs logH × KDK and logH × RK4 now, and logH × Euler, × Yoshida-4 and
+× Yoshida-6 once TASK-M3-39 writes them (its verify reads so, and TASK-M3-39's file says so); REQ-INT-084 and
+REQ-VAL-190 name the ruling.
+
+*What it refines:* **R-500**, which leapfrog its "TTL leapfrog" is.
+
+R-993 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-006. The parse printed R-993 for this answer.
+
+## R-994 — RQ-810, logH's landing: option (a), with RQ-795's answer; logH tests the landing after the step, as Heggie and Aarseth–Zare do, under R-998's rule: no landing tolerance, and the state lands on the boundary with the clock *(closes RQ-810)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-810 moved),
+`docs/archive/review_queue/M0.md` (RQ-810 with its ruling), `docs/contracts/principia_integrator_contract.md` § "The
+equations and the step control (R-160, R-161)" (a dated line), REQ-INT-084 (reqio) and `plan/rule_groups.yaml`;
+changes no requirement statement*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-810: (a), using RQ-795's answer.
+
+*What it decides:* RQ-810's option (a): "logH's secant fires as Heggie's and Aarseth–Zare's do, on the landing tested
+after the step … on by default as the code has it", with the landing test RQ-795 settles, as the owner's words say:
+R-998's, no tolerance, the interval landing when the last step ends the clock at or past the boundary, the state landing
+on the boundary together with the clock (the final step sized or retaken to land), never the clock corrected alone. The
+reference's predicted landing with `1 − 1e-12` is not used, so no precision-dependent constant reaches the branch
+(Part 2c rule 1). The secant is on by default.
+
+*Applied:* REQ-INT-084 (logH's step control in Part 2b) names the ruling; the step control is transcribed so by the
+task that transcribes logH (TASK-M3-75 on `task/TASK-M3-08`, R-992).
+
+R-994 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes no requirement statement; REQ-INT-084 names the ruling. The parse printed R-994 for this answer.
+
+## R-995 — RQ-801, deep-zoom records re-running: option (a); a record names its route, exact or patch, and for a patch the quad's level and address, so a re-run re-forms the patch and reproduces exactly what was simulated, on every machine with R-991 *(closes RQ-801)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-801 moved; RQ-783, open,
+a dated line), `docs/archive/review_queue/M0.md` (RQ-801 with its ruling), `docs/design/principia_ic_save.md` and
+`docs/design/principia_honesty_precision.md` (a dated line each), REQ-INT-115 and REQ-TOOL-172 (reqio), TASK-M2-87 and
+TASK-M7-45 (a dated line each) and `plan/rule_groups.yaml`; changes REQ-INT-115*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-801: (a).
+
+*What it decides:* RQ-801's option (a): "The record names its route (exact or patch) and, for a patch, the quad's level
+and address, so recreation re-forms the patch and reproduces the integrated IC bitwise; the inspector's one-pixel trace
+uses the quad's record. With RQ-799 (a), across machines too." RQ-799 took (a) (R-991), so it holds on every machine.
+honesty_precision's "bitwise what coloured the pixel" holds past `ℓ_switch`.
+
+*Read with RQ-783* (pre-switch records, deferred to M2 by R-956), which stays open: RQ-801 was filed as its addition;
+this answers the patch case, and RQ-783's own question, records made before R-926's route, is still the owner's at M2.
+RQ-783 gains a dated line saying so.
+
+*Applied:* REQ-INT-115's record contract carries the route and, for a patch, the level and address; TASK-M2-87 states
+it; REQ-TOOL-172 and TASK-M7-45 name the ruling.
+
+R-995 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-115. The parse printed R-995 for this answer.
+
+## R-996 — RQ-800, the measure weight: option (a), per pixel from each pixel's own exact slope; on a chart with no exact slopes, an estimated slope per pixel, labelled, admitted per chart only by the two-step check written before any run, else that chart gives unweighted chart-area fractions *(closes RQ-800; extends R-935)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-800 moved),
+`docs/archive/review_queue/M0.md` (RQ-800 with its ruling), the forward and "Still in force" lines of R-935,
+`docs/design/principia_deep_zoom.md` § "Couplings to the contract" (a dated line), REQ-DEC-034, REQ-VAL-094 and
+REQ-CHART-153 (reqio), TASK-M6-09 (its Goal and Acceptance, each with its *Was*), TASK-M8-128 (a dated line),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; changes REQ-DEC-034 and REQ-VAL-094*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-800: (a).
+
+*What it decides:* RQ-800's option (a), "Per sample": each sample's weight is the Gram area factor `√det(J_DᵀJ_D)` of
+its own slope, the dual (tier 1) or implicit (tier 2) slope at the sample; on a tier-3 map, a central difference at
+R-633's step per sample, labelled "measure by central difference", admitted per map only if it passes the entry's
+Richardson check, criterion fixed before any run (R-649): `|W(h) − W(h/2)| ≤ B(h) + B(h/2)`, `B` as the entry defines
+it, with its positive control (an error of `100·(B(h) + B(h/2))` planted in one map's evaluation must fail). A map that
+fails takes option (c): area statistics only on the uniform measurement grid (`FULL_RETENTION`), unweighted, labelled as
+chart-area fractions. One definition of the weight everywhere.
+
+*What it extends:* **R-935**'s "central differences only as the check", to the measure weight on tier-3 maps, admitted
+only by the check.
+
+*Applied:* REQ-DEC-034's clause "|det J_D| must double as the measure weight" and REQ-VAL-094 are rewritten per sample,
+each with its *Was*; TASK-M6-09 builds it, its Goal and Acceptance rewritten; REQ-CHART-153 and TASK-M8-128's final-
+condition charts, a tier-3 map (R-985), take the check.
+
+R-996 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-DEC-034 and REQ-VAL-094. The parse printed R-996 for this answer.
+
+## R-997 — RQ-803, the collapse test: option (a); R-90's strict bitwise test stays, and the first depth where any component shows stepping by the banding rule is reported beside the first collapsing depth, with the condition written in advance that a gap over one level comes back to the owner *(closes RQ-803)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-803 moved),
+`docs/archive/review_queue/M0.md` (RQ-803 with its ruling), REQ-DEC-052 and REQ-SCHED-062 (reqio), TASK-M5-04 (its
+gate's line and a dated note) and `plan/rule_groups.yaml`; changes REQ-DEC-052*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-803: (a).
+
+*What it decides:* RQ-803's option (a): "Keep R-90's bitwise test as written, and report beside REQ-DEC-052's first
+collapsing depth the first depth at which any component, along each in-plane axis, fails REQ-TOOL-152's 1/16
+criterion. Nothing changes in what is computed; the gap is measured." With it, the entry's condition written in
+advance: if the reported gap exceeds one level at any stated `|x₀|` on the first slice's charts, (b) or (c) comes back
+to the owner with those numbers.
+
+*Applied:* REQ-DEC-052's gate (TASK-M5-04) reports the column; TASK-M5-04 carries the condition; REQ-SCHED-062 names the
+ruling.
+
+R-997 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-DEC-052. The parse printed R-997 for this answer.
+
+## R-998 — RQ-795, Aarseth–Zare's landing: option (b), no landing tolerance, on the owner's condition that the state lands on the boundary together with the clock, the final step sized or retaken to land, never the clock corrected alone while the state stays overshot; checked by the figure-eight closure's convergence order, not only its closure value *(closes RQ-795)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-795 moved),
+`docs/archive/review_queue/M0.md` (RQ-795 with its ruling), `docs/contracts/principia_integrator_contract.md` § "Aarseth–
+Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)" (a dated line after
+step 8's note) and § "Rules the new kernel must hold by construction" (a dated line), REQ-INT-049 (reqio), REQ-INT-119
+(reqio, new), TASK-M3-76 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-INT-119*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-795: (b), on one condition: the state must land on the boundary together with the clock (the final step is sized or retaken to land), never the clock corrected alone while the state stays overshot. Check it by the figure-eight closure's convergence order, not only its closure value.
+
+*What it decides:*
+
+- **Option (b): no tolerance.** "The interval lands when the secant's last retake ends the interval clock at or past
+  `dt_left` … so the branch compares `t_s` with `dt_left` alone." No `LAND_EPS_REL` reaches a branch, at either
+  precision, so Part 2c rule 1 holds, and no calibration is needed.
+- **The owner's condition, binding as the option does.** The state lands on the boundary together with the clock: the
+  final step is sized, or retaken, so that the state it produces is the state at the boundary. Setting the clock to the
+  boundary while the state stays where an overshooting step left it is not allowed. So (b)'s "the clamp then setting the
+  remainder exactly" holds only for a state that landed with it.
+- **The check.** The figure-eight closure's convergence order across the step parameter, not only its closure value:
+  a landing that corrects the clock alone leaves an error of the overshoot's order in every interval, which the order
+  shows and a single closure value may not.
+
+*Applied per R-369 (a definition, R-72):* how the secant stops without a tolerance, so that the state and the clock
+land together, is written by the building task in Part 2b, physics-reviewed; the convergence-order check is the owner's
+test of it. Its criterion, the order expected for the stepper and its margin, is written in the pull request before any
+run (R-649).
+
+*Applied:* built Aarseth–Zare has `LAND_EPS_REL` as a setting with no value (`AzParams::land_eps_rel`, TASK-M3-68), so
+this changes built behaviour: a new task, TASK-M3-76, physics-reviewed, builds the landing and removes the setting, with
+R-999's floor, under a new requirement, REQ-INT-119, whose verify is the convergence-order check (applied per R-369:
+task scoping; no task building the regularised step control is open for Aarseth–Zare). REQ-INT-049 names the ruling.
+logH lands under the same rule (R-994).
+
+R-998 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Adds REQ-INT-119. The parse printed R-998 for this answer.
+
+## R-999 — RQ-796, Aarseth–Zare's floor on `|R₃|`: option (a), the floor is `TINY` at each working precision, as R-953 does for the reference's other `1e-300` floors, its value following REQ-INT-105's proposal *(closes RQ-796)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-796 moved),
+`docs/archive/review_queue/M0.md` (RQ-796 with its ruling), `docs/contracts/principia_integrator_contract.md` § "Aarseth–
+Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)" (the equations of
+motion, with its *Was*), REQ-INT-105 (reqio), REQ-INT-120 (reqio, new), TASK-M3-76 (new), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; changes REQ-INT-105; adds REQ-INT-120*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-796: (a).
+
+*What it decides:* RQ-796's option (a): "the floor is `TINY` at each width (`1e-37` at f32, `1e-300` at f64 in the
+reference's values), as R-953 maps `tb_az.py`'s other `1e-300` floors onto `TINY`, its value then following
+REQ-INT-105's proposal". At f32 the floor is no longer 0.
+
+*Applied:* the equations of motion in Part 2b read `|R₃|` floored at `TINY`, with the `1e-300` kept as *Was*;
+REQ-INT-105 lists `|R₃|` among `TINY`'s floored quantities; the built code takes the floor as a setting with no value
+(`AzParams::r3_floor`), so TASK-M3-76 (with R-998) sets it to `TINY` under a new requirement, REQ-INT-120.
+
+R-999 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-105; adds REQ-INT-120. The parse printed R-999 for this answer.
+
+## R-1000 — RQ-806, the failure code of a broken regularised march: option (iii), by cause; 2 where the step size went non-finite, otherwise 0 or 1, read on the first broken internal state *(closes RQ-806)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-806 moved),
+`docs/archive/review_queue/M0.md` (RQ-806 with its ruling), `docs/design/principia_dd_simstate_payload.md` § "2. Bit
+layouts (the packed u32s)" (a dated line on `sim_failed`), REQ-PAY-039 (reqio), TASK-M3-18 (a dated line) and
+`plan/rule_groups.yaml`; changes no requirement statement*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-806: (iii).
+
+*What it decides:* RQ-806's option (iii): "by cause: 2 where the step size `h` was not finite, else 0 or 1 read on the
+stepped state as in (ii)" (0 if any component of the first non-finite regularised state the step-7 test rejected is
+NaN, else 1). It records the failure's actual mode, as payload § 8 asks, and a later overflow of a finite step stays
+apart from a step size that failed.
+
+*Applied:* TASK-M3-18 (the one `sim_failed` writer) builds it and updates the code comment TASK-M3-68 marked interim
+(`crates/kernel/src/driver/wrapper.rs`); until it merges, (i) is built, and (i) and (iii) agree on every fixture the
+entry measured. Payload § 2 states the rule; REQ-PAY-039 names it.
+
+R-1000 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes no requirement statement; REQ-PAY-039 names the ruling. The parse printed R-1000 for this answer.
+
+## R-1001 — RQ-802, flat versus precision running out: option (b), the direct test on the records with the owner's slope condition deciding equal pairs, and pairs placed symmetrically about a flagged fold excluded, as seams are; Q-T3, a chart with no exact slopes, deferred to M6 *(on RQ-802, which stays open; defers RQ-802's Q-T3; refines R-54 and R-599)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-802 deferred on Q-T3),
+the forward and "Still in force" lines of R-54 and R-599, `docs/design/principia_deep_zoom.md` § "4. Sliding depth
+bound" (a dated line), REQ-GUI-012 (reqio, with R-1002), TASK-M6-07, TASK-M6-08 and TASK-M6-21 (a dated line each) and
+`plan/rule_groups.yaml`; changes REQ-GUI-012*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-802: (b), with my slope condition; pairs placed symmetrically about a flagged fold are excluded, as seams are. Q-T3: defer:M6.
+
+*What it decides:*
+
+- **The main question, option (b).** For a collapsed adjacent pair along in-plane direction `d`: the f64 sample points
+  equal, the genuine floor, it warns; the f64 ICs different while the narrowed records are equal, the f32 floor, it
+  warns; the f64 ICs bitwise equal at distinct f64 sample points, a saturation collapse only if
+  `|J_dual,k|·h_633 < ½ ulp_f64(x_k)` for every component `k` (the owner's slope condition of 12 Nov 2026: the dual or
+  implicit slope's column along `d`, R-633's step along `d`, no central difference), otherwise the f64 floor, and it
+  warns. On a tilted view `|u_d|` is the largest magnitude among the chart coordinates that `d` moves (the entry's
+  reading, which the owner took with the option).
+- **The fold pairs, the owner's rider.** A pair placed symmetrically about a fold REQ-DEC-058 flags is excluded from the
+  test, as seams are excluded from refinement (REQ-CHART-130), so it neither warns nor counts as saturation.
+- **Q-T3 deferred to M6.** What a tier-3 chart, with no exact slope, does with an equal pair is not decided; the entry
+  stays open on it, deferred to M6 by the owner, and the measurement's tier-3 arm stays void until it is answered.
+
+*Applied:* REQ-GUI-012's saturation clause is rewritten to (b) with the fold exclusion, with R-1002's change to its last
+clause, each replaced part kept as its *Was*; its `rq` keeps RQ-802 and RQ-804 for Q-T3. R-599's applied note, which
+read RQ-553's `J_D` test, now reads this one (a forward line); deep zoom § 4 a dated line. TASK-M6-21 (the warning),
+TASK-M6-08 (R-599's per-axis stop) and TASK-M6-07's note name it. The entry's measurement, its arms (a) to (f) with the
+fold pairs listed apart, runs in TASK-M6-21.
+
+*What it refines:* **R-54** and **R-599**, what reads as saturation.
+
+R-1001 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-012 (with R-1002). The parse printed R-1001 for this answer.
+
+## R-1002 — RQ-804, the switch at depth 20 alone: option (a), given RQ-798's (a″); no precision warning at a switch with no collapse; the warning is raised at a real collapse and at the precision floor, flat regions excepted by R-1001; Q-T3 as in RQ-802, deferred to M6 *(on RQ-804, which stays open; defers RQ-804's Q-T3; amends R-54)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-804 deferred on Q-T3),
+the forward and "Still in force" lines of R-54, `docs/design/principia_deep_zoom.md` § "4. Sliding depth bound" (the
+line on an `ℓ_switch` switchover with no collapse, with its *Was*), REQ-GUI-012 (reqio, with R-1001), TASK-M6-21 (a
+dated line) and `plan/rule_groups.yaml`; changes REQ-GUI-012*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-804: (a), given RQ-798 (a″). Q-T3 as in RQ-802: defer:M6.
+
+*What it decides:* RQ-804's option (a): "No. The warning is raised at a collapse (on either route) and at
+`AT_F32_FLOOR`, saturation excepted by RQ-802 (b)'s definition … A switch at `ℓ_switch` with no collapse raises none.
+R-54's "Raised on `DECODE_SWITCHOVER`" reads "on a `DECODE_SWITCHOVER` triggered by collapse"; REQ-GUI-012's arm (e) is
+inverted." The option is safe with RQ-798 (a″), which the owner took (R-990), as their words say. Q-T3 as in RQ-802:
+the entry stays open on it, deferred to M6.
+
+*Applied:* REQ-GUI-012's last clause is removed and its arm (e) inverted, with their *Was*; deep zoom § 4's line on an
+`ℓ_switch` switchover with no collapse is replaced, with its *Was*; TASK-M6-21 names it.
+
+*What it amends:* **R-54**, "Raised on `DECODE_SWITCHOVER`", now a switchover triggered by collapse.
+
+R-1002 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-GUI-012 (with R-1001). The parse printed R-1002 for this answer.
+
+## R-1003 — RQ-805, the backwards answer and `ctx.chart.z` past depth 20: Q1 conditional, M-E run under (a) first and (b) built only if the absolute answer falls more than one level short of what its input allows at some fixture; Q2 (ii), a centre-relative `z` lane beside the absolute one past depth 20 *(closes RQ-805)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-805 moved),
+`docs/archive/review_queue/M0.md` (RQ-805 with its ruling), `docs/design/principia_colour_composition.md` § "3" and
+`docs/design/principia_state_map.md` SM7 (a dated line each), REQ-RENDER-125 and REQ-COL-057 (reqio), REQ-COL-164
+(reqio, new), TASK-M7-74 and TASK-M7-47 (a dated line each), `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds
+REQ-COL-164*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-805: Q1: run the entry's measurement (M-E) under (a) first; build (b) only if the absolute answer falls more than one level short of what its input allows at some fixture. Q2: (ii).
+
+*What it decides:*
+
+- **Q1, a condition.** M-E (TASK-M7-74's `fragment_place_depth`) runs first under (a), the absolute answer as now. If at
+  some fixture the first depth at which the worst distance to `place` exceeds one sample spacing is more than one level
+  short of that fixture's forward floor `ℓ_k` (RQ-798's fixture rule), Q1 (b) is built: quad-local past `ℓ_switch`,
+  absolute beyond the quad's patch, as the entry has it. Otherwise (a) stands, its floor stated in SM7. The criterion is
+  the owner's, written before the run; it is the entry's own alternative turned the other way, as the owner worded it.
+- **Q2 (ii).** A quad-local `z` lane past `ℓ_switch`, beside the absolute one: `z₀` per quad from the CPU's f64 (high
+  and low words) and an f32 offset per pixel, `J_z·δ`, as R-395 does for `ctx.chart.slice_uv`; a change to colour § 3's
+  context that every shader can read; the absolute lane stays.
+
+*Applied:* TASK-M7-74 carries M-E under (a) first and Q1 (b) as a conditional deliverable, decided against that
+criterion (applied per R-369: task scoping). Q2's lane is a new requirement, REQ-COL-164, closed by TASK-M7-74 with the
+fragment's quad-local inputs (applied per R-369: task scoping, the task that sends the per-quad values to the fragment).
+REQ-RENDER-125 and REQ-COL-057 name the ruling; colour § 3, SM7 and TASK-M7-47 carry dated lines.
+
+R-1003 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-164. The parse printed R-1003 for this answer.
+
+## R-1004 — RQ-807, the WSL image: (3) and (4), and (i); the cache on E: stays as built, the hosted `wsl-image` job keeps its build in the Actions cache keyed on the recipe, restored on a hit and built only on a miss, proof 5 unchanged, and no credential on the PC *(closes RQ-807; amends R-285 and R-326)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-807 moved),
+`docs/archive/review_queue/M0.md` (RQ-807 with its ruling), the forward and "Still in force" lines of R-285 and R-326,
+REQ-TOOL-233 (reqio, new), TASK-M0-62 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-TOOL-233*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-807: (3) + (4), and (i). No credential on the PC.
+
+*What it decides:*
+
+- **(3) stays as built:** the cache on E: keyed on the recipe, a miss downloading with download-artifact's two tries, no
+  resume.
+- **(4):** "The hosted `wsl-image` job keeps its build in the Actions cache under `wsl-image-<recipe key>`, saved from a
+  `wsl-register` dispatch on `main`, restored on a hit, built only on a miss, uploaded as now." It amends R-285 (what CI
+  caches), with R-967 as precedent, and is an exception to R-326 for that dispatch: the entry is saved from a
+  `wsl-register` dispatch on `main`, the one save outside a push to `main`.
+- **(i):** `wsl-proofs` rebuilds as now; proof 5 is unchanged.
+- **"No credential on the PC" binds:** option (1), a token for the PC's register job, is refused, and so is anything
+  else that puts a credential on the owner's PC. (2) is not taken.
+
+*Applied:* a new CI task, TASK-M0-62, reviewers code and qa, builds (4) under a new requirement, REQ-TOOL-233. This pull
+request changes no workflow.
+
+*What it amends:* **R-285**, the Actions cache gaining the WSL image's entry; **R-326**, saving it from a `wsl-register`
+dispatch on `main`.
+
+R-1004 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-233. The parse printed R-1004 for this answer.
+
+## R-1005 — The owner confirms R-988 as their item 5; D-15 of the report of 13 Nov 2026 stands *(the report's D-15, which stands; confirms R-988)*
+*13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `decisions.md` § R-988 (a dated line under its
+heading), `plan/section_notes.yaml` and `plan/rule_groups.yaml`; changes no requirement*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> D-15: stands. R-988 is confirmed as my item 5.
+
+*What it decides:* the report's D-15, "The Windows run's time limits and re-run job" (#507: time limits of 1.5 times
+the slowest of the last five completed runs, written before any limit was set; the one automatic re-run a hosted job of
+its own, `win-retry`; the owner's item 5 recorded as R-988, flagged as a reading to confirm), stands. The owner confirms
+R-988 as their item 5: the reading flagged on #507 is settled, and R-988 stands as written. A dated line under R-988's
+heading says so; its text is unchanged.
+
+R-1005 is in the "ci" group of `plan/rule_groups.yaml`.

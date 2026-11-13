@@ -81,6 +81,7 @@ The membrane is thin, typed, and enumerable — exactly five crossings:
 | **Sanctioned pulls** | single-IC f32 GPU trace (click inspector's divergence overlay) · columnar decode (export) | GPU → CPU | user-initiated, tiny, async, latest-wins. (The hover trace is NOT a pull — it re-integrates on the CPU via `computeIC` in the inspector worker and reads no payload; render Part 7) |
 
 *12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (the invariant's "the GPU decides *what it computes to*" read as a GPU decode, and the Dispatch crossing's chart params and per-quad `c,h,x₀,J_D,T`; where `x₀ + J_D·δ` is formed is RQ-797's) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+*13 Nov 2026 (R-989):* RQ-797 is answered, Q1 (a): the CPU expands `x₀ + J_D·δ` in f64 and narrows it once into the records; no per-quad `x₀` or `J_D` crosses to the integrator.
 
 The Deployment ring's machinery — `resolve()`, monomorphised compute pipelines (and hand-WGSL fragment assembly — lowering Part 2), the precompile rule — exists to serve this mapping: code differences baked, moving values as uniforms, and *a gesture can never reach the compiler*.
 

@@ -19,6 +19,8 @@ This is axiom 4 ("charts lower; they do not interpret") made literal: the resolu
 
 *10 Nov 2026 (R-926).* The chart map and the decode no longer lower into the compute pipeline: the CPU evaluates them in f64 and sends each quad its forward table, from which the integrator's records are formed, and the compute pipeline integrates those records through the wrapper and the occupant, with no chart code in the integrator (R-926, items 5 and 6). The fragment pipeline keeps the chart's generated decode and encode where the chart has closed-form shader code, and reads CPU-built tables where it has none (R-925). The paragraph above is kept as written for what it says of the fragment side and of `SimState` and `ICDescriptor`; its compute-side list is *Was*.
 
+*13 Nov 2026 (R-989, RQ-797 Q1 (a)):* the records are formed on the CPU: an exact quad's from each sample's f64 evaluation, narrowed once, and past R-90's switch a patched quad's from each sample's `x₀ + J_D·δ` expanded in f64 and narrowed once (R-990's check deciding which quads take the patch); a tier-3 map's record holds the sample's own f64 evaluation, narrowed once (Q2 (i)). The GPU reads only finished records, and no `x₀` or `J_D` reaches the integrator.
+
 ---
 
 ## Part 2 — Two assembly mechanisms (the substrate split; the old "one mechanism" claim retires)

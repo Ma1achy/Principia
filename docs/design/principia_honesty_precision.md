@@ -189,7 +189,9 @@ over the f64 in the panel's previews. The four runs and every readout are the sa
 runs run from the clicked trajectory's own IC, under the trajectory's own sim key (its occupant and coefficients, never
 the current view's).
 - **An atlas pixel of the current view**: the f32 run is the survey kernel's one-pixel dispatch through the atlas's
-  decode path, bitwise what coloured the pixel, and the trust line takes REQ-GUI-370's three forms at the current atlas
+  decode path, bitwise what coloured the pixel (*13 Nov 2026, R-995:* past `ℓ_switch` the record names its route, exact
+  or patch, and for a patch the quad's level and address, so the one-pixel run re-forms the patch and is bitwise the
+  record that was integrated, on every machine with R-991), and the trust line takes REQ-GUI-370's three forms at the current atlas
   playhead `t_p`. An atlas pixel needs a live view: while the view source is `Result` (`principia_results.md` §3.4),
   no pixel is an atlas pixel. A **kept orbit** counts as an atlas pixel only if it was kept from an atlas pixel of a
   live view (the view source `Live` when it was kept), and only while the view it was kept from is unchanged: the view
