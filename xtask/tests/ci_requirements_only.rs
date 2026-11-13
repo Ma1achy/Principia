@@ -15,7 +15,8 @@
 //!   a `#[path]` to it. RQ-790's evidence, the test files under `crates/` that name the file,
 //!   are among them, and no crate without a reader has a test in it.
 //! - `ci_requirements_only_untrusted_scan_runs_every_crate`: the scan prints nothing on a workspace with a `[[test]]`
-//!   target at a path of its own, and when it prints nothing `decide` falls back to every crate.
+//!   target at a path of its own, or with a unit test in `src/` in a file that reads the file, and when it prints
+//!   nothing `decide` falls back to every crate.
 //! - `ci_requirements_only_no_doctest_reads_the_file`: no doc comment in a crate's or xtask's `src/` holds a path to the
 //!   file, so the doctests the selection leaves out read none of it.
 //! - `ci_requirements_only_per_merge_runs_everything`: on a push, `decide` names every crate whatever changed, and the
@@ -682,6 +683,42 @@ fn readers_beside_a_test_target(crates: &str) -> String {
     String::from_utf8_lossy(&out.stdout).trim().to_owned()
 }
 
+/// What `crates --readers` prints on a scratch workspace of one member, `a`, whose test `r` names the file, and whose
+/// library holds a unit test reading it.
+fn readers_beside_a_unit_test(crates: &str) -> String {
+    let dir = Scratch::new("ci_requirements_only_unit_test");
+    std::fs::create_dir_all(dir.join("a/tests")).expect("scratch");
+    std::fs::create_dir_all(dir.join("a/src")).expect("scratch");
+    std::fs::write(dir.join("Cargo.toml"), "[workspace]\nmembers = [\"a\"]\n").expect("manifest");
+    std::fs::write(dir.join("a/Cargo.toml"), "[package]\nname = \"a\"\n").expect("member");
+    std::fs::write(
+        dir.join("a/tests/r.rs"),
+        "const R: &str = \"plan/requirements.yaml\";\n",
+    )
+    .expect("test");
+    std::fs::write(
+        dir.join("a/src/lib.rs"),
+        "#[test]\nfn t() { let _ = std::fs::read(\"../plan/requirements.yaml\"); }\n",
+    )
+    .expect("library");
+    let script = dir.join("ci_quick_crates.py");
+    std::fs::write(&script, crates).expect("crates script");
+    let out = Command::new("python3")
+        .arg("-I")
+        .arg(&script)
+        .arg("--root")
+        .arg(&*dir)
+        .arg("--readers")
+        .timed_output()
+        .expect("ci_requirements_only: python3 ran");
+    assert!(
+        out.status.success(),
+        "ci_requirements_only: --readers failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    String::from_utf8_lossy(&out.stdout).trim().to_owned()
+}
+
 const ALL_PACKAGES: &str =
     "-p engine -p gui -p kernel -p ledger -p prin -p render -p validation -p xtask";
 const ALL_LIBRARY_PACKAGES: &str =
@@ -692,6 +729,11 @@ fn check_untrusted(tier: &str, crates: &str) {
         readers_beside_a_test_target(crates),
         "",
         "ci_requirements_only: the scan lists readers on a workspace with a `[[test]]` target it cannot place"
+    );
+    assert_eq!(
+        readers_beside_a_unit_test(crates),
+        "",
+        "ci_requirements_only: the scan lists readers on a workspace whose `src/` holds a unit test that reads the file"
     );
     let silent = crates.replacen(
         "        print(\" \".join(readers(args.root) or []))\n",
@@ -727,6 +769,23 @@ negative_control!(
         )
     )
 );
+
+mod unit_test_in_src {
+    use super::*;
+    negative_control!(
+        ci_requirements_only_untrusted_scan_runs_every_crate,
+        "the scan blind to a unit test in `src/` that reads the file",
+        expected = "whose `src/` holds a unit test that reads the file",
+        check_untrusted(
+            &read(TIER),
+            &edited(
+                CRATES,
+                "            if \"#[test]\" in text_of(f):\n                return None\n",
+                ""
+            )
+        )
+    );
+}
 
 mod empty_scan_taken {
     use super::*;

@@ -40,7 +40,7 @@ limit: it follows one hop only, so a reader through a longer chain is missed unl
 reading module: a binary started through cargo rather than `CARGO_BIN_EXE_` (`cargo xtask …`), or a module that reaches
 the file only through another program (`xtask::gate`, which runs validation's `gate` binary); the per-merge run runs
 them. Nothing is printed, and the caller runs every crate, when the scan cannot be trusted: a `[[test]]` target at a
-path of its own, or no reader found.
+path of its own, a unit test in `src/` in a file that reads the file, or no reader found.
 """
 import argparse
 import pathlib
@@ -179,6 +179,8 @@ def readers(root):
             parts = f.relative_to(src).with_suffix("").parts
             if parts[0] == "bin" or not names_read(text_of(f), names):
                 continue
+            if "#[test]" in text_of(f):
+                return None
             parts = parts[:-1] if parts[-1] == "mod" else parts
             if parts in ((), ("lib",), ("main",)):
                 modules.append(rf"\b{ident}::")
