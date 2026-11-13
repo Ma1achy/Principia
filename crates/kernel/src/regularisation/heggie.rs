@@ -439,15 +439,22 @@ impl<R: AzReal> HgSystem<R> {
     }
 }
 
+/// A registration: the system with its frozen `h`, and the regularised state at `t = 0`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct HgRegistered<R> {
+    /// The system.
+    pub system: HgSystem<R>,
+    /// The regularised positions, the clock at `0`.
+    pub q: HgQ<R>,
+    /// The regularised momenta.
+    pub p: HgP<R>,
+}
+
 /// Registers the Cartesian state `s`, in the centre-of-mass frame, under `time` (Part 2b; `system.rs:82-100`,
 /// `:137-151`): `qᵢ = rⱼ − rₖ`, `pᵢ = (mⱼvⱼ − mₖvₖ)/3` (Eq. 8b), the energy `h` by Eq. 6, `Qᵢ` the conditioned inverse
 /// of `qᵢ`, `Pᵢ = 2L(Qᵢ)ᵀpᵢ`, and the interval clock `t = 0`.
 #[inline]
-pub fn register<R: AzReal>(
-    s: &State<R>,
-    tiny: R,
-    time: HeggieTime,
-) -> (HgSystem<R>, HgQ<R>, HgP<R>) {
+pub fn register<R: AzReal>(s: &State<R>, tiny: R, time: HeggieTime) -> HgRegistered<R> {
     let third = R::one() / (two::<R>() + R::one());
     let qv = [
         sub(s.r[1], s.r[2]),
@@ -470,20 +477,20 @@ pub fn register<R: AzReal>(
         lc_inverse(qv[2], tiny),
     ];
     let two = two::<R>();
-    (
+    HgRegistered {
         system,
-        HgQ {
+        q: HgQ {
             q: u,
             t: R::default(),
         },
-        HgP {
+        p: HgP {
             p: [
                 scale(two, ltmul(u[0], pv[0])),
                 scale(two, ltmul(u[1], pv[1])),
                 scale(two, ltmul(u[2], pv[2])),
             ],
         },
-    )
+    }
 }
 
 /// The time-reversal map (Part 2b § "The time-reversal maps (REQ-INT-095)"): `(Q, P, t) → (Q, −P, −t)`, an involution.
@@ -941,7 +948,11 @@ pub fn march<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
     cadence: &mut C,
     watch: &mut X,
 ) -> HgAdvanced<R> {
-    let (system, q0, p0) = register(state, params.tiny, params.time);
+    let HgRegistered {
+        system,
+        q: q0,
+        p: p0,
+    } = register(state, params.tiny, params.time);
     watch.registered(&q0);
     let mut s = *state;
     let (mut q, mut p) = (q0, p0);

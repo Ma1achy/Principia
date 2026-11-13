@@ -33,7 +33,7 @@ use kernel::regularisation::dt_max::DtMaxReport;
 use kernel::regularisation::form::{Flow, Form};
 use kernel::regularisation::heggie::{
     self as hg, march, register, reversed, step_size, HgAdvanced, HgCount, HgP, HgParams, HgQ,
-    HgStepper, HgSystem, HgWatch, DEFAULT_TIME,
+    HgRegistered, HgStepper, HgSystem, HgWatch, DEFAULT_TIME,
 };
 use kernel::regularisation::pairs::HeggieTime;
 use validation::{
@@ -272,7 +272,7 @@ negative_control!(
 fn check_round_trip(turn: bool) {
     let s = triple::<f64>();
     for time in [HeggieTime::Eq20, HeggieTime::Eq22] {
-        let (system, mut q, p) = register(&s, 1e-300, time);
+        let HgRegistered { system, mut q, p } = register(&s, 1e-300, time);
         if turn {
             q.q[0] = [-q.q[0][1], q.q[0][0]];
         }
@@ -390,7 +390,9 @@ negative_control!(
 /// The march to boundary 4 from `s0` as `run` gives it: registered once (`h` bitwise the registration's), landing on
 /// boundary 4 at `4·Δ_sync` exactly, still marching, its regularised energy held within `1e-8`.
 fn check_once(out: &HgAdvanced<f64>, s0: &State<f64>) {
-    let (registered, _, _) = register(s0, 1e-300, DEFAULT_TIME);
+    let HgRegistered {
+        system: registered, ..
+    } = register(s0, 1e-300, DEFAULT_TIME);
     assert_eq!(
         out.system.h.to_bits(),
         registered.h.to_bits(),
@@ -758,7 +760,7 @@ negative_control!(
 /// The explicit finiteness test refuses a NaN in each of the thirteen components and passes a finite state; `skip`
 /// leaves component `skip` finite, the control's.
 fn check_explicit(skip: Option<usize>) {
-    let (_, q, p) = register(&triple::<f64>(), 1e-300, DEFAULT_TIME);
+    let HgRegistered { q, p, .. } = register(&triple::<f64>(), 1e-300, DEFAULT_TIME);
     assert!(
         HgWatch::finite(&mut ExplicitTest, &q, &p),
         "a finite state refused"
@@ -833,7 +835,7 @@ fn scripted(factors: &[f64], tries: u32, clamp: bool) -> (HgCount<f64>, f64) {
         r: [[0.0, 2.0 * y], [-0.5, -y], [0.5, -y]],
         p: [[0.0; 2]; 3],
     };
-    let (system, q, _) = register(&s, 1e-300, HeggieTime::Eq20);
+    let HgRegistered { system, q, .. } = register(&s, 1e-300, HeggieTime::Eq20);
     let mut pr = params::<f64>(HeggieTime::Eq20);
     pr.eta = 1.0;
     pr.delta_sync = system.dt_dtau(&q) / 8.0;
@@ -1026,7 +1028,11 @@ fn measure_heggie<R: P>(name: &'static str, time: HeggieTime) -> Measured {
             .map(|&x| x.into())
             .collect()
     };
-    let (s64, q64, p64) = register(&triple::<f64>(), 1e-300, time);
+    let HgRegistered {
+        system: s64,
+        q: q64,
+        p: p64,
+    } = register(&triple::<f64>(), 1e-300, time);
     let tau0 = hg_pairs(&s64, &q64)
         .iter()
         .map(|&(d, m)| (d * d * d / m).sqrt())
@@ -1047,7 +1053,8 @@ fn measure_heggie<R: P>(name: &'static str, time: HeggieTime) -> Measured {
         .copied()
         .fold(f64::INFINITY, f64::min);
     let dt = q1.t;
-    let (s, q, p) = register(&triple::<R>(), R::at_width(1e-37, 1e-300), time);
+    let HgRegistered { system: s, q, p } =
+        register(&triple::<R>(), R::at_width(1e-37, 1e-300), time);
     let h: R = v(h64);
     let (a, b) = <Rk4 as HgStepper>::regularised_step(&s, &q, &p, h);
     let (a, b) = reversed(&a, &b);
