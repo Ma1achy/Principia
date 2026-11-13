@@ -245,3 +245,9 @@ field added to the ledger as a schema change. The two-body radial collision gate
   measured numbers in Part 1 are TASK-M3-78's. `heggie::register` returns a struct, not a tuple, and so do the
   validation FD helpers, to drop combinatorial mutants (changes no result); `az::register` keeps its tuple, since
   `qa_TASK-M3-68.rs` destructures it and the implementer does not edit qa's files (R-290).
+- **13 Nov 2026 (R-1007, RQ-812 (a)):** ruled by R-1007, one landing rule for all three methods: Heggie lands under R-998's rule (no landing tolerance; the state lands on the boundary with the clock, the final step sized or retaken), built in this task's step-control part, which replaces the caller-supplied allowance (the report's D-3) and takes REQ-INT-084's convergence-order check (Heggie × RK4's figure-eight, η in [0.02, 0.001]); applied per R-369 (the criterion is designed before any run; physics review 5890410670 of #520, F1), its criterion states its round-off floor before it runs, fits the order only above that floor, reads an order still short of 4 there, by a threshold it states beforehand, as a landing defect, not round-off, and keeps the clock-only control, following the report of 13 Nov 2026 ("TASK-M3-76's experience says that check should state its round-off floor before it runs") with R-1008 as the analogue, not the owner's words, whose rider binds TASK-M3-76 only.
+- *13 Nov 2026, applied per R-369 (task scoping; the split above, with R-1007 merged from #520):* R-1007's "this task's
+  step-control part" is TASK-M3-77's since the split: it builds Heggie's landing under R-998's rule, writes how the last
+  step is sized or retaken in Part 2b, and runs REQ-INT-084's convergence-order check under the criterion above. The
+  caller-supplied landing setting (`HgParams::land_eps_rel`, the note following #502's precedent) was never on `main`
+  and is not built; this task has no landing code.
