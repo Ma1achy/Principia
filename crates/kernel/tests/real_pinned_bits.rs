@@ -1,7 +1,8 @@
 //! `Real`'s transcendentals at each precision (R-991, REQ-CHART-212):
 //! - `real_pinned_bits`: at f64 each method gives the pinned libm's result, bit for bit, and the bits recorded here
 //!   from libm 0.2.16 on the Mac, on fixed inputs, so that on every machine the f64 path is the pinned library and
-//!   the pinned library gives the Mac's bits; `sine_cosine` is `(sine, cosine)` and `sinc` `sine(r)/r`. Every
+//!   the pinned library gives the Mac's bits, but for a NaN, compared as NaN: libm forms an out-of-domain NaN by a
+//!   hardware `0/0`, so its sign and payload are the target's (records never hold one, R-79); `sine_cosine` is `(sine, cosine)` and `sinc` `sine(r)/r`. Every
 //!   function's inputs hold at least one where the Mac's platform library and libm differ (marked in the table, found
 //!   by a sweep of 10⁶ inputs per function), and `sine`'s four: at `0xc021cb0947a686b4` and `0xbfe2b074a5ac7510` libm's
 //!   `sin` is correctly rounded and the Mac's is not, at `0xc023fa30a11813de` and `0xc0155b4e049f4aee` the Mac's is and
@@ -499,6 +500,12 @@ const BINARY: [(&str, &[Pair]); 4] = [
     ),
 ];
 
+/// Whether two f64 results are the same: equal bits, or both NaN. libm makes an out-of-domain NaN by a hardware `0/0`,
+/// whose sign and payload are the target's (`0x7ff8…` on aarch64, `0xfff8…` on x86_64), as `tests/arctan.rs` compares.
+fn same(a: u64, b: u64) -> bool {
+    a == b || (f64::from_bits(a).is_nan() && f64::from_bits(b).is_nan())
+}
+
 /// Checks `m`, the f64 methods, against the pinned libm and the recorded bits.
 fn check_f64(m: &Methods<f64>) {
     let f = f64::from_bits;
@@ -507,12 +514,9 @@ fn check_f64(m: &Methods<f64>) {
         assert!(!rows.is_empty(), "{name} has inputs");
         for &(x, want) in rows {
             let got = method(f(x)).to_bits();
-            assert_eq!(
-                got,
-                libm_unary(name)(f(x)).to_bits(),
-                "{name}({x:#018x}) is libm's"
-            );
-            assert_eq!(got, want, "{name}({x:#018x}) is the Mac's libm bits");
+            let libm = libm_unary(name)(f(x)).to_bits();
+            assert!(same(got, libm), "{name}({x:#018x}) is libm's");
+            assert!(same(got, want), "{name}({x:#018x}) is the Mac's libm bits");
         }
     }
     for ((name, method), (table_name, rows)) in m.binary.iter().zip(BINARY) {
@@ -520,13 +524,10 @@ fn check_f64(m: &Methods<f64>) {
         assert!(!rows.is_empty(), "{name} has inputs");
         for &(a, b, want) in rows {
             let got = method(f(a), f(b)).to_bits();
-            assert_eq!(
-                got,
-                libm_binary(name)(f(a), f(b)).to_bits(),
-                "{name}({a:#018x}, {b:#018x}) is libm's"
-            );
-            assert_eq!(
-                got, want,
+            let libm = libm_binary(name)(f(a), f(b)).to_bits();
+            assert!(same(got, libm), "{name}({a:#018x}, {b:#018x}) is libm's");
+            assert!(
+                same(got, want),
                 "{name}({a:#018x}, {b:#018x}) is the Mac's libm bits"
             );
         }
