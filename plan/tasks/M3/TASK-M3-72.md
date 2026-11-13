@@ -77,6 +77,25 @@ it (R-974).
   does not apply; `W(a1) − W(a2)` = +0.00006 < 1/T = 0.03333, so rule 2 does not; **(a1) is chosen** (rule 3), and
   `Displacement` names it. At ‖δ₀‖ = 3e-3 the worst gaps are 0.00169, 0.00010 and 0.00010.
 
+## R-976's re-run (13 Nov 2026, `cargo xtask gate benettin-calibration`; R-649, R-71)
+The pre-registered eight-orbit calibration, its grid, meter, selection and tolerance rules unchanged, run in both
+shadow forms. A measurement: what the owner confirms at the M3 gate is a calibration value (R-71), not this task's
+choice.
+
+- **In force, provisional (R-976):** ‖δ₀‖ = 3e-3, `n_renorm` = 300, tolerance 0.2, unchanged by this task. The re-run
+  measures them at worst change 0.4699 in the displacement form (a1), with a bias of +8.32 at f32 and +8.17 at f64 on
+  (21, 20, 29) at rest, so ‖δ₀‖ = 3e-3 lies outside the linear regime there; in the absolute form their worst change is
+  not finite.
+- **The rule's pick, each form's proposal from its evidence:** in the displacement form (a1), ‖δ₀‖ = 1e-4,
+  `n_renorm` = 1, worst change 0.0764, tolerance 0.2, 0 of 42 candidates non-finite; in the absolute form, ‖δ₀‖ = 3e-3,
+  `n_renorm` = 1, worst change 1.35, tolerance 3, 39 of 42 non-finite (RQ-794 found this form's pick tests nothing).
+- **`min_regions` ≥ 6, proposed (R-976), with its evidence:** the report's regions are its 6 chaotic orbits, the
+  Pythagorean triangles at rest. Leaving each out moves the displacement form's pick only without (21, 20, 29), to
+  (3e-4, 1), and the absolute form's only without (9, 40, 41), to (1e-3, 1000): each pick rests on all 6 regions,
+  one of them deciding it.
+- **Which form the M3-gate values are for** depends on REQ-PAY-085's switch, an M4 calibration (TASK-M4-13): RQ-814,
+  for the owner. Nothing in this task waits on it.
+
 ## Notes
 - New (12 Nov 2026), applied per R-369 (task re-scoping, physics's recommendation in review 5866988394 of PR #493, § (4)): REQ-VAL-038 and its `shadow-form` acceptance arm moved here from TASK-M3-14, whose other deliverables do not depend on the form. The arm is TASK-M3-14's, unchanged, with the measurement and control RQ-793 names added.
 - Waits on RQ-793 (what the displacement form is; a one-way door). Whether a gain is "meaningful" stays REQ-PAY-085's calibration, at M4 (TASK-M4-13, which depends on this task).

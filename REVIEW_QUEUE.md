@@ -378,6 +378,65 @@ has seen and not objected to (to be confirmed as defaults)"; it is not decided.*
   Nothing waits on it: N14 builds each row to rule 2 meanwhile.
 - **Deferred:** deferred to M2 by owner 11 Nov 2026 (R-963, the owner: "RQ-779: defer:M2").
 
+## RQ-814: Which shadow form, absolute or displacement, the M3 gate's values of REQ-INT-076 (the FTLE shadow's ‖δ₀‖ and `n_renorm`) are for, when the values depend on the form and the switch to the displacement form is REQ-PAY-085's M4 calibration *(conflict; a one-way door, a calibration value and what the FTLE claims; R-71, R-976, R-974, R-649; REQ-INT-076, REQ-PAY-085; physics review 5887336006 of PR #517, F3; context: TASK-M3-72, TASK-M3-14, TASK-M4-13)*
+
+*Queued 13 Nov 2026 by the implementer of TASK-M3-72 (the displacement form of the FTLE shadow), fix round 1, from the
+physics review's F3; each quote re-read on the PR's branch. Nothing is chosen here.*
+
+*In plain English: the FTLE (how fast nearby trajectories separate) is measured by marching a second, slightly offset
+"shadow" copy of each trajectory. Two settings control that shadow: how far apart it starts (‖δ₀‖) and how often it is
+pulled back (`n_renorm`). They are calibration values the owner confirms at the M3 gate. TASK-M3-72 built a second way of
+holding the shadow (the displacement form, as an offset rather than a second full position), and re-ran the agreed
+calibration in both ways: the best settings differ between the two. Which way ships is decided only at M4. So the owner
+is asked which way the M3 gate's settings are for.*
+
+- **File, section:**
+  - `plan/requirements.yaml`, REQ-INT-076: "The Benettin shadow's initial separation ‖δ₀‖ and the renormalisation
+    interval n_renorm must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer,
+    confirmed by the human at the M3 gate and recorded in decisions.md."
+  - `decisions.md` § R-976 (its heading): "(3e-3, 300, 0.2) stay provisional and stated as unsupported on
+    close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run
+    unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run".
+  - `plan/requirements.yaml`, REQ-PAY-085: "The FTLE-accuracy improvement that would switch the f32 shadow from
+    absolute to displacement form must be calibrated: proposed with its evidence by the task that needs it, checked by
+    a reviewer, confirmed by the human at the M4 gate and recorded in decisions.md."
+  - `docs/design/principia_dd_integrator.md` § "3.8 Co-computations (tier-gated, ride the forward pass)", the
+    displacement form, **Stored**: "The payload stays in the absolute form until REQ-PAY-085's calibration says
+    otherwise (payload §8)".
+- **The conflict:** REQ-INT-076 is confirmed at the M3 gate; its values depend on the shadow's form; the form that
+  ships is settled by REQ-PAY-085 at the M4 gate. The corpus does not say which form the M3 values are for.
+- **The evidence (R-976's re-run, `cargo xtask gate benettin-calibration` on PR #517; `plan/tasks/M3/TASK-M3-72.md`
+  § "R-976's re-run"):**
+  - The rule's pick, displacement form (a1): ‖δ₀‖ = 1e-4, `n_renorm` = 1, worst change 0.0764, tolerance 0.2; 0 of 42
+    candidates non-finite. Leaving out (21, 20, 29) at rest moves it to (3e-4, 1).
+  - The rule's pick, absolute form: ‖δ₀‖ = 3e-3, `n_renorm` = 1, worst change 1.35, tolerance 3; 39 of 42 candidates
+    non-finite (RQ-794 found this pick tests nothing).
+  - The values in force, provisional (R-976), (3e-3, 300, 0.2): worst change 0.4699 in the displacement form, with a
+    bias of +8.32 at f32 and +8.17 at f64 on (21, 20, 29), outside the linear regime there; not finite in the
+    absolute form.
+  - `min_regions` ≥ 6 proposed (R-976): the report's 6 regions, each pick moved by leaving out one of them.
+- **Options:**
+  - (a) **For the absolute form**, the shipped one. The M3 gate confirms the absolute form's values (the rule's pick or
+    the provisional ones). Consequence: they are confirmed on evidence that is non-finite on 39 of 42 candidates, and
+    REQ-INT-076 is calibrated again if M4 switches the form.
+  - (b) **For the displacement form (a1).** The M3 gate confirms (1e-4, 1, 0.2) with `min_regions` ≥ 6. Consequence:
+    what ships at M3 stays the absolute form under the provisional values, still stated as unsupported (R-976), and the
+    confirmed values apply from the switch; if M4 does not switch, REQ-INT-076 is calibrated again for the absolute form.
+  - (c) **For each form.** REQ-INT-076 records one confirmed set per form, the one in force following REQ-PAY-085.
+    Consequence: two calibration records for one parameter; the absolute set still rests on the non-finite evidence of
+    (a).
+  - (d) **Neither at M3.** REQ-INT-076's confirmation moves to the M4 gate, beside REQ-PAY-085, the provisional values
+    staying in force and stated as unsupported until then. Consequence: amends REQ-INT-076's milestone and R-976's "the
+    M3 gate confirms", and the M3 gate passes with REQ-INT-076 provisional.
+- **Recommendation:** (d). The values depend on the form, and the form is settled at M4; confirming either set at M3
+  confirms a value whose context is still open, and (a) would confirm one on evidence that tests nothing. If a
+  confirmed value is wanted at M3, (b), whose evidence is finite throughout. The measurable alternative: TASK-M4-13's
+  REQ-PAY-085 measurement, which says which form ships, and with it which of the re-run's two picks applies.
+- **Applied meanwhile:** nothing changes. (3e-3, 300, 0.2) stay in force, provisional (R-976); the report states each
+  form's pick beside them (`validation::measure::benettin::eight_orbit_report`); `min_regions` is declared in no
+  `gate.json`.
+- **Waits:** the M3 gate's calibration of REQ-INT-076. Nothing in PR #517 waits on it.
+
 ## RQ-783: A record made before R-926's f64 decode route lands recreates bitwise only through today's f32 decode: R-921 and REQ-TOOL-172 require bitwise, and R-926 item 5 replaces that decode *(conflict; a one-way door, it changes what the instrument claims about reproducing records; R-921, R-926 item 5, R-521, R-919, R-483; REQ-TOOL-172; context: TASK-M7-45, TASK-M2-57, TASK-M2-61, TASK-M4-05, the plan's N1 and N2)*
 
 *Queued 10 Nov 2026 by the M2 chart re-plan, from physics review 5847854223 of PR #473, P1; each quote re-read on the
