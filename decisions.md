@@ -38899,8 +38899,8 @@ R-1005 is in the "ci" group of `plan/rule_groups.yaml`.
 *13 Nov 2026 · the owner's second reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-811 moved; RQ-804, a dated line),
 `docs/archive/review_queue/M0.md` (RQ-811 with its ruling), the forward and "Still in force" lines of R-990, R-1002 (a
 dated line), `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision" (the R-990 line under
-"Switchover", with its *Was*), REQ-DEC-063, REQ-DEC-064 and REQ-GUI-012 (reqio), TASK-M6-08 (its References, M-K's acceptance line and a dated
-note) and
+"Switchover", with its *Was*), REQ-DEC-063, REQ-DEC-064 and REQ-GUI-012 (reqio), TASK-M6-08 (its References, M-K's acceptance line, the physics
+checklist line for REQ-DEC-064 and a dated note) and
 `plan/rule_groups.yaml`; changes REQ-DEC-063 and REQ-DEC-064*
 
 The owner's words (13 Nov 2026), verbatim:
