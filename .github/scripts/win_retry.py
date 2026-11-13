@@ -24,7 +24,9 @@ Each job of the run on the runner that did not pass (its labels name `self-hoste
              line of its log): never re-run (R-988, R-970);
   newer      a newer run of it cancelled it (NEWER): never re-run (R-986);
   fault      it stopped on a runner-level fault (SIGNATURES: the runner lost, offline or its process killed, which
-             GitHub reports as lost communication; or shut down mid-job, the runner's shutdown signal): re-run once;
+             GitHub reports as lost communication; or shut down mid-job, the runner's shutdown signal), and no other
+             failure line stands beside it apart from a cancel's (CANCELED): re-run once; a step that had already
+             failed on its own output makes it `own`, since a job with real test failures is never re-run (R-714);
   untaken    no runner took it (no `runner_name`): never re-run, since a re-run would only wait again;
   own        anything else, a test or step failing on its own output, a flake, a cancel by hand: never re-run (R-714).
 A step's process killed from outside while the runner stays up leaves no trace apart from its own failure, so it reads
@@ -69,6 +71,8 @@ NEWER = re.compile(r"Canceling since a higher priority waiting request for \S+ e
 # A log line's timestamp, and the byte-order mark before the first.
 STAMP = re.compile(r"^\ufeff?\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ?")
 ERROR = "##[error]"
+# The line a step cut short by a cancel leaves, the runner's going included: no failure of the step's own.
+CANCELED = "The operation was canceled."
 # Job states that are no stop.
 PASSED = ("success", "skipped", "neutral")
 
@@ -87,6 +91,11 @@ def lines(annotations, log):
         if line.startswith(ERROR):
             out.append(line[len(ERROR):])
     return out
+
+
+def signed(text):
+    """Whether `text` is one of the runner's signatures (SIGNATURES)."""
+    return any(pattern.search(text) for _, pattern in SIGNATURES)
 
 
 def first_line(text):
@@ -114,9 +123,13 @@ def kind_of(job, annotations, log):
         if NEWER.search(text):
             return "newer", None, first_line(text)
     for text in texts:
-        for _, pattern in SIGNATURES:
-            if pattern.search(text):
-                return "fault", stopped_step(job), first_line(text)
+        if signed(text):
+            # A step that had already failed on its own output wins over the runner's going after it: `win-vulkan`
+            # runs its suites on past a failure, so a shutdown in a later step leaves the earlier failures standing.
+            own = [t for t in texts if t.strip() and not signed(t) and t.strip() != CANCELED]
+            if own:
+                return "own", stopped_step(job), f"{first_line(own[0])} (then: {first_line(text)})"
+            return "fault", stopped_step(job), first_line(text)
     if not job.get("runner_name"):
         return "untaken", None, "no runner took the job"
     shown = next((first_line(t) for t in texts if t.strip()), f"the job concluded {job.get('conclusion')}")

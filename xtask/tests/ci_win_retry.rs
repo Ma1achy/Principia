@@ -11,9 +11,9 @@
 //! saved test failure in the one respect they turn on: its annotation, GitHub's text for a runner gone, and no log.
 //!
 //! - `ci_win_retry_reruns_*`: a runner lost and a runner shut down are re-run once, that job alone;
-//! - `ci_win_retry_keeps_*`: a test failure, a hang (the job's limit and a step's), a run cancelled by a newer one, a job
-//!   no runner took, a second attempt, a fault once a newer run of it has started, and a run of a pull request or of a
-//!   push to another branch are not;
+//! - `ci_win_retry_keeps_*`: a test failure (one the runner's going follows in a later step too), a hang (the job's
+//!   limit and a step's), a run cancelled by a newer one, a job no runner took, a second attempt, a fault once a newer
+//!   run of it has started, and a run of a pull request or of a push to another branch are not;
 //! - `ci_win_retry_mixed_runs`: one fault beside failures of their own is re-run alone; two faults alone are re-run
 //!   together; two beside a failure of its own are not;
 //! - `ci_win_retry_decide_*`: `decide`, under a stand-in `gh`, asks for the one re-run and writes every unclear stop and
@@ -155,6 +155,21 @@ impl Run {
         self.annotations
             .push((id.to_owned(), Value::from(listed).to_string()));
         self.logs.retain(|(k, _)| k != id);
+        self
+    }
+
+    /// The job `id`'s saved annotations and log kept, and one more failure annotation saying `message` after them.
+    fn appended(mut self, id: &str, message: &str) -> Run {
+        let at = self.annotations.iter().position(|(k, _)| k == id);
+        let mut listed: Vec<Value> = at
+            .map(|i| serde_json::from_str(&self.annotations[i].1).expect("saved annotations"))
+            .unwrap_or_default();
+        listed.push(json!({"annotation_level": "failure", "message": message}));
+        let text = Value::from(listed).to_string();
+        match at {
+            Some(i) => self.annotations[i].1 = text,
+            None => self.annotations.push((id.to_owned(), text)),
+        }
         self
     }
 
@@ -351,6 +366,89 @@ negative_control!(
          (\"the runner received a shutdown signal\""
     ))
 );
+
+fn check_failure_then_fault(script: &str) {
+    // The saved test failure (four steps failed on their own output, the job running on past each), then the runner
+    // shut down or lost in a later step: its failures stand, and it is not re-run (R-714).
+    check_kept(
+        script,
+        "a test failure, then a shutdown",
+        &Run::saved(TEST_RUN).appended(TEST_JOB, SHUTDOWN),
+        "win-vulkan",
+        "own at step 'cargo nextest run -p validation -p xtask -p engine'",
+    );
+    check_kept(
+        script,
+        "a test failure, then a lost runner",
+        &Run::saved(TEST_RUN).appended(TEST_JOB, LOST),
+        "win-vulkan",
+        "own",
+    );
+    // The failure in the log alone, the annotations the runner's only.
+    let mut logged = Run::saved(TEST_RUN);
+    logged.annotations.retain(|(k, _)| k != TEST_JOB);
+    let logged = logged.appended(TEST_JOB, SHUTDOWN);
+    check_kept(
+        script,
+        "a test failure in the log, then a shutdown",
+        &logged,
+        "win-vulkan",
+        "own",
+    );
+    // A cancel's line or an empty one beside the runner's going is no failure of the job's own: still re-run.
+    let cut = Run::saved(TEST_RUN).annotated(TEST_JOB, &["The operation was canceled.", SHUTDOWN]);
+    assert_eq!(
+        rerun(script, &cut),
+        format!("rerun=job {TEST_JOB}"),
+        "a shutdown beside a cancel's line: not re-run"
+    );
+    let blank = Run::saved(TEST_RUN).annotated(TEST_JOB, &["", LOST]);
+    assert_eq!(
+        rerun(script, &blank),
+        format!("rerun=job {TEST_JOB}"),
+        "a lost runner beside an empty line: not re-run"
+    );
+}
+
+#[test]
+fn ci_win_retry_keeps_a_test_failure_before_a_runner_fault() {
+    check_failure_then_fault(&script());
+}
+
+negative_control!(
+    ci_win_retry_keeps_a_test_failure_before_a_runner_fault,
+    "a classifier that lets the runner's going outrank a failure before it",
+    expected = "a test failure, then a shutdown: re-run",
+    check_failure_then_fault(&edit(
+        &script(),
+        "            if own:\n",
+        "            if False:\n"
+    ))
+);
+
+mod failure_then_fault_cancel {
+    use super::*;
+    negative_control!(
+        ci_win_retry_keeps_a_test_failure_before_a_runner_fault,
+        "a classifier that reads a cancel's line as a failure of the job's own",
+        expected = "a shutdown beside a cancel's line: not re-run",
+        check_failure_then_fault(&edit(&script(), " and t.strip() != CANCELED]", "]"))
+    );
+}
+
+mod failure_then_fault_blank {
+    use super::*;
+    negative_control!(
+        ci_win_retry_keeps_a_test_failure_before_a_runner_fault,
+        "a classifier that reads an empty line as a failure of the job's own",
+        expected = "a lost runner beside an empty line: not re-run",
+        check_failure_then_fault(&edit(
+            &script(),
+            "own = [t for t in texts if t.strip() and not signed(t)",
+            "own = [t for t in texts if not signed(t)"
+        ))
+    );
+}
 
 fn check_hangs(script: &str) {
     check_kept(
