@@ -11,11 +11,12 @@ use kernel::regularisation::az::Watch;
 use serde_json::json;
 use validation::az::{
     above_floor, cartesian_closure, checked, closure, convergence, decide_sync, describe, diagnose,
-    diagnose_rungs, diagnosis_line, distance, doubly_degenerate, energy, figure_eight, floor_run,
-    lc_error, on_grid, orbit, proposal, propose_final_step_with, propose_floor, propose_sync_with,
-    radial, reference_tiny, round_up, show, slope, AzFinalStepGate, Diagnosis, FloorCriterion,
-    Landing, LcInverseGate, Orbit, Proposal, Quiet, Recorder, SeparationFloorGate, SyncRow, Width,
-    FINAL_STEP_NAME, FLOOR_NAME, LC_NAME, SYNC_ERROR,
+    diagnose_floor, diagnose_rungs, diagnosis_line, distance, doubly_degenerate, energy,
+    figure_eight, floor_run, lc_error, on_grid, orbit, proposal, propose_final_step_with,
+    propose_floor, propose_sync_with, radial, reference_tiny, round_up, show, slope,
+    AzFinalStepGate, Diagnosis, FloorCriterion, Landing, LcInverseGate, Orbit, Proposal, Quiet,
+    Recorder, SeparationFloorGate, SyncRow, Width, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME,
+    SYNC_ERROR,
 };
 use validation::gate::{self, Gate, GateConfig, GateSpec, MeasurementGate, Verdict};
 use validation::negative_control;
@@ -496,6 +497,84 @@ negative_control!(
             expected,
             margin,
         )
+    })
+);
+
+/// A diagnosis of the ladder's rungs `(η, error)` against a measured floor.
+type DiagnoseFloor = fn(&[(f64, f64)], f64, &FloorCriterion, f64, f64) -> Diagnosis;
+
+/// A measured floor that is not finite fails the convergence arm before any rung is selected (physics review
+/// 5896078008 F1, code review 5896097471 C1, on #519): a NaN measured floor never falls back to the stated floor and
+/// passes, and an infinite one never drops every rung and reads as round-off; the largest finite measured floor does
+/// drop every rung and reads as round-off, and a measured floor below the stated one leaves the stated floor, under
+/// which four fourth-order rungs read order 4.
+fn check_diagnose_floor(diagnose_floor: DiagnoseFloor) {
+    let fc = FloorCriterion {
+        stated: 1e-15,
+        second_eta: 1.25e-4,
+        factor: 10.0,
+        min_rungs: 3,
+        defect_below: 3.0,
+    };
+    let rung = |h: f64| (h, h.powi(4));
+    let rungs = [rung(0.02), rung(0.01), rung(0.005), rung(0.0025)];
+    let d = |measured: f64| diagnose_floor(&rungs, measured, &fc, 4.0, 0.5);
+    assert!(
+        matches!(d(1e-17), Diagnosis::Within { order } if (order - 4.0).abs() < 1e-9),
+        "a finite measured floor below the stated one reads order 4: {:?}",
+        d(1e-17)
+    );
+    assert!(
+        matches!(d(f64::NAN), Diagnosis::NonFiniteFloor { measured } if measured.is_nan()),
+        "a NaN measured floor fails the arm: {:?}",
+        d(f64::NAN)
+    );
+    assert_eq!(
+        d(f64::INFINITY),
+        Diagnosis::NonFiniteFloor {
+            measured: f64::INFINITY
+        },
+        "an infinite measured floor fails the arm, not round-off"
+    );
+    assert_eq!(
+        d(f64::NEG_INFINITY),
+        Diagnosis::NonFiniteFloor {
+            measured: f64::NEG_INFINITY
+        },
+        "a negative infinite measured floor fails the arm"
+    );
+    assert_eq!(
+        d(f64::MAX),
+        Diagnosis::RoundOff { kept: 0 },
+        "the largest finite measured floor drops every rung: round-off"
+    );
+    let line = diagnosis_line(
+        Diagnosis::NonFiniteFloor {
+            measured: f64::INFINITY,
+        },
+        &fc,
+        4.0,
+        0.5,
+    );
+    assert!(
+        line.contains("the second reference run at η = 0.000125")
+            && line.contains("is inf, not finite")
+            && line.contains("the convergence arm fails"),
+        "the report's line names the second reference run: {line}"
+    );
+}
+
+#[test]
+fn az_diagnose_floor() {
+    check_diagnose_floor(diagnose_floor);
+}
+
+negative_control!(
+    az_diagnose_floor,
+    "the measured floor taken as the larger with the stated one, unchecked",
+    expected = "a NaN measured floor fails the arm",
+    check_diagnose_floor(|rungs, measured, fc, expected, margin| {
+        diagnose_rungs(rungs, measured.max(fc.stated), fc, expected, margin)
     })
 );
 

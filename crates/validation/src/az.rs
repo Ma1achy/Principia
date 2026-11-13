@@ -496,6 +496,9 @@ pub enum Diagnosis {
     /// `rungs` rungs have an error against the reference run that is not finite: no order is read, and the arm fails,
     /// neither round-off nor a landing defect ([`diagnose_rungs`]).
     NonFinite { rungs: usize },
+    /// The measured floor, the distance between the reference run's end and the second reference run's, is not finite:
+    /// no rung is selected and no order is read, and the arm fails, neither round-off nor a pass ([`diagnose_floor`]).
+    NonFiniteFloor { measured: f64 },
 }
 
 /// The diagnosis of `order`, fitted on `kept` rungs above the floor, under `fc`, against `expected` within `margin`:
@@ -538,6 +541,26 @@ pub fn diagnose_rungs(
     }
 }
 
+/// The diagnosis of the ladder's `rungs` `(η, error)` under `fc` with the `measured` floor, the distance between the
+/// reference run's end and the second reference run's, against `expected` within `margin`:
+/// [`Diagnosis::NonFiniteFloor`] where `measured` is not finite, checked before any rung is selected, so that a NaN
+/// never falls back to the stated floor and an infinite one never drops every rung as round-off (R-1008's rider: the
+/// second check tells round-off from a defect); otherwise [`diagnose_rungs`] against the larger of `measured` and the
+/// stated floor.
+pub fn diagnose_floor(
+    rungs: &[(f64, f64)],
+    measured: f64,
+    fc: &FloorCriterion,
+    expected: f64,
+    margin: f64,
+) -> Diagnosis {
+    if measured.is_finite() {
+        diagnose_rungs(rungs, measured.max(fc.stated), fc, expected, margin)
+    } else {
+        Diagnosis::NonFiniteFloor { measured }
+    }
+}
+
 /// The report's line for `d` under `fc`, against `expected` within `margin`.
 pub fn diagnosis_line(d: Diagnosis, fc: &FloorCriterion, expected: f64, margin: f64) -> String {
     match d {
@@ -562,6 +585,12 @@ pub fn diagnosis_line(d: Diagnosis, fc: &FloorCriterion, expected: f64, margin: 
         Diagnosis::NonFinite { rungs } => format!(
             "{rungs} rung(s) with an error against the reference run that is not finite: no order read, the \
              convergence arm fails (neither round-off nor a landing defect)"
+        ),
+        Diagnosis::NonFiniteFloor { measured } => format!(
+            "the measured round-off floor, the distance from the reference run to the second reference run at \
+             η = {}, is {measured}, not finite: no rung selected, no order read, the convergence arm fails \
+             (neither round-off nor a pass)",
+            fc.second_eta
         ),
     }
 }
@@ -689,24 +718,31 @@ impl Gate for AzFinalStepGate {
             Some(fc) => {
                 let second = closure(&o, fc.second_eta, input.n, Landing::Fix);
                 let measured = distance(&conv.reference.end, &second.end);
-                let floor = measured.max(fc.stated);
                 let pairs: Vec<(f64, f64)> = conv.rungs.iter().map(|(r, e)| (r.eta, *e)).collect();
-                let kept = above_floor(&pairs, floor, fc.factor);
-                let order = fitted_order(&kept);
-                scatter.push(format!(
-                    "the round-off floor: {floor:.3e}, the larger of the stated {:.3e} and the measured \
-                     {measured:.3e} (the reference runs at η = {} and {} apart); the rungs above {}× it: {:?}; {} \
-                     of at least {}; the order fitted on them {order:.3}",
-                    fc.stated,
-                    input.reference_eta,
-                    fc.second_eta,
-                    fc.factor,
-                    kept.iter().map(|k| k.0).collect::<Vec<_>>(),
-                    kept.len(),
-                    fc.min_rungs
-                ));
-                let d =
-                    diagnose_rungs(&pairs, floor, &fc, input.order_expected, input.order_margin);
+                if measured.is_finite() {
+                    let floor = measured.max(fc.stated);
+                    let kept = above_floor(&pairs, floor, fc.factor);
+                    let order = fitted_order(&kept);
+                    scatter.push(format!(
+                        "the round-off floor: {floor:.3e}, the larger of the stated {:.3e} and the measured \
+                         {measured:.3e} (the reference runs at η = {} and {} apart); the rungs above {}× it: {:?}; {} \
+                         of at least {}; the order fitted on them {order:.3}",
+                        fc.stated,
+                        input.reference_eta,
+                        fc.second_eta,
+                        fc.factor,
+                        kept.iter().map(|k| k.0).collect::<Vec<_>>(),
+                        kept.len(),
+                        fc.min_rungs
+                    ));
+                }
+                let d = diagnose_floor(
+                    &pairs,
+                    measured,
+                    &fc,
+                    input.order_expected,
+                    input.order_margin,
+                );
                 negative.push(diagnosis_line(
                     d,
                     &fc,
