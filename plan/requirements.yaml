@@ -8663,6 +8663,8 @@
   - R-927
   - R-998
   milestone: M3
+  rq:
+  - RQ-813
   note: "Added 13 Nov 2026 by R-998 (RQ-795 (b), on the owner's condition). Closed by TASK-M3-76 (applied per R-369: task scoping). How the secant stops without a tolerance is a definition the task writes in Part 2b, physics-reviewed."
 - id: REQ-INT-120
   area: INT

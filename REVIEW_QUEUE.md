@@ -772,3 +772,64 @@ owner's call.*
 - **Applied meanwhile:** the integrator contract's 13 Nov rule-1 line names Aarseth–Zare and logH only, with its *Was*.
   REQ-INT-084 (Heggie's step control, closed by TASK-M3-08) names this entry.
 - **Waits:** Heggie's landing in TASK-M3-08 (or in the logH-and-hookup task its split creates).
+
+## RQ-813: Aarseth–Zare's landing with no tolerance: no stop bounded by an integer cap lands the state's own clock on the boundary bitwise, so R-998's limit "the wrapper's clock is never set to the boundary while the stored state's own clock differs from it" leaves a residual case with no rule *(silence, a definition the landing rests on (R-72); a one-way door, it decides what the occupant computes on every landing interval; R-998, R-565, R-927, R-953, R-71, R-72; REQ-INT-119, REQ-INT-049; context: TASK-M3-76, RQ-795, RQ-812)*
+
+*Queued 13 Nov 2026 by TASK-M3-76's implementer before any code was written, under R-998's dated line ("If no stop
+meets both, the residual goes to `REVIEW_QUEUE.md` (a calibration under R-71, or an RQ), and is never chosen in the
+pull request"). Nothing is chosen here.*
+
+*In plain English: Aarseth–Zare has to stop exactly at the end of each time slice, and the owner ruled that its
+position must arrive there together with its clock, with no "close enough" allowance. The clock is itself a number the
+step computes, rounded like every other. A measurement shows that for 1 or 2 time slices in 100 no step size at all
+makes the computed clock equal the end of the slice to the last bit: one step size lands a hair short, the next a hair
+past. So the rule as written has no answer for those slices, and what to do with that last hair is the owner's call.*
+
+- **File, section:**
+  - `decisions.md` § R-998, its dated line of 13 Nov 2026: "No constant other than an integer iteration cap (rule 3)
+    reaches a branch. The wrapper's clock is never set to the boundary while the stored state's own clock differs from
+    it. If no stop meets both, the residual goes to `REVIEW_QUEUE.md` (a calibration under R-71, or an RQ), and is never
+    chosen in the pull request."
+  - `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference body, the
+    Levi-Civita inverse and the step control (transcribed)", the dated line after step 8: "the state lands on the
+    boundary together with the clock, the final step sized or retaken so that its state is the state at the boundary;
+    the clock is never set to the boundary alone while the state stays where an overshooting step left it, so step 7's
+    "`t += dt_left`" on a landing holds only for a state that landed with it."
+  - The same section, step 5: "One classical RK4 step of the equations above, on `(u₁, p₁, u₂, p₂, t)`", and the
+    equation `dt/dτ = A·B`: the state's own clock `t` is an integrated, rounded component of the step.
+  - The same contract, § "The sync grid is a fixed quantum of physical time (R-565)": "The boundaries are
+    `t = k·Δ_sync`" and "The march stops only on the grid."
+- **The silence:** the state's clock after the landing step is `t_before + fl(fl(h/6)·W(h))`, rounded, with `W` the RK4
+  weighted sum of `A·B` at the four stages. Whether any representable `h` makes it equal `dt_left` bitwise depends on the
+  rounding, not on the stop. Measured before any build (a NumPy model of the kernel's RK4 clock arithmetic, `rk4` in
+  `crates/kernel/src/regularisation/form.rs`, on a smooth positive `dt/dτ`; 2000 random intervals each, `t_before` in
+  `[0.5, 0.99]·dt_left`): searching every `h` within 64 ulps of the secant's answer, **no `h` gives the clock
+  `dt_left` exactly in 28 of 2000 intervals at f64 and 42 of 2000 at f32**; with `t_before` in `[0, 0.99]·dt_left`, 179
+  and 187 of 2000. The secant alone with an exact stop and 4 retakes ends exactly on the boundary in 921 of 2000 at f64
+  (547 past, 532 short) and 1773 of 2000 at f32 (117 past, 110 short). So no stop, however its search is built, meets
+  both limits on every interval: where the clock cannot equal the boundary, the stored state's own clock differs from
+  it, and setting the wrapper's clock (the sync grid's `k·Δ_sync`, R-565) to the boundary is what the limit forbids.
+  Where it ends short the march may take another clamped step; where it ends past, nothing in the corpus says what
+  follows. The residual is at the clock's rounding (about one ulp of `dt_left`), not the overshoot of a step.
+- **The question:** where the landing step's clock cannot equal the boundary bitwise, what does the interval do?
+- **Options seen:**
+  - **(a) Land at the nearest representable clock and set the boundary,** the residual of at most about one ulp of
+    `dt_left` recorded per interval (a count of inexact landings and the largest residual in ulps), so the limit reads
+    "differs by more than the clock's rounding". The stop: the secant with an exact stop, then a bracketing search over
+    `h` for the clock nearest `dt_left` at or past it, an integer cap on both; no constant in a branch. It amends the
+    dated line's words.
+  - **(b) Carry the state's own clock,** never setting the boundary: the wrapper's time is `k·Δ_sync + residual` and the
+    next interval's `dt_left` is the next boundary less that time (step 1's `dt_left = t_target − t`). It meets the
+    dated line's words but contradicts R-565's fixed grid ("the march stops only on the grid"), and the seam's
+    `t_target` is an integer index, so it amends R-565.
+  - **(c) A residual tolerance as a calibration (R-71),** one value at both precisions, compared where the value is
+    used; it reintroduces what R-998 removed.
+- **Recommended:** (a). The owner's condition targets the overshoot of a step, an error of the step's order that the
+  convergence order shows; a residual at the clock's own rounding is of the order of the round-off every component
+  already carries, and (a) keeps R-565's grid. Measurable alternative, criterion written before any run (R-649): the
+  figure-eight closure's fitted order across η in [0.02, 0.001] under (a) and under (b), each against RK4's order 4
+  within the margin TASK-M3-76's pull request states, with the inexact-landing count and the largest residual in ulps
+  reported for both.
+- **Applied meanwhile:** none. REQ-INT-119 names this entry.
+- **Waits:** TASK-M3-76's landing (REQ-INT-119) and the gate `az-final-step`'s convergence arm. Its floor on `|R₃|`
+  (REQ-INT-120, R-999) does not depend on this entry.
