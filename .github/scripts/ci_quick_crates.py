@@ -170,7 +170,7 @@ def readers(root):
             if (d / "main.rs").is_file():
                 tests[f"{package}::{d.name}"] = "\n".join(text_of(f) for f in files)
             elif any(names_read(text_of(f), names) for f in files):
-                marks.append(rf'\bmod {d.name}\b|"[^"\s]*/{d.name}/[^"\s/]*\.rs"')
+                marks.append(rf'\bmod {d.name}\b|"(?:[^"\s]*/)?{d.name}/[^"\s/]*\.rs"')
         modules = []
         for f in sorted(src.rglob("*.rs")):
             parts = f.relative_to(src).with_suffix("").parts

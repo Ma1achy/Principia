@@ -11,7 +11,7 @@
 //!   (`.github/scripts/ci_quick_crates.py --readers`): each test with a string literal that is a path to the file, to
 //!   `plan/`, or to a script naming the file; each test of a crate using a library module that reads it so, or spawning
 //!   a binary that reads it or uses such a module; each xtask module's own test where the module reads it; and a test
-//!   including a support module that reads it. RQ-790's evidence, the test files under `crates/` that name the file,
+//!   including a support module that reads it, by `mod` or by a `#[path]` to it. RQ-790's evidence, the test files under `crates/` that name the file,
 //!   are among them, and no crate without a reader has a test in it.
 //! - `ci_requirements_only_untrusted_scan_runs_every_crate`: the scan prints nothing on a workspace with a `[[test]]`
 //!   target at a path of its own, and when it prints nothing `decide` falls back to every crate.
@@ -408,7 +408,8 @@ fn scan() -> BTreeSet<String> {
                             || literals(body).iter().any(|l| {
                                 !l.contains(char::is_whitespace)
                                     && l.rsplit_once('/').is_some_and(|(head, file)| {
-                                        head.ends_with(&format!("/{d}")) && file.ends_with(".rs")
+                                        (head == d || head.ends_with(&format!("/{d}")))
+                                            && file.ends_with(".rs")
                                     })
                             })
                     }
