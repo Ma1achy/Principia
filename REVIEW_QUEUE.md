@@ -681,3 +681,55 @@ untrue. The question is whether to stop warning at a switch where no pixels have
 - **Deferred:** deferred to M6 by owner 13 Nov 2026 (R-1002, the owner: "RQ-804: (a), given RQ-798 (a″). Q-T3 as in RQ-802: defer:M6.").
 - **13 Nov 2026 (code review 5886176062 of #515, C4):** the main question is ruled by R-1002 (option (a): no precision warning at a switch at `ℓ_switch` with no collapse); only Q-T3, inherited from RQ-802, is left, deferred to M6. R-1002's safety on quads whose component drops a binade waits on RQ-811.
 - **13 Nov 2026 (R-1006, RQ-811 (b)):** ruled by R-1006: a binade-drop component is compared at the f32 ulp of the quad's smallest sample magnitude, so R-1002's safety holds on those quads; only Q-T3 is left, deferred to M6.
+
+
+## RQ-815: Proof 2 of the WSL distro fails on WSL's own GPU share and its per-VM interop registration, and the two config fixes both change the `wsl.conf` the owner fixed "exactly as I gave it" *(conflict; a one-way door, it amends the owner's ruling's words; R-915, R-912; REQ-VAL-181; context: run 43418528499, `wsl-proofs`; the TASK-M0-63 dispatch)*
+
+*Queued 13 Nov 2026 by the TASK-M0-63 implementer before any code was written; each quote re-read on `main` at
+f9031a72f. Nothing is chosen here.*
+
+*In plain English: the Linux box that runs the Windows PC's CPU tests is meant to be sealed off from Windows. The first
+real run of its checks found two holes that Windows opens on its own: the graphics-driver folder on C: is shared in, and
+a hook that lets Linux start Windows programs is registered at boot even though interop is off. Each can be closed by
+adding a line to the box's settings file, `wsl.conf`, but the owner ruled that file must stay exactly as they wrote it,
+and one of the fixes adds a `[boot]` section, which that ruling's text singles out.*
+
+- **File, section:**
+  - `decisions.md` § R-915, the owner's words: "WSL stays as set: no sudo, no systemd, and wsl.conf exactly as I gave
+    it. Don't add [boot] systemd=true or any sudoers entry, not even a narrow one. A sudo rule for systemd-run amounts
+    to full root, and root can mount C: and D:."
+  - `decisions.md` § R-912, requirement (2): "automount off (/etc/wsl.conf [automount] enabled=false) and no Windows
+    interop; C: and D: not reachable from inside, shown by test".
+  - `plan/OPERATIONS.md` § "The Windows runner's work": "`/etc/wsl.conf` exactly as the owner gave it, automount and
+    interop off".
+  - `scripts/wsl/inside.sh` `isolation()` (proof 2), which fails on "a mount backed by Windows: drvfs, or the 9p and
+    virtiofs WSL serves Windows folders over (/usr/lib/wsl/drivers, with GPU support, is the driver store on C:)" and
+    on `/proc/sys/fs/binfmt_misc/WSLInterop` being present; `xtask/tests/wsl.rs` `check_image` holds
+    `scripts/wsl/wsl.conf` equal to `OWNERS_CONF` and the build free of the word `[boot]`.
+- **What run 43418528499 found:** (a) `/usr/lib/wsl/drivers` is 9p-mounted: WSL's GPU share, on by default; the
+  owner's `wsl.conf` has no `[gpu]` section. (b) `/proc/sys/fs/binfmt_misc/WSLInterop` is present: WSL2 registers it per
+  VM at boot whatever `[interop] enabled` says, and only root can remove it.
+- **The conflict:** the dispatched fix adds `[gpu] enabled=false` and a `[boot] command=` that writes `-1` to
+  `/proc/sys/fs/binfmt_misc/WSLInterop` (WSL runs it as root at the distro's start, without systemd). Both tighten
+  isolation, and neither adds systemd or sudo, but both change the file the owner fixed "exactly as I gave it", and the
+  second adds a `[boot]` section and a root command at boot, the area the ruling's own example names. Reading
+  "exactly" as "no looser" would reinterpret the owner's words.
+- **The question:** may `wsl.conf` gain `[gpu] enabled=false` and a `[boot] command=` removing the `WSLInterop`
+  registration, or is proof 2 to be met another way?
+- **Options seen:**
+  - **(a) Amend R-915's "exactly":** allow both additions (no `systemd=`, no sudo), the image test's exact text and its
+    `[boot]` ban updated to the new file and a ban on `systemd=` kept; the manifest re-pinned and the distro
+    re-registered with `replace: true`.
+  - **(b) `[gpu]` only:** allow `[gpu] enabled=false` (no `[boot]`), and close (b) PC-side or not at all; the
+    `WSLInterop` check then keeps failing, so proof 2 cannot pass under (b) alone.
+  - **(c) Keep `wsl.conf` as is:** close (a) on the PC (a `.wslconfig` GPU setting, if WSL's version there offers one,
+    sent as a PC message) and rule how R-912's "no Windows interop, shown by test" reads with a registration only root
+    can remove, for example that no Windows program can be started as `ci` (shown by trying), in place of the entry's
+    absence. That redefines the test, which is also the owner's call.
+- **Recommended:** (a). Both lines remove a path to Windows that the owner's file was written to close, add no
+  privilege `ci` can use, and are checked byte for byte by proof 2's own `cmp` and by the manifest pin. Measurable
+  alternative, criterion written before any run (R-649): proof 2 of `wsl-proofs` after a `replace: true` registration
+  passes every line of `isolation()` unchanged, with `/usr/lib/wsl/drivers` unmounted and `WSLInterop` absent.
+- **Applied meanwhile:** nothing; `scripts/wsl/wsl.conf` and its tests are unchanged.
+- **Waits:** the proof-2 half of TASK-M0-63. Its proof-6 fixes (the stdin read, the byte-order mark, lavapipe in the
+  hosted `wsl-parity` job, the failure line) and proof 3's evidence count touch no `wsl.conf` and need no ruling.
