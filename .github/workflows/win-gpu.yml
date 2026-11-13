@@ -605,17 +605,17 @@ jobs:
   # 51.5 s (run 42944409475) and 16 min 27.8 s (run 42954587933), each about 982.8 MB, rounded up to the minute. One
   # try ended short after 31 min 13 s (run 43128608743) and one hung until the job's limit, 57 min 49 s (run
   # 43146846084). Run 43312851701's took 12 min 56 s; the limit stays on the slower until the cache's misses time more.
-  # The job's limit is R-988's, 1.5 times its slowest completed run on the PC (`.github/win-times.md`, runs from before
-  # the cache), not a budget of its steps: the cache lookup's 5 and the two tries' 50 end inside it, so the step that
-  # names a download that never finished runs, but a first try that hangs to its limit leaves the second try less than
-  # its own, and the job's limit then ends it, a hang `win-retry` logs. (Was, until R-988: 95 minutes, the 4 to reach
-  # the download, the cache lookup's 5, the two tries' 50, 5 for the two checks' SHA-256 and 31 for the registration,
-  # the move into the cache and its check.)
+  # The job's 95 minutes: the 4 minutes the PC has taken to reach the download (3 min 59 s at most), the cache lookup's
+  # 5, the two tries' 50, 5 for the two checks' SHA-256 of the image, and the 31 the old limit of 60 left the
+  # registration after a 25-minute download, which now holds the move into the cache and its check as well. R-988
+  # keeps it, and the registration step's want of a limit of its own, until the job has a completed run: no run on the
+  # PC has yet registered the image, every registration having refused within 2 s or never been reached
+  # (`.github/win-times.md`).
   wsl-register:
     if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-register'
     needs: [wsl-image]
     runs-on: [self-hosted, windows, nvidia]
-    timeout-minutes: 51
+    timeout-minutes: 95
     concurrency:
       group: wsl-register
       cancel-in-progress: false
@@ -704,7 +704,6 @@ jobs:
           WSL_IMAGE: ${{ runner.temp }}/wsl-image
           WSL_CACHE_HIT: ${{ steps.cache.outcome }}
           WSL_REPLACE: ${{ inputs.replace }}
-        timeout-minutes: 1
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run wsl-register powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 register
           exit $LASTEXITCODE

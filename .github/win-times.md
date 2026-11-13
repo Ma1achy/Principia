@@ -12,7 +12,9 @@ The criterion, written on 13 Nov 2026 before any job's or step's time was read (
 - **Which steps:** every step that builds or runs tests, read as every step that starts its command through
   `.github/scripts/win_measure.ps1 run` (each job's recorded work: the cargo builds, the suites, the gates, the
   containment check, the proofs, `wsl-cpu`'s tests and the registration).
-- **A completed run of a step:** it concluded `success` or `failure`, never skipped, cancelled or timed out.
+- **A completed run of a step:** it concluded `success` or `failure`, never skipped, cancelled or timed out, and ran
+  its work through: a step that refused before its work (the registration's exit 125) did not (this clause made
+  explicit on review, before any limit acted; see the note under the table).
 - **A completed run of a job:** it concluded `success` or `failure`, and every step of it listed here was a completed
   run; for a job with no such step (`runner-proof`), its conclusion alone. A job that failed early, its suites skipped,
   did not run its work through.
@@ -55,17 +57,26 @@ Read on 13 Nov 2026 from `gh api repos/Ma1achy/Principia/actions/runs/<run>/atte
 | win-gpu.yml | win-self-check | The guard on this workflow | run 43230901521, job 131225617629, 177 s; run 43023140554, job 130531059678, 166 s; run 42825370464, job 129861170106, 157 s; run 42630146970, job 129204041981, 148 s; run 42520229425, job 128851914552, 173 s | 177 | 5 |
 | win-gpu.yml | win-contain | (job) | none | — | 30 |
 | win-gpu.yml | win-contain | Containment check | none | — | none |
-| win-gpu.yml | wsl-register | (job) | run 43128608743, job 130895892272, 2017 s; run 42954587933, job 130313726220, 1239 s; run 42944409475, job 130277996649, 1192 s | 2017 | 51 |
-| win-gpu.yml | wsl-register | Register principia-wsl | run 43128608743, job 130895892272, 2 s; run 42954587933, job 130313726220, 0 s; run 42944409475, job 130277996649, 1 s | 2 | 1 |
+| win-gpu.yml | wsl-register | (job) | none | — | 95 |
+| win-gpu.yml | wsl-register | Register principia-wsl | none | — | none |
 | win-gpu.yml | wsl-proofs | (job) | none | — | 180 |
 | win-gpu.yml | wsl-proofs | The six proofs | none | — | none |
 | win-gpu.yml | wsl-cpu | (job) | none | — | 330 |
 | win-gpu.yml | wsl-cpu | CPU tests and the job queue's mutants in WSL | none | — | none |
 | runner-proof.yml | runner-proof | (job) | run 42476517881, job 128718974418, 66 s | 66 | 2 |
 
+No completed run of `wsl-register`, its present limit kept. The job's work is the registration, and no run on the PC
+has done it: its three runs that concluded `success` or `failure` with the step run (run 43128608743, job
+130895892272, 2017 s; run 42954587933, job 130313726220, 1239 s; run 42944409475, job 130277996649, 1192 s) each
+refused within 2 s, exit 125, no image pinned or one that didn't match (2 s, 0 s and 1 s), and no other run reached
+the step, run 43225140437's attempts 2 (3182 s) and 3 (2273 s) among them. A refusal before the work is not a run of
+it, so neither the job nor its step "Register principia-wsl" has a completed run on record, and each keeps its present
+limit until it has one (R-988): the job its 95 minutes, the step none of its own. This reading of the criterion was
+corrected on review, before any limit acted (applied per R-369); the criterion above says the same of a job that failed
+early.
+
 Rows read from failed runs alone. Every recorded run of these steps failed on its own output, so its time may be
 that of the failure, not of the work, and the limit could cut the step once it passes: `compute_fast_math`,
-`golden --all` and `golden_halfway` of `win-vulkan`, and `Register principia-wsl`, which has only refused (no image
-pinned, or one that didn't match). The criterion takes them as they are; they are named here so that a cut of one is
-read as the limit's, not the step's, and is put to the owner rather than met by a limit changed after the result
-(R-649).
+`golden --all` and `golden_halfway` of `win-vulkan`. Each ran its tests and failed on their output, so its time is
+the work's; the criterion takes them as they are. They are named here so that a cut of one is read as the limit's, not
+the step's, and is put to the owner rather than met by a limit changed after the result (R-649).
