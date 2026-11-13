@@ -4141,8 +4141,33 @@ const WRONG_VALUES: [&str; 14] = [
 
 /// The whole of `$allowed` as a config file's text, with `wrong`, a pair, in place of its key's value.
 fn config_text(script: &str, wrong: Option<&str>) -> String {
+    pairs_text(&allowed_pairs(script), wrong)
+}
+
+/// The keys a clean kept checkout holds in `.git/config.worktree`, where `sparse-checkout disable` writes them.
+const WORKTREE_KEYS: [&str; 3] = [
+    "core.sparsecheckout",
+    "core.sparsecheckoutcone",
+    "index.sparse",
+];
+
+/// The whole of `$allowed`, with `wrong` as in [`config_text`], as the two files a clean checkout holds it in: each pair
+/// whose key is one of [`WORKTREE_KEYS`] in `.git/config.worktree`, every other in `.git/config`. Planted over a kept
+/// checkout it replaces both of its files, so no key is held twice.
+fn config_files(script: &str, wrong: Option<&str>) -> [(&'static str, String); 2] {
+    let (worktree, config): (Vec<&str>, Vec<&str>) = allowed_pairs(script)
+        .into_iter()
+        .partition(|pair| WORKTREE_KEYS.contains(&pair.split_once('=').expect("a pair").0));
+    [
+        (".git/config", pairs_text(&config, wrong)),
+        (".git/config.worktree", pairs_text(&worktree, wrong)),
+    ]
+}
+
+/// `pairs` as a config file's text, with `wrong`, a pair, in place of its key's value.
+fn pairs_text(pairs: &[&str], wrong: Option<&str>) -> String {
     let mut text = String::new();
-    for pair in allowed_pairs(script) {
+    for pair in pairs {
         let (key, value) = pair.split_once('=').expect("a pair");
         let value = wrong
             .and_then(|w| w.split_once('='))
@@ -4156,6 +4181,84 @@ fn config_text(script: &str, wrong: Option<&str>) -> String {
         text.push_str(&format!("\t{variable} = {value}\n"));
     }
     text
+}
+
+/// `files`, the whole list as planted over a kept checkout, is as a clean checkout holds it: its `.git/config.worktree`
+/// holds the keys a clean kept checkout's does, and no other, and the two files together hold every pair of the list
+/// once, each file read back by the script's own git line.
+fn check_split(script: &str, files: &[(&str, String)]) {
+    let base = scratch("split");
+    let (origin, kept) = (base.join("origin"), base.join("kept"));
+    origin_repo(&origin);
+    kept_repo(&origin, &kept);
+    let keys = |pairs: &[String]| {
+        let mut keys: Vec<String> = pairs
+            .iter()
+            .map(|pair| pair.split_once('=').expect("a pair").0.to_owned())
+            .collect();
+        keys.sort();
+        keys
+    };
+    let held = keys(&git_pairs(script, &kept.join(".git/config.worktree")));
+    let planted = |name: &str| {
+        files
+            .iter()
+            .filter(|(at, _)| *at == name)
+            .flat_map(|(at, text)| {
+                let file = base.join(at.trim_start_matches(".git/"));
+                std::fs::write(&file, text).expect("a planted file");
+                git_pairs(script, &file)
+            })
+            .collect::<Vec<String>>()
+    };
+    let worktree = planted(".git/config.worktree");
+    assert_eq!(
+        keys(&worktree),
+        held,
+        "git_guard: the planted config.worktree holds other keys than a clean checkout's"
+    );
+    let mut all = planted(".git/config");
+    all.extend(worktree);
+    all.sort();
+    let mut allowed = allowed_pairs(script);
+    allowed.sort_unstable();
+    assert_eq!(
+        all, allowed,
+        "git_guard: the planted config isn't the list, each pair once"
+    );
+}
+
+#[test]
+fn git_guard_whole_config_splits_as_a_clean_checkout() {
+    let script = read(GIT_GUARD);
+    check_split(&script, &config_files(&script, None));
+}
+
+negative_control!(
+    git_guard_whole_config_splits_as_a_clean_checkout,
+    "the whole list in .git/config alone",
+    expected = "git_guard: the planted config.worktree holds other keys than a clean checkout's",
+    {
+        let script = read(GIT_GUARD);
+        check_split(&script, &[(".git/config", config_text(&script, None))]);
+    }
+);
+
+mod split_twice {
+    use super::*;
+    negative_control!(
+        git_guard_whole_config_splits_as_a_clean_checkout,
+        "the sparse keys in both files",
+        expected = "git_guard: the planted config isn't the list, each pair once",
+        {
+            let script = read(GIT_GUARD);
+            let [_, worktree] = config_files(&script, None);
+            check_split(
+                &script,
+                &[(".git/config", config_text(&script, None)), worktree],
+            );
+        }
+    );
 }
 
 /// Each key on the list has its one value: the script's list comes back from git as it was written, and no wrong value for
@@ -5114,18 +5217,23 @@ fn check_script_refuses(script: &Path) {
         &plant("no_config", false, &[(".git/HEAD", "x")]),
     );
     let text = std::fs::read_to_string(script).expect("the script");
+    // The list as a clean checkout holds it, over the kept checkout's own two files: the checkout's sparse keys in
+    // config.worktree, so none is held twice.
     for (at, wrong) in WRONG_VALUES.iter().enumerate() {
-        let config = config_text(&text, Some(wrong));
+        let files = config_files(&text, Some(wrong));
         let dir = plant(
             &format!("wrong_{at}"),
             true,
-            &[(".git/config", config.as_str())],
+            &files.each_ref().map(|(name, text)| (*name, text.as_str())),
         );
         refuses(wrong, "off the allowlist", &dir);
     }
-    let whole = config_text(&text, None);
+    let whole = config_files(&text, None);
     assert!(
-        passes("whole", &[(".git/config", whole.as_str())]),
+        passes(
+            "whole",
+            &whole.each_ref().map(|(name, text)| (*name, text.as_str()))
+        ),
         "git_guard: the script refused its own list"
     );
     let detached = plant("detached", true, &[(".git/config", CLEAN)]);
