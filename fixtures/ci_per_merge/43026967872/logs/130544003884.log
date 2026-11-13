@@ -1,0 +1,8 @@
+﻿2026-11-11T13:12:50.0488395Z Current runner version: '2.338.2'
+2026-11-11T13:16:33.3941705Z ##[group]Run cargo xtask ci --partition 2/4
+2026-11-11T13:40:55.4536218Z xtask controls: xtask: test `a_note_differing_in_each_kind_of_id_is_caught_on_the_real_queue`: its control did not make it fail, so the test may not be able to (philosophy §4.4)
+2026-11-11T13:40:55.4537117Z --- output of control `a_note_differing_in_each_kind_of_id_is_caught_on_the_real_queue::negative_control`:
+2026-11-11T13:40:55.4537766Z note: test did not panic as expected at crates/validation/src/control.rs:94:16
+2026-11-11T13:40:55.4538043Z xtask: runner(s) failed: controls
+2026-11-11T13:40:55.4538305Z xtask ci: [3/10] controls FAILED: 1 test(s) without a control that makes them fail (REQ-VAL-147)
+2026-11-11T13:40:55.6649294Z ##[error]Process completed with exit code 1.

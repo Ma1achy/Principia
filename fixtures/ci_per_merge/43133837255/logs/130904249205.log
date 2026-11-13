@@ -1,0 +1,8 @@
+﻿2026-11-12T01:20:32.7357867Z Current runner version: '2.338.2'
+2026-11-12T01:23:26.2023791Z ##[group]Run cargo xtask ci --partition 2/4
+2026-11-12T02:02:48.7540509Z xtask controls: xtask: test `qa_m0_45_the_required_checks_cannot_be_skipped`: its control did not make it fail, so the test may not be able to (philosophy §4.4)
+2026-11-12T02:02:48.7541739Z --- output of control `qa_m0_45_the_required_checks_cannot_be_skipped::negative_control`:
+2026-11-12T02:02:48.7542501Z note: test did not panic as expected at crates/validation/src/control.rs:94:16
+2026-11-12T02:02:48.7543036Z xtask: runner(s) failed: controls
+2026-11-12T02:02:48.7543590Z xtask ci: [3/10] controls FAILED: 1 test(s) without a control that makes them fail (REQ-VAL-147)
+2026-11-12T02:02:48.9688973Z ##[error]Process completed with exit code 1.

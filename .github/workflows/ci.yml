@@ -51,12 +51,11 @@
 # and the screenshot runner's self-test (product correctness, never retired, R-909), the release profile (R-547),
 # `cargo xtask ci`, the controls run among it, and every process test. No job of it bears a required check, and branch
 # protection reads pull requests, so nothing here blocks a merge. `per-merge` runs last, whatever the others ended in,
-# and reads them (`.github/scripts/ci_per_merge.py`): a correctness failure (physics, validation, bit-for-bit, golden)
-# fails it, and that is a red `main` (R-681, R-907); any other failure, a process test, the lints and build beside the
-# tests, `cargo xtask ci`, the web skeleton or a step outside the tests, is filed as one issue labelled `per-merge`, a
-# top-priority task, and `per-merge` passes. The run's own conclusion is not the verdict: the jobs that run the product
-# suite run process tests too, and none of them may pass with a failing step (REQ-TOOL-223, R-235, R-335). The
-# description of the jobs below, kept from R-656's full CI:
+# and reads every one of them (`.github/scripts/ci_per_merge.py`): any failed job fails it, and that is a red `main`, a
+# process test, the lints and build beside the tests, `cargo xtask ci` and the web skeleton as much as a product test
+# (R-982, R-681); a failure confined to the step that installs Mesa, its network or archive download, fails it too, as
+# "no result", never green, which holds as red does (R-979); it passes only when no job failed. The description of the
+# jobs below, kept from R-656's full CI:
 # formatting and lints (R-195), build, test, the crate-graph check (REQ-SYS-004) and, in jobs
 # of their own beside them (R-235), `cargo xtask ci`, the single per-push entry point every later per-commit runner
 # registers into. The GPU kernel build, `cargo xtask build-kernel`, and the tests that need the built kernel run in a
@@ -1967,15 +1966,14 @@ jobs:
         run: cargo test -p xtask --features controls golden_halfway --doc
 
 
-  # The per-merge verdict (the owner's CI model, R-909 item 2: "Correctness failure (physics, validation, bit-for-bit,
-  # golden) = red main (R-681); other failures file a top-priority task"; R-907, R-908: "A failing process test never
-  # makes main red; it files a task"). On a push only, after every job of the run, whatever each ended in: it reads the
-  # attempt's jobs and each failed job's log through the API and judges each failure (`.github/scripts/ci_per_merge.py`,
-  # which says how): a correctness failure fails this job, and that alone is a red `main`; every other failure, on
-  # `main`, is filed as one issue labelled `per-merge`, or a comment on the open one of the same title, and this job
-  # passes. On a `measure/` branch it files nothing and prints what it would file. Its summary lists each failed job, its
-  # kind and why. It builds nothing, polls nothing (every job it reads has ended) and runs only this checkout's script
-  # on the API's data. Applied per R-369/R-812.
+  # The per-merge verdict over every job of the run (R-982, 12 Nov 2026, the owner's veto of D-2 of that day's report:
+  # "Any red job on main is red; make the per-merge verdict cover every job so the two can't disagree"; R-979, RQ-789
+  # (a)). On a push only, after every job of the run, whatever each ended in: it reads the attempt's jobs and each failed
+  # job's log through the API and judges each failure (`.github/scripts/ci_per_merge.py`, which says how). Red, any job
+  # failed, fails this job, a red `main`; no result, every failure an install step's network or archive download, fails
+  # it under its own summary line, never passing; green, no job failed, passes it. Its summary lists each failed job,
+  # its kind and why. It builds nothing, polls nothing (every job it reads has ended), files nothing, and runs only
+  # this checkout's script on the API's data. Applied per R-369/R-812.
   per-merge:
     needs:
       - changes
@@ -1995,12 +1993,10 @@ jobs:
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # `actions: read` for the jobs and their logs, `issues: write` for the task and its label, `contents: read` for the
-    # checkout.
+    # `actions: read` for the jobs and their logs, `contents: read` for the checkout.
     permissions:
       actions: read
       contents: read
-      issues: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -2011,6 +2007,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
-          HEAD_SHA: ${{ github.sha }}
-          FILE_TASKS: ${{ github.ref == 'refs/heads/main' }}
         run: python3 -I .github/scripts/ci_per_merge.py decide

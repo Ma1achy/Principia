@@ -243,6 +243,8 @@ mod another_run {
 
 /// The download action, pinned in the workflow.
 const DOWNLOAD: &str = "actions/download-artifact@";
+/// `wsl-register`'s lookup of this recipe's image in the PC's cache didn't find it whole.
+const CACHE_MISS: &str = "steps.cache.outcome != 'success'";
 
 fn is_download(step: &Yaml) -> bool {
     step["uses"]
@@ -262,7 +264,8 @@ fn is_image_check(step: &Yaml) -> bool {
 /// download is followed by the same download again, run only if the first set no `download-path`, and then by a step
 /// that fails the job naming it if neither set one. The image's each try is followed by `wsl.ps1 check-image` on the
 /// directory it wrote, run only if that try set `download-path`; the second try runs unless the first check passed,
-/// and the stop unless one of the checks did. The three downloads are the image, the manifest and the parity results.
+/// and the stop unless one of the checks did. The image's first try, its second and its stop also run only on a miss of
+/// the PC's image cache (`ci_wsl_cache.rs`). The three downloads are the image, the manifest and the parity results.
 fn check_downloads(text: &str) {
     let doc = parse(text);
     let mut seen = 0;
@@ -304,6 +307,13 @@ fn check_downloads(text: &str) {
             tolerant(first, "download");
             limited(first, "download");
             let image = what.starts_with("wsl-image-");
+            if image {
+                assert_eq!(
+                    first["if"].as_str(),
+                    Some(CACHE_MISS),
+                    "{job}'s download of {what} runs on a hit of the image cache"
+                );
+            }
             let check = |s: Option<&Yaml>, which: &str, after: &str| -> String {
                 let s = s.filter(|s| is_image_check(s)).unwrap_or_else(|| {
                     panic!("{job}'s {which} of {what} isn't checked for its length and hash")
@@ -324,7 +334,7 @@ fn check_downloads(text: &str) {
             let again_if = if image {
                 let checked = check(steps.get(next), "download", &first_id);
                 next += 1;
-                format!("steps.{checked}.outcome != 'success'")
+                format!("steps.{checked}.outcome != 'success' && {CACHE_MISS}")
             } else {
                 unfinished(&first_id)
             };
@@ -351,7 +361,9 @@ fn check_downloads(text: &str) {
                 let first_check = id(&steps[at + 1], "check");
                 let second_check = check(steps.get(next), "second download", &again_id);
                 next += 1;
-                format!("steps.{first_check}.outcome != 'success' && steps.{second_check}.outcome != 'success'")
+                format!(
+                    "steps.{first_check}.outcome != 'success' && steps.{second_check}.outcome != 'success' && {CACHE_MISS}"
+                )
             } else {
                 format!("{} && {}", unfinished(&first_id), unfinished(&again_id))
             };
@@ -472,6 +484,20 @@ mod download_dropped {
     );
 }
 
+mod image_on_a_hit {
+    use super::*;
+    negative_control!(
+        wsl_downloads_run_again_and_stop_if_neither_finished,
+        "the image downloaded on a cache hit too",
+        expected = "wsl-register's download of wsl-image-${{ github.run_id }} runs on a hit of the image cache",
+        check_downloads(&edited(
+            &read(WORKFLOW),
+            "        timeout-minutes: 25\n        if: steps.cache.outcome != 'success'\n",
+            "        timeout-minutes: 25\n"
+        ))
+    );
+}
+
 mod hang_ends_job {
     use super::*;
     negative_control!(
@@ -480,8 +506,8 @@ mod hang_ends_job {
         expected = "wsl-register's download of wsl-image-${{ github.run_id }} ends the job when it fails or hangs",
         check_downloads(&edited(
             &read(WORKFLOW),
-            "        id: image\n        timeout-minutes: 25\n        continue-on-error: true\n",
-            "        id: image\n        timeout-minutes: 25\n"
+            "        id: image\n        timeout-minutes: 25\n        if: steps.cache.outcome != 'success'\n        continue-on-error: true\n",
+            "        id: image\n        timeout-minutes: 25\n        if: steps.cache.outcome != 'success'\n"
         ))
     );
 }
@@ -509,8 +535,8 @@ mod again_longer {
             "wsl-register's two downloads of wsl-image-${{ github.run_id }} have different limits",
         check_downloads(&edited(
             &read(WORKFLOW),
-            "        if: steps.image-check.outcome != 'success'\n        timeout-minutes: 25\n",
-            "        if: steps.image-check.outcome != 'success'\n        timeout-minutes: 30\n"
+            "          && steps.cache.outcome != 'success'\n        timeout-minutes: 25\n",
+            "          && steps.cache.outcome != 'success'\n        timeout-minutes: 30\n"
         ))
     );
 }
@@ -566,8 +592,8 @@ mod bad_image_kept {
         expected = "wsl-register's download of wsl-image-${{ github.run_id }} isn't run again when it didn't finish whole",
         check_downloads(&edited(
             &read(WORKFLOW),
-            "        if: steps.image-check.outcome != 'success'\n        timeout-minutes: 25\n",
-            "        if: steps.image.outputs.download-path == ''\n        timeout-minutes: 25\n"
+            "        if: steps.image-check.outcome != 'success'\n          && steps.cache.outcome",
+            "        if: steps.image.outputs.download-path == ''\n          && steps.cache.outcome"
         ))
     );
 }
@@ -576,9 +602,13 @@ mod bad_image_kept {
 /// other, run 42944409475, took 15 min 51.5 s). Each try of the image gets 1.5 times it, rounded up to the minute.
 const SLOWER_WHOLE_IMAGE: f64 = 987.8;
 
-/// The image's tries are each 1.5 times its slower whole download, rounded up to the minute; and in each job the
-/// downloads' limits together end before the job's does, so the stop step runs. The job's own limit is R-988's, 1.5
-/// times its measured time (`ci_self_hosted.rs`, `self_hosted_jobs_have_time_limits`), no longer a budget of its steps.
+/// The cache lookup's limit, in minutes: it reads the cached image once, for its SHA-256, as a check does.
+const LOOKUP: i64 = 5;
+
+/// The image's tries are each 1.5 times its slower whole download, rounded up to the minute; the cache lookup has a
+/// limit of its own, a check's; and in each job the downloads' limits together end before the job's does, so the stop
+/// step runs. The job's own limit is R-988's, 1.5 times its measured time (`ci_self_hosted.rs`,
+/// `self_hosted_jobs_have_time_limits`), no longer a budget of its steps.
 fn check_limits(text: &str) {
     let doc = parse(text);
     let minutes = |s: &Yaml| s["timeout-minutes"].as_i64().unwrap_or(0);
@@ -594,6 +624,17 @@ fn check_limits(text: &str) {
         minutes(image),
         per_try,
         "the image's download limit isn't 1.5 times its slower whole download, rounded up to the minute"
+    );
+    let lookup = register["steps"]
+        .as_vec()
+        .expect("steps")
+        .iter()
+        .find(|s| s["id"].as_str() == Some("cache"))
+        .expect("the cache lookup");
+    assert_eq!(
+        minutes(lookup),
+        LOOKUP,
+        "the cache lookup's limit isn't a check's"
     );
     for job in ["wsl-register", "wsl-proofs"] {
         let job_minutes = minutes(&doc["jobs"][job]);
@@ -637,6 +678,20 @@ mod register_downloads_outlast {
             &read(WORKFLOW),
             "    runs-on: [self-hosted, windows, nvidia]\n    timeout-minutes: 51\n",
             "    runs-on: [self-hosted, windows, nvidia]\n    timeout-minutes: 50\n"
+        ))
+    );
+}
+
+mod lookup_unlimited {
+    use super::*;
+    negative_control!(
+        wsl_download_limits_fit_the_evidence,
+        "a cache lookup with only the job's limit",
+        expected = "the cache lookup's limit isn't a check's",
+        check_limits(&edited(
+            &read(WORKFLOW),
+            "        id: cache\n        timeout-minutes: 5\n",
+            "        id: cache\n"
         ))
     );
 }
