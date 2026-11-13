@@ -2075,7 +2075,7 @@ fn check_state_with_clock(retakes: fn(&mut AzParams<f64>)) {
         gap(&overshot, &at_boundary.state),
     );
     eprintln!(
-        "az_landing_state_with_clock: Δ_sync {delta}, the clamped step's clock {:e} (Δ + {:e}); the stored state {stored:e}          from the state at the boundary, the overshot one {overshoot:e}; {} steps, {} closings, {} halvings at most",
+        "az_landing_state_with_clock: Δ_sync {delta}, the clamped step's clock {:e} (Δ + {:e}); the stored state {stored:e} from the state at the boundary, the overshot one {overshoot:e}; {} steps, {} closings, {} halvings at most",
         oq.t,
         oq.t - delta,
         out.count.steps,
