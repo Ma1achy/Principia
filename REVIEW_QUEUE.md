@@ -1482,3 +1482,138 @@ third would change what proof 5 proves. Each is the owner's call.*
   (433-602 s in Phase A), and whether the entry survives between register dispatches.
 - **Applied meanwhile:** (3) and (i).
 - **Waits:** nothing; the cache is built and the register run waits only for the owner's folder.
+
+## RQ-808: Heggie and logH cannot keep their regularised state across `ADVANCE` calls, so through the seam as built they re-register at every sync boundary the wrapper crosses, which Part 2b says Heggie never does *(conflict; a one-way door, it changes what the default occupant computes; R-19, R-160, R-560, R-565; REQ-INT-006, REQ-INT-018, REQ-INT-073; context: TASK-M3-08, stopped before any code)*
+
+*Queued 13 Nov 2026 by TASK-M3-08's implementer, each quote re-read on `main` at 256384ade. Nothing is built.*
+
+*In plain English: Heggie's method (the default) turns the three bodies' positions into its own variables once, at the
+start, and never again; that is what makes it better than Aarseth–Zare. But the kernel hands an occupant only the
+ordinary positions and momenta, once per macro-step, and takes them back each time. So Heggie would have to rebuild
+its variables, and re-freeze its energy, at every call, which is exactly the re-registration it exists to avoid. logH
+has the same problem with its frozen energy and its TTL variable `W`. Either the occupant's own state is stored between
+calls (a payload change), or Heggie and logH re-register like Aarseth–Zare, or the wrapper calls them differently.*
+
+- **File, section:**
+  - `docs/contracts/principia_integrator_contract.md` § "Part 2b — Regularisation is a SECOND swappable axis, not a
+    property of the stepper", the table's Heggie row: "**Heggie 1974 (global)** | three relative vectors, symmetric |
+    **no reference body at all** | the general default, stepped with RK4"; and TASK-M3-08's Goal: "Heggie 1974 global
+    regularisation (three relative vectors, no reference body, never re-registers)".
+  - The same contract, § "The sync grid is a fixed quantum of physical time (R-565)": "So live march, catch-up and
+    re-boot after eviction reach the same state at the same grid time, bitwise." and "Heggie never re-registers, so its
+    sensitivity to the boundary cadence is about 10× smaller than Aarseth–Zare's."; § "What this preserves, and what it
+    costs": "For a regularised occupant the three reach the same state **bitwise**, because its march stops only on the
+    fixed sync grid (R-565, below)." and "The integrator still takes `(m, r, p)`".
+  - The seam as built: `crates/kernel/src/driver/advance.rs`, the module note: "The wrapper calls
+    [`Advance::advance`] once per macro-step, from `t_now` to `t_target`"; `crates/kernel/src/regularisation/mod.rs`,
+    `Regularisation::advance(state: &State<R>, geom: &Geom<R>, t_now: u32, t_target: u32, …)`, `State` being
+    `(m, r, p)`; `crates/kernel/src/driver/wrapper.rs`, `A::advance_reaching(&state, &geom, macro_step,
+    macro_step + 1, &params, cadence)`.
+  - The reference (R-159, not authority): `docs/reference/prin-rs/src/integrate/heggie/driver.rs:9`, "`to_reg` is called
+    **once at `t = 0`**, and the sync loop is a *sampling* cadence", `:275` "Registration. Once, at t = 0, and never
+    again.", and `:88` on `refresh_h_at_boundary`, "**Default off** … Refreshing `h` is the one thing this driver could
+    do that would reintroduce a boundary-dependent quantity into an otherwise uninterrupted march";
+    `.../logh/driver.rs:285-286`, "**`W` is registered ONCE, at `t = 0`, and carried across every sync boundary.** … 
+    re-seeding it to `Omega(r)` at each boundary would discard exactly the accumulated off-shell information the
+    transformation runs on, and would make the march depend on `n_sync`."
+- **The conflict:** Heggie marches `(Q₁, P₁, Q₂, P₂, Q₃, P₃, t)` with the energy `h` frozen at registration; logH marches
+  the Cartesian state with `B = −E` frozen and, in TTL mode, the carried `W`. The seam passes `(m, r, p)` in and out of
+  each `ADVANCE` call, once per macro-step, so a Heggie or logH occupant must rebuild `Q`, `P` and `h` (logH: `B`, and
+  `W` from `Ω(r)`) from the Cartesian state at each call that marches. With `dt_macro` below `Δ_sync`, each such call
+  crosses one sync boundary, so the occupant re-registers and re-freezes its energy at every boundary, as Aarseth–Zare
+  does. A march registered once at `t = 0` and carried through is not reachable through the seam, and the bitwise
+  equality of live march, catch-up and re-boot (Part 2a) holds for Heggie only if it re-registers at every boundary or
+  its state is stored. REQ-INT-018's count, and REQ-INT-073's definition of where it lives, depend on which.
+- **Options:**
+  - (a) Carry each regularised occupant's own state across `ADVANCE` calls in the payload, registered once at `t = 0`:
+    Heggie's `Qᵢ`, `Pᵢ` and `h` (13 numbers and the clock), logH's `B` and, in TTL mode, `W`. A schema change; the seam
+    gains the carried state; Heggie's and logH's re-registration count is 0.
+  - (b) Register at every `ADVANCE` call that marches, from the Cartesian state, re-freezing `h` (logH: `B`, and `W`
+    re-seeded to `Ω(r)`). No schema change; Heggie and logH then re-register at every sync boundary, as Aarseth–Zare
+    does, their count says so, and Part 2b's table, Part 2a's "Heggie never re-registers" and the task's Goal are
+    amended.
+  - (c) The wrapper calls a regularised occupant's `ADVANCE` from `t = 0` to the target, its regularised state
+    rebuilt from the IC each time (no carried state, no re-registration, the cost of a re-run per call); or once over
+    the horizon, its macro-step readout taken through the cadence at each boundary.
+- **Recommendation:** none; each changes what the default occupant computes or what is stored. The measurable
+  alternative: the reference's own control, Heggie's `refresh_h_at_boundary`, measures (b)'s energy re-freeze against
+  (a) on the 32-case matrix (prin-rs reports its effect, not assumed).
+- **Applied meanwhile:** nothing; TASK-M3-08 is stopped.
+- **Waits:** TASK-M3-08 (REQ-INT-006's seam runs, REQ-INT-018, REQ-INT-073, and the `integrate_with` tests the 12 Nov
+  note asks for). The direct marches the gates run (registered once at `t = 0`, as the reference driver does) do not
+  depend on it.
+
+## RQ-809: logH's pairs with Euler, KDK, Yoshida-4 and Yoshida-6 are TASK-M3-39's to write, after TASK-M3-08, but TASK-M3-08 must run every pair a step; and which step logH's own time modes take, its leapfrog or RK4, is not stated *(conflict and silence; a one-way door, it sets what logH computes and its `step_reversible` and `run_reversible`; R-160, R-162, R-500, R-561; REQ-INT-006, REQ-INT-084, REQ-INT-097, REQ-VAL-190; context: TASK-M3-08, stopped before any code)*
+
+*Queued 13 Nov 2026 by TASK-M3-08's implementer, each quote re-read on `main` at 256384ade. Nothing is built.*
+
+*In plain English: the contract says another, later task writes down exactly how logH runs under each stepper, but
+this task's test must already run logH under every stepper, so it would have to invent them. And the contract calls
+logH's own method "its leapfrog", while the reference code runs logH with RK4 by default; which one "logH" and "logH's
+TTL mode" are decides whether TTL comes out time-reversible, which the rulings expect.*
+
+- **File, section:**
+  - TASK-M3-08 (`plan/tasks/M3/TASK-M3-08.md`), Deliverables: "Default occupant config = Heggie × RK4 (R-560); `none`,
+    AZ, logH selectable, and every stepper under each (R-561)."; Acceptance: "`cargo test -p kernel
+    regularisation_default` — every stepper × regularisation pair, `none` included, runs a step on a fixture state"
+    (REQ-INT-006's verify).
+  - `docs/contracts/principia_integrator_contract.md` § "Every stepper × regularisation pair runs; the pairs measured not
+    to work carry a warning (R-561)": "Under logH, whose time transformation is built for a leapfrog, each pair's exact
+    form is written with logH's equations and checked as the others are (REQ-INT-097). **TASK-M3-39 writes them here**,
+    each pair in each of logH's time modes, from logH's equations once TASK-M3-08 has transcribed them (R-160,
+    REQ-INT-084, which covers logH's own equations, time transformations and step control, not its pairs)"; and "logH's
+    own time modes, logH and its TTL leapfrog, are unchanged (above)."
+  - `decisions.md` § R-500: "step_reversible: KDK, Yoshida-4, Yoshida-6 and TTL leapfrog true; … run_reversible:
+    logH-TTL only (R-162)"; REQ-VAL-190's verify: "every built regularised occupant (Heggie, logH in each time mode,
+    Aarseth–Zare + RK4) … a verdict that differs from the values R-500 lists (Aarseth–Zare + RK4 false, logH's TTL time
+    mode true) is reported for the review queue".
+  - The reference (R-159, not authority): `docs/reference/prin-rs/src/integrate/logh/driver.rs:150`, the default
+    `stepper: Stepper::Rk4`; `.../logh/step.rs:119-122`, its leapfrog "`X(h/2) V(h) X(h/2)`, Mikkola's own
+    composition", a drift–kick–drift whose TTL kick advances `W` at "**The MIDPOINT velocity, not the entering one**"
+    (`:103`), where Part 2b's KDK form is kick–drift–kick with each rate at the state as it stands.
+- **The conflict:** (i) logH × Euler, × KDK, × Yoshida-4 and × Yoshida-6 have no form in the corpus until TASK-M3-39
+  writes them, and TASK-M3-08's test must run each a step; (ii) the corpus names logH's own step "its leapfrog" and
+  R-500 the "TTL leapfrog", but says neither which leapfrog (the reference's drift–kick–drift with the midpoint `W`,
+  or Part 2b's KDK form) nor how logH's own time modes sit in the composed slot beside its pairs; the reference driver
+  runs RK4. Under RK4, TTL is not step-reversible, so REQ-VAL-190's verdict and logH-TTL's `run_reversible` turn on it.
+- **Options:**
+  - (a) logH's own time modes are its leapfrog, the reference's drift–kick–drift (`W` at the midpoint velocity in TTL
+    mode), selected as logH × KDK; logH × RK4 is the reference's classical RK4 on `(r, v, t, W)`; logH × Euler and ×
+    Yoshida wait on TASK-M3-39, and REQ-INT-006's test runs them once it writes them.
+  - (b) As (a), but every logH pair is Part 2b's generic form applied to logH's equations (Euler and RK4 classical on
+    `(r, v, t, W)`, KDK and Yoshida the explicit KDK on `Q = (r, t)`, `P = (v, W)`), written by TASK-M3-08, and
+    logH's leapfrog is a separate selectable row; TASK-M3-39 measures them.
+  - (c) logH's own time modes are logH × RK4, the reference driver's default, and the leapfrog is not built here; R-500's
+    "TTL leapfrog" then waits on TASK-M3-39's pair.
+- **Recommendation:** none; each sets what logH computes and its reversibility flags.
+- **Applied meanwhile:** nothing; TASK-M3-08 is stopped.
+- **Waits:** TASK-M3-08 (REQ-INT-006's logH pairs, REQ-VAL-190's logH arms, logH's profile).
+
+## RQ-810: logH's landing secant fires on a predicted landing whose test carries the literal `1 − 1e-12`, which Part 2c rule 1 forbids in a branch, and the reference's own note says the secant is off by default while its code turns it on *(conflict; a one-way door, it changes where logH's steps land; R-160, R-927, R-953; REQ-INT-084; context: TASK-M3-08, stopped before any code)*
+
+*Queued 13 Nov 2026 by TASK-M3-08's implementer, each quote re-read on `main` at 256384ade. Nothing is built.*
+
+*In plain English: logH's reference code decides whether a step is the one landing on a sync boundary using a tiny
+fixed number that means something different at single and double precision, which the kernel's rules forbid; and its
+comments and its code disagree on whether the landing correction is on at all. Heggie and Aarseth–Zare decide it
+differently, after the step.*
+
+- **File, section:**
+  - `docs/reference/prin-rs/src/integrate/logh/driver.rs:390-391` (R-159, not authority): "`let landing =
+    opts.clamp_final_step && ds >= (dt_left - s.t).max(T::zero()) / dtds * (T::one() - T::lit(1e-12));`", read before
+    the step, and `:397`, "`if landing && opts.land_iterate {`"; against `.../heggie/driver.rs:385`, "`if
+    opts.clamp_final_step && opts.land_iterate && s.t >= dt_left - tol {`", read after the step, as Part 2b transcribes
+    for Aarseth–Zare (step 6: "When the step just taken reaches the boundary").
+  - `.../logh/driver.rs:132`, on `land_iterate`: "**Default off.** Every committed number in `results/` was taken
+    without it, and AZ and Heggie do not have it at all"; against `:161`, `LhOpts::default`'s `land_iterate: true`, and
+    `.../heggie/driver.rs:103`, Heggie's `land_iterate: true`.
+  - `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction", rule 1: "**NO
+    PRECISION-DEPENDENT CONSTANT IN A CONTROL-FLOW DECISION.**" and "If a tolerance must scale with precision, it
+    belongs where the *value* is used, never where the *branch* is taken." `1 − 1e-12` is `1` at f32 and not at f64.
+- **Options:** (a) logH's secant fires as Heggie's and Aarseth–Zare's do, on the landing tested after the step
+  (`t_s ≥ dt_left − dt_left·LAND_EPS_REL`, the landing tolerance a supplied value, RQ-795), on by default as the code
+  has it; (b) the reference's predicted landing with the factor removed (`ds ≥ (dt_left − t_s)/(dt/ds)`), on by
+  default; (c) the secant off for logH, as the reference's note says.
+- **Recommendation:** none.
+- **Applied meanwhile:** nothing; TASK-M3-08 is stopped.
+- **Waits:** TASK-M3-08 (logH's step control in Part 2b, REQ-INT-084).
