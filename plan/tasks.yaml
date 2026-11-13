@@ -509,6 +509,14 @@
   requirements: [REQ-TOOL-233]  # R-1004 (13 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-65
+  milestone: M0
+  title: "Paths on Windows in the tests and the lints: escaped in TOML and JSON, no verbatim prefix, `/` in the lints' output and either separator in comparisons"
+  depends_on: []
+  needs: []
+  requirements: [REQ-TOOL-237]  # applied per R-369 (13 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"

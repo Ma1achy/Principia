@@ -32722,6 +32722,25 @@
   - R-1004
   milestone: M0
   note: "Added 13 Nov 2026 by R-1004 (RQ-807 (3) + (4), and (i); \"No credential on the PC\"). Closed by TASK-M0-62."
+- id: REQ-TOOL-237
+  area: TOOL
+  statement: "Every test that writes a path into a TOML or JSON file must write it escaped for that file's strings and without Windows' verbatim prefix (`\\\\?\\`, which `canonicalize` adds), and every test that compares a path with a tool's output must compare it without assuming the separator; the xtask lints no-alloc, constants, vocab and compute-pipelines must print each finding's repo-relative path with `/` on every platform; what each lint refuses, and what each test asserts, is unchanged (R-711, R-860, R-946)."
+  source:
+  - file: decisions.md
+    section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
+  - file: decisions.md
+    section: "R-860 — R-859's list of what the Windows runner may run is not exhaustive: the nightly `win-tests` job and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, never required checks *(closes RQ-742; refines R-859)*"
+  - file: decisions.md
+    section: "R-946 — \"Windows once proven\" counts the PC's CPU-only tiers alone: the slow tier, the mutation runs and the process tests may move to the PC's per-merge run without waiting for the card, containment first and unchanged, and only once the CPU tiers repeat, three runs on one commit of `main` with the same result for every test and every hosted-Linux pass passing on all three; the PC's GPU results stay measurements until each of the four failing steps is explained, sorted by running it under lavapipe as well as on the RTX *(no RQ; refines R-909; amends R-719)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p validation --test paths and cargo test -p xtask --test paths: a verbatim path (`\\\\?\\E:\\a`, `\\\\?\\UNC\\s\\h`) loses its prefix and no other path changes, a path's `\\` and `\"` are escaped for TOML and JSON, Windows output's `\\` reads as `/`, and a lint path's separator prints as `/`; controls: the prefix kept, an unescaped `\\`, and a separator left as `\\` each fail; the touched lint, controls, deps, links, registry, validated_chart, expected_message and build_kernel tests pass on the Mac with and without --features controls; on the PC, win-tests' groups B1, B2 and B3 of run 43431404746 pass on the first run on `main` after merge, except the qa files the PR lists and the tests a group-A fix also holds back (a shell stand-in, a Unix tool), its run id reported (a measurement, R-711)"
+  rulings:
+  - R-711
+  - R-860
+  - R-946
+  milestone: M0
+  note: "Added 13 Nov 2026 (applied per R-369: a test-only and tooling fix that changes no result, the owner's goal of 12 Nov 2026 for the Windows runner). Closed by TASK-M0-65. From win-gpu run 43431404746 (ab1dc06c5), groups B1 (paths spliced into TOML and JSON), B2 (separators) and B3 (the verbatim prefix). The qa files' sites wait for qa's round (R-290). Numbered 237: 234 is TASK-M0-63's, and TASK-M0-64 renumbers its own to the next free id, likely 235."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
