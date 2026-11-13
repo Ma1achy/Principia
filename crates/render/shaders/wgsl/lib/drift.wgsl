@@ -43,7 +43,7 @@ fn dbg_drift_place(x: f32, compaction: u32, lin_r: f32, eps: f32) -> f32 {
 // rounding bound of a fresh sample's drift against a CPU reference. The CPU mirrors are
 // `crate::present::{DRIFT_BAND_E, DRIFT_BAND_LZ}`.
 const DBG_DRIFT_BAND_E: f32 = 1.7881393432617188e-6;
-const DBG_DRIFT_BAND_LZ: f32 = 5.960464477539062e-7;
+const DBG_DRIFT_BAND_LZ: f32 = 5.960464477539063e-7;
 
 // Whether `x` is NaN or `±∞`, an exponent of all ones, tested on its bits before any arithmetic (R-436; render_gui_spec
 // §10.1; gpu_determinism_note rule 4). WGSL pins neither the bits of `∞ − ∞` nor a comparison on `∞`, so a drift view

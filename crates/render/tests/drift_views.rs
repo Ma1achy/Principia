@@ -613,6 +613,9 @@ fn c0() -> Rgb {
     present::drift_ramp(0.5, false)
 }
 
+/// Three bodies' positions or momenta, `[x, y]` each.
+type Vec2s = [[f32; 2]; 3];
+
 /// The samples of [`fresh_scene`]: the showcase's eight states, then the two whose reference is near zero.
 const FRESH: u32 = 10;
 
@@ -620,7 +623,7 @@ const FRESH: u32 = 10;
 /// `L_z` is 0 but for rounding, its `S` not; and a near-parabolic state, the dyadic tile's momenta scaled so that
 /// `K = |V|`, whose `E` is 0 but for rounding, its `K + |V|` not. The band relative to the reference is nearly empty on
 /// each, and the band of the rounding is not.
-fn near_zero_states() -> [([[f32; 2]; 3], [[f32; 2]; 3], [f32; 3]); 2] {
+fn near_zero_states() -> [(Vec2s, Vec2s, [f32; 3]); 2] {
     let eight = drift::figure_eight().ic;
     let f = |a: [[f64; 2]; 3]| a.map(|v| v.map(|c| c as f32));
     let m = [0.25_f32, 0.375, 0.375];
@@ -740,6 +743,7 @@ fn ramp_neutral() -> Rgb {
 }
 
 /// `ramp` with its band cut: the drift compacted as it is read, for the control.
+#[cfg(feature = "controls")]
 fn unbanded(ramp: &FieldRamp) -> Colouring {
     let band = ramp.field.band.unwrap_or_else(|| panic!("no band"));
     let source = ramp.wgsl();
@@ -816,6 +820,7 @@ negative_control!(
 );
 
 /// The band of R-652 before R-928, `k·2⁻²³·|reference|` with `k = 128`, in place of the view's.
+#[cfg(feature = "controls")]
 fn relative_band(view: View) -> Colouring {
     let field = if view.energy {
         "energy_drift"
@@ -959,7 +964,9 @@ negative_control!(
     }
 );
 
-/// Under `log`, which has no band, a drift inside `symlog`'s band keeps its place, off the place of 0.
+/// Under `log`, which has no band, a drift inside `symlog`'s band keeps its place, off the place of 0: by a squared
+/// distance over 0.001, the band being some `10⁻⁷`, a tenth of `ε`, where `log` places half of it about a tenth of the
+/// way up viridis (0.008 on `Lz_drift`'s dyadic state).
 fn check_log_unbanded(view: View, s: &Scene, image: &[Rgb]) {
     let zero = present::dbg_drift(
         0.0,
@@ -970,7 +977,7 @@ fn check_log_unbanded(view: View, s: &Scene, image: &[Rgb]) {
         [0.5, 0.5],
     );
     assert!(
-        distance(tile(s, image, 0), zero) > 0.02,
+        distance(tile(s, image, 0), zero) > 0.001,
         "`{}`: `log` drew a drift inside `symlog`'s band as 0",
         view.id
     );
@@ -1092,10 +1099,7 @@ negative_control!(
 
 /// The band's widths, `k'·2⁻²³` of the f64 `K + |V|` and `S` of the state: on the dyadic state, where `S` is exact in
 /// f32, and on the figure-eight, whose `L_z` is near 0 and its `S` is not.
-fn check_scales(
-    energy: fn([[f32; 2]; 3], [[f32; 2]; 3], [f32; 3]) -> f32,
-    lz: fn([[f32; 2]; 3], [[f32; 2]; 3]) -> f32,
-) {
+fn check_scales(energy: fn(Vec2s, Vec2s, [f32; 3]) -> f32, lz: fn(Vec2s, Vec2s) -> f32) {
     let [(r8, p8, m8), _] = near_zero_states();
     for (r, p, m) in [(R, P, [0.25_f32, 0.375, 0.375]), (r8, p8, m8)] {
         let [.., kv, s] = exact(r, p, m);

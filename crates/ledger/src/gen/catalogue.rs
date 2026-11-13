@@ -233,6 +233,9 @@ impl View {
             if !DRIFT_LATCHES.contains(&reference) {
                 out.push(Accessor::Member(reference.to_owned()));
             }
+            let (members, ic) = drift_band_reads(self.field);
+            out.extend(members.iter().map(|m| Accessor::Member((*m).to_owned())));
+            out.extend(ic.iter().map(|m| Accessor::IcMember((*m).to_owned())));
         }
         out
     }
@@ -550,6 +553,16 @@ pub fn drift_reference(field: &str) -> &'static str {
     match field {
         "Lz_drift" => "Lz_0",
         _ => "E_0",
+    }
+}
+
+/// What the neutral band of the drift `field` reads (R-928): the sample's `r` and `p`, and for `energy_drift` its
+/// `ICDescriptor` masses, `m0 m1 m2`; as `(SimState members, ICDescriptor members)`, the reads of
+/// [`drift_band_wgsl`].
+pub fn drift_band_reads(field: &str) -> (&'static [&'static str], &'static [&'static str]) {
+    match field {
+        "Lz_drift" => (&["r", "p"], &[]),
+        _ => (&["r", "p"], &["m0", "m1", "m2"]),
     }
 }
 
@@ -1212,14 +1225,26 @@ fn drift_check(n: &str) -> String {
     let band = [
         format!("read.{reference}.to_bits()"),
         format!("s.{reference}.to_bits()"),
-        format!("\"`{n}`'s neutral band's reference {NOT_DERIVED}\""),
+        format!("\"`{n}`'s reference, its guard's (R-436), {NOT_DERIVED}\""),
     ];
-    format!(
+    let mut out = format!(
         "{}\n{}\n{}",
         call(4, "", "expect", &energy),
         call(4, "", "expect", &lz),
         call(4, "", "expect", &band)
-    )
+    );
+    // The neutral band's reads (R-928), the probe's: its `r` and `p`; the masses are the derived value's own.
+    let (members, _) = drift_band_reads(n);
+    for m in members {
+        let args = [
+            format!("read.{m}.map(|v| v.map(f32::to_bits))"),
+            format!("s.{m}.map(|v| v.map(f32::to_bits))"),
+            format!("\"`{n}`'s neutral band's `{m}` {NOT_DERIVED}\""),
+        ];
+        out.push('\n');
+        out.push_str(&call(4, "", "expect", &args));
+    }
+    out
 }
 
 /// The field whose alteration the negative control of `e`'s test stores: the field itself, or, for a derived field,
