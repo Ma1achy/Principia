@@ -231,8 +231,10 @@ fn heggie_pairs() {
 }
 
 /// A stepper that takes no step: the control's.
+#[cfg(feature = "controls")]
 struct NoStep;
 
+#[cfg(feature = "controls")]
 impl HgStepper for NoStep {
     fn pair_profile() -> CapabilityProfile {
         Form::Rk4.pair_profile()
@@ -447,8 +449,10 @@ negative_control!(
 );
 
 /// A watch that reports every state finite: the control's, the explicit test removed.
+#[cfg(feature = "controls")]
 struct NoTest;
 
+#[cfg(feature = "controls")]
 impl<R> HgWatch<R> for NoTest {
     fn finite(&mut self, _q: &HgQ<R>, _p: &HgP<R>) -> bool {
         true
@@ -917,10 +921,13 @@ impl P for f32 {
     }
 }
 
+/// A flow's three pair separations and pair masses at a position.
+type Pairs<F> = fn(&F, &<F as Flow<f64>>::Q) -> [(f64, f64); 3];
+
 /// A flow that records the pair separations and pair masses at every evaluation, for the step's `τ`.
 struct Recording<'a, F: Flow<f64>> {
     flow: &'a F,
-    pairs: fn(&F, &<F as Flow<f64>>::Q) -> [(f64, f64); 3],
+    pairs: Pairs<F>,
     taus: RefCell<Vec<f64>>,
 }
 

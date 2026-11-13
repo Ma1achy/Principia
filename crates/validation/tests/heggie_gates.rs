@@ -116,9 +116,16 @@ fn check_radial(reader: &str) {
             Ok(Verdict::Fail),
             "{name}: at the read drift"
         );
+        // Under Aarseth–Zare the two read-outs coincide bitwise (re-registered from the Cartesian state at each
+        // boundary), so a Cartesian reader reads the regularised drift there; the reader check binds under Heggie.
+        let cartesian = if occupant == Occupant::Heggie {
+            Verdict::Fail
+        } else {
+            Verdict::Pass
+        };
         assert_eq!(
             at(1.0, "cartesian"),
-            Ok(Verdict::Fail),
+            Ok(cartesian),
             "{name}: the Cartesian reader"
         );
     }
