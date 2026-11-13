@@ -643,7 +643,7 @@ fn check_gated_unit_test_fails(case: &str, gate: &str, ok: bool, stderr: &str, e
         "{case}: stderr does not cite R-194:\n{stderr}"
     );
     assert!(
-        stderr.contains("error[E04") && slashed(&stderr).contains(lib),
+        stderr.contains("error[E04") && slashed(stderr).contains(lib),
         "{case}: stderr does not show the compiler's error:\n{stderr}"
     );
 }
