@@ -1668,6 +1668,8 @@ enum Clock {
     To(f64),
     /// `t + 2x` where `x ≥ 3Δ_sync/4`, else `t`: a short step leaves the clock where it was.
     Stall,
+    /// One float short of `Δ_sync` where `x < Δ_sync/2`, else one float past it: no step lands the clock on it.
+    Gap,
 }
 
 thread_local! {
@@ -1696,6 +1698,15 @@ impl AzStepper for Scripted {
             Clock::Scale(k) => q.t + v::<R>(k) * x,
             Clock::Jump(c) => q.t + x + v::<R>(c),
             Clock::To(t) => v(t),
+            Clock::Gap => {
+                let d = 0.125f64;
+                let side = if x < v(0.0625) {
+                    f64::from_bits(d.to_bits() - 1)
+                } else {
+                    f64::from_bits(d.to_bits() + 1)
+                };
+                v(side)
+            }
             Clock::Stall => {
                 if x >= v(0.75 * 0.125) {
                     q.t + v::<R>(2.0) * x
@@ -1778,7 +1789,54 @@ fn check_secant(run: ScriptRun<'_>) {
         Some(0.125),
         "the retakes land the clock on Δ exactly ({t:?})"
     );
-    assert!(out.count.steps >= 2, "the clamped step and a retake");
+    assert_eq!(
+        (
+            out.count.steps,
+            out.count.most_bisections,
+            out.count.closings
+        ),
+        (2, 0, 0),
+        "the clamped step and one retake at half its size, no halving, no closing step"
+    );
+    never_past(&t);
+
+    // From `t = 0.6Δ`: `η = 0.3` puts the first step at `0.3Δ` (the clock `0.6Δ`), the clamped second reaches `1.4Δ`,
+    // and the secant's `want` is the remainder `0.4Δ`, so one retake at half the step lands.
+    let mut p = scripted();
+    p.eta = 0.3;
+    let (out, t) = run(Clock::Scale(2.0), 0, p);
+    assert_eq!(
+        (out.boundary, t.last().copied(), out.count.most_bisections),
+        (1, Some(0.125), 0),
+        "a landing from t_before > 0 takes the remainder as its want ({t:?}, {} steps)",
+        out.count.steps
+    );
+
+    // The bisection's cap: a clock every step puts past the boundary, the secant off, 3 halvings.
+    let mut p = scripted();
+    p.secant_tries = 0;
+    p.bisect_tries = 3;
+    p.n_min = 3;
+    p.step_budget_rate = 0.0;
+    let (out, _) = run(Clock::To(0.25), 0, p);
+    assert_eq!(
+        (out.count.most_bisections, out.count.steps, out.count.end),
+        (3, 4, End::Exhausted),
+        "the bisection stops at its cap"
+    );
+
+    // A clock with no landing step: the bracket closes to adjacent step sizes before the cap of 64, the kept clock
+    // one float short, and the copy, unable to close it, is spent unlanded.
+    let mut p = scripted();
+    p.n_min = 200;
+    p.step_budget_rate = 0.0;
+    let (out, t) = run(Clock::Gap, 0, p);
+    assert!(
+        out.count.most_bisections > 1 && out.count.most_bisections < 64,
+        "the bracket closes before the cap: {} halvings",
+        out.count.most_bisections
+    );
+    assert_eq!((out.count.end, out.boundary), (End::Exhausted, 0));
     never_past(&t);
 
     let mut p = scripted();

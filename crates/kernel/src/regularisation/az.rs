@@ -823,8 +823,7 @@ pub fn entry_size<R: AzReal>(q: &AzQ<R>, params: &AzParams<R>) -> R {
 /// One landing's retakes (Part 2b, step 6; R-998), from the saved state `(q, p)` whose step `h` gave `(q1, p1)` past the
 /// boundary `dt_left`: the secant on `t(h)`, at most `secant_tries` retakes, stopping where a retake ends the clock on
 /// the boundary, its increment is not finite or not positive, or the tries are spent; then, where the last retake is
-/// still past, a bisection on `h` between the largest step known to end at or short of the boundary (`0`, the saved
-/// state, to begin with) and the least known to end past it, at most `bisect_tries` halvings, stopping where a halving
+/// still past, a bisection on `h` between `0` (the saved state) and that retake's step, at most `bisect_tries` halvings, stopping where a halving
 /// ends the clock on the boundary or the bracket's midpoint is one of its ends. The bisection keeps the bracket's short
 /// end, so the step kept ends the clock at or short of the boundary, never past it. Every branch compares the clock
 /// with `dt_left`, a step with the bracket's ends, or a count with its cap. Each retake is a counted step.
@@ -851,10 +850,6 @@ fn land<S: AzStepper, R: AzReal>(
     let before = q.t;
     let want = dt_left - before;
     let (mut q1, mut p1) = (q1, p1);
-    // The bracket: `lo` the largest step known to end at or short of the boundary, with its state; `hi` the least known
-    // to end past it.
-    let (mut lo, mut lo_q, mut lo_p) = (zero, *q, *p);
-    let mut hi = h;
     let mut cur = h;
     let mut retakes = 0;
     let mut go = true;
@@ -866,17 +861,14 @@ fn land<S: AzStepper, R: AzReal>(
             cur = cur * want / got;
             (q1, p1) = S::regularised_step(system, q, p, cur);
             retakes += 1;
-            if q1.t <= dt_left {
-                if cur > lo {
-                    (lo, lo_q, lo_p) = (cur, q1, p1);
-                }
-            } else if q1.t > dt_left && cur < hi {
-                hi = cur;
-            }
         }
     }
     let mut halvings = 0;
     if finite(q1.t) && q1.t > dt_left {
+        // The bracket: `lo` the largest step known to end the clock at or short of the boundary, with its state (`0`,
+        // the saved state, to begin with); `hi` the least known to end it past (the secant's last step).
+        let (mut lo, mut lo_q, mut lo_p) = (zero, *q, *p);
+        let mut hi = cur;
         let two = two::<R>();
         go = true;
         while go && halvings < params.bisect_tries {

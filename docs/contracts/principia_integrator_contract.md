@@ -643,11 +643,8 @@ rule; the rest of steps 1 to 8 stands.
 - **The secant.** `want = dt_left − t_before`, `cur = h`; up to `land_max_iters` (4) times: `got = t_s − t_before`;
   stop if `got` is not finite, `got ≤ 0`, or `t_s = dt_left`; otherwise `cur = cur·want/got` and the step is retaken
   from the saved state at `cur`, each retake a counted step.
-- **The bracket.** Through the secant the march keeps `lo`, the largest step size known to end the clock at or short of
-  the boundary, with its state (`lo = 0`, the saved state, to begin with), and `hi`, the least known to end it past
-  (`h` to begin with).
-- **The bisection.** Where the secant's last retake still ends the clock past the boundary, its clock finite, the step
-  is retaken at `mid = lo + (hi − lo)/2`, up to 64 times, each a counted step: a retake that ends the clock at or short
+- **The bisection.** Where the secant's last retake still ends the clock past the boundary, its clock finite, a bracket
+  is set: `lo = 0`, the saved state, and `hi` that retake's step size. The step is retaken at `mid = lo + (hi − lo)/2`, up to 64 times, each a counted step: a retake that ends the clock at or short
   of the boundary becomes `lo`, with its state, and one that ends it past, or whose clock is not a number, becomes `hi`;
   it stops where a retake ends the clock on the boundary, or where `mid` is `lo` or `hi` (the bracket is one step size
   wide). The state kept is `lo`'s. So the step kept never ends the clock past the boundary.
