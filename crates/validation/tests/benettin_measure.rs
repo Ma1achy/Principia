@@ -28,10 +28,13 @@
 //!   Burrau first, and its eight starting conditions are the calibration orbits then the five others.
 //! - `eight_orbit_rules`: the bias against the reference, the reference read, the spread, the pick with an orbit left
 //!   out, the report's lines and its completeness, on synthetic candidates.
+//! - `eight_orbit_provisional`: the values in force, provisional (R-976), are read from the candidate at both their
+//!   `‖δ₀‖` and their `n_renorm`, never one alone, and are absent where the sweep did not run them.
 //! - `eight_orbit_gate`: the report's candidates leave out the orbit a control names and refuse an unknown one before
-//!   the sweep runs; the report passes complete, its regions the chaotic orbits, gives the rule's pick beside the
-//!   unchanged proposal and R-976's proposed `min_regions` ≥ 6, and fails with an orbit left out; an unknown shadow
-//!   form is refused before the sweep; on synthetic candidates.
+//!   the sweep runs; the report passes complete, its regions the chaotic orbits, gives the rule's pick as the
+//!   re-run's proposal beside the values in force, provisional (R-976), with their worst change (finite, not finite, or
+//!   not in the sweep), and R-976's proposed `min_regions` ≥ 6 with its evidence, and fails with an orbit left out;
+//!   an unknown shadow form is refused before the sweep; on synthetic candidates.
 
 use std::path::Path;
 
@@ -43,10 +46,10 @@ use validation::measure::benettin::{
     bias, burrau, burrau_finite, calibration_orbit, calibration_orbits, chaotic_orbits,
     chaotic_spread, choose, eight_orbit_candidates, eight_orbit_report, eight_orbits, figure_eight,
     finite_time_gaps, kepler_embedded, lagrange, lagrange_exponent, lambda, lambda_in,
-    leave_one_out_lines, periodic_complete, periodic_set, pythagorean, reference, report_complete,
-    routh_beta, run_lines, select, select_without, shadow_forms, spread, spread_lines,
-    sweep_confirms, tolerance, worst_gap, BenettinCalibrationGate, Candidate, Form, FormRow,
-    GapRow, Orbit, PeriodicReads, Precision, ShadowFormGate, Test10, BURRAU_DELTA_0,
+    leave_one_out_lines, periodic_complete, periodic_set, provisional_worst, pythagorean,
+    reference, report_complete, routh_beta, run_lines, select, select_without, shadow_forms,
+    spread, spread_lines, sweep_confirms, tolerance, worst_gap, BenettinCalibrationGate, Candidate,
+    Form, FormRow, GapRow, Orbit, PeriodicReads, Precision, ShadowFormGate, Test10, BURRAU_DELTA_0,
     CRITERION_DELTA_0, FORM_DELTA_0, GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0,
     PROPOSED_MIN_REGIONS, PROPOSED_N_RENORM, PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
 };
@@ -1169,6 +1172,47 @@ negative_control!(
     check_eight_orbit_rules(|l, r, _| (l - r) / r.abs())
 );
 
+// ── eight_orbit_provisional ─────────────────────────────────────────────────────────────────────────────────────
+
+fn check_provisional(worst: fn(&[Candidate]) -> Option<f64>) {
+    use Precision::F64;
+    let at = |delta_0, n_renorm, change| syn(delta_0, n_renorm, &[("A", F64, 0.5, change)]);
+    let near = [
+        at(1e-3, PROPOSED_N_RENORM, 0.125),
+        at(PROPOSED_DELTA_0, 100, 0.25),
+        at(PROPOSED_DELTA_0, 1000, 0.375),
+    ];
+    assert_eq!(
+        worst(&near),
+        None,
+        "a candidate that is the provisional values in one coordinate alone is read as them"
+    );
+    let mut with = near.to_vec();
+    with.push(at(PROPOSED_DELTA_0, PROPOSED_N_RENORM, 0.5));
+    let got = worst(&with).expect("the provisional values are in the sweep");
+    assert!(
+        (got - 0.5).abs() < 1e-12,
+        "the provisional values' worst change is {got}, not 0.5"
+    );
+    assert_eq!(worst(&[]), None);
+}
+
+#[test]
+fn eight_orbit_provisional() {
+    check_provisional(provisional_worst);
+}
+
+negative_control!(
+    eight_orbit_provisional,
+    "the provisional values matched on ‖δ₀‖ alone must fail",
+    expected = "in one coordinate alone",
+    check_provisional(|c| {
+        c.iter()
+            .find(|c| c.delta_0 == PROPOSED_DELTA_0)
+            .map(Candidate::worst)
+    })
+);
+
 // ── eight_orbit_gate ────────────────────────────────────────────────────────────────────────────────────────────
 
 fn check_eight_orbit_gate(expect_control: Verdict) {
@@ -1236,13 +1280,34 @@ fn check_eight_orbit_gate(expect_control: Verdict) {
         report.description,
         format!(
             "d: reported, not gated (R-649; the verdict is the report's completeness alone). Over the 3 starting \
-             conditions the rule picks ‖δ₀‖ = 1e-6, n_renorm = 1 (worst change 0.0000), tolerance 0; the proposal \
-             stays ‖δ₀‖ = 3e-3, n_renorm = 300, tolerance {PROPOSED_TOLERANCE}, for the owner at the M3 gate \
-             (REQ-INT-076). Bias is against f64 at ‖δ₀‖ = 1e-6 at the same n_renorm. Proposed (R-976): \
-             min_regions ≥ 6, the chaotic orbits, for the owner at the M3 gate"
+             conditions the rule picks ‖δ₀‖ = 1e-6, n_renorm = 1 (worst change 0.0000), tolerance 0: the re-run's \
+             proposal from its evidence, in this shadow form. In force, provisional (R-976): ‖δ₀‖ = 3e-3, n_renorm = \
+             300, tolerance {PROPOSED_TOLERANCE}, not in this sweep; the owner confirms REQ-INT-076's values at the M3 \
+             gate. Bias is against f64 at ‖δ₀‖ = 1e-6 at the same n_renorm. Proposed (R-976): min_regions ≥ 6, the \
+             chaotic orbits, for the owner at the M3 gate; its evidence, this report's 2 regions and the pick with \
+             each left out (its negative results)"
         )
     );
     assert_eq!(PROPOSED_MIN_REGIONS, 6);
+    // The values in force, provisional (R-976), measured where the sweep ran them: finite, and not finite.
+    for (lambdas, said) in [
+        ([0.5, 0.75, 0.5, 0.5], "worst change here 0.5000;"),
+        ([f64::INFINITY; 4], "worst change here not finite;"),
+    ] {
+        let mut ran = grid();
+        ran.push(Candidate {
+            delta_0: PROPOSED_DELTA_0,
+            n_renorm: PROPOSED_N_RENORM,
+            ..every(PROPOSED_DELTA_0, lambdas)
+        });
+        let with = eight_orbit_report(&config, "t", "d", &ran, &orbits, &["A", "B"]).expect("runs");
+        assert!(
+            with.description
+                .contains(&format!("tolerance {PROPOSED_TOLERANCE}, {said}")),
+            "the provisional values' result is not `{said}`: {}",
+            with.description
+        );
+    }
     // Its control: an orbit's runs left out, which the completeness check tells apart.
     let control =
         eight_orbit_report(&config, "t", "d", &fewer, &orbits, &["A", "B"]).expect("runs");

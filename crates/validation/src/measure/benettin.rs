@@ -634,11 +634,22 @@ pub fn eight_orbit_candidates(
     }
 }
 
+/// The values in force, provisional (R-976), measured in `candidates`: the provisional `(‖δ₀‖, n_renorm)`'s worst
+/// change, `None` where the sweep did not run it.
+pub fn provisional_worst(candidates: &[Candidate]) -> Option<f64> {
+    candidates
+        .iter()
+        .find(|c| c.delta_0 == PROPOSED_DELTA_0 && c.n_renorm == PROPOSED_N_RENORM)
+        .map(Candidate::worst)
+}
+
 /// The eight-orbit report on `candidates` over `orbits`, its regions the orbits named in `chaotic`, against `config`:
 /// reported, never gated (R-649), its verdict the report's completeness alone ([`report_complete`]). Its description
-/// gives the rule's pick over every orbit and the tolerance the rule gives, beside the proposal, which it leaves as it
-/// is; its negative results, the non-finite count and the pick with each chaotic orbit left out; its scatter, each
-/// candidate's spread over the chaotic orbits and each run. Refused for no candidates.
+/// gives the rule's pick over every orbit and the tolerance the rule gives, the re-run's proposal from its evidence in
+/// the shadow form it ran; beside it the values in force, provisional (R-976), which it leaves as they are, and their
+/// worst change here ([`provisional_worst`]); and R-976's proposed `min_regions` with its evidence. Its negative
+/// results, the non-finite count and the pick with each chaotic orbit left out; its scatter, each candidate's spread
+/// over the chaotic orbits and each run. Refused for no candidates.
 pub fn eight_orbit_report(
     config: &GateConfig,
     name: &str,
@@ -659,21 +670,29 @@ pub fn eight_orbit_report(
     negative_results.extend(leave_one_out_lines(candidates, chosen, chaotic));
     let mut scatter = spread_lines(candidates, chaotic);
     scatter.extend(run_lines(candidates));
+    let provisional = match provisional_worst(candidates) {
+        Some(w) if w.is_finite() => format!("worst change here {w:.4}"),
+        Some(_) => "worst change here not finite".to_string(),
+        None => "not in this sweep".to_string(),
+    };
     Ok(report(
         config,
         name,
         format!(
             "{description}: reported, not gated (R-649; the verdict is the report's completeness alone). Over the \
-             {} starting conditions the rule picks ‖δ₀‖ = {:e}, n_renorm = {} (worst change {:.4}), tolerance {}; \
-             the proposal stays ‖δ₀‖ = {PROPOSED_DELTA_0:e}, n_renorm = {PROPOSED_N_RENORM}, tolerance \
-             {PROPOSED_TOLERANCE}, for the owner at the M3 gate (REQ-INT-076). Bias is against f64 at ‖δ₀‖ = \
+             {} starting conditions the rule picks ‖δ₀‖ = {:e}, n_renorm = {} (worst change {:.4}), tolerance {}: \
+             the re-run's proposal from its evidence, in this shadow form. In force, provisional (R-976): ‖δ₀‖ = \
+             {PROPOSED_DELTA_0:e}, n_renorm = {PROPOSED_N_RENORM}, tolerance {PROPOSED_TOLERANCE}, {provisional}; \
+             the owner confirms REQ-INT-076's values at the M3 gate. Bias is against f64 at ‖δ₀‖ = \
              {REFERENCE_DELTA_0:e} at the same n_renorm. Proposed (R-976): min_regions ≥ {PROPOSED_MIN_REGIONS}, the \
-             chaotic orbits, for the owner at the M3 gate",
+             chaotic orbits, for the owner at the M3 gate; its evidence, this report's {} regions and the pick with \
+             each left out (its negative results)",
             orbits.len(),
             chosen.delta_0,
             chosen.n_renorm,
             chosen.worst(),
-            tolerance(chosen.worst())
+            tolerance(chosen.worst()),
+            chaotic.len()
         ),
         report_complete(candidates, orbits),
         scatter,
