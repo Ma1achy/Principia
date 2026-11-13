@@ -29150,11 +29150,14 @@ runner, whose jobs have their own workflow file; `ci.yml`, its counts and gates 
 required checks; moving required or heavy CI work to it is not approved).*
 *Amended in part by R-970 (11 Nov 2026: a run clearly hung or stuck because of a bug is caught and cancelled, on
 `main` too).*
+*Amended in part by R-986 (12 Nov 2026: `win-gpu.yml`'s `win-vulkan`, the 85-minute run on R-711's runner, runs on
+merges to `main`, nightly and by dispatch only, and a newer run of it cancels an older one, on `main` too).*
 *Still in force: all of it but what counts as docs-only and what a docs-only head runs, which are R-662's and R-677's,
 how the merge-ready head's mutants run and `reviews.yml`'s concurrency, which are R-676's, and which heads' mutants run,
 which is R-677's, and which of `gui`'s paths are GPU paths, which is R-692's: the push trigger, the cancelled runs, the in-job skips under each required check's own name, mutants
 on the merge-ready head, the approved target cache, no paid runner, and no self-hosted runner but R-711's; a run on
-`main` is never cancelled unless it is clearly hung or stuck because of a bug, which is R-970's.*
+`main` is never cancelled unless it is clearly hung or stuck because of a bug, which is R-970's, or it is a run of
+`win-vulkan` on R-711's runner that a newer one cancels, which is R-986's.*
 *30 Oct 2026 · the owner's two messages of that day; applied in `.github/workflows/ci.yml`,
 `.github/workflows/mutants.yml`, `scripts/ci_changes.sh` (new), `xtask/tests/ci_changes.rs` (new), three qa files
 (below), `plan/OPERATIONS.md`, `plan/WORKFLOW.md`, `docs/contracts/principia_parity_contract.md` §6, eight
@@ -31226,8 +31229,14 @@ Adds REQ-INT-113; changes REQ-EVT-006, REQ-INT-057, REQ-INT-061, REQ-INT-064, RE
 *Refined by R-859 (8 Nov 2026: from the anchor move the runner may run, as named measurements, the GPU suites nightly
 and on pushes to `main` (Vulkan now, DX12 from Phase 2), gpu-idle, the weekly proof and the heavy-work comparison;
 Windows benchmark numbers are a separate named series; its security rules are unchanged).*
+*Read with R-986 (12 Nov 2026: `win-vulkan`, the 85-minute run, runs on merges to `main`, nightly and by dispatch only,
+a newer run cancelling an older one; item 1's triggers unchanged).*
+*Read with R-988 (12 Nov 2026: a job of this runner that stops unclearly is re-run once, automatically, by a hosted
+job, and a hung one ends at its time limit, both logged; a re-run keeps its run's event, so item 1's triggers and item
+6's check of `github.actor` on a re-run hold).*
 *Still in force: all of it, items 1 to 6; R-856 says which recorded runs take a clean target; R-859 says what the
-runner may run from the anchor move, and that moving required or heavy CI work to it is not approved.*
+runner may run from the anchor move, and that moving required or heavy CI work to it is not approved; R-986 says when
+`win-vulkan` runs and what cancels it; R-988 adds the one re-run and the time limits.*
 *Read with R-862 (8 Nov 2026: the owner's DX12 order of 4 Nov, whose "in no CI job" item 2 rewords, is now that
 ruling, the number "The DX12 order's wording" below could not yet give).*
 *5 Nov 2026 · the owner's message of that day; applied in the forward lines of R-58, R-110, R-174, R-186 and R-656,
@@ -31334,7 +31343,10 @@ R-713 is in the "ci" group of `plan/rule_groups.yaml`.
 ## R-714 — A failed CI job is retried automatically only on a runner-level fault, in at most two retries, never on a real test failure or a flake, the classifier a script tested on saved logs; every CI speed-up step reports disk use and must reduce or hold it; lands in `plan/OPERATIONS.md` § "Merging"
 *Extended by R-968 (11 Nov 2026: a job whose only failure is the package-install step is re-run once, on
 GitHub-hosted runners, marked as a re-run).*
-*Still in force: all of it, R-968 adding a failure of the install step alone, re-run once.*
+*Extended by R-988 (12 Nov 2026: a job of R-711's self-hosted runner that stops unclearly, on a runner-level fault, is
+re-run once, automatically, by a hosted job of its own, and logged).*
+*Still in force: all of it, R-968 adding a failure of the install step alone, re-run once, and R-988 a runner fault on
+R-711's runner, re-run once, never on a real test failure or a flake.*
 *4 Nov 2026 · the owner's three messages of that day, written up 5 Nov 2026 under the batch's item (3); applied in `plan/OPERATIONS.md` § "Merging", `plan/rule_groups.yaml` and `plan/section_notes.yaml`; changes no requirement; built by PR #392*
 
 The owner's words, 4 Nov 2026, verbatim:
@@ -32820,7 +32832,12 @@ the path-cover and time-column benchmarks stay as named measurements, never requ
 *Corrected in part by R-861 (8 Nov 2026, RQ-743: the 7 Nov order's "push trigger" was an error; the comparison starts
 by `workflow_dispatch` on the task branch, the runner's security rules unchanged).*
 *Amended in part by R-905 (8 Nov 2026: heavy work, the slow tier and the mutation run, may run on the Windows runner on `main` and nightly, advisory and never required, where R-905's placement rule puts it, after Windows containment, the 8 GiB cap and the 36-hour no-run alert; R-909's model governs).*
-*Still in force: all of it, the owner's words and the 7 Nov order quoted as given; the order's "via push trigger" reads as R-861 corrects it, and the list of what the runner may run is not exhaustive (R-860). Its "Held for the owner" items are answered by R-860 and R-861. Its "NOT approved yet" for heavy work gives way to R-905's placement rule; nothing on the runner becomes a required check.*
+*Amended in part by R-988 (12 Nov 2026: of the runner's security rules, the owner's job rules of 5 Nov 2026 as the
+workflows carry them, "No job here is gathered, retried or read by any gate", no longer forbid one automatic re-run of
+a job that stops unclearly, made by a hosted job; a hung job ends at a time limit; both are logged).*
+*Read with R-986 (12 Nov 2026: the GPU suites' run on pushes to `main`, `win-vulkan`, runs on merges to `main`,
+nightly and by dispatch only, a newer run cancelling an older one).*
+*Still in force: all of it, the owner's words and the 7 Nov order quoted as given; the order's "via push trigger" reads as R-861 corrects it, and the list of what the runner may run is not exhaustive (R-860). Its "Held for the owner" items are answered by R-860 and R-861. Its "NOT approved yet" for heavy work gives way to R-905's placement rule; nothing on the runner becomes a required check. Its security rules stand but for R-988's one re-run, which gathers nothing and is read by no gate.*
 *8 Nov 2026 · the owner's ruling of that day, pasted as their own; applied in the forward lines of R-186, R-656 and
 R-711, `docs/contracts/principia_parity_contract.md` § 6, `REVIEW_QUEUE.md` (RQ-742 and RQ-743, new), `plan/OPERATIONS.md`
 § "Metal and perf (Mac only)" and § "The Windows runner's work (R-859)" (new), `plan/WORKFLOW.md`, `plan/HUMAN_SETUP.md`,
@@ -36699,6 +36716,9 @@ R-945 is in the "design" group of `plan/rule_groups.yaml`.
 Changes no requirement.
 
 ## R-946 — "Windows once proven" counts the PC's CPU-only tiers alone: the slow tier, the mutation runs and the process tests may move to the PC's per-merge run without waiting for the card, containment first and unchanged, and only once the CPU tiers repeat, three runs on one commit of `main` with the same result for every test and every hosted-Linux pass passing on all three; the PC's GPU results stay measurements until each of the four failing steps is explained, sorted by running it under lavapipe as well as on the RTX *(no RQ; refines R-909; amends R-719)*
+*Read with R-986 (12 Nov 2026: the reply's section on the 85-minute run, which this entry left unrecorded as an
+instruction to the orchestrator, is answered by the owner's ruling R-986: that run, `win-vulkan`, runs on merges to
+`main`, nightly and by dispatch only, a newer run cancelling an older one, never on branch pushes).*
 *10 Nov 2026 · the owner's reply of that day on the Windows tier and the rest of the CI model, "Record the answer to the
 question as a ruling"; applied in the forward and "Still in force" lines of R-719 and R-909, a "Read with" line on
 R-912, `plan/OPERATIONS.md` § "Windows GPU results (R-719)" and § "The Windows runner's work (R-859)" (dated bullets),
@@ -37507,6 +37527,8 @@ build) gains the Mesa packages. R-829's "R-285 unchanged" was about the kernel's
 R-967 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-968 — A job whose only failure is the package-install step is re-run once, automatically, on GitHub-hosted runners, marked as a re-run and never turning a real failure green; the per-merge verdict is unchanged, RQ-789 open *(extends R-714)*
+*Read with R-988 (12 Nov 2026: its "never on R-711's self-hosted runner" holds for the install-step re-run; a job of
+that runner that stops unclearly, on a runner-level fault, has a re-run of its own, once, made by a hosted job).*
 *11 Nov 2026 · the owner's two messages of that day on CI (R-966 quotes them); applied in the forward and "Still in
 force" lines of R-714, `plan/OPERATIONS.md` § "Merging" (R-714's paragraph), `plan/section_notes.yaml` and
 `plan/rule_groups.yaml`; changes no requirement; the CI change is PR #495's*
@@ -37570,6 +37592,10 @@ And item (2) of the third (R-971):
 R-969 is in the "ci" group of `plan/rule_groups.yaml`.
 
 ## R-970 — A CI run clearly hung or stuck because of a bug is caught and cancelled, on `main` too; every other run on `main` is still never cancelled *(amends R-656)*
+*Refined by R-988 (12 Nov 2026: on R-711's runner a hang is ended by a time limit on its step and its job, each set at
+1.5 times the measured time, and logged, and is not re-run).*
+*Read with R-986 (12 Nov 2026: a newer run of `win-vulkan` cancels an older one, hung or not, on `main` too).*
+*Still in force: all of it; on R-711's runner the limit that catches a hang is R-988's.*
 *11 Nov 2026 · the owner's reply of that day on a hung Windows run; applied in `plan/OPERATIONS.md` § "Merging" (the
 PR tier's paragraph), the forward and "Still in force" lines of R-656, `plan/section_notes.yaml` and
 `plan/rule_groups.yaml`; changes no requirement*
@@ -38037,3 +38063,171 @@ dispatched.
 R-984 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-CHART-201, REQ-CHART-202 and REQ-CHART-203. R-984 was reserved for this follow-up.
+
+## R-985 — On a view tilted toward time the stop index `k_stop` stays in the record and only that word is rewritten each frame; a final-condition chart is a tier-3 map like any other, with no label of its own as a route *(the owner's directions of 12 Nov 2026 on the chart audit's F8 and F17)*
+*12 Nov 2026 · the owner's follow-up of 12 Nov 2026 on the chart audit they ordered; applied in `plan/rule_groups.yaml`,
+REQ-INT-115 and REQ-CHART-153 (reqio: this ruling as a source and a dated note each, their statements unchanged); the
+doc edits it implies are the chart audit's record-corrections pull request's, not this one's; changes no requirement
+statement*
+
+The owner's words (12 Nov 2026), verbatim, from their follow-up on the chart audit:
+
+> Next, still no chart task and R-923 stands:
+> 1. Revise report.md and rq-drafts.md with both reviewers' corrections folded in: … F8 by the two-way route (k_stop stays in the record, that word rewritten per frame); … F17 as a tier-3 map like any other; …
+
+*A prose ruling of the owner, not a reply line:* the words are two directions inside the owner's message on the chart
+audit, not an `RQ-n: …` or `D-n: …` line of a reply to a rulings report, so no reply parser read them and no review
+queue entry closes. R-985 was reserved for them.
+
+*What it decides,* two findings of the chart audit, each a two-way door the owner walked through:
+
+- **F8, the stop index on a view tilted toward time.** R-935 (under RQ-761) puts a per-sample stop index `k_stop`, a
+  `u32`, in the record, and REQ-INT-115 names it among the record's words; R-926 item 2 makes the playhead the window's
+  centre along time. On a view tilted toward time with the playhead running, every sample's target time moves each
+  frame. Decided: `k_stop` stays in the record, as R-935 rules; on a view tilted toward time only that word is rewritten
+  each frame, from the pixel and the playhead on the host, and the record's other words are unchanged. A sample behind
+  its new target resumes and one ahead of it re-boots from `t = 0`, as R-935 rules ("a target below the current state
+  re-boots from `t = 0` (R-565, bitwise)"). Any fallback for backward play other than that re-boot is not decided here
+  and would be a one-way question.
+- **F17, final-condition charts.** R-879 builds them "as a CPU batch chart" (TASK-M8-128, REQ-CHART-153: flip the
+  momenta, integrate forward `T`, flip back), and R-926's *What it supersedes* reads: "every view, live or not, is
+  filled from the CPU's f64 evaluation narrowed to the integrator's records, so a CPU-batch view is no longer a
+  separate, labelled route that a gesture never reaches."
+  Decided: a final-condition chart is a tier-3 map like any other (no slope of its own, R-926 item 9), evaluated on the
+  CPU as every chart is; R-879's "CPU batch chart" reads as that evaluation. It takes the coarse cover in motion and
+  is exact at rest (REQ-SCHED-020), and carries no label of its own as a route ("not live", "CPU batch" or the like).
+  R-879's other decisions stand as written, the per-pixel horizon labelled as the final-condition charts' exception and
+  the round-trip miss measured and large misses masked among them. Its measure weight is RQ-800's (the measure weight
+  per sample, on a tier-3 map by central difference) hard case, and waits on that entry.
+
+*Read with:* R-935 (under RQ-761) and R-926 items 2 and 9 for F8; R-879 and R-926's *What it supersedes* for F17. Each
+stands as written; R-985 decides only what the two directions say.
+
+*Not in this pull request:* the doc edits R-985 implies: the scheduler contract's Part 7 and the caching contract's
+Part 1 for F8 (a dated note on "never present mixed time" for tilted views, where each pixel shows its own time by
+design), and the dated note on TASK-M8-128 and REQ-CHART-153's statement for F17. They are the chart audit's
+record-corrections pull request's, which the owner ordered in the same message. Until it lands, REQ-INT-115 and
+REQ-CHART-153 carry a dated note naming R-985. R-923's hold on the chart tasks is unchanged: no chart task is
+dispatched or re-scoped.
+
+R-985 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement statement; REQ-INT-115 and REQ-CHART-153 gain this ruling as a source, with a dated note. R-985
+was reserved for these directions.
+
+## R-986 — The 85-minute run on the Windows PC, `win-vulkan`, runs on merges to `main`, nightly and by dispatch only, never on a branch push, and a newer run of it cancels an older one, on `main` too *(the owner's goal of 12 Nov 2026 for the Windows runner; amends R-656 for this job; read with R-711, R-859, R-946 and R-970)*
+*12 Nov 2026 · the owner's goal of that day for the Windows runner's CI; applied in the forward and "Still in force"
+lines of R-656, R-711, R-859, R-946 and R-970, `plan/OPERATIONS.md` § "Merging" (the PR tier's paragraph, with its
+*Was*) and § "The Windows runner's work (R-859)" (a dated bullet), REQ-TOOL-230 (reqio, new), TASK-M0-61 (new),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-TOOL-230*
+
+The owner's words (12 Nov 2026), verbatim, the line of their goal for the Windows runner that they marked a ruling:
+
+> The 85-minute PC run: merges to main, nightly and dispatch only, with a newer run cancelling an older one; never branch pushes. (Ruling.)
+
+*A prose ruling of the owner, not a reply line:* the words are one line of the owner's message setting the goal of the
+Windows runner's CI, which ends "(Ruling.)", not an `RQ-n: …` or `D-n: …` line of a reply to a rulings report, so no
+reply parser read it and no review queue entry closes. R-986 was reserved for it.
+
+*Context.* R-946's entry recorded two sections of the owner's reply of 10 Nov 2026 and left the reply's section on the
+85-minute run unrecorded, as an instruction to the orchestrator; that section asked for options and held the workflow
+unchanged until the owner answered. This line is their answer.
+
+*What it decides:*
+
+- **Which run.** "The 85-minute PC run" is `win-gpu.yml`'s `win-vulkan`, the GPU suites under Vulkan on R-711's runner,
+  the one job of that workflow a push to `main` starts (`win-tests` and `win-self-check` run nightly only, and the
+  dispatch-only jobs never on a push).
+- **When it runs.** On merges to `main`, nightly (the schedule) and by `workflow_dispatch` only; never on a push to any
+  other branch. That is what `win-gpu.yml` already does: its push trigger is limited to `main`, and R-711 item 1 allows
+  no other trigger on a self-hosted job.
+- **What cancels it.** A newer run of `win-vulkan` cancels an older one still in progress, on `main` too: the job's
+  concurrency group cancels in progress (`cancel-in-progress: true`), so the PC always works on the newest commit and a
+  run left behind by a later merge, a later nightly or a later dispatch stops.
+
+*Applied per R-369:*
+
+- "Merges to `main`" reads as R-711's push to `main`, every push to `main` being a merge (R-656), with item 5's paths
+  filter kept, so a docs-only merge still runs nothing.
+- The concurrency group stays the job's own, `win-vulkan`, one group for every event, so a newer run of any of the three
+  kinds cancels an older run of any of them, a dispatched run on a branch included; the owner's words name no exception.
+  Every other job on the runner keeps `cancel-in-progress: false`: the line is about the 85-minute run alone.
+- A run cancelled by a newer one is no failure, is not re-run (R-988) and leaves no red: the runner's jobs are
+  measurements, never required checks (R-859), and a red one is not main red.
+- `win-gpu.yml` is unchanged here: TASK-M0-61, under REQ-TOOL-230, sets `cancel-in-progress: true` on `win-vulkan` and
+  flips the control in `xtask/tests/ci_self_hosted.rs` that a cancelling `win-vulkan` fails ("cancels a running
+  measurement") into the check that it cancels.
+
+*What it amends:* **R-656**, its "never a run on `main`", for `win-vulkan` (R-970 being its other exception). *Read
+with* **R-711** (item 1's triggers, unchanged), **R-859** (the GPU suites "nightly and on pushes to `main`", unchanged),
+**R-946** (the 85-minute run it left unrecorded) and **R-970** (a hung run, caught and cancelled).
+
+R-986 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-230. R-986 was reserved for this line; the number between it and R-988 is on another branch, so R-988 follows it in this file.
+
+## R-988 — A job on the Windows PC that stops unclearly is re-run once, automatically, by a hosted job; a hung one ends at a time limit of 1.5 times its measured time; both are logged *(the owner's goal of 12 Nov 2026, item 5; amends R-859's security rules, the owner's job rules of 5 Nov 2026, for this re-run; extends R-714; refines R-970; read with R-711 and R-968)*
+*12 Nov 2026 · the owner's goal of that day for the Windows runner's CI, item 5; applied in the forward and "Still in
+force" lines of R-711, R-714, R-859, R-968 and R-970, `plan/OPERATIONS.md` § "Merging" (R-714's paragraph, a dated
+line) and § "The Windows runner's work (R-859)" (a dated bullet, and the bullet on what the runner may run, with its
+*Was*), REQ-TOOL-231 and REQ-TOOL-232 (reqio, new), TASK-M0-61 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`;
+adds REQ-TOOL-231 and REQ-TOOL-232*
+
+The owner's words (12 Nov 2026), verbatim, item 5 of their goal's definition of done:
+
+> 5. Unclear stop: one automatic re-run; hang: cancelled by time limit; both logged.
+
+*The owner's direction in their own words, not labelled a ruling:* the goal's other line, R-986's, ends "(Ruling.)";
+this item does not. It is recorded as an amendment because it contradicts a rule in force (below), and applied as the
+owner's direction; the reading is flagged for the owner's confirmation on the pull request (CLAUDE.md § "Rulings").
+
+*The contradiction.* `win-gpu.yml` (line 6) and `runner-proof.yml` (lines 4 and 5) each say "No job here is gathered, retried or
+read by any gate", carrying the owner's job rules of 5 Nov 2026, which R-859 and R-861 count among the runner's
+security rules, "unchanged", and which no entry of this file quotes; R-711's own words carry no such rule.
+`xtask/tests/ci_self_hosted.rs` enforces it: its control `retried` fails when `retry.yml` follows `win-gpu.yml`. And
+R-968's applied text keeps its install-step re-run "on GitHub-hosted runners only, never on R-711's self-hosted runner".
+An automatic re-run of a job on the PC is what those rules forbid.
+
+*What it decides,* as applied:
+
+- **An unclear stop: one automatic re-run.** A job on R-711's runner that stops for a reason outside its own steps, a
+  runner-level fault (the runner lost, offline or shut down mid-job, its communication with GitHub lost, the job's
+  process killed from outside), is re-run once, automatically. The re-run is made by one hosted job, `win-retry`,
+  started by `workflow_run` on `win-gpu.yml` and `runner-proof.yml`, never under a `pull_request` or
+  `pull_request_target` trigger; it re-runs only a run whose event is a push to `main`, the schedule or
+  `workflow_dispatch`, at its first attempt, and only while no newer run of that job has started (a re-run of an older
+  `win-vulkan` would otherwise cancel the newer one, R-986). Its classifier is a script tested on saved logs, as R-714's
+  is, a real test failure among them that must not re-run.
+- **Never re-run:** a job that failed a test or a step on its own output, or a flake (R-714); a job cancelled by its
+  time limit (a hang, below); a job cancelled by a newer run (R-986); a job no runner took (the PC off, which a re-run
+  would only queue again).
+- **A hang: cancelled by a time limit.** Every job on the runner, and every step of one that builds or runs tests,
+  carries a time limit of 1.5 times its measured time, rounded up to a whole minute. The measured time is the slowest
+  of its recorded completed runs on the PC (the last five, or all if fewer), recorded with their run ids before the
+  limit is set and never adjusted after seeing a result (R-649). A job or step with no completed run on record keeps its
+  present limit until it has one. A hang that reaches its limit is cancelled and is not re-run.
+- **Both logged.** `win-retry`'s run summary names each unclear stop and each hang it sees, with the run, the job, the
+  step where it applies, the signature and the re-run's id; the first attempt's record stays, and the re-run says it is
+  one, so a real failure never turns green.
+- **What does not change.** The re-run gathers nothing and gates nothing: the runner's jobs stay named measurements,
+  never required checks, read by no gate (R-859), and a red one is not main red. R-711 item 1's triggers hold for every
+  self-hosted job; `win-retry` is hosted, and a re-run keeps its run's event, so item 6's check of `github.actor` on a
+  re-run applies. R-968's install-step re-run stays on hosted runners.
+
+*Applied per R-369:* "Unclear stop" reads as a stop whose cause is the runner, not the job's own output, R-714's
+runner-level signatures in their Windows form; "hang" as a job or step still running at its time limit. The multiplier
+1.5 and "the slowest of the last five completed runs" are CI timing (R-369, R-812's two-way doors), each written here
+before any limit is set. The re-run is a hosted job of its own, not a line in `retry.yml`, so that `retry.yml` still may
+not follow the runner's workflows and `xtask/tests/ci_self_hosted.rs` admits exactly one reader, `win-retry`. Whether
+the PC's hook accepts a re-run's events, R-711 item 6's check, is confirmed on the first real re-run, PC-side work going
+through the owner one message at a time, as their goal asks.
+
+*What it amends:* the owner's job rules of 5 Nov 2026, among **R-859**'s security rules, "No job here is gathered,
+retried or read by any gate": a job on the runner may be re-run, once, as above; it is still never gathered and never
+read by any gate. *What it extends:* **R-714**, a runner-level fault on R-711's runner re-run once. *What it refines:*
+**R-970**, a hang on the runner caught by a time limit. *Read with* **R-711** and **R-968**.
+
+R-988 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-231 and REQ-TOOL-232. R-988 was the next free number (`plan/tools/rulings_reply.py next-id`), reserved
+for this item.

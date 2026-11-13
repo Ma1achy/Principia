@@ -142,31 +142,37 @@ impl Catalogue {
     }
 }
 
+/// A debug view whose colour is the WGSL `colour` as a stain's nodes: the zero source into the colour, the
+/// pass-through combiner, `OUT`.
+pub fn view_nodes(colour: &str) -> Vec<Node> {
+    let node = |kind, occupant, inputs: &[Option<usize>]| Node {
+        kind,
+        occupant,
+        inputs: inputs.to_vec(),
+    };
+    vec![
+        node(Kind::Source, Occupant::Custom(ZERO_SOURCE.to_owned()), &[]),
+        node(
+            Kind::Colour,
+            Occupant::Custom(colour.to_owned()),
+            &[Some(0)],
+        ),
+        node(
+            Kind::Combiner,
+            Occupant::BuiltIn("pass_through".to_owned()),
+            &[Some(1), None],
+        ),
+        node(Kind::Out, Occupant::None, &[Some(2)]),
+    ]
+}
+
 impl ViewGenerator for Catalogue {
-    /// `field`'s view as a stain: the zero source into the view's colour, the pass-through combiner, `OUT`.
+    /// `field`'s view as a stain: [`view_nodes`] of the view's colour.
     fn view(&self, field: &str) -> Option<Vec<Node>> {
         let view = self
             .views
             .iter()
             .find(|e| e.id.strip_prefix("debug/generated/") == Some(field))?;
-        let node = |kind, occupant, inputs: &[Option<usize>]| Node {
-            kind,
-            occupant,
-            inputs: inputs.to_vec(),
-        };
-        Some(vec![
-            node(Kind::Source, Occupant::Custom(ZERO_SOURCE.to_owned()), &[]),
-            node(
-                Kind::Colour,
-                Occupant::Custom(view.source.clone()),
-                &[Some(0)],
-            ),
-            node(
-                Kind::Combiner,
-                Occupant::BuiltIn("pass_through".to_owned()),
-                &[Some(1), None],
-            ),
-            node(Kind::Out, Occupant::None, &[Some(2)]),
-        ])
+        Some(view_nodes(&view.source))
     }
 }

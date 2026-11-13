@@ -46,6 +46,10 @@
 //! The Print graph (TASK-M7-54; principia_print_graph.md §4; R-485, R-486): post-processing as a node graph of its
 //! own after the stain, its data model, port types, registry, build-time check and codegen ([`mod@print`]).
 //!
+//! The FTLE shadow's provisional calibration (TASK-M3-73; R-976): the one source of the statement every view showing
+//! the FTLE carries in its legend line, and its switch, which falls silent once REQ-INT-076's confirmed values are
+//! recorded ([`ftle_provisional`]).
+//!
 //! The image embedding lives here too (`embed`): its record format, tiled writer, read searches and majority-vote
 //! reader. The plan layout names no export crate.
 
@@ -61,6 +65,7 @@ pub mod display;
 pub mod embed;
 pub mod export;
 pub mod frame_record;
+pub mod ftle_provisional;
 pub mod headless;
 pub mod hot_reload;
 pub(crate) mod lex;

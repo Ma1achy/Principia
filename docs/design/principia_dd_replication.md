@@ -244,6 +244,8 @@ docs. PLAN.md § 3 lists them as targets; this port changes none of them.
 | REQ-VAL-076 (AT-D2's field) | REQ-VAL-076 (+ -137) | the closure field low at free-fall orbits | M4 |
 | SP-1 (V-4) | REQ-VAL-034 (+ -127, -132) | Burrau: binary plus escaper, structurally | M3 |
 
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (the "CPU/GPU decode" row; REQ-VAL-017 is re-scoped to the fragment's generated code against the CPU record (R-935 under RQ-765)) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
 Two of these now carry a record of what blocks them. REQ-VAL-042's source, Hristov et al. 2024's free-fall database,
 is fetched (R-630 item 7, closing RQ-584) and committed (R-631) as `FF27/data/sofia_3bodyfree/sol_80.txt`, so its
 `rq: RQ-584` is lifted; its citation is RQ-589's question. *Was:* "REQ-VAL-042's source, Hristov et al. 2024's

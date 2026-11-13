@@ -22,6 +22,8 @@ decodeOnly(chart, uv, simKey)      → (m, r, p, ICDescriptor)
 ```
 <!-- /retired-terms -->
 
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (`decodeOnly(chart, uv, simKey) → (m, r, p, ICDescriptor)` as a compute entry the kernel is diffed against) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
 The parity suite is this subsystem diffed against the headless WGSL kernel. It was going to exist regardless; the tests are therefore nearly free.
 
 ---
@@ -117,6 +119,8 @@ first is the design working; only the second is excluded.
 - **short pre-divergence trajectory**: up to the divergence-onset time, accumulated error is bounded; compare to a growing-but-bounded envelope.
 - **encode round-trip in physical units**: T2 (encode dd §5.1).
 
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (Tier N's decode row, compared against a GPU decode) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
 ### Tier S — structural only (asserting the pointwise gap would assert a falsehood)
 
 A chaotic trajectory integrated to `t_end` **cannot** match pointwise across precisions, and it is not a bug — positive Lyapunov exponent means a 1-ulp difference is uncorrelated by `t_end`. So:
@@ -150,6 +154,8 @@ Therefore Tier-N tolerances are **pinned empirically, not guessed**: **native in
 
 Relative tolerance, per quantity class: IC/decode ~1e-5; one-step state ~1e-5 scaled by force magnitude; monitored `E₀`/`L_z` at t=0 ~1e-6. These are starting points to be replaced by measured values.
 
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (the IC/decode tolerance class, `~1e-5`, for a GPU decode) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
 **Golden images are byte-exact across backends at exact ties, by construction (R-287), but not near one (R-296).** Fragment output quantises explicitly in the shader — round half to even, then store — not through a backend's automatic float-to-unorm conversion, which breaks exact half-way ties differently (Metal rounds up, lavapipe to even; R-269's measurement). Every backend then writes identical bytes for an exact tie, and a golden case keeps one reference across backends; a case whose bytes still differ keeps one reference per backend (R-269). **Explicit quantisation makes exact ties identical, but a value within an ulp of a tie can differ on a backend whose display shaders compile with fast-math (Metal via wgpu), so goldens near a tie use per-backend references (R-296).** Quantising removes the conversion's tie-break difference, not a difference in the fragment's own arithmetic before it: on Metal, R-269's `(x + 0.5) / 255.0` matched multiplication by f32(1/255), and on 94 columns it landed one ulp from lavapipe's correctly rounded division, on the other side of the tie, so the rounded level differed by one (R-296's Result). R-269's half-way fixture is such a case: its evidence is that lavapipe's quantised bytes equal its automatic ones, and that both backends round exact ties to even.
 
 *4 Nov 2026 (R-695, closing RQ-686):* "goldens near a tie use per-backend references" above holds on the backends CI renders on, Metal and Vulkan on lavapipe. On any other driver a near-tie case's result is reported, not compared to pass (REQ-VAL-349).
@@ -163,6 +169,7 @@ Relative tolerance, per quantity class: IC/decode ~1e-5; one-step state ~1e-5 sc
   *4 Nov 2026 (R-694, closing RQ-685):* with the setting off, "bit-identity" here is the branch decisions of REQ-INT-057 and the Tier B fields only. Continuous values are free across drivers, so `SimState = f(IC, sim key)` holds per driver for them. Neither input is fed by a driver's division or `√`: `E_rel` and `|Δn̂|` take written forms that use neither (REQ-INT-112). The ionisation gate's total `E > 0` reads the stored `E_0`, whose sign is the one enumerated exception: it may differ between backends only within a few ulp of `E_0 = 0`, measured and reported, never reconciled (R-710; *was:* "is RQ-697's"). *Was:* "A driver's division or `√` feeds no decision:", which presumed that ruling. The header records "Off" only for drivers measured, otherwise wgpu's path with "driver unverified" (REQ-TOOL-221). Such a driver is not measured, R-690's "not run"; "unverified, not supported" is earned only by a measured failure. *Was:* "such a driver is unverified, not supported".
 - **Vertex and fragment shaders (display):** fast-math may stay on.
 - **The exception:** fragment paths that recompute physics to check agreement — the DECODE and ROUNDTRIP presets (R-116; `principia_colour_composition.md` §6) — compare within a stated tolerance, a calibration requirement (R-71), not bit-exactly: the DECODE view's agreement presets, fragment against compute, within a tolerance calibrated for them; ROUNDTRIP, computed wholly in the fragment, within ε_phys (`principia_inverse_encode_contract.md` Part 4).
+  *12 Nov 2026 (R-935 under RQ-765; the chart audit's F14):* "fragment against compute, within a tolerance calibrated for them" reads as the fragment's generated code against the CPU's narrowed record; the compute side decodes nothing (R-926 item 5). *Was:* the line stands as written.
 - The telemetry header records the compute setting asked for and each stage's mode as compiled — compute, vertex and fragment (`principia_dd_telemetry_and_tiers.md` §5).
 - **In the browser build (R-303):** WebGPU offers no fast-math control, so off can't be guaranteed there: each stage's compiled mode is recorded as "unknown", the Run window's control is disabled, and browser runs are held to the Tier-N tolerances native wgpu sets (R-85), measured, not bit-exact, whatever the setting. The setting itself stays on the sim key and in pxpack.
 

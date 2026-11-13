@@ -272,6 +272,7 @@ its flags (link parameters interpolated, R-520; a dissolve is two renders) and i
     "apply thermal headroom ... of raw cold measurement"; its value is REQ-PERF-088's calibration, no new number), since
     a multi-minute export is the sustained load that headroom is for;
   - **estimate = `S_export × 2(E_export + 1) × steps × c_traj / headroom`**, one value, with the model's provenance key.
+    *12 Nov 2026 (R-926 item 5; the chart audit's F16):* the one model gains its CPU-evaluation term (the CPU's f64 evaluation of each sample's start, priced by the probe's CPU leg), still one estimator. *Was:* the estimate as written.
   - **The provenance key, as the user reads it** (fix round 15 of PR #286, gui review 5634549430, G3; R-72 form; applied per R-369): shown once, under the
     planner's rows, not on each row, reading "measured on <adapter name> · probe v<version>", the adapter's name and the probe's version taken from
     `principia_quality_device_note.md` §9's provenance signature.
