@@ -1353,7 +1353,7 @@ fn check_scans_both_forms(tag: &str, paths: &[&str]) {
     for (i, path) in paths.iter().enumerate() {
         let files = scan_fixture(&format!("{tag}_{i}"), path);
         assert!(
-            files.iter().any(|(p, _)| p.ends_with(path)),
+            files.iter().any(|(p, _)| Path::new(p).ends_with(path)),
             "the scan does not read `{path}`"
         );
     }

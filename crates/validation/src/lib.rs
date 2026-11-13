@@ -26,6 +26,7 @@ pub mod link_variation;
 pub mod measure;
 pub mod nsub_bucket;
 pub mod oklab;
+pub mod paths;
 pub mod projection_parity;
 pub mod prop;
 pub mod reference;

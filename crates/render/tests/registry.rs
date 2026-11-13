@@ -226,7 +226,7 @@ fn check_refused(file: (&str, &str), why: &str) {
     let _ = std::fs::remove_dir_all(&root);
     let error = scanned.err().map(|e| e.to_string()).unwrap_or_default();
     assert!(
-        error.contains(file.0) && error.contains(why),
+        validation::paths::slashed(&error).contains(file.0) && error.contains(why),
         "`{}` was not refused for {why:?}: {error:?}",
         file.0
     );

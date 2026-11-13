@@ -41,7 +41,7 @@ impl fmt::Display for Finding {
             f,
             "{}:{}: `{}` in the kernel's physics or driver layer, which allocates nothing and uses no `std` (Part 2c \
              rule 5)",
-            self.path.display(),
+            crate::repo_path(&self.path),
             self.line,
             self.token
         )

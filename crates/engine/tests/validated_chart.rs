@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
 use validation::negative_control;
+use validation::paths::{escaped, slashed};
 use validation::spawn::Spawn;
 
 #[path = "../../validation/tests/support/fixture_tree.rs"]
@@ -28,7 +29,7 @@ fn check_fixture(own: &str, body: &str) -> Output {
     let fixture = root().join("fixtures/validated_chart");
     let read = |file: &str| std::fs::read_to_string(fixture.join(file)).unwrap();
     let crates = root().join("crates");
-    let manifest = read("Cargo.toml").replace("../../crates", crates.to_str().unwrap());
+    let manifest = read("Cargo.toml").replace("../../crates", &escaped(&crates));
     let lib = read("src/lib.rs");
     assert!(lib.contains(FORGED), "the fixture changed");
     let tmp = Path::new(env!("CARGO_TARGET_TMPDIR"));
@@ -74,7 +75,7 @@ fn check_refused(o: &Output) {
         !errors.is_empty()
             && errors
                 .iter()
-                .all(|l| l.contains("error[E0451]") && l.contains("src/lib.rs")),
+                .all(|l| l.contains("error[E0451]") && slashed(l).contains("src/lib.rs")),
         "the build failed, but not only at the private fields:\n{stderr}"
     );
 }

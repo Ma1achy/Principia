@@ -57,7 +57,7 @@ impl fmt::Display for Finding {
         write!(
             f,
             "{}:{}: `{}`: {rule} (R-297)",
-            self.path.display(),
+            crate::repo_path(&self.path),
             self.line,
             self.ident
         )
