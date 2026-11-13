@@ -10,7 +10,7 @@ reason `ci_retry.py` is: `.github/` is full CI whole (R-662).
   win_retry.py classify DIR   Classify a saved run, offline, and print the verdict. DIR holds `run.json` (the run: its
                               `id`, `event`, `head_branch`, `run_attempt` and `conclusion`), `jobs.json` (the attempt's
                               jobs, as the jobs API lists them, with their `runner_name`, `labels` and `steps`),
-                              `annotations/<job id>.json` (each stopped job's check-run annotations),
+                              `annotations/<job id>.json` (each job's check-run annotations),
                               `logs/<job id>.log` (its log, absent where none was kept) and `newer.json` (each
                               newer run of the workflow, as `{"id": …, "jobs": [...]}`; absent, the newer runs are
                               unknown).
@@ -32,6 +32,12 @@ Each job of the run on the runner that did not pass (its labels name `self-hoste
 A step's process killed from outside while the runner stays up leaves no trace apart from its own failure, so it reads
 as `own`, failing towards no re-run.
 
+A job on the runner that passed is read too, for one thing: a step of it ended by its time limit that the job passed on
+from (a `continue-on-error` download, then its second attempt, as `wsl-proofs` and `wsl-register` do), which GitHub
+records as a failure annotation (TIME_LIMIT) while the step and the job read `success`. It is logged as a `hang`, its
+verdict saying the job passed on, and never re-run: a passing job is never a fault, so nothing re-runs it (R-988's
+"hang: cancelled by time limit; both logged", REQ-TOOL-231's "every hang it sees").
+
 A fault is re-run only when the run's event is a push to `main`, the schedule or `workflow_dispatch`, at the run's
 first attempt, and while no newer run of that job is queued, running or done (a re-run of an older `win-vulkan` would
 cancel the newer one, R-986; a queued one would be displaced, GitHub keeping one waiting run in a group). Newer runs
@@ -40,7 +46,7 @@ that can't be read re-run nothing. GitHub re-runs one job, or every failed job o
 otherwise none is, and the summary says why. A hosted job of the run (`wsl-image`, `wsl-parity`) is never re-run here.
 
 The verdict: `rerun=none|job <id>|failed-jobs`, `reason=<why>`, then `job=<name>: <kind>: …` for each job on the
-runner that did not pass, and an `evidence=<name>: <line>` for each signature it rests on.
+runner that did not pass or passed on from a step's time limit, and an `evidence=<name>: <line>` for each signature it rests on.
 """
 
 import json
@@ -143,6 +149,17 @@ VERDICT = {
     "untaken": "never taken by a runner: not re-run",
     "own": "a failure of the job's own: not re-run",
 }
+# A step's time limit in a job that passed on from it.
+RECOVERED = "hang, a step ended by its time limit, the job passing on: not re-run"
+
+
+def recovered(job, annotations, log):
+    """(step, evidence) of a step's time limit a job on the runner that passed went on from, or None."""
+    for text in lines(annotations, log):
+        m = TIME_LIMIT.search(text)
+        if m:
+            return m.group(1) or stopped_step(job), first_line(text)
+    return None
 
 
 def newer_started(name, newer):
@@ -156,12 +173,18 @@ def newer_started(name, newer):
 
 def classify(run, jobs, annotations, logs, newer):
     """(rerun, reason, rows): rerun is None, ("job", id) or ("failed-jobs", None); each row is [name, id, kind, step,
-    evidence, verdict], one per job on the runner that did not pass."""
+    evidence, verdict], one per job on the runner that did not pass, and one per job on it that passed on from a step's
+    time limit (a `hang`, never a fault, so never re-run)."""
     rows = []
     for job in jobs:
-        if job.get("conclusion") in PASSED or not on_runner(job):
+        if not on_runner(job):
             continue
         jid = str(job["id"])
+        if job.get("conclusion") in PASSED:
+            found = recovered(job, annotations.get(jid, []), logs.get(jid))
+            if found:
+                rows.append([job["name"], jid, "hang", found[0], found[1], RECOVERED])
+            continue
         kind, step, evidence = kind_of(job, annotations.get(jid, []), logs.get(jid))
         rows.append([job["name"], jid, kind, step, evidence, VERDICT[kind]])
     faults = [r for r in rows if r[2] == "fault"]
@@ -308,11 +331,14 @@ def decide():
     jobs = [j for page in values(listed) for j in page.get("jobs", [])]
     annotations, logs = {}, {}
     for j in jobs:
-        if j.get("conclusion") in PASSED or not on_runner(j):
+        if not on_runner(j) or j.get("conclusion") == "skipped":
             continue
         jid = str(j["id"])
         got = gh(["--paginate", f"repos/{repo}/check-runs/{jid}/annotations?per_page=100"])
         annotations[jid] = [a for page in values(got or "") for a in page]
+        if j.get("conclusion") in PASSED:
+            # A passing job is read for a step's time limit alone, which its annotations carry; its log isn't needed.
+            continue
         log = fetch_log(repo, jid)
         if log is not None:
             logs[jid] = log

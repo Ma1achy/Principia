@@ -12,15 +12,15 @@
 //!
 //! - `ci_win_retry_reruns_*`: a runner lost and a runner shut down are re-run once, that job alone;
 //! - `ci_win_retry_keeps_*`: a test failure (one the runner's going follows in a later step too), a hang (the job's
-//!   limit and a step's), a run cancelled by a newer one, a job no runner took, a second attempt, a fault once a newer
+//!   limit and a step's, and a step's in a job that passed on from it, which is logged too), a run cancelled by a newer one, a job no runner took, a second attempt, a fault once a newer
 //!   run of it has started, and a run of a pull request or of a push to another branch are not;
 //! - `ci_win_retry_mixed_runs`: one fault beside failures of their own is re-run alone; two faults alone are re-run
 //!   together; two beside a failure of its own are not;
 //! - `ci_win_retry_decide_*`: `decide`, under a stand-in `gh`, asks for the one re-run and writes every unclear stop and
 //!   hang to the step summary, with the run, the job, the step, the signature and the re-run's id, and a re-run says it
-//!   is one;
+//!   is one; a passing run's step that reached its limit is logged and not re-run;
 //! - `ci_win_retry_workflow_*`: `win-retry.yml`, parsed: `workflow_run` on `win-gpu` and `runner-proof` alone, hosted,
-//!   the least permissions, the repository guard, and `main`'s checkout.
+//!   the least permissions, the repository guard, a passing run read, and `main`'s checkout.
 //!
 //! Each test has its negative control (R-176). Unix only: `decide`'s stand-in `gh` is a shell script.
 #![cfg(unix)]
@@ -46,6 +46,12 @@ const TEST_JOB: &str = "131524774857";
 const JOB_LIMIT_RUN: &str = "43146846084";
 /// A dispatch's second attempt: `wsl-register`'s two downloads each ended by its own limit.
 const STEP_LIMIT_RUN: &str = "43225140437";
+const STEP_LIMIT_JOB: &str = "131274911991";
+/// That run's first download's limit, GitHub's annotation for it: a step that `continue-on-error` lets the job pass on
+/// from.
+const FIRST_DOWNLOAD_LIMIT: &str = "The action 'This run's image' has timed out after 25 minutes.";
+/// The verdict for a step's time limit in a job that passed on from it.
+const RECOVERED: &str = "hang, a step ended by its time limit, the job passing on: not re-run";
 /// `main`, a push: `win-vulkan` cancelled, waiting, by a newer run.
 const NEWER_RUN: &str = "42751477363";
 const NEWER_JOB: &str = "129615866444";
@@ -231,6 +237,23 @@ impl Run {
 /// The saved test failure, its runner lost mid-job.
 fn lost() -> Run {
     Run::saved(TEST_RUN).gone(TEST_JOB, LOST)
+}
+
+/// The saved step limits' run as it would read had the second download finished: the first download ended by its limit,
+/// its annotation kept, every step, the job and the run passing, at the first attempt.
+fn recovered() -> Run {
+    let mut run = Run::saved(STEP_LIMIT_RUN)
+        .attempt(1)
+        .annotated(STEP_LIMIT_JOB, &[FIRST_DOWNLOAD_LIMIT]);
+    let job = run.job(STEP_LIMIT_JOB);
+    job["conclusion"] = json!("success");
+    for step in job["steps"].as_array_mut().expect("steps") {
+        if step["conclusion"] == "failure" {
+            step["conclusion"] = json!("success");
+        }
+    }
+    run.run["conclusion"] = json!("success");
+    run
 }
 
 /// `run`, classified by `script`: what it printed.
@@ -513,6 +536,77 @@ mod hang_by_quote {
             &script(),
             "TIME_LIMIT = re.compile(r\"The action '(.*)' has timed out",
             "TIME_LIMIT = re.compile(r\"The action '([^']*)' has timed out"
+        ))
+    );
+}
+
+fn check_recovered(script: &str) {
+    let text = classified(script, &recovered());
+    assert!(
+        text.starts_with("rerun=none\n"),
+        "a recovered step limit: re-run"
+    );
+    assert!(
+        text.lines().any(|l| l
+            == format!("job=wsl-register: hang at step 'This run's image': {RECOVERED}")),
+        "a recovered step limit: not logged as a hang"
+    );
+    assert!(
+        text.lines()
+            .any(|l| l == format!("evidence=wsl-register: {FIRST_DOWNLOAD_LIMIT}")),
+        "a recovered step limit: the line it rests on is not logged"
+    );
+    // A passing job with no limit reached logs nothing.
+    let clean = classified(script, &recovered().bare(STEP_LIMIT_JOB));
+    assert!(
+        !clean.lines().any(|l| l.starts_with("job=")),
+        "a passing job with no limit reached: logged"
+    );
+    // A recovered limit beside a fault leaves the fault to re-run alone, and is logged beside it.
+    let mut beside = lost();
+    beside.jobs.push(json!({
+        "id": 1, "name": "wsl-proofs", "status": "completed", "conclusion": "success",
+        "runner_name": "malachys-pc-rtx2080s", "labels": ["self-hosted", "windows", "nvidia"], "steps": []
+    }));
+    let beside = beside.appended("1", FIRST_DOWNLOAD_LIMIT);
+    let text = classified(script, &beside);
+    assert!(
+        text.starts_with(&format!("rerun=job {TEST_JOB}\n")),
+        "a fault beside a recovered step limit: not re-run alone"
+    );
+    assert!(
+        text.lines()
+            .any(|l| l.starts_with("job=wsl-proofs: hang at step 'This run's image'")),
+        "a recovered step limit beside a fault: not logged"
+    );
+}
+
+#[test]
+fn ci_win_retry_keeps_a_step_limit_the_job_passed_on_from() {
+    check_recovered(&script());
+}
+
+negative_control!(
+    ci_win_retry_keeps_a_step_limit_the_job_passed_on_from,
+    "a passing job's step limit unread",
+    expected = "a recovered step limit: not logged as a hang",
+    check_recovered(&edit(
+        &script(),
+        "            if found:\n",
+        "            if False:\n"
+    ))
+);
+
+mod recovered_as_fault {
+    use super::*;
+    negative_control!(
+        ci_win_retry_keeps_a_step_limit_the_job_passed_on_from,
+        "a passing job's step limit read as a fault",
+        expected = "a recovered step limit: re-run",
+        check_recovered(&edit(
+            &script(),
+            "rows.append([job[\"name\"], jid, \"hang\", found[0]",
+            "rows.append([job[\"name\"], jid, \"fault\", found[0]"
         ))
     );
 }
@@ -988,6 +1082,38 @@ negative_control!(
     ))
 );
 
+fn check_decide_recovered(script: &str) {
+    let done = decide(script, &recovered(), &[]);
+    assert!(done.ok, "decide failed on a passing run");
+    assert!(done.posts().is_empty(), "a recovered step limit: re-run");
+    assert!(
+        done.summary.contains(&format!(
+            "| wsl-register | This run's image | {RECOVERED} | `{FIRST_DOWNLOAD_LIMIT}` | — |"
+        )),
+        "a recovered step limit: not logged with its step and signature"
+    );
+    assert!(
+        !done.calls.iter().any(|c| c.contains("/workflows/")),
+        "a recovered step limit: the newer runs read"
+    );
+}
+
+#[test]
+fn ci_win_retry_decide_logs_a_step_limit_the_job_passed_on_from() {
+    check_decide_recovered(&script());
+}
+
+negative_control!(
+    ci_win_retry_decide_logs_a_step_limit_the_job_passed_on_from,
+    "a passing job's annotations unread",
+    expected = "a recovered step limit: not logged with its step and signature",
+    check_decide_recovered(&edit(
+        &script(),
+        "        if not on_runner(j) or j.get(\"conclusion\") == \"skipped\":",
+        "        if not on_runner(j) or j.get(\"conclusion\") in PASSED:"
+    ))
+);
+
 // ---- The workflow -----------------------------------------------------------------------------------------------------
 
 fn parse(text: &str) -> Yaml {
@@ -1084,6 +1210,10 @@ fn check_workflow(text: &str) {
             .as_str()
             .is_some_and(|c| c.starts_with("github.repository == 'Ma1achy/Principia' && (")),
         "win-retry lacks the repository guard"
+    );
+    assert!(
+        job["if"].as_str().is_some_and(|c| !c.contains("'success'")),
+        "win-retry passes over a passing run, its recovered step limits unlogged"
     );
     let steps = job["steps"].as_vec().expect("win-retry's steps");
     let checkout = &steps[0];
@@ -1184,6 +1314,21 @@ mod unguarded {
             &read(WORKFLOW),
             "github.repository == 'Ma1achy/Principia' && ",
             ""
+        ))
+    );
+}
+
+mod passing_passed_over {
+    use super::*;
+    negative_control!(
+        ci_win_retry_workflow_is_hosted_and_follows_the_runner_alone,
+        "a passing run passed over",
+        expected = "win-retry passes over a passing run, its recovered step limits unlogged",
+        check_workflow(&edit(
+            &read(WORKFLOW),
+            "github.event.workflow_run.conclusion != 'skipped'",
+            "(github.event.workflow_run.conclusion != 'success' && \
+             github.event.workflow_run.conclusion != 'skipped')"
         ))
     );
 }
