@@ -38899,7 +38899,8 @@ R-1005 is in the "ci" group of `plan/rule_groups.yaml`.
 *13 Nov 2026 · the owner's second reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-811 moved; RQ-804, a dated line),
 `docs/archive/review_queue/M0.md` (RQ-811 with its ruling), the forward and "Still in force" lines of R-990, R-1002 (a
 dated line), `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision" (the R-990 line under
-"Switchover", with its *Was*), REQ-DEC-063, REQ-DEC-064 and REQ-GUI-012 (reqio), TASK-M6-08 and
+"Switchover", with its *Was*), REQ-DEC-063, REQ-DEC-064 and REQ-GUI-012 (reqio), TASK-M6-08 (its References, M-K's acceptance line and a dated
+note) and
 `plan/rule_groups.yaml`; changes REQ-DEC-063 and REQ-DEC-064*
 
 The owner's words (13 Nov 2026), verbatim:
@@ -38941,7 +38942,8 @@ Changes REQ-DEC-063 and REQ-DEC-064; REQ-GUI-012 drops RQ-811. The parse printed
 `docs/archive/review_queue/M0.md` (RQ-812 with its ruling), the forward and "Still in force" lines of R-998 and R-994,
 `docs/contracts/principia_integrator_contract.md` § "The equations and the step control (R-160, R-161)" (a dated line)
 and § "Rules the new kernel must hold by construction" (rule 1's 13 Nov line, with its *Was*), REQ-INT-084 (reqio),
-REQ-INT-049 and REQ-INT-119 (reqio, a dated note each), TASK-M3-08 (a dated line at its end) and
+REQ-INT-049 and REQ-INT-119 (reqio, a dated note each), TASK-M3-08 (a dated line at its end), TASK-M3-76 (a dated
+line) and
 `plan/rule_groups.yaml`; changes REQ-INT-084*
 
 The owner's words (13 Nov 2026), verbatim:
@@ -38976,7 +38978,7 @@ Changes REQ-INT-084. The parse printed R-1007 for this answer.
 
 ## R-1008 — TASK-M3-76's failed convergence check stands as reported, and its second criterion, written before running on a fresh η ladder with a stated round-off floor and approved by physics before it runs, must tell round-off from a landing defect: the order fitted only above the floor, an order still "well short of 4" there a landing defect, the clock-only control kept *(on D-5 of the report of 13 Nov 2026, which stands)*
 *13 Nov 2026 · the owner's second reply to the report of 13 Nov 2026; applied in the forward line of R-998,
-TASK-M3-76 (its Acceptance tests), REQ-INT-119 (reqio, a dated note) and `plan/rule_groups.yaml`; changes no
+TASK-M3-76 (its References and Acceptance tests), REQ-INT-119 (reqio, a dated note) and `plan/rule_groups.yaml`; changes no
 requirement statement*
 
 The owner's words (13 Nov 2026), verbatim:
