@@ -1,0 +1,8 @@
+{
+  "description": "The same passage under Aarseth–Zare + RK4, re-registering at each sync boundary (integrator_contract Part 2b): through d_min < 1e-10 with the regularised energy's drift, against the energy of its first registration, below 1e-12 (R-257, R-566), the value read bitwise the occupant's own, the Cartesian read-out after the passage printed beside it and different, and that read-out not falling with η over the ladder.",
+  "occupant": "aarseth-zare",
+  "reader": "regularised",
+  "eta": 0.01,
+  "ladder": [0.01, 0.005, 0.0025, 0.00125],
+  "expected": "pass"
+}

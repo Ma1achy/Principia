@@ -1,0 +1,9 @@
+{
+  "description": "The control: Heggie under Eq. 22 with the first momentum rate's sign flipped, the wrong-equation signature the check exists to catch; its discrepancy is of order one, far beyond the tolerance, so the gate must fail it (REQ-VAL-170).",
+  "occupant": "heggie-eq22",
+  "step": 1e-6,
+  "samples": 64,
+  "seed": 79600363727205,
+  "flip": true,
+  "expected": "fail"
+}

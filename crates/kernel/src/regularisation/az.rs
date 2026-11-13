@@ -61,48 +61,48 @@ pub trait AzReal: AdvanceReal {}
 impl<R: AdvanceReal> AzReal for R {}
 
 /// A 2-vector.
-type V<R> = [R; 2];
+pub(super) type V<R> = [R; 2];
 
 #[inline]
-fn add<R: AzReal>(a: V<R>, b: V<R>) -> V<R> {
+pub(super) fn add<R: AzReal>(a: V<R>, b: V<R>) -> V<R> {
     [a[0] + b[0], a[1] + b[1]]
 }
 
 #[inline]
-fn sub<R: AzReal>(a: V<R>, b: V<R>) -> V<R> {
+pub(super) fn sub<R: AzReal>(a: V<R>, b: V<R>) -> V<R> {
     [a[0] - b[0], a[1] - b[1]]
 }
 
 #[inline]
-fn scale<R: AzReal>(s: R, a: V<R>) -> V<R> {
+pub(super) fn scale<R: AzReal>(s: R, a: V<R>) -> V<R> {
     [s * a[0], s * a[1]]
 }
 
 #[inline]
-fn dot<R: AzReal>(a: V<R>, b: V<R>) -> R {
+pub(super) fn dot<R: AzReal>(a: V<R>, b: V<R>) -> R {
     a[0] * b[0] + a[1] * b[1]
 }
 
 #[inline]
-fn norm<R: AzReal>(a: V<R>) -> R {
+pub(super) fn norm<R: AzReal>(a: V<R>) -> R {
     dot(a, a).square_root()
 }
 
 /// `L(u)w = (u₀w₀ − u₁w₁, u₁w₀ + u₀w₁)`.
 #[inline]
-fn lmul<R: AzReal>(u: V<R>, w: V<R>) -> V<R> {
+pub(super) fn lmul<R: AzReal>(u: V<R>, w: V<R>) -> V<R> {
     [u[0] * w[0] - u[1] * w[1], u[1] * w[0] + u[0] * w[1]]
 }
 
 /// `L(u)ᵀw = (u₀w₀ + u₁w₁, −u₁w₀ + u₀w₁)`.
 #[inline]
-fn ltmul<R: AzReal>(u: V<R>, w: V<R>) -> V<R> {
+pub(super) fn ltmul<R: AzReal>(u: V<R>, w: V<R>) -> V<R> {
     [u[0] * w[0] + u[1] * w[1], u[0] * w[1] - u[1] * w[0]]
 }
 
 /// `max(x, floor)`, a NaN `x` kept.
 #[inline]
-fn floored<R: AzReal>(x: R, floor: R) -> R {
+pub(super) fn floored<R: AzReal>(x: R, floor: R) -> R {
     if floor > x {
         floor
     } else {
@@ -112,7 +112,7 @@ fn floored<R: AzReal>(x: R, floor: R) -> R {
 
 /// `min(a, b)`, a NaN `a` kept.
 #[inline]
-fn least<R: AzReal>(a: R, b: R) -> R {
+pub(super) fn least<R: AzReal>(a: R, b: R) -> R {
     if b < a {
         b
     } else {
@@ -122,7 +122,7 @@ fn least<R: AzReal>(a: R, b: R) -> R {
 
 /// `|x|`.
 #[inline]
-fn abs<R: AzReal>(x: R) -> R {
+pub(super) fn abs<R: AzReal>(x: R) -> R {
     if x < R::default() {
         -x
     } else {
@@ -132,13 +132,13 @@ fn abs<R: AzReal>(x: R) -> R {
 
 /// `2` at `R`.
 #[inline]
-fn two<R: AzReal>() -> R {
+pub(super) fn two<R: AzReal>() -> R {
     R::one() + R::one()
 }
 
 /// Whether `x` is finite, on its bits (Part 2c; R-114).
 #[inline]
-fn finite<R: AzReal>(x: R) -> bool {
+pub(super) fn finite<R: AzReal>(x: R) -> bool {
     !x.non_finite_bits()
 }
 
@@ -312,6 +312,14 @@ impl<R: AzReal> AzSystem<R> {
         ]
     }
 
+    /// The regularised energy of `(q, p)` (integrator_contract Part 1, R-566; REQ-INT-104): the physical energy of the
+    /// relative positions and momenta the regularised state gives ([`AzSystem::phys`]), each separation floored at
+    /// `TINY`, read from the regularised coordinates and momenta, never through the Cartesian return.
+    #[inline]
+    pub fn energy(&self, q: &AzQ<R>, p: &AzP<R>) -> R {
+        energy_of(self.mabc, self.mu, self.phys(q, p), self.tiny)
+    }
+
     /// The Cartesian state the regularised `(q, p)` maps back to (Part 2b, "Registration and return"): `V₁`, `V₂` from
     /// `P₁`, `P₂` through `K`; `r_a = 0`, `r_b = R₁`, `r_c = R₂`, `v_a = 0`, `v_b = V₁`, `v_c = V₂`; then shifted to the
     /// centre of mass; the momenta `pᵢ = mᵢvᵢ`.
@@ -336,6 +344,20 @@ impl<R: AzReal> AzSystem<R> {
             p: [scale(m[0], v[0]), scale(m[1], v[1]), scale(m[2], v[2])],
         }
     }
+}
+
+/// The physical energy at the relative positions and momenta `[R₁, R₂, P₁, P₂]` (Part 2b, "Coordinates and mass
+/// factors"): `E = |P₁|²/(2μ₁) + P₁·P₂/m_a + |P₂|²/(2μ₂) − m_a m_b/|R₁| − m_a m_c/|R₂| − m_b m_c/|R₃|`, each `|Rᵢ|`
+/// floored at `TINY` (`system.rs`'s `energy_phys`; R-953).
+#[inline]
+fn energy_of<R: AzReal>(mabc: [R; 3], mu: [R; 2], [r1, r2, p1, p2]: [V<R>; 4], tiny: R) -> R {
+    let [ma, mb, mc] = mabc;
+    let two = two::<R>();
+    let kinetic = dot(p1, p1) / (two * mu[0]) + dot(p1, p2) / ma + dot(p2, p2) / (two * mu[1]);
+    let potential = ma * mb / floored(norm(r1), tiny)
+        + ma * mc / floored(norm(r2), tiny)
+        + mb * mc / floored(norm(sub(r2, r1)), tiny);
+    kinetic - potential
 }
 
 /// Registers the Cartesian state `s` (Part 2b, "Registration and return"): the reference body ([`reference_body`]),
@@ -363,10 +385,7 @@ pub fn register<R: AzReal>(s: &State<R>, tiny: R, r3_floor: R) -> (AzSystem<R>, 
     let p1 = add(scale(k[0], v1), scale(k[2], v2));
     let p2 = add(scale(k[2], v1), scale(k[1], v2));
     let two = two::<R>();
-    let kinetic = dot(p1, p1) / (two * mu[0]) + dot(p1, p2) / ma + dot(p2, p2) / (two * mu[1]);
-    let potential = ma * mb / floored(norm(r1), tiny)
-        + ma * mc / floored(norm(r2), tiny)
-        + mb * mc / floored(norm(sub(r2, r1)), tiny);
+    let e = energy_of([ma, mb, mc], mu, [r1, r2, p1, p2], tiny);
     let u1 = lc_inverse(r1, tiny);
     let u2 = lc_inverse(r2, tiny);
     let system = AzSystem {
@@ -375,7 +394,7 @@ pub fn register<R: AzReal>(s: &State<R>, tiny: R, r3_floor: R) -> (AzSystem<R>, 
         mabc: [ma, mb, mc],
         mu,
         k,
-        e: kinetic - potential,
+        e,
         tiny,
         r3_floor,
     };
@@ -674,6 +693,12 @@ pub struct AzAdvanced<R> {
     pub t: R,
     /// The trajectory's counts.
     pub count: AzCount<R>,
+    /// The energy `E` of the march's first registration: the physical energy at its start, against which its
+    /// regularised energy drifts (integrator_contract Part 1, R-566). `0` where no interval was marched.
+    pub registered: R,
+    /// The regularised energy where the march ended ([`AzSystem::energy`] of its last interval's regularised state;
+    /// integrator_contract Part 1, R-566; REQ-INT-104). `0` where no interval was marched.
+    pub regularised: R,
 }
 
 /// What the march asks and tells as it goes: the explicit finiteness test it exits on (Part 2b, step 7), a slot so that
@@ -756,7 +781,14 @@ fn predictive<R: AzReal>(system: &AzSystem<R>, q: &AzQ<R>, p: &AzP<R>, f: R, ab:
 /// that is not a number, read on its bits, spends the budget too, so that the march stays bounded (Part 2c rule 3).
 #[inline]
 pub fn over_budget<R: AzReal>(steps: u32, t: R, params: &AzParams<R>) -> bool {
-    let allowance = floored(params.step_budget_rate * t, R::count(params.n_min));
+    over_allowance(steps, t, params.step_budget_rate, params.n_min)
+}
+
+/// Whether the running total `steps` exceeds `max(n_min, rate·t)` at physical time `t`, R-604's budget for any
+/// regularised occupant (Part 6), an allowance that is not a number spending it.
+#[inline]
+pub fn over_allowance<R: AzReal>(steps: u32, t: R, rate: R, n_min: u32) -> bool {
+    let allowance = floored(rate * t, R::count(n_min));
     R::count(steps) > allowance || allowance.nan_bits()
 }
 
@@ -947,8 +979,14 @@ pub fn march<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     let mut k = k_now;
     let mut count = count;
     let mut t_s = R::default();
+    let mut registered = R::default();
+    let mut regularised = R::default();
+    let first = count.re_registrations;
     while k < k_target && count.end == End::Marching {
         let (system, q, p) = register(&s, params.tiny, params.r3_floor);
+        if count.re_registrations == first {
+            registered = system.e;
+        }
         count.re_registrations += 1;
         if count.reference != 3 && count.reference != system.a {
             count.switches += 1;
@@ -956,6 +994,7 @@ pub fn march<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
         count.reference = system.a;
         watch.registered(&q);
         let out = interval::<S, R, C, X>(&system, (q, p), k, params, &mut count, cadence, watch);
+        regularised = system.energy(&out.q, &out.p);
         s = system.image(&out.q, &out.p);
         if out.landed {
             k += 1;
@@ -969,6 +1008,8 @@ pub fn march<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
         boundary: k,
         t: R::count(k) * params.delta_sync + t_s,
         count,
+        registered,
+        regularised,
     }
 }
 

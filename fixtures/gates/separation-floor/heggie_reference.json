@@ -1,0 +1,6 @@
+{
+  "description": "The reference's TINY, 1e-300 at f64 (R-953), under Heggie × RK4 on the same passage: below every pre-floor dt/dτ, S and Rᵢ there, it floors no step, so the control's count reads zero and it fails.",
+  "tiny": "reference",
+  "occupant": "heggie",
+  "expected": "fail"
+}

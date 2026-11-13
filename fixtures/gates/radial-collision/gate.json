@@ -1,0 +1,6 @@
+{
+  "gate": "radial-collision",
+  "inputs": ["heggie.json", "aarseth_zare.json", "cartesian_reader.json"],
+  "threshold": { "value": 1e-12, "requirement": "REQ-VAL-045", "status": "confirmed", "ruling": "R-257" },
+  "min_regions": { "value": null, "requirement": "REQ-VAL-357" }
+}
