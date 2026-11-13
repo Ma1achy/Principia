@@ -1,4 +1,5 @@
-//! Aarseth–Zare's gates (TASK-M3-68): `lc-inverse` (REQ-INT-044), `az-final-step` (REQ-INT-049, REQ-INT-114) and the
+//! Aarseth–Zare's gates (TASK-M3-68, TASK-M3-76): `lc-inverse` (REQ-INT-044), `az-final-step` (REQ-INT-049,
+//! REQ-INT-114, REQ-INT-119) and the
 //! `separation-floor` measurement (REQ-INT-105): their verdicts at and past their thresholds, their refusals, their
 //! flags, and the runner on their fixtures. Each test registers its negative control (R-176).
 
@@ -12,8 +13,8 @@ use validation::az::{
     cartesian_closure, checked, closure, convergence, decide_sync, describe, distance,
     doubly_degenerate, energy, figure_eight, floor_run, lc_error, on_grid, orbit, proposal,
     propose_final_step_with, propose_floor, propose_sync_with, radial, reference_tiny, round_up,
-    show, AzFinalStepGate, LcInverseGate, Orbit, Proposal, Quiet, Recorder, SeparationFloorGate,
-    SyncRow, Width, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME, SYNC_ERROR,
+    show, slope, AzFinalStepGate, Landing, LcInverseGate, Orbit, Proposal, Quiet, Recorder,
+    SeparationFloorGate, SyncRow, Width, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME, SYNC_ERROR,
 };
 use validation::gate::{self, Gate, GateConfig, GateSpec, MeasurementGate, Verdict};
 use validation::negative_control;
@@ -128,54 +129,77 @@ negative_control!(
 );
 
 /// A small `az-final-step` input: two rungs, against a reference run at `η = 0.005`.
-fn final_step(landing: bool, order_above: f64) -> serde_json::Value {
+fn final_step(landing: Landing, expected: f64, margin: f64) -> serde_json::Value {
     json!({
-        "description": "a test input", "eta": 0.01, "n": 8, "landing": landing,
-        "ladder": [0.02, 0.01], "reference_eta": 0.005, "order_above": order_above
+        "description": "a test input", "eta": 0.01, "n": 8, "landing": landing_name(landing),
+        "ladder": [0.02, 0.01], "reference_eta": 0.005, "order_expected": expected, "order_margin": margin
     })
 }
 
-/// The figure-eight's closure and convergence at the gate's verdict: at the measured closure and below the measured
-/// order it passes; just below the closure, or at the order, it fails; the closure without the landing fix is first
-/// order and larger; a short ladder or no interval is refused; the orbit fixture is `ledger`'s IC.
-fn check_final_step(landing: bool) {
+/// `landing` as an input names it.
+fn landing_name(landing: Landing) -> &'static str {
+    match landing {
+        Landing::Fix => "fix",
+        Landing::ClockOnly => "clock_only",
+        Landing::Off => "off",
+    }
+}
+
+/// The figure-eight's closure and convergence at the gate's verdict: at the measured closure and the measured order
+/// with no margin it passes; just below the closure, or with the expected order one step either side of the measured
+/// one, it fails; the fix's order is better than first and the run without it is first order and larger; a short
+/// ladder or no interval is refused; the orbit fixture is `ledger`'s IC.
+fn check_final_step(landing: Landing) {
     let o = orbit().expect("the orbit fixture");
     assert_eq!(figure_eight::<f64>(&o).p[2], o.v3, "unit masses: p₃ = v₃");
     let c = closure(&o, 0.01, 8, landing);
     let conv = convergence(&o, &[0.02, 0.01], 0.005, 8, landing);
-    let off = convergence(&o, &[0.02, 0.01], 0.005, 8, false);
+    let off = convergence(&o, &[0.02, 0.01], 0.005, 8, Landing::Off);
     assert!(
         conv.order > 1.5,
         "the landing fix's order {} is better than first",
         conv.order
     );
     assert!(off.order < 1.5, "without it: {}", off.order);
-    let below = conv.order.next_down();
-    let at = |threshold: f64, order_above: f64| {
+    let at = |threshold: f64, expected: f64, margin: f64| {
         AzFinalStepGate
             .run(
                 &config(FINAL_STEP_NAME, threshold),
                 "t",
-                &final_step(landing, order_above),
+                &final_step(landing, expected, margin),
             )
             .map(|r| r.verdict)
     };
-    assert_eq!(at(c.closure, below), Ok(Verdict::Pass), "at the closure");
     assert_eq!(
-        at(c.closure.next_down(), below),
+        at(c.closure, conv.order, 0.0),
+        Ok(Verdict::Pass),
+        "at the closure"
+    );
+    assert_eq!(
+        at(c.closure.next_down(), conv.order, 0.0),
         Ok(Verdict::Fail),
         "below the closure"
     );
     assert_eq!(
-        at(c.closure, conv.order),
+        at(c.closure, conv.order.next_up(), 0.0),
         Ok(Verdict::Fail),
-        "at the order, not above it"
+        "an expected order above the fitted one, beyond the margin"
+    );
+    assert_eq!(
+        at(c.closure, conv.order.next_down(), 0.0),
+        Ok(Verdict::Fail),
+        "an expected order below the fitted one, beyond the margin"
+    );
+    assert_eq!(
+        at(c.closure, conv.order + 0.25, 0.5),
+        Ok(Verdict::Pass),
+        "within the margin"
     );
     for bad in [
-        json!({ "description": "", "eta": 0.01, "n": 8, "landing": true, "ladder": [0.01],
-                "reference_eta": 0.005, "order_above": 1.5 }),
-        json!({ "description": "", "eta": 0.01, "n": 0, "landing": true, "ladder": [0.02, 0.01],
-                "reference_eta": 0.005, "order_above": 1.5 }),
+        json!({ "description": "", "eta": 0.01, "n": 8, "landing": "fix", "ladder": [0.01],
+                "reference_eta": 0.005, "order_expected": 4.0, "order_margin": 0.5 }),
+        json!({ "description": "", "eta": 0.01, "n": 0, "landing": "fix", "ladder": [0.02, 0.01],
+                "reference_eta": 0.005, "order_expected": 4.0, "order_margin": 0.5 }),
     ] {
         assert!(
             AzFinalStepGate
@@ -188,14 +212,43 @@ fn check_final_step(landing: bool) {
 
 #[test]
 fn az_final_step_gate() {
-    check_final_step(true);
+    check_final_step(Landing::Fix);
 }
 
 negative_control!(
     az_final_step_gate,
     "the gate's arms run without the landing fix",
     expected = "the landing fix's order",
-    check_final_step(false)
+    check_final_step(Landing::Off)
+);
+
+/// The fitted order is the least-squares slope over every rung: on `y = 4x + 1` it is 4, on three points off a line it
+/// is the fit's, not the end points' slope.
+fn check_slope(fit: fn(&[(f64, f64)]) -> f64) {
+    assert_eq!(
+        fit(&[(0.0, 1.0), (1.0, 5.0), (2.0, 9.0)]),
+        4.0,
+        "a line's slope"
+    );
+    // (0, 0), (1, 0), (3, 3): the end points give 1; the fit: x̄ = 4/3, ȳ = 1, sxy = (−4/3)(−1) + (−1/3)(−1) + (5/3)(2) = 5,
+    // sxx = 16/9 + 1/9 + 25/9 = 42/9, so 15/14.
+    let s = fit(&[(0.0, 0.0), (1.0, 0.0), (3.0, 3.0)]);
+    assert!(
+        (s - 15.0 / 14.0).abs() < 1e-15,
+        "the fit over every point: {s}"
+    );
+}
+
+#[test]
+fn az_order_fit() {
+    check_slope(slope);
+}
+
+negative_control!(
+    az_order_fit,
+    "the end points' slope",
+    expected = "the fit over every point",
+    check_slope(|p| (p[p.len() - 1].1 - p[0].1) / (p[p.len() - 1].0 - p[0].0))
 );
 
 /// The gates' flags: `az-final-step` takes `--propose` and `--propose-sync` alone, `separation-floor` `--propose`
@@ -385,13 +438,14 @@ negative_control!(
 /// reference's values.
 fn check_proposals(final_step: &str, sync: &str, floor: &str) {
     let o = orbit().expect("the orbit");
-    let c = closure(&o, 0.01, 8, true);
+    let c = closure(&o, 0.01, 8, Landing::Fix);
     for needle in [
         format!("**Proposed threshold:** {:.1e}", round_up(2.0 * c.closure)),
         "the IC's own closure, Cartesian RK4 at dt = T/4096".to_owned(),
         "## The convergence ladder, with the landing fix (errors against η = 0.005, landing on)"
             .to_owned(),
-        "## The convergence ladder, without it".to_owned(),
+        "## The convergence ladder, with the clock-only landing".to_owned(),
+        "## The convergence ladder, without the landing fix".to_owned(),
         "| 0.02 | ".to_owned(),
     ] {
         assert!(
@@ -497,7 +551,7 @@ fn check_helpers(o: Orbit) {
         "unequal masses: {}",
         energy(&h)
     );
-    let c = closure(&o, 0.02, 8, true);
+    let c = closure(&o, 0.02, 8, Landing::Fix);
     let drift =
         |end: &kernel::occupant::State<f64>| ((energy(end) - energy(&s)) / energy(&s)).abs();
     assert_eq!(c.energy, drift(&c.state), "the closure's drift");
@@ -515,12 +569,12 @@ fn check_helpers(o: Orbit) {
     ] {
         assert!(text.contains(needle), "{text}");
     }
-    assert!(describe(&closure(&o, 0.02, 8, false)).contains("landing fix off"));
+    assert!(describe(&closure(&o, 0.02, 8, Landing::Off)).contains("landing fix off"));
     assert!(
         !Cadence::<f64>::done(&Quiet),
         "the quiet cadence never ends a march"
     );
-    let (_, q, p) = kernel::regularisation::az::register(&s, 1e-300, 1e-300);
+    let (_, q, p) = kernel::regularisation::az::register(&s, 1e-300);
     let mut watch = Recorder::default();
     assert!(Watch::<f64>::finite(&mut watch, &q, &p));
     let mut nan = q;

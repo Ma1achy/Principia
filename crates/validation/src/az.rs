@@ -6,10 +6,11 @@
 //!   conditioned inverse at most one, the requirement's `≈ 5.96e-8` and `≈ 1e-16` (one unit in the last place of a
 //!   component just below 1 is `2⁻²⁴ ≈ 5.96e-8` at f32 and `2⁻⁵³ ≈ 1.1e-16` at f64); the unstable form, the control,
 //!   far above it (the reference's table: `2.2e-2` at f32, `4.0e-12` at f64, relative).
-//! - **`az-final-step`** ([`AzFinalStepGate`]; REQ-INT-049, REQ-INT-114): the figure-eight's closure after one period
-//!   on the gate's own sync interval `T/32` at `η = 0.001`, under the step control in force with the landing clamp and
-//!   secant, at most REQ-INT-114's proposed threshold, and its convergence over the `η` ladder better than first order;
-//!   the closure without the landing fix, the control, beside it. `--propose` prints REQ-INT-114's proposal and
+//! - **`az-final-step`** ([`AzFinalStepGate`]; REQ-INT-049, REQ-INT-114, REQ-INT-119): the figure-eight's closure
+//!   after one period on the gate's own sync interval `T/32` at `η = 0.001`, under the step control in force with the
+//!   landing clamp, secant and bisection (R-998), at most REQ-INT-114's proposed threshold, and its convergence order
+//!   over the `η` ladder, fitted by least squares, within the input's margin of RK4's order 4; the controls, the closure
+//!   without the landing fix and the landing that sets the clock alone over the overshot state, beside it. `--propose` prints REQ-INT-114's proposal and
 //!   `--propose-sync` REQ-INT-080's (`Δ_sync` and `η`).
 //! - **`separation-floor`** ([`SeparationFloorGate`]; REQ-INT-105): a measurement; `--propose` prints `TINY`'s
 //!   proposal at f32 and f64 from Aarseth–Zare's pre-floor `A` and `B` and the inverse's guarded component; its
@@ -17,11 +18,10 @@
 //!   and the reference's, which floors none.
 //!
 //! **The conditions every run states.** The values the step control reads are calibrations, so each run here names
-//! the ones it ran at: `TINY` the reference's (`1e-37` at f32, `1e-300` at f64; R-953) unless the run varies it, the
-//! landing tolerance the reference's `LAND_EPS_REL` (`1e-5`, `1e-14`; RQ-795), R-160's `f = 0.02`, the `|R₃|` floor
-//! Part 2b's `1e-300` at f64 and **no floor (0) at f32**, a step budget that does not bind, and the stepper RK4 (Part
-//! 2a's validation-grade pair). Part 2b's floor is an f64 value, which is 0 at f32, and the corpus gives none at f32:
-//! every f32 run here has no floor on `|R₃|` until RQ-796 is ruled (R-71).
+//! the ones it ran at: `TINY` the reference's (`1e-37` at f32, `1e-300` at f64; R-953) unless the run varies it, which
+//! also floors `|R₃|` (R-999), the landing with no tolerance, its secant's 4 retakes and its bisection's 64 halvings
+//! (R-998), R-160's `f = 0.02`, a step budget that does not bind, and the stepper RK4 (Part 2a's validation-grade
+//! pair).
 
 use std::path::Path;
 
@@ -82,21 +82,45 @@ pub fn reference_tiny<R: AzReal>() -> R {
     R::at_width(1e-37, 1e-300)
 }
 
-/// The run conditions at `R` (the module's note), at step factor `eta` and sync quantum `delta_sync`, the landing fix
-/// on or off.
-pub fn conditions<R: AzReal>(eta: f64, delta_sync: f64, landing: bool) -> AzParams<R> {
+/// How a run lands at its sync boundaries.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Landing {
+    /// The rule in force (Part 2b, steps 3 and 6; R-998): the clamp, the secant's 4 retakes and the bisection's 64
+    /// halvings, the state landing on the boundary with its clock.
+    Fix,
+    /// The clamp with no retakes: the clamped step's state kept where it overshoots, the clock set to the boundary
+    /// alone, what R-998 forbids (REQ-INT-119's control).
+    ClockOnly,
+    /// No clamp and no retakes: each interval's last step overshoots by up to a step (REQ-INT-049's control).
+    Off,
+}
+
+impl Landing {
+    /// The words a run's description gives it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Landing::Fix => "landing fix on",
+            Landing::ClockOnly => "clock-only landing",
+            Landing::Off => "landing fix off",
+        }
+    }
+}
+
+/// The run conditions at `R` (the module's note), at step factor `eta` and sync quantum `delta_sync`, landing as
+/// `landing` says.
+pub fn conditions<R: AzReal>(eta: f64, delta_sync: f64, landing: Landing) -> AzParams<R> {
+    let fix = landing == Landing::Fix;
     AzParams {
         eta: at(eta),
         delta_sync: at(delta_sync),
         tiny: reference_tiny(),
         predictive_f: at(0.02),
-        // Part 2b's `1e-300` at f64; at f32 no floor (0) until RQ-796 is ruled (the module's note).
-        r3_floor: R::at_width(0.0, 1e-300),
-        land_eps_rel: R::at_width(1e-5, 1e-14),
         step_budget_rate: at(0.0),
         n_min: u32::MAX,
-        clamp: landing,
-        secant_tries: if landing { 4 } else { 0 },
+        clamp: landing != Landing::Off,
+        secant_tries: if fix { 4 } else { 0 },
+        bisect_tries: if fix { 64 } else { 0 },
     }
 }
 
@@ -312,12 +336,12 @@ pub fn figure_eight<R: Width>(o: &Orbit) -> State<R> {
     }
 }
 
-/// One figure-eight run: one period on the grid `T/n` at `eta`, the landing fix on or off.
+/// One figure-eight run: one period on the grid `T/n` at `eta`, landing as `landing` says.
 #[derive(Clone, Copy, Debug)]
 pub struct Closure {
     pub eta: f64,
     pub n: u32,
-    pub landing: bool,
+    pub landing: Landing,
     /// The closure `|r(T) − r(0)|` over every position component.
     pub closure: f64,
     /// `|E(T) − E(0)|/|E(0)|`, the Cartesian energy.
@@ -331,7 +355,7 @@ pub struct Closure {
 }
 
 /// The figure-eight over one period on `n` sync intervals at `eta`, at f64.
-pub fn closure(o: &Orbit, eta: f64, n: u32, landing: bool) -> Closure {
+pub fn closure(o: &Orbit, eta: f64, n: u32, landing: Landing) -> Closure {
     let s0 = figure_eight::<f64>(o);
     let params = conditions::<f64>(eta, o.period / f64::from(n), landing);
     let out = march::<Rk4, f64, Quiet, ExplicitTest>(
@@ -358,8 +382,8 @@ pub fn closure(o: &Orbit, eta: f64, n: u32, landing: bool) -> Closure {
 /// The `η` ladder of REQ-INT-114's convergence (`[0.02, 0.001]`, dd_validation_orbits § 0.1's).
 pub const LADDER: [f64; 5] = [0.02, 0.01, 0.005, 0.002, 0.001];
 
-/// The convergence over a ladder: each rung's run, its error against a reference run at `reference_eta` (landing on),
-/// and the order between the first and last rungs, `log(e₀/eₙ)/log(η₀/ηₙ)`.
+/// The convergence over a ladder: each rung's run, its error against a reference run at `reference_eta` (the landing
+/// fix on), and the order fitted on the ladder: the least-squares slope of `ln e` against `ln η` over every rung.
 #[derive(Clone, Debug)]
 pub struct Convergence {
     pub rungs: Vec<(Closure, f64)>,
@@ -367,16 +391,16 @@ pub struct Convergence {
     pub order: f64,
 }
 
-/// The convergence of the figure-eight over `ladder` on `n` intervals, the landing fix on or off, against a run at
-/// `reference_eta` with it on.
+/// The convergence of the figure-eight over `ladder` on `n` intervals, landing as `landing` says, against a run at
+/// `reference_eta` with the landing fix on.
 pub fn convergence(
     o: &Orbit,
     ladder: &[f64],
     reference_eta: f64,
     n: u32,
-    landing: bool,
+    landing: Landing,
 ) -> Convergence {
-    let reference = closure(o, reference_eta, n, true);
+    let reference = closure(o, reference_eta, n, Landing::Fix);
     let rungs: Vec<(Closure, f64)> = ladder
         .iter()
         .map(|&eta| {
@@ -385,13 +409,23 @@ pub fn convergence(
             (c, e)
         })
         .collect();
-    let (first, last) = (&rungs[0], &rungs[rungs.len() - 1]);
-    let order = (first.1 / last.1).ln() / (first.0.eta / last.0.eta).ln();
+    let points: Vec<(f64, f64)> = rungs.iter().map(|(c, e)| (c.eta.ln(), e.ln())).collect();
+    let order = slope(&points);
     Convergence {
         rungs,
         reference,
         order,
     }
+}
+
+/// The least-squares slope of `y` against `x` over `points`.
+pub fn slope(points: &[(f64, f64)]) -> f64 {
+    let n = points.len() as f64;
+    let mx = points.iter().map(|p| p.0).sum::<f64>() / n;
+    let my = points.iter().map(|p| p.1).sum::<f64>() / n;
+    let sxy: f64 = points.iter().map(|p| (p.0 - mx) * (p.1 - my)).sum();
+    let sxx: f64 = points.iter().map(|p| (p.0 - mx) * (p.0 - mx)).sum();
+    sxy / sxx
 }
 
 /// An `az-final-step` input.
@@ -403,14 +437,17 @@ pub struct FinalStepInput {
     pub eta: f64,
     /// The sync intervals per period.
     pub n: u32,
-    /// Whether the landing fix (the clamp and the secant) is on.
-    pub landing: bool,
+    /// How the runs land.
+    pub landing: Landing,
     /// The `η` ladder of the convergence arm.
     pub ladder: Vec<f64>,
     /// The reference run's `η`.
     pub reference_eta: f64,
-    /// The least order that is better than first order, REQ-INT-114's proposal beside the threshold.
-    pub order_above: f64,
+    /// The order expected for the stepper: RK4's 4 (REQ-INT-119).
+    pub order_expected: f64,
+    /// How far the fitted order may lie from `order_expected`, either way (REQ-INT-119; the criterion written before
+    /// any run, R-649).
+    pub order_margin: f64,
 }
 
 /// The lines describing one run.
@@ -422,11 +459,12 @@ pub fn describe(c: &Closure) -> String {
         DtMaxReport::NoUsableStep { skipped } => format!("no usable step ({skipped} skipped)"),
     };
     format!(
-        "η = {}, n = {}, landing fix {}: closure {:.4e}, |ΔE/E| {:.2e}; {} steps, {} re-registrations, {} reference \
-         switches, the predictive limit bound {} step(s), {} cap hits, {} overshoots, {dt_max}",
+        "η = {}, n = {}, {}: closure {:.4e}, |ΔE/E| {:.2e}; {} steps, {} re-registrations, {} reference \
+         switches, the predictive limit bound {} step(s), {} cap hits, {} overshoots, {} interval(s) closed by a \
+         further step, at most {} halving(s) in a landing, {dt_max}",
         c.eta,
         c.n,
-        if c.landing { "on" } else { "off" },
+        c.landing.name(),
         c.closure,
         c.energy,
         c.count.steps,
@@ -434,7 +472,9 @@ pub fn describe(c: &Closure) -> String {
         c.count.switches,
         c.count.predictive_bound,
         c.count.cap_hits,
-        c.count.overshoots
+        c.count.overshoots,
+        c.count.closings,
+        c.count.most_bisections
     )
 }
 
@@ -478,10 +518,12 @@ impl Gate for AzFinalStepGate {
         }
         scatter.push(format!("reference run: {}", describe(&conv.reference)));
         scatter.push(format!(
-            "order over the ladder {:.3} (η {} → {})",
+            "order fitted on the ladder {:.3} (η {} → {}; RK4's {} ± {})",
             conv.order,
             input.ladder[0],
-            input.ladder[input.ladder.len() - 1]
+            input.ladder[input.ladder.len() - 1],
+            input.order_expected,
+            input.order_margin
         ));
         scatter.extend(
             o.reference
@@ -490,7 +532,7 @@ impl Gate for AzFinalStepGate {
         );
         let mut negative = Vec::new();
         let closes = c.closure <= threshold;
-        let converges = conv.order > input.order_above;
+        let converges = (conv.order - input.order_expected).abs() <= input.order_margin;
         negative.push(if closes {
             format!(
                 "the closure {:.4e} is within the threshold {threshold:.3e}",
@@ -504,13 +546,13 @@ impl Gate for AzFinalStepGate {
         });
         negative.push(if converges {
             format!(
-                "the order {:.3} is above {} (better than first order)",
-                conv.order, input.order_above
+                "the fitted order {:.3} is within {} of {}",
+                conv.order, input.order_margin, input.order_expected
             )
         } else {
             format!(
-                "the order {:.3} is not above {}: no better than first order",
-                conv.order, input.order_above
+                "the fitted order {:.3} is not within {} of {}",
+                conv.order, input.order_margin, input.order_expected
             )
         });
         Ok(GateReport {
@@ -589,8 +631,8 @@ pub fn propose_final_step_with(
         "# REQ-INT-114: the figure-eight closure threshold, proposed (az-final-step --propose)\n"
     );
     say!(out, "{}\n", o.description);
-    let c = closure(&o, eta, n, true);
-    let off = closure(&o, eta, n, false);
+    let c = closure(&o, eta, n, Landing::Fix);
+    let off = closure(&o, eta, n, Landing::Off);
     say!(
         out,
         "- the closure under the rule in force: {}",
@@ -601,27 +643,35 @@ pub fn propose_final_step_with(
         "- the closure without the landing fix: {}",
         describe(&off)
     );
-    let on = convergence(&o, ladder, reference_eta, n, true);
-    let without = convergence(&o, ladder, reference_eta, n, false);
-    for (what, conv) in [("with the landing fix", &on), ("without it", &without)] {
+    let on = convergence(&o, ladder, reference_eta, n, Landing::Fix);
+    let clock_only = convergence(&o, ladder, reference_eta, n, Landing::ClockOnly);
+    let without = convergence(&o, ladder, reference_eta, n, Landing::Off);
+    for (what, conv) in [
+        ("with the landing fix", &on),
+        ("with the clock-only landing", &clock_only),
+        ("without the landing fix", &without),
+    ] {
         say!(out, "\n## The convergence ladder, {what} (errors against η = {reference_eta}, landing on)\n");
         say!(
             out,
-            "| η | closure | error | steps | re-registrations | predictive limit bound |"
+            "| η | closure | error | steps | re-registrations | predictive limit bound | closed by a further step \
+             | most halvings |"
         );
-        say!(out, "|---|---|---|---|---|---|");
+        say!(out, "|---|---|---|---|---|---|---|---|");
         for (r, e) in &conv.rungs {
             say!(
                 out,
-                "| {} | {:.4e} | {e:.3e} | {} | {} | {} |",
+                "| {} | {:.4e} | {e:.3e} | {} | {} | {} | {} | {} |",
                 r.eta,
                 r.closure,
                 r.count.steps,
                 r.count.re_registrations,
-                r.count.predictive_bound
+                r.count.predictive_bound,
+                r.count.closings,
+                r.count.most_bisections
             );
         }
-        say!(out, "\norder over the ladder: {:.3}", conv.order);
+        say!(out, "\norder fitted on the ladder: {:.3}", conv.order);
     }
     say!(out, "\nreference run: {}", describe(&on.reference));
     // The IC's own closure: Cartesian RK4 at a fine fixed step, no regularisation.
@@ -637,11 +687,13 @@ pub fn propose_final_step_with(
         );
     }
     say!(out,
-        "\n**Proposed threshold:** {:.1e}, {MARGIN}× the measured closure {:.4e} rounded up; the order criterion: above \
-         1.5 (measured {:.3} with the fix, {:.3} without)",
+        "\n**Proposed threshold:** {:.1e}, {MARGIN}× the measured closure {:.4e} rounded up; the order criterion: RK4's \
+         4 ± 0.5, fitted on the ladder (REQ-INT-119; measured {:.3} with the fix, {:.3} with the clock-only landing, \
+         {:.3} without the fix)",
         round_up(MARGIN * c.closure),
         c.closure,
         on.order,
+        clock_only.order,
         without.order
     );
     Ok(out)
@@ -675,7 +727,7 @@ pub const SYNC_LADDER: [f64; 6] = [0.40625, 0.2, 0.1, 0.05, 0.025, 0.0125];
 /// the positions there, `|ΔE/E|`, the counts.
 pub fn on_grid(o: &Orbit, eta: f64, delta_sync: f64) -> (AzAdvanced<f64>, f64) {
     let s0 = figure_eight::<f64>(o);
-    let params = conditions::<f64>(eta, delta_sync, true);
+    let params = conditions::<f64>(eta, delta_sync, Landing::Fix);
     let k = kernel::regularisation::az::boundary_at_or_before(o.period, delta_sync);
     let out = march::<Rk4, f64, Quiet, ExplicitTest>(
         &s0,
@@ -917,7 +969,7 @@ pub const FLOOR_ETA: f64 = 0.01;
 
 /// Runs `f` at `R` with `TINY = tiny`.
 pub fn floor_run<R: Width>(f: &FloorFixture, tiny: Option<f64>) -> FloorRun {
-    let mut params = conditions::<R>(FLOOR_ETA, f.delta_sync, true);
+    let mut params = conditions::<R>(FLOOR_ETA, f.delta_sync, Landing::Fix);
     if let Some(t) = tiny {
         params.tiny = at(t);
     }
@@ -962,8 +1014,8 @@ pub fn propose_floor() -> Result<String, String> {
     );
     say!(out,
         "Each fixture run under Aarseth–Zare + RK4 at η = {FLOOR_ETA}, Δ_sync = 0.125, with TINY the reference's \
-         (1e-37 at f32, 1e-300 at f64; R-953), the landing tolerance the reference's (RQ-795), and the |R₃| floor \
-         1e-300 at f64 and none (0) at f32, the corpus giving no f32 value until RQ-796 is ruled.\n"
+         (1e-37 at f32, 1e-300 at f64; R-953), which also floors |R₃| (R-999), and the landing with no tolerance \
+         (R-998).\n"
     );
     say!(out,
         "| fixture | width | least A | least B | least A·B | least guarded component | floored | non-finite entries \
@@ -1042,7 +1094,7 @@ pub fn doubly_degenerate() -> (End, u32, u32) {
         r: [[0.0, 0.0], [1e-38, 0.0], [0.0, 2e-38]],
         p: [[0.0; 2]; 3],
     };
-    let mut params = conditions::<f32>(FLOOR_ETA, 0.125, true);
+    let mut params = conditions::<f32>(FLOOR_ETA, 0.125, Landing::Fix);
     params.n_min = 64;
     let out = march::<Rk4, f32, Quiet, ExplicitTest>(
         &s,

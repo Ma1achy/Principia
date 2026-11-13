@@ -1,10 +1,11 @@
 {
-  "description": "The control: the same run without the landing fix (no clamp, no secant), each interval's last step overshooting its boundary by up to one step, an O(η) phase error (dd_validation_orbits § 0.1): its closure far beyond the threshold and its convergence first order, so the gate must fail it.",
+  "description": "The control of REQ-INT-049: the same run without the landing fix (no clamp, no retakes), each interval's last step overshooting its boundary by up to one step, an O(η) phase error (dd_validation_orbits § 0.1): its closure far beyond the threshold and its fitted order about 1, so the gate must fail it.",
   "eta": 0.001,
   "n": 32,
-  "landing": false,
+  "landing": "off",
   "ladder": [0.02, 0.01, 0.005, 0.002, 0.001],
   "reference_eta": 0.0001,
-  "order_above": 1.5,
+  "order_expected": 4.0,
+  "order_margin": 0.5,
   "expected": "fail"
 }

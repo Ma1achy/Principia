@@ -24,9 +24,9 @@
 //!   rule with its tie-break, the conditioned inverse's branches, registration and return, and the interval's energy;
 //!   their controls a last-maximum tie-break, the unstable inverse, a quarter-turned `u₁` and a flow whose energy is
 //!   not the state's.
-//! - `az_landing_secant`: on a scripted clock, the landing secant's retake, its tries and its stop on a clock that does
-//!   not move, the budget's physical time, a copy spent as it lands, and the overshoot's edge; its control turns the
-//!   secant off.
+//! - `az_landing_secant`: on a scripted clock, the landing's secant and bisection landing the clock on the boundary
+//!   exactly, a retake that leaves the clock where it was, the budget's physical time, a copy spent as it lands, and
+//!   the overshoot's edge, no kept clock past the boundary; its control turns the retakes off (R-998).
 //! - `az_boundary_corrected`, `az_seam_index`: the boundary's corrections of the quotient both ways and before `0`,
 //!   and the seam's `ADVANCE` from a later macro index; their controls the uncorrected quotient and a seam from 0.
 //! - `az_form_orders`: each stepper's form at its own order on the harmonic oscillator (KDK second order there, being
@@ -36,8 +36,13 @@
 //! - `az_whole_nan`, `az_whole_negative`, `az_whole_above`: `Count::whole` clamps in the float type before the cast
 //!   (gpu_determinism_note § "The discipline", rule 3): a NaN on its bits to `0`, a negative to `0`, at or above `2³²`
 //!   to `u32::MAX`; their controls a NaN sent to the top, a negative by its magnitude, and a clamp with no select.
-//! - `az_clamp_off_tolerance`: with the clamp off the landing tolerance is 0, a copy landing only at the boundary; its
-//!   control keeps the tolerance.
+//! - `az_landing_no_tolerance`: no landing tolerance, with the clamp on or off: a clock short of the boundary never
+//!   lands, one past it is never kept; its control keeps a step past the boundary (R-998).
+//! - `az_landing_state_with_clock`: under RK4, an interval whose clamped step overshoots stores the state whose own
+//!   clock is the boundary, bitwise, its time the boundary's; its control is the clock-only correction (R-998;
+//!   REQ-INT-119).
+//! - `az_r3_floor_tiny`: the equations of motion read `|R₃|` floored at `TINY`, `1e-37` at f32 and `1e-300` at f64; its
+//!   control a floor of 0 at f32 (R-999; REQ-INT-120).
 //! - `az_seam_non_finite_fails`, `az_seam_completes`, `az_seam_exhausted_stops`, `az_seam_done_short`: through the
 //!   wrapper (`integrate_with`), the seam's end (Part 2a, Cost 2; § "The sync grid is a fixed quantum of physical time
 //!   (R-565)"): a march ended non-finite fails the run, `sim_failed` at the macro-step it ended in; every macro-step
@@ -111,21 +116,20 @@ fn v<R: AzReal>(x: f64) -> R {
 }
 
 /// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8` (exact in binary), the reference's `TINY` (`1e-37` at
-/// f32, `1e-300` at f64, R-953) and landing tolerance (`1e-5`, `1e-14`; RQ-795), R-160's `f = 0.02`, the `|R₃|` floor
-/// Part 2b's `1e-300` at f64 and no floor (0) at f32, the corpus giving no f32 value until RQ-796 is ruled, a budget
-/// that does not bind, the clamp and the secant on. Test inputs, not the calibrations.
+/// f32, `1e-300` at f64, R-953), which also floors `|R₃|` (R-999), R-160's `f = 0.02`, a budget that does not bind, the
+/// clamp on, the secant's 4 retakes and the bisection's 64 halvings (Part 2b, step 6; R-998). Test inputs, not the
+/// calibrations.
 fn params<R: AzReal>() -> AzParams<R> {
     AzParams {
         eta: v(0.01),
         delta_sync: v(0.125),
         tiny: R::at_width(1e-37, 1e-300),
         predictive_f: v(0.02),
-        r3_floor: R::at_width(0.0, 1e-300),
-        land_eps_rel: R::at_width(1e-5, 1e-14),
         step_budget_rate: v(1e7),
         n_min: 1_000_000,
         clamp: true,
         secant_tries: 4,
+        bisect_tries: 64,
     }
 }
 
@@ -252,7 +256,7 @@ fn check_degenerate_ends(out: &AzAdvanced<f32>) {
 #[test]
 fn az_doubly_degenerate_is_finite() {
     let p = params::<f32>();
-    let (system, q, pm) = register(&degenerate(), p.tiny, p.r3_floor);
+    let (system, q, pm) = register(&degenerate(), p.tiny);
     let (a, b) = AzSystem::ab(&q);
     assert!(
         a < p.tiny && b < p.tiny,
@@ -979,7 +983,7 @@ fn check_round_trip(image: impl Fn(&AzSystem<f64>, &AzQ<f64>, &AzP<f64>) -> Stat
         ),
         unnormalised(),
     ] {
-        let (system, q, pm) = register(&s, p.tiny, p.r3_floor);
+        let (system, q, pm) = register(&s, p.tiny);
         let back = image(&system, &q, &pm);
         // The image is the state shifted to its centre of mass and momentum.
         let mt: f64 = s.m.iter().sum();
@@ -1040,7 +1044,7 @@ fn gamma(sys: &AzSystem<f64>, q: &AzQ<f64>, p: &AzP<f64>) -> f64 {
 fn check_energy(de: f64) {
     let p = params::<f64>();
     let s = burrau::<f64>();
-    let (sys, q, pm) = register(&s, p.tiny, p.r3_floor);
+    let (sys, q, pm) = register(&s, p.tiny);
     assert!(gamma(&sys, &q, &pm).abs() < 1e-14, "Γ = 0 on registration");
     // The rates are Γ's derivatives, by central differences.
     let mut flow = sys;
@@ -1096,7 +1100,7 @@ fn check_energy(de: f64) {
         &mut Counting::default(),
         &mut ExplicitTest,
     );
-    let (sys1, q1, p1) = register(&out.state, p.tiny, p.r3_floor);
+    let (sys1, q1, p1) = register(&out.state, p.tiny);
     assert!(gamma(&sys1, &q1, &p1).abs() < 1e-14);
     assert!(
         (sys1.e - sys.e).abs() < 1e-9 * sys.e.abs(),
@@ -1131,7 +1135,7 @@ fn check_signals(size: Size) {
     let mut p = params::<f64>();
     p.clamp = false;
     let s = burrau::<f64>();
-    let (sys, q, pm) = register(&s, p.tiny, p.r3_floor);
+    let (sys, q, pm) = register(&s, p.tiny);
     let entry = entry_size(&q, &p);
     let at_entry = size(&sys, &q, &pm, entry, &p);
     assert!(
@@ -1308,6 +1312,7 @@ fn check_counts(over: Over<'_>) {
     let mut loose = p;
     loose.clamp = false;
     loose.secant_tries = 0;
+    loose.bisect_tries = 0;
     loose.eta = 50.0;
     loose.predictive_f = 0.0;
     let wild = march::<Rk4, f64, Counting, ExplicitTest>(
@@ -1556,7 +1561,7 @@ fn centred(s: &State<f64>) -> [[f64; 2]; 3] {
 fn check_against_cartesian(e_of: fn(&State<f64>) -> f64) {
     let p = params::<f64>();
     for s in [burrau::<f64>(), unnormalised()] {
-        let (sys, _, _) = register(&s, p.tiny, p.r3_floor);
+        let (sys, _, _) = register(&s, p.tiny);
         assert!(
             (sys.e - e_of(&s)).abs() < 1e-13,
             "E on registration: {} against {}",
@@ -1617,7 +1622,7 @@ fn check_guards(test: &mut dyn FnMut(&AzQ<f64>, &AzP<f64>) -> bool) {
     );
     assert!(over_budget(0, f64::NAN, &p), "a NaN allowance is spent");
     let s = burrau::<f64>();
-    let (_, q, pm) = register(&s, p.tiny, p.r3_floor);
+    let (_, q, pm) = register(&s, p.tiny);
     assert!(test(&q, &pm), "a finite state is finite");
     for i in 0..9 {
         let (mut q1, mut p1) = (q, pm);
@@ -1745,51 +1750,54 @@ fn script(clock: Clock, k: u32, params: AzParams<f64>) -> (AzAdvanced<f64>, Vec<
     (out, watch.t)
 }
 
-/// The landing secant and what the interval counts around it (Part 2b, steps 5 and 6; R-604), `Δ_sync = 1/8`:
-/// - a clock twice as fast: the clamped step reaches `2Δ`, one retake at half the size lands within the tolerance
-///   `Δ·LAND_EPS_REL`, two steps counted, one kept, the interval's two its largest;
-/// - a clock that jumps `Δ/2` each step never lands within the tolerance: the secant stops after its tries (3 here),
-///   at `31Δ/30` by hand, four steps;
-/// - a retake that leaves the clock where it was stops the secant at once, and the interval starts again (a budget of
-///   4 ends it: three tries of two steps);
+/// The landing and what the interval counts around it (Part 2b, steps 5 to 7; R-604, R-998), `Δ_sync = 1/8`:
+/// - a clock twice as fast: the clamped step reaches `2Δ`, past, and the retakes land the clock on `Δ` exactly, the
+///   march then at boundary 1;
+/// - a clock that jumps `Δ/2` each step: the secant's 3 retakes end at `31Δ/30` by hand, still past, and the bisection
+///   lands the clock on `Δ` exactly;
+/// - a retake that leaves the clock where it was stops the secant at once, its state short at `t = 0`, and the
+///   interval starts again (a budget of 4 ends it: three tries of two steps);
 /// - a copy whose budget is spent as it lands is not counted landed: it stays at boundary 3, its time `3Δ` plus its
-///   clock;
-/// - the budget reads the physical time `k·Δ + t`: from boundary 4 at 4 steps per unit time the allowance is
-///   `4·(1/2 + t)`, and the interval's two steps land;
-/// - a step to exactly `2Δ` is not an overshoot, and one to `0.3` is.
+///   clock, `Δ`;
+/// - the budget reads the physical time `k·Δ + t`: from boundary 4 at 8 steps per unit time the allowance is
+///   `8·(1/2 + t)`, and the interval lands;
+/// - with the retakes off, a step to exactly `2Δ` is not an overshoot, and one to `0.3` is.
+///
+/// No clock the march keeps is past the boundary.
 fn check_secant(run: ScriptRun<'_>) {
-    let tol = 0.125 * 1e-14;
+    let never_past = |t: &[f64]| {
+        assert!(
+            t.iter().all(|&t| t <= 0.125),
+            "a kept clock is past the boundary: {t:?}"
+        );
+    };
     let (out, t) = run(Clock::Scale(2.0), 0, scripted());
-    assert_eq!(
-        (
-            out.count.steps,
-            out.count.accepted,
-            out.count.largest_interval
-        ),
-        (2, 1, 2),
-        "the secant's one retake: two steps, one kept, the interval's two ({t:?})"
-    );
     assert_eq!((out.boundary, out.count.end), (1, End::Marching));
-    assert_eq!(t.len(), 2, "the registration and the landed state: {t:?}");
-    assert!(
-        (t[1] - 0.125).abs() <= tol,
-        "the retake lands within Δ·LAND_EPS_REL: {:e}",
-        t[1] - 0.125
+    assert_eq!(
+        t.last().copied(),
+        Some(0.125),
+        "the retakes land the clock on Δ exactly ({t:?})"
     );
+    assert!(out.count.steps >= 2, "the clamped step and a retake");
+    never_past(&t);
 
     let mut p = scripted();
     p.secant_tries = 3;
+    p.n_min = 200;
+    p.step_budget_rate = 0.0;
     let (out, t) = run(Clock::Jump(0.0625), 0, p);
     assert_eq!(
-        (out.count.steps, out.count.largest_interval),
-        (4, 4),
-        "the secant stops after its tries ({t:?})"
+        (out.boundary, out.count.end, t.last().copied()),
+        (1, End::Marching, Some(0.125)),
+        "the bisection lands the clock on Δ ({t:?})"
     );
     assert!(
-        (t[1] - 31.0 / 30.0 * 0.125).abs() <= 1e-15,
-        "the third retake's clock, 31Δ/30: {}",
-        t[1]
+        out.count.most_bisections >= 1 && out.count.steps >= 5,
+        "the clamped step, the secant's 3 retakes and a halving: {} steps, {} halvings",
+        out.count.steps,
+        out.count.most_bisections
     );
+    never_past(&t);
 
     let mut p = scripted();
     p.n_min = 4;
@@ -1800,6 +1808,8 @@ fn check_secant(run: ScriptRun<'_>) {
         (End::Exhausted, 6, 3),
         "a retake that leaves the clock stops the secant ({t:?})"
     );
+    assert_eq!(out.count.closings, 1, "the short landing is counted once");
+    never_past(&t);
 
     let mut p = scripted();
     p.n_min = 1;
@@ -1810,15 +1820,11 @@ fn check_secant(run: ScriptRun<'_>) {
         (End::Exhausted, 3),
         "a copy spent as it lands stays at its boundary"
     );
-    assert!(
-        (out.t - 0.5).abs() <= tol,
-        "its time the boundary's plus its clock: {}",
-        out.t
-    );
+    assert_eq!(out.t, 0.5, "its time the boundary's plus its clock");
 
     let mut p = scripted();
     p.n_min = 0;
-    p.step_budget_rate = 4.0;
+    p.step_budget_rate = 8.0;
     let (out, _) = run(Clock::Scale(2.0), 4, p);
     assert_eq!(
         (out.count.end, out.boundary),
@@ -1828,6 +1834,7 @@ fn check_secant(run: ScriptRun<'_>) {
 
     let mut p = scripted();
     p.secant_tries = 0;
+    p.bisect_tries = 0;
     let (out, _) = run(Clock::To(0.25), 0, p);
     assert_eq!(
         out.count.overshoots, 0,
@@ -1844,58 +1851,209 @@ fn az_landing_secant() {
 
 negative_control!(
     az_landing_secant,
-    "a march without the secant",
-    expected = "the secant's one retake",
+    "a march without the landing's retakes, the clock set to the boundary over an overshot state",
+    expected = "the retakes land the clock on Δ exactly",
     check_secant(&|c, k, mut p| {
         p.secant_tries = 0;
+        p.bisect_tries = 0;
         script(c, k, p)
     })
 );
 
-/// With the clamp off the landing tolerance is 0 (the reference driver's; physics review 5873527379 of PR #502,
-/// point 2): a clock that stops within `Δ·LAND_EPS_REL` of the boundary, short of it, lands with the clamp on but not
-/// with it off, where the copy steps on until its budget (3 steps) is spent; a clock that reaches the boundary lands
-/// either way. `run` is the scripted march under test.
-fn check_clamp_off_tolerance(run: ScriptRun<'_>) {
+/// No landing tolerance (R-998): a clock that stops `Δ·5e-15` short of the boundary never lands, with the clamp on or
+/// off, the copy stepping on until its budget (3 steps) is spent; a clock that reaches the boundary exactly lands
+/// either way; and a clock that every step and retake puts past the boundary is never kept: the copy is spent at
+/// `t = 0`, unlanded. `run` is the scripted march under test.
+fn check_no_tolerance(run: ScriptRun<'_>) {
     let short = 0.125 - 0.125 * 0.5e-14;
     let mut p = scripted();
-    p.secant_tries = 0;
     p.n_min = 3;
     p.step_budget_rate = 0.0;
-    let (out, _) = run(Clock::To(short), 0, p);
-    assert_eq!(
-        (out.count.end, out.boundary),
-        (End::Marching, 1),
-        "the clamp on lands within the tolerance"
-    );
-    p.clamp = false;
-    let (out, _) = run(Clock::To(short), 0, p);
+    for clamp in [true, false] {
+        p.clamp = clamp;
+        let (out, _) = run(Clock::To(short), 0, p);
+        assert_eq!(
+            (out.count.end, out.boundary),
+            (End::Exhausted, 0),
+            "a clock short of the boundary never lands (clamp {clamp})"
+        );
+        let (out, _) = run(Clock::To(0.125), 0, p);
+        assert_eq!(
+            (out.count.end, out.boundary),
+            (End::Marching, 1),
+            "the boundary itself lands (clamp {clamp})"
+        );
+    }
+    p.clamp = true;
+    let past = f64::from_bits(0.125f64.to_bits() + 1);
+    let (out, t) = run(Clock::To(past), 0, p);
     assert_eq!(
         (out.count.end, out.boundary),
         (End::Exhausted, 0),
-        "with the clamp off a copy lands only at the boundary"
+        "a clock past the boundary is never kept ({t:?})"
     );
-    let (out, _) = run(Clock::To(0.125), 0, p);
+    assert!(t.iter().all(|&t| t == 0.0), "only t = 0 kept: {t:?}");
+}
+
+#[test]
+fn az_landing_no_tolerance() {
+    check_no_tolerance(&script);
+}
+
+negative_control!(
+    az_landing_no_tolerance,
+    "a march that keeps a step past the boundary, its retakes off",
+    expected = "a clock past the boundary is never kept",
+    check_no_tolerance(&|c, k, mut p| {
+        p.secant_tries = 0;
+        p.bisect_tries = 0;
+        script(c, k, p)
+    })
+);
+
+/// The state lands on the boundary with the clock (R-998; REQ-INT-119), under RK4 on Burrau's state at f64: at
+/// `η = 10` with the predictive limit off each interval is one clamped step, whose first-order prediction of the
+/// landing overshoots the boundary (asserted, on the first of the sync quanta tried that does). The march's stored
+/// state is the image of the regularised state whose own clock is the boundary, bitwise, and its time reads the
+/// boundary; that state is nearer the state at the boundary (a march at `η = 0.001`) than the overshot one is; and no
+/// landing tolerance is read (`AzParams` has none). `retakes` sets the landing's retakes on `params`.
+fn check_state_with_clock(retakes: fn(&mut AzParams<f64>)) {
+    let s = burrau::<f64>();
+    let quanta = [0.125, 0.25, 0.0625, 0.5, 0.03125];
+    let mut p = params::<f64>();
+    p.eta = 10.0;
+    p.predictive_f = 0.0;
+    let (sys, q, pm) = register(&s, p.tiny);
+    let delta = quanta.into_iter().find(|&d| {
+        let mut p = p;
+        p.delta_sync = d;
+        let h = step_size(&sys, &q, &pm, entry_size(&q, &p), &p).h;
+        <Rk4 as AzStepper>::regularised_step(&sys, &q, &pm, h).0.t > d
+    });
+    let delta = delta.expect("a sync quantum whose clamped step overshoots");
+    p.delta_sync = delta;
+    let h = step_size(&sys, &q, &pm, entry_size(&q, &p), &p).h;
+    let (oq, op) = <Rk4 as AzStepper>::regularised_step(&sys, &q, &pm, h);
+    let overshot = sys.image(&oq, &op);
+    let mut fine = p;
+    fine.eta = 0.001;
+    let at_boundary = march::<Rk4, f64, Counting, ExplicitTest>(
+        &s,
+        0,
+        1,
+        AzCount::new(),
+        &fine,
+        &mut Counting::default(),
+        &mut ExplicitTest,
+    );
+    retakes(&mut p);
+    let mut watch = Clocks::default();
+    let out = march::<Rk4, f64, Counting, Clocks>(
+        &s,
+        0,
+        1,
+        AzCount::new(),
+        &p,
+        &mut Counting::default(),
+        &mut watch,
+    );
+    let gap = |a: &State<f64>, b: &State<f64>| {
+        a.r.iter()
+            .flatten()
+            .zip(b.r.iter().flatten())
+            .map(|(x, y)| (x - y) * (x - y))
+            .sum::<f64>()
+            .sqrt()
+    };
+    let (stored, overshoot) = (
+        gap(&out.state, &at_boundary.state),
+        gap(&overshot, &at_boundary.state),
+    );
+    eprintln!(
+        "az_landing_state_with_clock: Δ_sync {delta}, the clamped step's clock {:e} (Δ + {:e}); the stored state {stored:e}          from the state at the boundary, the overshot one {overshoot:e}; {} steps, {} closings, {} halvings at most",
+        oq.t,
+        oq.t - delta,
+        out.count.steps,
+        out.count.closings,
+        out.count.most_bisections
+    );
+    assert_eq!((out.boundary, out.count.end), (1, End::Marching));
+    assert_eq!(out.t, delta, "the clock reads the boundary");
     assert_eq!(
-        (out.count.end, out.boundary),
-        (End::Marching, 1),
-        "with the clamp off the boundary itself lands"
+        watch.t.last().copied(),
+        Some(delta),
+        "the stored state's own clock is the boundary, bitwise: {:?}",
+        watch.t
+    );
+    assert!(
+        stored < overshoot,
+        "the stored state is nearer the state at the boundary ({stored:e}) than the overshot one ({overshoot:e})"
     );
 }
 
 #[test]
-fn az_clamp_off_tolerance() {
-    check_clamp_off_tolerance(&script);
+fn az_landing_state_with_clock() {
+    check_state_with_clock(|_| {});
 }
 
 negative_control!(
-    az_clamp_off_tolerance,
-    "the clamp-off run keeping the landing tolerance",
-    expected = "with the clamp off a copy lands only at the boundary",
-    check_clamp_off_tolerance(&|c, k, mut p| {
-        p.clamp = true;
-        script(c, k, p)
+    az_landing_state_with_clock,
+    "the clock-only correction: the retakes off, the clock set to the boundary over the overshot state",
+    expected = "the stored state's own clock is the boundary, bitwise",
+    check_state_with_clock(|p| {
+        p.secant_tries = 0;
+        p.bisect_tries = 0;
     })
+);
+
+// ── The floor on |R₃| ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// The equations of motion read `|R₃|` floored at `TINY` at each working precision (R-999; REQ-INT-120): with
+/// `u₂ = u₁`, so that `|R₃| = 0`, the term reads `TINY`, `1e-37` at f32 (not 0) and `1e-300` at f64; above the floor
+/// it reads `|R₂ − R₁|` itself. `tiny32` is the f32 floor registered.
+fn check_r3_floor(tiny32: f32) {
+    let (sys, q, _) = register(&burrau::<f32>(), tiny32);
+    let on = AzQ { u2: q.u1, ..q };
+    assert_eq!(
+        sys.r3(&on).to_bits(),
+        1e-37f32.to_bits(),
+        "at f32 |R₃| = 0 reads TINY, 1e-37, not {:e}",
+        sys.r3(&on)
+    );
+    let r3 = {
+        let d = [lc(q.u2)[0] - lc(q.u1)[0], lc(q.u2)[1] - lc(q.u1)[1]];
+        (d[0] * d[0] + d[1] * d[1]).sqrt()
+    };
+    assert_eq!(
+        sys.r3(&q),
+        r3,
+        "above TINY at f32 the term reads |R₃| itself"
+    );
+    let p = params::<f64>();
+    let (sys, q, _) = register(&burrau::<f64>(), p.tiny);
+    let on = AzQ { u2: q.u1, ..q };
+    assert_eq!(sys.r3(&on), 1e-300, "at f64 |R₃| = 0 reads TINY, 1e-300");
+    let r3 = {
+        let d = [lc(q.u2)[0] - lc(q.u1)[0], lc(q.u2)[1] - lc(q.u1)[1]];
+        (d[0] * d[0] + d[1] * d[1]).sqrt()
+    };
+    assert_eq!(
+        sys.r3(&q),
+        r3,
+        "above TINY at f64 the term reads |R₃| itself"
+    );
+}
+
+#[test]
+fn az_r3_floor_tiny() {
+    check_r3_floor(params::<f32>().tiny);
+}
+
+negative_control!(
+    az_r3_floor_tiny,
+    "a floor of 0 at f32",
+    expected = "at f32 |R₃| = 0 reads TINY",
+    check_r3_floor(0.0)
 );
 
 // ── The boundary's corrections and the seam's index ────────────────────────────────────────────────────────────
