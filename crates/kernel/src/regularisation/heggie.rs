@@ -30,7 +30,7 @@
 //!
 //! No precision-dependent constant is in a branch here (Part 2c rule 1): `TINY` is the one excepted floor, and the
 //! landing tolerance is supplied by the caller ([`HgParams::land_eps_rel`]). What replaces the reference's
-//! per-precision `LAND_EPS_REL` in Heggie's landing is an open question (RQ-812, rulings PR #515): until it is ruled the landing reads the supplied
+//! per-precision `LAND_EPS_REL` in Heggie's landing is RQ-812, open: until it is ruled the landing reads the supplied
 //! value as the reference's driver does, and its tests supply the reference's values. The step control's values are
 //! calibrations (R-71: REQ-INT-080, REQ-INT-105, REQ-INT-108, REQ-INT-103), read from [`HgParams`], never from a
 //! literal here.
@@ -621,7 +621,7 @@ pub struct HgParams<R> {
     pub tiny: R,
     /// The predictive limit's `f` (R-160: 0.02); the limit is off where it is not positive.
     pub predictive_f: R,
-    /// The landing tolerance, relative to `dt_left`, in the reference's place of `LAND_EPS_REL` (RQ-812, open, rulings PR #515).
+    /// The landing tolerance, relative to `dt_left`, in the reference's place of `LAND_EPS_REL` (RQ-812, open).
     pub land_eps_rel: R,
     /// The step budget's rate, steps per unit physical time per copy (R-564; REQ-INT-103, a calibration).
     pub step_budget_rate: R,
@@ -827,6 +827,7 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
     watch: &mut X,
 ) -> Interval<R> {
     let dt_left = params.delta_sync;
+    // RQ-812: the landing tolerance is the caller's setting, no value here; the landing follows RQ-812's ruling.
     let land_eps = if params.clamp {
         params.land_eps_rel
     } else {
@@ -862,7 +863,7 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
             }
             kept_q = q;
             kept_p = p;
-            landed = q.t >= land_at;
+            landed = q.t >= land_at; // RQ-812: the landing reads the supplied tolerance.
             if over_allowance(count.steps, t0 + q.t, params.step_budget_rate, params.n_min) {
                 count.end = End::Exhausted;
                 go = false;
@@ -892,6 +893,7 @@ fn interval<S: HgStepper, R: AzReal, C: Cadence<R>, X: HgWatch<R>>(
             let (mut q1, mut p1) = S::regularised_step(system, &q, &p, h);
             count.steps += 1;
             here += 1;
+            // RQ-812: the secant's trigger and stop read the supplied tolerance.
             if q1.t >= land_at {
                 let want = dt_left - before;
                 let mut cur = h;

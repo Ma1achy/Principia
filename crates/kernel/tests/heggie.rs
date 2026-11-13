@@ -56,6 +56,7 @@ fn params<R: AzReal>(time: HeggieTime) -> HgParams<R> {
         delta_sync: v(0.125),
         tiny: R::at_width(1e-37, 1e-300),
         predictive_f: v(0.02),
+        // RQ-812: the reference's LAND_EPS_REL, a test input meanwhile, not a production value.
         land_eps_rel: R::at_width(1e-5, 1e-14),
         step_budget_rate: v(1e7),
         n_min: 1_000_000,

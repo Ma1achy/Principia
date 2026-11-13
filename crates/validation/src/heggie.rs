@@ -23,8 +23,8 @@
 //!
 //! **The conditions every run states**, as Aarseth–Zare's gates do ([`crate::az`]): `TINY` the reference's (`1e-37` at
 //! f32, `1e-300` at f64; R-953) unless the run varies it, the landing tolerance the reference's `LAND_EPS_REL` (`1e-5`,
-//! `1e-14`; RQ-795), R-160's `f = 0.02`, a step budget that does not bind, the clamp and the secant on, `Δ_sync = 1/8`,
-//! and the stepper RK4.
+//! `1e-14`; RQ-795 for Aarseth–Zare, RQ-812 for Heggie, each applied meanwhile as a caller-supplied setting), R-160's
+//! `f = 0.02`, a step budget that does not bind, the clamp and the secant on, `Δ_sync = 1/8`, and the stepper RK4.
 
 use std::path::Path;
 
@@ -62,7 +62,7 @@ pub fn hg_conditions<R: Width>(eta: f64, delta_sync: f64, time: HeggieTime) -> H
         delta_sync: c.delta_sync,
         tiny: c.tiny,
         predictive_f: c.predictive_f,
-        land_eps_rel: c.land_eps_rel,
+        land_eps_rel: c.land_eps_rel, // RQ-812: the reference's value, applied meanwhile.
         step_budget_rate: c.step_budget_rate,
         n_min: c.n_min,
         clamp: true,
@@ -193,7 +193,7 @@ pub fn propose_floor_heggie() -> String {
     say!(out, "\n## Heggie's arm (TASK-M3-08)\n");
     say!(out,
         "Each fixture run under Heggie × RK4, registered once at t = 0, at η = {}, Δ_sync = 0.125, TINY the reference's \
-         (1e-37 at f32, 1e-300 at f64; R-953), the landing tolerance the reference's (RQ-795). The floor acts where \
+         (1e-37 at f32, 1e-300 at f64; R-953), the landing tolerance the reference's (RQ-812, applied meanwhile). The floor acts where \
          dt/dτ < TINY, S < TINY under Eq. 22, or any Rᵢ < TINY (integrator_contract Part 6).\n",
         crate::az::FLOOR_ETA
     );
