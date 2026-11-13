@@ -32766,6 +32766,22 @@
   - R-1004
   milestone: M0
   note: "Added 13 Nov 2026 by R-1004 (RQ-807 (3) + (4), and (i); \"No credential on the PC\"). Closed by TASK-M0-62."
+- id: REQ-TOOL-234
+  area: TOOL
+  statement: "The WSL distro's proof scripts must report proofs 3 and 6 as they ran (R-912, R-915): proof 6's comparison reads the stdin wsl.ps1 sends it as the stream already open, never by reopening /dev/stdin; nothing wsl.ps1 sends on wsl.exe's stdin is preceded by a byte-order mark, and parity.py drops one where it arrives; the hosted wsl-parity job installs the lavapipe ci.yml's test jobs install, so kernel's GPU harness tests run on Vulkan on both sides; a failed proof 6 carries the last lines each failed side wrote, stderr included; and proof 3 counts a connection relayed to its listener through localhost forwarding, beyond the one from inside, as inbound, its pass condition no looser."
+  source:
+  - file: decisions.md
+    section: "R-912 — Windows containment, RQ-751: option (b) now, the Job Object proof passing with its two process-visibility gaps accepted and the job-queue mutants staying on GitHub's runners; option (c), CPU tests and mutants in a WSL2 distro under `contain.sh`, built in parallel and never blocking, replaces (b) only once each of its five requirements is proven, the job-queue mutants then free to move to Windows; GPU tests stay native *(closes RQ-751; amends R-905)*"
+  - file: decisions.md
+    section: "R-915 — Inside WSL, `contain.sh check` proves an unprivileged mode: user and PID namespaces with no sudo and the real `kill -9 -1`, passing only if a ci process outside the namespace and the runner agent and gh-runner's other Windows processes survive; WSL keeps no sudo, no systemd and the owner's exact `wsl.conf`; the mode is selected explicitly, never a fallback, and fails, never skips, without user namespaces; other machines keep the strict mode; proof 4 reworded *(closes RQ-753; amends R-912)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test wsl (wsl_parity_reads_its_stdin_past_a_byte_order_mark, wsl_stdin_carries_no_byte_order_mark, wsl_parity_runs_on_the_hosted_jobs_lavapipe, wsl_proof_six_says_how_a_side_failed, wsl_proof_three_tries_the_host_over_the_switch), each with its negative controls under --features controls: inside.sh compare given /dev/stdin, parity.py reading the mark as text, the encoding left with its mark, wsl-parity with no lavapipe or installing it late or other packages, a failed side's tail or stderr left out, a relayed connection passing or left out of the evidence; and a wsl-proofs dispatch after merge in which proof 6's line names the hosted and the WSL sides' results, its run id reported"
+  rulings:
+  - R-912
+  - R-915
+  milestone: M0
+  note: "Added 13 Nov 2026 by TASK-M0-63 (applied per R-369: CI tooling within the runner rules, the owner's 12 Nov goal for the Windows runner, item 3), from run 43418528499, the first to reach wsl-proofs. Proof 2's two fixes, which change scripts/wsl/wsl.conf, wait on RQ-815 (R-915's \"wsl.conf exactly as I gave it\")."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

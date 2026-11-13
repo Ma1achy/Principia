@@ -1963,6 +1963,184 @@ mod other_status {
     );
 }
 
+// ---- What wsl.exe is sent, and what a failed proof 6 shows --------------------------------------------------------
+
+/// Nothing before what Invoke-Wsl sends: Windows PowerShell's .NET writes a started process's stdin in
+/// Console.InputEncoding, with its preamble first (run 43418528499: every stdin began with a byte-order mark). So the
+/// script sets that encoding to UTF-8 with no preamble before any process starts, a newer .NET's StandardInputEncoding
+/// too, and Invoke-Wsl refuses to send anything while a preamble remains.
+fn check_stdin_encoding(script: &str) {
+    let first_start = script
+        .find("[System.Diagnostics.Process]::Start(")
+        .expect("wsl.ps1 starts no process");
+    let set = script
+        .find("try { [Console]::InputEncoding = $NoBom }")
+        .filter(|&at| at < first_start);
+    assert!(
+        script.contains("$NoBom = New-Object System.Text.UTF8Encoding $false\n") && set.is_some(),
+        "wsl.ps1 doesn't set stdin's encoding to UTF-8 with no byte-order mark before it starts a process"
+    );
+    assert!(
+        script.contains(
+            "if ($psi.PSObject.Properties['StandardInputEncoding']) { $psi.StandardInputEncoding = $NoBom }"
+        ),
+        "Start-Wsl leaves a newer .NET's stdin encoding as it was"
+    );
+    let invoke = &script[script.find("function Invoke-Wsl(").expect("no Invoke-Wsl")..];
+    let guard = invoke
+        .find(
+            "if ($Stdin -and [Console]::InputEncoding.GetPreamble().Length -ne 0) {\n        Fail ",
+        )
+        .filter(|&at| {
+            at < invoke
+                .find("$p = Start-Wsl")
+                .expect("Invoke-Wsl starts nothing")
+        });
+    assert!(
+        guard.is_some(),
+        "Invoke-Wsl sends stdin in an encoding with a byte-order mark"
+    );
+}
+
+#[test]
+fn wsl_stdin_carries_no_byte_order_mark() {
+    check_stdin_encoding(&read(PS));
+}
+
+negative_control!(
+    wsl_stdin_carries_no_byte_order_mark,
+    "UTF-8 with its byte-order mark, as Windows PowerShell gave it",
+    expected = "doesn't set stdin's encoding to UTF-8 with no byte-order mark",
+    check_stdin_encoding(&edited(
+        &read(PS),
+        "System.Text.UTF8Encoding $false",
+        "System.Text.UTF8Encoding $true"
+    ))
+);
+
+mod encoding_unset {
+    use super::*;
+    negative_control!(
+        wsl_stdin_carries_no_byte_order_mark,
+        "the encoding never set",
+        expected = "doesn't set stdin's encoding to UTF-8 with no byte-order mark",
+        check_stdin_encoding(&edited(
+            &read(PS),
+            "try { [Console]::InputEncoding = $NoBom }",
+            "try { }"
+        ))
+    );
+}
+
+mod newer_dotnet {
+    use super::*;
+    negative_control!(
+        wsl_stdin_carries_no_byte_order_mark,
+        "a newer .NET's own stdin encoding left as it was",
+        expected = "Start-Wsl leaves a newer .NET's stdin encoding as it was",
+        check_stdin_encoding(&edited(
+            &read(PS),
+            "{ $psi.StandardInputEncoding = $NoBom }",
+            "{ }"
+        ))
+    );
+}
+
+mod unguarded {
+    use super::*;
+    negative_control!(
+        wsl_stdin_carries_no_byte_order_mark,
+        "a mark left in place sent anyway",
+        expected = "Invoke-Wsl sends stdin in an encoding with a byte-order mark",
+        check_stdin_encoding(&edited(
+            &read(PS),
+            "if ($Stdin -and [Console]::InputEncoding.GetPreamble().Length -ne 0) {",
+            "if ($false) {"
+        ))
+    );
+}
+
+/// A failed proof 6 says why: Invoke-Wsl keeps the stderr it shows, and proof 6's line carries the last lines each
+/// failed side wrote, stderr's included, where a traceback is (run 43418528499: an empty line from `parity:*` alone).
+fn check_proof_six_tail(script: &str) {
+    assert!(
+        script.contains(
+            "[pscustomobject]@{ Code = $p.ExitCode; Lines = $lines.ToArray(); Err = \"$e\" }"
+        ),
+        "Invoke-Wsl drops the stderr it showed"
+    );
+    let tail = &script[script.find("function Get-Tail(").expect("no Get-Tail")..];
+    assert!(
+        tail.contains("@($Result.Lines) + @(\"$($Result.Err)\" -split")
+            && tail.contains("Select-Object -Last $Count"),
+        "Get-Tail isn't the last lines of stdout and stderr"
+    );
+    let six = &script[script.find("# Proof 6:").expect("no proof 6")..];
+    for side in ["parity", "compare"] {
+        assert!(
+            six.contains(&format!(
+                "if (${side}.Code -ne 0) {{ $evidence += \"; inside.sh {side} exited $(${side}.Code), ending: \
+                 $(Get-Tail ${side})\" }}"
+            )),
+            "proof 6's line leaves out how inside.sh {side} ended"
+        );
+    }
+    assert!(
+        six.contains("Report 6 ($parity.Code -eq 0 -and $compare.Code -eq 0) $evidence"),
+        "proof 6 reports something other than its evidence"
+    );
+}
+
+#[test]
+fn wsl_proof_six_says_how_a_side_failed() {
+    check_proof_six_tail(&read(PS));
+}
+
+negative_control!(
+    wsl_proof_six_says_how_a_side_failed,
+    "the comparison's traceback left out",
+    expected = "proof 6's line leaves out how inside.sh compare ended",
+    check_proof_six_tail(&edited(
+        &read(PS),
+        "if ($compare.Code -ne 0) {",
+        "if ($false) {"
+    ))
+);
+
+mod parity_tail {
+    use super::*;
+    negative_control!(
+        wsl_proof_six_says_how_a_side_failed,
+        "the run's tail left out",
+        expected = "proof 6's line leaves out how inside.sh parity ended",
+        check_proof_six_tail(&edited(&read(PS), ", ending: $(Get-Tail $parity)", ""))
+    );
+}
+
+mod stderr_dropped {
+    use super::*;
+    negative_control!(
+        wsl_proof_six_says_how_a_side_failed,
+        "stderr shown and dropped, as before",
+        expected = "Invoke-Wsl drops the stderr it showed",
+        check_proof_six_tail(&edited(&read(PS), "; Err = \"$e\" }", " }"))
+    );
+}
+
+mod stdout_alone {
+    use super::*;
+    negative_control!(
+        wsl_proof_six_says_how_a_side_failed,
+        "the tail of stdout alone",
+        expected = "Get-Tail isn't the last lines of stdout and stderr",
+        check_proof_six_tail(&edited(
+            &read(PS),
+            " + @(\"$($Result.Err)\" -split \"`r?`n\")",
+            ""
+        ))
+    );
+}
+
 // ---- Proof 3, the host over WSL's virtual switch -------------------------------------------------------------------
 
 /// Proof 3 tries the host over WSL's virtual switch as well as over the LAN: the distro's default gateway (in NAT mode,
@@ -2002,6 +2180,23 @@ fn check_proof_three(script: &str) {
         ok.contains(" -and -not $viaSwitch"),
         "proof 3 passes with the host reached over the virtual switch"
     );
+    // WSL's localhost forwarding relays a connection from Windows to the listener, which then sees it come from
+    // 127.0.0.1, as the one from inside does (run 43418528499): each beyond that one got in.
+    assert!(
+        three.contains(
+            "$relayed = [Math]::Max(0, @($accepts | Where-Object { $_ -eq 'accepted 127.0.0.1' }).Count - \
+             $(if ($selfIn) { 1 } else { 0 }))"
+        ),
+        "proof 3 doesn't count the connections relayed through localhost beyond the one from inside"
+    );
+    assert!(
+        ok.contains(" -and -not $accepted -and $relayed -eq 0 -and "),
+        "proof 3 passes with a connection relayed through localhost"
+    );
+    assert!(
+        three.contains("relayed through localhost: $relayed;"),
+        "proof 3's evidence doesn't show the connections relayed through localhost"
+    );
 }
 
 #[test]
@@ -2027,6 +2222,44 @@ mod no_smb {
         "SMB left out",
         expected = "proof 3 doesn't try both the host's listener and SMB over the switch",
         check_proof_three(&edited(&read(PS), "@($outPort, 445)", "@($outPort)"))
+    );
+}
+
+mod relayed_passes {
+    use super::*;
+    negative_control!(
+        wsl_proof_three_tries_the_host_over_the_switch,
+        "a connection relayed through localhost passes",
+        expected = "proof 3 passes with a connection relayed through localhost",
+        check_proof_three(&edited(&read(PS), " -and $relayed -eq 0", ""))
+    );
+}
+
+mod relayed_unshown {
+    use super::*;
+    negative_control!(
+        wsl_proof_three_tries_the_host_over_the_switch,
+        "the relayed count left out of the evidence",
+        expected = "proof 3's evidence doesn't show the connections relayed through localhost",
+        check_proof_three(&edited(
+            &read(PS),
+            ", relayed through localhost: $relayed",
+            ""
+        ))
+    );
+}
+
+mod relayed_uncounted {
+    use super::*;
+    negative_control!(
+        wsl_proof_three_tries_the_host_over_the_switch,
+        "every connection from 127.0.0.1 taken as the one from inside",
+        expected = "proof 3 doesn't count the connections relayed through localhost beyond the one from inside",
+        check_proof_three(&edited(
+            &read(PS),
+            ".Count - $(if ($selfIn) { 1 } else { 0 })",
+            ".Count - $(if ($selfIn) { 9 } else { 9 })"
+        ))
     );
 }
 
@@ -2215,6 +2448,124 @@ mod strict_inside {
     );
 }
 
+// ---- Proof 6's hosted side, on lavapipe ----------------------------------------------------------------------------
+
+/// The hosted `wsl-parity` job installs the lavapipe `ci.yml`'s test jobs install, the same packages, before proof 6's
+/// command: kernel's GPU harness tests run on the Vulkan `inside.sh` selects, which the image has (run 43418528499:
+/// without it, 13 GPU tests failed there and passed in the distro).
+fn check_parity_lavapipe(workflow: &str, ci: &str) {
+    let (installs, _) = hosted_vulkan(ci);
+    let hosted = installs
+        .first()
+        .unwrap_or_else(|| panic!("{CI} installs no lavapipe"));
+    let doc = parse(workflow);
+    let steps = doc["jobs"]["wsl-parity"]["steps"]
+        .as_vec()
+        .expect("wsl-parity has steps");
+    let proof = steps
+        .iter()
+        .position(|s| s["name"].as_str() == Some("Proof 6, the hosted side"))
+        .expect("wsl-parity runs no proof 6");
+    let install = steps.iter().position(|s| {
+        s["name"].as_str().unwrap_or("").contains("lavapipe")
+            && s["run"].as_str().unwrap_or("").contains("apt-get install")
+    });
+    let Some(install) = install else {
+        panic!("wsl-parity installs no lavapipe");
+    };
+    assert!(
+        install < proof,
+        "wsl-parity installs lavapipe after proof 6 has run"
+    );
+    let run = steps[install]["run"].as_str().unwrap_or("");
+    let mut packages: Vec<String> = run
+        .split_once("apt-get install")
+        .map_or("", |(_, rest)| rest)
+        .split_whitespace()
+        .filter(|w| !w.starts_with('-'))
+        .map(str::to_owned)
+        .collect();
+    packages.sort();
+    assert_eq!(
+        &packages, hosted,
+        "wsl-parity installs other packages than {CI}'s lavapipe steps"
+    );
+}
+
+#[test]
+fn wsl_parity_runs_on_the_hosted_jobs_lavapipe() {
+    check_parity_lavapipe(&read(WORKFLOW), &read(CI));
+}
+
+/// The workflow with `from`, in the `wsl-parity` job alone, replaced by `to`.
+#[cfg(feature = "controls")]
+fn parity_job_edited(from: &str, to: &str) -> String {
+    let workflow = read(WORKFLOW);
+    let start = workflow
+        .find("\n  wsl-parity:\n")
+        .expect("no wsl-parity job");
+    let end = start
+        + 1
+        + workflow[start + 1..]
+            .find("\n  wsl-register:")
+            .expect("no wsl-register job");
+    format!(
+        "{}{}{}",
+        &workflow[..start],
+        edited(&workflow[start..end], from, to),
+        &workflow[end..]
+    )
+}
+
+negative_control!(
+    wsl_parity_runs_on_the_hosted_jobs_lavapipe,
+    "the job as run 43418528499 ran it, with no lavapipe",
+    expected = "wsl-parity installs no lavapipe",
+    check_parity_lavapipe(
+        &parity_job_edited(
+            "      - name: Install Mesa (lavapipe)\n",
+            "      - name: Install Mesa\n"
+        ),
+        &read(CI)
+    )
+);
+
+mod parity_lavapipe_late {
+    use super::*;
+    negative_control!(
+        wsl_parity_runs_on_the_hosted_jobs_lavapipe,
+        "lavapipe installed once the tests have run",
+        expected = "wsl-parity installs lavapipe after proof 6 has run",
+        {
+            // Proof 6's step moved to before the cache's restore.
+            const PROOF: &str = "      - name: Proof 6, the hosted side\n        run: |\n          mkdir -p \"$RUNNER_TEMP/wsl-parity\"\n          bash scripts/wsl/inside.sh parity \"$WSL_PARITY_COMMIT\" > \"$RUNNER_TEMP/wsl-parity/hosted.tsv\"\n";
+            let moved = parity_job_edited(PROOF, "");
+            let moved = moved.replacen(
+                "          tool: cargo-nextest@0.9.146\n      - name: Restore the Mesa packages\n",
+                &format!("          tool: cargo-nextest@0.9.146\n{PROOF}      - name: Restore the Mesa packages\n"),
+                1,
+            );
+            check_parity_lavapipe(&moved, &read(CI));
+        }
+    );
+}
+
+mod parity_lavapipe_other {
+    use super::*;
+    negative_control!(
+        wsl_parity_runs_on_the_hosted_jobs_lavapipe,
+        "a package list other than the hosted jobs'",
+        expected = "wsl-parity installs other packages than",
+        check_parity_lavapipe(
+            &parity_job_edited(
+                "apt-get install -y mesa-vulkan-drivers -o",
+                "apt-get install -y mesa-vulkan-drivers vulkan-tools -o"
+            ),
+            &read(CI)
+        )
+    );
+}
+
 // ---- Proof 6's comparison -----------------------------------------------------------------------------------------
 
 #[cfg(unix)]
@@ -2392,6 +2743,125 @@ mod parity {
     #[test]
     fn wsl_parity_keeps_stderr_off_its_results() {
         check_parity_streams("wsl_parity_streams", &read(INSIDE));
+    }
+
+    /// `inside` and `parity` saved as `<scratch>/scripts/wsl/inside.sh` and `parity.py`, with HOME the scratch and this
+    /// side's results in `~/work/parity.tsv`; `inside.sh compare` run with the other side's results, a byte-order mark
+    /// first, on its stdin, as wsl.ps1 sent them in run 43418528499. The arm hands parity.py the stdin it already has,
+    /// `-`, never `/dev/stdin`, which `wsl.exe -u ci` refuses to open again (EACCES there); parity.py drops the mark,
+    /// in a summary and in nextest's JSON alike.
+    fn check_marked_stdin(tag: &str, inside: &str, parity_py: &str) {
+        const BOM: &str = "\u{feff}";
+        let arm = inside
+            .lines()
+            .find(|l| l.trim_start().starts_with("compare)"))
+            .expect("inside.sh has no compare arm");
+        assert!(
+            arm.contains("parity.py\" compare - ") && !inside.contains("/dev/stdin"),
+            "inside.sh compare opens /dev/stdin again: {arm}"
+        );
+        let dir = Scratch::new(tag);
+        let wsl = dir.join("scripts/wsl");
+        std::fs::create_dir_all(&wsl).expect("scratch");
+        std::fs::create_dir_all(dir.join("work")).expect("scratch");
+        std::fs::write(wsl.join("inside.sh"), inside).expect("scratch");
+        std::fs::write(wsl.join("parity.py"), parity_py).expect("scratch");
+        let summary = "# wall 100 exit 0 tests 2\nkernel::a\tok\t0.5\nkernel::b\tignored\t0\n";
+        std::fs::write(dir.join("work/parity.tsv"), summary).expect("scratch");
+        let other = dir.join("other.tsv");
+        std::fs::write(&other, format!("{BOM}{summary}")).expect("scratch");
+        let out = Command::new("sh")
+            .args(["-c", "exec bash \"$1\" compare < \"$2\"", "compare"])
+            .arg(wsl.join("inside.sh"))
+            .arg(&other)
+            .env("HOME", &*dir)
+            .output_within(Duration::from_secs(60))
+            .expect("bash ran");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            out.status.code() == Some(0) && stdout.contains("parity: identical, test by test"),
+            "parity.py doesn't read a summary sent with a byte-order mark: {stdout}"
+        );
+        let events = dir.join("events.json");
+        std::fs::write(
+            &events,
+            format!("{BOM}{{\"type\":\"test\",\"event\":\"ok\",\"name\":\"kernel::a\"}}\n"),
+        )
+        .expect("scratch");
+        let out = Command::new("sh")
+            .args([
+                "-c",
+                "exec python3 \"$1\" summarize 1 0 < \"$2\"",
+                "summarize",
+            ])
+            .arg(wsl.join("parity.py"))
+            .arg(&events)
+            .output_within(Duration::from_secs(60))
+            .expect("python3 ran");
+        assert_eq!(
+            String::from_utf8_lossy(&out.stdout),
+            "# wall 1 exit 0 tests 1\nkernel::a\tok\t0\n",
+            "parity.py drops nextest's first event after a byte-order mark"
+        );
+    }
+
+    #[test]
+    fn wsl_parity_reads_its_stdin_past_a_byte_order_mark() {
+        check_marked_stdin(
+            "wsl_parity_marked",
+            &read(INSIDE),
+            &read("scripts/wsl/parity.py"),
+        );
+    }
+
+    mod marked {
+        use super::*;
+        negative_control!(
+            wsl_parity_reads_its_stdin_past_a_byte_order_mark,
+            "the mark read as text",
+            expected = "parity.py doesn't read a summary sent with a byte-order mark",
+            check_marked_stdin(
+                "wsl_parity_marked_control",
+                &read(INSIDE),
+                &read("scripts/wsl/parity.py").replace("\"utf-8-sig\"", "\"utf-8\"")
+            )
+        );
+    }
+
+    mod marked_events {
+        use super::*;
+        negative_control!(
+            wsl_parity_reads_its_stdin_past_a_byte_order_mark,
+            "nextest's events read from the raw stdin",
+            expected = "parity.py drops nextest's first event after a byte-order mark",
+            check_marked_stdin(
+                "wsl_parity_marked_events_control",
+                &read(INSIDE),
+                &edited(
+                    &read("scripts/wsl/parity.py"),
+                    "summarize(argv[2], argv[3], stdin())",
+                    "summarize(argv[2], argv[3], sys.stdin)"
+                )
+            )
+        );
+    }
+
+    mod reopened {
+        use super::*;
+        negative_control!(
+            wsl_parity_reads_its_stdin_past_a_byte_order_mark,
+            "the arm as run 43418528499 ran it",
+            expected = "inside.sh compare opens /dev/stdin again",
+            check_marked_stdin(
+                "wsl_parity_reopened_control",
+                &edited(
+                    &read(INSIDE),
+                    "parity.py\" compare - ",
+                    "parity.py\" compare /dev/stdin "
+                ),
+                &read("scripts/wsl/parity.py")
+            )
+        );
     }
 
     mod merged {
