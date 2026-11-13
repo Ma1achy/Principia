@@ -385,7 +385,12 @@ physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
   building Heggie's step control writes here, physics-reviewed, within R-998's limits (no constant other than an
   integer iteration cap in a branch; the clock never set to the boundary while the stored state's own clock differs
   from it); it is checked by Heggie × RK4's figure-eight closure and its convergence order across η in [0.02, 0.001]
-  (REQ-INT-084).
+  (REQ-INT-084). *Applied per R-369 (the criterion is designed before any run; physics review 5890410670 of #520, F1):*
+  the criterion states its round-off floor before it runs; the order is fitted only over step sizes above that floor;
+  an order still short of 4 there, by a threshold the criterion states beforehand, is read as a landing defect, not as
+  round-off; and the clock-only control stays in. This follows the report of 13 Nov 2026 under RQ-812's recommendation,
+  "TASK-M3-76's experience says that check should state its round-off floor before it runs", with R-1008 as its
+  analogue; R-1008's rider is the owner's for TASK-M3-76 only, and this is not the owner's words.
 
 #### Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)
 

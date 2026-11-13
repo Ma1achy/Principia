@@ -38940,7 +38940,8 @@ Changes REQ-DEC-063 and REQ-DEC-064; REQ-GUI-012 drops RQ-811. The parse printed
 ## R-1007 — RQ-812, Heggie's landing: option (a), one landing rule for all three methods; Heggie's occupant lands under R-998's rule, with no landing tolerance, the state landing on the boundary with the clock, the final step sized or retaken, checked by the figure-eight closure's convergence order *(closes RQ-812; extends R-998 and R-994)*
 *13 Nov 2026 · the owner's second reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-812 moved),
 `docs/archive/review_queue/M0.md` (RQ-812 with its ruling), the forward and "Still in force" lines of R-998 and R-994,
-`docs/contracts/principia_integrator_contract.md` § "The equations and the step control (R-160, R-161)" (a dated line)
+`docs/contracts/principia_integrator_contract.md` § "The equations and the step control (R-160, R-161)" (a dated line,
+its round-off floor applied per R-369 on #520)
 and § "Rules the new kernel must hold by construction" (rule 1's 13 Nov line, with its *Was*), REQ-INT-084 (reqio),
 REQ-INT-049 and REQ-INT-119 (reqio, a dated note each), TASK-M3-08 (a dated line at its end), TASK-M3-76 (a dated
 line) and
