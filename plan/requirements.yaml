@@ -41570,9 +41570,10 @@
     detail: "Review (physics): §3.8 carries the definition. cargo test -p kernel displacement_shadow_same_time: on the Heggie × RK4 occupant, at every renormalisation of a joint-step run, the shadow's elapsed physical time equals the sample's (to the definition's stated tolerance, or bitwise if it lands on the same `t`); control: a joint step that advances the shadow by the sample's `Δτ` alone, its elapsed `t` drifting from the sample's, fails"
   rulings:
   - R-72
+  - R-369
   - R-974
   milestone: M3
-  note: "12 Nov 2026 (R-974, physics review 5875695467 of PR #503, F1): a recorded consequence of R-974, closed by TASK-M3-72. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-974, physics review 5875695467 of PR #503, F1): a recorded consequence of R-974. The test's name is given here (naming). Re-scoped 13 Nov 2026, applied per R-369 (task scoping): Heggie × RK4 needs TASK-M3-08, so the joint step on it and this verify move to TASK-M3-74, which closes this requirement; the definition stays TASK-M3-72's, written into §3.8 for any occupant that owns its time mapping. *Was:* \"a recorded consequence of R-974, closed by TASK-M3-72.\""
 - id: REQ-VAL-356
   area: VAL
   statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, TASK-M9-41's per-point FTLE maps and their report must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
