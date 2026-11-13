@@ -27,6 +27,9 @@
 #                                      machinery's own, `.github/`, `xtask/`, `scripts/`, `plan/`, `decisions.md`,
 #                                      `REVIEW_QUEUE.md` or `docs/` (the owner's CI model, R-909), so the process
 #                                      tests run; no path at all runs them. `detect` writes it after the verdict.
+#   scripts/ci_changes.sh requirements Read changed paths from stdin; print `requirements_only=true|false`: the change's
+#                                      only code-tier path is `plan/requirements.yaml`, so the pull request runs only
+#                                      the tests that read it (R-980; `.github/scripts/ci_tier.sh` asks it).
 #
 # The verdict, one `key=value` per line:
 #   tier=code|data|docs   the highest tier of any path;
@@ -242,6 +245,28 @@ process() {
   echo "process=$process"
 }
 
+# Reads paths on stdin; prints `requirements_only=true|false`: true when `plan/requirements.yaml` is among them and
+# no other path is code, so the pull request runs, of the product tests, only the tests that read that file
+# (`.github/scripts/ci_quick_crates.py --readers`, through `.github/scripts/ci_tier.sh`), and the per-merge run the
+# rest on every merge (R-980, refining R-677). The field check plays no part: a change to fields no code reads is
+# tier (b), and runs no product test whatever this says. No path at all is false, as it runs everything.
+requirements() {
+  local found=false other=false path
+  while IFS= read -r path || [ -n "$path" ]; do
+    [ -n "$path" ] || continue
+    if [ "$path" = plan/requirements.yaml ]; then
+      found=true
+    elif [ "$(tier_of "$path")" = code ]; then
+      other=true
+    fi
+  done
+  if [ "$found" = true ] && [ "$other" = false ]; then
+    echo "requirements_only=true"
+  else
+    echo "requirements_only=false"
+  fi
+}
+
 # The paths the pull request changes, against the base its merge commit is merged onto. Fetches the merge commit's
 # parents (the checkout is one commit deep); prints nothing if anything fails, which classify reads as "run all".
 changed_paths() {
@@ -297,8 +322,9 @@ case "${1:-}" in
   paths) changed_paths ;;
   classify) classify ;;
   process) process ;;
+  requirements) requirements ;;
   *)
-    echo "usage: scripts/ci_changes.sh detect | paths | classify | process" >&2
+    echo "usage: scripts/ci_changes.sh detect | paths | classify | process | requirements" >&2
     exit 2
     ;;
 esac
