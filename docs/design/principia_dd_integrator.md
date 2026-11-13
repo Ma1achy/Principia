@@ -404,12 +404,17 @@ as follows:
   other component (its rate the difference `g(x + δ⃗) − g(x)`, formed as the occupant's joint step forms its other
   differences), starting at 0. The sample lands on the sync grid as its own `ADVANCE` does (Part 2a, R-565); the
   shadow stands at `t + δt`.
-- **Resynchronised wherever the separation is read**: at each renormalisation, and at a read of the finalised FTLE or of
-  the stored shadow. The Cartesian displacement is first taken back to the sample's physical time, to first order,
-  `δx ← δx − f(x)·δt`, `f(x) = (p/m, m·a(r))` the physical-time vector field at the sample's state (read from its force
-  evaluation), and `δt ← 0`. A renormalisation then acts on the resynchronised `δx`, so **at every renormalisation the
-  shadow's elapsed physical time equals the sample's, exactly** (`δt = 0` there). Between renormalisations `δt` is
-  carried, never zeroed.
+- **Resynchronised at each renormalisation and at each write of the stored shadow**, these and no others. The
+  Cartesian displacement is taken back to the sample's physical time, to first order, `δx ← δx − f(x)·δt`,
+  `f(x) = (p/m, m·a(r))` the physical-time vector field at the sample's state (read from its force evaluation), and
+  `δt ← 0`. A renormalisation then acts on the resynchronised `δx`, so **at every renormalisation the shadow's elapsed
+  physical time equals the sample's, exactly** (`δt = 0` there). A write of the stored shadow (`r_sh = r + δr`,
+  `p_sh = p + δp`, above) is a resynchronisation point too: the payload holds no `δt`, so what it stores is the
+  resynchronised shadow, and the carried `(δ⃗, δt)` is resynchronised with it, so that a march carried on past the
+  write and one resumed from the stored shadow continue from the same `(δ⃗, δt = 0)`.
+- **A read resynchronises a copy.** A read of the finalised FTLE (payload §5, `δ_current`) away from those points
+  resynchronises a copy of `δx` and reads its norm; the carried `(δ⃗, δt)` is left as it is.
+- **Otherwise carried.** Between resynchronisation points `δt` is carried, never zeroed.
 - **What it drops.** The first-order term `ẋ·δt`, of the separation's own order, is the flow component R-974's
   consequence names, and it is removed. What remains is `O(δt²·ẍ)` and `O(‖δx‖·δt)` (`f` read at `x`, not `x + δx`):
   second order in the separation, the order of the finite-difference estimator's own nonlinearity, which dd test 10's
