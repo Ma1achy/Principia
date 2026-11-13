@@ -77,6 +77,7 @@ use crate::decode::{self, descriptor, Blocks, Decoded, Degenerate, Ic, Latent};
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 use crate::real::IeeeBits;
+use crate::Real;
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
@@ -99,8 +100,8 @@ pub fn embed<R: Float>(nu: R) -> System<R> {
 /// The acute angle `θ(ν) = arctan((1 − ν²)/(2ν))`, as `atan2(1 − ν², 2ν)`, which is that for `ν > 0`: the angle at
 /// `r₂` (`tan θ = a/b`).
 #[inline]
-pub fn acute_angle<R: Float>(nu: R) -> R {
-    Float::atan2(R::one() - nu * nu, nu + nu)
+pub fn acute_angle<R: Float + Real>(nu: R) -> R {
+    Real::arctangent2(R::one() - nu * nu, nu + nu)
 }
 
 /// The seed R-82's rule takes on the embed at `ν`: `(ρ, 0)` where `3ν ≤ 1`, else `(0, λ)` (the module's note). `3ν`
@@ -376,7 +377,7 @@ impl<P: Copy> Burrau<P> {
 
     /// `K(v) = K_max·v^γ_K`.
     #[inline]
-    pub fn kinetic<F: Float + From<P>>(&self, v: F) -> F {
+    pub fn kinetic<F: Float + Real + From<P>>(&self, v: F) -> F {
         let wide = <F as From<P>>::from;
         invariant::kinetic(wide(self.k_max), wide(self.gamma_k), v)
     }
@@ -551,10 +552,10 @@ pub struct EuclidPlane<P> {
 impl<P: Copy> EuclidPlane<P> {
     /// `m(u) = m_min·(m_max/m_min)^u`, the annotation coordinate.
     #[inline]
-    pub fn m<F: Float + From<P>>(&self, u: F) -> F {
+    pub fn m<F: Float + Real + From<P>>(&self, u: F) -> F {
         let wide = <F as From<P>>::from;
         let (lo, hi) = (wide(self.m_range[0]), wide(self.m_range[1]));
-        lo * Float::powf(hi / lo, u)
+        lo * Real::power(hi / lo, u)
     }
 
     /// `ν(v) = ν_min + (ν_max − ν_min)·v`.
@@ -635,7 +636,7 @@ where
                 (nu >= nu_lo && nu <= nu_hi).then(|| LatticePoint {
                     m,
                     n,
-                    u: Float::ln(m as f64 / m_lo) / Float::ln(m_hi / m_lo),
+                    u: Real::logarithm(m as f64 / m_lo) / Real::logarithm(m_hi / m_lo),
                     v: (nu - nu_lo) / (nu_hi - nu_lo),
                     primitive: family::primitive(m, n),
                 })

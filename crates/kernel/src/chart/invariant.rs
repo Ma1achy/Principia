@@ -87,6 +87,7 @@ use crate::decode::{self, descriptor, Blocks, Decoded, Degenerate, Ic};
 use crate::generated::constants::ChartConstants;
 use crate::generated::links::{Defaults, LinkParams, LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
+use crate::Real;
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
@@ -183,8 +184,8 @@ pub struct Targets<R> {
 /// §2.1's `K(t) = K_max·t^γ_K`, the warp's kinetic energy, which the Burrau `(ν, K)` chart's vertical axis takes too
 /// (chart_reference §4.5; R-113).
 #[inline]
-pub fn kinetic<R: Float>(k_max: R, gamma_k: R, t: R) -> R {
-    k_max * Float::powf(t, gamma_k)
+pub fn kinetic<R: Float + Real>(k_max: R, gamma_k: R, t: R) -> R {
+    k_max * Real::power(t, gamma_k)
 }
 
 /// §2.1's warp at `(s, t)` under `K_max = k_max` and `γ_K = gamma_k`, `I = 1` (the module's note).

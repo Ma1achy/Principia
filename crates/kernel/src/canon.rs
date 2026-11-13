@@ -132,6 +132,7 @@ use spirv_std::num_traits::Float;
 use crate::decode::Ic;
 use crate::generated::links::LinkReal;
 use crate::real::IeeeBits;
+use crate::Real;
 
 /// A state on the canonical section, and what `C` did to reach it.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -558,7 +559,7 @@ pub fn axis_zero<R: LinkReal>(x: R) -> bool {
 #[inline]
 fn angle_of<R: LinkReal>(v: [R; 2], pole: bool) -> R {
     let x = select(axis_zero(v[0]), R::zero(), v[0]);
-    select(pole, R::zero(), Float::atan2(v[1], x))
+    select(pole, R::zero(), Real::arctangent2(v[1], x))
 }
 
 /// Step 2's turn from the scaled `ρ` and its pole: `ρ̂ = ρ/‖ρ‖`, `(1, 0)` at the pole ([`rotation`]).

@@ -15,13 +15,30 @@
 //!
 //! **What `Real` gives the physics layer** (integrator_contract Part 2c, "Rules the new kernel must hold by
 //! construction"): the four operations and negation, [`RealOps::fma`], [`RealOps::square_root`] and the comparisons
-//! of `PartialOrd`, and nothing else; its two other functions, [`Real::arctan2`] and [`Real::sinc`], ask for
-//! `num_traits::Float` too, so code bounded by `Real` alone cannot reach them. It carries no numeric constant, no epsilon, no largest value, no infinity: rule 1
+//! of `PartialOrd`, and nothing else; its other functions, the transcendentals ([`Real::arctan2`], [`Real::sinc`],
+//! [`Real::sine`] and the rest), ask for `num_traits::Float` too, so code bounded by `Real` alone cannot reach them. It
+//! carries no numeric constant, no epsilon, no largest value, no infinity: rule 1
 //! forbids a precision-dependent constant in a control-flow decision, so code bounded by `Real` alone, as
 //! [`crate::physics`] is, has none to reach. A tolerance that must scale with precision is supplied where the value is
 //! used, never where a branch is taken. `NAME` is the precision row's label for the ledger, not a number. The two
 //! functions are named apart from `num_traits::Float`'s `mul_add` and `sqrt`, which the links' bound
-//! ([`crate::generated::links::LinkReal`]) also carries, so that a call on a type bounded by both is not ambiguous.
+//! ([`crate::generated::links::LinkReal`]) also carries, so that a call on a type bounded by both is not ambiguous; the
+//! transcendentals are named apart from `Float`'s for the same reason (`sine` for `sin`, `logarithm` for `ln`).
+//!
+//! **The pinned maths library** (R-991, REQ-CHART-212). Every f64 transcendental the CPU chart evaluator reaches is a
+//! method of [`Real`], and at f64 on the host each is the pinned pure-software libm's (`libm = "=0.2.16"` with
+//! `force-soft-floats`, as `Cargo.toml` pins it for the `N_sub` table, R-502): `sin`, `cos`, `tan`, `asin`, `acos`,
+//! `atan2`, `exp`, `expm1`, `log`, `log1p`, `pow`, `hypot`, `cbrt`, `sinh`, `cosh`, `tanh` and `atanh`, `sin_cos` its
+//! `sin` and `cos`. No platform maths library, compiler intrinsic or architecture-specific instruction computes them,
+//! so the f64 evaluation, and every record narrowed from it, has the same bits on every machine (the Mac, Linux,
+//! Windows and the wasm build). `sqrt` is not among them: IEEE 754 requires it correctly rounded, so every platform gives
+//! the same bits ([`RealOps::square_root`]). At f32, the GPU's precision, each is `num_traits::Float`'s, unchanged, but
+//! for [`Real::arctan2`] and [`Real::sinc`], the kernel's own. `crates/kernel/tests/transcendental_pin.rs` fails on a
+//! `Float::` or inherent transcendental anywhere in the evaluator's source outside this file's `Real` items.
+//!
+//! Two features, off in every build but the measurement's (`cargo xtask measure libm-pin`, R-991), change the f64 path:
+//! `measure-std-maths` puts it back on `num_traits::Float`, the platform's library, the path before the pin, and
+//! `measure-perturb-sin` moves [`Real::sine`]'s result one ulp up, the measurement's control.
 
 use core::fmt::Debug;
 use core::ops::{Add, Div, Mul, Neg, Sub};
@@ -46,13 +63,12 @@ pub trait Real:
     /// The name the ledger's precision row gives this type (dd_simstate_payload §1).
     const NAME: &'static str;
 
-    /// `atan2(self, x)`, the angle of the point `(x, self)`, in `[−π, π]`, for a type that is also a `Float`: through
-    /// `num_traits::Float` by default, which on the host is std's, the platform's maths library (spirv-std turns on
-    /// num-traits' `std` off the SPIR-V target), not the pinned libm, so the f64 path is bitwise only per platform
-    /// (whether to pin it is RQ-799, open); and at f32, the GPU's precision, the kernel's own,
-    /// [`crate::arctan::atan2_f32`], in integer arithmetic, so every backend gives the CPU's bits (RQ-628, decided by the
-    /// orchestrator per R-369, option (a)). The encode's angles and the shape sphere decode's `β` call it, so the
-    /// precision chooses it through `crate::generated::links::LinkReal`, whose bound holds `Real`.
+    /// `atan2(self, x)`, the angle of the point `(x, self)`, in `[−π, π]`, for a type that is also a `Float`:
+    /// `num_traits::Float`'s by default; at f64 on the host the pinned libm's `atan2` (R-991; the module's note); and at
+    /// f32, the GPU's precision, the kernel's own, [`crate::arctan::atan2_f32`], in integer arithmetic, so every backend
+    /// gives the CPU's bits (RQ-628, decided by the orchestrator per R-369, option (a)). The encode's angles and the shape
+    /// sphere decode's `β` call it, so the precision chooses it through `crate::generated::links::LinkReal`, whose bound
+    /// holds `Real`.
     #[inline]
     fn arctan2(self, x: Self) -> Self
     where
@@ -61,16 +77,188 @@ pub trait Real:
         Float::atan2(self, x)
     }
 
+    /// `atan2(self, x)` where the f32 path keeps the backend's: `num_traits::Float`'s by default, so at f32 the GPU's own
+    /// `atan2`, unchanged; at f64 on the host the pinned libm's `atan2`, as [`Real::arctan2`]'s (R-991; the module's
+    /// note). The callers that took `Float::atan2` before the pin take it, so no f32 bit moves; those RQ-628 gates take
+    /// [`Real::arctan2`].
+    #[inline]
+    fn arctangent2(self, x: Self) -> Self
+    where
+        Self: Float,
+    {
+        Float::atan2(self, x)
+    }
+
     /// `sin r/r` at `r = self`, nonzero, for a type that is also a `Float`, with `_square` the `r²` the caller formed
-    /// before its square root: `sin(r)/r` by default, so the f64 path's bits do not move and `r²` is not read, and at
-    /// f32, the GPU's precision, [`crate::chart::shape_sphere::sinc_f32`], which reads no backend `sin` near 0 (R-696).
-    /// The shape sphere's exponential map calls it, as [`Real::arctan2`] is gated.
+    /// before its square root: [`Real::sine`]`(r)/r` by default, so `r²` is not read, at f64 on the host the pinned
+    /// libm's `sin` through it; and at f32, the GPU's precision, [`crate::chart::shape_sphere::sinc_f32`], which reads no
+    /// backend `sin` near 0 (R-696). The shape sphere's exponential map calls it, as [`Real::arctan2`] is gated.
     #[inline]
     fn sinc(self, _square: Self) -> Self
     where
         Self: Float,
     {
-        Float::sin(self) / self
+        self.sine() / self
+    }
+
+    /// `(sin(self), cos(self))`: [`Real::sine`]'s and [`Real::cosine`]'s values, so the pair is the two functions' own.
+    #[inline]
+    fn sine_cosine(self) -> (Self, Self)
+    where
+        Self: Float,
+    {
+        (self.sine(), self.cosine())
+    }
+
+    /// `sin(self)`. `Float::sin` by default; at f64 on the host libm's `sin`, pinned (the module's note).
+    #[inline]
+    fn sine(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::sin(self)
+    }
+
+    /// `cos(self)`. `Float::cos` by default; at f64 on the host libm's `cos`, pinned (the module's note).
+    #[inline]
+    fn cosine(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::cos(self)
+    }
+
+    /// `tan(self)`. `Float::tan` by default; at f64 on the host libm's `tan`, pinned (the module's note).
+    #[inline]
+    fn tangent(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::tan(self)
+    }
+
+    /// `asin(self)`, in `[−π/2, π/2]`. `Float::asin` by default; at f64 on the host libm's `asin`, pinned (the module's
+    /// note).
+    #[inline]
+    fn arcsine(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::asin(self)
+    }
+
+    /// `acos(self)`, in `[0, π]`. `Float::acos` by default; at f64 on the host libm's `acos`, pinned (the module's
+    /// note).
+    #[inline]
+    fn arccosine(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::acos(self)
+    }
+
+    /// `eˢᵉˡᶠ`. `Float::exp` by default; at f64 on the host libm's `exp`, pinned (the module's note).
+    #[inline]
+    fn exponential(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::exp(self)
+    }
+
+    /// `eˢᵉˡᶠ − 1`, accurate near 0 (libm's `expm1`). `Float::exp_m1` by default; at f64 on the host libm's `expm1`,
+    /// pinned (the module's note).
+    #[inline]
+    fn exp_minus_one(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::exp_m1(self)
+    }
+
+    /// `ln(self)`, the natural logarithm (libm's `log`). `Float::ln` by default; at f64 on the host libm's `log`,
+    /// pinned (the module's note).
+    #[inline]
+    fn logarithm(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::ln(self)
+    }
+
+    /// `ln(1 + self)`, accurate near 0 (libm's `log1p`). `Float::ln_1p` by default; at f64 on the host libm's `log1p`,
+    /// pinned (the module's note).
+    #[inline]
+    fn ln_one_plus(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::ln_1p(self)
+    }
+
+    /// `∛self`. `Float::cbrt` by default; at f64 on the host libm's `cbrt`, pinned (the module's note).
+    #[inline]
+    fn cube_root(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::cbrt(self)
+    }
+
+    /// `sinh(self)`. `Float::sinh` by default; at f64 on the host libm's `sinh`, pinned (the module's note).
+    #[inline]
+    fn hyperbolic_sine(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::sinh(self)
+    }
+
+    /// `cosh(self)`. `Float::cosh` by default; at f64 on the host libm's `cosh`, pinned (the module's note).
+    #[inline]
+    fn hyperbolic_cosine(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::cosh(self)
+    }
+
+    /// `tanh(self)`. `Float::tanh` by default; at f64 on the host libm's `tanh`, pinned (the module's note).
+    #[inline]
+    fn hyperbolic_tangent(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::tanh(self)
+    }
+
+    /// `artanh(self)`, the inverse of `tanh`. `Float::atanh` by default; at f64 on the host libm's `atanh`, pinned (the
+    /// module's note).
+    #[inline]
+    fn arctanh(self) -> Self
+    where
+        Self: Float,
+    {
+        Float::atanh(self)
+    }
+
+    /// `selfˣ` (libm's `pow`). `Float::powf` by default; at f64 on the host libm's `pow`, pinned (the module's note).
+    #[inline]
+    fn power(self, x: Self) -> Self
+    where
+        Self: Float,
+    {
+        Float::powf(self, x)
+    }
+
+    /// `√(self² + x²)`, without undue overflow or underflow. `Float::hypot` by default; at f64 on the host libm's
+    /// `hypot`, pinned (the module's note).
+    #[inline]
+    fn hypotenuse(self, x: Self) -> Self
+    where
+        Self: Float,
+    {
+        Float::hypot(self, x)
     }
 }
 
@@ -88,8 +276,125 @@ impl Real for f32 {
     }
 }
 
+/// The f64 path: on the host each transcendental the pinned libm's (R-991; the module's note), [`Real::sinc`] and
+/// [`Real::sine_cosine`] the defaults, through [`Real::sine`] and [`Real::cosine`]. Each override is gated off the SPIR-V
+/// target, where the pinned libm is not built and the kernel instantiates f32 alone (R-265), and off under
+/// `measure-std-maths`, the measurement's path before the pin; there every method is the default, `num_traits::Float`'s,
+/// on the host the platform's maths library. Under `measure-perturb-sin`, the measurement's control, [`Real::sine`]'s
+/// result is moved one ulp up, its bit pattern plus one.
 impl Real for f64 {
     const NAME: &'static str = "f64";
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn arctan2(self, x: f64) -> f64 {
+        libm::atan2(self, x)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn arctangent2(self, x: f64) -> f64 {
+        libm::atan2(self, x)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn sine(self) -> f64 {
+        let s = libm::sin(self);
+        #[cfg(feature = "measure-perturb-sin")]
+        let s = f64::from_bits(s.to_bits().wrapping_add(1));
+        s
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn cosine(self) -> f64 {
+        libm::cos(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn tangent(self) -> f64 {
+        libm::tan(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn arcsine(self) -> f64 {
+        libm::asin(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn arccosine(self) -> f64 {
+        libm::acos(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn exponential(self) -> f64 {
+        libm::exp(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn exp_minus_one(self) -> f64 {
+        libm::expm1(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn logarithm(self) -> f64 {
+        libm::log(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn ln_one_plus(self) -> f64 {
+        libm::log1p(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn cube_root(self) -> f64 {
+        libm::cbrt(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn hyperbolic_sine(self) -> f64 {
+        libm::sinh(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn hyperbolic_cosine(self) -> f64 {
+        libm::cosh(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn hyperbolic_tangent(self) -> f64 {
+        libm::tanh(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn arctanh(self) -> f64 {
+        libm::atanh(self)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn power(self, x: f64) -> f64 {
+        libm::pow(self, x)
+    }
+
+    #[cfg(not(any(target_arch = "spirv", feature = "measure-std-maths")))]
+    #[inline]
+    fn hypotenuse(self, x: f64) -> f64 {
+        libm::hypot(self, x)
+    }
 }
 
 /// The two functions [`Real`] gives beyond its operators, taken from `num_traits::Float` for every float type, so that

@@ -447,10 +447,10 @@ impl Body<'_> {
                     Op::Sub => format!("{} - {}", a[0], a[1]),
                     Op::Div => format!("{} / {}", a[0], a[1]),
                     Op::Neg => format!("-{}", a[0]),
-                    Op::Exp => format!("Float::exp({})", a[0]),
-                    Op::Log => format!("Float::ln({})", a[0]),
+                    Op::Exp => format!("Real::exponential({})", a[0]),
+                    Op::Log => format!("Real::logarithm({})", a[0]),
                     Op::Tanh => format!("tanh_sat({})", a[0]),
-                    Op::Artanh => format!("Float::atanh({})", a[0]),
+                    Op::Artanh => format!("Real::arctanh({})", a[0]),
                     Op::Clamp => format!("Float::min(Float::max({}, {}), {})", a[0], a[1], a[2]),
                     Op::Sigmoid | Op::Logit | Op::Softplus | Op::InvSoftplus | Op::Sech2 => {
                         format!("{}({})", op.spelling_arity().0, a[0])
@@ -680,30 +680,30 @@ const HELPERS: [(&str, &str); 6] = [
          /// f64, and gives ±1 where a GPU's `tanh` fails at large arguments, as Metal's does; the select keeps the result\n\
          /// in `tanh`'s own range where a backend's accuracy bound lets it pass 1, and never acts on the CPU.\n\
          #[inline]\npub fn tanh_sat<R: LinkReal>(x: R) -> R {\n    let t = super::constants::tanh_sat::<R>();\n    \
-         let lo = if x < -t { -t } else { x };\n    let y = Float::tanh(if lo > t { t } else { lo });\n    \
+         let lo = if x < -t { -t } else { x };\n    let y = Real::hyperbolic_tangent(if lo > t { t } else { lo });\n    \
          let one = R::one();\n    let hi = if y > one { one } else { y };\n    if hi < -one {\n        -one\n    } else {\n        hi\n    }\n}\n",
     ),
     (
         "sigmoid",
-        "/// `σ(x) = 1/(1 + e⁻ˣ)`.\n#[inline]\nfn sigmoid<R: LinkReal>(x: R) -> R {\n    R::one() / (R::one() + Float::exp(-x))\n}\n",
+        "/// `σ(x) = 1/(1 + e⁻ˣ)`.\n#[inline]\nfn sigmoid<R: LinkReal>(x: R) -> R {\n    R::one() / (R::one() + Real::exponential(-x))\n}\n",
     ),
     (
         "logit",
-        "/// `logit(s) = log(s/(1 − s))`, σ's inverse.\n#[inline]\nfn logit<R: LinkReal>(s: R) -> R {\n    Float::ln(s / (R::one() - s))\n}\n",
+        "/// `logit(s) = log(s/(1 − s))`, σ's inverse.\n#[inline]\nfn logit<R: LinkReal>(s: R) -> R {\n    Real::logarithm(s / (R::one() - s))\n}\n",
     ),
     (
         "softplus",
         "/// `softplus(x) = log(1 + eˣ)`, as `max(x, 0) + log(1 + e^(−|x|))`, which does not overflow.\n#[inline]\n\
-         fn softplus<R: LinkReal>(x: R) -> R {\n    Float::max(x, R::zero()) + Float::ln_1p(Float::exp(-Float::abs(x)))\n}\n",
+         fn softplus<R: LinkReal>(x: R) -> R {\n    Float::max(x, R::zero()) + Real::ln_one_plus(Real::exponential(-Float::abs(x)))\n}\n",
     ),
     (
         "inv_softplus",
         "/// `inv_softplus(y) = log(eʸ − 1)`, as `y + log(1 − e⁻ʸ)`, which does not overflow.\n#[inline]\n\
-         fn inv_softplus<R: LinkReal>(y: R) -> R {\n    y + Float::ln(-Float::exp_m1(-y))\n}\n",
+         fn inv_softplus<R: LinkReal>(y: R) -> R {\n    y + Real::logarithm(-Real::exp_minus_one(-y))\n}\n",
     ),
     (
         "sech2",
-        "/// `sech2(x) = 1/cosh² x`.\n#[inline]\nfn sech2<R: LinkReal>(x: R) -> R {\n    let c = Float::cosh(x);\n    R::one() / (c * c)\n}\n",
+        "/// `sech2(x) = 1/cosh² x`.\n#[inline]\nfn sech2<R: LinkReal>(x: R) -> R {\n    let c = Real::hyperbolic_cosine(x);\n    R::one() / (c * c)\n}\n",
     ),
 ];
 

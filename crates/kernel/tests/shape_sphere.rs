@@ -47,6 +47,7 @@ use kernel::decode::{descriptor, mass, momentum, Decoded, Ic};
 use kernel::generated::links::Defaults;
 use kernel::shape::{landmarks, shape, shape_vec, weighted_jacobi, Landmarks};
 use kernel::stage::decode::StickBreakingLinks;
+use kernel::Real;
 use proptest::prelude::*;
 use validation::decode_f32_eps::SplitMix;
 use validation::gauge::Gauge;
@@ -530,14 +531,14 @@ fn check_inverse_poles(inv: Inverse64) {
             [0.0, -1.0, 0.0],
         ] {
             let got = inv(n, i, phase);
-            assert_eq!(got.beta, n[2].atan2(n[1]), "β off the pole at {n:?}");
+            assert_eq!(got.beta, n[2].arctan2(n[1]), "β off the pole at {n:?}");
         }
         for n0 in [1.0, -1.0] {
             for n1 in [0.0, -0.0] {
                 for n2 in [0.0, -0.0] {
                     let got = inv([n0, n1, n2], i, phase);
                     let (a, b) = (i * (1.0 + n0) / 2.0, i * (1.0 - n0) / 2.0);
-                    let along = |x: f64| [x.sqrt() * phase.cos(), x.sqrt() * phase.sin()];
+                    let along = |x: f64| [x.sqrt() * phase.cosine(), x.sqrt() * phase.sine()];
                     assert!(
                         got.beta.to_bits() == 0,
                         "β at the pole ({n0}, {n1:?}, {n2:?}) is {:?}, not R-437's +0",
