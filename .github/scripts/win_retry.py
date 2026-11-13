@@ -10,9 +10,10 @@ reason `ci_retry.py` is: `.github/` is full CI whole (R-662).
   win_retry.py classify DIR   Classify a saved run, offline, and print the verdict. DIR holds `run.json` (the run: its
                               `id`, `event`, `head_branch`, `run_attempt` and `conclusion`), `jobs.json` (the attempt's
                               jobs, as the jobs API lists them, with their `runner_name`, `labels` and `steps`),
-                              `annotations/<job id>.json` (each stopped job's check-run annotations), `logs/<job id>.log`
-                              (its log, absent where none was kept) and `newer.json` (each newer run of the workflow, as
-                              `{"id": …, "jobs": [...]}`; absent, the newer runs are unknown).
+                              `annotations/<job id>.json` (each stopped job's check-run annotations),
+                              `logs/<job id>.log` (its log, absent where none was kept) and `newer.json` (each
+                              newer run of the workflow, as `{"id": …, "jobs": [...]}`; absent, the newer runs are
+                              unknown).
   win_retry.py decide         In `win-retry.yml`: read the run named by GH_REPO, RUN_ID, RUN_ATTEMPT, RUN_EVENT,
                               HEAD_BRANCH, RUN_CONCLUSION and WORKFLOW_ID through `gh` into that layout, classify it,
                               ask for the re-run it allows, and write the decision, and the lines it rests on, to
@@ -331,7 +332,10 @@ def finish(title, run, rerun, reason, rows, repo):
         summary += [f"This is a re-run, attempt {attempt}; the first attempt's record stays in run {run_id}.", ""]
     summary += [f"**Decision: {decision}.** {reason}.", ""]
     if rows:
-        summary += ["| Job | Step | Verdict | Signature (the line it rests on) | Re-run |", "| --- | --- | --- | --- | --- |"]
+        summary += [
+            "| Job | Step | Verdict | Signature (the line it rests on) | Re-run |",
+            "| --- | --- | --- | --- | --- |",
+        ]
         for name, _, kind, step, evidence, verdict in rows:
             shown = again if kind == "fault" and verdict.endswith("re-run once") else "—"
             cell = evidence.replace("|", "\\|").replace("`", "'")
