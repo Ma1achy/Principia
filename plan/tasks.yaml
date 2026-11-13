@@ -1551,10 +1551,10 @@
   pitfalls: [PIT-4, PIT-9]
 - id: TASK-M3-08
   milestone: M3
-  title: "The Heggie occupant, registered once at t = 0, and the radial collision gate"  # re-scoped 13 Nov 2026 (R-369); was "Heggie and logH occupants, and the visible re-registration count"
+  title: "Heggie's regularised system: its equations, maps and regularised energy"  # split three ways 13 Nov 2026 (R-369); was "The Heggie occupant, registered once at t = 0, and the radial collision gate", before that "Heggie and logH occupants, and the visible re-registration count"
   depends_on: [TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-VAL-045, REQ-VAL-357]  # REQ-VAL-357 added 13 Nov 2026 (R-71, R-369): the radial-collision gate's region minimum; re-scoped 13 Nov 2026 (R-369): logH and the seam wiring to TASK-M3-75 (REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105), and REQ-INT-118 and REQ-PAY-114 (R-992, the carried state) with them
+  requirements: [REQ-INT-121]  # split 13 Nov 2026 (R-369): the march to TASK-M3-77 (REQ-INT-122), the gates to TASK-M3-78 (REQ-VAL-045, REQ-VAL-357); before that logH and the seam wiring to TASK-M3-75 (REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105), with REQ-INT-118 and REQ-PAY-114 (R-992)
   reviewers: [code, qa, physics, perf]  # perf added 13 Nov 2026 by #515 (REQ-PAY-114); kept per the orchestrator
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09
@@ -1888,7 +1888,7 @@
 - id: TASK-M3-75
   milestone: M3
   title: "logH, Heggie's and logH's seam, and the visible re-registration count"
-  depends_on: [TASK-M3-08]  # split from TASK-M3-08, 13 Nov 2026 (R-369); RQ-808 to RQ-810 ruled the same day (R-992, R-993, R-994)
+  depends_on: [TASK-M3-78]  # split from TASK-M3-08, 13 Nov 2026 (R-369); RQ-808 to RQ-810 ruled the same day (R-992, R-993, R-994); TASK-M3-78 (and through it TASK-M3-77 and TASK-M3-08) since TASK-M3-08's three-way split; was TASK-M3-08
   needs: [REQ-DEC-005, REQ-GEN-008]
   requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105, REQ-INT-118, REQ-PAY-114]  # from TASK-M3-08, 13 Nov 2026 (R-369)
   reviewers: [code, qa, physics, perf]  # perf: REQ-PAY-114, a payload schema change (R-992)
@@ -1901,6 +1901,22 @@
   requirements: [REQ-INT-119, REQ-INT-120]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4]
+- id: TASK-M3-77
+  milestone: M3
+  title: "Heggie's direct march, registered once at t = 0, and its step control"
+  depends_on: [TASK-M3-08]  # split from TASK-M3-08, 13 Nov 2026 (R-369, task scoping)
+  needs: [REQ-DEC-005, REQ-GEN-008]
+  requirements: [REQ-INT-122]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
+- id: TASK-M3-78
+  milestone: M3
+  title: "Heggie's gates: the radial collision, the Hamiltonian check and the separation floor"
+  depends_on: [TASK-M3-77]  # split from TASK-M3-08, 13 Nov 2026 (R-369, task scoping)
+  needs: [REQ-DEC-005, REQ-GEN-008]
+  requirements: [REQ-VAL-045, REQ-VAL-357]  # from TASK-M3-08, 13 Nov 2026 (R-369)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint

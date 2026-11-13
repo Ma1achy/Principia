@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105, REQ-INT-118, REQ-PAY-114
-- **Depends on:** TASK-M3-08
+- **Depends on:** TASK-M3-78
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-GEN-008
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-4, PIT-4.3, PIT-4.4
@@ -112,3 +112,6 @@ a schema change. Each requirement TASK-M3-08 built a Heggie or Aarseth–Zare ar
   answer on RQ-808), move here from TASK-M3-08 with its Deliverable and its two Acceptance lines, word for word, as
   #515's note on TASK-M3-08 says; perf joins the reviewers for the payload schema change. The R-992, R-993 and R-994
   notes stay on TASK-M3-08, and RQ-808 to RQ-810, which this task waited on, are ruled by them. *Was:* Closes without REQ-INT-118 and REQ-PAY-114; Reviewers "code, qa, physics".
+- *13 Nov 2026, applied per R-369 (TASK-M3-08 split three ways):* depends on TASK-M3-78, and through it on TASK-M3-77
+  and TASK-M3-08, since Heggie's march and gates, which this task wires and extends, are theirs. *Was:* "Depends on:
+  TASK-M3-08".
