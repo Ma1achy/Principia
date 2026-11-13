@@ -19,6 +19,8 @@
 //!   finite counting as infinite); unknown forms refused.
 //! - `shadow_form_criterion` (R-974; TASK-M3-72's pre-registered criterion): Burrau alone decides where it separates
 //!   (a1) from (a2); else (a2) exactly where `W(a1) − W(a2) ≥ 1/T`, the boundary included; else (a1).
+//! - `shadow_form_burrau`: the criterion's Burrau read is the form's f32 `λ_T` on Burrau at each of its `‖δ₀‖`s, bit for
+//!   bit, and finite exactly where both are.
 //! - `eight_orbit_set`: the eight-orbit report's chaotic orbits are the Pythagorean triangles at rest their names give,
 //!   Burrau first, and its eight starting conditions are the calibration orbits then the five others.
 //! - `eight_orbit_rules`: the bias against the reference, the reference read, the spread, the pick with an orbit left
@@ -35,13 +37,14 @@ use validation::gate::Gate;
 use validation::gate::RegionCount;
 use validation::gate::{self, GateSpec, MeasurementGate, Verdict};
 use validation::measure::benettin::{
-    bias, burrau, calibration_orbit, calibration_orbits, chaotic_orbits, chaotic_spread, choose,
-    eight_orbit_candidates, eight_orbit_report, eight_orbits, figure_eight, finite_time_gaps,
-    kepler_embedded, lagrange, lagrange_exponent, lambda, leave_one_out_lines, periodic_set,
-    pythagorean, reference, report_complete, routh_beta, run_lines, select, select_without, spread,
-    spread_lines, sweep_confirms, tolerance, worst_gap, BenettinCalibrationGate, Candidate, Form,
-    FormRow, GapRow, Orbit, Precision, ShadowFormGate, Test10, BURRAU_DELTA_0, CRITERION_DELTA_0,
-    GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0, PROPOSED_MIN_REGIONS, PROPOSED_N_RENORM,
+    bias, burrau, burrau_finite, calibration_orbit, calibration_orbits, chaotic_orbits,
+    chaotic_spread, choose, eight_orbit_candidates, eight_orbit_report, eight_orbits, figure_eight,
+    finite_time_gaps, kepler_embedded, lagrange, lagrange_exponent, lambda, lambda_in,
+    leave_one_out_lines, periodic_set, pythagorean, reference, report_complete, routh_beta,
+    run_lines, select, select_without, shadow_forms, spread, spread_lines, sweep_confirms,
+    tolerance, worst_gap, BenettinCalibrationGate, Candidate, Form, FormRow, GapRow, Orbit,
+    Precision, ShadowFormGate, Test10, BURRAU_DELTA_0, CRITERION_DELTA_0, GAP_HORIZONS,
+    LAGRANGE_HORIZON, PROPOSED_DELTA_0, PROPOSED_MIN_REGIONS, PROPOSED_N_RENORM,
     PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
 };
 use validation::negative_control;
@@ -416,7 +419,7 @@ negative_control!(
 
 // ── shadow_form_gate ────────────────────────────────────────────────────────────────────────────────────────────
 
-fn check_form_controls(second: &str) {
+fn check_form_controls(second: &str) -> String {
     let GateSpec::Measurement(config) = gate::spec(root(), "shadow-form").expect("gate.json")
     else {
         panic!("shadow-form is not a measurement");
@@ -456,12 +459,24 @@ fn check_form_controls(second: &str) {
         serde_json::json!({ "kind": "differs", "description": "x", "forms": ["absolute", "nope"] })
     )
     .is_err());
+    set.markdown
 }
 
 #[test]
 fn shadow_form_gate() {
-    check_form_controls("plain");
+    let report = check_form_controls("plain");
     check_form_controls("cancellation-free");
+    // The criterion reads its worst gaps at ‖δ₀‖ = 1e-5, not at the other ‖δ₀‖ the tables give.
+    let rows = shadow_forms(CRITERION_DELTA_0, PROPOSED_N_RENORM);
+    let w = format!(
+        "W(a1) = {:.5}, W(a2) = {:.5}",
+        worst_gap(&rows, Form::Plain),
+        worst_gap(&rows, Form::CancellationFree)
+    );
+    assert!(
+        report.contains(&w),
+        "the criterion's line does not read `{w}`, the worst gaps at ‖δ₀‖ = {CRITERION_DELTA_0:e}"
+    );
     assert_eq!(ShadowFormGate.name(), "shadow-form");
     // The finite-time gap (physics N3): the unstable orbits alone, each measured at both horizons.
     let gaps = finite_time_gaps(PROPOSED_DELTA_0, PROPOSED_N_RENORM);
@@ -545,6 +560,11 @@ fn shadow_form_gate() {
         assert_eq!(Form::parse(word), Ok(f));
     }
     assert!(Form::parse("displacement").is_err());
+    // Each form's name in the tables, (a1) and (a2) as R-974 names them.
+    assert_eq!(
+        Form::ALL.map(Form::word),
+        ["absolute", "(a1) plain", "(a2) cancellation-free"]
+    );
     assert_eq!(CRITERION_DELTA_0, 1e-5);
     assert_eq!(BURRAU_DELTA_0, [1e-5, 1e-6]);
 }
@@ -553,7 +573,9 @@ negative_control!(
     shadow_form_gate,
     "the absolute form held against itself as a displacement form must fail",
     expected = "a displacement form reads as the absolute form on every orbit",
-    check_form_controls("absolute")
+    {
+        check_form_controls("absolute");
+    }
 );
 
 // ── shadow_form_criterion ───────────────────────────────────────────────────────────────────────────────────────
@@ -607,6 +629,39 @@ fn check_criterion(choose: fn([f64; 2], [bool; 2], f64) -> Form) {
 fn shadow_form_criterion() {
     check_criterion(choose);
 }
+
+// ── shadow_form_burrau ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// `read`, the criterion's Burrau read, against `lambda_in` at each of [`BURRAU_DELTA_0`], (a1) at the proposed
+/// `n_renorm`.
+fn check_burrau(read: fn(Form, u32) -> (bool, [f64; 2])) {
+    let (finite, l) = read(Form::Plain, PROPOSED_N_RENORM);
+    let o = burrau();
+    for (k, d) in BURRAU_DELTA_0.into_iter().enumerate() {
+        assert_eq!(
+            l[k].to_bits(),
+            lambda_in(&o, Form::Plain, Precision::F32, d, PROPOSED_N_RENORM).to_bits(),
+            "Burrau's read at ‖δ₀‖ = {d:e} is not the f32 λ_T there"
+        );
+    }
+    assert_eq!(
+        finite,
+        l.iter().all(|x| x.is_finite()),
+        "Burrau's flag is not whether both reads are finite"
+    );
+}
+
+#[test]
+fn shadow_form_burrau() {
+    check_burrau(burrau_finite);
+}
+
+negative_control!(
+    shadow_form_burrau,
+    "a Burrau read that is not the measurement must fail",
+    expected = "is not the f32 λ_T there",
+    check_burrau(|_, _| (true, [0.0; 2]))
+);
 
 negative_control!(
     shadow_form_criterion,

@@ -1195,11 +1195,9 @@ pub fn periodic_report(name: &str, description: &str) -> (String, bool) {
         "# shadow-form: {name}\n\n{description}; T = {LAGRANGE_HORIZON}, Yoshida-4, n_renorm = {PROPOSED_N_RENORM}. The gap \
          is λ_T(f32) − λ_T(f64), both runs in the column's form.\n"
     );
-    let mut complete = true;
     let mut at_criterion = Vec::new();
     for d in FORM_DELTA_0 {
         let rows = shadow_forms(d, PROPOSED_N_RENORM);
-        complete &= rows.len() == periodic_set().len();
         let table: Vec<String> = rows.iter().map(FormRow::line).collect();
         markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{FORM_HEADER}\n{}\n", table.join("\n"));
         let worst: Vec<String> = Form::ALL
@@ -1252,10 +1250,9 @@ pub fn periodic_report(name: &str, description: &str) -> (String, bool) {
             .collect();
         markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{GAP_HEADER}\n{}\n", table.join("\n"));
     }
-    (
-        markdown,
-        complete && at_criterion.len() == periodic_set().len(),
-    )
+    // Each table has a row per orbit (`shadow_forms` maps the set); complete where the criterion's `‖δ₀‖` was measured.
+    let complete = at_criterion.len() == periodic_set().len();
+    (markdown, complete)
 }
 
 impl MeasurementGate for ShadowFormGate {
