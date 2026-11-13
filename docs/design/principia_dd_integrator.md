@@ -425,8 +425,11 @@ as follows:
 - **The occupant's own variables.** A regularised occupant marches its own coordinates; its joint step carries `δ⃗` in
   them, with `δt`, and maps it to the Cartesian `δx` the estimator reads (payload §5) where the separation is read. For
   Heggie × RK4 that map and the joint step are TASK-M3-74's, under physics review; an occupant with no joint step has no
-  displacement form (integrator contract Part 2a). Under a stepper, which does not own its time mapping, `δt` is 0
-  throughout: the sample and its shadow share the wrapper's grid.
+  displacement form (integrator contract Part 2a). The resynchronisation and the renormalisation above are stated on
+  the Cartesian `δx`. For a regularised occupant, how they act on `δ⃗` in its own variables, and how the rescaled
+  displacement returns to those variables (a KS-type map is invertible only up to gauge), is stated by TASK-M3-74 for
+  Heggie × RK4, under physics review; until it is, no regularised occupant has a displacement form. Under a stepper,
+  which does not own its time mapping, `δt` is 0 throughout: the sample and its shadow share the wrapper's grid.
 
 ---
 

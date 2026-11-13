@@ -814,8 +814,9 @@ Cost 1 has it (it projects `x` and `δ⃗` and watches `x + δ⃗`): `state'` is
 per-substep work. A stepper's is its `N_sub` joint steps. An occupant that owns its time mapping carries `δt` in the
 displacement, advanced by the same `Δτ`, and resynchronises it to first order at each renormalisation and at each
 write of the stored shadow, a read of the finalised FTLE resynchronising a copy, so that at every renormalisation the
-shadow's elapsed physical time equals the sample's (§3.8 gives it in full); Heggie × RK4's is TASK-M3-74's. An
-occupant with no joint march has no displacement-form shadow: marching one beside it fails to build.
+shadow's elapsed physical time equals the sample's (§3.8 gives it in full); Heggie × RK4's, with how the rescaled
+displacement returns to its own variables, is TASK-M3-74's. An occupant with no joint march has no
+displacement-form shadow: marching one beside it fails to build.
 
 **Cost 2 — the wrapper can no longer verify `N_sub`.** It must trust the occupant's reported
 `total_substeps`. That number is not cosmetic: measured across 68,685 leaves it is **bimodal with a

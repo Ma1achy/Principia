@@ -31,6 +31,14 @@ stages, the sample and its shadow at the same physical time at every renormalisa
 - `crates/kernel`: the joint step of the FTLE shadow's displacement form for Heggie × RK4, `x` bit-identical to its
   `ADVANCE`, `δ⃗` advanced through the same stages with the force difference TASK-M3-72's measurement chose, the sample
   and its shadow kept at the same physical time as § 3.8 defines it.
+- Doc change: `docs/design/principia_dd_integrator.md` § 3.8 — the rule by which the resynchronisation and the
+  renormalisation act on Heggie × RK4's `δ⃗` in its own variables, and the renormalised displacement returns to them
+  (§ 3.8 states both on the Cartesian `δx` and leaves the regularised occupant's to this task; a KS-type map is
+  invertible only up to gauge), under physics review (R-72). The physics reviewer of TASK-M3-72 proposed one (review
+  5887336006 of PR #517, F2), a proposal and not a ruling: resynchronise in the occupant's variables,
+  `δy ← δy − F(y)·δt/g(y)` (`F` the `τ`-flow, `g = dt/dτ`, so that the `t`-component of `δy` goes to 0 exactly), then
+  take `δ = ‖J·δy‖` through the map's Jacobian `J` and rescale `δy ← (δ₀/δ)·δy`, which needs no inverse map. Where the
+  corpus does not settle the rule when this task is built, it files an RQ and waits on it.
 - `cargo test -p kernel displacement_shadow_same_time`, with its control (R-176).
 
 ## Acceptance tests
@@ -45,3 +53,6 @@ stages, the sample and its shadow at the same physical time at every renormalisa
 - New 13 Nov 2026, applied per R-369 (task scoping, a two-way door; the orchestrator): split from TASK-M3-72, which
   stopped because the Heggie × RK4 joint step needs TASK-M3-08's occupant and TASK-M3-72 does not depend on it.
   REQ-VAL-355 moves here with its verify; its definition stays TASK-M3-72's, in § 3.8.
+- *13 Nov 2026, applied per R-369 (task scoping; physics review 5887336006 of PR #517, F2):* how the rescaled
+  displacement returns to a regularised occupant's own variables is this task's to state, the Deliverables' doc-change
+  line.
