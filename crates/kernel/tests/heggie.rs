@@ -10,7 +10,15 @@
 //!   finiteness exit at entry and mid-interval, the state latched finite (control: the test removed); R-604's budget
 //!   ending the march latched (control: a budget that does not bind); the floor signal on `dt/dτ < TINY` or `Rᵢ < TINY`
 //!   at its edges (control: the reference's `Rᵢ` arm alone); the entry-cap hit, the predictive limit and the clamp at
-//!   their edges; the explicit test on every component.
+//!   their edges; the explicit test on every component; the rate of `t` and `dt/dτ` bitwise one expression (control:
+//!   `R₀R₁R₂/S^{3/2}`, which differs in the last bit); R-604's budget helper at its edges.
+//! - `heggie_march_landing`: the landing with no tolerance (R-998 as R-1007 applies it; Part 2b, Heggie's step 8) on a
+//!   scripted clock: the secant's stops, the bisection, the closing step, the overshoot's edge and `dt_max` (control:
+//!   the retakes off, a step past the boundary kept).
+//! - `heggie_landing_state`, `heggie_landing_reported`: Heggie × RK4 lands on each boundary with the state's own clock
+//!   the boundary's, bitwise, the time reported `k·Δ_sync` (controls: the clock-only landing, its state left overshot;
+//!   a stored state whose clock differs from the boundary it reports). The convergence order across η (R-1007) runs
+//!   once physics has approved its criterion, written in the pull request before it runs.
 //! - `regularised_step_reversibility`: dd_integrator §5's test 3 on Heggie × RK4 (Eq. 20 and Eq. 22) and Aarseth–Zare +
 //!   RK4, each through its time-reversal map, on its full state, at REQ-VAL-191's criterion inside its domain: each
 //!   residual and verdict printed, each verdict against the pair's profile; at the same `dt`, Cartesian RK4 and
@@ -30,8 +38,8 @@ use kernel::regularisation::az::{self, AzP, AzQ, AzReal, AzStepper, AzSystem, En
 use kernel::regularisation::dt_max::DtMaxReport;
 use kernel::regularisation::form::{Flow, Form};
 use kernel::regularisation::heggie::{
-    self as hg, march, register, reversed, step_size, HgAdvanced, HgCount, HgP, HgParams, HgQ,
-    HgRegistered, HgStepper, HgSystem, HgWatch, DEFAULT_TIME,
+    self as hg, march, register, reversed, step_size, HgAdvanced, HgP, HgParams, HgQ, HgRegistered,
+    HgStepper, HgSystem, HgWatch, DEFAULT_TIME,
 };
 use kernel::regularisation::pairs::HeggieTime;
 use validation::{
@@ -46,20 +54,20 @@ fn v<R: AzReal>(x: f64) -> R {
     R::at_width(x as f32, x)
 }
 
-/// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8`, the reference's `TINY` and landing tolerance, R-160's
-/// `f = 0.02`, a budget that does not bind, the clamp and the secant on, under `time`. Test inputs, not calibrations.
+/// Test values for the step control: `η = 0.01`, `Δ_sync = 1/8`, the reference's `TINY`, R-160's `f = 0.02`, a budget
+/// that does not bind, and the landing in force (Part 2b, Heggie's step 8: the clamp, the secant's 4 retakes and the
+/// bisection's 64 halvings), under `time`. Test inputs, not calibrations.
 fn params<R: AzReal>(time: HeggieTime) -> HgParams<R> {
     HgParams {
         eta: v(0.01),
         delta_sync: v(0.125),
         tiny: R::at_width(1e-37, 1e-300),
         predictive_f: v(0.02),
-        // RQ-812: the reference's LAND_EPS_REL, a test input meanwhile, not a production value.
-        land_eps_rel: R::at_width(1e-5, 1e-14),
         step_budget_rate: v(1e7),
         n_min: 1_000_000,
         clamp: true,
         secant_tries: 4,
+        bisect_tries: 64,
         time,
     }
 }
@@ -209,8 +217,11 @@ fn every_pair(time: HeggieTime) -> Vec<PairRun> {
 fn heggie_pairs() {
     check_pairs(&every_pair(HeggieTime::Eq20));
     check_pairs(&every_pair(HeggieTime::Eq22));
+}
+
+#[test]
+fn heggie_pairs_default() {
     check_default(DEFAULT_TIME);
-    check_default(params::<f64>(DEFAULT_TIME).time);
 }
 
 /// A stepper that takes no step: the control's.
@@ -655,9 +666,9 @@ impl HgStepper for Scripted {
 
 /// One interval's march of [`Scripted`] reading `factors`, from an equilateral triangle of unit masses at rest, with
 /// `η = 1` and `Δ_sync = d/8`, `d` the registration's `dt/dτ` under Eq. 20, so that the first step's size is `1/8`
-/// exactly and the clock's sizes are exact multiples of `Δ_sync`; no predictive limit, the secant's `tries` and the
-/// clamp `clamp`. Its counts and its `Δ_sync`.
-fn scripted(factors: &[f64], tries: u32, clamp: bool) -> (HgCount<f64>, f64) {
+/// exactly and a step's clock lands on exact multiples of `Δ_sync` for power-of-two factors; no predictive limit, the
+/// secant's `tries`, the bisection's `halvings` and the clamp `clamp`. The march and its `Δ_sync`.
+fn scripted(factors: &[f64], tries: u32, halvings: u32, clamp: bool) -> (HgAdvanced<f64>, f64) {
     FACTORS.with_borrow_mut(|f| *f = factors.to_vec());
     let y = 3f64.sqrt() / 6.0;
     let s = State {
@@ -671,45 +682,112 @@ fn scripted(factors: &[f64], tries: u32, clamp: bool) -> (HgCount<f64>, f64) {
     pr.delta_sync = system.dt_dtau(&q) / 8.0;
     pr.predictive_f = 0.0;
     pr.secant_tries = tries;
+    pr.bisect_tries = halvings;
     pr.clamp = clamp;
-    pr.n_min = 20;
+    pr.n_min = 200;
     pr.step_budget_rate = 0.0;
     let out =
         march::<Scripted, f64, Quiet, ExplicitTest>(&s, 1, &pr, &mut Quiet, &mut ExplicitTest);
     FACTORS.with_borrow_mut(|f| f.clear());
-    (out.count, pr.delta_sync)
+    (out, pr.delta_sync)
 }
 
-/// The landing secant, its stops and the overshoot's edge; `tries` the secant's (the control turns it off).
-fn check_secant(tries: u32) {
-    let (c, _) = scripted(&[0.5, 1.0], tries, true);
+/// The march landed on boundary 1, still marching, its stored state's own clock the boundary's, bitwise.
+fn landed(out: &HgAdvanced<f64>, delta: f64, what: &str) {
     assert_eq!(
-        (c.steps, c.end),
-        (2, End::Marching),
-        "short by half, then a landing"
+        (out.count.end, out.boundary, out.q.t.to_bits()),
+        (End::Marching, 1, delta.to_bits()),
+        "{what}: did not land with the state's clock on the boundary (clock {:e}, Δ {delta:e})",
+        out.q.t
     );
-    let (c, _) = scripted(&[1.1, 1.1], tries, true);
+}
+
+/// The landing with no tolerance on a scripted clock (Part 2b, Heggie's step 8), with the secant's `tries` and the
+/// bisection's `halvings` (the occupant's 4 and 64; the control's 0 and 0).
+fn check_landing(tries: u32, halvings: u32) {
+    let (c, d) = scripted(&[0.5], tries, halvings, true);
+    landed(&c, d, "short by half, then the clamped step");
+    assert_eq!(c.count.steps, 2, "short by half: two steps");
+    let (c, d) = scripted(&[2.0, 2.0], tries, halvings, true);
     assert_eq!(
-        (c.steps, c.end),
-        (2, End::Marching),
-        "10% over, one retake that lands"
+        (c.count.steps, c.q.t.to_bits()),
+        (2, d.to_bits()),
+        "past by double, one retake that lands"
     );
-    let (c, _) = scripted(&[1.1, 0.0], tries, true);
+    landed(&c, d, "past by double");
+    let (c, d) = scripted(&[2.0, 0.0], tries, halvings, true);
+    landed(&c, d, "a retake whose clock stands still");
     assert_eq!(
-        (c.steps, c.end),
-        (3, End::Marching),
-        "a retake whose clock stands still stops the secant"
+        (c.count.steps, c.count.closings),
+        (3, 1),
+        "a retake whose clock stands still stops the secant, kept short and closed by a step"
     );
-    let (c, _) = scripted(&[1.1], 0, true);
-    assert_eq!(c.steps, 1, "the secant off takes no retake");
-    let (c, _) = scripted(&[2.5], 0, true);
-    assert_eq!(c.overshoots, 1, "past twice the interval is an overshoot");
-    let (c, _) = scripted(&[2.5], 0, false);
-    assert_eq!(c.overshoots, 0, "an overshoot counted with the clamp off");
-    let (c, delta) = scripted(&[2.0], 0, true);
-    assert_eq!(c.overshoots, 0, "twice the interval is not past it");
+    let (c, d) = scripted(&[2.0, 2.0], 0, halvings, true);
+    landed(&c, d, "the secant off");
     assert_eq!(
-        c.dt_max.report(),
+        (c.count.steps, c.count.most_bisections),
+        (2, 1),
+        "the secant off, one halving that lands"
+    );
+    let doubling = [2.0, 4.0, 8.0, 16.0, 32.0];
+    let (c, d) = scripted(&doubling, tries, halvings, true);
+    landed(&c, d, "the secant spent past the boundary");
+    assert_eq!(c.count.closings, 1, "the bisection kept a step short");
+    assert!(
+        c.count.most_bisections > 40 && c.count.most_bisections < 64,
+        "the bisection ran to a bracket one step wide: {} halvings",
+        c.count.most_bisections
+    );
+    let (c, d) = scripted(&doubling, tries, 3, true);
+    landed(&c, d, "the bisection's cap");
+    assert_eq!(
+        (c.count.most_bisections, c.count.closings),
+        (3, 1),
+        "the bisection stops at its cap"
+    );
+    let (c, d) = scripted(&[2.0, f64::NEG_INFINITY], 0, halvings, true);
+    landed(&c, d, "a halving whose clock is −∞");
+    assert_eq!(c.count.closings, 1, "a clock of −∞ kept");
+    let (c, d) = scripted(&[2.0, f64::NAN], 0, halvings, true);
+    landed(&c, d, "a halving whose clock is NaN");
+    let (c, _) = scripted(&[2.0, f64::NAN], tries, halvings, true);
+    assert_eq!(
+        (c.count.end, c.count.steps),
+        (End::NonFinite, 2),
+        "a retake whose clock is NaN stops the secant, and the finiteness test ends the march"
+    );
+}
+
+#[test]
+fn heggie_march_landing() {
+    check_landing(4, 64);
+}
+
+negative_control!(
+    heggie_march_landing,
+    "the retakes off: a step past the boundary kept, the clock set over it",
+    expected = "past by double, one retake that lands",
+    check_landing(0, 0)
+);
+
+/// The overshoot's edge and `dt_max`, with the retakes off so that a step past the boundary is kept: past twice the
+/// interval with the clamp on is an overshoot; with it off, or at twice the interval exactly, it is not; `dt_max` is
+/// the physical step. `edge` is the factor read at twice the interval (the control's is past it).
+fn check_overshoot(edge: f64) {
+    let (c, _) = scripted(&[2.5], 0, 0, true);
+    assert_eq!(
+        c.count.overshoots, 1,
+        "past twice the interval is an overshoot"
+    );
+    let (c, _) = scripted(&[2.5], 0, 0, false);
+    assert_eq!(
+        c.count.overshoots, 0,
+        "an overshoot counted with the clamp off"
+    );
+    let (c, delta) = scripted(&[edge], 0, 0, true);
+    assert_eq!(c.count.overshoots, 0, "twice the interval is not past it");
+    assert_eq!(
+        c.count.dt_max.report(),
         DtMaxReport::Largest {
             dt_max: 2.0 * delta,
             skipped: 0
@@ -719,15 +797,178 @@ fn check_secant(tries: u32) {
 }
 
 #[test]
-fn heggie_march_landing_secant() {
-    check_secant(4);
+fn heggie_march_overshoot() {
+    check_overshoot(2.0);
 }
 
 negative_control!(
-    heggie_march_landing_secant,
-    "the secant off",
-    expected = "10% over, one retake that lands",
-    check_secant(0)
+    heggie_march_overshoot,
+    "a step just past twice the interval read as the edge",
+    expected = "twice the interval is not past it",
+    check_overshoot(2.0 + 2.0 * f64::EPSILON)
+);
+
+/// The rate of `t` the equations of motion give and `d` read as `dt/dτ` agree bitwise, under Eq. 20 and Eq. 22, at the
+/// registration of [`triple`] and at states scaled from it (Part 2b, Heggie's step 5: the clamp and the step one `d`).
+fn check_rate_of_t(d: impl Fn(&HgSystem<f64>, &HgQ<f64>) -> f64) {
+    for time in [HeggieTime::Eq20, HeggieTime::Eq22] {
+        let HgRegistered { system, q, p } = register(&triple::<f64>(), 1e-300, time);
+        for i in 0..64 {
+            let a = 1.0 + f64::from(i) * 0.0371;
+            let b = 1.0 - f64::from(i) * 0.0113;
+            let qs = HgQ {
+                q: [
+                    [q.q[0][0] * a, q.q[0][1]],
+                    [q.q[1][0], q.q[1][1] * b],
+                    [q.q[2][0] * b, q.q[2][1] * a],
+                ],
+                t: 0.0,
+            };
+            let rate = system.rates_of(&qs, &p).0.t;
+            assert_eq!(
+                rate.to_bits(),
+                d(&system, &qs).to_bits(),
+                "the rate of t differs from dt/dτ under {time:?} at state {i}: {rate:e}"
+            );
+        }
+    }
+}
+
+#[test]
+fn heggie_march_rate_of_t() {
+    check_rate_of_t(HgSystem::dt_dtau);
+}
+
+negative_control!(
+    heggie_march_rate_of_t,
+    "dt/dτ read as R₀R₁R₂/S^{3/2}, which differs from the rate in the last bit",
+    expected = "the rate of t differs from dt/dτ under Eq22",
+    check_rate_of_t(|s, q| {
+        let r: Vec<f64> = q.q.iter().map(|x| x[0] * x[0] + x[1] * x[1]).collect();
+        let product = r[0] * r[1] * r[2];
+        match s.time {
+            HeggieTime::Eq20 => product,
+            HeggieTime::Eq22 => {
+                let sum = (r[0] + r[1] + r[2]).max(s.tiny);
+                product / (sum * sum.sqrt())
+            }
+        }
+    })
+);
+
+/// R-604's budget helper at its edges, `f` read as it: over only past `max(N_min, rate·t)`, at `N_min` and at
+/// `rate·t`, and a NaN allowance spent (Aarseth–Zare's `over_budget` calls it at its values).
+fn check_allowance(f: impl Fn(u32, f64, f64, u32) -> bool) {
+    assert!(!f(100, 0.05, 1000.0, 100), "at N_min, not over");
+    assert!(f(101, 0.05, 1000.0, 100), "past N_min");
+    assert!(
+        !f(200, 0.2, 1000.0, 100),
+        "at the allowance rate·t, not over"
+    );
+    assert!(f(201, 0.2, 1000.0, 100), "past rate·t");
+    assert!(f(0, f64::NAN, 1000.0, 100), "a NaN allowance is spent");
+}
+
+#[test]
+fn heggie_march_budget() {
+    check_allowance(az::over_allowance::<f64>);
+}
+
+negative_control!(
+    heggie_march_budget,
+    "a budget spent at its allowance, not past it",
+    expected = "at N_min, not over",
+    check_allowance(|s, t, r, n| f64::from(s) >= (r * t).max(f64::from(n)))
+);
+
+// ── heggie_landing: Heggie × RK4 lands with its state ─────────────────────────────────────────────────────────────
+
+/// Heggie × RK4 from [`triple`] under the default time transformation to boundary `k`, with the secant's `tries` and
+/// the bisection's `halvings`.
+fn rk4_to(k: u32, tries: u32, halvings: u32) -> HgAdvanced<f64> {
+    let mut p = params::<f64>(DEFAULT_TIME);
+    p.secant_tries = tries;
+    p.bisect_tries = halvings;
+    march::<Rk4, f64, Quiet, ExplicitTest>(&triple(), k, &p, &mut Quiet, &mut ExplicitTest)
+}
+
+/// A march reported at boundary `k` landed there: the time `k·Δ_sync`, the stored state's own clock the boundary's,
+/// bitwise, and the Cartesian state the image of that stored state.
+fn check_landed(out: &HgAdvanced<f64>, k: u32) {
+    let delta = 0.125;
+    assert_eq!(
+        (out.count.end, out.boundary, out.t),
+        (End::Marching, k, f64::from(k) * delta),
+        "the march did not report boundary {k}"
+    );
+    assert_eq!(
+        out.q.t.to_bits(),
+        delta.to_bits(),
+        "the stored state's own clock is not the boundary it reports, {k}: {:e} against {delta:e}",
+        out.q.t
+    );
+    assert_eq!(
+        out.state,
+        out.system.image(&out.q, &out.p),
+        "the state reported is not the stored state's image"
+    );
+}
+
+/// Heggie × RK4 lands on boundaries 1 to 8, each with its state, a landing having retaken a step on the way (from boundary
+/// 5 on, at these values).
+fn check_rk4_landings(tries: u32, halvings: u32) {
+    let mut retook = false;
+    for k in 1..=8 {
+        let out = rk4_to(k, tries, halvings);
+        check_landed(&out, k);
+        retook |= out.count.steps > out.count.accepted;
+        println!(
+            "heggie_landing_state: boundary {k}: {} steps, {} kept, {} closings, most halvings {}",
+            out.count.steps, out.count.accepted, out.count.closings, out.count.most_bisections
+        );
+    }
+    assert!(
+        retook,
+        "no landing retook a step: the landing is not exercised"
+    );
+}
+
+#[test]
+fn heggie_landing_state() {
+    check_rk4_landings(4, 64);
+}
+
+negative_control!(
+    heggie_landing_state,
+    "the clock-only landing: the clamped step's state kept where it overshoots, the clock set to the boundary over it",
+    expected = "the stored state's own clock is not the boundary it reports",
+    check_rk4_landings(0, 0)
+);
+
+/// A landed march's report, `tamper` applied to it first.
+fn check_reported(tamper: impl Fn(&mut HgAdvanced<f64>)) {
+    for k in 1..=8 {
+        let mut out = rk4_to(k, 4, 64);
+        tamper(&mut out);
+        check_landed(&out, k);
+    }
+}
+
+#[test]
+fn heggie_landing_reported() {
+    check_reported(|_| {});
+}
+
+negative_control!(
+    heggie_landing_reported,
+    "a stored state advanced past the boundary it reports by one further step, its image with it",
+    expected = "the stored state's own clock is not the boundary it reports",
+    check_reported(|out| {
+        let (q, p) = <Rk4 as HgStepper>::regularised_step(&out.system, &out.q, &out.p, 1e-3);
+        out.q = q;
+        out.p = p;
+        out.state = out.system.image(&q, &p);
+    })
 );
 
 // ── regularised_step_reversibility ─────────────────────────────────────────────────────────────────────────────
