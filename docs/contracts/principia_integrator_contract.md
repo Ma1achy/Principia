@@ -645,9 +645,13 @@ rule; the rest of steps 1 to 8 stands.
   from the saved state at `cur`, each retake a counted step.
 - **The bisection.** Where the secant's last retake still ends the clock past the boundary, its clock finite, a bracket
   is set: `lo = 0`, the saved state, and `hi` that retake's step size. The step is retaken at `mid = lo + (hi − lo)/2`, up to 64 times, each a counted step: a retake that ends the clock at or short
-  of the boundary becomes `lo`, with its state, and one that ends it past, or whose clock is not a number, becomes `hi`;
-  it stops where a retake ends the clock on the boundary, or where `mid` is `lo` or `hi` (the bracket is one step size
-  wide). The state kept is `lo`'s. So the step kept never ends the clock past the boundary.
+  of the boundary, its clock finite, becomes `lo`, with its state, and one that ends it past, or whose clock is not
+  finite, becomes `hi`; it stops where a retake ends the clock on the boundary, or where `mid` is `lo` or `hi` (the
+  bracket is one step size wide). The state kept is `lo`'s. So the step kept never ends the clock past the boundary.
+  *13 Nov 2026 (physics review 5893039643 of #519, F1):* a clock of −∞ is not finite and becomes `hi`: a stepper with a
+  negative stage weight in the slot (Yoshida-4 and Yoshida-6's drift weight `w₀`) can reach it where `A·B` overflows,
+  and kept as `lo` it would break the bracket's property. *Was:* "a retake that ends the clock at or short of the
+  boundary becomes `lo`, with its state, and one that ends it past, or whose clock is not a number, becomes `hi`".
 - **The closing step.** A step kept short of the boundary, by `δ = dt_left − t_s`, is followed by the march's own next
   step, clamped by step 3 to `δ/ab`: a real step of the state with its clock, which ends the clock on the boundary or,
   where it ends it past, lands by the same retakes. The intervals that needed it are counted, and so is the most
