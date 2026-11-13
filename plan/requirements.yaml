@@ -32722,7 +32722,7 @@
   - R-1004
   milestone: M0
   note: "Added 13 Nov 2026 by R-1004 (RQ-807 (3) + (4), and (i); \"No credential on the PC\"). Closed by TASK-M0-62."
-- id: REQ-TOOL-234
+- id: REQ-TOOL-235
   area: TOOL
   statement: "win-self-check's re-proof of the kept-checkout guard must plant a whole allowed config as actions/checkout leaves it, the three sparse-checkout keys in .git/config.worktree and the other keys in .git/config, so the guard passes its own list and still refuses every planted case, the guard script unchanged (R-711, R-860)."
   source:
@@ -32737,7 +32737,7 @@
   - R-711
   - R-860
   milestone: M0
-  note: "Added 13 Nov 2026 (applied per R-369: CI tooling, a test-only fix, the owner's goal of 12 Nov 2026 for the Windows runner, item E). Closed by TASK-M0-64. The test failed on the PC on every nightly since 5d242dd09 (5 Nov 2026): its whole config wrote the sparse-checkout keys into .git/config beside the ones the checkout left in .git/config.worktree, and the guard rightly refused a repeated key."
+  note: "Added 13 Nov 2026 (applied per R-369: CI tooling, a test-only fix, the owner's goal of 12 Nov 2026 for the Windows runner, item E). Closed by TASK-M0-64. Numbered REQ-TOOL-235, as REQ-TOOL-234 is TASK-M0-63's (PR #524). The test failed on the PC on every nightly since 5d242dd09 (5 Nov 2026): its whole config wrote the sparse-checkout keys into .git/config beside the ones the checkout left in .git/config.worktree, and the guard rightly refused a repeated key."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

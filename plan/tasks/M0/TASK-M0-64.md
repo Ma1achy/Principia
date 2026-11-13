@@ -1,7 +1,7 @@
 # TASK-M0-64 — win-self-check's guard test plants a clean checkout's config as the checkout leaves it, the sparse keys in config.worktree
 
 - **Milestone:** M0
-- **Closes:** REQ-TOOL-234
+- **Closes:** REQ-TOOL-235
 - **Depends on:** none
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
@@ -34,12 +34,12 @@ unchanged (R-711's security rules, re-proved nightly by win-self-check, R-860).
 
 ## Acceptance tests
 - `cargo test -p xtask --test ci_self_hosted git_guard_whole_config_splits` — the split holds; controls: the whole list
-  planted in `.git/config` alone fails, and the sparse keys planted in both files fails (REQ-TOOL-234).
+  planted in `.git/config` alone fails, and the sparse keys planted in both files fails (REQ-TOOL-235).
 - `cargo test -p xtask --test ci_self_hosted` and `cargo test -p xtask --features controls --test ci_self_hosted` on
-  the Mac pass; `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass (REQ-TOOL-234).
+  the Mac pass; `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass (REQ-TOOL-235).
 - On the PC, win-self-check's `git_guard_script_refuses_what_is_planted` passes on the first run on `main` after
   merge, its control, the script with its lists off, still failing; the run id reported in the PR or a follow-up
-  comment, a measurement (R-711) (REQ-TOOL-234).
+  comment, a measurement (R-711) (REQ-TOOL-235).
 
 ## Notes
 - Entered 13 Nov 2026 (applied per R-369: CI tooling, a test-only fix, two-way).

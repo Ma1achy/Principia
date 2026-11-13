@@ -514,7 +514,7 @@
   title: "win-self-check's guard test plants a clean checkout's config as the checkout leaves it, the sparse keys in config.worktree"
   depends_on: []
   needs: []
-  requirements: [REQ-TOOL-234]  # applied per R-369 (13 Nov 2026)
+  requirements: [REQ-TOOL-235]  # applied per R-369 (13 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
 - id: TASK-M1-01
