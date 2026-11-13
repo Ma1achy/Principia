@@ -753,8 +753,10 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
 
 1. **Registration, once.** The Cartesian state at `t = 0` is mapped to `(Q, P)` and `h` (`driver.rs:275-277`); the
    march then runs uninterrupted, and each sync boundary is a sampling cadence that does not touch the state
-   (`driver.rs:8-11`, `:482`). Heggie never re-registers (Part 2a, R-565). How the occupant seam carries this state
-   across `ADVANCE` calls is RQ-808 (TASK-M3-75); the march here is the reference driver's, registered once at `t = 0`.
+   (`driver.rs:8-11`, `:482`). Heggie never re-registers (Part 2a, R-565). The occupant seam carries this state across
+   `ADVANCE` calls in the payload under R-992 (RQ-808 (a); § "Part 2a" below), and TASK-M3-75 builds it; the march here
+   is the reference driver's, registered once at `t = 0`. *Was (corrected 13 Nov 2026 by code review 5895563626 C1 of
+   PR #522):* "How the occupant seam carries this state across `ADVANCE` calls is RQ-808 (TASK-M3-75)".
 2. **The interval.** `dt_left = Δ_sync` (R-565), and the interval clock `t` is set to `0` at each interval's start
    (`driver.rs:327-329`); the landing tolerance is `dt_left·LAND_EPS_REL` with the clamp on and `0` with it off
    (`driver.rs:328`).
