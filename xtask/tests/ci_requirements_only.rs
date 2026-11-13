@@ -684,11 +684,11 @@ fn readers_beside_a_test_target(crates: &str) -> String {
 }
 
 /// What `crates --readers` prints on a scratch workspace of one member, `a`, whose test `r` names the file, and whose
-/// library holds a unit test reading it.
-fn readers_beside_a_unit_test(crates: &str) -> String {
+/// source `unit` (`a/src/lib.rs`, or a binary's `a/src/bin/x.rs`) holds a unit test reading it.
+fn readers_beside_a_unit_test(crates: &str, unit: &str) -> String {
     let dir = Scratch::new("ci_requirements_only_unit_test");
     std::fs::create_dir_all(dir.join("a/tests")).expect("scratch");
-    std::fs::create_dir_all(dir.join("a/src")).expect("scratch");
+    std::fs::create_dir_all(dir.join("a/src/bin")).expect("scratch");
     std::fs::write(dir.join("Cargo.toml"), "[workspace]\nmembers = [\"a\"]\n").expect("manifest");
     std::fs::write(dir.join("a/Cargo.toml"), "[package]\nname = \"a\"\n").expect("member");
     std::fs::write(
@@ -697,7 +697,7 @@ fn readers_beside_a_unit_test(crates: &str) -> String {
     )
     .expect("test");
     std::fs::write(
-        dir.join("a/src/lib.rs"),
+        dir.join(unit),
         "#[test]\nfn t() { let _ = std::fs::read(\"../plan/requirements.yaml\"); }\n",
     )
     .expect("library");
@@ -731,9 +731,15 @@ fn check_untrusted(tier: &str, crates: &str) {
         "ci_requirements_only: the scan lists readers on a workspace with a `[[test]]` target it cannot place"
     );
     assert_eq!(
-        readers_beside_a_unit_test(crates),
+        readers_beside_a_unit_test(crates, "a/src/lib.rs"),
         "",
         "ci_requirements_only: the scan lists readers on a workspace whose `src/` holds a unit test that reads the file"
+    );
+    assert_eq!(
+        readers_beside_a_unit_test(crates, "a/src/bin/x.rs"),
+        "",
+        "ci_requirements_only: the scan lists readers on a workspace whose `src/bin/` holds a unit test that reads the \
+         file"
     );
     let silent = crates.replacen(
         "        print(\" \".join(readers(args.root) or []))\n",
@@ -780,8 +786,25 @@ mod unit_test_in_src {
             &read(TIER),
             &edited(
                 CRATES,
-                "            if \"#[test]\" in text_of(f):\n                return None\n",
+                "            if \"#[test]\" in text:\n                return None\n",
                 ""
+            )
+        )
+    );
+}
+
+mod unit_test_in_a_binary {
+    use super::*;
+    negative_control!(
+        ci_requirements_only_untrusted_scan_runs_every_crate,
+        "the scan skipping `src/bin/` before it looks for a unit test",
+        expected = "whose `src/bin/` holds a unit test that reads the file",
+        check_untrusted(
+            &read(TIER),
+            &edited(
+                CRATES,
+                "            if \"#[test]\" in text:\n",
+                "            if \"#[test]\" in text and parts[0] != \"bin\":\n"
             )
         )
     );

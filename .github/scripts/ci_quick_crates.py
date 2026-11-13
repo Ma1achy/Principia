@@ -177,10 +177,14 @@ def readers(root):
         modules = []
         for f in sorted(src.rglob("*.rs")):
             parts = f.relative_to(src).with_suffix("").parts
-            if parts[0] == "bin" or not names_read(text_of(f), names):
+            text = text_of(f)
+            if not names_read(text, names):
                 continue
-            if "#[test]" in text_of(f):
+            # A unit test in `src/`, a binary's among them, is no target the scan can select.
+            if "#[test]" in text:
                 return None
+            if parts[0] == "bin":
+                continue
             parts = parts[:-1] if parts[-1] == "mod" else parts
             if parts in ((), ("lib",), ("main",)):
                 modules.append(rf"\b{ident}::")
