@@ -498,20 +498,19 @@ impl<R> Cadence<R> for Quiet {
     }
 }
 
-/// Test values for Aarseth–Zare's step control at f64 (the reference's `TINY`, R-953, and landing tolerance, RQ-795,
-/// meanwhile), a budget that does not bind.
+/// Test values for Aarseth–Zare's step control at f64 (the reference's `TINY`, R-953; the landing bisection's 64 halvings,
+/// Part 2b, step 6), a budget that does not bind.
 fn az_params() -> AzParams<f64> {
     AzParams {
         eta: 0.01,
         delta_sync: 0.125,
         tiny: 1e-300,
         predictive_f: 0.02,
-        r3_floor: 1e-300,
-        land_eps_rel: 1e-14,
         step_budget_rate: 1e7,
         n_min: 1_000_000,
         clamp: true,
         secant_tries: 4,
+        bisect_tries: 64,
     }
 }
 
@@ -532,7 +531,7 @@ fn check_az_energy(first: impl Fn(&State<f64>, &State<f64>) -> State<f64>) {
         &mut ExplicitTest,
     );
     assert_eq!(out.boundary, 3, "the march did not land on 3");
-    let (sys0, q0, p0) = az::register(&first(&s0, &out.state), p.tiny, p.r3_floor);
+    let (sys0, q0, p0) = az::register(&first(&s0, &out.state), p.tiny);
     assert_eq!(
         out.registered.to_bits(),
         sys0.e.to_bits(),
@@ -542,7 +541,7 @@ fn check_az_energy(first: impl Fn(&State<f64>, &State<f64>) -> State<f64>) {
         ((sys0.energy(&q0, &p0) - sys0.e) / sys0.e).abs() < 1e-14,
         "the energy at registration is not E"
     );
-    let (sys1, _, _) = az::register(&out.state, p.tiny, p.r3_floor);
+    let (sys1, _, _) = az::register(&out.state, p.tiny);
     assert!(
         ((out.regularised - sys1.e) / sys1.e).abs() < 1e-12,
         "regularised {:e} is not the final state's energy {:e}",
