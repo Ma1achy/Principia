@@ -115,7 +115,7 @@ Commands:
                                   each run written under <target>/measure/libm-pin/; --wasm runs the pinned path built
                                   for wasm32-unknown-unknown under node too; --against compares another machine's run
                                   with this one's of the same arm. Prints the records differing at f64 and after
-                                  narrowing, per chart and zoom, and the outcome: PASS, UNEXPLAINED or void
+                                  narrowing, per chart and zoom, and the outcome: PASS, INCOMPLETE, UNEXPLAINED or void
   measure libm-pin --write <file> [--std]
                                   write this machine's pinned run (or std run) to <file>, for --against elsewhere
   mutants-check <mutants.out>... [--equivalent <file>]
@@ -501,24 +501,22 @@ fn measure_libm_pin(rest: &[&str]) -> Result<(), String> {
             pinned_elsewhere.push((other.header.host.clone(), counts));
         }
     }
-    let not_run: Vec<&str> = ["linux", "windows", "wasm32"]
-        .into_iter()
-        .filter(|os| {
-            !pinned_elsewhere
-                .iter()
-                .any(|(host, _)| host.starts_with(os))
-        })
-        .collect();
     print!("{report}");
-    if !not_run.is_empty() {
-        println!(
-            "pinned arms not run: {}; the outcome holds for the arms that ran",
-            not_run.join(", ")
-        );
-    }
+    let ran: Vec<&str> = pinned_elsewhere
+        .iter()
+        .map(|(host, _)| host.as_str())
+        .collect();
     match outcome(&control_counts, &pinned_elsewhere) {
         Outcome::Pass => {
-            println!("libm-pin: PASS");
+            println!("libm-pin: PASS ({})", ran.join(", "));
+            Ok(())
+        }
+        Outcome::Incomplete(missing) => {
+            println!(
+                "libm-pin: INCOMPLETE, pinned arms not run: {}; 0 records differ on the arms that ran: {}",
+                missing.join(", "),
+                if ran.is_empty() { "none".to_owned() } else { ran.join(", ") }
+            );
             Ok(())
         }
         Outcome::Unexplained(hosts) => Err(format!(
