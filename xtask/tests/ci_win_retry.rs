@@ -16,6 +16,8 @@
 //!   run of it has started, and a run of a pull request or of a push to another branch are not;
 //! - `ci_win_retry_a_limit_*`: a step's limit the job passed on from is a row of its own beside the job's verdict (a
 //!   runner lost after it re-run once, a failure of its own after it `own`), and a limit that stopped the job a hang;
+//! - `ci_win_retry_logs_every_time_limit_once`: every distinct limit in a job, stopping or passed on from, is a row of
+//!   its own, once, in a hung job and a passing one;
 //! - `ci_win_retry_mixed_runs`: one fault beside failures of their own is re-run alone; two faults alone are re-run
 //!   together; two beside a failure of its own are not;
 //! - `ci_win_retry_decide_*`: `decide`, under a stand-in `gh`, asks for the one re-run and writes every unclear stop and
@@ -879,6 +881,188 @@ mod stopping_timed_out {
             &script(),
             "    if job.get(\"conclusion\") == \"timed_out\":",
             "    if False:"
+        ))
+    );
+}
+
+/// The verdict for a time limit that stopped the job.
+const STOPPED: &str = "hang, ended by its time limit: not re-run";
+
+fn check_every_limit(script: &str) {
+    let second_limit = format!("The action '{SECOND_DOWNLOAD}' has timed out after 25 minutes.");
+    let first_hang = format!("job=wsl-register: hang at step 'This run's image': {STOPPED}");
+    let second_hang = format!("job=wsl-register: hang at step '{SECOND_DOWNLOAD}': {STOPPED}");
+    // The saved run, both downloads stopping the job at their limits, each carried by an annotation and a log line:
+    // a hang, never re-run, each limit a row of its own, once.
+    let both = Run::saved(STEP_LIMIT_RUN)
+        .attempt(1)
+        .step(STEP_LIMIT_JOB, "This run's image", "cancelled")
+        .step(STEP_LIMIT_JOB, SECOND_DOWNLOAD, "cancelled");
+    let text = classified(script, &both);
+    assert!(
+        text.starts_with("rerun=none\n"),
+        "two stopping step limits: re-run"
+    );
+    let rows = register_rows(&text);
+    assert!(
+        rows.contains(&first_hang.as_str()) && rows.contains(&second_hang.as_str()),
+        "two stopping step limits: a limit not logged"
+    );
+    assert_eq!(
+        rows.len(),
+        2,
+        "two stopping step limits: a limit logged more than once"
+    );
+    assert!(
+        text.lines()
+            .any(|l| l == format!("evidence=wsl-register: {FIRST_DOWNLOAD_LIMIT}"))
+            && text
+                .lines()
+                .any(|l| l == format!("evidence=wsl-register: {second_limit}")),
+        "two stopping step limits: a line it rests on not logged"
+    );
+    // The saved run, the first download passed on from and the second stopping the job: the stop the verdict, the
+    // recovered limit a row beside it.
+    let text = classified(
+        script,
+        &Run::saved(STEP_LIMIT_RUN)
+            .attempt(1)
+            .step(STEP_LIMIT_JOB, SECOND_DOWNLOAD, "cancelled"),
+    );
+    assert_eq!(
+        register_rows(&text),
+        vec![
+            second_hang.as_str(),
+            format!("job=wsl-register: hang at step 'This run's image': {RECOVERED}").as_str(),
+        ],
+        "a stopping limit after a recovered one: a limit not logged, or logged twice"
+    );
+    // A step's limit stopping the job, then the job's own: two hangs.
+    let job_limit = "The job has exceeded the maximum execution time of 1h0m0s";
+    let text = classified(
+        script,
+        &limits_then(&[FIRST_DOWNLOAD_LIMIT, job_limit]).step(
+            STEP_LIMIT_JOB,
+            "This run's image",
+            "cancelled",
+        ),
+    );
+    assert!(
+        text.starts_with("rerun=none\n"),
+        "a step's limit, then the job's: re-run"
+    );
+    let rows = register_rows(&text);
+    assert_eq!(
+        rows.len(),
+        2,
+        "a step's limit, then the job's: the job's limit not logged"
+    );
+    assert!(
+        text.lines()
+            .any(|l| l == format!("evidence=wsl-register: {job_limit}")),
+        "a step's limit, then the job's: the job's line not logged"
+    );
+    // A passing job with two limits it passed on from: each a row, once.
+    let text = classified(
+        script,
+        &recovered().annotated(STEP_LIMIT_JOB, &[FIRST_DOWNLOAD_LIMIT, &second_limit]),
+    );
+    assert!(
+        text.starts_with("rerun=none\n"),
+        "two recovered limits in a passing job: re-run"
+    );
+    assert_eq!(
+        register_rows(&text),
+        vec![
+            format!("job=wsl-register: hang at step 'This run's image': {RECOVERED}").as_str(),
+            format!("job=wsl-register: hang at step '{SECOND_DOWNLOAD}': {RECOVERED}").as_str(),
+        ],
+        "two recovered limits in a passing job: a limit not logged"
+    );
+}
+
+#[test]
+fn ci_win_retry_logs_every_time_limit_once() {
+    check_every_limit(&script());
+}
+
+negative_control!(
+    ci_win_retry_logs_every_time_limit_once,
+    "a hung job's first limit logged alone",
+    expected = "two stopping step limits: a limit not logged",
+    check_every_limit(&edit(
+        &script(),
+        "for other in limits(job, texts):",
+        "for other in []:"
+    ))
+);
+
+mod every_limit_twice {
+    use super::*;
+    negative_control!(
+        ci_win_retry_logs_every_time_limit_once,
+        "a stopping limit logged once per line that carries it",
+        expected = "two stopping step limits: a limit logged more than once",
+        check_every_limit(&edit(
+            &script(),
+            "            if limit not in seen:\n",
+            "            if True:\n"
+        ))
+    );
+}
+
+mod every_limit_verdict_twice {
+    use super::*;
+    negative_control!(
+        ci_win_retry_logs_every_time_limit_once,
+        "the verdict's own limit logged again beside it",
+        expected = "two stopping step limits: a limit logged more than once",
+        check_every_limit(&edit(
+            &script(),
+            "if other != (step, evidence):",
+            "if True:"
+        ))
+    );
+}
+
+mod every_limit_recovered_beside_a_hang {
+    use super::*;
+    negative_control!(
+        ci_win_retry_logs_every_time_limit_once,
+        "a recovered limit unlogged beside a hung job's stop",
+        expected = "a stopping limit after a recovered one: a limit not logged, or logged twice",
+        check_every_limit(&edit(
+            &script(),
+            "        for step, evidence in recovered:\n",
+            "        for step, evidence in (recovered if job.get(\"conclusion\") in PASSED else []):\n"
+        ))
+    );
+}
+
+mod every_limit_job_own {
+    use super::*;
+    negative_control!(
+        ci_win_retry_logs_every_time_limit_once,
+        "the job's own limit unread",
+        expected = "a step's limit, then the job's: the job's limit not logged",
+        check_every_limit(&edit(
+            &script(),
+            "|has exceeded the maximum execution time\")",
+            "\")"
+        ))
+    );
+}
+
+mod every_limit_recovered_first_alone {
+    use super::*;
+    negative_control!(
+        ci_win_retry_logs_every_time_limit_once,
+        "a passing job's first recovered limit logged alone",
+        expected = "two recovered limits in a passing job: a limit not logged",
+        check_every_limit(&edit(
+            &script(),
+            "            if limit not in found:\n",
+            "            if not found:\n"
         ))
     );
 }

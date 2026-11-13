@@ -24,6 +24,7 @@ Each job of the run on the runner that did not pass (its labels name `self-hoste
              line of its log, or the job concluding `timed_out`): never re-run (R-988, R-970). A step's limit stops the
              job unless every step of that name concluded `success`, the job passing on from it (a `continue-on-error`
              download); a limit the job passed on from is never its verdict, and is logged as a row of its own (below);
+             every other distinct limit that stopped the job (a later step's, the job's own) is a `hang` row beside it;
   newer      a newer run of it cancelled it (NEWER): never re-run (R-986);
   fault      it stopped on a runner-level fault (SIGNATURES: the runner lost, offline or its process killed, which
              GitHub reports as lost communication; or shut down mid-job, the runner's shutdown signal), and no other
@@ -50,8 +51,8 @@ that can't be read re-run nothing. GitHub re-runs one job, or every failed job o
 otherwise none is, and the summary says why. A hosted job of the run (`wsl-image`, `wsl-parity`) is never re-run here.
 
 The verdict: `rerun=none|job <id>|failed-jobs`, `reason=<why>`, then `job=<name>: <kind>: …` for each job on the
-runner that did not pass and for each step's time limit a job passed on from, and an `evidence=<name>: <line>` for each
-signature they rest on.
+runner that did not pass, for each other time limit that stopped a hung job and for each step's time limit a job passed
+on from, and an `evidence=<name>: <line>` for each signature they rest on.
 """
 
 import json
@@ -169,6 +170,19 @@ def kind_of(job, texts):
     return "own", stopped_step(job), shown
 
 
+def limits(job, texts):
+    """Each distinct time limit in the job's lines `texts`, once, as (step, evidence), in their order: the limits that
+    stopped it, which the annotations and the log may each carry."""
+    seen = []
+    for text in texts:
+        m = TIME_LIMIT.search(text)
+        if m:
+            limit = (m.group(1) or stopped_step(job), first_line(text))
+            if limit not in seen:
+                seen.append(limit)
+    return seen
+
+
 VERDICT = {
     "hang": "hang, ended by its time limit: not re-run",
     "newer": "cancelled by a newer run: not re-run",
@@ -202,6 +216,12 @@ def classify(run, jobs, annotations, logs, newer):
         if job.get("conclusion") not in PASSED:
             kind, step, evidence = kind_of(job, texts)
             rows.append([job["name"], jid, kind, step, evidence, VERDICT[kind]])
+            if kind == "hang":
+                # Every other limit that stopped the job (a later step's, run `if: always()`, or the job's own) is a
+                # `hang` row of its own, once, beside the verdict: REQ-TOOL-231's "every hang it sees".
+                for other in limits(job, texts):
+                    if other != (step, evidence):
+                        rows.append([job["name"], jid, "hang", other[0], other[1], VERDICT["hang"]])
         for step, evidence in recovered:
             rows.append([job["name"], jid, "hang", step, evidence, RECOVERED])
     faults = [r for r in rows if r[2] == "fault"]
