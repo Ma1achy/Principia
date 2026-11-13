@@ -33,7 +33,10 @@
 //!
 //! **Tolerances.** The inspector's and the round trip's are the register's (R-427). The others are multiples of the
 //! precision's epsilon, set from the worst case each test measures, with headroom (applied per R-369: a test decision,
-//! as `canon.rs`'s).
+//! as `canon.rs`'s). `shape_landmarks_mass_weighted`'s is `8ε·κ`, scaled by `shape`'s condition number `κ` at each
+//! draw: a collision configuration is an ill-conditioned input, `|ρ|` small against the positions, and the error is
+//! `shape`'s rounding on it, not the landmark's; the worst error over 600,000 draws is `3.8 ε·κ` (physics review
+//! 5897335433; applied per R-369: a test decision).
 
 use std::path::Path;
 
@@ -1626,9 +1629,20 @@ negative_control!(
     }
 );
 
+/// The condition number of `shape` at a configuration `r` with the pair opposite body `k` together (`k` = 0 or 1):
+/// `κ = 1 + (max|rᵢ| / |ρ|) · (M₀₁ / m_k)`, `ρ = r₁ − r₀`, `M₀₁ = m₀ + m₁`: `shape`'s rounding error on the
+/// configuration grows with it (physics review 5897335433).
+fn condition(r: [[f64; 2]; 3], m: [f64; 3], k: usize) -> f64 {
+    let norm = |v: [f64; 2]| v[0].hypot(v[1]);
+    let big = r.iter().map(|&v| norm(v)).fold(0.0, f64::max);
+    let rho = norm([r[1][0] - r[0][0], r[1][1] - r[0][1]]);
+    1.0 + (big / rho) * ((m[0] + m[1]) / m[k])
+}
+
 /// dd_integrator test 9 and R-50: the landmarks of [`check_landmarks`], equal masses at azimuths 180°, 60° and 300°
-/// for `BC₀₁`, `BC₁₂` and `BC₂₀` within `1e-12°`; and under every mass set each collision is, within `64ε`, the `n` of
-/// random configurations with that pair together, turned, scaled and moved: mass-weighted, so unequal masses move them.
+/// for `BC₀₁`, `BC₁₂` and `BC₂₀` within `1e-12°`; and under every mass set each collision is the `n` of random
+/// configurations with that pair together, turned, scaled and moved: `BC₀₁` exactly, the others within `8ε·κ`
+/// ([`condition`]); mass-weighted, so unequal masses move them.
 fn check_mass_weighted(of: LandmarksFn) {
     check_landmarks(of);
     let l = of([1.0 / 3.0; 3]);
@@ -1645,21 +1659,32 @@ fn check_mass_weighted(of: LandmarksFn) {
         for k in 0..3 {
             let mut r = [0, 1, 2].map(|_| [on(&mut rng, -2.0, 2.0), on(&mut rng, -2.0, 2.0)]);
             r[(k + 2) % 3] = r[(k + 1) % 3];
-            let n = shape(
-                moved(
-                    r,
-                    on(&mut rng, -PI, PI),
-                    on(&mut rng, 0.1, 10.0),
-                    [0.3, -0.7],
-                ),
-                m,
+            let r = moved(
+                r,
+                on(&mut rng, -PI, PI),
+                on(&mut rng, 0.1, 10.0),
+                [0.3, -0.7],
             );
-            assert!(
-                dist(n, l.bc[k]) <= 64.0 * EPS,
-                "the collision opposite body {k} is {:?}, not {n:?}, a configuration with that pair together, under \
-                 masses {m:?}",
-                l.bc[k]
-            );
+            let n = shape(r, m);
+            let d = dist(n, l.bc[k]);
+            if k == 2 {
+                // Bodies 0 and 1 together: ρ = r₁ − r₀ = 0, and the collision is exact.
+                assert!(
+                    n == l.bc[k],
+                    "the collision opposite body {k} is {:?}, not {n:?}, a configuration with that pair together, \
+                     under masses {m:?}",
+                    l.bc[k]
+                );
+            } else {
+                let kappa = condition(r, m, k);
+                assert!(
+                    d <= 8.0 * EPS * kappa,
+                    "the collision opposite body {k} is {:?}, not {n:?}, a configuration with that pair together, \
+                     under masses {m:?}: {:.2} ε against 8 ε · κ, κ = {kappa:.2}",
+                    l.bc[k],
+                    d / EPS
+                );
+            }
         }
     }
     let skewed = of([0.6, 0.3, 0.1]);
