@@ -9,6 +9,7 @@ use std::process::Command;
 #[path = "../../crates/validation/tests/support/fixture_tree.rs"]
 mod fixture_tree;
 
+use validation::paths::{escaped, slashed};
 use validation::spawn::Spawn;
 use xtask::deps::{check, DepKind, Edge, Metadata};
 
@@ -283,7 +284,8 @@ fn target_metadata(case: &str, lib: Option<&str>) -> Metadata {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join("deps_targets")
         .join(case);
-    let ws = root.display();
+    // Escaped for the JSON strings it is spliced into: a Windows path's `\` is an escape there (REQ-TOOL-237).
+    let ws = escaped(&root);
     let package = |name: &str| {
         let targets = lib.map_or(String::new(), |lib| {
             format!(r#", "targets": [{{"kind": ["lib"], "src_path": "{ws}/crates/{name}/{lib}"}}]"#)
@@ -439,7 +441,7 @@ fn assert_fails_to_compile(case: &str, root: &std::path::Path, krate: &str, file
         "{case}: stderr does not show the compiler's error:\n{stderr}"
     );
     assert!(
-        stderr.contains(file),
+        slashed(&stderr).contains(file),
         "{case}: stderr does not name {file}:\n{stderr}"
     );
     assert_compiles_with_the_dependency(root, krate);
@@ -552,7 +554,7 @@ fn deps_a_unit_test_behind_a_feature_using_validation_fails() {
         "stderr does not name --all-features in the dev profile and cite R-194:\n{stderr}"
     );
     assert!(
-        stderr.contains("error[E04") && stderr.contains(lib),
+        stderr.contains("error[E04") && slashed(&stderr).contains(lib),
         "stderr does not show the compiler's error:\n{stderr}"
     );
 }
@@ -641,7 +643,7 @@ fn check_gated_unit_test_fails(case: &str, gate: &str, ok: bool, stderr: &str, e
         "{case}: stderr does not cite R-194:\n{stderr}"
     );
     assert!(
-        stderr.contains("error[E04") && stderr.contains(lib),
+        stderr.contains("error[E04") && slashed(&stderr).contains(lib),
         "{case}: stderr does not show the compiler's error:\n{stderr}"
     );
 }

@@ -151,7 +151,7 @@ fn check_finds(root: &Path, want: &[&str]) {
     let found: Vec<String> = check(root, &[])
         .expect("lint ran")
         .iter()
-        .map(|f| format!("{}:{}: {}", f.path.display(), f.line, f.name))
+        .map(|f| format!("{}:{}: {}", xtask::repo_path(&f.path), f.line, f.name))
         .collect();
     assert_eq!(found, want, "the lint's findings are not the expected ones");
 }

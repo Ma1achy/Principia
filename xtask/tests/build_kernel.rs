@@ -597,7 +597,8 @@ fn check_backend_build(case: &str, status: u8) {
     let dir = empty_backend_dir(case);
     let (cargo, log) = stand_in_cargo(case, status);
     let result = build_backend(&dir, "nightly-2026-04-11", Command::new(cargo), spawned);
-    let dir_real = dir.canonicalize().unwrap();
+    // Without Windows' verbatim prefix, which `canonicalize` adds there and no working directory prints (REQ-TOOL-237).
+    let dir_real = validation::paths::plain(&dir.canonicalize().unwrap());
     assert_eq!(
         calls(&log),
         [format!(

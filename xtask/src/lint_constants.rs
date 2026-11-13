@@ -31,7 +31,7 @@ impl std::fmt::Display for Finding {
         write!(
             f,
             "{}:{}: numeric constant `{}` is not read from the constants register ({REGISTER})",
-            self.path.display(),
+            crate::repo_path(&self.path),
             self.line,
             self.name
         )

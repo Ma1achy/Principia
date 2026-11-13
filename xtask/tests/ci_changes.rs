@@ -94,6 +94,7 @@ use std::process::Command;
 use serde_json::Value;
 use validation::negative_control;
 use validation::spawn::Spawn;
+use xtask::repo_path;
 
 #[path = "../../crates/validation/tests/support/scratch.rs"]
 mod scratch;
@@ -1409,7 +1410,7 @@ fn requirement_loaders() -> Vec<(String, String)> {
         .filter_map(|file| {
             let text = std::fs::read_to_string(root().join(&file)).ok()?;
             text.contains("requirements.yaml")
-                .then(|| (file.to_string_lossy().into_owned(), text))
+                .then(|| (repo_path(&file), text))
         })
         .collect()
 }
@@ -1636,10 +1637,7 @@ fn named_files() -> Vec<(String, String)> {
                         continue;
                     };
                     if !path.as_os_str().is_empty() && root().join(&path).is_file() {
-                        out.push((
-                            file.to_string_lossy().into_owned(),
-                            path.to_string_lossy().into_owned(),
-                        ));
+                        out.push((repo_path(&file), repo_path(&path)));
                     }
                 }
             }
@@ -1957,7 +1955,7 @@ fn test_sources() -> Vec<(String, String)> {
         .into_iter()
         .map(|f| {
             let text = std::fs::read_to_string(root().join(&f)).expect("ci_changes: a test source");
-            (f.to_string_lossy().into_owned(), text)
+            (repo_path(&f), text)
         })
         .collect()
 }
@@ -2031,7 +2029,7 @@ fn data_tests(wf: &Value, flag: &str) -> Vec<(String, String)> {
 fn reader_test(reader: &str) -> Option<(String, String)> {
     let path = Path::new(reader);
     let stem = path.file_stem()?.to_string_lossy().into_owned();
-    let parent = path.parent()?.to_string_lossy().into_owned();
+    let parent = repo_path(path.parent()?);
     if parent == "xtask/tests" {
         return Some(("xtask".to_owned(), stem));
     }

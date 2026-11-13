@@ -164,7 +164,7 @@ pub struct Finding {
 
 impl std::fmt::Display for Finding {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}: ", self.path.display(), self.line)?;
+        write!(f, "{}:{}: ", crate::repo_path(&self.path), self.line)?;
         match self.found {
             Found::Term(term) => write!(f, "`{}` ({})", term.text, term.source),
             Found::Unclosed => write!(f, "`{OPEN}` has no `{CLOSE}` after it (R-111)"),

@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{PoisonError, RwLock};
+use validation::paths::escaped;
 use validation::spawn::Spawn;
 
 #[path = "../../crates/validation/tests/support/own_target.rs"]
@@ -53,7 +54,7 @@ fn run_fixture_with(name: &str, remove: Option<&str>, args: &[&str]) -> Verdict 
             *bytes = String::from_utf8_lossy(bytes)
                 .replace(
                     "../../../../../crates/validation",
-                    root.join("crates/validation").to_str().unwrap(),
+                    &escaped(&root.join("crates/validation")),
                 )
                 .into_bytes();
         }

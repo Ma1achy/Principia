@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
 
+use validation::paths::escaped;
 use validation::spawn::Spawn;
 
 #[path = "support/own_target.rs"]
@@ -24,10 +25,7 @@ fn fixture_run() -> &'static str {
         for (path, bytes) in &mut files {
             if path == Path::new("Cargo.toml") {
                 *bytes = String::from_utf8_lossy(bytes)
-                    .replace(
-                        "../../../../../crates/validation",
-                        validation.to_str().unwrap(),
-                    )
+                    .replace("../../../../../crates/validation", &escaped(&validation))
                     .into_bytes();
             }
         }

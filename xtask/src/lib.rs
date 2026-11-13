@@ -34,3 +34,14 @@ use std::path::{Path, PathBuf};
 pub fn workspace_manifest() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml")
 }
+
+/// `path`, relative to the repository, as the lints print it: its separator written `/` on every platform, so a
+/// finding reads alike on Windows (REQ-TOOL-237).
+pub fn repo_path(path: &Path) -> String {
+    slashed(&path.to_string_lossy(), std::path::MAIN_SEPARATOR)
+}
+
+/// `text`, a path, with each `separator` written `/`.
+pub fn slashed(text: &str, separator: char) -> String {
+    text.replace(separator, "/")
+}
