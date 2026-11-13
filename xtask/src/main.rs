@@ -353,8 +353,8 @@ fn gate_report(args: &[&str]) -> Result<(), String> {
     )
 }
 
-/// This workspace's root directory.
-/// The libm-pin harness's arms: a run's file name, the harness features it is built with, its own target directory.
+/// The libm-pin harness's arms on this machine: each one's name, which names its run's file and its own target directory,
+/// and the harness features it is built with.
 const LIBM_PIN_ARMS: [(&str, &str); 3] = [
     ("pinned", ""),
     ("std", "std-maths"),
@@ -531,6 +531,7 @@ fn measure_libm_pin(rest: &[&str]) -> Result<(), String> {
     }
 }
 
+/// This workspace's root directory.
 fn workspace_root() -> PathBuf {
     workspace_manifest()
         .parent()
