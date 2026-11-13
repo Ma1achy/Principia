@@ -107,7 +107,8 @@ and the step control (transcribed)"), read against `h`, the energy frozen at the
 passes through the Cartesian return. *Aarseth–Zare's* is the physical energy of the relative positions and momenta its
 regularised state gives about the reference body, each separation floored at `TINY`, read against the `E` of its first
 registration. Since Aarseth–Zare re-registers at every sync boundary with `E` the Cartesian energy there, its
-regularised and Cartesian read-outs can coincide, and the radial-collision gate's "differs" control is Heggie's alone.
+regularised and Cartesian read-outs can coincide (on the radial collision they do, bitwise), and the radial-collision
+gate's "differs" control and its reader check bind under Heggie alone.
 Measured on the two-body radial collision (`cargo xtask gate radial-collision`; RK4, `η = 0.01`, `Δ_sync = 1/8`, f64):
 Heggie under Eq. 22 passes `d_min = 7.7·10⁻³⁹` with a regularised drift of `5.9·10⁻¹⁴` and a Cartesian read-out of
 `2.1·10⁻¹³` (3.7×), the Cartesian read-out not falling with `η` over the ladder `0.01` to `0.00125`; Aarseth–Zare reads
