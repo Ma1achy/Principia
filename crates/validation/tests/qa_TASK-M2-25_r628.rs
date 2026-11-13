@@ -35,6 +35,7 @@ use kernel::decode::descriptor::describe;
 use kernel::decode::Ic;
 use kernel::generated::links::{Defaults, LinkReal};
 use kernel::payload::{ICDescriptorOf, PayloadReal};
+use kernel::real::Real;
 use kernel::stage::decode::{sample_with, UniformChart};
 use render::presets::DecodeChart;
 use validation::decode_preset as dp;
@@ -52,6 +53,7 @@ trait W:
     fn f(self) -> f64;
     fn bits(self) -> u64;
     fn nil() -> Self;
+    /// `atan2(y, x)`: `Real::arctangent2`, at f32 the backend's own, unchanged, and at f64 the pinned libm's (R-991).
     fn angle2(y: Self, x: Self) -> Self;
 }
 
@@ -72,7 +74,7 @@ impl W for f32 {
         0.0
     }
     fn angle2(y: Self, x: Self) -> Self {
-        y.atan2(x)
+        Real::arctangent2(y, x)
     }
 }
 
@@ -92,7 +94,7 @@ impl W for f64 {
         0.0
     }
     fn angle2(y: Self, x: Self) -> Self {
-        y.atan2(x)
+        Real::arctangent2(y, x)
     }
 }
 
