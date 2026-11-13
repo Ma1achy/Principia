@@ -14,6 +14,8 @@
 //! - `ci_win_retry_keeps_*`: a test failure (one the runner's going follows in a later step too), a hang (the job's
 //!   limit and a step's, and a step's in a job that passed on from it, which is logged too), a run cancelled by a newer one, a job no runner took, a second attempt, a fault once a newer
 //!   run of it has started, and a run of a pull request or of a push to another branch are not;
+//! - `ci_win_retry_a_limit_*`: a step's limit the job passed on from is a row of its own beside the job's verdict (a
+//!   runner lost after it re-run once, a failure of its own after it `own`), and a limit that stopped the job a hang;
 //! - `ci_win_retry_mixed_runs`: one fault beside failures of their own is re-run alone; two faults alone are re-run
 //!   together; two beside a failure of its own are not;
 //! - `ci_win_retry_decide_*`: `decide`, under a stand-in `gh`, asks for the one re-run and writes every unclear stop and
@@ -50,6 +52,8 @@ const STEP_LIMIT_JOB: &str = "131274911991";
 /// That run's first download's limit, GitHub's annotation for it: a step that `continue-on-error` lets the job pass on
 /// from.
 const FIRST_DOWNLOAD_LIMIT: &str = "The action 'This run's image' has timed out after 25 minutes.";
+/// That run's second download.
+const SECOND_DOWNLOAD: &str = "This run's image, again if the first download didn't finish whole";
 /// The verdict for a step's time limit in a job that passed on from it.
 const RECOVERED: &str = "hang, a step ended by its time limit, the job passing on: not re-run";
 /// `main`, a push: `win-vulkan` cancelled, waiting, by a newer run.
@@ -183,6 +187,18 @@ impl Run {
     fn bare(mut self, id: &str) -> Run {
         self.annotations.retain(|(k, _)| k != id);
         self.logs.retain(|(k, _)| k != id);
+        self
+    }
+
+    /// The job `id`'s steps named `name` concluding `conclusion`.
+    fn step(mut self, id: &str, name: &str, conclusion: &str) -> Run {
+        let steps = self.job(id)["steps"].as_array_mut().expect("steps");
+        let mut found = false;
+        for step in steps.iter_mut().filter(|s| s["name"] == name) {
+            step["conclusion"] = json!(conclusion);
+            found = true;
+        }
+        assert!(found, "ci_win_retry: no step {name}");
         self
     }
 
@@ -481,12 +497,15 @@ fn check_hangs(script: &str) {
         "wsl-register",
         "hang at step 'This run's image'",
     );
+    // The saved step limits' run, its second download stopping the job at its limit rather than passing on.
     check_kept(
         script,
         "steps at their limits",
-        &Run::saved(STEP_LIMIT_RUN).attempt(1),
+        &Run::saved(STEP_LIMIT_RUN)
+            .attempt(1)
+            .step(STEP_LIMIT_JOB, SECOND_DOWNLOAD, "cancelled"),
         "wsl-register",
-        "hang at step 'This run's image, again if the first download didn't finish whole'",
+        &format!("hang at step '{SECOND_DOWNLOAD}': hang, ended by its time limit"),
     );
     // A hang beside a runner's signature is still a hang.
     let both = Run::saved(TEST_RUN).annotated(
@@ -592,8 +611,8 @@ negative_control!(
     expected = "a recovered step limit: not logged as a hang",
     check_recovered(&edit(
         &script(),
-        "            if found:\n",
-        "            if False:\n"
+        "        for step, evidence in recovered:\n",
+        "        for step, evidence in []:\n"
     ))
 );
 
@@ -605,8 +624,261 @@ mod recovered_as_fault {
         expected = "a recovered step limit: re-run",
         check_recovered(&edit(
             &script(),
-            "rows.append([job[\"name\"], jid, \"hang\", found[0]",
-            "rows.append([job[\"name\"], jid, \"fault\", found[0]"
+            "rows.append([job[\"name\"], jid, \"hang\", step, evidence, RECOVERED])",
+            "rows.append([job[\"name\"], jid, \"fault\", step, evidence, RECOVERED])"
+        ))
+    );
+}
+
+// ---- A step's limit the job passed on from is never the job's verdict -------------------------------------------------
+
+/// The `job=wsl-register: …` lines of `text`.
+fn register_rows(text: &str) -> Vec<&str> {
+    text.lines()
+        .filter(|l| l.starts_with("job=wsl-register: "))
+        .collect()
+}
+
+/// The saved step limits' run at its first attempt, its job's lines `messages` alone, no log.
+fn limits_then(messages: &[&str]) -> Run {
+    Run::saved(STEP_LIMIT_RUN)
+        .attempt(1)
+        .annotated(STEP_LIMIT_JOB, messages)
+}
+
+fn check_passed_on(script: &str) {
+    let first_row = format!("job=wsl-register: hang at step 'This run's image': {RECOVERED}");
+    // The saved run as it was: both downloads at their limits, passed on from, then the job failing its own check of
+    // the image. Its verdict is its own failure, and each limit is a row of its own, once, though both the annotations
+    // and the log carry it.
+    let text = classified(script, &Run::saved(STEP_LIMIT_RUN).attempt(1));
+    assert!(
+        text.starts_with("rerun=none\n"),
+        "a failure of its own after recovered limits: re-run"
+    );
+    let rows = register_rows(&text);
+    assert_eq!(
+        rows.first().copied(),
+        Some(
+            "job=wsl-register: own at step 'This run's image, never downloaded whole': a failure of the job's own: \
+             not re-run"
+        ),
+        "a failure of its own after recovered limits: not its verdict"
+    );
+    assert_eq!(
+        rows.len(),
+        3,
+        "a failure of its own after recovered limits: a limit logged more than once, or not at all"
+    );
+    assert!(
+        rows.contains(&first_row.as_str())
+            && rows.contains(
+                &format!("job=wsl-register: hang at step '{SECOND_DOWNLOAD}': {RECOVERED}")
+                    .as_str()
+            ),
+        "a failure of its own after recovered limits: a recovered limit not logged"
+    );
+    assert!(
+        text.lines()
+            .any(|l| l == "evidence=wsl-register: Process completed with exit code 1."),
+        "a failure of its own after recovered limits: its own line not its evidence"
+    );
+    // A recovered limit, then the runner lost: a fault, re-run once, the limit logged beside it.
+    let text = classified(script, &limits_then(&[FIRST_DOWNLOAD_LIMIT, LOST]));
+    assert!(
+        text.starts_with(&format!("rerun=job {STEP_LIMIT_JOB}\n")),
+        "a lost runner after a recovered limit: not re-run"
+    );
+    let rows = register_rows(&text);
+    assert_eq!(
+        rows.first().copied(),
+        Some(
+            "job=wsl-register: fault at step 'This run's image, never downloaded whole': unclear stop, a \
+             runner-level fault: re-run once"
+        ),
+        "a lost runner after a recovered limit: not its verdict"
+    );
+    assert_eq!(
+        rows.get(1..),
+        Some(&[first_row.as_str()][..]),
+        "a lost runner after a recovered limit: the limit not logged beside it"
+    );
+    // A shutdown alike.
+    assert_eq!(
+        rerun(script, &limits_then(&[FIRST_DOWNLOAD_LIMIT, SHUTDOWN])),
+        format!("rerun=job {STEP_LIMIT_JOB}"),
+        "a shutdown after a recovered limit: not re-run"
+    );
+}
+
+#[test]
+fn ci_win_retry_a_limit_passed_on_from_is_never_the_verdict() {
+    check_passed_on(&script());
+}
+
+negative_control!(
+    ci_win_retry_a_limit_passed_on_from_is_never_the_verdict,
+    "a failing job's every step limit read as its stop",
+    expected = "a failure of its own after recovered limits: not its verdict",
+    check_passed_on(&edit(
+        &script(),
+        "if m and (passed or passed_on(job, m.group(1))):",
+        "if m and passed:"
+    ))
+);
+
+mod passed_on_unlogged {
+    use super::*;
+    negative_control!(
+        ci_win_retry_a_limit_passed_on_from_is_never_the_verdict,
+        "a failing job's recovered limits left out of the log",
+        expected = "a failure of its own after recovered limits: a limit logged more than once, or not at all",
+        check_passed_on(&edit(
+            &script(),
+            "        for step, evidence in recovered:\n",
+            "        for step, evidence in (recovered if job.get(\"conclusion\") in PASSED else []):\n"
+        ))
+    );
+}
+
+mod passed_on_twice {
+    use super::*;
+    negative_control!(
+        ci_win_retry_a_limit_passed_on_from_is_never_the_verdict,
+        "a limit logged once per line that carries it",
+        expected = "a failure of its own after recovered limits: a limit logged more than once, or not at all",
+        check_passed_on(&edit(
+            &script(),
+            "            if limit not in found:\n",
+            "            if True:\n"
+        ))
+    );
+}
+
+mod passed_on_in_the_verdict {
+    use super::*;
+    negative_control!(
+        ci_win_retry_a_limit_passed_on_from_is_never_the_verdict,
+        "a failing job's verdict read from every line, recovered limits among them",
+        expected = "a failure of its own after recovered limits: not its verdict",
+        check_passed_on(&edit(
+            &script(),
+            "kind, step, evidence = kind_of(job, texts)",
+            "kind, step, evidence = kind_of(job, lines(annotations.get(jid, []), logs.get(jid)))"
+        ))
+    );
+}
+
+fn check_stopping_limit(script: &str) {
+    // The first download stopping the job at its limit, then the runner lost: a hang, never re-run.
+    let stopped = limits_then(&[FIRST_DOWNLOAD_LIMIT, LOST]).step(
+        STEP_LIMIT_JOB,
+        "This run's image",
+        "cancelled",
+    );
+    check_kept(
+        script,
+        "a stopping step limit",
+        &stopped,
+        "wsl-register",
+        "hang at step 'This run's image': hang, ended by its time limit: not re-run",
+    );
+    assert_eq!(
+        register_rows(&classified(script, &stopped)).len(),
+        1,
+        "a stopping step limit: logged as passed on from too"
+    );
+    // A limit naming no step of the job is read as its stop.
+    let unnamed = limits_then(&[
+        "The action 'A step this job lacks' has timed out after 25 minutes.",
+        LOST,
+    ]);
+    check_kept(
+        script,
+        "a limit on a step the job doesn't name",
+        &unnamed,
+        "wsl-register",
+        "hang at step 'A step this job lacks'",
+    );
+    // Two steps of the name, one passed on from and one stopped: a stop.
+    let mut twice = limits_then(&[FIRST_DOWNLOAD_LIMIT, LOST]);
+    let steps = twice.job(STEP_LIMIT_JOB)["steps"]
+        .as_array_mut()
+        .expect("steps");
+    steps.push(json!({"number": 99, "name": "This run's image", "status": "completed", "conclusion": "cancelled"}));
+    check_kept(
+        script,
+        "a limit on a step of a repeated name, one stopped",
+        &twice,
+        "wsl-register",
+        "hang at step 'This run's image'",
+    );
+    // A recovered limit, then the job ended at its own: a hang.
+    let mut timed = limits_then(&[FIRST_DOWNLOAD_LIMIT, LOST]);
+    timed.job(STEP_LIMIT_JOB)["conclusion"] = json!("timed_out");
+    check_kept(
+        script,
+        "a job that timed out after a recovered limit",
+        &timed,
+        "wsl-register",
+        "hang",
+    );
+}
+
+#[test]
+fn ci_win_retry_a_limit_that_stops_the_job_is_a_hang() {
+    check_stopping_limit(&script());
+}
+
+negative_control!(
+    ci_win_retry_a_limit_that_stops_the_job_is_a_hang,
+    "a limit read as passed on from whatever its step's conclusion",
+    expected = "a stopping step limit: re-run",
+    check_stopping_limit(&edit(
+        &script(),
+        "all(s.get(\"conclusion\") == \"success\" for s in named)",
+        "True"
+    ))
+);
+
+mod stopping_unnamed {
+    use super::*;
+    negative_control!(
+        ci_win_retry_a_limit_that_stops_the_job_is_a_hang,
+        "a limit on no step of the job read as passed on from",
+        expected = "a limit on a step the job doesn't name: re-run",
+        check_stopping_limit(&edit(
+            &script(),
+            "return bool(named) and all(",
+            "return all("
+        ))
+    );
+}
+
+mod stopping_repeated {
+    use super::*;
+    negative_control!(
+        ci_win_retry_a_limit_that_stops_the_job_is_a_hang,
+        "one passing step of the name enough to pass on",
+        expected = "a limit on a step of a repeated name, one stopped: re-run",
+        check_stopping_limit(&edit(
+            &script(),
+            "all(s.get(\"conclusion\") == \"success\" for s in named)",
+            "any(s.get(\"conclusion\") == \"success\" for s in named)"
+        ))
+    );
+}
+
+mod stopping_timed_out {
+    use super::*;
+    negative_control!(
+        ci_win_retry_a_limit_that_stops_the_job_is_a_hang,
+        "a job's timed_out conclusion unread",
+        expected = "a job that timed out after a recovered limit: re-run",
+        check_stopping_limit(&edit(
+            &script(),
+            "    if job.get(\"conclusion\") == \"timed_out\":",
+            "    if False:"
         ))
     );
 }
@@ -1332,3 +1604,4 @@ mod passing_passed_over {
         ))
     );
 }
+
