@@ -11,11 +11,11 @@ use kernel::regularisation::az::Watch;
 use serde_json::json;
 use validation::az::{
     above_floor, cartesian_closure, checked, closure, convergence, decide_sync, describe, diagnose,
-    distance, doubly_degenerate, energy, figure_eight, floor_run, lc_error, on_grid, orbit,
-    proposal, propose_final_step_with, propose_floor, propose_sync_with, radial, reference_tiny,
-    round_up, show, slope, AzFinalStepGate, Diagnosis, FloorCriterion, Landing, LcInverseGate,
-    Orbit, Proposal, Quiet, Recorder, SeparationFloorGate, SyncRow, Width, FINAL_STEP_NAME,
-    FLOOR_NAME, LC_NAME, SYNC_ERROR,
+    diagnose_rungs, diagnosis_line, distance, doubly_degenerate, energy, figure_eight, floor_run,
+    lc_error, on_grid, orbit, proposal, propose_final_step_with, propose_floor, propose_sync_with,
+    radial, reference_tiny, round_up, show, slope, AzFinalStepGate, Diagnosis, FloorCriterion,
+    Landing, LcInverseGate, Orbit, Proposal, Quiet, Recorder, SeparationFloorGate, SyncRow, Width,
+    FINAL_STEP_NAME, FLOOR_NAME, LC_NAME, SYNC_ERROR,
 };
 use validation::gate::{self, Gate, GateConfig, GateSpec, MeasurementGate, Verdict};
 use validation::negative_control;
@@ -423,6 +423,79 @@ negative_control!(
         } else {
             Diagnosis::Unexplained { order }
         }
+    })
+);
+
+/// A diagnosis of the ladder's rungs `(η, error)` against a floor.
+type DiagnoseRungs = fn(&[(f64, f64)], f64, &FloorCriterion, f64, f64) -> Diagnosis;
+
+/// A rung whose error is not finite fails the convergence arm, reported as such (Codex review of #519,
+/// PRRT_kwDOUpUQ5c63Ly_F): three fourth-order rungs and a fourth whose error is NaN read no order, where the floor's
+/// selection alone would drop the NaN rung and fit order 4 on the three left, meeting `min_rungs = 3`; an infinite
+/// error does the same, and each such rung is counted; the four finite rungs read order 4.
+fn check_diagnose_rungs(diagnose_rungs: DiagnoseRungs) {
+    let fc = FloorCriterion {
+        stated: 1e-15,
+        second_eta: 1.25e-4,
+        factor: 10.0,
+        min_rungs: 3,
+        defect_below: 3.0,
+    };
+    let rung = |h: f64| (h, h.powi(4));
+    let finite = [rung(0.02), rung(0.01), rung(0.005), rung(0.0025)];
+    let d = |rungs: &[(f64, f64)]| diagnose_rungs(rungs, fc.stated, &fc, 4.0, 0.5);
+    assert!(
+        matches!(d(&finite), Diagnosis::Within { order } if (order - 4.0).abs() < 1e-9),
+        "four finite fourth-order rungs read order 4: {:?}",
+        d(&finite)
+    );
+    let mut nan = finite;
+    nan[3].1 = f64::NAN;
+    assert_eq!(
+        d(&nan),
+        Diagnosis::NonFinite { rungs: 1 },
+        "a NaN rung fails the arm"
+    );
+    let mut inf = finite;
+    inf[0].1 = f64::INFINITY;
+    assert_eq!(
+        d(&inf),
+        Diagnosis::NonFinite { rungs: 1 },
+        "an infinite rung fails the arm"
+    );
+    let mut both = nan;
+    both[0].1 = f64::INFINITY;
+    assert_eq!(
+        d(&both),
+        Diagnosis::NonFinite { rungs: 2 },
+        "each non-finite rung counted"
+    );
+    let line = diagnosis_line(Diagnosis::NonFinite { rungs: 2 }, &fc, 4.0, 0.5);
+    assert!(
+        line.starts_with("2 rung(s) with an error against the reference run that is not finite")
+            && line.contains("the convergence arm fails"),
+        "the report's line names the non-finite rungs: {line}"
+    );
+}
+
+#[test]
+fn az_diagnose_rungs() {
+    check_diagnose_rungs(diagnose_rungs);
+}
+
+negative_control!(
+    az_diagnose_rungs,
+    "the floor's selection with no finiteness check, dropping a NaN rung from the fit",
+    expected = "a NaN rung fails the arm",
+    check_diagnose_rungs(|rungs, floor, fc, expected, margin| {
+        let kept = above_floor(rungs, floor, fc.factor);
+        diagnose(
+            validation::az::fitted_order(&kept),
+            kept.len(),
+            fc,
+            expected,
+            margin,
+        )
     })
 );
 

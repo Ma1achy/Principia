@@ -493,6 +493,9 @@ pub enum Diagnosis {
     LandingDefect { order: f64 },
     /// Outside the margin and not below `defect_below`: explained by neither, reported as unexplained.
     Unexplained { order: f64 },
+    /// `rungs` rungs have an error against the reference run that is not finite: no order is read, and the arm fails,
+    /// neither round-off nor a landing defect ([`diagnose_rungs`]).
+    NonFinite { rungs: usize },
 }
 
 /// The diagnosis of `order`, fitted on `kept` rungs above the floor, under `fc`, against `expected` within `margin`:
@@ -512,6 +515,26 @@ pub fn diagnose(
         Diagnosis::LandingDefect { order }
     } else {
         Diagnosis::Unexplained { order }
+    }
+}
+
+/// The diagnosis of the ladder's `rungs` `(η, error)` against the round-off `floor` under `fc`, against `expected`
+/// within `margin`: [`Diagnosis::NonFinite`] where any rung's error is not finite, checked before the floor's selection
+/// so that a rung with a NaN error is never dropped from the fit as below the floor; otherwise [`diagnose`] of the order
+/// fitted ([`fitted_order`]) on the rungs [`above_floor`].
+pub fn diagnose_rungs(
+    rungs: &[(f64, f64)],
+    floor: f64,
+    fc: &FloorCriterion,
+    expected: f64,
+    margin: f64,
+) -> Diagnosis {
+    let non_finite = rungs.iter().filter(|&&(_, e)| !e.is_finite()).count();
+    if non_finite > 0 {
+        Diagnosis::NonFinite { rungs: non_finite }
+    } else {
+        let kept = above_floor(rungs, floor, fc.factor);
+        diagnose(fitted_order(&kept), kept.len(), fc, expected, margin)
     }
 }
 
@@ -535,6 +558,10 @@ pub fn diagnosis_line(d: Diagnosis, fc: &FloorCriterion, expected: f64, margin: 
             "unexplained: the order fitted above the round-off floor, {order:.3}, is not within {margin} of \
              {expected} and not below {}, the landing defect's bound",
             fc.defect_below
+        ),
+        Diagnosis::NonFinite { rungs } => format!(
+            "{rungs} rung(s) with an error against the reference run that is not finite: no order read, the \
+             convergence arm fails (neither round-off nor a landing defect)"
         ),
     }
 }
@@ -678,13 +705,8 @@ impl Gate for AzFinalStepGate {
                     kept.len(),
                     fc.min_rungs
                 ));
-                let d = diagnose(
-                    order,
-                    kept.len(),
-                    &fc,
-                    input.order_expected,
-                    input.order_margin,
-                );
+                let d =
+                    diagnose_rungs(&pairs, floor, &fc, input.order_expected, input.order_margin);
                 negative.push(diagnosis_line(
                     d,
                     &fc,
