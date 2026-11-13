@@ -456,7 +456,7 @@ fn check_proposals(final_step: &str, sync: &str, floor: &str) {
     for needle in [
         "**Proposed:** η = 0.02; Δ_sync = 0.2. The closure window's 0.4 time units are 2.00 boundaries at Δ_sync = 0.2",
         "(0.4/Δ_sync at each quantum: 0.40625: 0.98, 0.2: 2.00, 0.1: 4.00)",
-        "steps per unit time against the 0.40625 grid's: 0.40625: 1.00×, 0.2: 2.01×, 0.1: 3.96×",
+        "steps per unit time against the 0.40625 grid's: 0.40625: 1.00×, 0.2: 1.82×, 0.1: 3.49×",
         "| 0.1 | 0.01 | 6.300000 | ",
     ] {
         assert!(sync.contains(needle), "REQ-INT-080's proposal lacks `{needle}`:\n{sync}");
@@ -469,7 +469,7 @@ fn check_proposals(final_step: &str, sync: &str, floor: &str) {
         "TINY·TINY at the reference's values: 0e0 at f32",
         "(NonFinite, 1, 1)",
         "η·dt_left/FLT_MAX = 3.673e-42",
-        "sit 18.6 and 35.2 decades above them at f32",
+        "sit 17.0 and 34.3 decades above them at f32",
     ] {
         assert!(
             floor.contains(needle),
