@@ -39,8 +39,11 @@ or is the own test of an xtask module that reads it (`xtask/tests/gate_report.rs
 limit: it follows one hop only, so a reader through a longer chain is missed unless the test also names the file or a
 reading module: a binary started through cargo rather than `CARGO_BIN_EXE_` (`cargo xtask …`), or a module that reaches
 the file only through another program (`xtask::gate`, which runs validation's `gate` binary); the per-merge run runs
-them. Nothing is printed, and the caller runs every crate, when the scan cannot be trusted: a `[[test]]` target at a
-path of its own, a unit test in `src/` in a file that reads the file, or no reader found.
+them. Unit tests in `src/` are no target it selects: one in a file that does not name the file but calls a module
+that reads it (`#[cfg(test)]` in `validation/src/cross_backend.rs`, through `crate::gate`) is missed, with no
+fallback, and runs per merge; the file-naming case alone is distrusted, below. Nothing is printed, and the caller
+runs every crate, when the scan cannot be trusted: a `[[test]]` target at a path of its own, a unit test in `src/` in
+a file that reads the file, or no reader found.
 """
 import argparse
 import pathlib

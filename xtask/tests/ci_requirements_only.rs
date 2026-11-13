@@ -13,7 +13,10 @@
 //!   a binary (a `src/bin/` file, or the package's own `src/main.rs`) that reads it or uses such a module; each xtask
 //!   module's own test where the module reads it; and a test including a support module that reads it, by `mod` or by
 //!   a `#[path]` to it. RQ-790's evidence, the test files under `crates/` that name the file,
-//!   are among them, and no crate without a reader has a test in it.
+//!   are among them, and no crate without a reader has a test in it. Its limit, the script's too: a unit test in
+//!   `src/` is no target either scan selects, so one whose file does not name the file but calls a module that reads it
+//!   (`crate::gate`, as `validation/src/cross_backend.rs`'s do) is missed on the pull request, with no fallback, and
+//!   runs per merge.
 //! - `ci_requirements_only_untrusted_scan_runs_every_crate`: the scan prints nothing on a workspace with a `[[test]]`
 //!   target at a path of its own, or with a unit test in `src/` in a file that reads the file, and when it prints
 //!   nothing `decide` falls back to every crate.
