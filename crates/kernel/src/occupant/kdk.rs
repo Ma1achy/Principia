@@ -10,8 +10,20 @@
 //! kick `c_{n+1}·dt`; the force is evaluated after each drift, `n` evaluations, the first kick reading the evaluation it
 //! is given. KDK is `d = [1]`, `c = [1/2, 1/2]`; [`sequence3`] and [`sequence7`] are the three- and seven-drift
 //! compositions, written out stage by stage so that every coefficient is read at a constant index.
+//!
+//! **The joint step** (R-974; [`Stepper::joint_step`]): each stage's sample state is the plain stage's, bit for bit,
+//! and the displacement `δ = (δr, δp)` takes the same kick and drift, linear in it, the kick's force replaced by the
+//! force difference at the stage's positions ([`ForceDifference::accel`]):
+//!
+//! ```text
+//! δp ← δp + h·m·Δa(r, δr) ;   δr ← δr + h·δp/m
+//! ```
+//!
+//! which is the absolute shadow's stage less the sample's, term by term: a drift is linear, and a kick's only
+//! nonlinear term is the force.
 
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};
+use crate::physics::difference::ForceDifference;
 use crate::regularisation::form::Form;
 
 /// The KDK leapfrog.
@@ -39,6 +51,18 @@ impl Stepper for Kdk {
         let one = R::one();
         let half = one / (one + one);
         sequence1(s, dt, geom, &[one], &[half, half])
+    }
+
+    #[inline]
+    fn joint_step<R: StepReal, D: ForceDifference>(
+        s: &State<R>,
+        delta: &State<R>,
+        dt: R,
+        geom: &Geom<R>,
+    ) -> (State<R>, Geom<R>, State<R>) {
+        let one = R::one();
+        let half = one / (one + one);
+        joint_sequence1::<R, D>(s, delta, dt, geom, &[one], &[half, half])
     }
 }
 
@@ -141,4 +165,110 @@ pub fn sequence7<R: StepReal>(
     let (s, g) = stage(&s, &g, c[5], d[5], dt);
     let (s, g) = stage(&s, &g, c[6], d[6], dt);
     close(&s, g, c[7], dt)
+}
+
+/// The displacement's stage beside the sample's at `s`, whose force evaluation is `g`: kick `c·dt` with the force
+/// difference at `s`'s positions, then drift `d·dt` (the module's note).
+#[inline]
+fn joint_delta<R: StepReal, D: ForceDifference>(
+    s: &State<R>,
+    g: &Geom<R>,
+    delta: &State<R>,
+    c: R,
+    d: R,
+    dt: R,
+) -> State<R> {
+    let da = D::accel(&s.m, &g.pair, &delta.r);
+    let p = kick(&delta.p, &s.m, c * dt, &da);
+    let r = drift(&delta.r, &s.m, d * dt, &p);
+    State { m: delta.m, r, p }
+}
+
+/// [`stage`] with the displacement's beside it: the sample's, bit for bit, and the displacement's.
+#[inline]
+fn joint_stage<R: StepReal, D: ForceDifference>(
+    s: &State<R>,
+    g: &Geom<R>,
+    delta: &State<R>,
+    c: R,
+    d: R,
+    dt: R,
+) -> (State<R>, Geom<R>, State<R>) {
+    let next_delta = joint_delta::<R, D>(s, g, delta, c, d, dt);
+    let (next, next_g) = stage(s, g, c, d, dt);
+    (next, next_g, next_delta)
+}
+
+/// [`close`] with the displacement's closing kick `c·dt` beside it, the force difference at `s`'s positions.
+#[inline]
+fn joint_close<R: StepReal, D: ForceDifference>(
+    s: &State<R>,
+    g: Geom<R>,
+    delta: &State<R>,
+    c: R,
+    dt: R,
+) -> (State<R>, Geom<R>, State<R>) {
+    let da = D::accel(&s.m, &g.pair, &delta.r);
+    let p = kick(&delta.p, &s.m, c * dt, &da);
+    let (next, next_g) = close(s, g, c, dt);
+    (
+        next,
+        next_g,
+        State {
+            m: delta.m,
+            r: delta.r,
+            p,
+        },
+    )
+}
+
+/// [`sequence1`]'s joint step: the sample's state and force evaluation [`sequence1`]'s, bit for bit, and the
+/// displacement through the same stages.
+#[inline]
+pub fn joint_sequence1<R: StepReal, D: ForceDifference>(
+    s: &State<R>,
+    delta: &State<R>,
+    dt: R,
+    geom: &Geom<R>,
+    d: &[R; 1],
+    c: &[R; 2],
+) -> (State<R>, Geom<R>, State<R>) {
+    let (s, g, e) = joint_stage::<R, D>(s, geom, delta, c[0], d[0], dt);
+    joint_close::<R, D>(&s, g, &e, c[1], dt)
+}
+
+/// [`sequence3`]'s joint step.
+#[inline]
+pub fn joint_sequence3<R: StepReal, D: ForceDifference>(
+    s: &State<R>,
+    delta: &State<R>,
+    dt: R,
+    geom: &Geom<R>,
+    d: &[R; 3],
+    c: &[R; 4],
+) -> (State<R>, Geom<R>, State<R>) {
+    let (s, g, e) = joint_stage::<R, D>(s, geom, delta, c[0], d[0], dt);
+    let (s, g, e) = joint_stage::<R, D>(&s, &g, &e, c[1], d[1], dt);
+    let (s, g, e) = joint_stage::<R, D>(&s, &g, &e, c[2], d[2], dt);
+    joint_close::<R, D>(&s, g, &e, c[3], dt)
+}
+
+/// [`sequence7`]'s joint step.
+#[inline]
+pub fn joint_sequence7<R: StepReal, D: ForceDifference>(
+    s: &State<R>,
+    delta: &State<R>,
+    dt: R,
+    geom: &Geom<R>,
+    d: &[R; 7],
+    c: &[R; 8],
+) -> (State<R>, Geom<R>, State<R>) {
+    let (s, g, e) = joint_stage::<R, D>(s, geom, delta, c[0], d[0], dt);
+    let (s, g, e) = joint_stage::<R, D>(&s, &g, &e, c[1], d[1], dt);
+    let (s, g, e) = joint_stage::<R, D>(&s, &g, &e, c[2], d[2], dt);
+    let (s, g, e) = joint_stage::<R, D>(&s, &g, &e, c[3], d[3], dt);
+    let (s, g, e) = joint_stage::<R, D>(&s, &g, &e, c[4], d[4], dt);
+    let (s, g, e) = joint_stage::<R, D>(&s, &g, &e, c[5], d[5], dt);
+    let (s, g, e) = joint_stage::<R, D>(&s, &g, &e, c[6], d[6], dt);
+    joint_close::<R, D>(&s, g, &e, c[7], dt)
 }

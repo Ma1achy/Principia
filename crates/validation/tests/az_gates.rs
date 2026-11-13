@@ -1,4 +1,5 @@
-//! Aarseth–Zare's gates (TASK-M3-68): `lc-inverse` (REQ-INT-044), `az-final-step` (REQ-INT-049, REQ-INT-114) and the
+//! Aarseth–Zare's gates (TASK-M3-68, TASK-M3-76): `lc-inverse` (REQ-INT-044), `az-final-step` (REQ-INT-049,
+//! REQ-INT-114, REQ-INT-119) and the
 //! `separation-floor` measurement (REQ-INT-105): their verdicts at and past their thresholds, their refusals, their
 //! flags, and the runner on their fixtures. Each test registers its negative control (R-176).
 
@@ -9,11 +10,13 @@ use kernel::regularisation::az::End;
 use kernel::regularisation::az::Watch;
 use serde_json::json;
 use validation::az::{
-    cartesian_closure, checked, closure, convergence, decide_sync, describe, distance,
-    doubly_degenerate, energy, figure_eight, floor_run, lc_error, on_grid, orbit, proposal,
-    propose_final_step_with, propose_floor, propose_sync_with, radial, reference_tiny, round_up,
-    show, AzFinalStepGate, LcInverseGate, Orbit, Proposal, Quiet, Recorder, SeparationFloorGate,
-    SyncRow, Width, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME, SYNC_ERROR,
+    above_floor, cartesian_closure, checked, closure, convergence, decide_sync, describe, diagnose,
+    diagnose_floor, diagnose_rungs, diagnosis_line, distance, doubly_degenerate, energy,
+    figure_eight, floor_run, lc_error, on_grid, orbit, proposal, propose_final_step_with,
+    propose_floor, propose_sync_with, radial, reference_tiny, round_up, show, slope,
+    AzFinalStepGate, Diagnosis, FloorCriterion, Landing, LcInverseGate, Orbit, Proposal, Quiet,
+    Recorder, SeparationFloorGate, SyncRow, Width, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME,
+    SYNC_ERROR,
 };
 use validation::gate::{self, Gate, GateConfig, GateSpec, MeasurementGate, Verdict};
 use validation::negative_control;
@@ -128,54 +131,136 @@ negative_control!(
 );
 
 /// A small `az-final-step` input: two rungs, against a reference run at `η = 0.005`.
-fn final_step(landing: bool, order_above: f64) -> serde_json::Value {
+fn final_step(landing: Landing, expected: f64, margin: f64) -> serde_json::Value {
     json!({
-        "description": "a test input", "eta": 0.01, "n": 8, "landing": landing,
-        "ladder": [0.02, 0.01], "reference_eta": 0.005, "order_above": order_above
+        "description": "a test input", "eta": 0.01, "n": 8, "landing": landing_name(landing),
+        "ladder": [0.02, 0.01], "reference_eta": 0.005, "order_expected": expected, "order_margin": margin
     })
 }
 
-/// The figure-eight's closure and convergence at the gate's verdict: at the measured closure and below the measured
-/// order it passes; just below the closure, or at the order, it fails; the closure without the landing fix is first
-/// order and larger; a short ladder or no interval is refused; the orbit fixture is `ledger`'s IC.
-fn check_final_step(landing: bool) {
+/// `landing` as an input names it.
+fn landing_name(landing: Landing) -> &'static str {
+    match landing {
+        Landing::Fix => "fix",
+        Landing::ClockOnly => "clock_only",
+        Landing::Off => "off",
+    }
+}
+
+/// The figure-eight's closure and convergence at the gate's verdict: at the measured closure and the measured order
+/// with no margin it passes; just below the closure, or with the expected order one step either side of the measured
+/// one, it fails; the fix's order is better than first and the run without it is first order and larger; a short
+/// ladder or no interval is refused; the orbit fixture is `ledger`'s IC.
+fn check_final_step(landing: Landing) {
     let o = orbit().expect("the orbit fixture");
     assert_eq!(figure_eight::<f64>(&o).p[2], o.v3, "unit masses: p₃ = v₃");
     let c = closure(&o, 0.01, 8, landing);
     let conv = convergence(&o, &[0.02, 0.01], 0.005, 8, landing);
-    let off = convergence(&o, &[0.02, 0.01], 0.005, 8, false);
+    let off = convergence(&o, &[0.02, 0.01], 0.005, 8, Landing::Off);
     assert!(
         conv.order > 1.5,
         "the landing fix's order {} is better than first",
         conv.order
     );
     assert!(off.order < 1.5, "without it: {}", off.order);
-    let below = conv.order.next_down();
-    let at = |threshold: f64, order_above: f64| {
+    let at = |threshold: f64, expected: f64, margin: f64| {
         AzFinalStepGate
             .run(
                 &config(FINAL_STEP_NAME, threshold),
                 "t",
-                &final_step(landing, order_above),
+                &final_step(landing, expected, margin),
             )
             .map(|r| r.verdict)
     };
-    assert_eq!(at(c.closure, below), Ok(Verdict::Pass), "at the closure");
     assert_eq!(
-        at(c.closure.next_down(), below),
+        at(c.closure, conv.order, 0.0),
+        Ok(Verdict::Pass),
+        "at the closure"
+    );
+    assert_eq!(
+        at(c.closure.next_down(), conv.order, 0.0),
         Ok(Verdict::Fail),
         "below the closure"
     );
     assert_eq!(
-        at(c.closure, conv.order),
+        at(c.closure, conv.order.next_up(), 0.0),
         Ok(Verdict::Fail),
-        "at the order, not above it"
+        "an expected order above the fitted one, beyond the margin"
+    );
+    assert_eq!(
+        at(c.closure, conv.order.next_down(), 0.0),
+        Ok(Verdict::Fail),
+        "an expected order below the fitted one, beyond the margin"
+    );
+    assert_eq!(
+        at(c.closure, conv.order + 0.25, 0.5),
+        Ok(Verdict::Pass),
+        "within the margin"
+    );
+    let mut floored = final_step(landing, conv.order, 0.0);
+    floored["floor"] = json!({ "stated": 0.0, "second_eta": 0.006, "factor": 0.0, "min_rungs": 2,
+                               "defect_below": 0.0 });
+    let run = |v: &serde_json::Value| {
+        let r = AzFinalStepGate
+            .run(&config(FINAL_STEP_NAME, c.closure), "t", v)
+            .expect("the floored input runs");
+        (r.verdict, r.negative_results)
+    };
+    let says = |negative: &[String], what: &str| {
+        assert!(
+            negative.iter().any(|n| n.contains(what)),
+            "the report says {what:?}: {negative:?}"
+        );
+    };
+    let (v, n) = run(&floored);
+    assert_eq!(
+        v,
+        Verdict::Pass,
+        "both rungs above a floor of factor 0, the same fit"
+    );
+    says(&n, "the order fitted above the round-off floor");
+    // A stated floor above every rung's error keeps none: the floor is the larger of the stated and the measured.
+    floored["floor"]["factor"] = json!(1.0);
+    floored["floor"]["stated"] = json!(1.0);
+    let (v, n) = run(&floored);
+    assert_eq!(v, Verdict::Fail, "a stated floor over every rung");
+    says(
+        &n,
+        "too few rungs above the round-off floor to fit an order (0 of at least 2)",
+    );
+    floored["floor"]["factor"] = json!(0.0);
+    floored["floor"]["stated"] = json!(0.0);
+    // Outside the margin and below `defect_below`: a landing defect; at `defect_below` itself, unexplained.
+    floored["order_expected"] = json!(conv.order + 1.0);
+    floored["floor"]["defect_below"] = json!(conv.order.next_up());
+    let (v, n) = run(&floored);
+    assert_eq!(v, Verdict::Fail, "a landing defect fails");
+    says(&n, "a landing defect");
+    floored["floor"]["defect_below"] = json!(conv.order);
+    let (v, n) = run(&floored);
+    assert_eq!(v, Verdict::Fail, "an unexplained order fails");
+    says(&n, "unexplained");
+    floored["order_expected"] = json!(conv.order);
+    floored["floor"]["min_rungs"] = json!(3);
+    let (v, n) = run(&floored);
+    assert_eq!(
+        v,
+        Verdict::Fail,
+        "fewer rungs above the floor than the least the fit takes"
+    );
+    says(&n, "too few rungs above the round-off floor");
+    floored["floor"]["min_rungs"] = json!(1);
+    assert!(
+        AzFinalStepGate
+            .run(&config(FINAL_STEP_NAME, c.closure), "t", &floored)
+            .is_err(),
+        "a floor's fit on one rung is refused"
     );
     for bad in [
-        json!({ "description": "", "eta": 0.01, "n": 8, "landing": true, "ladder": [0.01],
-                "reference_eta": 0.005, "order_above": 1.5 }),
-        json!({ "description": "", "eta": 0.01, "n": 0, "landing": true, "ladder": [0.02, 0.01],
-                "reference_eta": 0.005, "order_above": 1.5 }),
+        json!({ "description": "", "eta": 0.01, "n": 8, "landing": "fix", "ladder": [0.01],
+                "reference_eta": 0.005, "order_expected": 4.0, "order_margin": 0.5 }),
+        json!({ "description": "", "eta": 0.01, "n": 0, "landing": "fix", "ladder": [0.02, 0.01],
+                "reference_eta": 0.005, "order_expected": 4.0, "order_margin": 0.5 }),
     ] {
         assert!(
             AzFinalStepGate
@@ -188,14 +273,321 @@ fn check_final_step(landing: bool) {
 
 #[test]
 fn az_final_step_gate() {
-    check_final_step(true);
+    check_final_step(Landing::Fix);
 }
 
 negative_control!(
     az_final_step_gate,
     "the gate's arms run without the landing fix",
     expected = "the landing fix's order",
-    check_final_step(false)
+    check_final_step(Landing::Off)
+);
+
+/// The fitted order is the least-squares slope over every rung: on `y = 4x + 1` it is 4, on three points off a line it
+/// is the fit's, not the end points' slope.
+fn check_slope(fit: fn(&[(f64, f64)]) -> f64) {
+    assert_eq!(
+        fit(&[(0.0, 1.0), (1.0, 5.0), (2.0, 9.0)]),
+        4.0,
+        "a line's slope"
+    );
+    // (0, 0), (1, 0), (3, 3): the end points give 1; the fit: x̄ = 4/3, ȳ = 1, sxy = (−4/3)(−1) + (−1/3)(−1) + (5/3)(2) = 5,
+    // sxx = 16/9 + 1/9 + 25/9 = 42/9, so 15/14.
+    let s = fit(&[(0.0, 0.0), (1.0, 0.0), (3.0, 3.0)]);
+    assert!(
+        (s - 15.0 / 14.0).abs() < 1e-15,
+        "the fit over every point: {s}"
+    );
+}
+
+/// A filter of the rungs `(η, error)` above `factor·floor`.
+type Keep = fn(&[(f64, f64)], f64, f64) -> Vec<(f64, f64)>;
+
+/// The rungs fitted are those whose error exceeds `factor·floor`, strictly, in ladder order.
+fn check_above_floor(keep: Keep) {
+    // A floor of 2⁻⁴⁰ at factor 2 puts the bar at 2⁻³⁹ exactly, the third rung's error.
+    let (floor, bar) = (2f64.powi(-40), 2f64.powi(-39));
+    let rungs = [(0.02, 1e-9), (0.01, 6e-11), (0.005, bar), (0.002, 8e-13)];
+    assert_eq!(
+        keep(&rungs, floor, 2.0),
+        vec![(0.02, 1e-9), (0.01, 6e-11)],
+        "the rungs above 2× the floor, the one at the bar not above it"
+    );
+    assert_eq!(
+        keep(&rungs, 1e-13, 1.0).len(),
+        4,
+        "every rung above the floor itself"
+    );
+    assert!(
+        keep(&rungs, 1e-8, 1.0).is_empty(),
+        "none above a floor over them all"
+    );
+}
+
+#[test]
+fn az_above_floor() {
+    check_above_floor(above_floor);
+}
+
+negative_control!(
+    az_above_floor,
+    "a filter that keeps a rung at the floor",
+    expected = "the rungs above 2× the floor",
+    check_above_floor(|r, floor, factor| r
+        .iter()
+        .copied()
+        .filter(|&(_, e)| e >= factor * floor)
+        .collect())
+);
+
+/// A diagnosis of an order fitted on some rungs above the floor.
+type Diagnose = fn(f64, usize, &FloorCriterion, f64, f64) -> Diagnosis;
+
+/// R-1008's diagnosis at each boundary, under 4 ± 0.5, a landing defect below 3, at least 3 rungs: 3 rungs read an
+/// order and 2 do not; 3.5 and 4.5 are within the margin and the floats just outside are not; just below 3 is a
+/// landing defect and 3 itself is unexplained, as is anything above 4.5.
+fn check_diagnose(diagnose: Diagnose) {
+    let fc = FloorCriterion {
+        stated: 8e-13,
+        second_eta: 1.25e-4,
+        factor: 10.0,
+        min_rungs: 3,
+        defect_below: 3.0,
+    };
+    let d = |order: f64, kept: usize| diagnose(order, kept, &fc, 4.0, 0.5);
+    assert_eq!(
+        d(4.0, 2),
+        Diagnosis::RoundOff { kept: 2 },
+        "2 rungs read no order"
+    );
+    assert_eq!(
+        d(4.0, 3),
+        Diagnosis::Within { order: 4.0 },
+        "3 rungs read one"
+    );
+    assert_eq!(
+        d(3.5, 3),
+        Diagnosis::Within { order: 3.5 },
+        "the margin's low edge"
+    );
+    assert_eq!(
+        d(4.5, 3),
+        Diagnosis::Within { order: 4.5 },
+        "the margin's high edge"
+    );
+    let low = 3.5f64.next_down();
+    assert_eq!(
+        d(low, 3),
+        Diagnosis::Unexplained { order: low },
+        "just below the margin"
+    );
+    let high = 4.5f64.next_up();
+    assert_eq!(
+        d(high, 3),
+        Diagnosis::Unexplained { order: high },
+        "just above it"
+    );
+    assert_eq!(
+        d(3.0, 3),
+        Diagnosis::Unexplained { order: 3.0 },
+        "the defect's bound itself"
+    );
+    let short = 3.0f64.next_down();
+    assert_eq!(
+        d(short, 3),
+        Diagnosis::LandingDefect { order: short },
+        "just below the defect's bound"
+    );
+    assert_eq!(
+        d(2.0, 5),
+        Diagnosis::LandingDefect { order: 2.0 },
+        "an h² residual's order"
+    );
+}
+
+#[test]
+fn az_diagnose() {
+    check_diagnose(diagnose);
+}
+
+negative_control!(
+    az_diagnose,
+    "every order short of the margin read as a landing defect, with no unexplained band",
+    expected = "just below the margin",
+    check_diagnose(|order, kept, fc, expected, margin| {
+        if kept < fc.min_rungs {
+            Diagnosis::RoundOff { kept }
+        } else if (order - expected).abs() <= margin {
+            Diagnosis::Within { order }
+        } else if order < expected {
+            Diagnosis::LandingDefect { order }
+        } else {
+            Diagnosis::Unexplained { order }
+        }
+    })
+);
+
+/// A diagnosis of the ladder's rungs `(η, error)` against a floor.
+type DiagnoseRungs = fn(&[(f64, f64)], f64, &FloorCriterion, f64, f64) -> Diagnosis;
+
+/// A rung whose error is not finite fails the convergence arm, reported as such (Codex review of #519,
+/// PRRT_kwDOUpUQ5c63Ly_F): three fourth-order rungs and a fourth whose error is NaN read no order, where the floor's
+/// selection alone would drop the NaN rung and fit order 4 on the three left, meeting `min_rungs = 3`; an infinite
+/// error does the same, and each such rung is counted; the four finite rungs read order 4.
+fn check_diagnose_rungs(diagnose_rungs: DiagnoseRungs) {
+    let fc = FloorCriterion {
+        stated: 1e-15,
+        second_eta: 1.25e-4,
+        factor: 10.0,
+        min_rungs: 3,
+        defect_below: 3.0,
+    };
+    let rung = |h: f64| (h, h.powi(4));
+    let finite = [rung(0.02), rung(0.01), rung(0.005), rung(0.0025)];
+    let d = |rungs: &[(f64, f64)]| diagnose_rungs(rungs, fc.stated, &fc, 4.0, 0.5);
+    assert!(
+        matches!(d(&finite), Diagnosis::Within { order } if (order - 4.0).abs() < 1e-9),
+        "four finite fourth-order rungs read order 4: {:?}",
+        d(&finite)
+    );
+    let mut nan = finite;
+    nan[3].1 = f64::NAN;
+    assert_eq!(
+        d(&nan),
+        Diagnosis::NonFinite { rungs: 1 },
+        "a NaN rung fails the arm"
+    );
+    let mut inf = finite;
+    inf[0].1 = f64::INFINITY;
+    assert_eq!(
+        d(&inf),
+        Diagnosis::NonFinite { rungs: 1 },
+        "an infinite rung fails the arm"
+    );
+    let mut both = nan;
+    both[0].1 = f64::INFINITY;
+    assert_eq!(
+        d(&both),
+        Diagnosis::NonFinite { rungs: 2 },
+        "each non-finite rung counted"
+    );
+    let line = diagnosis_line(Diagnosis::NonFinite { rungs: 2 }, &fc, 4.0, 0.5);
+    assert!(
+        line.starts_with("2 rung(s) with an error against the reference run that is not finite")
+            && line.contains("the convergence arm fails"),
+        "the report's line names the non-finite rungs: {line}"
+    );
+}
+
+#[test]
+fn az_diagnose_rungs() {
+    check_diagnose_rungs(diagnose_rungs);
+}
+
+negative_control!(
+    az_diagnose_rungs,
+    "the floor's selection with no finiteness check, dropping a NaN rung from the fit",
+    expected = "a NaN rung fails the arm",
+    check_diagnose_rungs(|rungs, floor, fc, expected, margin| {
+        let kept = above_floor(rungs, floor, fc.factor);
+        diagnose(
+            validation::az::fitted_order(&kept),
+            kept.len(),
+            fc,
+            expected,
+            margin,
+        )
+    })
+);
+
+/// A diagnosis of the ladder's rungs `(η, error)` against a measured floor.
+type DiagnoseFloor = fn(&[(f64, f64)], f64, &FloorCriterion, f64, f64) -> Diagnosis;
+
+/// A measured floor that is not finite fails the convergence arm before any rung is selected (physics review
+/// 5896078008 F1, code review 5896097471 C1, on #519): a NaN measured floor never falls back to the stated floor and
+/// passes, and an infinite one never drops every rung and reads as round-off; the largest finite measured floor does
+/// drop every rung and reads as round-off, and a measured floor below the stated one leaves the stated floor, under
+/// which four fourth-order rungs read order 4.
+fn check_diagnose_floor(diagnose_floor: DiagnoseFloor) {
+    let fc = FloorCriterion {
+        stated: 1e-15,
+        second_eta: 1.25e-4,
+        factor: 10.0,
+        min_rungs: 3,
+        defect_below: 3.0,
+    };
+    let rung = |h: f64| (h, h.powi(4));
+    let rungs = [rung(0.02), rung(0.01), rung(0.005), rung(0.0025)];
+    let d = |measured: f64| diagnose_floor(&rungs, measured, &fc, 4.0, 0.5);
+    assert!(
+        matches!(d(1e-17), Diagnosis::Within { order } if (order - 4.0).abs() < 1e-9),
+        "a finite measured floor below the stated one reads order 4: {:?}",
+        d(1e-17)
+    );
+    assert!(
+        matches!(d(f64::NAN), Diagnosis::NonFiniteFloor { measured } if measured.is_nan()),
+        "a NaN measured floor fails the arm: {:?}",
+        d(f64::NAN)
+    );
+    assert_eq!(
+        d(f64::INFINITY),
+        Diagnosis::NonFiniteFloor {
+            measured: f64::INFINITY
+        },
+        "an infinite measured floor fails the arm, not round-off"
+    );
+    assert_eq!(
+        d(f64::NEG_INFINITY),
+        Diagnosis::NonFiniteFloor {
+            measured: f64::NEG_INFINITY
+        },
+        "a negative infinite measured floor fails the arm"
+    );
+    assert_eq!(
+        d(f64::MAX),
+        Diagnosis::RoundOff { kept: 0 },
+        "the largest finite measured floor drops every rung: round-off"
+    );
+    let line = diagnosis_line(
+        Diagnosis::NonFiniteFloor {
+            measured: f64::INFINITY,
+        },
+        &fc,
+        4.0,
+        0.5,
+    );
+    assert!(
+        line.contains("the second reference run at η = 0.000125")
+            && line.contains("is inf, not finite")
+            && line.contains("the convergence arm fails"),
+        "the report's line names the second reference run: {line}"
+    );
+}
+
+#[test]
+fn az_diagnose_floor() {
+    check_diagnose_floor(diagnose_floor);
+}
+
+negative_control!(
+    az_diagnose_floor,
+    "the measured floor taken as the larger with the stated one, unchecked",
+    expected = "a NaN measured floor fails the arm",
+    check_diagnose_floor(|rungs, measured, fc, expected, margin| {
+        diagnose_rungs(rungs, measured.max(fc.stated), fc, expected, margin)
+    })
+);
+
+#[test]
+fn az_order_fit() {
+    check_slope(slope);
+}
+
+negative_control!(
+    az_order_fit,
+    "the end points' slope",
+    expected = "the fit over every point",
+    check_slope(|p| (p[p.len() - 1].1 - p[0].1) / (p[p.len() - 1].0 - p[0].0))
 );
 
 /// The gates' flags: `az-final-step` takes `--propose` and `--propose-sync` alone, `separation-floor` `--propose`
@@ -385,13 +777,14 @@ negative_control!(
 /// reference's values.
 fn check_proposals(final_step: &str, sync: &str, floor: &str) {
     let o = orbit().expect("the orbit");
-    let c = closure(&o, 0.01, 8, true);
+    let c = closure(&o, 0.01, 8, Landing::Fix);
     for needle in [
         format!("**Proposed threshold:** {:.1e}", round_up(2.0 * c.closure)),
         "the IC's own closure, Cartesian RK4 at dt = T/4096".to_owned(),
         "## The convergence ladder, with the landing fix (errors against η = 0.005, landing on)"
             .to_owned(),
-        "## The convergence ladder, without it".to_owned(),
+        "## The convergence ladder, with the clock-only landing".to_owned(),
+        "## The convergence ladder, without the landing fix".to_owned(),
         "| 0.02 | ".to_owned(),
     ] {
         assert!(
@@ -402,7 +795,10 @@ fn check_proposals(final_step: &str, sync: &str, floor: &str) {
     for needle in [
         "**Proposed:** η = 0.02; Δ_sync = 0.2. The closure window's 0.4 time units are 2.00 boundaries at Δ_sync = 0.2",
         "(0.4/Δ_sync at each quantum: 0.40625: 0.98, 0.2: 2.00, 0.1: 4.00)",
-        "steps per unit time against the 0.40625 grid's: 0.40625: 1.00×, 0.2: 2.01×, 0.1: 3.96×",
+        // Measured under the landing at 5bce96466 (the bisection bracketed from 0 to the secant's last step); the
+        // decision above is unchanged, 0.1's cost staying past 1.1×. *Was* (at 1254983c7, before that bracket):
+        // "0.2: 1.82×, 0.1: 3.49×".
+        "steps per unit time against the 0.40625 grid's: 0.40625: 1.00×, 0.2: 1.56×, 0.1: 2.65×",
         "| 0.1 | 0.01 | 6.300000 | ",
     ] {
         assert!(sync.contains(needle), "REQ-INT-080's proposal lacks `{needle}`:\n{sync}");
@@ -415,7 +811,7 @@ fn check_proposals(final_step: &str, sync: &str, floor: &str) {
         "TINY·TINY at the reference's values: 0e0 at f32",
         "(NonFinite, 1, 1)",
         "η·dt_left/FLT_MAX = 3.673e-42",
-        "sit 18.6 and 35.2 decades above them at f32",
+        "sit 17.0 and 34.3 decades above them at f32",
     ] {
         assert!(
             floor.contains(needle),
@@ -497,7 +893,7 @@ fn check_helpers(o: Orbit) {
         "unequal masses: {}",
         energy(&h)
     );
-    let c = closure(&o, 0.02, 8, true);
+    let c = closure(&o, 0.02, 8, Landing::Fix);
     let drift =
         |end: &kernel::occupant::State<f64>| ((energy(end) - energy(&s)) / energy(&s)).abs();
     assert_eq!(c.energy, drift(&c.state), "the closure's drift");
@@ -515,12 +911,12 @@ fn check_helpers(o: Orbit) {
     ] {
         assert!(text.contains(needle), "{text}");
     }
-    assert!(describe(&closure(&o, 0.02, 8, false)).contains("landing fix off"));
+    assert!(describe(&closure(&o, 0.02, 8, Landing::Off)).contains("landing fix off"));
     assert!(
         !Cadence::<f64>::done(&Quiet),
         "the quiet cadence never ends a march"
     );
-    let (_, q, p) = kernel::regularisation::az::register(&s, 1e-300, 1e-300);
+    let (_, q, p) = kernel::regularisation::az::register(&s, 1e-300);
     let mut watch = Recorder::default();
     assert!(Watch::<f64>::finite(&mut watch, &q, &p));
     let mut nan = q;

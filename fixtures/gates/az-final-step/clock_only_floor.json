@@ -1,0 +1,12 @@
+{
+  "description": "The control of REQ-INT-119's second criterion (R-1008 (4), the clock-only control kept), on the same fresh ladder, floor, fit and thresholds as landing_floor.json: the clamp with no retakes, the clock set to the boundary alone over the overshot state (what R-998 forbids), whose error is of order η² in every interval, so the order fitted above the round-off floor must fall below 3.0 and read as a landing defect, and the gate must fail it.",
+  "eta": 0.001,
+  "n": 32,
+  "landing": "clock_only",
+  "ladder": [0.018, 0.014, 0.011, 0.009, 0.007],
+  "reference_eta": 0.0001,
+  "order_expected": 4.0,
+  "order_margin": 0.5,
+  "floor": { "stated": 8.0e-13, "second_eta": 0.000125, "factor": 10.0, "min_rungs": 3, "defect_below": 3.0 },
+  "expected": "fail"
+}

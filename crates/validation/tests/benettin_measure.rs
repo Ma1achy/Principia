@@ -13,15 +13,28 @@
 //! - `orbit_fixtures`: the orbits are what they are named: the Kepler-embedded pair's eccentricity 1/2 and its light
 //!   third body's circular orbit, Burrau's (3, 4, 5) triangle at rest, Lagrange's equilateral triangle in rigid
 //!   rotation at `ω² = M/a³`, all in the sim's units (`M = 1`, `I = 1`, CoM at rest at the origin).
-//! - `shadow_form_gate`: its controls give their expected outcomes, and its measurement covers the periodic set at both
-//!   `‖δ₀‖`s with every value finite.
+//! - `shadow_form_gate` (REQ-VAL-038; R-974): each displacement form's f32 `λ_T` differs bitwise from the absolute
+//!   form's on some orbit, and the absolute form against itself does not; the measurement covers the periodic set at
+//!   both `‖δ₀‖`s and makes the choice; a row's reads, gaps (f32 less f64, in one form) and worst gap (a gap that is not
+//!   finite counting as infinite); unknown forms refused.
+//! - `shadow_form_complete`: the `periodic-set` verdict is structural alone: a table at each of its `‖δ₀‖`s in order,
+//!   each with a row per orbit of the set in order, and two Burrau reads in each form, in order; a NaN read counts as a
+//!   read (R-649); each part missing, extra or out of order fails it.
+//! - `shadow_form_criterion` (R-974; TASK-M3-72's pre-registered criterion): Burrau alone decides where it separates
+//!   (a1) from (a2); else (a2) exactly where `W(a1) − W(a2) ≥ 1/T`, the boundary included; else (a1).
+//! - `shadow_form_burrau`: the criterion's Burrau read is the form's f32 `λ_T` on Burrau at each of its `‖δ₀‖`s, bit for
+//!   bit, and finite exactly where both are.
 //! - `eight_orbit_set`: the eight-orbit report's chaotic orbits are the Pythagorean triangles at rest their names give,
 //!   Burrau first, and its eight starting conditions are the calibration orbits then the five others.
 //! - `eight_orbit_rules`: the bias against the reference, the reference read, the spread, the pick with an orbit left
 //!   out, the report's lines and its completeness, on synthetic candidates.
+//! - `eight_orbit_provisional`: the values in force, provisional (R-976), are read from the candidate at both their
+//!   `‖δ₀‖` and their `n_renorm`, never one alone, and are absent where the sweep did not run them.
 //! - `eight_orbit_gate`: the report's candidates leave out the orbit a control names and refuse an unknown one before
-//!   the sweep runs; the report passes complete, its regions the chaotic orbits, gives the rule's pick beside the
-//!   unchanged proposal, and fails with an orbit left out; on synthetic candidates.
+//!   the sweep runs; the report passes complete, its regions the chaotic orbits, gives the rule's pick as the
+//!   re-run's proposal beside the values in force, provisional (R-976), with their worst change (finite, not finite, or
+//!   not in the sweep), and R-976's proposed `min_regions` ≥ 6 with its evidence, and fails with an orbit left out;
+//!   an unknown shadow form is refused before the sweep; on synthetic candidates.
 
 use std::path::Path;
 
@@ -30,13 +43,15 @@ use validation::gate::Gate;
 use validation::gate::RegionCount;
 use validation::gate::{self, GateSpec, MeasurementGate, Verdict};
 use validation::measure::benettin::{
-    bias, burrau, calibration_orbit, calibration_orbits, chaotic_orbits, chaotic_spread,
-    eight_orbit_candidates, eight_orbit_report, eight_orbits, figure_eight, finite_time_gaps,
-    kepler_embedded, lagrange, lagrange_exponent, lambda, leave_one_out_lines, periodic_set,
-    pythagorean, reference, report_complete, routh_beta, run_lines, select, select_without, spread,
-    spread_lines, sweep_confirms, tolerance, BenettinCalibrationGate, Candidate, FormRow, GapRow,
-    Orbit, Precision, ShadowFormGate, Test10, GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0,
-    PROPOSED_N_RENORM, PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
+    bias, burrau, burrau_finite, calibration_orbit, calibration_orbits, chaotic_orbits,
+    chaotic_spread, choose, eight_orbit_candidates, eight_orbit_report, eight_orbits, figure_eight,
+    finite_time_gaps, kepler_embedded, lagrange, lagrange_exponent, lambda, lambda_in,
+    leave_one_out_lines, periodic_complete, periodic_set, provisional_worst, pythagorean,
+    reference, report_complete, routh_beta, run_lines, select, select_without, shadow_forms,
+    spread, spread_lines, sweep_confirms, tolerance, worst_gap, BenettinCalibrationGate, Candidate,
+    Form, FormRow, GapRow, Orbit, PeriodicReads, Precision, ShadowFormGate, Test10, BURRAU_DELTA_0,
+    CRITERION_DELTA_0, FORM_DELTA_0, GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0,
+    PROPOSED_MIN_REGIONS, PROPOSED_N_RENORM, PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
 };
 use validation::negative_control;
 
@@ -410,23 +425,23 @@ negative_control!(
 
 // ── shadow_form_gate ────────────────────────────────────────────────────────────────────────────────────────────
 
-fn check_form_controls(doubled: f64) {
+fn check_form_controls(second: &str) -> String {
     let GateSpec::Measurement(config) = gate::spec(root(), "shadow-form").expect("gate.json")
     else {
         panic!("shadow-form is not a measurement");
     };
     let control = |v: serde_json::Value| ShadowFormGate.control(&config, "t", &v);
-    let same = control(serde_json::json!({ "kind": "compare", "description": "s", "scale": 1.0 }))
-        .expect("runs");
-    assert_eq!(same.verdict, Verdict::Pass);
-    let other =
-        control(serde_json::json!({ "kind": "compare", "description": "d", "scale": doubled }))
-            .expect("runs");
+    let differs = |a: &str, b: &str| {
+        control(serde_json::json!({ "kind": "differs", "description": "d", "forms": [a, b] }))
+            .expect("runs")
+            .verdict
+    };
     assert_eq!(
-        other.verdict,
-        Verdict::Fail,
-        "the comparison cannot tell two reads apart"
+        differs("absolute", second),
+        Verdict::Pass,
+        "a displacement form reads as the absolute form on every orbit"
     );
+    assert_eq!(differs("absolute", "absolute"), Verdict::Fail);
     let set =
         control(serde_json::json!({ "kind": "periodic-set", "description": "p" })).expect("runs");
     assert_eq!(set.verdict, Verdict::Pass);
@@ -440,13 +455,34 @@ fn check_form_controls(doubled: f64) {
             o.name
         );
     }
+    assert!(
+        set.markdown.contains("Chosen: "),
+        "the report makes no choice"
+    );
     assert!(ShadowFormGate.flags(root(), &["--measure"]).is_err());
-    assert!(control(serde_json::json!({ "kind": "compare", "description": "x" })).is_err());
+    assert!(control(serde_json::json!({ "kind": "differs", "description": "x" })).is_err());
+    assert!(control(
+        serde_json::json!({ "kind": "differs", "description": "x", "forms": ["absolute", "nope"] })
+    )
+    .is_err());
+    set.markdown
 }
 
 #[test]
 fn shadow_form_gate() {
-    check_form_controls(2.0);
+    let report = check_form_controls("plain");
+    check_form_controls("cancellation-free");
+    // The criterion reads its worst gaps at ‖δ₀‖ = 1e-5, not at the other ‖δ₀‖ the tables give.
+    let rows = shadow_forms(CRITERION_DELTA_0, PROPOSED_N_RENORM);
+    let w = format!(
+        "W(a1) = {:.5}, W(a2) = {:.5}",
+        worst_gap(&rows, Form::Plain),
+        worst_gap(&rows, Form::CancellationFree)
+    );
+    assert!(
+        report.contains(&w),
+        "the criterion's line does not read `{w}`, the worst gaps at ‖δ₀‖ = {CRITERION_DELTA_0:e}"
+    );
     assert_eq!(ShadowFormGate.name(), "shadow-form");
     // The finite-time gap (physics N3): the unstable orbits alone, each measured at both horizons.
     let gaps = finite_time_gaps(PROPOSED_DELTA_0, PROPOSED_N_RENORM);
@@ -496,42 +532,250 @@ fn shadow_form_gate() {
             o.name
         );
     }
-    // A row with any value not finite reads not finite.
+    // A row's reads, gaps and line.
     let row = FormRow {
         orbit: "r",
-        known: 0.0,
-        f64_absolute: 0.1,
-        f32_absolute: 0.2,
-        f32_displacement: 0.3,
+        known: 0.5,
+        lambdas: [[0.75, 0.5], [0.625, 0.5], [0.5, 0.25]],
     };
-    assert!(row.finite());
-    for bad in [
-        FormRow {
-            known: f64::NAN,
-            ..row
-        },
-        FormRow {
-            f64_absolute: f64::INFINITY,
-            ..row
-        },
-        FormRow {
-            f32_absolute: f64::NAN,
-            ..row
-        },
-        FormRow {
-            f32_displacement: f64::NEG_INFINITY,
-            ..row
-        },
-    ] {
-        assert!(!bad.finite(), "{bad:?} reads finite");
+    assert_eq!(row.lambda(Form::Plain, Precision::F32), 0.625);
+    assert_eq!(row.lambda(Form::CancellationFree, Precision::F64), 0.25);
+    assert_eq!(
+        Form::ALL.map(|f| row.gap(f)),
+        [0.25, 0.125, 0.25],
+        "the gap is λ_T(f32) − λ_T(f64) in the same form"
+    );
+    assert_eq!(
+        row.line(),
+        "| r | 0.50000 | 0.75000 (+0.25000, +0.25000) | 0.62500 (+0.12500, +0.12500) | 0.50000 (+0.00000, +0.25000) |"
+    );
+    let bad = FormRow {
+        lambdas: [[f64::NAN, 0.5], [0.5, 0.5], [-1.0, 0.5]],
+        ..row
+    };
+    assert_eq!(worst_gap(&[row, bad], Form::Absolute), f64::INFINITY);
+    assert_eq!(worst_gap(&[row, bad], Form::Plain), 0.125);
+    assert_eq!(worst_gap(&[row, bad], Form::CancellationFree), 1.5);
+    assert_eq!(worst_gap(&[], Form::Plain), 0.0);
+    for f in Form::ALL {
+        let word = match f {
+            Form::Absolute => "absolute",
+            Form::Plain => "plain",
+            Form::CancellationFree => "cancellation-free",
+        };
+        assert_eq!(Form::parse(word), Ok(f));
     }
+    assert!(Form::parse("displacement").is_err());
+    // Each form's name in the tables, (a1) and (a2) as R-974 names them.
+    assert_eq!(
+        Form::ALL.map(Form::word),
+        ["absolute", "(a1) plain", "(a2) cancellation-free"]
+    );
+    assert_eq!(CRITERION_DELTA_0, 1e-5);
+    assert_eq!(BURRAU_DELTA_0, [1e-5, 1e-6]);
 }
 
 negative_control!(
     shadow_form_gate,
-    "a control at the same ‖δ₀‖ must not be told apart",
-    expected = "the comparison cannot tell two reads apart",
-    check_form_controls(1.0)
+    "the absolute form held against itself as a displacement form must fail",
+    expected = "a displacement form reads as the absolute form on every orbit",
+    {
+        check_form_controls("absolute");
+    }
+);
+
+// ── shadow_form_complete ────────────────────────────────────────────────────────────────────────────────────────
+
+/// A structurally complete `periodic-set` measurement, its values synthetic, a NaN among them as the absolute form's
+/// on Burrau is.
+fn complete_reads() -> PeriodicReads {
+    let row = |orbit| FormRow {
+        orbit,
+        known: 0.5,
+        lambdas: [[f64::NAN, 0.5], [0.5, 0.5], [0.5, 0.5]],
+    };
+    let rows = || periodic_set().map(|o| row(o.name)).to_vec();
+    PeriodicReads {
+        tables: FORM_DELTA_0.iter().map(|&d| (d, rows())).collect(),
+        burrau: Form::ALL
+            .iter()
+            .map(|&f| (f, vec![f64::NAN; BURRAU_DELTA_0.len()]))
+            .collect(),
+    }
+}
+
+fn check_complete(complete: fn(&PeriodicReads) -> bool) {
+    let full = complete_reads();
+    assert!(
+        complete(&full),
+        "a complete measurement, a NaN among its reads, reads as incomplete"
+    );
+    let mut cases: Vec<(&str, PeriodicReads)> = Vec::new();
+    let mut r = full.clone();
+    r.tables.remove(0);
+    cases.push(("the table at the first ‖δ₀‖ missing", r));
+    let mut r = full.clone();
+    r.tables.pop();
+    cases.push(("the criterion's table missing", r));
+    let mut r = full.clone();
+    r.tables.reverse();
+    cases.push(("the tables out of order", r));
+    let mut r = full.clone();
+    r.tables[1].0 = 1e-6;
+    cases.push(("a table at another ‖δ₀‖", r));
+    let mut r = full.clone();
+    r.tables.push(full.tables[1].clone());
+    cases.push(("a third table", r));
+    let mut r = full.clone();
+    r.tables[0].1.pop();
+    cases.push(("an orbit's row missing at the first ‖δ₀‖", r));
+    let mut r = full.clone();
+    r.tables[1].1.remove(0);
+    cases.push(("an orbit's row missing at the criterion's ‖δ₀‖", r));
+    let mut r = full.clone();
+    let extra = r.tables[1].1[0];
+    r.tables[1].1.push(extra);
+    cases.push(("an extra row", r));
+    let mut r = full.clone();
+    r.tables[0].1[2].orbit = "elsewhere";
+    cases.push(("a row of another orbit", r));
+    let mut r = full.clone();
+    r.burrau.remove(0);
+    cases.push(("the absolute form's Burrau reads missing", r));
+    let mut r = full.clone();
+    r.burrau.pop();
+    cases.push(("(a2)'s Burrau reads missing", r));
+    let mut r = full.clone();
+    r.burrau.swap(1, 2);
+    cases.push(("the Burrau forms out of order", r));
+    let mut r = full.clone();
+    r.burrau[1].1.pop();
+    cases.push(("one Burrau read of (a1)'s two", r));
+    let mut r = full.clone();
+    r.burrau[2].1.push(0.5);
+    cases.push(("three Burrau reads of (a2)'s", r));
+    let mut r = full.clone();
+    r.burrau[0].1.clear();
+    cases.push(("no Burrau read of the absolute form's", r));
+    for (what, reads) in cases {
+        assert!(
+            !complete(&reads),
+            "an incomplete measurement reads as complete: {what}"
+        );
+    }
+}
+
+#[test]
+fn shadow_form_complete() {
+    check_complete(periodic_complete);
+}
+
+negative_control!(
+    shadow_form_complete,
+    "the vacuous check, a table at the criterion's ‖δ₀‖ with a row per orbit and nothing else, must fail",
+    expected = "an incomplete measurement reads as complete",
+    check_complete(|r| {
+        r.tables
+            .iter()
+            .any(|t| t.0 == CRITERION_DELTA_0 && t.1.len() == periodic_set().len())
+    })
+);
+
+// ── shadow_form_criterion ───────────────────────────────────────────────────────────────────────────────────────
+
+/// The pre-registered (a1)/(a2) choice, `choose`, on its boundaries.
+fn check_criterion(choose: fn([f64; 2], [bool; 2], f64) -> Form) {
+    let t = 30.0;
+    let step = 1.0 / t;
+    // Burrau alone separates them: the finite one, whatever the gaps.
+    assert_eq!(
+        choose([0.0, 1.0], [false, true], t),
+        Form::CancellationFree,
+        "Burrau decides for (a2)"
+    );
+    assert_eq!(
+        choose([1.0, 0.0], [true, false], t),
+        Form::Plain,
+        "Burrau decides for (a1)"
+    );
+    for burrau in [[true, true], [false, false]] {
+        // At the boundary, W(a1) − W(a2) = 1/T exactly: (a2).
+        assert_eq!(
+            choose([2.0 * step, step], burrau, t),
+            Form::CancellationFree,
+            "at 1/T exactly"
+        );
+        // Just below it: (a1).
+        let below = f64::from_bits((2.0 * step).to_bits() - 1);
+        assert_eq!(
+            choose([below, step], burrau, t),
+            Form::Plain,
+            "just below 1/T"
+        );
+        // (a2) worse: (a1).
+        assert_eq!(choose([0.0, 1.0], burrau, t), Form::Plain, "(a2) worse");
+        // (a1) not finite, (a2) finite: (a2); both not finite: (a1).
+        assert_eq!(
+            choose([f64::INFINITY, 0.5], burrau, t),
+            Form::CancellationFree,
+            "(a1) infinite"
+        );
+        assert_eq!(
+            choose([f64::INFINITY; 2], burrau, t),
+            Form::Plain,
+            "both infinite"
+        );
+    }
+}
+
+#[test]
+fn shadow_form_criterion() {
+    check_criterion(choose);
+}
+
+// ── shadow_form_burrau ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// `read`, the criterion's Burrau read, against `lambda_in` at each of [`BURRAU_DELTA_0`], (a1) at the proposed
+/// `n_renorm`.
+fn check_burrau(read: fn(Form, u32) -> (bool, [f64; 2])) {
+    let (finite, l) = read(Form::Plain, PROPOSED_N_RENORM);
+    let o = burrau();
+    for (k, d) in BURRAU_DELTA_0.into_iter().enumerate() {
+        assert_eq!(
+            l[k].to_bits(),
+            lambda_in(&o, Form::Plain, Precision::F32, d, PROPOSED_N_RENORM).to_bits(),
+            "Burrau's read at ‖δ₀‖ = {d:e} is not the f32 λ_T there"
+        );
+    }
+    assert_eq!(
+        finite,
+        l.iter().all(|x| x.is_finite()),
+        "Burrau's flag is not whether both reads are finite"
+    );
+}
+
+#[test]
+fn shadow_form_burrau() {
+    check_burrau(burrau_finite);
+}
+
+negative_control!(
+    shadow_form_burrau,
+    "a Burrau read that is not the measurement must fail",
+    expected = "is not the f32 λ_T there",
+    check_burrau(|_, _| (true, [0.0; 2]))
+);
+
+negative_control!(
+    shadow_form_criterion,
+    "a choice that reads the boundary as strict must fail",
+    expected = "at 1/T exactly",
+    check_criterion(|w, b, t| match b {
+        [true, false] => Form::Plain,
+        [false, true] => Form::CancellationFree,
+        _ if w[0] - w[1] > 1.0 / t => Form::CancellationFree,
+        _ => Form::Plain,
+    })
 );
 
 // ── orbit_fixtures ──────────────────────────────────────────────────────────────────────────────────────────────
@@ -928,6 +1172,47 @@ negative_control!(
     check_eight_orbit_rules(|l, r, _| (l - r) / r.abs())
 );
 
+// ── eight_orbit_provisional ─────────────────────────────────────────────────────────────────────────────────────
+
+fn check_provisional(worst: fn(&[Candidate]) -> Option<f64>) {
+    use Precision::F64;
+    let at = |delta_0, n_renorm, change| syn(delta_0, n_renorm, &[("A", F64, 0.5, change)]);
+    let near = [
+        at(1e-3, PROPOSED_N_RENORM, 0.125),
+        at(PROPOSED_DELTA_0, 100, 0.25),
+        at(PROPOSED_DELTA_0, 1000, 0.375),
+    ];
+    assert_eq!(
+        worst(&near),
+        None,
+        "a candidate that is the provisional values in one coordinate alone is read as them"
+    );
+    let mut with = near.to_vec();
+    with.push(at(PROPOSED_DELTA_0, PROPOSED_N_RENORM, 0.5));
+    let got = worst(&with).expect("the provisional values are in the sweep");
+    assert!(
+        (got - 0.5).abs() < 1e-12,
+        "the provisional values' worst change is {got}, not 0.5"
+    );
+    assert_eq!(worst(&[]), None);
+}
+
+#[test]
+fn eight_orbit_provisional() {
+    check_provisional(provisional_worst);
+}
+
+negative_control!(
+    eight_orbit_provisional,
+    "the provisional values matched on ‖δ₀‖ alone must fail",
+    expected = "in one coordinate alone",
+    check_provisional(|c| {
+        c.iter()
+            .find(|c| c.delta_0 == PROPOSED_DELTA_0)
+            .map(Candidate::worst)
+    })
+);
+
 // ── eight_orbit_gate ────────────────────────────────────────────────────────────────────────────────────────────
 
 fn check_eight_orbit_gate(expect_control: Verdict) {
@@ -995,11 +1280,34 @@ fn check_eight_orbit_gate(expect_control: Verdict) {
         report.description,
         format!(
             "d: reported, not gated (R-649; the verdict is the report's completeness alone). Over the 3 starting \
-             conditions the rule picks ‖δ₀‖ = 1e-6, n_renorm = 1 (worst change 0.0000), tolerance 0; the proposal \
-             stays ‖δ₀‖ = 3e-3, n_renorm = 300, tolerance {PROPOSED_TOLERANCE}, for the owner at the M3 gate \
-             (REQ-INT-076). Bias is against f64 at ‖δ₀‖ = 1e-6 at the same n_renorm"
+             conditions the rule picks ‖δ₀‖ = 1e-6, n_renorm = 1 (worst change 0.0000), tolerance 0: the re-run's \
+             proposal from its evidence, in this shadow form. In force, provisional (R-976): ‖δ₀‖ = 3e-3, n_renorm = \
+             300, tolerance {PROPOSED_TOLERANCE}, not in this sweep; the owner confirms REQ-INT-076's values at the M3 \
+             gate. Bias is against f64 at ‖δ₀‖ = 1e-6 at the same n_renorm. Proposed (R-976): min_regions ≥ 6, the \
+             chaotic orbits, for the owner at the M3 gate; its evidence, this report's 2 regions and the pick with \
+             each left out (its negative results)"
         )
     );
+    assert_eq!(PROPOSED_MIN_REGIONS, 6);
+    // The values in force, provisional (R-976), measured where the sweep ran them: finite, and not finite.
+    for (lambdas, said) in [
+        ([0.5, 0.75, 0.5, 0.5], "worst change here 0.5000;"),
+        ([f64::INFINITY; 4], "worst change here not finite;"),
+    ] {
+        let mut ran = grid();
+        ran.push(Candidate {
+            delta_0: PROPOSED_DELTA_0,
+            n_renorm: PROPOSED_N_RENORM,
+            ..every(PROPOSED_DELTA_0, lambdas)
+        });
+        let with = eight_orbit_report(&config, "t", "d", &ran, &orbits, &["A", "B"]).expect("runs");
+        assert!(
+            with.description
+                .contains(&format!("tolerance {PROPOSED_TOLERANCE}, {said}")),
+            "the provisional values' result is not `{said}`: {}",
+            with.description
+        );
+    }
     // Its control: an orbit's runs left out, which the completeness check tells apart.
     let control =
         eight_orbit_report(&config, "t", "d", &fewer, &orbits, &["A", "B"]).expect("runs");
@@ -1015,6 +1323,13 @@ fn check_eight_orbit_gate(expect_control: Verdict) {
         &serde_json::json!({ "kind": "eight-orbits", "description": "t", "drop": "pluto" }),
     );
     assert!(refused.is_err());
+    // And an unknown shadow form, before it sweeps.
+    let refused = BenettinCalibrationGate.run(
+        &config,
+        "t",
+        &serde_json::json!({ "kind": "eight-orbits", "description": "t", "form": "displacement" }),
+    );
+    assert!(refused.is_err_and(|e| e.contains("form `displacement`")));
 }
 
 #[test]

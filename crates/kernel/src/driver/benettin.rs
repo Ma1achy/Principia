@@ -47,10 +47,17 @@
 //! decision is a comparison of integers (integrator_contract Part 4): `completed_renorms = step_count / n_renorm`, as
 //! the read side derives it. `n_renorm = 0` never renormalises, and the read side reads no completed renorm.
 //!
-//! **Two forms of the held shadow** (payload §8; REQ-VAL-038): [`Absolute`] holds `x'` between macro-steps, the
-//! payload's `r_sh`, `p_sh`; [`Displacement`] holds `δ⃗`, forming `x + δ⃗` at each macro-step's start. The payload
-//! stores the absolute form; the displacement form is measured against it on known-Lyapunov periodic orbits
-//! (`validation::measure::benettin`), and the switch waits for REQ-PAY-085's criterion.
+//! **Two forms of the held shadow** (payload §8; REQ-VAL-038; R-974). [`Absolute`] holds `x'` and marches it by the
+//! occupant's own `ADVANCE`: the payload's form, `r_sh`, `p_sh`. [`Displacement`] holds `δ⃗ = x' − x` and marches it
+//! with the sample by the occupant's joint step ([`Advance::advance_joint`]; dd_integrator §3.8): the sample's
+//! macro-step is replayed from its start with `δ⃗` beside it, its `x` bit-identical to the sample's, and `δ⃗` advanced
+//! through the same stages, each force difference formed from the stage's pair separations by `D`, R-974's (a1)
+//! [`Plain`] or (a2) [`CancellationFree`] ([`crate::physics::difference`]); `Displacement` alone names the one TASK-M3-72's
+//! measurement chose. Where the shadow needs absolute positions it reads `x + δ⃗` (§3.8): its projection is its own,
+//! the sample's replayed on `x` and the same linear map on `δ⃗` (so `x + δ⃗` is projected by its own `R_com` and
+//! `P_com`), and its monitor and detector watch `x + δ⃗`, formed at the working precision after the projections. The
+//! payload stores the absolute form; the switch waits for REQ-PAY-085's criterion (TASK-M4-13), and a displacement
+//! shadow written to the payload stores `x + δ⃗`.
 //!
 //! **Finalised at read** ([`ftle`], [`ftle_read`]): the partial interval since the last renormalisation is folded in
 //! before dividing by the full elapsed `step_count · dt_macro`, never plain `S / t` (payload §5); the read is NaN
@@ -63,13 +70,14 @@ use core::marker::PhantomData;
 
 use spirv_std::num_traits::Float;
 
-use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence};
+use super::advance::{Advance, AdvanceParams, AdvanceReal, Cadence, JointCadence};
 use super::cadence::WrapperCadence;
 use super::wrapper::{integrate_with_co, monitored, CoMarch, WrapperReal, WrapperUniforms};
 use crate::decode::Ic;
 use crate::detect::collision::CollisionRadius;
 use crate::occupant::{Geom, State};
 use crate::payload::{sd_is_failed, tm_t_end_step, PayloadReal, SimStateBaseOf, SimStateFTLEOf};
+pub use crate::physics::difference::{CancellationFree, ForceDifference, Plain};
 
 /// The sim key's Benettin values (integrator_contract Part 3): `‖δ₀‖` and the renormalisation interval in macro-steps,
 /// REQ-INT-076's calibration.
@@ -81,26 +89,83 @@ pub struct BenettinParams<R> {
     pub n_renorm: u32,
 }
 
-/// What the shadow holds between macro-steps: `x'` itself, or `δ⃗ = x' − x` (the module's note).
-pub trait ShadowForm {
+/// What the shadow holds between macro-steps, `x'` itself or `δ⃗ = x' − x`, and how it marches (the module's note).
+pub trait ShadowForm: Sized {
     /// Whether the held state is the displacement `δ⃗`.
     const DISPLACEMENT: bool;
+
+    /// The shadow `b`'s march beside the sample's macro-step from `start` at the grid's `t_now`, the sample's
+    /// `params` and its `taken` substeps, by the bound occupant `A`; the renormalisation is the caller's.
+    fn march<A: Advance, R: WrapperReal>(
+        b: &mut Benettin<R, Self>,
+        start: &State<R>,
+        t_now: u32,
+        params: &AdvanceParams<R>,
+        taken: u32,
+    );
 }
 
-/// The absolute form: the shadow's state `x'`, the payload's.
+/// The absolute form: the shadow's state `x'`, the payload's, marched by the occupant's own `ADVANCE`.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Absolute;
 
 impl ShadowForm for Absolute {
     const DISPLACEMENT: bool = false;
+
+    /// `x'` through its own cadence, `N_sub` as the sample's and at most `taken` substeps.
+    #[inline]
+    fn march<A: Advance, R: WrapperReal>(
+        b: &mut Benettin<R, Self>,
+        _start: &State<R>,
+        t_now: u32,
+        params: &AdvanceParams<R>,
+        taken: u32,
+    ) {
+        let mut limited = Limited {
+            inner: &mut b.cadence,
+            left: taken,
+        };
+        let out = A::advance(&b.held, &b.geom, t_now, t_now + 1, params, &mut limited);
+        b.held = out.state;
+        b.geom = out.geom;
+    }
 }
 
-/// The displacement form: `δ⃗ = x' − x`.
+/// The displacement form (R-974): `δ⃗ = x' − x`, marched with the sample by the occupant's joint step, its force
+/// difference formed by `D`, R-974's (a1) [`Plain`] or (a2) [`CancellationFree`]. `Displacement` alone is the form
+/// TASK-M3-72's pre-registered measurement chose.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct Displacement;
+pub struct Displacement<D = Plain>(PhantomData<D>);
 
-impl ShadowForm for Displacement {
+impl<D: ForceDifference> ShadowForm for Displacement<D> {
     const DISPLACEMENT: bool = true;
+
+    /// The sample's macro-step replayed from `start` with `δ⃗` beside it ([`Advance::advance_joint`]), `taken` joint
+    /// steps, each followed by the shadow's projection and watch (`JointLimited`).
+    #[inline]
+    fn march<A: Advance, R: WrapperReal>(
+        b: &mut Benettin<R, Self>,
+        start: &State<R>,
+        t_now: u32,
+        params: &AdvanceParams<R>,
+        taken: u32,
+    ) {
+        let geom = Geom::new(&start.m, &start.r);
+        let mut joint = JointLimited {
+            cadence: &mut b.cadence,
+            left: taken,
+        };
+        let (_, delta) = A::advance_joint::<R, D, _>(
+            start,
+            &geom,
+            &b.held,
+            t_now,
+            t_now + 1,
+            params,
+            &mut joint,
+        );
+        b.held = delta;
+    }
 }
 
 /// `f` applied to each of the six components of `a` and `b`, written out: no loop (gpu_determinism_note § "The
@@ -134,6 +199,16 @@ fn minus<R: AdvanceReal>(a: &State<R>, b: &State<R>) -> State<R> {
     }
 }
 
+/// The zero displacement, with the masses `m`.
+#[inline]
+fn zero_state<R: AdvanceReal>(m: &[R; 3]) -> State<R> {
+    State {
+        m: *m,
+        r: [[R::default(); 2]; 3],
+        p: [[R::default(); 2]; 3],
+    }
+}
+
 /// `k·d + x` per component, each one rounded multiply-add (gpu_determinism_note § "The discipline", rule 2); `x`'s
 /// masses.
 #[inline]
@@ -150,10 +225,16 @@ fn scaled_plus<R: AdvanceReal>(k: R, d: &State<R>, x: &State<R>) -> State<R> {
 /// momenta are `x₀`'s and each position component `r + ‖δ₀‖·uₖ`, one rounded multiply-add each.
 #[inline]
 pub fn offset<R: AdvanceReal>(x: &State<R>, delta_0: R) -> State<R> {
+    scaled_plus(delta_0, &direction(&x.m), x)
+}
+
+/// `u`, the direction of `δ₀` ([`offset`]), with the masses `m`.
+#[inline]
+fn direction<R: AdvanceReal>(m: &[R; 3]) -> State<R> {
     let one = R::one();
     let half = one / (one + one);
     let mut u = State {
-        m: x.m,
+        m: *m,
         r: [[R::default(); 2]; 3],
         p: [[R::default(); 2]; 3],
     };
@@ -161,7 +242,7 @@ pub fn offset<R: AdvanceReal>(x: &State<R>, delta_0: R) -> State<R> {
     u.r[1][0] = -half;
     u.r[1][1] = half;
     u.r[2][1] = -half;
-    scaled_plus(delta_0, &u, x)
+    u
 }
 
 /// `δ = ‖x' − x‖`, the Euclidean norm of the offset over the twelve components, in the read side's order (each body's
@@ -257,14 +338,43 @@ impl<R: WrapperReal, C: Cadence<R>> Cadence<R> for Limited<'_, C> {
     }
 }
 
+/// The displacement form's joint cadence for one macro-step (R-974; the module's note): after each joint step, the
+/// sample's projection replayed on `x` (the shadow's projection's `M` and weights are the sample's, the masses being
+/// one), the same linear projection on `δ⃗`, so that `x + δ⃗` is projected by its own `R_com` and `P_com`; then the
+/// shadow's monitor and detector watch `x + δ⃗` ([`WrapperCadence::watch`]), which only watch (R-972). Done once it has
+/// taken `left` more steps, the sample's count.
+struct JointLimited<'a, R> {
+    cadence: &'a mut WrapperCadence<R>,
+    left: u32,
+}
+
+impl<R: WrapperReal> JointCadence<R> for JointLimited<'_, R> {
+    #[inline]
+    fn after_step(&mut self, x: &mut State<R>, geom: &mut Geom<R>, delta: &mut State<R>) {
+        self.cadence.project(x, geom);
+        let (r, p) = self.cadence.projection().project(&delta.r, &delta.p);
+        delta.r = r;
+        delta.p = p;
+        let shadow = plus(x, delta);
+        self.cadence
+            .watch(&shadow, &Geom::new(&shadow.m, &shadow.r));
+        self.left -= 1;
+    }
+
+    #[inline]
+    fn done(&self) -> bool {
+        self.left == 0
+    }
+}
+
 /// One sample's Benettin shadow in the form `F` (the module's note): what it holds, its own cadence, `S` and the
 /// macro-steps since its last renormalisation.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Benettin<R, F> {
     /// `x'` ([`Absolute`]) or `δ⃗` ([`Displacement`]); the masses are the sample's.
     held: State<R>,
-    /// The force evaluation at `x'`'s positions ([`Absolute`]; unused by [`Displacement`], which forms it per
-    /// macro-step).
+    /// The force evaluation at `x'`'s positions ([`Absolute`]; unused by [`Displacement`], whose joint step reads the
+    /// sample's).
     geom: Geom<R>,
     /// The shadow's own projection, monitor and detector.
     cadence: WrapperCadence<R>,
@@ -288,8 +398,9 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
             p: ic.p,
         };
         let shadow = offset(&x, params.delta_0);
+        // The displacement form holds `‖δ₀‖·u` itself, each component exact (§3.8), not `x'₀ − x₀`.
         let held = if F::DISPLACEMENT {
-            minus(&shadow, &x)
+            scaled_plus(params.delta_0, &direction(&x.m), &zero_state(&x.m))
         } else {
             shadow
         };
@@ -353,12 +464,7 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
         self.s_sum = self.s_sum + Float::ln(dist / self.params.delta_0);
         let k = self.params.delta_0 / dist;
         if F::DISPLACEMENT {
-            let none = State {
-                m: x.m,
-                r: zero,
-                p: zero,
-            };
-            self.held = scaled_plus(k, &d, &none);
+            self.held = scaled_plus(k, &d, &zero_state(&x.m));
         } else {
             self.held = scaled_plus(k, &d, x);
             self.geom = Geom::new(&self.held.m, &self.held.r);
@@ -427,9 +533,8 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
 }
 
 impl<R: WrapperReal, F: ShadowForm> CoMarch<R> for Benettin<R, F> {
-    /// The shadow's macro-step beside the sample's: from `x'` (or `start + δ⃗`) through its own cadence, `N_sub` as the
-    /// sample's and at most `taken` substeps; then, at the end of every `n_renorm`-th completed macro-step, the
-    /// renormalisation at `end`.
+    /// The shadow's macro-step beside the sample's, in its form ([`ShadowForm::march`]): `N_sub` as the sample's and at
+    /// most `taken` substeps; then, at the end of every `n_renorm`-th completed macro-step, the renormalisation at `end`.
     #[inline]
     fn after_macro<A: Advance>(
         &mut self,
@@ -439,23 +544,7 @@ impl<R: WrapperReal, F: ShadowForm> CoMarch<R> for Benettin<R, F> {
         params: &AdvanceParams<R>,
         taken: u32,
     ) {
-        let (from, geom) = if F::DISPLACEMENT {
-            let s = plus(start, &self.held);
-            (s, Geom::new(&s.m, &s.r))
-        } else {
-            (self.held, self.geom)
-        };
-        let mut limited = Limited {
-            inner: &mut self.cadence,
-            left: taken,
-        };
-        let out = A::advance(&from, &geom, t_now, t_now + 1, params, &mut limited);
-        if F::DISPLACEMENT {
-            self.held = minus(&out.state, end);
-        } else {
-            self.held = out.state;
-            self.geom = out.geom;
-        }
+        F::march::<A, R>(self, start, t_now, params, taken);
         if taken == params.n_sub {
             self.since += 1;
             if self.since == self.params.n_renorm {

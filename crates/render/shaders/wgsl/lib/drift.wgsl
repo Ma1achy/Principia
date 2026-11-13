@@ -38,10 +38,12 @@ fn dbg_drift_place(x: f32, compaction: u32, lin_r: f32, eps: f32) -> f32 {
     return dbg_literal(select(-s, s, c >= 0.0));
 }
 
-// The neutral band's half-width as a fraction of the drift's reference: `k·2⁻²³` with `k = 128`, so 2⁻¹⁶. The bound
-// behind `k` is the render contract's (Part 5, "The neutral band"). The CPU mirror is
-// `crate::present::DRIFT_NEUTRAL_BAND`.
-const DBG_DRIFT_NEUTRAL_BAND: f32 = 1.52587890625e-5;
+// The neutral band's factors, `k'·2⁻²³` (render contract Part 5, "The neutral band"; R-928): the energy's `k' = 15`,
+// so `15·2⁻²³`, of `K + |V|`, and `L_z`'s `k' = 5`, so `5·2⁻²³`, of `S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|)`, each `k'` the
+// rounding bound of a fresh sample's drift against a CPU reference. The CPU mirrors are
+// `crate::present::{DRIFT_BAND_E, DRIFT_BAND_LZ}`.
+const DBG_DRIFT_BAND_E: f32 = 1.7881393432617188e-6;
+const DBG_DRIFT_BAND_LZ: f32 = 5.960464477539063e-7;
 
 // Whether `x` is NaN or `±∞`, an exponent of all ones, tested on its bits before any arithmetic (R-436; render_gui_spec
 // §10.1; gpu_determinism_note rule 4). WGSL pins neither the bits of `∞ − ∞` nor a comparison on `∞`, so a drift view
@@ -51,16 +53,55 @@ fn dbg_drift_non_finite(x: f32) -> bool {
     return (bitcast<u32>(x) & 0x7f800000u) == 0x7f800000u;
 }
 
-// The value a drift view hands `dbg_drift`: under `symlog`, 0 where `|x| ≤ DBG_DRIFT_NEUTRAL_BAND·|reference|`, the
-// reference `E_0` or `Lz_0`, since a difference of that size is the rounding of `H(r, p) − E_0` or `L_z(r, p) − Lz_0`
-// in live f32 and not physics (R-652); else `x` as it is, so a drift past the band keeps its own place. `lin` and `log`
-// pass `x` through, and a non-finite `x` or `reference`, tested first on the bits, passes `x` too, so the band never
-// makes a non-finite operand neutral (`|x| ≤ 2⁻¹⁶·|∞|` holds for every `x`). At a zero reference the band is empty.
-fn dbg_drift_shown(x: f32, compaction: u32, reference: f32) -> f32 {
-    if (dbg_drift_non_finite(x) || dbg_drift_non_finite(reference) || compaction == DBG_DRIFT_LIN || compaction == DBG_DRIFT_LOG) {
+// The rounding's own scale for the energy, `K + |V|`, `K = Σᵢ ‖pᵢ‖²/2mᵢ` and `|V| = Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖`, the
+// masses `m` the sample's `ICDescriptor`'s: the sizes of the terms `H(r, p) − E_0` sums, whatever `E_0` is (R-928). The
+// CPU mirror is `crate::present::drift_rounding_energy`.
+fn dbg_drift_rounding_energy(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, m: vec3<f32>) -> f32 {
+    let r01 = r[0] - r[1];
+    let r02 = r[0] - r[2];
+    let r12 = r[1] - r[2];
+    let k = dot(p[0], p[0]) / (2.0 * m.x) + dot(p[1], p[1]) / (2.0 * m.y) + dot(p[2], p[2]) / (2.0 * m.z);
+    let v = m.x * m.y / sqrt(dot(r01, r01)) + m.x * m.z / sqrt(dot(r02, r02)) + m.y * m.z / sqrt(dot(r12, r12));
+    return k + v;
+}
+
+// The rounding's own scale for `L_z`, `S = Σᵢ (|xᵢp_{y,i}| + |yᵢp_{x,i}|)`: the sizes of the six products
+// `L_z(r, p) − Lz_0` sums, whatever `Lz_0` is (R-928). The CPU mirror is `crate::present::drift_rounding_lz`.
+fn dbg_drift_rounding_lz(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -> f32 {
+    return (abs(r[0].x * p[0].y) + abs(r[0].y * p[0].x)) + (abs(r[1].x * p[1].y) + abs(r[1].y * p[1].x))
+        + (abs(r[2].x * p[2].y) + abs(r[2].y * p[2].x));
+}
+
+// The neutral band's half-width on `energy_drift`, `15·2⁻²³·(K + |V|)` (R-928).
+fn dbg_drift_band_energy(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, m: vec3<f32>) -> f32 {
+    return DBG_DRIFT_BAND_E * dbg_drift_rounding_energy(r, p, m);
+}
+
+// The neutral band's half-width on `Lz_drift`, `5·2⁻²³·S` (R-928).
+fn dbg_drift_band_lz(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>) -> f32 {
+    return DBG_DRIFT_BAND_LZ * dbg_drift_rounding_lz(r, p);
+}
+
+// The neutral band, one definition for every place a current drift is read under `symlog`, the three drift views and
+// a field ramp's `diverging` compaction (R-928, R-929): 0 where `|x| ≤ band`, the half-width `dbg_drift_band_energy`'s
+// or `dbg_drift_band_lz`'s, since a difference of that size is the rounding of `H(r, p) − E_0` or `L_z(r, p) − Lz_0` in
+// live f32 and not physics (R-652); else `x` as it is, so a drift past the band keeps its own place. A non-finite `x`
+// or `band`, tested first on the bits, passes `x`, so the band never makes a non-finite operand neutral (`|x| ≤ ∞`
+// holds for every `x`).
+fn dbg_drift_banded(x: f32, band: f32) -> f32 {
+    if (dbg_drift_non_finite(x) || dbg_drift_non_finite(band)) {
         return x;
     }
-    return select(x, 0.0, abs(x) <= DBG_DRIFT_NEUTRAL_BAND * abs(reference));
+    return select(x, 0.0, abs(x) <= band);
+}
+
+// The value a drift view hands `dbg_drift`: under `symlog`, the band's (`dbg_drift_banded`); `lin` and `log` pass `x`
+// through, having no band.
+fn dbg_drift_shown(x: f32, compaction: u32, band: f32) -> f32 {
+    if (compaction == DBG_DRIFT_LIN || compaction == DBG_DRIFT_LOG) {
+        return x;
+    }
+    return dbg_drift_banded(x, band);
 }
 
 // A drift view's colour of the drift `x` (render contract Part 5; R-381; RQ-208, option 3): the absence NaN, by its

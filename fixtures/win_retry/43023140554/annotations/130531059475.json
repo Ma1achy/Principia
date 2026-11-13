@@ -1,0 +1,50 @@
+[
+ {
+  "path": ".github",
+  "blob_href": "https://github.com/Ma1achy/Principia/blob/33f4ab6407423943c409fd85a1e2ba41841f8468/.github",
+  "start_line": 142,
+  "start_column": null,
+  "end_line": 142,
+  "end_column": null,
+  "annotation_level": "failure",
+  "title": "",
+  "message": "Process completed with exit code 100.",
+  "raw_details": ""
+ },
+ {
+  "path": ".github",
+  "blob_href": "https://github.com/Ma1achy/Principia/blob/33f4ab6407423943c409fd85a1e2ba41841f8468/.github",
+  "start_line": 328,
+  "start_column": null,
+  "end_line": 328,
+  "end_column": null,
+  "annotation_level": "failure",
+  "title": "",
+  "message": "Process completed with exit code 1.",
+  "raw_details": ""
+ },
+ {
+  "path": ".github",
+  "blob_href": "https://github.com/Ma1achy/Principia/blob/33f4ab6407423943c409fd85a1e2ba41841f8468/.github",
+  "start_line": 409,
+  "start_column": null,
+  "end_line": 409,
+  "end_column": null,
+  "annotation_level": "failure",
+  "title": "",
+  "message": "Process completed with exit code 100.",
+  "raw_details": ""
+ },
+ {
+  "path": ".github",
+  "blob_href": "https://github.com/Ma1achy/Principia/blob/33f4ab6407423943c409fd85a1e2ba41841f8468/.github",
+  "start_line": 319,
+  "start_column": null,
+  "end_line": 319,
+  "end_column": null,
+  "annotation_level": "failure",
+  "title": "",
+  "message": "Process completed with exit code 100.",
+  "raw_details": ""
+ }
+]

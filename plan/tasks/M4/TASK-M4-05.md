@@ -33,6 +33,7 @@ deep_zoom layer 0's compute side: a flat grid of equal quads covering the view, 
 - `crates/kernel`: the survey entry point — workgroup size N², per-thread map → z → decode → wrapper; workgroup shared memory holds reduction accumulators only.
 - Dispatch guards: `horizon_steps × N_max ≤ 2³²−1` hard assert; re-dispatch gated on `sd_is_finished`.
 - Word buffer as its own allocation, bound only when symbolic features are on.
+- *13 Nov 2026 (R-928; TASK-M3-70, applied per R-369):* when this march writes the references `E_0` and `Lz_0` (GPU-computed), the drift views' and field ramps' neutral band switches to R-928's GPU-reference `k'`, 22 for the energy and 6 for `L_z` (`drift.wgsl`'s `DBG_DRIFT_BAND_E` and `DBG_DRIFT_BAND_LZ`, `render::present::{DRIFT_BAND_E, DRIFT_BAND_LZ}`; render contract Part 5, "The neutral band"), with a test that a fresh sample on a GPU-written reference reads exactly neutral in the three drift views and through a field ramp on each drift. TASK-M3-70 built the CPU reference's `k'`, 15 and 5.
 
 ## Acceptance tests
 - `cargo test -p engine dispatch_shape` — shader reflection: workgroup size N²; shared-memory size independent of E; the kernel has no loop over ensemble copies — each copy is the same kernel dispatched again with `copy_index` a uniform (R-102); the resolve pass is dispatched after the E+1 copy dispatches and is the only writer of the footprint resolve and QuadReduction (R-135) (REQ-PERF-012).

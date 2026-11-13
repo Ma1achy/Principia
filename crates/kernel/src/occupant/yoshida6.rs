@@ -19,8 +19,9 @@
 //! test 1a; REQ-INT-090), as R-501 puts them in place of a copy of the paper. The negative weight is `w₁` (R-57); the
 //! composition is symmetric, so it is step-reversible despite it (R-500).
 
-use super::kdk::sequence7;
+use super::kdk::{joint_sequence7, sequence7};
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};
+use crate::physics::difference::ForceDifference;
 use crate::regularisation::form::Form;
 
 /// Yoshida's sixth-order composition, solution A.
@@ -75,5 +76,15 @@ impl Stepper for Yoshida6 {
     #[inline]
     fn step<R: StepReal>(s: &State<R>, dt: R, geom: &Geom<R>) -> (State<R>, Geom<R>) {
         sequence7(s, dt, geom, &drift(), &kick())
+    }
+
+    #[inline]
+    fn joint_step<R: StepReal, D: ForceDifference>(
+        s: &State<R>,
+        delta: &State<R>,
+        dt: R,
+        geom: &Geom<R>,
+    ) -> (State<R>, Geom<R>, State<R>) {
+        joint_sequence7::<R, D>(s, delta, dt, geom, &drift(), &kick())
     }
 }

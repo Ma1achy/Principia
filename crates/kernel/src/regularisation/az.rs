@@ -19,16 +19,18 @@
 //! (R-565): the interval `dt_left` is `Δ_sync`, the entry size `dτ_entry = η·dt_left/(max(A₀, TINY)·max(B₀, TINY))`;
 //! each step's size the least of the finite, positive constraints `c₀ = η·dt_left/ab`, `c₁ = dτ_entry` and the
 //! predictive limit `c₂ = f·d_min/(P_max·ab)` on the relative momenta `P₁, P₂` (R-953), `ab` the floored `A·B`; then
-//! the landing clamp `dτ = min(dτ, max(dt_left − t_s, 0)/ab)`; one step of the stepper; the landing secant (at most
-//! [`AzParams::secant_tries`] retakes, each a counted step); and the exit, when the interval clock lands, the state is
-//! not finite (tested explicitly on its bits, step 7: the guard that catches a non-finite entry size, the doubly
+//! the landing clamp `dτ = min(dτ, max(dt_left − t_s, 0)/ab)`; one step of the stepper; the landing ([`AzParams`]'s
+//! `secant_tries` secant retakes, then up to `bisect_tries` halvings, each a counted step), which keeps a step that ends
+//! the clock at or short of the boundary, never past it, so that the state lands with its clock (R-998); and the exit,
+//! when the interval clock reaches the boundary, the state is not finite (tested explicitly on its bits, step 7: the guard that catches a non-finite entry size, the doubly
 //! degenerate state among them), or the step budget is spent. The floor signal (`A < TINY` or `B < TINY`) and the
 //! entry-cap hit (`c₀ > c₁`) are counted, non-terminal signals (Part 6, R-563). Each step's physical increment is fed
 //! to the trajectory's `dt_max` ([`super::dt_max`]; step 8).
 //!
 //! **No precision-dependent constant in a branch** (Part 2c rule 1). The interval skip of step 1 (`SYNC_EPS`) is an
-//! integer test on the grid's boundary index; the landing tolerance (`LAND_EPS_REL`), whose value Part 2b leaves out of
-//! the transcription, is [`AzParams::land_eps_rel`], supplied by the caller (RQ-795). `TINY` is the one excepted floor.
+//! integer test on the grid's boundary index; the landing takes no tolerance (R-998): its branches compare the interval
+//! clock with `dt_left`, a step size with the bracket's ends, and integer counts with their caps. `TINY` is the one
+//! excepted floor, and the equations of motion floor `|R₃|` at it (R-999).
 //!
 //! **The step budget** (Part 6; R-604): a copy's running total of steps, every RK4 call and secant retake counted,
 //! is checked at every step against `max(N_min, step_budget_rate·t)`, `t` its physical time since `t = 0`; a copy that
@@ -42,9 +44,9 @@
 //! evaluation, symplectic, step-reversible, not run-reversible, owning its time mapping); its equations are not in the
 //! corpus and none is built (R-162; REQ-INT-024).
 //!
-//! The values the step control reads (`η`, `Δ_sync`, `TINY`, `N_min`, the budget's rate, the landing tolerance) are
-//! calibrations (R-71: REQ-INT-080, REQ-INT-105, REQ-INT-108, REQ-INT-103; RQ-795), so the occupant reads them from its
-//! [`AzConfig`], never from a literal here.
+//! The values the step control reads (`η`, `Δ_sync`, `TINY`, `N_min`, the budget's rate) are calibrations (R-71:
+//! REQ-INT-080, REQ-INT-105, REQ-INT-108, REQ-INT-103), and the landing's two integer caps are Part 2b's, so the
+//! occupant reads them from its [`AzConfig`], never from a literal here.
 
 use core::marker::PhantomData;
 
@@ -284,10 +286,8 @@ pub struct AzSystem<R> {
     pub k: [R; 3],
     /// The physical energy `E`, held through the interval.
     pub e: R,
-    /// The floor `TINY`.
+    /// The floor `TINY`, which also floors `|R₃|` in the equations of motion (R-999).
     pub tiny: R,
-    /// The equations of motion's floor on `|R₃|` ([`AzParams::r3_floor`]).
-    pub r3_floor: R,
 }
 
 impl<R: AzReal> AzSystem<R> {
@@ -295,6 +295,13 @@ impl<R: AzReal> AzSystem<R> {
     #[inline]
     pub fn ab(q: &AzQ<R>) -> (R, R) {
         (dot(q.u1, q.u1), dot(q.u2, q.u2))
+    }
+
+    /// `|R₃| = |R₂ − R₁|` as the equations of motion read it: floored at `TINY`, the working precision's (Part 2b;
+    /// R-999).
+    #[inline]
+    pub fn r3(&self, q: &AzQ<R>) -> R {
+        floored(norm(sub(lc(q.u2), lc(q.u1))), self.tiny)
     }
 
     /// The relative positions and momenta `(R₁, R₂, P₁, P₂)`: `R = L(u)u`, `P₁ = L₁p₁/(2A)`, `P₂ = L₂p₂/(2B)`, `A` and
@@ -365,7 +372,7 @@ fn energy_of<R: AzReal>(mabc: [R; 3], mu: [R; 2], [r1, r2, p1, p2]: [V<R>; 4], t
 /// `E` with each `|Rᵢ|` floored at `TINY`, `u` by the conditioned inverse, `p₁ = 2L₁ᵀP₁`, `p₂ = 2L₂ᵀP₂`, and the
 /// interval clock `t = 0`.
 #[inline]
-pub fn register<R: AzReal>(s: &State<R>, tiny: R, r3_floor: R) -> (AzSystem<R>, AzQ<R>, AzP<R>) {
+pub fn register<R: AzReal>(s: &State<R>, tiny: R) -> (AzSystem<R>, AzQ<R>, AzP<R>) {
     let a = reference_body(&s.r);
     let (b, c) = others(a);
     let (ma, mb, mc) = (pick(&s.m, a), pick(&s.m, b), pick(&s.m, c));
@@ -396,7 +403,6 @@ pub fn register<R: AzReal>(s: &State<R>, tiny: R, r3_floor: R) -> (AzSystem<R>, 
         k,
         e,
         tiny,
-        r3_floor,
     };
     let q = AzQ {
         u1,
@@ -433,8 +439,8 @@ impl<R: AzReal> Flow<R> for AzSystem<R> {
         }
     }
 
-    /// `dp₁/dτ = −∂Γ/∂u₁` and `dp₂/dτ = −∂Γ/∂u₂` (Part 2b), `A` and `B` unfloored and `|R₃|` floored at
-    /// [`AzSystem::r3_floor`]:
+    /// `dp₁/dτ = −∂Γ/∂u₁` and `dp₂/dτ = −∂Γ/∂u₂` (Part 2b), `A` and `B` unfloored and `|R₃|` floored at `TINY`
+    /// ([`AzSystem::r3`]; R-999):
     ///
     /// ```text
     /// ∂Γ/∂u₁ = u₁|p₂|²/(4μ₂) + L(p₁)ᵀ(L₂p₂)/(4m_a) − 2m_a m_c u₁ − m_b m_c (2u₁B/|R₃| + 2(A·B/|R₃|³) L₁ᵀR₃) − 2E·B·u₁
@@ -447,7 +453,7 @@ impl<R: AzReal> Flow<R> for AzSystem<R> {
         let four = two * two;
         let [ma, mb, mc] = self.mabc;
         let r3 = sub(lc(q.u2), lc(q.u1));
-        let n3 = floored(norm(r3), self.r3_floor);
+        let n3 = self.r3(q);
         let cube = a * b / (n3 * n3 * n3);
         let l1p1 = lmul(q.u1, p.p1);
         let l2p2 = lmul(q.u2, p.p2);
@@ -587,22 +593,20 @@ pub struct AzParams<R> {
     pub tiny: R,
     /// The predictive limit's `f` (R-160: 0.02); the limit is off where it is not positive.
     pub predictive_f: R,
-    /// The equations of motion's floor on `|R₃|` (Part 2b: `1e-300`, after `tb_az.py`, an f64 value; the corpus gives
-    /// none at f32, RQ-796, a calibration, R-71).
-    pub r3_floor: R,
-    /// The landing tolerance, relative to `dt_left`, the reference's `LAND_EPS_REL` (RQ-795): one value, read where the
-    /// landing is tested and where the secant stops.
-    pub land_eps_rel: R,
     /// The step budget's rate, steps per unit physical time per copy (R-564; REQ-INT-103, a calibration).
     pub step_budget_rate: R,
     /// The step budget's floor `N_min` (R-604; REQ-INT-108, a calibration).
     pub n_min: u32,
     /// Whether the landing clamp is on (Part 2b, step 3; the default). Off only to measure the closure without the
-    /// landing fix (REQ-INT-049); with it off the landing tolerance is 0, as the reference driver has it, and
-    /// [`AzParams::land_eps_rel`] is not read.
+    /// landing fix (REQ-INT-049).
     pub clamp: bool,
     /// The landing secant's most retakes (Part 2b, step 6: `land_max_iters`, 4); `0` turns it off.
     pub secant_tries: u32,
+    /// The landing bisection's most halvings (Part 2b, step 6: 64). With this `0`, whatever `secant_tries` is, a step
+    /// past the boundary is kept (the secant's last retake, where it takes any), the clock set to the boundary while the
+    /// state stays overshot: a setting only for measuring what R-998 forbids (REQ-INT-119's control), never the
+    /// occupant's.
+    pub bisect_tries: u32,
 }
 
 /// How an Aarseth–Zare copy's march stands.
@@ -640,6 +644,11 @@ pub struct AzCount<R> {
     pub non_finite_entries: u32,
     /// The steps that carried the interval clock past `2·dt_left` (Part 2b, step 7).
     pub overshoots: u32,
+    /// The intervals whose landing ended short of the boundary, so that the march closed it with a further clamped
+    /// step (Part 2b, step 6; R-998).
+    pub closings: u32,
+    /// The most halvings one landing took (Part 2b, step 6).
+    pub most_bisections: u32,
     /// The most steps taken in one interval, for the record (REQ-INT-054).
     pub largest_interval: u32,
     /// The largest physical step (Part 2b, step 8; Part 2c).
@@ -664,6 +673,8 @@ impl<R: AzReal> AzCount<R> {
             predictive_bound: 0,
             non_finite_entries: 0,
             overshoots: 0,
+            closings: 0,
+            most_bisections: 0,
             largest_interval: 0,
             dt_max: DtMax::new(),
             reference: 3,
@@ -835,6 +846,85 @@ pub fn entry_size<R: AzReal>(q: &AzQ<R>, params: &AzParams<R>) -> R {
     params.eta * params.delta_sync / (floored(a0, params.tiny) * floored(b0, params.tiny))
 }
 
+/// One landing's retakes (Part 2b, step 6; R-998), from the saved state `(q, p)` whose step `h` gave `(q1, p1)` past the
+/// boundary `dt_left`: the secant on `t(h)`, at most `secant_tries` retakes, stopping where a retake ends the clock on
+/// the boundary, its increment is not finite or not positive, or the tries are spent; then, where the last retake is
+/// still past, a bisection on `h` between `0` (the saved state) and that retake's step, at most `bisect_tries` halvings, stopping where a halving
+/// ends the clock on the boundary or the bracket's midpoint is one of its ends. The bisection keeps the bracket's short
+/// end, so the step kept ends the clock at or short of the boundary, never past it. Every branch compares the clock
+/// with `dt_left`, a step with the bracket's ends, or a count with its cap. Each retake is a counted step.
+struct Landing<R> {
+    q: AzQ<R>,
+    p: AzP<R>,
+    /// The retakes taken.
+    retakes: u32,
+    /// The halvings taken.
+    halvings: u32,
+}
+
+/// [`Landing`]'s retakes.
+#[inline]
+fn land<S: AzStepper, R: AzReal>(
+    system: &AzSystem<R>,
+    (q, p): (&AzQ<R>, &AzP<R>),
+    h: R,
+    (q1, p1): (AzQ<R>, AzP<R>),
+    params: &AzParams<R>,
+) -> Landing<R> {
+    let dt_left = params.delta_sync;
+    let zero = R::default();
+    let before = q.t;
+    let want = dt_left - before;
+    let (mut q1, mut p1) = (q1, p1);
+    let mut cur = h;
+    let mut retakes = 0;
+    let mut go = true;
+    while go && retakes < params.secant_tries {
+        let got = q1.t - before;
+        if !finite(got) || got <= zero || q1.t == dt_left {
+            go = false;
+        } else {
+            cur = cur * want / got;
+            (q1, p1) = S::regularised_step(system, q, p, cur);
+            retakes += 1;
+        }
+    }
+    let mut halvings = 0;
+    if finite(q1.t) && q1.t > dt_left {
+        // The bracket: `lo` the largest step known to end the clock at or short of the boundary, with its state (`0`,
+        // the saved state, to begin with); `hi` the least known to end it past (the secant's last step).
+        let (mut lo, mut lo_q, mut lo_p) = (zero, *q, *p);
+        let mut hi = cur;
+        let two = two::<R>();
+        go = true;
+        while go && halvings < params.bisect_tries {
+            let mid = lo + (hi - lo) / two;
+            if mid <= lo || mid >= hi {
+                go = false;
+            } else {
+                let (qm, pm) = S::regularised_step(system, q, p, mid);
+                halvings += 1;
+                if finite(qm.t) && qm.t <= dt_left {
+                    (lo, lo_q, lo_p) = (mid, qm, pm);
+                    go = qm.t < dt_left;
+                } else {
+                    // Past, or a clock that is not finite (NaN, or −∞ through a negative stage weight): never kept.
+                    hi = mid;
+                }
+            }
+        }
+        if params.bisect_tries > 0 {
+            (q1, p1) = (lo_q, lo_p);
+        }
+    }
+    Landing {
+        q: q1,
+        p: p1,
+        retakes,
+        halvings,
+    }
+}
+
 /// What one interval's march left: the last finite state, its interval clock, and whether it landed: on its boundary
 /// with the march going on, or with a terminal that fired on the landing step itself (the landing registered, then the
 /// march ended).
@@ -845,7 +935,9 @@ struct Interval<R> {
 }
 
 /// Marches one sync interval from the registration's `(q, p)` at boundary `k` (Part 2b, the step control, steps 2 to 8),
-/// the cadence after every kept step on its Cartesian image, the counts in `count`.
+/// the cadence after every kept step on its Cartesian image, the counts in `count`. The interval lands when a kept
+/// step ends the clock at or past the boundary, with no tolerance (R-998); with the landing's retakes on, a kept step
+/// never ends past it, so the state's own clock is the boundary's.
 #[inline]
 fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     system: &AzSystem<R>,
@@ -857,15 +949,6 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     watch: &mut X,
 ) -> Interval<R> {
     let dt_left = params.delta_sync;
-    // With the clamp off the landing tolerance is 0, the reference driver's (`land_tol` is 0 unless the clamp is on;
-    // physics review 5873527379 of PR #502, point 2): the run without the landing fix lands only at `dt_left`.
-    let land_eps = if params.clamp {
-        params.land_eps_rel
-    } else {
-        R::default()
-    };
-    let land_at = dt_left - dt_left * land_eps;
-    let land_tol = dt_left * land_eps;
     let t0 = R::count(k) * dt_left;
     let entry = entry_size(&q, params);
     if !finite(entry) {
@@ -875,6 +958,7 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     let (mut kept_q, mut kept_p) = (q, p);
     let mut stepped = false;
     let mut landed = false;
+    let mut closed = false;
     let mut go = true;
     let mut here = 0u32;
     while go {
@@ -887,7 +971,7 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
             }
             kept_q = q;
             kept_p = p;
-            landed = q.t >= land_at;
+            landed = q.t >= dt_left;
             // `done` is read before the landing: a terminal that fires on the landing step ends the march there, its
             // state latched, never marched on into the next interval (Part 2a § "The sync grid is a fixed quantum of
             // physical time (R-565)": "a terminal event … still latches at the step it fires on"; code review
@@ -919,22 +1003,16 @@ fn interval<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
             let (mut q1, mut p1) = S::regularised_step(system, &q, &p, h);
             count.steps += 1;
             here += 1;
-            if q1.t >= land_at {
-                let want = dt_left - before;
-                let mut cur = h;
-                let mut tries = 0;
-                let mut retake = true;
-                while retake && tries < params.secant_tries {
-                    let got = q1.t - before;
-                    if !finite(got) || got <= R::default() || abs(got - want) <= land_tol {
-                        retake = false;
-                    } else {
-                        cur = cur * want / got;
-                        (q1, p1) = S::regularised_step(system, &q, &p, cur);
-                        count.steps += 1;
-                        here += 1;
-                        tries += 1;
-                    }
+            if q1.t > dt_left {
+                let l = land::<S, R>(system, (&q, &p), h, (q1, p1), params);
+                (q1, p1) = (l.q, l.p);
+                let retakes = l.retakes + l.halvings;
+                count.steps += retakes;
+                here += retakes;
+                count.most_bisections = count.most_bisections.max(l.halvings);
+                if q1.t < dt_left && !closed {
+                    count.closings += 1;
+                    closed = true;
                 }
             }
             count.dt_max = count.dt_max.observe(q1.t - before);
@@ -976,7 +1054,7 @@ pub fn march<S: AzStepper, R: AzReal, C: Cadence<R>, X: Watch<R>>(
     let mut regularised = R::default();
     let first = count.re_registrations;
     while k < k_target && count.end == End::Marching {
-        let (system, q, p) = register(&s, params.tiny, params.r3_floor);
+        let (system, q, p) = register(&s, params.tiny);
         if count.re_registrations == first {
             registered = system.e;
         }

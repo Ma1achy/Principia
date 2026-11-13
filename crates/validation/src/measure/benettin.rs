@@ -9,8 +9,8 @@ use kernel::decode::Ic;
 use kernel::detect::collision::CollisionRadius;
 use kernel::driver::advance::Advance;
 use kernel::driver::benettin::{
-    completed_renorms, integrate_ftle_with, sum_failed, Absolute, BenettinParams, Displacement,
-    ShadowForm,
+    completed_renorms, integrate_ftle_with, sum_failed, Absolute, BenettinParams, CancellationFree,
+    Displacement, Plain, ShadowForm,
 };
 use kernel::driver::wrapper::WrapperReal;
 use kernel::occupant::yoshida4::Yoshida4;
@@ -218,9 +218,20 @@ pub struct Test10 {
 }
 
 impl Test10 {
-    /// Runs it.
+    /// Runs it, the shadow in the payload's form ([`Absolute`]).
     pub fn run(orbit: &Orbit, precision: Precision, delta_0: f64, n_renorm: u32) -> Self {
-        let at = |d: f64, n: u32| lambda(orbit, precision, d, n);
+        Self::run_in(orbit, Form::Absolute, precision, delta_0, n_renorm)
+    }
+
+    /// Runs it, the shadow in `form` ([`lambda_in`]).
+    pub fn run_in(
+        orbit: &Orbit,
+        form: Form,
+        precision: Precision,
+        delta_0: f64,
+        n_renorm: u32,
+    ) -> Self {
+        let at = |d: f64, n: u32| lambda_in(orbit, form, precision, d, n);
         Test10 {
             delta_0,
             n_renorm,
@@ -265,6 +276,10 @@ pub const PROPOSED_N_RENORM: u32 = 300;
 /// the M3 gate): [`tolerance`] of the selected candidate's worst change, the gate's provisional threshold.
 pub const PROPOSED_TOLERANCE: f64 = 0.2;
 
+/// The region minimum R-976 has the re-run propose for REQ-INT-076 (`min_regions` ≥ 6): the eight-orbit report's
+/// chaotic orbits, its regions. Proposed, never declared in `gate.json` before the M3 gate confirms it.
+pub const PROPOSED_MIN_REGIONS: u32 = 6;
+
 /// The horizon of the Lagrange orbits: short enough that the f32 march, started a rounding away from the unstable
 /// orbit, is still on it at the end (`e^{λT}` times f32's `6·10⁻⁸` stays below `10⁻²` at the equal-mass exponent).
 pub const LAGRANGE_HORIZON: f64 = 30.0;
@@ -307,10 +322,19 @@ impl Candidate {
 
     /// Runs dd test 10 at `(delta_0, n_renorm)` on each of `orbits` at f32 and f64, each run under its orbit's name.
     pub fn run_on(orbits: &[Orbit], delta_0: f64, n_renorm: u32) -> Self {
+        Self::run_on_in(orbits, Form::Absolute, delta_0, n_renorm)
+    }
+
+    /// [`Candidate::run_on`], the shadow in `form`.
+    pub fn run_on_in(orbits: &[Orbit], form: Form, delta_0: f64, n_renorm: u32) -> Self {
         let mut runs = Vec::new();
         for orbit in orbits {
             for p in [Precision::F32, Precision::F64] {
-                runs.push((orbit.name, p, Test10::run(orbit, p, delta_0, n_renorm)));
+                runs.push((
+                    orbit.name,
+                    p,
+                    Test10::run_in(orbit, form, p, delta_0, n_renorm),
+                ));
             }
         }
         Candidate {
@@ -349,6 +373,11 @@ pub fn sweep() -> Vec<Candidate> {
 
 /// Every candidate of the grid on `orbits`, each on a thread of its own.
 pub fn sweep_on(orbits: &[Orbit]) -> Vec<Candidate> {
+    sweep_on_in(orbits, Form::Absolute)
+}
+
+/// [`sweep_on`], the shadow in `form` (R-976's re-run in the displacement form, beside the unchanged one).
+pub fn sweep_on_in(orbits: &[Orbit], form: Form) -> Vec<Candidate> {
     let pairs: Vec<(f64, u32)> = GRID_DELTA_0
         .iter()
         .flat_map(|&d| GRID_N_RENORM.iter().map(move |&n| (d, n)))
@@ -356,7 +385,7 @@ pub fn sweep_on(orbits: &[Orbit]) -> Vec<Candidate> {
     std::thread::scope(|s| {
         let handles: Vec<_> = pairs
             .iter()
-            .map(|&(d, n)| s.spawn(move || Candidate::run_on(orbits, d, n)))
+            .map(|&(d, n)| s.spawn(move || Candidate::run_on_in(orbits, form, d, n)))
             .collect();
         handles
             .into_iter()
@@ -605,11 +634,22 @@ pub fn eight_orbit_candidates(
     }
 }
 
+/// The values in force, provisional (R-976), measured in `candidates`: the provisional `(‖δ₀‖, n_renorm)`'s worst
+/// change, `None` where the sweep did not run it.
+pub fn provisional_worst(candidates: &[Candidate]) -> Option<f64> {
+    candidates
+        .iter()
+        .find(|c| c.delta_0 == PROPOSED_DELTA_0 && c.n_renorm == PROPOSED_N_RENORM)
+        .map(Candidate::worst)
+}
+
 /// The eight-orbit report on `candidates` over `orbits`, its regions the orbits named in `chaotic`, against `config`:
 /// reported, never gated (R-649), its verdict the report's completeness alone ([`report_complete`]). Its description
-/// gives the rule's pick over every orbit and the tolerance the rule gives, beside the proposal, which it leaves as it
-/// is; its negative results, the non-finite count and the pick with each chaotic orbit left out; its scatter, each
-/// candidate's spread over the chaotic orbits and each run. Refused for no candidates.
+/// gives the rule's pick over every orbit and the tolerance the rule gives, the re-run's proposal from its evidence in
+/// the shadow form it ran; beside it the values in force, provisional (R-976), which it leaves as they are, and their
+/// worst change here ([`provisional_worst`]); and R-976's proposed `min_regions` with its evidence. Its negative
+/// results, the non-finite count and the pick with each chaotic orbit left out; its scatter, each candidate's spread
+/// over the chaotic orbits and each run. Refused for no candidates.
 pub fn eight_orbit_report(
     config: &GateConfig,
     name: &str,
@@ -630,20 +670,29 @@ pub fn eight_orbit_report(
     negative_results.extend(leave_one_out_lines(candidates, chosen, chaotic));
     let mut scatter = spread_lines(candidates, chaotic);
     scatter.extend(run_lines(candidates));
+    let provisional = match provisional_worst(candidates) {
+        Some(w) if w.is_finite() => format!("worst change here {w:.4}"),
+        Some(_) => "worst change here not finite".to_string(),
+        None => "not in this sweep".to_string(),
+    };
     Ok(report(
         config,
         name,
         format!(
             "{description}: reported, not gated (R-649; the verdict is the report's completeness alone). Over the \
-             {} starting conditions the rule picks ‖δ₀‖ = {:e}, n_renorm = {} (worst change {:.4}), tolerance {}; \
-             the proposal stays ‖δ₀‖ = {PROPOSED_DELTA_0:e}, n_renorm = {PROPOSED_N_RENORM}, tolerance \
-             {PROPOSED_TOLERANCE}, for the owner at the M3 gate (REQ-INT-076). Bias is against f64 at ‖δ₀‖ = \
-             {REFERENCE_DELTA_0:e} at the same n_renorm",
+             {} starting conditions the rule picks ‖δ₀‖ = {:e}, n_renorm = {} (worst change {:.4}), tolerance {}: \
+             the re-run's proposal from its evidence, in this shadow form. In force, provisional (R-976): ‖δ₀‖ = \
+             {PROPOSED_DELTA_0:e}, n_renorm = {PROPOSED_N_RENORM}, tolerance {PROPOSED_TOLERANCE}, {provisional}; \
+             the owner confirms REQ-INT-076's values at the M3 gate. Bias is against f64 at ‖δ₀‖ = \
+             {REFERENCE_DELTA_0:e} at the same n_renorm. Proposed (R-976): min_regions ≥ {PROPOSED_MIN_REGIONS}, the \
+             chaotic orbits, for the owner at the M3 gate; its evidence, this report's {} regions and the pick with \
+             each left out (its negative results)",
             orbits.len(),
             chosen.delta_0,
             chosen.n_renorm,
             chosen.worst(),
-            tolerance(chosen.worst())
+            tolerance(chosen.worst()),
+            chaotic.len()
         ),
         report_complete(candidates, orbits),
         scatter,
@@ -674,74 +723,182 @@ pub fn periodic_set() -> [Orbit; 4] {
     ]
 }
 
-/// One periodic orbit measured: its known exponent, `λ_T` at f64 in the absolute form (the finite-time value the f32
-/// forms are read against), and at f32 in the absolute and displacement forms.
+/// A shadow form measured (REQ-VAL-038; R-974): the absolute form, the payload's, or the displacement form with its
+/// force difference formed (a1) plainly or (a2) cancellation-free.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Form {
+    Absolute,
+    Plain,
+    CancellationFree,
+}
+
+impl Form {
+    /// Every form, in the table's order.
+    pub const ALL: [Form; 3] = [Form::Absolute, Form::Plain, Form::CancellationFree];
+
+    /// The form's name in the tables.
+    pub fn word(self) -> &'static str {
+        match self {
+            Self::Absolute => "absolute",
+            Self::Plain => "(a1) plain",
+            Self::CancellationFree => "(a2) cancellation-free",
+        }
+    }
+
+    /// The form named `word` in a fixture: `absolute`, `plain` or `cancellation-free`.
+    pub fn parse(word: &str) -> Result<Form, String> {
+        match word {
+            "absolute" => Ok(Self::Absolute),
+            "plain" => Ok(Self::Plain),
+            "cancellation-free" => Ok(Self::CancellationFree),
+            _ => Err(format!(
+                "form `{word}` is none of absolute, plain, cancellation-free"
+            )),
+        }
+    }
+}
+
+/// `λ_T` of `orbit` by Yoshida-4 at `precision` in `form`, at `(delta_0, n_renorm)` ([`measure`]).
+pub fn lambda_in(
+    orbit: &Orbit,
+    form: Form,
+    precision: Precision,
+    delta_0: f64,
+    n_renorm: u32,
+) -> f64 {
+    type P = Displacement<Plain>;
+    type C = Displacement<CancellationFree>;
+    match (form, precision) {
+        (Form::Absolute, Precision::F32) => {
+            measure::<Yoshida4, f32, Absolute>(orbit, delta_0, n_renorm)
+        }
+        (Form::Absolute, Precision::F64) => {
+            measure::<Yoshida4, f64, Absolute>(orbit, delta_0, n_renorm)
+        }
+        (Form::Plain, Precision::F32) => measure::<Yoshida4, f32, P>(orbit, delta_0, n_renorm),
+        (Form::Plain, Precision::F64) => measure::<Yoshida4, f64, P>(orbit, delta_0, n_renorm),
+        (Form::CancellationFree, Precision::F32) => {
+            measure::<Yoshida4, f32, C>(orbit, delta_0, n_renorm)
+        }
+        (Form::CancellationFree, Precision::F64) => {
+            measure::<Yoshida4, f64, C>(orbit, delta_0, n_renorm)
+        }
+    }
+    .lambda
+}
+
+/// One periodic orbit measured: its known exponent, and `λ_T` in each [`Form`] at f32 and at f64.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FormRow {
     pub orbit: &'static str,
     pub known: f64,
-    pub f64_absolute: f64,
-    pub f32_absolute: f64,
-    pub f32_displacement: f64,
+    /// `[f32, f64]` per form, in [`Form::ALL`]'s order.
+    pub lambdas: [[f64; 2]; 3],
 }
 
 impl FormRow {
-    /// Measures `orbit` at `(delta_0, n_renorm)`.
+    /// Measures `orbit` at `(delta_0, n_renorm)` in every form at both precisions.
     pub fn run(orbit: &Orbit, delta_0: f64, n_renorm: u32) -> Self {
         FormRow {
             orbit: orbit.name,
             known: orbit.known.unwrap_or(f64::NAN),
-            f64_absolute: measure::<Yoshida4, f64, Absolute>(orbit, delta_0, n_renorm).lambda,
-            f32_absolute: measure::<Yoshida4, f32, Absolute>(orbit, delta_0, n_renorm).lambda,
-            f32_displacement: measure::<Yoshida4, f32, Displacement>(orbit, delta_0, n_renorm)
-                .lambda,
+            lambdas: Form::ALL.map(|f| {
+                [Precision::F32, Precision::F64].map(|p| lambda_in(orbit, f, p, delta_0, n_renorm))
+            }),
         }
     }
 
-    /// Whether every value is finite.
-    pub fn finite(&self) -> bool {
-        [
-            self.known,
-            self.f64_absolute,
-            self.f32_absolute,
-            self.f32_displacement,
-        ]
-        .iter()
-        .all(|x| x.is_finite())
+    /// `λ_T` in `form` at `precision`.
+    pub fn lambda(&self, form: Form, precision: Precision) -> f64 {
+        let k = Form::ALL.iter().position(|&f| f == form).unwrap_or(0);
+        self.lambdas[k][usize::from(precision == Precision::F64)]
     }
 
-    /// The row in the measurement's table.
+    /// The signed gap `λ_T(f32) − λ_T(f64)` in `form`, both runs in that form (the criterion's measure).
+    pub fn gap(&self, form: Form) -> f64 {
+        self.lambda(form, Precision::F32) - self.lambda(form, Precision::F64)
+    }
+
+    /// The row in the measurement's table: per form, `λ_T` at f32, its error against the known exponent, and the gap.
     pub fn line(&self) -> String {
+        let cells: Vec<String> = Form::ALL
+            .iter()
+            .map(|&f| {
+                let l = self.lambda(f, Precision::F32);
+                format!("{l:.5} ({:+.5}, {:+.5})", l - self.known, self.gap(f))
+            })
+            .collect();
         format!(
-            "| {} | {:.5} | {:.5} | {:.5} ({:+.5}, {:+.5}) | {:.5} ({:+.5}, {:+.5}) |",
+            "| {} | {:.5} | {} |",
             self.orbit,
             self.known,
-            self.f64_absolute,
-            self.f32_absolute,
-            self.f32_absolute - self.known,
-            self.f32_absolute - self.f64_absolute,
-            self.f32_displacement,
-            self.f32_displacement - self.known,
-            self.f32_displacement - self.f64_absolute,
+            cells.join(" | ")
         )
     }
 }
 
-/// The `‖δ₀‖`s the forms are measured at: the proposed value, and `10⁻⁵`, where the f32 state's rounding is a larger
-/// part of the separation, the regime a displacement form would help in.
-pub const FORM_DELTA_0: [f64; 2] = [PROPOSED_DELTA_0, 1e-5];
+/// The `‖δ₀‖`s the forms are measured at: the proposed value, and `10⁻⁵`, the criterion's, where the f32 state's
+/// rounding is a larger part of the separation, the regime a displacement form would help in.
+pub const FORM_DELTA_0: [f64; 2] = [PROPOSED_DELTA_0, CRITERION_DELTA_0];
+
+/// The criterion's `‖δ₀‖` (TASK-M3-72's pre-registered criterion).
+pub const CRITERION_DELTA_0: f64 = 1e-5;
+
+/// The `‖δ₀‖`s the criterion reads Burrau's f32 `λ_T` at.
+pub const BURRAU_DELTA_0: [f64; 2] = [1e-5, 1e-6];
 
 /// The table's header.
 pub const FORM_HEADER: &str =
-    "| orbit | known λ | f64 absolute λ_T | f32 absolute λ_T (− known, − f64) | \
-                               f32 displacement λ_T (− known, − f64) |\n|---|---|---|---|---|";
+    "| orbit | known λ | f32 absolute λ_T (− known, gap f32 − f64) | f32 (a1) plain λ_T (− \
+     known, gap) | f32 (a2) cancellation-free λ_T (− known, gap) |\n|---|---|---|---|---|";
 
-/// The periodic set measured at `(delta_0, n_renorm)`.
+/// The periodic set measured at `(delta_0, n_renorm)`, each orbit on a thread of its own.
 pub fn shadow_forms(delta_0: f64, n_renorm: u32) -> Vec<FormRow> {
-    periodic_set()
-        .iter()
-        .map(|o| FormRow::run(o, delta_0, n_renorm))
-        .collect()
+    let orbits = periodic_set();
+    std::thread::scope(|s| {
+        let handles: Vec<_> = orbits
+            .iter()
+            .map(|o| s.spawn(move || FormRow::run(o, delta_0, n_renorm)))
+            .collect();
+        handles
+            .into_iter()
+            .map(|h| h.join().expect("a form thread completes"))
+            .collect()
+    })
+}
+
+/// A form's worst gap over `rows`: the largest `|λ_T(f32) − λ_T(f64)|`, a gap that is not finite counting as
+/// infinite.
+pub fn worst_gap(rows: &[FormRow], form: Form) -> f64 {
+    rows.iter()
+        .map(|r| {
+            let g = r.gap(form).abs();
+            if g.is_finite() {
+                g
+            } else {
+                f64::INFINITY
+            }
+        })
+        .fold(0.0, f64::max)
+}
+
+/// Whether `form`'s f32 `λ_T` on Burrau is finite at every [`BURRAU_DELTA_0`], `n_renorm` as given, and the values.
+pub fn burrau_finite(form: Form, n_renorm: u32) -> (bool, [f64; 2]) {
+    let o = burrau();
+    let l = BURRAU_DELTA_0.map(|d| lambda_in(&o, form, Precision::F32, d, n_renorm));
+    (l.iter().all(|x| x.is_finite()), l)
+}
+
+/// TASK-M3-72's pre-registered choice between (a1) and (a2) (its task file, written before any run; R-649, R-974):
+/// where exactly one stays finite on Burrau, that one; else (a2) where `W(a1) − W(a2) ≥ 1/T`, `T` the horizon the
+/// worst gaps were read over; else (a1). `w` and `burrau` are (a1)'s then (a2)'s.
+pub fn choose(w: [f64; 2], burrau: [bool; 2], horizon: f64) -> Form {
+    match burrau {
+        [true, false] => Form::Plain,
+        [false, true] => Form::CancellationFree,
+        _ if w[0] - w[1] >= 1.0 / horizon => Form::CancellationFree,
+        _ => Form::Plain,
+    }
 }
 
 /// The two horizons the finite-time gap to Routh's exponent is read at: [`LAGRANGE_HORIZON`] and twice it, both short
@@ -833,6 +990,10 @@ enum CalibrationInput {
         description: String,
         #[serde(default)]
         drop: Option<String>,
+        /// The shadow's form, `absolute` (the payload's, unchanged) where none is named; R-976's re-run names the
+        /// displacement form too.
+        #[serde(default)]
+        form: Option<String>,
     },
     /// dd test 10 on one orbit at one precision, at the proposed values unless named.
     Test10 {
@@ -976,18 +1137,33 @@ impl Gate for BenettinCalibrationGate {
                     1,
                 ))
             }
-            CalibrationInput::EightOrbits { description, drop } => {
-                // The grid runs once per process, the report and its control sharing it.
+            CalibrationInput::EightOrbits {
+                description,
+                drop,
+                form,
+            } => {
+                // The grid runs once per process and form, the report and its control sharing it.
                 static SWEEP: OnceLock<Vec<Candidate>> = OnceLock::new();
+                static SWEEP_PLAIN: OnceLock<Vec<Candidate>> = OnceLock::new();
+                static SWEEP_FREE: OnceLock<Vec<Candidate>> = OnceLock::new();
+                let form = match form {
+                    Some(word) => Form::parse(&word).map_err(|e| format!("{name}: {e}"))?,
+                    None => Form::Absolute,
+                };
+                let cache = match form {
+                    Form::Absolute => &SWEEP,
+                    Form::Plain => &SWEEP_PLAIN,
+                    Form::CancellationFree => &SWEEP_FREE,
+                };
                 let orbits = eight_orbits();
                 let candidates = eight_orbit_candidates(&orbits, drop.as_deref(), |o| {
-                    SWEEP.get_or_init(|| sweep_on(o)).clone()
+                    cache.get_or_init(|| sweep_on_in(o, form)).clone()
                 })
                 .map_err(|e| format!("{name}: {e}"))?;
                 eight_orbit_report(
                     config,
                     name,
-                    &description,
+                    &format!("{description} (the shadow's form: {})", form.word()),
                     &candidates,
                     &orbits,
                     &chaotic_orbits().map(|o| o.name),
@@ -997,19 +1173,151 @@ impl Gate for BenettinCalibrationGate {
     }
 }
 
-/// `cargo xtask gate shadow-form` (REQ-VAL-038; R-649): a measurement. Its controls check the comparison, and its
-/// `periodic-set` input measures both f32 shadow forms against the known exponents at the proposed values; the switch
-/// to the displacement form waits on REQ-PAY-085's criterion, so nothing here decides it.
+/// `cargo xtask gate shadow-form` (REQ-VAL-038; R-649, R-974): a measurement. Its `differs` controls check that a
+/// displacement form is not the absolute form under another name (physics review 5866988394 of PR #493, N6): each
+/// passes where the two forms' f32 `λ_T` differ bitwise on some orbit of the periodic set, and the control of two
+/// identical forms fails. Its `periodic-set` input measures the three forms against the known exponents and makes TASK-M3-72's
+/// pre-registered (a1)/(a2) choice ([`choose`]); whether the chosen form's gain is meaningful enough to switch the
+/// payload is REQ-PAY-085's calibration (TASK-M4-13), so nothing here switches it.
 pub struct ShadowFormGate;
 
-/// A `shadow-form` control.
+/// A `shadow-form` input.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields, tag = "kind", rename_all = "kebab-case")]
 enum FormControl {
-    /// One form read against itself, or against itself at `scale·‖δ₀‖`: passes where the two reads are identical.
-    Compare { description: String, scale: f64 },
-    /// The periodic set measured: passes where every value is finite.
+    /// Two forms' f32 `λ_T` on the periodic set at the criterion's `‖δ₀‖`: passes where they differ bitwise on some orbit.
+    Differs {
+        description: String,
+        forms: [String; 2],
+    },
+    /// The measurement and the criterion's choice: passes where it is structurally complete ([`periodic_complete`]): a
+    /// table at both `‖δ₀‖`s, each with a row per orbit, three forms by two precisions in each, and Burrau's two reads
+    /// in each form. No value is judged (R-649); a read that is not finite is a result, recorded.
     PeriodicSet { description: String },
+}
+
+/// Whether two forms' f32 `λ_T` differ bitwise on some orbit, with the values.
+pub fn forms_differ(a: Form, b: Form) -> (bool, Vec<(f64, f64)>) {
+    let reads: Vec<(f64, f64)> = periodic_set()
+        .iter()
+        .map(|o| {
+            let at = |f| lambda_in(o, f, Precision::F32, CRITERION_DELTA_0, PROPOSED_N_RENORM);
+            (at(a), at(b))
+        })
+        .collect();
+    (reads.iter().any(|(x, y)| x.to_bits() != y.to_bits()), reads)
+}
+
+/// What the `periodic-set` measurement read: a table of the periodic set per `‖δ₀‖`, and Burrau's f32 `λ_T` per form.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeriodicReads {
+    /// `(‖δ₀‖, a row per orbit)`, in the order measured.
+    pub tables: Vec<(f64, Vec<FormRow>)>,
+    /// `(form, its f32 λ_T at each Burrau ‖δ₀‖)`, in the order measured.
+    pub burrau: Vec<(Form, Vec<f64>)>,
+}
+
+impl PeriodicReads {
+    /// Measures the periodic set at each [`FORM_DELTA_0`], and Burrau at f32 in each form at each [`BURRAU_DELTA_0`].
+    pub fn run() -> Self {
+        PeriodicReads {
+            tables: FORM_DELTA_0
+                .iter()
+                .map(|&d| (d, shadow_forms(d, PROPOSED_N_RENORM)))
+                .collect(),
+            burrau: Form::ALL
+                .iter()
+                .map(|&f| (f, burrau_finite(f, PROPOSED_N_RENORM).1.to_vec()))
+                .collect(),
+        }
+    }
+}
+
+/// Whether the `periodic-set` measurement is structurally complete: a table at each [`FORM_DELTA_0`], in that order,
+/// each with a row per orbit of [`periodic_set`], in its order; and a Burrau entry per form of [`Form::ALL`], in its
+/// order, each with a read at each [`BURRAU_DELTA_0`]. A row holds three forms by two precisions by its type
+/// ([`FormRow::lambdas`]). It judges no value (R-649): a read that is not finite, as the absolute form's on Burrau is,
+/// is a result recorded, and counts as a read.
+pub fn periodic_complete(reads: &PeriodicReads) -> bool {
+    let orbits = periodic_set().map(|o| o.name);
+    let deltas: Vec<f64> = reads.tables.iter().map(|t| t.0).collect();
+    let forms: Vec<Form> = reads.burrau.iter().map(|b| b.0).collect();
+    deltas == FORM_DELTA_0
+        && reads
+            .tables
+            .iter()
+            .all(|t| t.1.iter().map(|r| r.orbit).eq(orbits))
+        && forms == Form::ALL
+        && reads
+            .burrau
+            .iter()
+            .all(|b| b.1.len() == BURRAU_DELTA_0.len())
+}
+
+/// The `periodic-set` report: the tables at both `‖δ₀‖`s, Burrau, the worst gaps and the choice, then the finite-time
+/// gaps; and whether the measurement is structurally complete ([`periodic_complete`]), its values judged nowhere.
+pub fn periodic_report(name: &str, description: &str) -> (String, bool) {
+    let reads = PeriodicReads::run();
+    let mut markdown = format!(
+        "# shadow-form: {name}\n\n{description}; T = {LAGRANGE_HORIZON}, Yoshida-4, n_renorm = {PROPOSED_N_RENORM}. The gap \
+         is λ_T(f32) − λ_T(f64), both runs in the column's form.\n"
+    );
+    let mut at_criterion: &[FormRow] = &[];
+    for (d, rows) in &reads.tables {
+        let table: Vec<String> = rows.iter().map(FormRow::line).collect();
+        markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{FORM_HEADER}\n{}\n", table.join("\n"));
+        let worst: Vec<String> = Form::ALL
+            .iter()
+            .map(|&f| format!("{} {:.5}", f.word(), worst_gap(rows, f)))
+            .collect();
+        markdown += &format!("\nWorst |gap|: {}\n", worst.join("; "));
+        if *d == CRITERION_DELTA_0 {
+            at_criterion = rows;
+        }
+    }
+    let mut burrau_ok = [false; 2];
+    markdown += &format!(
+        "\nBurrau, f32, n_renorm = {PROPOSED_N_RENORM}, λ_T at ‖δ₀‖ = {BURRAU_DELTA_0:?}:\n\n"
+    );
+    for (f, l) in &reads.burrau {
+        let ok = l.iter().all(|x| x.is_finite());
+        let values: Vec<String> = l.iter().map(|x| format!("{x:.5}")).collect();
+        markdown += &format!(
+            "- {}: {} ({})\n",
+            f.word(),
+            values.join(", "),
+            if ok { "finite" } else { "not finite" }
+        );
+        match f {
+            Form::Plain => burrau_ok[0] = ok,
+            Form::CancellationFree => burrau_ok[1] = ok,
+            Form::Absolute => {}
+        }
+    }
+    let w = [Form::Plain, Form::CancellationFree].map(|f| worst_gap(at_criterion, f));
+    let chosen = choose(w, burrau_ok, LAGRANGE_HORIZON);
+    markdown += &format!(
+        "\nThe criterion (TASK-M3-72's, written before any run): W(a1) = {:.5}, W(a2) = {:.5}, W(a1) − W(a2) = {:+.5} \
+         against 1/T = {:.5}; Burrau finite: (a1) {}, (a2) {}. Chosen: {}.\n",
+        w[0],
+        w[1],
+        w[0] - w[1],
+        1.0 / LAGRANGE_HORIZON,
+        burrau_ok[0],
+        burrau_ok[1],
+        chosen.word()
+    );
+    markdown += "\nThe gap to Routh's exponent at two horizons, f64, the absolute form (a measurement, R-649: reported, \
+                 never tuned). A gap that is finite-time falls as 1/T, a ratio near ½ and gap × T near constant.\n";
+    for d in FORM_DELTA_0 {
+        let table: Vec<String> = finite_time_gaps(d, PROPOSED_N_RENORM)
+            .iter()
+            .map(GapRow::line)
+            .collect();
+        markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{GAP_HEADER}\n{}\n", table.join("\n"));
+    }
+    let complete = periodic_complete(&reads);
+    (markdown, complete)
 }
 
 impl MeasurementGate for ShadowFormGate {
@@ -1024,51 +1332,37 @@ impl MeasurementGate for ShadowFormGate {
         fixture: &serde_json::Value,
     ) -> Result<MeasurementControl, String> {
         match FormControl::deserialize(fixture).map_err(|e| format!("{name}: {e}"))? {
-            FormControl::Compare { description, scale } => {
-                let orbit = &periodic_set()[0];
-                let read =
-                    |d: f64| measure::<Yoshida4, f32, Absolute>(orbit, d, PROPOSED_N_RENORM).lambda;
-                let (a, b) = (read(PROPOSED_DELTA_0), read(scale * PROPOSED_DELTA_0));
-                let same = a.to_bits() == b.to_bits();
+            FormControl::Differs { description, forms } => {
+                let a = Form::parse(&forms[0]).map_err(|e| format!("{name}: {e}"))?;
+                let b = Form::parse(&forms[1]).map_err(|e| format!("{name}: {e}"))?;
+                let (differ, reads) = forms_differ(a, b);
+                let lines: Vec<String> = periodic_set()
+                    .iter()
+                    .zip(&reads)
+                    .map(|(o, (x, y))| format!("- {}: {x} against {y}", o.name))
+                    .collect();
                 Ok(MeasurementControl {
-                    description: format!("{description}: {a:.6} against {b:.6}"),
-                    verdict: if same { Verdict::Pass } else { Verdict::Fail },
+                    description: format!("{description}: {} against {}", a.word(), b.word()),
+                    verdict: if differ { Verdict::Pass } else { Verdict::Fail },
                     markdown: format!(
-                        "# shadow-form: {name}\n\n{description}\n\nf32 absolute λ_T on {}: {a} and {b}\n",
-                        orbit.name
+                        "# shadow-form: {name}\n\n{description}\n\nf32 λ_T at ‖δ₀‖ = {CRITERION_DELTA_0:e}, {} against \
+                         {}:\n\n{}\n",
+                        a.word(),
+                        b.word(),
+                        lines.join("\n")
                     ),
                 })
             }
             FormControl::PeriodicSet { description } => {
-                let mut markdown = format!(
-                    "# shadow-form: {name}\n\n{description}; T = {LAGRANGE_HORIZON}, Yoshida-4, n_renorm = \
-                     {PROPOSED_N_RENORM}\n"
-                );
-                let mut every = Vec::new();
-                for d in FORM_DELTA_0 {
-                    let rows = shadow_forms(d, PROPOSED_N_RENORM);
-                    let table: Vec<String> = rows.iter().map(FormRow::line).collect();
-                    markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{FORM_HEADER}\n{}\n", table.join("\n"));
-                    every.extend(rows);
-                }
-                markdown += "\nThe displacement column holds δ⃗ but forms x + δ⃗ at each macro-step and marches that \
-                             absolute state, so it agrees with the absolute column by construction (PR #493, physics \
-                             F2): the table does not settle REQ-VAL-038.\n";
-                markdown += "\nThe gap to Routh's exponent at two horizons, f64, the absolute form (a measurement, \
-                             R-649: reported, never tuned). A gap that is finite-time falls as 1/T, a ratio near ½ \
-                             and gap × T near constant.\n";
-                for d in FORM_DELTA_0 {
-                    let table: Vec<String> = finite_time_gaps(d, PROPOSED_N_RENORM)
-                        .iter()
-                        .map(GapRow::line)
-                        .collect();
-                    markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{GAP_HEADER}\n{}\n", table.join("\n"));
-                }
-                let finite = every.iter().all(FormRow::finite);
+                let (markdown, complete) = periodic_report(name, &description);
                 print!("{markdown}");
                 Ok(MeasurementControl {
                     description,
-                    verdict: if finite { Verdict::Pass } else { Verdict::Fail },
+                    verdict: if complete {
+                        Verdict::Pass
+                    } else {
+                        Verdict::Fail
+                    },
                     markdown,
                 })
             }

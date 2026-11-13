@@ -4,7 +4,7 @@
 //! - `qa_m368_done_on_each_landing`: Aarseth–Zare + RK4 marched over four sync boundaries, with a terminal that fires on
 //!   the landing step of the first, second and third interval in turn, at f32 and f64. The march ends at that step: its
 //!   state is bitwise the landing state of the same march run to that boundary with no terminal, its accepted steps are
-//!   that march's, its time is that boundary's (within the landing tolerance), the end is `Done`, and the march never
+//!   that march's, its time is that boundary's (exactly, R-998; *was* "within the landing tolerance"), the end is `Done`, and the march never
 //!   registered past the landing (re-registrations equal to the boundaries landed on, so no registration of the next
 //!   interval was made).
 //!
@@ -37,23 +37,21 @@ impl P for f64 {
     }
 }
 
-/// The landing tolerance's relative width at `R` (the test values below).
-const LAND_EPS: (f32, f64) = (1e-5, 1e-14);
-
-/// Step control values for the test: `η = 0.01`, `Δ_sync = 1/8` (exact in binary), `TINY` `1e-37` / `1e-300`, landing
-/// tolerance `1e-5` / `1e-14`, `f = 0.02`, a budget no march here comes near, the landing clamp on.
+/// Step control values for the test: `η = 0.01`, `Δ_sync = 1/8` (exact in binary), `TINY` `1e-37` / `1e-300`,
+/// `f = 0.02`, a budget no march here comes near, the landing clamp and retakes on (the secant's 4, the bisection's 64,
+/// Part 2b). Changed by TASK-M3-76: the `|R₃|` floor is `TINY` (R-999) and the landing takes no tolerance (R-998);
+/// *was* `r3_floor` `0` / `1e-300` and the landing tolerance `1e-5` / `1e-14`.
 fn params<R: AzReal>() -> AzParams<R> {
     AzParams {
         eta: R::at_width(0.01, 0.01),
         delta_sync: R::at_width(0.125, 0.125),
         tiny: R::at_width(1e-37, 1e-300),
         predictive_f: R::at_width(0.02, 0.02),
-        r3_floor: R::at_width(0.0, 1e-300),
-        land_eps_rel: R::at_width(LAND_EPS.0, LAND_EPS.1),
         step_budget_rate: R::at_width(1e7, 1e7),
         n_min: 1_000_000,
         clamp: true,
         secant_tries: 4,
+        bisect_tries: 64,
     }
 }
 
@@ -138,11 +136,6 @@ fn check_each_landing<R: P, C: Cadence<R>>(terminal: Terminal<C>) {
     let s = burrau::<R>();
     let prm = params::<R>();
     let delta: f64 = prm.delta_sync.into();
-    let eps = if core::mem::size_of::<R>() == 4 {
-        f64::from(LAND_EPS.0)
-    } else {
-        LAND_EPS.1
-    };
     for j in 1..=3u32 {
         let reference = march::<Rk4, R, Never, ExplicitTest>(
             &s,
@@ -185,9 +178,11 @@ fn check_each_landing<R: P, C: Cadence<R>>(terminal: Terminal<C>) {
         );
         let t: f64 = out.t.into();
         let at = f64::from(j) * delta;
-        assert!(
-            (t - at).abs() <= delta * eps * 2.0,
-            "the latched time {t} is boundary {j}'s, {at}, within the landing tolerance"
+        // R-998: no landing tolerance; the time is the boundary's exactly (`j·Δ_sync`, exact for `Δ_sync = 1/8`).
+        // *Was:* `|t − j·Δ| ≤ 2·Δ·LAND_EPS_REL`.
+        assert_eq!(
+            t, at,
+            "the latched time {t} is boundary {j}'s, {at}, exactly"
         );
     }
 }
