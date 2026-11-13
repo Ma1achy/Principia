@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-TOOL-031, REQ-TOOL-032, REQ-TOOL-038, REQ-VAL-053, REQ-INT-019, REQ-INT-074
-- **Depends on:** TASK-M3-08, TASK-M3-19
+- **Depends on:** TASK-M3-08, TASK-M3-75, TASK-M3-19
 - **Needs (earlier milestones):** REQ-VAL-003
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3, PIT-4.4, PIT-5
@@ -37,3 +37,4 @@
 
 ## Notes
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-074.
+- *13 Nov 2026, applied per R-369:* TASK-M3-08 is re-scoped to Heggie, registered once at `t = 0`, and the radial collision gate; logH, the seam wiring into `integrate_with` and the visible re-registration count are TASK-M3-75's, which waits on RQ-808 to RQ-810. What this task read from TASK-M3-08 is now in the two, so it depends on both. *Was:* "Depends on: TASK-M3-08, TASK-M3-19".

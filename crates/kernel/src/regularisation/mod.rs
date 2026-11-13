@@ -12,7 +12,8 @@
 //!
 //! **`none`** ([`NoRegularisation`]) is built here: Cartesian, the independent control, always available. Its pairs are
 //! separable, so each is the stepper's own form: the stepper's profile and the stepper's `ADVANCE`. **Aarseth–Zare**
-//! ([`az::AarsethZare`]) is built in [`az`]; Heggie and logH are TASK-M3-08's. Under a regularisation the stepper is
+//! ([`az::AarsethZare`]) is built in [`az`]; Heggie's regularised system in [`heggie`] (TASK-M3-08), its march,
+//! registered once at `t = 0`, TASK-M3-77's, its seam `ADVANCE` and logH TASK-M3-75's (R-992 to R-994). Under a regularisation the stepper is
 //! applied to the regularised equations of motion in its form on a non-separable system ([`form`]).
 //!
 //! [`pairs`] is Part 2b's pair table and the selection of a pair; [`dt_max`] is the per-trajectory largest-step
@@ -21,6 +22,7 @@
 pub mod az;
 pub mod dt_max;
 pub mod form;
+pub mod heggie;
 pub mod pairs;
 
 use core::marker::PhantomData;
@@ -79,7 +81,7 @@ pub trait Regularisation {
     /// Cost 2). `none` keeps the stepper's rule ([`Reached::by_count`]). **This default suits only a march that cannot
     /// fail**: it never reports [`Reached::NonFinite`] or [`Reached::Exhausted`], so a regularisation whose march can
     /// end non-finite or on its step budget reports it in its own, as [`az::AarsethZare`] does; Heggie and logH must
-    /// (TASK-M3-08; physics review 5879658175 of PR #502, P2).
+    /// (TASK-M3-75, from TASK-M3-08's split; physics review 5879658175 of PR #502, P2).
     #[inline]
     fn advance_reaching<S: Stepper, R: AdvanceReal, C: Cadence<R>>(
         state: &State<R>,

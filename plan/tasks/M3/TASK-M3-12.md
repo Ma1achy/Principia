@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-EVT-005, REQ-EVT-006, REQ-EVT-011, REQ-EVT-015, REQ-EVT-016, REQ-EVT-017, REQ-EVT-018, REQ-EVT-024, REQ-EVT-026
-- **Depends on:** TASK-M3-08, TASK-M3-11
+- **Depends on:** TASK-M3-08, TASK-M3-75, TASK-M3-11
 - **Needs (earlier milestones):** REQ-SYS-016, REQ-PAY-004
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-1.5, PIT-2, PIT-2.1, PIT-2.2
@@ -75,3 +75,4 @@ The fixture files are `fixtures/escape/<name>.toml`, each holding these paramete
 - *4 Nov 2026 (R-710, closing RQ-697 (b)):* the wait on RQ-697 ends. The gate's third condition reads the stored `E_0`, its sign decided once per trajectory at `t = 0`.
 - Waits on RQ-708, whether the running kernel reaches the ionisation gate only after `E_rel > 0`: this task's Goal and R-32 read differently, and the answer changes `t_end` on some `E > 0` states. The gate waits; the escape rule and the predicate test don't (physics review 5801941254 of PR #425, N1).
 - *7 Nov 2026 (R-818, RQ-708 (a)):* the ionisation gate sits behind `E_rel > 0`: the escape rule fires first and the gate classifies that escape as `detail = 3`, never firing on its own. REQ-EVT-006 says so; its test takes RQ-708's equilateral family (`u² = 2.5/r₀`), where the firing waits until `r ≈ 2.16 r₀`, with a control that lets the gate fire on its own.
+- *13 Nov 2026, applied per R-369:* TASK-M3-08 is re-scoped to Heggie, registered once at `t = 0`, and the radial collision gate; logH, the seam wiring into `integrate_with` and the visible re-registration count are TASK-M3-75's, which waits on RQ-808 to RQ-810. What this task read from TASK-M3-08 is now in the two, so it depends on both. *Was:* "Depends on: TASK-M3-08, TASK-M3-11".

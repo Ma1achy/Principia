@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-INT-100
-- **Depends on:** TASK-M3-08
+- **Depends on:** TASK-M3-08, TASK-M3-75
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-4
@@ -33,3 +33,4 @@ The regularised occupants' sync grid is a fixed quantum of physical time, `Δ_sy
 - R-565 (21 Oct 2026). The cost and label-flip evidence for `Δ_sync` is prin-rs's `sync_grid_probe` (PR #34; `docs/incoming/2026-10-21_gap_sweep_integrator/`, a record). The value is proposed by TASK-M3-68 (REQ-INT-080; *was:* TASK-M3-07, split 10 Nov 2026, applied per R-369) and confirmed at the M3 gate; until then the tests run at the proposal's value and at a second one.
 - The unregularised macro-step grid is unchanged: R-132's `dt_macro` (R-602, RQ-524 (a); *was:* "(RQ-524's (a), applied meanwhile)").
 - The frame loop's side, the live set advancing by whole quanta, is TASK-M5-21's (REQ-SCHED-103).
+- *13 Nov 2026, applied per R-369:* TASK-M3-08 is re-scoped to Heggie, registered once at `t = 0`, and the radial collision gate; logH, the seam wiring into `integrate_with` and the visible re-registration count are TASK-M3-75's, which waits on RQ-808 to RQ-810. What this task read from TASK-M3-08 is now in the two, so it depends on both. *Was:* "Depends on: TASK-M3-08".
