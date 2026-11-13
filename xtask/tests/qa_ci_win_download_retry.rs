@@ -5,10 +5,7 @@
 //! - the retried image is checked, its length and SHA-256 against those built, before registration;
 //! - the job fails, naming the artifact, when both tries fail;
 //! - a re-run of the failed jobs alone finds the artifacts by name, and a re-run of the uploading job replaces them;
-//! - the per-try time limits fit inside the job's limit, and a try's limit doesn't cut off a whole download. Since
-//!   R-988 the job's limit is 1.5 times its measured time, not a budget of its steps, so the job no longer has to hold
-//!   the old budget's estimates for the image's SHA-256 checks and the registration; it still has to let each try, after
-//!   the PC reaches the download and the cache lookup runs to its limit, run to its own limit.
+//! - the per-try time limits fit inside the job's limit, and a try's limit doesn't cut off a whole download.
 //!
 //! Off Windows there is no PowerShell, so the workflow is read and its steps' `if:` conditions are evaluated by a small
 //! model of GitHub Actions' step semantics (`continue-on-error`, `timeout-minutes`, `outcome` against `conclusion`,
@@ -578,14 +575,12 @@ mod qa_names_attempt_control {
 /// The slower of the two whole downloads of the image on the PC, in minutes: 16 min 27.8 s (run 42954587933, the
 /// evidence the workflow cites).
 const SLOWER_WHOLE_IMAGE_MINUTES: f64 = 16.0 + 27.8 / 60.0;
-/// The time the PC has taken to reach the download, in minutes: 3 min 59 s at most, as the workflow stated it before
-/// R-988 (its budget's "4 minutes the PC has taken to reach the download").
-const REACH_DOWNLOAD: i64 = 4;
+/// The rest of `wsl-register`'s time, in minutes, as the workflow's own budget states it: reaching the download (4),
+/// the two checks' SHA-256 (5), and the registration (31).
+const REST_OF_REGISTER: i64 = 4 + 5 + 31;
 
-/// A try's limit lets a whole download finish; reaching the download, the cache lookup to its limit and two tries that
-/// each run to their limit fit in the job's limit (R-988 replaced the job's budget with its measured time, so the
-/// budget's estimates for the checks and the registration leave the sum); and every download of `wsl-proofs` is limited
-/// well inside its job's.
+/// A try's limit lets a whole download finish; two tries that each run to their limit, and the rest of the job, fit in
+/// the job's limit; and every download of `wsl-proofs` is limited well inside its job's.
 fn check_limits(workflow: &str) {
     let doc = parse(workflow);
     let register = job(&doc, "wsl-register");
@@ -612,20 +607,10 @@ fn check_limits(workflow: &str) {
             "qa: a try's limit of {limit} min cuts off a whole download ({SLOWER_WHOLE_IMAGE_MINUTES:.2} min)"
         );
     }
-    let lookup = steps(register)
-        .iter()
-        .find(|s| text(s, "id") == Some("cache"))
-        .map(|s| {
-            s["timeout-minutes"]
-                .as_i64()
-                .expect("qa: the cache lookup has no time limit of its own")
-        })
-        .unwrap_or(0);
-    let worst = REACH_DOWNLOAD + lookup + image.iter().sum::<i64>();
+    let worst = image.iter().sum::<i64>() + REST_OF_REGISTER;
     assert!(
         worst <= job_limit,
-        "qa: reaching the download, the cache lookup and two tries to their limits take {worst} min, over \
-         wsl-register's {job_limit}"
+        "qa: two tries to their limits and the rest take {worst} min, over wsl-register's {job_limit}"
     );
     let proofs = job(&doc, "wsl-proofs");
     let proofs_limit = proofs["timeout-minutes"]
@@ -651,11 +636,11 @@ fn qa_download_limits_fit_inside_the_job() {
     check_limits(&read(WORKFLOW));
 }
 
-// Each try gets 40 minutes: two of them no longer fit in the job's limit.
+// Each try gets 40 minutes: two of them and the rest no longer fit in 90.
 negative_control!(
     qa_download_limits_fit_inside_the_job,
     "tries too long for the job must fail",
-    expected = "qa: reaching the download, the cache lookup and two tries to their limits take",
+    expected = "qa: two tries to their limits and the rest take",
     check_limits(&read(WORKFLOW).replace(
         "        timeout-minutes: 25\n        continue-on-error: true\n        uses: actions/download-artifact",
         "        timeout-minutes: 40\n        continue-on-error: true\n        uses: actions/download-artifact"
