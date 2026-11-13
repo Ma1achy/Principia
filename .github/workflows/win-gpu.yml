@@ -532,8 +532,10 @@ jobs:
           overwrite: true
 
   # Proof 6's hosted side: at WSL_PARITY_COMMIT, `cargo nextest run -p kernel --profile ci`, as `scripts/wsl/inside.sh
-  # parity` runs it in the distro, its per-test results as this run's artifact. Kernel's tests: CPU only, deterministic,
-  # needing neither bash nor PyYAML of the test machine, and enough of them to compare one by one.
+  # parity` runs it in the distro, its per-test results as this run's artifact. Kernel's tests: deterministic, needing
+  # neither bash nor PyYAML of the test machine, and enough of them to compare one by one. Not CPU only: its GPU harness
+  # tests run on Vulkan, which `inside.sh` selects on both sides, so this job installs lavapipe as `ci.yml`'s test jobs
+  # do and the image does (run 43418528499: without it, 13 GPU tests failed here and passed in the distro).
   wsl-parity:
     if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-proofs'
     runs-on: ubuntu-24.04
@@ -553,6 +555,16 @@ jobs:
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         with:
           tool: cargo-nextest@0.9.146
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+      - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
+        timeout-minutes: 8
+        run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - name: Proof 6, the hosted side
         run: |
           mkdir -p "$RUNNER_TEMP/wsl-parity"

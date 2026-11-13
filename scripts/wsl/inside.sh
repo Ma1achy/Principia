@@ -133,8 +133,8 @@ print("connected")
 EOF
 }
 
-# Proof 6's command, the same on both sides: kernel's tests, CPU only and deterministic, under the `ci` profile CI's
-# shards use, no retries, every test run.
+# Proof 6's command, the same on both sides: kernel's tests, deterministic, their GPU harness tests on the Vulkan
+# selected above (lavapipe on both sides), under the `ci` profile CI's shards use, no retries, every test run.
 parity() {
   local commit=$1 dir="$work/parity" start code
   rm -rf "$dir"
@@ -195,7 +195,7 @@ case "$verb" in
   connect) connect "$@" ;;
   check) PRIN_CONTAIN=unprivileged bash "$repo/scripts/contain.sh" check ;;
   parity) parity "$@" ;;
-  compare) python3 "$repo/scripts/wsl/parity.py" compare /dev/stdin "$work/parity.tsv" ;;
+  compare) python3 "$repo/scripts/wsl/parity.py" compare - "$work/parity.tsv" ;;
   cpu) cpu ;;
   results) tar -C "$HOME/results" -cf - . ;;
   *)
