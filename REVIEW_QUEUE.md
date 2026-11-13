@@ -1408,3 +1408,77 @@ owner's.*
   its doc comment marking the detail interim until this entry is ruled), as TASK-M3-05's interim writer was.
 - **Waits:** TASK-M3-18 (the one `sim_failed` writer and the cross-check of payload §2's codes); TASK-M3-68 itself does
   not wait.
+
+## RQ-807: The WSL image's download can't resume within the PC's runner rules, and its hosted build can be skipped only through the Actions cache, which R-285 and R-326 don't allow for it; and proof 5 is "this run's rebuild" *(conflict; a one-way door, it widens what a job on the owner's PC holds, or publishes the image, or adds a CI cache R-285 doesn't list and saves it from a dispatch, or changes what proof 5 proves; R-711 items 1 and 5, the owner's job rules of 5 Nov 2026; R-285, R-326, R-967; the owner's words of 12 Nov 2026 on the WSL image, items 3 and 4; RQ-751; context: PR #509, run 43312851701)*
+
+*Queued 12 Nov 2026 by the implementer of the WSL image cache (Phase B), each quote re-read on `main` at 709ac1c0.
+Built meanwhile: the cache on E: (the owner's item 2), keyed on the recipe; the parts below are not built.*
+
+*In plain English: the owner asked for three things beyond the cache: a download that picks up where it stalled, a
+hosted build that runs only when the recipe changes, and proof runs that don't need Ubuntu's snapshot server. The
+first needs the PC job to hold a token (or run code the PC's rules refuse); the second can be had on the hosted side
+alone, by keeping the built image in GitHub's Actions cache, which the CI cache rulings don't yet allow for it; and the
+third would change what proof 5 proves. Each is the owner's call.*
+
+- **File, section:**
+  - The owner's words of 12 Nov 2026 (`orch/r630/owner-win-wsl-cache-12nov.txt`): "3. … If not, key the image on the
+    recipe (build script + Ubuntu snapshot date) and build it only when that changes, so proof runs don't depend on
+    Ubuntu's snapshot server. 4. Make the download resumable (ranged requests, continue after a stall rather than
+    restart)", "within the runner rules: no secrets, no new triggers, E: only".
+  - `.github/workflows/win-gpu.yml`, its header (R-711 items 1 and 5): "No credential reaches a job: `contents: read`,
+    no repository secret, and checkout with `persist-credentials: false`. Every action is pinned to a full commit SHA",
+    and, of the WSL jobs: "The image can't come from another run: a run's artifact downloads only with a token, and no
+    job here holds one."
+  - `xtask/tests/ci_self_hosted.rs` (the owner's guard, 5 Nov 2026: "fails if any workflow … uses an unpinned action in
+    a self-hosted job, or makes any self-hosted job required or gathered"): `check_no_credential` refuses any string
+    naming `github.token` in the file and any permission but `contents: read`, its control "a second permission" being
+    `actions: read`; `check_pins` refuses a local action; `check_not_gathered` refuses any job that `needs` a
+    self-hosted one.
+  - `.github/scripts/wsl.ps1`, proof 5: "the manifest after a rebuild (this run's hosted build) and the registered
+    distro's, derived inside it, each equal to the pin."
+  - `decisions.md` § R-285 (as amended): "CI cache: cache only the cargo registry and the fixture pool, not whole target
+    dirs, with per-job keys, to stay well under GitHub's 10 GB limit."; § R-326: "caches are saved only on pushes to
+    main; PR jobs restore only"; § R-967 (precedent, amends R-285): "Cache the Mesa packages for gpu-lavapipe and the
+    release jobs, keyed on the package list, so CI no longer fetches from Ubuntu's archive each run".
+- **The conflict:**
+  - (a) Resume. A ranged request needs the artifact's blob URL. The REST API gives it only to a token with
+    `actions: read`; download-artifact's own runtime token reaches an action, never a `run` step, and on the PC a local
+    action is refused and a third-party one would be new code on the owner's machine.
+  - (b) Build only on change. The hosted job can't learn whether the PC holds this recipe's image: that would mean
+    waiting on a self-hosted job (gathering it) or reading another run's artifact (a token). But it needn't know: it can
+    keep its own build in the Actions cache, keyed on the same recipe key, restore it on a hit and build only on a miss,
+    and upload as now. That needs no token, no job waiting on the PC and nothing new on the PC, and it takes
+    `wsl-register` off Ubuntu's snapshot server while the entry lives. It conflicts instead with R-285, which lists
+    what CI caches and not this, and with R-326, which saves caches only on pushes to `main`, while this job runs only
+    on a dispatch. The image is about 0.98 GB against the repository's 10 GB; on 12 Nov the repository held 9.86 GB in
+    75 entries (the cargo registry 5.44 GB in 59, the fixture pool 4.14 GB in 6), so a new entry evicts the least
+    recently used, and an image entry used only by register dispatches would itself go after 7 days unused.
+  - (c) Proof runs. `wsl-proofs` downloads only the 1 KB manifest, never the image; it builds the image for proof 5,
+    whose definition is this run's rebuild reproducing the pin. Skipping the build there changes what proof 5 proves.
+- **Options:**
+  - (1) The PC's `wsl-register` alone holds its own run's `GITHUB_TOKEN` with `actions: read`, to fetch the artifact's
+    blob URL and download it with HTTP ranges, resuming after 60 s without growth; the guard allows exactly that one job
+    and permission. Covers (a), not (b).
+  - (2) The hosted job publishes each recipe's image as a release asset (`contents: write` on the hosted job only), and
+    the PC fetches it by plain ranged HTTP with no token; the hosted job builds only when no release of the recipe
+    exists. Covers (a) and (b). It publishes an Ubuntu image with its packages (a licence question, R-643), and Phase A
+    measured that path at 5.64 MiB/s against the artifact's 1.21 MiB/s (run 43312851701).
+  - (3) As built: the cache on E: keyed on the recipe, a miss downloading with download-artifact's two tries (#500), no
+    resume, the hosted build on every register dispatch.
+  - (4) The hosted `wsl-image` job keeps its build in the Actions cache under `wsl-image-<recipe key>`, saved from a
+    `wsl-register` dispatch on `main`, restored on a hit, built only on a miss, uploaded as now. Covers (b) for
+    `wsl-register`, alone or beside (1) or (3); with it, a hit gives the same bytes run after run, so the PC's entry and
+    this run's upload agree. It needs a ruling amending R-285 (with R-967 as precedent) and making an exception to
+    R-326 for a dispatch.
+  - For (c): (i) `wsl-proofs` rebuilds as now, proof 5 unchanged; (ii) proof 5 reads the cached image's build-time
+    manifest, and `wsl-proofs` builds nothing.
+- **Recommendation:** (3) with (4), and (i). (4) is the only route to (b) that leaves the PC's rules as they are, and
+  it costs a cache ruling rather than a credential on the owner's machine; it doesn't change what proof 5 proves. For
+  (a), (3) until the register runs measure the cache's misses. A miss is a recipe change or a first registration; run
+  43225140437's four failures were one recipe's download stalling four times, which the cache doesn't prevent on a
+  miss: it serves every registration after the first whole download. If misses still stall, (1) is the narrowest
+  widening: one job, read-only, its own run. The measurable alternatives: for (a), count over the next register runs
+  the misses whose download fails against all misses; for (4), the `wsl-image` job's time on a restore against a build
+  (433-602 s in Phase A), and whether the entry survives between register dispatches.
+- **Applied meanwhile:** (3) and (i).
+- **Waits:** nothing; the cache is built and the register run waits only for the owner's folder.
