@@ -2,8 +2,9 @@
 //! - `libm_pin_parse`: a run's file reads back to its header and digests; a wrong header or a short body is refused.
 //! - `libm_pin_compare`: two runs' records are counted apart at f64 (the digest's high half) and after narrowing (its
 //!   low half), per chart and zoom, and the table prints them; runs over different grids are refused.
-//! - `libm_pin_outcome`: R-991's criterion: void where the control changes no record at f64, PASS where no other
-//!   machine's pinned run differs at either level, UNEXPLAINED naming each machine where one does.
+//! - `libm_pin_outcome`: R-991's criterion: void where the control changes no record at f64, UNEXPLAINED naming each
+//!   machine whose pinned run differs at either level, PASS only where Linux, Windows and wasm all ran and none differs,
+//!   INCOMPLETE naming the arms not run where none differs but one is missing.
 
 use xtask::libm_pin::{
     compare, outcome, parse, table, totals, Count, Header, Outcome, Run, CHARTS, ZOOMS,
@@ -257,8 +258,33 @@ fn check_outcome(judge: Judge) {
     );
     assert_eq!(
         judge(&counts((1, 0)), &[]),
-        Outcome::Pass,
-        "no other machine: PASS for the arms that ran"
+        Outcome::Incomplete(vec![
+            "linux".to_owned(),
+            "windows".to_owned(),
+            "wasm32".to_owned()
+        ]),
+        "no other machine: INCOMPLETE, every arm missing"
+    );
+    assert_eq!(
+        judge(&counts((1, 0)), &all_clean[..2]),
+        Outcome::Incomplete(vec!["wasm32".to_owned()]),
+        "Linux and Windows 0, wasm not run: INCOMPLETE, not PASS"
+    );
+    assert_eq!(
+        judge(
+            &counts((1, 0)),
+            &[all_clean[0].clone(), all_clean[2].clone()]
+        ),
+        Outcome::Incomplete(vec!["windows".to_owned()]),
+        "Linux and wasm 0, Windows not run"
+    );
+    assert_eq!(
+        judge(
+            &counts((5, 0)),
+            &[("linux-x86_64".to_owned(), counts((0, 1)))]
+        ),
+        Outcome::Unexplained(vec!["linux-x86_64".to_owned()]),
+        "a differing arm is UNEXPLAINED even with arms missing"
     );
 }
 

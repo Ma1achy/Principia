@@ -7,8 +7,9 @@
 //! **The criterion, R-991's, written before any run.** PASS: under the pinned path, the count of records differing from
 //! the Mac's is 0 on Linux, Windows and wasm, at both levels. The std path against the pinned on the Mac, and the std
 //! path's cross-machine counts, are reported as the size of the change. The control, the pinned path with `sin` moved
-//! one ulp (`measure-perturb-sin`), must give a non-zero count against the pinned at f64, or the harness is void. An
-//! arm not run is named, and the outcome then holds for the arms that ran only (R-649: a measurement, never a gate).
+//! one ulp (`measure-perturb-sin`), must give a non-zero count against the pinned at f64, or the harness is void. PASS
+//! needs all three pinned arms, Linux, Windows and wasm, compared; with any not run and none differing the outcome is
+//! INCOMPLETE, naming the arms missing, the arms that ran still reported (R-649: a measurement, never a gate).
 
 use std::fmt::Write as _;
 
@@ -134,13 +135,18 @@ pub fn totals(counts: &[Count]) -> (usize, usize) {
         .fold((0, 0), |(w, n), c| (w + c.wide, n + c.narrow))
 }
 
+/// The pinned arms PASS needs against the Mac's, by the prefix of their host: Linux, Windows and wasm.
+pub const PINNED_ARMS: [&str; 3] = ["linux", "windows", "wasm32"];
+
 /// The measurement's outcome (the module's note).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Outcome {
-    /// Every pinned cross-machine count 0 at both levels, the control non-zero at f64.
+    /// Every one of [`PINNED_ARMS`] compared, each count 0 at both levels, the control non-zero at f64.
     Pass,
     /// A pinned cross-machine count non-zero, naming the machines.
     Unexplained(Vec<String>),
+    /// No pinned count non-zero, but some of [`PINNED_ARMS`] not compared, naming them.
+    Incomplete(Vec<String>),
     /// The control gave 0 at f64: the harness cannot see a one-ulp change.
     Void,
 }
@@ -156,10 +162,18 @@ pub fn outcome(control: &[Count], pinned: &[(String, Vec<Count>)]) -> Outcome {
         .filter(|(_, counts)| totals(counts) != (0, 0))
         .map(|(host, _)| host.clone())
         .collect();
-    if differing.is_empty() {
+    if !differing.is_empty() {
+        return Outcome::Unexplained(differing);
+    }
+    let missing: Vec<String> = PINNED_ARMS
+        .iter()
+        .filter(|arm| !pinned.iter().any(|(host, _)| host.starts_with(*arm)))
+        .map(|arm| (*arm).to_owned())
+        .collect();
+    if missing.is_empty() {
         Outcome::Pass
     } else {
-        Outcome::Unexplained(differing)
+        Outcome::Incomplete(missing)
     }
 }
 
