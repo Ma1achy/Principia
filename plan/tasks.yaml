@@ -509,6 +509,14 @@
   requirements: [REQ-TOOL-233]  # R-1004 (13 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-64
+  milestone: M0
+  title: "win-self-check's guard test plants a clean checkout's config as the checkout leaves it, the sparse keys in config.worktree"
+  depends_on: []
+  needs: []
+  requirements: [REQ-TOOL-234]  # applied per R-369 (13 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"
