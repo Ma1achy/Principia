@@ -1483,8 +1483,14 @@ fn check_workflow(text: &str) {
             .is_some_and(|c| c.starts_with("github.repository == 'Ma1achy/Principia' && (")),
         "win-retry lacks the repository guard"
     );
-    assert!(
-        job["if"].as_str().is_some_and(|c| !c.contains("'success'")),
+    // Past the repository guard, the one test: a re-run, or any conclusion but `skipped`, `success` among them.
+    assert_eq!(
+        job["if"]
+            .as_str()
+            .and_then(|c| c.strip_prefix("github.repository == 'Ma1achy/Principia' && ")),
+        Some(
+            "(github.event.workflow_run.run_attempt > 1 || github.event.workflow_run.conclusion != 'skipped')"
+        ),
         "win-retry passes over a passing run, its recovered step limits unlogged"
     );
     let steps = job["steps"].as_vec().expect("win-retry's steps");
@@ -1605,3 +1611,30 @@ mod passing_passed_over {
     );
 }
 
+mod failures_alone {
+    use super::*;
+    negative_control!(
+        ci_win_retry_workflow_is_hosted_and_follows_the_runner_alone,
+        "a guard narrowed to failed runs",
+        expected = "win-retry passes over a passing run, its recovered step limits unlogged",
+        check_workflow(&edit(
+            &read(WORKFLOW),
+            "github.event.workflow_run.conclusion != 'skipped'",
+            "github.event.workflow_run.conclusion == 'failure'"
+        ))
+    );
+}
+
+mod first_attempts_alone {
+    use super::*;
+    negative_control!(
+        ci_win_retry_workflow_is_hosted_and_follows_the_runner_alone,
+        "a guard that drops a re-run",
+        expected = "win-retry passes over a passing run, its recovered step limits unlogged",
+        check_workflow(&edit(
+            &read(WORKFLOW),
+            "github.event.workflow_run.run_attempt > 1 || ",
+            ""
+        ))
+    );
+}
