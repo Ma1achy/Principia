@@ -666,9 +666,11 @@ rule; the rest of steps 1 to 8 stands.
   precision (53 bits at f64, 24 at f32), so the bisection reaches a bracket one step size wide before its cap; the cap
   is the same integer at both precisions (rule 1). The step budget (Part 6, R-604) bounds a march that keeps no
   progress.
-- **The settings that turn it off** (the clamp off; the secant's and the bisection's caps both 0) keep a step past the
-  boundary and set the clock alone: they are measurement settings for REQ-INT-049's and REQ-INT-119's controls, never
-  the occupant's.
+- **The settings that turn it off** (the clamp off; or the bisection's cap 0, which turns it off alone, with the
+  secant's retakes or without them: the secant's last retake is kept wherever it ends) keep a step past the boundary
+  and set the clock alone: they are measurement settings for REQ-INT-049's and REQ-INT-119's controls, never the
+  occupant's. *13 Nov 2026 (code review 5893012877 of #519, C2, applied per R-369: the text made to match the code,
+  no result changed):* *Was:* "(the clamp off; the secant's and the bisection's caps both 0)".
 
 *Was (the steps' lines this replaces, kept above as the transcription):* step 6's "When the step just taken reaches the
 boundary (`t_s ≥ dt_left − dt_left·LAND_EPS_REL`)" and "stop if `got` is not finite, `got ≤ 0`, or
