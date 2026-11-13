@@ -8,7 +8,8 @@
 //! - `qa_m372_shadow_own_com` (§3.8 "Its projection", §3.4): after a run in the displacement form at unequal masses,
 //!   the shadow `x + δ⃗` has its own centre of mass and total momentum at zero, to rounding: `δ⃗` is projected by the same
 //!   linear map as `x`. `u` puts the shadow's CoM `‖δ₀‖·(m₀ − m₁, m₁ − m₂)/(2M)` off the sample's at the start, so a
-//!   projection of `x` alone leaves it there. Control: the unprojected start, `offset(x₀, ‖δ₀‖)`, fails.
+//!   projection of `x` alone leaves it there. Control: the unprojected start, `offset(x₀, ‖δ₀‖)`, fails. A state NaN
+//!   on one position or momentum axis, centred on the other, fails too (`qa_m372_own_com_reads_every_*_axis`).
 //! - `qa_m372_detector_watches_shadow` (§3.8 "Its energy and collision test"; R-972 (d)): in the displacement form the
 //!   shadow's detector reads `x + δ⃗`, not `x`: on a close pair that `u` brings closer, its least `d²` at `r_coll = 0`
 //!   is below the sample's; at an `r_coll` between the two it fires, and the shadow marches on, its `r_sh`, `p_sh`
@@ -174,13 +175,23 @@ fn shadow_after_run() -> (State<f64>, State<f64>) {
     (b.shadow(&x), x)
 }
 
-/// `|R_com|` and `|P_com|` of `s`, componentwise maxima.
+/// The larger of `|a|` and `|b|`, or infinity if either is not finite: `f64::max` drops a NaN and would return the
+/// other axis's value, so a state NaN on one axis would read as centred.
+fn abs_max(a: f64, b: f64) -> f64 {
+    if a.is_finite() && b.is_finite() {
+        a.abs().max(b.abs())
+    } else {
+        f64::INFINITY
+    }
+}
+
+/// `|R_com|` and `|P_com|` of `s`, componentwise maxima, infinite if any component is not finite.
 fn com(s: &State<f64>) -> (f64, f64) {
     let m = s.m;
     let total = m[0] + m[1] + m[2];
     let r = [0, 1].map(|k| (m[0] * s.r[0][k] + m[1] * s.r[1][k] + m[2] * s.r[2][k]) / total);
     let p = [0, 1].map(|k| s.p[0][k] + s.p[1][k] + s.p[2][k]);
-    (r[0].abs().max(r[1].abs()), p[0].abs().max(p[1].abs()))
+    (abs_max(r[0], r[1]), abs_max(p[0], p[1]))
 }
 
 /// The shadow's own CoM and momentum are zero to rounding. The bound, 1e-12, is f64 rounding on states of order one
@@ -203,6 +214,39 @@ fn qa_m372_shadow_own_com() {
     );
     check_own_com(&shadow);
 }
+
+/// Lagrange at (0.5, 0.3, 0.2) at its start, in its CoM frame, with `nan` put on one axis of one field: a state
+/// whose CoM reads zero on the other axis must not pass for a projected one.
+fn centred_with(nan: fn(&mut State<f64>)) -> State<f64> {
+    let orbit = lagrange("Lagrange, (0.5, 0.3, 0.2)", [0.5, 0.3, 0.2], 2.0);
+    let mut s = state(&ic_at::<f64>(&orbit.ic));
+    nan(&mut s);
+    s
+}
+
+#[test]
+fn qa_m372_own_com_reads_every_position_axis() {
+    check_own_com(&centred_with(|_| {}));
+}
+
+negative_control!(
+    qa_m372_own_com_reads_every_position_axis,
+    "a shadow NaN on one position axis, centred on the other, must fail",
+    expected = "not projected by its own R_com",
+    check_own_com(&centred_with(|s| s.r[0][0] = f64::NAN))
+);
+
+#[test]
+fn qa_m372_own_com_reads_every_momentum_axis() {
+    check_own_com(&centred_with(|_| {}));
+}
+
+negative_control!(
+    qa_m372_own_com_reads_every_momentum_axis,
+    "a shadow NaN on one momentum axis, its momenta zero on the other, must fail",
+    expected = "not projected by its own R_com",
+    check_own_com(&centred_with(|s| s.p[1][1] = f64::NAN))
+);
 
 negative_control!(
     qa_m372_shadow_own_com,
