@@ -20,8 +20,8 @@ reason `ci_retry.py` is: `.github/` is full CI whole (R-662).
                               $GITHUB_STEP_SUMMARY.
 
 Each job of the run on the runner that did not pass (its labels name `self-hosted`) is one of, in this order:
-  hang       its own time limit or one of its steps' ended it (TIMEOUT, in a failure annotation or an `##[error]` line
-             of its log): never re-run (R-988, R-970);
+  hang       its own time limit or one of its steps' ended it (TIME_LIMIT, in a failure annotation or an `##[error]`
+             line of its log): never re-run (R-988, R-970);
   newer      a newer run of it cancelled it (NEWER): never re-run (R-986);
   fault      it stopped on a runner-level fault (SIGNATURES: the runner lost, offline or its process killed, which
              GitHub reports as lost communication; or shut down mid-job, the runner's shutdown signal): re-run once;
@@ -63,7 +63,7 @@ SIGNATURES = (
     ("the runner received a shutdown signal", re.compile(r"The runner has received a shutdown signal")),
 )
 # A time limit reached: a step's (the action's name, which may hold a quote, then its limit) or the job's.
-TIMEOUT = re.compile(r"The action '(.*)' has timed out after \d+ minutes|has exceeded the maximum execution time")
+TIME_LIMIT = re.compile(r"The action '(.*)' has timed out after \d+ minutes|has exceeded the maximum execution time")
 # A job cancelled by a newer run in its concurrency group, as GitHub annotates it.
 NEWER = re.compile(r"Canceling since a higher priority waiting request for \S+ exists")
 # A log line's timestamp, and the byte-order mark before the first.
@@ -105,7 +105,7 @@ def kind_of(job, annotations, log):
     """(kind, step, evidence) for a job on the runner that did not pass (the module's order)."""
     texts = lines(annotations, log)
     for text in texts:
-        m = TIMEOUT.search(text)
+        m = TIME_LIMIT.search(text)
         if m:
             return "hang", m.group(1) or stopped_step(job), first_line(text)
     if job.get("conclusion") == "timed_out":

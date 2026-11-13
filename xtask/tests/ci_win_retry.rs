@@ -399,9 +399,9 @@ negative_control!(
     expected = "a hang beside a lost runner: re-run",
     check_hangs(&edit(
         &script(),
-        "    for text in texts:\n        m = TIMEOUT.search(text)",
+        "    for text in texts:\n        m = TIME_LIMIT.search(text)",
         "    for text in texts:\n        if any(p.search(text) for _, p in SIGNATURES):\n            \
-         return \"fault\", None, text\n    for text in texts:\n        m = TIMEOUT.search(text)"
+         return \"fault\", None, text\n    for text in texts:\n        m = TIME_LIMIT.search(text)"
     ))
 );
 
@@ -413,8 +413,8 @@ mod hang_by_quote {
         expected = "steps at their limits: not logged as hang",
         check_hangs(&edit(
             &script(),
-            "TIMEOUT = re.compile(r\"The action '(.*)' has timed out",
-            "TIMEOUT = re.compile(r\"The action '([^']*)' has timed out"
+            "TIME_LIMIT = re.compile(r\"The action '(.*)' has timed out",
+            "TIME_LIMIT = re.compile(r\"The action '([^']*)' has timed out"
         ))
     );
 }
