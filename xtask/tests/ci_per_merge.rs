@@ -1,24 +1,26 @@
 //! The per-merge tier (the owner's CI model, R-909 item 2, approved 9 Nov 2026: "Each merge to main (per merge commit;
-//! advisory; never blocks a merge) ... Correctness failure (physics, validation, bit-for-bit, golden) = red main (R-681);
-//! other failures file a top-priority task"; R-908: "A failing process test never makes main red; it files a task"):
-//! `ci.yml`'s jobs on a push and their verdict, `per-merge`, which `.github/scripts/ci_per_merge.py` gives.
+//! advisory; never blocks a merge)"; R-982, 12 Nov 2026: "Any red job on main is red; make the per-merge verdict cover
+//! every job so the two can't disagree"): `ci.yml`'s jobs on a push and their verdict, `per-merge`, which
+//! `.github/scripts/ci_per_merge.py` gives. Every failed job is red, but for R-979's install outage
+//! (`ci_per_merge_verdict.rs` tests that and the saved runs); these tests read the kind each failed job's line gives,
+//! `correctness` or `other`.
 //!
 //! - `ci_per_merge_verdict_*`: the classifier, `classify` on a run written here: no failure is green; a product test's
-//!   failure is red, a process test's alone a task, both together red; a failure outside the test steps, or the build
-//!   failing inside one, a task; a test step that names no failed test, or whose log is gone, red; the jobs that are
-//!   never correctness a task, the release profile's always red, and a job it does not know red; nextest's lines read
-//!   whatever their status, counter and colours, a retried attempt no failure of its own; each failed test step read in
-//!   its own part of the job's log, a part opening in its step's second its own and never a skipped step's; two failed
-//!   test steps whose parts cannot be told apart red; a test step skipped after a failed one red, one skipped before it
-//!   not; nextest's summary counting fewer tests run than selected red.
+//!   failure is `correctness`, a process test's alone `other`, both together `correctness`; a failure outside the test
+//!   steps, or the build failing inside one, `other`; a test step that names no failed test, or whose log is gone,
+//!   `correctness`; the jobs outside the product suite `other`, the release profile's always `correctness`, and a job
+//!   it does not know `correctness`; nextest's lines read whatever their status, counter and colours, a retried attempt
+//!   no failure of its own; each failed test step read in its own part of the job's log, a part opening in its step's
+//!   second its own and never a skipped step's; two failed test steps whose parts cannot be told apart `correctness`; a
+//!   test step skipped after a failed one `correctness`, one skipped before it not; nextest's summary counting fewer
+//!   tests run than selected `correctness`. Each of these runs is red.
 //! - `ci_per_merge_process_class_is_the_process_profiles`: the classifier's process tests are the `process` profile's
 //!   binaries, and none of the product correctness the owner named (R-909).
-//! - `ci_per_merge_decide_*`: `decide`, with a stand-in `gh`: on `main`, one issue labelled `per-merge` for the other
-//!   failures, or a comment on the open one of that title, and none off `main`; red exits 1; it never reads its own job;
-//!   jobs it cannot read are red; a task it cannot file is an error annotation, not red.
+//! - `ci_per_merge_decide_*`: `decide`, with a stand-in `gh`: red exits 1, whatever the kind, and files nothing (R-982
+//!   ends R-907's top-priority task); it never reads its own job; jobs it cannot read are red.
 //! - `ci_per_merge_tier_*`: `ci.yml`, parsed with PyYAML: it runs on each push to `main`, each merge commit in a run of
 //!   its own and never cancelled; `per-merge` runs on a push alone, last, after every job a push runs, whatever each
-//!   ended in, with the permissions it uses and nothing self-hosted; the classifier knows each of those jobs by name;
+//!   ended in, with the permissions it reads with and nothing self-hosted; the classifier knows each of those jobs by name;
 //!   and the tier runs the owner's list: the `ci`, `ci-workspace` and `gpu-kernel` profiles between them select every
 //!   test (the `ci` profile leaving out exactly the other two's), `cargo xtask golden --all` and `cargo xtask gate
 //!   decode-agreement` on lavapipe and on Metal, and the release profile; and the jobs of those three profiles run
@@ -319,21 +321,21 @@ fn check_process(config: &str) {
     );
     let text = classified_with(&script(), &run, config);
     assert!(
-        text.starts_with("verdict=task\n")
+        text.starts_with("verdict=red\n")
             && text.contains("job=ci (3): other: `cargo nextest run --archive-file … --partition hash:2/4`: process tests failed: xtask::ci ci_list_runs_no_control"),
-        "ci_per_merge: a process test's failure is not a task"
+        "ci_per_merge: a process test's failure is not red and named a process test's"
     );
 }
 
 #[test]
-fn ci_per_merge_verdict_process_test_failure_is_a_task() {
+fn ci_per_merge_verdict_process_test_failure_is_red_and_other() {
     check_process(&read(CONFIG));
 }
 
 negative_control!(
-    ci_per_merge_verdict_process_test_failure_is_a_task,
+    ci_per_merge_verdict_process_test_failure_is_red_and_other,
     "a configuration whose `process` profile is gone, so no test reads as a process test",
-    expected = "ci_per_merge: a process test's failure is not a task",
+    expected = "ci_per_merge: a process test's failure is not red and named a process test's",
     check_process(&edit(
         &read(CONFIG),
         "[profile.process]\n",
@@ -375,7 +377,7 @@ fn ci_per_merge_verdict_a_product_failure_beside_a_process_one_is_red() {
 negative_control!(
     ci_per_merge_verdict_a_product_failure_beside_a_process_one_is_red,
     "a classifier that calls a failure red only when every failed test is a product test",
-    expected = "ci_per_merge: a process test and the golden listing's failing together: the verdict is not red",
+    expected = "ci_per_merge: a process test and the golden listing's failing together: ci-workspace is not judged correctness",
     check_mixed(&edit(
         &script(),
         "if failed and any(b not in process for b, _ in failed):",
@@ -397,7 +399,7 @@ fn check_outside(script: &str, step: &str) {
         script,
         "a failure outside the test steps",
         &run,
-        "task",
+        "red",
         &[
             ("gpu-kernel suites", "other", "no test step failed"),
             ("ci-archive", "other", "no test step failed"),
@@ -406,14 +408,15 @@ fn check_outside(script: &str, step: &str) {
 }
 
 #[test]
-fn ci_per_merge_verdict_a_failure_outside_the_tests_is_a_task() {
+fn ci_per_merge_verdict_a_failure_outside_the_tests_is_red_and_other() {
     check_outside(&script(), "Free runner disk");
 }
 
 negative_control!(
-    ci_per_merge_verdict_a_failure_outside_the_tests_is_a_task,
+    ci_per_merge_verdict_a_failure_outside_the_tests_is_red_and_other,
     "the same job failing in its test step, its log naming no test",
-    expected = "ci_per_merge: a failure outside the test steps: the verdict is not task",
+    expected =
+        "ci_per_merge: a failure outside the test steps: gpu-kernel suites is not judged other",
     check_outside(
         &script(),
         "cargo nextest run -p validation -p xtask -p engine"
@@ -429,7 +432,7 @@ fn check_build(lines: &[String]) {
         &script(),
         "a test step whose build failed",
         &run,
-        "task",
+        "red",
         &[("gpu-kernel suites", "other", "the build failed")],
     );
 }
@@ -438,7 +441,7 @@ const COMPILE_ERROR: &str = "2026-11-10T01:00:00.0000000Z \u{1b}[1m\u{1b}[91merr
                              compile `engine` (test \"canon_gpu\") due to 1 previous error\u{1b}[0m";
 
 #[test]
-fn ci_per_merge_verdict_a_build_failing_in_a_test_step_is_a_task() {
+fn ci_per_merge_verdict_a_build_failing_in_a_test_step_is_red_and_other() {
     check_build(&[
         "2026-11-10T01:00:00.0000000Z error[E0425]: cannot find value `x` in this scope".to_owned(),
         COMPILE_ERROR.to_owned(),
@@ -446,9 +449,10 @@ fn ci_per_merge_verdict_a_build_failing_in_a_test_step_is_a_task() {
 }
 
 negative_control!(
-    ci_per_merge_verdict_a_build_failing_in_a_test_step_is_a_task,
+    ci_per_merge_verdict_a_build_failing_in_a_test_step_is_red_and_other,
     "the same step's log without cargo's could-not-compile line",
-    expected = "ci_per_merge: a test step whose build failed: the verdict is not task",
+    expected =
+        "ci_per_merge: a test step whose build failed: gpu-kernel suites is not judged other",
     check_build(&[
         "2026-11-10T01:00:00.0000000Z error[E0425]: cannot find value `x` in this scope".to_owned()
     ])
@@ -508,8 +512,8 @@ fn ci_per_merge_verdict_a_test_step_naming_no_test_is_red() {
 
 negative_control!(
     ci_per_merge_verdict_a_test_step_naming_no_test_is_red,
-    "a classifier that calls a test step naming no failed test a task",
-    expected = "ci_per_merge: a golden run: the verdict is not red",
+    "a classifier that calls a test step naming no failed test `other`",
+    expected = "ci_per_merge: a golden run: gpu-lavapipe suites is not judged correctness",
     check_unnamed(&edit(
         &script(),
         "return \"correctness\", f\"{step} failed, its log naming no failed test\"",
@@ -521,8 +525,8 @@ mod a_lost_log {
     use super::*;
     negative_control!(
         ci_per_merge_verdict_a_test_step_naming_no_test_is_red,
-        "a classifier that calls a test step whose log is gone a task",
-        expected = "ci_per_merge: a test step without its log: the verdict is not red",
+        "a classifier that calls a test step whose log is gone `other`",
+        expected = "ci_per_merge: a test step without its log: gpu-kernel suites is not judged correctness",
         check_unnamed(&edit(
             &script(),
             "return \"correctness\", f\"{step} failed and its log could not be read\"",
@@ -531,9 +535,10 @@ mod a_lost_log {
     );
 }
 
-/// The jobs that are never correctness, each failing in a step that would be a test step elsewhere, or none.
+/// The jobs outside the product suite, each failing in a step that would be a test step elsewhere, or none: red, each
+/// `other`.
 fn check_other(run: &Run, jobs: &[(&str, &str, &str)]) {
-    check_verdict(&script(), "jobs outside correctness", run, "task", jobs);
+    check_verdict(&script(), "jobs outside correctness", run, "red", jobs);
 }
 
 fn other_run(unknown: bool) -> Run {
@@ -570,16 +575,26 @@ const OTHER_JUDGED: [(&str, &str, &str); 4] = [
     ("changes", "other", "not a correctness job"),
 ];
 
+/// OTHER_JUDGED, and a job the classifier does not know read as one of them: the control's.
+#[cfg(feature = "controls")]
+const UNKNOWN_JUDGED: [(&str, &str, &str); 5] = [
+    OTHER_JUDGED[0],
+    OTHER_JUDGED[1],
+    OTHER_JUDGED[2],
+    OTHER_JUDGED[3],
+    ("ci-unknown", "other", "not a correctness job"),
+];
+
 #[test]
-fn ci_per_merge_verdict_jobs_outside_correctness_are_a_task() {
+fn ci_per_merge_verdict_jobs_outside_correctness_are_red_and_other() {
     check_other(&other_run(false), &OTHER_JUDGED);
 }
 
 negative_control!(
-    ci_per_merge_verdict_jobs_outside_correctness_are_a_task,
+    ci_per_merge_verdict_jobs_outside_correctness_are_red_and_other,
     "a run with a job the classifier does not know failing beside them, its failed test a process test's",
-    expected = "ci_per_merge: jobs outside correctness: the verdict is not task",
-    check_other(&other_run(true), &OTHER_JUDGED)
+    expected = "ci_per_merge: jobs outside correctness: ci-unknown is not judged other",
+    check_other(&other_run(true), &UNKNOWN_JUDGED)
 );
 
 /// The release profile's jobs: a process test failing at `--release` and the archive's build, each red (REQ-TOOL-223).
@@ -645,7 +660,7 @@ fn check_statuses(retried: &str) {
         &script(),
         "nextest's statuses",
         &run,
-        "task",
+        "red",
         &[(
             "ci (4)",
             "other",
@@ -662,7 +677,7 @@ fn ci_per_merge_verdict_reads_each_nextest_status() {
 negative_control!(
     ci_per_merge_verdict_reads_each_nextest_status,
     "the product test's attempt read as its last failure",
-    expected = "ci_per_merge: nextest's statuses: the verdict is not task",
+    expected = "ci_per_merge: nextest's statuses: ci (4) is not judged other",
     check_statuses("FAIL")
 );
 
@@ -794,7 +809,7 @@ fn ci_per_merge_verdict_reads_each_failed_test_step() {
 negative_control!(
     ci_per_merge_verdict_reads_each_failed_test_step,
     "a classifier that reads the job's whole log for each failed step, so the process test's lines answer for the doctest",
-    expected = "ci_per_merge: a doctest failing after a process test: the verdict is not red",
+    expected = "ci_per_merge: a doctest failing after a process test: ci-workspace is not judged correctness",
     check_each_step(&edit(
         &script(),
         "    own = parts(every, log)\n",
@@ -859,7 +874,7 @@ fn check_two_process_steps(script: &str) {
         script,
         "two test steps failing with process tests",
         &run,
-        "task",
+        "red",
         &[(
             "ci-workspace",
             "other",
@@ -878,7 +893,8 @@ fn ci_per_merge_verdict_a_part_opening_in_its_steps_second_is_its_own() {
 negative_control!(
     ci_per_merge_verdict_a_part_opening_in_its_steps_second_is_its_own,
     "a classifier that gives a part only to a step started before its first line's second",
-    expected = "ci_per_merge: two test steps failing with process tests: the verdict is not task",
+    expected =
+        "ci_per_merge: two test steps failing with process tests: ci-workspace is not judged other",
     check_two_process_steps(&edit(
         &script(),
         "if second <= m.group(1)]",
@@ -891,7 +907,7 @@ mod a_skipped_step_owns_no_part {
     negative_control!(
         ci_per_merge_verdict_a_part_opening_in_its_steps_second_is_its_own,
         "a classifier that lets a skipped step, started in the same second, take the failed step's part",
-        expected = "ci_per_merge: two test steps failing with process tests: the verdict is not task",
+        expected = "ci_per_merge: two test steps failing with process tests: ci-workspace is not judged other",
         check_two_process_steps(&edit(
             &script(),
             "if m and step.get(\"conclusion\") != \"skipped\":",
@@ -941,7 +957,7 @@ fn check_untimed(script: &str) {
         script,
         "a log without times",
         &bare,
-        "task",
+        "red",
         &[("ci-workspace", "other", "process tests failed: xtask::ci")],
     );
 }
@@ -996,7 +1012,7 @@ fn check_skipped(script: &str) {
         script,
         "a doctest step skipped before a failed test step",
         &run,
-        "task",
+        "red",
         &[("ci (2)", "other", "process tests failed: xtask::ci")],
     );
     let mut workspace = job(7, "ci-workspace", "failure", WORKSPACE_TESTS);
@@ -1015,7 +1031,7 @@ fn check_skipped(script: &str) {
         script,
         "the process tests' steps skipped after a failed test step",
         &run,
-        "task",
+        "red",
         &[("ci-workspace", "other", "process tests failed: xtask::ci")],
     );
 }
@@ -1028,8 +1044,7 @@ fn ci_per_merge_verdict_a_test_step_skipped_after_a_failure_is_red() {
 negative_control!(
     ci_per_merge_verdict_a_test_step_skipped_after_a_failure_is_red,
     "a classifier that reads no skipped test step",
-    expected =
-        "ci_per_merge: a doctest step skipped after a failed test step: the verdict is not red",
+    expected = "ci_per_merge: a doctest step skipped after a failed test step: gpu-kernel suites is not judged correctness",
     check_skipped(&edit(&script(), "    if skipped:\n", "    if False:\n"))
 );
 
@@ -1038,7 +1053,7 @@ mod skipped_process_steps {
     negative_control!(
         ci_per_merge_verdict_a_test_step_skipped_after_a_failure_is_red,
         "a classifier that reads a step of process tests alone, skipped after a failure, as product tests left unrun",
-        expected = "ci_per_merge: the process tests' steps skipped after a failed test step: the verdict is not task",
+        expected = "ci_per_merge: the process tests' steps skipped after a failed test step: ci-workspace is not judged other",
         check_skipped(&edit(
             &script(),
             " and s.get(\"name\") not in PROCESS_STEPS",
@@ -1052,7 +1067,7 @@ mod skipped_before {
     negative_control!(
         ci_per_merge_verdict_a_test_step_skipped_after_a_failure_is_red,
         "a classifier that reads a test step skipped before the failed one as left unrun",
-        expected = "ci_per_merge: a doctest step skipped before a failed test step: the verdict is not task",
+        expected = "ci_per_merge: a doctest step skipped before a failed test step: ci (2) is not judged other",
         check_skipped(&edit(
             &script(),
             "for s in every[tests[0] + 1:]",
@@ -1062,20 +1077,20 @@ mod skipped_before {
 }
 
 /// A process test failing in a `ci` shard, nextest's summary saying how many of the tests it selected it ran: fewer is
-/// red, every one (as `N/N` or as `N`) a task.
+/// `correctness`, every one (as `N/N` or as `N`) `other`; red each.
 fn check_unrun(script: &str) {
     let process = line("FAIL", "xtask::ci", "ci_list_runs_no_control");
     let cases = [
         (SUMMARY.to_owned(), "red", "correctness", "nextest ran 322 of the 5514 tests it selected, the rest unrun"),
         (
             "2026-11-10T01:00:01.0000000Z      Summary [  71.045s] 5514/5514 tests run: 5513 passed, 1 failed".to_owned(),
-            "task",
+            "red",
             "other",
             "process tests failed: xtask::ci ci_list_runs_no_control",
         ),
         (
             "2026-11-10T01:00:01.0000000Z      Summary [ 300.000s] 5514 tests run: 5513 passed, 1 failed".to_owned(),
-            "task",
+            "red",
             "other",
             "process tests failed: xtask::ci ci_list_runs_no_control",
         ),
@@ -1109,7 +1124,7 @@ mod every_test_run {
     negative_control!(
         ci_per_merge_verdict_tests_left_unrun_are_red,
         "a classifier that reads a run of every selected test, `N/N`, as one that left tests unrun",
-        expected = "5514/5514 tests run: 5513 passed, 1 failed`: the verdict is not task",
+        expected = "5514/5514 tests run: 5513 passed, 1 failed`: ci (3) is not judged other",
         check_unrun(&edit(
             &script(),
             "int(m.group(1)) < int(m.group(2))",
@@ -1243,19 +1258,9 @@ struct Decided {
     summary: String,
 }
 
-impl Decided {
-    /// The calls that POST to `path` exactly.
-    fn posts_to(&self, path: &str) -> usize {
-        self.calls
-            .iter()
-            .filter(|c| c.starts_with(&format!("api --method POST {path} ")))
-            .count()
-    }
-}
-
-/// `decide` under `script`, on `run`, with a stand-in `gh` serving the run's jobs in two pages, each failed job's log
-/// (a 404 for one with none), the open issues `issues` (JSON), and failing what `env` asks of it.
-fn decide(script: &str, run: &Run, issues: &str, env: &[(&str, &str)]) -> Decided {
+/// `decide` under `script`, on `run`, with a stand-in `gh` serving the run's jobs in two pages and each failed job's log
+/// (a 404 for one with none), failing what `env` asks of it, and failing any other call.
+fn decide(script: &str, run: &Run, env: &[(&str, &str)]) -> Decided {
     let dir = Scratch::new("ci_per_merge_decide");
     let data = dir.join("run");
     let bin = dir.join("bin");
@@ -1268,7 +1273,6 @@ fn decide(script: &str, run: &Run, issues: &str, env: &[(&str, &str)]) -> Decide
         json!({"jobs": run.jobs[half..]})
     );
     std::fs::write(data.join("pages"), pages).expect("pages");
-    std::fs::write(data.join("issues"), issues).expect("issues");
     std::fs::create_dir_all(dir.join(".config")).expect(".config");
     std::fs::write(dir.join(".config/nextest.toml"), read(CONFIG)).expect("config");
     let file = dir.join("ci_per_merge.py");
@@ -1282,16 +1286,12 @@ fn decide(script: &str, run: &Run, issues: &str, env: &[(&str, &str)]) -> Decide
          { printf '\\036'; printf '%s ' \"$@\"; } >> \"$STUB_CALLS\"\n\
          args=\"$*\"\n\
          case \"$args\" in\n\
-           'api repos/o/r/labels/per-merge') [ -n \"$STUB_LABEL_EXISTS\" ] || { echo 'gh: Not Found (HTTP 404)' >&2; exit 1; }; echo '{}' ;;\n\
-           'api --method POST repos/o/r/labels '*) [ -z \"$STUB_LABEL_ERR\" ] || { echo \"$STUB_LABEL_ERR\" >&2; exit 1; } ;;\n\
-           'api --method POST '*) [ -z \"$STUB_POST_ERR\" ] || { echo \"$STUB_POST_ERR\" >&2; exit 1; }; echo '{\"number\": 12}' ;;\n\
            *'/attempts/'*'/jobs'*)\n\
              [ -z \"$STUB_JOBS_ERR\" ] || { echo \"$STUB_JOBS_ERR\" >&2; exit 1; }\n\
              cat \"$STUB_DATA/pages\" ;;\n\
            *'/logs')\n\
              id=${args##*jobs/}; id=${id%/logs}\n\
              cat \"$STUB_DATA/logs/$id.log\" 2> /dev/null || { echo 'gh: HTTP 404' >&2; exit 1; } ;;\n\
-           *'/issues?labels='*) cat \"$STUB_DATA/issues\" ;;\n\
            *) echo \"unexpected: $args\" >&2; exit 1 ;;\n\
          esac\n\
          exit 0\n",
@@ -1315,8 +1315,6 @@ fn decide(script: &str, run: &Run, issues: &str, env: &[(&str, &str)]) -> Decide
         .env("GH_REPO", "o/r")
         .env("RUN_ID", "42")
         .env("RUN_ATTEMPT", "1")
-        .env("HEAD_SHA", "abc")
-        .env("FILE_TASKS", "true")
         .env("GITHUB_STEP_SUMMARY", &summary);
     for (k, v) in env {
         cmd.env(k, v);
@@ -1335,7 +1333,7 @@ fn decide(script: &str, run: &Run, issues: &str, env: &[(&str, &str)]) -> Decide
     }
 }
 
-/// A process test failing in a `ci` shard, a task.
+/// A process test failing in a `ci` shard: red (R-982), its kind `other`.
 fn process_run() -> Run {
     Run::green().test_failed(
         "ci (3)",
@@ -1344,149 +1342,57 @@ fn process_run() -> Run {
     )
 }
 
-const TITLE: &str = "per-merge: ci failed on main (not a correctness failure)";
-
-/// `decide` opens the task, labelled, naming its run and failure, says where it filed it, and asks to make the label
-/// `label_posts` times: once when it is missing, never when it exists, where the API answers a request to make it with a
-/// 422 (run 43073329906, whose task was filed all the same, as a comment on #490).
-fn check_files(env: &[(&str, &str)], label_posts: usize) {
-    check_files_with(&script(), env, label_posts)
-}
-
-fn check_files_with(script: &str, env: &[(&str, &str)], label_posts: usize) {
-    let done = decide(script, &process_run(), "[]", env);
-    assert!(done.ok, "ci_per_merge: decide failed on a task");
-    assert_eq!(
-        done.posts_to("repos/o/r/issues"),
-        1,
-        "ci_per_merge: decide did not open the task"
-    );
-    let opened = done
-        .calls
-        .iter()
-        .find(|c| c.starts_with("api --method POST repos/o/r/issues "))
-        .expect("the issue");
-    assert!(
-        opened.contains(&format!("-f title={TITLE} "))
-            && opened.contains("-f labels[]=per-merge ")
-            && opened.contains("https://github.com/o/r/actions/runs/42")
-            && opened.contains("xtask::ci ci_list_runs_no_control"),
-        "ci_per_merge: the task does not name its run, its failure and its label"
-    );
-    assert!(
-        done.summary.contains(&format!("Filed: {TITLE} (#12)"))
-            && done.out.contains("filed: #12: "),
-        "ci_per_merge: decide did not say where it filed the task"
-    );
-    assert_eq!(
-        done.posts_to("repos/o/r/labels"),
-        label_posts,
-        "ci_per_merge: decide did not ask to make its label only when it is missing"
-    );
-}
-
-#[test]
-fn ci_per_merge_decide_files_one_task_on_main() {
-    check_files(&[], 1);
-}
-
-negative_control!(
-    ci_per_merge_decide_files_one_task_on_main,
-    "decide off `main`",
-    expected = "ci_per_merge: decide did not open the task",
-    check_files(&[("FILE_TASKS", "false")], 1)
-);
-
-#[test]
-fn ci_per_merge_decide_files_the_task_when_its_label_exists() {
-    check_files(&[("STUB_LABEL_EXISTS", "1")], 0);
-}
-
-negative_control!(
-    ci_per_merge_decide_files_the_task_when_its_label_exists,
-    "decide asking to make the label whether or not it exists, which the API refuses with a 422",
-    expected = "ci_per_merge: decide did not ask to make its label only when it is missing",
-    check_files_with(
-        &edit(
-            &script(),
-            "    if out.returncode == 0:\n        return\n",
-            ""
-        ),
-        &[
-            ("STUB_LABEL_EXISTS", "1"),
-            ("STUB_LABEL_ERR", "gh: Validation Failed (HTTP 422)")
-        ],
-        0
-    )
-);
-
-#[test]
-fn ci_per_merge_decide_files_the_task_when_its_label_cannot_be_made() {
-    check_files(&[("STUB_LABEL_ERR", "gh: HTTP 403")], 1);
-}
-
-negative_control!(
-    ci_per_merge_decide_files_the_task_when_its_label_cannot_be_made,
-    "decide off `main`, the label not made",
-    expected = "ci_per_merge: decide did not open the task",
-    check_files(
-        &[("STUB_LABEL_ERR", "gh: HTTP 403"), ("FILE_TASKS", "false")],
-        1
-    )
-);
-
-fn check_comment(open_title: &str) {
-    let issues = json!([{"number": 7, "title": open_title}]).to_string();
-    let done = decide(&script(), &process_run(), &issues, &[]);
-    assert!(done.ok, "ci_per_merge: decide failed on a task");
-    assert_eq!(
-        done.posts_to("repos/o/r/issues"),
-        0,
-        "ci_per_merge: decide opened a second issue"
-    );
-    assert_eq!(
-        done.posts_to("repos/o/r/issues/7/comments"),
-        1,
-        "ci_per_merge: decide did not comment on the open task"
-    );
-}
-
-#[test]
-fn ci_per_merge_decide_comments_on_the_open_task() {
-    check_comment(TITLE);
-}
-
-negative_control!(
-    ci_per_merge_decide_comments_on_the_open_task,
-    "an open issue of another title",
-    expected = "ci_per_merge: decide opened a second issue",
-    check_comment("per-merge: xtask-ci failed on main (not a correctness failure)")
-);
-
-fn check_red(run: &Run) {
-    let done = decide(&script(), run, "[]", &[]);
-    assert!(!done.ok, "ci_per_merge: decide passed a red run");
+/// `decide` fails the red run `run`, says so, and files nothing: it calls `gh` for the run's jobs and the failed jobs'
+/// logs alone (R-982 ends R-907's top-priority task for a failure outside correctness).
+fn check_red(script: &str, case: &str, run: &Run) {
+    let done = decide(script, run, &[]);
+    assert!(!done.ok, "ci_per_merge: {case}: decide passed a red run");
     assert!(
         done.out.starts_with("verdict=red\n") && done.summary.contains("**Red `main`:**"),
-        "ci_per_merge: decide does not say the run is red"
+        "ci_per_merge: {case}: decide does not say the run is red"
     );
-    assert_eq!(
-        done.posts_to("repos/o/r/issues"),
-        0,
-        "ci_per_merge: decide filed a correctness failure as a task"
+    assert!(
+        done.calls
+            .iter()
+            .all(|c| c.contains("/attempts/1/jobs?") || c.ends_with("/logs ")),
+        "ci_per_merge: {case}: decide called gh for more than the run's jobs and logs"
     );
 }
 
 #[test]
 fn ci_per_merge_decide_red_fails_and_files_nothing() {
-    check_red(&Run::green().test_failed("ci (2)", CI_STEP, &[PRODUCT_FAIL.to_owned()]));
+    check_red(
+        &script(),
+        "a product test's failure",
+        &Run::green().test_failed("ci (2)", CI_STEP, &[PRODUCT_FAIL.to_owned()]),
+    );
 }
 
 negative_control!(
     ci_per_merge_decide_red_fails_and_files_nothing,
-    "a process test's failure",
-    expected = "ci_per_merge: decide passed a red run",
-    check_red(&process_run())
+    "a run whose jobs all passed",
+    expected = "ci_per_merge: a product test's failure: decide passed a red run",
+    check_red(&script(), "a product test's failure", &Run::green())
+);
+
+#[test]
+fn ci_per_merge_decide_a_process_failure_fails_and_files_nothing() {
+    check_red(&script(), "a process test's failure", &process_run());
+}
+
+negative_control!(
+    ci_per_merge_decide_a_process_failure_fails_and_files_nothing,
+    "a decide that lets a failure outside correctness pass, as before R-982",
+    expected = "ci_per_merge: a process test's failure: decide passed a red run",
+    check_red(
+        &edit(
+            &script(),
+            "RED = (\"correctness\", \"other\")",
+            "RED = (\"correctness\",)"
+        ),
+        "a process test's failure",
+        &process_run()
+    )
 );
 
 /// The verdict's own job, still running as it reads the run.
@@ -1497,7 +1403,7 @@ fn with_itself(run: Run) -> Run {
 }
 
 fn check_itself(env: &[(&str, &str)]) {
-    let done = decide(&script(), &with_itself(Run::green()), "[]", env);
+    let done = decide(&script(), &with_itself(Run::green()), env);
     assert!(
         done.ok && done.out == "verdict=green\n",
         "ci_per_merge: decide read its own running job"
@@ -1521,7 +1427,7 @@ negative_control!(
 );
 
 fn check_unread(env: &[(&str, &str)]) {
-    let done = decide(&script(), &Run::green(), "[]", env);
+    let done = decide(&script(), &Run::green(), env);
     assert!(
         !done.ok && done.out.starts_with("verdict=red\n"),
         "ci_per_merge: a run whose jobs could not be read is not red"
@@ -1538,41 +1444,6 @@ negative_control!(
     "jobs that could be read",
     expected = "ci_per_merge: a run whose jobs could not be read is not red",
     check_unread(&[])
-);
-
-fn check_unfiled(script: &str) {
-    let done = decide(
-        script,
-        &process_run(),
-        "[]",
-        &[("STUB_POST_ERR", "gh: HTTP 403")],
-    );
-    assert!(
-        done.ok,
-        "ci_per_merge: a task not filed made the verdict red"
-    );
-    assert!(
-        done.out
-            .contains("::error::the per-merge task was not filed: the issue could not be opened")
-            && done.summary.contains("The task **was not filed**"),
-        "ci_per_merge: a task not filed is not seen"
-    );
-}
-
-#[test]
-fn ci_per_merge_decide_a_task_not_filed_is_seen_not_red() {
-    check_unfiled(&script());
-}
-
-negative_control!(
-    ci_per_merge_decide_a_task_not_filed_is_seen_not_red,
-    "a decide that says nothing when the task is not filed",
-    expected = "ci_per_merge: a task not filed is not seen",
-    check_unfiled(&edit(
-        &script(),
-        "print(f\"::error::the per-merge task was not filed: {why}\")",
-        "pass"
-    ))
 );
 
 // ---- `ci.yml`'s per-merge tier --------------------------------------------------------------------------------------
@@ -1702,7 +1573,7 @@ fn check_verdict_job(ci: &str) {
     );
     assert_eq!(
         job["permissions"],
-        json!({"actions": "read", "contents": "read", "issues": "write"}),
+        json!({"actions": "read", "contents": "read"}),
         "ci_per_merge: per-merge's permissions are not what it uses"
     );
     assert!(
@@ -1719,12 +1590,10 @@ fn check_verdict_job(ci: &str) {
         "ci_per_merge: the verdict's step can be passed over"
     );
     for (key, want) in [
-        ("FILE_TASKS", "${{ github.ref == 'refs/heads/main' }}"),
         ("RUN_ID", "${{ github.run_id }}"),
         ("RUN_ATTEMPT", "${{ github.run_attempt }}"),
         ("GH_TOKEN", "${{ github.token }}"),
         ("GH_REPO", "${{ github.repository }}"),
-        ("HEAD_SHA", "${{ github.sha }}"),
     ] {
         assert_eq!(
             text(&step["env"][key]),
@@ -1764,16 +1633,16 @@ mod skipped_after_a_failure {
     );
 }
 
-mod filing_off_main {
+mod may_write_issues {
     use super::*;
     negative_control!(
         ci_per_merge_tier_verdict_runs_last_on_a_push,
-        "a per-merge job that files tasks from a measure/ branch",
-        expected = "ci_per_merge: the verdict's FILE_TASKS is not",
+        "a per-merge job that may still write issues, which it no longer files (R-982)",
+        expected = "ci_per_merge: per-merge's permissions are not what it uses",
         check_verdict_job(&edit(
             &read(CI),
-            "          FILE_TASKS: ${{ github.ref == 'refs/heads/main' }}\n",
-            "          FILE_TASKS: true\n"
+            "      actions: read\n      contents: read\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n        with:\n          persist-credentials: false\n      - name: The per-merge verdict",
+            "      actions: read\n      contents: read\n      issues: write\n    steps:\n      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0\n        with:\n          persist-credentials: false\n      - name: The per-merge verdict"
         ))
     );
 }
