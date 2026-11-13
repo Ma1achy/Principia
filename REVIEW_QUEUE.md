@@ -613,6 +613,7 @@ under that rule yet; a sub-question asks the owner what they do.*
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M6-21, TASK-M6-08 (R-599's per-axis stop), TASK-M6-07's note.
 - **Deferred:** deferred to M6 by owner 13 Nov 2026 (R-1001, the owner: "RQ-802: (b), with my slope condition; pairs placed symmetrically about a flagged fold are excluded, as seams are. Q-T3: defer:M6.").
+- **13 Nov 2026 (code review 5886176062 of #515, C4):** the main question is ruled by R-1001 (option (b), the direct test on the records with the owner's slope condition, pairs placed symmetrically about a flagged fold excluded, as seams are); only Q-T3 (how an equal pair is classified on a tier-3 map, which has no exact slope) is left, deferred to M6.
 
 ## RQ-804: REQ-GUI-012's last clause, re-derived: under R-926 a switch at `ℓ_switch` with no collapsed pair costs no precision beyond the narrowing, except where RQ-798's creases are, so the warning it raises claims what is not so *(conflict; a one-way door, it amends R-54's words and what the warning claims; R-54, R-90, R-926 item 11, R-935, R-570; REQ-GUI-012; context: TASK-M6-21, RQ-553, the chart audit's F22 (the physics reviewer's "missed" 4))*
 
@@ -678,3 +679,90 @@ untrue. The question is whether to stop warning at a switch where no pixels have
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M6-21; RQ-798 and RQ-802.
 - **Deferred:** deferred to M6 by owner 13 Nov 2026 (R-1002, the owner: "RQ-804: (a), given RQ-798 (a″). Q-T3 as in RQ-802: defer:M6.").
+- **13 Nov 2026 (code review 5886176062 of #515, C4):** the main question is ruled by R-1002 (option (a): no precision warning at a switch at `ℓ_switch` with no collapse); only Q-T3, inherited from RQ-802, is left, deferred to M6. R-1002's safety on quads whose component drops a binade waits on RQ-811.
+
+## RQ-811: RQ-798's binade-drop case: a component that drops a binade inside a quad without crossing zero, where R-990's check at the checked points' own ulp admits records about 2 f32 ulp from exact against the owner's "within one f32 step" *(conflict; a one-way door, it changes which quads take the patch and so the CPU's bits; R-990, R-90, R-1002, R-989; REQ-DEC-063, REQ-DEC-064; context: TASK-M6-08, RQ-798)*
+
+*Queued 13 Nov 2026 by the rulings pull request #515, from physics review 5886173032 (F1) and code review 5886176062
+(C1); each quote re-read on the pull request's head b9b01202c. Nothing is chosen here.*
+
+*In plain English: deep in the zoom a square of pixels can borrow its values from a cheap straight-line patch, but only
+if a check at eight points says the patch is close enough. The owner set the check so that every pixel ends up within
+one f32 step of the exact value. That works while a number keeps roughly the same size across the square. Where it
+halves in size across the square (drops a binade) without reaching zero, the check as written measures "one step" at
+the eight points' size, and the smaller pixels in between can be about two of their own steps out. Checking against the
+smallest pixel's step instead keeps the promise but sends more squares to the slow exact path, which changes the bits
+the CPU writes.*
+
+- **File, section:**
+  - `decisions.md` § R-990, the owner's words: "RQ-798: (a″), with the comparison at 4/5 of the bound so admitted
+    records are within one f32 step of exact. Where a component crosses zero inside a square, compare at the square's
+    smallest value of that component."
+  - `docs/archive/review_queue/M0.md` § RQ-798, the binade condition (physics review 5877523301, F5): "Where a
+    component's magnitude drops a binade inside the quad, interior samples get up to 2 (semidefinite, (a′)) or 5/2
+    ((a″)) of their own ulp."
+  - `plan/requirements.yaml` REQ-DEC-063 (the admission check, qualified "within one binade" until this is answered);
+    `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision", the R-990 line after "Switchover".
+- **The conflict:** the owner's words name the purpose, "so admitted records are within one f32 step of exact", and a
+  variant for a zero crossing only. For a binade drop with no crossing, the check at the checked points' own ulp gives
+  interior samples up to 5/2 of their own ulp at the full bound, so about 2 at 4/5 (the binade condition), which breaks
+  the purpose. The physics review's bound: over every quadratic error that is 0 at the quad centre and at most 1 at the
+  four corners and four edge midpoints, the maximum over the square is 5/4, at `(u, v) = (−1, −½)`; so 4/5 of the bound
+  at the eight points bounds the square at the bound itself, in the checked points' ulp, and a sample whose own ulp is
+  half that sees about twice it. RQ-804 (a), taken by R-1002, is "safe only with RQ-798 (a″)", so on these quads the
+  error would also be silent.
+- **The question:** on a quad where a component's samples drop a binade below the checked points' without crossing
+  zero, at which ulp does R-990's check compare that component?
+- **Options seen:**
+  - **(a) The checked points' own ulp**, as (a″) states. No change to which quads go exact on this account; admitted
+    binade-drop quads carry interior samples up to about 2 of their own f32 ulp from exact, and "within one f32 step"
+    holds within one binade only.
+  - **(b) The f32 ulp of the quad's smallest sample magnitude** of that component, the owner's zero-crossing variant
+    extended to this case. Every admitted sample is within one f32 step of its own value; more quads go exact, and the
+    CPU's bits change on them.
+- **Recommended:** (b), because it keeps the purpose the owner's words state; (a) if the cost M-K measures is judged too
+  high. Measurable alternative, criterion written before any run (R-649): M-K's straddling, away and indefinite sets
+  (REQ-DEC-063), the binade-drop quads among them reported apart; under (a), the worst per-sample difference in each
+  sample's own f32 ulp on admitted binade-drop quads and their share of admitted quads; under (b), the extra share of
+  quads sent to exact and its cost in exact evaluations. If (a)'s worst difference is at most one own ulp on every
+  admitted quad, the two agree and (a) costs nothing.
+- **Applied meanwhile:** REQ-DEC-063's statement and the deep zoom line say "within one binade; the binade-drop case
+  waits on RQ-811"; R-990 and R-1002 carry dated lines naming this entry.
+- **Waits:** TASK-M6-08 (the switch and M-K); TASK-M6-21 (the warning, through R-1002).
+
+## RQ-812: Heggie's landing: its reference lands with the per-precision `LAND_EPS_REL` in branches, which Part 2c rule 1 forbids, and R-998's no-tolerance rule names Aarseth–Zare and R-994 logH, not Heggie *(conflict; a one-way door, it changes what the default occupant, Heggie × RK4, computes; R-998, R-994, R-953, R-560, R-159; REQ-INT-049, REQ-INT-119; context: TASK-M3-08, TASK-M3-76, RQ-795)*
+
+*Queued 13 Nov 2026 by the rulings pull request #515, from physics review 5886173032 (F4) and code review 5886176062
+(C2); each quote re-read on the pull request's head b9b01202c. Nothing is chosen here.*
+
+*In plain English: each method has to stop exactly at the end of each time slice. The owner ruled that Aarseth–Zare
+stops with no "close enough" allowance and lands its state together with its clock, and that logH does the same. The
+default method, Heggie's, was not part of that question. Its reference code uses a "close enough" allowance that
+differs between single and double precision, which the kernel's rules forbid. So what Heggie does instead is still the
+owner's call.*
+
+- **File, section:**
+  - `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction", rule 1:
+    "If a tolerance must scale with precision, it belongs where the *value* is used, never where the *branch* is
+    taken", and R-953's note: "`SYNC_EPS` and `LAND_EPS_REL` stay forbidden in a branch."
+  - The reference (R-159, record only): `docs/reference/prin-rs/src/integrate/heggie/driver.rs:328`, `let tol = … dt_left
+    * T::LAND_EPS_REL`, used in branches at `:345`, `:385` and `:390`.
+  - `decisions.md` § R-998 (Aarseth–Zare, "RQ-795: (b), on one condition: the state must land on the boundary together
+    with the clock …") and § R-994 (logH, "RQ-810: (a), using RQ-795's answer.").
+- **The conflict:** Heggie's reference lands with a per-precision tolerance in a branch; rule 1 forbids it; no ruling
+  says what replaces it for Heggie. The report framed RQ-810 (a) as one landing rule for all three methods, but those are
+  the report's words, not the owner's.
+- **The question:** how does Heggie's occupant land at a sync boundary?
+- **Options seen:**
+  - **(a) R-998's rule:** no landing tolerance; the interval lands when the last step ends the clock at or past the
+    boundary, the state landing with the clock, the final step sized or retaken; checked by the figure-eight closure's
+    convergence order. One rule for all three occupants.
+  - **(b) One tolerance at both precisions,** a calibration (R-71), compared where the value is used.
+  - **(c) The reference's per-precision values,** with rule 1 amended to except them.
+- **Recommended:** (a), one landing rule across Aarseth–Zare, logH and Heggie, with no constant in a branch and no
+  calibration. Measurable alternative, criterion written before any run (R-649): Heggie × RK4's figure-eight closure and
+  its convergence order across η in [0.02, 0.001] under (a) and under (b) at its proposed tolerance, with the expected
+  order for RK4 and its margin stated before the run; a landing that sets the clock alone shows its order fall.
+- **Applied meanwhile:** the integrator contract's 13 Nov rule-1 line names Aarseth–Zare and logH only, with its *Was*.
+  REQ-INT-084 (Heggie's step control, closed by TASK-M3-08) names this entry.
+- **Waits:** Heggie's landing in TASK-M3-08 (or in the logH-and-hookup task its split creates).

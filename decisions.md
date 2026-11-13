@@ -35232,6 +35232,9 @@ split requirements, REQ-PERF-116 and the moved calibrations.
 *Still in force: M2's gate, "fully working and tested", and its checklist G1 to G14 (R-923 passes no gate); what
 finishes; CI and tooling outside the order; R-914's release holding in the graph. Its order and its hold on new
 integrator and visual dispatch until M2's gate are set aside for now (R-923).*
+*13 Nov 2026, applied per R-369 (R-987; code review 5886176062 of #515, C3):* once R-923 lifts, M3 tasks keep slot
+priority, M2 chart tasks are dispatched next, and the GUI track continues as now; this ruling's order and its hold are
+otherwise unchanged, a visual (M4 to M8) task outside the GUI track waiting for M2's gate.
 *9 Nov 2026 · the owner's ruling of that evening, which follows R-916; applied in `plan/MILESTONES.md` (§ "Where the order
 comes from" and § "M2 — Charts, decode and encode", its gate text), `plan/WORKFLOW.md` (§ "Human checkpoints: the
 milestone gates"), `plan/OPERATIONS.md` (§ "Dispatching" and § "The GUI track (R-390)"), the forward lines of R-390,
@@ -38282,6 +38285,12 @@ for them, and they are ported with the reply they name.
 *What it amends:* **R-923**, lifted when this pull request merges. *Read with* **R-917**: its order stays set aside as
 far as agent slots go, integrator tasks first.
 
+*13 Nov 2026, applied per R-369 (process, a two-way door; code review 5886176062 of #515, C3):*
+dispatch after the lift. M3 tasks keep slot priority (this ruling); M2 chart tasks are dispatched next; the GUI track
+R-923 let go ahead (R-390, R-627) continues as now; R-917's build order and `plan/OPERATIONS.md` § "Dispatching" are
+otherwise unchanged, so a visual (M4 to M8) task outside the GUI track still waits for M2's gate, as it did under
+R-923.
+
 R-987 is in the "process" group of `plan/rule_groups.yaml`.
 
 Changes no requirement. R-987 was reserved for this message; the numbers after R-988 are this reply's, so R-987 follows
@@ -38394,6 +38403,30 @@ check.
 *What it amends:* **R-90**, "whichever comes first": past `ℓ_switch` the patch is taken only where R-990's check
 admits it.
 
+*13 Nov 2026, corrected on the pull request that records it (physics review 5886173032 and code review 5886176062 of #515), the owner's words unchanged:*
+three points above go beyond what the owner's words settle, and are corrected here.
+
+- **The binade-drop case is a question, not a reading.** A component that drops a binade inside the quad without
+  crossing zero is RQ-811, open, a one-way door: checked at the checked points' own ulp, interior samples reach about 2
+  of their own ulp at 4/5 of the bound (5/2 at the full bound; the entry's binade condition), against the owner's "so
+  admitted records are within one f32 step of exact"; checked at the smallest sample's ulp, it meets that purpose but
+  sends more quads to exact and changes CPU bits. The "Not named by the owner's words" bullet's reading is withdrawn
+  into RQ-811. Until it is answered, "admitted records are within one f32 step of exact", here, in REQ-DEC-063 and in
+  deep zoom § 2, holds within one binade; the binade-drop case waits on RQ-811, and M-K reports those quads apart.
+- **"The quad's smallest value" of a zero-crossing component is not defined here.** The estimate `|x₀| − |J|·√2·h` is
+  at or below 0 on exactly those quads, and the continuum minimum, 0, would send every crossing quad to exact, the
+  entry's other variant, which the owner did not take. The value, and how a crossing is detected, are a definition
+  (R-72) TASK-M6-08 writes under physics review, required to make "within one f32 step" true per sample on an admitted
+  crossing quad (REQ-DEC-064, applied per R-369: task scoping). A definition that reads the value as the continuum zero
+  goes to `REVIEW_QUEUE.md`.
+- **M-K judges admitted zero-crossing quads per sample,** in each sample's own f32 ulp, with a positive control that
+  fails if the variant is left out: a planted quad whose error passes at the checked points' own ulp but exceeds the
+  smallest sample's ulp is rejected (REQ-DEC-063's verify).
+
+The physics review's check of the 4/5 factor: over every quadratic error that is 0 at the quad centre and at most 1 at
+the four corners and four edge midpoints, the maximum over the square is exactly 5/4, at `(u, v) = (−1, −½)`; without
+the zero at the centre it is 3. So the bound rests on `x₀` being the exact centre value, as R-989 makes it.
+
 R-990 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Adds REQ-DEC-063; changes REQ-INT-115. The parse printed R-990 for this answer.
@@ -38467,6 +38500,11 @@ Aarseth–Zare) and REQ-INT-006's seam runs carry the state. The task that build
 from TASK-M3-08 (D-22 of the report), TASK-M3-75, written on `task/TASK-M3-08` and not on `main` when this was
 written; until that split merges, the two requirements sit on TASK-M3-08, and the split moves them with REQ-INT-018
 and REQ-INT-073.
+
+*13 Nov 2026, corrected on the pull request that records it (physics review 5886173032 and code review 5886176062 of #515):* option (a) reads "Heggie's `Qᵢ`,
+`Pᵢ` and `h` (13 numbers and the clock)". The heading and the applied lines listed `Qᵢ`, `Pᵢ` and `h` only; Heggie's
+carried state includes its own clock, as the option has it, so that re-boot after eviction reproduces live march
+bitwise (REQ-INT-118); REQ-INT-118, REQ-PAY-114, payload § 0 and the integrator contract's Part 2a line now name it.
 
 R-992 is in the "physics" group of `plan/rule_groups.yaml`.
 
@@ -38637,6 +38675,13 @@ R-999's floor, under a new requirement, REQ-INT-119, whose verify is the converg
 task scoping; no task building the regularised step control is open for Aarseth–Zare). REQ-INT-049 names the ruling.
 logH lands under the same rule (R-994).
 
+*13 Nov 2026, the definition's limits, stated on the pull request that records it (physics review 5886173032 and code review 5886176062 of #515):* the stop
+TASK-M3-76 writes is bounded thus. No constant other than an integer iteration cap (rule 3) reaches a branch. The
+wrapper's clock is never set to the boundary while the stored state's own clock differs from it. If no stop meets both,
+the residual goes to `REVIEW_QUEUE.md` (a calibration under R-71, or an RQ), and is never chosen in the pull request.
+Heggie's landing is not ruled by this answer: its reference uses the same per-precision `LAND_EPS_REL` in branches, and
+what replaces it is RQ-812, open.
+
 R-998 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Adds REQ-INT-119. The parse printed R-998 for this answer.
@@ -38743,6 +38788,11 @@ the entry stays open on it, deferred to M6.
 `ℓ_switch` switchover with no collapse is replaced, with its *Was*; TASK-M6-21 names it.
 
 *What it amends:* **R-54**, "Raised on `DECODE_SWITCHOVER`", now a switchover triggered by collapse.
+
+*13 Nov 2026, a dependency noted on the pull request that records it (physics review 5886173032 and code review 5886176062 of #515):* the option is "safe only
+with RQ-798 (a″)". On a quad whose component drops a binade without crossing zero, R-990's check at the checked points'
+own ulp admits records up to about 2 of their own ulp from exact, and with no warning at a switch with no collapse that
+error is silent. So this ruling's safety on those quads waits on RQ-811's answer; elsewhere it holds as R-990 states.
 
 R-1002 is in the "design" group of `plan/rule_groups.yaml`.
 

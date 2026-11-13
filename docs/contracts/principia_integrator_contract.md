@@ -257,10 +257,12 @@ saying it was excepted; the owner's answer calls it "the same floor constant the
 writes the exception down. Rule 1's text stands for every other constant: `SYNC_EPS` and `LAND_EPS_REL` stay forbidden
 in a branch.
 
-*13 Nov 2026 (R-998, RQ-795 (b); R-994, RQ-810 (a)):* the regularised occupants' landing takes no tolerance: an interval
+*13 Nov 2026 (R-998, RQ-795 (b); R-994, RQ-810 (a)):* Aarseth–Zare's and logH's landing takes no tolerance: an interval
 lands when the last step ends the clock at or past the boundary, the state landing on the boundary together with the
 clock, so no `LAND_EPS_REL`, and no factor such as logH reference's `1 − 1e-12`, reaches a branch (Part 2b, Aarseth–Zare's
-steps 6 and 7).
+steps 6 and 7). Heggie's landing is not ruled: its reference uses the same per-precision `LAND_EPS_REL` in branches, which
+this rule forbids, and what replaces it is RQ-812, open. *Was (13 Nov 2026, corrected on #515 by physics review
+5886173032 F4 and code review 5886176062 C2):* "the regularised occupants' landing takes no tolerance".
 
 **2. COMPARISON-ONLY IN BRANCH CONDITIONS.** No runtime transcendental deciding a branch. Frozen
 threshold tables (frozen per sim key, generated on the host, R-502), integer counters, `d² < r_coll²` rather than `d < r_coll`. The spike's control —
@@ -799,7 +801,8 @@ rename, no behaviour change. AZ implements it by stepping in `tau` until it land
 variables or re-freezes its energy at a call, and its re-registration count is 0 (REQ-INT-018, REQ-INT-118). It is a
 payload schema change (REQ-PAY-114). Aarseth–Zare carries none and re-registers at every sync boundary, as Part 2b's
 table says. *Was:* the seam passed only `(m, r, p)`, so through it a Heggie or logH occupant would have rebuilt its
-state at every call that marches (RQ-808).
+state at every call that marches (RQ-808). *Corrected 13 Nov 2026 (physics review 5886173032 of #515, F5):* Heggie's carried state includes its own
+clock, as option (a) reads ("13 numbers and the clock"), so that re-boot reproduces live march bitwise.
 
 The profile gains **`owns_time_mapping: bool`** — the honest name, because the question is not "is it
 regularised" but **"does the wrapper still know how far a step goes"**. It is reported for the **composed occupant**
