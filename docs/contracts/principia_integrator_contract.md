@@ -267,12 +267,15 @@ saying it was excepted; the owner's answer calls it "the same floor constant the
 writes the exception down. Rule 1's text stands for every other constant: `SYNC_EPS` and `LAND_EPS_REL` stay forbidden
 in a branch.
 
-*13 Nov 2026 (R-998, RQ-795 (b); R-994, RQ-810 (a)):* Aarseth–Zare's and logH's landing takes no tolerance: an interval
-lands when the last step ends the clock at or past the boundary, the state landing on the boundary together with the
-clock, so no `LAND_EPS_REL`, and no factor such as logH reference's `1 − 1e-12`, reaches a branch (Part 2b, Aarseth–Zare's
-steps 6 and 7). Heggie's landing is not ruled: its reference uses the same per-precision `LAND_EPS_REL` in branches, which
-this rule forbids, and what replaces it is RQ-812, open. *Was (13 Nov 2026, corrected on #515 by physics review
-5886173032 F4 and code review 5886176062 C2):* "the regularised occupants' landing takes no tolerance".
+*13 Nov 2026 (R-998, RQ-795 (b); R-994, RQ-810 (a); R-1007, RQ-812 (a)):* Aarseth–Zare's, logH's and Heggie's landing
+takes no tolerance, one landing rule for all three methods: an interval lands when the last step ends the clock at or
+past the boundary, the state landing on the boundary together with the clock, the final step sized or retaken, so no
+`LAND_EPS_REL`, and no factor such as logH reference's `1 − 1e-12`, reaches a branch (Part 2b, Aarseth–Zare's steps 6
+and 7, and § "The equations and the step control" for Heggie and logH). *Was (13 Nov 2026, corrected on #515 by physics
+review 5886173032 F4 and code review 5886176062 C2):* "the regularised occupants' landing takes no tolerance". *Was (13
+Nov 2026, until R-1007):* "Aarseth–Zare's and logH's landing takes no tolerance" and "Heggie's landing is not ruled: its
+reference uses the same per-precision `LAND_EPS_REL` in branches, which this rule forbids, and what replaces it is
+RQ-812, open."
 
 **2. COMPARISON-ONLY IN BRANCH CONDITIONS.** No runtime transcendental deciding a branch. Frozen
 threshold tables (frozen per sim key, generated on the host, R-502), integer counters, `d² < r_coll²` rather than `d < r_coll`. The spike's control —
@@ -384,6 +387,20 @@ physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
   Aarseth–Zare's, under R-998's rule: no landing tolerance, and the state lands on the boundary with the clock (the
   final step sized or retaken to land); the reference's landing predicted before the step with `1 − 1e-12`
   (`.../logh/driver.rs:390-391`) is not transcribed. The secant is on by default.
+- *13 Nov 2026 (R-1007, RQ-812 (a)):* Heggie's landing follows the same rule, one landing rule for all three methods:
+  no landing tolerance; the interval lands when the last step ends the clock at or past the boundary, the state landing
+  on the boundary together with the clock, the final step sized or retaken, never the clock set to the boundary alone
+  while the state stays overshot. The reference's per-precision `LAND_EPS_REL` (`.../heggie/driver.rs:328`, in branches
+  at `:345`, `:385` and `:390`) is not transcribed. How the last step is sized or retaken is a definition (R-72) the task
+  building Heggie's step control writes here, physics-reviewed, within R-998's limits (no constant other than an
+  integer iteration cap in a branch; the clock never set to the boundary while the stored state's own clock differs
+  from it); it is checked by Heggie × RK4's figure-eight closure and its convergence order across η in [0.02, 0.001]
+  (REQ-INT-084). *Applied per R-369 (the criterion is designed before any run; physics review 5890410670 of #520, F1):*
+  the criterion states its round-off floor before it runs; the order is fitted only over step sizes above that floor;
+  an order still short of 4 there, by a threshold the criterion states beforehand, is read as a landing defect, not as
+  round-off; and the clock-only control stays in. This follows the report of 13 Nov 2026 under RQ-812's recommendation,
+  "TASK-M3-76's experience says that check should state its round-off floor before it runs", with R-1008 as its
+  analogue; R-1008's rider is the owner's for TASK-M3-76 only, and this is not the owner's words.
 
 *13 Nov 2026 (TASK-M3-08 split, applied per R-369):* Heggie's equations, time transformations and step control are
 transcribed in § "Heggie: the equations, the time transformations, the maps and the step control (transcribed)" below
@@ -736,8 +753,10 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
 
 1. **Registration, once.** The Cartesian state at `t = 0` is mapped to `(Q, P)` and `h` (`driver.rs:275-277`); the
    march then runs uninterrupted, and each sync boundary is a sampling cadence that does not touch the state
-   (`driver.rs:8-11`, `:482`). Heggie never re-registers (Part 2a, R-565). How the occupant seam carries this state
-   across `ADVANCE` calls is RQ-808 (TASK-M3-75); the march here is the reference driver's, registered once at `t = 0`.
+   (`driver.rs:8-11`, `:482`). Heggie never re-registers (Part 2a, R-565). The occupant seam carries this state across
+   `ADVANCE` calls in the payload under R-992 (RQ-808 (a); § "Part 2a" below), and TASK-M3-75 builds it; the march here
+   is the reference driver's, registered once at `t = 0`. *Was (corrected 13 Nov 2026 by code review 5895563626 C1 of
+   PR #522):* "How the occupant seam carries this state across `ADVANCE` calls is RQ-808 (TASK-M3-75)".
 2. **The interval.** `dt_left = Δ_sync` (R-565), and the interval clock `t` is set to `0` at each interval's start
    (`driver.rs:327-329`); the landing tolerance is `dt_left·LAND_EPS_REL` with the clamp on and `0` with it off
    (`driver.rs:328`).
@@ -772,10 +791,12 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
 Each kept step's Cartesian image (the return above) goes to the cadence (Part 2a, Cost 1); the reference driver's own
 collision, escape and closure sampling (`driver.rs:422-528`) is the wrapper's detectors here (Part 7), not the
 occupant's. `LAND_EPS_REL` is not part of this transcription: the reference keeps it per precision in branches
-(`driver.rs:328`, `:345`, `:385`, `:390`), which Part 2c rule 1 forbids, and what replaces it is RQ-812, open;
-until it is ruled the landing reads a caller-supplied setting, with no value in the kernel and no production
-configuration, its tests and gates at the reference's values (applied per R-369, as #502 did for Aarseth–Zare before
-RQ-795 was ruled).
+(`driver.rs:328`, `:345`, `:385`, `:390`), which Part 2c rule 1 forbids. Steps 2, 4, 5 and 8 above transcribe the
+reference's landing; Heggie's own lands under R-998's rule (R-1007, RQ-812 (a): Part 2c's rule 1 note and the note under
+"The equations and the step control" above), and how its last step is sized or retaken is the definition TASK-M3-77,
+building this step control, writes here. *Was (13 Nov 2026, until R-1007):* "what replaces it is RQ-812, open; until it
+is ruled the landing reads a caller-supplied setting, with no value in the kernel and no production configuration, its
+tests and gates at the reference's values (applied per R-369, as #502 did for Aarseth–Zare before RQ-795 was ruled)."
 
 #### The time-reversal maps (REQ-INT-095)
 

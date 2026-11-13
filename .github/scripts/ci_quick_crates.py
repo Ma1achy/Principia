@@ -25,9 +25,29 @@ reaches a changed crate, or when one of its dev-dependencies is itself affected,
 crate's dev-dependencies and their normal dependencies, never their dev-dependencies. So `validation`, a dev-dependency
 of every crate but `gui` and a normal dependant of `kernel`, `engine`, `render` and `ledger`, carries a change in any
 of those to all the crates that test with it.
+
+`--readers` prints instead the test binaries that read `plan/requirements.yaml`, as nextest's binary ids
+(`<package>::<test>`), space-separated and sorted: what a pull request whose only code-tier path is that file runs
+(R-980; `scripts/ci_changes.sh requirements` says when). It reads no paths. They are listed by a scan of the sources,
+never by hand. A test reads the file when, outside a whole-line comment, a string literal of its own, or of a support
+module it includes, is a path to it (`"plan/requirements.yaml"`, `join("requirements.yaml")`; a literal with a space in
+it is prose naming the file, as an error message is), to the `plan/` folder, which it walks, or to a script that names
+the file (`plan/check_plan.py`); or when it uses a library module that reads it so (`validation::gate`, whose gates
+check each threshold's requirement in it), spawns a binary that reads it or uses such a module (`CARGO_BIN_EXE_gate`),
+or is the own test of an xtask module that reads it (`xtask/tests/gate_report.rs`). A binary is a package's
+`src/bin/` file or its own `src/main.rs` (`CARGO_BIN_EXE_xtask`, whose `main.rs` uses `xtask::gate_report`). Its
+limit: it follows one hop only, so a reader through a longer chain is missed unless the test also names the file or a
+reading module: a binary started through cargo rather than `CARGO_BIN_EXE_` (`cargo xtask …`), or a module that reaches
+the file only through another program (`xtask::gate`, which runs validation's `gate` binary); the per-merge run runs
+them. Unit tests in `src/` are no target it selects: one in a file that does not name the file but calls a module
+that reads it (`#[cfg(test)]` in `validation/src/cross_backend.rs`, through `crate::gate`) is missed, with no
+fallback, and runs per merge; the file-naming case alone is distrusted, below. Nothing is printed, and the caller
+runs every crate, when the scan cannot be trusted: a `[[test]]` target at a path of its own, a unit test in `src/` in
+a file that reads the file, or no reader found.
 """
 import argparse
 import pathlib
+import re
 import sys
 import tomllib
 
@@ -111,11 +131,95 @@ def has_library(member_dir):
     return "lib" in manifest(member_dir / "Cargo.toml") or (member_dir / "src" / "lib.rs").exists()
 
 
+READ = "requirements.yaml"
+SCRIPT_DIRS = ("plan", "scripts", ".github/scripts")
+
+
+def text_of(path):
+    """A source's text, its whole-line comments left out."""
+    lines = path.read_text(errors="replace").splitlines()
+    return "\n".join(line for line in lines if not line.lstrip().startswith("//"))
+
+
+def names_read(text, names):
+    """Whether a string literal of `text` with no space in it ends in one of `names`: a path to the file, to `plan/`
+    or to a script naming the file. Best effort: an escaped quote is stepped over, a raw string's hashes are not read."""
+    for lit in re.findall(r'"((?:[^"\\\n]|\\.)*)"', text):
+        if not re.search(r"\s", lit) and lit.rstrip("/").rsplit("/", 1)[-1] in names:
+            return True
+    return False
+
+
+def readers(root):
+    """The test binaries that read `plan/requirements.yaml`, as `<package>::<test>`, sorted; None when the scan cannot
+    be trusted."""
+    names = {READ, "plan"} | {
+        p.name
+        for d in SCRIPT_DIRS
+        for p in (root / d).rglob("*")
+        if p.suffix in (".py", ".sh") and p.is_file() and READ in p.read_text(errors="replace")
+    }
+    tests = {}  # <package>::<test> -> its sources' text
+    marks = []  # what a test's text shows it reads through: a module's path, a binary, a support module
+    own = set()  # the xtask modules that read it, whose own tests read it
+    for member in manifest(root / "Cargo.toml")["workspace"]["members"]:
+        doc = manifest(root / member / "Cargo.toml")
+        if "test" in doc:
+            return None
+        package = doc["package"]["name"]
+        ident = package.replace("-", "_")
+        folder, src = root / member / "tests", root / member / "src"
+        for f in sorted(folder.glob("*.rs")):
+            tests[f"{package}::{f.stem}"] = text_of(f)
+        for d in sorted(p for p in folder.glob("*") if p.is_dir()):
+            files = sorted(d.glob("*.rs"))
+            if (d / "main.rs").is_file():
+                tests[f"{package}::{d.name}"] = "\n".join(text_of(f) for f in files)
+            elif any(names_read(text_of(f), names) for f in files):
+                marks.append(rf'\bmod {d.name}\b|"(?:[^"\s]*/)?{d.name}/[^"\s/]*\.rs"')
+        modules = []
+        for f in sorted(src.rglob("*.rs")):
+            parts = f.relative_to(src).with_suffix("").parts
+            text = text_of(f)
+            if not names_read(text, names):
+                continue
+            # A unit test in `src/`, a binary's among them, is no target the scan can select.
+            if "#[test]" in text:
+                return None
+            if parts[0] == "bin":
+                continue
+            parts = parts[:-1] if parts[-1] == "mod" else parts
+            if parts in ((), ("lib",), ("main",)):
+                modules.append(rf"\b{ident}::")
+            else:
+                modules.append(rf"\b{ident}::{parts[0]}\b|\b{ident}::\{{[^}}]*\b{parts[0]}\b")
+                if package == "xtask":
+                    own.add(f"xtask::{parts[0]}")
+        marks.extend(modules)
+        binaries = [(f, f.stem if f.name != "main.rs" else f.parent.name) for f in sorted((src / "bin").rglob("*.rs"))]
+        if (src / "main.rs").is_file():
+            binaries.append((src / "main.rs", package))
+        for f, name in binaries:
+            body = text_of(f)
+            if names_read(body, names) or any(re.search(m, body) for m in modules):
+                marks.append(rf"\bCARGO_BIN_EXE_{name}\b")
+    out = [
+        test
+        for test, body in tests.items()
+        if test in own or names_read(body, names) or any(re.search(m, body) for m in marks)
+    ]
+    return sorted(out) or None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--root", type=pathlib.Path, required=True)
     parser.add_argument("--library", action="store_true", help="only the packages with a library target")
+    parser.add_argument("--readers", action="store_true", help="the test binaries that read plan/requirements.yaml")
     args = parser.parse_args()
+    if args.readers:
+        print(" ".join(readers(args.root) or []))
+        return
     paths = [line.strip() for line in sys.stdin if line.strip()]
     dirs, deps = workspace(args.root)
     changed = seeds(paths, dirs) if paths else None
