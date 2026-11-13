@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-VAL-044, REQ-VAL-134, REQ-INT-032
-- **Depends on:** TASK-M3-24, TASK-M3-28, TASK-M3-08
+- **Depends on:** TASK-M3-24, TASK-M3-28, TASK-M3-08, TASK-M3-75
 - **Needs (earlier milestones):** REQ-ENC-002
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -38,3 +38,4 @@ Two or three free-fall (brake) periodic orbits from Hristov et al. 2023 or the T
 - *Was: "Gap: the only `reversible: true` occupant in the Part 2a table is AZ + time-transformed leapfrog (Mikkola–Tanikawa), whose equations the corpus doesn't give and whose build in M3 isn't decided; without it REQ-VAL-044's gate cannot run ('blocked on a reversible occupant')."* RQ-102 ruled: R-162 — a reversible occupant exists: logH's TTL time mode, built in TASK-M3-08; Aarseth–Zare with Mikkola–Tanikawa isn't required.
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-VAL-134.
 - *30 Oct 2026 (R-650):* FF-H, the free-fall closure against Hristov et al.'s orbits (REQ-VAL-042), is external and moves to TASK-M9-36 in M9; the brake orbits stay here as fixtures for the reversibility diagnostic (REQ-VAL-044). *Was:* Closes "REQ-VAL-042, REQ-VAL-044, REQ-VAL-134, REQ-INT-032"; the goal's "run as closure tests asserting a return to rest in the same configuration, with the order reported"; the acceptance test "`cargo xtask gate free-fall-closure` — each orbit returns to rest in the same configuration after one period (tolerance: REQ-VAL-130, calibrated); order reported (REQ-VAL-042).".
+- *13 Nov 2026, applied per R-369:* TASK-M3-08 is re-scoped to Heggie, registered once at `t = 0`, and the radial collision gate; logH, the seam wiring into `integrate_with` and the visible re-registration count are TASK-M3-75's, which waits on RQ-808 to RQ-810. What this task read from TASK-M3-08 is now in the two, so it depends on both. *Was:* "Depends on: TASK-M3-24, TASK-M3-28, TASK-M3-08".

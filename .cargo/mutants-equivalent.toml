@@ -538,3 +538,15 @@ justification = "only x == U32_TOP_F64 takes the other arm, which selects U32_TO
 [[equivalent]]
 mutant = "crates/kernel/src/driver/latch.rs:100:48: replace < with <= in Latches::separation_squared"
 justification = "the mutant differs only where d2 == d2_min (seen already true), where it writes back an equal value; +0.0 and -0.0 compare equal but each √s to a zero that set_d_min floors to 0x0001, so no persisted bit and no live value but the sign of a zero d_min changes"
+
+[[equivalent]]
+mutant = "crates/kernel/src/regularisation/heggie.rs:102:27: replace * with + in dgamma_dp"
+justification = "two() is exactly 2 at f32 and f64, and 2 * 2 and 2 + 2 are both exactly 4, so four is the same value"
+
+[[equivalent]]
+mutant = "crates/kernel/src/regularisation/heggie.rs:133:20: replace * with + in dgamma_dq"
+justification = "two is exactly 2 at f32 and f64, and 2 * 2 and 2 + 2 are both exactly 4, so four is the same value"
+
+[[equivalent]]
+mutant = "crates/kernel/src/regularisation/heggie.rs:233:31: replace * with + in HgSystem<R>::gamma"
+justification = "two() is exactly 2 at f32 and f64, and 2 * 2 and 2 + 2 are both exactly 4, so four is the same value"

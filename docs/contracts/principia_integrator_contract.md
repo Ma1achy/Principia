@@ -100,6 +100,16 @@ what Euler, RK4, KDK, Yoshida-4 and Yoshida-6 light at it on dd tests 2 and 7 at
 REQ-INT-085's and REQ-VAL-031's pass conditions (Euler lighting `SUSPECT_ENERGY` on test 2) still hold. *Was:* "Where the
 regularised drift is stored, and how a drift view draws a run that stopped at an event, is RQ-528."
 
+**The regularised energies, defined (R-566; TASK-M3-08, 13 Nov 2026).** *Heggie's* regularised energy is Heggie's Eq. 6,
+`Σᵢ [|pᵢ|²/(2μᵢ) − pⱼ·pₖ/mᵢ − mⱼmₖ/max(|qᵢ|, TINY)]`, on the relative `(qᵢ, pᵢ)` the regularised state gives,
+`qᵢ = L(Qᵢ)Qᵢ` and `pᵢ = L(Qᵢ)Pᵢ/(2·max(Rᵢ, TINY))` (Part 2b § "Heggie: the equations, the time transformations, the maps
+and the step control (transcribed)"), read against `h`, the energy frozen at the one registration at `t = 0`; it never
+passes through the Cartesian return. *Aarseth–Zare's* is the physical energy of the relative positions and momenta its
+regularised state gives about the reference body, each separation floored at `TINY`, read against the `E` of its first
+registration. Since Aarseth–Zare re-registers at every sync boundary with `E` the Cartesian energy there, its
+regularised and Cartesian read-outs can coincide. The radial-collision gate's measurement of both, and which of its
+controls bind under each, are TASK-M3-78's.
+
 This factoring is load-bearing: it puts all the shared, determinism-critical machinery in one place, and keeps occupants trivially simple and interchangeable. Adaptive substepping lives in the **wrapper**, not the integrator — the wrapper calls `STEP` `N_sub` times at `dt_macro/N_sub`. RK4-as-validation and the inspector's f64 run are just "different occupant + different precision," no special path.
 
 ---
@@ -397,6 +407,10 @@ physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
   round-off; and the clock-only control stays in. This follows the report of 13 Nov 2026 under RQ-812's recommendation,
   "TASK-M3-76's experience says that check should state its round-off floor before it runs", with R-1008 as its
   analogue; R-1008's rider is the owner's for TASK-M3-76 only, and this is not the owner's words.
+
+*13 Nov 2026 (TASK-M3-08 split, applied per R-369):* Heggie's equations, time transformations and step control are
+transcribed in § "Heggie: the equations, the time transformations, the maps and the step control (transcribed)" below
+(TASK-M3-08); logH's and TTL's are TASK-M3-75's, under R-992 to R-994.
 
 #### Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)
 
@@ -711,6 +725,159 @@ detail 2 where the step size `h` was not finite (an entry size that is not finit
 read on the first non-finite regularised state the test rejected (0 if any component is NaN, else 1); the state stored
 is the latched last finite one (payload § 2; TASK-M3-18).
 
+#### Heggie: the equations, the time transformations, the maps and the step control (transcribed)
+
+*Transcribed 13 Nov 2026 by TASK-M3-08 under R-160 (REQ-INT-084's Heggie part; logH's and TTL's are TASK-M3-75's, which
+closes it); physics-reviewed; confirmed at the M3 gate.* Citation: D. C. Heggie, *A global regularisation of the
+gravitational N-body problem*, Celestial Mechanics **10** (1974) 217–241; equation numbers are his. Each equation is
+written as the prin-rs reference set computes it (reference, not authority, R-159), checked line by line against the
+cited file of `docs/reference/prin-rs/src/integrate/heggie/`: `mod.rs`, `state.rs`, `system.rs`, `hamiltonian.rs`,
+`rk4.rs` and `driver.rs` (each by its file name below). Planar, `G = 1`. The Levi-Civita map, its conditioned inverse
+and `L(u)` are the Aarseth–Zare section's above (`system.rs:13` takes them from `az::lc`).
+
+**The planar reduction** (`mod.rs:31-50`). Heggie works in three dimensions and Kustaanheimo–Stiefel-regularises each
+relative vector, giving 4-vectors `Qᵢ` and the 4×3 matrix `Aᵢ` of his Eq. (18). In the plane, `Q₃ = Q₄ = 0` in his
+Eq. (17) leaves `qᵢ = (Q₁² − Q₂², 2Q₁Q₂)`, the Levi-Civita map, and Eq. (18) reduces to the 2×2 block `Aᵢ = 2L(Qᵢ)ᵀ`,
+so `Rᵢ = |Qᵢ|² = |qᵢ|`, Heggie's `qᵢ = ½Aᵢᵀ Qᵢ` is `L(Qᵢ)Qᵢ`, and the coupling `Pⱼᵀ Aⱼ Aₖᵀ Pₖ` is
+`4(L(Qⱼ)Pⱼ)·(L(Qₖ)Pₖ)`. The regularised state is thirteen numbers, `(Q₁, P₁, Q₂, P₂, Q₃, P₃, t)` (`state.rs:1-26`).
+The reduction is the one step the paper does not state; the reference verifies it numerically against Eq. (18) written
+out as a 4×3 matrix (`mod.rs:48-50`).
+
+**Indices** (`mod.rs:52-55`, `system.rs:17-21`). Heggie's are 1-based; here, as in the reference, `i ∈ {0, 1, 2}` and
+`(j, k) = ((i + 1) mod 3, (i + 2) mod 3)`, his `(i+1, i+2)`. Every formula below is written once for `i` and holds
+cyclically; there are no reference body and no special pair (`system.rs:1-6`).
+
+**Coordinates and mass factors** (`system.rs:23-55`, `:82-100`; Heggie Eqs. (4), (8b)). With `mᵢ` the masses and
+`M = m₀ + m₁ + m₂`:
+
+- the relative vectors `qᵢ = rⱼ − rₖ`, so `q₀` joins bodies 1 and 2;
+- in the centre-of-mass frame, `pᵢ = (mⱼvⱼ − mₖvₖ)/3` (Eq. 8b; its general form's `−((mⱼ − mₖ)/M) Σp′` term vanishes
+  there, and the decoder's state is in that frame, Part 1);
+- `μᵢ = mⱼmₖ/(mⱼ + mₖ)`, the reduced mass of the pair `qᵢ` joins, which pairs with `|pᵢ|²`; `mmᵢ = mⱼmₖ`; and `1/mᵢ`,
+  the coefficient of the coupling `pⱼ·pₖ/mᵢ`.
+
+**The energy** (`system.rs:170-186`; Heggie Eq. (6) in the centre-of-mass frame, where its `|⟨p⟩|²/2M` term drops):
+
+`E = Σᵢ [ |pᵢ|²/(2μᵢ) − pⱼ·pₖ/mᵢ − mⱼmₖ/max(|qᵢ|, TINY) ]`.
+
+**Back to the Cartesian state** (`system.rs:121-135`; Heggie Eqs. (10), (12)): `rᵢ = (mⱼqₖ − mₖqⱼ)/M` and
+`vᵢ = (pₖ − pⱼ)/mᵢ`, in the centre-of-mass frame; the Cartesian momenta are `mᵢvᵢ = pₖ − pⱼ`.
+
+**Regularisation and its return** (`system.rs:137-168`). `Qᵢ` is the conditioned Levi-Civita inverse of `qᵢ` (the
+default, `lc_stable`, `system.rs:38-39`, `:143`) and `Pᵢ = 2L(Qᵢ)ᵀpᵢ` (Heggie Eq. (19) inverted with `L(u)ᵀL(u) = |u|²I`).
+Back, `qᵢ = L(Qᵢ)Qᵢ` and `pᵢ = L(Qᵢ)Pᵢ/(2·max(Rᵢ, TINY))`; `Rᵢ` is floored where it divides and nowhere else
+(`state.rs:29-34`, `system.rs:156-157`). `Wᵢ = L(Qᵢ)Pᵢ` (`system.rs:73-80`).
+
+**The regularised Hamiltonian** (`hamiltonian.rs:3-11`, `:65-87`; Heggie §2, his Eq. (20) time transformation
+`dτ = dt/(R₁R₂R₃)`): `Γ* = (H − h)·R₀R₁R₂`, with `h` the energy frozen at registration, is
+
+`Γ* = Σᵢ RⱼRₖ|Pᵢ|²/(8μᵢ) − Σᵢ Rᵢ Wⱼ·Wₖ/(4mᵢ) − Σᵢ mⱼmₖ RⱼRₖ − h·R₀R₁R₂`.
+
+It has no `1/r` term: a polynomial of degree six in the coordinates and two in the momenta (`hamiltonian.rs:13-16`). It
+couples positions and momenta, so it is not separable (the pair rule below).
+
+**The equations of motion under Eq. (20)** (`hamiltonian.rs:89-130`; Heggie Eq. (21)), on `(Q, P, t)` with `h` held:
+
+- `dQᵢ/dτ = ∂Γ*/∂Pᵢ = Pᵢ RⱼRₖ/(4μᵢ) − [L(Qᵢ)ᵀWₖ · Rⱼ/mⱼ + L(Qᵢ)ᵀWⱼ · Rₖ/mₖ]/4`
+- `dPᵢ/dτ = −∂Γ*/∂Qᵢ`, with
+  `∂Γ*/∂Qᵢ = Qᵢ(Rₖ|Pⱼ|²/μⱼ + Rⱼ|Pₖ|²/μₖ)/4 − [2Qᵢ Wⱼ·Wₖ/mᵢ + L(Pᵢ)ᵀWₖ · Rⱼ/mⱼ + L(Pᵢ)ᵀWⱼ · Rₖ/mₖ]/4
+  − 2Qᵢ(mₖmᵢ Rₖ + mᵢmⱼ Rⱼ) − 2h RⱼRₖ Qᵢ`
+- `dt/dτ = R₀R₁R₂`.
+
+`L(Pᵢ)ᵀX` is the gradient in `Qᵢ` of `Wᵢ·X`, since `L(u)w = L(w)u`: the argument moves into the matrix slot
+(`hamiltonian.rs:92-95`). The five groups of `∂Γ*/∂Qᵢ` are the two other kinetic terms, its own coupling term through
+`Rᵢ`, the two other coupling terms through `Wᵢ`, the two potential terms containing `Rᵢ` and the energy term
+(`hamiltonian.rs:112-117`).
+
+**The time transformations** (`hamiltonian.rs:36-63`, `:132-164`; R-161):
+
+- **Eq. (20)**, selectable: `dτ = dt/(R₀R₁R₂)`, the equations above as they stand.
+- **Eq. (22) at n = 3/2, the default** (R-161): `dτ = S^{3/2}/(R₀R₁R₂) dt`, `S = R₀ + R₁ + R₂` floored at `TINY`
+  (`hamiltonian.rs:152`). By Heggie's Eqs. (23) and (24) every rate above is scaled by `S^{−3/2}`, and the momentum
+  equation gains `+(3/2)Γ* ∂ln S/∂Qᵢ = 3Γ*Qᵢ/S`:
+  `dQᵢ/dτ = S^{−3/2} ∂Γ*/∂Pᵢ`, `dPᵢ/dτ = S^{−3/2}(−∂Γ*/∂Qᵢ + 3Γ*Qᵢ/S)`, `dt/dτ = R₀R₁R₂ S^{−3/2}`.
+  These are Hamilton's equations of `Γ** = Γ*·S^{−3/2}`. `Γ*` is evaluated, not assumed zero: it is zero on the exact
+  solution path, and its value off it is the stabilising control term (`hamiltonian.rs:138-140`). Heggie's §3 finds that
+  only (22)–(24) carry no mode growing as `Rᵢ^{−1}` near a triple collision (`hamiltonian.rs:38-42`). The reference keeps
+  a third arm, Eq. (25), (22) with that term dropped (`keep_gamma_term: false`, `hamiltonian.rs:54-56`), the arm Heggie
+  found unstable; it is not one of the two time transformations the corpus names (R-161), and it is not built.
+
+**The step control**, `driver.rs`'s defaults (`driver.rs:97-119`): the per-step interval rule (`HgDtauMode::PerStepInterval`,
+`driver.rs:41-44`), the landing clamp on, the landing secant on with at most 4 retakes (`driver.rs:102-104`), the
+predictive limit at `f = 0.02` (`driver.rs:105`; R-160), `h` never refreshed (`refresh_h_at_boundary` off,
+`driver.rs:86-93`, `:115`), and the conditioned inverse. `dt/dτ` below is the time transformation's in force, `R₀R₁R₂`
+or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.rs:203-215`).
+
+1. **Registration, once.** The Cartesian state at `t = 0` is mapped to `(Q, P)` and `h` (`driver.rs:275-277`); the
+   march then runs uninterrupted, and each sync boundary is a sampling cadence that does not touch the state
+   (`driver.rs:8-11`, `:482`). Heggie never re-registers (Part 2a, R-565). The occupant seam carries this state across
+   `ADVANCE` calls in the payload under R-992 (RQ-808 (a); § "Part 2a" below), and TASK-M3-75 builds it; the march here
+   is the reference driver's, registered once at `t = 0`. *Was (corrected 13 Nov 2026 by code review 5895563626 C1 of
+   PR #522):* "How the occupant seam carries this state across `ADVANCE` calls is RQ-808 (TASK-M3-75)".
+2. **The interval.** `dt_left = Δ_sync` (R-565), and the interval clock `t` is set to `0` at each interval's start
+   (`driver.rs:327-329`); the landing tolerance is `dt_left·LAND_EPS_REL` with the clamp on and `0` with it off
+   (`driver.rs:328`).
+3. **The entry size.** `dτ_entry = η·dt_left/(dt/dτ)` at the interval's entry; an entry `dt/dτ` that is not positive or
+   not finite ends the march not finite (`driver.rs:331-336`).
+4. **Each step's guards** (`driver.rs:338-352`): the explicit finiteness test of the whole state, "`is_finite`
+   explicitly: `NaN >= x` is false"; the landing exit `t ≥ dt_left − tol`; the step budget (here Part 6's, R-604).
+5. **Each step's size** (`driver.rs:354-372`): the floor signal (Part 6, the Heggie bullet); `d = max(dt/dτ, TINY)`;
+   `dτ = min(η·dt_left/d, dτ_entry)`, an entry-cap hit counted when `η·dt_left/d > dτ_entry` (Part 6); the predictive
+   limit, `dτ = lim` where `lim < dτ`; then the landing clamp, `dτ = min(dτ, max(dt_left − t, 0)/d)`, with the same `d`
+   the sizing used ("recomputing it here would let the clamp and the step disagree").
+6. **The predictive limit** (`driver.rs:230-252`): `lim = f·d_min/(v_max·dt/dτ)`, `d_min = min |qᵢ|` and
+   `v_max = max |q̇ᵢ|` over the three pairs, from the relative velocities of Heggie's Eq. (7),
+   `q̇ᵢ = pᵢ/μᵢ − pₖ/mⱼ − pⱼ/mₖ` (`driver.rs:217-228`; the momentum with the further cyclic index carries the reciprocal
+   of the nearer mass), `(q, p)` the regularised state's return above; `+∞` when `f ≤ 0`, the denominator is not
+   positive, or `d_min` or the denominator is not finite. It reads velocities, as R-160 writes it (R-953's note above);
+   the three `qᵢ` are the three pair separations, none special (`driver.rs:233-234`).
+7. **The step.** One step of the stepper on the equations of motion in force, from the saved state; under RK4 the
+   classical `s + (h/6)(k₁ + 2k₂ + 2k₃ + k₄)` (`rk4.rs:26-54`), and under every stepper its form on a non-separable
+   system (the pair rule below).
+8. **The landing secant** (`driver.rs:379-399`), as Aarseth–Zare's step 6 above: when the step just taken reaches the
+   boundary, `want = dt_left − t_before`, and up to 4 times `got = t − t_before`, stopping if `got` is not finite,
+   `got ≤ 0` or `|got − want| ≤ tol`, else `cur = cur·want/got` and the step retaken from the saved state, each retake a
+   counted step.
+9. **The records** (`driver.rs:401-420`): the physical step `t − t_before` folded into `dt_max` (the reference seeds it
+   at `0`, `driver.rs:306`, which the kernel does not; Part 2c rule 4); a step that carries `t` past `2·dt_left` with the
+   clamp on counted as an overshoot; the closest approach over the three pairs at every step.
+10. **The boundary.** The march lands, and the boundary's physical time is `k·Δ_sync` (R-565, Part 2a), where the
+    reference accumulates `t_now += min(t, dt_left)` (`driver.rs:479`); the state passes to the cadence, and `h` is held
+    (`driver.rs:530-532`, off).
+
+Each kept step's Cartesian image (the return above) goes to the cadence (Part 2a, Cost 1); the reference driver's own
+collision, escape and closure sampling (`driver.rs:422-528`) is the wrapper's detectors here (Part 7), not the
+occupant's. `LAND_EPS_REL` is not part of this transcription: the reference keeps it per precision in branches
+(`driver.rs:328`, `:345`, `:385`, `:390`), which Part 2c rule 1 forbids. Steps 2, 4, 5 and 8 above transcribe the
+reference's landing; Heggie's own lands under R-998's rule (R-1007, RQ-812 (a): Part 2c's rule 1 note and the note under
+"The equations and the step control" above), and how its last step is sized or retaken is the definition TASK-M3-77,
+building this step control, writes here. *Was (13 Nov 2026, until R-1007):* "what replaces it is RQ-812, open; until it
+is ruled the landing reads a caller-supplied setting, with no value in the kernel and no production configuration, its
+tests and gates at the reference's values (applied per R-369, as #502 did for Aarseth–Zare before RQ-795 was ruled)."
+
+#### The time-reversal maps (REQ-INT-095)
+
+*Defined 13 Nov 2026 by TASK-M3-08 (R-72; physics reviewer approves): Heggie's and Aarseth–Zare + RK4's; logH's, its time
+variable and its conjugate and TTL's `W`, are TASK-M3-75's, which closes REQ-INT-095.* Each map `Θ` acts on the occupant's
+full state, the domain on which dd_integrator §5's test 3 takes its residual (REQ-VAL-190, REQ-VAL-191): `STEP(dt)`, `Θ`,
+`STEP(dt)`, `Θ`.
+
+- **Heggie**, on `(Q₀, P₀, Q₁, P₁, Q₂, P₂, t)` with `h` held: `Θ(Q, P, t) = (Q, −P, −t)`.
+- **Aarseth–Zare + RK4**, on `(u₁, p₁, u₂, p₂, t)` with `E` and the reference body held: `Θ(u, p, t) = (u, −p, −t)`.
+
+Each is an involution, `Θ∘Θ = id`. **The derivation.** Each Hamiltonian is even in its momenta: Heggie's `Γ*` has its
+kinetic terms `RⱼRₖ|Pᵢ|²` quadratic in `P`, its coupling terms `Wⱼ·Wₖ` bilinear (`Wᵢ = L(Qᵢ)Pᵢ` is linear in `Pᵢ`), and
+its potential and energy terms free of `P`, and `S^{−3/2}` is free of `P`, so `Γ**` is even too; Aarseth–Zare's `Γ` has
+`B|p₁|²`, `A|p₂|²` and the bilinear `(L₁p₁)·(L₂p₂)/(4m_a)`, the rest free of `p`. So the position rates `∂Γ/∂p` are odd
+in the momenta, the momentum rates `−∂Γ/∂q` even, and `dt/dτ` (`R₀R₁R₂`, `R₀R₁R₂/S^{3/2}`, `A·B`) free of them. If
+`x(τ) = (q(τ), p(τ), t(τ))` solves the equations, then so does `Θx(−τ) = (q(−τ), −p(−τ), −t(−τ))`: its position rate is
+`−q̇(−τ) = −∂Γ/∂p(q, p) = ∂Γ/∂p(q, −p)`, its momentum rate `ṗ(−τ) = −∂Γ/∂q(q, p) = −∂Γ/∂q(q, −p)`, and its time rate
+`ṫ(−τ) = dt/dτ(q)`. So `Θ∘φ_τ∘Θ = φ_{−τ}` for the exact flow `φ`, and `Θ∘φ_τ∘Θ∘φ_τ = id`: test 3 returns the state
+exactly for the flow, and the residual it reads is the stepper's. In physical terms the positions `qᵢ = L(Qᵢ)Qᵢ` (or
+`R = L(u)u`) are unchanged and the relative momenta `L(Q)P/(2R)` negated, so the Cartesian velocities are reversed, the
+ordinary time reversal; the root's sign, `±Q` giving the same `q`, is not touched. The frozen energy (`h`, `E`) is held:
+it is not a state component, and the reversal keeps the energy.
+
 #### Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)
 
 **The user chooses the regularisation and the stepper freely, and no pair is forbidden.** The regularisation (`none`,
@@ -742,9 +909,10 @@ at the step `h` the step control gives:
 
 Under logH, whose time transformation is built for a leapfrog, each pair's exact form is written with logH's equations
 and checked as the others are (REQ-INT-097). **TASK-M3-39 writes them here**, each pair in each of logH's time modes, from
-logH's equations once TASK-M3-08 has transcribed them (R-160, REQ-INT-084, which covers logH's own equations, time
+logH's equations once TASK-M3-75 has transcribed them (R-160, REQ-INT-084, which covers logH's own equations, time
 transformations and step control, not its pairs), physics-reviewed before merge (applied per R-369, qa review 5607548278
-of PR #277, Q1). *Was:* "when they are transcribed (R-160, REQ-INT-084)", which named no writer for the pair forms.
+of PR #277, Q1). *Was:* "when they are transcribed (R-160, REQ-INT-084)", which named no writer for the pair forms. *Was (13 Nov 2026, TASK-M3-08 split,
+applied per R-369):* "once TASK-M3-08 has transcribed them"; logH's pairs are RQ-809's.
 
 *13 Nov 2026 (R-993, RQ-809 (a)):* under logH, the pair logH × KDK is logH's own leapfrog, the reference's
 drift–kick–drift with `W` at the midpoint velocity in TTL mode, in each time mode, not the generic kick–drift–kick above;

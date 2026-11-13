@@ -7928,6 +7928,8 @@
     section: R-162 — The reversible occupant is logH's TTL time mode
   - file: decisions.md
     section: "R-159 — The prin-rs reference set is imported *(closes RQ-102 and RQ-103, with R-160 to R-167)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Heggie: the equations, the time transformations, the maps and the step control (transcribed)"
   - file: decisions.md
     section: "R-993 — RQ-809, logH's step: option (a); logH's own time modes are the reference's drift–kick–drift leapfrog, `W` advanced at the midpoint velocity in TTL mode, selected as logH × KDK; logH × RK4 is classical RK4 on `(r, v, t, W)`; logH × Euler and × Yoshida wait for TASK-M3-39 *(closes RQ-809; refines R-500)*"
   - file: decisions.md
@@ -8160,6 +8162,8 @@
     section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
   - file: docs/design/principia_dd_integrator.md
     section: 5. Unit tests
+  - file: docs/contracts/principia_integrator_contract.md
+    section: The time-reversal maps (REQ-INT-095)
   verify:
     method: review checklist
     detail: "Part 2b gives each regularised occupant's reversal map, each an involution on its full state, with its derivation from the occupant's equations; physics reviewer approves before merge; REQ-VAL-190's test applies it"
@@ -8167,7 +8171,7 @@
   - R-72
   - R-500
   milestone: M3
-  note: "R-500, review round 1 of PR #258 (physics P3, applied per R-369). Written by TASK-M3-08."
+  note: "R-500, review round 1 of PR #258 (physics P3, applied per R-369). Written by TASK-M3-08. Re-scoped 13 Nov 2026, applied per R-369 (TASK-M3-08 split; logH and the seam wiring wait on RQ-808 to RQ-810): TASK-M3-08 writes Heggie's and Aarseth–Zare + RK4's maps; TASK-M3-75 writes logH's and closes it."
 - id: REQ-INT-096
   area: INT
   statement: "computeIC must guard both ends of a degenerate start (R-538 TM9): a start already inside r_coll must end as an ordinary collision at t_end_step = 0 in its pair's colour (the integrator contract's t = 0 terminals, R-445), and a step size that is not finite must end the run at once, never looping, labelled sim_failed as the integrator contract has it, its trace ending with the \"?\" icon (RQ-418 (a)); is_finite is tested explicitly, never by a comparison that a NaN makes false."
@@ -8341,7 +8345,7 @@
   - R-160
   - R-566
   milestone: M3
-  note: "R-566 (21 Oct 2026), applied per R-369: a definition (R-72) written with the equations TASK-M3-08 transcribes (R-160); closed by TASK-M3-08."
+  note: "R-566 (21 Oct 2026), applied per R-369: a definition (R-72) written with the equations TASK-M3-08 transcribes (R-160); closed by TASK-M3-08. Re-scoped 13 Nov 2026, applied per R-369 (TASK-M3-08 split; logH and the seam wiring wait on RQ-808 to RQ-810): TASK-M3-08 writes Heggie's and Aarseth–Zare's; TASK-M3-75 writes logH's and closes it. *Was:* \"closed by TASK-M3-08\"."
 - id: REQ-INT-105
   area: INT
   kind: calibration
@@ -8362,7 +8366,7 @@
   - file: decisions.md
     section: "R-999 — RQ-796, Aarseth–Zare's floor on `|R₃|`: option (a), the floor is `TINY` at each working precision, as R-953 does for the reference's other `1e-300` floors, its value following REQ-INT-105's proposal *(closes RQ-796)*"
   verify:
-    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B and the Levi-Civita inverse's guarded components |u₀| and |u₁| at registration (TASK-M3-68), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (TASK-M3-08, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does, and Aarseth–Zare's smallest pre-floor A·B against η·dt_left/FLT_MAX, below which the f32 entry size is not finite with neither factor floored (integrator contract Part 2b, step 7), with the count of non-finite entry steps; the reference's values (1e-37 at f32, 1e-300 at f64) reported beside the proposal; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it. And cargo test -p kernel az_doubly_degenerate_is_finite (TASK-M3-68): an f32 Aarseth–Zare fixture degenerate at the interval's entry, at registration, with both A and B below TINY, so that TINY·TINY underflows to 0 and the entry size is infinite (one case of step 7's general condition), ends its march at the explicit finiteness test (integrator contract Part 2b, the Aarseth–Zare step control, step 7) with no non-finite state carried past it; controls: the march with that finiteness test removed carries a non-finite state on and fails, and the same fixture degenerate only mid-interval takes a finite step (the per-step rule skipping the non-finite constraint) and does not reach the test (R-953)"
+    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence, per regularisation on its own floored quantities: Aarseth–Zare's pre-floor A and B and the Levi-Civita inverse's guarded components |u₀| and |u₁| at registration (TASK-M3-68), and Heggie's pre-floor dt/dτ and S under Eq. 20 and Eq. 22 and logH's drift denominator in its logH and TTL modes (Heggie's TASK-M3-08's, logH's TASK-M3-75's, which closes this), over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does, and Aarseth–Zare's smallest pre-floor A·B against η·dt_left/FLT_MAX, below which the f32 entry size is not finite with neither factor floored (integrator contract Part 2b, step 7), with the count of non-finite entry steps; the reference's values (1e-37 at f32, 1e-300 at f64) reported beside the proposal; control: a TINY above the radial collision's smallest pre-floor value floors steps on it and is reported, for each regularisation; recorded in decisions.md before the M3 gate confirms it. And cargo test -p kernel az_doubly_degenerate_is_finite (TASK-M3-68): an f32 Aarseth–Zare fixture degenerate at the interval's entry, at registration, with both A and B below TINY, so that TINY·TINY underflows to 0 and the entry size is infinite (one case of step 7's general condition), ends its march at the explicit finiteness test (integrator contract Part 2b, the Aarseth–Zare step control, step 7) with no non-finite state carried past it; controls: the march with that finiteness test removed carries a non-finite state on and fails, and the same fixture degenerate only mid-interval takes a finite step (the per-step rule skipping the non-finite constraint) and does not reach the test (R-953)"
     method: numerical gate
   rulings:
   - R-71
@@ -8370,7 +8374,7 @@
   - R-953
   - R-999
   milestone: M3
-  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split, and Aarseth–Zare's proposal is TASK-M3-68's. *Was (verify):* \"Aarseth–Zare's pre-floor A and B (TASK-M3-07)\"; *was (this note):* TASK-M3-07 proposes it. R-953 (11 Nov 2026, RQ-756 (5) 7 and the owner's follow-up): TINY's uses gain the Levi-Civita inverse's guards and Aarseth–Zare's energy separations, as the imported reference code has them; a branch on TINY is integrator contract Part 2c rule 1's one exception; the owner's two values are the reference's, recorded and reported, the calibration still the M3 gate's; the finiteness arm on a doubly degenerate state is this requirement's, its fixture degenerate at entry (applied per R-369: where the owner's concern takes effect, not REQ-INT-044). *Was (statement):* \"The floor TINY of the regularised occupants' time-transformation denominators (Heggie's S and dt/dτ, its Rᵢ tested against TINY and never floored; Aarseth–Zare's A and B; logH's drift denominator), one value per working precision, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it is in neither the corpus nor the reference set.\" *Was (verify):* the same, without the inverse's guards, the reference's values and the finiteness arm. Corrected 11 Nov 2026 (code review 5859660972 F1, physics review 5859683359 F3 of PR #488): *was (statement's end):* \"it is in neither the corpus nor the reference set, whose prin-rs values the owner states as 1e-37 at f32 and 1e-300 at f64 (R-953).\" Verify corrected 11 Nov 2026 by the physics review of PR #488 (F2): the proposal also reports the smallest pre-floor A·B against η·dt_left/FLT_MAX and counts non-finite entry steps; was \"…and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; …\". *13 Nov 2026 (R-999, RQ-796 (a)):* Aarseth–Zare's |R₃| floor in the equations of motion is TINY at each precision. *Was (statement, the clause):* \"and Aarseth–Zare's three separations in its energy (floored at TINY) (R-953),\""
+  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Physics review 5606990734, P2 (applied per R-369): TASK-M3-07 proposes it from Aarseth–Zare's A and B; TASK-M3-08 re-runs the proposal on Heggie's and logH's floored quantities and closes it. *Was:* \"Closed by TASK-M3-07, the first task that floors at it.\" Applied per R-369 (10 Nov 2026): TASK-M3-07 is split, and Aarseth–Zare's proposal is TASK-M3-68's. *Was (verify):* \"Aarseth–Zare's pre-floor A and B (TASK-M3-07)\"; *was (this note):* TASK-M3-07 proposes it. R-953 (11 Nov 2026, RQ-756 (5) 7 and the owner's follow-up): TINY's uses gain the Levi-Civita inverse's guards and Aarseth–Zare's energy separations, as the imported reference code has them; a branch on TINY is integrator contract Part 2c rule 1's one exception; the owner's two values are the reference's, recorded and reported, the calibration still the M3 gate's; the finiteness arm on a doubly degenerate state is this requirement's, its fixture degenerate at entry (applied per R-369: where the owner's concern takes effect, not REQ-INT-044). *Was (statement):* \"The floor TINY of the regularised occupants' time-transformation denominators (Heggie's S and dt/dτ, its Rᵢ tested against TINY and never floored; Aarseth–Zare's A and B; logH's drift denominator), one value per working precision, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it is in neither the corpus nor the reference set.\" *Was (verify):* the same, without the inverse's guards, the reference's values and the finiteness arm. Corrected 11 Nov 2026 (code review 5859660972 F1, physics review 5859683359 F3 of PR #488): *was (statement's end):* \"it is in neither the corpus nor the reference set, whose prin-rs values the owner states as 1e-37 at f32 and 1e-300 at f64 (R-953).\" Verify corrected 11 Nov 2026 by the physics review of PR #488 (F2): the proposal also reports the smallest pre-floor A·B against η·dt_left/FLT_MAX and counts non-finite entry steps; was \"…and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; …\". *13 Nov 2026 (R-999, RQ-796 (a)):* Aarseth–Zare's |R₃| floor in the equations of motion is TINY at each precision. *Was (statement, the clause):* \"and Aarseth–Zare's three separations in its energy (floored at TINY) (R-953),\" Re-scoped 13 Nov 2026, applied per R-369 (TASK-M3-08 split; logH and the seam wiring wait on RQ-808 to RQ-810): TASK-M3-08 builds Heggie's arm; TASK-M3-75 builds logH's and closes it. *Was (verify):* \"(TASK-M3-08, which closes this)\". *13 Nov 2026 (TASK-M3-08 split three ways, applied per R-369, task scoping):* the Heggie arm named TASK-M3-08's above is TASK-M3-78's (separation-floor --propose)."
 - id: REQ-INT-106
   area: INT
   statement: "The energy-suspect threshold proposed under REQ-INT-085 must be measured against the default occupant, Heggie × RK4 (R-560), whose regularised energy SUSPECT_ENERGY reads (R-566): its regularised drift, final and max, on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and which suspect predicates it lights on each under the proposed thresholds, recorded with REQ-INT-085's proposal before the M3 gate confirms it."
@@ -8653,7 +8657,7 @@
   - R-19
   - R-992
   milestone: M3
-  note: "Added 13 Nov 2026 by R-992 (RQ-808 (a)). On TASK-M3-08 until its split (D-22 of the report of 13 Nov 2026) moves it, with REQ-INT-018 and REQ-INT-073, to the logH-and-hookup task. *13 Nov 2026, corrected (physics review 5886173032 of #515, F5):* option (a) reads \"13 numbers and the clock\"; Heggie's own clock is carried so that re-boot reproduces live march bitwise. *Was (statement, the clause):* \"(Heggie's Qᵢ, Pᵢ and h;\" *Was (verify, the clause):* \"a seam that rebuilds Q, P and h\" *13 Nov 2026, corrected (physics review 5886305544 of #515, G3):* the clock re-boot control asserts its precondition. *Was (verify, the clause):* \"and a re-boot that restores Heggie's Q, P and h but not its own clock fails where the landed clock differs from the boundary in its last bits\""
+  note: "Added 13 Nov 2026 by R-992 (RQ-808 (a)). On TASK-M3-08 until its split (D-22 of the report of 13 Nov 2026) moves it, with REQ-INT-018 and REQ-INT-073, to the logH-and-hookup task. *13 Nov 2026, corrected (physics review 5886173032 of #515, F5):* option (a) reads \"13 numbers and the clock\"; Heggie's own clock is carried so that re-boot reproduces live march bitwise. *Was (statement, the clause):* \"(Heggie's Qᵢ, Pᵢ and h;\" *Was (verify, the clause):* \"a seam that rebuilds Q, P and h\" *13 Nov 2026, corrected (physics review 5886305544 of #515, G3):* the clock re-boot control asserts its precondition. *Was (verify, the clause):* \"and a re-boot that restores Heggie's Q, P and h but not its own clock fails where the landed clock differs from the boundary in its last bits\" *13 Nov 2026, applied per R-369 (the split, TASK-M3-08's PR):* moved to TASK-M3-75, the logH-and-hookup task."
 - id: REQ-INT-119
   area: INT
   statement: "The Aarseth–Zare occupant's sync interval must land with no landing tolerance in any branch: the interval lands when the last step ends the clock at or past the boundary, the state landing on the boundary together with the clock, the final step sized or retaken to land, never the clock set to the boundary alone while the state stays overshot (R-998)."
@@ -8687,6 +8691,46 @@
   - R-999
   milestone: M3
   note: "Added 13 Nov 2026 by R-999 (RQ-796 (a)). Closed by TASK-M3-76 (applied per R-369: task scoping)."
+- id: REQ-INT-121
+  area: INT
+  statement: "Heggie's regularised system must be built to integrator contract Part 2b's transcription: Γ* and its rates under Eq. 20 and under Eq. 22 at n = 3/2, the default (R-161), the registration from the Cartesian state and the return to it, the time-reversal map and the regularised energy (Part 1, R-566), each checked: the round trip at unequal masses with the registered energy and Eq. 7's relative velocities, Γ* against (E − h)·R₀R₁R₂ with E the Cartesian energy of the image, and the rates against a central difference of the Hamiltonian."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Heggie: the equations, the time transformations, the maps and the step control (transcribed)"
+  - file: decisions.md
+    section: "R-160 — The integrator equations are transcribed into integrator_contract Part 2b"
+  - file: decisions.md
+    section: "R-161 ✱ — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel --test heggie_system: the round trip, the Γ* anchor, the rates against the finite difference (step 1e-6, within 1e-8), dt/dτ and the floors, the time-reversal map an involution, the flow's sums and the default time transformation, each with its negative control"
+  rulings:
+  - R-160
+  - R-161
+  - R-566
+  milestone: M3
+  note: "Added 13 Nov 2026 by the TASK-M3-08 split (applied per R-369, task scoping, the owner's standing rule to split under ~300 mutants): every task closes a requirement, and REQ-INT-084, REQ-INT-095 and REQ-INT-104, whose Heggie parts this builds, are closed by TASK-M3-75 once logH's are in."
+- id: REQ-INT-122
+  area: INT
+  statement: "Heggie's direct march must be built to integrator contract Part 2b's step control: registered once at t = 0 and carried across every sync boundary of R-565's grid, landing on each at k·Δ_sync under R-998's rule as R-1007 applies it (no landing tolerance in any branch, the state landing on the boundary with the clock, the final step sized or retaken, its definition written in Part 2b), every stepper through its form on the regularised system (R-561), the explicit finiteness exit and R-604's step budget ending the march latched, Part 6's floor signal and entry-cap hits counted; and dd test 3 measured on Heggie × RK4 under Eq. 20 and Eq. 22 and on Aarseth–Zare + RK4 (REQ-VAL-190's arms)."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Heggie: the equations, the time transformations, the maps and the step control (transcribed)"
+  - file: decisions.md
+    section: "R-604 — A regularised copy's step budget is checked every step: its running total against `max(N_min, rate · t_elapsed)`; `N_min` protects early close encounters and is an M3 calibration *(closes RQ-527; settles R-564's accounting)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel --test heggie: heggie_pairs (every stepper under Eq. 20 and Eq. 22 lands on a boundary; the default Eq. 22), heggie_march (registered once, the landing, the finiteness exit, the budget, the floor signal, the step size, the secant), heggie_landing (Heggie × RK4's figure-eight closure and convergence order across η in [0.02, 0.001] under R-1007's landing, its criterion and round-off floor stated before it runs) and regularised_step_reversibility, each with its negative control"
+  rulings:
+  - R-160
+  - R-500
+  - R-561
+  - R-565
+  - R-604
+  - R-998
+  - R-1007
+  milestone: M3
+  note: "Added 13 Nov 2026 by the TASK-M3-08 split (applied per R-369, task scoping): TASK-M3-77 builds and closes it; REQ-INT-006 and REQ-VAL-190, whose Heggie and Aarseth–Zare arms it builds, are closed by TASK-M3-75. *13 Nov 2026 (R-1007, RQ-812 (a); applied per R-369, a mechanical consequence of the ruling and the split):* the landing follows R-998's rule; *was:* \"the landing tolerance a caller-supplied setting until RQ-812 is ruled\". REQ-INT-084's convergence-order check, which R-1007 gives the task building Heggie's step control, runs in TASK-M3-77; TASK-M3-75 closes REQ-INT-084 once logH's part is in."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -11533,7 +11577,7 @@
   rulings:
   - R-992
   milestone: M3
-  note: "Added 13 Nov 2026 by R-992 (RQ-808 (a)). On TASK-M3-08 until its split (D-22 of the report of 13 Nov 2026) moves it to the logH-and-hookup task. *13 Nov 2026, corrected (physics review 5886173032 of #515, F5):* option (a) reads \"13 numbers and the clock\"; Heggie's own clock is carried so that re-boot reproduces live march bitwise. *Was (statement, the clause):* \"(Heggie's Qᵢ, Pᵢ and h;\""
+  note: "Added 13 Nov 2026 by R-992 (RQ-808 (a)). On TASK-M3-08 until its split (D-22 of the report of 13 Nov 2026) moves it to the logH-and-hookup task. *13 Nov 2026, corrected (physics review 5886173032 of #515, F5):* option (a) reads \"13 numbers and the clock\"; Heggie's own clock is carried so that re-boot reproduces live march bitwise. *Was (statement, the clause):* \"(Heggie's Qᵢ, Pᵢ and h;\" *13 Nov 2026, applied per R-369 (the split, TASK-M3-08's PR):* moved to TASK-M3-75, the logH-and-hookup task."
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -33287,7 +33331,7 @@
   rulings:
   - R-500
   milestone: M3
-  note: "R-500 (closes RQ-369): this is what step_reversible means; the regularised occupants' measurement is REQ-VAL-190 (TASK-M3-08). The criterion is REQ-VAL-191 (R-71), proposed by TASK-M3-02."
+  note: "R-500 (closes RQ-369): this is what step_reversible means; the regularised occupants' measurement is REQ-VAL-190 (TASK-M3-08). The criterion is REQ-VAL-191 (R-71), proposed by TASK-M3-02. Re-scoped 13 Nov 2026, applied per R-369 (TASK-M3-08 split; logH and the seam wiring wait on RQ-808 to RQ-810): REQ-VAL-190's Heggie and Aarseth–Zare arms are TASK-M3-08's, its logH arms and its closing TASK-M3-75's. *13 Nov 2026 (TASK-M3-08 split three ways, applied per R-369, task scoping):* REQ-VAL-190's Heggie and Aarseth–Zare arms named TASK-M3-08's above are TASK-M3-77's."
 - id: REQ-VAL-033
   area: VAL
   statement: A close-encounter IC must show `max|ΔE| ≫ |ΔE_final|`.
@@ -33578,7 +33622,7 @@
   - R-257
   - R-566
   milestone: M3
-  note: "R-566 (21 Oct 2026): the gate reads the regularised energy; the Cartesian energy is a diagnostic read only from runs that did not stop at an event (REQ-VAL-195). Physics review 5605806092 of PR #277, F1 (applied per R-369): the firing arm is the reader check, since 280× a round-off regularised value can still pass |dE/E| < 1e-12."
+  note: "R-566 (21 Oct 2026): the gate reads the regularised energy; the Cartesian energy is a diagnostic read only from runs that did not stop at an event (REQ-VAL-195). Physics review 5605806092 of PR #277, F1 (applied per R-369): the firing arm is the reader check, since 280× a round-off regularised value can still pass |dE/E| < 1e-12. *13 Nov 2026 (TASK-M3-08 split three ways, applied per R-369, task scoping):* closed by TASK-M3-78, which builds the radial-collision gate, not TASK-M3-08."
 - id: REQ-VAL-046
   area: VAL
   statement: "A ground-truth validation suite, separate from parity, must compare the f64 CPU instantiation against external truth in four tiers: conservation, analytic solutions (Lagrange, Euler), known periodic orbits (figure-eight, Broucke–Hadjidemetriou–Hénon, catalogue orbits), and literature benchmarks (Burrau, Lehto et al.), comparing chaotic cases (Burrau) at structural features only, never pointwise."
@@ -35845,7 +35889,7 @@
   rulings:
   - R-257
   milestone: M3
-  note: "The step and tolerance: REQ-VAL-171 (calibration)."
+  note: "The step and tolerance: REQ-VAL-171 (calibration). Re-scoped 13 Nov 2026, applied per R-369: TASK-M3-08 builds the Heggie and Aarseth–Zare arms; TASK-M3-75 adds logH's and closes it. *13 Nov 2026 (TASK-M3-08 split three ways, applied per R-369, task scoping):* the arms named TASK-M3-08's above are TASK-M3-78's (hamiltonian-fd)."
 - id: REQ-VAL-171
   area: VAL
   kind: calibration
@@ -35864,6 +35908,7 @@
   - R-71
   - R-257
   milestone: M3
+  note: "Re-scoped 13 Nov 2026, applied per R-369: TASK-M3-08 proposes for Heggie and Aarseth–Zare; TASK-M3-75 adds logH's and closes it. *13 Nov 2026 (TASK-M3-08 split three ways, applied per R-369, task scoping):* the proposal named TASK-M3-08's above is TASK-M3-78's."
 - id: REQ-VAL-172
   area: VAL
   statement: "The gauge-invariance gate must rescale the ICs by alpha ∈ {0.25, 1, 4} and t by alpha^{3/2}, and the shape_vec spread (spread_shape) must be identical to ~10 decimals."
@@ -36238,7 +36283,7 @@
   - R-500
   - R-993
   milestone: M3
-  note: "R-500 (closes RQ-369): \"regularised occupants measured by dd test 3, not asserted\". Closed by TASK-M3-08. On review (PR #258: physics P3, P4; qa 3; applied per R-369): the reversal map is REQ-INT-095, the criterion REQ-VAL-191, and the controls are added. *13 Nov 2026 (R-993, RQ-809 (a)):* logH's arms run on its own leapfrog, the reference's drift–kick–drift, R-500's \"TTL leapfrog\"."
+  note: "R-500 (closes RQ-369): \"regularised occupants measured by dd test 3, not asserted\". Closed by TASK-M3-08. On review (PR #258: physics P3, P4; qa 3; applied per R-369): the reversal map is REQ-INT-095, the criterion REQ-VAL-191, and the controls are added. *13 Nov 2026 (R-993, RQ-809 (a)):* logH's arms run on its own leapfrog, the reference's drift–kick–drift, R-500's \"TTL leapfrog\". Re-scoped 13 Nov 2026, applied per R-369 (TASK-M3-08 split; logH and the seam wiring wait on RQ-808 to RQ-810): TASK-M3-08 builds the Heggie and Aarseth–Zare + RK4 arms; TASK-M3-75 adds logH's time modes and closes it. *Was:* \"Closed by TASK-M3-08.\" *13 Nov 2026 (TASK-M3-08 split three ways, applied per R-369, task scoping):* the Heggie and Aarseth–Zare + RK4 arms named TASK-M3-08's above are TASK-M3-77's."
 - id: REQ-VAL-191
   area: VAL
   kind: calibration
@@ -36257,7 +36302,7 @@
   - R-71
   - R-500
   milestone: M3
-  note: "R-500, review round 1 of PR #258 (qa 3, applied per R-369). Proposed by TASK-M3-02; used by TASK-M3-08. On review round 2 (qa E, applied per R-369; physics to confirm): the extended state."
+  note: "R-500, review round 1 of PR #258 (qa 3, applied per R-369). Proposed by TASK-M3-02; used by TASK-M3-08. On review round 2 (qa E, applied per R-369; physics to confirm): the extended state. Re-scoped 13 Nov 2026, applied per R-369 (TASK-M3-08 split; logH and the seam wiring wait on RQ-808 to RQ-810): used by TASK-M3-08 (Heggie, Aarseth–Zare) and TASK-M3-75 (logH). *13 Nov 2026 (TASK-M3-08 split three ways, applied per R-369, task scoping):* its use named TASK-M3-08's above is TASK-M3-77's."
 - id: REQ-VAL-192
   area: VAL
   statement: "`render::pipeline_runtime`'s `node_failure_isolation_unexplained_failure_keeps_the_pipeline` must not die by a signal at teardown: its process must exit by status, never by SIGSEGV after its assertions pass, on lavapipe (PRIN_GPU_BACKEND=vulkan) under the parallel suite as in CI; the cause is found and fixed, not retried or ignored."
@@ -41819,6 +41864,22 @@
   - R-976
   milestone: M9
   note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M9-41. The test's name is given here (naming)."
+- id: REQ-VAL-357
+  area: VAL
+  kind: calibration
+  statement: "The radial-collision gate's minimum number of regions, the cases its verdict on REQ-VAL-045 must cover before it stands, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate radial-collision prints the regions it ran (the passage at each rung of the halving η ladder its control reads) and their count against the minimum, and flags a verdict drawn from fewer; the proposal states the minimum with its evidence; recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  milestone: M3
+  note: "Added by TASK-M3-08 (applied per R-369, as REQ-INT-117 was for lc-inverse and REQ-INT-110 for projection-parity): the gate framework names a calibration requirement for every gate's region minimum, and REQ-VAL-045, the gate's threshold requirement, is not one. Proposed at 4: the four rungs of the halving η ladder over which the control reads the Cartesian read-out, its \"does not fall with η\" judged on them. *13 Nov 2026 (TASK-M3-08 split three ways, applied per R-369, task scoping):* TASK-M3-78, which builds the radial-collision gate, proposes and closes it, not TASK-M3-08."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

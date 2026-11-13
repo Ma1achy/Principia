@@ -2,7 +2,7 @@
 
 - **Milestone:** M9
 - **Closes:** REQ-VAL-201, REQ-VAL-202
-- **Depends on:** TASK-M9-01, TASK-M3-24, TASK-M3-08
+- **Depends on:** TASK-M9-01, TASK-M3-24, TASK-M3-08, TASK-M3-75
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
@@ -41,3 +41,4 @@ The replication suite's targets OC-1 run as engine tests (`principia_dd_replicat
 - Part of the first batch (`principia_dd_replication.md` § 6), ported from PLAN.md § 6's drafts by R-629.
 - Reference data are read from the records named in each requirement's verify; the records stay records (R-159), and the contract is `principia_dd_replication.md`.
 - *30 Oct 2026 (R-649, R-650):* moved to M9, external replication, and renumbered: formerly TASK-M3-42 (milestone M3). Its targets are measurements, never gates: each is scored in M9, or early as a peek (information only, `docs/verification/peek_log.md`), and its outcome is PASS, EXPLAINED DIVERGENCE (with the measurement showing the mechanism) or UNEXPLAINED, never a failure that blocks; like-for-like is checked first, and nothing is tuned, loosened or special-cased to pass (`docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"). The tier each binds is § "12.2 Tiers"'s: (b). Its calibrations are confirmed by the human with the M9 report (REQ-VAL-340), *was:* "at the M3 gate". Old ids in this file now read as their M9 ids: TASK-M4-26 → TASK-M9-30.
+- *13 Nov 2026, applied per R-369:* TASK-M3-08 is re-scoped to Heggie, registered once at `t = 0`, and the radial collision gate; logH, the seam wiring into `integrate_with` and the visible re-registration count are TASK-M3-75's, which waits on RQ-808 to RQ-810. What this task read from TASK-M3-08 is now in the two, so it depends on both. *Was:* "Depends on: TASK-M9-01, TASK-M3-24, TASK-M3-08".
