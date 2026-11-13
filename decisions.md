@@ -38356,6 +38356,8 @@ Changes REQ-SCHED-024, REQ-DEC-033, REQ-DEC-035, REQ-DEC-036, REQ-DEC-051, REQ-D
 REQ-INT-115. The parse printed R-989 for this answer.
 
 ## R-990 — RQ-798, a patched quad that straddles a crease: (a″), compared at 4/5 of the bound so admitted records are within one f32 step of exact; a quad past R-90's switch takes the one-cell patch only if the patch agrees with the exact f64 evaluation at its four corners and four edge midpoints and its footprint meets no flagged site, and where a component crosses zero inside the quad the comparison is at the quad's smallest value of that component *(closes RQ-798; amends R-90)*
+*Extended by R-1006 (13 Nov 2026; RQ-811 (b): where a component's samples drop a binade below the checked points' without crossing zero, or the checked points themselves span two binades, the check compares that component at the f32 ulp of the quad's smallest sample magnitude, so every admitted sample is within one f32 step of exact).*
+*Still in force: all of it but the binade-drop case waiting on RQ-811 and "within one f32 step" holding within one binade only: the eight-point check at 4/5 of the bound, the footprint test, the zero-crossing variant (its value and test REQ-DEC-064's definition) and M-K; a binade-drop component is compared at the f32 ulp of the quad's smallest sample magnitude (R-1006).*
 *13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-798 moved),
 `docs/archive/review_queue/M0.md` (RQ-798 with its ruling), the forward and "Still in force" lines of R-90,
 `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision" (a dated line under "Switchover"),
@@ -38546,6 +38548,8 @@ R-993 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-INT-006. The parse printed R-993 for this answer.
 
 ## R-994 — RQ-810, logH's landing: option (a), with RQ-795's answer; logH tests the landing after the step, as Heggie and Aarseth–Zare do, under R-998's rule: no landing tolerance, and the state lands on the boundary with the clock *(closes RQ-810)*
+*Extended by R-1007 (13 Nov 2026; RQ-812 (a): one landing rule for all three methods; Heggie lands under R-998's rule, as logH does by this ruling and Aarseth–Zare by R-998).*
+*Still in force: all of it; logH's landing is tested after the step under R-998's rule, which R-1007 makes the rule of all three regularised occupants.*
 *13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-810 moved),
 `docs/archive/review_queue/M0.md` (RQ-810 with its ruling), `docs/contracts/principia_integrator_contract.md` § "The
 equations and the step control (R-160, R-161)" (a dated line), REQ-INT-084 (reqio) and `plan/rule_groups.yaml`;
@@ -38648,6 +38652,9 @@ R-997 is in the "design" group of `plan/rule_groups.yaml`.
 Changes REQ-DEC-052. The parse printed R-997 for this answer.
 
 ## R-998 — RQ-795, Aarseth–Zare's landing: option (b), no landing tolerance, on the owner's condition that the state lands on the boundary together with the clock, the final step sized or retaken to land, never the clock corrected alone while the state stays overshot; checked by the figure-eight closure's convergence order, not only its closure value *(closes RQ-795)*
+*Extended by R-1007 (13 Nov 2026; RQ-812 (a): one landing rule for all three methods; Heggie's occupant lands under this rule too, with no landing tolerance, the state landing with the clock, checked by the figure-eight closure's convergence order).*
+*Refined by R-1008 (13 Nov 2026; the report's D-5, which stands, with the owner's rider: TASK-M3-76's second convergence criterion must tell round-off from a landing defect, fits the order only over step sizes above the stated round-off floor, treats an order still "well short of 4" there as a landing defect, and keeps the clock-only control).*
+*Still in force: all of it; its dated line's "Heggie's landing is not ruled by this answer" is answered by R-1007, under which Heggie lands by this rule; its convergence-order check is judged, on TASK-M3-76's second criterion, as R-1008's rider says.*
 *13 Nov 2026 · the owner's reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-795 moved),
 `docs/archive/review_queue/M0.md` (RQ-795 with its ruling), `docs/contracts/principia_integrator_contract.md` § "Aarseth–
 Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)" (a dated line after
@@ -38801,6 +38808,11 @@ with RQ-798 (a″)". On a quad whose component drops a binade without crossing z
 own ulp admits records up to about 2 of their own ulp from exact, and with no warning at a switch with no collapse that
 error is silent. So this ruling's safety on those quads waits on RQ-811's answer; elsewhere it holds as R-990 states.
 
+*13 Nov 2026 (R-1006, RQ-811 (b)):* the condition above is met. R-990's check now compares a component that drops a
+binade without crossing zero, or whose checked points span two binades, at the f32 ulp of the quad's smallest sample
+magnitude, so every admitted sample on those quads is within one f32 step of exact and no error is left silent there;
+this ruling's safety holds on them as R-990 states it elsewhere.
+
 R-1002 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-GUI-012 (with R-1001). The parse printed R-1002 for this answer.
@@ -38882,3 +38894,114 @@ R-988 as their item 5: the reading flagged on #507 is settled, and R-988 stands 
 heading says so; its text is unchanged.
 
 R-1005 is in the "ci" group of `plan/rule_groups.yaml`.
+
+## R-1006 — RQ-811, R-990's binade-drop case: option (b); where a component's samples drop a binade below the checked points' without crossing zero, or the checked points themselves span two binades, the check compares that component at the f32 ulp of the quad's smallest sample magnitude, so "within one f32 step" holds for every admitted pixel *(closes RQ-811; extends R-990)*
+*13 Nov 2026 · the owner's second reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-811 moved; RQ-804, a dated line),
+`docs/archive/review_queue/M0.md` (RQ-811 with its ruling), the forward and "Still in force" lines of R-990, R-1002 (a
+dated line), `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision" (the R-990 line under
+"Switchover", with its *Was*), REQ-DEC-063, REQ-DEC-064 and REQ-GUI-012 (reqio), TASK-M6-08 and
+`plan/rule_groups.yaml`; changes REQ-DEC-063 and REQ-DEC-064*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-811: (b). "Within one f32 step" has to hold for every admitted pixel, not only at the checked points.
+
+*What it decides:* RQ-811's option (b), "the f32 ulp of the quad's smallest sample magnitude of that component, the
+owner's zero-crossing variant extended to this case. Every admitted sample is within one f32 step of its own value; more
+quads go exact, and the CPU's bits change on them." On a quad where a component's samples drop a binade below the
+checked points' without crossing zero, R-990's check compares that component at the f32 ulp of the quad's smallest
+sample magnitude of that component, at 4/5 of half that ulp, not at the checked points' own ulp.
+
+The owner's words, "every admitted pixel, not only at the checked points", cover the entry's 13 Nov case too (physics
+review 5886305544 of #515, G1): a quad whose checked points themselves span two binades, where a sample in the lower
+binade reaches about 1.05 of its own ulp after narrowing though it shares a binade with five checked points. That quad
+is compared the same way. So, with R-990's zero-crossing variant, every admitted sample is within one f32 step of
+exact, the purpose R-990's words state, not within one binade only.
+
+*What follows:* more quads go to the exact path than under (a), and the CPU's bits change on them; R-1002's safety
+condition ("safe only with RQ-798 (a″)") is now met on binade-drop quads, so no error is left silent there. How the
+quad's smallest sample magnitude is found is a definition (R-72), as the zero-crossing value is: TASK-M6-08 writes it
+in deep zoom § 2 under physics review, required to make "within one f32 step" true per sample, by extending REQ-DEC-064
+(applied per R-369: task scoping, the definition sitting with its zero-crossing twin). M-K judges admitted binade-drop
+quads per sample, in each sample's own ulp, with a positive control that fails if the comparison is left out.
+
+*The entry's measurement,* reported and never a gate (R-649): M-K reports the admitted binade-drop quads apart, each
+with its worst difference in each sample's own f32 ulp, and the extra share of quads sent to exact by this comparison,
+with its cost in exact evaluations (REQ-DEC-063's verify; TASK-M6-08).
+
+*What it extends:* **R-990**, whose "within one f32 step of exact" held within one binade until this answer: the
+binade-drop case is compared at the smallest sample's ulp.
+
+R-1006 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-DEC-063 and REQ-DEC-064; REQ-GUI-012 drops RQ-811. The parse printed R-1006 for this answer.
+
+## R-1007 — RQ-812, Heggie's landing: option (a), one landing rule for all three methods; Heggie's occupant lands under R-998's rule, with no landing tolerance, the state landing on the boundary with the clock, the final step sized or retaken, checked by the figure-eight closure's convergence order *(closes RQ-812; extends R-998 and R-994)*
+*13 Nov 2026 · the owner's second reply to the report of 13 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-812 moved),
+`docs/archive/review_queue/M0.md` (RQ-812 with its ruling), the forward and "Still in force" lines of R-998 and R-994,
+`docs/contracts/principia_integrator_contract.md` § "The equations and the step control (R-160, R-161)" (a dated line)
+and § "Rules the new kernel must hold by construction" (rule 1's 13 Nov line, with its *Was*), REQ-INT-084 (reqio),
+REQ-INT-049 and REQ-INT-119 (reqio, a dated note each), TASK-M3-08 (a dated line at its end) and
+`plan/rule_groups.yaml`; changes REQ-INT-084*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> RQ-812: (a). One landing rule for all three methods.
+
+*What it decides:* RQ-812's option (a), "R-998's rule: no landing tolerance; the interval lands when the last step ends
+the clock at or past the boundary, the state landing with the clock, the final step sized or retaken; checked by the
+figure-eight closure's convergence order. One rule for all three occupants." Heggie's occupant lands as Aarseth–Zare
+does under R-998 and logH under R-994. The reference's per-precision `LAND_EPS_REL` (`heggie/driver.rs:328`, used in
+branches at `:345`, `:385` and `:390`; reference, not authority, R-159) is not transcribed, so no tolerance reaches a
+branch at either precision (Part 2c rule 1), and no calibration is needed.
+
+*What follows:* the caller-supplied landing allowance with which Heggie is built meanwhile (the report's D-3, which
+stands until this is built) is replaced, in TASK-M3-08's step-control part, by this rule; how Heggie's last step is
+sized or retaken so that the state and the clock land together is written in Part 2b by that task, physics-reviewed (a
+definition, R-72, as R-998's is for Aarseth–Zare), within R-998's dated limits: no constant other than an integer
+iteration cap reaches a branch, and the clock is never set to the boundary while the stored state's own clock differs
+from it.
+
+*The entry's measurement,* the owner's check of the rule: Heggie × RK4's figure-eight closure and its convergence order
+across η in [0.02, 0.001], the order expected for RK4 and its margin stated before the run (R-649), with the clock-only
+landing as its control, which shows its order fall (REQ-INT-084's verify, applied per R-369: task scoping; TASK-M3-08
+is being split, and its step-control part takes it).
+
+*What it extends:* **R-998**, whose rule named Aarseth–Zare, and **R-994**, whose "using RQ-795's answer" named logH:
+the same rule holds for Heggie.
+
+R-1007 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-084. The parse printed R-1007 for this answer.
+
+## R-1008 — TASK-M3-76's failed convergence check stands as reported, and its second criterion, written before running on a fresh η ladder with a stated round-off floor and approved by physics before it runs, must tell round-off from a landing defect: the order fitted only above the floor, an order still "well short of 4" there a landing defect, the clock-only control kept *(on D-5 of the report of 13 Nov 2026, which stands)*
+*13 Nov 2026 · the owner's second reply to the report of 13 Nov 2026; applied in the forward line of R-998,
+TASK-M3-76 (its Acceptance tests), REQ-INT-119 (reqio, a dated note) and `plan/rule_groups.yaml`; changes no
+requirement statement*
+
+The owner's words (13 Nov 2026), verbatim:
+
+> D-5: stands, with a rider: the second check must tell round-off from a landing defect. Fit the order only over step sizes above the stated round-off floor. If the order is still well short of 4 there, treat it as a landing defect (a residual of order h² from sizing the final step), not as round-off. The clock-only control stays in.
+
+*What it decides:* the report's D-5, "TASK-M3-76's convergence check failed; a second check is written before it
+runs", stands: the first check's criterion (order within 0.5 of 4) read 2.46, a FAIL, shown as it is, nothing tuned to
+pass; a second criterion is written on a fresh set of step sizes not yet run, with its round-off floor stated
+beforehand, and physics review approves it before it runs.
+
+The owner's rider binds that second criterion:
+
+1. it must tell round-off from a landing defect;
+2. the order is fitted only over step sizes above the stated round-off floor;
+3. if the order there is still "well short of 4", it is treated as a landing defect (a residual of order h² from
+   sizing the final step), not as round-off;
+4. the clock-only control stays in.
+
+"Well short of 4" is the owner's words, not a number set here: the criterion states its own threshold before it runs,
+and physics approves it (R-649).
+
+*What it refines:* **R-998**'s "Check it by the figure-eight closure's convergence order, not only its closure value":
+on TASK-M3-76's second criterion the order is read as the rider says.
+
+R-1008 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes no requirement statement; REQ-INT-119 names the ruling. The parse printed R-1008 for this answer.

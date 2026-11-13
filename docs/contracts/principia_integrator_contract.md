@@ -257,12 +257,15 @@ saying it was excepted; the owner's answer calls it "the same floor constant the
 writes the exception down. Rule 1's text stands for every other constant: `SYNC_EPS` and `LAND_EPS_REL` stay forbidden
 in a branch.
 
-*13 Nov 2026 (R-998, RQ-795 (b); R-994, RQ-810 (a)):* Aarseth–Zare's and logH's landing takes no tolerance: an interval
-lands when the last step ends the clock at or past the boundary, the state landing on the boundary together with the
-clock, so no `LAND_EPS_REL`, and no factor such as logH reference's `1 − 1e-12`, reaches a branch (Part 2b, Aarseth–Zare's
-steps 6 and 7). Heggie's landing is not ruled: its reference uses the same per-precision `LAND_EPS_REL` in branches, which
-this rule forbids, and what replaces it is RQ-812, open. *Was (13 Nov 2026, corrected on #515 by physics review
-5886173032 F4 and code review 5886176062 C2):* "the regularised occupants' landing takes no tolerance".
+*13 Nov 2026 (R-998, RQ-795 (b); R-994, RQ-810 (a); R-1007, RQ-812 (a)):* Aarseth–Zare's, logH's and Heggie's landing
+takes no tolerance, one landing rule for all three methods: an interval lands when the last step ends the clock at or
+past the boundary, the state landing on the boundary together with the clock, the final step sized or retaken, so no
+`LAND_EPS_REL`, and no factor such as logH reference's `1 − 1e-12`, reaches a branch (Part 2b, Aarseth–Zare's steps 6
+and 7, and § "The equations and the step control" for Heggie and logH). *Was (13 Nov 2026, corrected on #515 by physics
+review 5886173032 F4 and code review 5886176062 C2):* "the regularised occupants' landing takes no tolerance". *Was (13
+Nov 2026, until R-1007):* "Aarseth–Zare's and logH's landing takes no tolerance" and "Heggie's landing is not ruled: its
+reference uses the same per-precision `LAND_EPS_REL` in branches, which this rule forbids, and what replaces it is
+RQ-812, open."
 
 **2. COMPARISON-ONLY IN BRANCH CONDITIONS.** No runtime transcendental deciding a branch. Frozen
 threshold tables (frozen per sim key, generated on the host, R-502), integer counters, `d² < r_coll²` rather than `d < r_coll`. The spike's control —
@@ -374,6 +377,15 @@ physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
   Aarseth–Zare's, under R-998's rule: no landing tolerance, and the state lands on the boundary with the clock (the
   final step sized or retaken to land); the reference's landing predicted before the step with `1 − 1e-12`
   (`.../logh/driver.rs:390-391`) is not transcribed. The secant is on by default.
+- *13 Nov 2026 (R-1007, RQ-812 (a)):* Heggie's landing follows the same rule, one landing rule for all three methods:
+  no landing tolerance; the interval lands when the last step ends the clock at or past the boundary, the state landing
+  on the boundary together with the clock, the final step sized or retaken, never the clock set to the boundary alone
+  while the state stays overshot. The reference's per-precision `LAND_EPS_REL` (`.../heggie/driver.rs:328`, in branches
+  at `:345`, `:385` and `:390`) is not transcribed. How the last step is sized or retaken is a definition (R-72) the task
+  building Heggie's step control writes here, physics-reviewed, within R-998's limits (no constant other than an
+  integer iteration cap in a branch; the clock never set to the boundary while the stored state's own clock differs
+  from it); it is checked by Heggie × RK4's figure-eight closure and its convergence order across η in [0.02, 0.001]
+  (REQ-INT-084).
 
 #### Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)
 
