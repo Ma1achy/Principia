@@ -643,7 +643,10 @@ fn check_proposals(final_step: &str, sync: &str, floor: &str) {
     for needle in [
         "**Proposed:** η = 0.02; Δ_sync = 0.2. The closure window's 0.4 time units are 2.00 boundaries at Δ_sync = 0.2",
         "(0.4/Δ_sync at each quantum: 0.40625: 0.98, 0.2: 2.00, 0.1: 4.00)",
-        "steps per unit time against the 0.40625 grid's: 0.40625: 1.00×, 0.2: 1.82×, 0.1: 3.49×",
+        // Measured under the landing at 5bce96466 (the bisection bracketed from 0 to the secant's last step); the
+        // decision above is unchanged, 0.1's cost staying past 1.1×. *Was* (at 1254983c7, before that bracket):
+        // "0.2: 1.82×, 0.1: 3.49×".
+        "steps per unit time against the 0.40625 grid's: 0.40625: 1.00×, 0.2: 1.56×, 0.1: 2.65×",
         "| 0.1 | 0.01 | 6.300000 | ",
     ] {
         assert!(sync.contains(needle), "REQ-INT-080's proposal lacks `{needle}`:\n{sync}");
