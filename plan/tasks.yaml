@@ -509,6 +509,14 @@
   requirements: [REQ-TOOL-233]  # R-1004 (13 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-63
+  milestone: M0
+  title: "The WSL proofs' scripts: proof 6's stdin, byte-order mark, hosted lavapipe and failure line; proof 3's relayed connections"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-TOOL-234]  # R-912, R-915; run 43418528499 (13 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"
