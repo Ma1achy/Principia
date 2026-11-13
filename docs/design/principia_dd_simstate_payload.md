@@ -10,7 +10,7 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 
 | Buffer | Contents | Access pattern | Size |
 |---|---|---|---|
-| **`SimState`** (hot) | phase state, shadow, accumulators, drift refs, packed status/times/scalars | read/updated **every substep** by the march | **152 B** (FTLE-on); **104 B** (FTLE-off) from TASK-M3-41 on, with R-603's and R-605's two u32s (§1); **144 / 96 B** as generated until then — *was 144 / 96 before them (perf review 5661999637 of PR #293, P1), and 136 / 88 before the 8 B closure field, §1* |
+| **`SimState`** (hot) | phase state, shadow, accumulators, drift refs, packed status/times/scalars | read/updated **every substep** by the march | **160 B** (FTLE-on); **112 B** (FTLE-off) from TASK-M3-41 on, with R-603's and R-605's two u32s (§1); **152 / 104 B** as generated until then, with the collision floor's 8 B (TASK-M3-71, R-973, §1) — *was "152 / 104 B from TASK-M3-41 on; 144 / 96 B as generated until then" before the collision floor's 8 B; was 144 / 96 before them (perf review 5661999637 of PR #293, P1), and 136 / 88 before the 8 B closure field, §1* |
 | **word buffer** (cold) | the free-group word (`vec4<u32>`) | **append on branch-cut crossing; read at resolve/inspect** — never per-step | 16 B/entry, ×(E+1) (no shadow, appended in place), sharded per-quad |
 
 **Why split.** `SimState` fields are **hot** in the sense of being *co-resident march state updated during marching* — the physics and shadow (every substep), the accumulators, the drift refs and latches, `times`/`total_substeps`/descriptor (updated as the march progresses). Not every field is literally loaded+written at every substep (`packed_a/b`, `times`, `total_substeps` are march bookkeeping updated during marching, not per-substep operands) — they belong in the hot struct because they are co-resident march state, not because each is touched every substep. The word alone is **cold**: appended only on branch-cut crossings and read only at resolve/inspect. Co-locating it inline (a) forced the struct to 16-byte alignment (the `vec4` is the sole 16-align driver), padding the tail with **12 dead bytes**; (b) dragged 16 B of unused word through every hot cache line. Moving the word to a parallel buffer drops `SimState` to **8-byte alignment**, kills the padding (→ 4 B residual), and cuts the persistent hot-state footprint 160→136 (FTLE-on) / 112→88 (FTLE-off) — a **~15% reduction in the persistent hot-state footprint**, expected to reduce storage traffic and working-set pressure (the *measured* bottleneck is unconfirmed — see §3). Cost: one extra buffer binding + an indexed word fetch on the *cold* paths only. **Only the word moves** — splitting the hot fields further would fragment co-accessed data and hurt the prefetcher.
@@ -106,11 +106,20 @@ struct SimStateFTLE {
     //   _reserved as ONE member, closure_step_reserved : u32 (closure_step bits 0–15, _reserved bits 16–31),
     //   read through fn closure_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }. The stored bytes and
     //   the Rust closure_step: u16 / _reserved: u16 are as above.
+
+    // ── COLLISION FLOOR (R-954, R-973; TASK-M3-71) ──────────  8 B
+    coll_floor_word : u32,        // bits 0–7: coll_floor, the largest floor of the collision test over its
+                                  //   near-firing states and the d_min state, as its code (§2; integrator
+                                  //   contract Part 7); bits 8–31 reserved, decoding as zero. Hot: the
+                                  //   detector latches it every step.
+    _pad            : u32,        // declared padding (R-86): at f32 a new member costs 8 B (the recheck below).
 }
-// SimStateFTLE: 144 B actual / 144 B effective (8-byte aligned), as generated until TASK-M3-41;
-//   152 B from TASK-M3-41 on, with budget_word and dE_reg (R-603, R-605)
-// SimStateBase: drop r_sh,p_sh → 96 B actual / 96 B effective, as generated until TASK-M3-41;
-//   104 B from TASK-M3-41 on (R-603, R-605)
+// SimStateFTLE: 152 B actual / 152 B effective (8-byte aligned), with the collision floor's 8 B, as generated
+//   until TASK-M3-41; 160 B from TASK-M3-41 on, with budget_word and dE_reg (R-603, R-605)
+// SimStateBase: drop r_sh,p_sh → 104 B actual / 104 B effective, as generated until TASK-M3-41;
+//   112 B from TASK-M3-41 on (R-603, R-605)
+// Was (before the collision floor's 8 B, TASK-M3-71): "144 B ... as generated until TASK-M3-41; 152 B from
+//   TASK-M3-41 on" and "96 B ... 104 B from TASK-M3-41 on".
 ```
 
 ### Why closure is here, at this width, unconditionally
@@ -146,6 +155,22 @@ state at which the test was near firing and over the `d_min` state; each output'
 placement, 8 B at f32 under the recheck above or a share of TASK-M3-41's 8 B below if it fits there, and its bit-level
 definition are TASK-M3-71's, written with integrator contract Part 7 under physics review (REQ-EVT-035), with the
 recheck that placement makes.
+
+**The recheck, on the collision floor's record (13 Nov 2026, TASK-M3-71; R-973; REQ-EVT-035).** The record takes its
+own 8 B at the end of both variants, after `_reserved`: `coll_floor_word`, a u32 whose bits 0–7 hold the floor's code
+(§2), and `_pad`, a declared u32 of padding (R-86), since at f32 any new member costs 8 B (above). Placed after the
+u16s, it leaves no hole at any row. Bytes per copy:
+- **f32:** `coll_floor_word` at 144 and `_pad` at 148 in `SimStateFTLE`, 96 and 100 in `SimStateBase`: 144 → **152 B**
+  = 19×8 and 96 → **104 B** = 13×8. +5.6 % FTLE-on, +8.3 % FTLE-off.
+- **f64:** `coll_floor_word` at 268 fills the declared `_tail`, `_pad` at 272, a new 4 B `_tail` at 276:
+  `SimStateFTLE` 272 → **280 B** and `SimStateBase` 176 → **184 B** (`coll_floor_word` at 172). +2.9 %, +4.5 %.
+- **DoubleF64:** likewise `SimStateFTLE` 520 → **528 B** (524 used) and `SimStateBase` 328 → **336 B** (332 used).
+
+With TASK-M3-41's two u32s after `total_substeps` as well (below), the rows are 160 / 112 B at f32, 288 / 192 B at f64
+and 536 / 344 B at DoubleF64, each 8 B above that recheck's; `_pad` is the 4 B a later u32 may take at no cost at f32.
+*Applied per R-369:* its own 8 B rather than a share of TASK-M3-41's: those bits are TASK-M3-41's to define
+(REQ-PAY-110, REQ-PAY-111) and are not built, and one of its u32s alone would leave an implicit 4 B hole before
+`closure_min` at f64 (R-86).
 
 **The recheck, on R-603's and R-605's two u32s (REQ-PAY-009, REQ-PAY-110, REQ-PAY-111; perf review 5661999637 of PR #293, P1,
 applied per R-369).** From TASK-M3-41 on, which builds them; until then the generated layout is the one above at every row. `budget_word` and `dE_reg` are one u32 each, in the hot struct, after `total_substeps` with the
@@ -224,6 +249,7 @@ width.
 | `total_substeps` | u32 | u32, fixed |
 | `budget_word`, `dE_reg` (R-603's counters and flag, R-605's regularised drift latches) | u32 | u32, fixed |
 | `closure_step`, `_reserved` | u16 | u16, fixed |
+| `coll_floor_word`, `_pad` (the collision floor's record and its declared padding, R-973) | u32 | u32, fixed |
 
 Why: the phase state and shadow are the integration, and a wider `Real` is the point of the CPU path (canonical_spec
 §1 item 3). The accumulators are sums, and the precision rule above (summing in a narrower type loses the tail) holds at
@@ -235,16 +261,21 @@ which do not depend on the float type (parity_contract Tier B), so they keep the
 
 **Layout at a `Real` of `w` bytes.** Members in the order above, each at its own alignment (`Real` at its alignment,
 u32 at 4, u16 at 2); the struct aligned to 8, or to `Real`'s alignment if greater. `SimStateFTLE` stores 31 `Real`s and
-`SimStateBase` 19, then 24 B of u32s and 4 B of u16s, so they end at `31w + 28` and `19w + 28` from TASK-M3-41 on (`31w + 20` and `19w + 20`, the *Was* below, as generated until then). Rounding up to the
+`SimStateBase` 19, then 24 B of u32s, 4 B of u16s and the collision floor's 8 B of u32s, so they end at `31w + 36` and `19w + 36` from TASK-M3-41 on (`31w + 28` and `19w + 28` as generated until then; 13 Nov 2026, TASK-M3-71, R-973: *was* "then 24 B of u32s and 4 B of u16s, so they end at `31w + 28` and `19w + 28` from TASK-M3-41 on (`31w + 20` and `19w + 20`, the *Was* below, as generated until then)"). Rounding up to the
 alignment leaves tail padding at every width but f32; it is declared, never implicit (R-86): a trailing `_tail` of
 `(size − end)/4` u32s, empty at f32. *Was:* "then 16 B of u32s and 4 B of u16s, so they end at `31w + 20` and
 `19w + 20`", before R-603's and R-605's two u32s (perf review 5661999637 of PR #293, P1).
 
-**The f64 layout** (`w` = 8, aligned to 8), from TASK-M3-41 on (272 / 176 B, the *Was* below, as generated until then):
+**The f64 layout** (`w` = 8, aligned to 8), from TASK-M3-41 on (280 / 184 B as generated until then, below):
 - `SimStateFTLE`: `r` 0, `p` 48, `r_sh` 96, `p_sh` 144, `S` 192, `theta` 200, `mean_y` 208, `C_ty` 216, `E_0` 224,
   `Lz_0` 232, `packed_a` 240, `packed_b` 244, `times` 248, `total_substeps` 252, `budget_word` 256, `dE_reg` 260,
-  `closure_min` 264, `closure_step` 272, `_reserved` 274, `_tail` 276 (one u32): **280 B**.
-- `SimStateBase`: the same less `r_sh` and `p_sh`, 96 B earlier from `S`; `_tail` at 180: **184 B**.
+  `closure_min` 264, `closure_step` 272, `_reserved` 274, `coll_floor_word` 276, `_pad` 280, `_tail` 284 (one u32):
+  **288 B**.
+- `SimStateBase`: the same less `r_sh` and `p_sh`, 96 B earlier from `S`; `_tail` at 188: **192 B**.
+- As generated until TASK-M3-41: `total_substeps` 252, `closure_min` 256, `closure_step` 264, `_reserved` 266,
+  `coll_floor_word` 268, `_pad` 272, `_tail` 276 (one u32): **280 B**, and `_tail` at 180: **184 B**.
+- *Was* (before the collision floor's 8 B, 13 Nov 2026, TASK-M3-71, R-973): "`closure_min` 264, `closure_step` 272,
+  `_reserved` 274, `_tail` 276 (one u32): **280 B**" and "`_tail` at 180: **184 B**", from TASK-M3-41 on.
 - *Was:* "`total_substeps` 252, `closure_min` 256, `closure_step` 264, `_reserved` 266, `_tail` 268 (one u32):
   **272 B**" and "`_tail` at 172: **176 B**", before R-603's and R-605's two u32s (perf review 5661999637 of PR #293, P1).
 
@@ -253,9 +284,11 @@ item 3).
 
 **The DoubleF64 stub row.** DoubleF64 is an unevaluated pair (hi, lo) of f64s: 16 B, aligned to 8. It is a precision row
 of the ledger for the width function only. It has no `Real` impl, no kernel instantiation (R-265) and no arithmetic
-(REQ-SYS-007), and its layout exists only as a row of the generated layout table: `SimStateFTLE` **528 B** from TASK-M3-41 on (524 used,
-one u32 of `_tail`) and `SimStateBase` **336 B** (332 used, one u32 of `_tail`), aligned to 8 (*was* 520 B, 516 used,
-and 328 B, 324 used, before R-603's and R-605's two u32s; perf review 5661999637 of PR #293, P1). A new instantiation
+(REQ-SYS-007), and its layout exists only as a row of the generated layout table: `SimStateFTLE` **536 B** from TASK-M3-41 on (532 used,
+one u32 of `_tail`) and `SimStateBase` **344 B** (340 used, one u32 of `_tail`), aligned to 8, and **528 B** (524 used)
+and **336 B** (332 used) as generated until then, with the collision floor's 8 B (13 Nov 2026, TASK-M3-71, R-973;
+*was* "**528 B** from TASK-M3-41 on (524 used, …) and `SimStateBase` **336 B** (332 used, …)" before it; *was* 520 B,
+516 used, and 328 B, 324 used, before R-603's and R-605's two u32s; perf review 5661999637 of PR #293, P1). A new instantiation
 would be one more row, as philosophy §7.1 says, and the generator would not fork.
 
 **`ICDescriptor` follows `Real` too (R-313).** The payload is `SimState` + `ICDescriptor`; the descriptor's float fields have the width of `Real`, and R-86's 64 B is its f32 instantiation (generation-root §3.6). Its f64 and DoubleF64 layouts are part of REQ-PAY-087's definition.
@@ -289,6 +322,20 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
 
 *12 Nov 2026 (R-973):* the collision floor's per-sample byte (§1's dated line) takes no bit of `sample_descriptor`,
 which has none free; its layout is TASK-M3-71's definition, a format change like `last_symbol`'s.
+
+### `coll_floor_word` (u32) — the collision test's floor (R-954, R-973; 13 Nov 2026, TASK-M3-71)
+```
+ bit  31 ································ 8 | 7 ············ 0
+      └──────── reserved (decode as zero) ──────┘ | └─ coll_floor ─┘
+```
+| Code | Meaning |
+|---|---|
+| `0` | **not recorded**: a failed sample's (`sim_failed`, `decode_failed`; R-79), and any sample's before the collision test first reads it |
+| `1 … 145` | the floor `2^(code − 41)`, `2⁻⁴⁰` to `2¹⁰⁴`: the largest over the test's near-firing states and the `d_min` state (integrator contract Part 7) |
+| `146 … 255` | not written |
+
+The flag an output reads is `r_coll < 2^(code − 41)`, from the sim key's `r_coll`, exactly, at read; it is not stored
+(§5). The format change is versioned as `last_symbol`'s was: the schema version is the ledger's hash (R-36).
 
 > **`bounded` (state 1) is a FINITE-HORIZON classification, not a proof of permanent boundedness.** It means: neither escape nor collision occurred **within horizon `T`** (which lives in the sim key). Permanent boundedness is (in general) **not decidable** for the three-body problem — no finite integration can certify it — so `bounded` is the standard field term for "survived to `T`" and carries no claim about `t > T`. This is not a limitation being papered over: finite-horizon outcome *is* the only well-posed classification the system admits. Consequences: basin fractions, ML labels, and quad impurity are all "at horizon `T`"; cross-horizon comparison must account for `T` (the sim key carries it, so a single dataset is automatically horizon-consistent). The UI may render `bounded` as "bounded over the selected horizon." The term stays `bounded` (literature-standard — Lehto et al. etc.); it is not renamed to `survived_horizon`, which would fix nothing (the same might-escape-later caveat applies) while breaking legibility with the field.
 
@@ -598,6 +645,7 @@ Everything that is a function of stored state is a shader helper, zero storage:
 | current drift `ΔLz` | `L_z(r,p) − Lz_0` | ditto |
 | regularised drift (R-605) | **stored, not derived:** `dE_reg`'s two 16-bit halves, final and max, their encoding open (§1; *was* "two f16 halves", physics review 5662346996 of PR #293, F1) | under a regularised occupant the suspect flags and the drift view read it, and the Cartesian `ΔE` above is diagnostic only; the stored state is Cartesian, so the regularised energy cannot be derived here. The halves' names and the accessors that read them are TASK-M3-41's (REQ-PAY-111; code review 5662211284 of PR #293, note (c), applied per R-369) |
 | reduced crossing count | `fgw_reduced_length` — **valid only if `fgw_reduced_length_valid`** | **net branch-cut crossings** (free reduction); **INVALID for truncated samples** (later cancellations untracked after the cap — §3). `fgw_retained_prefix_length` (=76 when truncated) is a debug/export quantity, NOT the reduced count; never expose `127` |
+| `r_coll` below the collision test's floor (R-973) | the sim key's `r_coll` and `coll_floor`: `r_coll < 2^(coll_floor − 41)`, exactly | read on the host from the sim key, where `r_coll` is (13 Nov 2026, TASK-M3-71); `coll_floor = 0` reads no flag (§2; integrator contract Part 7) |
 | `total_substeps_log2` | `total_substeps` (exact u32) via `countLeadingZeros` | complexity proxy derived at read, not stored (§2) |
 | `n` (shape) | `shape(r)` or `shape(r, masses)` | current shape-sphere point (`r` mass-weighted, or pass masses); NOT `shape(r,p)` |
 | chart position at the playhead (R-542) | `r, p` at the playhead (or the pixel's own IC, at `t = 0`), the `ICDescriptor`'s masses and the target chart, through the encode, the target chart's projection and its quotient fold (`principia_state_map.md` SM1, SM2) | the Chart position node's `point⟨q⟩` and its four-result status (state map SM5); stores nothing, adds no field, accumulator or kernel change; a target other than the view's chart, and the chart it reads, wait on RQ-489 |
