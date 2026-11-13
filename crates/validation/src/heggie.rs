@@ -631,23 +631,33 @@ pub type Hamiltonian = Box<dyn Fn(&[f64]) -> f64>;
 /// The analytic rates at a flat state, as `(∂Γ/∂p, −∂Γ/∂q, −∂Γ/∂h)`: the position rates, the momentum rates and `dt/dτ`.
 pub type Rates = Box<dyn Fn(&[f64]) -> (Vec<f64>, Vec<f64>, f64)>;
 
+/// A regularised state with its system: a flat state read back.
+pub struct At<S, Q, P> {
+    /// The system.
+    pub system: S,
+    /// The regularised positions and clock.
+    pub q: Q,
+    /// The regularised momenta.
+    pub p: P,
+}
+
 /// Heggie's `(Q, P)` and system at a flat state with `masses` and `time`.
 pub fn heggie_at(
     x: &[f64],
     masses: [f64; 3],
     time: HeggieTime,
-) -> (HgSystem<f64>, HgQ<f64>, HgP<f64>) {
+) -> At<HgSystem<f64>, HgQ<f64>, HgP<f64>> {
     let v = |i: usize| [x[i], x[i + 1]];
-    (
-        HgSystem::new(masses, x[12], reference_tiny(), time),
-        HgQ {
+    At {
+        system: HgSystem::new(masses, x[12], reference_tiny(), time),
+        q: HgQ {
             q: [v(0), v(2), v(4)],
             t: 0.0,
         },
-        HgP {
+        p: HgP {
             p: [v(6), v(8), v(10)],
         },
-    )
+    }
 }
 
 /// Heggie's Hamiltonian in fictitious time: `Γ*` under Eq. 20, `Γ*·S^{−3/2}` under Eq. 22, `S` floored at `TINY`.
@@ -667,11 +677,11 @@ pub fn heggie_hamiltonian(system: &HgSystem<f64>, q: &HgQ<f64>, p: &HgP<f64>) ->
 }
 
 /// Aarseth–Zare's system and `(u, p)` at a flat state with masses `(m_a, m_b, m_c)`.
-pub fn az_at(x: &[f64], mabc: [f64; 3]) -> (AzSystem<f64>, AzQ<f64>, AzP<f64>) {
+pub fn az_at(x: &[f64], mabc: [f64; 3]) -> At<AzSystem<f64>, AzQ<f64>, AzP<f64>> {
     let [ma, mb, mc] = mabc;
     let total = ma + mb + mc;
-    (
-        AzSystem {
+    At {
+        system: AzSystem {
             a: 0,
             m: mabc,
             mabc,
@@ -685,16 +695,16 @@ pub fn az_at(x: &[f64], mabc: [f64; 3]) -> (AzSystem<f64>, AzQ<f64>, AzP<f64>) {
             tiny: reference_tiny(),
             r3_floor: 1e-300,
         },
-        AzQ {
+        q: AzQ {
             u1: [x[0], x[1]],
             u2: [x[2], x[3]],
             t: 0.0,
         },
-        AzP {
+        p: AzP {
             p1: [x[4], x[5]],
             p2: [x[6], x[7]],
         },
-    )
+    }
 }
 
 /// Aarseth–Zare's `Γ = A·B·(H − E)` as integrator_contract Part 2b writes it, independently of the kernel:
@@ -745,11 +755,11 @@ pub fn draw(occupant: FdOccupant, rng: &mut SplitMix) -> Draw {
             Draw {
                 x,
                 hamiltonian: Box::new(move |y| {
-                    let (s, q, p) = heggie_at(y, masses, time);
+                    let At { system: s, q, p } = heggie_at(y, masses, time);
                     heggie_hamiltonian(&s, &q, &p)
                 }),
                 rates: Box::new(move |y| {
-                    let (s, q, p) = heggie_at(y, masses, time);
+                    let At { system: s, q, p } = heggie_at(y, masses, time);
                     let (dq, dp) = s.rates(&q, &p);
                     (
                         dq.q.iter().flatten().copied().collect(),
@@ -775,11 +785,11 @@ pub fn draw(occupant: FdOccupant, rng: &mut SplitMix) -> Draw {
             Draw {
                 x,
                 hamiltonian: Box::new(move |y| {
-                    let (s, q, p) = az_at(y, masses);
+                    let At { system: s, q, p } = az_at(y, masses);
                     az_gamma(&s, &q, &p)
                 }),
                 rates: Box::new(move |y| {
-                    let (s, q, p) = az_at(y, masses);
+                    let At { system: s, q, p } = az_at(y, masses);
                     let (dq, dp) = s.rates(&q, &p);
                     (
                         vec![dq.u1[0], dq.u1[1], dq.u2[0], dq.u2[1]],
