@@ -1535,10 +1535,10 @@
   pitfalls: [PIT-4, PIT-9]
 - id: TASK-M3-08
   milestone: M3
-  title: Heggie and logH occupants, and the visible re-registration count
+  title: "The Heggie occupant, registered once at t = 0, and the radial collision gate"  # re-scoped 13 Nov 2026 (R-369); was "Heggie and logH occupants, and the visible re-registration count"
   depends_on: [TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105]
+  requirements: [REQ-VAL-045]  # re-scoped 13 Nov 2026 (R-369): logH and the seam wiring wait on RQ-808 to RQ-810; REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104 and REQ-INT-105 to TASK-M3-75
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09
@@ -1568,7 +1568,7 @@
 - id: TASK-M3-12
   milestone: M3
   title: "The escape detector: closure and E_rel, the window, the escaper and ionisation"
-  depends_on: [TASK-M3-08, TASK-M3-11]
+  depends_on: [TASK-M3-08, TASK-M3-75, TASK-M3-11]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: [REQ-SYS-016, REQ-PAY-004]
   requirements: [REQ-EVT-005, REQ-EVT-006, REQ-EVT-011, REQ-EVT-015, REQ-EVT-016, REQ-EVT-017, REQ-EVT-018, REQ-EVT-024, REQ-EVT-026]
   reviewers: [code, qa, physics]
@@ -1656,7 +1656,7 @@
 - id: TASK-M3-23
   milestone: M3
   title: The occupant-comparison harness
-  depends_on: [TASK-M3-08, TASK-M3-19]
+  depends_on: [TASK-M3-08, TASK-M3-75, TASK-M3-19]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: [REQ-VAL-003]
   requirements: [REQ-TOOL-031, REQ-TOOL-032, REQ-TOOL-038, REQ-VAL-053, REQ-INT-019, REQ-INT-074]
   reviewers: [code, qa, physics]
@@ -1704,7 +1704,7 @@
 - id: TASK-M3-29
   milestone: M3
   title: Free-fall brake orbits and the reversibility diagnostic
-  depends_on: [TASK-M3-24, TASK-M3-28, TASK-M3-08]
+  depends_on: [TASK-M3-24, TASK-M3-28, TASK-M3-08, TASK-M3-75]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: [REQ-ENC-002]
   requirements: [REQ-VAL-044, REQ-VAL-134, REQ-INT-032]  # R-650 (30 Oct 2026): REQ-VAL-042 to TASK-M9-36
   reviewers: [code, qa, physics]
@@ -1720,7 +1720,7 @@
 - id: TASK-M3-31
   milestone: M3
   title: The predictive step limit and the two-artefact ablation
-  depends_on: [TASK-M3-08, TASK-M3-19]
+  depends_on: [TASK-M3-08, TASK-M3-75, TASK-M3-19]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: [REQ-VAL-009, REQ-VAL-003]
   requirements: [REQ-INT-052]
   reviewers: [code, qa, physics]
@@ -1784,7 +1784,7 @@
 - id: TASK-M3-39
   milestone: M3
   title: "Every stepper × regularisation pair: its exact composition, the measured pair table and its warnings (R-561)"
-  depends_on: [TASK-M3-08]
+  depends_on: [TASK-M3-08, TASK-M3-75]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: []
   requirements: [REQ-INT-097, REQ-INT-098, REQ-INT-099, REQ-INT-017]
   reviewers: [code, qa, physics]
@@ -1792,7 +1792,7 @@
 - id: TASK-M3-40
   milestone: M3
   title: "The fixed sync quantum: one grid of physical time, the march stopping only on it, live, catch-up and re-boot bitwise (R-565)"
-  depends_on: [TASK-M3-08]
+  depends_on: [TASK-M3-08, TASK-M3-75]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: []
   requirements: [REQ-INT-100]
   reviewers: [code, qa, physics]
@@ -1869,6 +1869,14 @@
   requirements: [REQ-VAL-038, REQ-VAL-355]  # REQ-VAL-355: R-974, physics review 5875695467 of PR #503, F1 (12 Nov 2026)
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M3-75
+  milestone: M3
+  title: "logH, Heggie's and logH's seam, and the visible re-registration count"
+  depends_on: [TASK-M3-08]  # split from TASK-M3-08, 13 Nov 2026 (R-369); waits on RQ-808 to RQ-810
+  needs: [REQ-DEC-005, REQ-GEN-008]
+  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105]  # from TASK-M3-08, 13 Nov 2026 (R-369)
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
@@ -4301,7 +4309,7 @@
 - id: TASK-M9-02
   milestone: M9
   title: "Atlas closure at order (OC-1, the first batch's DRAFT-VAL-01)"
-  depends_on: [TASK-M9-01, TASK-M3-24, TASK-M3-08]
+  depends_on: [TASK-M9-01, TASK-M3-24, TASK-M3-08, TASK-M3-75]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: []
   requirements: [REQ-VAL-201, REQ-VAL-202]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -4349,7 +4357,7 @@
 - id: TASK-M9-08
   milestone: M9
   title: "Heggie 1974's regularisation targets: the step ratio against Aarseth–Zare (H-1, H-2, DRAFT-VAL-04) and C/3 toward the Lagrange triple collision (H-3, DRAFT-VAL-03)"
-  depends_on: [TASK-M3-24, TASK-M3-08]
+  depends_on: [TASK-M3-24, TASK-M3-08, TASK-M3-75]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: []
   requirements: [REQ-VAL-205, REQ-VAL-206, REQ-VAL-207, REQ-VAL-208]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -4381,7 +4389,7 @@
 - id: TASK-M9-12
   milestone: M9
   title: "The butterflies' two published periods, decided by closure (BG-4, the first batch's DRAFT-VAL-07)"
-  depends_on: [TASK-M3-24, TASK-M3-08]
+  depends_on: [TASK-M3-24, TASK-M3-08, TASK-M3-75]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: []
   requirements: [REQ-VAL-213]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -4389,7 +4397,7 @@
 - id: TASK-M9-13
   milestone: M9
   title: "The Belgrade orbits close: the PRL's 15, the gallery's 206 sequence orbits and 57 BHH satellites, Hudomal's 38 and his E = −0.5 periods (SD-1, BG-1, BG-2, HU-3, HU-5)"
-  depends_on: [TASK-M3-24, TASK-M3-08]
+  depends_on: [TASK-M3-24, TASK-M3-08, TASK-M3-75]  # TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: []
   requirements: [REQ-VAL-228, REQ-VAL-229, REQ-VAL-230, REQ-VAL-231, REQ-VAL-232, REQ-VAL-233, REQ-VAL-234, REQ-VAL-235, REQ-VAL-238, REQ-VAL-239]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]
@@ -4445,7 +4453,7 @@
 - id: TASK-M9-20
   milestone: M9
   title: "Lehto et al. 2008 at a small grid: local homogeneity, reversibility and the step-halving controls (L-3, L-4, L-5)"
-  depends_on: [TASK-M3-34, TASK-M3-08, TASK-M2-77]  # R-916
+  depends_on: [TASK-M3-34, TASK-M3-08, TASK-M3-75, TASK-M2-77]  # R-916; TASK-M3-75: TASK-M3-08 split 13 Nov 2026 (R-369)
   needs: []
   requirements: [REQ-VAL-281, REQ-VAL-282, REQ-VAL-283, REQ-VAL-284, REQ-VAL-285]  # R-594, R-629 (27 Oct 2026)
   reviewers: [code, qa, physics]

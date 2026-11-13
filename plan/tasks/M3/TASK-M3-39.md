@@ -2,7 +2,7 @@
 
 - **Milestone:** M3
 - **Closes:** REQ-INT-097, REQ-INT-098, REQ-INT-099, REQ-INT-017
-- **Depends on:** TASK-M3-08
+- **Depends on:** TASK-M3-08, TASK-M3-75
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -43,3 +43,4 @@ Every stepper × regularisation pair runs, regularisation off included, and none
 - Applied per R-369: the composed occupant's profile is the pair's; the not-measured pairs carry no warning until measured; Euler's pairs run in the debug selection only (REQ-INT-015).
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-099.
 - R-567 (21 Oct 2026, the follow-up): Heggie × the generalised (Störmer–Verlet) leapfrog is measured bad, "does not keep Heggie's Eq. (9); the energy breaks once its residual reaches ~2e-2"; neither implicit stepper is selectable or built, and "stays allowed" means no pair of the built steppers is blocked (R-609, RQ-532 (a); *was:* "whether it is a selectable stepper is RQ-532, (a) applied meanwhile, so it is not built here."). Physics review 5605806092 of PR #277: F5 (the Yoshida pairs' order, kicks not merged) and F7 (each regularisation's time transformations; Aarseth–Zare × RK4's status the port's).
+- *13 Nov 2026, applied per R-369:* TASK-M3-08 is re-scoped to Heggie, registered once at `t = 0`, and the radial collision gate; logH, the seam wiring into `integrate_with` and the visible re-registration count are TASK-M3-75's, which waits on RQ-808 to RQ-810. What this task read from TASK-M3-08 is now in the two, so it depends on both. *Was:* "Depends on: TASK-M3-08".
