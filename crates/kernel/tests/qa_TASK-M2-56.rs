@@ -44,8 +44,11 @@ fn spec(tau1: f64, tau2: f64, map: TiltMap, x: u32, y: u32) -> TiltSpec {
     }
 }
 
+/// `(sin, cos)` of an angle in degrees, through the pinned libm the kernel's f64 path takes (R-991), so the reference
+/// is the same on every machine.
 fn sc(deg: f64) -> (f64, f64) {
-    deg.to_radians().sin_cos()
+    let r = deg.to_radians();
+    (libm::sin(r), libm::cos(r))
 }
 
 fn bits(d: &Decoded<f64>) -> String {
