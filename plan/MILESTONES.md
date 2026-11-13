@@ -457,9 +457,9 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 231 requirements** (and every earlier gate still green):
+**Exit gate — 232 requirements** (and every earlier gate still green):
 
-- DEC (7): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042, REQ-DEC-049, REQ-DEC-063
+- DEC (8): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042, REQ-DEC-049, REQ-DEC-063…064
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096

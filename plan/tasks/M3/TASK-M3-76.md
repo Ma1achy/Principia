@@ -30,7 +30,10 @@ values as settings with no value (`AzParams::land_eps_rel`, `AzParams::r3_floor`
 ## Deliverables
 - Part 2b's text, physics-reviewed: how the secant stops with no tolerance so that the state and the clock land on the
   boundary together, the final step sized or retaken to land, never the clock set alone while the state is overshot (a
-  definition, R-72, under R-998); each replaced line of steps 6 and 7 kept as *Was*.
+  definition, R-72, under R-998); each replaced line of steps 6 and 7 kept as *Was*. Its limits (R-998's dated line):
+  no constant other than an integer iteration cap (rule 3) reaches a branch; the wrapper's clock is never set to the
+  boundary while the stored state's own clock differs from it; if no stop meets both, the residual goes to
+  `REVIEW_QUEUE.md` (a calibration under R-71, or an RQ) and is never chosen in the pull request.
 - `crates/kernel/src/regularisation/az.rs`: the landing as written; `AzParams::land_eps_rel` removed, so no landing
   tolerance reaches a branch at either precision; `AzParams::r3_floor` replaced by `TINY` at the working precision.
 - The gates and tests that state the reference's values (`1e-5`, `1e-14`; `1e-300` and no floor at f32) as their run
@@ -59,4 +62,7 @@ values as settings with no value (`AzParams::land_eps_rel`, `AzParams::r3_floor`
   listed on the PR).
 - logH lands under the same rule (R-994), in the task that builds logH; Heggie's landing is that task's and TASK-M3-08's,
   and R-998 names Aarseth–Zare only.
+- *13 Nov 2026 (physics review 5886173032 and code review 5886176062 of #515):* Heggie's landing is RQ-812, open (its reference lands with the per-precision
+  `LAND_EPS_REL` in branches, which rule 1 forbids); it is not this task's. The secant stop's limits are stated in the
+  Deliverables, from R-998's dated line.
 - `TINY`'s values are REQ-INT-105's calibration, confirmed at the M3 gate.

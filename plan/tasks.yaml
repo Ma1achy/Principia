@@ -2444,7 +2444,7 @@
   title: "The decoder switchover and AT_F32_FLOOR: DECODE_MODE, collapse detection, the linear-path uniform"
   depends_on: [TASK-M6-01, TASK-M6-02, TASK-M6-07, TASK-M4-07]
   needs: [REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077, REQ-TOOL-158, REQ-DEC-051]
-  requirements: [REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038, REQ-TOOL-159, REQ-DEC-063]  # REQ-DEC-063: R-990 (13 Nov 2026), the patch admission check (applied per R-369)
+  requirements: [REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038, REQ-TOOL-159, REQ-DEC-063, REQ-DEC-064]  # REQ-DEC-063: R-990 (13 Nov 2026), the patch admission check; REQ-DEC-064: its zero-crossing definition, #515's fix round (applied per R-369)
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-9]
 - id: TASK-M6-09

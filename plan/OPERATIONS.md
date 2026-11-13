@@ -159,6 +159,10 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   R-923's limits on integrator tasks end; where an M3 task and a chart task can both start, the M3 task takes the slot;
   a task tied to an open question (TASK-M6-21 on RQ-802's and RQ-804's Q-T3, deferred to M6; tasks tied to RQ-783,
   deferred to M2) waits for its ruling.
+- **Dispatch after the lift (13 Nov 2026, applied per R-369, a process call; code review 5886176062 of #515, C3).**
+  Once R-923 lifts: M3 tasks keep slot priority (R-987); M2 chart tasks are dispatched next; the GUI track R-923 let go
+  ahead (§ "The GUI track (R-390)") continues as now; R-917's build order and this section are otherwise unchanged, so a
+  visual (M4 to M8) task outside the GUI track still waits for M2's gate (R-917's hold, above).
 - **What every dispatch names:**
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
@@ -716,6 +720,7 @@ tasks that don't depend on the points the owner hasn't decided may be dispatched
 TASK-M2-85 (TASK-M2-82, the trajectory interface, which the same message names as fine, excepted). M2's gate and G1 to
 G14 are unchanged.
 *13 Nov 2026 (R-987):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges (the owner's message of 12 Nov 2026), and chart tasks are dispatched from then; integrator (M3) tasks keep priority over chart tasks for agent slots, and a task tied to a question the owner hasn't answered waits for its ruling.
+*13 Nov 2026 (applied per R-369, code review 5886176062 of #515, C3):* after the lift the track continues as now, beside M3 tasks (slot priority) and M2 chart tasks (next); R-917's hold still covers visual tasks outside the track (§ "Dispatching").
 
 The human's ruling of 6 Oct 2026 (R-390): a dev GUI the human runs on the Mac with `cargo run -p gui --features mock`,
 built on a mock engine, in six tasks, TASK-M6-24 to TASK-M6-29, one per ORDER item, each its own PR, reviewed by code,
