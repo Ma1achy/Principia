@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-DEC-057, REQ-PERF-120
-- **Depends on:** none
+- **Depends on:** TASK-M2-106
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -31,7 +31,9 @@ The smallest piece that puts a real kernel chart through the system R-926 rules 
 ## Notes
 - Entered 11 Nov 2026 as N1 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`) (applied per R-369: task scoping); its acceptance is the re-plan's § C, "The criterion, written before any run", with "Compared bit for bit" and "The control arm". The plan documents are under `plan/charts/`; the lines above carry what they say.
 - **Entered, not released (R-923).** R-923 (integrator work before charts, for now) holds the chart tasks TASK-M2-57 to TASK-M2-85, TASK-M2-82 excepted, and allows no new chart task meanwhile. Entering this task in `plan/tasks.yaml` does not lift the hold: it is a chart task, entered held, and it is not dispatched until the owner lifts R-923's hold.
+- *13 Nov 2026 (R-987, the owner's message of 12 Nov 2026):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges; from then this task is dispatched as its dependencies allow, integrator (M3) tasks keeping priority for agent slots, unless it is tied to a question the owner hasn't answered, when it waits for that ruling.
 - The † edge to TASK-M2-58 (the gate) is dropped (applied per R-369: task scoping): the slice uses today's charts, window and record layout and nothing the gate writes.
 - The record difference between today's f32 decode and the f64-then-narrow path is the size of the conversion R-926 makes, which TASK-M2-61's baseline must record.
 - Records made before the switch (RQ-783, open): the share of neighbouring pairs and of differing records the slice reports is also the share of pre-switch starting states that would fail to recreate bitwise; nothing is applied meanwhile, and the slice reports the share on its grids, and on the pixels of `fixtures/retired_beta_links/pre_m2_57.json` once TASK-M2-57 has written it.
 - The re-plan's open items O1 and O7 are this task's implementer's: O7, the kernel's exact feasibility predicate (`decode/invariant.rs`) is used, and the review's f32/f64 triple is run through the kernel's predicate and through a plain comparison, each verdict reported; criterion: the kernel's predicate gives the f64 verdict on the triple and the plain comparison, the control, does not.
+- *13 Nov 2026 (R-991, RQ-799 (a)):* every transcendental the CPU evaluator reaches goes through the pinned libm first, so this slice depends on TASK-M2-106 (applied per R-369: task scoping), and no record is written on the new route before the pin; the slice's benchmark measures the pinned path's speed. *Was:* "**Depends on:** none".

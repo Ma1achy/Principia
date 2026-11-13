@@ -421,6 +421,7 @@ bounded range; the simplex `(2u − 1, 2v − 1)`, linear.
   2.7e-8 (momenta), 7e-8 (θ × h), 1.9e-6 (tilted E, F)** in chart units. On ν × h it holds to **4.9e-4**, which is the
   demo's 1/1000 curve table, not the method.
   *12 Nov 2026 (R-395; the chart audit's F23):* in the View frame `x − view centre` is formed from an absolute f32 `x`, so it shows the backwards answer's floor: a sample off from about depth 20 at `|u|` in `[0.5, 1)`, and sooner by the identity figures above (about 14 to 17 on the latent, sphere, simplex and tilted charts, *inferred*); whether and how it changes past `ℓ_switch` is RQ-805's. `chart_position_identity` and `chart_position_frame` report a depth arm (M-E).
+  *13 Nov 2026 (R-1003, RQ-805 Q1):* M-E runs first with the absolute answer, as now; the quad-local backwards answer past `ℓ_switch` (RQ-805's Q1 (b)) is built only if, at some fixture, the absolute answer falls more than one level short of what its input allows (TASK-M7-74). Until then the floor above stands, stated.
 
 *Transcribed from the prototype (R-542; `smCompact`).* In the view frame the vertical axis is signed by the view's own
 orientation (`−tanh((y − c_y)/h_y) · sign(y_max − y_min)`), so up on the screen is `+s_y` on every chart. The prototype's

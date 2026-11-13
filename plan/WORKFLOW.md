@@ -272,6 +272,7 @@ owner's say: integrator tasks that don't depend on the points the owner hasn't d
 may go ahead (`plan/OPERATIONS.md` § "Dispatching", R-923's line). Chart work stays paused: no new chart task starts,
 nothing else from TASK-M2-57 to TASK-M2-85 (TASK-M2-82, the trajectory interface, which the same message names as
 fine, excepted). M2's gate and G1 to G14 are unchanged.
+*13 Nov 2026 (R-987):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges (the owner's message of 12 Nov 2026), and chart tasks are dispatched from then; integrator (M3) tasks keep priority over chart tasks for agent slots, and a task tied to a question the owner hasn't answered waits for its ruling.
 *30 Oct 2026 (R-649, R-650):* a replication or verification target is a measurement, never a gate: an external
 target's outcome (PASS, EXPLAINED DIVERGENCE or UNEXPLAINED) blocks no merge and no milestone. The internal
 correctness tests, the GPU-vs-CPU agreement checks within their stated f32 tolerances and the anchor smoke tests

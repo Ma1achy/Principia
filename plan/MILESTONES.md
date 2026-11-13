@@ -69,6 +69,7 @@ owner's say: integrator tasks that don't depend on the points the owner hasn't d
 may go ahead (`plan/OPERATIONS.md` § "Dispatching", R-923's line). Chart work stays paused: no new chart task starts,
 nothing else from TASK-M2-57 to TASK-M2-85 (TASK-M2-82, the trajectory interface, which the same message names as
 fine, excepted). M2's gate and G1 to G14 are unchanged.
+*13 Nov 2026 (R-987):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges (the owner's message of 12 Nov 2026), and chart tasks are dispatched from then; integrator (M3) tasks keep priority over chart tasks for agent slots, and a task tied to a question the owner hasn't answered waits for its ruling.
 
 **The research phases are settled (R-74).** canonical_spec §11 governs: the vertical slice settled the
 integrator, step control, escape criterion and refinement policy, so there is no research milestone before
@@ -98,13 +99,13 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 132 requirements** (and every earlier gate still green):
+**Exit gate — 133 requirements** (and every earlier gate still green):
 
 - PAY (22): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091…092
 - GEN (13): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029, REQ-GEN-031…032
 - SCHED (1): REQ-SCHED-001
 - RENDER (3): REQ-RENDER-001…002, REQ-RENDER-083
-- TOOL (29): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223…226, REQ-TOOL-228…232
+- TOOL (30): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223…226, REQ-TOOL-228…233
 - VAL (38): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167, REQ-VAL-169, REQ-VAL-175…176, REQ-VAL-178…181
 - SYS (26): REQ-SYS-001…008, REQ-SYS-063…079, REQ-SYS-097
 <!-- /gate:M0 -->
@@ -229,6 +230,7 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   § "Dispatching", R-923's line). Chart work stays paused: no new chart task starts, nothing else from TASK-M2-57 to
   TASK-M2-85 (TASK-M2-82, the trajectory interface, which the same message names as fine, excepted). M2's gate and G1
   to G14 are unchanged.
+  *13 Nov 2026 (R-987):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges (the owner's message of 12 Nov 2026), and chart tasks are dispatched from then; integrator (M3) tasks keep priority over chart tasks for agent slots, and a task tied to a question the owner hasn't answered waits for its ruling.
 - **M2's gate, "fully working and tested" (R-917):** the checklist G1 to G14 below, the owner's lock-with-morphs test
   among it, beside the requirement block. `ε_phys` is REQ-ENC-024's tolerance. "Controls" are R-176's named negative
   controls under `--features controls` (REQ-VAL-147). Every item marked [CAL] is a calibration (R-71): its criterion
@@ -308,11 +310,11 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
     the CPU, in `SimConfig` (R-69)" reads with R-866.
 
 <!-- gate:M2 -->
-**Exit gate — 340 requirements** (and every earlier gate still green):
+**Exit gate — 341 requirements** (and every earlier gate still green):
 
 - DEC (51): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…048, REQ-DEC-050, REQ-DEC-053…062
 - ENC (34): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031, REQ-ENC-034…038
-- CHART (169): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089…090, REQ-CHART-094…099, REQ-CHART-101…125, REQ-CHART-127…128, REQ-CHART-131, REQ-CHART-133, REQ-CHART-135, REQ-CHART-137, REQ-CHART-139, REQ-CHART-141…151, REQ-CHART-156…164, REQ-CHART-166…176, REQ-CHART-180…211
+- CHART (170): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-060…070, REQ-CHART-073, REQ-CHART-075…078, REQ-CHART-081…082, REQ-CHART-089…090, REQ-CHART-094…099, REQ-CHART-101…125, REQ-CHART-127…128, REQ-CHART-131, REQ-CHART-133, REQ-CHART-135, REQ-CHART-137, REQ-CHART-139, REQ-CHART-141…151, REQ-CHART-156…164, REQ-CHART-166…176, REQ-CHART-180…212
 - INT (3): REQ-INT-002…003, REQ-INT-115
 - PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
 - GEN (15): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034, REQ-GEN-036…042, REQ-GEN-044…045
@@ -355,13 +357,13 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
   Benettin FTLE shadow, re-queued, with REQ-CHART-132;".
 
 <!-- gate:M3 -->
-**Exit gate — 243 requirements** (and every earlier gate still green):
+**Exit gate — 247 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (6): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086, REQ-CHART-132, REQ-CHART-177
-- INT (86): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110, REQ-INT-114, REQ-INT-117
+- INT (89): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110, REQ-INT-114, REQ-INT-117…120
 - EVT (27): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032…033, REQ-EVT-035
-- PAY (33): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…113
+- PAY (34): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…114
 - GEN (1): REQ-GEN-016
 - SCHED (2): REQ-SCHED-002…003
 - RENDER (1): REQ-RENDER-028
@@ -455,9 +457,9 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 230 requirements** (and every earlier gate still green):
+**Exit gate — 232 requirements** (and every earlier gate still green):
 
-- DEC (6): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042, REQ-DEC-049
+- DEC (8): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042, REQ-DEC-049, REQ-DEC-063…064
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
@@ -504,14 +506,14 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   REQ-RENDER-110 (TASK-M7-69, a leaf), and so this gate, until it is ruled."
 
 <!-- gate:M7 -->
-**Exit gate — 267 requirements** (and every earlier gate still green):
+**Exit gate — 268 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
 - PAY (10): REQ-PAY-099…108
 - GEN (5): REQ-GEN-019…022, REQ-GEN-043
 - SCHED (1): REQ-SCHED-072
 - RENDER (49): REQ-RENDER-057…072, REQ-RENDER-080…081, REQ-RENDER-087…096, REQ-RENDER-101…115, REQ-RENDER-118, REQ-RENDER-120…121, REQ-RENDER-124…126
-- COL (125): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…132, REQ-COL-134, REQ-COL-136…159, REQ-COL-162
+- COL (126): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100, REQ-COL-106…107, REQ-COL-112…120, REQ-COL-122…132, REQ-COL-134, REQ-COL-136…159, REQ-COL-162, REQ-COL-164
 - GUI (24): REQ-GUI-016…031, REQ-GUI-151…152, REQ-GUI-335…338, REQ-GUI-340, REQ-GUI-436
 - TOOL (30): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151, REQ-TOOL-171…174, REQ-TOOL-179…181, REQ-TOOL-186
 - VAL (11): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…189
@@ -555,6 +557,7 @@ no milestone yet (R-571). *Was (title):* "The dev GUI, tooling, the browser prod
   (`plan/OPERATIONS.md` § "Dispatching", R-923's line). Chart work stays paused: no new chart task starts, nothing else
   from TASK-M2-57 to TASK-M2-85 (TASK-M2-82, the trajectory interface, which the same message names as fine, excepted).
   M2's gate and G1 to G14 are unchanged.
+  *13 Nov 2026 (R-987):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges (the owner's message of 12 Nov 2026), and chart tasks are dispatched from then; integrator (M3) tasks keep priority over chart tasks for agent slots, and a task tied to a question the owner hasn't answered waits for its ruling.
 - **The chart core's visual remainders (R-916):** the GUI's side of locking, tilt and slice, Save view, the
   consolidation's slips, points of interest's stars, the symmetry filter's toggle and real-run test, time-axis mode
   on the real integrator, hold `L_z`'s GPU tags and `τ`, the CPU-batch seams and the Sequence's morph segment with

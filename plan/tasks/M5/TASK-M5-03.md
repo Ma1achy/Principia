@@ -50,3 +50,4 @@ resident address unchanged. No manifold-level hierarchy exists.
   `x₀`/`J_D` computed on the CPU by finite differences of the full decoder (see Gaps in the milestone report).
 - RQ-99 ruled: R-113, option (a) — REQ-DEC-036 moves to M5, closed by TASK-M5-04 (which depends on this task); this task's third assertion keeps its fixture `x₀`/`J_D`.
 - *12 Nov 2026 (the chart audit's F7):* where `x₀ + J_D·δ` is formed is RQ-797's question (where the one-cell patch is expanded); the f64 quantities above stand.
+- *13 Nov 2026 (R-989, RQ-797 Q1 (a)):* the CPU expands the one-cell patch, each sample's `x₀ + J_D·δ` formed in f64 and narrowed once into its record; the GPU reads only records, and no `x₀` or `J_D` is uploaded for the integrator.

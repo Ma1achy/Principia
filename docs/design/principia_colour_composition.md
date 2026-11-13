@@ -481,6 +481,8 @@ the DECODE preset use the pixel's `ctx.chart.slice_uv` (physics review 566652141
 
 *12 Nov 2026 (R-395; R-935 under RQ-768; the chart audit's F23):* past `ℓ_switch` the generated `D ∘ Φ` evaluated at an absolute `ctx.chart.slice_uv` is what R-395's rule rules out past `ℓ_switch` (never an absolute f32 `u` there), and a table-route `z` is absolute f32 at each node, so `ctx.chart.z` collapses near depth 20 at O(1) `z`; how it is formed there is RQ-805's Q2.
 
+*13 Nov 2026 (R-1003, RQ-805 Q2 (ii)):* past `ℓ_switch` the context gains a quad-local `z` lane beside the absolute one: `z₀` per quad from the CPU's f64 evaluation, sent as two f32 words a component (high and low), and an f32 offset per pixel, `J_z·δ`, as R-395 does for `ctx.chart.slice_uv`; every shader can read it, and the absolute `ctx.chart.z` stays for shaders that need no depth (REQ-COL-164).
+
 Per row of lowering's appendix (`principia_lowering_contract.md`, "Appendix — worked enumeration of the current chart
 set"):
 

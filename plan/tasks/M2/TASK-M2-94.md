@@ -30,5 +30,6 @@ The solver core of TASK-M2-73 (numerical inverses and the general solve), moved 
 ## Notes
 - Entered 11 Nov 2026 as N11 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`) (applied per R-369: task scoping); its acceptance is the re-plan's § B.3 item 10. The plan documents are under `plan/charts/`; the lines above carry what they say.
 - **Entered, not released (R-923).** R-923 (integrator work before charts, for now) holds the chart tasks TASK-M2-57 to TASK-M2-85, TASK-M2-82 excepted, and allows no new chart task meanwhile. Entering this task in `plan/tasks.yaml` does not lift the hold: it is a chart task, entered held, and it is not dispatched until the owner lifts R-923's hold.
+- *13 Nov 2026 (R-987, the owner's message of 12 Nov 2026):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges; from then this task is dispatched as its dependencies allow, integrator (M3) tasks keeping priority for agent slots, unless it is tied to a question the owner hasn't answered, when it waits for that ruling.
 - The † edge to TASK-M2-61 is kept (applied per R-369: task scoping): the solve is over that object's map, and its measurement runs along a morph of it.
 - TASK-M2-73 gives this core up and keeps the rest; TASK-M2-65 depends on this task.

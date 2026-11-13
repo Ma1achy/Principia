@@ -34,6 +34,7 @@ The momentum seed of the deterministic construction becomes the uniform expansio
 ## Notes
 - Entered 11 Nov 2026 as N10 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`) (applied per R-369: task scoping); its acceptance is the re-plan's § B.1 item 4. The plan documents are under `plan/charts/`; the lines above carry what they say.
 - **Entered, not released (R-923).** R-923 (integrator work before charts, for now) holds the chart tasks TASK-M2-57 to TASK-M2-85, TASK-M2-82 excepted, and allows no new chart task meanwhile. Entering this task in `plan/tasks.yaml` does not lift the hold: it is a chart task, entered held, and it is not dispatched until the owner lifts R-923's hold.
+- *13 Nov 2026 (R-987, the owner's message of 12 Nov 2026):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges; from then this task is dispatched as its dependencies allow, integrator (M3) tasks keeping priority for agent slots, unless it is tied to a question the owner hasn't answered, when it waits for that ruling.
 - No edge is named for this task; it lands before TASK-M2-61's baseline, so TASK-M2-61 depends on it (applied per R-369: task scoping).
 - REQ-DEC-021 (the momentum seed) was closed by TASK-M2-09, which is built and is not rewritten: the requirement is brought into line with R-934 and moves here, the task that builds the new behaviour (11 Nov 2026).
 - TASK-M2-96 (the second sheet) starts from the construction as this task leaves it; the first slice (TASK-M2-86) names the seed in force when it runs.

@@ -501,6 +501,14 @@
   requirements: [REQ-TOOL-230, REQ-TOOL-231, REQ-TOOL-232]  # R-986, R-988 (12 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-62
+  milestone: M0
+  title: "The WSL image's hosted build kept in the Actions cache, keyed on the recipe, built only on a miss (R-1004)"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-TOOL-233]  # R-1004 (13 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"
@@ -1320,7 +1328,7 @@
 - id: TASK-M2-86
   milestone: M2
   title: "The first slice: one real chart through CPU f64, the per-quad table, records and the integrator, against today's decode (R-926)"
-  depends_on: []  # N1, the re-plan § C
+  depends_on: [TASK-M2-106]  # N1, the re-plan § C; TASK-M2-106: R-991 (13 Nov 2026), the pin before any record on the new route (applied per R-369)
   needs: []
   requirements: [REQ-DEC-057, REQ-PERF-120]
   reviewers: [code, qa, physics, perf]
@@ -1477,6 +1485,14 @@
   requirements: [REQ-CHART-208]
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M2-106
+  milestone: M2
+  title: "Pin every transcendental the CPU chart evaluator reaches through the pinned libm, enforced by a test (R-991)"
+  depends_on: []  # R-991 (13 Nov 2026); TASK-M2-86 depends on it (applied per R-369)
+  needs: []
+  requirements: [REQ-CHART-212]
+  reviewers: [code, qa, physics, perf]
+  pitfalls: []
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -1538,8 +1554,8 @@
   title: Heggie and logH occupants, and the visible re-registration count
   depends_on: [TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105]
-  reviewers: [code, qa, physics]
+  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105, REQ-INT-118, REQ-PAY-114]  # REQ-INT-118, REQ-PAY-114: R-992 (13 Nov 2026), the carried state, with REQ-INT-018 and REQ-INT-073 to the logH-and-hookup task when TASK-M3-08 splits
+  reviewers: [code, qa, physics, perf]  # perf added 13 Nov 2026: REQ-PAY-114, the carried state, a payload schema change (R-992)
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09
   milestone: M3
@@ -1869,6 +1885,14 @@
   requirements: [REQ-VAL-038, REQ-VAL-355]  # REQ-VAL-355: R-974, physics review 5875695467 of PR #503, F1 (12 Nov 2026)
   reviewers: [code, qa, physics]
   pitfalls: []
+- id: TASK-M3-76
+  milestone: M3
+  title: "Aarseth–Zare's landing with no tolerance, the state landing with the clock, and its |R₃| floor at TINY (R-998, R-999)"
+  depends_on: [TASK-M3-68]  # R-998, R-999 (13 Nov 2026), applied per R-369: task scoping
+  needs: []
+  requirements: [REQ-INT-119, REQ-INT-120]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-4]
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
@@ -2409,7 +2433,7 @@
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M6-07
   milestone: M6
-  title: "The linearised decoder: x₀ and J_D in f64 on the CPU, x₀ + J_D·δ on the GPU"
+  title: "The linearised decoder: x₀ and J_D in f64 on the CPU, x₀ + J_D·δ expanded on the CPU in f64 and narrowed once (R-989)"  # was "…, x₀ + J_D·δ on the GPU" (13 Nov 2026)
   depends_on: [TASK-M5-04]
   needs: [REQ-DEC-031, REQ-DEC-032, REQ-SCHED-024, REQ-SYS-015, REQ-CHART-003, REQ-CHART-032, REQ-CHART-037, REQ-DEC-036, REQ-DEC-051]
   requirements: [REQ-DEC-034, REQ-DEC-035, REQ-DEC-042, REQ-GEN-018]
@@ -2420,7 +2444,7 @@
   title: "The decoder switchover and AT_F32_FLOOR: DECODE_MODE, collapse detection, the linear-path uniform"
   depends_on: [TASK-M6-01, TASK-M6-02, TASK-M6-07, TASK-M4-07]
   needs: [REQ-PAY-064, REQ-SCHED-024, REQ-SYS-024, REQ-PERF-077, REQ-TOOL-158, REQ-DEC-051]
-  requirements: [REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038, REQ-TOOL-159]
+  requirements: [REQ-DEC-033, REQ-DEC-037, REQ-SCHED-062, REQ-PAY-069, REQ-SYS-038, REQ-TOOL-159, REQ-DEC-063, REQ-DEC-064]  # REQ-DEC-063: R-990 (13 Nov 2026), the patch admission check; REQ-DEC-064: its zero-crossing definition, #515's fix round (applied per R-369)
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-9]
 - id: TASK-M6-09
@@ -3366,7 +3390,7 @@
   title: "The fragment table route: the GPU side of the backwards table, for Chart position and the presets (R-925 items 1 and 2)"
   depends_on: [TASK-M2-92, TASK-M2-99]  # N9, the re-plan § B.6 item 22
   needs: []
-  requirements: [REQ-RENDER-125, REQ-PERF-122, REQ-RENDER-126]  # REQ-RENDER-126: R-935's three tolerances, a calibration (11 Nov 2026)
+  requirements: [REQ-RENDER-125, REQ-PERF-122, REQ-RENDER-126, REQ-COL-164]  # REQ-RENDER-126: R-935's three tolerances, a calibration (11 Nov 2026); REQ-COL-164: R-1003 (13 Nov 2026), the quad-local z lane (applied per R-369)
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M7-75
