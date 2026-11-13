@@ -19,7 +19,7 @@
 use kernel::driver::advance::Cadence;
 use kernel::occupant::rk4::Rk4;
 use kernel::occupant::{Geom, State};
-use kernel::regularisation::az::{self, AzCount, AzParams, AzReal, ExplicitTest};
+use kernel::regularisation::az::{self, AzCount, AzParams, ExplicitTest};
 use kernel::regularisation::form::Flow;
 use kernel::regularisation::heggie::{
     register, reversed, HgP, HgQ, HgRegistered, HgSystem, DEFAULT_TIME,
