@@ -1129,6 +1129,18 @@ impl Scene {
         self.read_with(i, self.masses(i))
     }
 
+    /// The half-width of the neutral band of the current drift `field` at sample `i`, as the fragment computes it
+    /// from the sample's read state and masses (render contract Part 5, "The neutral band"; R-928):
+    /// `present::drift_band_energy` for `energy_drift`, `present::drift_band_lz` for `Lz_drift`, else 0.
+    pub fn drift_band(&self, field: &str, i: u32) -> f32 {
+        let read = self.read(i);
+        match field {
+            "energy_drift" => present::drift_band_energy(read.r, read.p, self.masses(i)),
+            "Lz_drift" => present::drift_band_lz(read.r, read.p),
+            _ => 0.0,
+        }
+    }
+
     /// Sample `i` through the kernel's read side with the masses `masses`: the scene's context, a FULL-tier read with
     /// no ensemble. A test's control reads with masses not the sample's through it.
     pub fn read_with(&self, i: u32, masses: [f32; 3]) -> SimState {
@@ -1249,7 +1261,7 @@ impl Scene {
             // its defaults (TASK-M3-05), the predicates read from the stored latches at the default `ε_E`.
             Colouring::View("energy_drift") => {
                 let (energy, lz) = drift_suspects(&read);
-                let band = present::drift_band_energy(read.r, read.p, self.masses(i));
+                let band = self.drift_band("energy_drift", i);
                 Ok(Look::Drift {
                     x: present::dbg_drift_banded(v, band),
                     reference: read.E_0,
@@ -1283,8 +1295,17 @@ impl Scene {
                     },
                 )
             }
+            // A ramp on a current drift reads it through the sample's own neutral band, as its WGSL does (R-928,
+            // R-929); every other field's band is 0, which the ramp does not read.
             Colouring::Ramp { ramp, override_on } => Ok(
-                match ramp.shown_in(v, gate, Reads::HEADER, self.set.forbidden(i), read.state) {
+                match ramp.shown_in_banded(
+                    v,
+                    gate,
+                    Reads::HEADER,
+                    self.set.forbidden(i),
+                    read.state,
+                    self.drift_band(ramp.field.field, i),
+                ) {
                     RampShown::Blank => Look::Background,
                     RampShown::Invalid if *override_on => Look::Override,
                     RampShown::Invalid => Look::PresentInvalid,

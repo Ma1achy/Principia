@@ -811,6 +811,21 @@ impl FieldRamp {
     /// R-511), then the failed test (a `sim_failed` sample or a reserved state, [`Shown::Invalid`]), then
     /// [`FieldRamp::shown_at`].
     pub fn shown_in(&self, x: f32, gate: bool, reads: Reads, forbidden: bool, state: u32) -> Shown {
+        self.shown_in_banded(x, gate, reads, forbidden, state, 0.0)
+    }
+
+    /// [`FieldRamp::shown_in`] for a current drift whose neutral band at the sample has the half-width `band`: the
+    /// blank and failed tests first, as there, then [`FieldRamp::shown_banded`] (R-928, R-929). A `band` of 0 is
+    /// `shown_in`.
+    pub fn shown_in_banded(
+        &self,
+        x: f32,
+        gate: bool,
+        reads: Reads,
+        forbidden: bool,
+        state: u32,
+        band: f32,
+    ) -> Shown {
         if forbidden {
             return Shown::Blank;
         }
@@ -819,7 +834,7 @@ impl FieldRamp {
             Some(State::DecodeFailed) => Shown::Blank,
             Some(State::SimFailed | State::Reserved6 | State::Reserved7) | None => Shown::Invalid,
             Some(State::Escape | State::Bounded | State::Collision | State::Running) => {
-                self.shown_at(x, gate, reads)
+                self.shown_banded(x, gate, reads, band)
             }
         }
     }

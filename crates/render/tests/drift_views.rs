@@ -29,7 +29,7 @@ use render::colour::field_ramp::{
 use render::present::{self, Rgb};
 use render::registry;
 use validation::drift;
-use validation::golden_scene::{drift_suspects, row_scene, Colouring, DebugCase, Scene};
+use validation::golden_scene::{drift_suspects, row_scene, Colouring, DebugCase, Look, Scene};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 
@@ -876,6 +876,93 @@ negative_control!(
         let s = fresh_scene(unbanded(&energy), &fresh);
         check_fresh(&s, &render(&gpu(), &s), ramp_neutral(), "energy_drift");
     }
+);
+
+/// A scene's CPU twin `twin` places every fresh sample of the field ramp on `energy_drift`, the drift a scene reads
+/// (`Scene::value`), at the ramp's neutral, 0.5, as its WGSL does
+/// (`drift_view_neutral_fresh_sample_renders_exactly_neutral`); and some fresh sample's drift is not 0, so that only
+/// the band places it there.
+fn check_scene_twin_neutral(twin: &dyn Fn(&Scene, &FieldRamp, u32) -> f64) {
+    let [ramp, _] = drift_ramps();
+    let s = fresh_scene(
+        Colouring::Ramp {
+            ramp: ramp.clone(),
+            override_on: false,
+        },
+        &fresh,
+    );
+    let mut rounded = false;
+    for i in 0..FRESH {
+        let x = s.read(i).energy_drift;
+        rounded |= x != 0.0;
+        assert_eq!(
+            twin(&s, &ramp, i),
+            0.5,
+            "`energy_drift`'s scene twin at fresh sample {i}, drift {x}"
+        );
+    }
+    assert!(rounded, "every fresh energy drift is exactly 0");
+}
+
+/// The ramp's place in the scene's look at sample `i` ([`Scene::look`]).
+fn look_place(s: &Scene, _: &FieldRamp, i: u32) -> f64 {
+    match s.look(i).unwrap_or_else(|e| panic!("{e}")) {
+        Look::Ramp { t, .. } => t,
+        other => panic!("sample {i}'s look is {other:?}, not a ramp"),
+    }
+}
+
+#[test]
+fn drift_view_neutral_scene_twin_reads_the_band() {
+    check_scene_twin_neutral(&look_place);
+}
+
+negative_control!(
+    drift_view_neutral_scene_twin_reads_the_band,
+    "the scene's twin of a field ramp on energy_drift through `shown_in`, without the band: a fresh sample's \
+     rounding shows",
+    expected = "scene twin at fresh sample",
+    check_scene_twin_neutral(&|s, ramp, i| {
+        let (v, gate) = s.value(i).unwrap_or_else(|e| panic!("{e}"));
+        match ramp.shown_in(v, gate, Reads::HEADER, s.set.forbidden(i), s.read(i).state) {
+            RampShown::Ramp(t) => t,
+            other => panic!("sample {i} shows {other:?}"),
+        }
+    })
+);
+
+/// `band` gives, at each fresh sample, `energy_drift`'s band as `present::drift_band_energy` of the sample's state and
+/// masses, `Lz_drift`'s as `present::drift_band_lz`, each not 0, and 0 for a field with no band, `d_min`.
+fn check_scene_band(band: &dyn Fn(&Scene, &str, u32) -> f32) {
+    let s = fresh_scene(view_of(VIEWS[0]), &fresh);
+    for i in 0..FRESH {
+        let read = s.read(i);
+        let energy = present::drift_band_energy(read.r, read.p, s.masses(i));
+        let lz = present::drift_band_lz(read.r, read.p);
+        assert!(
+            energy > 0.0 && lz > 0.0,
+            "sample {i}'s bands are {energy}, {lz}"
+        );
+        for (field, want) in [("energy_drift", energy), ("Lz_drift", lz), ("d_min", 0.0)] {
+            assert_eq!(
+                band(&s, field, i).to_bits(),
+                want.to_bits(),
+                "`{field}`'s scene band at sample {i} is not {want}"
+            );
+        }
+    }
+}
+
+#[test]
+fn drift_view_neutral_scene_band_is_the_samples() {
+    check_scene_band(&Scene::drift_band);
+}
+
+negative_control!(
+    drift_view_neutral_scene_band_is_the_samples,
+    "every field's band the energy's",
+    expected = "scene band at sample",
+    check_scene_band(&|s, _, i| s.drift_band("energy_drift", i))
 );
 
 /// The band's half-width at sample `i` of `s` in `view`, the mirror's.
