@@ -1067,7 +1067,9 @@ results (R-719)"'s sorting of the four failing steps.
 *12 Nov 2026 (R-986, the owner's ruling):* the 85-minute run, `win-gpu.yml`'s `win-vulkan`, runs on merges to `main`,
 nightly and by dispatch only, never on a branch push, and a newer run of it cancels an older one, on `main` too
 (`cancel-in-progress: true` on that job alone; every other job on the runner keeps `false`). A run cancelled so is no
-failure and is not re-run. TASK-M0-61 sets it (REQ-TOOL-230).
+failure and is not re-run. TASK-M0-61 set it (REQ-TOOL-230): `win-gpu.yml`'s `win-vulkan` carries
+`cancel-in-progress: true`, and `xtask/tests/ci_self_hosted.rs` fails if it doesn't or if any other job on the runner
+does.
 
 *12 Nov 2026 (R-988, the owner's item 5, a reading to confirm):* a job on the runner that stops unclearly, on a
 runner-level fault (the runner lost, offline or shut down mid-job, its communication lost, its process killed from
@@ -1078,8 +1080,14 @@ a hang, a run cancelled by a newer one, a job no runner took. A hang ends at its
 that builds or runs tests, carries `timeout-minutes` of 1.5 times its measured time (the slowest of its last five
 recorded completed runs, written down with their run ids before the limit is set, R-649), rounded up to a whole minute.
 `win-retry`'s run summary logs every unclear stop and every hang it sees, and the re-run marks itself as one.
-TASK-M0-61 builds it (REQ-TOOL-231, REQ-TOOL-232). Until then nothing re-runs a job on the PC automatically, and a hang there
-is caught as R-970 says, by the job's present limit or by the orchestrator.
+TASK-M0-61 built it (REQ-TOOL-231, REQ-TOOL-232): the hosted job is `.github/workflows/win-retry.yml`, its classifier
+`.github/scripts/win_retry.py`, tested on the saved runs under `fixtures/win_retry/` by `xtask/tests/ci_win_retry.rs`;
+the measured times and the limits they give are the table `.github/win-times.md`, with each run's id, which
+`xtask/tests/ci_self_hosted.rs` holds every limit in `win-gpu.yml` and `runner-proof.yml` to. A row read from failed
+runs alone may cut a step once it passes; the table names those rows, and a cut there goes to the owner, never to a
+limit changed after the result (R-649). `win-retry` acts from the first run after the merge (`workflow_run` reads
+`main`), and its first real re-run is reported, with what the PC's hook did with it and what `github.actor` read on it
+(R-711 item 6).
 
 - **From the anchor move** (the owner's move of the PC hook's signing-gate anchor; before it the hook refuses `main`'s
   merges), it may run, each as a named measurement reporting under its own name and never a required check, gathered
