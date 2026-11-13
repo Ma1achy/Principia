@@ -3,10 +3,10 @@
 // f64, f16 pairs through core `unpack2x16float` (no `enable f16`).
 
 // The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger (R-36, R-63; the Rust
-// PAYLOAD_SCHEMA_VERSION, 0xd602ac699cd55a52). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
-const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0x9cd55a52u, 0xd602ac69u);
+// PAYLOAD_SCHEMA_VERSION, 0x6eb5221651eb35de). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
+const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0x51eb35deu, 0x6eb52216u);
 
-// `SimStateFTLE`: 144 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
+// `SimStateFTLE`: 152 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
 struct SimStateFTLE {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -24,9 +24,11 @@ struct SimStateFTLE {
     total_substeps: u32,
     closure_min: f32,
     closure_step_reserved: u32, // `closure_step` in bits 0–15, `_reserved` in bits 16–31 (WGSL has no u16; R-343)
+    coll_floor_bits: u32,
+    _pad: array<u32, 1>,
 }
 
-// `SimStateBase`: 96 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
+// `SimStateBase`: 104 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
 struct SimStateBase {
     r: array<vec2<f32>, 3>,
     p: array<vec2<f32>, 3>,
@@ -42,6 +44,8 @@ struct SimStateBase {
     total_substeps: u32,
     closure_min: f32,
     closure_step_reserved: u32, // `closure_step` in bits 0–15, `_reserved` in bits 16–31 (WGSL has no u16; R-343)
+    coll_floor_bits: u32,
+    _pad: array<u32, 1>,
 }
 
 // `ICDescriptor`: 64 B, aligned to 4 (payload §1; dd_generation_root §3.3a, §3.6).
@@ -135,6 +139,12 @@ fn tm_t_end_step(w: u32) -> u32 { return extractBits(w, 0u, 16u); }
 
 // `t_dmin_step`: bits 16–31 of `times` (payload §2, §6).
 fn tm_t_dmin_step(w: u32) -> u32 { return extractBits(w, 16u, 16u); }
+
+// `coll_floor`'s sentinel in the ledger (dd_generation_root §3.8).
+const CF_COLL_FLOOR_SENTINEL: u32 = 0u;
+
+// `coll_floor`: bits 0–7 of `coll_floor_bits` (payload §2, §6).
+fn cf_coll_floor(w: u32) -> u32 { return extractBits(w, 0u, 8u); }
 
 // The word's capacity in symbols, `length`'s greatest valid value (payload §3).
 const FGW_CAPACITY: u32 = 76u;

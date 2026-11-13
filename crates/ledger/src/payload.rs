@@ -237,7 +237,7 @@ pub const PROVISIONAL: [(&str, &str); 0] = [];
 
 /// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0`,
 /// `rho_angle` and `n`.
-pub const DECLARED: [(&str, &str); 14] = [
+pub const DECLARED: [(&str, &str); 15] = [
     (
         "V_0",
         "dd_generation_root §3.6: `V_0` (lin, (−∞, 0]); dd_decoder §3.6: `V₀ = −Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖` (R-403)",
@@ -283,6 +283,11 @@ pub const DECLARED: [(&str, &str); 14] = [
     (
         "last_symbol",
         "dd_simstate_payload §3: the symbol codes `a = 0, A = 1, b = 2, B = 3`",
+    ),
+    (
+        "coll_floor",
+        "dd_simstate_payload §2, `coll_floor_bits`: the codes 1–145, the floor `2^(code − 41)`, and 0 \"not \
+         recorded\"; integrator contract Part 7 (R-973)",
     ),
     (
         "payload",
@@ -399,6 +404,14 @@ fn words() -> Vec<Word> {
         ),
         word("packed_b", vec![]),
         word("times", vec![]),
+        // Bits 0–7 `coll_floor`, 8–31 reserved (payload §2; R-973).
+        word(
+            "coll_floor_bits",
+            vec![Span {
+                offset: 8,
+                width: 24,
+            }],
+        ),
         word("fgw_w", vec![]),
     ]
 }
@@ -457,6 +470,16 @@ fn entries() -> Vec<EntryBuilder> {
         latch("dLz_max", packed("packed_b", 16, 16), Bound::Closed(0.0)),
         step("t_end_step", packed("times", 0, 16)),
         step("t_dmin_step", packed("times", 16, 16)),
+        // The collision test's floor, `2^(code − 41)`, 1 to 145; 0 "not recorded" (payload §2; integrator contract
+        // Part 7; R-973).
+        entry(
+            "coll_floor",
+            packed("coll_floor_bits", 0, 8),
+            FieldType::UBits,
+            Scale::Lin,
+        )
+        .range(Range::int(0, 145))
+        .sentinel(0.0),
         // No sentinel: `ftle` reads NaN whenever `ftle_valid` is false (R-253, R-254).
         derived(
             "ftle",
@@ -556,6 +579,10 @@ fn simstate(ftle: bool) -> Struct {
         m("closure_min", Storage::F32),
         m("closure_step", Storage::U16),
         m("_reserved", Storage::U16),
+        // The collision test's floor (integrator contract Part 7; R-954, R-973): its own 8 B after the u16s, so no
+        // row has a hole (payload §1, the recheck on the collision floor's record; R-86).
+        m("coll_floor_bits", Storage::U32),
+        m("_pad", Storage::Pad(1)),
     ]);
     Struct {
         name: if ftle { "SimStateFTLE" } else { "SimStateBase" },

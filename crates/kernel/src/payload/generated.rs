@@ -2,9 +2,9 @@
 
 /// The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger, computed at generation
 /// and never bumped by hand (R-36, R-63; `ledger::version`).
-pub const PAYLOAD_SCHEMA_VERSION: u64 = 0xd602ac699cd55a52;
+pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x6eb5221651eb35de;
 
-/// `SimStateFTLE` at the `Real` `R`: 144 B aligned to 8 at f32, 272 B aligned to 8 at f64.
+/// `SimStateFTLE` at the `Real` `R`: 152 B aligned to 8 at f32, 280 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
 #[repr(C, align(8))]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -26,13 +26,15 @@ pub struct SimStateFTLEOf<R: PayloadReal> {
     pub closure_min: R,
     pub closure_step: u16,
     pub _reserved: u16,
+    pub coll_floor_bits: u32,
+    pub _pad: [u32; 1],
     pub _tail: R::SimStateFTLETail,
 }
 
-/// `SimStateFTLE` at f32, the GPU's instantiation (canonical_spec §1 item 3): 144 B.
+/// `SimStateFTLE` at f32, the GPU's instantiation (canonical_spec §1 item 3): 152 B.
 pub type SimStateFTLE = SimStateFTLEOf<f32>;
 
-/// `SimStateBase` at the `Real` `R`: 96 B aligned to 8 at f32, 176 B aligned to 8 at f64.
+/// `SimStateBase` at the `Real` `R`: 104 B aligned to 8 at f32, 184 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
 #[repr(C, align(8))]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
@@ -52,10 +54,12 @@ pub struct SimStateBaseOf<R: PayloadReal> {
     pub closure_min: R,
     pub closure_step: u16,
     pub _reserved: u16,
+    pub coll_floor_bits: u32,
+    pub _pad: [u32; 1],
     pub _tail: R::SimStateBaseTail,
 }
 
-/// `SimStateBase` at f32, the GPU's instantiation (canonical_spec §1 item 3): 96 B.
+/// `SimStateBase` at f32, the GPU's instantiation (canonical_spec §1 item 3): 104 B.
 pub type SimStateBase = SimStateBaseOf<f32>;
 
 /// `FreeGroupWord`: 16 B, aligned to 16 (dd_simstate_payload §1; dd_generation_root §3.3a, §3.6).
@@ -130,7 +134,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 4,
         real_align: 4,
         instantiated: true,
-        structs: [("SimStateFTLE", 144, 8), ("SimStateBase", 96, 8)],
+        structs: [("SimStateFTLE", 152, 8), ("SimStateBase", 104, 8)],
         descriptor: ("ICDescriptor", 64, 4),
     },
     PayloadLayout {
@@ -138,7 +142,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 8,
         real_align: 8,
         instantiated: true,
-        structs: [("SimStateFTLE", 272, 8), ("SimStateBase", 176, 8)],
+        structs: [("SimStateFTLE", 280, 8), ("SimStateBase", 184, 8)],
         descriptor: ("ICDescriptor", 112, 8),
     },
     PayloadLayout {
@@ -146,7 +150,7 @@ pub const PAYLOAD_LAYOUTS: [PayloadLayout; 3] = [
         real_size: 16,
         real_align: 8,
         instantiated: false,
-        structs: [("SimStateFTLE", 520, 8), ("SimStateBase", 328, 8)],
+        structs: [("SimStateFTLE", 528, 8), ("SimStateBase", 336, 8)],
         descriptor: ("ICDescriptor", 208, 8),
     },
 ];
@@ -573,6 +577,31 @@ pub const TIMES_RESERVED: [(u32, u32); 0] = [];
 pub fn pack_times(t_end_step: u32, t_dmin_step: u32) -> u32 {
     let w = set_t_end_step(0, t_end_step);
     set_t_dmin_step(w, t_dmin_step)
+}
+
+/// `coll_floor`'s sentinel in the ledger (dd_generation_root §3.8).
+pub const CF_COLL_FLOOR_SENTINEL: u32 = 0;
+
+/// `coll_floor`: bits 0–7 of `coll_floor_bits` (payload §2, §6).
+#[inline]
+pub fn cf_coll_floor(w: u32) -> u32 {
+    extract(w, 0, 8)
+}
+
+/// `coll_floor_bits` with `coll_floor` set to `v`; every other bit kept.
+#[inline]
+pub fn set_coll_floor(w: u32, v: u32) -> u32 {
+    insert(w, v, 0, 8)
+}
+
+/// `coll_floor_bits`'s reserved spans, `(offset, width)`, as the ledger declares them: never written, decoded as zero
+/// (payload §2; dd_generation_root §5 test 1).
+pub const COLL_FLOOR_BITS_RESERVED: [(u32, u32); 1] = [(8, 24)];
+
+/// `coll_floor_bits` from its fields, each written in bit order over zero, so its reserved bits are zero (payload §2).
+#[inline]
+pub fn pack_coll_floor_bits(coll_floor: u32) -> u32 {
+    set_coll_floor(0, coll_floor)
 }
 
 /// The word's capacity in symbols, `length`'s greatest valid value (payload §3; the register's `fgw_capacity`).

@@ -51,6 +51,7 @@ struct SimState {
     total_substeps: u32,
     closure_min: f32,
     closure_step: u32,
+    coll_floor: u32,
     word: vec4<u32>,
     ftle: f32,
     ftle_valid: bool,
@@ -249,6 +250,7 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f3
     let s_total_substeps = simstate_buffer[i].total_substeps;
     let s_closure_min = simstate_buffer[i].closure_min;
     let s_closure_step_reserved = simstate_buffer[i].closure_step_reserved;
+    let s_coll_floor_bits = simstate_buffer[i].coll_floor_bits;
     let w = word_buffer[i];
     let n = tm_t_end_step(s_times);
     let ftle_ok = ftle_valid(s_packed_a, true, n, completed_renorms(n, params.n_renorm), s_S);
@@ -277,6 +279,7 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f3
     out.total_substeps = s_total_substeps;
     out.closure_min = s_closure_min;
     out.closure_step = closure_step(s_closure_step_reserved);
+    out.coll_floor = cf_coll_floor(s_coll_floor_bits);
     out.word = w;
     out.ftle = ftle(s_S, delta, params.delta_0, n, params.dt_macro, ftle_ok);
     out.ftle_valid = ftle_ok;

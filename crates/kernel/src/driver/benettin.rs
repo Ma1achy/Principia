@@ -421,6 +421,7 @@ impl<R: WrapperReal, F: ShadowForm> Benettin<R, F> {
             closure_min: out.closure_min,
             closure_step: out.closure_step,
             _reserved: out._reserved,
+            coll_floor_bits: out.coll_floor_bits,
             ..SimStateFTLEOf::default()
         }
     }
