@@ -878,11 +878,11 @@ fn land<S: AzStepper, R: AzReal>(
             } else {
                 let (qm, pm) = S::regularised_step(system, q, p, mid);
                 halvings += 1;
-                if qm.t <= dt_left {
+                if finite(qm.t) && qm.t <= dt_left {
                     (lo, lo_q, lo_p) = (mid, qm, pm);
                     go = qm.t < dt_left;
                 } else {
-                    // Past, or a clock that is not a number: never kept.
+                    // Past, or a clock that is not finite (NaN, or −∞ through a negative stage weight): never kept.
                     hi = mid;
                 }
             }

@@ -1670,6 +1670,9 @@ enum Clock {
     Stall,
     /// One float short of `Δ_sync` where `x < Δ_sync/2`, else one float past it: no step lands the clock on it.
     Gap,
+    /// `2Δ_sync` where `x ≥ 3Δ_sync/4`, `c` where `3Δ_sync/10 ≤ x < 3Δ_sync/4`, else `Δ_sync`: a band of steps whose
+    /// clock is `c`, between the clamped step past the boundary and the steps that land.
+    Hole(f64),
 }
 
 thread_local! {
@@ -1706,6 +1709,15 @@ impl AzStepper for Scripted {
                     f64::from_bits(d.to_bits() + 1)
                 };
                 v(side)
+            }
+            Clock::Hole(c) => {
+                if x >= v(0.75 * 0.125) {
+                    v(0.25)
+                } else if x >= v(0.3 * 0.125) {
+                    v(c)
+                } else {
+                    v(0.125)
+                }
             }
             Clock::Stall => {
                 if x >= v(0.75 * 0.125) {
@@ -1916,6 +1928,41 @@ negative_control!(
         p.bisect_tries = 0;
         script(c, k, p)
     })
+);
+
+/// A retake whose clock is not finite is never kept by the bisection (Part 2b, "The bisection"; physics review
+/// 5893039643 of #519, F1): with the secant off, the clamped step (`x = Δ`) ends the clock past the boundary; the first
+/// halving (`x = Δ/2`) falls in [`Clock::Hole`]'s band, its clock `hole`, and becomes `hi`; the second (`x = Δ/4`) lands
+/// the clock on `Δ` exactly. Two halvings, the interval landed. A `−∞` clock is what a stepper with a negative stage
+/// weight (Yoshida-4 and Yoshida-6's drift weight) can reach where `A·B` overflows.
+fn check_not_finite_clock(hole: f64) {
+    let mut p = scripted();
+    p.secant_tries = 0;
+    p.n_min = 20;
+    p.step_budget_rate = 0.0;
+    let (out, t) = script(Clock::Hole(hole), 0, p);
+    assert_eq!(
+        (
+            out.boundary,
+            out.count.end,
+            t.last().copied(),
+            out.count.most_bisections
+        ),
+        (1, End::Marching, Some(0.125), 2),
+        "a retake whose clock is not finite becomes hi, never lo ({t:?})"
+    );
+}
+
+#[test]
+fn az_landing_not_finite_clock() {
+    check_not_finite_clock(f64::NEG_INFINITY);
+}
+
+negative_control!(
+    az_landing_not_finite_clock,
+    "the band's clock the most negative finite one, kept as lo as the bisection without the finiteness guard kept −∞",
+    expected = "a retake whose clock is not finite becomes hi, never lo",
+    check_not_finite_clock(f64::MIN)
 );
 
 /// No landing tolerance (R-998): a clock that stops `Δ·5e-15` short of the boundary never lands, with the clamp on or
