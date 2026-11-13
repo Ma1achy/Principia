@@ -1,0 +1,26 @@
+[
+ {
+  "path": ".github",
+  "blob_href": "https://github.com/Ma1achy/Principia/blob/33f4ab6407423943c409fd85a1e2ba41841f8468/.github",
+  "start_line": 1,
+  "start_column": null,
+  "end_line": 1,
+  "end_column": null,
+  "annotation_level": "failure",
+  "title": "",
+  "message": "The run was canceled by @Ma1achy.",
+  "raw_details": ""
+ },
+ {
+  "path": ".github",
+  "blob_href": "https://github.com/Ma1achy/Principia/blob/33f4ab6407423943c409fd85a1e2ba41841f8468/.github",
+  "start_line": 15563,
+  "start_column": null,
+  "end_line": 15563,
+  "end_column": null,
+  "annotation_level": "failure",
+  "title": "",
+  "message": "The operation was canceled.",
+  "raw_details": ""
+ }
+]

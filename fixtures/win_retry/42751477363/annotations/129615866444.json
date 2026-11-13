@@ -1,0 +1,14 @@
+[
+ {
+  "path": ".github",
+  "blob_href": "https://github.com/Ma1achy/Principia/blob/3dcc099ba7f5f5399924a4fa5f90244a036290ee/.github",
+  "start_line": 1,
+  "start_column": null,
+  "end_line": 1,
+  "end_column": null,
+  "annotation_level": "failure",
+  "title": "",
+  "message": "Canceling since a higher priority waiting request for win-vulkan exists",
+  "raw_details": ""
+ }
+]

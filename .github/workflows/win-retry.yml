@@ -1,0 +1,58 @@
+# Re-runs, once, a job on the owner's Windows PC that stopped on a runner-level fault, and logs every such stop and every
+# hang (the owner's goal of 12 Nov 2026, item 5, R-988: "Unclear stop: one automatic re-run; hang: cancelled by time
+# limit; both logged."). `.github/scripts/win_retry.py` holds the classification; `xtask/tests/ci_win_retry.rs` tests it,
+# this workflow and the saved runs under `fixtures/win_retry/`.
+#
+# It reads each completed run of `win-gpu` and `runner-proof`, the workflows of R-711's runner, and is the one workflow
+# that does (`xtask/tests/ci_self_hosted.rs`): `retry.yml` still never follows them. A fault is re-run only for a run of
+# a push to `main`, the schedule or a dispatch, at its first attempt, while no newer run of that job has started; a
+# test or step failing on its own output, a hang ended by its time limit, a run cancelled by a newer one and a job no
+# runner took are logged and never re-run. A re-run keeps its run's event, so R-711 item 1's triggers and the PC's hook
+# hold for it, and this job's summary for it says it is a re-run, whatever its result. It gathers nothing and gates
+# nothing: the runner's jobs stay named measurements (R-859).
+#
+# The job is hosted, on GitHub's runners, never the PC, and has no `pull_request` or `pull_request_target` trigger.
+# `workflow_run` takes effect only from the default branch, so GitHub reads this file from `main`, and the checkout is
+# `main`'s: the job runs no code from the run it reads; what it reads of that run, its jobs, annotations and logs, is
+# data. It first runs after the merge.
+name: win-retry
+
+on:
+  workflow_run:
+    workflows: [win-gpu, runner-proof]
+    types: [completed]
+
+# The least it needs (R-988): `actions: write` for the one re-run, which also reads the jobs and logs; `checks: read` for
+# the annotations, the only trace a runner that went leaves; `contents: read` for the checkout.
+permissions:
+  actions: write
+  checks: read
+  contents: read
+
+env:
+  # R-374 and the owner's CI setting (PR #394), as in every workflow. Nothing here runs cargo.
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  win-retry:
+    if: github.repository == 'Ma1achy/Principia' && (github.event.workflow_run.run_attempt > 1 || (github.event.workflow_run.conclusion != 'success' && github.event.workflow_run.conclusion != 'skipped'))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          ref: main
+      - name: Re-run a runner fault on the PC once; log every unclear stop and hang
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WORKFLOW_ID: ${{ github.event.workflow_run.workflow_id }}
+        run: python3 -I .github/scripts/win_retry.py decide
