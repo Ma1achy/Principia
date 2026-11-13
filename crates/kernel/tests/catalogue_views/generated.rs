@@ -706,7 +706,17 @@ fn check_energy_drift(p: &Probe) {
     expect(
         read.E_0.to_bits(),
         s.E_0.to_bits(),
-        "`energy_drift`'s neutral band's reference is not its derived accessor's value",
+        "`energy_drift`'s reference, its guard's (R-436), is not its derived accessor's value",
+    );
+    expect(
+        read.r.map(|v| v.map(f32::to_bits)),
+        s.r.map(|v| v.map(f32::to_bits)),
+        "`energy_drift`'s neutral band's `r` is not its derived accessor's value",
+    );
+    expect(
+        read.p.map(|v| v.map(f32::to_bits)),
+        s.p.map(|v| v.map(f32::to_bits)),
+        "`energy_drift`'s neutral band's `p` is not its derived accessor's value",
     );
 }
 
@@ -746,7 +756,17 @@ fn check_lz_drift(p: &Probe) {
     expect(
         read.Lz_0.to_bits(),
         s.Lz_0.to_bits(),
-        "`Lz_drift`'s neutral band's reference is not its derived accessor's value",
+        "`Lz_drift`'s reference, its guard's (R-436), is not its derived accessor's value",
+    );
+    expect(
+        read.r.map(|v| v.map(f32::to_bits)),
+        s.r.map(|v| v.map(f32::to_bits)),
+        "`Lz_drift`'s neutral band's `r` is not its derived accessor's value",
+    );
+    expect(
+        read.p.map(|v| v.map(f32::to_bits)),
+        s.p.map(|v| v.map(f32::to_bits)),
+        "`Lz_drift`'s neutral band's `p` is not its derived accessor's value",
     );
 }
 

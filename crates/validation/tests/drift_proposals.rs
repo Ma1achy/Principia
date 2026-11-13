@@ -283,9 +283,12 @@ fn lin_pixel(x: f64, r: f64) -> [u8; 3] {
     ))
 }
 
-fn symlog_pixel(x: f64, reference: f64, r: f64) -> [u8; 3] {
+/// The default `symlog` view's pixel of the final drift `x`, without the neutral band: the band's half-width is the
+/// final state's own rounding scale, `K + |V|` or `S` (render contract Part 5; R-928), which a run's record does not
+/// keep, so a drift within it, which the view draws at `c0`, prints at its own place here.
+fn symlog_pixel(x: f64, r: f64) -> [u8; 3] {
     pixel(present::dbg_drift(
-        present::dbg_drift_shown(x as f32, DRIFT_SYMLOG, reference as f32),
+        x as f32,
         DRIFT_SYMLOG,
         false,
         r,
@@ -330,11 +333,10 @@ fn print_lin(
     table: &[Measured],
     read: fn(&Drifts) -> f64,
     max: fn(&Drifts) -> f64,
-    reference: fn(&Drifts) -> f64,
     r: f64,
 ) {
     println!(
-        "{fixture}, {field}, R = {r:e}: occupant, precision: final, max; lin pixel, symlog pixel"
+        "{fixture}, {field}, R = {r:e}: occupant, precision: final, max; lin pixel, symlog pixel (no band)"
     );
     for m in table {
         for (precision, d) in runs(m) {
@@ -344,7 +346,7 @@ fn print_lin(
                 read(d),
                 max(d),
                 lin_pixel(read(d), r),
-                symlog_pixel(read(d), reference(d), r),
+                symlog_pixel(read(d), r),
             );
         }
     }
@@ -357,27 +359,10 @@ fn drift_lin_range_proposal() {
     let (r_e, r_l) = (DRIFT_LIN_R_E.number(), DRIFT_LIN_R_LZ.number());
     let max_e = |d: &Drifts| d.de_max;
     let max_l = |d: &Drifts| d.dlz_max;
-    let (e_0, lz_0) = (|d: &Drifts| d.e_0, |d: &Drifts| d.lz_0);
-    print_lin(
-        "test 2",
-        "energy_drift",
-        &test2,
-        final_energy,
-        max_e,
-        e_0,
-        r_e,
-    );
-    print_lin("test 2", "Lz_drift", &test2, final_lz, max_l, lz_0, r_l);
-    print_lin(
-        "test 7",
-        "energy_drift",
-        &test7,
-        final_energy,
-        max_e,
-        e_0,
-        r_e,
-    );
-    print_lin("test 7", "Lz_drift", &test7, final_lz, max_l, lz_0, r_l);
+    print_lin("test 2", "energy_drift", &test2, final_energy, max_e, r_e);
+    print_lin("test 2", "Lz_drift", &test2, final_lz, max_l, r_l);
+    print_lin("test 7", "energy_drift", &test7, final_energy, max_e, r_e);
+    print_lin("test 7", "Lz_drift", &test7, final_lz, max_l, r_l);
     check_lin_range(&test2, final_energy, r_e);
     check_lin_range(&test2, final_lz, r_l);
 }

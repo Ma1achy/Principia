@@ -442,22 +442,59 @@ pub fn dbg_drift(
     drift_ramp(t, viridis || compaction == DRIFT_LOG)
 }
 
-/// The neutral band's half-width as a fraction of the drift's reference: `k·2⁻²³`, `k = 128`, so 2⁻¹⁶ (render contract
-/// Part 5, "The neutral band"; R-652): `drift.wgsl`'s `DBG_DRIFT_NEUTRAL_BAND`.
-pub const DRIFT_NEUTRAL_BAND: f64 = 1.0 / 65_536.0;
+/// The energy's neutral-band factor, `k'·2⁻²³` with `k' = 15`, of `K + |V|` (render contract Part 5, "The neutral
+/// band"; R-928): `drift.wgsl`'s `DBG_DRIFT_BAND_E`.
+pub const DRIFT_BAND_E: f64 = 15.0 / 8_388_608.0;
 
-/// `dbg_drift_shown(x, compaction, reference)`: under `symlog`, 0 where `|x| ≤ DRIFT_NEUTRAL_BAND·|reference|`, else `x`;
-/// `lin`, `log` and a non-finite `x` or `reference`, tested on the bits first (R-436), pass `x` through.
-pub fn dbg_drift_shown(x: f32, compaction: u32, reference: f32) -> f32 {
-    if non_finite(x) || non_finite(reference) || compaction == DRIFT_LIN || compaction == DRIFT_LOG
-    {
+/// `L_z`'s neutral-band factor, `k'·2⁻²³` with `k' = 5`, of `S` (R-928): `drift.wgsl`'s `DBG_DRIFT_BAND_LZ`.
+pub const DRIFT_BAND_LZ: f64 = 5.0 / 8_388_608.0;
+
+/// `dbg_drift_rounding_energy(r, p, m)`: `K + |V|`, in f32 in the shader's order, the masses `m` the sample's.
+pub fn drift_rounding_energy(r: [[f32; 2]; 3], p: [[f32; 2]; 3], m: [f32; 3]) -> f32 {
+    let dot = |a: [f32; 2]| a[0] * a[0] + a[1] * a[1];
+    let sub = |a: [f32; 2], b: [f32; 2]| [a[0] - b[0], a[1] - b[1]];
+    let k = dot(p[0]) / (2.0 * m[0]) + dot(p[1]) / (2.0 * m[1]) + dot(p[2]) / (2.0 * m[2]);
+    let v = m[0] * m[1] / dot(sub(r[0], r[1])).sqrt()
+        + m[0] * m[2] / dot(sub(r[0], r[2])).sqrt()
+        + m[1] * m[2] / dot(sub(r[1], r[2])).sqrt();
+    k + v
+}
+
+/// `dbg_drift_rounding_lz(r, p)`: `S = Σᵢ (|xᵢp_{y,i}| + |yᵢp_{x,i}|)`, in f32 in the shader's order.
+pub fn drift_rounding_lz(r: [[f32; 2]; 3], p: [[f32; 2]; 3]) -> f32 {
+    let body = |k: usize| (r[k][0] * p[k][1]).abs() + (r[k][1] * p[k][0]).abs();
+    body(0) + body(1) + body(2)
+}
+
+/// `dbg_drift_band_energy(r, p, m)`: the band's half-width on `energy_drift`, [`DRIFT_BAND_E`] of `K + |V|`.
+pub fn drift_band_energy(r: [[f32; 2]; 3], p: [[f32; 2]; 3], m: [f32; 3]) -> f32 {
+    (DRIFT_BAND_E as f32) * drift_rounding_energy(r, p, m)
+}
+
+/// `dbg_drift_band_lz(r, p)`: the band's half-width on `Lz_drift`, [`DRIFT_BAND_LZ`] of `S`.
+pub fn drift_band_lz(r: [[f32; 2]; 3], p: [[f32; 2]; 3]) -> f32 {
+    (DRIFT_BAND_LZ as f32) * drift_rounding_lz(r, p)
+}
+
+/// `dbg_drift_banded(x, band)`: 0 where `|x| ≤ band`, else `x`; a non-finite `x` or `band`, tested on the bits first
+/// (R-436), passes `x` through. The one band of every place a current drift is read under `symlog` (R-929).
+pub fn dbg_drift_banded(x: f32, band: f32) -> f32 {
+    if non_finite(x) || non_finite(band) {
         return x;
     }
-    if x.abs() <= (DRIFT_NEUTRAL_BAND as f32) * reference.abs() {
+    if x.abs() <= band {
         0.0
     } else {
         x
     }
+}
+
+/// `dbg_drift_shown(x, compaction, band)`: under `symlog`, [`dbg_drift_banded`]; `lin` and `log` pass `x` through.
+pub fn dbg_drift_shown(x: f32, compaction: u32, band: f32) -> f32 {
+    if compaction == DRIFT_LIN || compaction == DRIFT_LOG {
+        return x;
+    }
+    dbg_drift_banded(x, band)
 }
 
 /// The suspect styling's period, in pixels: a line where the pixel's coordinate is a multiple of it.
