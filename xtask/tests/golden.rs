@@ -1,7 +1,8 @@
 //! `cargo xtask golden` (TASK-M0-06; R-110, R-186): the self-test's analytic gradient matches its analytically computed
 //! reference and its one-step-shifted twin fails, so the runner can fire (pitfalls §3); the tolerance REQ-VAL-138
 //! proposes passes a same-backend re-render and fails a one-variable change; a bare-number tolerance, a reference
-//! changed without a BASELINES.md entry, and an entry naming no recorded decision are refused; `golden --list` lists
+//! changed without a BASELINES.md entry, an entry naming no recorded decision, and an entry naming a route that is
+//! neither closed form nor table are refused, and every preset golden's row names closed form; `golden --list` lists
 //! and checks every case without opening a device (R-235), and `golden repro` with no case gives its usage.
 
 use std::fs;
@@ -321,6 +322,108 @@ negative_control!(
         load_with_decision("ctl_unrecorded", "R-110"),
         "which decisions.md does not record"
     )
+);
+
+// --- A row may name its route, closed form or table, and no other (R-925, R-931) ----------------------------------
+
+/// The self-test copy with the gradient's row given the route cell `route` before its decision, loaded.
+fn load_with_route(name: &str, route: &str) -> Result<(), String> {
+    load_with_decision(
+        name,
+        &format!("{route} | R-186 (created by TASK-M0-06: the analytic gradient)"),
+    )
+}
+
+/// Each of `routes` loads, each in its own scratch copy named after `name`.
+fn check_routes_load(name: &str, routes: &[&str]) {
+    for (k, route) in routes.iter().enumerate() {
+        load_with_route(&format!("{name}_{k}"), route)
+            .unwrap_or_else(|e| panic!("a row naming route `{route}` was refused: {e}"));
+    }
+}
+
+#[test]
+fn golden_reads_route_column() {
+    check_routes_load("route", &golden::ROUTES);
+}
+
+negative_control!(
+    golden_reads_route_column,
+    "a route that is none of the two",
+    expected = "a row naming route `tables` was refused",
+    check_routes_load("ctl_route_read", &["closed form", "tables"])
+);
+
+#[test]
+fn golden_refuses_unknown_route() {
+    for (k, route) in ["tables", "closed-form", "Closed form", ""]
+        .iter()
+        .enumerate()
+    {
+        check_refused(
+            load_with_route(&format!("unknown_route_{k}"), route),
+            &format!("names route `{route}`"),
+        );
+    }
+    // A fifth cell is no row the runner reads: the reference has no entry.
+    check_refused(
+        load_with_route("five_cells", "closed form | table"),
+        "has no entry for its reference",
+    );
+}
+
+negative_control!(
+    golden_refuses_unknown_route,
+    "a row naming the table route",
+    expected = "the case was not refused",
+    check_refused(load_with_route("ctl_route", "table"), "names route")
+);
+
+/// Each `decode-preset/*` and `roundtrip-preset/*` row of `baselines` names route `closed form`, every current one
+/// being computed by the charts' closed-form code (R-925); a change of route is a recorded conversion (R-931), which
+/// changes this test with the row. Returns how many rows were read.
+fn check_preset_routes(baselines: &str) -> usize {
+    let mut read = 0;
+    for line in baselines.lines() {
+        let cells: Vec<&str> = line
+            .trim()
+            .trim_matches('|')
+            .split('|')
+            .map(str::trim)
+            .collect();
+        let name = cells[0].trim_matches('`');
+        if name.starts_with("decode-preset/") || name.starts_with("roundtrip-preset/") {
+            assert!(
+                cells.len() == 4 && cells[2] == "closed form",
+                "{name}'s row names no route `closed form`: {cells:?}"
+            );
+            read += 1;
+        }
+    }
+    read
+}
+
+#[test]
+fn golden_preset_rows_name_closed_form() {
+    let baselines = fs::read_to_string(repo_root().join("fixtures/golden/BASELINES.md")).unwrap();
+    // The seven DECODE-preset and two ROUNDTRIP-preset goldens (TASK-M2-25, TASK-M2-26), so the check is not vacuous.
+    assert!(
+        check_preset_routes(&baselines) >= 9,
+        "BASELINES.md holds fewer than the nine preset rows"
+    );
+}
+
+negative_control!(
+    golden_preset_rows_name_closed_form,
+    "a preset row naming the table route",
+    expected = "decode-preset/latent's row names no route `closed form`",
+    {
+        check_preset_routes(
+            &fs::read_to_string(repo_root().join("fixtures/golden/BASELINES.md"))
+                .unwrap()
+                .replacen("| closed form |", "| table |", 1),
+        );
+    }
 );
 
 /// `golden <arg>` on the self-test copy: an argument starting with `-` that is no flag is refused as unrecognised,
