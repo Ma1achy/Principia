@@ -583,9 +583,10 @@ pub struct AzParams<R> {
     pub clamp: bool,
     /// The landing secant's most retakes (Part 2b, step 6: `land_max_iters`, 4); `0` turns it off.
     pub secant_tries: u32,
-    /// The landing bisection's most halvings (Part 2b, step 6: 64). With this and `secant_tries` both `0`, a step past
-    /// the boundary is kept, the clock set to the boundary while the state stays overshot: a setting only for measuring
-    /// what R-998 forbids (REQ-INT-119's control), never the occupant's.
+    /// The landing bisection's most halvings (Part 2b, step 6: 64). With this `0`, whatever `secant_tries` is, a step
+    /// past the boundary is kept (the secant's last retake, where it takes any), the clock set to the boundary while the
+    /// state stays overshot: a setting only for measuring what R-998 forbids (REQ-INT-119's control), never the
+    /// occupant's.
     pub bisect_tries: u32,
 }
 
