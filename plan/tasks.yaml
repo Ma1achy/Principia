@@ -1538,7 +1538,7 @@
   title: "The Heggie occupant, registered once at t = 0, and the radial collision gate"  # re-scoped 13 Nov 2026 (R-369); was "Heggie and logH occupants, and the visible re-registration count"
   depends_on: [TASK-M3-68]  # was TASK-M3-07, split 10 Nov 2026 (R-369)
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-VAL-045]  # re-scoped 13 Nov 2026 (R-369): logH and the seam wiring wait on RQ-808 to RQ-810; REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104 and REQ-INT-105 to TASK-M3-75
+  requirements: [REQ-VAL-045, REQ-VAL-357]  # REQ-VAL-357 added 13 Nov 2026 (R-71, R-369): the radial-collision gate's region minimum; re-scoped 13 Nov 2026 (R-369): logH and the seam wiring wait on RQ-808 to RQ-810; REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104 and REQ-INT-105 to TASK-M3-75
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09

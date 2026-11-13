@@ -7839,6 +7839,8 @@
     section: R-162 — The reversible occupant is logH's TTL time mode
   - file: decisions.md
     section: "R-159 — The prin-rs reference set is imported *(closes RQ-102 and RQ-103, with R-160 to R-167)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Heggie: the equations, the time transformations, the maps and the step control (transcribed)"
   verify:
     method: review checklist
     detail: "Part 2b gives the equations, time transformations and step control for Heggie, logH and TTL and the predictive step limit, each cited to its paper and to the prin-rs file it was transcribed from; the physics reviewer approved; the human confirmed it at the M3 gate"
@@ -8061,6 +8063,8 @@
     section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
   - file: docs/design/principia_dd_integrator.md
     section: 5. Unit tests
+  - file: docs/contracts/principia_integrator_contract.md
+    section: The time-reversal maps (REQ-INT-095)
   verify:
     method: review checklist
     detail: "Part 2b gives each regularised occupant's reversal map, each an involution on its full state, with its derivation from the occupant's equations; physics reviewer approves before merge; REQ-VAL-190's test applies it"
@@ -41587,6 +41591,22 @@
   - R-976
   milestone: M9
   note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M9-41. The test's name is given here (naming)."
+- id: REQ-VAL-357
+  area: VAL
+  kind: calibration
+  statement: "The radial-collision gate's minimum number of regions, the cases its verdict on REQ-VAL-045 must cover before it stands, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_validation_orbits.md
+    section: 2. What the suite tests that the current gates do not
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate radial-collision prints the regions it ran (the passage at each rung of the halving η ladder its control reads) and their count against the minimum, and flags a verdict drawn from fewer; the proposal states the minimum with its evidence; recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  milestone: M3
+  note: "Added by TASK-M3-08 (applied per R-369, as REQ-INT-117 was for lc-inverse and REQ-INT-110 for projection-parity): the gate framework names a calibration requirement for every gate's region minimum, and REQ-VAL-045, the gate's threshold requirement, is not one. Proposed at 4: the four rungs of the halving η ladder over which the control reads the Cartesian read-out, its \"does not fall with η\" judged on them."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

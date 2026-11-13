@@ -1,7 +1,7 @@
 # TASK-M3-08 — The Heggie occupant, registered once at t = 0, and the radial collision gate
 
 - **Milestone:** M3
-- **Closes:** REQ-VAL-045
+- **Closes:** REQ-VAL-045, REQ-VAL-357
 - **Depends on:** TASK-M3-68
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-GEN-008
 - **Reviewers:** code, qa, physics
@@ -108,6 +108,9 @@ field added to the ledger as a schema change. The two-body radial collision gate
   review 5605806092 of PR #277, F1). *Was:* "control: … is printed and is worse than the regularised one …, so the gate
   pointed at it fails". *Was (13 Nov 2026, re-scoped):* "run for the default occupant and AZ", the default occupant then
   reached through the seam.
+- `cargo xtask gate radial-collision` prints the regions it ran, the passage at each rung of the halving η ladder, and
+  their count against REQ-VAL-357's minimum, proposed at 4 with that evidence in the PR (REQ-VAL-357, added 13 Nov 2026,
+  applied per R-369 and R-71: the gate framework names a calibration requirement for every gate's region minimum).
 - `cargo test -p kernel heggie_pairs` — Heggie × every stepper (Euler, KDK, Yoshida-4, Yoshida-6, RK4) under Eq. 20 and
   Eq. 22 marches a fixture state across a sync boundary as a direct march, its state finite and its profile its form's;
   Heggie's time transformation defaults to Eq. 22, Eq. 20 selectable (R-161); controls: a march whose stepper takes no step
