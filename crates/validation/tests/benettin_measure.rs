@@ -13,15 +13,20 @@
 //! - `orbit_fixtures`: the orbits are what they are named: the Kepler-embedded pair's eccentricity 1/2 and its light
 //!   third body's circular orbit, Burrau's (3, 4, 5) triangle at rest, Lagrange's equilateral triangle in rigid
 //!   rotation at `ω² = M/a³`, all in the sim's units (`M = 1`, `I = 1`, CoM at rest at the origin).
-//! - `shadow_form_gate`: its controls give their expected outcomes, and its measurement covers the periodic set at both
-//!   `‖δ₀‖`s with every value finite.
+//! - `shadow_form_gate` (REQ-VAL-038; R-974): each displacement form's f32 `λ_T` differs bitwise from the absolute
+//!   form's on some orbit, and the absolute form against itself does not; the measurement covers the periodic set at
+//!   both `‖δ₀‖`s and makes the choice; a row's reads, gaps (f32 less f64, in one form) and worst gap (a gap that is not
+//!   finite counting as infinite); unknown forms refused.
+//! - `shadow_form_criterion` (R-974; TASK-M3-72's pre-registered criterion): Burrau alone decides where it separates
+//!   (a1) from (a2); else (a2) exactly where `W(a1) − W(a2) ≥ 1/T`, the boundary included; else (a1).
 //! - `eight_orbit_set`: the eight-orbit report's chaotic orbits are the Pythagorean triangles at rest their names give,
 //!   Burrau first, and its eight starting conditions are the calibration orbits then the five others.
 //! - `eight_orbit_rules`: the bias against the reference, the reference read, the spread, the pick with an orbit left
 //!   out, the report's lines and its completeness, on synthetic candidates.
 //! - `eight_orbit_gate`: the report's candidates leave out the orbit a control names and refuse an unknown one before
 //!   the sweep runs; the report passes complete, its regions the chaotic orbits, gives the rule's pick beside the
-//!   unchanged proposal, and fails with an orbit left out; on synthetic candidates.
+//!   unchanged proposal and R-976's proposed `min_regions` ≥ 6, and fails with an orbit left out; an unknown shadow
+//!   form is refused before the sweep; on synthetic candidates.
 
 use std::path::Path;
 
@@ -30,13 +35,14 @@ use validation::gate::Gate;
 use validation::gate::RegionCount;
 use validation::gate::{self, GateSpec, MeasurementGate, Verdict};
 use validation::measure::benettin::{
-    bias, burrau, calibration_orbit, calibration_orbits, chaotic_orbits, chaotic_spread,
+    bias, burrau, calibration_orbit, calibration_orbits, chaotic_orbits, chaotic_spread, choose,
     eight_orbit_candidates, eight_orbit_report, eight_orbits, figure_eight, finite_time_gaps,
     kepler_embedded, lagrange, lagrange_exponent, lambda, leave_one_out_lines, periodic_set,
     pythagorean, reference, report_complete, routh_beta, run_lines, select, select_without, spread,
-    spread_lines, sweep_confirms, tolerance, BenettinCalibrationGate, Candidate, FormRow, GapRow,
-    Orbit, Precision, ShadowFormGate, Test10, GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0,
-    PROPOSED_N_RENORM, PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
+    spread_lines, sweep_confirms, tolerance, worst_gap, BenettinCalibrationGate, Candidate, Form,
+    FormRow, GapRow, Orbit, Precision, ShadowFormGate, Test10, BURRAU_DELTA_0, CRITERION_DELTA_0,
+    GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0, PROPOSED_MIN_REGIONS, PROPOSED_N_RENORM,
+    PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
 };
 use validation::negative_control;
 
@@ -410,23 +416,23 @@ negative_control!(
 
 // ── shadow_form_gate ────────────────────────────────────────────────────────────────────────────────────────────
 
-fn check_form_controls(doubled: f64) {
+fn check_form_controls(second: &str) {
     let GateSpec::Measurement(config) = gate::spec(root(), "shadow-form").expect("gate.json")
     else {
         panic!("shadow-form is not a measurement");
     };
     let control = |v: serde_json::Value| ShadowFormGate.control(&config, "t", &v);
-    let same = control(serde_json::json!({ "kind": "compare", "description": "s", "scale": 1.0 }))
-        .expect("runs");
-    assert_eq!(same.verdict, Verdict::Pass);
-    let other =
-        control(serde_json::json!({ "kind": "compare", "description": "d", "scale": doubled }))
-            .expect("runs");
+    let differs = |a: &str, b: &str| {
+        control(serde_json::json!({ "kind": "differs", "description": "d", "forms": [a, b] }))
+            .expect("runs")
+            .verdict
+    };
     assert_eq!(
-        other.verdict,
-        Verdict::Fail,
-        "the comparison cannot tell two reads apart"
+        differs("absolute", second),
+        Verdict::Pass,
+        "a displacement form reads as the absolute form on every orbit"
     );
+    assert_eq!(differs("absolute", "absolute"), Verdict::Fail);
     let set =
         control(serde_json::json!({ "kind": "periodic-set", "description": "p" })).expect("runs");
     assert_eq!(set.verdict, Verdict::Pass);
@@ -440,13 +446,22 @@ fn check_form_controls(doubled: f64) {
             o.name
         );
     }
+    assert!(
+        set.markdown.contains("Chosen: "),
+        "the report makes no choice"
+    );
     assert!(ShadowFormGate.flags(root(), &["--measure"]).is_err());
-    assert!(control(serde_json::json!({ "kind": "compare", "description": "x" })).is_err());
+    assert!(control(serde_json::json!({ "kind": "differs", "description": "x" })).is_err());
+    assert!(control(
+        serde_json::json!({ "kind": "differs", "description": "x", "forms": ["absolute", "nope"] })
+    )
+    .is_err());
 }
 
 #[test]
 fn shadow_form_gate() {
-    check_form_controls(2.0);
+    check_form_controls("plain");
+    check_form_controls("cancellation-free");
     assert_eq!(ShadowFormGate.name(), "shadow-form");
     // The finite-time gap (physics N3): the unstable orbits alone, each measured at both horizons.
     let gaps = finite_time_gaps(PROPOSED_DELTA_0, PROPOSED_N_RENORM);
@@ -496,42 +511,113 @@ fn shadow_form_gate() {
             o.name
         );
     }
-    // A row with any value not finite reads not finite.
+    // A row's reads, gaps and line.
     let row = FormRow {
         orbit: "r",
-        known: 0.0,
-        f64_absolute: 0.1,
-        f32_absolute: 0.2,
-        f32_displacement: 0.3,
+        known: 0.5,
+        lambdas: [[0.75, 0.5], [0.625, 0.5], [0.5, 0.25]],
     };
-    assert!(row.finite());
-    for bad in [
-        FormRow {
-            known: f64::NAN,
-            ..row
-        },
-        FormRow {
-            f64_absolute: f64::INFINITY,
-            ..row
-        },
-        FormRow {
-            f32_absolute: f64::NAN,
-            ..row
-        },
-        FormRow {
-            f32_displacement: f64::NEG_INFINITY,
-            ..row
-        },
-    ] {
-        assert!(!bad.finite(), "{bad:?} reads finite");
+    assert_eq!(row.lambda(Form::Plain, Precision::F32), 0.625);
+    assert_eq!(row.lambda(Form::CancellationFree, Precision::F64), 0.25);
+    assert_eq!(
+        Form::ALL.map(|f| row.gap(f)),
+        [0.25, 0.125, 0.25],
+        "the gap is λ_T(f32) − λ_T(f64) in the same form"
+    );
+    assert_eq!(
+        row.line(),
+        "| r | 0.50000 | 0.75000 (+0.25000, +0.25000) | 0.62500 (+0.12500, +0.12500) | 0.50000 (+0.00000, +0.25000) |"
+    );
+    let bad = FormRow {
+        lambdas: [[f64::NAN, 0.5], [0.5, 0.5], [-1.0, 0.5]],
+        ..row
+    };
+    assert_eq!(worst_gap(&[row, bad], Form::Absolute), f64::INFINITY);
+    assert_eq!(worst_gap(&[row, bad], Form::Plain), 0.125);
+    assert_eq!(worst_gap(&[row, bad], Form::CancellationFree), 1.5);
+    assert_eq!(worst_gap(&[], Form::Plain), 0.0);
+    for f in Form::ALL {
+        let word = match f {
+            Form::Absolute => "absolute",
+            Form::Plain => "plain",
+            Form::CancellationFree => "cancellation-free",
+        };
+        assert_eq!(Form::parse(word), Ok(f));
     }
+    assert!(Form::parse("displacement").is_err());
+    assert_eq!(CRITERION_DELTA_0, 1e-5);
+    assert_eq!(BURRAU_DELTA_0, [1e-5, 1e-6]);
 }
 
 negative_control!(
     shadow_form_gate,
-    "a control at the same ‖δ₀‖ must not be told apart",
-    expected = "the comparison cannot tell two reads apart",
-    check_form_controls(1.0)
+    "the absolute form held against itself as a displacement form must fail",
+    expected = "a displacement form reads as the absolute form on every orbit",
+    check_form_controls("absolute")
+);
+
+// ── shadow_form_criterion ───────────────────────────────────────────────────────────────────────────────────────
+
+/// The pre-registered (a1)/(a2) choice, `choose`, on its boundaries.
+fn check_criterion(choose: fn([f64; 2], [bool; 2], f64) -> Form) {
+    let t = 30.0;
+    let step = 1.0 / t;
+    // Burrau alone separates them: the finite one, whatever the gaps.
+    assert_eq!(
+        choose([0.0, 1.0], [false, true], t),
+        Form::CancellationFree,
+        "Burrau decides for (a2)"
+    );
+    assert_eq!(
+        choose([1.0, 0.0], [true, false], t),
+        Form::Plain,
+        "Burrau decides for (a1)"
+    );
+    for burrau in [[true, true], [false, false]] {
+        // At the boundary, W(a1) − W(a2) = 1/T exactly: (a2).
+        assert_eq!(
+            choose([2.0 * step, step], burrau, t),
+            Form::CancellationFree,
+            "at 1/T exactly"
+        );
+        // Just below it: (a1).
+        let below = f64::from_bits((2.0 * step).to_bits() - 1);
+        assert_eq!(
+            choose([below, step], burrau, t),
+            Form::Plain,
+            "just below 1/T"
+        );
+        // (a2) worse: (a1).
+        assert_eq!(choose([0.0, 1.0], burrau, t), Form::Plain, "(a2) worse");
+        // (a1) not finite, (a2) finite: (a2); both not finite: (a1).
+        assert_eq!(
+            choose([f64::INFINITY, 0.5], burrau, t),
+            Form::CancellationFree,
+            "(a1) infinite"
+        );
+        assert_eq!(
+            choose([f64::INFINITY; 2], burrau, t),
+            Form::Plain,
+            "both infinite"
+        );
+    }
+}
+
+#[test]
+fn shadow_form_criterion() {
+    check_criterion(choose);
+}
+
+negative_control!(
+    shadow_form_criterion,
+    "a choice that reads the boundary as strict must fail",
+    expected = "at 1/T exactly",
+    check_criterion(|w, b, t| match b {
+        [true, false] => Form::Plain,
+        [false, true] => Form::CancellationFree,
+        _ if w[0] - w[1] > 1.0 / t => Form::CancellationFree,
+        _ => Form::Plain,
+    })
 );
 
 // ── orbit_fixtures ──────────────────────────────────────────────────────────────────────────────────────────────
@@ -997,9 +1083,11 @@ fn check_eight_orbit_gate(expect_control: Verdict) {
             "d: reported, not gated (R-649; the verdict is the report's completeness alone). Over the 3 starting \
              conditions the rule picks ‖δ₀‖ = 1e-6, n_renorm = 1 (worst change 0.0000), tolerance 0; the proposal \
              stays ‖δ₀‖ = 3e-3, n_renorm = 300, tolerance {PROPOSED_TOLERANCE}, for the owner at the M3 gate \
-             (REQ-INT-076). Bias is against f64 at ‖δ₀‖ = 1e-6 at the same n_renorm"
+             (REQ-INT-076). Bias is against f64 at ‖δ₀‖ = 1e-6 at the same n_renorm. Proposed (R-976): \
+             min_regions ≥ 6, the chaotic orbits, for the owner at the M3 gate"
         )
     );
+    assert_eq!(PROPOSED_MIN_REGIONS, 6);
     // Its control: an orbit's runs left out, which the completeness check tells apart.
     let control =
         eight_orbit_report(&config, "t", "d", &fewer, &orbits, &["A", "B"]).expect("runs");
@@ -1015,6 +1103,13 @@ fn check_eight_orbit_gate(expect_control: Verdict) {
         &serde_json::json!({ "kind": "eight-orbits", "description": "t", "drop": "pluto" }),
     );
     assert!(refused.is_err());
+    // And an unknown shadow form, before it sweeps.
+    let refused = BenettinCalibrationGate.run(
+        &config,
+        "t",
+        &serde_json::json!({ "kind": "eight-orbits", "description": "t", "form": "displacement" }),
+    );
+    assert!(refused.is_err_and(|e| e.contains("form `displacement`")));
 }
 
 #[test]

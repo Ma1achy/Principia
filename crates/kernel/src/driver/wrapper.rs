@@ -242,7 +242,7 @@ pub trait CoMarch<R: AdvanceReal> {
     /// reached, `params` its `dt_macro` and `N_sub`, and `taken` the substeps it took, `N_sub` unless its `done` cut
     /// the macro-step short. `A` is the bound occupant. For a stepper `taken == N_sub` is exactly the macro-step
     /// completed ([`Reached::by_count`], what the wrapper counts); under an occupant that owns its time mapping the
-    /// shadow's joint step is TASK-M3-72's (R-974), and no caller marches a shadow beside one.
+    /// shadow's joint step is TASK-M3-74's (R-974; Heggie × RK4), and no caller marches a shadow beside one.
     fn after_macro<A: Advance>(
         &mut self,
         start: &State<R>,

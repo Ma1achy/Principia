@@ -15,8 +15,9 @@
 //!   rounding each, no momentum moved.
 //! - `shadow_lockstep`: where the sample's `done` cuts a macro-step short, the shadow stops at the same substep, and that
 //!   macro-step, not completed, is not counted towards a renormalisation.
-//! - `shadow_forms_agree` (REQ-VAL-038's forms): at f64 the displacement form reads the absolute form's `λ_T`, to
-//!   rounding.
+//! - `shadow_forms_agree` (REQ-VAL-038's forms; R-974): at f64, where rounding is far below the separation, both
+//!   displacement forms, (a1) and (a2), marched by the joint step, read the absolute form's `λ_T`, to rounding: the
+//!   joint step is the same discrete map's separation, formed another way.
 //! - `shadow_terminal_only_watches` (R-972, RQ-791 case B, option (d)): at a nonzero `r_coll` that only the shadow
 //!   comes inside, the shadow's detector fires and the shadow marches on, bit for bit as at `r_coll = 0`; the sample is
 //!   untouched and its FTLE valid and finite.
@@ -37,7 +38,8 @@ use kernel::detect::collision::CollisionRadius;
 use kernel::driver::advance::{Advance, AdvanceParams, Cadence};
 use kernel::driver::benettin::{
     completed_renorms, delta, ftle, ftle_read, integrate_ftle, integrate_ftle_with, offset,
-    pool_member, s_failed, sum_failed, Absolute, Benettin, BenettinParams, Displacement,
+    pool_member, s_failed, sum_failed, Absolute, Benettin, BenettinParams, CancellationFree,
+    Displacement, Plain,
 };
 use kernel::driver::cadence::WrapperCadence;
 use kernel::driver::project::ComProjection;
@@ -910,17 +912,27 @@ negative_control!(
 
 // ── shadow_forms_agree (REQ-VAL-038's forms) ────────────────────────────────────────────────────────────────────
 
-/// The displacement form's `λ_T` at `scale·‖δ₀‖` against the absolute form's at `‖δ₀‖`, at f64, on `orbit`.
+/// Each displacement form's `λ_T` at `scale·‖δ₀‖` against the absolute form's at `‖δ₀‖`, at f64, on `orbit`.
 fn check_forms(orbit: &Orbit, scale: f64) {
     let abs = measure::<Yoshida4, f64, Absolute>(orbit, PROPOSED_DELTA_0, PROPOSED_N_RENORM).lambda;
-    let disp =
-        measure::<Yoshida4, f64, Displacement>(orbit, scale * PROPOSED_DELTA_0, PROPOSED_N_RENORM)
-            .lambda;
-    assert!(
-        (disp - abs).abs() <= 1e-8 * abs.abs(),
-        "{}: the displacement form reads {disp}, the absolute form {abs}",
-        orbit.name
-    );
+    let d = scale * PROPOSED_DELTA_0;
+    for (form, disp) in [
+        (
+            "(a1)",
+            measure::<Yoshida4, f64, Displacement<Plain>>(orbit, d, PROPOSED_N_RENORM).lambda,
+        ),
+        (
+            "(a2)",
+            measure::<Yoshida4, f64, Displacement<CancellationFree>>(orbit, d, PROPOSED_N_RENORM)
+                .lambda,
+        ),
+    ] {
+        assert!(
+            (disp - abs).abs() <= 1e-8 * abs.abs(),
+            "{}: the displacement form {form} reads {disp}, the absolute form {abs}",
+            orbit.name
+        );
+    }
 }
 
 #[test]
@@ -937,7 +949,7 @@ fn shadow_forms_agree() {
 negative_control!(
     shadow_forms_agree,
     "a displacement form started at another ‖δ₀‖ must fail",
-    expected = "the displacement form reads",
+    expected = "the displacement form",
     check_forms(
         &lagrange("Lagrange, equal masses", [1.0 / 3.0; 3], 30.0),
         2.0

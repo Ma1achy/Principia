@@ -1,6 +1,0 @@
-{
-  "expected": "pass",
-  "kind": "compare",
-  "description": "control: the f32 absolute form's λ_T against itself",
-  "scale": 1.0
-}
