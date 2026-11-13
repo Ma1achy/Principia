@@ -12,8 +12,8 @@
 //!
 //! **`none`** ([`NoRegularisation`]) is built here: Cartesian, the independent control, always available. Its pairs are
 //! separable, so each is the stepper's own form: the stepper's profile and the stepper's `ADVANCE`. **Aarseth–Zare**
-//! ([`az::AarsethZare`]) is built in [`az`]; Heggie's march, registered once at `t = 0`, in [`heggie`] (TASK-M3-08), its
-//! seam `ADVANCE` and logH being TASK-M3-75's (RQ-808 to RQ-810). Under a regularisation the stepper is
+//! ([`az::AarsethZare`]) is built in [`az`]; Heggie's regularised system in [`heggie`] (TASK-M3-08), its march,
+//! registered once at `t = 0`, TASK-M3-77's, its seam `ADVANCE` and logH TASK-M3-75's (R-992 to R-994). Under a regularisation the stepper is
 //! applied to the regularised equations of motion in its form on a non-separable system ([`form`]).
 //!
 //! [`pairs`] is Part 2b's pair table and the selection of a pair; [`dt_max`] is the per-trajectory largest-step
