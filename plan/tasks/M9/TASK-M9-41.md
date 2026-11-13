@@ -1,9 +1,9 @@
 # TASK-M9-41 — Candidate original results: per-point FTLE maps over the batch-152 planes and a time-weighted shape-sphere occupancy accumulator (R-679)
 
 - **Milestone:** M9
-- **Closes:** REQ-VAL-344, REQ-VAL-345, REQ-VAL-346
-- **Depends on:** TASK-M3-14, TASK-M4-13
-- **Needs (earlier milestones):** REQ-INT-043, REQ-PAY-021, REQ-PAY-031, REQ-PAY-032, REQ-PAY-058
+- **Closes:** REQ-VAL-344, REQ-VAL-345, REQ-VAL-346, REQ-VAL-356
+- **Depends on:** TASK-M3-14, TASK-M4-13, TASK-M3-73
+- **Needs (earlier milestones):** REQ-INT-043, REQ-PAY-021, REQ-PAY-031, REQ-PAY-032, REQ-PAY-058, REQ-GUI-438
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
 - **Size:** ~300 lines
@@ -17,6 +17,7 @@ Two outputs no paper gives, planned by R-679 (RQ-674) as M9 peeks, non-gating, r
 - `docs/design/principia_dd_replication.md` § "12.5 Peeks"
 - `docs/design/principia_dd_replication.md` § "12.2 Tiers"
 - `docs/design/principia_dd_replication.md` § "12.3 Outcomes, the like-for-like check and the forbidden moves"
+- `decisions.md` § "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
 
 ## Deliverables
 - The accumulator's definition in `docs/design/principia_dd_replication.md` § 12.5: the equal-area partition of the shape sphere (its scheme, its resolution or how a result chooses it, and what it does with a point on a cell edge or vertex, the poles included), which step the accumulator adds over (macro-step, sync interval or occupant step), where in it the shape point is sampled, the physical-time weight under every occupant's time mapping, and, on a fixed-time grid, how an encounter shorter than the grid is resolved and which control replaces the step-count one; approved by the physics reviewer before any code (REQ-VAL-346, R-72).
@@ -29,7 +30,9 @@ Two outputs no paper gives, planned by R-679 (RQ-674) as M9 peeks, non-gating, r
 - `cargo test -p validation ftle_plane_map` — each pixel's map value equals the FTLE field read for that start alone, at each stated horizon, bit for bit at f64; `ftle_valid` false reads invalid; an escaping start's value is the one frozen at t_esc; controls: a map that reads another horizon than it labels, one that writes a number where `ftle_valid` is false, and one that reads a pixel's corner for its centre, each fail (REQ-VAL-344).
 - `cargo test -p validation shape_occupancy` — the fractions sum to 1 within rounding; the equilateral Lagrange orbit, at masses inside Routh's bound (27(m₁m₂ + m₂m₃ + m₃m₁)/M² < 1), puts all its time in the one cell the definition's rule assigns to the Lagrange point; a run on a step of varying physical length, where the defined step has one, is weighted by physical time; the cells' areas are equal within the stated rounding; controls: an accumulator weighting by step count on the defined step, or the control the definition names if that step is a fixed-time grid, one binning the shape point of the wrong step, and a partition with one cell doubled, each fail (REQ-VAL-345).
 - Review checklist (physics reviewer) — each peek-log row states its tier, its horizons or ensemble and measure, the starts' source, the occupant, the precision and the conventions (REQ-VAL-344, REQ-VAL-345).
+- Review (physics): the report and each FTLE map's caption state the calibration as provisional and unsupported on close-encounter chaotic orbits where REQ-INT-076's values are still unconfirmed (REQ-VAL-356).
 
 ## Notes
 - Added by R-679 (3 Nov 2026, item 3, RQ-674; ported 3 Nov 2026). A build task for candidate original results, not a target: it is not scored, the results gate nothing, its tests block only its own merge, and TASK-M9-37's report does not wait on it.
 - The batch-152 planes are the eucliss free-fall fate plane (`[value]`) and its two unequal-mass velocity planes (`[value]`), located by `docs/incoming/2026-11-02_library_triage/triage-81-153.csv`, rows 204 and 205 (`batches/papers-152/`; row 205's file names give the velocity planes' values, and the fate plane's is in the held file row 204 names), held locally and AI-authored, so peeks only (R-668 item 6): their starts are used, never their outcomes as a reference. Before a triage item is used, its source page is re-read (R-680).
+- *12 Nov 2026 (R-976, RQ-794 (c); code review 5875707244 of PR #503, F4; applied per R-369: task scoping):* REQ-GUI-437 is split per surface showing the FTLE; this task closes REQ-VAL-356, its FTLE maps and their report, reading the one source REQ-GUI-438 (TASK-M3-73) builds, so TASK-M3-73 joins Depends on. *Was:* "Closes: REQ-VAL-344, REQ-VAL-345, REQ-VAL-346"; "Depends on: TASK-M3-14, TASK-M4-13"; "Needs (earlier milestones): REQ-INT-043, REQ-PAY-021, REQ-PAY-031, REQ-PAY-032, REQ-PAY-058".

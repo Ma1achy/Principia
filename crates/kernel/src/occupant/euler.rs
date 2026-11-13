@@ -10,12 +10,16 @@
 
 use super::kdk::{drift, kick};
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};
+use crate::regularisation::form::Form;
 
 /// Explicit Euler.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Euler;
 
 impl Stepper for Euler {
+    /// The form under a regularisation (integrator_contract Part 2b; [`crate::regularisation::form`]).
+    const FORM: Form = Form::Euler;
+
     #[inline]
     fn profile() -> CapabilityProfile {
         CapabilityProfile {

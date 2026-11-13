@@ -364,14 +364,31 @@ or unknown, so nothing depends on remembering a list; it replaces the orchestrat
 counted from the head's required checks going green, or `merge-ready` goes on only once they are green.
 What is red `main` (R-907: "a correctness failure (physics, validation, bit-for-bit, golden) is red main under R-681;
 any other failure files a top-priority task without freezing PR work"): `ci.yml`'s `per-merge` job failing on `main`'s
-head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose summary names each failed job and why. A
+head, the per-merge tier's verdict (`.github/scripts/ci_per_merge.py`), whose summary names each failed job and why.
+*12 Nov 2026 (R-982, the owner's veto of D-2 of that day's report: "Any red job on main is red; make the per-merge
+verdict cover every job so the two can't disagree."):* any failed job of `ci.yml`'s run on `main` is a red `main`, a
+process test, the lints, `cargo xtask ci` or the web skeleton as much as a product test; an install step's network or
+archive-download failure reads "no result", never green, and holds as red does (R-979, a reading flagged for the
+owner). The built verdict (TASK-M0-59, `.github/scripts/ci_per_merge.py`) covers every job of the run: red when any job
+failed but by an install outage, which fails `per-merge`; "no result" when every failed job is an install outage, which
+fails `per-merge` too, under its own summary line, never passing; green when no job failed, which alone passes it. An
+install outage is narrow: the job's one unfinished step is `Install Mesa (lavapipe)`, and that step's own part of the
+log shows `bounded`'s last try failing on an `apt-get` call, an apt fetch or network error (an `Ign:` or `Err:` line on
+a URL, `Failed to fetch`, a name not resolved, a connection refused or timed out) and no package error; the summary
+names the step and those two lines. Anything else fails towards red. *Was:* "Until TASK-M0-59 makes the verdict cover
+every job, the orchestrator reads every job of the run itself." The vetoed
+policy is kept as its *Was*: "A
 run of `ci` on `main` that failed with `per-merge` passing is not red `main`: its failures are outside correctness (a
 process test, the lints and build beside the tests, `cargo xtask ci`, the web skeleton, a runner or setup step), filed
 as one issue labelled `per-merge`, a top-priority task the orchestrator works without stopping pull-request work. The
 run's own conclusion can't carry this: the jobs that run the product suite run process tests too, and none of them may
-pass with a failing step (REQ-TOOL-223, R-235, R-335). Applied per R-369/R-812.
-The verdict reads each failed test step in its own part of the job's log, and is red whenever part of the product
-suite did not run: a test step skipped after a failed one (but a step of process tests alone), or nextest counting
+pass with a failing step (REQ-TOOL-223, R-235, R-335). Applied per R-369/R-812."
+Each failed job's line in the summary also gives its kind, for the reader, both kinds red: `correctness` (a product
+test, the release profile, a job the verdict does not know) or `other` (a process test, the lints and build, `cargo
+xtask ci`, the web skeleton, a step outside the tests). *Was:* "What follows describes the verdict as built today, and
+stands until TASK-M0-59 changes it to cover every job (R-982); it is not the vetoed policy." The verdict reads each
+failed test step in its own part of the job's log, and calls the job `correctness` whenever part of the product
+suite did not run (*was:* "and is red whenever part of the product suite did not run"): a test step skipped after a failed one (but a step of process tests alone), or nextest counting
 fewer tests run than it selected. The `ci`, `ci-workspace` and `gpu-kernel` profiles run every test after a failure
 (`fail-fast = false`), and each later product test step of their jobs runs whatever an earlier one ended in, but for
 one: in `ci`'s first shard the doctests run before the shard's nextest run, which a failing doctest skips, leaving that
@@ -430,7 +447,9 @@ R-656), so a push cancels the run on the head it supersedes; a run on `main` is 
 hung or stuck because of a bug, which is caught and cancelled, on `main`, a pull request's current head or a schedule
 alike (R-970, 11 Nov 2026; *was:* "a run on `main` is never cancelled"). "Caught", applied per R-369 (R-970): by a
 limit that ends a hung test or job where one can be set, and otherwise by the orchestrator, who cancels without asking
-and records it; the cause of the hang is then traced. `reviews.yml` keeps one
+and records it; the cause of the hang is then traced. The one other exception is the Windows runner's 85-minute run,
+`win-gpu.yml`'s `win-vulkan`: a newer run of it cancels an older one, on `main` too (R-986, 12 Nov 2026; *was:* "a run
+on `main` is never cancelled unless it is clearly hung or stuck because of a bug"). `reviews.yml` keeps one
 group per pull request and event, so a burst of reviews leaves one run, and the `pull_request_review` run that re-runs
 the `pull_request` run (R-276) is not in that run's group, which would cancel it (R-676). `ci.yml`'s `changes` job
 classifies the change with `scripts/ci_changes.sh` (the pull request's merge commit against the base it merges onto)
@@ -486,9 +505,10 @@ On a code change the jobs run in parallel:
   class: CI's own tests, the plan checks', the negative-control registry's, the job queue's, the deps rules' synthetic
   workspaces' and the like), less their own slow tier, only when the change touches `.github/`, `xtask/`, `scripts/`,
   `plan/`, `decisions.md`, `REVIEW_QUEUE.md` or `docs/` (`scripts/ci_changes.sh`'s `process`). A failing process test
-  is read and fixed in its pull request. On `main`, the per-merge tier's verdict brings the owner's "A failing
+  is read and fixed in its pull request. On `main`, a process test failing is a red `main` (R-982, 12 Nov 2026;
+  § "Merging", what is red `main`). *Was:* "On `main`, the per-merge tier's verdict brings the owner's "A failing
   process test never makes main red; it files a task" (8 Nov 2026): a process test failing there is filed as a task,
-  and `per-merge` passes (§ "Merging", what is red `main`). The orchestrator's merge script
+  and `per-merge` passes (§ "Merging", what is red `main`)." The orchestrator's merge script
   refuses a merge with a red `process` job on the head, though branch protection does not require it;
 - `web-skeleton`, advisory: the v1 web skeleton's wasm build.
 Every job bearing a required check runs on every pull request whose run is not cancelled, `if: !cancelled()`,
@@ -510,8 +530,11 @@ and Metal (the `gpu-kernel` profile, the `--features controls` suites, `cargo xt
 decode-agreement`), the golden and screenshot runners' self-tests, the release profile (R-547), `cargo xtask ci`, the
 controls run among it, and every process test. They are `ci.yml`'s per-merge tier (the owner's CI model, R-909 item 2,
 order step 3), the full suite's jobs, on a push only, each merge commit in a run of its own, bearing no required check,
-and last `per-merge`, their verdict: a correctness failure fails it, a red `main`; any other failure is filed as a
-top-priority task, an issue labelled `per-merge` (§ "Merging"). A head that changes only prose a test reads does not run that test unless it changes the
+and last `per-merge`, their verdict. *12 Nov 2026 (R-982, the owner's veto of D-2 of that day's report):* any failed job
+of the run is a red `main`, an install step's network or archive-download failure reading "no result", never green
+(R-979; § "Merging", what is red `main`), the built verdict since TASK-M0-59. *Was (12 Nov 2026, until TASK-M0-59):*
+"the built verdict follows once TASK-M0-59 lands, and until then the orchestrator reads every job itself." *Was:* "a correctness failure fails it, a red `main`; any other failure is filed as
+a top-priority task, an issue labelled `per-merge` (§ "Merging")". A head that changes only prose a test reads does not run that test unless it changes the
 machinery, so a contract's renamed heading can turn `main` red after a green pull request (R-662). New code that loads
 a data file for behaviour adds that file to `scripts/ci_changes.sh`'s list; `xtask/tests/ci_changes.rs` scans for a
 literal data path missing from it.
@@ -548,6 +571,8 @@ Approvals are of a head, so the reviewers approve the merged head again before t
 
 **Automatic retries and disk (R-714).** `retry.yml` re-runs failed jobs only on a runner-level fault, in at most two retries, never on a real test failure or a flake; its classifier is tested on saved logs. Every CI speed-up step reports the lowest free disk per job, before and after, and must reduce or hold it.
 *11 Nov 2026 (R-968):* a job whose only failure is the package-install step is also re-run, once, automatically, on GitHub-hosted runners only, marked as a re-run; any other failure beside it stands, so a real failure never turns green. The per-merge verdict on such a failure is unchanged (REQ-TOOL-223; RQ-789, open).
+*12 Nov 2026 (R-979, RQ-789 (a), built by TASK-M0-59):* the per-merge verdict reads an install step's network or archive-download failure as "no result", never green, in any job (§ "Merging", what is red `main`); the re-run above is unchanged.
+*12 Nov 2026 (R-988):* a job on the Windows runner that stops unclearly, on a runner-level fault, is re-run once, automatically, by a hosted job of its own, `win-retry`, never by `retry.yml`; a hung one ends at its time limit and is not re-run; both are logged. § "The Windows runner's work (R-859)" has the detail; TASK-M0-61 builds it.
 
 **The Mesa package cache (R-967).** CI caches the Mesa (lavapipe) packages that `gpu-lavapipe` and the release jobs install, keyed on the package list and, applied per R-369 (R-967), the runner's image, saved only on a push to `main` and restored by pull-request runs (R-326), so a run no longer fetches them from Ubuntu's archive. It joins R-285's cargo registry and fixture pool and R-320's rust-gpu build; no target directory is cached (R-285, R-656).
 
@@ -803,6 +828,10 @@ Check free disk and memory pressure before every dispatch, build or reviewer.
 | Free disk | aim for ≥ 25 GB; start nothing below 15 GB; below 20 GB, clean (R-262, 28 Sep 2026). Read `df -h`, not `du`: `du` counts APFS clones in full | the same thresholds (R-347), read with `df -h "$HOME"` |
 | Build settings | heavy commands through the job queue only, each job with `CARGO_BUILD_JOBS` and `RUST_TEST_THREADS` at the core count (R-658, below); `CARGO_INCREMENTAL=0` | the same |
 
+*12 Nov 2026 (R-981, the owner's word on D-1 of that day's report: "Don't exceed the agent limit again."):* the
+heavy-agent cap in force is never exceeded, not even while the job queue runs the builds one after another; a dispatch
+that would exceed it waits for a slot.
+
 **The swap check (R-391, a trial from 6 Oct 2026; Mac only).** At warning, before each dispatch, read "Pageouts" from
 `vm_stat` twice, 60 s apart (`vm_stat | awk '/Pageouts/ {print $2}'`; wait with Monitor, not a foreground `sleep`).
 If it rose by more than 1000 in that minute (about 16 MB a minute at the Mac's 16 KB pages), the Mac is swapping: allow
@@ -1046,9 +1075,27 @@ every test that passes on the hosted Linux run of that commit passes on all thre
 differ the tier does not move and the owner is told which tests differed. The RTX's GPU tests wait on § "Windows GPU
 results (R-719)"'s sorting of the four failing steps.
 
+*12 Nov 2026 (R-986, the owner's ruling):* the 85-minute run, `win-gpu.yml`'s `win-vulkan`, runs on merges to `main`,
+nightly and by dispatch only, never on a branch push, and a newer run of it cancels an older one, on `main` too
+(`cancel-in-progress: true` on that job alone; every other job on the runner keeps `false`). A run cancelled so is no
+failure and is not re-run. TASK-M0-61 sets it (REQ-TOOL-230).
+
+*12 Nov 2026 (R-988, the owner's item 5, a reading to confirm):* a job on the runner that stops unclearly, on a
+runner-level fault (the runner lost, offline or shut down mid-job, its communication lost, its process killed from
+outside), is re-run once, automatically, by the hosted job `win-retry` (`workflow_run` on `win-gpu.yml` and
+`runner-proof.yml`, never a `pull_request` trigger), only for a push to `main`, schedule or dispatch run at its first
+attempt and while no newer run of that job has started. Never re-run: a test or step failing on its own output, a flake,
+a hang, a run cancelled by a newer one, a job no runner took. A hang ends at its time limit: every job, and every step
+that builds or runs tests, carries `timeout-minutes` of 1.5 times its measured time (the slowest of its last five
+recorded completed runs, written down with their run ids before the limit is set, R-649), rounded up to a whole minute.
+`win-retry`'s run summary logs every unclear stop and every hang it sees, and the re-run marks itself as one.
+TASK-M0-61 builds it (REQ-TOOL-231, REQ-TOOL-232). Until then nothing re-runs a job on the PC automatically, and a hang there
+is caught as R-970 says, by the job's present limit or by the orchestrator.
+
 - **From the anchor move** (the owner's move of the PC hook's signing-gate anchor; before it the hook refuses `main`'s
   merges), it may run, each as a named measurement reporting under its own name and never a required check, gathered
-  or read by any gate (R-649, R-711 item 1):
+  or read by any gate, re-run only by R-988's `win-retry`, once (R-649, R-711 item 1; *was, 12 Nov 2026:* "never a
+  required check, gathered or read by any gate (R-649, R-711 item 1)"):
   - the GPU suites, nightly and on pushes to `main`: Vulkan now, DX12 from Phase 2, once its opt-in lands (R-862: a
     cargo feature and `PRIN_GPU_BACKEND=dx12`, off by default, "local testing only, untested in CI", in no required or
     hosted job; TASK-M0-57 builds it, TASK-M0-58 the runner's DX12 run);
@@ -1114,6 +1161,10 @@ A throwaway `measure/<what>` branch may be pushed so that CI takes a measurement
 RQ-164's ubuntu mutants timing were taken this way). Record the number in the PR or `decisions.md`, delete the branch
 straight after, and never open a PR from it. If the permission classifier refuses the push, show the human the rule;
 don't route around it.
+*12 Nov 2026 (R-983, the owner's word on D-26 of that day's report: "Deleting your own measurement branch is fine when
+its commit is recorded; anything else asks first."):* the orchestrator deletes a measurement branch it made itself only
+once that branch's commit is recorded, in the PR or `decisions.md`, so it can be restored; deleting any other branch,
+or one whose commit is not recorded, is asked of the owner first.
 
 ## Pitfalls
 

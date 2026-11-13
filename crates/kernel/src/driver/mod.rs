@@ -5,11 +5,16 @@
 //! ([`monitor`]) it runs after every step (TASK-M3-05). Its substep control ([`substep`]): the position-quantised `d²`, the
 //! `N_sub` bucket over the sim key's threshold table and the per-run substep record; and the host's generator of that
 //! table ([`nsub_table`]; R-502), which the SPIR-V build does not take. The Welford diffusion's per-macro-step update
-//! and closed-form time moments ([`welford`]; payload §4). Like the physics layer, it allocates nothing
+//! and closed-form time moments ([`welford`]; payload §4). The monotone latches `d_min`, `dE_max` and `dLz_max`, local
+//! f32s packed to the payload's f16 halves at a persist boundary and reloaded from them at a resume ([`latch`]; payload
+//! §1, §2). The FTLE tier's Benettin shadow, marched beside the sample through its own cadence ([`benettin`];
+//! TASK-M3-14). Like the physics layer, it allocates nothing
 //! (Part 2c rule 5; `cargo xtask lint no-alloc`).
 
 pub mod advance;
+pub mod benettin;
 pub mod cadence;
+pub mod latch;
 pub mod monitor;
 #[cfg(not(target_arch = "spirv"))]
 pub mod nsub_table;

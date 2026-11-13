@@ -1,0 +1,9 @@
+{
+  "expected": "fail",
+  "kind": "test10",
+  "description": "control: ‖δ₀‖ = 10⁻⁴ at f32 on Burrau, where the shadow's separation is near the state's rounding at the encounters",
+  "orbit": "burrau",
+  "precision": "f32",
+  "delta_0": 1e-4,
+  "n_renorm": 10
+}

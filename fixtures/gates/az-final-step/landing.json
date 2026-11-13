@@ -1,0 +1,10 @@
+{
+  "description": "The figure-eight (az-figure-eight/orbit.json) over one period on its own sync interval T/32 at η = 0.001, Aarseth–Zare + RK4 under the step control in force (integrator contract Part 2b, Part 6's per-step rule) with the landing clamp and secant: its closure within REQ-INT-114's threshold, and its convergence over the η ladder against a run at η = 1e-4 better than first order (REQ-INT-049; R-927).",
+  "eta": 0.001,
+  "n": 32,
+  "landing": true,
+  "ladder": [0.02, 0.01, 0.005, 0.002, 0.001],
+  "reference_eta": 0.0001,
+  "order_above": 1.5,
+  "expected": "pass"
+}

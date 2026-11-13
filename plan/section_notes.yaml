@@ -2016,3 +2016,11 @@
   section: "R-971 — The per-merge verdict fix and the `plan/requirements.yaml`-only move come to the owner as rulings, through RQ-789 and RQ-790, which stay open; neither goes straight into a CI pull request"
   reason: informative only
   note: "the owner's message of 11 Nov 2026: RQ-789 and RQ-790 come as rulings and stay open; ci; changes no requirement"
+- file: decisions.md
+  section: "R-981 — The orchestrator never exceeds the heavy-agent cap, not even while the job queue runs the builds one after another *(the report's D-1, which stands)*"
+  reason: informative only
+  note: "the owner's word on D-1 of the report of 12 Nov 2026: the heavy-agent cap is never exceeded; process; changes no requirement"
+- file: decisions.md
+  section: "R-983 — The orchestrator may delete its own measurement branch once its commit is recorded; deleting anything else asks first *(the report's D-26, which stands; refines R-272)*"
+  reason: informative only
+  note: "the owner's word on D-26 of the report of 12 Nov 2026: own measurement branches deleted once their commit is recorded, anything else asked first; refines R-272; process; changes no requirement"

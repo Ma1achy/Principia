@@ -477,6 +477,30 @@
   requirements: [REQ-TOOL-226]  # R-862, R-859 (8 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-59
+  milestone: M0
+  title: "The per-merge verdict covers every job, any red job a red `main`, an install-step outage \"no result\" (R-982, R-979)"
+  depends_on: [TASK-M0-54]
+  needs: [REQ-TOOL-223]
+  requirements: [REQ-TOOL-228]  # R-979, R-982 (12 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-60
+  milestone: M0
+  title: "A `plan/requirements.yaml`-only change runs on the pull request only the tests that read it (R-980)"
+  depends_on: [TASK-M0-54]
+  needs: []
+  requirements: [REQ-TOOL-229]  # R-980 (12 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-61
+  milestone: M0
+  title: "Windows runner: R-986 concurrency, one re-run, time limits"
+  depends_on: [TASK-M0-04]
+  needs: []
+  requirements: [REQ-TOOL-230, REQ-TOOL-231, REQ-TOOL-232]  # R-986, R-988 (12 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"
@@ -1562,7 +1586,7 @@
   title: The Benettin FTLE shadow
   depends_on: [TASK-M3-05, TASK-M3-06]  # R-369, following R-924: TASK-M2-71 (R-918) dropped with REQ-CHART-132
   needs: [REQ-PAY-021, REQ-PAY-026, REQ-PAY-032]
-  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038]  # R-369, following R-924: REQ-CHART-132 to TASK-M3-69
+  requirements: [REQ-INT-035, REQ-INT-039, REQ-INT-043, REQ-INT-076, REQ-INT-077]  # R-369, following R-924: REQ-CHART-132 to TASK-M3-69; R-369 (12 Nov 2026, RQ-793): REQ-VAL-038 to TASK-M3-72
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-15
@@ -1802,7 +1826,7 @@
   title: The Aarseth–Zare occupant
   depends_on: [TASK-M3-07]  # split from TASK-M3-07, 10 Nov 2026 (R-369)
   needs: [REQ-DEC-005, REQ-INT-002]
-  requirements: [REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-080, REQ-INT-114]  # REQ-INT-114: R-927
+  requirements: [REQ-INT-024, REQ-INT-044, REQ-INT-049, REQ-INT-054, REQ-INT-080, REQ-INT-114, REQ-INT-117]  # REQ-INT-114: R-927; REQ-INT-117: fix round 1 of PR #502 (R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.1, PIT-9]
 - id: TASK-M3-69
@@ -1827,6 +1851,22 @@
   depends_on: [TASK-M3-09]  # R-954 (11 Nov 2026), RQ-782 (a)
   needs: []
   requirements: [REQ-EVT-035]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M3-73
+  milestone: M3
+  title: "The FTLE views already built state the shadow's provisional calibration, from one source (R-976)"
+  depends_on: [TASK-M3-14, TASK-M1-12]  # R-976 (12 Nov 2026), code review 5875707244 of PR #503, F4
+  needs: []
+  requirements: [REQ-GUI-438]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M3-72
+  milestone: M3
+  title: "The displacement form of the FTLE shadow, R-974's joint step (REQ-VAL-038), and R-976's calibration re-run"
+  depends_on: [TASK-M3-14]  # R-369 (12 Nov 2026): split from TASK-M3-14, physics review 5866988394 of PR #493; R-974, R-976 (12 Nov 2026)
+  needs: []
+  requirements: [REQ-VAL-038, REQ-VAL-355]  # REQ-VAL-355: R-974, physics review 5875695467 of PR #503, F1 (12 Nov 2026)
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M4-01
@@ -1928,9 +1968,9 @@
 - id: TASK-M4-13
   milestone: M4
   title: "FTLE on the GPU: the f32 shadow form and the horizon map"
-  depends_on: [TASK-M4-06, TASK-M4-04, TASK-M3-36]
-  needs: [REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-PAY-021, REQ-PAY-032, REQ-VAL-035, REQ-RENDER-013, REQ-TOOL-009]
-  requirements: [REQ-PAY-085, REQ-TOOL-043, REQ-TOOL-126]
+  depends_on: [TASK-M4-06, TASK-M4-04, TASK-M3-36, TASK-M3-72, TASK-M3-73]  # TASK-M3-72: R-369 (12 Nov 2026), REQ-VAL-038 moved there
+  needs: [REQ-INT-043, REQ-INT-076, REQ-INT-077, REQ-VAL-038, REQ-PAY-021, REQ-PAY-032, REQ-VAL-035, REQ-RENDER-013, REQ-TOOL-009, REQ-GUI-438]
+  requirements: [REQ-PAY-085, REQ-TOOL-043, REQ-TOOL-126, REQ-GUI-437]  # REQ-GUI-437: R-976 (12 Nov 2026)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M4-14
@@ -3420,9 +3460,9 @@
 - id: TASK-M8-11
   milestone: M8
   title: "The Trajectory panel: summary, real space, the turning shape sphere, kept orbits"
-  depends_on: [TASK-M8-09, TASK-M8-87, TASK-M6-27, TASK-M2-33]  # TASK-M2-33 for R-449's display names
-  needs: [REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047, REQ-GUI-188]
-  requirements: [REQ-GUI-088, REQ-GUI-089, REQ-GUI-054]
+  depends_on: [TASK-M8-09, TASK-M8-87, TASK-M6-27, TASK-M2-33, TASK-M3-73]  # TASK-M2-33 for R-449's display names
+  needs: [REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047, REQ-GUI-188, REQ-GUI-438]
+  requirements: [REQ-GUI-088, REQ-GUI-089, REQ-GUI-054, REQ-GUI-440]  # REQ-GUI-440: R-976 (12 Nov 2026), split per surface
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-12
@@ -3508,9 +3548,9 @@
 - id: TASK-M8-22
   milestone: M8
   title: Legend generated by evaluating the stain (06_legend.png)
-  depends_on: [TASK-M8-92, TASK-M8-10, TASK-M6-27]
-  needs: [REQ-GEN-019, REQ-COL-002, REQ-GUI-021, REQ-GUI-030, REQ-COL-018, REQ-GUI-188]
-  requirements: [REQ-GUI-105, REQ-GUI-106]
+  depends_on: [TASK-M8-92, TASK-M8-10, TASK-M6-27, TASK-M3-73]
+  needs: [REQ-GEN-019, REQ-COL-002, REQ-GUI-021, REQ-GUI-030, REQ-COL-018, REQ-GUI-188, REQ-GUI-438]
+  requirements: [REQ-GUI-105, REQ-GUI-106, REQ-GEN-046, REQ-GUI-439]  # REQ-GEN-046: R-978 (12 Nov 2026)
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-23
@@ -3940,9 +3980,9 @@
 - id: TASK-M8-76
   milestone: M8
   title: "Where precision runs out: four runs of the clicked point, the chord's two marks, the trust line, and nothing changed in the atlas (R-574)"
-  depends_on: [TASK-M8-17, TASK-M4-16, TASK-M8-75]
-  needs: [REQ-TOOL-127, REQ-TOOL-040, REQ-PERF-108]
-  requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371, REQ-PERF-106, REQ-GUI-398, REQ-VAL-200, REQ-PERF-114]  # REQ-PERF-114: perf review 5661999637 of PR #293, P3; REQ-GUI-398, REQ-VAL-200: R-621's header
+  depends_on: [TASK-M8-17, TASK-M4-16, TASK-M8-75, TASK-M3-73]
+  needs: [REQ-TOOL-127, REQ-TOOL-040, REQ-PERF-108, REQ-GUI-438]
+  requirements: [REQ-VAL-196, REQ-VAL-197, REQ-VAL-198, REQ-VAL-199, REQ-GUI-369, REQ-GUI-370, REQ-GUI-371, REQ-PERF-106, REQ-GUI-398, REQ-VAL-200, REQ-PERF-114, REQ-GUI-441]  # REQ-PERF-114: perf review 5661999637 of PR #293, P3; REQ-GUI-398, REQ-VAL-200: R-621's header
   reviewers: [code, qa, physics, gui, perf]
   pitfalls: [PIT-10]
 - id: TASK-M8-77
@@ -3972,9 +4012,9 @@
 - id: TASK-M8-80
   milestone: M8
   title: "Export details: every measured colour window frozen at export and at Record, the clipped shares and the export block, the colour-vision simulation never in an export unless asked, `render_scale` 1, and the physical size (R-581 to R-583)"
-  depends_on: [TASK-M8-32, TASK-M8-33, TASK-M8-94, TASK-M8-78, TASK-M8-53, TASK-M7-70, TASK-M7-25]
-  needs: [REQ-RENDER-118]
-  requirements: [REQ-RENDER-117, REQ-TOOL-201, REQ-TOOL-202, REQ-GUI-389, REQ-TOOL-203, REQ-TOOL-204, REQ-GUI-390, REQ-TOOL-205, REQ-TOOL-216, REQ-TOOL-217, REQ-TOOL-218]
+  depends_on: [TASK-M8-32, TASK-M8-33, TASK-M8-94, TASK-M8-78, TASK-M8-53, TASK-M7-70, TASK-M7-25, TASK-M3-73]
+  needs: [REQ-RENDER-118, REQ-GUI-438]
+  requirements: [REQ-RENDER-117, REQ-TOOL-201, REQ-TOOL-202, REQ-GUI-389, REQ-TOOL-203, REQ-TOOL-204, REQ-GUI-390, REQ-TOOL-205, REQ-TOOL-216, REQ-TOOL-217, REQ-TOOL-218, REQ-GUI-442]  # REQ-GUI-442: R-976 (12 Nov 2026), split per surface
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-81
@@ -4573,9 +4613,9 @@
 - id: TASK-M9-41
   milestone: M9
   title: "Candidate original results: per-point FTLE maps over the batch-152 planes and a time-weighted shape-sphere occupancy accumulator (R-679)"
-  depends_on: [TASK-M3-14, TASK-M4-13]
-  needs: [REQ-INT-043, REQ-PAY-021, REQ-PAY-031, REQ-PAY-032, REQ-PAY-058]
-  requirements: [REQ-VAL-344, REQ-VAL-345, REQ-VAL-346]  # R-679 (3 Nov 2026), RQ-674
+  depends_on: [TASK-M3-14, TASK-M4-13, TASK-M3-73]
+  needs: [REQ-INT-043, REQ-PAY-021, REQ-PAY-031, REQ-PAY-032, REQ-PAY-058, REQ-GUI-438]
+  requirements: [REQ-VAL-344, REQ-VAL-345, REQ-VAL-346, REQ-VAL-356]  # R-679 (3 Nov 2026), RQ-674
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M9-42

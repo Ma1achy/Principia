@@ -1,0 +1,7 @@
+{
+  "expected": "pass",
+  "kind": "test10",
+  "description": "dd test 10 at the proposed values",
+  "orbit": "burrau",
+  "precision": "f32"
+}

@@ -11,18 +11,21 @@
 //! profile says.
 //!
 //! **`none`** ([`NoRegularisation`]) is built here: Cartesian, the independent control, always available. Its pairs are
-//! separable, so each is the stepper's own form: the stepper's profile and the stepper's `ADVANCE`. Aarseth–Zare is
-//! TASK-M3-68's and Heggie and logH TASK-M3-08's.
+//! separable, so each is the stepper's own form: the stepper's profile and the stepper's `ADVANCE`. **Aarseth–Zare**
+//! ([`az::AarsethZare`]) is built in [`az`]; Heggie and logH are TASK-M3-08's. Under a regularisation the stepper is
+//! applied to the regularised equations of motion in its form on a non-separable system ([`form`]).
 //!
 //! [`pairs`] is Part 2b's pair table and the selection of a pair; [`dt_max`] is the per-trajectory largest-step
 //! diagnostic with its "no usable step" sentinel (Part 2c).
 
+pub mod az;
 pub mod dt_max;
+pub mod form;
 pub mod pairs;
 
 use core::marker::PhantomData;
 
-use crate::driver::advance::{Advance, AdvanceParams, AdvanceReal, Advanced, Cadence};
+use crate::driver::advance::{Advance, AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
 use crate::occupant::{CapabilityProfile, Geom, State, Stepper};
 
 /// The regularisation slot's four kinds (Part 2b).
@@ -68,6 +71,34 @@ pub trait Regularisation {
         params: &AdvanceParams<R>,
         cadence: &mut C,
     ) -> Advanced<R>;
+
+    /// The pair's `ADVANCE` with how the call ended ([`Advance::advance_reaching`]). This default is the kind's rule. An
+    /// occupant that owns its time mapping reached its target unless the cadence's `done` stopped it: its march stops
+    /// only on the sync grid, at the latest boundary at or before `t_target` (Part 2a § "The sync grid is a fixed
+    /// quantum of physical time (R-565)"), and the steps it took there are its own, not the wrapper's `N_sub` (Part 2a,
+    /// Cost 2). `none` keeps the stepper's rule ([`Reached::by_count`]). **This default suits only a march that cannot
+    /// fail**: it never reports [`Reached::NonFinite`] or [`Reached::Exhausted`], so a regularisation whose march can
+    /// end non-finite or on its step budget reports it in its own, as [`az::AarsethZare`] does; Heggie and logH must
+    /// (TASK-M3-08; physics review 5879658175 of PR #502, P2).
+    #[inline]
+    fn advance_reaching<S: Stepper, R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> (Advanced<R>, Reached) {
+        let out = Self::advance::<S, R, C>(state, geom, t_now, t_target, params, cadence);
+        let reached = if !Self::KIND.owns_time_mapping() {
+            Reached::by_count(out.substeps, params.n_sub)
+        } else if cadence.done() {
+            Reached::Short
+        } else {
+            Reached::Target
+        };
+        (out, reached)
+    }
 }
 
 /// `none`: no regularisation. The pair with a stepper is the stepper itself (Part 2b: "The `none` pairs are separable,
@@ -123,5 +154,17 @@ impl<S: Stepper, G: Regularisation> Advance for Composed<S, G> {
         cadence: &mut C,
     ) -> Advanced<R> {
         G::advance::<S, R, C>(state, geom, t_now, t_target, params, cadence)
+    }
+
+    #[inline]
+    fn advance_reaching<R: AdvanceReal, C: Cadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> (Advanced<R>, Reached) {
+        G::advance_reaching::<S, R, C>(state, geom, t_now, t_target, params, cadence)
     }
 }

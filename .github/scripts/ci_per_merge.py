@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""The per-merge verdict: which failures of a run of `ci.yml` on a push to `main` are correctness failures.
+"""The per-merge verdict over every job of a run of `ci.yml` on a push to `main`: red, no result or green.
 
-The owner's CI model (R-909, approved 9 Nov 2026, item 2): "Each merge to main (per merge commit; advisory; never
-blocks a merge) ... Correctness failure (physics, validation, bit-for-bit, golden) = red main (R-681); other failures
-file a top-priority task." R-908: "A failing process test never makes main red; it files a task." `ci.yml`'s
-`per-merge` job runs this after every other job of the run, on a push only; its failure is a red `main`, and its pass on
-a run whose other jobs failed is not (`plan/OPERATIONS.md` § "Merging"). The run's own conclusion cannot carry the
-distinction: the jobs that run the product suite also run process tests, and none of them may pass with a failing step
-(REQ-TOOL-223, R-235, R-335). It is here and not in `scripts/` because `.github/` is full CI whole (R-662), as
-`ci_retry.py` is.
+R-982 (12 Nov 2026, the owner's veto of D-2 of that day's report): "Any red job on main is red; make the per-merge
+verdict cover every job so the two can't disagree." R-979 (RQ-789 (a)): only the install step's network and
+archive-download failures count as infrastructure, and their verdict is "no result", never green; read with R-982,
+that holds in any job of the run, and "no result" holds as red does under R-681. `ci.yml`'s `per-merge` job runs this
+after every other job of the run, on a push only; it fails on red and on no result, and passes on green alone
+(`plan/OPERATIONS.md` § "Merging", what is red `main`). It is here and not in `scripts/` because `.github/` is full CI
+whole (R-662), as `ci_retry.py` is.
 
   ci_per_merge.py classify DIR CONFIG  Classify a saved run, offline: print the verdict. DIR holds `jobs.json` (the
                                        attempt's jobs, as the jobs API lists them, with their steps) and
@@ -18,46 +17,53 @@ distinction: the jobs that run the product suite also run process tests, and non
   ci_per_merge.py decide               In `ci.yml`'s `per-merge` job: fetch the run named by RUN_ID and RUN_ATTEMPT
                                        (GH_REPO the repository) through `gh`, every job but its own (SELF, by default
                                        `per-merge`) and each failed job's log, classify it against this checkout's
-                                       `.config/nextest.toml`, and write the verdict to $GITHUB_STEP_SUMMARY. When
-                                       FILE_TASKS is `true` (a push to `main`), the failures that are not correctness
-                                       failures are filed as one issue labelled LABEL, or a comment on the open issue
-                                       of the same title. Exits 1 on a correctness failure, else 0.
+                                       `.config/nextest.toml`, and write the verdict to $GITHUB_STEP_SUMMARY. Exits 0
+                                       on green alone, else 1.
 
 The verdict, one `verdict=` line, then a line per failed job:
-  verdict=red|task|green   red: some failure is a correctness failure; task: every failure is another kind; green:
-                           no job failed;
-  job=<name>: correctness: <why> | other: <why>.
+  verdict=red|no-result|green  red: some job failed other than by an install outage (below); no-result: every failed
+                               job is an install outage; green: no job failed;
+  job=<name>: correctness|other|no-result: <why>.
 
-A failed job (any conclusion but success, skipped and neutral) is judged by its job's name, less a matrix's ` (<k>)`:
-  - OTHER_JOBS fail as another kind, whatever failed: the classification, the lints, docs and build beside the tests
-    (which the pull-request tier's required checks gate), `cargo xtask ci` (the controls run) and the web skeleton.
-  - RELEASE_JOBS fail as correctness, whatever failed: REQ-TOOL-223 makes every failure of `ci-release`, a shard or its
-    archive, a correctness failure and so a red `main`.
+A failed job is any conclusion but success, skipped and neutral. Each is first read for an install outage, R-979's
+narrow class: the job concluded `failure`; its one step that did not finish is INSTALL_STEPS' (the step that installs
+Mesa from Ubuntu's archive through `bounded`'s three tries, `ci.yml`'s header); and that step's own part of the log
+shows `bounded`'s last try failing on an `apt-get` call (EXHAUSTED), apt failing a fetch or the network failing
+(NETWORK: an `Ign:` or `Err:` line on a URL, `Failed to fetch`, a name not resolved, a connection refused or timed out),
+and no package error (PACKAGE: an `E:` line but a fetch's, `dpkg: error`, unmet dependencies). Such a job is
+`no-result`, its line naming the step and the two lines that show it. Anything else fails towards red: a log GitHub
+kept none of, a part that cannot be cut, the step cut off by its own time limit, another install step (the toolchain's,
+PyYAML's, nextest's), another step failing beside it.
+
+Every other failed job is red, whatever its kind (R-982): a process test, the lints, `cargo xtask ci` and the web
+skeleton as much as a product test. Its kind, `correctness` or `other`, says what failed, for the reader:
+  - OTHER_JOBS, whatever failed in them, are `other`: the classification, the lints, docs and build beside the tests,
+    `cargo xtask ci` (the controls run) and the web skeleton.
+  - RELEASE_JOBS, whatever failed in them, are `correctness`: REQ-TOOL-223 makes a failure of `ci-release`, a shard or
+    its archive, a correctness failure.
   - TEST_JOBS, the rest of the run: each failed step that runs tests (TEST_STEPS, by the step's name) is read on its
-    own, in its own part of the job's log, and is a correctness failure unless the tests it names failing are all
-    process tests, or it names none and shows the build failing (`error: could not compile`); a failure in any other
-    step (the runner, the disk, the toolchain, a download, the kernel's or the archive's build) is another kind. The
-    job is a correctness failure if any of its failed test steps is one, and whenever part of its product suite did not
-    run: a test step skipped after a failed one, but for the steps that run process tests alone (PROCESS_STEPS), or
-    nextest's summary counting fewer tests run than it selected (a failure that stopped the run). `ci.yml` runs the
-    rest of the product suite after a failure (the `ci`, `ci-workspace` and `gpu-kernel` profiles set `fail-fast =
-    false`, and each later product test step of their jobs runs whatever an earlier one ended in, but for one: in
-    `ci`'s first shard a failing doctest skips the shard's nextest run after it, its quarter of the product suite, and
-    is red already, a product failure), so a process test's failure leaves no product test unrun; these two rules hold
-    the verdict red if it ever does.
-  - Any other name is a job this script does not know: a correctness failure, so a job added to `ci.yml` without a
-    place here is never let through (`xtask/tests/ci_per_merge.rs` checks the lists against `ci.yml`).
+    own, in its own part of the job's log, and is `correctness` unless the tests it names failing are all process
+    tests, or it names none and shows the build failing (`error: could not compile`); a failure in any other step (the
+    runner, the disk, the toolchain, a download, the kernel's or the archive's build) is `other`. The job is
+    `correctness` if any of its failed test steps is, and whenever part of its product suite did not run: a test step
+    skipped after a failed one, but for the steps that run process tests alone (PROCESS_STEPS), or nextest's summary
+    counting fewer tests run than it selected (a failure that stopped the run). `ci.yml` runs the rest of the product
+    suite after a failure (the `ci`, `ci-workspace` and `gpu-kernel` profiles set `fail-fast = false`, and each later
+    product test step of their jobs runs whatever an earlier one ended in, but for one: in `ci`'s first shard a
+    failing doctest skips the shard's nextest run after it).
+  - Any other name is a job this script does not know: `correctness`, so a job added to `ci.yml` without a place here
+    is named as one (`xtask/tests/ci_per_merge.rs` checks the lists against `ci.yml`).
 A process test is one of the binaries the `process` profile's filter names before its `& not (`, the class the split
-of 9 Nov 2026 calls process. Fails towards red: a test job's failed test step with no log, or with no test and no build
-failure in its own part of the log (a doctest, `cargo xtask golden`, a gate), two failed test steps whose parts of the
-log cannot be told apart (their steps carry no start time, or a part starts without one), and a config whose process
-class cannot be read, which makes every test a product test.
+of 9 Nov 2026 calls process. Read as `correctness`: a test job's failed test step with no log, or with no test and no
+build failure in its own part of the log (a doctest, `cargo xtask golden`, a gate), two failed test steps whose parts
+of the log cannot be told apart, and a config whose process class cannot be read, which makes every test a product
+test.
 
 A step's part of the log: GitHub writes a job's steps into one log, each step's run opening with a `##[group]Run`
 line. The log is cut at those lines, and each part goes to the step that started last, of those that ran, at or before
 its first line's time (the jobs API gives a step's start to the second). A part is never split: nextest's closing lines,
 written in the second the next step starts, stay with their own step. A step that started in the same second as the
-next loses its part to it, and reads as naming no failed test: red, never a failure hidden.
+next loses its part to it, and reads as naming no failed test, or showing no outage.
 """
 
 import json
@@ -68,13 +74,12 @@ import sys
 import tomllib
 from pathlib import Path
 
-# The jobs whose failure is never a correctness failure (R-907, R-908): `changes`, the classification, whose failure
-# fails the GPU smoke sets' first step; `ci-checks`, fmt, Clippy, the docs, the build and the crate-graph check, which
-# the pull-request tier's required `fmt`, `clippy` and `build` gate, so a failure here is a merge's skew; `xtask-ci`,
-# `cargo xtask ci`, whose controls run is the process tests' machinery, its golden and gate steps run again in the GPU
-# suites; `web-skeleton`, the wasm build.
+# The jobs whose failure is of the kind `other`, red all the same (R-982): `changes`, the classification, whose
+# failure fails the GPU smoke sets' first step; `ci-checks`, fmt, Clippy, the docs, the build and the crate-graph
+# check; `xtask-ci`, `cargo xtask ci`, whose controls run is the process tests' machinery; `web-skeleton`, the wasm
+# build.
 OTHER_JOBS = ("changes", "ci-checks", "xtask-ci", "web-skeleton")
-# Every failure of these is a correctness failure (REQ-TOOL-223; R-809, R-907).
+# Every failure of these is a correctness failure (REQ-TOOL-223; R-809), but for an install outage (R-979).
 RELEASE_JOBS = ("ci-release-archive", "ci-release")
 # The jobs that run the product suite on `main`, judged by the step that failed and the tests it names.
 TEST_JOBS = (
@@ -100,10 +105,27 @@ PROCESS_STEPS = (
 PASSED = ("success", "skipped", "neutral")
 # A step's states that mean it did not finish: failed, cut off by the job's timeout or cancelled with it.
 STEP_FAILED = ("failure", "cancelled", "timed_out")
-# The label the issue carries, its colour and description.
-LABEL = "per-merge"
-LABEL_COLOUR = "b60205"
-LABEL_TEXT = "Top-priority task: a per-merge run on main failed outside correctness (R-907)"
+# The kinds of a failed job that make the verdict red: every kind but NO_RESULT (R-982).
+RED = ("correctness", "other")
+NO_RESULT = "no-result"
+# The step whose network or archive-download failure is an install outage (R-979): Mesa from Ubuntu's archive, by its
+# name in `ci.yml`. No other step: the toolchain's, PyYAML's and nextest's installs are not this class.
+INSTALL_STEPS = ("Install Mesa (lavapipe)",)
+# `bounded`'s line when its last try of an `apt-get` call fails (`ci.yml`): `attempt 3 of 3 failed or ran past 90 s,
+# apt-get update` (run 43029168415).
+EXHAUSTED = re.compile(r"^attempt (\d+) of \1 failed or ran past \d+ s, apt-get (?:update|install)\b")
+# apt failing a fetch, or the network failing: `Ign:2 http://azure.archive.ubuntu.com/ubuntu noble InRelease` (run
+# 43029168415), and apt's `Err:`, `Failed to fetch`, and the resolver's and the connection's errors.
+NETWORK = re.compile(
+    r"^(?:Ign|Err):\d+ https?://"
+    r"|Failed to fetch |Temporary failure resolving|Could not resolve|Could not connect to|Unable to connect to"
+    r"|Connection timed out|Connection refused|Connection failed"
+)
+# A package error, which no outage explains: an `E:` line but a fetch's, dpkg's error, unmet dependencies.
+PACKAGE = re.compile(
+    r"^E: (?!Failed to fetch |Unable to fetch some archives|Some index files failed to download)"
+    r"|^dpkg: error|unmet dependencies"
+)
 
 # A log line's timestamp, and the byte-order mark GitHub puts before the first (as in `ci_retry.py`).
 STAMP = re.compile(r"^\ufeff?\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z ?")
@@ -262,18 +284,39 @@ def judge(job, log, process):
     return kind, "; ".join(why for _, why in judged)
 
 
+def install_outage(job, log):
+    """Why the failed job is an install outage (R-979, the module's rules), or None."""
+    every = job.get("steps") or []
+    failed = [at for at, s in enumerate(every) if s.get("conclusion") in STEP_FAILED]
+    if job.get("conclusion") != "failure" or len(failed) != 1 or log is None:
+        return None
+    step = every[failed[0]].get("name", "")
+    if step not in INSTALL_STEPS:
+        return None
+    own = parts(every, log)
+    lines = [] if own is None else [line.strip() for line in own.get(failed[0], [])]
+    exhausted = next((line for line in lines if EXHAUSTED.match(line)), None)
+    network = next((line for line in lines if NETWORK.search(line)), None)
+    if exhausted is None or network is None or any(PACKAGE.search(line) for line in lines):
+        return None
+    return f"`{step}`: its network or archive download failed (R-979): `{network}`; `{exhausted}`"
+
+
 def classify(jobs, logs, process):
     """(verdict, [(job name, kind, why)]) over every failed job of `jobs`."""
     judged = []
     for job in jobs:
         if job.get("conclusion") in PASSED:
             continue
-        kind, why = judge(job, logs.get(str(job.get("id"))), process)
+        log = logs.get(str(job.get("id")))
+        outage = install_outage(job, log)
+        kind, why = (NO_RESULT, outage) if outage else judge(job, log, process)
         judged.append((job.get("name", ""), kind, why))
-    if any(kind == "correctness" for _, kind, _ in judged):
+    kinds = {kind for _, kind, _ in judged}
+    if kinds & set(RED):
         verdict = "red"
-    elif judged:
-        verdict = "task"
+    elif NO_RESULT in kinds:
+        verdict = NO_RESULT
     else:
         verdict = "green"
     return verdict, judged
@@ -329,51 +372,20 @@ def fetch_log(repo, jid):
     return out.stdout.decode(errors="replace")
 
 
-def task_text(judged, repo, run_id, sha):
-    """The issue's title and body for the failures that are not correctness failures."""
-    other = [(n, why) for n, kind, why in judged if kind == "other"]
-    names = sorted({base_name(n) for n, _ in other})
-    title = f"per-merge: {', '.join(names)} failed on main (not a correctness failure)"
-    url = f"https://github.com/{repo}/actions/runs/{run_id}"
-    body = [
-        f"The per-merge run on `main` at {sha} ({url}) failed outside correctness. The owner's CI model (R-907, "
-        "R-909): a correctness failure is a red `main`; any other failure files a top-priority task, and pull-request "
-        "work goes on.",
-        "",
-    ]
-    body += [f"- `{n}`: {why}" for n, why in other]
-    body += ["", "Filed by `.github/scripts/ci_per_merge.py`, `ci.yml`'s `per-merge` job."]
-    return title, "\n".join(body) + "\n"
-
-
-def file_task(repo, title, body):
-    """Open the issue, or comment on the open one of the same title: None, or why it could not be filed."""
-    # The label, made if it is missing; a label that exists makes the request fail, which changes nothing.
-    gh(["--method", "POST", f"repos/{repo}/labels", "-f", f"name={LABEL}", "-f", f"color={LABEL_COLOUR}",
-        "-f", f"description={LABEL_TEXT}"])
-    listed = gh(["--paginate", f"repos/{repo}/issues?labels={LABEL}&state=open&per_page=100"])
-    if listed is None:
-        return "the open issues could not be read"
-    try:
-        issues = [i for page in values(listed) for i in page]
-    except (ValueError, TypeError):
-        return "the open issues could not be read"
-    same = [i for i in issues if isinstance(i, dict) and i.get("title") == title and "number" in i]
-    if same:
-        done = gh(["--method", "POST", f"repos/{repo}/issues/{same[0]['number']}/comments", "-f", f"body={body}"])
-        return None if done is not None else f"the comment on #{same[0]['number']} could not be posted"
-    done = gh(["--method", "POST", f"repos/{repo}/issues", "-f", f"title={title}", "-f", f"body={body}",
-               "-f", f"labels[]={LABEL}"])
-    return None if done is not None else "the issue could not be opened"
+# Each verdict's line in the step summary; `decide` passes on green alone.
+SAID = {
+    "red": "**Red `main`:** a job of the run failed (R-982, R-681).",
+    NO_RESULT: "**No result, not green:** every failed job is an install step's network or archive download (R-979); "
+    "it holds as red does (R-681).",
+    "green": "**Green:** no job failed.",
+}
 
 
 def decide():
     repo = os.environ["GH_REPO"]
     run_id = os.environ["RUN_ID"]
     attempt = os.environ["RUN_ATTEMPT"]
-    sha = os.environ.get("HEAD_SHA", "")
     me = os.environ.get("SELF", "per-merge")
-    file_tasks = os.environ.get("FILE_TASKS") == "true"
     summary = [f"## The per-merge verdict: run {run_id}, attempt {attempt}", ""]
     listed = gh(["--paginate", f"repos/{repo}/actions/runs/{run_id}/attempts/{attempt}/jobs?per_page=100"])
     if listed is None:
@@ -390,30 +402,12 @@ def decide():
     process = process_binaries(Path(os.environ.get("CONFIG", ".config/nextest.toml")).read_text())
     verdict, judged = classify(jobs, logs, process)
     sys.stdout.write(verdict_lines(verdict, judged))
-    said = {
-        "red": "**Red `main`:** a correctness failure (R-681, R-907).",
-        "task": "**Not red:** every failure is outside correctness; it is filed as a top-priority task (R-907).",
-        "green": "**Green:** no job failed.",
-    }[verdict]
-    summary += [said, ""]
+    summary += [SAID[verdict], ""]
     if judged:
         summary += ["| Failed job | Kind | Why |", "| --- | --- | --- |"]
         summary += [f"| {n} | {kind} | {why} |" for n, kind, why in judged]
         summary.append("")
-    if any(kind == "other" for _, kind, _ in judged):
-        title, body = task_text(judged, repo, run_id, sha)
-        if file_tasks:
-            why = file_task(repo, title, body)
-            if why:
-                # Seen, never silent, and no red `main`: the error annotation is on the run's page.
-                print(f"::error::the per-merge task was not filed: {why}")
-                summary.append(f"The task **was not filed**: {why}. Title: {title}")
-            else:
-                summary.append(f"Filed: {title}")
-        else:
-            summary.append(f"Not on `main`, so not filed: {title}")
-            sys.stdout.write(f"would file: {title}\n{body}")
-    return finish(summary, 1 if verdict == "red" else 0)
+    return finish(summary, 0 if verdict == "green" else 1)
 
 
 def finish(summary, status):

@@ -4,12 +4,27 @@
 # through `scripts/wsl/inside.sh`, from a clone at the job's own commit; interop is off, so nothing inside can reach
 # Windows, and Windows reads only what `wsl.exe` relays: stdout, and the exit status.
 #
-#   wsl.ps1 register   Imports the image the same run built (WSL_IMAGE: rootfs.tar.gz, rootfs.sha256, manifest.txt),
-#                      as gh-runner, to E:\wsl\principia-wsl\, never C:. Refuses unless a manifest hash is pinned in
-#                      scripts/wsl/manifest.sha256 and the image's manifest has it, and unless the copy's bytes are the
-#                      ones built. Refuses if the distro exists, unless WSL_REPLACE is `true`. After the import it
-#                      derives the manifest again inside the distro, from what is really there, and unregisters it if
-#                      that differs from the pin, or if deriving it fails or stops short.
+#   wsl.ps1 cache-ready
+#                      Fails, naming the folder, unless the image cache E:\runner-tools\wsl-cache\ exists and gh-runner
+#                      can write to it. The owner makes the folder; nothing here makes it, or writes in its place.
+#   wsl.ps1 cache-lookup
+#                      Exits 0 only if the cache holds the image of this checkout's recipe (Get-RecipeKey), whole: its
+#                      length and SHA-256 the ones recorded when it was built. Otherwise it exits non-zero, saying why,
+#                      and the job downloads this run's image. It writes nothing.
+#   wsl.ps1 check-image
+#                      Checks that the image a download wrote (WSL_IMAGE) is whole, its length and SHA-256 the ones
+#                      built, and nothing more; the registering job runs it after each download, to try again on a bad
+#                      one.
+#   wsl.ps1 register   Imports the image of this checkout's recipe, as gh-runner, to E:\wsl\principia-wsl\, never C:.
+#                      The image is the cache's, E:\runner-tools\wsl-cache\<recipe key>\: found there by the lookup
+#                      (WSL_CACHE_HIT is `success`), or else this run's download (WSL_IMAGE: rootfs.tar.gz,
+#                      rootfs.sha256, rootfs.bytes and manifest.txt), checked and moved there first. Either way the
+#                      cache's copy is the one checked and imported, every time, never trusted by its name. Refuses
+#                      unless a manifest hash is pinned in scripts/wsl/manifest.sha256 and the image's manifest has it,
+#                      and unless the copy is whole, its length and bytes the ones built. Keeps at most two images in
+#                      the cache, this one and the one used before it. Refuses if the distro exists, unless WSL_REPLACE
+#                      is `true`. After the import it derives the manifest again inside the distro, from what is really
+#                      there, and unregisters it if that differs from the pin, or if deriving it fails or stops short.
 #   wsl.ps1 proofs     The six proofs RQ-751 (c) needs before it can replace (b), each reported PASS or FAIL with its
 #                      evidence; exits 0 only if all six pass. WSL_PARITY_COMMIT and WSL_HOSTED_PARITY (the hosted
 #                      runner's results, this run's) feed proof 6; WSL_IMAGE (this run's rebuild) feeds proof 5.
@@ -17,7 +32,8 @@
 #                      passed). Then the CPU tests and the job queue's mutants inside, through `scripts/contain.sh` in
 #                      its unprivileged mode; their results come out as a tar stream on a second `wsl.exe`'s stdout.
 #
-# Every verb ends with `wsl.exe --terminate`, which ends every process in the distro, whatever was left running.
+# Every verb but check-image and the cache's two, which never start WSL, ends with `wsl.exe --terminate`, which ends
+# every process in the distro, whatever was left running.
 $ErrorActionPreference = 'Stop'
 $verb = $args[0]
 $Distro = 'principia-wsl'
@@ -26,6 +42,16 @@ $User = 'ci'
 $Repo = '/home/ci/work/principia'
 $Inside = "$Repo/scripts/wsl/inside.sh"
 $Record = Join-Path $env:RUNNER_TEMP 'win-measure'
+# The image cache (the owner, 12 Nov 2026: "Cache the verified image on E:"). The owner makes the folder, writable by
+# gh-runner; this script never makes it. Each image is in a folder named by its recipe key, holding the four files the
+# build writes; `<key>.partial` is one being filled.
+$CacheRoot = 'E:\runner-tools\wsl-cache'
+$ImageFiles = @('rootfs.tar.gz', 'rootfs.sha256', 'rootfs.bytes', 'manifest.txt')
+# The recipe: what `scripts/wsl/build-image.sh` builds the image from. The script itself, which holds the base's URL and
+# SHA-256, the Ubuntu snapshot date, the package list and the cargo tools' versions; every file of the repository it
+# reads; and the manifest's pin. The image's bytes differ from build to build (run 43312851701: tar order, times,
+# logs), what it is built from doesn't, so the cache is keyed on this.
+$RecipeFiles = @('scripts/wsl/build-image.sh', 'scripts/wsl/manifest.sh', 'scripts/wsl/wsl.conf', 'scripts/wsl/manifest.sha256', 'rust-toolchain.toml')
 # wsl.exe's own messages in UTF-8, not UTF-16.
 $env:WSL_UTF8 = '1'
 
@@ -105,10 +131,80 @@ function Get-Sha256([string]$Path) {
     (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
 }
 
+# The image in $Image is whole: its files are there, rootfs.tar.gz is as long as built, and its bytes hash to what was
+# built. The length comes first, so a download that stopped short names itself before the hash says only that it
+# differs. `check-image` runs it after each download, `register` again before the import.
+function Assert-Image([string]$Image) {
+    $rootfs = Join-Path $Image 'rootfs.tar.gz'
+    foreach ($f in $rootfs, (Join-Path $Image 'manifest.txt'), (Join-Path $Image 'rootfs.sha256'), (Join-Path $Image 'rootfs.bytes')) {
+        if (-not (Test-Path -LiteralPath $f)) { Fail "the image has no $f" }
+    }
+    $length = (Get-Content -LiteralPath (Join-Path $Image 'rootfs.bytes') -Raw).Trim()
+    if ($length -notmatch '^[0-9]+$') { Fail "rootfs.bytes holds no length: '$length'" }
+    $copiedLength = (Get-Item -LiteralPath $rootfs).Length
+    if ($copiedLength -lt [int64]$length) { Fail "rootfs.tar.gz is a short copy, $copiedLength of $length bytes: the download stopped short" }
+    $built = (Get-Content -LiteralPath (Join-Path $Image 'rootfs.sha256') -Raw).Trim()
+    $copied = Get-Sha256 $rootfs
+    if ($copied -ne $built) { Fail "rootfs.tar.gz is $copied here, $built as built: the copy is not the image" }
+    "the image is whole: rootfs.tar.gz is $copiedLength bytes, sha256 $copied, as built"
+}
+
 function Get-TextSha256([string[]]$Lines) {
     $bytes = [Text.Encoding]::UTF8.GetBytes((($Lines -join "`n") + "`n"))
     $sha = [Security.Cryptography.SHA256]::Create()
     -join ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') })
+}
+
+# The recipe's key: the SHA-256 of a first line naming the scheme and one line per recipe file, its path and its
+# bytes' SHA-256. The same commit gives the same key on any machine; a change to any recipe file gives another.
+function Get-RecipeKey {
+    $lines = @('principia-wsl recipe 1') + @(foreach ($f in $RecipeFiles) { "$f $(Get-Sha256 $f)" })
+    Get-TextSha256 $lines
+}
+
+# The cache's folder is there, and is a folder. The owner makes it and nothing here does, so a missing one fails here,
+# named, before anything is written.
+function Assert-Cache {
+    if (-not (Test-Path -LiteralPath $CacheRoot -PathType Container)) {
+        Fail "the image cache $CacheRoot\ doesn't exist: the owner makes it on the PC, writable by $([Environment]::UserName), before a register run. Nothing is written in its place"
+    }
+}
+
+# Moves this run's download, $From, into the cache as $Entry. It is checked whole, and its manifest the pin, before
+# anything is written; moved into `$Entry.partial`, and only then renamed $Entry, so that a folder named by a key holds a
+# whole copy or nothing. `register` checks the cache's copy again before the import.
+function Save-Image([string]$From, [string]$Entry, [string]$Pinned) {
+    Assert-Cache
+    Assert-Image $From
+    $hash = Get-Sha256 (Join-Path $From 'manifest.txt')
+    if ($hash -ne $Pinned) { Fail "this run's image's manifest is $hash, the pin is ${Pinned}: not caching it" }
+    $partial = "$Entry.partial"
+    foreach ($old in $partial, $Entry) {
+        if (Test-Path -LiteralPath $old) { Remove-Item -LiteralPath $old -Recurse -Force }
+    }
+    New-Item -ItemType Directory -Path $partial | Out-Null
+    foreach ($f in $ImageFiles) { Move-Item -LiteralPath (Join-Path $From $f) -Destination (Join-Path $partial $f) }
+    Rename-Item -LiteralPath $partial -NewName (Split-Path -Leaf $Entry)
+    "cached this run's image as $Entry"
+}
+
+# At most two images in the cache: $Current, marked as just used, and the one used last before it. Only folders named
+# as the cache names them, a recipe key in lowercase hex (`-cmatch`: a folder named in capitals is no key's) or one
+# being filled, are touched; anything else in the folder is left alone.
+function Limit-Cache([string]$Current) {
+    Assert-Cache
+    (Get-Item -LiteralPath (Join-Path $CacheRoot $Current)).LastWriteTimeUtc = [DateTime]::UtcNow
+    $entries = @(Get-ChildItem -LiteralPath $CacheRoot -Directory | Where-Object { $_.Name -cmatch '^[0-9a-f]{64}(\.partial)?$' })
+    $previous = @($entries | Where-Object { $_.Name -cmatch '^[0-9a-f]{64}$' -and $_.Name -ne $Current } |
+            Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1 | ForEach-Object { $_.Name })
+    $keep = @($Current) + $previous
+    foreach ($e in $entries) {
+        if ($keep -notcontains $e.Name) {
+            "removing $($e.Name) from the image cache: it keeps this image and the one before it"
+            Remove-Item -LiteralPath $e.FullName -Recurse -Force
+        }
+    }
+    "the image cache keeps $($keep -join ', ')"
 }
 
 # The manifest of the registered distro, derived inside it from what is there: the job's `manifest.sh`, on stdin.
@@ -171,17 +267,50 @@ function Report([int]$Proof, [bool]$Passed, [string]$Evidence) {
 }
 
 switch ($verb) {
+    'cache-ready' {
+        Assert-Cache
+        $probe = Join-Path $CacheRoot ".write-probe-$PID"
+        try {
+            [IO.File]::WriteAllText($probe, '')
+            Remove-Item -LiteralPath $probe -Force
+        } catch {
+            Fail "the image cache $CacheRoot\ isn't writable by $([Environment]::UserName): $_"
+        }
+        "the image cache $CacheRoot\ is there and writable; this run's recipe key is $(Get-RecipeKey)"
+        exit 0
+    }
+    'cache-lookup' {
+        Assert-Cache
+        $key = Get-RecipeKey
+        $entry = Join-Path $CacheRoot $key
+        if (-not (Test-Path -LiteralPath $entry -PathType Container)) {
+            "cache miss: no image of recipe $key in $CacheRoot\, so this run's is downloaded"
+            exit 1
+        }
+        Assert-Image $entry
+        "cache hit: the image of recipe $key in $entry is whole"
+        exit 0
+    }
+    'check-image' {
+        Assert-Image $env:WSL_IMAGE
+        exit 0
+    }
     'register' {
         $pinned = Get-Pinned
-        $image = $env:WSL_IMAGE
+        $key = Get-RecipeKey
+        $image = Join-Path $CacheRoot $key
+        if ($env:WSL_CACHE_HIT -eq 'success') {
+            "cache hit: registering the cached image of recipe $key, checked again here"
+        } else {
+            "cache miss: caching this run's image as recipe $key"
+            Save-Image $env:WSL_IMAGE $image $pinned
+        }
+        # The sweep runs before the check, so that a check that fails still leaves at most two images; it keeps this
+        # one, and the import below still waits on the check.
+        Limit-Cache $key
         $rootfs = Join-Path $image 'rootfs.tar.gz'
         $manifest = Join-Path $image 'manifest.txt'
-        foreach ($f in $rootfs, $manifest, (Join-Path $image 'rootfs.sha256')) {
-            if (-not (Test-Path -LiteralPath $f)) { Fail "the image has no $f" }
-        }
-        $built = (Get-Content -LiteralPath (Join-Path $image 'rootfs.sha256') -Raw).Trim()
-        $copied = Get-Sha256 $rootfs
-        if ($copied -ne $built) { Fail "rootfs.tar.gz is $copied here, $built as built: the copy is not the image" }
+        Assert-Image $image
         $hash = Get-Sha256 $manifest
         if ($hash -ne $pinned) { Fail "the image's manifest is $hash, the pin is ${pinned}: refusing it" }
         "the image's manifest matches the pin: $hash"

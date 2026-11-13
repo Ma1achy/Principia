@@ -16,11 +16,11 @@
 #   `lint no-alloc`, the generated files current (`cargo xtask codegen` writes nothing), the static listing that every
 #   test has a registered negative control (`cargo xtask controls --list`, which runs no control) and the plan checks;
 #   on a data or docs change only the plan checks and the vocabulary lint;
-# - `ci` (the job `tests`): the product tests of the changed crates and their reverse dependencies
-#   (`.github/scripts/ci_tier.sh`, `.github/scripts/ci_quick_crates.py`) under the `pr` nextest profile, every test but
-#   the process tests, the in-depth GPU tests, the golden and screenshot runners' and the slow tier, each test measured
-#   over 60 s (`.config/nextest.toml` names them), with their doctests (R-231); on a data change the tests of the code
-#   that reads it (R-677);
+# - `ci` (the job `tests-verdict`, over the 3 shards of the job `tests`): the product tests of the changed crates and
+#   their reverse dependencies (`.github/scripts/ci_tier.sh`, `.github/scripts/ci_quick_crates.py`) under the `pr`
+#   nextest profile, every test but the process tests, the in-depth GPU tests, the golden and screenshot runners' and the
+#   slow tier, each test measured over 60 s (`.config/nextest.toml` names them), with their doctests (R-231); on a data
+#   change the tests of the code that reads it (R-677);
 # - `gpu-lavapipe` and `gpu-metal`: on a change with a GPU-path file (`gpu`), the GPU smoke set on lavapipe and on
 #   Metal, one fast test of each GPU stage after `cargo xtask build-kernel` (the `gpu-smoke` profile), and on lavapipe
 #   every numerical gate but `decode-agreement`; on a push too, to keep their rust-gpu caches warm on `main`;
@@ -51,12 +51,11 @@
 # and the screenshot runner's self-test (product correctness, never retired, R-909), the release profile (R-547),
 # `cargo xtask ci`, the controls run among it, and every process test. No job of it bears a required check, and branch
 # protection reads pull requests, so nothing here blocks a merge. `per-merge` runs last, whatever the others ended in,
-# and reads them (`.github/scripts/ci_per_merge.py`): a correctness failure (physics, validation, bit-for-bit, golden)
-# fails it, and that is a red `main` (R-681, R-907); any other failure, a process test, the lints and build beside the
-# tests, `cargo xtask ci`, the web skeleton or a step outside the tests, is filed as one issue labelled `per-merge`, a
-# top-priority task, and `per-merge` passes. The run's own conclusion is not the verdict: the jobs that run the product
-# suite run process tests too, and none of them may pass with a failing step (REQ-TOOL-223, R-235, R-335). The
-# description of the jobs below, kept from R-656's full CI:
+# and reads every one of them (`.github/scripts/ci_per_merge.py`): any failed job fails it, and that is a red `main`, a
+# process test, the lints and build beside the tests, `cargo xtask ci` and the web skeleton as much as a product test
+# (R-982, R-681); a failure confined to the step that installs Mesa, its network or archive download, fails it too, as
+# "no result", never green, which holds as red does (R-979); it passes only when no job failed. The description of the
+# jobs below, kept from R-656's full CI:
 # formatting and lints (R-195), build, test, the crate-graph check (REQ-SYS-004) and, in jobs
 # of their own beside them (R-235), `cargo xtask ci`, the single per-push entry point every later per-commit runner
 # registers into. The GPU kernel build, `cargo xtask build-kernel`, and the tests that need the built kernel run in a
@@ -119,7 +118,9 @@
 # larger of 1.5 times the longest passing run of the job, over the 60 pull-request and 40 push runs before 10 Nov 2026,
 # rounded up to 5 minutes, and the diagnosis's own figure: `changes` 5 (longest 0.9 min), `fmt` 5 (1.0), `clippy` 10
 # (3.5), `build` 25 (14.5), `ci` 90 (58.9), `process` 60 (38.9), `gpu-lavapipe` 25 (16.6, a run that built rust-gpu
-# with no cache), `gpu-metal` 20 (12.5, the same) and `web-skeleton` 10 (2.4).
+# with no cache), `gpu-metal` 20 (12.5, the same) and `web-skeleton` 10 (2.4). Since the split of 11 Nov 2026 each of
+# `ci`'s 3 shards (`tests`) keeps the unsharded job's 90, nothing yet measured of a shard, and `tests-verdict`, which
+# only reads the shards' result, has 5.
 # Every step that installs from apt, in every workflow, calls `apt-get` through one shell function, `bounded`, which
 # ends a call at its limit (`timeout`, then a kill 10 s later) and tries it three times: `apt-get update` at 90 s,
 # `apt-get install` at 420 s, and the step at 8 minutes. `apt-get update` is what stalled those two runs for six
@@ -259,6 +260,19 @@ jobs:
       - name: Dependencies without debug info, every profile
         if: needs.changes.outputs.docs_only != 'true'
         uses: ./.github/actions/cargo-ci-config
+      # The crates, fetched before the job's own work, up to three tries, over HTTP/1.1
+      # (CARGO_HTTP_MULTIPLEXING=false: the curl 16 errors were HTTP/2 framing); then CARGO_NET_OFFLINE=true for every
+      # later step, with the lockfile `--locked` has just checked, `--frozen`'s two halves, so the job's own steps fail
+      # only on their own work. Five PR jobs since 7 Nov 2026 failed at crates.io's index, curl 56 or 16, before anything
+      # compiled (#481's `clippy` among them, job 130327300645). Criterion, fixed before measuring: no network-caused
+      # `clippy` or `build` failure over the next 50 PR runs, and `clippy`'s median job time within 10 s of today's
+      # (about 2 min). Applied per R-369/R-812.
+      - name: cargo fetch --locked (up to three tries)
+        if: needs.changes.outputs.docs_only != 'true'
+        timeout-minutes: 10
+        env:
+          CARGO_HTTP_MULTIPLEXING: "false"
+        run: for attempt in 1 2 3; do cargo fetch --locked && { echo "CARGO_NET_OFFLINE=true" >> "$GITHUB_ENV"; exit 0; }; echo "attempt $attempt of 3 of cargo fetch failed"; done; exit 1
       - name: cargo clippy --workspace --all-targets -- -D warnings
         if: needs.changes.outputs.docs_only != 'true'
         run: cargo clippy --workspace --all-targets -- -D warnings
@@ -303,6 +317,18 @@ jobs:
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
+      # The crates, fetched before the job's own work, up to three tries, over HTTP/1.1
+      # (CARGO_HTTP_MULTIPLEXING=false: the curl 16 errors were HTTP/2 framing); then CARGO_NET_OFFLINE=true for every
+      # later step, with the lockfile `--locked` has just checked, `--frozen`'s two halves, so the job's own steps fail
+      # only on their own work. Five PR jobs since 7 Nov 2026 failed at crates.io's index, curl 56 or 16, before anything
+      # compiled (#481's `clippy` among them, job 130327300645). Criterion, fixed before measuring: no network-caused
+      # `clippy` or `build` failure over the next 50 PR runs, and `clippy`'s median job time within 10 s of today's
+      # (about 2 min). Applied per R-369/R-812.
+      - name: cargo fetch --locked (up to three tries)
+        timeout-minutes: 10
+        env:
+          CARGO_HTTP_MULTIPLEXING: "false"
+        run: for attempt in 1 2 3; do cargo fetch --locked && { echo "CARGO_NET_OFFLINE=true" >> "$GITHUB_ENV"; exit 0; }; echo "attempt $attempt of 3 of cargo fetch failed"; done; exit 1
       # The plan checks need Python and PyYAML (REQ-SYS-007).
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
@@ -362,6 +388,12 @@ jobs:
   # xtask's readers and validation's Part 6 catalogue, and for the GUI's artboards and references the screenshot tests
   # and the HTML references' tests. On a docs change, none.
   # Built here, not from an archive, so the tests that run cargo on the workspace's own target have its build state.
+  # As 3 parallel shards (the owner, 11 Nov 2026: "split the ci job as planned, and judge the 30-minute target only after
+  # a week of runs on the split"; the CI diagnosis of 10 Nov 2026, its change 3), a matrix, each building for itself and
+  # running nextest's `--partition hash:<k>/3` of every nextest step, so together they run every test the unsharded job
+  # did, once: the product tests and the data readers alike. The doctests, which nextest does not run, run in shard 1.
+  # The shards bear no required check: the job after them, `tests-verdict`, bears `ci`, and fails unless every shard
+  # passed. Applied per R-369/R-812.
   # Runner disk: `ci-quick`, the job this replaces, grew 20-91 GB (runner-disk artefacts of 9 Nov 2026, 6 runs), most
   # of it the process tests' cargo runs, which run here no more; the image starts with about 85 GB free. This job grew
   # 28-31 GB at its largest sample (jobs 129477740831, 129590408874, 129638775481 and 129899725782 of 10 Nov 2026, the
@@ -369,11 +401,15 @@ jobs:
   # 140 s a job. The plan's task data's readers' steps run outside the sampler; the `df` after the tests reads the disk
   # at their end. Applied per R-369/R-812.
   tests:
-    name: ci
+    name: ci shard ${{ matrix.shard }}/3
     needs: changes
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
       PRIN_GPU_BACKEND: vulkan
       RUNNER_DISK_TMPFS: /dev/shm
@@ -403,6 +439,16 @@ jobs:
       - name: Dependencies without debug info, every profile
         if: env.RUN == 'true'
         uses: ./.github/actions/cargo-ci-config
+      # The crates fetched first, then offline, as `clippy`, `build` and `process` do: `tests` runs on no push, so its
+      # registry key is never saved, and each shard otherwise downloads the registry inside its nextest step, where a
+      # curl 56 or 16 fails the required `ci` and `ci_retry.py` never re-runs it (code review of #495, finding 4).
+      # Applied per R-369/R-812.
+      - name: cargo fetch --locked (up to three tries)
+        if: env.RUN == 'true'
+        timeout-minutes: 10
+        env:
+          CARGO_HTTP_MULTIPLEXING: "false"
+        run: for attempt in 1 2 3; do cargo fetch --locked && { echo "CARGO_NET_OFFLINE=true" >> "$GITHUB_ENV"; exit 0; }; echo "attempt $attempt of 3 of cargo fetch failed"; done; exit 1
       # The fixture pool the `ci` shards save on `main`, restored only, under their key (R-270, R-285, R-337).
       - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         if: env.RUN == 'true'
@@ -417,8 +463,15 @@ jobs:
       - name: Install PyYAML
         if: env.RUN == 'true'
         run: python3 -m pip install pyyaml
-      - name: Install Mesa (lavapipe)
+      - name: Restore the Mesa packages
+        id: mesa
         if: env.RUN == 'true'
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+      - name: Install Mesa (lavapipe)
+        if: env.RUN == 'true' && steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
@@ -433,11 +486,12 @@ jobs:
           NEXTEST_PROFILE: pr
           NEXTEST_NO_TESTS: pass
           PACKAGES: ${{ needs.changes.outputs.packages }}
-        run: cargo nextest run $PACKAGES
+        run: cargo nextest run $PACKAGES --partition hash:${{ matrix.shard }}/3
         shell: bash .github/scripts/disk_sampler.sh {0}
-      # On the packages with a library: `cargo test --doc` fails on a list with none, as a change to `prin` alone is.
+      # On the packages with a library: `cargo test --doc` fails on a list with none, as a change to `prin` alone is. In
+      # shard 1 alone: the doctests have no partition.
       - name: cargo test --doc (the changed crates and their reverse dependencies)
-        if: env.CODE == 'true' && needs.changes.outputs.doc_packages != ''
+        if: env.CODE == 'true' && needs.changes.outputs.doc_packages != '' && matrix.shard == 1
         env:
           PACKAGES: ${{ needs.changes.outputs.doc_packages }}
         run: cargo test $PACKAGES --doc
@@ -448,16 +502,20 @@ jobs:
       # gate report read `plan/MILESTONES.md` and the requirements' fields, plan-check, the progress banner and
       # reviews-check the task files, the print-graph coverage the statements, and validation's Part 6 catalogue walks
       # the task files. `xtask/tests/ci_changes.rs` checks that every reader the sources show is among them.
+      # Partitioned across the shards as the product tests are; a shard whose slice of a step holds no test passes it
+      # (NEXTEST_NO_TESTS), and `xtask/tests/ci_pr_tier.rs` checks that every reader step's binaries hold tests.
       - name: cargo nextest run -p xtask (the plan's task data's readers)
         if: needs.changes.outputs.plan_data == 'true'
         env:
           NEXTEST_PROFILE: ci
-        run: cargo nextest run -p xtask --test gate_provisional --test gate_report --test plan_check --test progress_banner --test qa_R-485_print_graph_coverage --test qa_TASK-M0-02 --test qa_TASK-M0-19 --test qa_TASK-M0-36 --test qa_TASK-M0-53 --test reviews_check
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p xtask --test gate_provisional --test gate_report --test plan_check --test progress_banner --test qa_R-485_print_graph_coverage --test qa_TASK-M0-02 --test qa_TASK-M0-19 --test qa_TASK-M0-36 --test qa_TASK-M0-53 --test reviews_check --partition hash:${{ matrix.shard }}/3
       - name: cargo nextest run -p validation (the plan's task data's readers)
         if: needs.changes.outputs.plan_data == 'true'
         env:
           NEXTEST_PROFILE: ci
-        run: cargo nextest run -p validation --test part6_catalogue
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p validation --test part6_catalogue --partition hash:${{ matrix.shard }}/3
       # Tier (b), the GUI's artboards and references (R-677), beside code or not, as `ci-workspace` ran them: xtask's
       # screenshot tests, the gui ones among them, which copy an artboard (under the default profile, which keeps them),
       # its screenshot-case checks and the print-graph coverage; kernel's initial-conditions inspector and render's
@@ -465,13 +523,19 @@ jobs:
       # request.
       - name: cargo nextest run -p xtask (the GUI's artboards' and references' readers)
         if: needs.changes.outputs.gui_data == 'true'
-        run: cargo nextest run -p xtask --test qa_R-485_print_graph_coverage --test qa_TASK-M6-24 --test screenshot
+        env:
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p xtask --test qa_R-485_print_graph_coverage --test qa_TASK-M6-24 --test screenshot --partition hash:${{ matrix.shard }}/3
       - name: cargo nextest run -p kernel (the GUI's references' readers)
         if: needs.changes.outputs.gui_data == 'true'
-        run: cargo nextest run -p kernel --test qa_TASK-M2-08
+        env:
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p kernel --test qa_TASK-M2-08 --partition hash:${{ matrix.shard }}/3
       - name: cargo nextest run -p render (the GUI's references' readers)
         if: needs.changes.outputs.gui_data == 'true'
-        run: cargo nextest run -p render --test qa_TASK-M1-03
+        env:
+          NEXTEST_NO_TESTS: pass
+        run: cargo nextest run -p render --test qa_TASK-M1-03 --partition hash:${{ matrix.shard }}/3
       - name: Runner disk after the tests
         if: always() && env.RUN == 'true'
         run: df -h /
@@ -485,7 +549,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 5
         with:
-          name: runner-disk-tests
+          name: runner-disk-tests-${{ matrix.shard }}
           path: |
             ${{ runner.temp }}/runner-disk.log
             /dev/shm/runner-pressure.log
@@ -493,6 +557,27 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           overwrite: true
+
+  # The required check `ci`: the product tests' verdict over their 3 shards (above). It runs whatever the shards ended
+  # in, short of a cancelled run, and passes only when every shard passed: `needs.tests.result` is `success` only when
+  # every shard of the matrix succeeded, and is `failure`, `cancelled` or `skipped` when one failed, was cancelled or
+  # never ran, so a shard that fails or is missing fails `ci`. Its first step fails when `changes` did not succeed, as
+  # every required check's does. It builds and runs nothing. Applied per R-369/R-812.
+  tests-verdict:
+    name: ci
+    needs: [changes, tests]
+    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: The classification ran
+        env:
+          CHANGES: ${{ needs.changes.result }}
+        run: '[ "$CHANGES" = success ] || { echo "changes ended $CHANGES: no verdict to skip on"; exit 1; }'
+      - name: Every shard passed
+        env:
+          SHARDS: ${{ needs.tests.result }}
+        run: '[ "$SHARDS" = success ] || { echo "the product test shards ended $SHARDS: every shard must pass"; exit 1; }'
 
   # The process tests (the owner's CI model, R-909: "Process tests only when the PR changes .github/, xtask/,
   # scripts/, plan/, decisions.md, REVIEW_QUEUE.md or docs/"): the split's process class, the `process` nextest profile,
@@ -536,6 +621,18 @@ jobs:
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - name: Dependencies without debug info, every profile
         uses: ./.github/actions/cargo-ci-config
+      # The crates, fetched before the job's own work, up to three tries, over HTTP/1.1
+      # (CARGO_HTTP_MULTIPLEXING=false: the curl 16 errors were HTTP/2 framing); then CARGO_NET_OFFLINE=true for every
+      # later step, with the lockfile `--locked` has just checked, `--frozen`'s two halves, so the job's own steps fail
+      # only on their own work. Five PR jobs since 7 Nov 2026 failed at crates.io's index, curl 56 or 16, before anything
+      # compiled (#481's `clippy` among them, job 130327300645). Criterion, fixed before measuring: no network-caused
+      # `clippy` or `build` failure over the next 50 PR runs, and `clippy`'s median job time within 10 s of today's
+      # (about 2 min). Applied per R-369/R-812.
+      - name: cargo fetch --locked (up to three tries)
+        timeout-minutes: 10
+        env:
+          CARGO_HTTP_MULTIPLEXING: "false"
+        run: for attempt in 1 2 3; do cargo fetch --locked && { echo "CARGO_NET_OFFLINE=true" >> "$GITHUB_ENV"; exit 0; }; echo "attempt $attempt of 3 of cargo fetch failed"; done; exit 1
       - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: target/tmp/fixture-targets
@@ -546,7 +643,14 @@ jobs:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
       - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
@@ -626,10 +730,26 @@ jobs:
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-lavapipe-smoke-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
-      - name: Install Mesa (lavapipe)
+      - name: Restore the Mesa packages
+        id: mesa
         if: env.RUN == 'true'
         timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+      - name: Install Mesa (lavapipe)
+        if: env.RUN == 'true' && steps.mesa.outputs.installed != 'true'
+        timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
+      # The Mesa packages the step above downloaded, kept under the key every job that installs Mesa restores, on a push
+      # to `main` only (R-326): this job names the key (R-285, R-337; `.github/actions/mesa-debs`).
+      - name: Keep the Mesa packages
+        if: env.RUN == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        timeout-minutes: 5
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
+          save: "true"
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
         if: env.RUN == 'true'
         with:
@@ -918,7 +1038,14 @@ jobs:
         run: python3 -m pip install pyyaml
       # The workspace tests include the GPU harness self-tests, which need an adapter and PRIN_GPU_BACKEND (R-169):
       # here they run on lavapipe; metal_hosted_probe is ignored off macOS.
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
       - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
@@ -1022,7 +1149,14 @@ jobs:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
       - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
@@ -1292,7 +1426,14 @@ jobs:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
       - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
@@ -1414,7 +1555,14 @@ jobs:
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
       - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
@@ -1528,7 +1676,14 @@ jobs:
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-xtask-ci-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
       - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -1742,7 +1897,14 @@ jobs:
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-lavapipe-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
+      - name: Restore the Mesa packages
+        id: mesa
+        timeout-minutes: 8
+        uses: ./.github/actions/mesa-debs
+        with:
+          packages: mesa-vulkan-drivers
       - name: Install Mesa (lavapipe)
+        if: steps.mesa.outputs.installed != 'true'
         timeout-minutes: 8
         run: bounded() { limit=$1; shift; for attempt in 1 2 3; do sudo timeout -k 10 "$limit" "$@" && return; echo "attempt $attempt of 3 failed or ran past $limit s, $*"; done; return 1; }; bounded 90 apt-get update && bounded 420 apt-get install -y mesa-vulkan-drivers -oDPkg::Lock::Timeout=60
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2.90.1
@@ -1804,15 +1966,14 @@ jobs:
         run: cargo test -p xtask --features controls golden_halfway --doc
 
 
-  # The per-merge verdict (the owner's CI model, R-909 item 2: "Correctness failure (physics, validation, bit-for-bit,
-  # golden) = red main (R-681); other failures file a top-priority task"; R-907, R-908: "A failing process test never
-  # makes main red; it files a task"). On a push only, after every job of the run, whatever each ended in: it reads the
-  # attempt's jobs and each failed job's log through the API and judges each failure (`.github/scripts/ci_per_merge.py`,
-  # which says how): a correctness failure fails this job, and that alone is a red `main`; every other failure, on
-  # `main`, is filed as one issue labelled `per-merge`, or a comment on the open one of the same title, and this job
-  # passes. On a `measure/` branch it files nothing and prints what it would file. Its summary lists each failed job, its
-  # kind and why. It builds nothing, polls nothing (every job it reads has ended) and runs only this checkout's script
-  # on the API's data. Applied per R-369/R-812.
+  # The per-merge verdict over every job of the run (R-982, 12 Nov 2026, the owner's veto of D-2 of that day's report:
+  # "Any red job on main is red; make the per-merge verdict cover every job so the two can't disagree"; R-979, RQ-789
+  # (a)). On a push only, after every job of the run, whatever each ended in: it reads the attempt's jobs and each failed
+  # job's log through the API and judges each failure (`.github/scripts/ci_per_merge.py`, which says how). Red, any job
+  # failed, fails this job, a red `main`; no result, every failure an install step's network or archive download, fails
+  # it under its own summary line, never passing; green, no job failed, passes it. Its summary lists each failed job,
+  # its kind and why. It builds nothing, polls nothing (every job it reads has ended), files nothing, and runs only
+  # this checkout's script on the API's data. Applied per R-369/R-812.
   per-merge:
     needs:
       - changes
@@ -1832,12 +1993,10 @@ jobs:
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    # `actions: read` for the jobs and their logs, `issues: write` for the task and its label, `contents: read` for the
-    # checkout.
+    # `actions: read` for the jobs and their logs, `contents: read` for the checkout.
     permissions:
       actions: read
       contents: read
-      issues: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -1848,6 +2007,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
-          HEAD_SHA: ${{ github.sha }}
-          FILE_TASKS: ${{ github.ref == 'refs/heads/main' }}
         run: python3 -I .github/scripts/ci_per_merge.py decide

@@ -638,7 +638,7 @@
   rulings:
   - R-395
   milestone: M5
-  note: "R-395: past ℓ_switch (R-90) the sample position is carried as the per-quad local coordinates, the centre (f64 on the CPU, its f32 uniform on the GPU) and the f32 offset δ = half·(2t − 1), and is never summed into an absolute f32 u, which bands from about ℓ = 19 near u ≈ 0.6 (RQ-242, PR #160's measurement); the formula defines the position. This needs no RQ: R-395 answers RQ-242's question (b), which named this wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch (REQ-TOOL-159 routes every quad there onto δ). The depth-30 verify does not settle it alone: near the origin (the k = 0 quad at any N; for N = 8, any u below 2^−10) the absolute f32 sum is itself exact."
+  note: "R-395: past ℓ_switch (R-90) the sample position is carried as the per-quad local coordinates, the centre (f64 on the CPU, its f32 uniform on the GPU) and the f32 offset δ = half·(2t − 1), and is never summed into an absolute f32 u, which bands from about ℓ = 19 near u ≈ 0.6 (RQ-242, PR #160's measurement); the formula defines the position. This needs no RQ: R-395 answers RQ-242's question (b), which named this wording, and REQ-TOOL-158 forbids the absolute sum past ℓ_switch (REQ-TOOL-159 routes every quad there onto δ). The depth-30 verify does not settle it alone: near the origin (the k = 0 quad at any N; for N = 8, any u below 2^−10) the absolute f32 sum is itself exact. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"the GPU must compute sample positions\" is the retired compute-side route; it stands as its *Was* until TASK-M5-04 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-DEC-032
   area: DEC
   statement: "CPU quad centres/half-widths and the GPU quad-local sample coordinate must share the Y-up UV convention, with the single flip v = 1 − frag_coord.y/H at the framebuffer seam, so ICs are not mirrored within a quad."
@@ -652,6 +652,7 @@
     detail: "an asymmetric IC fixture decodes to the same IC at a given UV on CPU and GPU; exported image orientation matches the reference"
   rulings: []
   milestone: M5
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"the GPU quad-local sample coordinate\" and the Y-up seam on the GPU side is the retired compute-side route; it stands as its *Was* until TASK-M5-03 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-DEC-033
   area: DEC
   statement: "Sample collapse on the full nonlinear decoder — adjacent samples giving bitwise-identical ICs — must trigger DECODE_SWITCHOVER to the linearised decoder with refinement continuing, never a refinement stop."
@@ -670,6 +671,9 @@
   rulings:
   - R-90
   milestone: M6
+  rq:
+  - RQ-797
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"DECODE_SWITCHOVER to the linearised decoder\" as a GPU decode mode is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-DEC-034
   area: DEC
   statement: "The linearised decode must replace the decode with x₀ + J_D·δ, where J_D is the map's exact (dual-number) or implicit slopes (R-935; REQ-DEC-058), central differences of the full chart→IC composite in f64 with deep_zoom §2's step rule (h_k = ε^{1/3}·max(1, |x_k|) in f64 along each input coordinate, divided by the step actually taken, (x + h) − (x − h); R-633) being only the check, chart-agnostic with no per-axis-kind special-casing, and |det J_D| must double as the measure weight."
@@ -703,6 +707,8 @@
   - R-926
   - R-935
   milestone: M6
+  rq:
+  - RQ-800
   note: "Slope tolerance of the h² fit: REQ-DEC-042 (calibration). R-633 (28 Oct 2026, RQ-600 (a)): J_D's step is the encode contract's, written into deep_zoom §2; a secant at the quad's half-width is rejected. *Was (statement):* \"The linearised decode must replace the decode with x₀ + J_D·δ, where J_D is central differences of the full chart→IC composite in f64, chart-agnostic with no per-axis-kind special-casing, and |det J_D| must double as the measure weight.\" *11 Nov 2026:* brought into line with R-935 (under RQ-758 (a)): exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (TASK-M2-88 builds the slopes; the re-plan § A.2, CHANGE; the addition § F.5). *Was (statement, the clause):* \"where J_D is central differences of the full chart→IC composite in f64 with deep_zoom §2's step rule (h_k = ε^{1/3}·max(1, |x_k|) in f64 along each input coordinate, divided by the step actually taken, (x + h) − (x − h); R-633),\""
 - id: REQ-DEC-035
   area: DEC
@@ -715,6 +721,8 @@
     detail: "CPU quadtree types are f64; GPU uniforms are f32 c, h, x₀, J_D; inspector integrates in f64"
   rulings: []
   milestone: M6
+  rq:
+  - RQ-797
 - id: REQ-DEC-036
   area: DEC
   statement: "The linearised decoder must compute x₀ = D(c_u, c_v) in f64 on the CPU and J_D from the map's exact (dual-number) or implicit slopes (R-935; REQ-DEC-058), central differences in f64 with deep_zoom §2's step rule (h_k = ε^{1/3}·max(1, |x_k|) in f64 along each input coordinate, divided by the step actually taken, (x + h) − (x − h); R-633) being only the check, per deep quad, and the GPU must evaluate x = x₀ + J_D·δ without running the nonlinear decode pipeline."
@@ -742,6 +750,8 @@
   - R-926
   - R-935
   milestone: M5
+  rq:
+  - RQ-797
   note: "R-113 (RQ-99 M5-2, option a): moved to M5 (TASK-M5-04); the switchover (REQ-DEC-033/037) and the error-fit tests (REQ-DEC-034, REQ-DEC-042) stay in M6. R-632 (27 Oct 2026, RQ-578 (a) with (c)): on the f32 GPU path the linear path's floor is the measured value, quoted with |x₀| (REQ-DEC-051, measured by REQ-DEC-052's gate), not depth 50; a floor near ~50 needs an f64 sum and integration. *Was (verify):* \"over a depth sweep, linear vs full decode agree to O(h²) (R-154; the check at the switchover depth is REQ-DEC-037's); the linear path distinguishes adjacent samples to depth ≥ 50\" R-633 (28 Oct 2026, RQ-600 (a)): the step is written (applied per R-369: TASK-M5-04 computes J_D). *Was (statement):* \"The linearised decoder must compute x₀ = D(c_u, c_v) and J_D by central differences in f64 on the CPU per deep quad, and the GPU must evaluate x = x₀ + J_D·δ without running the nonlinear decode pipeline.\" *11 Nov 2026:* brought into line with R-935 (under RQ-758 (a)), as REQ-DEC-034 (the re-plan § A.2, CHANGE; the addition § F.5). *Was (statement, the clause):* \"must compute x₀ = D(c_u, c_v) and J_D by central differences in f64 on the CPU, with deep_zoom §2's step rule (h_k = ε^{1/3}·max(1, |x_k|) in f64 along each input coordinate, divided by the step actually taken, (x + h) − (x − h); R-633), per deep quad,\""
 - id: REQ-DEC-037
   area: DEC
@@ -764,6 +774,7 @@
   - R-90
   - R-154
   milestone: M6
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"signalled by QuadRequest DECODE_MODE\" to a GPU decode is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-DEC-038
   area: DEC
   kind: definition
@@ -871,6 +882,7 @@
   rulings:
   - R-71
   milestone: M2
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F14):* re-scoped to the fragment's generated code against the CPU record (R-935 under RQ-765); the compute side decodes nothing."
 - id: REQ-DEC-044
   area: DEC
   kind: calibration
@@ -1016,7 +1028,9 @@
   - R-71
   - R-632
   milestone: M5
-  note: "R-632 (27 Oct 2026, RQ-578 (a) with (c)): the docs and the gates take this measured value, deep zoom §2's \"~50+\" replaced; a floor near ~50 needs an f64 sum and integration (on the CPU, or RQ-577's ladder after M3). Closed by TASK-M5-04 (applied per R-369); read by REQ-DEC-036, TASK-M6-07 and TASK-M6-08."
+  rq:
+  - RQ-797
+  note: "R-632 (27 Oct 2026, RQ-578 (a) with (c)): the docs and the gates take this measured value, deep zoom §2's \"~50+\" replaced; a floor near ~50 needs an f64 sum and integration (on the CPU, or RQ-577's ladder after M3). Closed by TASK-M5-04 (applied per R-369); read by REQ-DEC-036, TASK-M6-07 and TASK-M6-08. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"x = x₀ + J_D·δ formed in f32\" on the GPU is the retired compute-side route; it stands as its *Was* until TASK-M5-04 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-DEC-052
   area: DEC
   statement: "A gate must measure the f32 GPU path's distinguishable depth on the linearised decoder as integrated — the depth at which adjacent samples' ICs, x = x₀ + J_D·δ formed in f32, first reach the f32 GPU integrator as bitwise-identical values — over a depth sweep past ℓ_switch at stated coordinate magnitudes |x₀|, each depth quoted with its |x₀|, so that the docs and the gates take the measured value (REQ-DEC-051) (R-632)."
@@ -1037,6 +1051,9 @@
   rulings:
   - R-632
   milestone: M5
+  rq:
+  - RQ-797
+  - RQ-803
   note: "R-632 (27 Oct 2026, RQ-578 (c)). Closed by TASK-M5-04, which builds the linear path and linear-decode-depth (applied per R-369). The coordinate magnitudes are the task's, checked by the physics reviewer (applied per R-369)."
 - id: REQ-DEC-053
   area: DEC
@@ -1140,6 +1157,8 @@
   - R-926
   - R-935
   milestone: M2
+  rq:
+  - RQ-798
   note: "Added 11 Nov 2026 with TASK-M2-88 (N3 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the owner's chart re-plan corrections, item 2; applied per R-369: tests):* the registry-wide test and its control added to the verify line, so a map added later is caught without per-task wiring. *Was (verify, its end):* \"…and the control flips the sign of a column whose norm is at least 100 times that bound, and must fail\""
 - id: REQ-DEC-059
   area: DEC
@@ -1964,6 +1983,7 @@
     detail: "the compute kernel contains no runtime dispatch on axis kind or chart id; every chart is a generic instantiation"
   rulings: []
   milestone: M2
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"Each chart must lower to a monomorphised Rust variant\" on the compute side is the retired compute-side route; it stands as its *Was* until it is rewritten under R-926 (TASK-M2-06, which closed it, is built); where they differ, R-926 binds."
 - id: REQ-CHART-002
   area: CHART
   statement: "The shape sphere chart must be the whole sphere (R-544): R-14's φ = π(1 − t), pole to pole, is its only φ span, and a pixel (θ, φ) and its mirror (θ, π − φ) decode to two systems, each its own, so the spherical map's system_image is bijective, θ's period and the poles being R-407's types and not a fold; the chart must render both hemispheres, with no hemisphere label, no redundancy flag and no one-hemisphere view."
@@ -2043,6 +2063,7 @@
   milestone: M2
   rq:
   - RQ-712
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"lowered by monomorphisation to a specialised decode+map per chart\" is the retired compute-side route; it stands as its *Was* until it is rewritten under R-926 (TASK-M2-14, which closed it, is built); where they differ, R-926 binds."
 - id: REQ-CHART-005
   area: CHART
   statement: "A derived-in-block (kind 2) axis must declare and label its residual convention for the leftover within-block DOF, and encode must use the same convention as the forward axis."
@@ -2656,7 +2677,7 @@
   - R-544
   - R-914
   milestone: M4
-  note: "R-104: the appendix's shape-sphere row names DoubleCover (2-to-1 over the φ hemispheres). R-117: that row is conformed to R-14's (θ, φ) map. The appendix row's value is the untilted chart's. Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics; accepted by R-559). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold; accepted by R-559): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\". R-544 (21 Oct 2026): the shape sphere's row is bijective over the whole sphere (*was:* n-to-1, n = 2, R-141); the tilted fold above no longer applies to it. Physics review 5603309678 of PR #273, P3: the baked GPU variant, generated from the shared source, skips C's mirror step on the shape sphere, so it never restores R-141's gauge (TASK-M4-06). R-914 (9 Nov 2026, RQ-752 (a); physics review 5829515661, P1): the Anosova physical-frame row is region D's third-body pair, which TASK-M4-34 builds, so its clause is REQ-CHART-165, closed there; this requirement keeps the other eight rows. *Was (statement, the clause):* \"Burrau integer lattice per-cell dispatch, Anosova physical-frame through canonicalise)\" Code review 5829649251 (R-914): the statement and verify now name the exception. *Was (statement, the opening):* \"Each chart in the lowering appendix must lower\"; *was (verify):* \"one row per chart checked against the chart registry and kernel variants; the shape-sphere row lowers (s,t) → (θ,φ) → n → (ρ̃, λ̃) (R-117); the int (m,n) lattice's system_image is bijective (R-113)\""
+  note: "R-104: the appendix's shape-sphere row names DoubleCover (2-to-1 over the φ hemispheres). R-117: that row is conformed to R-14's (θ, φ) map. The appendix row's value is the untilted chart's. Under a tilt (R-473 T1, T2, J1) the fold is the tilted view's: two pixels fold only when their full (a, b, d) decode to the same system, a pixel's mirror being the pixel with the mirrored (a, b) and the same d: the mirror pair keeps its fold iff the tilt adds no hidden offset that depends on the mirrored axis (N_b = 0 for N ∝ (R·e_a) × (R·e_b) from the active tilt map's R, per map as chart_reference §3.3 gives it, decided exactly on the stored angles, never by a tolerance on a computed N_b: under Tip as sheet iff τ₂ == 0 or m == 180 with m = √(τ₁² + τ₂²) from the stored angles in degrees, under Lean each axis iff τ₁ == ±90 or τ₂ == 0, with two targets, per hidden offset, iff τ₂ ∈ {0, ±180}), and otherwise the tilted view is bijective there; the pixels in view are the tilted view's, and the tilt's angles and targets join the recompute trigger (chart_reference §3.3; physics review 5593301205 of PR #255, P1; applied per R-369 from chart_decoder_contract Part 5's definition, flagged for the human's veto as it changes area statistics; accepted by R-559). Built and tested by TASK-M2-36 (REQ-CHART-062's tilted arm). Physics review 5593377792 of PR #255, P3 (applied per R-369, flagged as before): *Was:* \"so a tilted shape-sphere view is generically bijective, on either map\". Physics review 5593414323 of PR #255, P4 (applied per R-369, flagged as before): the criterion is N_b from the active map's R, not keyed on τ₂. *Was:* \"(N_b = 0 for the tilted plane's normal N = R·e₃: τ₂ = 0 on the spherical map, the analogous condition on an exponential frame aligned so the mirror is (u, v) ↔ (u, 1 − v))\". Physics review 5593455102 of PR #255, P5 and P6 (applied per R-369, a routine design choice, flagged for the human's veto with the tilted fold; accepted by R-559): the decision is exact on the stored angles, and N is defined as ∝ (R·e_a) × (R·e_b). *Was:* \"(N_b = 0, computed from the active tilt map's R with N = R·e₃, …)\". R-544 (21 Oct 2026): the shape sphere's row is bijective over the whole sphere (*was:* n-to-1, n = 2, R-141); the tilted fold above no longer applies to it. Physics review 5603309678 of PR #273, P3: the baked GPU variant, generated from the shared source, skips C's mirror step on the shape sphere, so it never restores R-141's gauge (TASK-M4-06). R-914 (9 Nov 2026, RQ-752 (a); physics review 5829515661, P1): the Anosova physical-frame row is region D's third-body pair, which TASK-M4-34 builds, so its clause is REQ-CHART-165, closed there; this requirement keeps the other eight rows. *Was (statement, the clause):* \"Burrau integer lattice per-cell dispatch, Anosova physical-frame through canonicalise)\" Code review 5829649251 (R-914): the statement and verify now name the exception. *Was (statement, the opening):* \"Each chart in the lowering appendix must lower\"; *was (verify):* \"one row per chart checked against the chart registry and kernel variants; the shape-sphere row lowers (s,t) → (θ,φ) → n → (ρ̃, λ̃) (R-117); the int (m,n) lattice's system_image is bijective (R-113)\" *12 Nov 2026 (R-926 item 5; the chart audit's F7):* each chart lowered \"to its stated Φ map, extra uniforms and flags\" in the compute kernel, infeasible pixels written in-kernel is the retired compute-side route; it stands as its *Was* until TASK-M4-06 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-CHART-038
   area: CHART
   statement: "Every navigation gesture must be a CPU-side edit of the one chart uniform (z₀, q₁, q₂) — pan/slice edit z₀, zoom/tilt edit the basis, the lock pins the centre — with non-raw slice/tilt directions taken as tangents at the centre, and the GPU must have no locked mode, view mode, camera object or second code path."
@@ -2686,7 +2707,7 @@
   - R-69
   - R-92
   milestone: M5
-  note: "The lock is chart construction, held in SimConfig and undoable (R-69; systems_architecture §6 now says so). Which gestures re-integrate and which re-address is R-92's: the slice plane is on the sim key."
+  note: "The lock is chart construction, held in SimConfig and undoable (R-69; systems_architecture §6 now says so). Which gestures re-integrate and which re-address is R-92's: the slice plane is on the sim key. *12 Nov 2026 (R-926 item 1; the chart audit's F7):* every gesture is an edit of the window `(c, Q)` (TASK-M2-61's object); the chart-uniform model of the statement is its *Was*."
 - id: REQ-CHART-039
   area: CHART
   statement: "Validation must be CPU-side through each chart's validate(u, v) -> ValidationResult so the GPU never sees an invalid IC, and the quadtree, lookup/lock and the legend must query the same function (the quadtree to skip quads entirely outside the feasible region)."
@@ -3994,6 +4015,8 @@
   - R-484
   - R-916
   milestone: M2
+  rq:
+  - RQ-799
   note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66; the stale rq fields (RQ-716, RQ-722, each ruled) cleared."
 - id: REQ-CHART-100
   area: CHART
@@ -4020,7 +4043,7 @@
   - R-914
   - R-916
   milestone: M4
-  note: "R-871 (8 Nov 2026, RQ-714 (b) with RQ-738 conflict 3 read as its (c)): the preset is the full disc, unmasked, the symmetry filter (TASK-M8-120) giving exactly D; until it lands D is a contour and TASK-M4-06's golden reads in_region_d. *Was (statement, the clause):* \"with its region-D preset as RQ-714 and RQ-736 rule,\". R-914 (9 Nov 2026, RQ-752 (a)): that golden, region D's GPU reference, is TASK-M4-34's own (REQ-RENDER-123), and TASK-M4-06 gains no edge to TASK-M4-34. R-916 (9 Nov 2026): the pair's CPU decode, its presets and region_d_plane are REQ-CHART-171 (TASK-M2-68, M2); this requirement keeps the baked entry, TASK-M4-34's; the stale rq fields cleared. *Was (verify):* \"cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state …\", now REQ-CHART-171's."
+  note: "R-871 (8 Nov 2026, RQ-714 (b) with RQ-738 conflict 3 read as its (c)): the preset is the full disc, unmasked, the symmetry filter (TASK-M8-120) giving exactly D; until it lands D is a contour and TASK-M4-06's golden reads in_region_d. *Was (statement, the clause):* \"with its region-D preset as RQ-714 and RQ-736 rule,\". R-914 (9 Nov 2026, RQ-752 (a)): that golden, region D's GPU reference, is TASK-M4-34's own (REQ-RENDER-123), and TASK-M4-06 gains no edge to TASK-M4-34. R-916 (9 Nov 2026): the pair's CPU decode, its presets and region_d_plane are REQ-CHART-171 (TASK-M2-68, M2); this requirement keeps the baked entry, TASK-M4-34's; the stale rq fields cleared. *Was (verify):* \"cargo test -p kernel region_d_plane and cargo test -p engine region_d_variant: every Table 1 row's pixel decodes to the import's canonical state …\", now REQ-CHART-171's. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"a closed-form baked pair\" decoding on the GPU is the retired compute-side route; it stands as its *Was* until TASK-M4-34 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-CHART-101
   area: CHART
   statement: "Each closed-form primitive and pair must round-trip, forward(inverse(x)) = x over its domain at f64 and at f32, the interior angles and the side ratios among them, each with its mass-weighted form onto the shape sphere."
@@ -4540,6 +4563,8 @@
   - R-80
   - R-100
   milestone: M8
+  rq:
+  - RQ-798
 - id: REQ-CHART-130
   area: CHART
   statement: "Declared seams must be masked from the refinement criterion: on a flagged footprint unresolved(f) must not fire from spread, event class, the latch or a composed chart's own mask, a quad with any flagged footprint and none unresolved must take the decision Seam with its count n_seam reported, the added QuadReduction slot and CPU batch's branch word being a schema change, its coherence must not raise its priority, and a chart of today's registry must be bitwise unchanged."
@@ -4551,6 +4576,8 @@
     detail: "cargo test -p engine seam_refinement_masked: a flagged footprint leaves n_unresolved, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes the decision Seam, a mixed quad included, with n_seam counted, and coherence gives it no priority; a non-finite copy on it still fires; an unflagged neighbour with real spread still splits; a chart of today's registry decides bitwise as REQ-REF-022; controls: the mask removed splits quads along the seam at every depth, the mask applied to an unflagged footprint fails, Keep taken for Seam, Seam taken only when every footprint is flagged fails"
   rulings: []
   milestone: M8
+  rq:
+  - RQ-798
 - id: REQ-CHART-131
   area: CHART
   statement: "Any statistic over a composed or warped chart must either be weighted by the chart's area factor, the Gram determinant, into a named reference measure, or be labelled per pixel of this chart; refinement density must never feed it, and a replication fraction must use its paper's own measure; a mid-morph frame, a blend chart at `0 < s < 1`, must admit no area statistic, its `measure` `none`, the two end charts keeping their own (R-936, R-944)."
@@ -4950,14 +4977,19 @@
     section: "R-879 — Final-condition charts are built after the M8 charts, as a CPU batch chart on the default integrator, the round-trip miss measured per pixel and large misses masked; the standard size is kept at the chosen state, with a per-pixel horizon as a labelled exception for final-condition charts only; the rejection of \"anything measured after `t = 0`\" narrows to trajectory functionals and event reads *(closes RQ-734)*"
   - file: docs/design/principia_chart_composition.md
     section: 10.3 Final-condition charts
+  - file: decisions.md
+    section: "R-985 — On a view tilted toward time the stop index `k_stop` stays in the record and only that word is rewritten each frame; a final-condition chart is a tier-3 map like any other, with no label of its own as a route *(the owner's directions of 12 Nov 2026 on the chart audit's F8 and F17)*"
   verify:
     method: unit test
     detail: "cargo test -p engine final_condition_chart: on a small grid each pixel's round trip is measured and reported, pixels past the threshold masked and labelled; a conserved axis (L_z²E, the sign of E) reads the same at two T; the per-pixel horizon labelled; controls: a pixel past the threshold drawn unmasked fails, a single global horizon on this chart where the rescale differs per pixel fails, an unsigned (mirrored) start fails"
   rulings:
   - R-852
   - R-879
+  - R-985
   milestone: M8
-  note: "Added by R-879 (8 Nov 2026). Closed by TASK-M8-128. The owner wrote \"may use a per-pixel horizon\"; the control that a single global horizon fails where the rescale differs per pixel is applied per R-369 (P8 of physics review 5820410914, PR #455), with I = 1 kept at the chosen state."
+  rq:
+  - RQ-800
+  note: "Added by R-879 (8 Nov 2026). Closed by TASK-M8-128. The owner wrote \"may use a per-pixel horizon\"; the control that a single global horizon fails where the rescale differs per pixel is applied per R-369 (P8 of physics review 5820410914, PR #455), with I = 1 kept at the chosen state. R-985 (12 Nov 2026, the owner's direction on the chart audit's F17): a final-condition chart is a tier-3 map like any other, evaluated on the CPU as every chart is under R-926, R-879's \"CPU batch chart\" read as that evaluation; the coarse cover in motion, exact at rest (REQ-SCHED-020), with no label of its own as a route; R-879's per-pixel horizon, labelled, and its masked misses stand. The statement stands as written until the chart audit's record-corrections pull request carries the docs, and where it differs from R-985 the ruling binds. Its measure weight waits on RQ-800. *12 Nov 2026 (the chart audit's record-corrections pull request):* the docs now carry R-985: TASK-M8-128's Notes and `principia_chart_composition.md` § 10.3 each have a dated note; the statement stands as written, and where it differs from R-985 the ruling binds. The measure weight is linked to RQ-800."
 - id: REQ-CHART-154
   area: CHART
   kind: calibration
@@ -4989,6 +5021,8 @@
   - R-889
   - R-926
   milestone: M8
+  rq:
+  - RQ-799
   note: "Added by R-889 (8 Nov 2026). Closed by TASK-M8-102. *11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE: every chart is CPU-evaluated in the browser too. Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M8-102 rewrites them under the ruling, and where they differ from it the ruling binds."
 - id: REQ-CHART-156
   area: CHART
@@ -5043,7 +5077,7 @@
   - R-902
   - R-916
   milestone: M2
-  note: "Added by R-899 and R-902 (8 Nov 2026). Closed by TASK-M2-65. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65. *Was (statement, the clause):* \"confirmed by the owner at the M8 gate\" (R-916, R-919)."
+  note: "Added by R-899 and R-902 (8 Nov 2026). Closed by TASK-M2-65. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-65. *Was (statement, the clause):* \"confirmed by the owner at the M8 gate\" (R-916, R-919). *12 Nov 2026 (the chart audit's F23):* the proposal also states the tolerance's depth reach, the depth at which `tol / σ_min(J)` equals one sample spacing, a reported quantity; no value is chosen here. `place_routes` (TASK-M2-99) gains M-E's CPU half at depths 21 and 30."
 - id: REQ-CHART-159
   area: CHART
   statement: "Stage 2's rewrite of every saved record's text must be handled as RQ-750 (R-900, R-898): the saved-file format's version bumped, old files converted on load, a conversion test in place of the bitwise check (each converted record decoding to the same system within REQ-ENC-024's ε_phys, the calibrated physical-units round-trip tolerance, on the decoded state; its outcome class REQ-CHART-177's), and any golden hash it changes regenerated with a recorded reason."
@@ -5178,7 +5212,7 @@
   - R-871
   - R-914
   milestone: M4
-  note: "Split from REQ-CHART-037 by R-914 (9 Nov 2026, RQ-752 (a); physics review 5829515661 of the rulings PR, P1): the Anosova row's lowering goes with region D's GPU reference (REQ-RENDER-123) to TASK-M4-34."
+  note: "Split from REQ-CHART-037 by R-914 (9 Nov 2026, RQ-752 (a); physics review 5829515661 of the rulings PR, P1): the Anosova row's lowering goes with region D's GPU reference (REQ-RENDER-123) to TASK-M4-34. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* the row lowered at the compute kernel's canonicalise entry is the retired compute-side route; it stands as its *Was* until TASK-M4-34 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-CHART-166
   area: CHART
   statement: "Locking must not move the view (R-866) in the engine: a lock must edit neither z₀, the basis nor a nonlinear chart's window; the pin must be the clicked pixel, its initial in-plane excursion that pixel's offset from the view's centre; tilt and zoom must turn about the pin; on nonlinear charts the pin must be exact, or the task must state why it can't be, an inexact pin's bound REQ-GUI-429's calibration, how the pin is held written into chart_decoder_contract Part 4 (R-72) and approved by the physics reviewer; snap-back must undo the slice only, centre on pin clearing the in-plane part, the two together z₀ ← z_locked bitwise by assignment, snap-back alone exact to the rounding bound derived from its construction and stated by the task, a bound that can't be derived a calibration (R-71) (R-899, Q2 (a))."
@@ -5723,9 +5757,11 @@
     section: "R-943 — The general rule for a morph: a morph moves each pixel's system from its system on chart A to its system on chart B along a path, defined by the pairing (the same pixel on both charts), the path (by default the shortest in each block's natural geometry) and the easing (timing and nothing else); any other path is allowed if both ends are exactly the end charts, every in-between frame is a valid system and it is continuous; a path is the owner's choice, not physics *(no RQ; refines R-926)*"
   - file: docs/design/principia_chart_composition.md
     section: 17.2 The mechanism
+  - file: decisions.md
+    section: "R-975 — RQ-787, a blend's interior pixel whose blended masses raise `M01_TINY` between two valid ends: option (a), it saturates and is never blank, by physics review's smooth hold: the blended ratio of the two light masses kept and the pair lifted just to the allowed minimum, the rest of the blend unchanged *(closes RQ-787)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine blend_chart: the ends bitwise (G4; REQ-CHART-113's exact selection); a blend nests (a blend's end may be a blend); pan, zoom and rotate on a blend reach both ends; the blend's f64 forward map and decode are exposed; a fixture whose path crosses a binary-collision point of the shape sphere has the outcome a collision at `t = 0` (R-933) on every pixel with two bodies within `r_coll`, a small disc of them, recorded with the pair and the least separation, never a blank and never `decode_failed` (confirmed by the physics review of PR #482 (review 5852979675)); a fixture whose path takes `M₀₁` below `ε_M01` between two valid ends, in three arms, of which arms (1) and (2) are checked here and arm (3) (both ends saturated pixels whose saturated states differ in `m₁/m₀`) is REQ-CHART-211's, checked by TASK-M2-103 (saturate in the CPU evaluator), which builds the saturated pixels it blends; on a chart that sets its masses directly (the edge-reaching simplex link): arm (1), the physics review's first example, end A `μ = (−L, 0)` and end B `μ = (L, L)` in `μ_k = ln(m_k/m₀)` with `L > 24.4`, so that at `s = ½` `μ = (0, L/2)` and `M₀₁ = 2/(2 + e^{L/2}) < 10⁻⁵`; arm (2), at the band with modest ratios, end A ∝ `(1, 0.01, 10⁵)` and end B ∝ `(0.01, 1, 10⁵)` in `(m₀, m₁, m₂)`, both with `M₀₁ = 1.01·10⁻⁵`, whose midpoint ∝ `(0.1, 0.1, 10⁵)` has `M₀₁ = 2·10⁻⁶`. On each of arms (1) and (2) both ends are valid, and the midpoint pixel raises `M01_TINY`, tagged, never NaN and never dropped; what that pixel shows waits on RQ-787 and is not asserted here, nothing about what is drawn on any arm; controls: on arm (1) the same pair with `L` small enough that `M₀₁` stays at or above `ε_M01` for every `s` raises no tag; on arm (2) two controls: the same ends with equal `m₁/m₀` (`q = 1`, for which `g` is constant along the path in exact arithmetic) raise no tag, and, keeping the path, the same ratios with the light pair lifted, ends ∝ `(1, 0.01, 10⁴)` and `(0.01, 1, 10⁴)`, `M₀₁ = 1.01·10⁻⁴` at the ends and its least value on the path `2.0·10⁻⁵` at the midpoint, raise no tag at any `s`. Measurement, reported, labelled, not a gate (R-850: mid-morph frames never claim held values): the held-`E*` miss mid-morph (composition § 17.6's 0.054 median), its subject this task's own blend (the miss is the state blend's own)"
+    detail: "cargo test -p engine blend_chart: the ends bitwise (G4; REQ-CHART-113's exact selection); a blend nests (a blend's end may be a blend); pan, zoom and rotate on a blend reach both ends; the blend's f64 forward map and decode are exposed; a fixture whose path crosses a binary-collision point of the shape sphere has the outcome a collision at `t = 0` (R-933) on every pixel with two bodies within `r_coll`, a small disc of them, recorded with the pair and the least separation, never a blank and never `decode_failed` (confirmed by the physics review of PR #482 (review 5852979675)); a fixture whose path takes `M₀₁` below `ε_M01` between two valid ends, in three arms, of which arms (1) and (2) are checked here and arm (3) (both ends saturated pixels whose saturated states differ in `m₁/m₀`) is REQ-CHART-211's, checked by TASK-M2-103 (saturate in the CPU evaluator), which builds the saturated pixels it blends; on a chart that sets its masses directly (the edge-reaching simplex link): arm (1), the physics review's first example, end A `μ = (−L, 0)` and end B `μ = (L, L)` in `μ_k = ln(m_k/m₀)` with `L > 24.4`, so that at `s = ½` `μ = (0, L/2)` and `M₀₁ = 2/(2 + e^{L/2}) < 10⁻⁵`; arm (2), at the band with modest ratios, end A ∝ `(1, 0.01, 10⁵)` and end B ∝ `(0.01, 1, 10⁵)` in `(m₀, m₁, m₂)`, both with `M₀₁ = 1.01·10⁻⁵`, whose midpoint ∝ `(0.1, 0.1, 10⁵)` has `M₀₁ = 2·10⁻⁶`. On each of arms (1) and (2) both ends are valid, and the midpoint pixel, where the plain blend's `M₀₁` falls below `ε_M01`, shows R-975's saturated system: the blended `m₁ : m₀` kept and the light pair lifted to the allowed minimum, the rest of the blend unchanged, a valid system, never blank, never NaN and never dropped, untagged by `M01_TINY` (how the lifted state sits against the guard, which fires strictly below, defined by the task under physics review); the shown system is continuous in `s` and equals the plain blend where the dip begins and ends; controls: a blend that leaves the midpoint pixel tagged or blank fails, and one that shows the pixel's own system at the nearest `s` where `M₀₁` is still large enough fails continuity; and on arm (1) the same pair with `L` small enough that `M₀₁` stays at or above `ε_M01` for every `s` raises no tag and engages no hold; on arm (2) two controls: the same ends with equal `m₁/m₀` (`q = 1`, for which `g` is constant along the path in exact arithmetic) raise no tag, and, keeping the path, the same ratios with the light pair lifted, ends ∝ `(1, 0.01, 10⁴)` and `(0.01, 1, 10⁴)`, `M₀₁ = 1.01·10⁻⁴` at the ends and its least value on the path `2.0·10⁻⁵` at the midpoint, raise no tag and engage no hold at any `s`. Measurement, reported, labelled, not a gate (R-850: mid-morph frames never claim held values): the held-`E*` miss mid-morph (composition § 17.6's 0.054 median), its subject this task's own blend (the miss is the state blend's own)"
   rulings:
   - R-925
   - R-926
@@ -5734,10 +5770,9 @@
   - R-936
   - R-943
   - R-944
+  - R-975
   milestone: M2
-  rq:
-  - RQ-787
-  note: "Added 11 Nov 2026 with TASK-M2-90 (N5 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P1 and its confirmation 4):* the collision fixture is confirmed, a small disc of pixels and not only isolated ones; a second fixture is added, `M01_TINY` opening between two valid ends, since `M₀₁` along the path is convex in `s`. What such a pixel shows is the owner's (RQ-787); the fixture asserts the tag and no more. *Was (verify, the clause):* \"a fixture whose path crosses a binary-collision point of the shape sphere has the outcome a collision at `t = 0` (R-933), physics review confirming.\" *11 Nov 2026 (the physics re-check of PR #482 (review 5853427038), P9):* the fixture gains two arms. The first example needs `L > 24.4` and is not the typical case: with `r_k = m_k/m₂` and `g = r₀ + r₁`, two ends at the band's edge `g = g*` whose light pair has the ratios `q` and `1/q` give `g(½) = g*·2√q/(1 + q)`, below `g*` for every `q ≠ 1`, so the dip needs no extreme mass and reaches saturated ends (a saturated end blends its saturated state, on the band's edge). Each arm asserts only the tag and that both ends are valid. *Was (verify, the clause):* \"a fixture whose path takes `M₀₁` below `ε_M01` between two valid ends, the physics review's example, on a chart that sets its masses directly (the edge-reaching simplex link), end A\"; *was (verify, the clause):* \"`M₀₁ = 2/(2 + e^{L/2}) < 10⁻⁵`: both ends are valid, and the midpoint pixel raises `M01_TINY`, tagged, never NaN and never dropped; what that pixel shows waits on RQ-787 and is not asserted here; control: the same pair with `L` small enough that `M₀₁` stays at or above `ε_M01` for every `s` raises no tag.\" *11 Nov 2026 (the physics review of PR #482 (review 5853910857), P10):* the `q = 1` control the fix round added for arms (2) and (3) is corrected by physics review. It is sound on arm (2), 1% above `ε_M01`, but there the two ends are one mass point and the blend is not exercised, so a second control keeps the path (the light pair lifted, `10⁴` for `10⁵`). On arm (3) a saturated end sits on the band's edge, `M₀₁ = ε_M01`, and the guard fires iff strictly below (`principia_dd_decoder.md` § 3.1), so at `q = 1` one rounding of the blend decides the tag (measured in f64 by the review: 18,449 of 39,400 `(q, s)` samples tagged, the shortfall at most `3.7·10⁻¹⁵` relative): the case is reported, asserted only where TASK-M2-95's saturate definition puts the state inside the edge by more than the path's rounding, else void; the control that always fires is a blend that saturates its interior pixel before RQ-787 is ruled. *Was (verify, the clause):* \"on arms (2) and (3) the same ends with equal `m₁/m₀` (`q = 1`, for which `g` is constant along the path) raise no tag.\" *11 Nov 2026 (the code review of PR #482 (review 5853977854), N6):* arm (3) reads TASK-M2-95's saturate definition and its ends are saturated pixels TASK-M2-103 builds, and TASK-M2-90 depends on neither. The edges were tried first and `plan/check_plan.py` refused them (\"dependency cycle: TASK-M2-55 → TASK-M2-65 → TASK-M2-90 → TASK-M2-103 → TASK-M2-66 → TASK-M2-65\"), so the verify says instead how the arm stands meanwhile, as REQ-RENDER-125's arm (ii) does: where its ends come from, and that it is not read as passing until both are merged (applied per R-369: task scoping). No word of what arm (3) asserts changes; the verify only gains its last sentence, which begins \"Arm (3)'s ends are\". *11 Nov 2026 (the code review of PR #482 (review 5854054751), N6 not closed; applied per R-369: task scoping):* arm (3) leaves this requirement for REQ-CHART-211 (a blend of two saturated pixels raises the tag), closed by TASK-M2-103 (saturate in the CPU evaluator). TASK-M2-103 stands on TASK-M2-90 through TASK-M2-66 and TASK-M2-65, so TASK-M2-90, the only task closing this requirement, merges before the saturated pixels the arm blends exist and could never run it, and \"not read as passing until … merged\" named nobody who reads it afterwards. Arms (1) and (2) stay here with their controls; they need nothing TASK-M2-90 lacks. The words of what arm (3) asserts move unchanged to REQ-CHART-211's verify; `rq: RQ-787` stays here and is also on REQ-CHART-211. The line of this note dated for review 5853977854, which has the verify saying how the arm stands meanwhile, is superseded by this one. *Was (verify, the clause):* \"in three arms, on a chart that sets its masses directly (the edge-reaching simplex link):\"; *was (verify, the clause):* \"; arm (3), both ends saturated pixels whose saturated states differ in `m₁/m₀`, where the interior dips for every `0 < s < 1`. On each arm both ends are valid, and the interior pixel (the midpoint on arms (1) and (2)) raises `M01_TINY`\"; *was (verify, the clause):* \"; on arm (3) the `q = 1` case is a reported case: the path's `M₀₁` is reported, and \"no tag\" is asserted only if the saturated state's `M₀₁` exceeds `ε_M01` by more than the path's rounding, which TASK-M2-95's saturate definition decides (on the edge exactly, or inside it by a margin); otherwise it is reported void, never passed and never failed; arm (3)'s control, the one that can always fire: a blend that saturates its interior pixel (RQ-787's option (a), built before it is ruled) raises no tag and fails the arm. Arm (3)'s ends are the evaluator's own saturated pixels, which TASK-M2-103 (saturate in the CPU evaluator) builds, never states the fixture constructs on the band's edge; arm (3) is not read as passing until TASK-M2-95's saturate definition and TASK-M2-103 are merged.\" *11 Nov 2026 (the physics review of PR #482 (review 5858443185), P11):* the line above saying the words of what arm (3) asserts \"move unchanged\" to REQ-CHART-211 is corrected: the qualifier \"on a chart that sets its masses directly (the edge-reaching simplex link)\" did not move with the arm, and in this verify it now covers arms (1) and (2) only, as before for them; REQ-CHART-211's statement and verify gain it for arm (3), with R-597. This verify is unchanged by that."
+  note: "Added 11 Nov 2026 with TASK-M2-90 (N5 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P1 and its confirmation 4):* the collision fixture is confirmed, a small disc of pixels and not only isolated ones; a second fixture is added, `M01_TINY` opening between two valid ends, since `M₀₁` along the path is convex in `s`. What such a pixel shows is the owner's (RQ-787); the fixture asserts the tag and no more. *Was (verify, the clause):* \"a fixture whose path crosses a binary-collision point of the shape sphere has the outcome a collision at `t = 0` (R-933), physics review confirming.\" *11 Nov 2026 (the physics re-check of PR #482 (review 5853427038), P9):* the fixture gains two arms. The first example needs `L > 24.4` and is not the typical case: with `r_k = m_k/m₂` and `g = r₀ + r₁`, two ends at the band's edge `g = g*` whose light pair has the ratios `q` and `1/q` give `g(½) = g*·2√q/(1 + q)`, below `g*` for every `q ≠ 1`, so the dip needs no extreme mass and reaches saturated ends (a saturated end blends its saturated state, on the band's edge). Each arm asserts only the tag and that both ends are valid. *Was (verify, the clause):* \"a fixture whose path takes `M₀₁` below `ε_M01` between two valid ends, the physics review's example, on a chart that sets its masses directly (the edge-reaching simplex link), end A\"; *was (verify, the clause):* \"`M₀₁ = 2/(2 + e^{L/2}) < 10⁻⁵`: both ends are valid, and the midpoint pixel raises `M01_TINY`, tagged, never NaN and never dropped; what that pixel shows waits on RQ-787 and is not asserted here; control: the same pair with `L` small enough that `M₀₁` stays at or above `ε_M01` for every `s` raises no tag.\" *11 Nov 2026 (the physics review of PR #482 (review 5853910857), P10):* the `q = 1` control the fix round added for arms (2) and (3) is corrected by physics review. It is sound on arm (2), 1% above `ε_M01`, but there the two ends are one mass point and the blend is not exercised, so a second control keeps the path (the light pair lifted, `10⁴` for `10⁵`). On arm (3) a saturated end sits on the band's edge, `M₀₁ = ε_M01`, and the guard fires iff strictly below (`principia_dd_decoder.md` § 3.1), so at `q = 1` one rounding of the blend decides the tag (measured in f64 by the review: 18,449 of 39,400 `(q, s)` samples tagged, the shortfall at most `3.7·10⁻¹⁵` relative): the case is reported, asserted only where TASK-M2-95's saturate definition puts the state inside the edge by more than the path's rounding, else void; the control that always fires is a blend that saturates its interior pixel before RQ-787 is ruled. *Was (verify, the clause):* \"on arms (2) and (3) the same ends with equal `m₁/m₀` (`q = 1`, for which `g` is constant along the path) raise no tag.\" *11 Nov 2026 (the code review of PR #482 (review 5853977854), N6):* arm (3) reads TASK-M2-95's saturate definition and its ends are saturated pixels TASK-M2-103 builds, and TASK-M2-90 depends on neither. The edges were tried first and `plan/check_plan.py` refused them (\"dependency cycle: TASK-M2-55 → TASK-M2-65 → TASK-M2-90 → TASK-M2-103 → TASK-M2-66 → TASK-M2-65\"), so the verify says instead how the arm stands meanwhile, as REQ-RENDER-125's arm (ii) does: where its ends come from, and that it is not read as passing until both are merged (applied per R-369: task scoping). No word of what arm (3) asserts changes; the verify only gains its last sentence, which begins \"Arm (3)'s ends are\". *11 Nov 2026 (the code review of PR #482 (review 5854054751), N6 not closed; applied per R-369: task scoping):* arm (3) leaves this requirement for REQ-CHART-211 (a blend of two saturated pixels raises the tag), closed by TASK-M2-103 (saturate in the CPU evaluator). TASK-M2-103 stands on TASK-M2-90 through TASK-M2-66 and TASK-M2-65, so TASK-M2-90, the only task closing this requirement, merges before the saturated pixels the arm blends exist and could never run it, and \"not read as passing until … merged\" named nobody who reads it afterwards. Arms (1) and (2) stay here with their controls; they need nothing TASK-M2-90 lacks. The words of what arm (3) asserts move unchanged to REQ-CHART-211's verify; `rq: RQ-787` stays here and is also on REQ-CHART-211. The line of this note dated for review 5853977854, which has the verify saying how the arm stands meanwhile, is superseded by this one. *Was (verify, the clause):* \"in three arms, on a chart that sets its masses directly (the edge-reaching simplex link):\"; *was (verify, the clause):* \"; arm (3), both ends saturated pixels whose saturated states differ in `m₁/m₀`, where the interior dips for every `0 < s < 1`. On each arm both ends are valid, and the interior pixel (the midpoint on arms (1) and (2)) raises `M01_TINY`\"; *was (verify, the clause):* \"; on arm (3) the `q = 1` case is a reported case: the path's `M₀₁` is reported, and \"no tag\" is asserted only if the saturated state's `M₀₁` exceeds `ε_M01` by more than the path's rounding, which TASK-M2-95's saturate definition decides (on the edge exactly, or inside it by a margin); otherwise it is reported void, never passed and never failed; arm (3)'s control, the one that can always fire: a blend that saturates its interior pixel (RQ-787's option (a), built before it is ruled) raises no tag and fails the arm. Arm (3)'s ends are the evaluator's own saturated pixels, which TASK-M2-103 (saturate in the CPU evaluator) builds, never states the fixture constructs on the band's edge; arm (3) is not read as passing until TASK-M2-95's saturate definition and TASK-M2-103 are merged.\" *11 Nov 2026 (the physics review of PR #482 (review 5858443185), P11):* the line above saying the words of what arm (3) asserts \"move unchanged\" to REQ-CHART-211 is corrected: the qualifier \"on a chart that sets its masses directly (the edge-reaching simplex link)\" did not move with the arm, and in this verify it now covers arms (1) and (2) only, as before for them; REQ-CHART-211's statement and verify gain it for arm (3), with R-597. This verify is unchanged by that. *12 Nov 2026 (R-975, RQ-787 (a) with physics review's smooth hold):* the interior pixel saturates and is never blank; arms (1) and (2) assert the hold where they asserted the tag; `rq: RQ-787` removed. *Was (verify, the clause):* \"On each of arms (1) and (2) both ends are valid, and the midpoint pixel raises `M01_TINY`, tagged, never NaN and never dropped; what that pixel shows waits on RQ-787 and is not asserted here, nothing about what is drawn on any arm; controls:\"; *was (verify, the clauses):* \"raises no tag; on arm (2)\" and \"raise no tag at any `s`.\"."
 - id: REQ-CHART-190
   area: CHART
   kind: definition
@@ -5789,7 +5824,7 @@
     section: "R-945 — R-926 item 7's \"ONLY\" list was not exhaustive: the backwards direction serves anything that places a running or saved state on a chart, traces and marks on the CPU among them *(no RQ; refines R-926)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine backwards_table_cpu: for each kernel chart of the first slice, a baked backwards table and search on the CPU return every forward node to its own cell. Measurement: at `t = 0` and after a run, 256 × 256 samples, table 64, scan 16 (the prototype's sensible point, re-measured, not adopted): the wrong share (a worse match than an exhaustive search of the same table) and the round-trip error in cells; criterion written before any run: PASS if the wrong share at `t = 0` is at most the prototype's figure for the same kind of chart (0.00% on the plain sphere and latent charts, 0.12% on `(L_z, E)`); EXPLAINED DIVERGENCE if worse with a named cause; else UNEXPLAINED. The accuracy outside a morph is R-935's (under RQ-767 (a): the table seeds a refinement on the chart's forward code)"
+    detail: "cargo test -p engine backwards_table_cpu: for each kernel chart of the first slice, a baked backwards table and search on the CPU return every forward node to its own cell. Measurement: at `t = 0` and after a run, 256 × 256 samples, table 64, scan 16 (the prototype's sensible point, re-measured, not adopted): the wrong share (a worse match than an exhaustive search of the same table) and the round-trip error in cells; criterion written before any run: PASS if the wrong share at `t = 0` is at most the prototype's figure for the same kind of chart (0.00% on the plain sphere and latent charts, 0.12% on `(L_z, E)`); EXPLAINED DIVERGENCE if worse with a named cause; else UNEXPLAINED. The accuracy outside a morph is R-935's (under RQ-767 (a): the table seeds a refinement on the chart's forward code). Also (the chart audit's F23, 12 Nov 2026): cargo test -p engine backwards_table_blend: the re-plan's open item O4, the latent chart to the exponential-map sphere at s = 0.25, 0.5 and 0.75, table 64 and 128, scan 16, at t = 0, 256 × 256 samples: the wrong share by route, and the folded share by TASK-M2-90's signed fold indicator; PASS if the wrong share outside folded cells is at most the plain charts' figure (0.00% on the plain sphere and latent charts), EXPLAINED DIVERGENCE if the excess lies in folded cells (R-936) or has another cause the physics reviewer names, else UNEXPLAINED; positive control: a table off by one node raises the wrong share, or the run is void. cargo test -p engine backwards_table_size_gauge: O9's two checks (the chart point at I ≠ 1 equals the one for the state rescaled to I = 1, within the stated tolerance; the decode equals the state's canonical form, REQ-ENC-006); control: an unrescaled lookup fails the first check"
   rulings:
   - R-649
   - R-925
@@ -5797,7 +5832,7 @@
   - R-935
   - R-945
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-92 (N7 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it."
+  note: "Added 11 Nov 2026 with TASK-M2-92 (N7 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *12 Nov 2026 (the chart audit's F23):* the verify gains `backwards_table_blend` (the re-plan's open item O4, its criterion and control), and `backwards_table_size_gauge` (O9's two checks and control), as TASK-M2-92's acceptance; the table is the chart's, one per chart plane at home scale (R-947; R-942 under RQ-776 (a)). *12 Nov 2026 (Codex's review of PR #508; applied per R-369: task scoping):* the arms that read `place` (measurement M-D, `backwards_table_depth`, and O4's share still wrong after `place` refines it, `backwards_table_blend_place`) move to REQ-CHART-199's verify and TASK-M2-99, which builds `place` and depends on TASK-M2-92."
 - id: REQ-CHART-193
   area: CHART
   statement: "The lock's solver core must be a least-squares solve over a map with a recorded branch rule, convergence reported per call and failures tagged, following its local minimiser continuously and stopping where that ends (R-926 item 4; R-935, under RQ-759 (a))."
@@ -5930,14 +5965,14 @@
     section: "10.6 Placement: one function for \"where is this state on this chart\""
   verify:
     method: unit test
-    detail: "cargo test -p kernel place_routes: for each kernel chart of the first slice (the latent chart, the shape sphere's exponential map, the `(L_z, E)` chart) and each of two blend pairs (the latent chart to the shape sphere's exponential map, and the `(L_z, E)` chart to the shape sphere's exponential map) at `s = 0.25`, `0.5` and `0.75`, on a 64 × 64 pixel grid: `place` of each pixel's own decoded state returns that pixel with its residual within the lock's tolerance (REQ-CHART-158), or, where the blend folds, a set containing it; at `s = 0.0` and `1.0` the end chart's own answer, bitwise; on a chart with an inverse the encode route's answer equals the one projection (REQ-COL-134) bitwise. Controls: a `place` that returns its table seed unrefined fails the residual check on at least one blend (if none fails, the table already meets the tolerance and the control is reported void, not passed); an answer one pixel off fails. It checks only states on the chart's image, and is not read as passing on a nearest-point route until REQ-CHART-200's two definitions are written and approved"
+    detail: "cargo test -p kernel place_routes: for each kernel chart of the first slice (the latent chart, the shape sphere's exponential map, the `(L_z, E)` chart) and each of two blend pairs (the latent chart to the shape sphere's exponential map, and the `(L_z, E)` chart to the shape sphere's exponential map) at `s = 0.25`, `0.5` and `0.75`, on a 64 × 64 pixel grid: `place` of each pixel's own decoded state returns that pixel with its residual within the lock's tolerance (REQ-CHART-158), or, where the blend folds, a set containing it; at `s = 0.0` and `1.0` the end chart's own answer, bitwise; on a chart with an inverse the encode route's answer equals the one projection (REQ-COL-134) bitwise. Controls: a `place` that returns its table seed unrefined fails the residual check on at least one blend (if none fails, the table already meets the tolerance and the control is reported void, not passed); an answer one pixel off fails. It checks only states on the chart's image, and is not read as passing on a nearest-point route until REQ-CHART-200's two definitions are written and approved. Also (the chart audit's F23, 12 Nov 2026, moved from REQ-CHART-192 by Codex's review of PR #508): cargo test -p engine backwards_table_blend_place: O4's blend, the latent chart to the exponential-map sphere at s = 0.25, 0.5 and 0.75, table 64 and 128, scan 16, at t = 0, 256 × 256 samples: the share still wrong after `place` refines TASK-M2-92's table answer, reported beside its wrong share by route and folded share. cargo test -p engine backwards_table_depth: measurement M-D, the fragment's algorithm on the CPU in f64 and f32 emulation against `place` at depths 0 to 40; PASS on the image in f64 at the count the fragment uses, every sample at every admitted depth within one sample spacing of `place`, and builds none on pan, zoom or the playhead, one per tilt, slice and morph frame; off-image shares and the f32 arm reported, never asserted (R-935); positive controls: the unrefined seed fails at depth 10; a table off by one node raises the not-within share"
   rulings:
   - R-542
   - R-935
   - R-945
   - R-947
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P7):* the statement gains R-935's split under RQ-767 (a), recorded in `decisions.md` § R-935, the bullet \"RQ-767, the table route's accuracy outside a morph: (a)\", and now in chart_composition § 10.6, \"Accuracy\": without it a reader taking the tolerance as a bound on the residual would mark almost every trace vertex `left`. *11 Nov 2026 (the same review, P2):* REQ-COL-133 (the leaving rule's definition) and REQ-COL-163 (later states read signed) move to TASK-M2-99 with this requirement, since `place`'s `status` and its signed input implement them."
+  note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the physics review of PR #482 (review 5852979675), P7):* the statement gains R-935's split under RQ-767 (a), recorded in `decisions.md` § R-935, the bullet \"RQ-767, the table route's accuracy outside a morph: (a)\", and now in chart_composition § 10.6, \"Accuracy\": without it a reader taking the tolerance as a bound on the residual would mark almost every trace vertex `left`. *11 Nov 2026 (the same review, P2):* REQ-COL-133 (the leaving rule's definition) and REQ-COL-163 (later states read signed) move to TASK-M2-99 with this requirement, since `place`'s `status` and its signed input implement them. *12 Nov 2026 (Codex's review of PR #508; applied per R-369: task scoping):* the verify gains `backwards_table_blend_place` and `backwards_table_depth` (measurement M-D), moved from REQ-CHART-192 with TASK-M2-92's acceptance lines, since they read `place`."
 - id: REQ-CHART-200
   area: CHART
   kind: definition
@@ -5960,59 +5995,70 @@
   note: "Added 11 Nov 2026 with TASK-M2-99 (N19 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
 - id: REQ-CHART-201
   area: CHART
-  statement: "P2 and P4 must be measured and reported, not gates (R-951), and shown to the owner before TASK-M8-49 and TASK-M8-58 are built: P2, the on-screen jump between an end chart's own trace (`s = 0`) and the blend's (`s = 10⁻⁶`), median and worst, in pixels per vertex; P4, at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices that land more than 8 pixels apart on the blend, set against the same share on each end chart's own trace, with the median and worst residual (how far off the surface each vertex is); no threshold and no fallback picked by anyone but the owner. With them the report must carry P3's timing, the time to place a trace on a blend frame, a number with no pass line: it is not R-951's, which rules P2 and P4 only; it is carried here by the orchestrator's decision (applied per R-369: task scoping, listed for veto), and the trace's length is REQ-CHART-210's definition."
+  statement: "P2 and P4 must be measured and reported, not gates (R-951), and shown to the owner before TASK-M8-49 and TASK-M8-58 are built: P2, the on-screen jump between an end chart's own trace and the blend's next to it, at both ends (`s = 0` against `s = 10⁻⁶`, and `s = 1` against `s = 1 − 10⁻⁶`, each reported apart; R-977 (3b)), median and worst, measured as a fraction of picture width and read in px at 512×512, 1024×1024 and 1920×1080 from the same run (R-984); P4, at `s = 0.25`, `0.5` and `0.75`, the gaps between neighbouring trace vertices counted as a fraction of picture width and their distribution reported, with the share more than 8 px apart on the blend at each of the three sizes (R-977), set against the same share on each end chart's own trace, with the median and worst residual (how far off the surface each vertex is); no threshold and no fallback picked by anyone but the owner. With them the report must carry P3's timing, the time to place a trace on a blend frame, a number with no pass line: it is not R-951's, which rules P2 and P4 only; it is carried here by the orchestrator's decision (applied per R-369: task scoping, listed for veto), and the trace's length is REQ-CHART-210's definition."
   source:
   - file: decisions.md
     section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
   - file: decisions.md
     section: "R-947 — Placement, the re-plan addition's question (A): option (a), one placement function for \"where is this state on this chart\", two routes chosen by the chart, the existing reading where a chart has an inverse and the nearest point everywhere else, every blend included, refined to the lock's precision on the CPU *(no RQ; answers the re-plan addition's question (A); refines R-542 and R-926)*"
+  - file: decisions.md
+    section: "R-977 — RQ-785, P4's unit and the set-up of P2 and P4: P4's gaps counted as a fraction of picture width with their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; a pinned trace (2a), P2 at both ends (3b), the fixture's own output steps at each chart's home window, zoom 1 (4a); P2's unit left open, then settled by R-984 *(on RQ-785, which R-984 closes)*"
+  - file: decisions.md
+    section: "R-984 — RQ-785, P2's unit: P2's on-screen jump is measured as a fraction of picture width, as P4's gaps are, and its median and worst read in px at 512×512, 1024×1024 and 1920×1080 *(closes RQ-785)*"
   verify:
     method: review checklist
-    detail: "the report exists with every number: P2 (median and worst jump in pixels per vertex between `s = 0` and `s = 10⁻⁶`); P4 (at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices more than 8 pixels apart on the blend, against the same share on each end chart's own trace; the median and worst residual); P3's timing (the time to place a trace of the length REQ-CHART-210 defines on a blend frame, on the Mac (R-186), one thread, the slowest of five warm runs, a number with no pass line); each at the picture size the owner states (REQ-CHART-202); no pass line anywhere; and it has been shown to the owner"
+    detail: "the report exists with every number: P2 (median and worst jump, as a fraction of picture width and in px at 512×512, 1024×1024 and 1920×1080, between `s = 0` and `s = 10⁻⁶` and, reported apart, between `s = 1` and `s = 1 − 10⁻⁶`; R-977, R-984); P4 (at `s = 0.25`, `0.5` and `0.75`, the distribution of the gaps between neighbouring trace vertices as a fraction of picture width, and the share more than 8 px apart on the blend at each of the three sizes, against the same share on each end chart's own trace; the median and worst residual); P3's timing (the time to place a trace of the length REQ-CHART-210 defines on a blend frame, on the Mac (R-186), one thread, the slowest of five warm runs, a number with no pass line); P2 and P4 at the three sizes R-977 and R-984 state (REQ-CHART-202), from the same run; no pass line anywhere; and it has been shown to the owner"
   rulings:
   - R-649
   - R-947
   - R-951
+  - R-977
+  - R-984
   milestone: M2
-  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the code review of PR #482 (review 5852985982), F3):* the statement now names P3's timing, which the verify already asked for, and says whose decision it is; R-951 does not rule P3. \"A trace of a stated length\" named no one to state it: the length is a definition owed (R-72), REQ-CHART-210, and the draft's 5,000 vertices is a proposal nothing adopts. *Was (verify, the clause):* \"the time to place a trace of a stated length on a blend frame\""
+  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. *11 Nov 2026 (the code review of PR #482 (review 5852985982), F3):* the statement now names P3's timing, which the verify already asked for, and says whose decision it is; R-951 does not rule P3. \"A trace of a stated length\" named no one to state it: the length is a definition owed (R-72), REQ-CHART-210, and the draft's 5,000 vertices is a proposal nothing adopts. *Was (verify, the clause):* \"the time to place a trace of a stated length on a blend frame\" *12 Nov 2026 (R-977 (3b), R-984; code review 5875707244 of PR #503, F3):* P2 at both ends, as a fraction of picture width read in px at three sizes, and P4's gaps as a fraction of picture width with their distribution. *Was (statement):* \"P2 and P4 must be measured and reported, not gates (R-951), and shown to the owner before TASK-M8-49 and TASK-M8-58 are built: P2, the on-screen jump between an end chart's own trace (`s = 0`) and the blend's (`s = 10⁻⁶`), median and worst, in pixels per vertex; P4, at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices that land more than 8 pixels apart on the blend, set against the same share on each end chart's own trace, with the median and worst residual (how far off the surface each vertex is); no threshold and no fallback picked by anyone but the owner. With them the report must carry P3's timing, the time to place a trace on a blend frame, a number with no pass line: it is not R-951's, which rules P2 and P4 only; it is carried here by the orchestrator's decision (applied per R-369: task scoping, listed for veto), and the trace's length is REQ-CHART-210's definition.\" *Was (verify):* \"the report exists with every number: P2 (median and worst jump in pixels per vertex between `s = 0` and `s = 10⁻⁶`); P4 (at `s = 0.25`, `0.5` and `0.75`, the share of neighbouring trace vertices more than 8 pixels apart on the blend, against the same share on each end chart's own trace; the median and worst residual); P3's timing (the time to place a trace of the length REQ-CHART-210 defines on a blend frame, on the Mac (R-186), one thread, the slowest of five warm runs, a number with no pass line); each at the picture size the owner states (REQ-CHART-202); no pass line anywhere; and it has been shown to the owner\""
 - id: REQ-CHART-202
   area: CHART
   kind: definition
-  statement: "The picture size at which P2's and P4's pixels are counted, which R-951 does not give (\"more than 8 pixels apart\" and \"in pixels\" name no picture size, and the measurements run headless), must be defined (R-72) by the owner's answer to RQ-785 and written into the measurement task's file before any run; nothing is assumed meanwhile."
+  statement: "P2's and P4's unit is R-977's and R-984's (RQ-785): P4's gaps between neighbouring trace vertices are counted as a fraction of the picture width and their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run, 8 px over each picture's width (R-977); P2's on-screen jump, at both ends, is measured as a fraction of the picture width too, its median and worst read in px at the same three sizes from the same run (R-984); both must be written into the measurement task's file before any run."
   source:
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
     section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
+  - file: decisions.md
+    section: "R-977 — RQ-785, P4's unit and the set-up of P2 and P4: P4's gaps counted as a fraction of picture width with their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; a pinned trace (2a), P2 at both ends (3b), the fixture's own output steps at each chart's home window, zoom 1 (4a); P2's unit left open, then settled by R-984 *(on RQ-785, which R-984 closes)*"
+  - file: decisions.md
+    section: "R-984 — RQ-785, P2's unit: P2's on-screen jump is measured as a fraction of picture width, as P4's gaps are, and its median and worst read in px at 512×512, 1024×1024 and 1920×1080 *(closes RQ-785)*"
   verify:
     method: review checklist
-    detail: "RQ-785 is answered by the owner and the picture size is written into this file before any run; nothing was run before it"
+    detail: "P4's unit as R-977 states it and P2's as R-984 states it are written into the task's file before any run; nothing was run before them"
   rulings:
   - R-72
   - R-951
+  - R-977
+  - R-984
   milestone: M2
-  rq:
-  - RQ-785
-  note: "Waits on RQ-785. Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it."
+  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. 12 Nov 2026 (R-977): P4's unit is settled; RQ-785 stays open on P2's unit, so `rq: RQ-785` stays. *Was (statement):* \"The picture size at which P2's and P4's pixels are counted, which R-951 does not give (\\\"more than 8 pixels apart\\\" and \\\"in pixels\\\" name no picture size, and the measurements run headless), must be defined (R-72) by the owner's answer to RQ-785 and written into the measurement task's file before any run; nothing is assumed meanwhile.\" *Was (verify):* \"RQ-785 is answered by the owner and the picture size is written into this file before any run; nothing was run before it\" *Was (note):* \"Waits on RQ-785. Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it.\" 12 Nov 2026, later the same day (R-984, the owner's follow-up on RQ-785, which closes): P2's unit is settled, a fraction of picture width read in px at the three sizes; `rq: RQ-785` removed, and R-977 cited under its new heading (it now ends \"P2's unit left open, then settled by R-984 *(on RQ-785, which R-984 closes)*\"). *Was (statement):* \"P4's unit is R-977's (RQ-785): its gaps between neighbouring trace vertices are counted as a fraction of the picture width and their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run, 8 px over each picture's width, written into the measurement task's file before any run; P2's unit, which R-951 gives \\\"in pixels per vertex\\\" and the owner's words do not name, must be defined (R-72) by the owner's answer to RQ-785, still open on it; nothing is assumed meanwhile.\" *Was (verify):* \"P4's unit as R-977 states it, and P2's as RQ-785's answer states it, are written into the task's file before any run; nothing was run before them\""
 - id: REQ-CHART-203
   area: CHART
   kind: definition
-  statement: "The points of P2's and P4's set-up that the sources do not settle must be defined (R-72) by the owner's answers to RQ-785's further questions and written into the measurement task's file before any run: what a seeded pixel contributes (the sources have \"over the trajectory fixtures … and 16 seeded pixels per chart pair\" and say no more), and whether P2 is also read at the other end, `s = 1` against `s = 1 − 10⁻⁶` (R-951 defines it at `s = 0` only, and the owner's words have \"as a morph starts or ends\"); and the trace's vertex spacing in time and the window the charts are read in (the home window at zoom 1, or another), both of which move P4's share and which no source gives; nothing is assumed meanwhile."
+  statement: "The points of P2's and P4's set-up are R-977's (the owner's answers to RQ-785's further questions) and must be written into the measurement task's file before any run: each seeded pixel gives a pinned trace, the system it shows on the starting chart integrated once and placed again at every `s` (2a); P2 is read at both ends, `s = 0` against `s = 10⁻⁶` and `s = 1` against `s = 1 − 10⁻⁶`, each reported apart (3b); the trace's vertices are the trajectory fixture's own output steps (TASK-M2-82), each chart in its home window at zoom 1 (4a)."
   source:
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
     section: "R-951 — Two measurements before the trace tasks are built: P4, beside P2, the share of neighbouring trace vertices that land more than 8 pixels apart on a blend at `s = 0.25`, `0.5` and `0.75`, set against each end chart's own trace, with the median and worst residual; P2 and P4 are reported, not gates, shown to the owner before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is picked by anyone else *(no RQ; RQ-785, new, asks the picture size the pixels are counted at)*"
+  - file: decisions.md
+    section: "R-977 — RQ-785, P4's unit and the set-up of P2 and P4: P4's gaps counted as a fraction of picture width with their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; a pinned trace (2a), P2 at both ends (3b), the fixture's own output steps at each chart's home window, zoom 1 (4a); P2's unit left open, then settled by R-984 *(on RQ-785, which R-984 closes)*"
   verify:
     method: review checklist
-    detail: "RQ-785's further questions are answered by the owner: what a seeded pixel contributes, whether P2 is also read at `s = 1` against `s = 1 − 10⁻⁶`, and the trace's vertex spacing in time and the window; each answer is written into this file before any run, and nothing was run before them"
+    detail: "the task's file states (2a), (3b) and (4a) as R-977 has them before any run, and nothing was run before them"
   rulings:
   - R-72
   - R-951
+  - R-977
   milestone: M2
-  rq:
-  - RQ-785
-  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. Waits on RQ-785. *11 Nov 2026 (the code review of PR #482 (review 5852985982), F2; the physics review of PR #482 (review 5852979675), its point 10):* the two set-up points are now asked of the owner, as further questions on RQ-785, each with its options and nothing chosen; the trace's vertex spacing in time and the window are added, the physics review having found that both move P4's share. *Was (statement, the opening):* \"Two points of P2's and P4's set-up that the sources do not settle must be defined (R-72) by the owner and written into the measurement task's file before any run:\" *Was (verify):* \"the owner has stated what a seeded pixel contributes and whether P2 is also read at `s = 1` against `s = 1 − 10⁻⁶`, and both are written into this file before any run\""
+  note: "Added 11 Nov 2026 with TASK-M2-100 (N20 of the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`)), which closes it. Waits on RQ-785. *11 Nov 2026 (the code review of PR #482 (review 5852985982), F2; the physics review of PR #482 (review 5852979675), its point 10):* the two set-up points are now asked of the owner, as further questions on RQ-785, each with its options and nothing chosen; the trace's vertex spacing in time and the window are added, the physics review having found that both move P4's share. *Was (statement, the opening):* \"Two points of P2's and P4's set-up that the sources do not settle must be defined (R-72) by the owner and written into the measurement task's file before any run:\" *Was (verify):* \"the owner has stated what a seeded pixel contributes and whether P2 is also read at `s = 1` against `s = 1 − 10⁻⁶`, and both are written into this file before any run\" 12 Nov 2026 (R-977): answered (2a), (3b), (4a); `rq: RQ-785` removed, P2's unit being REQ-CHART-202's. *Was (statement):* \"The points of P2's and P4's set-up that the sources do not settle must be defined (R-72) by the owner's answers to RQ-785's further questions and written into the measurement task's file before any run: what a seeded pixel contributes (the sources have \\\"over the trajectory fixtures … and 16 seeded pixels per chart pair\\\" and say no more), and whether P2 is also read at the other end, `s = 1` against `s = 1 − 10⁻⁶` (R-951 defines it at `s = 0` only, and the owner's words have \\\"as a morph starts or ends\\\"); and the trace's vertex spacing in time and the window the charts are read in (the home window at zoom 1, or another), both of which move P4's share and which no source gives; nothing is assumed meanwhile.\" *Was (verify):* \"RQ-785's further questions are answered by the owner: what a seeded pixel contributes, whether P2 is also read at `s = 1` against `s = 1 − 10⁻⁶`, and the trace's vertex spacing in time and the window; each answer is written into this file before any run, and nothing was run before them\" 12 Nov 2026, later the same day (R-984): R-977 cited under its new heading, which now ends \"P2's unit left open, then settled by R-984 *(on RQ-785, which R-984 closes)*\"; *was (source):* the same heading ending \"P2's unit left open *(on RQ-785, which stays open)*\"."
 - id: REQ-CHART-204
   area: CHART
   statement: "Past an edge that declares unfold, the CPU evaluator must show the chart's second sheet (R-932, R-937): a sample at `s = 1 + δ` must equal sheet 2 at `1 − δ` bitwise, the kind applied before `Φ` in R-407's order, each registry row and shipped chart that takes it declaring it per edge."
@@ -6155,7 +6201,7 @@
   note: "Added 11 Nov 2026 (the code review of PR #482 (review 5852985982), F3), on TASK-M2-100 (the measurements P2 and P4), which closes it. P3's timing is the orchestrator's addition to that task (applied per R-369: task scoping, listed for veto), not R-951's; R-951 is its source only for the task it sits in. *11 Nov 2026 (the physics re-check of PR #482 (review 5853427038), its note on REQ-CHART-210):* the length sets only P3's trace, so that it does not change what is measured for the owner: P2 and P4 are taken on the traces RQ-785's question 4 (the trace's vertex spacing in time, and the window) defines, never cut or padded to P3's length; the report also gives the time per vertex. *Was (verify):* \"the task's file states the trace length P3's timing is taken at, with its reason, written before any run; the reviewers checked it; the report gives the timing at that length\""
 - id: REQ-CHART-211
   area: CHART
-  statement: "A blend of two saturated pixels of a chart that sets its masses directly (the edge-reaching simplex link), whose saturated states differ in `m₁/m₀`, must raise `M01_TINY` on its interior pixel wherever the blended `M₀₁` falls below `ε_M01`, tagged, never NaN and never dropped, with both ends valid, the ends being the evaluator's own saturated pixels (R-926 item 3, R-932, R-597; composition § 17.11, \"Out of feasible\", case 2); what that pixel shows is the owner's (RQ-787) and is not required here."
+  statement: "A blend of two saturated pixels of a chart that sets its masses directly (the edge-reaching simplex link), whose saturated states differ in `m₁/m₀`, must show on its interior pixel, wherever the plain blend's `M₀₁` falls below `ε_M01`, R-975's saturated system (the blended `m₁ : m₀` kept and the light pair lifted to the allowed minimum, the rest of the blend unchanged), never blank, never NaN and never dropped, with both ends valid, the ends being the evaluator's own saturated pixels (R-926 item 3, R-932, R-597; composition § 17.11, \"Out of feasible\", case 2); the hold is continuous in `s` and equals the plain blend where the dip begins and ends (R-975, R-943)."
   source:
   - file: decisions.md
     section: "R-926 — The new chart system: a chart is a map from named coordinates to a system state and a time, composed with a flat window of a centre and a basis, every view edit an edit of the window and an axis change a tilt to 90°; time the last coordinate of every map, the playhead the window's centre along it; a morph a blend of two charts' states, linear in masses, momenta and time and a slerp on shape, exact at both ends, navigated by one pixel-space edit on both ends; the lock one constraint, \"this pixel shows this system\", re-solved; the CPU evaluates charts in f64 and the GPU only integrates records, with no chart code in the integrator; per-quad forward tables and no inverse on that path; a backwards table with a table search fallback for the fragment's needs only; no refusal path; three slope tiers; table debug views; a small quad's one-cell table the linearised decoder *(supersedes R-839; amends R-842; refines R-902)*"
@@ -6167,9 +6213,11 @@
     section: 17.2 The mechanism
   - file: docs/design/principia_chart_composition.md
     section: 17.11 Honesty
+  - file: decisions.md
+    section: "R-975 — RQ-787, a blend's interior pixel whose blended masses raise `M01_TINY` between two valid ends: option (a), it saturates and is never blank, by physics review's smooth hold: the blended ratio of the two light masses kept and the pair lifted just to the allowed minimum, the rest of the blend unchanged *(closes RQ-787)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine blend_saturated_ends: arm (3) of the blend chart's `M01_TINY` fixture, whose arms (1) and (2) are REQ-CHART-189's: arm (3), both ends saturated pixels of a chart that sets its masses directly (the edge-reaching simplex link), whose saturated states differ in `m₁/m₀`, where the interior dips for every `0 < s < 1`. Both ends are valid, and the interior pixel raises `M01_TINY`, tagged, never NaN and never dropped; what that pixel shows waits on RQ-787 and is not asserted here, nothing about what is drawn; on arm (3) the `q = 1` case is a reported case: the path's `M₀₁` is reported, and \"no tag\" is asserted only if the saturated state's `M₀₁` exceeds `ε_M01` by more than the path's rounding, which TASK-M2-95's saturate definition decides (on the edge exactly, or inside it by a margin); otherwise it is reported void, never passed and never failed; arm (3)'s control, the one that can always fire: a blend that saturates its interior pixel (RQ-787's option (a), built before it is ruled) raises no tag and fails the arm. Arm (3)'s ends are the evaluator's own saturated pixels, which TASK-M2-103 (saturate in the CPU evaluator) builds, never states the fixture constructs on the band's edge. Arm (3)'s \"the interior dips for every `0 < s < 1`\" describes ends exactly on the edge: if TASK-M2-95's definition puts the saturated state inside the edge by a margin, the dip must first pass that margin, so the fixture's two pixels must differ in `m₁/m₀` by enough for it to, and the tag is raised on an interior range of `s` and not on all of it; the arm's assertion (the interior pixel raises the tag, both ends valid) is unaffected; the fixture reports the range (the physics review of PR #482, review 5854043330)"
+    detail: "cargo test -p engine blend_saturated_ends: arm (3) of the blend chart's `M01_TINY` fixture, whose arms (1) and (2) are REQ-CHART-189's: arm (3), both ends saturated pixels of a chart that sets its masses directly (the edge-reaching simplex link), whose saturated states differ in `m₁/m₀`, where the interior dips for every `0 < s < 1`. Both ends are valid, and the interior pixel shows R-975's saturated system, untagged by `M01_TINY`, never blank, never NaN and never dropped, continuous in `s` and equal to the plain blend where the dip begins and ends; on arm (3) the `q = 1` case is a reported case: the path's `M₀₁` is reported, and \"no hold\" is asserted only if the saturated state's `M₀₁` exceeds `ε_M01` by more than the path's rounding, which TASK-M2-95's saturate definition decides (on the edge exactly, or inside it by a margin); otherwise it is reported void, never passed and never failed; arm (3)'s controls: a blend that leaves its interior pixel tagged or blank fails, and one that shows the pixel's own system at the nearest valid `s` fails continuity. Arm (3)'s ends are the evaluator's own saturated pixels, which TASK-M2-103 (saturate in the CPU evaluator) builds, never states the fixture constructs on the band's edge. Arm (3)'s \"the interior dips for every `0 < s < 1`\" describes ends exactly on the edge: if TASK-M2-95's definition puts the saturated state inside the edge by a margin, the dip must first pass that margin, so the fixture's two pixels must differ in `m₁/m₀` by enough for it to, and the hold engages on an interior range of `s` and not on all of it; the arm's assertion (the interior pixel shows the hold, both ends valid) is unaffected; the fixture reports the range (the physics review of PR #482, review 5854043330)"
   rulings:
   - R-597
   - R-926
@@ -6177,10 +6225,9 @@
   - R-936
   - R-943
   - R-944
+  - R-975
   milestone: M2
-  rq:
-  - RQ-787
-  note: "Added 11 Nov 2026 (the code review of PR #482 (review 5854054751), N6; applied per R-369: task scoping), closed by TASK-M2-103 (saturate in the CPU evaluator). It is arm (3) of the `M01_TINY` fixture of REQ-CHART-189 (a blend is a chart), moved here because TASK-M2-90 (the blend chart), which closes REQ-CHART-189, merges before the saturated pixels the arm blends exist: TASK-M2-103 builds them and stands on TASK-M2-90 through TASK-M2-66 and TASK-M2-65, and it already depends on TASK-M2-95, whose saturate definition decides the `q = 1` case. The words of what the arm asserts are the physics reviewer's (reviews 5853427038, P9, and 5853910857, P10), moved unchanged from REQ-CHART-189's verify, where they are kept as a *Was*; the last sentence of the verify is the physics reviewer's note of review 5854043330 (a margin inside the edge; the range of `s` reported). `rq: RQ-787` travels with the arm: what the pixel shows is still the owner's, and the arm asserts only the tag and valid ends. The test's name, `blend_saturated_ends`, is given here (naming). *11 Nov 2026 (the physics review of PR #482 (review 5858443185), P11):* the chart is restored to the arm. In REQ-CHART-189's verify one qualifier, \"on a chart that sets its masses directly (the edge-reaching simplex link)\", covered all three arms; when arm (3) moved here that qualifier stayed behind, after the clause that sends arm (3) away, so it covered arms (1) and (2) only, and the words above that the arm's words \"moved unchanged\" were wrong: that clause did not move. It is physics, not wording: arm (3) assumes a saturated end sits on the band's edge, `M₀₁ = ε_M01`, which holds only under the edge-reaching simplex link (R-597; REQ-CHART-206); latent-link ends cannot reach the edge (composition § 17.11 case 2: `|μ| ≤ 5` gives `g ≥ e^{−5}`), so on a latent chart the dip stays above `ε_M01` and the arm would be unsatisfiable, or met vacuously. The statement and the verify carry the qualifier in the reviewer's words, and R-597 joins the rulings (and the statement's citation). *Was (statement, the clause):* \"A blend of two saturated pixels whose saturated states differ in `m₁/m₀` must raise\"; *was (statement, the clause):* \"(R-926 item 3, R-932; composition\"; *was (verify, the clause):* \"arm (3), both ends saturated pixels whose saturated states differ in `m₁/m₀`, where\"."
+  note: "Added 11 Nov 2026 (the code review of PR #482 (review 5854054751), N6; applied per R-369: task scoping), closed by TASK-M2-103 (saturate in the CPU evaluator). It is arm (3) of the `M01_TINY` fixture of REQ-CHART-189 (a blend is a chart), moved here because TASK-M2-90 (the blend chart), which closes REQ-CHART-189, merges before the saturated pixels the arm blends exist: TASK-M2-103 builds them and stands on TASK-M2-90 through TASK-M2-66 and TASK-M2-65, and it already depends on TASK-M2-95, whose saturate definition decides the `q = 1` case. The words of what the arm asserts are the physics reviewer's (reviews 5853427038, P9, and 5853910857, P10), moved unchanged from REQ-CHART-189's verify, where they are kept as a *Was*; the last sentence of the verify is the physics reviewer's note of review 5854043330 (a margin inside the edge; the range of `s` reported). `rq: RQ-787` travels with the arm: what the pixel shows is still the owner's, and the arm asserts only the tag and valid ends. The test's name, `blend_saturated_ends`, is given here (naming). *11 Nov 2026 (the physics review of PR #482 (review 5858443185), P11):* the chart is restored to the arm. In REQ-CHART-189's verify one qualifier, \"on a chart that sets its masses directly (the edge-reaching simplex link)\", covered all three arms; when arm (3) moved here that qualifier stayed behind, after the clause that sends arm (3) away, so it covered arms (1) and (2) only, and the words above that the arm's words \"moved unchanged\" were wrong: that clause did not move. It is physics, not wording: arm (3) assumes a saturated end sits on the band's edge, `M₀₁ = ε_M01`, which holds only under the edge-reaching simplex link (R-597; REQ-CHART-206); latent-link ends cannot reach the edge (composition § 17.11 case 2: `|μ| ≤ 5` gives `g ≥ e^{−5}`), so on a latent chart the dip stays above `ε_M01` and the arm would be unsatisfiable, or met vacuously. The statement and the verify carry the qualifier in the reviewer's words, and R-597 joins the rulings (and the statement's citation). *Was (statement, the clause):* \"A blend of two saturated pixels whose saturated states differ in `m₁/m₀` must raise\"; *was (statement, the clause):* \"(R-926 item 3, R-932; composition\"; *was (verify, the clause):* \"arm (3), both ends saturated pixels whose saturated states differ in `m₁/m₀`, where\". *12 Nov 2026 (R-975, RQ-787 (a) with physics review's smooth hold):* the interior pixel saturates; arm (3) asserts the hold where it asserted the tag; `rq: RQ-787` removed. *Was (statement, the clauses):* \"must raise `M01_TINY` on its interior pixel wherever the blended `M₀₁` falls below `ε_M01`, tagged, never NaN and never dropped, with both ends valid,\" and \"what that pixel shows is the owner's (RQ-787) and is not required here.\" *Was (verify, the clauses):* \"Both ends are valid, and the interior pixel raises `M01_TINY`, tagged, never NaN and never dropped; what that pixel shows waits on RQ-787 and is not asserted here, nothing about what is drawn;\"; \"and \\\"no tag\\\" is asserted only if\"; \"arm (3)'s control, the one that can always fire: a blend that saturates its interior pixel (RQ-787's option (a), built before it is ruled) raises no tag and fails the arm.\"; \"and the tag is raised on an interior range of `s` and not on all of it; the arm's assertion (the interior pixel raises the tag, both ends valid) is unaffected;\"."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -6892,15 +6939,19 @@
   milestone: M3
 - id: REQ-INT-039
   area: INT
-  statement: "Each marching trajectory (the base, each Benettin shadow, each ensemble copy and its shadow) must be CoM-projected, monitored and detected independently every step; a shadow must not inherit the base's projection."
+  statement: "Each marching trajectory (the base, each Benettin shadow, each ensemble copy and its shadow) must be CoM-projected, monitored and detected independently every step; a shadow must not inherit the base's projection. A shadow's detectors monitor only: where one would fire, the shadow marches on through, and nothing it raises reaches the sample's march, outcome or fields (R-972, RQ-791 (d)); once the shadow's `S` is non-finite, `ftle_valid` is false and `ftle` reads NaN (R-972, RQ-791 (a); REQ-PAY-032)."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: "3.4 COM projection (per `STEP`; the policy is integrator contract Part 1)"
+  - file: decisions.md
+    section: "R-972 — RQ-791, the FTLE when only its shadow reaches a terminal or goes non-finite: (d) + (a); the shadow's detectors monitor only and the shadow marches on through what would be its terminal, and once the shadow's `S` is non-finite `ftle_valid` is false, `ftle` reads NaN and every aggregate drops the sample *(closes RQ-791)*"
   verify:
     method: unit test
-    detail: "run base+shadow with deliberately different roundoff; each has its own R_com computed; FTLE unchanged vs a reference that projects independently"
-  rulings: []
+    detail: "run base+shadow with deliberately different roundoff; each has its own R_com computed; FTLE unchanged vs a reference that projects independently; at a nonzero `r_coll`, a fixture driving a shadow-only collision (the shadow inside `r_coll`, the sample not): the shadow marches on, takes substeps and renormalises as a moving neighbour, the sample's outcome and fields are bitwise those of the same run with the shadow's collision test removed, and `ftle_valid` stays true; and a fixture driving a non-finite shadow `S` with a healthy sample: `ftle_valid` is false, `ftle` reads NaN, and an aggregate over `ftle` drops the sample (R-972); controls: a shadow whose collision ends its march, and a non-finite shadow `S` read as valid, each fail"
+  rulings:
+  - R-972
   milestone: M3
+  note: "12 Nov 2026 (R-972, RQ-791 (d) + (a)): the shadow's detectors monitor only, and a non-finite shadow `S` makes the FTLE invalid; built by TASK-M3-14 (PR #493), which closes this requirement. REQ-PAY-032 carries the `ftle_valid` clause; its arm is this verify's second fixture. *Was (statement):* the sentence before \"A shadow's detectors monitor only\", alone. *Was (verify):* \"run base+shadow with deliberately different roundoff; each has its own R_com computed; FTLE unchanged vs a reference that projects independently\"."
 - id: REQ-INT-040
   area: INT
   statement: "The drift suspect predicates must be read-time predicates over the stored drift latches (no stored suspect bits): energy-suspect on relative δE, L_z-suspect on absolute ΔL_z, and consumers must read the occupant's `symplectic` flag before interpreting drift as dynamics."
@@ -7619,12 +7670,16 @@
     section: Part 3 — Parameter ownership (who owns what)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
   verify:
     method: numerical gate
     detail: "the proposal shows dd test 10 (halving δ₀ and doubling n_renorm leaves λ_T unchanged) at the proposed values at f32 and f64; recorded in decisions.md"
   rulings:
   - R-71
+  - R-976
   milestone: M3
+  note: "12 Nov 2026 (R-976, RQ-794 (c)): (‖δ₀‖, n_renorm, dd test 10's tolerance) = (3e-3, 300, 0.2) stay provisional, stated as unsupported on close-encounter chaotic orbits (REQ-GUI-437); the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until that re-run. Applied per R-369 (task scoping): TASK-M3-14 keeps the provisional proposal and its eight-orbit evidence and closes this requirement; the re-run is TASK-M3-72's, after the displacement form (R-974) and R-972's (d) + (a) are built. `rq: RQ-794` removed."
 - id: REQ-INT-077
   area: INT
   kind: definition
@@ -8429,14 +8484,17 @@
     section: "R-935 — The chart re-plan's one-way questions, the plan's recommendation on each: exact or implicit slopes are the linearised decoder's `J_D`, central differences only the check (RQ-758); the lock's re-solve follows its local minimiser continuously, stops where that ends, and keeps the offered re-centre, the navigation stop and the stored-words select (RQ-759); a per-sample stop index on the integrator's grid with a new label \"reached its time\", the zoom along time floored at one boundary (RQ-761); the window's scale is R-507's and R-920's unit, time's the home time window (RQ-762); stage 1 measures each operation against its generic edit first (RQ-763); the GPU decode entries stay as test entries and R-837's cap is retired once measured (RQ-765); a large quad's forward table has one exact node per sample, R-90's trigger read on the narrowed f32 records (RQ-766); the table seeds a refinement on the chart's forward code (RQ-767); `ctx.chart.z` stays the forward value, carried in the table (RQ-768); stage 3 runs beside stages 1 and 2 (RQ-769); an in-plane pan or zoom still re-addresses the cache (RQ-770) *(closes RQ-758, RQ-759, RQ-761, RQ-762, RQ-763, RQ-765, RQ-766, RQ-767, RQ-768, RQ-769 and RQ-770; amends R-837, R-849, R-863 and R-864; refines R-90 and R-926)*"
   - file: docs/design/principia_core_design.md
     section: 3. Kernel eats chart params, decodes in-kernel
+  - file: decisions.md
+    section: "R-985 — On a view tilted toward time the stop index `k_stop` stays in the record and only that word is rewritten each frame; a final-condition chart is a tier-3 map like any other, with no label of its own as a route *(the owner's directions of 12 Nov 2026 on the chart audit's F8 and F17)*"
   verify:
     method: review checklist
     detail: "the contracts state the record and table contract: the record's content (REQ-DEC-005's `(m, r, p)`, the descriptor and tag words, a branch word, the stop index of RQ-761), `SimState` a separate buffer (REQ-SCHED-012), each replaced line kept as *Was*; no measurement"
   rulings:
   - R-926
   - R-935
+  - R-985
   milestone: M2
-  note: "Replaces REQ-INT-070 (decode in the kernel, never an IC buffer), reversed by R-926 item 5 and retired (the re-plan § A.2). Added 11 Nov 2026 with TASK-M2-87 (N2 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the code re-check of PR #482 (review 5853463481), N1):* this requirement's verify is contract text and checks no code. That the built integrator entry holds no chart code and never decodes is checked by REQ-INT-116, closed by TASK-M4-05 (flat-grid compute), which builds the entry."
+  note: "Replaces REQ-INT-070 (decode in the kernel, never an IC buffer), reversed by R-926 item 5 and retired (the re-plan § A.2). Added 11 Nov 2026 with TASK-M2-87 (N2 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the code re-check of PR #482 (review 5853463481), N1):* this requirement's verify is contract text and checks no code. That the built integrator entry holds no chart code and never decodes is checked by REQ-INT-116, closed by TASK-M4-05 (flat-grid compute), which builds the entry. R-985 (12 Nov 2026, the owner's direction on the chart audit's F8): the stop index stays in the record, and on a view tilted toward time only that word is rewritten each frame, from the pixel and the playhead on the host, the record's other words unchanged; the statement stands as written until the chart audit's record-corrections pull request carries the docs, and where it differs from R-985 the ruling binds. *12 Nov 2026 (the chart audit's record-corrections pull request):* the docs now carry R-985: the scheduler contract's Part 7 and the caching contract's Part 1 each have a dated note."
 - id: REQ-INT-116
   area: INT
   statement: "The built integrator's compute entry must hold no chart code and must never decode (R-926 item 5): its starting states are the records the CPU wrote, read as REQ-INT-115's contract gives them."
@@ -8453,6 +8511,22 @@
   - R-935
   milestone: M4
   note: "Added 11 Nov 2026 (the code re-check of PR #482 (review 5853463481), N1), on TASK-M4-05 (flat-grid compute), which closes it (applied per R-369: task scoping). REQ-INT-070 (decode in the kernel, never an IC buffer) was retired under R-926 item 5 and its acceptance line on TASK-M4-05 with it, with nothing in its place; REQ-INT-115, which replaced it, is closed by TASK-M2-87 (the CPU-to-GPU record and table contract), contract text with no code, and its verify reads the contracts only. So no verify checked the built entry. This requirement is that check, on the task that builds the entry; REQ-SYS-022 (no interpreter on the GPU), on the same task, stands beside it."
+- id: REQ-INT-117
+  area: INT
+  kind: calibration
+  statement: "The lc-inverse gate's minimum number of regions, the cases its verdict on REQ-INT-044 must cover before it stands, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate lc-inverse prints the regions it ran (the round trip at f32 and at f64) and their count against the minimum, and flags a verdict drawn from fewer; the proposal states the minimum with its evidence; recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  milestone: M3
+  note: "Added by TASK-M3-68 (applied per R-369, as REQ-INT-110 was for projection-parity): the gate framework names a calibration requirement for every gate's region minimum, and REQ-INT-044, the gate's threshold requirement, is not one; the gate had named REQ-INT-105 (the floor TINY), which has nothing to do with it (physics review 5873527379 of PR #502, point 4). Proposed at 2: the two widths, f32 and f64, at which REQ-INT-044's verify states its figures."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -9145,20 +9219,23 @@
 - id: REQ-EVT-035
   area: EVT
   kind: definition
-  statement: "Integrator contract Part 7 must define how the collision test's floor is recorded with a run (R-954): below the f32 spacing of the positions at the pair's coordinates r_coll means collision at f32 coincidence and d_min is resolved only to that spacing, and the run records, beside r_coll, what it needs for an output to say whether its r_coll lay below what the test resolves; the definition states what is recorded (a value, a flag or both), how it is computed from the run, the floor varying with the pair's coordinates along it, and where it is stored, written into Part 7 under physics review before it is built."
+  statement: "Integrator contract Part 7 must define how the collision test's floor is recorded with a run (R-954): below the f32 spacing of the positions at the pair's coordinates r_coll means collision at f32 coincidence and d_min is resolved only to that spacing, and the run records, beside r_coll, what it needs for an output to say whether its r_coll lay below what the test resolves; the form is R-973's (RQ-792 (a), cautious): a per-sample byte holding the floor's exponent, latched as the largest floor over every state at which the test was near firing (`d_quant(s) < r_coll + floor(s)`) and over the `d_min` state, each output's flag read as `r_coll < floor`; the definition states its placement (8 B at f32 under R-397's recheck, or a share of TASK-M3-41's 8 B) and its bit-level layout, with the export decoder and the schema hash, written into Part 7 under physics review before it is built."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 7 — Detectors as the `SimState` producer
   - file: decisions.md
     section: "R-954 — RQ-782, the collision test's floor: option (a), a definition in integrator contract Part 7; below the f32 spacing of the positions at the pair's coordinates `r_coll` means collision at f32 coincidence, `d_min` is resolved only to that spacing, the slider stays valid to 0, and the floor is recorded with the run *(closes RQ-782)*"
+  - file: decisions.md
+    section: "R-973 — RQ-792, where the collision test's floor is recorded: option (a) in its cautious form, a per-sample exponent byte latched as the largest floor over every near-firing state and the `d_min` state, each output's flag read as `r_coll < floor`; its placement and bit-level definition are TASK-M3-71's, under physics review *(closes RQ-792)*"
   verify:
     method: unit test
     detail: "Review (physics): Part 7 carries the definition, as stated. cargo test -p engine r_coll_floor_recorded: a run with r_coll at the default 10⁻³ records that it lies above the floor; a run with r_coll below the f32 spacing of its bodies' coordinates (one at 2⁻²⁶ with bodies near |x| = 1) records that it lies below; a run at r_coll = 0 records it; the record is carried on every output beside r_coll, bit for bit as defined; controls: a recorder that reads only r_coll's value and not the coordinates misreports a run whose bodies lie at |x| in [1, 2) with r_coll between the two spacings, and fails; a run whose output drops the record fails"
   rulings:
   - R-547
   - R-954
+  - R-973
   milestone: M3
-  note: "R-954 (11 Nov 2026, RQ-782 (a)): the floor is stated in Part 7 as a definition; the clause \"the floor is recorded with the run\" is built behaviour nothing recorded, so this definition requirement (R-72) and TASK-M3-71 carry it. The test's figures (2⁻²⁶, |x| in [1, 2)) are the definition's examples; the task's definition fixes them."
+  note: "R-954 (11 Nov 2026, RQ-782 (a)): the floor is stated in Part 7 as a definition; the clause \"the floor is recorded with the run\" is built behaviour nothing recorded, so this definition requirement (R-72) and TASK-M3-71 carry it. The test's figures (2⁻²⁶, |x| in [1, 2)) are the definition's examples; the task's definition fixes them. 12 Nov 2026 (R-973, RQ-792 (a), cautious form): the form is ruled; TASK-M3-71 no longer waits, and writes the placement and the bit-level definition. *Was (statement, the clause):* \"the definition states what is recorded (a value, a flag or both), how it is computed from the run, the floor varying with the pair's coordinates along it, and where it is stored,\"."
 - id: REQ-PAY-001
   area: PAY
   statement: "ICDescriptor must be 64 B (its 12 f32 fields plus explicit padding, with E₀ derived as K_0 + V_0 and not stored), and the sample descriptor must use bits 0–9 (bits 8–9 `last_symbol`) with bits 10–15 reserved."
@@ -9725,7 +9802,7 @@
   milestone: M1
 - id: REQ-PAY-032
   area: PAY
-  statement: "`ftle_valid` must be derived as FTLE tier on, state not failed, `n > 0` and `completed_renorms = step_count / renorm_interval_steps > 0`, and `ftle` must read NaN whenever it is false (R-254); every aggregate over `ftle` (footprint means and spreads, quad reductions, histograms, statistics) must exclude samples by `ftle_valid` explicitly, never by NaN propagation (R-255)."
+  statement: "`ftle_valid` must be derived as FTLE tier on, state not failed, `n > 0` and `completed_renorms = step_count / renorm_interval_steps > 0`, and false once the shadow's `S` is non-finite, marked as TASK-M3-14 defines, storage never holding NaN (R-972, R-79), and `ftle` must read NaN whenever it is false (R-254); every aggregate over `ftle` (footprint means and spreads, quad reductions, histograms, statistics) must exclude samples by `ftle_valid` explicitly, never by NaN propagation (R-255)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 5. Derived — computed at read, NOT stored
@@ -9737,13 +9814,17 @@
     section: "R-254 — `ftle` reads NaN whenever `ftle_valid` is false *(refines R-253)*"
   - file: decisions.md
     section: "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
+  - file: decisions.md
+    section: "R-972 — RQ-791, the FTLE when only its shadow reaches a terminal or goes non-finite: (d) + (a); the shadow's detectors monitor only and the shadow marches on through what would be its terminal, and once the shadow's `S` is non-finite `ftle_valid` is false, `ftle` reads NaN and every aggregate drops the sample *(closes RQ-791)*"
   verify:
     method: unit test
-    detail: truth table over tier/state/n/renorms
+    detail: "truth table over tier/state/n/renorms and the shadow's `S` finite or not (R-972); the non-finite arm is REQ-INT-039's fixture, built by TASK-M3-14"
   rulings:
   - R-254
   - R-255
+  - R-972
   milestone: M1
+  note: "12 Nov 2026 (R-972, RQ-791 (a)): `ftle_valid` gains the clause \"false once the shadow's `S` is non-finite\"; the mark is TASK-M3-14's to define under physics review (payload §6), and TASK-M3-14 builds it under REQ-INT-039, this requirement's closing task (TASK-M1-01) having merged. *Was (statement, the clause):* \"`completed_renorms = step_count / renorm_interval_steps > 0`, and\". *Was (verify):* \"truth table over tier/state/n/renorms\"."
 - id: REQ-PAY-033
   area: PAY
   statement: "Word accessors must include `fgw_length_raw`, `fgw_truncated`, `fgw_reduced_length`/`fgw_reduced_length_valid` and `fgw_retained_prefix_length` (clamping 127 to 76, for debug/export only), each accessor must have exactly one name (payload §6's), and the reduced crossing count must equal `fgw_reduced_length` when valid."
@@ -10387,6 +10468,9 @@
     detail: "the QuadRequest struct has no x₀/J_D fields; the linear-path bind group binds the uniform and the full-decoder bind group does not"
   rulings: []
   milestone: M6
+  rq:
+  - RQ-797
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"x₀ and the Jacobian J_D must travel in a separate uniform buffer\" is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-PAY-070
   area: PAY
   kind: definition
@@ -11605,16 +11689,17 @@
     section: 3. The `ctx` contract
   - file: decisions.md
     section: "R-53 — Node interfaces declare their input domains *(GU-2 (a))*"
+  - file: decisions.md
+    section: "R-978 — RQ-786, the domain an untransformed input inherits from a field with one finite end: option (b), the finite end kept and the other the measured one per draw, built with TASK-M8-22's legend; until then such a wire stays refused, as built *(closes RQ-786; amends R-815)*"
   verify:
     method: unit test
-    detail: "scan the registry: every entry has inputDomains, an untransformed input recording inherits; on a wired node its domain equals the manifest [lo, hi] of its field, and a field whose range is unbounded takes (0, 1) (R-815)"
+    detail: "scan the registry: every entry has inputDomains, an untransformed input recording inherits; on a wired node its domain equals the manifest [lo, hi] of its field, and a field whose range is unbounded takes (0, 1) (R-815); a field with exactly one finite end is refused, `Err(Unruled)`, as built, until REQ-GEN-046 (R-978) replaces the refusal"
   rulings:
   - R-53
   - R-815
+  - R-978
   milestone: M7
-  rq:
-  - RQ-786
-  note: "R-53 is recorded against colour_composition §1.2 and §3, but those sections do not yet state it; the requirement follows the ruling."
+  note: "R-53 is recorded against colour_composition §1.2 and §3, but those sections do not yet state it; the requirement follows the ruling. 12 Nov 2026 (R-978, RQ-786 (b)): a field with exactly one finite end keeps that end and measures the other per draw, built with TASK-M8-22's legend under REQ-GEN-046; until then the built refusal stands; `rq: RQ-786` removed. *Was (verify):* \"scan the registry: every entry has inputDomains, an untransformed input recording inherits; on a wired node its domain equals the manifest [lo, hi] of its field, and a field whose range is unbounded takes (0, 1) (R-815)\"."
 - id: REQ-GEN-020
   area: GEN
   statement: "The fragment registry must be generated by scanning shaders/wgsl/frag/{colour, brightness, combiner, post, debug}, so adding a .wgsl file registers an occupant with no code edited, runtime-authored customs join the same way, and the fixed compositor passes are not scanned."
@@ -12096,6 +12181,22 @@
   - R-699
   milestone: M2
   note: "R-699, applied per R-369: the code change the ruling needs, as R-428's mark coming off was. TASK-M2-54."
+- id: REQ-GEN-046
+  area: GEN
+  statement: "An untransformed input wired to a field whose manifest range has exactly one finite end must take a domain whose finite end is that end and whose other end is the measured one, resolved per draw from the reduction that fills `u_range` (or the frozen range, R-581), as `range_norm` does (R-978, RQ-786 (b); render_gui_spec §10.1); the legend samples over it; it replaces the built refusal (`Err(Unruled)`), whose citation goes with it."
+  source:
+  - file: decisions.md
+    section: "R-978 — RQ-786, the domain an untransformed input inherits from a field with one finite end: option (b), the finite end kept and the other the measured one per draw, built with TASK-M8-22's legend; until then such a wire stays refused, as built *(closes RQ-786; amends R-815)*"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: "3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants"
+  verify:
+    method: unit test
+    detail: "cargo test -p render inherits_one_finite_end: `K_0` (`[0, ∞)`) and `V_0` (`(−∞, 0]`) wired to an untransformed input give domains with the finite end fixed and the other measured per draw, and the legend's samples span that domain on a reference draw; a frozen range is used when frozen; controls: (0, 1) given to such a wire, the refusal kept, and the measured end taken once at assembly, each fail"
+  rulings:
+  - R-815
+  - R-978
+  milestone: M8
+  note: "12 Nov 2026 (R-978); applied per R-369 (task scoping): closed by TASK-M8-22 (the generated legend), its first reader. The test's name is given here (naming)."
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -12489,6 +12590,8 @@
     detail: "per-quad uniforms carry c, h, x₀, J_D; kernel computes only x₀ + J_D·δ"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-797
 - id: REQ-SCHED-025
   area: SCHED
   statement: "In-plane pan and zoom must only change which quad addresses are asked for — the addresses themselves are fixed in the slice plane's own frame, relative to the plane anchor — slicing out of the plane, tilting and rotating must request new identities whose quads integrate fresh, the lock must change neither key, and no navigation may invalidate a cached payload; revealed quads catch up to the playhead off-loop."
@@ -12751,7 +12854,7 @@
   - R-97
   - R-100
   milestone: M5
-  note: "There is no hash seed (R-100). The frame's level-0 cell size: see the definition requirement for the slice-plane frame's scale."
+  note: "There is no hash seed (R-100). The frame's level-0 cell size: see the definition requirement for the slice-plane frame's scale. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"the GPU quad uniforms\" sharing the address convention is the retired compute-side route; it stands as its *Was* until TASK-M5-03 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-SCHED-041
   area: SCHED
   statement: "Ensemble copies must be full uniform `SimState`s at copy_index 1..E, offset to Halton (2,3) points 1..E centred and scaled to the footprint (copy_index 0 = the un-jittered nominal), must be scheduler leaves that never spawn their own ensemble, and must carry no per-sample ensemble tag."
@@ -13105,7 +13208,9 @@
   - R-599
   - R-686
   milestone: M6
-  note: "R-599 (25 Oct 2026, RQ-554 (c)): collapse is judged per axis; the switchover is unchanged; the readout's naming of the saturated axis is REQ-GUI-397 (applied per R-369). RQ-554 was (R-570's port, perf review 5624936602 of PR #279, P2): a band quad at 10⁴·ê_k, every collapsed pair along the saturated axis, switches, collapses again on the linear path and stops terminally here above the screen floor, while its other axis stays structured; whether such a quad keeps refining along the unsaturated direction is open. The terminal stop stands as written meanwhile; a ruling for RQ-554's (a) changes this requirement for band quads. *Was (statement):* \"The full decoder must switch to the linearised decoder once `quad.collapsed` is set (its adjacent samples give bitwise-identical ICs) or at depth ℓ_switch = 20 (lowering's SWITCH), whichever comes first, and sample collapse on the linearised decoder must fire AT_F32_FLOOR, a terminal stop cached as a quad fact, so the response to sample collapse keys off which decoder is active.\" *Was (verify):* \"force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full\" R-686 (4 Nov 2026): the bitwise agreement this switch reads must be tested on NVIDIA specifically: a Windows run of quad.collapsed over the same quads, compared with the other backends and posted to #390 (TASK-M6-08's notes). It blocks nothing; bitwise switchover on CI backends stays blocking (R-686, the owner's acceptance)."
+  rq:
+  - RQ-803
+  note: "R-599 (25 Oct 2026, RQ-554 (c)): collapse is judged per axis; the switchover is unchanged; the readout's naming of the saturated axis is REQ-GUI-397 (applied per R-369). RQ-554 was (R-570's port, perf review 5624936602 of PR #279, P2): a band quad at 10⁴·ê_k, every collapsed pair along the saturated axis, switches, collapses again on the linear path and stops terminally here above the screen floor, while its other axis stays structured; whether such a quad keeps refining along the unsaturated direction is open. The terminal stop stands as written meanwhile; a ruling for RQ-554's (a) changes this requirement for band quads. *Was (statement):* \"The full decoder must switch to the linearised decoder once `quad.collapsed` is set (its adjacent samples give bitwise-identical ICs) or at depth ℓ_switch = 20 (lowering's SWITCH), whichever comes first, and sample collapse on the linearised decoder must fire AT_F32_FLOOR, a terminal stop cached as a quad fact, so the response to sample collapse keys off which decoder is active.\" *Was (verify):* \"force collapse with DECODE_MODE = 1: the quad is marked terminal (AT_F32_FLOOR) and never re-queued; the same symptom with DECODE_MODE = 0 switches instead; a non-collapsed quad at depth 21 decodes linearised and at depth 15 decodes full\" R-686 (4 Nov 2026): the bitwise agreement this switch reads must be tested on NVIDIA specifically: a Windows run of quad.collapsed over the same quads, compared with the other backends and posted to #390 (TASK-M6-08's notes). It blocks nothing; bitwise switchover on CI backends stays blocking (R-686, the owner's acceptance). *12 Nov 2026 (R-926 item 5; the chart audit's F7):* the switch between GPU decoders and `AT_F32_FLOOR` read on the GPU's linear decode is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-SCHED-063
   area: SCHED
   statement: "A quad at the integration floor must be stopped there: flagged floor-limited, not re-queued as refinable, while its samples keep their real (low-confidence) outcomes rather than being terminated. The floor follows the occupant (R-563): with regularisation off, samples substep-saturated with suspect_fraction staying high, unchanged; under a regularised occupant, the stop reading saturated, set when either counted signal (the separation floor, the entry-cap hits) fires, and suspect_fraction, as for every occupant (R-603); and a footprint undetermined by its budget (budget_exhausted) must take the refinement policy's Undetermined decision, never split, never discarded and never treated as resolved, its remedy finer steps only as an explicit re-run, never an automatic one (R-603)."
@@ -15258,7 +15363,7 @@
   - R-75
   - R-113
   milestone: M2
-  note: "UV / DECODE / ROUNDTRIP are fragment presets, not kernel variants (R-75). R-113 (RQ-95): the Burrau int lattice and the Anosova physical-frame chart are a separate M4 requirement."
+  note: "UV / DECODE / ROUNDTRIP are fragment presets, not kernel variants (R-75). R-113 (RQ-95): the Burrau int lattice and the Anosova physical-frame chart are a separate M4 requirement. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"without special-casing\", read against a compute-side decode is the retired compute-side route; it stands as its *Was* until it is rewritten under R-926 (TASK-M2-25, which closed it, is built); where they differ, R-926 binds."
 - id: REQ-RENDER-028
   area: RENDER
   statement: "The diffusion validity must use the streaming slope defined by the payload ledger: the predicate n ≥ 2, with NaN for an invalid fit (R-17, R-245)."
@@ -16977,7 +17082,7 @@
   milestone: M4
   rq:
   - RQ-714
-  note: "Split from REQ-RENDER-082 by R-914 (9 Nov 2026, RQ-752 (a)): region D's GPU reference moves from TASK-M4-06 into TASK-M4-34, the edge from TASK-M4-06 to TASK-M4-34 dropped."
+  note: "Split from REQ-RENDER-082 by R-914 (9 Nov 2026, RQ-752 (a)): region D's GPU reference moves from TASK-M4-06 into TASK-M4-34, the edge from TASK-M4-06 to TASK-M4-34 dropped. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* its GPU reference read from a GPU decode of region D is the retired compute-side route; it stands as its *Was* until TASK-M4-34 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-RENDER-124
   area: RENDER
   statement: "Five table debug views must exist (R-925 item 6; R-926 item 10): the forward table by block, the forward-table check, the backwards table over its key, the route, and the distance off the chart."
@@ -17020,7 +17125,9 @@
   - R-945
   - R-947
   milestone: M7
-  note: "Added 11 Nov 2026 with TASK-M7-74 (N9 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the physics re-check of PR #482 (review 5853427038), P8; the code re-check (review 5853463481), N4; Codex's inline comment 4533257731):* the verify said the sources give no bound and cited R-926 item 7, which permits approximation during a morph only, while its subject was a chart outside a morph. Outside a morph R-935 keeps a criterion (under RQ-767 (a)): the three cases above are the physics reviewer's, each line R-935's, and nothing is chosen. The tolerances are REQ-RENDER-126's calibrations. *Was (statement):* \"Chart position and the presets must work on a chart with no closed-form shader code by the fragment's table route, the GPU side of the backwards table, never a refusal (R-925 items 1 and 2; R-926 items 7 and 8), and the route must be measured against the placement function on the CPU (R-947).\" *Was (verify):* \"cargo test -p render fragment_table_route: on a chart with no closed-form shader code, Chart position and the presets read the backwards table in the fragment and nothing is refused; the route's answer is measured against `place` on the CPU (REQ-CHART-199) and the difference reported. The sources give no bound for that difference (R-926 item 7: approximate is acceptable during a morph, which binds this route only): none is asserted and none is chosen here\""
+  rq:
+  - RQ-805
+  note: "Added 11 Nov 2026 with TASK-M7-74 (N9 of the chart re-plan (`plan/charts/m2-chart-system-replan.md`)), which closes it. *11 Nov 2026 (the physics re-check of PR #482 (review 5853427038), P8; the code re-check (review 5853463481), N4; Codex's inline comment 4533257731):* the verify said the sources give no bound and cited R-926 item 7, which permits approximation during a morph only, while its subject was a chart outside a morph. Outside a morph R-935 keeps a criterion (under RQ-767 (a)): the three cases above are the physics reviewer's, each line R-935's, and nothing is chosen. The tolerances are REQ-RENDER-126's calibrations. *Was (statement):* \"Chart position and the presets must work on a chart with no closed-form shader code by the fragment's table route, the GPU side of the backwards table, never a refusal (R-925 items 1 and 2; R-926 items 7 and 8), and the route must be measured against the placement function on the CPU (R-947).\" *Was (verify):* \"cargo test -p render fragment_table_route: on a chart with no closed-form shader code, Chart position and the presets read the backwards table in the fragment and nothing is refused; the route's answer is measured against `place` on the CPU (REQ-CHART-199) and the difference reported. The sources give no bound for that difference (R-926 item 7: approximate is acceptable during a morph, which binds this route only): none is asserted and none is chosen here\" *12 Nov 2026 (the chart audit's F23):* M-E, the fragment against `place` by depth, is TASK-M7-74's `fragment_place_depth`: PASS where arm (1) and REQ-COL-134 already assert, at depths 0 to 16, and bitwise at `s = 0` and 1; the rest reported; its quad-local arm waits on RQ-805."
 - id: REQ-RENDER-126
   area: RENDER
   kind: calibration
@@ -18135,6 +18242,8 @@
   rulings:
   - R-72
   milestone: M2
+  rq:
+  - RQ-805
 - id: REQ-COL-058
   area: COL
   kind: definition
@@ -18193,7 +18302,7 @@
   - R-358
   - R-436
   milestone: M2
-  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note). R-436: a pixel with a non-finite operand is invalid, so it is no sample of the tolerance. The tolerance is the factor times colour_composition §6's conditioning-aware scale, eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²) from the fragment decode's own (m, r), an R-72 definition written by TASK-M2-29 (RQ-623, option (b), decided by the orchestrator per R-369 and listed for the owner's veto at the M2 gate); the factor is calibrated in that scale."
+  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note). R-436: a pixel with a non-finite operand is invalid, so it is no sample of the tolerance. The tolerance is the factor times colour_composition §6's conditioning-aware scale, eps·(max(|K₀|, 1) + max(|V₀|, 1) + Σ mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²) from the fragment decode's own (m, r), an R-72 definition written by TASK-M2-29 (RQ-623, option (b), decided by the orchestrator per R-369 and listed for the owner's veto at the M2 gate); the factor is calibrated in that scale. *12 Nov 2026 (R-926 item 5; R-935 under RQ-765; the chart audit's F14):* the factor `F` (TASK-M2-29's) was measured on the old pair, the kernel's decode against the fragment's; it is re-measured on the new pair, the fragment's generated decode against the CPU's narrowed record, as a proposal, the owner's at the gate (R-71)."
 - id: REQ-COL-061
   area: COL
   kind: calibration
@@ -20650,6 +20759,9 @@
   - R-54
   - R-570
   milestone: M6
+  rq:
+  - RQ-802
+  - RQ-804
   note: "RQ-553 (a), decided per R-369 by the orchestrator on PR #279 (23 Oct 2026, not a human ruling; physics review 5624721489, P4): a saturation collapse raises no precision warning, recorded against R-54 and R-570 item 5. *Was (statement):* \"The deep-zoom precision warning must be event-driven: raised when DECODE_SWITCHOVER fires on visible quads and when AT_F32_FLOOR is hit, not by fixed depth thresholds.\" *Was (verify):* \"zoom a visible region through the switchover and to the linear floor; the warning event is raised exactly at each event and not at any fixed depth when the events do not fire (e.g. early switchover at shallow depth with tiny q)\" Fix round 3 of PR #279 (physics review 5624781454, P5; gui review 5624788928, G5 and G6; applied per R-369): the test per direction, so the bands along the axes are covered; the band arm; the genuine floor split into two cases whose controls can fail; z₀ set by SetField. *Was (statement):* \"The deep-zoom precision warning must be event-driven: raised when DECODE_SWITCHOVER fires on visible quads and when AT_F32_FLOOR is hit, not by fixed depth thresholds; and it must not be raised for a saturation collapse, a quad at which f64 J_D's columns along the view's plane are 0 while the quad's f64 sample points are distinct (RQ-553 (a), decided per R-369; R-570 item 5, W13), the genuine floor, where J_D ≠ 0, still raising it.\" *Was (verify):* \"zoom a visible region through the switchover and to the linear floor; the warning event is raised exactly at each event and not at any fixed depth when the events do not fire (e.g. early switchover at shallow depth with tiny q); saturation arm (RQ-553): on the latent chart at the decoder's default links with E* = None, a view at the home zoom centred at 10⁴·d (d's component on each coordinate the plane varies at least 0.1, as REQ-CHART-087's) raises no warning while DECODE_SWITCHOVER and AT_F32_FLOOR fire there; genuine-floor arm: a view zoomed to the linear floor at a centre where the f64 decodes are distinct and unsaturated (J_D ≠ 0) still raises it; control: an executor that suppresses the warning on identical f64 decodes (RQ-553 (a)'s old wording) drops the genuine-floor warning and fails, and one that never suppresses it warns in the saturated view and fails\" Fix round 4 of PR #279 (gui review 5624846336, G8; applied per R-369): at least one collapsed pair is required, so an ℓ_switch switchover with none still warns; arm (e). *Was (statement):* \"The deep-zoom precision warning must be event-driven: raised when DECODE_SWITCHOVER fires on visible quads and when AT_F32_FLOOR is hit, not by fixed depth thresholds; and it must not be raised for a quad every collapsed adjacent pair of which is a saturation collapse, a collapse between adjacent samples along in-plane direction k being one when f64 J_D's column along k is 0 while those two f64 sample points are distinct (RQ-553 (a), decided per R-369, per direction; R-570 item 5, W13), the genuine floor, where J_D's column along a collapsed pair's direction is non-zero or the pair's f64 sample points coincide, still raising it.\" *Was (verify):* \"zoom a visible region through the switchover and to the linear floor; the warning event is raised exactly at each event and not at any fixed depth when the events do not fire (e.g. early switchover at shallow depth with tiny q); (a) saturated arm: on the latent chart at the decoder's default links with E* = None, z₀ = 10⁴·d set by SetField at the home zoom (d's component on each coordinate the plane varies at least 0.1, as REQ-CHART-087's) raises no warning while DECODE_SWITCHOVER and AT_F32_FLOOR fire there; control: an executor that never suppresses warns there and fails; (b) band arm: on a plane containing ê_k, z₀ = 10⁴·ê_k set by SetField, a quad whose collapsed pairs all lie along ê_k (J_D's ê_k column 0, the other column non-zero, the pair's f64 sample points distinct) raises no warning, and a quad in the same view that also has a genuine-floor collapse along the other axis (pairs there bitwise identical, J_D's column along it non-zero) still warns; controls: an executor that suppresses only when every in-plane column is 0 warns on the band quad and fails, and one that suppresses when any collapsed pair is a saturation collapse drops the mixed quad's warning and fails; (c) genuine floor, case (i): an unsaturated quad at the linear floor whose adjacent f64 sample decodes are bitwise identical while f64 J_D's in-plane columns are non-zero, AT_F32_FLOOR set, still warns; control: an executor that suppresses on identical f64 decodes (RQ-553 (a)'s round-1 wording) drops it and fails; (d) genuine floor, case (ii): an unsaturated quad at the linear floor whose f64 sample points are not distinct (c ± h rounding to c), J_D's central differences reading 0, AT_F32_FLOOR set, still warns; control: an executor without the distinct-points clause drops it and fails; each arm asserts its own precondition (the collapse, J_D's columns, the points' distinctness) before its assertion, so none passes vacuously; (b) to (d) may feed the trigger synthetic quad facts\" Fix round 5 of PR #279 (gui review 5624873208, G9; applied per R-369): arm (e) may use synthetic quad facts too, as TASK-M6-21's acceptance line says; it tests the trigger's logic, which synthetic facts exercise fully, and arm (a) stays the real-engine arm. *Was (verify):* \"zoom a visible region through the switchover and to the linear floor; the warning event is raised exactly at each event and not at any fixed depth when the events do not fire (e.g. early switchover at shallow depth with tiny q); (a) saturated arm: on the latent chart at the decoder's default links with E* = None, z₀ = 10⁴·d set by SetField at the home zoom (d's component on each coordinate the plane varies at least 0.1, as REQ-CHART-087's) raises no warning while DECODE_SWITCHOVER and AT_F32_FLOOR fire there; control: an executor that never suppresses warns there and fails; (b) band arm: on a plane containing ê_k, z₀ = 10⁴·ê_k set by SetField, a quad whose collapsed pairs all lie along ê_k (J_D's ê_k column 0, the other column non-zero, the pair's f64 sample points distinct) raises no warning, and a quad in the same view that also has a genuine-floor collapse along the other axis (pairs there bitwise identical, J_D's column along it non-zero) still warns; controls: an executor that suppresses only when every in-plane column is 0 warns on the band quad and fails, and one that suppresses when any collapsed pair is a saturation collapse drops the mixed quad's warning and fails; (c) genuine floor, case (i): an unsaturated quad at the linear floor whose adjacent f64 sample decodes are bitwise identical while f64 J_D's in-plane columns are non-zero, AT_F32_FLOOR set, still warns; control: an executor that suppresses on identical f64 decodes (RQ-553 (a)'s round-1 wording) drops it and fails; (d) genuine floor, case (ii): an unsaturated quad at the linear floor whose f64 sample points are not distinct (c ± h rounding to c), J_D's central differences reading 0, AT_F32_FLOOR set, still warns; control: an executor without the distinct-points clause drops it and fails; (e) a visible quad at an unsaturated centre switching at ℓ_switch = 20 with no collapsed adjacent pair still warns; its precondition asserts that no pair collapsed; control: an executor that classifies an empty collapse record as saturated drops the warning and fails; each arm asserts its own precondition (the collapse, J_D's columns, the points' distinctness) before its assertion, so none passes vacuously; (b) to (d) may feed the trigger synthetic quad facts\""
 - id: REQ-GUI-013
   area: GUI
@@ -28228,6 +28340,86 @@
   - R-962
   milestone: M7
   note: "R-962 (11 Nov 2026, RQ-788 (a)): the map is as TASK-M7-12 built it; TASK-M7-75 drops the \"provisional pending RQ-788\" wording and renames the test from stain_fanout_margin_provisional_map_is_the_grey_ramp."
+- id: REQ-GUI-437
+  area: GUI
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the horizon map and its legend must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.8 Co-computations (tier-gated, ride the forward pass)
+  verify:
+    method: unit test
+    detail: "cargo test -p render ftle_provisional_stated: the horizon map's view and its legend carry the provisional statement from REQ-GUI-438's source; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M4
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping): closed by TASK-M4-13, the first task that puts the FTLE in a view and a legend; later views of the FTLE read the same statement. The test's name is given here (naming). *12 Nov 2026, later (code review 5875707244 of PR #503, F4; applied per R-369: task scoping):* split per surface, so each task that builds a surface showing the FTLE closes its own arm: this one keeps the horizon map and its legend (TASK-M4-13); REQ-GUI-438 the existing field views and the one source (a new task, TASK-M3-73), REQ-GUI-439 the generated legend (TASK-M8-22), REQ-GUI-440 the Trajectory panel's summary (TASK-M8-11), REQ-GUI-441 the click inspector's trust line (TASK-M8-76), REQ-GUI-442 an export's block (TASK-M8-80), REQ-VAL-356 TASK-M9-41's FTLE maps. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, every place the FTLE is shown (each view of `ftle`, the horizon map and its legend, the Trajectory panel's summary, and an export's header) must state that the shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits (R-976, RQ-794 (c)).\" *Was (verify):* \"cargo test -p render ftle_provisional_stated: every view the registry offers that reads `ftle`, the horizon map's legend and the export header carry the provisional statement, read from one source; controls: a view of `ftle` without it, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail\""
+- id: REQ-GUI-438
+  area: GUI
+  statement: "There must be one source for the statement that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, which every surface showing the FTLE reads and which falls silent once REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run; until then every field view of `ftle` already built (TASK-M1-12's finalised `ftle` and running `S/t` views, and every catalogue view that reads `ftle`) must state it (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render ftle_views_state_provisional: every catalogue view that reads `ftle` carries the statement, from the one source; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M3
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M3-73. The test's name is given here (naming)."
+- id: REQ-GUI-439
+  area: GUI
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the generated legend of a stain that reads `ftle` (a preset such as n̂ × FTLE among them) must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render legend_ftle_provisional: the legend of a stain reading `ftle` carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M8
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-22. The test's name is given here (naming)."
+- id: REQ-GUI-440
+  area: GUI
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the Trajectory panel's summary line where it shows the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui trajectory_summary_ftle_provisional: the summary's FTLE carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M8
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-11. The test's name is given here (naming)."
+- id: REQ-GUI-441
+  area: GUI
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the click inspector's trust line where it reads the FTLE estimate must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui trust_line_ftle_provisional: the trust line's FTLE-based reading carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M8
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-76. The test's name is given here (naming)."
+- id: REQ-GUI-442
+  area: GUI
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, an export's block, where the export carries the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render export_block_ftle_provisional: an export of a stain reading `ftle` carries the statement in its export block; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M8
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-80. The test's name is given here (naming)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -30230,7 +30422,7 @@
   - R-72
   - R-574
   milestone: M4
-  note: "R-574 (21 Oct 2026): the trace writes r_i(t) too, takes the nudge, and its criterion is the two marks (10⁻³, 0.1, the human's values, not R-71 calibrations). Was: \"how the survey kernel writes the dense n(t) series …, the shared times at which it is compared with the CPU f64 curve, and the criterion that reads the divergence time off the two traces\" and, in the verify, \"the divergence-time criterion (any threshold in it is a value proposed under R-71 at the M4 gate); REQ-TOOL-040 and REQ-VAL-106 use it\". Fix round 9 of PR #283 (perf review 5627960807, P1; applied per R-369): the trace's dispatch is bounded in chunks that carry state, with a test; TASK-M4-16 names perf. Fix round 10 of PR #283 (perf review 5628071919, Q2; applied per R-369): trace_chunked asserts each dispatch is within the chunk planner's bound and the count is ⌈steps / bound⌉; a fixed two-way split fails."
+  note: "R-574 (21 Oct 2026): the trace writes r_i(t) too, takes the nudge, and its criterion is the two marks (10⁻³, 0.1, the human's values, not R-71 calibrations). Was: \"how the survey kernel writes the dense n(t) series …, the shared times at which it is compared with the CPU f64 curve, and the criterion that reads the divergence time off the two traces\" and, in the verify, \"the divergence-time criterion (any threshold in it is a value proposed under R-71 at the M4 gate); REQ-TOOL-040 and REQ-VAL-106 use it\". Fix round 9 of PR #283 (perf review 5627960807, P1; applied per R-369): the trace's dispatch is bounded in chunks that carry state, with a test; TASK-M4-16 names perf. Fix round 10 of PR #283 (perf review 5628071919, Q2; applied per R-369): trace_chunked asserts each dispatch is within the chunk planner's bound and the count is ⌈steps / bound⌉; a fixed two-way split fails. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"after its own decode\" is the retired compute-side route; it stands as its *Was* until TASK-M4-16 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-TOOL-128
   area: TOOL
   kind: definition
@@ -30808,7 +31000,9 @@
   - R-90
   - R-395
   milestone: M5
-  note: "R-395, the second half of REQ-TOOL-019's \"no banding\" (RQ-242), split per the human's \"M5/M6\": this requirement is the per-quad local path, kernel and fragment, and REQ-TOOL-159 the routing of every quad past ℓ_switch onto it (DECODE_MODE, REQ-DEC-037, TASK-M6-08). Closed by TASK-M5-04, which owns the per-quad uniforms, the quad-local sample positions and REQ-DEC-031's depth-30 gate, and with them the UV preset's per-quad uniforms (REQ-TOOL-019's note) (applied per R-369); TASK-M6-07's linearised decoder consumes δ."
+  rq:
+  - RQ-797
+  note: "R-395, the second half of REQ-TOOL-019's \"no banding\" (RQ-242), split per the human's \"M5/M6\": this requirement is the per-quad local path, kernel and fragment, and REQ-TOOL-159 the routing of every quad past ℓ_switch onto it (DECODE_MODE, REQ-DEC-037, TASK-M6-08). Closed by TASK-M5-04, which owns the per-quad uniforms, the quad-local sample positions and REQ-DEC-031's depth-30 gate, and with them the UV preset's per-quad uniforms (REQ-TOOL-019's note) (applied per R-369); TASK-M6-07's linearised decoder consumes δ. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* the per-quad local coordinates \"in the kernel\" is the retired compute-side route; it stands as its *Was* until TASK-M5-04 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-TOOL-159
   area: TOOL
   statement: "Every quad deeper than the deep-zoom switchover ℓ_switch (R-90) must take the per-quad local path of REQ-TOOL-158 (DECODE_MODE = LIN, REQ-DEC-037), so that no quad past ℓ_switch has its sample positions formed as an absolute f32 u (R-395)."
@@ -30831,7 +31025,7 @@
   - R-395
   - R-632
   milestone: M6
-  note: "R-395, the routing half of REQ-TOOL-019's second half (the human's \"M5/M6\"); REQ-TOOL-158 is the path itself. Closed by TASK-M6-08, which builds DECODE_MODE's switchover (REQ-DEC-037) (applied per R-369). R-632 (27 Oct 2026, RQ-578): the fixtures' quads at depths 21 and 30 with distinct adjacent ICs use coordinates where the measured f32 floor (REQ-DEC-051, quoted with |x₀|) admits depth 30."
+  note: "R-395, the routing half of REQ-TOOL-019's second half (the human's \"M5/M6\"); REQ-TOOL-158 is the path itself. Closed by TASK-M6-08, which builds DECODE_MODE's switchover (REQ-DEC-037) (applied per R-369). R-632 (27 Oct 2026, RQ-578): the fixtures' quads at depths 21 and 30 with distinct adjacent ICs use coordinates where the measured f32 floor (REQ-DEC-051, quoted with |x₀|) admits depth 30. *12 Nov 2026 (R-926 item 5; the chart audit's F7):* the routing \"DECODE_MODE = LIN\" to a GPU linear decode is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-TOOL-160
   area: TOOL
   kind: calibration
@@ -31133,6 +31327,7 @@
   milestone: M7
   rq:
   - RQ-755
+  - RQ-801
   note: "R-483 X4's per-link arm; R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026); no longer waits. The writing side is REQ-TOOL-186. Physics review is required (⚑): which records recreate. *Was:* \"A record whose link's registry entry content differs from the writer's must be refused as \\\"state present, cannot recreate\\\", naming exactly the changed link.\", the verify's \"a record whose recorded entry hash for the masses differs from the build's is refused naming the masses' link; control: an unchanged entry recreates\", and \"waits on RQ-385 (meanwhile the schema-version refusal of REQ-TOOL-171, 20 Oct 2026).\" Physics review P2 of PR #265 (applied per R-369): an entry's hash also covers the registry constants its decode reaches (tanh_sat, ε_M01, δ_λ, ε_w; dd_generation_root §3.9), the recreate arm names a payload-only ledger change, and a control refuses a tanh_sat or δ_λ change. *Was:* the verify's \"(an unrelated ledger entry changed)\" and its controls without the constants' arm. Physics review P6 and P7 of PR #265 (applied per R-369): δ_λ and ε_w go into every entry as a conservative choice (δ_λ is read only by dd_decoder §3.3, ε_w only by §3.4), the refusal names the constants as well as the link, and the verify gains the constants' scope arms (ε_M01, ε_w, tanh_sat) and their controls; added, nothing removed. Physics review P8 and P9 of PR #265 (applied per R-369): when all four blocks mismatch, the refusal leads with the constants all four hashes cover, computed from the record's links (tanh_sat too when every link is tanh-bearing), and the verify gains the lead's arms and controls; added, nothing removed. R-919 (RQ-754 Q1 (c), 9 Nov 2026) and physics review 5834538186 of PR #465 (applied per R-369): latent β takes one periodic link, and tanh_beta stays only as a conversion source, not selectable. The verify's all-tanh arm (stick_breaking masses, tanh_alpha, tanh_beta, tanh_q) keeps tanh_beta, read as the β link of a record written before TASK-M2-57 merged, the kind of old record this requirement exists to refuse correctly, checked against the conversion source's entry, which the registry keeps with its forward map and so with its hash. That reading tests what the arm always tested, the refusal's lead computed from the record's links with tanh_sat in it when all four are tanh-bearing. The other reading, the periodic link in tanh_beta's place, would test the same thing only if that link is tanh-bearing, which TASK-M2-57 has not yet defined, so it is not taken. RQ-755 (9 Nov 2026): whether such a record, every hash matching, recreates through the conversion source or is refused is open; the recreate side for it waits on RQ-755. R-921 (10 Nov 2026, closes RQ-755): the owner's option (c). Records store latent coordinates only (dd_image_embedding §6, tier 1; gui_state_contract §2), so a record made under a retired β link recreates by decoding its stored latent coordinates through that exact link, bitwise, with no conversion on recreation; conversion into the periodic β happens only when it is opened as an editable view (R-919 Q3 (a)). The recreate side no longer waits; the statement gains its last sentence and the verify the retired-link recreate arm, nothing removed. *Was:* the statement and verify without them. Physics review 5836519618 of PR #469, P1 and P2 (applied per R-369: the pre-M2-57 fixture): the record writer is built in M7, after TASK-M2-57, so the retired-link arm's expected bits are a fixture captured from a pre-TASK-M2-57 build, fixtures/retired_beta_links/pre_m2_57.json, written on TASK-M2-57's baseline commit: for each of sigmoid_beta, tanh_beta and softsign_beta, the latent coordinates, the four blocks' links and each decoded starting state as bits, with pixels where converting z_β to the periodic link changes at least one bit, so the retained forward maps are not checked against themselves and the converting reader's control cannot pass trivially; TASK-M7-45 depends on TASK-M2-57 for it; added, nothing removed. *Was:* the verify's \"the retired-link recreate arm (R-921): a record made before TASK-M2-57, its β link\", \"equal bit for bit to the state the writing build decoded,\" and \"fails the bitwise arm\". Physics review 5836599062 of PR #469, P3 (applied per R-369: the fixture's bounded search): TASK-M2-57's search for pixels where conversion changes a bit has a fixed budget (257 pixels per link, one extension to 4097); a link with none within it is reported to the owner and its converting-reader control marked not exercisable, never looped on; every bit of the fixture, a rewrite included, comes from the baseline commit's decoder. *Was:* the verify's \"which TASK-M2-57's baseline commit writes through the decoder before any link changes:\" and \"(at least one per retired link, checked by TASK-M2-57)\"."
 - id: REQ-TOOL-173
   area: TOOL
@@ -32125,7 +32320,7 @@
   note: "Closed by TASK-M3-27, RQ-681 (a). It scores external targets, so its own test uses synthetic ones. PL-8a is internal and blocking (principia_dd_replication.md § 12.1), so it runs under burrau-smoke, whose outcome blocks (R-794, applied per R-369; physics review 5805354224 of PR #430, F4). *Was:* \"Its first target is PL-8a.\""
 - id: REQ-TOOL-223
   area: TOOL
-  statement: "A failure of `ci-release`, a shard or its archive, must fail the run it is in and never be read by eye (R-809): it runs on each merge to `main`, off the pull request's path, a job of the per-merge run conditional on nothing but the event not being a pull request, with no `continue-on-error` on its build or test steps, so its failure is a failed run on `main`, a correctness failure and so a red `main` (R-681, as R-907 reads it); no pull-request check gathers it (R-907, R-908, R-909)."
+  statement: "A failure of `ci-release`, a shard or its archive, must fail the run it is in and never be read by eye (R-809): it runs on each merge to `main`, off the pull request's path, a job of the per-merge run conditional on nothing but the event not being a pull request, with no `continue-on-error` on its build or test steps, so its failure is a failed run on `main`, a correctness failure and so a red `main` (R-681, as R-907 reads it), but for a failure confined to the install step's network or archive download, which counts as infrastructure and reads \"no result\", never green (R-979; REQ-TOOL-228); no pull-request check gathers it (R-907, R-908, R-909)."
   source:
   - file: decisions.md
     section: "R-809 — `ci-gate` gathers `ci-release`: reading that job by eye before each merge is vetoed *(vetoes D-11 of the report of 5 Nov 2026)*"
@@ -32135,6 +32330,8 @@
     section: "R-908 — CI: decide and act: pull-request feedback in under 30 minutes and merge-ready to merge in under an hour; the required checks become build, fmt, Clippy, the product test suite, a lavapipe GPU smoke set and reviews; process tests move off the pull-request path, or are retired where history shows high cost and no product catch, each in its own commit; mutation, in-depth GPU tests and the slow tier leave the pull-request path; product-correctness tests are never retired *(amends R-196, R-202, R-302, R-305, R-376, R-678, R-683, R-684, R-904, R-905 and R-907)*"
   - file: decisions.md
     section: "R-909 — The CI model is approved: a required pull-request tier under 30 minutes, an advisory tier on each merge to `main`, and a nightly and Windows background; the golden runner over every suite and the screenshot runner's self-test are product correctness, run per merge and never retired; the 17 retirement candidates are retired, one commit each; branch protection stays the owner's, who changes it from an exact old-to-new list *(amends R-677, R-683, R-684, R-904, R-905, R-907 and R-908)*"
+  - file: decisions.md
+    section: "R-979 — RQ-789: option (a), REQ-TOOL-223 amended: only the release-build install step's network and archive-download failures count as infrastructure, and their verdict is \"no result\", never green; any other release-build failure stays red *(closes RQ-789)*"
   verify:
     method: unit test
     detail: "cargo test -p xtask --test qa_TASK-M2-49 --test qa_tooling_pr_tier: `ci-release-archive` runs on every push to `main` under `github.event_name != 'pull_request'` alone (qa_m249_release_job_on_every_push, qa_pr_tier_mutants_are_off_the_pr_path) and `ci-release` runs that archive (qa_m249_release_archive_is_run); controls: the archive job conditioned on another expression, and the shards running another archive, each fail"
@@ -32143,11 +32340,12 @@
   - R-907
   - R-908
   - R-909
+  - R-979
   milestone: M0
-  note: "Closed by TASK-M0-54. Replaces the read by eye of D-11 in the report of 5 Nov 2026. R-907 to R-909 (8 and 9 Nov 2026), applied per R-369 as their mechanical consequence: the required check `ci` is now the pull-request tier's product tests and `ci-gate` is gone with the quick and full tiers; the release-profile run moved to each merge to `main`, where its own failed job fails the run, so R-809's aim, that a release failure is never read by eye, holds without a gathering check. *Was (statement):* \"The required check `ci` must gather `ci-release`: a `ci-release` shard that fails, or that skips on a change that isn't docs or data, must fail the check, and a skip on a docs or data change must pass it (R-809).\" *Was (verify):* \"cargo test -p xtask ci_gate_gathers_release: `ci-gate`'s `needs` holds `ci-release`, and over the gate's modelled results a failed shard fails, a skip with a failed `ci-release-archive` fails, a pass passes, and a skip on a docs or data head passes; controls: `ci-release` left out of `needs`, and a skip passed on a code head, each fail\"."
+  note: "Closed by TASK-M0-54. Replaces the read by eye of D-11 in the report of 5 Nov 2026. R-907 to R-909 (8 and 9 Nov 2026), applied per R-369 as their mechanical consequence: the required check `ci` is now the pull-request tier's product tests and `ci-gate` is gone with the quick and full tiers; the release-profile run moved to each merge to `main`, where its own failed job fails the run, so R-809's aim, that a release failure is never read by eye, holds without a gathering check. *Was (statement):* \"The required check `ci` must gather `ci-release`: a `ci-release` shard that fails, or that skips on a change that isn't docs or data, must fail the check, and a skip on a docs or data change must pass it (R-809).\" *Was (verify):* \"cargo test -p xtask ci_gate_gathers_release: `ci-gate`'s `needs` holds `ci-release`, and over the gate's modelled results a failed shard fails, a skip with a failed `ci-release-archive` fails, a pass passes, and a skip on a docs or data head passes; controls: `ci-release` left out of `needs`, and a skip passed on a code head, each fail\". 12 Nov 2026 (R-979, RQ-789 (a)): the install step's network and archive-download failures read \"no result\", never green; any other release-build failure stays red; built by TASK-M0-59 under REQ-TOOL-228. *Was (statement, the clause):* \"so its failure is a failed run on `main`, a correctness failure and so a red `main` (R-681, as R-907 reads it);\"."
 - id: REQ-TOOL-224
   area: TOOL
-  statement: "From the anchor move, the Windows runner's jobs on `main` must each be a named job reporting under its own name, never a required check: the GPU suites, Vulkan, nightly and on pushes to `main`; the nightly Windows build and tests, `win-tests`; gpu-idle, the read-only GPU sample, by `workflow_dispatch`; and the weekly proof; the runner's security rules unchanged (R-859, R-860, R-711). From the per-merge Windows move (R-905, R-907, R-909), the runner's per-merge jobs on `main` are read: a correctness failure there is a red `main` (R-681), any other failure files a task; its nightly and background jobs' failures file tasks and never block (R-909 § 3); until the per-merge suite moves to Windows, the per-merge tier runs on GitHub-hosted runners."
+  statement: "From the anchor move, the Windows runner's jobs on `main` must each be a named job reporting under its own name, never a required check: the GPU suites, Vulkan, nightly and on pushes to `main`; the nightly Windows build and tests, `win-tests`; gpu-idle, the read-only GPU sample, by `workflow_dispatch`; and the weekly proof; the runner's security rules unchanged (R-859, R-860, R-711). From the per-merge Windows move (R-905, R-907, R-909), the runner's per-merge jobs on `main` are jobs of the per-merge run: any failed one is a red `main` (R-681, R-982), but for R-979's install-step \"no result\"; its nightly and background jobs' failures file tasks and never block (R-909 § 3); until the per-merge suite moves to Windows, the per-merge tier runs on GitHub-hosted runners."
   source:
   - file: decisions.md
     section: "R-859 — From the anchor move, the Windows runner may run, as named measurements and never as required checks: the GPU suites (Vulkan now, DX12 from Phase 2) nightly and on pushes to `main`, gpu-idle, the weekly proof and the 7 Nov heavy-work comparison; benchmarks of record stay on the Mac, Windows numbers a separate named series; moving required or heavy CI work to the PC is not approved and returns through `/rulings-report`; the runner's security rules are unchanged *(refines R-186, R-656 and R-711)*"
@@ -32155,6 +32353,8 @@
     section: "R-860 — R-859's list of what the Windows runner may run is not exhaustive: the nightly `win-tests` job and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, never required checks *(closes RQ-742; refines R-859)*"
   - file: decisions.md
     section: "R-909 — The CI model is approved: a required pull-request tier under 30 minutes, an advisory tier on each merge to `main`, and a nightly and Windows background; the golden runner over every suite and the screenshot runner's self-test are product correctness, run per merge and never retired; the 17 retirement candidates are retired, one commit each; branch protection stays the owner's, who changes it from an exact old-to-new list *(amends R-677, R-683, R-684, R-904, R-905, R-907 and R-908)*"
+  - file: decisions.md
+    section: "R-982 — Any red job on `main` is a red `main`; the per-merge verdict covers every job of the per-merge run, so the verdict and the run's jobs cannot disagree *(vetoes D-2 of the report of 12 Nov 2026; amends R-907 and R-908; refines R-681)*"
   verify:
     method: unit test
     detail: "cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_are_named_measurements, every self-hosted job across the workflows being one of the listed measurements, each named, and each listed one present, with the existing trigger, pin, guard, credential and not-gathered checks holding for the gpu-idle job; controls: an unlisted self-hosted job fails (the per-merge in-diff mutants, slow-tier and in-depth GPU jobs join the list when R-909's step (5) builds them), a listed job removed fails, and the gpu-idle job under a push trigger fails"
@@ -32164,8 +32364,9 @@
   - R-905
   - R-907
   - R-909
+  - R-982
   milestone: M0
-  note: "Closed by TASK-M0-55. RQ-742 answered by R-860: `win-tests` stays and is on the list. DX12's job is REQ-TOOL-226's, after the DX12 opt-in (R-862). R-909 (9 Nov 2026, applied per R-369 as a mechanical consequence of R-905, R-907 and R-909): the runner's per-merge jobs are read, a correctness failure there a red `main`, its nightly jobs filing tasks and never blocking (R-909 § 3, code and physics reviews of PR #455); the job list and the control are rebuilt by the per-merge Windows pull request (R-909's step (5)). *Was (statement, the clause):* \"must each be a named measurement reporting under its own name, never a required check and never gathered or read by any gate:\"; *was (verify, the clause):* \"controls: an unlisted self-hosted job (a mutants job) fails,\"."
+  note: "Closed by TASK-M0-55. RQ-742 answered by R-860: `win-tests` stays and is on the list. DX12's job is REQ-TOOL-226's, after the DX12 opt-in (R-862). R-909 (9 Nov 2026, applied per R-369 as a mechanical consequence of R-905, R-907 and R-909): the runner's per-merge jobs are read, a correctness failure there a red `main`, its nightly jobs filing tasks and never blocking (R-909 § 3, code and physics reviews of PR #455); the job list and the control are rebuilt by the per-merge Windows pull request (R-909's step (5)). *Was (statement, the clause):* \"must each be a named measurement reporting under its own name, never a required check and never gathered or read by any gate:\"; *was (verify, the clause):* \"controls: an unlisted self-hosted job (a mutants job) fails,\". 12 Nov 2026 (R-982, D-2 vetoed): any red job of the per-merge run is a red `main`. *Was (statement, the clause):* \"the runner's per-merge jobs on `main` are read: a correctness failure there is a red `main` (R-681), any other failure files a task;\"."
 - id: REQ-TOOL-225
   area: TOOL
   statement: "The heavy-work comparison must run, at one commit of one task branch after the anchor move, the GPU suites, codegen_selftest_pack_unpack_kernel_gpu among them, and one mutant shard holding projection_parity.rs or drift.rs, on the Windows runner and on hosted runners, and report each side's wall time and whether the results are identical: the same test outcomes, and the same caught, missed, unviable and timed-out mutant sets, mutant for mutant; against a criterion committed before the first run and never adjusted after (R-649, R-812); its result and the fallback design going to the next /rulings-report as the one-way question of moving required work, and nothing required moving (R-859)."
@@ -32218,6 +32419,82 @@
   - R-929
   milestone: M3
   note: "R-928 (RQ-637 (b)) and R-929 (RQ-638 (a)), 10 Nov 2026. Closed by TASK-M3-70; until it merges the band is TASK-M3-05's, relative to the reference with k = 128, in the three drift debug views only."
+- id: REQ-TOOL-228
+  area: TOOL
+  statement: "The per-merge verdict (`ci_per_merge.py`) must cover every job of `ci.yml`'s per-merge run on `main`: any failed job makes it red, a red `main` (R-982, D-2 of the report of 12 Nov 2026 vetoed), so the verdict and the run's jobs cannot disagree; the one exception is a failure confined to an install step's network or archive download, in any job, which reads \"no result\", never green (R-979), and holds as red does under R-681; a job with any other failure beside it is red."
+  source:
+  - file: decisions.md
+    section: "R-982 — Any red job on `main` is a red `main`; the per-merge verdict covers every job of the per-merge run, so the verdict and the run's jobs cannot disagree *(vetoes D-2 of the report of 12 Nov 2026; amends R-907 and R-908; refines R-681)*"
+  - file: decisions.md
+    section: "R-979 — RQ-789: option (a), REQ-TOOL-223 amended: only the release-build install step's network and archive-download failures count as infrastructure, and their verdict is \"no result\", never green; any other release-build failure stays red *(closes RQ-789)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_per_merge_verdict: over saved and synthetic job lists, a failed process, lint, `cargo xtask ci` or web-skeleton job reads red; a failure confined to an install step's network or archive fetch reads \"no result\" in any job, and never green; that failure beside any other failure reads red; all jobs passing reads green; controls: a process-only failure read as green, an install-step outage read as green, and an install-step outage hiding a test failure read as \"no result\", each fail"
+  rulings:
+  - R-979
+  - R-982
+  milestone: M0
+  note: "12 Nov 2026 (R-979, R-982); applied per R-369 (task scoping): one requirement and one task, TASK-M0-59, since both change the per-merge verdict. The test's name is given here (naming)."
+- id: REQ-TOOL-229
+  area: TOOL
+  statement: "A pull request whose only code-tier path is `plan/requirements.yaml` must run on the pull request only the tests that read that file, the tooling's and the product crates' alike, each one that reads it established by the change; every other product test runs in the per-merge run on every merge (R-980, RQ-790 (a); refines R-677)."
+  source:
+  - file: decisions.md
+    section: "R-980 — RQ-790: option (a), a `plan/requirements.yaml`-only change runs on the pull request only the tests that read that file, the tooling's and the product crates' alike; the per-merge run still runs the rest on every merge *(closes RQ-790; refines R-677)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_requirements_only: on a head changing only `plan/requirements.yaml` the selection holds every test that reads the file (the xtask readers and each crate test that reads it, listed by a scan) and no other product test, and the per-merge run's selection holds them all; controls: a reader left out of the pull request's selection, and a product test left out of the per-merge run, each fail"
+  rulings:
+  - R-677
+  - R-980
+  milestone: M0
+  note: "12 Nov 2026 (R-980); applied per R-369 (task scoping): closed by TASK-M0-60. The test's name is given here (naming)."
+- id: REQ-TOOL-230
+  area: TOOL
+  statement: "`win-gpu.yml`'s `win-vulkan`, the GPU suites' 85-minute run on R-711's runner, must run on pushes to `main` (merges), the schedule and `workflow_dispatch` only, never on a push to any other branch, and its concurrency group, the job's own, must cancel an older run in progress when a newer one starts, on `main` too (`cancel-in-progress: true`); every other job on the runner keeps `cancel-in-progress: false` (R-986; amends R-656's \"never a run on `main`\" for this job)."
+  source:
+  - file: decisions.md
+    section: "R-986 — The 85-minute run on the Windows PC, `win-vulkan`, runs on merges to `main`, nightly and by dispatch only, never on a branch push, and a newer run of it cancels an older one, on `main` too *(the owner's goal of 12 Nov 2026 for the Windows runner; amends R-656 for this job; read with R-711, R-859, R-946 and R-970)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_have_the_shape_the_runner_needs, `win-vulkan`'s `cancel-in-progress` true and every other self-hosted job's false, and self_hosted_jobs_have_only_the_three_triggers, `win-gpu.yml`'s push trigger limited to `main`; controls: `win-vulkan` with `cancel-in-progress: false` fails (the `cancels` control flipped), another self-hosted job with `cancel-in-progress: true` fails, and a push trigger naming a branch besides `main` fails"
+  rulings:
+  - R-986
+  milestone: M0
+  note: "12 Nov 2026 (R-986, the owner's ruling); closed by TASK-M0-61. The triggers are already as R-986 says; the change is the job's concurrency and the control that pinned it false. The test names are the existing ones (naming)."
+- id: REQ-TOOL-231
+  area: TOOL
+  statement: "A hosted job, `win-retry`, in a workflow of its own, must re-run once, automatically, a job of `win-gpu.yml` or `runner-proof.yml` on R-711's runner that stopped on a runner-level fault (the runner lost, offline or shut down mid-job, its communication with GitHub lost, its process killed from outside), the classifier a script tested on saved logs; it must start by `workflow_run` on those two workflows only, never under a `pull_request` or `pull_request_target` trigger; it must re-run only a run whose event is a push to `main`, the schedule or `workflow_dispatch`, at its first attempt, and only while no newer run of that job has started; it must never re-run a job that failed a test or a step on its own output, a flake, a job cancelled by its time limit (REQ-TOOL-232), one cancelled by a newer run (R-986) or one no runner took; its run summary must log every unclear stop and every hang it sees, with the run, the job, the step where it applies, the signature and the re-run's id, the first attempt's record kept and the re-run marked as one; it gathers nothing and gates nothing, and no other workflow follows the runner's workflows (R-988, R-714, R-859)."
+  source:
+  - file: decisions.md
+    section: "R-988 — A job on the Windows PC that stops unclearly is re-run once, automatically, by a hosted job; a hung one ends at a time limit of 1.5 times its measured time; both are logged *(the owner's goal of 12 Nov 2026, item 5; amends R-859's security rules, the owner's job rules of 5 Nov 2026, for this re-run; extends R-714; refines R-970; read with R-711 and R-968)*"
+  - file: decisions.md
+    section: "R-714 — A failed CI job is retried automatically only on a runner-level fault, in at most two retries, never on a real test failure or a flake, the classifier a script tested on saved logs; every CI speed-up step reports disk use and must reduce or hold it; lands in `plan/OPERATIONS.md` § \"Merging\""
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_win_retry: over saved logs, a runner lost mid-job and a runner shut down mid-job re-run once, and a test failure, a step's time limit, a job's time limit, a run cancelled by a newer one, a job no runner took and a second attempt re-run nothing, each decision logged; the workflow's only trigger is `workflow_run` on `win-gpu` and `runner-proof`, its job hosted; and cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_are_never_required_or_gathered admits `win-retry` as the one reader of the runner's workflows; controls: a `pull_request` trigger added to `win-retry`, a test failure re-run, a hang re-run, a cancelled run re-run, a second attempt re-run, a re-run while a newer run has started, and `retry.yml` following `win-gpu.yml`, each fail"
+  rulings:
+  - R-714
+  - R-859
+  - R-988
+  milestone: M0
+  note: "12 Nov 2026 (R-988, the owner's item 5, a reading to confirm: their words contradict the job rules' \"No job here is gathered, retried or read by any gate\"); closed by TASK-M0-61. Applied per R-369: a hosted job of its own rather than a line in `retry.yml`; the test and workflow names (naming)."
+- id: REQ-TOOL-232
+  area: TOOL
+  statement: "Every job on R-711's runner, and every step of one that builds or runs tests, must carry a time limit (`timeout-minutes`) of 1.5 times its measured time, rounded up to a whole minute, the measured time the slowest of its recorded completed runs on the PC (the last five, or all if fewer), committed with their run ids before the limit is set and never adjusted after seeing a result (R-649); a job or step with no completed run on record keeps its present limit until it has one; a job or step reaching its limit is cancelled, logged by `win-retry` (REQ-TOOL-231) and not re-run (R-988, R-970)."
+  source:
+  - file: decisions.md
+    section: "R-988 — A job on the Windows PC that stops unclearly is re-run once, automatically, by a hosted job; a hung one ends at a time limit of 1.5 times its measured time; both are logged *(the owner's goal of 12 Nov 2026, item 5; amends R-859's security rules, the owner's job rules of 5 Nov 2026, for this re-run; extends R-714; refines R-970; read with R-711 and R-968)*"
+  - file: decisions.md
+    section: "R-970 — A CI run clearly hung or stuck because of a bug is caught and cancelled, on `main` too; every other run on `main` is still never cancelled *(amends R-656)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_self_hosted: self_hosted_jobs_have_time_limits, every self-hosted job and every build or test step of one carrying `timeout-minutes` equal to the ceiling of 1.5 times its measured time in the committed table, or its present limit where the table records no completed run; controls: a limit above 1.5 times the measured time, one below it, a build or test step with no limit, and a job missing from the table, each fail"
+  rulings:
+  - R-970
+  - R-988
+  milestone: M0
+  note: "12 Nov 2026 (R-988); closed by TASK-M0-61. Applied per R-369 (CI timing, written before any limit is set): the multiplier 1.5 and the slowest of the last five completed runs; the table's form and the test's name (naming)."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -32501,7 +32778,7 @@
   milestone: M2
   rq:
   - RQ-715
-  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): branch inputs are built only from operations every IEEE backend rounds alike, with no subnormal intermediate; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration). TASK-M2-24 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-48, which re-proves test 12 with the rewritten M₀₁ (applied per R-369). *Was:* \"R-34 extends explicit fma to every multi-op branch input\" and the verify's \"feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs\" (stale value, replaced by R-547). Fix round 1 of PR #274 (qa Q5, applied per R-369). *Was (verify):* \"decoder test 12: fuzz z on all backends (Metal and lavapipe beside the CPU); continuous outputs within f32-eps-scaled tolerance; branch tags bitwise equal; every branch input formed as dd_decoder §2's enumerated table gives it, each built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), feasibility K* ≥ L_z²/2 among them\". RQ-621, decided by the orchestrator per R-369 (a test decision, option (a), 30 Oct 2026, TASK-M2-48): test 12's inputs gain TASK-M2-02's onset crossings and the emulations gain \"contracted (fused)\". *Was (verify):* \"control: on the same fuzzed inputs the superseded forms (the explicit fma(m₁, 1, m₀), a plain float subtract or compare), evaluated on the CPU under an unfused or flush-to-zero emulation, give a different tag from the unflushed CPU on at least one input\"."
+  note: "R-34, corrected by R-547 (RQ-298 (a), 21 Oct 2026): branch inputs are built only from operations every IEEE backend rounds alike, with no subnormal intermediate; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration). TASK-M2-24 merged with this requirement held (rq: RQ-298); it moves to TASK-M2-48, which re-proves test 12 with the rewritten M₀₁ (applied per R-369). *Was:* \"R-34 extends explicit fma to every multi-op branch input\" and the verify's \"feasibility K* ≥ L_z²/2 formed with explicit fma per the enumerated branch inputs\" (stale value, replaced by R-547). Fix round 1 of PR #274 (qa Q5, applied per R-369). *Was (verify):* \"decoder test 12: fuzz z on all backends (Metal and lavapipe beside the CPU); continuous outputs within f32-eps-scaled tolerance; branch tags bitwise equal; every branch input formed as dd_decoder §2's enumerated table gives it, each built only from operations every IEEE backend rounds alike, with no intermediate that can be subnormal (R-547), feasibility K* ≥ L_z²/2 among them\". RQ-621, decided by the orchestrator per R-369 (a test decision, option (a), 30 Oct 2026, TASK-M2-48): test 12's inputs gain TASK-M2-02's onset crossings and the emulations gain \"contracted (fused)\". *Was (verify):* \"control: on the same fuzzed inputs the superseded forms (the explicit fma(m₁, 1, m₀), a plain float subtract or compare), evaluated on the CPU under an unfused or flush-to-zero emulation, give a different tag from the unflushed CPU on at least one input\". *12 Nov 2026 (R-926 item 5; the chart audit's F14):* re-scoped to the fragment's generated code against the CPU record (R-935 under RQ-765); the compute side decodes nothing."
 - id: REQ-VAL-018
   area: VAL
   statement: "z = 0 must decode to the canonical golden IC — masses (⅓,⅓,⅓), α = π/4, β = π/2, rest (q = 0), I = 1 — with every derived value asserted in f64 and f32."
@@ -32883,19 +33160,22 @@
   note: "The acceptance threshold: REQ-PAY-083 (calibration)."
 - id: REQ-VAL-038
   area: VAL
-  statement: "The displacement-vs-absolute f32 shadow choice must be tested against known-Lyapunov periodic orbits, switching to displacement only if FTLE accuracy meaningfully improves."
+  statement: "The displacement-vs-absolute f32 shadow choice must be tested against known-Lyapunov periodic orbits, switching to displacement only if FTLE accuracy meaningfully improves. The displacement form is R-974's (RQ-793 (a)): a joint step on the occupant interface, its force difference formed plainly in f32 (a1) or cancellation-free (a2) as a measurement pre-registered in the task's file chooses (R-649)."
   source:
   - file: docs/design/principia_dd_simstate_payload.md
     section: 8. Build-time settles (measure / specify once running)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-974 — RQ-793, the displacement form of the FTLE shadow: option (a), a joint step on the occupant interface; whether the force difference is formed plainly in f32 (a1) or cancellation-free (a2) is chosen by a measurement whose criterion TASK-M3-72 writes before any run, physics-reviewed *(closes RQ-793)*"
   verify:
     method: numerical gate
-    detail: "FTLE error vs the known exponent for both shadow forms on the periodic-orbit set"
+    detail: "FTLE error vs the known exponent for both shadow forms on the periodic-orbit set; the (a1)/(a2) choice made by the measurement whose criterion the task file states before any run, physics-reviewed (R-974)"
   rulings:
   - R-71
+  - R-974
   milestone: M3
-  note: "'Meaningfully': REQ-PAY-085 (calibration)."
+  note: "'Meaningfully': REQ-PAY-085 (calibration). 12 Nov 2026, applied per R-369 (task re-scoping, physics review 5866988394 of PR #493): closed by TASK-M3-72 (was TASK-M3-14), which waits on RQ-793, the displacement form's definition (R-72). 12 Nov 2026 (R-974, RQ-793 (a)): the form is ruled and TASK-M3-72 no longer waits; `rq: RQ-793` removed. *Was (statement):* the first sentence alone. *Was (verify):* \"FTLE error vs the known exponent for both shadow forms on the periodic-orbit set\"."
 - id: REQ-VAL-039
   area: VAL
   statement: "The `sim_failed`/`decode_failed` detail codes must be confirmed against the integrator contract's failure enumeration once finalised."
@@ -33876,6 +34156,8 @@
     detail: measure weight equals |det J_D| for the quad; computed once
   rulings: []
   milestone: M6
+  rq:
+  - RQ-800
 - id: REQ-VAL-095
   area: VAL
   statement: "Whether symbolic spread is additive to outcome impurity must be measured once built and the result recorded."
@@ -41272,6 +41554,38 @@
   - R-916
   milestone: M2
   note: "Closed by TASK-M2-79. R-669 had not built it. R-916 (9 Nov 2026): moved from M8 to M2, closed by TASK-M2-79."
+- id: REQ-VAL-355
+  area: VAL
+  kind: definition
+  statement: "How R-974's joint step keeps the sample and its FTLE shadow at the same physical time under an occupant that owns its time mapping (Heggie × RK4, the default, `dτ = S^{3/2}/(R₁R₂R₃) dt`, integrator contract Part 2b, R-161; logH alike) must be defined (R-72) in `principia_dd_integrator.md` §3.8 by the task that builds the joint step and reviewed by the physics reviewer before merge: stepped by one `Δτ`, the two move by different `Δt`, and `δ⃗` gains a component along the flow that breaks the finite-difference estimator, ‖δ₀‖'s meaning and dd test 10. The options include carrying `δt` as a component of the displacement, resynchronised at each renormalisation, or stepping the shadow's `τ` so that it lands on the sample's `t`."
+  source:
+  - file: decisions.md
+    section: "R-974 — RQ-793, the displacement form of the FTLE shadow: option (a), a joint step on the occupant interface; whether the force difference is formed plainly in f32 (a1) or cancellation-free (a2) is chosen by a measurement whose criterion TASK-M3-72 writes before any run, physics-reviewed *(closes RQ-793)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: unit test
+    detail: "Review (physics): §3.8 carries the definition. cargo test -p kernel displacement_shadow_same_time: on the Heggie × RK4 occupant, at every renormalisation of a joint-step run, the shadow's elapsed physical time equals the sample's (to the definition's stated tolerance, or bitwise if it lands on the same `t`); control: a joint step that advances the shadow by the sample's `Δτ` alone, its elapsed `t` drifting from the sample's, fails"
+  rulings:
+  - R-72
+  - R-974
+  milestone: M3
+  note: "12 Nov 2026 (R-974, physics review 5875695467 of PR #503, F1): a recorded consequence of R-974, closed by TASK-M3-72. The test's name is given here (naming)."
+- id: REQ-VAL-356
+  area: VAL
+  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, TASK-M9-41's per-point FTLE maps and their report must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  source:
+  - file: decisions.md
+    section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  verify:
+    method: review checklist
+    detail: "Review (physics): the report and each map's caption carry the statement where REQ-INT-076's values are still unconfirmed; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
+  rulings:
+  - R-976
+  milestone: M9
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M9-41. The test's name is given here (naming)."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -41919,6 +42233,7 @@
     detail: "given synthetic throughput numbers the solver returns the expected three axes in order"
   rulings: []
   milestone: M6
+  note: "*12 Nov 2026 (R-926 items 5 and 6; the chart audit's F16):* the probe gains a CPU-evaluator leg, samples per second per core on the slice charts, and the cost model a CPU term; its values come from measurement (M-A, TASK-M2-89)."
 - id: REQ-PERF-042
   area: PERF
   statement: "Tiers must ship with defaults keyed on crude specs (VRAM/unified memory, core counts, backend), with tier boundaries then found from data."
@@ -42135,6 +42450,7 @@
     detail: "same model value → same rung; sensor updates change the model, never knobs directly"
   rulings: []
   milestone: M6
+  note: "*12 Nov 2026 (R-926 items 5 and 6; the chart audit's F16):* the probe gains a CPU-evaluator leg, samples per second per core on the slice charts, and the cost model a CPU term; its values come from measurement (M-A, TASK-M2-89)."
 - id: REQ-PERF-058
   area: PERF
   statement: "The controller's output must be one integer rung on an offline-designed ladder of ~8–12 complete presets in total, the six named tiers pinned rungs on it, with monotonic cost, degrading E/edge quality and render_scale before structural sample density."
@@ -42420,6 +42736,7 @@
   rulings:
   - R-72
   milestone: M4
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the chart axis of the \"(chart × occupant × tier × links)\" variant set is the retired compute-side route; it stands as its *Was* until TASK-M4-07 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-PERF-078
   area: PERF
   kind: calibration
@@ -43733,6 +44050,7 @@
     detail: "CPU reference and GPU kernel build from the same crate; no WGSL compute source exists"
   rulings: []
   milestone: M4
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"one monomorphised Rust kernel generic over … chart\" is the retired compute-side route; it stands as its *Was* until TASK-M4-01 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-SYS-024
   area: SYS
   statement: "Compute-side lowering must bake chart type, link selection, integrator occupant and the FTLE shadow co-computation as monomorphised variants, and must pass wrapper config (T, dt, N_max, r_*, eps_*, n_renorm) as SimUniforms, chart params (z0, q1, q2, slice values, curve tangent, invariant targets) as uniforms and the ensemble's copy_index as a uniform."
@@ -43749,6 +44067,7 @@
   rulings:
   - R-102
   milestone: M4
+  note: "*12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"bake chart type, link selection … as monomorphised variants\", with chart params as compute uniforms is the retired compute-side route; it stands as its *Was* until TASK-M4-06 rewrites it under R-926; where they differ, R-926 binds."
 - id: REQ-SYS-025
   area: SYS
   statement: "The physics kernel must be one Rust source, generic over `Real` and monomorphised, compiled to both the CPU-f64 build and the GPU-f32 build, with no second implementation of any physics or wrapper logic."
@@ -43966,7 +44285,7 @@
   rulings:
   - R-90
   milestone: M6
-  note: "The switch fires when the full decoder's adjacent samples give bitwise-identical ICs, or past SWITCH = ℓ_switch = 20 (an upper bound), whichever comes first (R-90)."
+  note: "The switch fires when the full decoder's adjacent samples give bitwise-identical ICs, or past SWITCH = ℓ_switch = 20 (an upper bound), whichever comes first (R-90). *12 Nov 2026 (R-926 item 5; the chart audit's F7):* \"Decode mode (full vs linearised) must be a per-quad workgroup-uniform flag\" in the compute kernel is the retired compute-side route; it stands as its *Was* until TASK-M6-08 rewrites it under R-926, with RQ-797's answer (where the one-cell patch is expanded); where they differ, R-926 binds."
 - id: REQ-SYS-039
   area: SYS
   statement: "The whole frame loop (WebGPU device, scheduler, cache, quadtree, compute and render) must run in the wasm engine in a Web Worker via `OffscreenCanvas`, while the main thread holds the GUI's own wasm context (egui), a loader and the input pump, and owns no simulation state (R-620)."

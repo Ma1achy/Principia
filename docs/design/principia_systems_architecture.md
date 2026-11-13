@@ -80,7 +80,11 @@ The membrane is thin, typed, and enumerable — exactly five crossings:
 | **Reduction** | `QuadReduction` (one per quad; 176 B, aligned to 4, with u32 histogram bins: dd_generation_root §3.7, R-410) | GPU → CPU | the **sole automatic** return of simulation data (R-332; R-288's telemetry readback is not simulation data); feeds the Allocation ring only |
 | **Sanctioned pulls** | single-IC f32 GPU trace (click inspector's divergence overlay) · columnar decode (export) | GPU → CPU | user-initiated, tiny, async, latest-wins. (The hover trace is NOT a pull — it re-integrates on the CPU via `computeIC` in the inspector worker and reads no payload; render Part 7) |
 
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (the invariant's "the GPU decides *what it computes to*" read as a GPU decode, and the Dispatch crossing's chart params and per-quad `c,h,x₀,J_D,T`; where `x₀ + J_D·δ` is formed is RQ-797's) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
 The Deployment ring's machinery — `resolve()`, monomorphised compute pipelines (and hand-WGSL fragment assembly — lowering Part 2), the precompile rule — exists to serve this mapping: code differences baked, moving values as uniforms, and *a gesture can never reach the compiler*.
+
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here ("monomorphised compute pipelines" over the chart) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
 
 **There are now two membranes, and they obey the same law.** Under the substrate decision (`principia_spike_brief.md`: whole CPU engine in Rust → wasm, thin TS GUI shell) the CPU/GPU membrane above is joined by a **wasm↔JS membrane** — the boundary between the wasm engine (which owns *all* CPU-side state: scheduler, cache, quad pyramid, the Precision-ring reference, the physics) and the TS GUI shell (which owns *only* DOM and view-scratch state). This is the firewall (seam 9 / GUI contract §1) made physical: the engine and GUI do not share a linker, so the one-way rule is a fact of the binary rather than a lint. It is thin and enumerable in the same way:
 
@@ -212,6 +216,8 @@ The cells above are the run from 21:11:33 to 21:12:43 UTC. The run before it, en
 
 **The shared law on both membranes: big data never crosses.** The CPU/GPU membrane returns only the per-quad `QuadReduction` automatically (176 B per quad, with u32 histogram bins: dd_generation_root §3.7, R-410) and sanctioned tiny pulls otherwise; the wasm/JS membrane carries only GUI-sized snapshots and single field edits. The payload, the tree, and the reductions are summarised across each boundary, never shipped whole — the *same* discipline stated twice, once per membrane. And the boundary must stay a **data** boundary, not an **object** one: the GUI holds no wasm handles, only the last snapshot (GUI contract §1 — wasm-bindgen makes handing JS a live Rust struct easy, and that would make the firewall decorative).
 
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (the CPU/GPU crossing read without the records the CPU now sends each quad) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
+
 ---
 
 ## 4. Dataflow
@@ -231,6 +237,8 @@ Intent ──constructs──▶ Chart ──validate──▶ resolve() [Deploy
                                                 ▼
                 blurred backdrop ▸ fresh cover ▸ trace/overlays ▸ style ▸ display scale ▸ gamut clamp ▸ CVD ▸ SCREEN   (R-67)
 ```
+
+*12 Nov 2026 (R-926 item 5; the chart audit's F7):* the CPU evaluates the chart in f64 and the integrator reads records; the compute-side lines here (the per-quad Φ → decode → canonicalise chain drawn on the GPU side of the dispatch) are *Was* until TASK-M2-59 and TASK-M2-60 rewrite this part.
 
 ### The return paths
 

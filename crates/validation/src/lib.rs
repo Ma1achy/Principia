@@ -3,6 +3,7 @@
 //! R-187).
 
 pub mod arctan;
+pub mod az;
 pub mod bench;
 pub mod bringup;
 pub mod control;
@@ -22,6 +23,7 @@ pub mod import;
 pub mod inspector;
 pub mod invariant_gradient;
 pub mod link_variation;
+pub mod measure;
 pub mod nsub_bucket;
 pub mod oklab;
 pub mod projection_parity;

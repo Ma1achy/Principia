@@ -39,3 +39,4 @@ The kernel's `AxisVirial` is built on TASK-M2-37: this gives it the descriptor t
 - *8 Nov 2026 (R-877):* RQ-741 is ruled (a): at `Q₀ > 0` the axis is labelled Q, the infeasible columns marked as the floor is, the state's own ratio in the readout.
 - *9 Nov 2026 (R-916):* moved from M8 to M2 and renumbered: formerly TASK-M8-119; the header follows plan/tasks.yaml. *Was:* "Milestone: M8"; "Closes: REQ-CHART-103, REQ-CHART-139"; "Depends on: TASK-M4-37, TASK-M4-33, TASK-M2-37, TASK-M8-117".
 - *9 Nov 2026 (R-916):* REQ-CHART-187, the round-trip tolerance § 12 gives only as measured worsts, is this task's calibration, its criterion written first, set by measurement (R-649/650), confirmed at the M2 gate (G5).
+- *12 Nov 2026 (R-925, R-926 item 5; R-935 under RQ-765; the chart audit's F7):* the CPU evaluates the pair; the baked entry is the fragment's closed form and a test entry. *Was:* "One baked entry." (Deliverables), which stands as written.

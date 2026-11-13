@@ -12,7 +12,8 @@
 //! - REQ-PAY-030: `diffusion` is NaN and invalid for `n < 2` (R-245), and a latched sample uses its own `n`
 //!   (`diffusion_slope`).
 //! - REQ-PAY-032: `ftle_valid`'s truth table over tier, state, `n` and completed renorms, `ftle` NaN exactly when it
-//!   is false (R-254) (`ftle_valid_truth_table`).
+//!   is false (R-254) (`ftle_valid_truth_table`); and R-972's clause, false exactly where `S` is the mark
+//!   `S_FAILED_BITS` of a shadow whose sum went non-finite (`ftle_valid_false_on_the_failed_sum`).
 //! - REQ-RENDER-013, REQ-RENDER-077: the tier-absent reads are lowering Part 3a's values, the canonical quiet NaN's
 //!   bits and the unbound word (`tier_absent_nan_bits`).
 //! - REQ-RENDER-019: the time fractions read 0 at a zero horizon and exactly 1.0 at it (`time_fraction`).
@@ -1210,6 +1211,57 @@ negative_control!(
             "ftle_tier_on && !sd_is_failed(state) && ",
             "ftle_tier_on && "
         )
+    )
+);
+
+// ── ftle_valid_failed_sum (R-972) ─────────────────────────────────────────────────────────────────────────────────
+
+/// A sample valid on every other clause (the FTLE tier, bounded, step 40, `n_renorm` 16), its `S` set to each of the
+/// bit patterns: `ftle_valid` is false, and `ftle` the canonical quiet NaN, exactly where `S` is the mark
+/// `S_FAILED_BITS`, `f32::MAX`'s bits, of a shadow whose sum went non-finite (payload §6; R-972, R-254); the largest
+/// finite value below it and a plain sum stay valid.
+fn check_failed_sum(gpu: &GpuHarness, generated: Gen) {
+    let rows = [
+        (ledger::payload::s_failed_bits(), true),
+        (ledger::payload::s_failed_bits() - 1, false),
+        (2f32.to_bits(), false),
+        ((-2f32).to_bits(), false),
+    ];
+    let cases: Vec<Case> = rows
+        .iter()
+        .map(|&(bits, _)| {
+            let mut sample = marching(40, 50.0);
+            sample.s = f32::from_bits(bits);
+            Case::new(sample)
+        })
+        .collect();
+    let got = read_members(gpu, generated, &cases, &[FTLE, FTLE_VALID]);
+    for (&(bits, marked), g) in rows.iter().zip(&got) {
+        assert_eq!(
+            g[1],
+            u32::from(!marked),
+            "ftle_valid with S's bits {bits:#010x} is not the failed sum's clause (R-972)"
+        );
+        assert_eq!(
+            g[0] == QNAN,
+            marked,
+            "ftle with S's bits {bits:#010x} is NaN where ftle_valid is true, or not where it is false"
+        );
+    }
+}
+
+#[test]
+fn ftle_valid_false_on_the_failed_sum() {
+    check_failed_sum(&gpu(), generated());
+}
+
+negative_control!(
+    ftle_valid_false_on_the_failed_sum,
+    "an ftle_valid that ignores the shadow's failed sum (R-972) must fail",
+    expected = "is not the failed sum's clause",
+    check_failed_sum(
+        &gpu(),
+        mutated("\n        && bitcast<u32>(s_sum) != S_FAILED_BITS", "")
     )
 );
 

@@ -47,3 +47,4 @@ view mode, camera object or second code path.
 - Revealed quads catching up to the playhead off-loop (REQ-SCHED-025's last clause) uses the catch-up path of
   TASK-M5-21; this task's property test runs with the playhead at t = 0 and is re-run by TASK-M5-21 at t > 0.
 - *9 Nov 2026 (R-916):* the chart core is M2's (R-916, R-917, R-919), so this header follows plan/tasks.yaml. *Was:* "Depends on: TASK-M5-04, TASK-M5-06, TASK-M5-08".
+- *12 Nov 2026 (R-926 item 1; the chart audit's F7):* every gesture is an edit of the window `(c, Q)` (TASK-M2-61's object); the chart-uniform model ("Every gesture is a CPU-side diff of the one chart uniform (z₀, q₁, q₂)") is its *Was*.

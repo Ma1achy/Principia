@@ -1040,7 +1040,8 @@ fn derived_locals(field: &str) -> (String, String) {
     }
     if expr.contains("ftle_ok") {
         locals.push(
-            "let ftle_ok = ftle_valid(s.packed_a, true, n, completed_renorms(n, params.n_renorm));"
+            "let ftle_ok = ftle_valid(\n        s.packed_a,\n        true,\n        n,\n        \
+             completed_renorms(n, params.n_renorm),\n        s.S,\n    );"
                 .to_owned(),
         );
     }

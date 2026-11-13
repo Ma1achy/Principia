@@ -20,6 +20,9 @@
 //!   build directory gone, together list every test the source build lists, each once, and running them compiles
 //!   nothing.
 //!
+//! The PR tier's `tests` shards (PR #495, 11 Nov 2026), which build for themselves on a pull request alone, are left out
+//! of the shard jobs read here (R-290's exception, named by the orchestrator for PR #495).
+//!
 //! Each test registers a negative control (R-176).
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -307,9 +310,18 @@ fn check_archive(workflow: &str) {
         );
     }
 
-    // The shard jobs: every job whose steps run nextest's `hash:` slices of a shard matrix.
+    // The shard jobs: every job whose steps run nextest's `hash:` slices of a shard matrix, but the pull request's
+    // `tests`. The split of PR #495 (11 Nov 2026, the owner: "split the ci job as planned") shards the PR tier's product
+    // tests, each shard building for itself; REQ-SYS-078 is read as covering the push suite's archive shards (`ci`,
+    // `ci-release`), which this still checks in full. Only the job `tests`, and only while it runs on a pull request
+    // alone, is left out. R-290's exception, named by the orchestrator for PR #495.
     let shard_jobs: Vec<&Job> = jobs
         .iter()
+        .filter(|j| {
+            !(j.id == "tests"
+                && j.own("if").as_deref()
+                    == Some("${{ !cancelled() && github.event_name == 'pull_request' }}"))
+        })
         .filter(|j| {
             j.steps().iter().flat_map(|s| commands(s)).any(|c| {
                 c.starts_with("cargo nextest run")
@@ -531,6 +543,20 @@ negative_control!(
     expected = "does not wait (`needs:`)",
     check_archive(&edited(&the_workflow(), "  ci:\n    needs: ci-archive\n", "  ci:\n"))
 );
+
+mod pr_shards_on_a_push {
+    use super::*;
+    negative_control!(
+        qa_m0_52_ci_shards_wait_on_the_archive_job,
+        "the checked-in workflow with the PR tier's `tests` shards, which build for themselves, running on a push too",
+        expected = "a `tests` shard compiles its tests",
+        check_archive(&edited(
+            &the_workflow(),
+            "  tests:\n    name: ci shard ${{ matrix.shard }}/3\n    needs: changes\n    if: ${{ !cancelled() && github.event_name == 'pull_request' }}\n",
+            "  tests:\n    name: ci shard ${{ matrix.shard }}/3\n    needs: changes\n    if: ${{ !cancelled() }}\n"
+        ))
+    );
+}
 
 #[test]
 fn qa_m0_52_no_shard_builds_of_its_own() {

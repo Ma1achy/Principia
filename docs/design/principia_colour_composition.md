@@ -476,6 +476,11 @@ centre, `c + h·(2·t_c − 1)` with `t_c = ctx.quad.uv + (½ − ctx.tile.uv)/N
 pixel on the tile's centre. *Was:* "`Φ` hands the shared decoder at the sample's chart point" and "by evaluating the
 chart's own `D ∘ Φ` in WGSL at the point the kernel decoded the sample", which named the tile centre where the table and
 the DECODE preset use the pixel's `ctx.chart.slice_uv` (physics review 5666521412 P1, applied per R-369).
+
+*12 Nov 2026 (R-926 item 5; R-935 under RQ-765; the chart audit's F14):* the compute side decodes nothing; an agreement preset compares the fragment's generated decode with the CPU's f64 record narrowed once; a table-route chart has no fragment decode to compare and shows the table check instead (R-926 item 10). *Was:* "where the kernel decoded it (R-80, copy 0)", which stands as written.
+
+*12 Nov 2026 (R-395; R-935 under RQ-768; the chart audit's F23):* past `ℓ_switch` the generated `D ∘ Φ` evaluated at an absolute `ctx.chart.slice_uv` is what R-395's rule rules out past `ℓ_switch` (never an absolute f32 `u` there), and a table-route `z` is absolute f32 at each node, so `ctx.chart.z` collapses near depth 20 at O(1) `z`; how it is formed there is RQ-805's Q2.
+
 Per row of lowering's appendix (`principia_lowering_contract.md`, "Appendix — worked enumeration of the current chart
 set"):
 
@@ -819,6 +824,7 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   compute shaders don't, by default (R-297), so an agreement preset compares within a stated tolerance, a calibration
   requirement (R-71), not bit-exactly. ROUNDTRIP's residual is computed wholly in the fragment, and its stated
   tolerance is ε_phys (`principia_inverse_encode_contract.md` Part 4; `principia_debug_tooling_plan.md` §A).
+  *12 Nov 2026 (R-926 item 5; R-935 under RQ-765; the chart audit's F14):* the compute side decodes nothing; an agreement preset compares the fragment's generated decode with the CPU's f64 record narrowed once; a table-route chart has no fragment decode to compare and shows the table check instead (R-926 item 10). *Was:* "a **live check between two compilation paths of one source** — the kernel's rust-gpu build and its SPIR-V → WGSL translation", which stands as written.
   **The tolerance's scale (R-72; RQ-623, decided by the orchestrator per R-369, option (b); TASK-M2-29).** A sample
   agrees where `|E − E₀| ≤ F·eps·S`, with `F` the calibrated factor (REQ-COL-060, R-71), `eps` f32's `2⁻²³`, and
   `S = max(|K₀|, 1) + max(|V₀|, 1) + Σ_{i<j} mᵢmⱼ·wᵢⱼ/ŝᵢⱼ²`, where `wᵢⱼ = ‖rᵢ‖∞ + ‖rⱼ‖∞` and

@@ -168,6 +168,12 @@ Linear, exact-symmetry housekeeping; keeps f32 dynamic range on internal structu
 
 **Per-trajectory, not per-pixel.** The projection acts on *one* physical system's `{rᵢ, pᵢ}`, and under the uniform-sample model (sampling/SSAA note) a pixel carries several independent trajectories — the base, its Benettin FTLE shadow, and (per nominal sample) E ensemble copies each with their own shadow. **Each is projected independently, every step**, because each is an independent integration whose own CoM drifts under its own roundoff. In particular a **shadow trajectory must be CoM-projected on its own** — if it inherited the base's projection instead of computing its own, its uncorrected drift would corrupt the Benettin separation and thus the FTLE. The wrapper runs the full per-`STEP` sequence (project, monitor, detect) on every marching trajectory it owns; "per `STEP`" means per step *of each trajectory*.
 
+*12 Nov 2026 (R-972, the owner's answer on RQ-791, option (d)):* **a shadow's detectors monitor only.** Every detector
+run on a Benettin shadow watches and never ends the shadow's march: where one would fire (today the collision test, the
+shadow's only terminal), the shadow marches on through, still projected, monitored and detected on its own every step.
+Nothing a shadow's detector does reaches the sample's march, outcome or fields; the sample's own detectors are
+unchanged. *Was:* the paragraph above said the shadow is detected, and nothing of what its terminal does.
+
 ### 3.5 Invariant monitoring (per `STEP`, post-projection)
 
 ```
@@ -308,12 +314,47 @@ every n_renorm steps:  δ⃗ = x' − x ;  δ = ‖δ⃗‖ ;  S += log(δ/δ₀
 ```
 Renormalisation is what makes λ an intrinsic flow quantity; it is also exactly why the Benettin endpoint is not a valid neighbourhood sample.
 
+*δ₀'s direction (TASK-M3-14's definition, R-72, REQ-INT-077).* The offset is in the positions alone, the momenta
+taking none: `x'₀ = x₀ + ‖δ₀‖·u`, with
+
+```
+u:  δr₀ = (+½, 0),  δr₁ = (−½, +½),  δr₂ = (0, −½),  δp₀ = δp₁ = δp₂ = (0, 0)
+```
+
+a unit vector over the twelve phase-space components `(r, p)` that `δ = ‖δ⃗‖` is taken over (payload §5), applied to the
+decoded IC `x₀`, each offset component one rounded multiply-add `xₖ + ‖δ₀‖·uₖ`. It is a constant, the same for every
+sample, chart, precision and backend: never drawn at random, never a function of the chart. Its entries `±½` and 0 are
+exact at f32 and f64 and `‖δ₀‖·uₖ` is exact, so CPU and GPU form bit-identical offsets from identical inputs. It moves
+no body's momentum, so no light body is given a large velocity: a momentum offset `‖δ₀‖/2` on a body of mass `mᵢ` is a
+velocity offset `‖δ₀‖/2mᵢ`, which on the Kepler-embedded orbit's `m₂ → ε` would swamp the first interval's growth. Its
+unweighted sum is zero in each component; its mass-weighted sum, the shadow's CoM offset, is zero at equal masses and
+otherwise removed by the shadow's own projection after its first step (§3.4), which leaves a nonzero separation, since
+`u` moves the bodies by different amounts. That separation is `‖δ₀‖·√(1 + 3|c|²)`, `c = Σmᵢuᵢ/M` the offset's
+mass-weighted mean: since `Σuᵢ = 0` and `Σ|uᵢ|² = 1`, removing the translation `‖δ₀‖·c` from each of the three bodies
+only lengthens the offset. As a mass-weighted mean of the `uᵢ`, the longest of which is `|u₁| = 1/√2`, `c` has
+`|c|² ≤ ½`, so the first interval starts between `‖δ₀‖` and `‖δ₀‖·√2.5`. This biases `λ_T` up by at most
+`½·ln 2.5 / T ≈ 0.46/T`, and every later interval starts at `‖δ₀‖` exactly. Any direction with a component along the
+most expanding one converges to the largest exponent under renormalisation; a fixed one makes the shadow a
+deterministic function of the sample's state. `u` lacks that component in one measure-zero case: a state at rest
+(`p = 0`) whose positions about the centre of mass are proportional to `−ẑ × (uᵢ − c)`, at equal masses
+`(0, −½), (½, ½), (−½, 0)`. There `u`, once projected, is an infinitesimal rotation `δrᵢ ∝ ẑ × rᵢ`, a symmetry of
+exponent 0, and the separation grows only through the `O(‖δ₀‖)` nonlinearity and rounding. `‖δ₀‖` and `n_renorm` are
+calibrated (REQ-INT-076, R-71).
+
 **Ensemble sensitivity** (E copies per nominal sample, full samples jittered within the footprint at fixed Halton (2,3) offsets — copy 0 the un-jittered centre, copies 1..E at Halton points 1..E centred and scaled to the footprint, R-80 — no intervention):
 ```
 outcome entropy   H = −Σᵢ pᵢ log pᵢ            (categorical final diagnostics)
 spread            σ²_T = (1/(E+1)) Σₖ ‖Φ_T(x₀⁽ᵏ⁾) − x̄(T)‖²     (over the footprint's E+1 samples, at resolve)
 ```
 Deliberately resolution-dependent (footprint shrinks with zoom) — a **footprint** quantity (one value per nominal sample, shared by its copies; does not sharp-edge AA), vs FTLE the **point** quantity (per-sample, anti-aliases). Total per nominal sample at full tier: **~2(E+1)** integrations (E+1 samples, each + its Benettin shadow).
+
+**The Benettin shadow alone at a would-be terminal, or with `S` non-finite (12 Nov 2026, R-972, RQ-791 (d) + (a)).**
+Where only the shadow would reach a terminal, it does not: its detectors monitor only (§3.4), and it marches on as a
+moving neighbour, renormalised every `n_renorm` steps as above. Where only the shadow's `S` goes non-finite, the sample
+healthy (a blow-up while marching through a close approach among the causes), the FTLE is invalid from then on:
+`ftle_valid` is false, `ftle` reads NaN and every aggregate drops the sample (payload §6; R-254, R-255). Storage never
+holds NaN (R-79): the mark that records it is TASK-M3-14's to define, under physics review. *Was:* the block above
+presumed a shadow that moves, and said nothing of a shadow that stops or goes non-finite.
 
 ---
 

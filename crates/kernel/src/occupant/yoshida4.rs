@@ -18,6 +18,7 @@
 
 use super::kdk::sequence3;
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};
+use crate::regularisation::form::Form;
 
 /// Yoshida's fourth-order composition.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,6 +42,9 @@ pub fn kick<R: StepReal>() -> [R; 4] {
 }
 
 impl Stepper for Yoshida4 {
+    /// The form under a regularisation (integrator_contract Part 2b; [`crate::regularisation::form`]).
+    const FORM: Form = Form::Yoshida4;
+
     #[inline]
     fn profile() -> CapabilityProfile {
         CapabilityProfile {

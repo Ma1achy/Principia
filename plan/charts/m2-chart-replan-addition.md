@@ -722,6 +722,11 @@ normalisation cannot reach) is answered by R-955, option (a), R-598 standing (*1
 blank areas" reaches a pixel energy normalisation cannot reach);" in this list). *11 Nov 2026:*
 RQ-787 (what a blend's interior pixel shows when its blended masses raise `M01_TINY` between two valid ends), which
 holds that one pixel of N5's fixture; and RQ-785's three further questions on N20's set-up.
+*12 Nov 2026:* RQ-787 is answered by R-975, option (a) with physics review's smooth hold: the pixel saturates, never
+blank. RQ-785's picture size for P4 and its three further questions are answered by R-977; RQ-785 stays open on P2's
+unit alone, which still holds N20.
+*12 Nov 2026, later the same day:* R-984 answers P2's unit (a fraction of picture width, read in px at the three
+sizes), and RQ-785 closes; N20 no longer waits on it, R-923's hold aside.
 
 ---
 
@@ -1009,6 +1014,6 @@ listed for the owner's veto):**
 - **Test names** not given by the plans (`first_slice`, `forward_table_builder`, `blend_chart` and the like) are named
   in the task files: naming.
 
-**Owed to the owner, nothing chosen:** RQ-785 (the picture size of P2's and P4's pixels, and, from 11 Nov 2026, its three further questions on N20's set-up); RQ-787 (what a blend's interior pixel shows when its blended masses raise `M01_TINY` between two valid ends; 11 Nov 2026); N20's two set-up points above;
+**Owed to the owner, nothing chosen:** (*12 Nov 2026, later the same day:* R-984 answered P2's unit and RQ-785 closed; *was:* "RQ-785, P2's unit"; *12 Nov 2026:* R-977 answered P4's picture size and the three further questions on N20's set-up, and R-975 answered RQ-787; *was:* "RQ-785 (the picture size of P2's and P4's pixels, and, from 11 Nov 2026, its three further questions on N20's set-up); RQ-787 (what a blend's interior pixel shows when its blended masses raise `M01_TINY` between two valid ends; 11 Nov 2026); N20's two set-up points above;");
 N16's tick tolerance, TASK-M8-58's `trace_fold` tolerance and, from the re-checks of 11 Nov 2026, N9's three tolerances of R-935's criterion (REQ-RENDER-126) (calibrations, R-71); N18's dim or hatch (a screenshot
 pair); R-952's case of a quarter-resolution grid that still misses 8.3 ms (reported, the owner decides).

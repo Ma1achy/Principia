@@ -95,6 +95,13 @@ impl<G: ViewGenerator> DebugViews<G> {
         cache.request(stain, keys, tier).map_err(BakeError::Request)
     }
 
+    /// `field`'s legend line, baked on demand: the FTLE's provisional calibration where the view shows the FTLE,
+    /// read from its one source ([`crate::ftle_provisional::legend_line`]; R-976), and nothing otherwise.
+    pub fn legend_line(&mut self, field: &str) -> Result<Option<&'static str>, BakeError> {
+        let (stain, _) = self.bake(field)?;
+        crate::ftle_provisional::legend_line(stain).map_err(BakeError::Stain)
+    }
+
     /// How many views are baked.
     pub fn baked(&self) -> usize {
         self.baked.len()

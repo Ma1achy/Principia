@@ -37,6 +37,7 @@ use spirv_std::num_traits::One;
 pub use crate::generated::steppers::StepperCoefficients;
 use crate::physics::force::force;
 use crate::physics::PairGeom;
+use crate::regularisation::form::Form;
 use crate::Real;
 
 /// The float type a stepper runs at: the kernel's [`Real`] (f32 on the GPU, f64 on the CPU; R-265), with `1` and the
@@ -179,6 +180,13 @@ pub trait Stepper {
     /// The state `s` one step `dt` on, and the force evaluation at its positions; `geom` is the force evaluation at
     /// `s`'s positions, `Geom::new(&s.m, &s.r)`.
     fn step<R: StepReal>(s: &State<R>, dt: R, geom: &Geom<R>) -> (State<R>, Geom<R>);
+
+    /// The stepper's form on a regularised, non-separable system, the stepper slot under a regularisation
+    /// (integrator_contract Part 2b, "Every stepper × regularisation pair runs"; "Every pair is defined exactly"): a
+    /// property of the type, which each stepper names, fixed at compile time. A stepper that names none has no form,
+    /// and composing it with a regularisation fails to build (this default is evaluated only where a regularised march
+    /// reads it, and it fails there); no form is inferred from a profile.
+    const FORM: Form = panic!("this stepper names no form on a regularised system (Stepper::FORM)");
 }
 
 /// The production steppers (integrator_contract Part 2): the occupants a tier binds by default or a user selects.

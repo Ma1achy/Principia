@@ -248,6 +248,7 @@ styling, so that dashes and labels run continuously along the whole line.
 
 - **Polylines in screen space, dashes by arc length.** The dash pattern continues along the whole line instead of
   restarting per segment. The mock-up's first cut restarted it, and dashed lines rendered solid.
+  *12 Nov 2026 (R-947, R-395; the chart audit's F23; applied per R-369: an implementation choice that changes no result):* trace and mark vertices reach the GPU in screen space, formed on the CPU in f64 from `place`'s point less the view's centre, never as absolute f32 chart coordinates.
 - **Outline first, then stroke,** with the same dash pattern and phase. Dash lengths do not scale with width, so a wider
   outline stays aligned with its stroke.
 - **Opacity per vertex** (traces): consecutive vertices of equal ink and quantised opacity are drawn as one run, which
@@ -335,6 +336,13 @@ it:
   pieces mid-morph and may jump as a morph starts or ends. P2 and P4 report how often; they are not gates, the owner
   sees both before TASK-M8-49 and TASK-M8-58 are built, and no threshold or fallback is chosen by anyone else. The
   picture size their pixels are counted at is RQ-785.
+  *12 Nov 2026 (R-977, the owner's answer on RQ-785):* P4's gaps are counted as a fraction of the picture width and
+  their distribution reported, the share over 8 px read at 512×512, 1024×1024 and 1920×1080 from the same run; each
+  seeded pixel gives a pinned trace, P2 is read at both ends, and the vertices are the trajectory fixture's own output
+  steps, each chart at its home window, zoom 1.
+  *12 Nov 2026, later the same day (R-984, the owner's follow-up on RQ-785, which closes):* P2's jump is measured as a
+  fraction of the picture width too, its median and worst read in px at the same three sizes. *Was:* "P2's unit stays
+  open on RQ-785."
 - **Fade off the plane.** Opacity per vertex falls with the state's distance from the slice, down to a floor (0.18 in
   the mock). See §11 Q3 for what "distance" should be in general.
 - **Breaks.** The line breaks where the path leaves the chart and resumes where it comes back. It is never joined across
