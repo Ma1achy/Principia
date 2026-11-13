@@ -112,10 +112,11 @@ Commands:
                                   the libm-pin measurement (R-991, REQ-CHART-212): the harness xtask/libm_pin/ decodes
                                   the first slice's three charts over their grids in f64 on this machine, on the pinned
                                   path, the std path (kernel's measure-std-maths) and the control (measure-perturb-sin),
-                                  each run written under <target>/measure/libm-pin/; --wasm runs the pinned path built
-                                  for wasm32-unknown-unknown under node too; --against compares another machine's run
-                                  with this one's of the same arm. Prints the records differing at f64 and after
-                                  narrowing, per chart and zoom, and the outcome: PASS, INCOMPLETE, UNEXPLAINED or void
+                                  each run written under <target>/measure/libm-pin/; --wasm runs the pinned and std
+                                  paths built for wasm32-unknown-unknown under node too; --against compares another
+                                  machine's run with this one's of the same arm. Prints the records differing at f64
+                                  and after narrowing, per chart and zoom, and the outcome: PASS, INCOMPLETE,
+                                  UNEXPLAINED or void
   measure libm-pin --write <file> [--std]
                                   write this machine's pinned run (or std run) to <file>, for --against elsewhere
   mutants-check <mutants.out>... [--equivalent <file>]
@@ -400,10 +401,12 @@ fn libm_pin_native(name: &str, features: &str, file: &Path) -> Result<(), String
     )
 }
 
-/// The harness built for wasm32-unknown-unknown and run under node (`xtask/libm_pin/run.mjs`), its run written to
-/// `file`.
-fn libm_pin_wasm(file: &Path) -> Result<(), String> {
-    let target = libm_pin_base().join("libm-pin").join("wasm");
+/// The harness built for wasm32-unknown-unknown with `features` and run under node (`xtask/libm_pin/run.mjs`), its run,
+/// the arm `name`, written to `file`.
+fn libm_pin_wasm(name: &str, features: &str, file: &Path) -> Result<(), String> {
+    let target = libm_pin_base()
+        .join("libm-pin")
+        .join(format!("wasm-{name}"));
     let mut build = std::process::Command::new(libm_pin_cargo());
     build
         .args([
@@ -418,13 +421,17 @@ fn libm_pin_wasm(file: &Path) -> Result<(), String> {
         .arg(workspace_root().join("xtask/libm_pin/Cargo.toml"))
         .arg("--target-dir")
         .arg(&target);
-    libm_pin_spawn(&mut build, "the wasm build")?;
+    if !features.is_empty() {
+        build.args(["--features", features]);
+    }
+    libm_pin_spawn(&mut build, &format!("the wasm {name} build"))?;
     let wasm = target.join("wasm32-unknown-unknown/release/libm_pin.wasm");
     let mut node = std::process::Command::new("node");
     node.arg(workspace_root().join("xtask/libm_pin/run.mjs"))
         .arg(&wasm)
-        .arg(file);
-    libm_pin_spawn(&mut node, "the wasm arm under node")
+        .arg(file)
+        .arg(name);
+    libm_pin_spawn(&mut node, &format!("the wasm {name} arm under node"))
 }
 
 /// Reads a run's file.
@@ -463,9 +470,11 @@ fn measure_libm_pin(rest: &[&str]) -> Result<(), String> {
         runs.push(libm_pin_read(&file)?);
     }
     if wasm {
-        let file = out.join("wasm-pinned.bin");
-        libm_pin_wasm(&file)?;
-        against.push(file);
+        for (name, features) in &LIBM_PIN_ARMS[..2] {
+            let file = out.join(format!("wasm-{name}.bin"));
+            libm_pin_wasm(name, features, &file)?;
+            against.push(file);
+        }
     }
     let [pinned, std_path, control] =
         <[_; 3]>::try_from(runs).map_err(|_| "measure libm-pin: three arms")?;
