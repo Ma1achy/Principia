@@ -11,6 +11,9 @@
 //! - `force_difference_forms`: (a2)'s `a(r + δr) − a(r)` keeps its relative precision at f32 however small `δr` is
 //!   against the separations, read against the same difference at f64 from the absolute positions; (a1) and (a2) agree
 //!   to f64 rounding where `δr` is not small.
+//! - `joint_step_difference_not_finite`, `force_difference_not_finite`: the two checks' reductions keep a non-finite
+//!   value, a NaN displacement or difference reading as an infinite residual or error, a failure, never as agreement
+//!   (Totality, R-47).
 //! - `joint_march_replays_sample`: a stepper's joint march, under a cadence that projects the sample as the wrapper's
 //!   does, leaves the sample's state that of its `ADVANCE` under the wrapper's cadence, bit for bit, macro-step by
 //!   macro-step.
@@ -342,7 +345,7 @@ fn reference(m: &[f64; 3], r: &[[f64; 2]; 3], dr: &[[f64; 2]; 3]) -> [[f64; 2]; 
 }
 
 /// The largest relative error of `D`'s difference at f32 against the reference, over the fixture states, at
-/// displacements of size `size`. The reference's own error, `ε₆₄·‖a‖/‖Δa‖`, is far below f32's at every size used.
+/// displacements of size `size`, infinite where any is not finite. The reference's own error, `ε₆₄·‖a‖/‖Δa‖`, is far below f32's at every size used.
 fn f32_error<D: ForceDifference>(size: f64) -> f64 {
     let mut seed = 3u64;
     states()
@@ -359,14 +362,17 @@ fn f32_error<D: ForceDifference>(size: f64) -> f64 {
                 &r32.map(|v| v.map(f64::from)),
                 &d32.map(|v| v.map(f64::from)),
             );
-            let scale = want.iter().flatten().fold(0.0f64, |a, &v| a.max(v.abs()));
+            let scale = want
+                .iter()
+                .flatten()
+                .fold(0.0f64, |a, &v| worst(a, v.abs()));
             let err = (0..3)
                 .flat_map(|i| (0..2).map(move |k| (i, k)))
                 .map(|(i, k)| (f64::from(got[i][k]) - want[i][k]).abs())
-                .fold(0.0f64, f64::max);
+                .fold(0.0f64, worst);
             err / scale
         })
-        .fold(0.0, f64::max)
+        .fold(0.0, worst)
 }
 
 /// (a2) at f32 keeps its relative error within `bound` at every size from 1e-2 to 1e-7.
@@ -397,11 +403,12 @@ fn force_difference_forms() {
             Plain::accel(&x.m, &g, &d.r),
             CancellationFree::accel(&x.m, &g, &d.r),
         );
-        let scale = a2.iter().flatten().fold(0.0f64, |a, &v| a.max(v.abs()));
+        let scale = a2.iter().flatten().fold(0.0f64, |a, &v| worst(a, v.abs()));
         for i in 0..3 {
             for k in 0..2 {
+                let gap = (a1[i][k] - a2[i][k]).abs();
                 assert!(
-                    (a1[i][k] - a2[i][k]).abs() <= 1e-10 * scale,
+                    gap.is_finite() && gap <= 1e-10 * scale,
                     "(a1) and (a2) differ at f64: {} against {}",
                     a1[i][k],
                     a2[i][k]
@@ -416,6 +423,32 @@ negative_control!(
     "(a1), the plain difference, held to (a2)'s bound must fail",
     expected = "it loses precision as δr shrinks",
     check_cancellation_free::<Plain>(F32_BOUND)
+);
+
+/// `D`'s f32 difference reads as an infinite relative error at every size, a failure of `check_cancellation_free`,
+/// never agreement.
+fn check_f32_not_finite<D: ForceDifference>() {
+    for size in [1e-2, 1e-4, 1e-5, 1e-6, 1e-7] {
+        let e = f32_error::<D>(size);
+        assert!(
+            e == f64::INFINITY,
+            "at ‖δr‖ ≈ {size:e} a non-finite f32 difference reads as relative error {e:e}, not as a failure"
+        );
+    }
+}
+
+/// `force_difference_forms`' f32 reduction keeps a NaN difference: it reads as an infinite error, which fails the
+/// check, where `f64::max` would drop it and read zero.
+#[test]
+fn force_difference_not_finite() {
+    check_f32_not_finite::<NotFinite>();
+}
+
+negative_control!(
+    force_difference_not_finite,
+    "a finite f32 difference read as non-finite must fail",
+    expected = "not as a failure",
+    check_f32_not_finite::<CancellationFree>()
 );
 
 // ── joint_march_replays_sample ─────────────────────────────────────────────────────────────────────────────────
