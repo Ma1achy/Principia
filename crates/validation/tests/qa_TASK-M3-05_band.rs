@@ -39,8 +39,14 @@ const ENERGY: &str = "debug/generated/energy_drift";
 const LZ: &str = "debug/generated/Lz_drift";
 const DERIVED: &str = "debug/derived/energy_drift";
 const EPS: f64 = 1e-6;
-/// `k·2⁻²³`, `k = 128` (render contract Part 5).
+/// `k·2⁻²³`, `k = 128`, relative to the reference: R-652's band, which bounds the fresh draws' domain (`k_E`, `k_L` ≤
+/// 128) and sets their control's offset (render contract Part 5).
+#[cfg(feature = "controls")]
 const BAND: f64 = 128.0 / 8_388_608.0;
+/// R-928's band factors, `k'·2⁻²³` of the rounding's own scale: 15 of `K + |V|` for the energy, 5 of `S` for `L_z`
+/// (render contract Part 5, "The neutral band").
+const BAND_E: f64 = 15.0 / 8_388_608.0;
+const BAND_LZ: f64 = 5.0 / 8_388_608.0;
 const R: [[f32; 2]; 3] = [[0.625, -0.25], [-0.5, 0.5], [-0.125, -0.25]];
 const P: [[f32; 2]; 3] = [[0.125, 0.25], [-0.25, -0.0625], [0.125, -0.1875]];
 
@@ -308,8 +314,32 @@ fn fill(s: &mut Scene, i: u32, e_0: f32, lz_0: f32, de_max: f32, dlz_max: f32) {
         .drift_max(de_max, dlz_max);
 }
 
-/// Multiples of the band, each way. The rounding of `H` on the state is under 128 of its 2⁻²³ units, so a drift of `f`
-/// bands is known to `1 ± 1/f`; the brackets below hold that much.
+/// R-928's band at tile `i` of `s` on the dyadic state, in f64: `15·2⁻²³·(K + |V|)` for the energy, `5·2⁻²³·S` for
+/// `L_z`, with the tile's own masses.
+fn band(s: &Scene, i: u32, energy: bool) -> f64 {
+    let f = |x: f32| f64::from(x);
+    let m = s.masses(i);
+    if energy {
+        let k: f64 = (0..3)
+            .map(|j| (f(P[j][0]).powi(2) + f(P[j][1]).powi(2)) / (2.0 * f(m[j])))
+            .sum();
+        let v: f64 = [(0, 1), (0, 2), (1, 2)]
+            .iter()
+            .map(|&(a, b)| {
+                f(m[a]) * f(m[b]) / (f(R[a][0]) - f(R[b][0])).hypot(f(R[a][1]) - f(R[b][1]))
+            })
+            .sum();
+        BAND_E * (k + v)
+    } else {
+        let s: f64 = (0..3)
+            .map(|j| (f(R[j][0]) * f(P[j][1])).abs() + (f(R[j][1]) * f(P[j][0])).abs())
+            .sum();
+        BAND_LZ * s
+    }
+}
+
+/// Multiples of the band, each way. The rounding of `H` on the state is under the band (render contract Part 5's
+/// bound, R-928), so a drift of `f` bands is known to `1 ± 1/f`; the brackets below hold that much.
 const PAST: [f64; 4] = [2.0, 16.0, -2.0, -16.0];
 
 /// Each tile of `PAST` is on its own side of `c0` and between the colours of its drift over and under by the rounding.
@@ -321,7 +351,7 @@ fn check_past(id: &str, energy: bool, colouring: Colouring) {
     for (i, f) in (0u32..).zip(PAST) {
         let (e, l) = invariants(&mut s, i);
         let reference = f64::from(if energy { e } else { l });
-        let x = f * BAND * reference.abs();
+        let x = f * band(&s, i, energy);
         assert!(reference != 0.0, "the state's reference is 0");
         if energy {
             fill(&mut s, i, (f64::from(e) - x) as f32, l, 0.0, 0.0);
@@ -369,7 +399,7 @@ negative_control!(
     check_past(
         LZ,
         false,
-        broken(LZ, "ctx.sample.Lz_0)", "8.0 * ctx.sample.Lz_0)")
+        broken(LZ, "ctx.sample.p);", "ctx.sample.p) * 8.0;")
     )
 );
 
