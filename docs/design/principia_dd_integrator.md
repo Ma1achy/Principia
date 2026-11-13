@@ -356,6 +356,73 @@ healthy (a blow-up while marching through a close approach among the causes), th
 holds NaN (R-79): the mark that records it is TASK-M3-14's to define, under physics review. *Was:* the block above
 presumed a shadow that moves, and said nothing of a shadow that stops or goes non-finite.
 
+**The displacement form (13 Nov 2026, TASK-M3-72's definition, R-72; R-974, the owner's answer on RQ-793, option
+(a)).** Beside the absolute form above, which marches `x'` and is the payload's, the shadow may be held as the
+displacement `δ⃗ = x' − x` over the twelve components `(r, p)` and marched with the sample by the occupant's **joint
+step**:
+
+- **Start.** `δ⃗₀ = ‖δ₀‖·u`, `u` the direction above, each component exact, so that `x + δ⃗₀` is the offset above, bit
+  for bit.
+- **The joint step.** Each occupant marches `(x, δ⃗)` together: `x` bit-identical to its own `STEP`, and `δ⃗` through
+  the same stages, each stage's update the occupant's own, linear in `δ⃗`, with the force replaced by the force
+  difference at the stage's positions, `Δa = a(r + δr) − a(r)` (integrator contract Part 2). `Δa` is formed from the pair
+  separations: pair `k = (i, j)` (R-22) has the sample's separation `dₖ = rⱼ − rᵢ` and its displacement
+  `eₖ = δrⱼ − δrᵢ`, and contributes `Δuₖ = u(dₖ + eₖ) − u(dₖ)`, `u(d) = d/‖d‖³`, combined as §3.1 combines the
+  terms (`Δa₀ = m₁Δu₂ − m₂Δu₁`, and cyclically), never from an absolute `r + δr`. For KDK and the Yoshida compositions
+  a stage is `δp ← δp + h·m·Δa(r, δr)`, `δr ← δr + h·δp/m`; for RK4 each `δkᵢ = (δp/m, m·Δa)` at the stage's
+  displaced state, combined by the same tableau; for Euler (the debug occupant) the same update at the step's start.
+  The difference is formed in one of R-974's two ways: **(a1)**, plainly, `dₖ + eₖ` formed at the working precision
+  and its `u` as the force forms it, less `u(dₖ)`; or **(a2)**, cancellation-free, with `n = ‖d‖`, `n' = ‖d + e‖`:
+  `q = e·(2d + e)` (`= n'² − n²`, formed from `e`), `n'² = n² + q`, and
+  `Δu = e/n'³ + d·c`, `c = −q·(n'² + n'n + n²) / ((n' + n)·n³·n'³)`, the difference of the inverse cubes written as a
+  product, so that no two nearly equal numbers are subtracted. TASK-M3-72's pre-registered measurement chose between
+  them (R-649): **(a1)**. On the shadow-form set at ‖δ₀‖ = 1e-5 (Yoshida-4, `n_renorm` 300, `T` = 30) the worst
+  `|λ_T(f32) − λ_T(f64)|` is 0.00017 for (a1) and 0.00011 for (a2), against the absolute form's 0.204, and both keep
+  Burrau's f32 `λ_T` finite at ‖δ₀‖ = 1e-5 and 1e-6 where the absolute form's is not; a gain of (a2) over (a1) below
+  `1/T` chooses (a1) (TASK-M3-72's file gives the criterion and the numbers).
+- **Per macro-step.** The shadow takes the sample's `N_sub` and as many joint steps as the sample took, from the
+  sample's state at the macro-step's start, as the absolute form does (§3.3).
+- **Its projection** (§3.4). After each joint step `x` is projected as the sample's state is, and `δ⃗` by the same
+  linear map with the same masses, `δrᵢ ← δrᵢ − Σⱼmⱼδrⱼ/M`, `δpᵢ ← δpᵢ − (mᵢ/M)·Σⱼδpⱼ`. The projection being linear,
+  `x + δ⃗` is then projected by its own `R_com` and `P_com`, never by the sample's alone.
+- **Its energy and collision test.** The shadow's monitor and detectors read `x + δ⃗`, formed at the working precision
+  after the projections, with the force evaluation formed there; its `E₀` is the energy of `x₀ + δ⃗₀`. They only watch
+  (R-972, §3.4): nothing they hold reaches the sample's march or a stored field.
+- **Renormalisation.** `δ = ‖δ⃗‖`; `S += ln(δ/δ₀)`; `δ⃗ ← (δ₀/δ)·δ⃗`, one rounding per component, with no absolute
+  state formed. The finalised read (payload §5) takes `δ_current = ‖δ⃗‖` itself.
+- **Stored.** The payload stays in the absolute form until REQ-PAY-085's calibration says otherwise (payload §8); a
+  displacement shadow written to a `SimState` stores `r_sh = r + δr`, `p_sh = p + δp`.
+
+**The same physical time under an occupant that owns its time mapping (13 Nov 2026, TASK-M3-72's definition, R-72;
+REQ-VAL-355; R-974's recorded consequence).** An occupant that owns its time mapping (Heggie × RK4, the default,
+`dτ = S^{3/2}/(R₁R₂R₃) dt`; logH; Aarseth–Zare; integrator contract Part 2a, Part 2b) marches in a fictitious time `τ`,
+and physical time `t` is one of its state's components, `dt/dτ = g(state)`. Stepped by one `Δτ` through the same
+stages, the sample and its shadow move by different `Δt`. The joint step keeps them comparable at equal physical time
+as follows:
+
+- **`δt` is carried.** The displacement gains the component `δt = t' − t`, advanced through the same stages as every
+  other component (its rate the difference `g(x + δ⃗) − g(x)`, formed as the occupant's joint step forms its other
+  differences), starting at 0. The sample lands on the sync grid as its own `ADVANCE` does (Part 2a, R-565); the
+  shadow stands at `t + δt`.
+- **Resynchronised wherever the separation is read**: at each renormalisation, and at a read of the finalised FTLE or of
+  the stored shadow. The Cartesian displacement is first taken back to the sample's physical time, to first order,
+  `δx ← δx − f(x)·δt`, `f(x) = (p/m, m·a(r))` the physical-time vector field at the sample's state (read from its force
+  evaluation), and `δt ← 0`. A renormalisation then acts on the resynchronised `δx`, so **at every renormalisation the
+  shadow's elapsed physical time equals the sample's, exactly** (`δt = 0` there). Between renormalisations `δt` is
+  carried, never zeroed.
+- **What it drops.** The first-order term `ẋ·δt`, of the separation's own order, is the flow component R-974's
+  consequence names, and it is removed. What remains is `O(δt²·ẍ)` and `O(‖δx‖·δt)` (`f` read at `x`, not `x + δx`):
+  second order in the separation, the order of the finite-difference estimator's own nonlinearity, which dd test 10's
+  linear regime bounds (§5, test 10).
+- **Why this option, of the two R-974 names.** Carrying `δt` keeps the stages matched, one `Δτ` for both, which the force
+  difference needs: each stage differences the shadow against the sample at the same stage. Stepping the shadow's `τ`
+  so that it lands on the sample's `t` gives the shadow steps of its own, with no matched stage to difference against.
+- **The occupant's own variables.** A regularised occupant marches its own coordinates; its joint step carries `δ⃗` in
+  them, with `δt`, and maps it to the Cartesian `δx` the estimator reads (payload §5) where the separation is read. For
+  Heggie × RK4 that map and the joint step are TASK-M3-74's, under physics review; an occupant with no joint step has no
+  displacement form (integrator contract Part 2a). Under a stepper, which does not own its time mapping, `δt` is 0
+  throughout: the sample and its shadow share the wrapper's grid.
+
 ---
 
 ## 4. Seams (obligations → integration tests)

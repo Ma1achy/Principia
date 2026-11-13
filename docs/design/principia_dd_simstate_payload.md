@@ -753,6 +753,10 @@ Span ~96 MB (phone: FTLE-off E=0 720p, hot only) to ~5.6 GB (4K FTLE-on E=3) fro
   pair separations; whether that difference is formed plainly in f32 (a1) or cancellation-free (a2) is chosen by a
   measurement whose criterion TASK-M3-72 writes before any run (R-649). TASK-M3-72 builds it and writes the definition
   into `principia_dd_integrator.md` §3.8 (R-72).
+  *13 Nov 2026 (TASK-M3-72, the measurement):* (a1) is chosen; on the known-Lyapunov periodic orbits at ‖δ₀‖ = 1e-5
+  the f32 displacement form's worst gap to f64 is 0.00017 against the absolute form's 0.204, and Burrau's f32 `λ_T`
+  stays finite at ‖δ₀‖ ≤ 1e-5 (`principia_dd_integrator.md` §3.8). The shipped form stays absolute until REQ-PAY-085's
+  calibration says whether the gain is meaningful (TASK-M4-13).
 - Quality controller thresholds/ladder; device-characterisation budget heuristics (unified vs discrete memory).
 - f16 latch semantics (a) vs (b) — confirm the local-f32-pack-at-persist path (a) is what's implemented (§1).
 - **Branch-cut crossing detection at every accepted substep** (not per-macro-step) OR a proof that each tested segment holds ≤1 crossing (§3) — required for topological adequacy.
