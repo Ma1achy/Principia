@@ -12,7 +12,9 @@
 //! **The evaluator's source** is `crates/kernel/src`, every file, but for the integrator's layers, which the chart
 //! evaluator does not reach (R-926: the CPU evaluates charts, the integrator only integrates records): `driver/`,
 //! `occupant/`, `physics/`, `regularisation/`, `detect/` and `payload/` (applied per R-369: the scan's scope). A file
-//! added anywhere else is scanned.
+//! added anywhere else is scanned. With it, the CPU evaluator's entry, `crates/engine/src/decode_dispatch.rs`
+//! (`decode_only_with`), labelled `engine/decode_dispatch.rs`; the rest of the engine calls the evaluator and is not
+//! reached by it.
 //!
 //! **Flagged**: a path ending in a transcendental's name (`Float::sin`, `f64::ln`, `<R as Float>::exp`, `R::powf`),
 //! whether called or named as a value, a method call of one (`x.ln()`), and any `libm::` path, so the pinned library is
@@ -221,6 +223,11 @@ fn sources() -> Vec<(String, String)> {
             }
         }
     }
+    let entry = Path::new(env!("CARGO_MANIFEST_DIR")).join("../engine/src/decode_dispatch.rs");
+    files.push((
+        "engine/decode_dispatch.rs".to_owned(),
+        fs::read_to_string(&entry).expect("the CPU evaluator's entry"),
+    ));
     files.sort();
     files
 }
@@ -234,6 +241,12 @@ fn check(files: &[(String, String)]) {
     assert!(
         files.iter().any(|(rel, _)| rel.starts_with("chart/")),
         "the scan reads src/chart/"
+    );
+    assert!(
+        files
+            .iter()
+            .any(|(rel, _)| rel == "engine/decode_dispatch.rs"),
+        "the scan reads the evaluator's entry, engine's decode_dispatch.rs"
     );
     let found: Vec<String> = files
         .iter()
