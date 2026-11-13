@@ -108,7 +108,7 @@ struct SimStateFTLE {
     //   the Rust closure_step: u16 / _reserved: u16 are as above.
 
     // ── COLLISION FLOOR (R-954, R-973; TASK-M3-71) ──────────  8 B
-    coll_floor_word : u32,        // bits 0–7: coll_floor, the largest floor of the collision test over its
+    coll_floor_bits : u32,        // bits 0–7: coll_floor, the largest floor of the collision test over its
                                   //   near-firing states and the d_min state, as its code (§2; integrator
                                   //   contract Part 7); bits 8–31 reserved, decoding as zero. Hot: the
                                   //   detector latches it every step.
@@ -157,13 +157,13 @@ definition are TASK-M3-71's, written with integrator contract Part 7 under physi
 recheck that placement makes.
 
 **The recheck, on the collision floor's record (13 Nov 2026, TASK-M3-71; R-973; REQ-EVT-035).** The record takes its
-own 8 B at the end of both variants, after `_reserved`: `coll_floor_word`, a u32 whose bits 0–7 hold the floor's code
+own 8 B at the end of both variants, after `_reserved`: `coll_floor_bits`, a u32 whose bits 0–7 hold the floor's code
 (§2), and `_pad`, a declared u32 of padding (R-86), since at f32 any new member costs 8 B (above). Placed after the
 u16s, it leaves no hole at any row. Bytes per copy:
-- **f32:** `coll_floor_word` at 144 and `_pad` at 148 in `SimStateFTLE`, 96 and 100 in `SimStateBase`: 144 → **152 B**
+- **f32:** `coll_floor_bits` at 144 and `_pad` at 148 in `SimStateFTLE`, 96 and 100 in `SimStateBase`: 144 → **152 B**
   = 19×8 and 96 → **104 B** = 13×8. +5.6 % FTLE-on, +8.3 % FTLE-off.
-- **f64:** `coll_floor_word` at 268 fills the declared `_tail`, `_pad` at 272, a new 4 B `_tail` at 276:
-  `SimStateFTLE` 272 → **280 B** and `SimStateBase` 176 → **184 B** (`coll_floor_word` at 172). +2.9 %, +4.5 %.
+- **f64:** `coll_floor_bits` at 268 fills the declared `_tail`, `_pad` at 272, a new 4 B `_tail` at 276:
+  `SimStateFTLE` 272 → **280 B** and `SimStateBase` 176 → **184 B** (`coll_floor_bits` at 172). +2.9 %, +4.5 %.
 - **DoubleF64:** likewise `SimStateFTLE` 520 → **528 B** (524 used) and `SimStateBase` 328 → **336 B** (332 used).
 
 With TASK-M3-41's two u32s after `total_substeps` as well (below), the rows are 160 / 112 B at f32, 288 / 192 B at f64
@@ -249,7 +249,7 @@ width.
 | `total_substeps` | u32 | u32, fixed |
 | `budget_word`, `dE_reg` (R-603's counters and flag, R-605's regularised drift latches) | u32 | u32, fixed |
 | `closure_step`, `_reserved` | u16 | u16, fixed |
-| `coll_floor_word`, `_pad` (the collision floor's record and its declared padding, R-973) | u32 | u32, fixed |
+| `coll_floor_bits`, `_pad` (the collision floor's record and its declared padding, R-973) | u32 | u32, fixed |
 
 Why: the phase state and shadow are the integration, and a wider `Real` is the point of the CPU path (canonical_spec
 §1 item 3). The accumulators are sums, and the precision rule above (summing in a narrower type loses the tail) holds at
@@ -269,11 +269,11 @@ alignment leaves tail padding at every width but f32; it is declared, never impl
 **The f64 layout** (`w` = 8, aligned to 8), from TASK-M3-41 on (280 / 184 B as generated until then, below):
 - `SimStateFTLE`: `r` 0, `p` 48, `r_sh` 96, `p_sh` 144, `S` 192, `theta` 200, `mean_y` 208, `C_ty` 216, `E_0` 224,
   `Lz_0` 232, `packed_a` 240, `packed_b` 244, `times` 248, `total_substeps` 252, `budget_word` 256, `dE_reg` 260,
-  `closure_min` 264, `closure_step` 272, `_reserved` 274, `coll_floor_word` 276, `_pad` 280, `_tail` 284 (one u32):
+  `closure_min` 264, `closure_step` 272, `_reserved` 274, `coll_floor_bits` 276, `_pad` 280, `_tail` 284 (one u32):
   **288 B**.
 - `SimStateBase`: the same less `r_sh` and `p_sh`, 96 B earlier from `S`; `_tail` at 188: **192 B**.
 - As generated until TASK-M3-41: `total_substeps` 252, `closure_min` 256, `closure_step` 264, `_reserved` 266,
-  `coll_floor_word` 268, `_pad` 272, `_tail` 276 (one u32): **280 B**, and `_tail` at 180: **184 B**.
+  `coll_floor_bits` 268, `_pad` 272, `_tail` 276 (one u32): **280 B**, and `_tail` at 180: **184 B**.
 - *Was* (before the collision floor's 8 B, 13 Nov 2026, TASK-M3-71, R-973): "`closure_min` 264, `closure_step` 272,
   `_reserved` 274, `_tail` 276 (one u32): **280 B**" and "`_tail` at 180: **184 B**", from TASK-M3-41 on.
 - *Was:* "`total_substeps` 252, `closure_min` 256, `closure_step` 264, `_reserved` 266, `_tail` 268 (one u32):
@@ -323,7 +323,7 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
 *12 Nov 2026 (R-973):* the collision floor's per-sample byte (§1's dated line) takes no bit of `sample_descriptor`,
 which has none free; its layout is TASK-M3-71's definition, a format change like `last_symbol`'s.
 
-### `coll_floor_word` (u32) — the collision test's floor (R-954, R-973; 13 Nov 2026, TASK-M3-71)
+### `coll_floor_bits` (u32) — the collision test's floor (R-954, R-973; 13 Nov 2026, TASK-M3-71)
 ```
  bit  31 ································ 8 | 7 ············ 0
       └──────── reserved (decode as zero) ──────┘ | └─ coll_floor ─┘
@@ -334,6 +334,7 @@ which has none free; its layout is TASK-M3-71's definition, a format change like
 | `1 … 145` | the floor `2^(code − 41)`, `2⁻⁴⁰` to `2¹⁰⁴`: the largest over the test's near-firing states and the `d_min` state (integrator contract Part 7) |
 | `146 … 255` | not written |
 
+It is named `_bits`, not `_word`: no `SimState` member names the word, which lives in its own buffer (§0; REQ-PAY-025).
 The flag an output reads is `r_coll < 2^(code − 41)`, from the sim key's `r_coll`, exactly, at read; it is not stored
 (§5). The format change is versioned as `last_symbol`'s was: the schema version is the ledger's hash (R-36).
 
@@ -757,7 +758,7 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 
 **Storage multiplier is `(E+1)`, NOT `2(E+1)`.** Critical distinction:
 - **The *trajectory / compute* count is `(E+1)(1 + 𝟙_FTLE)`** — per nominal sample there are `(E+1)` samples (base + E ensemble copies), each running its own trajectory *plus* a Benettin shadow **only when FTLE is enabled**. So integrations/pixel = `2(E+1)` with FTLE on, `(E+1)` with FTLE off. This is the number for the compute/probe estimate (quality-device note).
-- **`(E+1)` is the *storage* multiplier** (both tiers) — there are `(E+1)` `SimState`s per nominal sample, and **each `SimState` already contains its shadow** (the `r_sh, p_sh` fields, part of the 152 B from TASK-M3-41 on, of the generated 144 B until then; *was* "part of the 144 B" before R-603's and R-605's words). Multiplying storage by `2(E+1)` would **double-count the shadow** (once in the struct size, once in the multiplier). Memory = `bytes × (E+1) × live_pixels`.
+- **`(E+1)` is the *storage* multiplier** (both tiers) — there are `(E+1)` `SimState`s per nominal sample, and **each `SimState` already contains its shadow** (the `r_sh, p_sh` fields, part of the 160 B from TASK-M3-41 on, of the generated 152 B until then; *was* "part of the 152 B from TASK-M3-41 on, of the generated 144 B until then" before the collision floor's 8 B, and "part of the 144 B" before R-603's and R-605's words). Multiplying storage by `2(E+1)` would **double-count the shadow** (once in the struct size, once in the multiplier). Memory = `bytes × (E+1) × live_pixels`.
 
 **No double-buffering.** The march updates state **in place** each step (temporal note) — samples are independent (no stencil/neighbour hazard: each sample's force loop couples only its own 3 bodies), so read-modify-write of a sample's own slot is safe, no ping-pong copy.
 
@@ -770,7 +771,11 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 > are at 152 / 104 B; at 144 / 96 B they were 1.327 / 0.929 / 0.464 / 5.308 / 1.858 GB, with hot parts 1.194 / 0.796 /
 > 0.398 / 4.778 / 1.593 GB.
 
-Per-sample: hot `SimState` **144 B (FTLE-on) / 96 B (FTLE-off)** effective as generated until TASK-M3-41, **152 B / 104 B** from TASK-M3-41 on (R-603, R-605), the widths the table below uses + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
+> **The collision floor's 8 B (13 Nov 2026, TASK-M3-71, R-973).** The record's own 8 B (§1) make the generated widths
+> 152 / 104 B, the widths the table below is at, so its figures hold as generated now. From TASK-M3-41 on the widths are
+> 160 / 112 B: hot 1.327 / 0.929 / 0.464 / 5.308 / 1.858 GB, totals 1.460 / 1.062 / 0.531 / 5.839 / 2.123 GB.
+
+Per-sample: hot `SimState` **152 B (FTLE-on) / 104 B (FTLE-off)** effective as generated, with the collision floor's 8 B, **160 B / 112 B** from TASK-M3-41 on (R-603, R-605; *was* "**144 B (FTLE-on) / 96 B (FTLE-off)** effective as generated until TASK-M3-41, **152 B / 104 B** from TASK-M3-41 on", before the collision floor's 8 B); the table below is at 152 / 104 B + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
 
 | Config (at the stated *render* resolution) | Hot | +Word | Total |
 |---|---|---|---|

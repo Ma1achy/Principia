@@ -290,7 +290,7 @@ Each seam: the two parties, what crosses, and the single invariant that holds it
 
 **Measured by the lowering spike, and it is a design decision the CPU never forced.**
 
-At `N=8, E+1=8` a quad is **512 trajectories × 144 B = 72 KB** (recomputed at 144 B, R-40 / D6). At 152 B, from TASK-M3-41 on, with R-603's and R-605's two u32s (payload §1; perf review 5661999637 of PR #293, P1), it is 76 KB, 4.75× WebGPU's and 2.4× Metal's limit below; the spike's figures are kept as measured. Workgroup storage limits:
+At `N=8, E+1=8` a quad is **512 trajectories × 144 B = 72 KB** (recomputed at 144 B, R-40 / D6). At 152 B, from TASK-M3-41 on, with R-603's and R-605's two u32s (payload §1; perf review 5661999637 of PR #293, P1), it is 76 KB, 4.75× WebGPU's and 2.4× Metal's limit below; the spike's figures are kept as measured. Workgroup storage limits: *13 Nov 2026 (TASK-M3-71, R-973):* the collision floor's own 8 B (dd_simstate_payload §1) make the generated widths 152 / 104 B, so the figures quoted at 152 / 104 B hold as generated now; from TASK-M3-41 on the widths are 160 / 112 B, whose figures that task's recheck gives.
 
 | | WebGPU | Metal |
 |---|---|---|

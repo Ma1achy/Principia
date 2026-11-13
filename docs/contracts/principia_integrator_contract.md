@@ -227,7 +227,7 @@ prin-rs.**
 |---|---|---|
 | **step / deriv / Hamiltonians / `physics/`** | **PORTS AS-IS** | measured **0 `Vec`/`Box`/`dyn`/`std`** across both RK4s, both Hamiltonians and `physics/`. Already shader-shaped. Porting is transcription. |
 | **the driver layer** | **REWRITTEN to the rules below** | every blocker found is here, and every one is a *rule violation* rather than a bug |
-| **the dispatch shape** | **DESIGNED FRESH** | 72 KB per quad (512 × 144 B, D6; 76 KB at 152 B from TASK-M3-41 on, with R-603's and R-605's two u32s) fits no backend; see `principia_systems_architecture.md` §5.5 |
+| **the dispatch shape** | **DESIGNED FRESH** | 72 KB per quad (512 × 144 B, D6; 76 KB at 152 B from TASK-M3-41 on, with R-603's and R-605's two u32s; 13 Nov 2026, TASK-M3-71, R-973: 76 KB at the generated 152 B with the collision floor's 8 B, and 80 KB at 160 B from TASK-M3-41 on) fits no backend; see `principia_systems_architecture.md` §5.5 |
 
 **The good news is real and worth stating: no blocker is a physics problem.** No wrong equations, no
 bad numerics. It is all driver-layer plumbing — the cheapest kind of bad news, and what a spike is
@@ -1086,7 +1086,7 @@ Escape and collision are where the categorical outcome comes from — every outc
     - *The record.* Per sample, `coll_floor` holds the largest `c` over every pair near firing at every state the test
       read, and over the `d_min` state: the state and pair the `d_min` latch holds when the sample is written
       (`dmin_pair`; dd_simstate_payload § 2). It is stored as the code `c + 41`, 1 to 145, in bits 0–7 of the
-      `coll_floor_word` u32; bits 8–31 are reserved and decode as zero. The code 0 is "not recorded": a failed
+      `coll_floor_bits` u32; bits 8–31 are reserved and decode as zero. The code 0 is "not recorded": a failed
       sample's (`sim_failed`, `decode_failed`; R-79, as `d_min` is unset, R-271), and any sample's before the test
       first reads it. The placement and its recheck are dd_simstate_payload § 1 and § 2.
     - *The flag, at read.* An output reads `r_coll < 2^(code − 41)`, the sim key's `r_coll` against the recorded
