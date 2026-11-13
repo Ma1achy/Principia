@@ -1,0 +1,12 @@
+{
+  "description": "The control of REQ-INT-119's second criterion, on the same ladder, floor and fit as landing_floor.json: the clamp with no retakes, the clock set to the boundary alone over the overshot state (what R-998 forbids), whose error is of order η² in every interval, so the fitted order must fall out of 4 ± 0.5 and the gate must fail it.",
+  "eta": 0.001,
+  "n": 32,
+  "landing": "clock_only",
+  "ladder": [0.024, 0.016, 0.012, 0.008, 0.006],
+  "reference_eta": 0.0001,
+  "order_expected": 4.0,
+  "order_margin": 0.5,
+  "floor": { "second_eta": 0.000125, "factor": 10.0, "min_rungs": 3 },
+  "expected": "fail"
+}

@@ -409,8 +409,8 @@ pub fn convergence(
             (c, e)
         })
         .collect();
-    let points: Vec<(f64, f64)> = rungs.iter().map(|(c, e)| (c.eta.ln(), e.ln())).collect();
-    let order = slope(&points);
+    let pairs: Vec<(f64, f64)> = rungs.iter().map(|(c, e)| (c.eta, *e)).collect();
+    let order = fitted_order(&pairs);
     Convergence {
         rungs,
         reference,
@@ -448,6 +448,40 @@ pub struct FinalStepInput {
     /// How far the fitted order may lie from `order_expected`, either way (REQ-INT-119; the criterion written before
     /// any run, R-649).
     pub order_margin: f64,
+    /// The round-off floor the fit stays above, where the input states one ([`FloorCriterion`]); with none, every rung
+    /// is fitted.
+    #[serde(default)]
+    pub floor: Option<FloorCriterion>,
+}
+
+/// The convergence arm's round-off floor (REQ-INT-119's second criterion): the floor `F` is the distance between the
+/// reference run's end and a second reference run's at `second_eta`, both far below the ladder, so that their
+/// truncation errors are negligible and what parts them is rounding; a rung is fitted only where its error exceeds
+/// `factor·F`, and the arm passes only where at least `min_rungs` rungs are fitted.
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FloorCriterion {
+    /// The second reference run's `η`.
+    pub second_eta: f64,
+    /// How far above the floor a fitted rung's error must be.
+    pub factor: f64,
+    /// The fewest rungs the fit takes.
+    pub min_rungs: usize,
+}
+
+/// The rungs `(η, error)` of `rungs` whose error exceeds `factor·floor`, in ladder order.
+pub fn above_floor(rungs: &[(f64, f64)], floor: f64, factor: f64) -> Vec<(f64, f64)> {
+    rungs
+        .iter()
+        .copied()
+        .filter(|&(_, e)| e > factor * floor)
+        .collect()
+}
+
+/// The order fitted on `rungs` `(η, error)`: the least-squares slope of `ln e` against `ln η` ([`slope`]).
+pub fn fitted_order(rungs: &[(f64, f64)]) -> f64 {
+    let points: Vec<(f64, f64)> = rungs.iter().map(|&(h, e)| (h.ln(), e.ln())).collect();
+    slope(&points)
 }
 
 /// The lines describing one run.
@@ -532,7 +566,39 @@ impl Gate for AzFinalStepGate {
         );
         let mut negative = Vec::new();
         let closes = c.closure <= threshold;
-        let converges = (conv.order - input.order_expected).abs() <= input.order_margin;
+        let (order, enough) = match input.floor {
+            None => (conv.order, true),
+            Some(fc) => {
+                let second = closure(&o, fc.second_eta, input.n, Landing::Fix);
+                let floor = distance(&conv.reference.end, &second.end);
+                let pairs: Vec<(f64, f64)> = conv.rungs.iter().map(|(r, e)| (r.eta, *e)).collect();
+                let kept = above_floor(&pairs, floor, fc.factor);
+                let enough = kept.len() >= fc.min_rungs;
+                scatter.push(format!(
+                    "the round-off floor: {floor:.3e}, the reference runs at η = {} and {} apart; the rungs above \
+                     {}× it: {:?}; {} of at least {}",
+                    input.reference_eta,
+                    fc.second_eta,
+                    fc.factor,
+                    kept.iter().map(|k| k.0).collect::<Vec<_>>(),
+                    kept.len(),
+                    fc.min_rungs
+                ));
+                let order = if kept.len() >= 2 {
+                    fitted_order(&kept)
+                } else {
+                    f64::NAN
+                };
+                scatter.push(format!(
+                    "order fitted on the rungs above the floor {order:.3}"
+                ));
+                (order, enough)
+            }
+        };
+        let converges = enough && (order - input.order_expected).abs() <= input.order_margin;
+        if !enough {
+            negative.push("too few rungs above the round-off floor to fit an order".to_owned());
+        }
         negative.push(if closes {
             format!(
                 "the closure {:.4e} is within the threshold {threshold:.3e}",
@@ -546,13 +612,13 @@ impl Gate for AzFinalStepGate {
         });
         negative.push(if converges {
             format!(
-                "the fitted order {:.3} is within {} of {}",
-                conv.order, input.order_margin, input.order_expected
+                "the fitted order {order:.3} is within {} of {}",
+                input.order_margin, input.order_expected
             )
         } else {
             format!(
-                "the fitted order {:.3} is not within {} of {}",
-                conv.order, input.order_margin, input.order_expected
+                "the fitted order {order:.3} is not within {} of {}",
+                input.order_margin, input.order_expected
             )
         });
         Ok(GateReport {

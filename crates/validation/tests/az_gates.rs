@@ -10,7 +10,7 @@ use kernel::regularisation::az::End;
 use kernel::regularisation::az::Watch;
 use serde_json::json;
 use validation::az::{
-    cartesian_closure, checked, closure, convergence, decide_sync, describe, distance,
+    above_floor, cartesian_closure, checked, closure, convergence, decide_sync, describe, distance,
     doubly_degenerate, energy, figure_eight, floor_run, lc_error, on_grid, orbit, proposal,
     propose_final_step_with, propose_floor, propose_sync_with, radial, reference_tiny, round_up,
     show, slope, AzFinalStepGate, Landing, LcInverseGate, Orbit, Proposal, Quiet, Recorder,
@@ -195,6 +195,24 @@ fn check_final_step(landing: Landing) {
         Ok(Verdict::Pass),
         "within the margin"
     );
+    let mut floored = final_step(landing, conv.order, 0.0);
+    floored["floor"] = json!({ "second_eta": 0.006, "factor": 0.0, "min_rungs": 2 });
+    let verdict = |v: &serde_json::Value| {
+        AzFinalStepGate
+            .run(&config(FINAL_STEP_NAME, c.closure), "t", v)
+            .map(|r| r.verdict)
+    };
+    assert_eq!(
+        verdict(&floored),
+        Ok(Verdict::Pass),
+        "both rungs above a floor of factor 0, the same fit"
+    );
+    floored["floor"]["min_rungs"] = json!(3);
+    assert_eq!(
+        verdict(&floored),
+        Ok(Verdict::Fail),
+        "fewer rungs above the floor than the least the fit takes"
+    );
     for bad in [
         json!({ "description": "", "eta": 0.01, "n": 8, "landing": "fix", "ladder": [0.01],
                 "reference_eta": 0.005, "order_expected": 4.0, "order_margin": 0.5 }),
@@ -238,6 +256,43 @@ fn check_slope(fit: fn(&[(f64, f64)]) -> f64) {
         "the fit over every point: {s}"
     );
 }
+
+/// The rungs fitted are those whose error exceeds `factor·floor`, strictly, in ladder order.
+fn check_above_floor(keep: fn(&[(f64, f64)], f64, f64) -> Vec<(f64, f64)>) {
+    // A floor of 2⁻⁴⁰ at factor 2 puts the bar at 2⁻³⁹ exactly, the third rung's error.
+    let (floor, bar) = (2f64.powi(-40), 2f64.powi(-39));
+    let rungs = [(0.02, 1e-9), (0.01, 6e-11), (0.005, bar), (0.002, 8e-13)];
+    assert_eq!(
+        keep(&rungs, floor, 2.0),
+        vec![(0.02, 1e-9), (0.01, 6e-11)],
+        "the rungs above 2× the floor, the one at the bar not above it"
+    );
+    assert_eq!(
+        keep(&rungs, 1e-13, 1.0).len(),
+        4,
+        "every rung above the floor itself"
+    );
+    assert!(
+        keep(&rungs, 1e-8, 1.0).is_empty(),
+        "none above a floor over them all"
+    );
+}
+
+#[test]
+fn az_above_floor() {
+    check_above_floor(above_floor);
+}
+
+negative_control!(
+    az_above_floor,
+    "a filter that keeps a rung at the floor",
+    expected = "the rungs above 2× the floor",
+    check_above_floor(|r, floor, factor| r
+        .iter()
+        .copied()
+        .filter(|&(_, e)| e >= factor * floor)
+        .collect())
+);
 
 #[test]
 fn az_order_fit() {

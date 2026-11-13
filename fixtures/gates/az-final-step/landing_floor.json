@@ -1,0 +1,12 @@
+{
+  "description": "REQ-INT-119's second criterion, written 13 Nov 2026 before any run on its ladder (R-649), replacing landing.json's (kept as *Was*: its fitted order over [0.02, 0.001] was 2.462, FAIL, the rungs at 0.002 and 0.001 sitting on a flat floor of about 7e-13). The figure-eight over one period on its own sync interval T/32, Aarseth–Zare + RK4 with the landing clamp, secant and bisection (R-998): its closure at η = 0.001 within REQ-INT-114's threshold, and its convergence order on a fresh ladder [0.024, 0.016, 0.012, 0.008, 0.006], none of whose rungs has been run, against the reference run at η = 1e-4. The round-off floor F is stated before the run as a measurement the run makes: the distance between the reference run's end and a second reference run's at η = 1.25e-4, whose truncation errors (fourth order, about 1e-18 by RK4's scaling from η = 0.005) are negligible, so what parts them is rounding. A rung is fitted only where its error exceeds 10·F, so that rounding moves it by under a tenth; at least 3 rungs must be fitted; and the order fitted on them by least squares on ln(error) against ln(η) must lie within 0.5 of RK4's 4. Reasoning for the ladder: it stays at or below η = 0.024, near the first run's 0.02, where no step was bound by the predictive limit (which does not scale with η and would lower the order), and spans a factor of 4 so that three or more rungs can stand above the floor; this shape was chosen knowing the first run's errors, which is stated here.",
+  "eta": 0.001,
+  "n": 32,
+  "landing": "fix",
+  "ladder": [0.024, 0.016, 0.012, 0.008, 0.006],
+  "reference_eta": 0.0001,
+  "order_expected": 4.0,
+  "order_margin": 0.5,
+  "floor": { "second_eta": 0.000125, "factor": 10.0, "min_rungs": 3 },
+  "expected": "pass"
+}
