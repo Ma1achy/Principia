@@ -15,7 +15,7 @@ use render::colour::field_ramp::{
 };
 use render::present::{self, Rgb, DRIFT_LIN, DRIFT_LOG, DRIFT_SYMLOG};
 use render::registry;
-use validation::golden_scene::{row_scene, Colouring, DebugCase, Scene};
+use validation::golden_scene::{row_scene, Colouring, DebugCase, Look, Scene};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 
@@ -175,25 +175,57 @@ negative_control!(
 );
 
 /// The band's edges of scale: at rest (`K = 0`, `S = 0`) the energy band is `15·2⁻²³·|V|` and the `L_z` band empty,
-/// where the drift is exact; and neither depends on the reference (the mirror takes none).
-#[test]
-fn qa_tool227_band_at_rest_and_without_reference() {
+/// where the drift is exact; and neither depends on the reference (the mirror takes none). `band_e` and `band_lz` are
+/// the bands under test, `(r, p, m)` to the half-width.
+fn check_rest(
+    band_e: &dyn Fn(Vec2s, Vec2s, [f32; 3]) -> f32,
+    band_lz: &dyn Fn(Vec2s, Vec2s) -> f32,
+) {
     let (r, _, m) = random_state(&mut Rng(7));
     let p = [[0.0_f32; 2]; 3];
     let (_, v, ..) = invariants(r, p, m);
-    let e = f64::from(present::drift_band_energy(r, p, m));
+    let e = f64::from(band_e(r, p, m));
     assert!(
         (e - K_E * ULP * v).abs() <= 5.0 * ULP * e,
         "at rest the energy band {e} is not 15·2⁻²³·|V|"
     );
     assert!(e > 0.0, "the energy band is empty at rest");
-    assert_eq!(
-        present::drift_band_lz(r, p),
-        0.0,
-        "S = 0 and the band is not"
-    );
+    assert_eq!(band_lz(r, p), 0.0, "S = 0 and the band is not");
     // An exact drift of 0 on an empty band is drawn as 0.
     assert_eq!(present::dbg_drift_shown(0.0, DRIFT_SYMLOG, 0.0), 0.0);
+}
+
+#[test]
+fn qa_tool227_band_at_rest_and_without_reference() {
+    check_rest(&present::drift_band_energy, &present::drift_band_lz);
+}
+
+negative_control!(
+    qa_tool227_band_at_rest_and_without_reference,
+    "R-652's band, 128·2⁻²³ of |reference|, the reference H = −|V| at rest",
+    expected = "at rest the energy band",
+    check_rest(
+        &|r, p, m| {
+            let (.., h, _, _) = invariants(r, p, m);
+            (K_RELATIVE * ULP * h.abs()) as f32
+        },
+        &present::drift_band_lz
+    )
+);
+
+#[cfg(feature = "controls")]
+mod qa_tool227_band_at_rest_and_without_reference_lz {
+    use super::*;
+
+    negative_control!(
+        qa_tool227_band_at_rest_and_without_reference,
+        "an `L_z` band floored at the energy's scale, not empty at S = 0",
+        expected = "S = 0 and the band is not",
+        check_rest(&present::drift_band_energy, &|r, p| {
+            let m = [1.0 / 3.0_f32; 3];
+            present::drift_band_lz(r, p).max(present::drift_band_energy(r, p, m) / 3.0)
+        })
+    );
 }
 
 // ── a fresh sample's drift is inside the band, references near zero included ────────────────────────────────────────
@@ -718,3 +750,53 @@ mod qa_tool227_gpu_near_zero_fresh_neutral_and_past_band_shows_energy {
         }
     );
 }
+
+// ── the scene's CPU twin of the ramp reads the band (R-929) ─────────────────────────────────────────────────────────
+
+/// The CPU twin `place` of the field ramp on `energy_drift` places the near-zero GPU set's fresh samples (0–3) at the
+/// ramp's neutral, 0.5, as its WGSL draws them, and the samples 3 bands past it (4–7) on the warm side, above 0.5.
+/// (`Lz_drift` has no CPU twin: a scene's look of it is an error.)
+fn check_twin(place: &dyn Fn(&Scene, &FieldRamp, u32) -> f64) {
+    let [ramp, _] = ramps();
+    let s = scene(Colouring::Ramp {
+        ramp: ramp.clone(),
+        override_on: false,
+    });
+    for i in 0..8u32 {
+        let t = place(&s, &ramp, i);
+        if i < 4 {
+            assert_eq!(
+                t, 0.5,
+                "the twin places fresh sample {i} at {t}, not neutral"
+            );
+        } else {
+            assert!(
+                t > 0.5,
+                "the twin places sample {i}, past the band, at {t}, not warm"
+            );
+        }
+    }
+}
+
+#[test]
+fn qa_tool227_scene_twin_ramp_reads_the_band() {
+    check_twin(
+        &|s, _, i| match s.look(i).unwrap_or_else(|e| panic!("{e}")) {
+            Look::Ramp { t, .. } => t,
+            other => panic!("sample {i}'s look is {other:?}, not a ramp"),
+        },
+    );
+}
+
+negative_control!(
+    qa_tool227_scene_twin_ramp_reads_the_band,
+    "the twin through `shown_in`, the ramp without the band",
+    expected = "not neutral",
+    check_twin(&|s, ramp, i| {
+        let (v, gate) = s.value(i).unwrap_or_else(|e| panic!("{e}"));
+        match ramp.shown_in(v, gate, Reads::HEADER, s.set.forbidden(i), s.read(i).state) {
+            RampShown::Ramp(t) => t,
+            other => panic!("sample {i} shows {other:?}"),
+        }
+    })
+);
