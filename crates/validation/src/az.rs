@@ -9,7 +9,9 @@
 //! - **`az-final-step`** ([`AzFinalStepGate`]; REQ-INT-049, REQ-INT-114, REQ-INT-119): the figure-eight's closure
 //!   after one period on the gate's own sync interval `T/32` at `η = 0.001`, under the step control in force with the
 //!   landing clamp, secant and bisection (R-998), at most REQ-INT-114's proposed threshold, and its convergence order
-//!   over the `η` ladder, fitted by least squares, within the input's margin of RK4's order 4; the controls, the closure
+//!   over the `η` ladder, fitted by least squares, within the input's margin of RK4's order 4, where the input states
+//!   a round-off floor fitted only above it and diagnosed as round-off, a landing defect or unexplained
+//!   ([`FloorCriterion`], [`diagnose`]; R-1008); the controls, the closure
 //!   without the landing fix and the landing that sets the clock alone over the overshot state, beside it. `--propose` prints REQ-INT-114's proposal and
 //!   `--propose-sync` REQ-INT-080's (`Δ_sync` and `η`).
 //! - **`separation-floor`** ([`SeparationFloorGate`]; REQ-INT-105): a measurement; `--propose` prints `TINY`'s
@@ -458,19 +460,83 @@ pub struct FinalStepInput {
     pub floor: Option<FloorCriterion>,
 }
 
-/// The convergence arm's round-off floor (REQ-INT-119's second criterion): the floor `F` is the distance between the
-/// reference run's end and a second reference run's at `second_eta`, both far below the ladder, so that their
-/// truncation errors are negligible and what parts them is rounding; a rung is fitted only where its error exceeds
-/// `factor·F`, and the arm passes only where at least `min_rungs` rungs are fitted.
+/// The convergence arm's round-off floor (REQ-INT-119's second criterion; R-1008): the floor `F` is the larger of
+/// `stated`, the floor stated before the run, and the distance between the reference run's end and a second reference
+/// run's at `second_eta`, both far below the ladder, so that their truncation errors are negligible and what parts
+/// them is rounding; a rung is fitted only where its error exceeds `factor·F`, so the order is fitted only over the
+/// step sizes above the floor; the arm reads an order only where at least `min_rungs` rungs are fitted, and an order
+/// below `defect_below` there is a landing defect, not round-off ([`diagnose`]).
 #[derive(Clone, Copy, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct FloorCriterion {
+    /// The round-off floor stated before the run.
+    pub stated: f64,
     /// The second reference run's `η`.
     pub second_eta: f64,
     /// How far above the floor a fitted rung's error must be.
     pub factor: f64,
-    /// The fewest rungs the fit takes.
+    /// The fewest rungs the fit takes, at least 2.
     pub min_rungs: usize,
+    /// The order below which an order fitted above the floor is "well short of 4" (R-1008): a landing defect.
+    pub defect_below: f64,
+}
+
+/// What the convergence arm's order, fitted above the round-off floor, says (R-1008).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Diagnosis {
+    /// Fewer rungs above the floor than the fit takes: the ladder reaches the round-off floor, and no order is read.
+    RoundOff { kept: usize },
+    /// The order above the floor lies within the margin of the stepper's: the pass.
+    Within { order: f64 },
+    /// The order above the floor is below `defect_below`: a landing defect, a residual of order `h²` from sizing the
+    /// final step, not round-off.
+    LandingDefect { order: f64 },
+    /// Outside the margin and not below `defect_below`: explained by neither, reported as unexplained.
+    Unexplained { order: f64 },
+}
+
+/// The diagnosis of `order`, fitted on `kept` rungs above the floor, under `fc`, against `expected` within `margin`:
+/// too few rungs first, then within the margin, then below `defect_below`, else unexplained.
+pub fn diagnose(
+    order: f64,
+    kept: usize,
+    fc: &FloorCriterion,
+    expected: f64,
+    margin: f64,
+) -> Diagnosis {
+    if kept < fc.min_rungs {
+        Diagnosis::RoundOff { kept }
+    } else if (order - expected).abs() <= margin {
+        Diagnosis::Within { order }
+    } else if order < fc.defect_below {
+        Diagnosis::LandingDefect { order }
+    } else {
+        Diagnosis::Unexplained { order }
+    }
+}
+
+/// The report's line for `d` under `fc`, against `expected` within `margin`.
+pub fn diagnosis_line(d: Diagnosis, fc: &FloorCriterion, expected: f64, margin: f64) -> String {
+    match d {
+        Diagnosis::RoundOff { kept } => format!(
+            "too few rungs above the round-off floor to fit an order ({kept} of at least {}): the ladder reaches \
+             the floor, no order read",
+            fc.min_rungs
+        ),
+        Diagnosis::Within { order } => format!(
+            "the order fitted above the round-off floor, {order:.3}, is within {margin} of {expected}"
+        ),
+        Diagnosis::LandingDefect { order } => format!(
+            "a landing defect: the order fitted above the round-off floor, {order:.3}, is below {}, well short of \
+             {expected}: a residual of order h² from sizing the final step, not round-off (R-1008)",
+            fc.defect_below
+        ),
+        Diagnosis::Unexplained { order } => format!(
+            "unexplained: the order fitted above the round-off floor, {order:.3}, is not within {margin} of \
+             {expected} and not below {}, the landing defect's bound",
+            fc.defect_below
+        ),
+    }
 }
 
 /// The rungs `(η, error)` of `rungs` whose error exceeds `factor·floor`, in ladder order.
@@ -532,9 +598,9 @@ impl Gate for AzFinalStepGate {
     ) -> Result<GateReport, String> {
         let input =
             FinalStepInput::deserialize(fixture).map_err(|e| format!("refused: {name}: {e}"))?;
-        if input.ladder.len() < 2 || input.n == 0 {
+        if input.ladder.len() < 2 || input.n == 0 || input.floor.is_some_and(|f| f.min_rungs < 2) {
             return Err(format!(
-                "refused: {name}: a ladder of two rungs or more, and n ≥ 1"
+                "refused: {name}: a ladder of two rungs or more, n ≥ 1, and a floor's fit on two rungs or more"
             ));
         }
         let o = orbit()?;
@@ -570,39 +636,6 @@ impl Gate for AzFinalStepGate {
         );
         let mut negative = Vec::new();
         let closes = c.closure <= threshold;
-        let (order, enough) = match input.floor {
-            None => (conv.order, true),
-            Some(fc) => {
-                let second = closure(&o, fc.second_eta, input.n, Landing::Fix);
-                let floor = distance(&conv.reference.end, &second.end);
-                let pairs: Vec<(f64, f64)> = conv.rungs.iter().map(|(r, e)| (r.eta, *e)).collect();
-                let kept = above_floor(&pairs, floor, fc.factor);
-                let enough = kept.len() >= fc.min_rungs;
-                scatter.push(format!(
-                    "the round-off floor: {floor:.3e}, the reference runs at η = {} and {} apart; the rungs above \
-                     {}× it: {:?}; {} of at least {}",
-                    input.reference_eta,
-                    fc.second_eta,
-                    fc.factor,
-                    kept.iter().map(|k| k.0).collect::<Vec<_>>(),
-                    kept.len(),
-                    fc.min_rungs
-                ));
-                let order = if kept.len() >= 2 {
-                    fitted_order(&kept)
-                } else {
-                    f64::NAN
-                };
-                scatter.push(format!(
-                    "order fitted on the rungs above the floor {order:.3}"
-                ));
-                (order, enough)
-            }
-        };
-        let converges = enough && (order - input.order_expected).abs() <= input.order_margin;
-        if !enough {
-            negative.push("too few rungs above the round-off floor to fit an order".to_owned());
-        }
         negative.push(if closes {
             format!(
                 "the closure {:.4e} is within the threshold {threshold:.3e}",
@@ -614,17 +647,53 @@ impl Gate for AzFinalStepGate {
                 c.closure
             )
         });
-        negative.push(if converges {
-            format!(
-                "the fitted order {order:.3} is within {} of {}",
-                input.order_margin, input.order_expected
-            )
-        } else {
-            format!(
-                "the fitted order {order:.3} is not within {} of {}",
-                input.order_margin, input.order_expected
-            )
-        });
+        let converges = match input.floor {
+            None => {
+                let order = conv.order;
+                let within = (order - input.order_expected).abs() <= input.order_margin;
+                negative.push(format!(
+                    "the fitted order {order:.3} is {}within {} of {}",
+                    if within { "" } else { "not " },
+                    input.order_margin,
+                    input.order_expected
+                ));
+                within
+            }
+            Some(fc) => {
+                let second = closure(&o, fc.second_eta, input.n, Landing::Fix);
+                let measured = distance(&conv.reference.end, &second.end);
+                let floor = measured.max(fc.stated);
+                let pairs: Vec<(f64, f64)> = conv.rungs.iter().map(|(r, e)| (r.eta, *e)).collect();
+                let kept = above_floor(&pairs, floor, fc.factor);
+                let order = fitted_order(&kept);
+                scatter.push(format!(
+                    "the round-off floor: {floor:.3e}, the larger of the stated {:.3e} and the measured \
+                     {measured:.3e} (the reference runs at η = {} and {} apart); the rungs above {}× it: {:?}; {} \
+                     of at least {}; the order fitted on them {order:.3}",
+                    fc.stated,
+                    input.reference_eta,
+                    fc.second_eta,
+                    fc.factor,
+                    kept.iter().map(|k| k.0).collect::<Vec<_>>(),
+                    kept.len(),
+                    fc.min_rungs
+                ));
+                let d = diagnose(
+                    order,
+                    kept.len(),
+                    &fc,
+                    input.order_expected,
+                    input.order_margin,
+                );
+                negative.push(diagnosis_line(
+                    d,
+                    &fc,
+                    input.order_expected,
+                    input.order_margin,
+                ));
+                matches!(d, Diagnosis::Within { .. })
+            }
+        };
         Ok(GateReport {
             gate: FINAL_STEP_NAME.to_owned(),
             input: name.to_owned(),

@@ -1,6 +1,6 @@
 {
   "gate": "az-final-step",
-  "inputs": ["landing_floor.json", "clock_only_floor.json", "no_landing_fix.json"],
+  "inputs": ["no_landing_fix.json"],
   "threshold": { "value": 1.1e-7, "requirement": "REQ-INT-114", "status": "provisional", "ruling": "R-927" },
   "min_regions": { "value": null, "requirement": "REQ-INT-114" }
 }

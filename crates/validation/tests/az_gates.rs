@@ -10,11 +10,12 @@ use kernel::regularisation::az::End;
 use kernel::regularisation::az::Watch;
 use serde_json::json;
 use validation::az::{
-    above_floor, cartesian_closure, checked, closure, convergence, decide_sync, describe, distance,
-    doubly_degenerate, energy, figure_eight, floor_run, lc_error, on_grid, orbit, proposal,
-    propose_final_step_with, propose_floor, propose_sync_with, radial, reference_tiny, round_up,
-    show, slope, AzFinalStepGate, Landing, LcInverseGate, Orbit, Proposal, Quiet, Recorder,
-    SeparationFloorGate, SyncRow, Width, FINAL_STEP_NAME, FLOOR_NAME, LC_NAME, SYNC_ERROR,
+    above_floor, cartesian_closure, checked, closure, convergence, decide_sync, describe, diagnose,
+    distance, doubly_degenerate, energy, figure_eight, floor_run, lc_error, on_grid, orbit,
+    proposal, propose_final_step_with, propose_floor, propose_sync_with, radial, reference_tiny,
+    round_up, show, slope, AzFinalStepGate, Diagnosis, FloorCriterion, Landing, LcInverseGate,
+    Orbit, Proposal, Quiet, Recorder, SeparationFloorGate, SyncRow, Width, FINAL_STEP_NAME,
+    FLOOR_NAME, LC_NAME, SYNC_ERROR,
 };
 use validation::gate::{self, Gate, GateConfig, GateSpec, MeasurementGate, Verdict};
 use validation::negative_control;
@@ -196,33 +197,63 @@ fn check_final_step(landing: Landing) {
         "within the margin"
     );
     let mut floored = final_step(landing, conv.order, 0.0);
-    floored["floor"] = json!({ "second_eta": 0.006, "factor": 0.0, "min_rungs": 2 });
-    let verdict = |v: &serde_json::Value| {
-        AzFinalStepGate
+    floored["floor"] = json!({ "stated": 0.0, "second_eta": 0.006, "factor": 0.0, "min_rungs": 2,
+                               "defect_below": 0.0 });
+    let run = |v: &serde_json::Value| {
+        let r = AzFinalStepGate
             .run(&config(FINAL_STEP_NAME, c.closure), "t", v)
-            .map(|r| r.verdict)
+            .expect("the floored input runs");
+        (r.verdict, r.negative_results)
     };
+    let says = |negative: &[String], what: &str| {
+        assert!(
+            negative.iter().any(|n| n.contains(what)),
+            "the report says {what:?}: {negative:?}"
+        );
+    };
+    let (v, n) = run(&floored);
     assert_eq!(
-        verdict(&floored),
-        Ok(Verdict::Pass),
+        v,
+        Verdict::Pass,
         "both rungs above a floor of factor 0, the same fit"
     );
+    says(&n, "the order fitted above the round-off floor");
+    // A stated floor above every rung's error keeps none: the floor is the larger of the stated and the measured.
+    floored["floor"]["factor"] = json!(1.0);
+    floored["floor"]["stated"] = json!(1.0);
+    let (v, n) = run(&floored);
+    assert_eq!(v, Verdict::Fail, "a stated floor over every rung");
+    says(
+        &n,
+        "too few rungs above the round-off floor to fit an order (0 of at least 2)",
+    );
+    floored["floor"]["factor"] = json!(0.0);
+    floored["floor"]["stated"] = json!(0.0);
+    // Outside the margin and below `defect_below`: a landing defect; at `defect_below` itself, unexplained.
+    floored["order_expected"] = json!(conv.order + 1.0);
+    floored["floor"]["defect_below"] = json!(conv.order.next_up());
+    let (v, n) = run(&floored);
+    assert_eq!(v, Verdict::Fail, "a landing defect fails");
+    says(&n, "a landing defect");
+    floored["floor"]["defect_below"] = json!(conv.order);
+    let (v, n) = run(&floored);
+    assert_eq!(v, Verdict::Fail, "an unexplained order fails");
+    says(&n, "unexplained");
+    floored["order_expected"] = json!(conv.order);
     floored["floor"]["min_rungs"] = json!(3);
-    let report = AzFinalStepGate
-        .run(&config(FINAL_STEP_NAME, c.closure), "t", &floored)
-        .expect("the floored input runs");
+    let (v, n) = run(&floored);
     assert_eq!(
-        report.verdict,
+        v,
         Verdict::Fail,
         "fewer rungs above the floor than the least the fit takes"
     );
+    says(&n, "too few rungs above the round-off floor");
+    floored["floor"]["min_rungs"] = json!(1);
     assert!(
-        report
-            .negative_results
-            .iter()
-            .any(|n| n.contains("too few rungs above the round-off floor")),
-        "the report says why: {:?}",
-        report.negative_results
+        AzFinalStepGate
+            .run(&config(FINAL_STEP_NAME, c.closure), "t", &floored)
+            .is_err(),
+        "a floor's fit on one rung is refused"
     );
     for bad in [
         json!({ "description": "", "eta": 0.01, "n": 8, "landing": "fix", "ladder": [0.01],
@@ -306,6 +337,93 @@ negative_control!(
         .copied()
         .filter(|&(_, e)| e >= factor * floor)
         .collect())
+);
+
+/// A diagnosis of an order fitted on some rungs above the floor.
+type Diagnose = fn(f64, usize, &FloorCriterion, f64, f64) -> Diagnosis;
+
+/// R-1008's diagnosis at each boundary, under 4 ± 0.5, a landing defect below 3, at least 3 rungs: 3 rungs read an
+/// order and 2 do not; 3.5 and 4.5 are within the margin and the floats just outside are not; just below 3 is a
+/// landing defect and 3 itself is unexplained, as is anything above 4.5.
+fn check_diagnose(diagnose: Diagnose) {
+    let fc = FloorCriterion {
+        stated: 8e-13,
+        second_eta: 1.25e-4,
+        factor: 10.0,
+        min_rungs: 3,
+        defect_below: 3.0,
+    };
+    let d = |order: f64, kept: usize| diagnose(order, kept, &fc, 4.0, 0.5);
+    assert_eq!(
+        d(4.0, 2),
+        Diagnosis::RoundOff { kept: 2 },
+        "2 rungs read no order"
+    );
+    assert_eq!(
+        d(4.0, 3),
+        Diagnosis::Within { order: 4.0 },
+        "3 rungs read one"
+    );
+    assert_eq!(
+        d(3.5, 3),
+        Diagnosis::Within { order: 3.5 },
+        "the margin's low edge"
+    );
+    assert_eq!(
+        d(4.5, 3),
+        Diagnosis::Within { order: 4.5 },
+        "the margin's high edge"
+    );
+    let low = 3.5f64.next_down();
+    assert_eq!(
+        d(low, 3),
+        Diagnosis::Unexplained { order: low },
+        "just below the margin"
+    );
+    let high = 4.5f64.next_up();
+    assert_eq!(
+        d(high, 3),
+        Diagnosis::Unexplained { order: high },
+        "just above it"
+    );
+    assert_eq!(
+        d(3.0, 3),
+        Diagnosis::Unexplained { order: 3.0 },
+        "the defect's bound itself"
+    );
+    let short = 3.0f64.next_down();
+    assert_eq!(
+        d(short, 3),
+        Diagnosis::LandingDefect { order: short },
+        "just below the defect's bound"
+    );
+    assert_eq!(
+        d(2.0, 5),
+        Diagnosis::LandingDefect { order: 2.0 },
+        "an h² residual's order"
+    );
+}
+
+#[test]
+fn az_diagnose() {
+    check_diagnose(diagnose);
+}
+
+negative_control!(
+    az_diagnose,
+    "every order short of the margin read as a landing defect, with no unexplained band",
+    expected = "just below the margin",
+    check_diagnose(|order, kept, fc, expected, margin| {
+        if kept < fc.min_rungs {
+            Diagnosis::RoundOff { kept }
+        } else if (order - expected).abs() <= margin {
+            Diagnosis::Within { order }
+        } else if order < expected {
+            Diagnosis::LandingDefect { order }
+        } else {
+            Diagnosis::Unexplained { order }
+        }
+    })
 );
 
 #[test]
