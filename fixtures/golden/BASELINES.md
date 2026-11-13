@@ -4,10 +4,11 @@ A baseline image changes only with a recorded gate decision (R-110: "no re-basel
 M8 Playwright browser suite checks against these same baselines (R-110), so a baseline is never re-made to make a
 render pass.
 
-`cargo xtask golden` hashes each case's reference image and refuses the case unless the table below holds that
-SHA-256 for it, with the decision that set it, named as its `R-n` in `decisions.md`. To change a baseline: record the
-gate decision in `decisions.md`, replace the image, and update its row here with the new hash and that decision, in
-the same commit. A reference that changed without such a row is refused.
+`cargo xtask golden` hashes each case's reference image and refuses the case unless one of the two tables below (the
+main table, or the preset goldens' table with its route column) holds that SHA-256 for it, with the decision that set
+it, named as its `R-n` in `decisions.md`. To change a baseline: record the gate decision in `decisions.md`, replace
+the image, and update its row here with the new hash and that decision, in the same commit. A reference that changed
+without such a row is refused.
 
 The runner checks only that the row holds the reference's current hash and names an `R-n` that `decisions.md` records;
 it cannot tell whether that ruling is the gate decision that changed the baseline. That half of the rule rests on
@@ -171,7 +172,7 @@ A new case's row names the ruling that created it. The self-test's references ar
 
 A DECODE-preset or ROUNDTRIP-preset golden's reference is the CPU decode at each pixel's chart point, so its row also
 names the route the render it certifies takes to that point: `closed form`, the chart's closed-form shader code, or
-`table`, the tables the CPU builds where a chart has none (R-925 items 1 and 2). Every row below is closed form. A
+`table`, the tables the CPU builds where a chart has none (R-925 item 1). Every row below is closed form. A
 change of route is a recorded conversion under R-931: the row's route, hash and decision change together. The runner
 refuses a row naming any other route.
 

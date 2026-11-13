@@ -670,8 +670,8 @@ pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
     Ok(())
 }
 
-/// The routes a BASELINES.md row's route cell may name, the two ways a shader feature reaches a chart (R-925 items 1
-/// and 2): the chart's closed-form shader code, or, where a chart has none, tables the CPU builds. A golden whose
+/// The routes a BASELINES.md row's route cell may name, the two ways a shader feature reaches a chart (R-925 item
+/// 1): the chart's closed-form shader code, or, where a chart has none, tables the CPU builds. A golden whose
 /// route changes is a recorded conversion (R-931).
 pub const ROUTES: [&str; 2] = ["closed form", "table"];
 
