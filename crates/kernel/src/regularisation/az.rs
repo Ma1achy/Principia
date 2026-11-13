@@ -781,14 +781,7 @@ fn predictive<R: AzReal>(system: &AzSystem<R>, q: &AzQ<R>, p: &AzP<R>, f: R, ab:
 /// that is not a number, read on its bits, spends the budget too, so that the march stays bounded (Part 2c rule 3).
 #[inline]
 pub fn over_budget<R: AzReal>(steps: u32, t: R, params: &AzParams<R>) -> bool {
-    over_allowance(steps, t, params.step_budget_rate, params.n_min)
-}
-
-/// Whether the running total `steps` exceeds `max(n_min, rate·t)` at physical time `t`, R-604's budget for any
-/// regularised occupant (Part 6), an allowance that is not a number spending it.
-#[inline]
-pub fn over_allowance<R: AzReal>(steps: u32, t: R, rate: R, n_min: u32) -> bool {
-    let allowance = floored(rate * t, R::count(n_min));
+    let allowance = floored(params.step_budget_rate * t, R::count(params.n_min));
     R::count(steps) > allowance || allowance.nan_bits()
 }
 
