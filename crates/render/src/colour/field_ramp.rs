@@ -21,7 +21,10 @@
 //! `range_norm` on a fixed range, an end the ledger leaves open read at run time ([`Reads`]); `log`, `1 − 1/(1 + ln(1 + |x|/ε_f))`, with `x < 0`, the −1.0 sentinel, styled and
 //! never ramped; `cyclic`, `fract(x/period)`; `diverging`, the symlog `½ + ½·sign(x)·(1 − 1/(1 + ln(1 + |x|/x₀)))`, with
 //! no range and no `x_max`; and `flag`, `b ∈ {0, 1}`. Their WGSL is `shaders/wgsl/lib/compaction.wgsl`
-//! ([`COMPACTION_WGSL`]), which the assembler places after the prelude. **The ramps** ([`Ramp`]): `lut(name)`, the
+//! ([`COMPACTION_WGSL`]), which the assembler places after the prelude. **A current drift's neutral band** (render
+//! contract Part 5; R-928, R-929): a ramp on `energy_drift` or `Lz_drift` under `diverging` compacts the drift through
+//! the drift views' band, `dbg_drift_banded(v, band)` ([`ScalarField::band`]), so a fresh sample's rounding reads as
+//! the ramp's neutral; `compact_symlog` itself has no band. **The ramps** ([`Ramp`]): `lut(name)`, the
 //! prelude's `ramp_<name>`; `lerp(c0, c1)`; `diverging(c−, c0, c+)` through a neutral; `bands(field, n, line_col,
 //! base)`, a band-mask, each band the first `width` of its period (applied per R-369: §1.2 gives the band no width, so
 //! the node carries it). Their WGSL is `shaders/wgsl/lib/ramp.wgsl` ([`RAMP_WGSL`]). **Run time, not source**
@@ -101,6 +104,11 @@ pub struct ScalarField {
     /// The field is an `f32`, so a non-finite value, the absence NaN or a stored `±∞`, is one of its invalid values
     /// (R-436).
     float: bool,
+    /// The half-width of a current drift's neutral band, a WGSL `f32` over `ctx`, for `energy_drift` and `Lz_drift`
+    /// (`ledger::gen::catalogue::drift_band_wgsl`; render contract Part 5, "The neutral band"; R-928, R-929): the band
+    /// is applied where the drift is read, so the `diverging` compaction, the symlog, draws a drift within it as 0, as
+    /// the drift views do. `None` for every other field.
+    pub band: Option<&'static str>,
 }
 
 impl ScalarField {
@@ -193,6 +201,7 @@ impl ScalarField {
             unset_bits,
             non_finite,
             float: is_float,
+            band: catalogue::drift_band_wgsl(e.name),
         })
     }
 
@@ -666,6 +675,16 @@ impl FieldRamp {
         terms.join(" || ")
     }
 
+    /// The value the compaction takes, a WGSL `f32` over `v` and `ctx`: under the `diverging` compaction, the symlog,
+    /// a current drift through its neutral band, `dbg_drift_banded(v, band)` (R-928, R-929), past the guards, so
+    /// that `v` is finite there; else `v`. `lin`, `log` and the other forms have no band.
+    fn banded_wgsl(&self) -> String {
+        match (self.compaction, self.field.band) {
+            (Compaction::Diverging { .. }, Some(band)) => format!("dbg_drift_banded(v, {band})"),
+            _ => "v".to_owned(),
+        }
+    }
+
     /// The header's two declarations of the invalid lane: `INVALID_OVERRIDE`, 0 for the pattern, and
     /// `INVALID_COLOUR`, the override's colour.
     fn invalid_uniforms() -> String {
@@ -722,7 +741,9 @@ impl FieldRamp {
     /// the value is invalid, else the ramp of the compacted value; for [`Map::Lightness`], a brightness occupant,
     /// returning 0 at those samples, whose styles its post draws ([`FieldRamp::style_post`]), else the compacted value.
     pub fn wgsl(&self) -> String {
-        let b = self.polarity.wgsl(&self.compaction.wgsl("v"));
+        let b = self
+            .polarity
+            .wgsl(&self.compaction.wgsl(&self.banded_wgsl()));
         let polarity = match self.polarity {
             Polarity::High => "high",
             Polarity::Low => "low",
@@ -808,14 +829,28 @@ impl FieldRamp {
     /// validity, a non-finite value, the compaction's styled values), then the compacted value with the polarity
     /// applied.
     pub fn shown_at(&self, x: f32, gate: bool, reads: Reads) -> Shown {
+        self.shown_banded(x, gate, reads, 0.0)
+    }
+
+    /// [`FieldRamp::shown_at`] for a current drift whose neutral band at the sample has the half-width `band`
+    /// (`render::present::drift_band_energy` or `drift_band_lz` of the sample): under the `diverging` compaction, on a
+    /// field with a band ([`ScalarField::band`]), the value placed is `present::dbg_drift_banded(x, band)`; otherwise
+    /// `band` is not read. A `band` of 0 draws only an exact 0 as 0, which is `shown_at`.
+    pub fn shown_banded(&self, x: f32, gate: bool, reads: Reads, band: f32) -> Shown {
         if self.field.is_unset(x) {
             return Shown::NotYet;
         }
         match self.field.read(x, gate) {
-            (v, true) if !self.compaction.styles(f64::from(v)) => Shown::Ramp(
-                self.polarity
-                    .apply(self.compaction.place_at(f64::from(v), reads)),
-            ),
+            (v, true) if !self.compaction.styles(f64::from(v)) => {
+                let v = match (self.compaction, self.field.band) {
+                    (Compaction::Diverging { .. }, Some(_)) => present::dbg_drift_banded(v, band),
+                    _ => v,
+                };
+                Shown::Ramp(
+                    self.polarity
+                        .apply(self.compaction.place_at(f64::from(v), reads)),
+                )
+            }
             _ => Shown::Invalid,
         }
     }

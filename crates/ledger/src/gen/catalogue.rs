@@ -544,12 +544,26 @@ pub fn drift_range(field: &str) -> Option<f64> {
     }
 }
 
-/// The reference of the drift `field`, the stored member its neutral band is relative to (render contract Part 5):
-/// `E_0` for `energy_drift`, `Lz_0` for `Lz_drift`.
+/// The reference of the drift `field`, the stored member its drift is taken from and its view tests on the bits first
+/// (render contract Part 5, "The non-finite guard"): `E_0` for `energy_drift`, `Lz_0` for `Lz_drift`.
 pub fn drift_reference(field: &str) -> &'static str {
     match field {
         "Lz_drift" => "Lz_0",
         _ => "E_0",
+    }
+}
+
+/// The half-width of the drift `field`'s neutral band, a WGSL `f32` over `ctx` (render contract Part 5, "The neutral
+/// band"; R-928, R-929): `drift.wgsl`'s `dbg_drift_band_energy` of the sample's `r`, `p` and `ICDescriptor` masses for
+/// `energy_drift`, `15·2⁻²³·(K + |V|)`, and `dbg_drift_band_lz` of its `r` and `p` for `Lz_drift`, `5·2⁻²³·S`; `None`
+/// for any other field. The one source of the band's reads, for the drift views and a field ramp alike.
+pub fn drift_band_wgsl(field: &str) -> Option<&'static str> {
+    match field {
+        "energy_drift" => Some(
+            "dbg_drift_band_energy(ctx.sample.r, ctx.sample.p, vec3<f32>(ctx.ic.m0, ctx.ic.m1, ctx.ic.m2))",
+        ),
+        "Lz_drift" => Some("dbg_drift_band_lz(ctx.sample.r, ctx.sample.p)"),
+        _ => None,
     }
 }
 
@@ -580,6 +594,13 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
         let _ = writeln!(uniforms, "// @uniform {eps}: f32 = {}", float(default));
     }
     let reference = drift_reference(e.name);
+    // A drift view is only ever of a drift field, which has its band.
+    let band = drift_band_wgsl(e.name).unwrap_or("0.0");
+    let scale = if reference == "Lz_0" {
+        "`5·2⁻²³·S`, `S = Σ(|xᵢp_{y,i}| + |yᵢp_{x,i}|)`"
+    } else {
+        "`15·2⁻²³·(K + |V|)`"
+    };
     // The energy predicate reads `E_0`, which is tested before any arithmetic on it (R-436): above, in a view whose
     // reference it is; here in the `L_z` view, where it is unlit on a non-finite `E_0`, relative `δE` having no meaning
     // there, and the view keeps its finite `L_z` drift.
@@ -595,7 +616,8 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
          magnitude, at `dbg_log`'s place, unsigned; `symlog` and `lin` on the `diverging(c−, c0, c+)` ramp, or viridis \
          under the palette swap, `PALETTE` 1, and `log` on viridis always; a non-finite reference or drift hatched, \
          tested on its bits first (R-436); under `symlog` a \
-         drift within the neutral band of `{reference}` is drawn as 0 (`dbg_drift_shown`, R-652). Over it the suspect \
+         drift within the neutral band, the rounding's own scale {scale}, is drawn as 0 (`dbg_drift_shown`, R-652, \
+         R-928). Over it the suspect \
          styling of the drift suspect predicates read from the stored latches: rows for `SUSPECT_ENERGY`, columns for \
          `SUSPECT_LZ`. `LIN_R`'s default is the constants register's (REQ-TOOL-150)."
     );
@@ -604,7 +626,8 @@ pub fn drift_wgsl(e: &Entry, r: &Read, floor: &str, range: f64) -> String {
          if (dbg_drift_non_finite(ctx.sample.{reference})) {{ return debug_invalid(ctx.frag_xy); }}\n    \
          let x = {value};\n    \
          if (dbg_drift_non_finite(x)) {{ return debug_invalid(ctx.frag_xy); }}\n    \
-         let shown = dbg_drift_shown(x, uniforms.COMPACTION, ctx.sample.{reference});\n    \
+         let band = {band};\n    \
+         let shown = dbg_drift_shown(x, uniforms.COMPACTION, band);\n    \
          let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.{eps}, ctx.frag_xy);\n    \
          let energy = {energy_finite}suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);\n    \
          let lz = suspect_lz(ctx.sample.dLz_max);\n    \

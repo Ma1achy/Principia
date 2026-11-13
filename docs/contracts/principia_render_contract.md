@@ -391,7 +391,60 @@ with dd_colouring §3.1's sRGB transfer.
     on a finite reference hatches rather than being clamped, but a live `x` is tested as the backend computed it, WGSL
     letting an implementation assume no infinities, so a state with coincident bodies, overflowing momenta or an
     overflowing `L_z` is unpinned on the GPU, marked by `sim_failed` (TASK-M3-18).
-  - **The neutral band (R-652; the owner's ruling (d) of 31 Oct 2026; REQ-TOOL-149), `dbg_drift_shown(x, compaction,
+  - **The neutral band (R-652; the owner's ruling (d) of 31 Oct 2026, as R-928 and R-929 rule it; REQ-TOOL-149,
+    REQ-TOOL-227; TASK-M3-70), `dbg_drift_banded(x, band)` and `dbg_drift_shown(x, compaction, band)`, in
+    `drift.wgsl`.** The current drifts are computed in the fragment, `H(r, p) − E_0` and `L_z(r, p) − Lz_0`
+    (dd_generation_root §3.8; payload §5), so a fresh sample's drift is rounding, not physics, and differs by backend.
+    Under `symlog` a drift with `|x| ≤ band` is drawn as 0, at `c0` exactly (or viridis' middle under the palette swap),
+    the band scaled by the rounding itself, never by the size of the reference (R-928): on `energy_drift`
+    `band = k'_E·2⁻²³·(K + |V|)`, `K = Σᵢ ‖pᵢ‖²/2mᵢ` and `|V| = Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` of the sample's own state and
+    `ICDescriptor` masses (`dbg_drift_band_energy`); on `Lz_drift` `band = k'_L·2⁻²³·S`, `S = Σᵢ(|xᵢp_{y,i}| +
+    |yᵢp_{x,i}|)` (`dbg_drift_band_lz`); `k'_E = 15` and `k'_L = 5`, below. Each scale is computed in the fragment in
+    f32, as the drift is. Any other `x` keeps its own place, so a drift past the band is unchanged. `lin` and `log` have
+    no band, and a non-finite `x` or `band` passes through first, on the bits, so the band never makes a non-finite
+    operand neutral (`|x| ≤ ∞` holds for every `x`). The value passed to `dbg_suspect` stays `x`, and the predicates
+    read the latches, so a band never hides a lit predicate.
+    **Where the drift is read (R-929).** The band is applied wherever a current drift is read under `symlog`: in the
+    three drift debug views above, and in a field ramp on `energy_drift` or `Lz_drift`, colour_composition §6's
+    `f_edrift` (`default_ramp`'s `Compaction::Diverging`), which compacts `compact_symlog(dbg_drift_banded(v, band),
+    x₀)` after its guards, so a fresh sample's rounding reads as the ramp's neutral there too. `compact_symlog` itself
+    is unchanged, since it serves fields that have no reference. The band's reads, `r`, `p` and the masses, have one
+    source for the views and the ramp (`ledger::gen::catalogue::drift_band_wgsl`). A field ramp of a drift under `lin`
+    or `log` has no band, as the views' `lin` and `log` have none.
+    **`k'` and the rounding bound it comes from.** In units of `2⁻²³`, the relative size of one ULP at most, the
+    difference of a fragment's value from the stored reference on a fresh sample is bounded by summing, to first order,
+    each operation's error in `H = Σ dot(pᵢ, pᵢ)/(2mᵢ) − Σ mᵢmⱼ/√dot(rᵢⱼ, rᵢⱼ)` and `L_z = Σ (xᵢp_{y,i} − yᵢp_{x,i})`.
+    In the fragment, under WGSL's accuracy (`+ − ×` ½ ULP, `/` 2.5 ULP, `sqrt` 4.5 ULP), with any reassociation of the
+    six-term sum (five additions, each ½ ULP of a partial sum at most `K + |V|`): a kinetic term 3.5, so `K` carries 6;
+    a potential term 0.5 + (2 of the dot, halved by the root, + 4.5) + 2.5 = 8.5, so `|V|` carries 11. In a correctly
+    rounded CPU reference, `K` 3 and `|V|` 4. So `|x| ≤ 2⁻²³·(9K + 15|V|) ≤ 15·2⁻²³·(K + |V|)`: **`k'_E = 15`**, the
+    larger of the two coefficients, which the band meets where `K` is 0 and holds with `6K` to spare elsewhere. For
+    `L_z`, six products, each ½ ULP of its own size, and five additions, each ½ ULP of a partial sum at most `S`, are
+    3 of `S` in the fragment, and the CPU reference 2: `|x| ≤ 5·2⁻²³·S`, **`k'_L = 5`**. Neither depends on `E_0` or
+    `Lz_0`, so the bound holds at a zero reference, and a fresh sample near a cancellation (a near-parabolic start, or a
+    start with `L_z ≈ 0` and moving bodies, the figure-eight among them) reads exactly neutral. In a GPU-computed
+    reference, the one kernel source at f32 under the same accuracy, the reference carries the fragment's own `K` 6 and
+    `|V|` 11, and `L_z` 3: `|x| ≤ 2⁻²³·(12K + 22|V|)` and `6·2⁻²³·S`, so `k'` is 22 for the energy and 6 for `L_z`
+    (R-928). The references these views read in this build are the CPU's, since no GPU kernel writes real samples
+    until M4, so the band takes the CPU reference's `k'`, 15 and 5. TASK-M4-05 inherits the check on a GPU-computed
+    reference, whose `k'` is 22 and 6. Metal's observed differences on the golden
+    showcase's fresh sample, +5 ULP of `E_0` and −1 ULP of `Lz_0`, are inside the bound and not what sets it.
+    **The edge is hard.** A colour past the band keeps its own place, so no other tile moves, and `t` jumps at the band's
+    edge: at dd test 2's start, `|E_0| = 0.1168` and `K + |V| = 2.885·|E_0| = 0.337`, the band is `6.0×10⁻⁷`, and `t`
+    jumps from 0.5 to 0.66 under `ε_E = 10⁻⁶`, and to the mirror place on the negative side. So a drift oscillating
+    through the edge reads as on and off, and a pixel within rounding of the edge can differ between backends by that
+    whole jump: the band moves this noise to the edge, where a fresh sample isn't, rather than removing it.
+    **What it hides.** Only what the rounding bound allows, `k'·2⁻²³` of the rounding's own scale, whatever the
+    reference: against R-652's band, `128·2⁻²³·|E_0|`, it is narrower on a bound state where `K/|E_0| < 3.77`
+    (`15·(2K + |E_0|) < 128·|E_0|`, `|V| = K + |E_0|`) and wider beyond, never wider than the bound. Where the scale is itself 0 (`S = 0`, every product 0) the band is empty, and there the
+    drift is exact and 0.
+    **The test.** `drift_view_neutral_fresh_sample_renders_exactly_neutral` takes its references from the CPU, each
+    sample's `H(r, p)` and `L_z(r, p)` in f64 rounded once to f32, a correctly rounded CPU reference, and renders every
+    sample of its set exactly neutral on the backend it runs on: the showcase's eight states, dd test 2's figure-eight
+    at its start (`L_z` 0 but for rounding) and a near-parabolic state (`E` 0 but for rounding), in the three drift
+    views and through a field ramp on `energy_drift` and on `Lz_drift`.
+    *Was (until TASK-M3-70; the band of R-652's ruling (d) relative to the reference, its scope and the 10 Nov 2026 note
+    of R-928 and R-929):* **The neutral band (R-652; the owner's ruling (d) of 31 Oct 2026; REQ-TOOL-149), `dbg_drift_shown(x, compaction,
     reference)`, in `drift.wgsl`.** The current drifts are computed in the fragment, `H(r, p) − E_0` and `L_z(r, p) −
     Lz_0` (dd_generation_root §3.8; payload §5), so a fresh sample's drift is rounding, not physics, and differs by
     backend. Under `symlog` a drift with `|x| ≤ k·2⁻²³·|reference|`, `reference` `E_0` or `Lz_0`, `k = 128`, is drawn

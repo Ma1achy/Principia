@@ -437,10 +437,11 @@ pub enum Look {
     Background,
     /// The presentation views' invalid colour, `#141418` (R-467 D4): a field ramp's invalid value, not overridden.
     PresentInvalid,
-    /// A drift view at its defaults (render contract Part 5; R-381; TASK-M3-05): the drift `x`, within the neutral band of
-    /// its `reference` drawn as 0, at `symlog`'s place on the `diverging` ramp, its floor `eps` and `lin` range `lin_r`,
-    /// the absence NaN hatched, and the suspect styling
-    /// of the predicates `energy` and `lz` over it.
+    /// A drift view at its defaults (render contract Part 5; R-381; TASK-M3-05): the drift `x` as the view reads it, the
+    /// neutral band applied where it is read (R-928, R-929: [`Scene::look`] gives `present::dbg_drift_banded` of the
+    /// drift at the sample's own band), at `symlog`'s place on the `diverging` ramp, its floor `eps` and `lin` range
+    /// `lin_r`; a non-finite `x` or `reference` hatched; and the suspect styling of the predicates `energy` and `lz` over
+    /// it. The band never changes a non-finite value's bits, so the styling's test of the absence NaN reads the drift's.
     Drift {
         x: f32,
         reference: f32,
@@ -480,20 +481,13 @@ impl Look {
             }
             Look::Drift {
                 x,
-                reference,
                 lin_r,
                 eps,
                 energy,
                 lz,
+                ..
             } => present::dbg_suspect(
-                present::dbg_drift(
-                    present::dbg_drift_shown(x, present::DRIFT_SYMLOG, reference),
-                    present::DRIFT_SYMLOG,
-                    false,
-                    lin_r,
-                    eps,
-                    frag,
-                ),
+                present::dbg_drift(x, present::DRIFT_SYMLOG, false, lin_r, eps, frag),
                 x,
                 energy,
                 lz,
@@ -1255,8 +1249,9 @@ impl Scene {
             // its defaults (TASK-M3-05), the predicates read from the stored latches at the default `ε_E`.
             Colouring::View("energy_drift") => {
                 let (energy, lz) = drift_suspects(&read);
+                let band = present::drift_band_energy(read.r, read.p, self.masses(i));
                 Ok(Look::Drift {
-                    x: v,
+                    x: present::dbg_drift_banded(v, band),
                     reference: read.E_0,
                     lin_r: ledger::gen::catalogue::drift_range("energy_drift")
                         .ok_or("`energy_drift` has no drift range")?,
