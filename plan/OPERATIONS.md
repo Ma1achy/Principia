@@ -152,6 +152,13 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   named above as fine, excepted), while the owner reworks the chart design; TASK-M3-14 stays stopped (R-918). M2's gate
   and G1 to G14 are unchanged, and no edge moves. *Amended in part by R-924:* TASK-M3-14 resumes now (the bullet
   above).
+- **R-987 (13 Nov 2026, the owner's message of 12 Nov 2026): R-923 lifted.** "When the PR porting my answers to
+  RQ-797–806 merges, R-923 is lifted; start dispatching then. Integrator (M3) tasks keep priority over chart tasks for
+  agent slots. Tasks tied to an unanswered question wait for their ruling." From the merge of the pull request that
+  ports the owner's reply of 13 Nov 2026 (R-989 to R-1005), chart tasks are dispatched as their dependencies allow, and
+  R-923's limits on integrator tasks end; where an M3 task and a chart task can both start, the M3 task takes the slot;
+  a task tied to an open question (TASK-M6-21 on RQ-802's and RQ-804's Q-T3, deferred to M6; tasks tied to RQ-783,
+  deferred to M2) waits for its ruling.
 - **What every dispatch names:**
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
@@ -708,6 +715,7 @@ tasks that don't depend on the points the owner hasn't decided may be dispatched
 "Dispatching", R-923's line). Chart work stays paused: no new chart task starts, nothing else from TASK-M2-57 to
 TASK-M2-85 (TASK-M2-82, the trajectory interface, which the same message names as fine, excepted). M2's gate and G1 to
 G14 are unchanged.
+*13 Nov 2026 (R-987):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges (the owner's message of 12 Nov 2026), and chart tasks are dispatched from then; integrator (M3) tasks keep priority over chart tasks for agent slots, and a task tied to a question the owner hasn't answered waits for its ruling.
 
 The human's ruling of 6 Oct 2026 (R-390): a dev GUI the human runs on the Mac with `cargo run -p gui --features mock`,
 built on a mock engine, in six tasks, TASK-M6-24 to TASK-M6-29, one per ORDER item, each its own PR, reviewed by code,

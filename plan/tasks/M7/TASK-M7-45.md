@@ -57,3 +57,4 @@ Each recorded link carries its own registry-entry hash beside the build hash and
   baseline commit" "writes through the decoder before any link changes: the records' latent coordinates and links the
   fixture's, each" "pixel's recreated starting state equal bit for bit to the fixture's, and the converting reader's
   control run on the" "fixture's pixels where conversion changes a bit (R-921; physics review 5836519618 of PR #469)."
+- *13 Nov 2026 (R-995, RQ-801 (a)):* a record made past `ℓ_switch` names its route, exact or patch, and for a patch the quad's level and address (TASK-M2-87's record contract), so recreation re-forms the patch and reproduces it bitwise, on every machine with R-991; RQ-783 (records made before R-926's route) stays open, deferred to M2.
