@@ -10,8 +10,9 @@
 //!   and no doctest; the readers are this file's own scan of the sources, made apart from the script's
 //!   (`.github/scripts/ci_quick_crates.py --readers`): each test with a string literal that is a path to the file, to
 //!   `plan/`, or to a script naming the file; each test of a crate using a library module that reads it so, or spawning
-//!   a binary that reads it or uses such a module; each xtask module's own test where the module reads it; and a test
-//!   including a support module that reads it, by `mod` or by a `#[path]` to it. RQ-790's evidence, the test files under `crates/` that name the file,
+//!   a binary (a `src/bin/` file, or the package's own `src/main.rs`) that reads it or uses such a module; each xtask
+//!   module's own test where the module reads it; and a test including a support module that reads it, by `mod` or by
+//!   a `#[path]` to it. RQ-790's evidence, the test files under `crates/` that name the file,
 //!   are among them, and no crate without a reader has a test in it.
 //! - `ci_requirements_only_untrusted_scan_runs_every_crate`: the scan prints nothing on a workspace with a `[[test]]`
 //!   target at a path of its own, and when it prints nothing `decide` falls back to every crate.
@@ -366,7 +367,23 @@ fn scan() -> BTreeSet<String> {
                 }
             }
         }
-        for f in rust_files(&src.join("bin")) {
+        // A binary: each of `src/bin/`, and the package's own `src/main.rs`, named for the package.
+        let mut binaries: Vec<(PathBuf, String)> = rust_files(&src.join("bin"))
+            .into_iter()
+            .map(|f| {
+                let name = if f.file_name().is_some_and(|n| n == "main.rs") {
+                    f.parent().expect("folder").file_name()
+                } else {
+                    f.file_stem()
+                };
+                let name = name.expect("name").to_string_lossy().into_owned();
+                (f, name)
+            })
+            .collect();
+        if src.join("main.rs").is_file() {
+            binaries.push((src.join("main.rs"), package.clone()));
+        }
+        for (f, name) in binaries {
             let body = text(&f);
             let uses = |m: &String| {
                 if m.is_empty() {
@@ -376,14 +393,7 @@ fn scan() -> BTreeSet<String> {
                 }
             };
             if names_read(&body, &names) || modules.iter().any(uses) {
-                let name = if f.file_name().is_some_and(|n| n == "main.rs") {
-                    f.parent().expect("folder").file_name()
-                } else {
-                    f.file_stem()
-                };
-                through.push(Through::Binary(
-                    name.expect("name").to_string_lossy().into_owned(),
-                ));
+                through.push(Through::Binary(name));
             }
         }
         through.extend(
@@ -537,10 +547,11 @@ const EVIDENCE: &[&str] = &[
 fn check_selection(tier: &str, crates: &str, readers: &BTreeSet<String>) {
     let (packages, doc_packages) = decide(&read(CHANGES), tier, crates, "pull_request", ONLY);
     let got = selected(&packages);
-    // Not vacuous: the evidence, a reader through `validation::gate` alone, and gate-report's own tests are found.
+    // Not vacuous: the evidence, a reader through `validation::gate` alone, gate-report's own tests and a test that
+    // runs the xtask binary, whose `main.rs` uses `xtask::gate_report`, are found.
     for want in EVIDENCE
         .iter()
-        .chain(&["render::decode_preset", "xtask::gate_report"])
+        .chain(&["render::decode_preset", "xtask::gate_report", "xtask::ci"])
     {
         assert!(
             readers.contains(*want),
@@ -597,6 +608,24 @@ mod a_test_beyond_the_readers {
                 CRATES,
                 "    return sorted(out) or None\n",
                 "    return sorted(out + [\"kernel::qa_TASK-M2-08\"]) or None\n"
+            ),
+            &scan()
+        )
+    );
+}
+
+mod package_binary_dropped {
+    use super::*;
+    negative_control!(
+        ci_requirements_only_selects_every_reader_and_no_other,
+        "the crates script blind to a package's own `src/main.rs` binary, so the tests running xtask drop out",
+        expected = "\"xtask::ci\"",
+        check_selection(
+            &read(TIER),
+            &edited(
+                CRATES,
+                "            binaries.append((src / \"main.rs\", package))\n",
+                "            pass\n"
             ),
             &scan()
         )

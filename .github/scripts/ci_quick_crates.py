@@ -34,10 +34,13 @@ module it includes, is a path to it (`"plan/requirements.yaml"`, `join("requirem
 it is prose naming the file, as an error message is), to the `plan/` folder, which it walks, or to a script that names
 the file (`plan/check_plan.py`); or when it uses a library module that reads it so (`validation::gate`, whose gates
 check each threshold's requirement in it), spawns a binary that reads it or uses such a module (`CARGO_BIN_EXE_gate`),
-or is the own test of an xtask module that reads it (`xtask/tests/gate_report.rs`). Its limit: a reader more than one
-such hop away (`cargo xtask gate`, which runs validation's `gate` binary) is seen only where the test also names the
-file or the module, as each does today. Nothing is printed, and the caller runs every crate, when the scan cannot be
-trusted: a `[[test]]` target at a path of its own, or no reader found.
+or is the own test of an xtask module that reads it (`xtask/tests/gate_report.rs`). A binary is a package's
+`src/bin/` file or its own `src/main.rs` (`CARGO_BIN_EXE_xtask`, whose `main.rs` uses `xtask::gate_report`). Its
+limit: it follows one hop only, so a reader through a longer chain is missed unless the test also names the file or a
+reading module: a binary started through cargo rather than `CARGO_BIN_EXE_` (`cargo xtask …`), or a module that reaches
+the file only through another program (`xtask::gate`, which runs validation's `gate` binary); the per-merge run runs
+them. Nothing is printed, and the caller runs every crate, when the scan cannot be trusted: a `[[test]]` target at a
+path of its own, or no reader found.
 """
 import argparse
 import pathlib
@@ -184,10 +187,13 @@ def readers(root):
                 if package == "xtask":
                     own.add(f"xtask::{parts[0]}")
         marks.extend(modules)
-        for f in sorted((src / "bin").rglob("*.rs")):
+        binaries = [(f, f.stem if f.name != "main.rs" else f.parent.name) for f in sorted((src / "bin").rglob("*.rs"))]
+        if (src / "main.rs").is_file():
+            binaries.append((src / "main.rs", package))
+        for f, name in binaries:
             body = text_of(f)
             if names_read(body, names) or any(re.search(m, body) for m in modules):
-                marks.append(rf"\bCARGO_BIN_EXE_{f.stem if f.name != 'main.rs' else f.parent.name}\b")
+                marks.append(rf"\bCARGO_BIN_EXE_{name}\b")
     out = [
         test
         for test, body in tests.items()
