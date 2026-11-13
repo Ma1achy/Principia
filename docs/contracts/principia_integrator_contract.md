@@ -107,13 +107,8 @@ and the step control (transcribed)"), read against `h`, the energy frozen at the
 passes through the Cartesian return. *Aarseth–Zare's* is the physical energy of the relative positions and momenta its
 regularised state gives about the reference body, each separation floored at `TINY`, read against the `E` of its first
 registration. Since Aarseth–Zare re-registers at every sync boundary with `E` the Cartesian energy there, its
-regularised and Cartesian read-outs can coincide (on the radial collision they do, bitwise), and the radial-collision
-gate's "differs" control and its reader check bind under Heggie alone.
-Measured on the two-body radial collision (`cargo xtask gate radial-collision`; RK4, `η = 0.01`, `Δ_sync = 1/8`, f64):
-Heggie under Eq. 22 passes `d_min = 7.7·10⁻³⁹` with a regularised drift of `5.9·10⁻¹⁴` and a Cartesian read-out of
-`2.1·10⁻¹³` (3.7×), the Cartesian read-out not falling with `η` over the ladder `0.01` to `0.00125`; Aarseth–Zare reads
-`5.3·10⁻¹⁴` both ways. The 280× to 7100× above is prin-rs's measurement; this march does not reproduce it, and it is
-recorded here, not used as a criterion.
+regularised and Cartesian read-outs can coincide. The radial-collision gate's measurement of both, and which of its
+controls bind under each, are TASK-M3-78's.
 
 This factoring is load-bearing: it puts all the shared, determinism-critical machinery in one place, and keeps occupants trivially simple and interchangeable. Adaptive substepping lives in the **wrapper**, not the integrator — the wrapper calls `STEP` `N_sub` times at `dt_macro/N_sub`. RK4-as-validation and the inspector's f64 run are just "different occupant + different precision," no special path.
 

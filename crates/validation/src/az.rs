@@ -12,10 +12,9 @@
 //!   the closure without the landing fix, the control, beside it. `--propose` prints REQ-INT-114's proposal and
 //!   `--propose-sync` REQ-INT-080's (`Δ_sync` and `η`).
 //! - **`separation-floor`** ([`SeparationFloorGate`]; REQ-INT-105): a measurement; `--propose` prints `TINY`'s
-//!   proposal at f32 and f64 from Aarseth–Zare's pre-floor `A` and `B` and the inverse's guarded component, and
-//!   Heggie's arm, its pre-floor `dt/dτ`, `S` and `Rᵢ` ([`crate::heggie`]; TASK-M3-08); its controls are, for each, a
-//!   `TINY` above the radial collision passage's smallest pre-floor value, which floors steps there, and the
-//!   reference's, which floors none.
+//!   proposal at f32 and f64 from Aarseth–Zare's pre-floor `A` and `B` and the inverse's guarded component; its
+//!   controls are a `TINY` above the radial collision passage's smallest pre-floor value, which floors steps there,
+//!   and the reference's, which floors none.
 //!
 //! **The conditions every run states.** The values the step control reads are calibrations, so each run here names
 //! the ones it ran at: `TINY` the reference's (`1e-37` at f32, `1e-300` at f64; R-953) unless the run varies it, the
@@ -854,8 +853,8 @@ pub struct FloorFixture {
 
 /// The radial collision passage: two of three equal masses (`1/3`) from rest at `(±1/2, 0)`, the third far away at
 /// rest at `(0, 20)`, on the perpendicular bisector, so the pair falls head-on and collides at about `t = 1.36`; run to
-/// `t = 2`. REQ-VAL-045's `radial-collision` gate runs it (dd_validation_orbits § 2: "equal masses from rest, third
-/// body far away"; [`crate::heggie::RadialCollisionGate`]).
+/// `t = 2`. A stand-in for REQ-VAL-045's gate (dd_validation_orbits § 2: "equal masses from rest, third body far
+/// away"), which TASK-M3-08 builds.
 pub fn radial() -> FloorFixture {
     let m = 1.0 / 3.0;
     FloorFixture {
@@ -1032,7 +1031,6 @@ pub fn propose_floor() -> Result<String, String> {
         decades(least_f64.a, 1e-300),
         decades(least_f64.b, 1e-300)
     );
-    out.push_str(&crate::heggie::propose_floor_heggie());
     Ok(out)
 }
 
@@ -1063,12 +1061,9 @@ pub fn doubly_degenerate() -> (End, u32, u32) {
 #[serde(deny_unknown_fields)]
 pub struct FloorControl {
     pub description: String,
-    /// `"above"`: a `TINY` ten times the passage's least pre-floor `A·B`'s smaller factor (Heggie's: its least
-    /// pre-floor `dt/dτ`); `"reference"`: the reference's.
+    /// `"above"`: a `TINY` ten times the passage's least pre-floor `A·B`'s smaller factor; `"reference"`: the
+    /// reference's.
     pub tiny: String,
-    /// The occupant: `"heggie"` for Heggie × RK4 under Eq. 22 (TASK-M3-08); Aarseth–Zare + RK4 where absent.
-    #[serde(default)]
-    pub occupant: Option<String>,
 }
 
 /// The `separation-floor` measurement gate (REQ-INT-105).
@@ -1086,23 +1081,6 @@ impl MeasurementGate for SeparationFloorGate {
         fixture: &serde_json::Value,
     ) -> Result<MeasurementControl, String> {
         let control = FloorControl::deserialize(fixture).map_err(|e| format!("{name}: {e}"))?;
-        match control.occupant.as_deref() {
-            None => {}
-            Some("heggie") => {
-                let (markdown, floors) =
-                    crate::heggie::floor_control_heggie(name, &control.description, &control.tiny)?;
-                return Ok(MeasurementControl {
-                    description: control.description,
-                    verdict: if floors { Verdict::Pass } else { Verdict::Fail },
-                    markdown,
-                });
-            }
-            Some(other) => {
-                return Err(format!(
-                    "{name}: no occupant `{other}` (heggie, or none for Aarseth–Zare)"
-                ))
-            }
-        }
         let passage = radial();
         let base = floor_run::<f64>(&passage, None);
         let least = base.least.a.zip(base.least.b).map(|(a, b)| a.min(b));

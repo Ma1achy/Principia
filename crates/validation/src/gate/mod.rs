@@ -41,7 +41,6 @@ use crate::decode_agreement::DecodeAgreementGate;
 use crate::decode_f32_eps::DecodeF32EpsGate;
 use crate::decode_sanity::DecodeSanityGate;
 use crate::eps_phys::EpsPhysGate;
-use crate::heggie::{HamiltonianFdGate, RadialCollisionGate};
 use crate::import::LiteratureImportGate;
 use crate::inspector::{InspectorHandlesGate, InspectorRoundtripGate};
 use crate::invariant_gradient::InvariantGradientGate;
@@ -94,8 +93,6 @@ pub const REGISTRY: &[&dyn Gate] = &[
     &LcInverseGate,
     &AzFinalStepGate,
     &BenettinCalibrationGate,
-    &RadialCollisionGate,
-    &HamiltonianFdGate,
 ];
 
 /// A measurement gate (R-649): no threshold; its controls, and what it measures, under its flags.

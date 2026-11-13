@@ -19,7 +19,6 @@ pub mod gate;
 pub mod gauge;
 pub mod golden_scene;
 pub mod gpu;
-pub mod heggie;
 pub mod import;
 pub mod inspector;
 pub mod invariant_gradient;

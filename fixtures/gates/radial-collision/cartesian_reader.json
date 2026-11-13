@@ -1,8 +1,0 @@
-{
-  "description": "The control: the Heggie passage with the gate's reader pointed at the Cartesian read-out after the passage. The value read is then not the occupant's regularised drift, so the reader check fails it, whatever the read-out's size (REQ-VAL-045; physics review 5605806092 of PR #277, F1).",
-  "occupant": "heggie",
-  "reader": "cartesian",
-  "eta": 0.01,
-  "ladder": [0.01, 0.005, 0.0025, 0.00125],
-  "expected": "fail"
-}

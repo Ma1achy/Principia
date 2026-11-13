@@ -1,6 +1,0 @@
-{
-  "gate": "hamiltonian-fd",
-  "inputs": ["heggie_eq20.json", "heggie_eq22.json", "aarseth_zare.json", "sign_flipped.json"],
-  "threshold": { "value": 1e-8, "requirement": "REQ-VAL-171", "status": "provisional", "ruling": "R-71" },
-  "min_regions": { "value": null, "requirement": "REQ-VAL-171" }
-}

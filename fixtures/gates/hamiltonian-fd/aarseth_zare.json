@@ -1,9 +1,0 @@
-{
-  "description": "Aarseth–Zare, Γ as integrator_contract Part 2b writes it: its analytic rates (the position rates, the momentum rates and dt/dτ) against a central finite difference of the Hamiltonian over 64 random states, within REQ-VAL-171's tolerance at its step (R-257; REQ-VAL-170).",
-  "occupant": "aarseth-zare",
-  "step": 1e-6,
-  "samples": 64,
-  "seed": 79600363727205,
-  "flip": false,
-  "expected": "pass"
-}
