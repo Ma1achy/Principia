@@ -83,3 +83,6 @@ and dd test 3 is measured on Heggie × RK4 and Aarseth–Zare + RK4 (REQ-INT-122
   "this task's step-control part" (TASK-M3-08's note) is this task's: the landing above, its Part 2b definition and the
   convergence-order check. *Was:* "RQ-812 (Heggie's landing, open): the final landing follows its ruling, through a
   task."
+- *13 Nov 2026 (code review 5895563626 C2 of #522, applied per R-369, scope):* this task owes the R-604 budget helper
+  for any regularised occupant (`over_allowance(steps, t, rate, n_min)` in `az.rs`, `over_budget` routed through it
+  bit-identically), added with Heggie's march as its first caller; TASK-M3-08 dropped it.
