@@ -67,6 +67,8 @@ EVENTS = ("push", "schedule", "workflow_dispatch")
 BRANCH = "main"
 # The one attempt a fault is re-run from: the re-run is attempt 2, and nothing re-runs it again.
 FIRST = 1
+# The newer runs' one page: a full one that stops short of the run may leave a newer run on the next.
+PER_PAGE = 100
 # GitHub's words when a runner goes: lost (the PC off, offline, its runner process killed) or shut down mid-job. The
 # shutdown text is the runner's own (`actions/runner`, `src/Runner.Worker/JobRunner.cs`), as in `ci_retry.py`.
 SIGNATURES = (
@@ -335,13 +337,21 @@ def fetch_log(repo, jid):
 
 
 def fetch_newer(repo, workflow, run_id):
-    """Each run of the workflow newer than `run_id` (a larger id), with its latest attempt's jobs; None if unread."""
-    listed = gh([f"repos/{repo}/actions/workflows/{workflow}/runs?per_page=100"])
+    """Each run of the workflow newer than `run_id` (a larger id), with its latest attempt's jobs; None if unread.
+
+    One page, newest first, holds every newer run when it is short (the last page) or reaches `run_id` or an older
+    run. A full page of newer runs alone (PER_PAGE since this one, as pushes that skip a nightly job can be) may leave
+    a newer run of the job on the next page, so it counts as unread, and nothing is re-run: a fault that old is obsolete
+    anyway, and no further page is asked for."""
+    listed = gh([f"repos/{repo}/actions/workflows/{workflow}/runs?per_page={PER_PAGE}"])
     if listed is None:
         return None
     try:
-        runs = [r for r in json.loads(listed)["workflow_runs"] if int(r["id"]) > int(run_id)]
+        page = json.loads(listed)["workflow_runs"]
+        runs = [r for r in page if int(r["id"]) > int(run_id)]
     except (KeyError, TypeError, ValueError):
+        return None
+    if len(page) >= PER_PAGE and len(runs) == len(page):
         return None
     out = []
     for r in runs:

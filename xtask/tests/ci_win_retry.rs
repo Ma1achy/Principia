@@ -22,7 +22,8 @@
 //!   together; two beside a failure of its own are not;
 //! - `ci_win_retry_decide_*`: `decide`, under a stand-in `gh`, asks for the one re-run and writes every unclear stop and
 //!   hang to the step summary, with the run, the job, the step, the signature and the re-run's id, and a re-run says it
-//!   is one; a passing run's step that reached its limit is logged and not re-run;
+//!   is one; a passing run's step that reached its limit is logged and not re-run; a page of newer runs (100) that
+//!   stops short of the run counts as unread, and nothing is re-run;
 //! - `ci_win_retry_workflow_*`: `win-retry.yml`, parsed: `workflow_run` on `win-gpu` and `runner-proof` alone, hosted,
 //!   the least permissions, the repository guard, a passing run read, and `main`'s checkout.
 //!
@@ -1296,8 +1297,8 @@ impl Decided {
 }
 
 /// `decide` under `script`, on `run`, with a stand-in `gh` serving it as GitHub does: the attempt's jobs, each job's
-/// annotations and log (a 404 for none), the workflow's runs (the newer ones first, then this one) and each newer run's
-/// jobs, and refusing a re-run when `STUB_POST_ERR` is set.
+/// annotations and log (a 404 for none), the workflow's runs (the newer ones first, then this one, one page of 100) and
+/// each newer run's jobs, and refusing a re-run when `STUB_POST_ERR` is set.
 fn decide(script: &str, run: &Run, env: &[(&str, &str)]) -> Decided {
     let dir = Scratch::new("ci_win_retry_decide");
     let data = dir.join("run");
@@ -1317,6 +1318,8 @@ fn decide(script: &str, run: &Run, env: &[(&str, &str)]) -> Decided {
         .map(|r| json!({"id": r["id"]}))
         .collect();
     listed.push(json!({"id": 42}));
+    // One page, as `per_page=100` gives it.
+    listed.truncate(100);
     std::fs::write(
         data.join("runs"),
         json!({"workflow_runs": listed}).to_string(),
@@ -1569,6 +1572,102 @@ negative_control!(
         "        if not on_runner(j) or j.get(\"conclusion\") in PASSED:"
     ))
 );
+
+/// The saved runner lost, then a newer run that started `win-vulkan` (43), then `pushes` newer runs that skipped it,
+/// listed newest first.
+fn behind_pushes(pushes: u64) -> Run {
+    let mut run = lost();
+    for id in (44..44 + pushes).rev() {
+        run = run.newer_run(id, "win-vulkan", json!("skipped"));
+    }
+    run.newer_run(43, "win-vulkan", Value::Null)
+}
+
+fn check_decide_newer_page(script: &str) {
+    // 98 skipping runs and the one that started the job fill 99 places: the page reaches run 42, every newer run read.
+    let read = decide(script, &behind_pushes(98), &[]);
+    assert!(read.ok, "decide failed");
+    assert!(
+        read.posts().is_empty(),
+        "a fault re-run though a newer run of it, on the page, started"
+    );
+    // 100 skipping runs fill the page alone (Codex, PR #514), 43, which started the job, and 42 on the next.
+    let page = decide(script, &behind_pushes(100), &[]);
+    assert!(page.ok, "decide failed");
+    assert!(
+        page.posts().is_empty(),
+        "a fault re-run though the page of newer runs was full and stopped short of it"
+    );
+    assert!(
+        page.summary
+            .contains("the newer runs of the workflow could not be read"),
+        "a full page of newer runs: no reason given"
+    );
+    // 99 skipping runs alone: the page's last place is run 42 and no newer run started the job, so it is re-run.
+    let mut alone = lost();
+    for id in (43..43 + 99).rev() {
+        alone = alone.newer_run(id, "win-vulkan", json!("skipped"));
+    }
+    let rerun = decide(script, &alone, &[]);
+    assert_eq!(
+        rerun.posts(),
+        [&format!(
+            "gh api --method POST repos/o/r/actions/jobs/{TEST_JOB}/rerun"
+        )],
+        "a fault not re-run though the page reached its run and no newer run started it"
+    );
+    // A short page is the last: read whole, though every run on it is newer (run 41's, listing only 42).
+    let short = decide(script, &lost(), &[("RUN_ID", "41")]);
+    assert_eq!(
+        short.posts().len(),
+        1,
+        "a short page of newer runs taken as unread"
+    );
+}
+
+#[test]
+fn ci_win_retry_decide_refuses_a_full_page_of_newer_runs() {
+    check_decide_newer_page(&script());
+}
+
+negative_control!(
+    ci_win_retry_decide_refuses_a_full_page_of_newer_runs,
+    "a full page of newer runs taken as every newer run",
+    expected = "a fault re-run though the page of newer runs was full and stopped short of it",
+    check_decide_newer_page(&edit(
+        &script(),
+        "    if len(page) >= PER_PAGE and len(runs) == len(page):\n        return None\n",
+        ""
+    ))
+);
+
+mod newer_page_off_by_one {
+    use super::*;
+    negative_control!(
+        ci_win_retry_decide_refuses_a_full_page_of_newer_runs,
+        "a page one short of its run taken as full",
+        expected = "a fault not re-run though the page reached its run and no newer run started it",
+        check_decide_newer_page(&edit(
+            &script(),
+            "and len(runs) == len(page):",
+            "and len(runs) >= len(page) - 1:"
+        ))
+    );
+}
+
+mod newer_page_short {
+    use super::*;
+    negative_control!(
+        ci_win_retry_decide_refuses_a_full_page_of_newer_runs,
+        "a short page of newer runs taken as unread",
+        expected = "a short page of newer runs taken as unread",
+        check_decide_newer_page(&edit(
+            &script(),
+            "    if len(page) >= PER_PAGE and len(runs) == len(page):",
+            "    if len(runs) == len(page):"
+        ))
+    );
+}
 
 // ---- The workflow -----------------------------------------------------------------------------------------------------
 
