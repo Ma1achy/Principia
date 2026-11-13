@@ -55,7 +55,8 @@
 //! fail its comparison: the proof that the runner can fire (pitfalls §3). `lines` and `symptoms` are optional; a repro
 //! needs at least one line. Each reference is refused unless `fixtures/golden/BASELINES.md` holds its hash with the
 //! decision that set it (R-110: no re-baselining without a gate decision): the row is `<suite>/<case>` for a case's
-//! one reference, `<suite>/<case>@<backend>` for a per-backend one.
+//! one reference, `<suite>/<case>@<backend>` for a per-backend one. A row that also names its route, closed form or
+//! table (R-925), is refused if it names any other.
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -656,6 +657,8 @@ fn parse_symptoms(value: &Value) -> Result<Vec<Symptom>, String> {
 /// Checks each reference's SHA-256 against its entry in `fixtures/golden/BASELINES.md`, which must name a decision
 /// that `decisions.md` records (R-110). A reference with no entry, a different hash or no recorded decision is
 /// refused. The entry is `<suite>/<case>` for a case's one reference, `<suite>/<case>@<backend>` for a per-backend one.
+/// A row is `case | sha256 | decision`, or `case | sha256 | route | decision` in a table that names the route its
+/// reference was computed by, one of [`ROUTES`]; a row naming any other route is refused.
 pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
     let path = root.join("fixtures/golden/BASELINES.md");
     let baselines = fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
@@ -666,6 +669,11 @@ pub fn check_baseline(root: &Path, case: &Case) -> Result<(), String> {
     }
     Ok(())
 }
+
+/// The routes a BASELINES.md row's route cell may name, the two ways a shader feature reaches a chart (R-925 item
+/// 1): the chart's closed-form shader code, or, where a chart has none, tables the CPU builds. A golden whose
+/// route changes is a recorded conversion (R-931).
+pub const ROUTES: [&str; 2] = ["closed form", "table"];
 
 fn check_row(baselines: &str, decisions: &str, row: &str, reference: &Path) -> Result<(), String> {
     let bytes = fs::read(reference)
@@ -680,12 +688,17 @@ fn check_row(baselines: &str, decisions: &str, row: &str, reference: &Path) -> R
             .collect();
         match cells.as_slice() {
             [name, sha, decision] if name.trim_matches('`') == row => {
-                Some((sha.trim_matches('`').to_owned(), decision.to_string()))
+                Some((sha.trim_matches('`').to_owned(), None, decision.to_string()))
             }
+            [name, sha, route, decision] if name.trim_matches('`') == row => Some((
+                sha.trim_matches('`').to_owned(),
+                Some(route.to_string()),
+                decision.to_string(),
+            )),
             _ => None,
         }
     });
-    let Some((sha, decision)) = entry else {
+    let Some((sha, route, decision)) = entry else {
         return Err(format!(
             "golden case {row}: fixtures/golden/BASELINES.md has no entry for its reference; a baseline changes only \
              with a recorded gate decision (R-110)"
@@ -697,6 +710,14 @@ fn check_row(baselines: &str, decisions: &str, row: &str, reference: &Path) -> R
              {hash}; the entry records {sha}); a baseline changes only with a recorded gate decision (R-110)",
             reference.display()
         ));
+    }
+    if let Some(route) = route {
+        if !ROUTES.contains(&route.as_str()) {
+            return Err(format!(
+                "golden case {row}: its BASELINES.md entry names route `{route}`, which is none of {ROUTES:?} \
+                 (R-925, R-931)"
+            ));
+        }
     }
     let named: Vec<&str> = decision
         .split(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))

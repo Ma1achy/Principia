@@ -4,7 +4,7 @@
 - **Closes:** REQ-VAL-045, REQ-VAL-357
 - **Depends on:** TASK-M3-68
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-GEN-008
-- **Reviewers:** code, qa, physics
+- **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-4, PIT-4.3, PIT-4.4
 - **Size:** ~900 lines, the tests included
 
@@ -47,6 +47,10 @@ field added to the ledger as a schema change. The two-body radial collision gate
 - `docs/design/principia_dd_validation_orbits.md` § "2. What the suite tests that the current gates do not"
 - `decisions.md` § "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-992 — RQ-808, Heggie's and logH's own state: option (a); each regularised occupant that registers once carries its own state across `ADVANCE` calls in the payload, registered once at `t = 0` (Heggie's `Qᵢ`, `Pᵢ` and `h`; logH's `B` and, in TTL mode, `W`), so neither re-registers and its count is 0; a payload schema change *(closes RQ-808)*"
+- `decisions.md` § "R-993 — RQ-809, logH's step: option (a); logH's own time modes are the reference's drift–kick–drift leapfrog, `W` advanced at the midpoint velocity in TTL mode, selected as logH × KDK; logH × RK4 is classical RK4 on `(r, v, t, W)`; logH × Euler and × Yoshida wait for TASK-M3-39 *(closes RQ-809; refines R-500)*"
+- `decisions.md` § "R-994 — RQ-810, logH's landing: option (a), with RQ-795's answer; logH tests the landing after the step, as Heggie and Aarseth–Zare do, under R-998's rule: no landing tolerance, and the state lands on the boundary with the clock *(closes RQ-810)*"
+- `docs/design/principia_dd_simstate_payload.md` § "0. The two buffers (split by access pattern)"
 
 - `docs/contracts/principia_integrator_contract.md` § "COM projection and invariant monitoring"
 - `docs/contracts/principia_integrator_contract.md` § "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
@@ -95,6 +99,8 @@ field added to the ledger as a schema change. The two-body radial collision gate
 - *Was (13 Nov 2026, moved to TASK-M3-75):* "Doc change: `docs/contracts/principia_integrator_contract.md` § "The profile
   gains a field" — where the re-registration count lives (definition, R-72); if a payload field: the ledger row in
   `crates/ledger`, its generated accessors and the schema-version change."
+
+- *Was (13 Nov 2026, moved to TASK-M3-75 with REQ-INT-118 and REQ-PAY-114, as #515's note below says):* "The carried regularised state (R-992): Heggie's `Qᵢ`, `Pᵢ` and `h` (13 numbers) and its own clock, and logH's `B` and, in TTL mode, `W`, registered once at `t = 0` and passed through the seam beside `(m, r, p)` on every ADVANCE call; doc change: payload §1, the carried state's layout, widths and place (in `SimState` or a buffer beside it), a definition (R-72), physics- and perf-reviewed, with §7's memory figures recomputed and the ledger's schema change (REQ-INT-118, REQ-PAY-114). *Was (13 Nov 2026):* 'Heggie's `Qᵢ`, `Pᵢ` and `h` and logH's `B`'."
 
 ## Acceptance tests
 - `cargo xtask gate radial-collision` — the radial collision case passes through d_min ≈ 1e-11 with bounded energy drift
@@ -160,6 +166,8 @@ field added to the ledger as a schema change. The two-body radial collision gate
   2b states the choice; any payload field appears in the ledger with a schema-version change; physics reviewer approved
   (REQ-INT-073)."; and the logH arms of `hamiltonian-fd`, `separation-floor --propose` and
   `regularised_step_reversibility`, with the logH parts of the two Doc changes (REQ-INT-095, REQ-INT-104).
+- *Was (13 Nov 2026, moved to TASK-M3-75 with REQ-INT-118 and REQ-PAY-114):* the `regularised_state_carried` test and
+  the payload §1 review checklist (REQ-INT-118, REQ-PAY-114), word for word in TASK-M3-75.
 
 ## Notes
 - *Was: "Gap: Heggie's and logH's equations of motion and their step control are not in the corpus; REQ-INT-016 says they are transcribed from prin-rs, which is not in this repository."* RQ-102 ruled: R-159 imports the prin-rs reference set (`docs/reference/prin-rs`, reference, not authority); R-160 has this task transcribe the equations into Part 2b (REQ-INT-084), physics-reviewed and confirmed at the M3 gate. `FINDINGS.md:96`'s Eq. 20 statement is a documentation error; the default is Eq. 22 at n = 3/2 (R-161). TTL is built, validated and loses on accuracy in prin-rs, a prior finding (R-162).
@@ -180,3 +188,13 @@ field added to the ledger as a schema change. The two-body radial collision gate
   (its time-reversal map, its regularised energy) are built here with Heggie's: the original task named them, the split
   left them with neither part, and the reversibility test's own rule ("fails if one is missing") counts every built
   regularised occupant.
+- **13 Nov 2026 (R-992, R-993, R-994; RQ-808 to RQ-810):** the owner answered the three questions this task stopped on. Heggie and logH carry their own state across ADVANCE calls, registered once (R-992), so REQ-INT-118 and REQ-PAY-114 are added here; logH's own time modes are the reference's drift–kick–drift leapfrog and classical RK4 (R-993); logH tests its landing after the step under R-998's rule (R-994). The split of this task (the report's D-22, the logH-and-hookup task) is not on `main`; when it lands it moves REQ-INT-118, REQ-PAY-114 and the carried state to the new task (applied per R-369: task scoping).
+- **13 Nov 2026 (physics review 5886173032 of #515, F5; code review 5886308127, C6):** Heggie's carried state includes its own clock, as R-992's option (a) reads ("13 numbers and the clock"), so the carried-state Deliverable and `regularised_state_carried` name it, with the clock re-boot control and its precondition (REQ-INT-118, REQ-PAY-114).
+- **13 Nov 2026 (RQ-812; code review 5886308127 of #515, C7; applied per R-369: task scoping):** this task is not held whole. Only Heggie's landing, the landing branch of its step control, waits on RQ-812 (Heggie's landing, open; REQ-INT-084 names it). The reference's `LAND_EPS_REL` (`heggie/driver.rs:328`, `:345`, `:385`, `:390`) is never put into a branch (rule 1). Everything else in the task proceeds.
+- *13 Nov 2026, applied per R-369 (task scoping, the split landing after #515):* REQ-INT-118 and REQ-PAY-114, the
+  carried-state Deliverable and its two Acceptance lines move to TASK-M3-75, as the R-992 note above says; perf stays a
+  reviewer here, as #515's plan names it.
+- *13 Nov 2026, applied per R-369 (the orchestrator, following #502's precedent for Aarseth–Zare before RQ-795 was
+  ruled):* Heggie's landing tolerance is a caller-supplied setting (`HgParams::land_eps_rel`), with no value in the kernel
+  and no production configuration; its tests and gates run at the reference's values (`1e-5` at f32, `1e-14` at f64) and
+  say so, and each site is marked RQ-812. The final landing follows RQ-812's ruling, through a task.

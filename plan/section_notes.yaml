@@ -2024,3 +2024,11 @@
   section: "R-983 — The orchestrator may delete its own measurement branch once its commit is recorded; deleting anything else asks first *(the report's D-26, which stands; refines R-272)*"
   reason: informative only
   note: "the owner's word on D-26 of the report of 12 Nov 2026: own measurement branches deleted once their commit is recorded, anything else asked first; refines R-272; process; changes no requirement"
+- file: decisions.md
+  section: "R-987 — R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges, and chart dispatch starts then; integrator (M3) tasks keep priority over chart tasks for agent slots; a task tied to an unanswered question waits for its ruling *(the owner's message of 12 Nov 2026; amends R-923; read with R-917)*"
+  reason: informative only
+  note: "the owner's message of 12 Nov 2026 on R-923, ported with their reply of 13 Nov 2026: R-923 lifts when that port merges, integrator tasks keep slot priority; amends R-923; process; changes no requirement"
+- file: decisions.md
+  section: "R-1005 — The owner confirms R-988 as their item 5; D-15 of the report of 13 Nov 2026 stands *(the report's D-15, which stands; confirms R-988)*"
+  reason: informative only
+  note: "the owner's word on D-15 of the report of 13 Nov 2026: R-988 confirmed as their item 5; ci; changes no requirement"

@@ -36,6 +36,7 @@ The contracts state the extension kinds per chart edge (R-932: no blank areas; p
 ## Notes
 - Entered 11 Nov 2026 as N12 of the re-plan's addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`) (applied per R-369: task scoping); its acceptance is the addendum's § C item 1, and its answers section's N12 bullet (R-932, R-937, R-938). The plan documents are under `plan/charts/`; the lines above carry what they say.
 - **Entered, not released (R-923).** R-923 (integrator work before charts, for now) holds the chart tasks TASK-M2-57 to TASK-M2-85, TASK-M2-82 excepted, and allows no new chart task meanwhile. Entering this task in `plan/tasks.yaml` does not lift the hold: it is a chart task, entered held, and it is not dispatched until the owner lifts R-923's hold.
+- *13 Nov 2026 (R-987, the owner's message of 12 Nov 2026):* R-923 is lifted when the pull request porting the owner's answers to RQ-797 to RQ-806 merges; from then this task is dispatched as its dependencies allow, integrator (M3) tasks keeping priority for agent slots, unless it is tied to a question the owner hasn't answered, when it waits for that ruling.
 - "With TASK-M2-59 and TASK-M2-60" is a place in the order, not an edge.
 - TASK-M2-95 to TASK-M2-102 must meet the physics reviewer's conditions C1 to C7 on the clamp below the floor (R-937 records them in full).
 - RQ-779 (each edge's default kind) stays open: rows whose default is open are written to R-932's rule as R-941 says, the mass simplex saturating, the owner confirming the rest by eye when the charts render.

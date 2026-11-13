@@ -462,462 +462,11 @@ the old way is kept for it.*
 - **12 Nov 2026:** RQ-801 (records made past the switch to the linearised decoder, and across machines, recreating
   bit for bit) is an addition to this entry, filed from the chart audit the owner ordered ("RQ-783's addition"); it
   is read with this entry at M2 (R-956). This entry is not moved.
-
-## RQ-797: Where the one-cell patch `x₀ + J_D·δ` is expanded into the integrator's records: R-926 item 5 and REQ-INT-116 keep chart arithmetic off the GPU, while REQ-SCHED-024, REQ-DEC-036, REQ-DEC-052, TASK-M5-04 and TASK-M6-07 have the GPU form it; and R-935's tier-3 words read as a centre-plus-difference record *(conflict; a one-way door, it sets CPU and GPU bits and reads the owner's words in R-926 item 5 and R-935; R-926 items 5 and 11, R-935, R-90, R-632, R-686, R-142; REQ-INT-115, REQ-INT-116, REQ-SCHED-024, REQ-DEC-035, REQ-DEC-036, REQ-DEC-051, REQ-DEC-052, REQ-TOOL-158, REQ-PAY-069; context: TASK-M2-87, TASK-M4-05, TASK-M5-04, TASK-M6-07, TASK-M6-08, the chart audit's F1)*
-
-*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F1, with the audit's physics and code reviewers'
-corrections; each quote re-read on origin/main 54fa96fc. Q1 (a) and Q2 (i) are recommended by the owner, 12 Nov 2026:
-"patch location (recommend CPU f64)", and "[RQ-797] Q2: recommend (i). The owner doesn't recall the intent of R-935's
-words; (i) keeps the GPU free of chart arithmetic, which is R-926's purpose. Note that forming the sample's chart input
-quad-locally on the CPU (centre + offset, in f64) is compatible with (i)." (the owner's draft id bracketed as filed).
-Nothing is chosen here.*
-
-*In plain English: past zoom depth 20, each square's starting systems come from one centre point plus its slopes, a
-small sum per pixel. The owner ruled that the graphics card only runs the simulation and does no chart arithmetic, but
-older requirements and tasks still have the graphics card doing that sum. Where the sum is done decides whether the
-pictures come out the same bit for bit on every machine, and how much data goes to the graphics card. A second, smaller
-question: the owner's words for charts with no exact slopes say each pixel's record carries "its difference from the
-quad's centre", which reads as the same sum done on the graphics card. The owner doesn't recall what those words were
-meant to say; the recommendation reads them so that the graphics card still does no chart arithmetic: the CPU works out
-each such pixel's own starting system, and may use the centre plus the pixel's offset as its input.*
-
-- **File, section:**
-  - `decisions.md` § R-926 (the new chart system; the CPU evaluates charts, the GPU only integrates), the owner's
-    words, item 5: "The CPU evaluates charts in f64. The GPU only integrates records. No chart code in the
-    integrator."; item 11: "A small quad's table collapses to one cell — that IS the linearised decoder (centre +
-    slopes). Grids for large quads, one-cell patches for small ones."
-  - `decisions.md` § R-935 (the re-plan's eleven answers), under RQ-758 (slopes): "A tier-3 map gets no one-cell
-    patch: every sample is evaluated on the CPU, its record carrying its difference from the quad's centre."
-  - `plan/requirements.yaml` REQ-INT-116 (the integrator entry never decodes), verify: "the integrator entry's
-    source, and everything it calls, contains no chart map, no link and no decode call".
-  - `plan/requirements.yaml` REQ-SCHED-024 (deep zoom's precision split), statement: "give the GPU only quad-local
-    relative arithmetic x = x₀ + J_D·δ in f32, passed as per-quad uniforms"; verify: "kernel computes only x₀ +
-    J_D·δ".
-  - `plan/requirements.yaml` REQ-DEC-036 (`x₀` and `J_D` on the CPU), statement: "the GPU must evaluate x = x₀ +
-    J_D·δ without running the nonlinear decode pipeline".
-  - `plan/requirements.yaml` REQ-DEC-051 (the f32 floor calibration), statement: "x = x₀ + J_D·δ formed in f32".
-  - `plan/requirements.yaml` REQ-DEC-052 (the f32 floor gate), verify, its control: "a measurement that reads the f64
-    sum x₀ + J_D·δ in place of the f32 IC the GPU integrates misses it and fails".
-  - `plan/tasks/M6/TASK-M6-07.md` (the linearised decoder), Goal (:12): "the GPU evaluates `x = x₀ + J_D·δ` in f32
-    and never runs the nonlinear pipeline"; Deliverables (:30): "`crates/kernel/src/decode/linear.rs`: the f32 linear
-    path `x₀ + J_D·δ` in the shared source".
-  - `plan/tasks/M5/TASK-M5-04.md` (the quad request), Goal (:15–16): "the kernel's only use of them is `x₀ + J_D·δ`
-    in f32".
-  - `docs/contracts/principia_lowering_contract.md` § "Part 1 — What lowering is" (:20): "the CPU evaluates them in
-    f64 and sends each quad its forward table, from which the integrator's records are formed". It does not say
-    where they are formed.
-  - `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision" (:76): "A few fused multiply-adds
-    (continuous — the decode is not a branch input, so FMA latitude here is honest divergence, not a determinism
-    concern)"; (:87): "But `x = x₀ + J_D·δ` is an absolute f32 number of order `|x₀|`, and the f32 integrator on the
-    GPU starts from it".
-  - `docs/contracts/principia_scheduler_contract.md` Part 4 (:137), the dated note: "bitwise switchover on CI
-    backends stays blocking (R-686, the owner's acceptance)."
-  - `decisions.md` § R-142 (only the verdict returns from the GPU): "`QuadReduction` stays the sole automatic
-    return."
-- **The conflict:** R-926 item 5 and REQ-INT-116 leave the GPU no chart arithmetic, and the lowering contract forms
-  records from the forward table without saying where. REQ-SCHED-024, REQ-DEC-036, REQ-DEC-051, REQ-DEC-052,
-  TASK-M5-04 and TASK-M6-07 have the GPU form `x₀ + J_D·δ` in f32, TASK-M6-07 in a decode module. If the sum is
-  called from the integrator entry, TASK-M6-07 fails TASK-M4-05's lint (REQ-INT-116); if it is a separate GPU pass,
-  no task builds it. A GPU sum follows each backend's FMA contraction (deep zoom §2:76), and R-90's switch and
-  `AT_F32_FLOOR` branch on the bitwise equality of its results (scheduler Part 4:137–138), which is why R-686 tests it
-  on NVIDIA. Detecting collapse from GPU-formed records needs a readback, against R-142. Separately, R-935's tier-3
-  wording ("its record carrying its difference from the quad's centre") reads as a centre-plus-difference record,
-  which needs a GPU-side add on tier-3 quads too; a difference carried in f32 and summed in f32 before an absolute f32
-  integrator buys no depth (deep zoom §2:87).
-- **The question:** Q1, does the CPU or the GPU expand the patch into records? Q2, what does a tier-3 record carry?
-- **Options seen:**
-  - **Q1 (a) The CPU expands in f64 and narrows once.** The GPU reads only records, so R-926 item 5 and REQ-INT-116
-    hold literally. Each record is the correctly rounded value of its f64 sum (TASK-M2-86's predicate (3), within half
-    an f32 ulp), the same on every backend once RQ-799 (a) pins the maths library, with no quad seam beyond the
-    `O(h²)` linearisation (F10). Collapse and floor detection run on the CPU, with no readback (R-142). R-686's NVIDIA
-    run then measures the integrator only; its words stand. Costs: about 30 FMAs per patched sample, in place of the
-    exact evaluation (about 85 ns, composition §17.12:2496) it replaces, so the CPU cost per patched sample falls; and
-    `N²` records uploaded per patched quad, as for an exact quad, where (b) uploads one `x₀` and `J_D` (about 45 floats,
-    scheduler Part 5:171). Rewritten from the answer: REQ-SCHED-024, REQ-DEC-035, REQ-DEC-036, REQ-DEC-051,
-    REQ-DEC-052's control (the f64 sum, narrowed, becomes the measured path), REQ-TOOL-158, REQ-PAY-069, REQ-DEC-033
-    ("on the full nonlinear decoder"), scheduler Part 4:138's definition of `AT_F32_FLOOR`, deep zoom §2:75–76,
-    TASK-M5-04, TASK-M6-07 and TASK-M6-08. A patched sample's descriptor, tag and branch words must come from
-    somewhere: under RQ-798 (a′) a quad whose samples could differ from the centre's in tag, branch or sheet is
-    exact per sample, so the centre's words are right on every patched quad; TASK-M2-87's contract states it.
-  - **Q1 (b) A separate GPU pass expands into a record buffer before the integrator entry.** REQ-INT-116 holds and the
-    upload stays one `x₀` and `J_D` per quad. Records follow each backend's FMA contraction, so they are not bitwise
-    across backends, and R-686 applies to them. Floor detection needs a readback, against R-142. A new task is needed.
-  - **Q1 (c) The integrator entry calls the patch,** as TASK-M6-07 and TASK-M6-08 have it today. R-926 item 5 and
-    REQ-INT-116 would need amending, and (b)'s bit and readback issues remain.
-  - **Q2 (i) A tier-3 record holds each sample's own f64 evaluation, narrowed once,** the same as an exact record; "its
-    difference from the quad's centre" is read as what the CPU knows and may show (the table debug view, R-926 item
-    10), not what the record carries. Consistent with Q1 (a). The sample's chart input may be formed quad-locally on
-    the CPU, the quad's centre plus the sample's offset, in f64, before the evaluation; that is compatible with (i), the
-    difference from the centre then entering the CPU's evaluation, not the record or the GPU. A reading of the owner's
-    words, so the owner's.
-  - **Q2 (ii) A tier-3 record carries centre plus difference, summed on the GPU.** The words read literally. Needs Q1
-    (b) or (c) for tier-3 quads, with their bit issues, and buys no depth (deep zoom §2:87).
-- **Recommended:** Q1 (a), recommended by the owner, 12 Nov 2026, and Q2 (i), also recommended by the owner, 12 Nov 2026
-  (their words in this entry's header). On Q2: the owner doesn't recall what R-935's words "its record carrying its
-  difference from the quad's centre" were meant to say, and (i) keeps the GPU free of chart arithmetic, which is the
-  purpose of R-926 (item 5: "The GPU only integrates records. No chart code in the integrator."). Forming the sample's
-  chart input quad-locally on the CPU (centre plus offset, in f64) is compatible with (i). Q2 still reads the owner's
-  words, so it is the owner's to rule. Measurable alternative for Q1, written before any run: bytes uploaded per patched
-  quad under (a) and (b), reported as their ratio (expected about `N²·136 B / 180 B`, about 190 at `N = 16`, *inferred*)
-  and as a share of the tier's hard cap on bytes (REQ-PERF-040); and M-S, the audit's seam measurement, run under (a)
-  and (b): patch records against exact records on both sides of 1,000 quad edges, on the latent and `(L_z, E)` charts at
-  depths 21 to 25, at fixtures as RQ-798's fixture rule states them, the seam difference per component reported as a
-  ratio to the in-quad adjacent difference at the same depth, and the outcome-flip rate across seams against the in-quad
-  rate and the one-ulp chaos baseline (R-84); positive control, one quad's `x₀` offset by two ulps must show as a seam,
-  or the run is void.
-- **Applied meanwhile:** nothing. The superseded lines are marked *Was* in the chart audit's record-corrections PR (its
-  F7 and F9), without choosing an option.
-- **Waits:** TASK-M2-87 (the record contract), TASK-M4-05 (flat-grid compute), TASK-M5-04, TASK-M6-07, TASK-M6-08; the
-  parts of the chart audit's record corrections F7, F9 and F20 that depend on this answer.
-
-## RQ-798: A patched quad that straddles a crease: R-90 patches every quad past depth 20, "whichever comes first", and nothing consumes REQ-DEC-058's kink flag, so tags, branches and sheets come out as the centre's, and continuous values are wrong across a strip hundreds of quads wide near a square-root edge *(silence; a one-way door, it amends R-90's "whichever comes first" with a named exception, and changes CPU bits; R-90, R-935, R-937, R-926 item 11; REQ-DEC-058, REQ-INT-115, REQ-CHART-129, REQ-CHART-130; context: TASK-M2-87, TASK-M2-88, TASK-M6-08, the chart audit's F2)*
-
-*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F2, with the audit's physics reviewer's option (a′)
-and its code reviewer's additions; each quote re-read on origin/main 54fa96fc. (a′) is recommended by the owner, 12 Nov
-2026: "creases (recommend a′)". Nothing is chosen here.*
-
-*In plain English: deep down, each square gets the centre-plus-slopes shortcut. Where a square straddles a crease in
-the chart, such as the edge of the allowed region, a fold, a pole or a switch between formulas, the shortcut gives the
-wrong kind of system on part of the square. Near an edge shaped like a square root it is also wrong in value, not just
-in kind, over a band hundreds of squares wide. The proposed fix checks each square's four corners against the exact
-answer before trusting the shortcut. Four corners can miss a saddle-shaped error, which cancels at every corner; a
-variant also checks the midpoints of the square's four edges, which catches it, at twice the cost.*
-
-- **File, section:**
-  - `decisions.md` § R-90 (the decoder switchover trigger): "Switch to the linearised decoder when the full decoder's
-    adjacent samples give bitwise-identical ICs, with ℓ_switch = 20 as an upper bound (whichever comes first)."
-  - `decisions.md` § R-935, under RQ-766 (a large quad's forward table): "One node per sample above R-90's switch,
-    exact; the one-cell patch, a centre and slopes, below it".
-  - `plan/requirements.yaml` REQ-DEC-058 (each map declares its slope tier), statement: "a tier-1 or tier-2 map must
-    set a flag at each kink site (the feasibility boundary, `k = 0`, `warped_k` at `d = 0`, `normalise`'s edges, the
-    exponential map's `r = 0`, the poles, the seed switches)".
-  - `plan/requirements.yaml` REQ-INT-115 (the record contract): "the record as REQ-DEC-005's `(m, r, p)`, its
-    descriptor and tag words, a branch word and the stop index".
-  - `plan/requirements.yaml` REQ-CHART-129 (seams flagged per footprint): "a footprint whose copies straddle a
-    declared seam, a branch or a composed chart's mask must be flagged per pixel, in the resolve pass"; REQ-CHART-130
-    (seams masked from refinement): "Declared seams must be masked from the refinement criterion".
-  - `decisions.md` § R-937 (the invariant charts' second sheet): "the spin edges unfold onto the time-reversed sheet".
-  - `plan/tasks/M2/TASK-M2-86.md` (the first slice), Acceptance (:28): "(3) each narrowed component is the correctly
-    rounded value of its f64 evaluation (within half an f32 ulp of it)"; and "per component in f32 ulps at `max(1,
-    |x|)`".
-- **The silence:** REQ-DEC-058 requires the kink flags; nothing consumes them (in the tasks only TASK-M2-86:25 and
-  TASK-M2-88 mention kinks). R-90 patches every quad past 20. A one-cell patch gives every sample the centre's tag,
-  branch and sheet, so along each kink curve, at every depth past 20, `ENERGY_INFEASIBLE` and `INVARIANT_INFEASIBLE`
-  come out wrong at the `(L_z, E)` feasibility edge, the patch keeps sheet 1 across R-937's unfold line, and branch
-  selects come out wrong at the poles. The continuous error is wider than the tags. Near a `√` edge, `f = √d`; a patch
-  of half-width `h` centred at distance `d` has a relative linearisation error of about `(h/d)²/8`. Holding that under
-  half an f32 ulp of the component's own value (predicate (3)'s bound, `2⁻²⁴` relative) needs `(h/d)² ≤ 2⁻²¹`, so
-  `d ≳ 2^10.5·h ≈ 1,450·h`: about `2¹¹` half-widths (about 720 quad widths) each side of the edge (the physics
-  reviewer's arithmetic, *inferred*). Every figure here is in the component's own ulp, a relative unit, and only `h/d`
-  enters, so the strip is scale-invariant: the same number of half-widths at every depth. The poles behave alike
-  (curvature about `1/r²`).
-- **The question:** when does a quad past R-90's switch take the patch, and when is it exact per sample?
-- **Options seen:**
-  - **(a) Footprint and centre test.** A quad whose footprint meets a flagged site, or whose corner and centre
-    evaluations differ in tag, branch or sheet, is exact per sample at any depth. Fixes the tags where a flagged site
-    lies in the footprint; a tag sliver between sample points can still be missed by the corner test, which the
-    footprint test carries (the code reviewer). Leaves the wide strip of continuous values wrong by more than the
-    narrowing. R-90 gains a named exception.
-  - **(a′) The four-corner check plus the footprint test (the physics reviewer's).** A quad takes the patch only if
-    the exact f64 evaluation at each of its four corners and the patch's f64 prediction there differ by at most half
-    an f32 ulp of the component's own value in every component (predicate (3)'s bound), agree in tag, branch and
-    sheet, and its footprint meets no flagged site (REQ-DEC-058's flags, consumed by extending REQ-CHART-129's
-    per-footprint flag and REQ-CHART-130's `Seam` mask). Otherwise it is exact per sample. Cost: 4 evaluations against
-    `N² = 256` at `N = 16`, 1/64 of an exact quad. Covers kinks, folds and sheets, and the high-curvature strip where
-    the curvature has one sign (semidefinite, as at the `√` edge above), subject to the binade condition stated under
-    (a″) below; keeps R-926 item 11's "one-cell patches for
-    small ones" wherever the patch is right. R-90 gains a named exception, and the record's bits change on the quads
-    it sends back to exact. **The gap (physics review 5877078565 of the pull request that filed this entry, P2):** four
-    corners do not bound the patch's error where a component's curvature is indefinite. The error is `½·δᵀHδ + O(δ³)`,
-    at the corners `(±h, ±h)` it is `½h²(H_uu + H_vv ± 2H_uv)`, so a component with `H_uu = −H_vv` and `H_uv` small
-    (any harmonic component) passes every corner while samples near the edge midpoints are off by about `½h²|H_uu|`.
-    For example, on a log-polar pair `(s, θ)`, `x = e^s·cos θ` has `H_ss = x` and `H_θθ = −x`, and at `θ = 0`
-    `H_sθ = 0`: every corner passes while the samples along the `s` and `θ` axes are off by `½h²·x`. Under (a′) such
-    quads take the patch with that error. Its scale (physics review 5877369526, F2): the miss is `½h²·|H_uu|/|x|`
-    relative to the component's own value. On the log-polar example that is `½h²`, about `2⁻⁴⁵` at depth 21
-    (`h = 2⁻²²`), roughly `2⁻²¹` of an f32 ulp, harmless at every depth from 21 to 30. The gap bites only where
-    `½h²·|H_uu|/|x|` reaches an f32 ulp of the component's own value (`2⁻²⁴` relative), where the curvature is large
-    against the value: near a point where a component and its gradient both vanish with saddle-shaped curvature
-    (`x ≈ u² − v²`, whose miss `h²` against `|x| ≈ r²` reaches `2⁻²⁴` within about `r ≲ 2¹²·h`, some `2¹²`
-    half-widths of the point), or in an indefinite strip beside a singular site, as the `√` strip is beside its edge
-    (*inferred*). It also bites along a component's zero lines where the gradient is not zero (physics review
-    5877523301, F6): where the curvature in the grid axes is nearly trace-free with a small mixed term, for example
-    `x = g·u + c(u² − v²)`, the corners miss and `|x|` falls to 0 along the line, so the gap opens on strips, not only
-    at points, about `2²⁴·½h²|H_uu|/|∇x|` wide, some `2·|H_uu|/|∇x|` half-widths at depth 21, narrowing with depth
-    (*inferred*); the binade condition under (a″) applies to these quads too. The log-polar position components never
-    bite: `e^s·cos θ` and `e^s·sin θ` are harmonic, at their zero lines `H_ss = H_θθ = 0` and the curvature is purely
-    mixed, which the corners catch, and at their extrema the miss is about `½h²` relative (physics review 5877523301).
-  - **(a″) The four corners and the four edge midpoints, plus the footprint test (physics review 5877078565, P2).** As
-    (a′), with the exact f64 evaluation and the patch's f64 prediction compared at the four edge midpoints as well as
-    the four corners, under the same bound, tag, branch and sheet agreement and footprint test. The midpoints give
-    `H_uu` and `H_vv` and the corners `H_uv`, so the quadratic error over the square is bounded, for example by
-    `½h²(|H_uu| + 2|H_uv| + |H_vv|)`. Admission bounds the square at 5/4 of the bound checked at the eight points, not
-    at the bound itself (physics review 5877369526, F1): along each edge the error is a quadratic checked at three
-    points, the two corners and the midpoint, and the interpolation constant on nodes `{−1, 0, 1}` is `5/4`, reached at
-    `t = ½`. For example, in units of the bound, `½h²H_uu = 1`, `h²H_uv = 1` and `½h²H_vv = −1` pass all eight points,
-    while on the edge `u = h` the error is `1 + s − s²` (`s = v/h`), `5/4` at `s = ½`. So where the patch is admitted
-    its records are within 5/4 f32 ulp of the exact ones, where (a′) on semidefinite curvature gives one (a convex error
-    peaks at a vertex); comparing at 4/5 of the bound would restore one ulp, a variant the owner may name. **The binade
-    condition (physics review 5877523301, F5), for (a′) and (a″) alike:** both bounds are in the own-value ulp of the
-    checked points, which varies across a quad, so they hold per sample only while each component's samples stay in the
-    checked points' binade; the semidefinite bound is not exact per sample, as an earlier review read it, but holds only
-    under that uniform tolerance. Where a component's magnitude drops a binade inside the quad, interior samples get up
-    to 2 (semidefinite, (a′)) or 5/2 ((a″)) of their own ulp. Where a component changes sign inside the quad, its own
-    ulp at the samples nearest the zero is arbitrarily small, and the error against it is unbounded whatever the
-    curvature's sign: for `x = g·u + ½H·u²` on a quad straddling `u = 0` at depth 30 (`h = 2⁻³¹`), the corners sit at
-    `|x| ≈ |g|h` and pass whenever `h|H|/|g| < 2⁻²⁴`, while a sample at `|x| ≪ |g|h` still carries about `½H·δu²`
-    against `2⁻²⁴·|x|`. Variants the owner may name: comparing at the quad's smallest own-value ulp, estimated from the
-    patch as `|x₀| − |J|·√2·h`; and, where that estimate is at or below 0, so the component may cross zero, exact
-    evaluation per sample or an absolute floor. Cost: 8 evaluations against `N² = 256` at `N = 16`, 1/32 of an exact
-    quad. Covers kinks, folds, sheets and the high-curvature strip of either sign. R-90 gains a named exception, and the
-    record's bits change on the quads it sends back to exact.
-  - **(b) Keep the patch, and set each sample's tag, branch and sheet by a cheap exact predicate per sample.**
-    Continuous values stay linearised, wrong across the strip.
-  - **(c) Keep the patch and label the strip.** Wrong classifications are drawn and only labelled.
-- **Recommended:** (a′), recommended by the owner, 12 Nov 2026 (their words in this entry's header). The owner
-  recommended (a′) before physics review 5877078565 found that four corners miss indefinite curvature; (a″) closes it.
-  The choice between (a′) and (a″) is the owner's. Measurable alternative, measurement M-K, criterion written before
-  any run:
-  - *Fixture rule (this entry's and RQ-797's, RQ-801's, RQ-802's and RQ-805's):* a fixture past R-90's switch states,
-    before its run, `|x₀,k|` and the in-plane slopes `|∂x_k/∂u|`, `|∂x_k/∂v|` from the f64 evaluation for each of the
-    record's 15 components, and for each the deepest level at which it still separates adjacent samples,
-    `ℓ_k ≈ 19 + log₂(|∂x_k/∂u| / |x₀,k|)` at `N = 16` (`20 + …` at `N = 8`), to within one level (deep zoom § 1's
-    `h = 2^−(ℓ+1)` and sample spacing `2h/N` against f32's ulp at `|x₀,k|`, *inferred*). A depth is admitted when,
-    along each in-plane axis, some component varying along it has `ℓ_k` at or past that depth, R-632's rule as
-    REQ-TOOL-159's note has it ("use coordinates where the measured f32 floor (REQ-DEC-051, quoted with |x₀|) admits
-    depth 30"); an arm at a depth no component admits is reported void, never passed. RQ-802's arm (f) is exempt from
-    this f32 admission, and from it only: it lies past the f64 level of every component with a non-zero in-plane slope
-    by construction, and each component's f32 level comes about 29 levels before its f64 level (`19 + …` against
-    `48 + …`), so the rule would void every arm-(f) fixture. Arm (f) states `|x₀|` and the slopes per component as
-    above, and is admitted by its own preconditions in RQ-802 (each such component at its f64 level by the arm's depth,
-    the f64 sample points distinct, and at least one adjacent pair with bitwise-equal f64 ICs); an arm-(f) fixture
-    that fails them is void, never passed.
-  - *Setup:* the `(L_z, E)` chart at depths 21 to 30, `N = 16`, the CPU expansion of RQ-797 (a). Straddling set: 512
-    quads whose footprint meets the feasibility edge. Away set: 512 quads at distance at least `2¹¹·h` from it, the
-    bound above. Indefinite set: 512 quads at depths 21 to 30 centred within about `2¹²·h` of a point where a component
-    and its gradient both vanish with saddle-shaped curvature, or on a strip along a component's zero line where the
-    grid-axis curvature is nearly trace-free with a small mixed term (the gap's strips above), the fixture stating
-    before its run, under the fixture rule, that `½h²·|H_uu|` reaches an f32 ulp of that component's own value there; it
-    is needed because the feasibility edge's curvature is semidefinite and the two sets above alone would pass a
-    corners-only check that is wrong elsewhere. The log-polar example would not serve: its miss is about `2⁻²¹` of an
-    f32 ulp, so it reports no difference under (a′) or (a″). Whether any chart in the corpus has such a point or strip
-    past depth 20 is not established here; searching for both is M-K's first step, and if none exists the run says so,
-    the indefinite set is void, and (a′)'s gap is exercised by control (iii) alone, which the owner should know when
-    weighing (a′) against (a″). The set's quads that cross a component's zero are reported apart, as PASS below says,
-    in the quad's smallest own-value ulp. The fixture follows the fixture rule above. Patch records and exact narrowed
-    records compared sample by sample, as are the held quantities `E` and `L_z` of the patch records against `E*` and
-    `L_z*`.
-  - *Ulp convention:* the component's own f32 ulp, because near the edge `|p| ∝ √d` is small and `max(1, |x|)` would
-    hide its error. The strip bound, PASS and the controls are all in this one unit; each difference is also reported,
-    not judged, at `max(1, |x|)`, TASK-M2-86:28's unit, for comparison only.
-  - *PASS under (a′) or (a″):* on every quad the check admits on which each component's samples stay in the checked
-    points' binade, no sample differs in tag, branch or sheet, and no component differs by more than one f32 ulp of its
-    own value (half an ulp each side, predicate (3)) under (a′), or 5/4 f32 ulp under (a″), (a″)'s interpolation
-    constant above. Admitted quads on which a component crosses a binade or changes sign are reported apart, each with
-    its worst difference in the quad's smallest own-value ulp, and are not judged against a bound the check cannot give
-    them (the binade condition above). The share of
-    straddling and of away quads the check sends to exact is reported.
-  - *Positive controls, any failing voids the run:* (i) one sample's tag flipped on purpose in an admitted quad is
-    detected; (ii) one quad's `x₀` offset by two f32 ulps of the component's own value is rejected by the check;
-    (iii) a planted saddle-shaped second-order error `κ(δu² − δv²)` in one quad's patch, above the bound at the edge
-    midpoints and 0 at the corners, is rejected by (a″)'s check. (ii) is first-order and cannot exercise this. Under
-    (a′), (iii) is admitted by construction: that arm reports it as (a′)'s gap, and its rejection is asserted only
-    under (a″).
-- **Applied meanwhile:** nothing.
-- **Waits:** TASK-M2-87 (the record contract), TASK-M2-88's flag consumer, TASK-M6-08.
-
-## RQ-799: Pin every transcendental reachable from the CPU chart evaluator: on the host, `Float::sin`, `Float::atan2` and the rest call std and so the platform's maths library, so a record is bitwise only per machine *(conflict; a one-way door, CPU bits; R-926 item 5, R-502, R-521, R-921, R-197, R-931; REQ-CHART-099, REQ-CHART-155, REQ-TOOL-172, REQ-INT-091; context: TASK-M2-67, TASK-M2-86, TASK-M2-89, the chart audit's F3)*
-
-*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F3, with the audit's code reviewer's list of
-functions and its physics reviewer's measurement; each quote re-read on origin/main 54fa96fc. (a) is recommended by the
-owner, 12 Nov 2026: "the libm pin (recommend a)". Nothing is chosen here.*
-
-*In plain English: the CPU now works out every pixel's starting system. It uses the computer's own maths library,
-which differs very slightly between Mac, Linux, Windows and the browser, so a saved picture could re-run one bit
-differently on another machine. The project already fixed this in three places by using a pinned software maths
-library; this would do the same for every maths function the chart code can reach, with a test so none slips back.*
-
-- **File, section:**
-  - `crates/kernel/src/real.rs` (:49–50), the doc comment on `arctan2`: "libm's by default, so the f64 path is libm's
-    bit for bit"; the default body (:59): `Float::atan2(self, x)`; `sinc`'s default (:71): `Float::sin(self) / self`.
-  - spirv-std 0.10.0-alpha.1's `Cargo.toml` (the cargo registry, lines 61–63):
-    `[target.'cfg(not(target_arch = "spirv"))'.dependencies.num-traits]`, `default-features = true`. In num-traits
-    0.2.19 (`src/float.rs:835`, `:847`) the `std` implementation is selected when `std` is on, and the `libm` path only
-    under `all(not(std), libm)`.
-  - `crates/kernel/Cargo.toml` (:16–21): "computes its `pow` in f64 through a pinned pure-software libm … with
-    `force-soft-floats`, so no platform libm, compiler intrinsic or architecture-specific instruction computes it, and
-    the native and wasm hosts give the same bits"; `libm = { version = "=0.2.16", default-features = false, features =
-    ["force-soft-floats"] }`. The same pin is at `crates/engine/Cargo.toml:27` and `crates/ledger/Cargo.toml:11`, and
-    `crates/engine/src/trajectory.rs:277` and `:376–393` call `libm::sin` and `libm::cos`.
-  - Chart code calling the platform library on the host: `Float::powf` at `chart/invariant.rs:187`,
-    `construction.rs:946`, `physical.rs:739`, `burrau.rs:557`; `Float::asin` at `shape_sphere.rs:671`; `Float::ln` at
-    `burrau.rs:638`; inherent `f64::ln` at `physical.rs:922–923` and `:962`; `Float::sin`, `cos`, `sin_cos` and
-    `atan2` throughout `shape_sphere.rs`, `tilt.rs`, `burrau.rs` and `burrau_acute.rs`; `Float::hypot` at
-    `chart/tilt.rs:239`, `:288`, `:294`, `:342` and `:438`; `Float::ln_1p` and `Float::exp_m1` in the generated links'
-    `softplus` and `inv_softplus` (`generated/links.rs:219`, `:225`); `Float::cbrt` for the encode's step
-    (`encode/ingest.rs:116`, `:152`); and `Float::cosh`, which the link generator emits for `sech2`
-    (`crates/ledger/src/gen/links.rs:671`).
-  - `decisions.md` § R-502 (the `N_sub` table, pinned libm): "A pinned pure-software libm computes the `pow` (in
-    f64, rounded once to f32), so the native and the wasm hosts give identical bits".
-  - `decisions.md` § R-921 (records under a retired link recreate bitwise): "to the original physical starting
-    state, bitwise, and runs from there".
-  - `plan/requirements.yaml` REQ-CHART-099 (charts reopen bitwise): "Every existing chart, gallery preset and saved
-    chart must reopen bitwise under the composition"; REQ-CHART-155 (the browser CPU route): "whether a wasm f64 solve
-    matches the native one bit for bit is measured and reported".
-  - `docs/design/principia_ic_save.md` (:82–84): "a residual arises only from another platform's maths library
-    (`atan2` in `C`'s step 2, the chart inverses) or another build".
-  - `decisions.md` § R-197 (who may configure a lint): changing lint configuration (`clippy.toml`, `[lints]` tables)
-    needs a ruling.
-- **The conflict:** under R-926 item 5 every record is the CPU's f64 evaluation, narrowed. On the host every `Float::`
-  transcendental, and every inherent `f64` one, goes through std to the platform library (macOS, glibc, Windows, wasm).
-  Where two platforms' f64 values differ by one f64 ulp, narrowing flips at an f32 rounding midpoint with probability
-  about `2⁻²⁹` per differing component (one f64 ulp in the `2²⁹` f64 ulps of an f32 ulp); the overall rate is (the share
-  of calls that differ by platform) × (the amplification through the chart) × that, *inferred*. Rare, but not zero, so
-  R-521's and R-921's recreation, REQ-CHART-099's digest written on the Mac and checked on Linux CI, REQ-CHART-155's
-  native-to-wasm comparison and the export contract's re-render (:156) hold only per machine. The lock and placement
-  solves, the backwards search and R-952's contours call the evaluator, so they inherit it too (iteration counts and
-  branches can change). ic_save :82–84 already concedes the residual for chart inverses; R-926 extends it to every
-  pixel. The comment at `real.rs:49–50` reads as if the pinned crate were used, when the default goes through std.
-- **The question:** does every transcendental reachable from the CPU evaluator go through the pinned libm, enforced?
-- **Options seen:**
-  - **(a) Pin, enforced.** Every f64 transcendental reachable from the CPU evaluator (sin, cos, sin_cos, tan, atan2,
-    asin, acos, exp, exp_m1, ln, ln_1p, powf, hypot, cbrt, sinh, cosh, tanh and any added later) goes through libm
-    0.2.16 with `force-soft-floats` (libm's `expm1` and `log1p` for `exp_m1` and `ln_1p`), through the `Real` trait's
-    methods as `arctan2` and `sinc` already are. `sqrt` is excluded: IEEE 754 requires it correctly rounded, so every
-    platform gives the same bits. Enforced by a test in the `discipline_lint` style: every `Float::` or inherent `f64`
-    transcendental in the evaluator's source outside the `Real` impl fails, `sqrt` excepted, with a control (a planted
-    `Float::sin` fails); a clippy `disallowed-methods` entry would be lint configuration and need a
-    ruling (R-197), so the test is the route. Records become identical on every host. It changes today's f64 bits on
-    some inputs, so a fixture written from the f64 path becomes a recorded conversion (R-931). A software
-    implementation may be slower, which M-A then measures.
-  - **(b) Keep the platform library,** and state that bitwise claims hold per machine and per OS. That amends what
-    R-521 and R-921 claim across machines.
-- **Recommended:** (a), recommended by the owner, 12 Nov 2026 (their words in this entry's header), before any record is
-  written on the new route. Measurable alternative, criterion written before any run:
-  - *Setup:* the first slice's three charts and grids (TASK-M2-86). Count records that differ bitwise, at f64 before
-    narrowing and after narrowing, between the std path and the pinned path on the Mac, and, under each path, across
-    four machines: the Mac, Linux, Windows and wasm (the wasm build, as REQ-CHART-155 compares a wasm f64 solve with the
-    native one), each against the Mac. The wasm runtime and the Windows host are named before the run.
-  - *PASS:* under the pinned path the count against the Mac is 0 on Linux, Windows and wasm, at both levels. The
-    std/pinned counts and the std path's cross-machine counts are reported as the size of the change.
-  - *Control:* a one-ulp perturbation of `sin` gives a non-zero count at the f64 level, or the harness is void. (At the
-    narrowed level it flips about `2⁻²⁹` of components, about 0.03 expected over the slice's roughly `1.8·10⁷`
-    components, so it cannot serve there; the physics reviewer's arithmetic.)
-- **Applied meanwhile:** nothing. The `real.rs:49–50` comment is corrected as a two-way edit, apart from this entry,
-  saying what the default does today.
-- **Waits:** TASK-M2-67, TASK-M2-86, TASK-M2-89.
-
-## RQ-800: The measure weight: REQ-DEC-034 and REQ-VAL-094 take it from "the same J_D the linear decode uses", but under R-926 a `J_D` exists only on patched quads, varies across a shallow quad, and a tier-3 map has none *(silence; a one-way door, what statistics claim, and it extends R-935's "central differences only the check"; R-935, R-633, R-926 items 9 and 11, R-936; REQ-DEC-034, REQ-VAL-094, REQ-GEN-018, REQ-DEC-058; context: TASK-M6-09, TASK-M8-128, the chart audit's F13)*
-
-*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F13, with the audit's physics reviewer's widening;
-each quote re-read on origin/main 54fa96fc. (a) is recommended by the owner, 12 Nov 2026: "the tier-3 measure weight
-(recommend per-sample)". Nothing is chosen here.*
-
-*In plain English: statistics such as "what fraction of this area escapes" need each pixel weighted by how much the
-chart stretches the space of systems there. That weight came from the deep-zoom slopes, worked out once per square. The
-new chart system has those slopes only on the smallest squares, and charts with no exact slopes have none at all. The
-proposal is a weight per pixel from each pixel's own slopes, with a check for the charts that have to estimate them.*
-
-- **File, section:**
-  - `plan/requirements.yaml` REQ-DEC-034 (the linearised decode), statement: "and |det J_D| must double as the
-    measure weight".
-  - `plan/requirements.yaml` REQ-VAL-094 (the per-quad measure weight), statement: "The per-quad measure weight for
-    quantitative claims must be |det J_D| taken from the same J_D the linear decode uses."
-  - `plan/tasks/M6/TASK-M6-09.md` (the measure weight), Goal (:12): "weighted by `|det J_D|` — taken from the same
-    `J_D` the linear decode uses, computed once"; Acceptance (:30): "measure weight equals |det J_D| for the quad".
-  - `decisions.md` § R-935, under RQ-758: "A tier-3 map gets no one-cell patch"; "Central differences at R-633's step
-    stay as the test that checks a dual slope away from the flagged sites."
-  - `docs/design/principia_deep_zoom.md` § "Couplings to the contract", b: "The CPU already computes `J_D` per deep
-    quad for the linear decode — take `|det J_D|` and the per-quad measure weight is free."
-  - `plan/requirements.yaml` REQ-GEN-018 (`|det J_D|` against the link derivatives), verify: "log √det(J_DᵀJ_D) where
-    J_D is not square".
-  - `plan/requirements.yaml` REQ-DEC-058, verify, M-B's criterion: "agreement within the central difference's error
-    at that step, its truncation `h_k²·|f'''|/6` plus its rounding `ε·|f|/h_k`".
-- **The silence:** the weight is defined from the patch's `J_D`, once per quad. Under R-926 item 11 and R-935 a `J_D`
-  exists only on patched quads (past `ℓ_switch`); on exact quads above it, where `det J` varies across the quad, one
-  weight per quad is wrong; tier-1 and tier-2 maps give a dual slope per sample; a tier-3 map has no slope. A central
-  difference of a tier-3 map (a solve or an integration) carries an error of about `τ/h` from the solve's tolerance `τ`,
-  and for a chaotic flow map (TASK-M8-128's final-condition charts) it is not reliable at R-633's step. "det" here is
-  the Gram area factor `√det(J_DᵀJ_D)` (REQ-GEN-018's form; design §17.11), not a determinant.
-- **The question:** where does the measure weight come from, per sample or per quad, and on a tier-3 map?
-- **Options seen:**
-  - **(a) Per sample.** Each sample's weight is the Gram area factor of its own slope: the dual (tier 1) or implicit
-    (tier 2) slope at the sample; on a tier-3 map, a central difference at R-633's step per sample, labelled "measure
-    by central difference", admitted per map only if it passes the Richardson check below. Extends R-935's "central
-    differences only the check" to the measure on tier 3. REQ-DEC-034's clause, REQ-VAL-094 and TASK-M6-09 are
-    rewritten per sample.
-  - **(b) Per quad, as written,** from the patch's `J_D` where one exists, and per sample from the dual slope
-    elsewhere; tier 3 as (c). Two definitions of one weight.
-  - **(c) Tier-3 charts give area statistics only on the uniform measurement grid (`FULL_RETENTION`), unweighted,**
-    labelled as chart-area fractions.
-  - **(d) No measure-weighted statistics on tier-3 charts.** A refusal, against the no-refusal spirit of R-925 and
-    R-926 item 8.
-- **Recommended:** (a), recommended by the owner, 12 Nov 2026 (their words in this entry's header). Measurable
-  alternative, written before any run:
-  - *Per tier-1 and tier-2 map:* per-sample weight against the per-quad weight on shallow quads, the spread of their
-    ratio reported.
-  - *Per tier-3 map:* a Richardson check, the weight at `h` and `h/2`, `h` R-633's step; criterion, fixed before any
-    run (R-649): `|W(h) − W(h/2)| ≤ B(h) + B(h/2)`, since each of the two weights is within its own bound of the true
-    weight. `B(s)` is the column errors at step `s` carried through the Gram area factor, `e_u(s)·‖J_v‖ + ‖J_u‖·e_v(s)
-    + e_u(s)·e_v(s)` (the weight is `‖J_u ∧ J_v‖`, and that bounds how far it moves when its columns move by at most
-    `e_u` and `e_v`), where `e_c(s)`, column `c`'s error at step `s`, is the Euclidean norm over components `k` of
-    M-B's bound form (REQ-DEC-058: `s²·|f_k'''|/6 + ε·|f_k|/s`) plus the solve's `τ_k/s`, added per component inside
-    the norm: the corpus defines no tier-3 solve tolerance on the norm, so `τ_k` is the solve's tolerance on component
-    `k`. Each term is taken at its own step, so from `h` to `h/2` the truncation part falls by four and the rounding
-    and `τ/s` parts double; each is stated per map before the run. Both sides are in the weight's units, so rescaling
-    the map's outputs scales both alike; the difference is also reported as a ratio of the weight, not judged. A map
-    that fails takes (c), labelled. Positive control: an error planted in one map's evaluation, of
-    `100·(B(h) + B(h/2))` (M-B's control factor on the criterion's sum), must fail the check.
-- **Applied meanwhile:** nothing.
-- **Waits:** TASK-M6-09; TASK-M8-128's statistics.
-
-## RQ-801: An addition to RQ-783 for its M2 answer (R-956): records made past `ℓ_switch` recreate through the exact evaluation, not the patch that was integrated, and across machines through another maths library *(conflict; a one-way door, what a record claims to reproduce; R-521, R-921, R-926, R-956; REQ-TOOL-172; context: RQ-783, TASK-M2-87, TASK-M7-45, the chart audit's F15)*
-
-*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F15, with the audit's physics reviewer's sizing;
-each quote re-read on origin/main 54fa96fc. Filed as the owner directed, 12 Nov 2026: "RQ-783's addition". The
-recommendation is the audit's. Nothing is chosen here; read with RQ-783 at M2, where RQ-783 carries a dated line
-pointing here.*
-
-*In plain English: RQ-783 asks whether pictures saved before the new chart system re-run bit for bit. Two more cases
-need the same answer. A pixel deep in a zoom was simulated from the centre-plus-slopes shortcut, but re-opening it
-works the system out exactly, so it can differ in the last bit. And on another kind of computer the maths library
-can differ (RQ-799). The size is small in smooth regions, about one pixel in a hundred thousand at depth 21 by
-estimate.*
-
-- **File, section:**
-  - `REVIEW_QUEUE.md` § RQ-783 (pre-switch records re-running bit for bit), the question: "does a record written
-    before R-926 item 5's route lands recreate bitwise, and through which decode?"; Deferred: "deferred to M2 by owner
-    11 Nov 2026 (R-956, the owner: "RQ-783: defer:M2")".
-  - `docs/design/principia_ic_save.md` (:15–16): "Integration enters only through `computeIC(chart, uv, simKey)`";
-    (:37): `source:    "built" | { pixel: { chart, uv } }`.
-  - `docs/design/principia_honesty_precision.md` (:191–192): "the f32 run is the survey kernel's one-pixel dispatch
-    through the atlas's decode path, bitwise what coloured the pixel".
-  - `docs/design/principia_trajectory_viewing.md` (:135): "In regular regions, agreement certifies the pipeline
-    (disagreement = a real bug)."
-  - `decisions.md` § R-921: "to the original physical starting state, bitwise, and runs from there".
-- **The conflict:** a record stores `(chart, uv)`, and recreation is an exact f64 evaluation. Past `ℓ_switch` the
-  integrated IC was the patch's, which depends on the quad's level and centre, so an exact recreate can differ from it.
-  honesty_precision :191–192's bitwise claim then fails. trajectory_viewing :135 compares outcome class in regular
-  regions, which a one-ulp IC difference does not flip, so it does not misfire (the physics reviewer). Size: on smooth
-  patched quads about `h²‖D″‖/ulp` per component, about `10⁻⁵` of samples at depth 21, *inferred*, at a fixture whose
-  `|x₀|` per component admits depth 21 (RQ-798's fixture rule). Under RQ-798 (a′) the crease strips are
-  exact per sample, so they recreate. Across machines, RQ-799 decides.
-- **The question:** does a record made past `ℓ_switch` recreate the IC that was integrated, bitwise?
-- **Options seen:**
-  - **(a) The record names its route** (exact or patch) and, for a patch, the quad's level and address, so recreation
-    re-forms the patch and reproduces the integrated IC bitwise; the inspector's one-pixel trace uses the quad's
-    record. With RQ-799 (a), across machines too.
-  - **(b) The exact CPU evaluation is canonical.** Recreation and the inspector use it; a patched pixel's integrated IC
-    is documented as within the linearisation error of the canonical one; honesty_precision's "bitwise what coloured
-    the pixel" is amended past `ℓ_switch`.
-  - **(c) As (b), labelled per record** "recreated from the exact evaluation".
-- **Recommended:** (a), with RQ-799 (a), the audit's recommendation. Measurable alternative, written before any run: on
-  patched quads at depths 21 to 25, at a fixture stating `|x₀|` per component (RQ-798's fixture rule), the share of
-  samples whose exact recreate differs bitwise from the patch record, and the outcome flips that causes against the
-  one-ulp chaos baseline (R-84). Criterion: any non-zero share shows the question is real; the share is reported against
-  the `10⁻⁵` estimate.
-- **Applied meanwhile:** nothing.
-- **Waits:** TASK-M2-87 (whether a record carries its route), TASK-M7-45, RQ-783's M2 answer.
+- **13 Nov 2026:** RQ-801 is answered, by R-995 (the owner: "RQ-801: (a)."): a record made past the switch names its
+  route, exact or patch, and for a patch the quad's level and address, and with R-991 (the pinned maths library) it
+  re-runs bitwise on every machine. That settles the addition's patch and cross-machine cases, and records written
+  after the switch carry their route ("N2's record contract" above); this entry's own question, records made before
+  R-926's route, is unchanged and stays deferred to M2.
 
 ## RQ-802: How the precision warning tells saturation from the floor once `J_D` is the dual slope: REQ-GUI-012's test reads "f64 J_D's column along k is 0", which a dual σ′ does not reach until about 745, where the central difference reached 0 past about 37 *(conflict; a one-way door, a definition the warning rests on (R-72), and it extends R-935's words or replaces RQ-553's test; R-935, R-54, R-570, R-599, R-633, R-72; REQ-GUI-012, REQ-SCHED-062, REQ-DEC-034; context: TASK-M6-07, TASK-M6-21, RQ-553, the chart audit's F12)*
 
@@ -1063,48 +612,8 @@ under that rule yet; a sub-question asks the owner what they do.*
     criterion is written then, before its run.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M6-21, TASK-M6-08 (R-599's per-axis stop), TASK-M6-07's note.
-
-## RQ-803: The collapse test fires late: R-90 and `AT_F32_FLOOR` need every word of adjacent records bitwise equal, while the dominant components are step-quantised levels earlier, undetected *(silence; a one-way door if it becomes a criterion, it amends R-90's trigger and what the floor warning claims; R-90, R-935, R-599, R-632, R-433, R-54; REQ-SCHED-062, REQ-DEC-033, REQ-DEC-052, REQ-TOOL-152, REQ-GUI-012; context: TASK-M5-04, TASK-M6-08, the chart audit's F21 (the physics reviewer's "missed" 3))*
-
-*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F21, the audit's physics reviewer's missed point 3;
-each quote re-read on origin/main 54fa96fc. Filed as the owner directed, 12 Nov 2026: "the collapse-test lateness". The
-recommendation is the audit's. Nothing is chosen here.*
-
-*In plain English: the program decides that precision has run out only when two neighbouring pixels' starting systems
-are identical in every one of their numbers. Long before that, the biggest numbers can already be stuck in steps, so
-neighbouring pixels differ only in their smallest numbers and the picture can show stripes, with no warning. The
-question is whether to keep the strict test, or also count the earlier stepping.*
-
-- **File, section:**
-  - `decisions.md` § R-90: "Switch to the linearised decoder when the full decoder's adjacent samples give
-    bitwise-identical ICs"; refined by R-935: "the trigger's "bitwise-identical ICs" compares the narrowed f32 records".
-  - `docs/contracts/principia_scheduler_contract.md` Part 4 (:138): "Only when the *linearised* decoder's samples
-    collapse to bitwise-identical ICs … is f32 genuinely exhausted".
-  - `plan/requirements.yaml` REQ-TOOL-152 (the banding criterion, confirmed by R-433): "a delta departing from 2h/N by
-    more than 1/16 of the step is banded".
-  - `docs/design/principia_deep_zoom.md` § 1 (:62–65): "A run of reconstructed coordinates is banded, step-quantised,
-    when an adjacent-sample delta departs from the exact step `2h/N` by more than **1/16 of the step** … the criterion
-    holds while the step spans at least 16 ulps."
-- **The silence:** the banding criterion is defined for the chart coordinate `u`, never for the IC's components. A
-  record's components quantise one by one as the depth grows: the dominant ones first, levels before the last component
-  collapses. R-90's switch and `AT_F32_FLOOR` fire only when every word is equal, so the quantised stretch is
-  undetected, and REQ-GUI-012's warning comes late there. (On a 1/16 criterion a component quantises about four levels
-  before it collapses, `log₂ 16`, *inferred*.)
-- **The question:** does the switch or the floor stop also fire on per-component quantisation of the records?
-- **Options seen:**
-  - **(a) Keep R-90's bitwise test as written,** and report beside REQ-DEC-052's first collapsing depth the first depth
-    at which any component, along each in-plane axis, fails REQ-TOOL-152's 1/16 criterion. Nothing changes in what
-    is computed; the gap is measured. Adding a reported column is two-way.
-  - **(b) Add per-component quantisation as a trigger:** a component whose adjacent deltas along an axis fail the 1/16
-    criterion counts as collapsed along that axis, judged per axis as R-599 judges collapse. Amends R-90's trigger and
-    R-54's floor warning; changes when quads stop.
-  - **(c) Quantisation raises the precision warning only,** without changing the switch or the stop. Amends R-54.
-- **Recommended:** (a) now, the audit's recommendation, with (b) the measurable alternative: if (a)'s reported gap
-  exceeds one level at any stated
-  `|x₀|` on the first slice's charts, (b) or (c) comes back to the owner with those numbers. The criterion is written
-  here, before the run.
-- **Applied meanwhile:** nothing.
-- **Waits:** TASK-M5-04 (REQ-DEC-052's gate, where the column is reported), TASK-M6-08.
+- **Deferred:** deferred to M6 by owner 13 Nov 2026 (R-1001, the owner: "RQ-802: (b), with my slope condition; pairs placed symmetrically about a flagged fold are excluded, as seams are. Q-T3: defer:M6.").
+- **13 Nov 2026 (code review 5886176062 of #515, C4):** the main question is ruled by R-1001 (option (b), the direct test on the records with the owner's slope condition, pairs placed symmetrically about a flagged fold excluded, as seams are); only Q-T3 (how an equal pair is classified on a tier-3 map, which has no exact slope) is left, deferred to M6.
 
 ## RQ-804: REQ-GUI-012's last clause, re-derived: under R-926 a switch at `ℓ_switch` with no collapsed pair costs no precision beyond the narrowing, except where RQ-798's creases are, so the warning it raises claims what is not so *(conflict; a one-way door, it amends R-54's words and what the warning claims; R-54, R-90, R-926 item 11, R-935, R-570; REQ-GUI-012; context: TASK-M6-21, RQ-553, the chart audit's F22 (the physics reviewer's "missed" 4))*
 
@@ -1169,451 +678,97 @@ untrue. The question is whether to stop warning at a switch where no pixels have
   about.
 - **Applied meanwhile:** nothing.
 - **Waits:** TASK-M6-21; RQ-798 and RQ-802.
+- **Deferred:** deferred to M6 by owner 13 Nov 2026 (R-1002, the owner: "RQ-804: (a), given RQ-798 (a″). Q-T3 as in RQ-802: defer:M6.").
+- **13 Nov 2026 (code review 5886176062 of #515, C4):** the main question is ruled by R-1002 (option (a): no precision warning at a switch at `ℓ_switch` with no collapse); only Q-T3, inherited from RQ-802, is left, deferred to M6. R-1002's safety on quads whose component drops a binade waits on RQ-811.
 
-## RQ-805: The fragment's backwards answer and `ctx.chart.z` past `ℓ_switch`: both are absolute f32 values, which R-395 rules out for the forward coordinate there, so Chart position's View frame, the round-trip and decode presets and `ctx.chart.z` stop resolving samples from about depth 20, and the answer sooner on most charts *(silence; a one-way door, it changes what the fragment computes and shows and reads R-947's "the same function's generated WGSL"; R-926 items 7 and 11, R-945, R-947, R-935, R-395, R-394, R-570, R-90; REQ-CHART-199, REQ-COL-134, REQ-RENDER-125, REQ-RENDER-126, REQ-TOOL-158, REQ-COL-063, REQ-COL-057; context: TASK-M2-99, TASK-M7-47, TASK-M7-52, TASK-M7-74, RQ-797, the chart audit's F23)*
+## RQ-811: RQ-798's binade-drop case: a component that drops a binade inside a quad without crossing zero, where R-990's check at the checked points' own ulp admits records about 2 f32 ulp from exact against the owner's "within one f32 step" *(conflict; a one-way door, it changes which quads take the patch and so the CPU's bits; R-990, R-90, R-1002, R-989; REQ-DEC-063, REQ-DEC-064; context: TASK-M6-08, RQ-798)*
 
-*Queued 12 Nov 2026 from the chart audit the owner ordered, finding F23, item 1, on the owner's pass of that day on
-the backwards direction ("file any one-way part with the other eight"); each quote re-read on origin/main 54fa96fc. The
-recommendation is the audit's. Nothing is chosen here.*
+*Queued 13 Nov 2026 by the rulings pull request #515, from physics review 5886173032 (F1) and code review 5886176062
+(C1); each quote re-read on the pull request's head b9b01202c. Nothing is chosen here.*
 
-*In plain English: to colour a pixel by where its system is now, or to show the round-trip check, the graphics card
-works out a chart position from the system. The graphics card only has single precision, and it returns that position
-as one absolute number. Zoomed in past about level 20 (sooner on most charts, because the solve itself loses a few
-digits) neighbouring pixels get the same answer, so these views go blocky. The owner already ruled the same problem away
-for the forward direction by working relative to each square's centre (R-395). The question is whether the backwards
-answer, and the chart value shaders read (`ctx.chart.z`), get the same treatment.*
+*In plain English: deep in the zoom a square of pixels can borrow its values from a cheap straight-line patch, but only
+if a check at eight points says the patch is close enough. The owner set the check so that every pixel ends up within
+one f32 step of the exact value. That works while a number keeps roughly the same size across the square. Where it
+halves in size across the square (drops a binade) without reaching zero, the check as written measures "one step" at
+the eight points' size, and the smaller pixels in between can be about two of their own steps out. Checking against the
+smallest pixel's step instead keeps the promise but sends more squares to the slow exact path, which changes the bits
+the CPU writes.*
 
 - **File, section:**
-  - `decisions.md` § R-926 (the new chart system), the owner's words, item 7: "The backwards direction (running state ->
-    chart position) exists ONLY for the fragment-side needs: chart-position colouring / the state map, ctx.chart.z, and
-    the decode/round-trip debug presets."; item 11: "A small quad's table collapses to one cell — that IS the linearised
-    decoder (centre + slopes)."
-  - `decisions.md` § R-947 (one placement function), and `docs/design/principia_chart_composition.md` § 10.6
-    (:1503–1505): "The fragment reads the same function's generated WGSL where the chart has closed-form code, and the
-    backwards table with its search where it has none".
-  - `decisions.md` § R-935 (the re-plan's eleven answers), under RQ-767: "The table seeds the search, and Newton steps
-    run on the chart's generated forward code where the chart has it"; under RQ-768: `ctx.chart.z` "stays the forward
-    value of colour_composition § 3. On a table-route chart the forward table carries `z` beside the state at each node
-    (eight more f32 words a node)".
-  - `decisions.md` § R-395 (no banding, absolute to `ℓ_switch`, quad-local beyond), the owner's words: "no banding
-    beyond it through the per-quad local coordinates"; its decision: "**Beyond ℓ_switch**, the coordinate is carried as
-    the per-quad local coordinates, the quad's centre `c` (f64 on the CPU) and the f32 offset `δ` … never as an absolute
-    f32 `u`"; its sweep: "N = 16 to ℓ = 19, collapsing at ℓ = 20".
-  - `plan/requirements.yaml` REQ-TOOL-158 (quads past `ℓ_switch` on quad-local coordinates): "in the kernel and in the
-    fragment's UV preset". It covers the forward coordinate only.
-  - `docs/design/principia_colour_composition.md` § 3 (:452–454): "Formed in f32 it is an absolute coordinate, which
-    R-395 keeps free of banding only up to the deep-zoom switchover (ℓ_switch, R-90); past it a fragment works in the
-    quad's local coordinates"; (:460–464) `ctx.chart.z` is obtained "by evaluating the chart's own `D ∘ Φ` in WGSL at
-    the pixel's `ctx.chart.slice_uv`".
-  - `docs/design/principia_state_map.md` SM7 (:416–422): the View frame, "`s = tanh((x − view centre)/view
-    half-width)`", "is needed at depth"; "the state is f32. The `t = 0` identity holds to **4e-7 (latent), 1.5e-6
-    (sphere), 5e-6 (simplex), 2.7e-8 (momenta), 7e-8 (θ × h), 1.9e-6 (tilted E, F)** in chart units".
-- **The silence:** R-395 and REQ-TOOL-158 keep the forward coordinate quad-local past `ℓ_switch`; nothing does so for
-  the fragment's backwards answer or for `ctx.chart.z`. WGSL has no f64, so both fragment routes return an absolute f32
-  point. At `|u|` in `[0.5, 1)` and `N = 16` a correctly rounded answer stops separating adjacent samples at depth 20
-  (R-395's arithmetic), about `2^(ℓ−20)` samples sharing each answer past it; the f32 solve is not correctly rounded,
-  and SM7's identity errors reach one sample spacing at about depth 17 (latent), 15 (sphere, tilted E, F) and 14
-  (simplex) (*inferred*, F23, assuming SM7's chart units are the quadtree's units, a root quad of width 1 and a sample
-  spacing of `2^−(ℓ+4)` at `N = 16`: 4e-7 is `2^−21.25`, so depth 17; if a chart's home window spans `W` chart units,
-  every one of these depths shifts by `log₂ W`). The View frame's `x − view centre` then shows blocks; the round-trip
-  preset reads the floor. On a closed-form chart `ctx.chart.z` is `D ∘ Φ` at an absolute `ctx.chart.slice_uv`, which
-  R-395 rules out past `ℓ_switch`, and on a table-route chart its nodes are absolute f32, so it collapses near 20 at
-  O(1) `z`. A backwards answer can never beat its input: the f32 state separates samples only to `ℓ_k ≈ 19 +
-  log₂(|∂x_k/∂u| / |x₀,k|)`, so a quad-local answer gains depth past ~20 only where a component is small relative to its
-  slope, and gains the solve's lost digits everywhere.
-- **The question:** Q1, past `ℓ_switch`, is the fragment's backwards answer absolute f32 or quad-local? Q2, is
-  `ctx.chart.z` past `ℓ_switch` one absolute f32 value, or does it gain a quad-local lane?
+  - `decisions.md` § R-990, the owner's words: "RQ-798: (a″), with the comparison at 4/5 of the bound so admitted
+    records are within one f32 step of exact. Where a component crosses zero inside a square, compare at the square's
+    smallest value of that component."
+  - `docs/archive/review_queue/M0.md` § RQ-798, the binade condition (physics review 5877523301, F5): "Where a
+    component's magnitude drops a binade inside the quad, interior samples get up to 2 (semidefinite, (a′)) or 5/2
+    ((a″)) of their own ulp."
+  - `plan/requirements.yaml` REQ-DEC-063 (the admission check, qualified "within one binade" until this is answered);
+    `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision", the R-990 line after "Switchover".
+- **The conflict:** the owner's words name the purpose, "so admitted records are within one f32 step of exact", and a
+  variant for a zero crossing only. For a binade drop with no crossing, the check at the checked points' own ulp gives
+  interior samples up to 5/2 of their own ulp at the full bound, so about 2 at 4/5 (the binade condition), which breaks
+  the purpose. The physics review's bound: over every quadratic error that is 0 at the quad centre and at most 1 at the
+  four corners and four edge midpoints, the maximum over the square is 5/4, at `(u, v) = (−1, −½)`; so 4/5 of the bound
+  at the eight points bounds the square at the bound itself, in the checked points' ulp, and a sample whose own ulp is
+  half that sees about twice it. RQ-804 (a), taken by R-1002, is "safe only with RQ-798 (a″)", so on these quads the
+  error would also be silent.
+- **The question:** on a quad where a component's samples drop a binade below the checked points' without crossing
+  zero, at which ulp does R-990's check compare that component?
 - **Options seen:**
-  - **Q1 (a) Absolute, as now.** Nothing changes; the floor is stated in SM7 (a two-way note) and reported by M-E.
-    Chart position's View frame and the round-trip and decode presets go blocky from about depth 14 to 20 by chart.
-    R-570 (precision never limits navigation) is kept for navigation, not for these views.
-  - **Q1 (b) Quad-local past `ℓ_switch`, absolute beyond the quad's patch.** For a state near its own quad, the fragment
-    solves `δ = J⁺(X − x₀)`, the one-cell patch run backwards (R-926 item 11), and draws `(c_q − c_view) + δ` with `c_q
-    − c_view` formed in f64 on the CPU. `x₀` is sent as two f32 words a component (high and low) so its rounding is no
-    per-quad seam, about 62 f32 words, 248 B, per visible quad (*inferred*); under RQ-797 (a) this is new upload, under
-    (b) the uniforms exist. Validity: the solve's residual in state within `X`'s f32 rounding (R-935's on-image
-    criterion), else the absolute route. A tier-3 map has no `J_D` and keeps the absolute route. Reads R-947's "the same
-    function's generated WGSL": past `ℓ_switch` the fragment places by a linear solve from the one source's `x₀` and
-    `J_D`, not by its generated code. The gain is near `t = 0` and in regular regions; most running states leave their
-    quad and take the absolute route.
-  - **Q1 (c) The CPU places every visible sample with `place` and uploads offsets.** Exact to the lock's tolerance at
-    any depth; about one solve a sample a frame while time runs, several forward evaluations each at about 85 ns
-    (composition §17.12:2496), far past a frame for a whole screen (*inferred*). Not viable while time runs.
-  - **Q2 (i) `ctx.chart.z` stays one absolute f32 vec8.** It collapses near depth 20 at O(1) `z`, stated in colour § 3
-    (a two-way note).
-  - **Q2 (ii) A quad-local `z` lane past `ℓ_switch`, beside the absolute one:** `z₀` per quad from the CPU's f64 (high
-    and low words) and an f32 offset per pixel, `J_z·δ`, as R-395 does for `ctx.chart.slice_uv`. A change to colour §
-    3's context that every shader can read; the absolute lane stays for shaders that need no depth.
-- **Recommended:** Q1 (b) and Q2 (ii), the audit's recommendation: the forward rule the owner already made (R-395)
-  applied to the backwards answer and to `z`. Measurable alternative, written before any run: M-E, the audit's
-  measurement of the fragment against `place`, run first under (a): per route (the generated encode, the table with
-  Newton steps on generated forward code, the table alone, and a morph frame on both blend pairs), at depths 0, 10, 16,
-  20, 21, 25 and 30, at fixtures stating `|x₀|` and the slopes per component (RQ-798's fixture rule) and `|u|` per
-  axis, 64 × 64 samples at `t = 0` and at a stated `t > 0`, the distance between the fragment's point and `place`'s
-  reported in sample spacings, median and worst per route and depth; positive controls, either failing voids the run: a
-  fragment answer offset by one spacing at depth 10 shows a distance of at least one spacing, and the fragment's
-  algorithm run in f64 on the CPU stays within one spacing at depth 25 where the f32 run does not. If, at
-  every fixture, the first depth at which the worst distance to `place` exceeds one sample spacing is within one level
-  of that fixture's forward floor `ℓ_k`, the absolute answer already reaches what its input allows and (b) adds nothing:
-  (a) is then recommended. Otherwise (b), whose own M-E arm is predicted within one level of `ℓ_k`.
-- **Applied meanwhile:** nothing. Two-way notes in SM7 and colour § 3, apart from this entry, state the floor without
-  choosing.
-- **Waits:** TASK-M7-74 (M-E's quad-local arm), TASK-M7-47 (the View frame past `ℓ_switch`), TASK-M7-52 (the
-  generated projection's reading past `ℓ_switch`); RQ-797 (whether the per-quad `x₀` and `J_D` are uploaded at all).
+  - **(a) The checked points' own ulp**, as (a″) states. No change to which quads go exact on this account; admitted
+    binade-drop quads carry interior samples up to about 2 of their own f32 ulp from exact, and "within one f32 step"
+    holds within one binade only.
+  - **(b) The f32 ulp of the quad's smallest sample magnitude** of that component, the owner's zero-crossing variant
+    extended to this case. Every admitted sample is within one f32 step of its own value; more quads go exact, and the
+    CPU's bits change on them.
+- **Recommended:** (b), because it keeps the purpose the owner's words state; (a) if the cost M-K measures is judged too
+  high. Measurable alternative, criterion written before any run (R-649): M-K's straddling, away and indefinite sets
+  (REQ-DEC-063), the binade-drop quads among them reported apart; under (a), the worst per-sample difference in each
+  sample's own f32 ulp on admitted binade-drop quads and their share of admitted quads; under (b), the extra share of
+  quads sent to exact and its cost in exact evaluations. If (a)'s worst difference is at most one own ulp on every
+  admitted quad, the two agree and (a) costs nothing.
+- **13 Nov 2026 (physics review 5886305544 of #515, G1):** the case includes a quad whose checked points themselves span two binades. The bound
+  inside the square is 5/4 of the largest checked bound, so with the three `u = −1` points one binade up and the other
+  five in binade `k`, a sample at `(u, v) = (½, −1)` in binade `k` reaches 0.6875 of the bound, 0.55 of its own ulp,
+  about 1.05 ulp after narrowing, though it shares a binade with five checked points. Both options apply to it as to a
+  binade drop; M-K reports those quads apart. The qualification reads "every sample and every checked point in one
+  binade".
+- **Applied meanwhile:** REQ-DEC-063's statement and the deep zoom line say "within one binade; the binade-drop case
+  waits on RQ-811"; R-990 and R-1002 carry dated lines naming this entry.
+- **Waits:** TASK-M6-08 (the switch and M-K); TASK-M6-21 (the warning, through R-1002).
 
-## RQ-795: Aarseth–Zare's landing tolerance `LAND_EPS_REL`: the step control branches on it, rule 1 forbids it in a branch, and the corpus gives it no value *(conflict and silence, a missing value, R-71; a one-way door, it changes when a sync interval counts as landed and so what the occupant computes, at both precisions; Part 2b steps 6 and 7, Part 2c rule 1; R-927, R-953; REQ-INT-049, REQ-INT-114; context: TASK-M3-68)*
+## RQ-812: Heggie's landing: its reference lands with the per-precision `LAND_EPS_REL` in branches, which Part 2c rule 1 forbids, and R-998's no-tolerance rule names Aarseth–Zare and R-994 logH, not Heggie *(conflict; a one-way door, it changes what the default occupant, Heggie × RK4, computes; R-998, R-994, R-953, R-560, R-159; REQ-INT-049, REQ-INT-119; context: TASK-M3-08, TASK-M3-76, RQ-795)*
 
-*Queued 11 Nov 2026 by the implementer of TASK-M3-68 (the Aarseth–Zare occupant); each quote re-read on `main` at
-50f406e4. Nothing is chosen here.*
+*Queued 13 Nov 2026 by the rulings pull request #515, from physics review 5886173032 (F4) and code review 5886176062
+(C2); each quote re-read on the pull request's head b9b01202c. Nothing is chosen here.*
 
-*In plain English: Aarseth–Zare marches each sync interval in small steps of a stretched time, and stops when the
-clock has reached the interval's end "closely enough". The contract's transcription of the step control says how close
-with a tolerance, `LAND_EPS_REL`, in three places, but the contract's own rule 1 forbids exactly that constant in a
-branch, and it gives no value for it. The march cannot be built without some landing test, so the choice of test (and,
-if it is a tolerance, its value) is the owner's.*
+*In plain English: each method has to stop exactly at the end of each time slice. The owner ruled that Aarseth–Zare
+stops with no "close enough" allowance and lands its state together with its clock, and that logH does the same. The
+default method, Heggie's, was not part of that question. Its reference code uses a "close enough" allowance that
+differs between single and double precision, which the kernel's rules forbid. So what Heggie does instead is still the
+owner's call.*
 
 - **File, section:**
-  - `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference body, the
-    Levi-Civita inverse and the step control (transcribed)", step 6, "The landing secant": "When the step just taken
-    reaches the boundary (`t_s ≥ dt_left − dt_left·LAND_EPS_REL`) … stop if `got` is not finite, `got ≤ 0`, or
-    `|got − want| ≤ dt_left·LAND_EPS_REL`"; and step 7, "The exit": "The march ends when
-    `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, or the state is not finite, or the budget is spent".
-  - The same section, after step 8: "`SYNC_EPS` and `LAND_EPS_REL` are the reference's precision-dependent constants
-    that Part 2c rule 1 forbids in a branch; their values are not part of this transcription."
-  - The same contract, § "Rules the new kernel must hold by construction", rule 1: "prin-rs gives `f32` and `f64`
-    different `SYNC_EPS` (1e-6 / 1e-15) and `LAND_EPS_REL` (1e-5 / 1e-14), **both sitting directly in branch
-    conditions.** … If a tolerance must scale with precision, it belongs where the *value* is used, never where the
-    *branch* is taken."; and R-953's note there: "Rule 1's text stands for every other constant: `SYNC_EPS` and
-    `LAND_EPS_REL` stay forbidden in a branch."
-- **The conflict:** steps 6 and 7 branch on `LAND_EPS_REL`; rule 1 and R-953 forbid it in a branch; neither says what
-  the landing test is instead. **The silence:** no value is given (the values rule 1 quotes are prin-rs's, described as
-  the defect).
-- **`SYNC_EPS` does not need a ruling:** TASK-M3-68 replaces the reference's `t ≥ t_target − SYNC_EPS` (step 1) by
-  integer sync-boundary indices, so no tolerance reaches that branch (applied per R-369, an implementation choice that
-  changes no result on the grid R-565 fixes).
-- **Options (measurable):** (a) one tolerance for both precisions, set where the value is used, as rule 1 allows, a
-  calibration with its value proposed (R-71); (b) no tolerance: the interval lands when the secant's last retake ends
-  the interval clock at or past `dt_left`, the clamp then setting the remainder exactly, so the branch compares `t_s`
-  with `dt_left` alone; (c) the reference's per-precision values, which needs rule 1 amended. Each changes the
-  trajectory by at most the landing residual, which the `az-final-step` gate measures; the figure-eight closure under
-  each can be run on request.
-- **Applied meanwhile:** TASK-M3-68 takes the tolerance as a parameter of the occupant's configuration
-  (`AzParams::land_eps_rel`), with no value in the kernel and no production configuration; the gates and tests that
-  run the occupant state the reference's values (`1e-5`, `1e-14`) as their run condition, marked with this entry.
-- **Waits:** the occupant's production configuration (its `AzConfig`), with REQ-INT-080 and REQ-INT-105's values;
-  TASK-M3-68 itself does not wait.
-
-## RQ-796: Aarseth–Zare's floor on `|R₃|` in the equations of motion has an f64 value only, `1e-300`, which is 0 at f32: the corpus gives no f32 value *(silence, a missing value, R-71; a one-way door, it changes what the occupant computes at f32 near a close approach of the unregularised side; Part 2b § "The equations of motion in fictitious time `τ`"; R-953; REQ-INT-105; code review 5873667061 of PR #502, C3; context: TASK-M3-68, TASK-M3-08)*
-
-*Queued 12 Nov 2026 by the implementer of TASK-M3-68 (the Aarseth–Zare occupant), fix round 1; each quote re-read on
-`main` at 416e5cd7. Nothing is chosen here.*
-
-*In plain English: Aarseth–Zare removes the singularity of two of the three pairs, but the third side, between the two
-bodies other than the reference body, keeps its `1/|R₃|` term. The equations guard it with a tiny floor so that a
-division by zero cannot happen. The contract gives that floor as `1e-300`, a double-precision number; in single
-precision, which the GPU runs, `1e-300` rounds to exactly 0, so there is no floor at all. The contract gives no
-single-precision value, so which value to use there is the owner's.*
-
-- **File, section:** `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference
-  body, the Levi-Civita inverse and the step control (transcribed)", "The equations of motion in fictitious time `τ`":
-  "on the state `(u₁, p₁, u₂, p₂, t)` with `E` held, `A` and `B` here not floored and `|R₃|` floored at `1e-300`
-  (`tb_az.py:114-118`)"; the same section, on the reference body: "Hence the floor on `|R₃|` (`tb_az.py:118`) and
-  `|R₂ − R₁|` in the predictive limit's `d_min`".
-- **The neighbouring rule:** the same section, R-953's note on the inverse map's guards: "`system.rs` floors at `TINY`
-  too, where `tb_az.py` floors at `1e-300`: `A` and `B` in `phys_from_state` (`system.rs:93-94`) and the three
-  separations in `energy_phys` (`system.rs:109-111`)". `TINY` is "one value per working precision, a calibration (R-71,
-  REQ-INT-105)", the owner's numbers `1e-37` at f32 and `1e-300` at f64. The note names no floor for `|R₃|` in the
-  equations of motion, so the transcription's `1e-300` stands there, an f64 value.
-- **The silence:** `1e-300` is below f32's least subnormal (about `1.4e-45`), so at f32 it is `0`, and no f32 value is
-  given.
-- **Options (measurable):** (a) the floor is `TINY` at each width (`1e-37` at f32, `1e-300` at f64 in the reference's
-  values), as R-953 maps `tb_az.py`'s other `1e-300` floors onto `TINY`, its value then following REQ-INT-105's
-  proposal; (b) a calibration of its own per width, proposed from the least pre-floor `|R₃|` over the close-encounter
-  fixtures, as REQ-INT-105's verify does for `A` and `B`; (c) no floor at f32, a non-finite `|R₃|` term then caught by
-  the march's explicit finiteness test (Part 2b, step 7). Each can be measured on `separation-floor --propose`'s
-  fixtures: the floored-step count and the least `|R₃|` reached at f32.
-- **Recommendation:** (a), as the reading most consistent with R-953, which treats `tb_az.py`'s `1e-300` floors as
-  `TINY` at each width.
-- **Applied meanwhile:** TASK-M3-68's kernel takes the floor as a parameter of the occupant's configuration
-  (`AzParams::r3_floor`), with no value in the kernel and no production configuration. Its tests and gates run with
-  `1e-300` at f64 and **no floor (0) at f32**, and say so in their module notes and in `separation-floor --propose`'s
-  output, until this entry is ruled.
-- **Waits:** the occupant's production configuration (its `AzConfig`), with REQ-INT-080's and REQ-INT-105's values;
-  TASK-M3-68 itself does not wait.
-
-## RQ-806: Which `sim_failed` detail code a regularised march's non-finite exit writes, when the state it stores is the latched finite one *(silence and conflict, a meaning, R-72; a one-way door, it changes what the instrument records for a failed sample; payload §2, §8; integrator contract Part 2b step 7, Part 7; R-30; physics review 5879658175 of PR #502, P1; context: TASK-M3-68, TASK-M3-18)*
-
-*Queued 12 Nov 2026 from physics review 5879658175 on PR #502 (TASK-M3-68, the Aarseth–Zare occupant); each quote
-re-read on `main` at 54fa96fc. Nothing is chosen here.*
-
-*In plain English: when a regularised march breaks down numerically, it stops and keeps its last good state, and the
-sample is marked failed with a small code saying what went wrong: 0 for a NaN in the state, 1 for an infinity in the
-state, 2 for a blown-up derived quantity such as the energy or force. What broke is the march's own internal state,
-which held NaN or infinity, but what is stored is the last good state, which holds neither. So the code can be read off
-the stored state (2), off the broken internal state (0 or 1), or off the cause. Which one the instrument records is the
-owner's.*
-
-- **File, section:**
-  - `docs/design/principia_dd_simstate_payload.md` § "2. Bit layouts (the packed u32s)" (:296): "**`sim_failed`**
-    (state 4, numerical breakdown *during integration*): `0` = NaN in state; `1` = Inf/overflow in state; `2` =
-    non-finite derived quantity (energy/force blew up); `3` = reserved."
-  - The same file, § "8. Build-time settles" (:753): "**Failure `detail` enum** — the sim_failed/decode_failed category
-    codes (§2) are drawn from the integrator contract's actual failure modes; confirm they match the contract's
-    enumeration when it's finalised."
-  - `docs/contracts/principia_integrator_contract.md` § "Aarseth–Zare: the equations, the reference body, the
-    Levi-Civita inverse and the step control (transcribed)", step 7, "The exit": "The march ends when
-    `t_s ≥ dt_left − dt_left·LAND_EPS_REL`, or the state is not finite, or the budget is spent"; and, for an entry
-    size that is not finite: "The entry size is then infinite and the step's state is not finite".
-  - The same contract, Part 7 (:1093): "`sim_failed` (NaN/Inf during integration) and `decode_failed` … are lifecycle
-    states".
-  - The latch, as built (`crates/kernel/src/regularisation/az.rs`, `End::NonFinite`): "The state was not finite at the
-    explicit test (Part 2b, step 7): the copy stopped, its state latched at the last finite one."
-- **The silence:** the codes are defined on "the state", and a regularised march has two: the regularised `(Q, P, t)`
-  the step-7 test rejected, non-finite, and the stored Cartesian state, finite by construction. Payload §8 leaves the
-  codes open, and TASK-M3-18 owns their cross-check against the contract's failure enumeration.
-- **Options:**
-  - (i) 2, read on the stored state, as built (`failed_detail` on the latched state);
-  - (ii) 0 or 1, read on the first non-finite regularised state the step-7 test rejected (0 if any component is NaN,
-    else 1);
-  - (iii) by cause: 2 where the step size `h` was not finite, else 0 or 1 read on the stepped state as in (ii).
-- **Measured** (the `az_doubly_degenerate_is_finite` fixture, f32, three bodies within `3e-38` at rest, TASK-M3-68's
-  test values; a throwaway probe, not committed, run through the job queue as job 5298 on 3ae7ae9e): the entry size `dτ_entry` is
-  `+∞`, so the step size `h` is `+∞`; RK4's step from the registered state gives all nine components of
-  `(u₁, p₁, u₂, p₂, t)` NaN (bits `0x7fc00000`), none infinite. So this fixture writes **2** under (i), **0** under (ii)
-  and **2** under (iii). Under (i) and (iii) the code is the same here; they differ on a finite step whose stepped state
-  overflows.
-- **Measured over the separation-floor and close-encounter fixtures at f32** (physics review 5880652590's measurable
-  alternative; a throwaway probe, not committed, job 5312 on 2424506a; each fixture as `separation-floor --propose` runs
-  it, Aarseth–Zare + RK4 at `η = 0.01`, `Δ_sync = 0.125`, the reference's `TINY` and landing tolerance, no `|R₃|`
-  floor at f32):
-
-  | fixture | end at f32 | steps | (i) | (ii) | (iii) |
-  |---|---|---|---|---|---|
-  | the radial collision passage, to `t = 2` | marching, landed | 2528 | — | — | — |
-  | test 7's close-encounter hierarchy, to `t = 10` | marching, landed | 8463 | — | — | — |
-  | Burrau's (3, 4, 5) from rest, to `t = 20` | marching, landed | 22097 | — | — | — |
-  | the doubly degenerate state (`separation-floor --propose`'s, unit masses) | non-finite after 1 step | 1 | 2 | 0 | 2 |
-  | `az_doubly_degenerate_is_finite`'s fixture (masses `1/3`) | non-finite after 1 step | 1 | 2 | 0 | 2 |
-
-  None of the three close-encounter fixtures fails at f32, so no option writes a detail there. In both degenerate
-  states the step size `h` was not finite: the entry size and `c₀` were both unusable. So **(i) and (iii) never differ
-  on these fixtures**, and (ii) differs from both (0 against 2).
-- **Recommendation (physics review 5880652590 of PR #502):** option (iii), by cause. Payload §8 (:753) says the codes
-  "are drawn from the integrator contract's actual failure modes", and Part 2b step 7 names this failure's mode as an
-  entry size that is not finite, a derived quantity, which is payload §2's code 2. (iii) records that mode, and records 0
-  or 1 when a finite step overflows the state. (i) writes 2 for every regularised failure, so a later state overflow
-  cannot be told apart from it. (ii) writes 0 in the doubly degenerate case, although the step size failed first. Its
-  measurable alternative is above: (i) and (iii) agree on every fixture, so (i) is adequate for now.
-- **Applied meanwhile:** 2, option (i), as built by TASK-M3-68 (`crates/kernel/src/driver/wrapper.rs` `integrate_with`,
-  its doc comment marking the detail interim until this entry is ruled), as TASK-M3-05's interim writer was.
-- **Waits:** TASK-M3-18 (the one `sim_failed` writer and the cross-check of payload §2's codes); TASK-M3-68 itself does
-  not wait.
-
-## RQ-807: The WSL image's download can't resume within the PC's runner rules, and its hosted build can be skipped only through the Actions cache, which R-285 and R-326 don't allow for it; and proof 5 is "this run's rebuild" *(conflict; a one-way door, it widens what a job on the owner's PC holds, or publishes the image, or adds a CI cache R-285 doesn't list and saves it from a dispatch, or changes what proof 5 proves; R-711 items 1 and 5, the owner's job rules of 5 Nov 2026; R-285, R-326, R-967; the owner's words of 12 Nov 2026 on the WSL image, items 3 and 4; RQ-751; context: PR #509, run 43312851701)*
-
-*Queued 12 Nov 2026 by the implementer of the WSL image cache (Phase B), each quote re-read on `main` at 709ac1c0.
-Built meanwhile: the cache on E: (the owner's item 2), keyed on the recipe; the parts below are not built.*
-
-*In plain English: the owner asked for three things beyond the cache: a download that picks up where it stalled, a
-hosted build that runs only when the recipe changes, and proof runs that don't need Ubuntu's snapshot server. The
-first needs the PC job to hold a token (or run code the PC's rules refuse); the second can be had on the hosted side
-alone, by keeping the built image in GitHub's Actions cache, which the CI cache rulings don't yet allow for it; and the
-third would change what proof 5 proves. Each is the owner's call.*
-
-- **File, section:**
-  - The owner's words of 12 Nov 2026 (`orch/r630/owner-win-wsl-cache-12nov.txt`): "3. … If not, key the image on the
-    recipe (build script + Ubuntu snapshot date) and build it only when that changes, so proof runs don't depend on
-    Ubuntu's snapshot server. 4. Make the download resumable (ranged requests, continue after a stall rather than
-    restart)", "within the runner rules: no secrets, no new triggers, E: only".
-  - `.github/workflows/win-gpu.yml`, its header (R-711 items 1 and 5): "No credential reaches a job: `contents: read`,
-    no repository secret, and checkout with `persist-credentials: false`. Every action is pinned to a full commit SHA",
-    and, of the WSL jobs: "The image can't come from another run: a run's artifact downloads only with a token, and no
-    job here holds one."
-  - `xtask/tests/ci_self_hosted.rs` (the owner's guard, 5 Nov 2026: "fails if any workflow … uses an unpinned action in
-    a self-hosted job, or makes any self-hosted job required or gathered"): `check_no_credential` refuses any string
-    naming `github.token` in the file and any permission but `contents: read`, its control "a second permission" being
-    `actions: read`; `check_pins` refuses a local action; `check_not_gathered` refuses any job that `needs` a
-    self-hosted one.
-  - `.github/scripts/wsl.ps1`, proof 5: "the manifest after a rebuild (this run's hosted build) and the registered
-    distro's, derived inside it, each equal to the pin."
-  - `decisions.md` § R-285 (as amended): "CI cache: cache only the cargo registry and the fixture pool, not whole target
-    dirs, with per-job keys, to stay well under GitHub's 10 GB limit."; § R-326: "caches are saved only on pushes to
-    main; PR jobs restore only"; § R-967 (precedent, amends R-285): "Cache the Mesa packages for gpu-lavapipe and the
-    release jobs, keyed on the package list, so CI no longer fetches from Ubuntu's archive each run".
-- **The conflict:**
-  - (a) Resume. A ranged request needs the artifact's blob URL. The REST API gives it only to a token with
-    `actions: read`; download-artifact's own runtime token reaches an action, never a `run` step, and on the PC a local
-    action is refused and a third-party one would be new code on the owner's machine.
-  - (b) Build only on change. The hosted job can't learn whether the PC holds this recipe's image: that would mean
-    waiting on a self-hosted job (gathering it) or reading another run's artifact (a token). But it needn't know: it can
-    keep its own build in the Actions cache, keyed on the same recipe key, restore it on a hit and build only on a miss,
-    and upload as now. That needs no token, no job waiting on the PC and nothing new on the PC, and it takes
-    `wsl-register` off Ubuntu's snapshot server while the entry lives. It conflicts instead with R-285, which lists
-    what CI caches and not this, and with R-326, which saves caches only on pushes to `main`, while this job runs only
-    on a dispatch. The image is about 0.98 GB against the repository's 10 GB; on 12 Nov the repository held 9.86 GB in
-    75 entries (the cargo registry 5.44 GB in 59, the fixture pool 4.14 GB in 6), so a new entry evicts the least
-    recently used, and an image entry used only by register dispatches would itself go after 7 days unused.
-  - (c) Proof runs. `wsl-proofs` downloads only the 1 KB manifest, never the image; it builds the image for proof 5,
-    whose definition is this run's rebuild reproducing the pin. Skipping the build there changes what proof 5 proves.
-- **Options:**
-  - (1) The PC's `wsl-register` alone holds its own run's `GITHUB_TOKEN` with `actions: read`, to fetch the artifact's
-    blob URL and download it with HTTP ranges, resuming after 60 s without growth; the guard allows exactly that one job
-    and permission. Covers (a), not (b).
-  - (2) The hosted job publishes each recipe's image as a release asset (`contents: write` on the hosted job only), and
-    the PC fetches it by plain ranged HTTP with no token; the hosted job builds only when no release of the recipe
-    exists. Covers (a) and (b). It publishes an Ubuntu image with its packages (a licence question, R-643), and Phase A
-    measured that path at 5.64 MiB/s against the artifact's 1.21 MiB/s (run 43312851701).
-  - (3) As built: the cache on E: keyed on the recipe, a miss downloading with download-artifact's two tries (#500), no
-    resume, the hosted build on every register dispatch.
-  - (4) The hosted `wsl-image` job keeps its build in the Actions cache under `wsl-image-<recipe key>`, saved from a
-    `wsl-register` dispatch on `main`, restored on a hit, built only on a miss, uploaded as now. Covers (b) for
-    `wsl-register`, alone or beside (1) or (3); with it, a hit gives the same bytes run after run, so the PC's entry and
-    this run's upload agree. It needs a ruling amending R-285 (with R-967 as precedent) and making an exception to
-    R-326 for a dispatch.
-  - For (c): (i) `wsl-proofs` rebuilds as now, proof 5 unchanged; (ii) proof 5 reads the cached image's build-time
-    manifest, and `wsl-proofs` builds nothing.
-- **Recommendation:** (3) with (4), and (i). (4) is the only route to (b) that leaves the PC's rules as they are, and
-  it costs a cache ruling rather than a credential on the owner's machine; it doesn't change what proof 5 proves. For
-  (a), (3) until the register runs measure the cache's misses. A miss is a recipe change or a first registration; run
-  43225140437's four failures were one recipe's download stalling four times, which the cache doesn't prevent on a
-  miss: it serves every registration after the first whole download. If misses still stall, (1) is the narrowest
-  widening: one job, read-only, its own run. The measurable alternatives: for (a), count over the next register runs
-  the misses whose download fails against all misses; for (4), the `wsl-image` job's time on a restore against a build
-  (433-602 s in Phase A), and whether the entry survives between register dispatches.
-- **Applied meanwhile:** (3) and (i).
-- **Waits:** nothing; the cache is built and the register run waits only for the owner's folder.
-
-## RQ-808: Heggie and logH cannot keep their regularised state across `ADVANCE` calls, so through the seam as built they re-register at every sync boundary the wrapper crosses, which Part 2b says Heggie never does *(conflict; a one-way door, it changes what the default occupant computes; R-19, R-160, R-560, R-565; REQ-INT-006, REQ-INT-018, REQ-INT-073; context: TASK-M3-08, stopped before any code)*
-
-*Queued 13 Nov 2026 by TASK-M3-08's implementer, each quote re-read on `main` at 256384ade. Nothing is built.*
-
-*In plain English: Heggie's method (the default) turns the three bodies' positions into its own variables once, at the
-start, and never again; that is what makes it better than Aarseth–Zare. But the kernel hands an occupant only the
-ordinary positions and momenta, once per macro-step, and takes them back each time. So Heggie would have to rebuild
-its variables, and re-freeze its energy, at every call, which is exactly the re-registration it exists to avoid. logH
-has the same problem with its frozen energy and its TTL variable `W`. Either the occupant's own state is stored between
-calls (a payload change), or Heggie and logH re-register like Aarseth–Zare, or the wrapper calls them differently.*
-
-- **File, section:**
-  - `docs/contracts/principia_integrator_contract.md` § "Part 2b — Regularisation is a SECOND swappable axis, not a
-    property of the stepper", the table's Heggie row: "**Heggie 1974 (global)** | three relative vectors, symmetric |
-    **no reference body at all** | the general default, stepped with RK4"; and TASK-M3-08's Goal: "Heggie 1974 global
-    regularisation (three relative vectors, no reference body, never re-registers)".
-  - The same contract, § "The sync grid is a fixed quantum of physical time (R-565)": "So live march, catch-up and
-    re-boot after eviction reach the same state at the same grid time, bitwise." and "Heggie never re-registers, so its
-    sensitivity to the boundary cadence is about 10× smaller than Aarseth–Zare's."; § "What this preserves, and what it
-    costs": "For a regularised occupant the three reach the same state **bitwise**, because its march stops only on the
-    fixed sync grid (R-565, below)." and "The integrator still takes `(m, r, p)`".
-  - The seam as built: `crates/kernel/src/driver/advance.rs`, the module note: "The wrapper calls
-    [`Advance::advance`] once per macro-step, from `t_now` to `t_target`"; `crates/kernel/src/regularisation/mod.rs`,
-    `Regularisation::advance(state: &State<R>, geom: &Geom<R>, t_now: u32, t_target: u32, …)`, `State` being
-    `(m, r, p)`; `crates/kernel/src/driver/wrapper.rs`, `A::advance_reaching(&state, &geom, macro_step,
-    macro_step + 1, &params, cadence)`.
-  - The reference (R-159, not authority): `docs/reference/prin-rs/src/integrate/heggie/driver.rs:9`, "`to_reg` is called
-    **once at `t = 0`**, and the sync loop is a *sampling* cadence", `:275` "Registration. Once, at t = 0, and never
-    again.", and `:88` on `refresh_h_at_boundary`, "**Default off** … Refreshing `h` is the one thing this driver could
-    do that would reintroduce a boundary-dependent quantity into an otherwise uninterrupted march";
-    `.../logh/driver.rs:285-286`, "**`W` is registered ONCE, at `t = 0`, and carried across every sync boundary.** … 
-    re-seeding it to `Omega(r)` at each boundary would discard exactly the accumulated off-shell information the
-    transformation runs on, and would make the march depend on `n_sync`."
-- **The conflict:** Heggie marches `(Q₁, P₁, Q₂, P₂, Q₃, P₃, t)` with the energy `h` frozen at registration; logH marches
-  the Cartesian state with `B = −E` frozen and, in TTL mode, the carried `W`. The seam passes `(m, r, p)` in and out of
-  each `ADVANCE` call, once per macro-step, so a Heggie or logH occupant must rebuild `Q`, `P` and `h` (logH: `B`, and
-  `W` from `Ω(r)`) from the Cartesian state at each call that marches. With `dt_macro` below `Δ_sync`, each such call
-  crosses one sync boundary, so the occupant re-registers and re-freezes its energy at every boundary, as Aarseth–Zare
-  does. A march registered once at `t = 0` and carried through is not reachable through the seam, and the bitwise
-  equality of live march, catch-up and re-boot (Part 2a) holds for Heggie only if it re-registers at every boundary or
-  its state is stored. REQ-INT-018's count, and REQ-INT-073's definition of where it lives, depend on which.
-- **Options:**
-  - (a) Carry each regularised occupant's own state across `ADVANCE` calls in the payload, registered once at `t = 0`:
-    Heggie's `Qᵢ`, `Pᵢ` and `h` (13 numbers and the clock), logH's `B` and, in TTL mode, `W`. A schema change; the seam
-    gains the carried state; Heggie's and logH's re-registration count is 0.
-  - (b) Register at every `ADVANCE` call that marches, from the Cartesian state, re-freezing `h` (logH: `B`, and `W`
-    re-seeded to `Ω(r)`). No schema change; Heggie and logH then re-register at every sync boundary, as Aarseth–Zare
-    does, their count says so, and Part 2b's table, Part 2a's "Heggie never re-registers" and the task's Goal are
-    amended.
-  - (c) The wrapper calls a regularised occupant's `ADVANCE` from `t = 0` to the target, its regularised state
-    rebuilt from the IC each time (no carried state, no re-registration, the cost of a re-run per call); or once over
-    the horizon, its macro-step readout taken through the cadence at each boundary.
-- **Recommendation:** none; each changes what the default occupant computes or what is stored. The measurable
-  alternative: the reference's own control, Heggie's `refresh_h_at_boundary`, measures (b)'s energy re-freeze against
-  (a) on the 32-case matrix (prin-rs reports its effect, not assumed).
-- **Applied meanwhile:** nothing; TASK-M3-08 is stopped.
-- **Waits:** TASK-M3-08 (REQ-INT-006's seam runs, REQ-INT-018, REQ-INT-073, and the `integrate_with` tests the 12 Nov
-  note asks for). The direct marches the gates run (registered once at `t = 0`, as the reference driver does) do not
-  depend on it.
-
-## RQ-809: logH's pairs with Euler, KDK, Yoshida-4 and Yoshida-6 are TASK-M3-39's to write, after TASK-M3-08, but TASK-M3-08 must run every pair a step; and which step logH's own time modes take, its leapfrog or RK4, is not stated *(conflict and silence; a one-way door, it sets what logH computes and its `step_reversible` and `run_reversible`; R-160, R-162, R-500, R-561; REQ-INT-006, REQ-INT-084, REQ-INT-097, REQ-VAL-190; context: TASK-M3-08, stopped before any code)*
-
-*Queued 13 Nov 2026 by TASK-M3-08's implementer, each quote re-read on `main` at 256384ade. Nothing is built.*
-
-*In plain English: the contract says another, later task writes down exactly how logH runs under each stepper, but
-this task's test must already run logH under every stepper, so it would have to invent them. And the contract calls
-logH's own method "its leapfrog", while the reference code runs logH with RK4 by default; which one "logH" and "logH's
-TTL mode" are decides whether TTL comes out time-reversible, which the rulings expect.*
-
-- **File, section:**
-  - TASK-M3-08 (`plan/tasks/M3/TASK-M3-08.md`), Deliverables: "Default occupant config = Heggie × RK4 (R-560); `none`,
-    AZ, logH selectable, and every stepper under each (R-561)."; Acceptance: "`cargo test -p kernel
-    regularisation_default` — every stepper × regularisation pair, `none` included, runs a step on a fixture state"
-    (REQ-INT-006's verify).
-  - `docs/contracts/principia_integrator_contract.md` § "Every stepper × regularisation pair runs; the pairs measured not
-    to work carry a warning (R-561)": "Under logH, whose time transformation is built for a leapfrog, each pair's exact
-    form is written with logH's equations and checked as the others are (REQ-INT-097). **TASK-M3-39 writes them here**,
-    each pair in each of logH's time modes, from logH's equations once TASK-M3-08 has transcribed them (R-160,
-    REQ-INT-084, which covers logH's own equations, time transformations and step control, not its pairs)"; and "logH's
-    own time modes, logH and its TTL leapfrog, are unchanged (above)."
-  - `decisions.md` § R-500: "step_reversible: KDK, Yoshida-4, Yoshida-6 and TTL leapfrog true; … run_reversible:
-    logH-TTL only (R-162)"; REQ-VAL-190's verify: "every built regularised occupant (Heggie, logH in each time mode,
-    Aarseth–Zare + RK4) … a verdict that differs from the values R-500 lists (Aarseth–Zare + RK4 false, logH's TTL time
-    mode true) is reported for the review queue".
-  - The reference (R-159, not authority): `docs/reference/prin-rs/src/integrate/logh/driver.rs:150`, the default
-    `stepper: Stepper::Rk4`; `.../logh/step.rs:119-122`, its leapfrog "`X(h/2) V(h) X(h/2)`, Mikkola's own
-    composition", a drift–kick–drift whose TTL kick advances `W` at "**The MIDPOINT velocity, not the entering one**"
-    (`:103`), where Part 2b's KDK form is kick–drift–kick with each rate at the state as it stands.
-- **The conflict:** (i) logH × Euler, × KDK, × Yoshida-4 and × Yoshida-6 have no form in the corpus until TASK-M3-39
-  writes them, and TASK-M3-08's test must run each a step; (ii) the corpus names logH's own step "its leapfrog" and
-  R-500 the "TTL leapfrog", but says neither which leapfrog (the reference's drift–kick–drift with the midpoint `W`,
-  or Part 2b's KDK form) nor how logH's own time modes sit in the composed slot beside its pairs; the reference driver
-  runs RK4. Under RK4, TTL is not step-reversible, so REQ-VAL-190's verdict and logH-TTL's `run_reversible` turn on it.
-- **Options:**
-  - (a) logH's own time modes are its leapfrog, the reference's drift–kick–drift (`W` at the midpoint velocity in TTL
-    mode), selected as logH × KDK; logH × RK4 is the reference's classical RK4 on `(r, v, t, W)`; logH × Euler and ×
-    Yoshida wait on TASK-M3-39, and REQ-INT-006's test runs them once it writes them.
-  - (b) As (a), but every logH pair is Part 2b's generic form applied to logH's equations (Euler and RK4 classical on
-    `(r, v, t, W)`, KDK and Yoshida the explicit KDK on `Q = (r, t)`, `P = (v, W)`), written by TASK-M3-08, and
-    logH's leapfrog is a separate selectable row; TASK-M3-39 measures them.
-  - (c) logH's own time modes are logH × RK4, the reference driver's default, and the leapfrog is not built here; R-500's
-    "TTL leapfrog" then waits on TASK-M3-39's pair.
-- **Recommendation:** none; each sets what logH computes and its reversibility flags.
-- **Applied meanwhile:** nothing; TASK-M3-08 is stopped.
-- **Waits:** TASK-M3-08 (REQ-INT-006's logH pairs, REQ-VAL-190's logH arms, logH's profile).
-
-## RQ-810: logH's landing secant fires on a predicted landing whose test carries the literal `1 − 1e-12`, which Part 2c rule 1 forbids in a branch, and the reference's own note says the secant is off by default while its code turns it on *(conflict; a one-way door, it changes where logH's steps land; R-160, R-927, R-953; REQ-INT-084; context: TASK-M3-08, stopped before any code)*
-
-*Queued 13 Nov 2026 by TASK-M3-08's implementer, each quote re-read on `main` at 256384ade. Nothing is built.*
-
-*In plain English: logH's reference code decides whether a step is the one landing on a sync boundary using a tiny
-fixed number that means something different at single and double precision, which the kernel's rules forbid; and its
-comments and its code disagree on whether the landing correction is on at all. Heggie and Aarseth–Zare decide it
-differently, after the step.*
-
-- **File, section:**
-  - `docs/reference/prin-rs/src/integrate/logh/driver.rs:390-391` (R-159, not authority): "`let landing =
-    opts.clamp_final_step && ds >= (dt_left - s.t).max(T::zero()) / dtds * (T::one() - T::lit(1e-12));`", read before
-    the step, and `:397`, "`if landing && opts.land_iterate {`"; against `.../heggie/driver.rs:385`, "`if
-    opts.clamp_final_step && opts.land_iterate && s.t >= dt_left - tol {`", read after the step, as Part 2b transcribes
-    for Aarseth–Zare (step 6: "When the step just taken reaches the boundary").
-  - `.../logh/driver.rs:132`, on `land_iterate`: "**Default off.** Every committed number in `results/` was taken
-    without it, and AZ and Heggie do not have it at all"; against `:161`, `LhOpts::default`'s `land_iterate: true`, and
-    `.../heggie/driver.rs:103`, Heggie's `land_iterate: true`.
-  - `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction", rule 1: "**NO
-    PRECISION-DEPENDENT CONSTANT IN A CONTROL-FLOW DECISION.**" and "If a tolerance must scale with precision, it
-    belongs where the *value* is used, never where the *branch* is taken." `1 − 1e-12` is `1` at f32 and not at f64.
-- **Options:** (a) logH's secant fires as Heggie's and Aarseth–Zare's do, on the landing tested after the step
-  (`t_s ≥ dt_left − dt_left·LAND_EPS_REL`, the landing tolerance a supplied value, RQ-795), on by default as the code
-  has it; (b) the reference's predicted landing with the factor removed (`ds ≥ (dt_left − t_s)/(dt/ds)`), on by
-  default; (c) the secant off for logH, as the reference's note says.
-- **Recommendation:** none.
-- **Applied meanwhile:** nothing; TASK-M3-08 is stopped.
-- **Waits:** TASK-M3-08 (logH's step control in Part 2b, REQ-INT-084).
+  - `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction", rule 1:
+    "If a tolerance must scale with precision, it belongs where the *value* is used, never where the *branch* is
+    taken", and R-953's note: "`SYNC_EPS` and `LAND_EPS_REL` stay forbidden in a branch."
+  - The reference (R-159, record only): `docs/reference/prin-rs/src/integrate/heggie/driver.rs:328`, `let tol = … dt_left
+    * T::LAND_EPS_REL`, used in branches at `:345`, `:385` and `:390`.
+  - `decisions.md` § R-998 (Aarseth–Zare, "RQ-795: (b), on one condition: the state must land on the boundary together
+    with the clock …") and § R-994 (logH, "RQ-810: (a), using RQ-795's answer.").
+- **The conflict:** Heggie's reference lands with a per-precision tolerance in a branch; rule 1 forbids it; no ruling
+  says what replaces it for Heggie. The report framed RQ-810 (a) as one landing rule for all three methods, but those are
+  the report's words, not the owner's.
+- **The question:** how does Heggie's occupant land at a sync boundary?
+- **Options seen:**
+  - **(a) R-998's rule:** no landing tolerance; the interval lands when the last step ends the clock at or past the
+    boundary, the state landing with the clock, the final step sized or retaken; checked by the figure-eight closure's
+    convergence order. One rule for all three occupants.
+  - **(b) One tolerance at both precisions,** a calibration (R-71), compared where the value is used.
+  - **(c) The reference's per-precision values,** with rule 1 amended to except them.
+- **Recommended:** (a), one landing rule across Aarseth–Zare, logH and Heggie, with no constant in a branch and no
+  calibration. Measurable alternative, criterion written before any run (R-649): Heggie × RK4's figure-eight closure and
+  its convergence order across η in [0.02, 0.001] under (a) and under (b) at its proposed tolerance, with the expected
+  order for RK4 and its margin stated before the run; a landing that sets the clock alone shows its order fall.
+- **Applied meanwhile:** the integrator contract's 13 Nov rule-1 line names Aarseth–Zare and logH only, with its *Was*.
+  REQ-INT-084 (Heggie's step control, closed by TASK-M3-08) names this entry.
+- **Waits:** Heggie's landing in TASK-M3-08 (or in the logH-and-hookup task its split creates).

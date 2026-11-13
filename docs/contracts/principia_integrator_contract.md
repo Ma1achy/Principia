@@ -271,6 +271,13 @@ saying it was excepted; the owner's answer calls it "the same floor constant the
 writes the exception down. Rule 1's text stands for every other constant: `SYNC_EPS` and `LAND_EPS_REL` stay forbidden
 in a branch.
 
+*13 Nov 2026 (R-998, RQ-795 (b); R-994, RQ-810 (a)):* Aarseth–Zare's and logH's landing takes no tolerance: an interval
+lands when the last step ends the clock at or past the boundary, the state landing on the boundary together with the
+clock, so no `LAND_EPS_REL`, and no factor such as logH reference's `1 − 1e-12`, reaches a branch (Part 2b, Aarseth–Zare's
+steps 6 and 7). Heggie's landing is not ruled: its reference uses the same per-precision `LAND_EPS_REL` in branches, which
+this rule forbids, and what replaces it is RQ-812, open. *Was (13 Nov 2026, corrected on #515 by physics review
+5886173032 F4 and code review 5886176062 C2):* "the regularised occupants' landing takes no tolerance".
+
 **2. COMPARISON-ONLY IN BRANCH CONDITIONS.** No runtime transcendental deciding a branch. Frozen
 threshold tables (frozen per sim key, generated on the host, R-502), integer counters, `d² < r_coll²` rather than `d < r_coll`. The spike's control —
 runtime `ceil((r_sub/√d²)^1.5)` — forked **105 times on Metal and 82 on lavapipe**; the
@@ -374,10 +381,17 @@ physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
   (`heggie/driver.rs:242-245`, `logh/driver.rs:256-259`), and this line stands for them as written.
 - **TTL is a prior finding, not an open build:** it is built and validated in prin-rs, and it loses on accuracy,
   monotonically worse with mass ratio (prin-rs `NOTES.md:2573`; R-162).
+- *13 Nov 2026 (R-993, RQ-809 (a)):* logH's own method in each time mode, "its leapfrog" and R-500's "TTL leapfrog",
+  is the reference's drift–kick–drift leapfrog (`X(h/2) V(h) X(h/2)`, `.../logh/step.rs:119-122`), the TTL kick
+  advancing `W` at the midpoint velocity, selected as logH × KDK; logH × RK4 is classical RK4 on `(r, v, t, W)`.
+- *13 Nov 2026 (R-994, RQ-810 (a), with R-998):* logH's landing is tested after the step, as Heggie's and
+  Aarseth–Zare's, under R-998's rule: no landing tolerance, and the state lands on the boundary with the clock (the
+  final step sized or retaken to land); the reference's landing predicted before the step with `1 − 1e-12`
+  (`.../logh/driver.rs:390-391`) is not transcribed. The secant is on by default.
 
 *13 Nov 2026 (TASK-M3-08 split, applied per R-369):* Heggie's equations, time transformations and step control are
 transcribed in § "Heggie: the equations, the time transformations, the maps and the step control (transcribed)" below
-(TASK-M3-08); logH's and TTL's are TASK-M3-75's, which waits on RQ-808 to RQ-810.
+(TASK-M3-08); logH's and TTL's are TASK-M3-75's, under R-992 to R-994.
 
 #### Aarseth–Zare: the equations, the reference body, the Levi-Civita inverse and the step control (transcribed)
 
@@ -534,7 +548,9 @@ term")*"). The derivation of the kinetic
 terms: `|L₁p₁|² = A|p₁|²`, so `A·B·|P₁|²/(2μ₁) = B|p₁|²/(8μ₁)`, and `A·B·P₁·P₂/m_a = (L₁p₁)·(L₂p₂)/(4m_a)`.
 
 **The equations of motion in fictitious time `τ`** (`tb_az.py:112-142`), on the state `(u₁, p₁, u₂, p₂, t)` with `E`
-held, `A` and `B` here not floored and `|R₃|` floored at `1e-300` (`tb_az.py:114-118`):
+held, `A` and `B` here not floored and `|R₃|` floored at `TINY`, one value per working precision (R-999, RQ-796 (a),
+13 Nov 2026, as R-953 maps the reference's other `1e-300` floors; `tb_az.py:114-118`; *was:* "`|R₃|` floored at
+`1e-300`", an f64 value, which is 0 at f32):
 
 - `du₁/dτ = ∂Γ/∂p₁ = B·p₁/(4μ₁) + L₁ᵀ(L₂p₂)/(4m_a)` (`tb_az.py:125`)
 - `du₂/dτ = ∂Γ/∂p₂ = A·p₂/(4μ₂) + L₂ᵀ(L₁p₁)/(4m_a)` (`tb_az.py:126`)
@@ -623,6 +639,21 @@ these defaults (`tb_az.py:153-238`, the march at `tb_az.py:253-331`), flooring a
 
 `SYNC_EPS` and `LAND_EPS_REL` are the reference's precision-dependent constants that Part 2c rule 1 forbids in a branch;
 their values are not part of this transcription.
+
+*13 Nov 2026 (R-998, RQ-795 (b) on the owner's condition):* the landing takes no tolerance. In steps 6 and 7 the test
+`t_s ≥ dt_left − dt_left·LAND_EPS_REL` reads `t_s ≥ dt_left`, and the secant's stop `|got − want| ≤ dt_left·LAND_EPS_REL`
+has no tolerance. The owner's condition binds: the state lands on the boundary together with the clock, the final step
+sized or retaken so that its state is the state at the boundary; the clock is never set to the boundary alone while the
+state stays where an overshooting step left it, so step 7's "`t += dt_left`" on a landing holds only for a state that
+landed with it. How the secant stops without a tolerance is a definition (R-72) the building task (TASK-M3-76) writes
+here, physics-reviewed; it is checked by the figure-eight closure's convergence order, not only its closure value
+(REQ-INT-119). Until it is written, the lines above stand as the reference's transcription, its `LAND_EPS_REL` not the
+rule.
+
+*13 Nov 2026 (R-1000, RQ-806 (iii)):* a march that ends at step 7's finiteness test writes `sim_failed` by cause:
+detail 2 where the step size `h` was not finite (an entry size that is not finite, a derived quantity), otherwise 0 or 1
+read on the first non-finite regularised state the test rejected (0 if any component is NaN, else 1); the state stored
+is the latched last finite one (payload § 2; TASK-M3-18).
 
 #### Heggie: the equations, the time transformations, the maps and the step control (transcribed)
 
@@ -745,8 +776,10 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
 Each kept step's Cartesian image (the return above) goes to the cadence (Part 2a, Cost 1); the reference driver's own
 collision, escape and closure sampling (`driver.rs:422-528`) is the wrapper's detectors here (Part 7), not the
 occupant's. `LAND_EPS_REL` is not part of this transcription: the reference keeps it per precision in branches
-(`driver.rs:328`, `:345`, `:385`, `:390`), which Part 2c rule 1 forbids, and what replaces it is an open question
-(rulings PR #515); until it is ruled the landing reads a supplied value.
+(`driver.rs:328`, `:345`, `:385`, `:390`), which Part 2c rule 1 forbids, and what replaces it is RQ-812, open;
+until it is ruled the landing reads a caller-supplied setting, with no value in the kernel and no production
+configuration, its tests and gates at the reference's values (applied per R-369, as #502 did for Aarseth–Zare before
+RQ-795 was ruled).
 
 #### The time-reversal maps (REQ-INT-095)
 
@@ -806,6 +839,11 @@ logH's equations once TASK-M3-75 has transcribed them (R-160, REQ-INT-084, which
 transformations and step control, not its pairs), physics-reviewed before merge (applied per R-369, qa review 5607548278
 of PR #277, Q1). *Was:* "when they are transcribed (R-160, REQ-INT-084)", which named no writer for the pair forms. *Was (13 Nov 2026, TASK-M3-08 split,
 applied per R-369):* "once TASK-M3-08 has transcribed them"; logH's pairs are RQ-809's.
+
+*13 Nov 2026 (R-993, RQ-809 (a)):* under logH, the pair logH × KDK is logH's own leapfrog, the reference's
+drift–kick–drift with `W` at the midpoint velocity in TTL mode, in each time mode, not the generic kick–drift–kick above;
+logH × RK4 is classical RK4 on `(r, v, t, W)`. logH × Euler, × Yoshida-4 and × Yoshida-6 are TASK-M3-39's to write, as
+above, and REQ-INT-006's every-pair test runs them once it writes them.
 
 The explicit composition is not symplectic on a non-separable Hamiltonian, so the composed occupant's profile is the
 pair's, not the stepper's row in Part 2: `symplectic` false for these pairs, and `step_reversible` dd test 3's
@@ -925,6 +963,15 @@ The seam moves from *"advance by `dt`"* to *"advance to `t`"*. **The wrapper own
 occupant owns how it gets there.** KDK/Yoshida implement `ADVANCE` as the loop they already run — a
 rename, no behaviour change. AZ implements it by stepping in `tau` until it lands on `t_target`.
 
+*13 Nov 2026 (R-992, RQ-808 (a)):* an occupant that registers once, Heggie and logH, carries its own state across
+`ADVANCE` calls in the payload, registered once at `t = 0`: Heggie's `Qᵢ`, `Pᵢ` and `h`, logH's `B` and, in TTL mode,
+`W`. The seam passes that carried state in and out of each call beside `(m, r, p)`, so neither occupant rebuilds its
+variables or re-freezes its energy at a call, and its re-registration count is 0 (REQ-INT-018, REQ-INT-118). It is a
+payload schema change (REQ-PAY-114). Aarseth–Zare carries none and re-registers at every sync boundary, as Part 2b's
+table says. *Was:* the seam passed only `(m, r, p)`, so through it a Heggie or logH occupant would have rebuilt its
+state at every call that marches (RQ-808). *Corrected 13 Nov 2026 (physics review 5886173032 of #515, F5):* Heggie's carried state includes its own
+clock, as option (a) reads ("13 numbers and the clock"), so that re-boot reproduces live march bitwise.
+
 The profile gains **`owns_time_mapping: bool`** — the honest name, because the question is not "is it
 regularised" but **"does the wrapper still know how far a step goes"**. It is reported for the **composed occupant**
 (stepper × regularisation, Part 2b): `true` whenever the regularisation is not `none` (R-19).
@@ -937,7 +984,9 @@ system that handles integration makes the main path the exception, and that leak
 #### What this preserves, and what it costs
 
 **Preserved — the canonicalise seam.** The integrator still takes `(m, r, p)` and never learns the
-chart's name. This change does not come near it.
+chart's name. This change does not come near it. *13 Nov 2026 (R-992):* a Heggie or logH occupant also takes its
+carried regularised state from the payload; that state is the occupant's own, set once at `t = 0`, and holds nothing of
+the chart.
 
 **Preserved — payload purity, and it gets *cleaner*.** The guarantee is *"`SimState` is a pure
 function of `(IC, sim key, playhead t)` — identical whether reached by continuous marching, catch-up,
@@ -1005,7 +1054,8 @@ run, independent of the horizon `T` and of frame timing.** The boundaries are `t
   (0.10) costs 1–3% more steps, 16× (0.025) 17–25%, 32× (0.0125, about a display frame) 40–52%; the shape changes by
   about 1e-11 to 1e-10 (about 1e-6 on `far`), and 0, at most 1 and at most 4 outcome labels of 1024 flip (prin-rs
   `sync_grid_probe`, PR #34). Heggie never re-registers, so its sensitivity to the boundary cadence is about 10×
-  smaller than Aarseth–Zare's.
+  smaller than Aarseth–Zare's. *13 Nov 2026 (R-992):* that holds through the seam because Heggie's state is carried
+  across `ADVANCE` calls in the payload, registered once at `t = 0`.
 
 R-565 is the sync grid only (R-602, closing RQ-524): the unregularised occupants' macro-step grid, `dt_macro =
 max(1e-3, T/65535)` (Part 3, R-132), which depends on `T` above `T = 65.535`, stays R-132's, unchanged. *Was:* "Whether

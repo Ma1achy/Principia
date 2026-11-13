@@ -1,10 +1,10 @@
 # TASK-M3-75 — logH, Heggie's and logH's seam, and the visible re-registration count
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105
+- **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095, REQ-INT-104, REQ-INT-105, REQ-INT-118, REQ-PAY-114
 - **Depends on:** TASK-M3-08
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-GEN-008
-- **Reviewers:** code, qa, physics
+- **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-4, PIT-4.3, PIT-4.4
 - **Size:** ~700 lines, the tests included
 
@@ -49,6 +49,7 @@ a schema change. Each requirement TASK-M3-08 built a Heggie or Aarseth–Zare ar
 - `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"
 - `decisions.md` § "R-604 — A regularised copy's step budget is checked every step: its running total against `max(N_min, rate · t_elapsed)`; `N_min` protects early close encounters and is an M3 calibration *(closes RQ-527; settles R-564's accounting)*"
 
+- `decisions.md` § "R-992 — RQ-808, Heggie's and logH's own state: option (a); each regularised occupant that registers once carries its own state across `ADVANCE` calls in the payload, registered once at `t = 0` (Heggie's `Qᵢ`, `Pᵢ` and `h`; logH's `B` and, in TTL mode, `W`), so neither re-registers and its count is 0; a payload schema change *(closes RQ-808)*"
 ## Deliverables
 - `crates/kernel/src/regularisation/logh.rs` — logH transcribed: its time modes, logH and TTL, as RQ-809's ruling sets
   them, its TTL time mode the reversible occupant (R-162), its profile `run_reversible` true, the only one (R-500); its
@@ -67,6 +68,8 @@ a schema change. Each requirement TASK-M3-08 built a Heggie or Aarseth–Zare ar
   schema-version change. From TASK-M3-08 (13 Nov 2026, R-369).
 - logH's arms of `cargo xtask gate hamiltonian-fd`, `separation-floor --propose` and `regularised_step_reversibility`,
   beside TASK-M3-08's Heggie and Aarseth–Zare arms.
+
+- The carried regularised state (R-992): Heggie's `Qᵢ`, `Pᵢ` and `h` (13 numbers) and its own clock, and logH's `B` and, in TTL mode, `W`, registered once at `t = 0` and passed through the seam beside `(m, r, p)` on every ADVANCE call; doc change: payload §1, the carried state's layout, widths and place (in `SimState` or a buffer beside it), a definition (R-72), physics- and perf-reviewed, with §7's memory figures recomputed and the ledger's schema change (REQ-INT-118, REQ-PAY-114). *Was (13 Nov 2026):* "Heggie's `Qᵢ`, `Pᵢ` and `h` and logH's `B`".
 
 ## Acceptance tests
 - `cargo test -p kernel regularisation_default` — every stepper × regularisation pair, `none` included, runs a step on a
@@ -90,6 +93,9 @@ a schema change. Each requirement TASK-M3-08 built a Heggie or Aarseth–Zare ar
 - Doc change: integrator contract Part 1 § "COM projection and invariant monitoring" — each regularised occupant's regularised energy, with the equation it is read from (Heggie's and Aarseth–Zare's from their regularised coordinates and momenta; logH's from its transcribed equations); on the radial collision it stays at round-off through the passage while the Cartesian energy does not; physics reviewer approves (REQ-INT-104, R-566). From TASK-M3-08 (13 Nov 2026, R-369); TASK-M3-08 wrote Heggie's and Aarseth–Zare's.
 - `cargo xtask gate hamiltonian-fd --propose` — the step and tolerance with the measured discrepancy per occupant; the human confirms them at the M3 gate and they are recorded in decisions.md (REQ-VAL-171). From TASK-M3-08 (13 Nov 2026, R-369); TASK-M3-08 proposed for Heggie and Aarseth–Zare, and this one adds logH's.
 
+- `cargo test -p kernel regularised_state_carried` — REQ-INT-118's verify: Heggie × RK4 and logH in each time mode marched across `k` ADVANCE calls with the carried state equal one direct march registered once at `t = 0`, bitwise, with 0 re-registrations, and live march, catch-up and re-boot after eviction agree bitwise; controls: a seam rebuilding the regularised state from `(m, r, p)` at each call (Heggie's clock included), a carried state not restored on re-boot, and a re-boot that restores Heggie's `Q`, `P` and `h` but not its own clock, fail; the last control first asserts its precondition, at least one landing on its fixture whose landed clock differs from the boundary bitwise, shown before the assertion, planting one if the fixture has none or reporting the control void with the reason (REQ-INT-118). *Was (13 Nov 2026):* "controls: a seam rebuilding the regularised state from `(m, r, p)` at each call, and a carried state not restored on re-boot, fail (REQ-INT-118)."
+- Review checklist — payload §1 states the carried state's layout, widths and place, §7's figures recomputed, the ledger's schema change recorded; physics and perf reviewers approve (REQ-PAY-114).
+
 ## Notes
 - **Waits on RQ-808** (Heggie and logH cannot keep their regularised state across `ADVANCE` calls: the seam's wiring,
   the re-registration count and where it lives), **RQ-809** (logH's pairs with Euler, KDK and the Yoshidas, and which
@@ -102,3 +108,7 @@ a schema change. Each requirement TASK-M3-08 built a Heggie or Aarseth–Zare ar
   REQ-VAL-170 and REQ-VAL-171); and the 12 Nov 2026 note on `advance_reaching` (physics review 5879658175 of PR #502, P2).
 - Definitions closed here (R-72; physics reviewer approves before merge): REQ-INT-073, REQ-INT-095, REQ-INT-104 (R-566);
   and, under R-160, REQ-INT-084.
+- *13 Nov 2026, applied per R-369 (task scoping):* REQ-INT-118 and REQ-PAY-114, the carried state (R-992, the owner's
+  answer on RQ-808), move here from TASK-M3-08 with its Deliverable and its two Acceptance lines, word for word, as
+  #515's note on TASK-M3-08 says; perf joins the reviewers for the payload schema change. The R-992, R-993 and R-994
+  notes stay on TASK-M3-08, and RQ-808 to RQ-810, which this task waited on, are ruled by them. *Was:* Closes without REQ-INT-118 and REQ-PAY-114; Reviewers "code, qa, physics".
