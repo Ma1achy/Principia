@@ -255,11 +255,17 @@ fn check_view_lanes(views: &[(String, String)], word_fields: &[&str]) {
         if field == "last_symbol" {
             want.insert(("sample".to_owned(), "word".to_owned()));
         }
-        // The drift views (R-379, R-381; TASK-M3-05): each also reads the latches its suspect predicates read and the
-        // reference its neutral band is relative to (R-652), and nothing else.
+        // The drift views (R-379, R-381; TASK-M3-05): each also reads the latches its suspect predicates read and its
+        // reference, tested on the bits first (R-436); and the reads of its neutral band, the rounding's own scale
+        // (R-928): the state `r` and `p`, and for the energy the `ICDescriptor` masses of `K + |V|`; and nothing else.
         if field == "energy_drift" || field == "Lz_drift" {
-            for latch in ["dE_max", "E_0", "dLz_max"] {
+            for latch in ["dE_max", "E_0", "dLz_max", "r", "p"] {
                 want.insert(("sample".to_owned(), latch.to_owned()));
+            }
+        }
+        if field == "energy_drift" {
+            for m in ["m0", "m1", "m2"] {
+                want.insert(("ic".to_owned(), m.to_owned()));
             }
         }
         if field == "Lz_drift" {
@@ -285,9 +291,10 @@ fn word_fields(l: &Ledger) -> Vec<&'static str> {
 fn qa_tool020_each_view_reads_its_field_from_its_lane() {
     let l = ledger::layout();
     let views = views(&generate(&l));
+    // The views on `ctx.ic`, but `energy_drift`'s, whose neutral band reads the masses (R-928), checked below.
     let ic: Vec<&str> = views
         .iter()
-        .filter(|(_, t)| ctx_reads(t).iter().any(|(lane, _)| lane == "ic"))
+        .filter(|(f, t)| f != "energy_drift" && ctx_reads(t).iter().any(|(lane, _)| lane == "ic"))
         .map(|(f, _)| f.as_str())
         .collect();
     assert_eq!(
