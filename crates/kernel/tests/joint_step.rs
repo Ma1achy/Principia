@@ -184,9 +184,11 @@ negative_control!(
 
 // ── joint_step_difference ───────────────────────────────────────────────────────────────────────────────────────
 
-/// A force difference that is always zero: a joint step that ignores the force's change.
+/// A force difference that is always zero: a joint step that ignores the force's change (the control's).
+#[cfg(feature = "controls")]
 struct Zero;
 
+#[cfg(feature = "controls")]
 impl ForceDifference for Zero {
     fn term<R: Real>(_d: [R; 2], _d2: R, _norm: R, _cube: R, _e: [R; 2]) -> [R; 2] {
         [R::default(); 2]
