@@ -38427,6 +38427,13 @@ The physics review's check of the 4/5 factor: over every quadratic error that is
 the four corners and four edge midpoints, the maximum over the square is exactly 5/4, at `(u, v) = (−1, −½)`; without
 the zero at the centre it is 3. So the bound rests on `x₀` being the exact centre value, as R-989 makes it.
 
+*13 Nov 2026, a further correction (physics review 5886305544 of #515, G1, G2):* "holds within one binade" above reads "holds where, for each
+component, every sample and every checked point lie in one binade". A quad whose checked points themselves span two
+binades is part of the binade-drop case: with the three `u = −1` points one binade up and the other five in binade `k`,
+a sample at `(u, v) = (½, −1)` in binade `k` reaches 0.6875 of the bound, 0.55 of its own ulp, so about 1.05 ulp after
+narrowing. M-K reports those quads apart, and its tag, branch and sheet clause applies to every admitted quad,
+crossing and binade-drop included.
+
 R-990 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Adds REQ-DEC-063; changes REQ-INT-115. The parse printed R-990 for this answer.

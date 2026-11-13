@@ -726,6 +726,12 @@ the CPU writes.*
   sample's own f32 ulp on admitted binade-drop quads and their share of admitted quads; under (b), the extra share of
   quads sent to exact and its cost in exact evaluations. If (a)'s worst difference is at most one own ulp on every
   admitted quad, the two agree and (a) costs nothing.
+- **13 Nov 2026 (physics review 5886305544 of #515, G1):** the case includes a quad whose checked points themselves span two binades. The bound
+  inside the square is 5/4 of the largest checked bound, so with the three `u = −1` points one binade up and the other
+  five in binade `k`, a sample at `(u, v) = (½, −1)` in binade `k` reaches 0.6875 of the bound, 0.55 of its own ulp,
+  about 1.05 ulp after narrowing, though it shares a binade with five checked points. Both options apply to it as to a
+  binade drop; M-K reports those quads apart. The qualification reads "every sample and every checked point in one
+  binade".
 - **Applied meanwhile:** REQ-DEC-063's statement and the deep zoom line say "within one binade; the binade-drop case
   waits on RQ-811"; R-990 and R-1002 carry dated lines naming this entry.
 - **Waits:** TASK-M6-08 (the switch and M-K); TASK-M6-21 (the warning, through R-1002).
