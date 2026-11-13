@@ -28,7 +28,11 @@
 //!
 //!   `c` is the difference of the two inverse cubes written as a product, `n'³ − n³ = (n' − n)(n'² + n'n + n²)` and
 //!   `n' − n = q/(n' + n)`, so no two nearly equal numbers are subtracted, and every factor keeps its relative
-//!   precision: the difference keeps about `ε` relative whatever `‖e‖/‖d‖`.
+//!   precision: the difference keeps about `ε` relative whatever `‖e‖/‖d‖`. Its range in `‖d‖` is narrower than the
+//!   force's: the denominator `(n' + n)·n³·n'³` is seven powers of distance, so at f32 it leaves the normal range
+//!   below `‖d‖ ≈ 4e-6` and rounds to zero below about `3e-7`, where (a2) reads infinite or NaN; (a1) reaches as far
+//!   as the force itself. (a2) is the measured alternative, not the chosen form (TASK-M3-72's result: `Displacement`
+//!   names (a1)); only that measurement and the tests form it.
 //!
 //! No branch, no loop, no runtime index (integrator_contract Part 2c): each pair is written out.
 
