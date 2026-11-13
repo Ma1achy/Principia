@@ -46,8 +46,10 @@ pub trait Real:
     /// The name the ledger's precision row gives this type (dd_simstate_payload §1).
     const NAME: &'static str;
 
-    /// `atan2(self, x)`, the angle of the point `(x, self)`, in `[−π, π]`, for a type that is also a `Float`: libm's
-    /// by default, so the f64 path is libm's bit for bit, and at f32, the GPU's precision, the kernel's own,
+    /// `atan2(self, x)`, the angle of the point `(x, self)`, in `[−π, π]`, for a type that is also a `Float`: through
+    /// `num_traits::Float` by default, which on the host is std's, the platform's maths library (spirv-std turns on
+    /// num-traits' `std` off the SPIR-V target), not the pinned libm, so the f64 path is bitwise only per platform
+    /// (whether to pin it is RQ-799, open); and at f32, the GPU's precision, the kernel's own,
     /// [`crate::arctan::atan2_f32`], in integer arithmetic, so every backend gives the CPU's bits (RQ-628, decided by the
     /// orchestrator per R-369, option (a)). The encode's angles and the shape sphere decode's `β` call it, so the
     /// precision chooses it through `crate::generated::links::LinkReal`, whose bound holds `Real`.
