@@ -208,10 +208,21 @@ fn check_final_step(landing: Landing) {
         "both rungs above a floor of factor 0, the same fit"
     );
     floored["floor"]["min_rungs"] = json!(3);
+    let report = AzFinalStepGate
+        .run(&config(FINAL_STEP_NAME, c.closure), "t", &floored)
+        .expect("the floored input runs");
     assert_eq!(
-        verdict(&floored),
-        Ok(Verdict::Fail),
+        report.verdict,
+        Verdict::Fail,
         "fewer rungs above the floor than the least the fit takes"
+    );
+    assert!(
+        report
+            .negative_results
+            .iter()
+            .any(|n| n.contains("too few rungs above the round-off floor")),
+        "the report says why: {:?}",
+        report.negative_results
     );
     for bad in [
         json!({ "description": "", "eta": 0.01, "n": 8, "landing": "fix", "ladder": [0.01],

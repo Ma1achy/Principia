@@ -420,11 +420,15 @@ pub fn convergence(
 
 /// The least-squares slope of `y` against `x` over `points`.
 pub fn slope(points: &[(f64, f64)]) -> f64 {
+    // `Σ(x − x̄)(y − ȳ) = Σ(x − x̄)·y`, since `Σ(x − x̄) = 0`, so `ȳ` is not needed.
     let n = points.len() as f64;
     let mx = points.iter().map(|p| p.0).sum::<f64>() / n;
-    let my = points.iter().map(|p| p.1).sum::<f64>() / n;
-    let sxy: f64 = points.iter().map(|p| (p.0 - mx) * (p.1 - my)).sum();
-    let sxx: f64 = points.iter().map(|p| (p.0 - mx) * (p.0 - mx)).sum();
+    let (mut sxy, mut sxx) = (0.0, 0.0);
+    for &(x, y) in points {
+        let dx = x - mx;
+        sxy += dx * y;
+        sxx += dx * dx;
+    }
     sxy / sxx
 }
 
