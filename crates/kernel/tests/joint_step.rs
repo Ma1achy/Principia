@@ -195,19 +195,41 @@ impl ForceDifference for Zero {
     }
 }
 
-/// The largest component of `a − b` over the twelve, and the largest of `b`.
+/// A force difference that is never finite: a joint step whose displacement is NaN (the non-finite tests' input).
+struct NotFinite;
+
+impl ForceDifference for NotFinite {
+    fn term<R: Real>(_d: [R; 2], d2: R, _norm: R, _cube: R, _e: [R; 2]) -> [R; 2] {
+        // `√(−‖d‖²)`, NaN for every separation that is not zero.
+        [(-d2).square_root(); 2]
+    }
+}
+
+/// The larger of `acc` and `v`, a non-finite `v` counting as infinite: `f64::max` drops a NaN, and no reduction
+/// discards a non-finite sample silently (Totality, R-47; R-538).
+fn worst(acc: f64, v: f64) -> f64 {
+    if v.is_finite() {
+        acc.max(v)
+    } else {
+        f64::INFINITY
+    }
+}
+
+/// The largest component of `a − b` over the twelve, and the largest of `b`; either is infinite where a component
+/// it reads is not finite.
 fn residual(a: &State<f64>, b: &State<f64>) -> (f64, f64) {
-    let mut worst = 0.0f64;
+    let mut res = 0.0f64;
     let mut scale = 0.0f64;
     for i in 0..3 {
         for k in 0..2 {
-            worst = worst
-                .max((a.r[i][k] - b.r[i][k]).abs())
-                .max((a.p[i][k] - b.p[i][k]).abs());
-            scale = scale.max(b.r[i][k].abs()).max(b.p[i][k].abs());
+            res = worst(
+                worst(res, (a.r[i][k] - b.r[i][k]).abs()),
+                (a.p[i][k] - b.p[i][k]).abs(),
+            );
+            scale = worst(worst(scale, b.r[i][k].abs()), b.p[i][k].abs());
         }
     }
-    (worst, scale)
+    (res, scale)
 }
 
 /// `STEP(x + δ⃗) − STEP(x)` at f64.
@@ -227,7 +249,7 @@ fn absolute_difference<S: Stepper>(x: &State<f64>, d: &State<f64>, dt: f64) -> S
 }
 
 /// The joint step's displacement against the absolute difference, relative to its size, at `δ⃗` of size `size` on
-/// every fixture state, the worst over them.
+/// every fixture state, the worst over them; infinite where any is not finite.
 fn linear_residual<S: Stepper, D: ForceDifference>(size: f64) -> f64 {
     let mut seed = 11u64;
     let dt = 1e-2;
@@ -239,7 +261,7 @@ fn linear_residual<S: Stepper, D: ForceDifference>(size: f64) -> f64 {
             let (res, scale) = residual(&joint, &absolute_difference::<S>(x, &d, dt));
             res / scale
         })
-        .fold(0.0, f64::max)
+        .fold(0.0, worst)
 }
 
 /// For one stepper and difference: at each size, the relative residual is within `10⁴·ε/‖δ⃗‖`, the absolute
@@ -275,6 +297,38 @@ negative_control!(
     "a joint step that ignores the force's change must fail",
     expected = "not the absolute difference",
     check_linear::<Zero>()
+);
+
+/// For one stepper and difference: the relative residual is infinite, a failure of `check_linear_one`, never
+/// agreement.
+fn check_not_finite_one<S: Stepper, D: ForceDifference>(name: &str) {
+    let res = linear_residual::<S, D>(1e-3);
+    assert!(
+        res == f64::INFINITY,
+        "{name}: a non-finite displacement reads as relative residual {res:e}, not as a failure"
+    );
+}
+
+fn check_not_finite<D: ForceDifference>() {
+    check_not_finite_one::<Kdk, D>("KDK");
+    check_not_finite_one::<Yoshida4, D>("Yoshida-4");
+    check_not_finite_one::<Yoshida6, D>("Yoshida-6");
+    check_not_finite_one::<Rk4, D>("RK4");
+    check_not_finite_one::<Euler, D>("Euler");
+}
+
+/// `joint_step_difference`'s reduction keeps a NaN displacement: it reads as an infinite residual, which fails the
+/// check, where `f64::max` would drop it and read agreement.
+#[test]
+fn joint_step_difference_not_finite() {
+    check_not_finite::<NotFinite>();
+}
+
+negative_control!(
+    joint_step_difference_not_finite,
+    "a finite displacement read as non-finite must fail",
+    expected = "not as a failure",
+    check_not_finite::<Plain>()
 );
 
 // ── force_difference_forms ─────────────────────────────────────────────────────────────────────────────────────
