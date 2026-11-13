@@ -21,6 +21,12 @@
 //! `dt`, and `G`, which is 1 in the force (Part 3, Part 5); no chart reaches it (seam 3). The regularised occupants,
 //! which own their time mapping, implement `ADVANCE` themselves, as [`crate::regularisation::Composed`].
 //!
+//! **The joint march** (R-974; [`Advance::advance_joint`]): the FTLE shadow's displacement form marches `(x, δ⃗)`
+//! together through the occupant's joint step ([`Stepper::joint_step`]), `x` bit-identical to the occupant's own
+//! `ADVANCE` and `δ⃗` through the same stages, with a [`JointCadence`] after each internal step. A stepper's is the
+//! blanket impl's; an occupant that owns its time mapping has none until its own is built (Heggie × RK4's is
+//! TASK-M3-74's): marching a displacement-form shadow beside it fails to build.
+//!
 //! **Determinism** (REQ-INT-007, REQ-INT-023): the number and size of the steps are a function of the integer span, the
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.
 
@@ -28,6 +34,7 @@ use super::substep::{d2_quantised, Quantise};
 use crate::generated::constants::{U32_RANGE_END_F32, U32_TOP_F32, U32_TOP_F64};
 use crate::occupant::{Geom, State, StepReal, Stepper};
 use crate::payload::{PayloadReal, SimStateBaseOf};
+use crate::physics::difference::ForceDifference;
 use crate::real::IeeeBits;
 
 /// A step count as the float type it divides: `n` converted, exact for `n ≤ 2²⁴` at f32, and `N_sub ≤ L_max` is far
@@ -153,6 +160,18 @@ pub trait Cadence<R> {
     }
 }
 
+/// The per-substep cadence of a joint march (R-974; [`Advance::advance_joint`]): the work that runs after every internal
+/// joint step on the sample's state `x`, its force evaluation and the displacement, and the `done` flag that ends the
+/// march.
+pub trait JointCadence<R> {
+    /// Runs after each internal joint step, on the sample's state `x` the step left, the force evaluation at its
+    /// positions, and the displacement `delta`, any of which it may replace (the projections do).
+    fn after_step(&mut self, x: &mut State<R>, geom: &mut Geom<R>, delta: &mut State<R>);
+
+    /// Whether the march is done: no further joint step is taken.
+    fn done(&self) -> bool;
+}
+
 /// What the wrapper hands the occupant beside the state and the times (integrator_contract Part 3): the sim key's
 /// macro-step and the substep count the wrapper's law chose for this macro-step.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -205,6 +224,37 @@ pub trait Advance {
         let reached = Reached::by_count(out.substeps, params.n_sub);
         (out, reached)
     }
+
+    /// The joint march of the FTLE shadow's displacement form (R-974; the module's note): `state`, whose force
+    /// evaluation is `geom`, and the displacement `delta` advanced together from `t_now` to `t_target` with the
+    /// force difference `D`, `cadence` after every internal joint step, stopping early once it is done; the sample's
+    /// part is [`Advance::advance`]'s, bit for bit, under the same per-step work. Returns the sample's answer and the
+    /// displacement. This default is for an occupant with no joint step: it fails to build where it is reached
+    /// ([`Advance::NO_JOINT_STEP`]).
+    #[inline]
+    fn advance_joint<R: AdvanceReal, D: ForceDifference, C: JointCadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        delta: &State<R>,
+        _t_now: u32,
+        _t_target: u32,
+        _params: &AdvanceParams<R>,
+        _cadence: &mut C,
+    ) -> (Advanced<R>, State<R>) {
+        (
+            Advanced {
+                state: *state,
+                geom: *geom,
+                substeps: Self::NO_JOINT_STEP,
+            },
+            *delta,
+        )
+    }
+
+    /// The build failure of [`Advance::advance_joint`]'s default, read as its step count: evaluated only where an
+    /// occupant with no joint step is asked for one, and it fails there (as [`Stepper::FORM`]'s default does).
+    const NO_JOINT_STEP: u32 =
+        panic!("this occupant has no joint step (Advance::advance_joint; R-974): Heggie × RK4's is TASK-M3-74's");
 }
 
 /// How an `ADVANCE` call ended (integrator_contract Part 2a, Part 7): at its target; short of it, the run able to go
@@ -283,5 +333,49 @@ impl<S: Stepper> Advance for S {
             geom: g,
             substeps: taken,
         }
+    }
+
+    /// The stepper's joint march: [`Advance::advance`]'s loop with [`Stepper::joint_step`] in place of the `STEP`, the
+    /// same count and step size, so the sample's part is [`Advance::advance`]'s, bit for bit, under the same per-step
+    /// work on `x`.
+    #[inline]
+    fn advance_joint<R: AdvanceReal, D: ForceDifference, C: JointCadence<R>>(
+        state: &State<R>,
+        geom: &Geom<R>,
+        delta: &State<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut C,
+    ) -> (Advanced<R>, State<R>) {
+        // Written out, as in `advance`, for rust-gpu (R-169).
+        #[allow(clippy::implicit_saturating_sub)]
+        let span = if t_target > t_now {
+            t_target - t_now
+        } else {
+            0
+        };
+        let steps = span * params.n_sub;
+        let dt = params.dt_macro / R::count(params.n_sub);
+        let mut s = *state;
+        let mut g = *geom;
+        let mut d = *delta;
+        let mut taken = 0;
+        while taken < steps && !cadence.done() {
+            let (next, next_geom, next_delta) = S::joint_step::<R, D>(&s, &d, dt, &g);
+            s = next;
+            g = next_geom;
+            d = next_delta;
+            cadence.after_step(&mut s, &mut g, &mut d);
+            taken += 1;
+        }
+        (
+            Advanced {
+                state: s,
+                geom: g,
+                substeps: taken,
+            },
+            d,
+        )
     }
 }

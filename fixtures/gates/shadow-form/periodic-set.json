@@ -1,5 +1,5 @@
 {
   "expected": "pass",
   "kind": "periodic-set",
-  "description": "the absolute and displacement f32 shadows' λ_T against the known exponent on the periodic-orbit set"
+  "description": "the absolute, (a1) and (a2) shadows' λ_T at f32 and f64 against the known exponent on the periodic-orbit set, Burrau at f32, and TASK-M3-72's pre-registered (a1)/(a2) choice"
 }

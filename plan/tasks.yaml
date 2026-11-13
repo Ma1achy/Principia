@@ -1882,7 +1882,15 @@
   title: "The displacement form of the FTLE shadow, R-974's joint step (REQ-VAL-038), and R-976's calibration re-run"
   depends_on: [TASK-M3-14]  # R-369 (12 Nov 2026): split from TASK-M3-14, physics review 5866988394 of PR #493; R-974, R-976 (12 Nov 2026)
   needs: []
-  requirements: [REQ-VAL-038, REQ-VAL-355]  # REQ-VAL-355: R-974, physics review 5875695467 of PR #503, F1 (12 Nov 2026)
+  requirements: [REQ-VAL-038]  # REQ-VAL-355 moved to TASK-M3-74, re-scoped 13 Nov 2026 (R-369): Heggie × RK4 needs TASK-M3-08
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M3-74
+  milestone: M3
+  title: "The FTLE shadow's joint step on the default occupant, Heggie × RK4, at the sample's physical time (REQ-VAL-355)"
+  depends_on: [TASK-M3-08, TASK-M3-72]  # R-369 (13 Nov 2026): split from TASK-M3-72; Heggie × RK4 needs TASK-M3-08
+  needs: []
+  requirements: [REQ-VAL-355]  # R-974, physics review 5875695467 of PR #503, F1 (12 Nov 2026); moved from TASK-M3-72 (13 Nov 2026)
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-76

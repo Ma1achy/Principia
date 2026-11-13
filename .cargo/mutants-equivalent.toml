@@ -296,6 +296,10 @@ mutant = "crates/kernel/src/driver/advance.rs:209:32: replace > with >= in <impl
 justification = "at t_target == t_now both arms give a span of 0 (t_target - t_now is 0), so > and >= agree on every input"
 
 [[equivalent]]
+mutant = "crates/kernel/src/driver/advance.rs:353:32: replace > with >= in <impl Advance for S>::advance_joint"
+justification = "the same guard as advance's (advance.rs:209:32): at t_target == t_now both arms give a span of 0, so > and >= agree on every input"
+
+[[equivalent]]
 mutant = "crates/kernel/src/regularisation/dt_max.rs:82:31: replace > with >= in DtMax<R>::skipping"
 justification = "at more == u32::MAX - skipped the saturating arm gives u32::MAX and the sum arm gives skipped + more == u32::MAX, so > and >= agree on every input"
 

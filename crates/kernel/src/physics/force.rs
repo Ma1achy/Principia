@@ -20,6 +20,14 @@ pub fn force<R: Real>(m: &[R; 3], g: &PairGeom<R>) -> [[R; 2]; 3] {
         [sep[1][0] / cube[1], sep[1][1] / cube[1]],
         [sep[2][0] / cube[2], sep[2][1] / cube[2]],
     ];
+    combine(m, &u)
+}
+
+/// The accelerations from the three pairs' terms `uₖ` (the module's note): `a₀ = m₁u₂ − m₂u₁`, `a₁ = m₂u₀ − m₀u₂`,
+/// `a₂ = m₀u₁ − m₁u₀`. Linear in `u`, so a difference of terms gives the difference of accelerations
+/// ([`super::difference`]).
+#[inline]
+pub fn combine<R: Real>(m: &[R; 3], u: &[[R; 2]; 3]) -> [[R; 2]; 3] {
     [
         [
             m[1] * u[2][0] - m[2] * u[1][0],

@@ -35,6 +35,7 @@ pub mod yoshida6;
 use spirv_std::num_traits::One;
 
 pub use crate::generated::steppers::StepperCoefficients;
+use crate::physics::difference::ForceDifference;
 use crate::physics::force::force;
 use crate::physics::PairGeom;
 use crate::regularisation::form::Form;
@@ -180,6 +181,30 @@ pub trait Stepper {
     /// The state `s` one step `dt` on, and the force evaluation at its positions; `geom` is the force evaluation at
     /// `s`'s positions, `Geom::new(&s.m, &s.r)`.
     fn step<R: StepReal>(s: &State<R>, dt: R, geom: &Geom<R>) -> (State<R>, Geom<R>);
+
+    /// The joint step of the FTLE shadow's displacement form (R-974, RQ-793 (a); dd_integrator §3.8; integrator_contract
+    /// Part 2): `s` one step `dt` on with the force evaluation at its positions, exactly [`Stepper::step`]'s, bit for
+    /// bit, and the displacement `delta` (the shadow less the sample; its masses are not read) advanced through the same
+    /// stages, each stage's force difference formed by `D` from that stage's pair separations
+    /// ([`crate::physics::difference`]), never from an absolute `s + delta`. `geom` is the force evaluation at `s`'s
+    /// positions, as for [`Stepper::step`]. A stepper that names none has none: this default fails to build where it is
+    /// reached ([`Stepper::NO_JOINT_STEP`]), as [`Stepper::FORM`]'s does.
+    #[inline]
+    fn joint_step<R: StepReal, D: ForceDifference>(
+        s: &State<R>,
+        delta: &State<R>,
+        dt: R,
+        geom: &Geom<R>,
+    ) -> (State<R>, Geom<R>, State<R>) {
+        let _fails: u32 = Self::NO_JOINT_STEP;
+        let (next, g) = Self::step(s, dt, geom);
+        (next, g, *delta)
+    }
+
+    /// The build failure of [`Stepper::joint_step`]'s default: evaluated only where a stepper that names no joint step
+    /// is asked for one.
+    const NO_JOINT_STEP: u32 =
+        panic!("this stepper names no joint step (Stepper::joint_step; R-974)");
 
     /// The stepper's form on a regularised, non-separable system, the stepper slot under a regularisation
     /// (integrator_contract Part 2b, "Every stepper × regularisation pair runs"; "Every pair is defined exactly"): a

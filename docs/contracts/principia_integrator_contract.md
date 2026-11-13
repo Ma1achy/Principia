@@ -136,6 +136,12 @@ stages, the force difference formed from pair separations, never from an absolut
 and RK4, and for the default regularised occupant (Part 2b, R-560). Whether that difference is formed plainly in f32
 (a1) or cancellation-free (a2) is chosen by a measurement whose criterion TASK-M3-72 writes before any run (R-649);
 TASK-M3-72 builds it and defines the shadow's projection, energy and collision test from `x + δ⃗`, under physics review.
+*13 Nov 2026 (TASK-M3-72, applied per R-369):* every stepper's `STEP` gains its joint step, `joint_step(s, δ⃗, dt,
+geom) → (s', geom', δ⃗')`, `s'` and `geom'` the `STEP`'s bit for bit, `δ⃗'` through the same stages with the force
+difference of dd_integrator §3.8, (a1) or (a2) as the step's type parameter: KDK, Yoshida-4, Yoshida-6 and RK4, as
+R-974 names them, and Euler, the debug occupant, so that the slot's every stepper has one. The default regularised
+occupant's, Heggie × RK4's, is TASK-M3-74's (re-scoped 13 Nov 2026, applied per R-369: Heggie × RK4 needs
+TASK-M3-08); the line above, R-974's list, is unchanged.
 
 **The two reversibility flags (R-500).** `step_reversible` says the occupant's `STEP` is time-symmetric at a fixed
 step: one `STEP(dt)`, momentum negation, `STEP(dt)`, negation returns the state to rounding level, with no wrapper
@@ -866,6 +872,15 @@ longer a separation at equal physical time; the finite-difference estimator, ‖
 How the joint step keeps the sample and its shadow at the same physical time under such an occupant is a definition
 (R-72) TASK-M3-72 writes under physics review, its options including: carry `δt` as a component of the displacement
 and resynchronise it at each renormalisation, or step the shadow's `τ` so that it lands on the sample's `t`.
+*13 Nov 2026 (TASK-M3-72's definition, R-72; dd_integrator §3.8):* the seam gains the joint march,
+`ADVANCE_JOINT(state, δ⃗, t_now, t_target, params) → (state', δ⃗')`, with a joint per-substep cadence passed in as
+Cost 1 has it (it projects `x` and `δ⃗` and watches `x + δ⃗`): `state'` is `ADVANCE`'s, bit for bit, under the same
+per-substep work. A stepper's is its `N_sub` joint steps. An occupant that owns its time mapping carries `δt` in the
+displacement, advanced by the same `Δτ`, and resynchronises it to first order at each renormalisation and at each
+write of the stored shadow, a read of the finalised FTLE resynchronising a copy, so that at every renormalisation the
+shadow's elapsed physical time equals the sample's (§3.8 gives it in full); Heggie × RK4's, with how the rescaled
+displacement returns to its own variables, is TASK-M3-74's. An occupant with no joint march has no
+displacement-form shadow: marching one beside it fails to build.
 
 **Cost 2 — the wrapper can no longer verify `N_sub`.** It must trust the occupant's reported
 `total_substeps`. That number is not cosmetic: measured across 68,685 leaves it is **bimodal with a

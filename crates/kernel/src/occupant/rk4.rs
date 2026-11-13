@@ -8,8 +8,20 @@
 //! ```
 //!
 //! `k₁` reads the force evaluation it is given; `k₂`, `k₃` and `k₄` take one each, and the end state the fourth.
+//!
+//! **The joint step** (R-974; [`Stepper::joint_step`]): the sample's stages are the step's, bit for bit
+//! (`stages`), and the displacement `δy = (δr, δp)` takes the same tableau, linear in it, each `δkᵢ = (δp/m, m·Δa)`
+//! read at the stage's displaced state, the force difference `Δa` at the stage's positions
+//! ([`ForceDifference::accel`]):
+//!
+//! ```text
+//! δk₁ = δf(y; δy);  δk₂ = δf(y₂; δy + dt/2·δk₁);  δk₃ = δf(y₃; δy + dt/2·δk₂);  δk₄ = δf(y₄; δy + dt·δk₃)
+//! δy' = δy + (dt/6)(δk₁ + 2δk₂ + 2δk₃ + δk₄)
+//! ```
 
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};
+use crate::physics::difference::ForceDifference;
+use crate::physics::PairGeom;
 use crate::regularisation::form::Form;
 
 /// The classical fourth-order Runge–Kutta method.
@@ -98,20 +110,68 @@ impl Stepper for Rk4 {
 
     #[inline]
     fn step<R: StepReal>(s: &State<R>, dt: R, geom: &Geom<R>) -> (State<R>, Geom<R>) {
+        let (next, g, _) = stages(s, dt, geom);
+        (next, g)
+    }
+
+    #[inline]
+    fn joint_step<R: StepReal, D: ForceDifference>(
+        s: &State<R>,
+        delta: &State<R>,
+        dt: R,
+        geom: &Geom<R>,
+    ) -> (State<R>, Geom<R>, State<R>) {
+        let (next, g, [g2, g3, g4]) = stages(s, dt, geom);
         let m = &s.m;
         let one = R::one();
         let two = one + one;
         let half = dt / two;
-        let (k1r, k1p) = (velocity(m, &s.p), force(m, &geom.accel));
-        let (r2, p2) = (axpy(&s.r, half, &k1r), axpy(&s.p, half, &k1p));
-        let (k2r, k2p) = (velocity(m, &p2), force(m, &Geom::new(m, &r2).accel));
-        let (r3, p3) = (axpy(&s.r, half, &k2r), axpy(&s.p, half, &k2p));
-        let (k3r, k3p) = (velocity(m, &p3), force(m, &Geom::new(m, &r3).accel));
-        let (r4, p4) = (axpy(&s.r, dt, &k3r), axpy(&s.p, dt, &k3p));
-        let (k4r, k4p) = (velocity(m, &p4), force(m, &Geom::new(m, &r4).accel));
+        let k = |pair: &PairGeom<R>, r: &Vecs<R>, p: &Vecs<R>| {
+            (velocity(m, p), force(m, &D::accel(m, pair, r)))
+        };
+        let (k1r, k1p) = k(&geom.pair, &delta.r, &delta.p);
+        let (r2, p2) = (axpy(&delta.r, half, &k1r), axpy(&delta.p, half, &k1p));
+        let (k2r, k2p) = k(&g2, &r2, &p2);
+        let (r3, p3) = (axpy(&delta.r, half, &k2r), axpy(&delta.p, half, &k2p));
+        let (k3r, k3p) = k(&g3, &r3, &p3);
+        let (r4, p4) = (axpy(&delta.r, dt, &k3r), axpy(&delta.p, dt, &k3p));
+        let (k4r, k4p) = k(&g4, &r4, &p4);
         let sixth = dt / (two * (one + two));
-        let r = axpy(&s.r, sixth, &weighted(two, &k1r, &k2r, &k3r, &k4r));
-        let p = axpy(&s.p, sixth, &weighted(two, &k1p, &k2p, &k3p, &k4p));
-        (State { m: *m, r, p }, Geom::new(m, &r))
+        let r = axpy(&delta.r, sixth, &weighted(two, &k1r, &k2r, &k3r, &k4r));
+        let p = axpy(&delta.p, sixth, &weighted(two, &k1p, &k2p, &k3p, &k4p));
+        (next, g, State { m: delta.m, r, p })
     }
+}
+
+/// The step's stages (the module's tableau): the state one step `dt` on with the force evaluation at its positions, and
+/// the pairwise geometry at the second, third and fourth stages' positions, which the joint step's force differences
+/// read. [`Stepper::step`] is its first two, so the joint step's sample is the step's, bit for bit.
+#[inline]
+fn stages<R: StepReal>(
+    s: &State<R>,
+    dt: R,
+    geom: &Geom<R>,
+) -> (State<R>, Geom<R>, [PairGeom<R>; 3]) {
+    let m = &s.m;
+    let one = R::one();
+    let two = one + one;
+    let half = dt / two;
+    let (k1r, k1p) = (velocity(m, &s.p), force(m, &geom.accel));
+    let (r2, p2) = (axpy(&s.r, half, &k1r), axpy(&s.p, half, &k1p));
+    let g2 = Geom::new(m, &r2);
+    let (k2r, k2p) = (velocity(m, &p2), force(m, &g2.accel));
+    let (r3, p3) = (axpy(&s.r, half, &k2r), axpy(&s.p, half, &k2p));
+    let g3 = Geom::new(m, &r3);
+    let (k3r, k3p) = (velocity(m, &p3), force(m, &g3.accel));
+    let (r4, p4) = (axpy(&s.r, dt, &k3r), axpy(&s.p, dt, &k3p));
+    let g4 = Geom::new(m, &r4);
+    let (k4r, k4p) = (velocity(m, &p4), force(m, &g4.accel));
+    let sixth = dt / (two * (one + two));
+    let r = axpy(&s.r, sixth, &weighted(two, &k1r, &k2r, &k3r, &k4r));
+    let p = axpy(&s.p, sixth, &weighted(two, &k1p, &k2p, &k3p, &k4p));
+    (
+        State { m: *m, r, p },
+        Geom::new(m, &r),
+        [g2.pair, g3.pair, g4.pair],
+    )
 }

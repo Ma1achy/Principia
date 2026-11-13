@@ -1,0 +1,6 @@
+{
+  "expected": "pass",
+  "kind": "differs",
+  "description": "the (a1) displacement form is not the absolute form under another name: their f32 λ_T differ on some orbit",
+  "forms": ["absolute", "plain"]
+}

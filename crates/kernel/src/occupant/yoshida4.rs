@@ -16,8 +16,9 @@
 //! weight `w₀` does not break reversal at a fixed step: the composition is symmetric, so it is step-reversible
 //! (R-500; dd_integrator §5, test 3).
 
-use super::kdk::sequence3;
+use super::kdk::{joint_sequence3, sequence3};
 use super::{CapabilityProfile, Geom, State, StepReal, Stepper};
+use crate::physics::difference::ForceDifference;
 use crate::regularisation::form::Form;
 
 /// Yoshida's fourth-order composition.
@@ -60,5 +61,15 @@ impl Stepper for Yoshida4 {
     #[inline]
     fn step<R: StepReal>(s: &State<R>, dt: R, geom: &Geom<R>) -> (State<R>, Geom<R>) {
         sequence3(s, dt, geom, &drift(), &kick())
+    }
+
+    #[inline]
+    fn joint_step<R: StepReal, D: ForceDifference>(
+        s: &State<R>,
+        delta: &State<R>,
+        dt: R,
+        geom: &Geom<R>,
+    ) -> (State<R>, Geom<R>, State<R>) {
+        joint_sequence3::<R, D>(s, delta, dt, geom, &drift(), &kick())
     }
 }
