@@ -257,8 +257,11 @@ fn check_slope(fit: fn(&[(f64, f64)]) -> f64) {
     );
 }
 
+/// A filter of the rungs `(η, error)` above `factor·floor`.
+type Keep = fn(&[(f64, f64)], f64, f64) -> Vec<(f64, f64)>;
+
 /// The rungs fitted are those whose error exceeds `factor·floor`, strictly, in ladder order.
-fn check_above_floor(keep: fn(&[(f64, f64)], f64, f64) -> Vec<(f64, f64)>) {
+fn check_above_floor(keep: Keep) {
     // A floor of 2⁻⁴⁰ at factor 2 puts the bar at 2⁻³⁹ exactly, the third rung's error.
     let (floor, bar) = (2f64.powi(-40), 2f64.powi(-39));
     let rungs = [(0.02, 1e-9), (0.01, 6e-11), (0.005, bar), (0.002, 8e-13)];
