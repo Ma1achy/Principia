@@ -69,6 +69,13 @@ it (R-974).
   against the known exponent; the same at ‖δ₀‖ = 3e-3; and Burrau's f32 `λ_T` in each form. Whether the chosen form's
   gain over the absolute form is meaningful enough to switch the payload stays REQ-PAY-085's calibration, at M4
   (TASK-M4-13).
+- **The result (13 Nov 2026, `cargo xtask gate shadow-form`, run after the criterion's commit; R-649).** At ‖δ₀‖ = 1e-5
+  the signed gaps on (Lagrange equal masses, (0.5, 0.3, 0.2), (0.98, 0.01, 0.01), figure-eight) are: absolute +0.02256,
+  +0.05513, −0.01379, +0.20376 (TASK-M3-14's +0.023, +0.055, −0.014, +0.204, re-measured); (a1) +0.00017, +0.00003,
+  −0.00011, −0.00017, `W(a1)` = 0.00017; (a2) +0.00011, −0.00010, +0.00000, −0.00000, `W(a2)` = 0.00011. Burrau's f32
+  `λ_T` at ‖δ₀‖ = 1e-5 and 1e-6: absolute NaN, NaN; (a1) 0.52176, 0.52885; (a2) 0.52169, 0.52729, both finite. Rule 1
+  does not apply; `W(a1) − W(a2)` = +0.00006 < 1/T = 0.03333, so rule 2 does not; **(a1) is chosen** (rule 3), and
+  `Displacement` names it. At ‖δ₀‖ = 3e-3 the worst gaps are 0.00169, 0.00010 and 0.00010.
 
 ## Notes
 - New (12 Nov 2026), applied per R-369 (task re-scoping, physics's recommendation in review 5866988394 of PR #493, § (4)): REQ-VAL-038 and its `shadow-form` acceptance arm moved here from TASK-M3-14, whose other deliverables do not depend on the form. The arm is TASK-M3-14's, unchanged, with the measurement and control RQ-793 names added.
