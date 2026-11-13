@@ -1171,8 +1171,9 @@ enum FormControl {
         description: String,
         forms: [String; 2],
     },
-    /// The measurement and the criterion's choice: passes where it is complete, every form at both precisions on every
-    /// orbit at both `‖δ₀‖`s, and on Burrau.
+    /// The measurement and the criterion's choice: passes where it is structurally complete ([`periodic_complete`]): a
+    /// table at both `‖δ₀‖`s, each with a row per orbit, three forms by two precisions in each, and Burrau's two reads
+    /// in each form. No value is judged (R-649); a read that is not finite is a result, recorded.
     PeriodicSet { description: String },
 }
 
@@ -1188,24 +1189,70 @@ pub fn forms_differ(a: Form, b: Form) -> (bool, Vec<(f64, f64)>) {
     (reads.iter().any(|(x, y)| x.to_bits() != y.to_bits()), reads)
 }
 
+/// What the `periodic-set` measurement read: a table of the periodic set per `‖δ₀‖`, and Burrau's f32 `λ_T` per form.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PeriodicReads {
+    /// `(‖δ₀‖, a row per orbit)`, in the order measured.
+    pub tables: Vec<(f64, Vec<FormRow>)>,
+    /// `(form, its f32 λ_T at each Burrau ‖δ₀‖)`, in the order measured.
+    pub burrau: Vec<(Form, Vec<f64>)>,
+}
+
+impl PeriodicReads {
+    /// Measures the periodic set at each [`FORM_DELTA_0`], and Burrau at f32 in each form at each [`BURRAU_DELTA_0`].
+    pub fn run() -> Self {
+        PeriodicReads {
+            tables: FORM_DELTA_0
+                .iter()
+                .map(|&d| (d, shadow_forms(d, PROPOSED_N_RENORM)))
+                .collect(),
+            burrau: Form::ALL
+                .iter()
+                .map(|&f| (f, burrau_finite(f, PROPOSED_N_RENORM).1.to_vec()))
+                .collect(),
+        }
+    }
+}
+
+/// Whether the `periodic-set` measurement is structurally complete: a table at each [`FORM_DELTA_0`], in that order,
+/// each with a row per orbit of [`periodic_set`], in its order; and a Burrau entry per form of [`Form::ALL`], in its
+/// order, each with a read at each [`BURRAU_DELTA_0`]. A row holds three forms by two precisions by its type
+/// ([`FormRow::lambdas`]). It judges no value (R-649): a read that is not finite, as the absolute form's on Burrau is,
+/// is a result recorded, and counts as a read.
+pub fn periodic_complete(reads: &PeriodicReads) -> bool {
+    let orbits = periodic_set().map(|o| o.name);
+    let deltas: Vec<f64> = reads.tables.iter().map(|t| t.0).collect();
+    let forms: Vec<Form> = reads.burrau.iter().map(|b| b.0).collect();
+    deltas == FORM_DELTA_0
+        && reads
+            .tables
+            .iter()
+            .all(|t| t.1.iter().map(|r| r.orbit).eq(orbits))
+        && forms == Form::ALL
+        && reads
+            .burrau
+            .iter()
+            .all(|b| b.1.len() == BURRAU_DELTA_0.len())
+}
+
 /// The `periodic-set` report: the tables at both `‖δ₀‖`s, Burrau, the worst gaps and the choice, then the finite-time
-/// gaps; and whether it is complete.
+/// gaps; and whether the measurement is structurally complete ([`periodic_complete`]), its values judged nowhere.
 pub fn periodic_report(name: &str, description: &str) -> (String, bool) {
+    let reads = PeriodicReads::run();
     let mut markdown = format!(
         "# shadow-form: {name}\n\n{description}; T = {LAGRANGE_HORIZON}, Yoshida-4, n_renorm = {PROPOSED_N_RENORM}. The gap \
          is λ_T(f32) − λ_T(f64), both runs in the column's form.\n"
     );
-    let mut at_criterion = Vec::new();
-    for d in FORM_DELTA_0 {
-        let rows = shadow_forms(d, PROPOSED_N_RENORM);
+    let mut at_criterion: &[FormRow] = &[];
+    for (d, rows) in &reads.tables {
         let table: Vec<String> = rows.iter().map(FormRow::line).collect();
         markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{FORM_HEADER}\n{}\n", table.join("\n"));
         let worst: Vec<String> = Form::ALL
             .iter()
-            .map(|&f| format!("{} {:.5}", f.word(), worst_gap(&rows, f)))
+            .map(|&f| format!("{} {:.5}", f.word(), worst_gap(rows, f)))
             .collect();
         markdown += &format!("\nWorst |gap|: {}\n", worst.join("; "));
-        if d == CRITERION_DELTA_0 {
+        if *d == CRITERION_DELTA_0 {
             at_criterion = rows;
         }
     }
@@ -1213,13 +1260,13 @@ pub fn periodic_report(name: &str, description: &str) -> (String, bool) {
     markdown += &format!(
         "\nBurrau, f32, n_renorm = {PROPOSED_N_RENORM}, λ_T at ‖δ₀‖ = {BURRAU_DELTA_0:?}:\n\n"
     );
-    for f in Form::ALL {
-        let (ok, l) = burrau_finite(f, PROPOSED_N_RENORM);
+    for (f, l) in &reads.burrau {
+        let ok = l.iter().all(|x| x.is_finite());
+        let values: Vec<String> = l.iter().map(|x| format!("{x:.5}")).collect();
         markdown += &format!(
-            "- {}: {:.5}, {:.5} ({})\n",
+            "- {}: {} ({})\n",
             f.word(),
-            l[0],
-            l[1],
+            values.join(", "),
             if ok { "finite" } else { "not finite" }
         );
         match f {
@@ -1228,7 +1275,7 @@ pub fn periodic_report(name: &str, description: &str) -> (String, bool) {
             Form::Absolute => {}
         }
     }
-    let w = [Form::Plain, Form::CancellationFree].map(|f| worst_gap(&at_criterion, f));
+    let w = [Form::Plain, Form::CancellationFree].map(|f| worst_gap(at_criterion, f));
     let chosen = choose(w, burrau_ok, LAGRANGE_HORIZON);
     markdown += &format!(
         "\nThe criterion (TASK-M3-72's, written before any run): W(a1) = {:.5}, W(a2) = {:.5}, W(a1) − W(a2) = {:+.5} \
@@ -1250,8 +1297,7 @@ pub fn periodic_report(name: &str, description: &str) -> (String, bool) {
             .collect();
         markdown += &format!("\n‖δ₀‖ = {d:e}\n\n{GAP_HEADER}\n{}\n", table.join("\n"));
     }
-    // Each table has a row per orbit (`shadow_forms` maps the set); complete where the criterion's `‖δ₀‖` was measured.
-    let complete = at_criterion.len() == periodic_set().len();
+    let complete = periodic_complete(&reads);
     (markdown, complete)
 }
 

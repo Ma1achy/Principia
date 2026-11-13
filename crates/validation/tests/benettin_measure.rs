@@ -17,6 +17,9 @@
 //!   form's on some orbit, and the absolute form against itself does not; the measurement covers the periodic set at
 //!   both `‖δ₀‖`s and makes the choice; a row's reads, gaps (f32 less f64, in one form) and worst gap (a gap that is not
 //!   finite counting as infinite); unknown forms refused.
+//! - `shadow_form_complete`: the `periodic-set` verdict is structural alone: a table at each of its `‖δ₀‖`s in order,
+//!   each with a row per orbit of the set in order, and two Burrau reads in each form, in order; a NaN read counts as a
+//!   read (R-649); each part missing, extra or out of order fails it.
 //! - `shadow_form_criterion` (R-974; TASK-M3-72's pre-registered criterion): Burrau alone decides where it separates
 //!   (a1) from (a2); else (a2) exactly where `W(a1) − W(a2) ≥ 1/T`, the boundary included; else (a1).
 //! - `shadow_form_burrau`: the criterion's Burrau read is the form's f32 `λ_T` on Burrau at each of its `‖δ₀‖`s, bit for
@@ -40,12 +43,12 @@ use validation::measure::benettin::{
     bias, burrau, burrau_finite, calibration_orbit, calibration_orbits, chaotic_orbits,
     chaotic_spread, choose, eight_orbit_candidates, eight_orbit_report, eight_orbits, figure_eight,
     finite_time_gaps, kepler_embedded, lagrange, lagrange_exponent, lambda, lambda_in,
-    leave_one_out_lines, periodic_set, pythagorean, reference, report_complete, routh_beta,
-    run_lines, select, select_without, shadow_forms, spread, spread_lines, sweep_confirms,
-    tolerance, worst_gap, BenettinCalibrationGate, Candidate, Form, FormRow, GapRow, Orbit,
-    Precision, ShadowFormGate, Test10, BURRAU_DELTA_0, CRITERION_DELTA_0, GAP_HORIZONS,
-    LAGRANGE_HORIZON, PROPOSED_DELTA_0, PROPOSED_MIN_REGIONS, PROPOSED_N_RENORM,
-    PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
+    leave_one_out_lines, periodic_complete, periodic_set, pythagorean, reference, report_complete,
+    routh_beta, run_lines, select, select_without, shadow_forms, spread, spread_lines,
+    sweep_confirms, tolerance, worst_gap, BenettinCalibrationGate, Candidate, Form, FormRow,
+    GapRow, Orbit, PeriodicReads, Precision, ShadowFormGate, Test10, BURRAU_DELTA_0,
+    CRITERION_DELTA_0, FORM_DELTA_0, GAP_HORIZONS, LAGRANGE_HORIZON, PROPOSED_DELTA_0,
+    PROPOSED_MIN_REGIONS, PROPOSED_N_RENORM, PROPOSED_TOLERANCE, REFERENCE_DELTA_0,
 };
 use validation::negative_control;
 
@@ -576,6 +579,103 @@ negative_control!(
     {
         check_form_controls("absolute");
     }
+);
+
+// ── shadow_form_complete ────────────────────────────────────────────────────────────────────────────────────────
+
+/// A structurally complete `periodic-set` measurement, its values synthetic, a NaN among them as the absolute form's
+/// on Burrau is.
+fn complete_reads() -> PeriodicReads {
+    let row = |orbit| FormRow {
+        orbit,
+        known: 0.5,
+        lambdas: [[f64::NAN, 0.5], [0.5, 0.5], [0.5, 0.5]],
+    };
+    let rows = || periodic_set().map(|o| row(o.name)).to_vec();
+    PeriodicReads {
+        tables: FORM_DELTA_0.iter().map(|&d| (d, rows())).collect(),
+        burrau: Form::ALL
+            .iter()
+            .map(|&f| (f, vec![f64::NAN; BURRAU_DELTA_0.len()]))
+            .collect(),
+    }
+}
+
+fn check_complete(complete: fn(&PeriodicReads) -> bool) {
+    let full = complete_reads();
+    assert!(
+        complete(&full),
+        "a complete measurement, a NaN among its reads, reads as incomplete"
+    );
+    let mut cases: Vec<(&str, PeriodicReads)> = Vec::new();
+    let mut r = full.clone();
+    r.tables.remove(0);
+    cases.push(("the table at the first ‖δ₀‖ missing", r));
+    let mut r = full.clone();
+    r.tables.pop();
+    cases.push(("the criterion's table missing", r));
+    let mut r = full.clone();
+    r.tables.reverse();
+    cases.push(("the tables out of order", r));
+    let mut r = full.clone();
+    r.tables[1].0 = 1e-6;
+    cases.push(("a table at another ‖δ₀‖", r));
+    let mut r = full.clone();
+    r.tables.push(full.tables[1].clone());
+    cases.push(("a third table", r));
+    let mut r = full.clone();
+    r.tables[0].1.pop();
+    cases.push(("an orbit's row missing at the first ‖δ₀‖", r));
+    let mut r = full.clone();
+    r.tables[1].1.remove(0);
+    cases.push(("an orbit's row missing at the criterion's ‖δ₀‖", r));
+    let mut r = full.clone();
+    let extra = r.tables[1].1[0];
+    r.tables[1].1.push(extra);
+    cases.push(("an extra row", r));
+    let mut r = full.clone();
+    r.tables[0].1[2].orbit = "elsewhere";
+    cases.push(("a row of another orbit", r));
+    let mut r = full.clone();
+    r.burrau.remove(0);
+    cases.push(("the absolute form's Burrau reads missing", r));
+    let mut r = full.clone();
+    r.burrau.pop();
+    cases.push(("(a2)'s Burrau reads missing", r));
+    let mut r = full.clone();
+    r.burrau.swap(1, 2);
+    cases.push(("the Burrau forms out of order", r));
+    let mut r = full.clone();
+    r.burrau[1].1.pop();
+    cases.push(("one Burrau read of (a1)'s two", r));
+    let mut r = full.clone();
+    r.burrau[2].1.push(0.5);
+    cases.push(("three Burrau reads of (a2)'s", r));
+    let mut r = full.clone();
+    r.burrau[0].1.clear();
+    cases.push(("no Burrau read of the absolute form's", r));
+    for (what, reads) in cases {
+        assert!(
+            !complete(&reads),
+            "an incomplete measurement reads as complete: {what}"
+        );
+    }
+}
+
+#[test]
+fn shadow_form_complete() {
+    check_complete(periodic_complete);
+}
+
+negative_control!(
+    shadow_form_complete,
+    "the vacuous check, a table at the criterion's ‖δ₀‖ with a row per orbit and nothing else, must fail",
+    expected = "an incomplete measurement reads as complete",
+    check_complete(|r| {
+        r.tables
+            .iter()
+            .any(|t| t.0 == CRITERION_DELTA_0 && t.1.len() == periodic_set().len())
+    })
 );
 
 // ── shadow_form_criterion ───────────────────────────────────────────────────────────────────────────────────────
