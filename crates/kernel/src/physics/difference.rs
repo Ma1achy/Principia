@@ -15,6 +15,9 @@
 //!
 //! - **(a1) [`Plain`]**: `d + e` formed at the working precision, its `u` formed as the force forms it, less `u(d)`.
 //!   Where `‖e‖ ≪ ‖d‖`, `d + e` is rounded to `ε·‖d‖`, so the difference keeps about `ε·‖d‖/‖e‖` relative.
+//!   Where `‖e‖ ≲ ε·‖d‖/2`, below the rounding step of the separation, `d + e` rounds to `d` and the difference is 0:
+//!   a shadow that small on every pair drifts force-free, and its finite `λ_T` measures no exponent (dd_integrator
+//!   §3.8, (a1)'s precision floor).
 //! - **(a2) [`CancellationFree`]** (the Encke problem): with `n = ‖d‖`, `n' = ‖d + e‖`,
 //!
 //!   ```text

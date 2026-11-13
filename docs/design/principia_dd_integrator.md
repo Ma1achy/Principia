@@ -379,7 +379,15 @@ step**:
   them (R-649): **(a1)**. On the shadow-form set at ‖δ₀‖ = 1e-5 (Yoshida-4, `n_renorm` 300, `T` = 30) the worst
   `|λ_T(f32) − λ_T(f64)|` is 0.00017 for (a1) and 0.00011 for (a2), against the absolute form's 0.204, and both keep
   Burrau's f32 `λ_T` finite at ‖δ₀‖ = 1e-5 and 1e-6 where the absolute form's is not; a gain of (a2) over (a1) below
-  `1/T` chooses (a1) (TASK-M3-72's file gives the criterion and the numbers).
+  `1/T` chooses (a1) (TASK-M3-72's file gives the criterion and the numbers). **(a1)'s precision floor:** forming
+  `dₖ + eₖ` rounds it to the working precision's step at `‖dₖ‖`, so each pair's difference has a relative error of
+  about `ε‖dₖ‖/‖eₖ‖` (`ε` the working precision's relative rounding step), and is exactly 0 where
+  `‖eₖ‖ ≲ ε‖dₖ‖/2`, below the rounding step of the pair separation: there `dₖ + eₖ` rounds to `dₖ` and `Δa` is 0. A
+  shadow whose displacement lies below that step on every pair drifts force-free, `δr` moved by `δp/m` alone, so the
+  finite `λ_T` it reads is that free shear's and measures no exponent. ‖δ₀‖ being a sim-key parameter, its calibration
+  (REQ-INT-076; REQ-PAY-085 for the form) bounds it from below by this floor where (a1) is the form; at ‖δ₀‖ = 1e-5 and
+  above on the measured orbits it is far from reached (a1's gaps above). (a2), formed from `eₖ`, keeps about `ε`
+  relative whatever `‖eₖ‖/‖dₖ‖`.
 - **Per macro-step.** The shadow takes the sample's `N_sub` and as many joint steps as the sample took, from the
   sample's state at the macro-step's start, as the absolute form does (§3.3).
 - **Its projection** (§3.4). After each joint step `x` is projected as the sample's state is, and `δ⃗` by the same
