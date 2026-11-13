@@ -42,6 +42,34 @@ The f32 Benettin shadow's displacement form, as R-974 (RQ-793 (a)) rules it: a j
 - `cargo xtask gate benettin-calibration` — R-976's re-run: the pre-registered eight-orbit calibration, its grid, meter, selection and tolerance rules unchanged, run after this form and R-972's (d) + (a) are built, proposing `min_regions` ≥ 6 with its evidence; the human confirms REQ-INT-076's values at the M3 gate (REQ-INT-076, closed by TASK-M3-14).
 - Review (physics): § 3.8 states how the joint step keeps the sample and its shadow at the same physical time under any occupant that owns its time mapping (REQ-VAL-355's definition; TASK-M3-74 closes REQ-VAL-355).
 
+## The (a1)/(a2) criterion (R-974; written 13 Nov 2026, before any run, R-649)
+Committed before the joint step is built or run; nothing in it changes after the results (R-649). Physics review checks
+it (R-974).
+
+- **The forms.** The absolute form (the payload's, TASK-M3-14's); (a1), the joint step with the force difference
+  `f(rᵢⱼ + δᵢⱼ) − f(rᵢⱼ)` formed plainly at the kernel's precision; (a2), the joint step with the same difference formed
+  cancellation-free.
+- **The runs.** Yoshida-4 (the `shadow-form` gate's occupant), `n_renorm` = 300 (REQ-INT-076's provisional value), the
+  default sim key at each orbit's horizon, no collision radius; each form at f32 and at f64.
+- **The measure.** On each orbit of the shadow-form set (`validation::measure::benettin::periodic_set`: Lagrange at
+  equal masses, at (0.5, 0.3, 0.2) and at (0.98, 0.01, 0.01), and the figure-eight, to `T` = 30), at ‖δ₀‖ = 1e-5, the
+  signed gap `g = λ_T(f32) − λ_T(f64)`, both runs in the same form, so the gap is what f32 costs that form. A gap that is
+  not finite counts as infinite. A form's worst gap `W` is the largest `|g|` over the four orbits.
+- **Burrau.** Whether the form's f32 `λ_T` on Burrau (`validation::measure::benettin::burrau`, to its default horizon)
+  is finite at both ‖δ₀‖ = 1e-5 and ‖δ₀‖ = 1e-6.
+- **The choice.**
+  1. Where exactly one of (a1) and (a2) stays finite on Burrau at both values, that one is chosen.
+  2. Otherwise (a2) is chosen where `W(a1) − W(a2) ≥ 1/T`, `T` = 30: one neper of growth over the horizon, the
+     resolution of an exponent read over `T` (the scale dd test 10's change is read on, `validation::measure::benettin`'s
+     `Test10::change`). A smaller gain is below what a `λ_T` read over `T` resolves.
+  3. Otherwise (a1) is chosen: the plain form, which R-974 names first, with fewer operations per stage. Both worst gaps
+     infinite fall here.
+- **Recorded beside the choice, deciding nothing.** Each form's signed gaps on the four orbits, against the absolute
+  form's +0.023, +0.055, −0.014 and +0.204 (TASK-M3-14's figures, re-measured in the same run); each f32 form's error
+  against the known exponent; the same at ‖δ₀‖ = 3e-3; and Burrau's f32 `λ_T` in each form. Whether the chosen form's
+  gain over the absolute form is meaningful enough to switch the payload stays REQ-PAY-085's calibration, at M4
+  (TASK-M4-13).
+
 ## Notes
 - New (12 Nov 2026), applied per R-369 (task re-scoping, physics's recommendation in review 5866988394 of PR #493, § (4)): REQ-VAL-038 and its `shadow-form` acceptance arm moved here from TASK-M3-14, whose other deliverables do not depend on the form. The arm is TASK-M3-14's, unchanged, with the measurement and control RQ-793 names added.
 - Waits on RQ-793 (what the displacement form is; a one-way door). Whether a gain is "meaningful" stays REQ-PAY-085's calibration, at M4 (TASK-M4-13, which depends on this task).
