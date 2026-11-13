@@ -575,16 +575,10 @@ mod bad_image_kept {
 /// The slower of the two whole downloads of the image on the PC, in seconds: 16 min 27.8 s (run 42954587933; the
 /// other, run 42944409475, took 15 min 51.5 s). Each try of the image gets 1.5 times it, rounded up to the minute.
 const SLOWER_WHOLE_IMAGE: f64 = 987.8;
-/// The longest the PC took from the job's start to the image's download, in minutes, rounded up: 3 min 59 s.
-const REACH_DOWNLOAD: i64 = 4;
-/// The two checks' SHA-256 of the image, in minutes.
-const CHECKS: i64 = 5;
-/// What the job's old limit of 60 minutes left the registration after a 25-minute download, in minutes.
-const REGISTRATION: i64 = 31;
 
-/// The image's tries are each 1.5 times its slower whole download, rounded up to the minute; `wsl-register`'s limit
-/// holds reaching the download, both tries, both checks and the registration; and in each job the downloads' limits
-/// together end before the job's does, so the stop step runs.
+/// The image's tries are each 1.5 times its slower whole download, rounded up to the minute; and in each job the
+/// downloads' limits together end before the job's does, so the stop step runs. The job's own limit is R-988's, 1.5
+/// times its measured time (`ci_self_hosted.rs`, `self_hosted_jobs_have_time_limits`), no longer a budget of its steps.
 fn check_limits(text: &str) {
     let doc = parse(text);
     let minutes = |s: &Yaml| s["timeout-minutes"].as_i64().unwrap_or(0);
@@ -600,10 +594,6 @@ fn check_limits(text: &str) {
         minutes(image),
         per_try,
         "the image's download limit isn't 1.5 times its slower whole download, rounded up to the minute"
-    );
-    assert!(
-        minutes(register) >= REACH_DOWNLOAD + 2 * per_try + CHECKS + REGISTRATION,
-        "wsl-register's limit doesn't hold two tries of the image and the registration"
     );
     for job in ["wsl-register", "wsl-proofs"] {
         let job_minutes = minutes(&doc["jobs"][job]);
@@ -637,16 +627,16 @@ negative_control!(
     ))
 );
 
-mod job_too_short {
+mod register_downloads_outlast {
     use super::*;
     negative_control!(
         wsl_download_limits_fit_the_evidence,
-        "wsl-register a minute short",
-        expected = "wsl-register's limit doesn't hold two tries of the image and the registration",
+        "wsl-register as short as its two downloads",
+        expected = "the downloads' limits outlast wsl-register's: 50 of 50 minutes",
         check_limits(&edited(
             &read(WORKFLOW),
-            "    runs-on: [self-hosted, windows, nvidia]\n    timeout-minutes: 90\n",
-            "    runs-on: [self-hosted, windows, nvidia]\n    timeout-minutes: 89\n"
+            "    runs-on: [self-hosted, windows, nvidia]\n    timeout-minutes: 51\n",
+            "    runs-on: [self-hosted, windows, nvidia]\n    timeout-minutes: 50\n"
         ))
     );
 }

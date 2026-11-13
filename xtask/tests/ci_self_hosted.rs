@@ -8,6 +8,11 @@
 //! meet holds for both; [`check_proof`] pins that file to its one step, so that what it's spared can't be used to run
 //! anything else on the PC.
 //!
+//! `win-retry.yml`, hosted, is the one workflow that reads them (R-988): it re-runs, once, a job on the PC that stopped on
+//! a runner-level fault, and logs every such stop and every hang; `retry.yml` still may not. `win-vulkan` alone cancels
+//! an older run of it in progress (R-986). Every job on the runner, and every step of one that builds or runs tests,
+//! carries 1.5 times its measured time, from `.github/win-times.md` (R-988).
+//!
 //! The repository is public, so a job that isn't plainly a GitHub-hosted image counts as self-hosted, whatever labels it
 //! names: a job naming only `nvidia` would reach the PC, and so would one whose runner is an expression.
 //!
@@ -34,13 +39,18 @@ const JOBS: [&str; 3] = ["win-vulkan", "win-tests", "win-self-check"];
 /// The jobs that run nightly only.
 const NIGHTLY_ONLY: [&str; 2] = ["win-tests", "win-self-check"];
 const NOT_ON_PUSH: &str = "github.event_name != 'push'";
+/// The one job whose newer run cancels an older one in progress, on `main` too: the 85-minute run (R-986). Every other
+/// job on the runner lets a running measurement finish.
+const CANCELS: &str = "win-vulkan";
 /// The weekly proof's workflow and its one job (the owner, 5 Nov 2026).
 const PROOF_WORKFLOW: &str = "runner-proof.yml";
 const PROOF_JOB: &str = "runner-proof";
 const PROOF_TRIGGERS: [&str; 2] = ["schedule", "workflow_dispatch"];
 /// Sunday, 05:00 UTC, an hour after the PC's 04:00 update task (#390).
 const PROOF_CRON: &str = "0 5 * * 0";
-const PROOF_TIMEOUT: i64 = 30;
+/// Its limit: R-988's, 1.5 times its one completed run on the PC (66 s, run 42476517881), rounded up to a whole minute,
+/// as `.github/win-times.md` gives it and [`check_limits`] checks.
+const PROOF_TIMEOUT: i64 = 2;
 /// Every key the file may hold at each level, sorted. A key not listed could change what the step's two lines start: an
 /// `env` of `PATH` anywhere, or a `working-directory`, which on this runner is the folder a job can write.
 const PROOF_TOP_KEYS: [&str; 6] = ["defaults", "env", "jobs", "name", "on", "permissions"];
@@ -100,6 +110,12 @@ const REQUIRED: [&str; 12] = [
 #[cfg(feature = "controls")]
 const TIER_SCRIPT: &str = ".github/scripts/ci_tier.sh";
 const SETUP: &str = "plan/HUMAN_SETUP.md";
+/// The one reader of the runner's workflows (R-988): the hosted `win-retry`, which re-runs, once, a job on the PC that
+/// stopped on a runner-level fault, and logs every such stop and every hang. It is admitted only while every job of it is
+/// a plain hosted image and its one trigger is `workflow_run`, so that it can't become a job of the PC's or a pull
+/// request's; and its script only from it.
+const READER: &str = "win-retry.yml";
+const READER_SCRIPT: &str = ".github/scripts/win_retry.py";
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("..")
@@ -627,7 +643,38 @@ fn required_in(setup: &str) -> Vec<String> {
     names
 }
 
+/// Whether `file` is the one admitted reader, [`READER`], in the shape that admits it.
+fn admitted_reader(file: &str, text: &str) -> bool {
+    if file != READER {
+        return false;
+    }
+    let doc = parse(file, text);
+    let on: Vec<&str> = match &doc["on"] {
+        Yaml::Hash(_) => entries(&doc["on"]).into_iter().map(|(k, _)| k).collect(),
+        other => list(other),
+    };
+    let jobs = entries(&doc["jobs"]);
+    on == ["workflow_run"]
+        && !jobs.is_empty()
+        && jobs
+            .iter()
+            .all(|(_, job)| matches!(&job["runs-on"], Yaml::String(l) if is_hosted(l)))
+}
+
 fn check_not_gathered(files: &[(String, String)], others: &[(String, String)], setup: &str) {
+    let script = Path::new(READER_SCRIPT)
+        .file_name()
+        .expect("the script's name")
+        .to_string_lossy()
+        .into_owned();
+    for (file, text) in files.iter().filter(|(n, _)| n != READER) {
+        assert!(
+            !all_strings(&parse(file, text))
+                .iter()
+                .any(|s| s.contains(&script)),
+            "{file} runs the reader's script {READER_SCRIPT}"
+        );
+    }
     for name in required_in(setup) {
         let name = name.as_str();
         assert!(
@@ -660,7 +707,10 @@ fn check_not_gathered(files: &[(String, String)], others: &[(String, String)], s
                 );
             }
         }
-        for (other, text) in files.iter().filter(|(n, _)| n != file) {
+        for (other, text) in files
+            .iter()
+            .filter(|(n, t)| n != file && !admitted_reader(n, t))
+        {
             let read = parse(other, text);
             for s in all_strings(&read) {
                 assert!(
@@ -669,7 +719,7 @@ fn check_not_gathered(files: &[(String, String)], others: &[(String, String)], s
                 );
             }
         }
-        for (other, text) in others {
+        for (other, text) in others.iter().filter(|(n, _)| n != READER_SCRIPT) {
             assert!(
                 !names_any(text, &names),
                 "{other} reads the self-hosted workflow {file}"
@@ -709,6 +759,88 @@ mod retried {
                 "[ci, mutants, gate]",
                 "[ci, mutants, gate, win-gpu]"
             ),
+            &consumers(),
+            &read(SETUP)
+        )
+    );
+}
+
+/// The reader under a pull request's trigger, where a pull request's run would hold its `actions: write`.
+mod reader_on_pull_request {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_are_never_required_or_gathered,
+        "win-retry.yml under a pull_request trigger as well",
+        expected = "win-retry.yml reads the self-hosted workflow",
+        check_not_gathered(
+            &edited(
+                READER,
+                "on:\n  workflow_run:\n",
+                "on:\n  pull_request:\n  workflow_run:\n"
+            ),
+            &consumers(),
+            &read(SETUP)
+        )
+    );
+}
+
+/// The reader's job moved onto the PC.
+mod reader_on_the_pc {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_are_never_required_or_gathered,
+        "win-retry.yml's job on the self-hosted runner",
+        expected = "win-retry.yml reads the self-hosted workflow",
+        check_not_gathered(
+            &edited(
+                READER,
+                "runs-on: ubuntu-24.04",
+                "runs-on: [self-hosted, windows, nvidia]"
+            ),
+            &consumers(),
+            &read(SETUP)
+        )
+    );
+}
+
+/// Another workflow running the reader's script, which reads whatever run it is pointed at.
+mod reader_script_elsewhere {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_are_never_required_or_gathered,
+        "retry.yml running the reader's script",
+        expected = "retry.yml runs the reader's script .github/scripts/win_retry.py",
+        check_not_gathered(
+            &edited(
+                "retry.yml",
+                "python3 -I .github/scripts/ci_retry.py decide",
+                "python3 -I .github/scripts/win_retry.py decide"
+            ),
+            &consumers(),
+            &read(SETUP)
+        )
+    );
+}
+
+/// A second workflow reading the runner's, beside the one admitted.
+mod second_reader {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_are_never_required_or_gathered,
+        "a copy of win-retry.yml under another name",
+        expected = "win-retry2.yml reads the self-hosted workflow runner-proof.yml",
+        check_not_gathered(
+            &{
+                let mut files = workflows();
+                let copy = files
+                    .iter()
+                    .find(|(n, _)| n == READER)
+                    .expect("the reader")
+                    .1
+                    .replace("python3 -I .github/scripts/win_retry.py decide", "true");
+                files.push(("win-retry2.yml".to_owned(), copy));
+                files
+            },
             &consumers(),
             &read(SETUP)
         )
@@ -1188,11 +1320,19 @@ fn check_shape(files: &[(String, String)]) {
                 Some(id.as_str()),
                 "{file}/{id} has no concurrency group of its own"
             );
-            assert_eq!(
-                job["concurrency"]["cancel-in-progress"].as_bool(),
-                Some(false),
-                "{file}/{id} cancels a running measurement"
-            );
+            if file == WORKFLOW && id == CANCELS {
+                assert_eq!(
+                    job["concurrency"]["cancel-in-progress"].as_bool(),
+                    Some(true),
+                    "{file}/{id} doesn't cancel an older run when a newer one starts (R-986)"
+                );
+            } else {
+                assert_eq!(
+                    job["concurrency"]["cancel-in-progress"].as_bool(),
+                    Some(false),
+                    "{file}/{id} cancels a running measurement"
+                );
+            }
             assert!(
                 job["timeout-minutes"].as_i64().is_some(),
                 "{file}/{id} has no timeout"
@@ -1342,7 +1482,7 @@ mod no_group {
         "no concurrency group",
         expected = "win-gpu.yml/win-vulkan has no concurrency group of its own",
         check_shape(&measured(
-            "    concurrency:\n      group: win-vulkan\n      cancel-in-progress: false\n",
+            "    concurrency:\n      group: win-vulkan\n      cancel-in-progress: true\n",
             ""
         ))
     );
@@ -1387,13 +1527,43 @@ mod workflow_group {
     );
 }
 
+/// R-986: the 85-minute run left to finish when a newer one starts.
 mod cancels {
     use super::*;
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
-        "a new push cancelling a running measurement",
-        expected = "win-gpu.yml/win-vulkan cancels a running measurement",
+        "`win-vulkan` letting an older run finish when a newer one starts",
+        expected =
+            "win-gpu.yml/win-vulkan doesn't cancel an older run when a newer one starts (R-986)",
         check_shape(&measured(
+            "      group: win-vulkan\n      cancel-in-progress: true\n",
+            "      group: win-vulkan\n      cancel-in-progress: false\n"
+        ))
+    );
+}
+
+/// R-986 is about the 85-minute run alone: another job that cancels a running measurement.
+mod another_cancels {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "a nightly job cancelling a running measurement",
+        expected = "win-gpu.yml/win-tests cancels a running measurement",
+        check_shape(&measured(
+            "      group: win-tests\n      cancel-in-progress: false\n",
+            "      group: win-tests\n      cancel-in-progress: true\n"
+        ))
+    );
+}
+
+/// The weekly proof's job cancelling too.
+mod proof_cancels {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_the_shape_the_runner_needs,
+        "the weekly proof cancelling a running proof",
+        expected = "runner-proof.yml/runner-proof cancels a running measurement",
+        check_shape(&proved(
             "      cancel-in-progress: false\n",
             "      cancel-in-progress: true\n"
         ))
@@ -1642,7 +1812,7 @@ mod no_timeout {
         self_hosted_jobs_have_the_shape_the_runner_needs,
         "a job with GitHub's default six hours",
         expected = "win-gpu.yml/win-vulkan has no timeout",
-        check_shape(&measured("    timeout-minutes: 330\n", ""))
+        check_shape(&measured("    timeout-minutes: 156\n", ""))
     );
 }
 
@@ -1708,6 +1878,303 @@ mod gpu_nightly_only {
             "github.actor == 'Ma1achy' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-vulkan')",
             "github.actor == 'Ma1achy' && github.event_name != 'push'"
         ))
+    );
+}
+
+// ---- Time limits: 1.5 times the measured time (R-988) ---------------------------------------------------------------
+
+/// The measured times, with the runs they come from, committed before any limit was set (R-649).
+const TIMES: &str = ".github/win-times.md";
+/// A step that builds or runs tests: one that starts its command through the record (`win_measure.ps1 run`).
+const MEASURED_STEP: &str = ".github\\scripts\\win_measure.ps1 run ";
+/// A job's own row names this in place of a step.
+const JOB_ROW: &str = "(job)";
+/// The runs R-988 reads at most: the last five completed.
+const LAST_RUNS: usize = 5;
+
+/// A row of the table: its workflow, job and step (`(job)` for the job's own), the seconds of each completed run it
+/// lists (none if it lists none), the measured time it gives, and its limit in minutes (`None` for "none").
+struct Row {
+    workflow: String,
+    job: String,
+    step: String,
+    runs: Vec<u64>,
+    measured: Option<u64>,
+    limit: Option<i64>,
+}
+
+/// The table's rows: every line `| … |` of six cells after its header and rule.
+fn times(table: &str) -> Vec<Row> {
+    let mut out = Vec::new();
+    for line in table.lines().filter(|l| l.starts_with("| ")) {
+        let cells: Vec<&str> = line.trim_matches('|').split(" | ").map(str::trim).collect();
+        if cells.len() != 6 || cells[0] == "Workflow" || cells[0].starts_with("---") {
+            continue;
+        }
+        let runs = if cells[3] == "none" {
+            Vec::new()
+        } else {
+            cells[3]
+                .split("; ")
+                .map(|run| {
+                    run.rsplit(", ")
+                        .next()
+                        .and_then(|s| s.strip_suffix(" s"))
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or_else(|| panic!("{TIMES}: a run without its seconds: {run}"))
+                })
+                .collect()
+        };
+        out.push(Row {
+            workflow: cells[0].to_owned(),
+            job: cells[1].to_owned(),
+            step: cells[2].to_owned(),
+            runs,
+            measured: cells[4].parse().ok(),
+            limit: cells[5].parse().ok(),
+        });
+    }
+    assert!(!out.is_empty(), "{TIMES}: no row read");
+    out
+}
+
+/// R-988's limit for a measured time: 1.5 times it, rounded up to a whole minute.
+fn limit_for(seconds: u64) -> i64 {
+    i64::try_from((3 * seconds).div_ceil(120)).expect("a limit in minutes")
+}
+
+/// Every job on the runner, and every step of one that builds or runs tests, carries the limit its row of the table
+/// gives; each row's limit is 1.5 times the slowest of its at most five runs, or, with none on record, the present one;
+/// and the table names nothing the workflows don't have.
+fn check_limits(files: &[(String, String)], table: &str) {
+    let rows = times(table);
+    let mut seen = 0;
+    for row in &rows {
+        let what = format!("{}/{}/{}", row.workflow, row.job, row.step);
+        assert!(
+            row.runs.len() <= LAST_RUNS,
+            "{TIMES}: {what} lists {} runs, more than the last {LAST_RUNS}",
+            row.runs.len()
+        );
+        if let Some(slowest) = row.runs.iter().max() {
+            assert_eq!(
+                row.measured,
+                Some(*slowest),
+                "{TIMES}: {what}'s measured time isn't the slowest of its runs"
+            );
+            assert_eq!(
+                row.limit,
+                Some(limit_for(*slowest)),
+                "{TIMES}: {what}'s limit isn't 1.5 times its measured time, rounded up to a whole minute"
+            );
+        } else {
+            assert_eq!(
+                row.measured, None,
+                "{TIMES}: {what} gives a measured time with no run"
+            );
+        }
+    }
+    let row_of = |file: &str, job: &str, step: &str| {
+        rows.iter()
+            .find(|r| r.workflow == file && r.job == job && r.step == step)
+    };
+    for (file, _, doc, ids) in self_hosted(files) {
+        for id in ids {
+            let job = &doc["jobs"][id.as_str()];
+            let row = row_of(file, &id, JOB_ROW)
+                .unwrap_or_else(|| panic!("{file}/{id} isn't in the table of measured times"));
+            let limit = job["timeout-minutes"].as_i64();
+            assert_eq!(
+                limit, row.limit,
+                "{file}/{id}'s limit is {limit:?} min, not the table's {:?}",
+                row.limit
+            );
+            seen += 1;
+            for step in steps(job) {
+                if !step["run"]
+                    .as_str()
+                    .is_some_and(|r| r.contains(MEASURED_STEP))
+                {
+                    continue;
+                }
+                let name = step["name"].as_str().unwrap_or("");
+                let row = row_of(file, &id, name).unwrap_or_else(|| {
+                    panic!("{file}/{id}/{name} builds or runs tests and isn't in the table of measured times")
+                });
+                let limit = step["timeout-minutes"].as_i64();
+                assert!(
+                    limit.is_some() || row.runs.is_empty(),
+                    "{file}/{id}/{name} builds or runs tests and has no limit"
+                );
+                assert_eq!(
+                    limit, row.limit,
+                    "{file}/{id}/{name}'s limit is {limit:?} min, not the table's {:?}",
+                    row.limit
+                );
+                seen += 1;
+            }
+        }
+    }
+    assert_eq!(
+        seen,
+        rows.len(),
+        "{TIMES} names a job or step the workflows don't have"
+    );
+}
+
+#[test]
+fn self_hosted_jobs_have_time_limits() {
+    check_limits(&workflows(), &read(TIMES));
+}
+
+negative_control!(
+    self_hosted_jobs_have_time_limits,
+    "a job's limit above 1.5 times its measured time",
+    expected = "win-gpu.yml/win-vulkan's limit is Some(157) min, not the table's Some(156)",
+    check_limits(
+        &measured("    timeout-minutes: 156\n", "    timeout-minutes: 157\n"),
+        &read(TIMES)
+    )
+);
+
+mod limit_below {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "a job's limit below 1.5 times its measured time",
+        expected = "win-gpu.yml/win-tests's limit is Some(146) min, not the table's Some(147)",
+        check_limits(
+            &measured("    timeout-minutes: 147\n", "    timeout-minutes: 146\n"),
+            &read(TIMES)
+        )
+    );
+}
+
+mod step_limit_above {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "a step's limit above 1.5 times its measured time",
+        expected = "win-gpu.yml/win-vulkan/cargo xtask gate decode-agreement's limit is Some(27) min, not the table's Some(26)",
+        check_limits(
+            &measured("        timeout-minutes: 26\n", "        timeout-minutes: 27\n"),
+            &read(TIMES)
+        )
+    );
+}
+
+mod step_without_limit {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "a build or test step with no limit",
+        expected = "win-gpu.yml/win-vulkan/cargo nextest run -p validation -p xtask -p engine builds or runs tests and has no limit",
+        check_limits(
+            &measured("        timeout-minutes: 44\n", ""),
+            &read(TIMES)
+        )
+    );
+}
+
+mod job_not_in_table {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "a job missing from the table",
+        expected = "win-gpu.yml/win-tests isn't in the table of measured times",
+        check_limits(
+            &workflows(),
+            &read(TIMES).replacen(
+                "| win-gpu.yml | win-tests | (job) |",
+                "| win-gpu.yml | win-tests-gone | (job) |",
+                1
+            )
+        )
+    );
+}
+
+mod table_not_one_and_a_half {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "a table whose limit isn't 1.5 times its measured time, the workflow following it",
+        expected = "win-gpu.yml/win-vulkan/(job)'s limit isn't 1.5 times its measured time",
+        check_limits(
+            &measured("    timeout-minutes: 156\n", "    timeout-minutes: 160\n"),
+            &read(TIMES).replacen("| 6203 | 156 |", "| 6203 | 160 |", 1)
+        )
+    );
+}
+
+mod table_not_the_slowest {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "a measured time that isn't the slowest of its runs",
+        expected = "win-gpu.yml/win-tests/(job)'s measured time isn't the slowest of its runs",
+        check_limits(
+            &workflows(),
+            &read(TIMES).replacen("| 5863 | 147 |", "| 5600 | 147 |", 1)
+        )
+    );
+}
+
+mod table_six_runs {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "a row reading more than the last five runs",
+        expected = "win-gpu.yml/win-vulkan/(job) lists 6 runs, more than the last 5",
+        check_limits(
+            &workflows(),
+            &read(TIMES).replacen(
+                "| win-gpu.yml | win-vulkan | (job) | ",
+                "| win-gpu.yml | win-vulkan | (job) | run 1, job 1, 1 s; ",
+                1
+            )
+        )
+    );
+}
+
+mod no_run_new_limit {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "a job with no completed run given a new limit",
+        expected = "win-gpu.yml/wsl-proofs's limit is Some(90) min, not the table's Some(180)",
+        check_limits(
+            &measured("    timeout-minutes: 180\n", "    timeout-minutes: 90\n"),
+            &read(TIMES)
+        )
+    );
+}
+
+mod stale_row {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "a row for a step the workflows don't have",
+        expected = "names a job or step the workflows don't have",
+        check_limits(
+            &workflows(),
+            &format!(
+                "{}| win-gpu.yml | win-vulkan | gone | none | — | none |\n",
+                read(TIMES)
+            )
+        )
+    );
+}
+
+mod proof_limit {
+    use super::*;
+    negative_control!(
+        self_hosted_jobs_have_time_limits,
+        "the weekly proof's old half hour",
+        expected = "runner-proof.yml/runner-proof's limit is Some(30) min, not the table's Some(2)",
+        check_limits(
+            &proved("    timeout-minutes: 2\n", "    timeout-minutes: 30\n"),
+            &read(TIMES)
+        )
     );
 }
 
@@ -5194,9 +5661,9 @@ mod proof_timeout {
     use super::*;
     negative_control!(
         runner_proof_is_the_one_weekly_job,
-        "a timeout past the half hour",
+        "a timeout past its measured limit",
         expected = "runner-proof.yml's timeout",
-        check_proof(&proved("timeout-minutes: 30", "timeout-minutes: 31"))
+        check_proof(&proved("timeout-minutes: 2", "timeout-minutes: 3"))
     );
 }
 
@@ -5266,8 +5733,8 @@ mod proof_job_may_fail {
         "a job that passes whatever the proof finds",
         expected = "runner-proof.yml's job holds [\"concurrency\", \"continue-on-error\", \"if\"",
         check_proof(&proved(
-            "    timeout-minutes: 30\n",
-            "    timeout-minutes: 30\n    continue-on-error: true\n"
+            "    timeout-minutes: 2\n",
+            "    timeout-minutes: 2\n    continue-on-error: true\n"
         ))
     );
 }
@@ -5331,8 +5798,8 @@ mod proof_job_path {
         "a `PATH` on the job",
         expected = "runner-proof.yml's job holds [\"concurrency\", \"env\", \"if\"",
         check_proof(&proved(
-            "    timeout-minutes: 30\n",
-            "    timeout-minutes: 30\n    env:\n      PATH: x\n"
+            "    timeout-minutes: 2\n",
+            "    timeout-minutes: 2\n    env:\n      PATH: x\n"
         ))
     );
 }
@@ -5344,8 +5811,8 @@ mod proof_job_defaults {
         "`defaults` on the job, over the workflow's",
         expected = "runner-proof.yml's job holds [\"concurrency\", \"defaults\", \"if\"",
         check_proof(&proved(
-            "    timeout-minutes: 30\n",
-            "    timeout-minutes: 30\n    defaults:\n      run:\n        working-directory: x\n"
+            "    timeout-minutes: 2\n",
+            "    timeout-minutes: 2\n    defaults:\n      run:\n        working-directory: x\n"
         ))
     );
 }
@@ -5357,8 +5824,8 @@ mod proof_job_container {
         "the job in a container",
         expected = "runner-proof.yml's job holds [\"concurrency\", \"container\", \"if\"",
         check_proof(&proved(
-            "    timeout-minutes: 30\n",
-            "    timeout-minutes: 30\n    container: x\n"
+            "    timeout-minutes: 2\n",
+            "    timeout-minutes: 2\n    container: x\n"
         ))
     );
 }
@@ -5647,7 +6114,7 @@ mod proof_no_timeout {
         self_hosted_jobs_have_the_shape_the_runner_needs,
         "the weekly proof with GitHub's default six hours",
         expected = "runner-proof.yml/runner-proof has no timeout",
-        check_shape(&proved("    timeout-minutes: 30\n", ""))
+        check_shape(&proved("    timeout-minutes: 2\n", ""))
     );
 }
 

@@ -3,7 +3,9 @@
 # a nightly self-check, the only daily re-proof of the setup, since `schedule` fires only from `main`; and, dispatched by
 # hand alone, the proof of Windows containment (`win-contain`, below). Every result
 # here is a measurement, never a required check (R-649): the PC is sometimes off, and nothing on `main` waits for it.
-# No job here is gathered, retried or read by any gate, and a red one is not main red; `xtask/tests/ci_self_hosted.rs`
+# No job here is gathered or read by any gate, and a red one is not main red. A job here that stops on a runner-level
+# fault is re-run once, automatically, by the hosted job `win-retry` (`win-retry.yml`, R-988), the one reader of this
+# workflow, which logs every such stop and every hang; nothing else retries a job here. `xtask/tests/ci_self_hosted.rs`
 # fails if that ever stops holding, or if a rule below is broken. DX12 waits for its opt-in (R-711 item 2). No
 # benchmarks or soak run here, and no mutants outside the WSL2 distro's `wsl-cpu` (below), which is off.
 #
@@ -26,13 +28,21 @@
 # copy one that's cited. A step after a failed suite still runs, so one failure doesn't hide the rest; the job ends red.
 #
 # Concurrency: a group per job, each holding only that job's runs. The runner is one machine and takes one job at a time,
-# so the GPU is never shared whatever the groups; they only bound the queue, and being per job, a push can't displace a
-# nightly's `win-tests` or `win-self-check`, which pushes never run. `cancel-in-progress: false`: a running measurement
-# finishes, since cancelling it would throw away hours of a run on a busy day. GitHub keeps at most one run waiting in a
-# group and cancels the older waiting one, so with the PC off at most two of each job wait, the holder and the newest,
-# and no queue can pile up; a job a runner hasn't taken after 24 to 48 hours is cancelled by GitHub. A cancelled run is
-# no failure. On `win-vulkan`, the newest of a waiting nightly and pushes stands for them all: the same suites, on a
-# later commit.
+# so the GPU is never shared whatever the groups; they bound the queue, and being per job, a push can't displace a
+# nightly's `win-tests` or `win-self-check`, which pushes never run. `win-vulkan`, the 85-minute run, cancels in
+# progress (R-986, the owner's ruling of 12 Nov 2026: "merges to main, nightly and dispatch only, with a newer run
+# cancelling an older one; never branch pushes"): a newer run of it, from a merge, the schedule or a dispatch, cancels an
+# older one still running, on `main` too, so the PC always works on the newest commit. Every other job keeps
+# `cancel-in-progress: false`: a running measurement finishes. GitHub keeps at most one run waiting in a group and
+# cancels the older waiting one, so with the PC off at most two of each job wait, the holder and the newest, and no queue
+# can pile up; a job a runner hasn't taken after 24 to 48 hours is cancelled by GitHub. A cancelled run is no failure,
+# and `win-retry` re-runs none.
+#
+# Time limits (R-988): every job here on the runner, and every step that builds or runs tests (each step started
+# through `win_measure.ps1 run`), carries `timeout-minutes` of 1.5 times its measured time, rounded up to a whole
+# minute: the slowest of its last five completed runs on the PC, in `.github/win-times.md` with their run ids, written
+# before the limits were set (R-649). A job or step with no completed run on record keeps its present limit. A step or
+# job at its limit is a hang: it ends there, `win-retry` logs it, and nothing re-runs it.
 #
 # The checkout is kept between runs, since a full clone took 11.2 of 18.3 minutes on this PC's hard drive (the owner, 5 Nov
 # 2026): `fetch-depth: 1` and `clean: true`, explicit. No job here needs history: they run the suites hosted jobs run at
@@ -142,10 +152,10 @@ jobs:
   win-vulkan:
     if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-vulkan')
     runs-on: [self-hosted, windows, nvidia]
-    timeout-minutes: 330
+    timeout-minutes: 156
     concurrency:
       group: win-vulkan
-      cancel-in-progress: false
+      cancel-in-progress: true
     steps:
       - name: Self-check, first step
         run: |
@@ -175,6 +185,7 @@ jobs:
           exit $LASTEXITCODE
       - name: cargo xtask build-kernel
         id: kernel
+        timeout-minutes: 3
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run build-kernel cargo xtask build-kernel
           exit $LASTEXITCODE
@@ -184,6 +195,7 @@ jobs:
         if: ${{ !cancelled() && steps.kernel.outcome == 'success' }}
         env:
           WIN_MEASURE_EXPECT: "adapter: NVIDIA GeForce RTX 2080 SUPER"
+        timeout-minutes: 12
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run adapter cargo nextest run -p validation --features controls --no-capture --no-fail-fast --retries 0 -E 'test(=gpu::tests::gpu_harness_identity_round_trip)'
           exit $LASTEXITCODE
@@ -191,71 +203,85 @@ jobs:
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
         env:
           NEXTEST_PROFILE: gpu-kernel
+        timeout-minutes: 44
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run gpu-kernel cargo nextest run -p validation -p xtask -p engine --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo test -p validation -p xtask -p engine --doc
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 1
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run gpu-kernel-doc cargo test -p validation -p xtask -p engine --doc
           exit $LASTEXITCODE
       - name: cargo nextest run -p validation --features controls gpu_harness
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 1
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run gpu_harness cargo nextest run -p validation --features controls gpu_harness --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo nextest run -p validation --features controls compute_fast_math
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 1
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run compute_fast_math cargo nextest run -p validation --features controls compute_fast_math --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo nextest run -p engine --features controls compute_entry
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 8
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run compute_entry cargo nextest run -p engine --features controls compute_entry --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo nextest run -p engine --features controls decode_
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 22
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run decode cargo nextest run -p engine --features controls decode_ --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo nextest run -p engine --features controls invariant_
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run invariant cargo nextest run -p engine --features controls invariant_ --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo nextest run -p engine --features controls qa_m206_
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 5
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run qa_m206 cargo nextest run -p engine --features controls qa_m206_ --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo nextest run -p engine --features controls canonicaliser_
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 14
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run canonicaliser cargo nextest run -p engine --features controls canonicaliser_ --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo nextest run -p engine --features controls encode_
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 4
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run encode cargo nextest run -p engine --features controls encode_ --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo xtask gate decode-agreement
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 26
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run decode-agreement cargo xtask gate decode-agreement
           exit $LASTEXITCODE
       - name: cargo nextest run -p validation --features controls codegen_selftest
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run codegen_selftest cargo nextest run -p validation --features controls codegen_selftest --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo xtask golden --all
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 2
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden cargo xtask golden --all
           exit $LASTEXITCODE
       - name: cargo nextest run -p xtask --features controls golden_halfway
         if: ${{ !cancelled() && steps.adapter.outcome == 'success' }}
+        timeout-minutes: 15
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden_halfway cargo nextest run -p xtask --features controls golden_halfway --no-capture --no-fail-fast --retries 0
           exit $LASTEXITCODE
@@ -277,7 +303,7 @@ jobs:
   win-tests:
     if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-tests')
     runs-on: [self-hosted, windows, nvidia]
-    timeout-minutes: 240
+    timeout-minutes: 147
     concurrency:
       group: win-tests
       cancel-in-progress: false
@@ -310,6 +336,7 @@ jobs:
           exit $LASTEXITCODE
       - name: cargo build --workspace --all-targets
         id: build
+        timeout-minutes: 82
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run build cargo build --workspace --all-targets --keep-going
           exit $LASTEXITCODE
@@ -317,6 +344,7 @@ jobs:
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           NEXTEST_PROFILE: ci
+        timeout-minutes: 44
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run workspace cargo nextest run --workspace --no-fail-fast --retries 0
           exit $LASTEXITCODE
@@ -324,6 +352,7 @@ jobs:
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           NEXTEST_PROFILE: ci-workspace
+        timeout-minutes: 39
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run qa_TASK-M0-24 cargo nextest run -p validation --test qa_TASK-M0-24 --no-fail-fast --retries 0
           exit $LASTEXITCODE
@@ -331,16 +360,19 @@ jobs:
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         env:
           NEXTEST_PROFILE: ci-workspace
+        timeout-minutes: 21
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run qa_TASK-M0-06_list cargo nextest run -p xtask --test qa_TASK-M0-06_list --no-fail-fast --retries 0
           exit $LASTEXITCODE
       - name: cargo test --workspace --doc
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        timeout-minutes: 1
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run doc cargo test --workspace --doc
           exit $LASTEXITCODE
       - name: cargo xtask deps
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        timeout-minutes: 3
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run deps cargo xtask deps
           exit $LASTEXITCODE
@@ -363,7 +395,7 @@ jobs:
   win-self-check:
     if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-self-check')
     runs-on: [self-hosted, windows, nvidia]
-    timeout-minutes: 60
+    timeout-minutes: 17
     concurrency:
       group: win-self-check
       cancel-in-progress: false
@@ -406,6 +438,7 @@ jobs:
           if ($crlf -or $tok) { exit 1 }
           exit 0
       - name: The guard on this workflow
+        timeout-minutes: 5
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run guard cargo nextest run -p xtask --features controls --test ci_self_hosted --no-fail-fast --retries 0
           exit $LASTEXITCODE
@@ -556,14 +589,16 @@ jobs:
 # The image's download gets 25 minutes a try: 1.5 times the slower of the two whole downloads of it on the PC, 15 min
 # 51.5 s (run 42944409475) and 16 min 27.8 s (run 42954587933), each about 982.8 MB, rounded up to the minute. One try
 # ended short after 31 min 13 s (run 43128608743) and one hung until the job's limit, 57 min 49 s (run 43146846084).
-# The job's 90 minutes: the 4 minutes the PC has taken to reach the download (3 min 59 s at most), the two tries' 50,
-# 5 for the two checks' SHA-256 of the image, and the 31 the old limit of 60 left the registration after a 25-minute
-# download.
+# The job's limit is R-988's, 1.5 times its slowest completed run on the PC (`.github/win-times.md`), not a budget of
+# its steps: the two tries' 50 minutes end inside it, so the step that names a download that never finished runs, but a
+# first try that hangs to its limit leaves the second try less than its own, and the job's limit then ends it, a hang
+# `win-retry` logs. (Was, until R-988: 90 minutes, the 4 to reach the download, the two tries' 50, 5 for the two
+# checks' SHA-256 and 31 for the registration.)
   wsl-register:
     if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name == 'workflow_dispatch' && inputs.only == 'wsl-register'
     needs: [wsl-image]
     runs-on: [self-hosted, windows, nvidia]
-    timeout-minutes: 90
+    timeout-minutes: 51
     concurrency:
       group: wsl-register
       cancel-in-progress: false
@@ -638,6 +673,7 @@ jobs:
         env:
           WSL_IMAGE: ${{ runner.temp }}/wsl-image
           WSL_REPLACE: ${{ inputs.replace }}
+        timeout-minutes: 1
         run: |
           powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run wsl-register powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\wsl.ps1 register
           exit $LASTEXITCODE
