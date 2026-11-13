@@ -14,7 +14,8 @@
 //! - `delta0_direction` (REQ-INT-077): the shadow starts at §3.8's offset, bit for bit: `‖δ₀‖·u` on the positions, one
 //!   rounding each, no momentum moved.
 //! - `shadow_lockstep`: where the sample's `done` cuts a macro-step short, the shadow stops at the same substep, and that
-//!   macro-step, not completed, is not counted towards a renormalisation.
+//!   macro-step, not completed, is not counted towards a renormalisation; in each form, the displacement forms' joint
+//!   march included.
 //! - `shadow_forms_agree` (REQ-VAL-038's forms; R-974): at f64, where rounding is far below the separation, both
 //!   displacement forms, (a1) and (a2), marched by the joint step, read the absolute form's `λ_T`, to rounding: the
 //!   joint step is the same discrete map's separation, formed another way.
@@ -39,7 +40,7 @@ use kernel::driver::advance::{Advance, AdvanceParams, Cadence};
 use kernel::driver::benettin::{
     completed_renorms, delta, ftle, ftle_read, integrate_ftle, integrate_ftle_with, offset,
     pool_member, s_failed, sum_failed, Absolute, Benettin, BenettinParams, CancellationFree,
-    Displacement, Plain,
+    Displacement, Plain, ShadowForm,
 };
 use kernel::driver::cadence::WrapperCadence;
 use kernel::driver::project::ComProjection;
@@ -797,9 +798,9 @@ impl<R: WrapperReal> Cadence<R> for StopAfter<R> {
 }
 
 /// A co-march that hands the shadow the macro-step's full `N_sub`, whatever the sample took.
-struct FullMacro(Benettin<f64, Absolute>);
+struct FullMacro<F>(Benettin<f64, F>);
 
-impl CoMarch<f64> for FullMacro {
+impl<F: ShadowForm> CoMarch<f64> for FullMacro<F> {
     fn after_macro<A: Advance>(
         &mut self,
         start: &State<f64>,
@@ -825,9 +826,9 @@ fn close_pair() -> Ic<f64> {
 }
 
 /// The run of the close pair with the sample stopped after `stop` substeps (`N_sub = 3`, so 4 stops part-way through the
-/// second macro-step and 6 at its end), `n_renorm = 2`: the substeps the sample took, the shadow's, and `S`; `full`
-/// hands the shadow the whole macro-step ([`FullMacro`]).
-fn lockstep(stop: u32, full: bool) -> (u32, u32, f64) {
+/// second macro-step and 6 at its end), `n_renorm = 2`, its shadow in the form `F`: the substeps the sample took, the
+/// shadow's, and `S`; `full` hands the shadow the whole macro-step ([`FullMacro`]).
+fn lockstep<F: ShadowForm>(stop: u32, full: bool) -> (u32, u32, f64) {
     let ic = close_pair();
     let key = sim_key::<f64>(1.0);
     let params = BenettinParams {
@@ -838,7 +839,7 @@ fn lockstep(stop: u32, full: bool) -> (u32, u32, f64) {
         inner: WrapperCadence::new(&ic.m, &ic.r, &ic.p),
         left: stop,
     };
-    let b = Benettin::new(&ic, CollisionRadius::none(), params);
+    let b = Benettin::<f64, F>::new(&ic, CollisionRadius::none(), params);
     let mut shadow = if full {
         FullMacroOr::Full(FullMacro(b))
     } else {
@@ -850,20 +851,20 @@ fn lockstep(stop: u32, full: bool) -> (u32, u32, f64) {
 }
 
 /// The shadow as the kernel marches it, or with [`FullMacro`].
-enum FullMacroOr {
-    Kernel(Benettin<f64, Absolute>),
-    Full(FullMacro),
+enum FullMacroOr<F> {
+    Kernel(Benettin<f64, F>),
+    Full(FullMacro<F>),
 }
 
-impl FullMacroOr {
-    fn inner(&self) -> &Benettin<f64, Absolute> {
+impl<F> FullMacroOr<F> {
+    fn inner(&self) -> &Benettin<f64, F> {
         match self {
             Self::Kernel(b) | Self::Full(FullMacro(b)) => b,
         }
     }
 }
 
-impl CoMarch<f64> for FullMacroOr {
+impl<F: ShadowForm> CoMarch<f64> for FullMacroOr<F> {
     fn after_macro<A: Advance>(
         &mut self,
         start: &State<f64>,
@@ -879,23 +880,31 @@ impl CoMarch<f64> for FullMacroOr {
     }
 }
 
-fn check_lockstep(full: bool) {
-    let (taken, shadow, s) = lockstep(4, full);
-    assert_eq!(taken, 4);
+fn check_lockstep_in<F: ShadowForm>(form: &str, full: bool) {
+    let (taken, shadow, s) = lockstep::<F>(4, full);
+    assert_eq!(taken, 4, "{form}");
     assert_eq!(
         shadow, taken,
-        "the shadow ran past the substeps the sample took"
+        "the shadow ran past the substeps the sample took ({form})"
     );
     assert_eq!(
         s, 0.0,
-        "the macro-step `done` cut short was counted towards a renormalisation"
+        "the macro-step `done` cut short was counted towards a renormalisation ({form})"
     );
-    let (taken, shadow, s) = lockstep(6, full);
-    assert_eq!((taken, shadow), (6, 6));
+    let (taken, shadow, s) = lockstep::<F>(6, full);
+    assert_eq!((taken, shadow), (6, 6), "{form}");
     assert_ne!(
         s, 0.0,
-        "the second completed macro-step did not renormalise"
+        "the second completed macro-step did not renormalise ({form})"
     );
+}
+
+/// Each form in turn: the displacement forms march by the joint step (R-974), stopped by their own count as the
+/// absolute form is.
+fn check_lockstep(full: bool) {
+    check_lockstep_in::<Displacement<Plain>>("(a1)", full);
+    check_lockstep_in::<Displacement<CancellationFree>>("(a2)", full);
+    check_lockstep_in::<Absolute>("absolute", full);
 }
 
 #[test]
