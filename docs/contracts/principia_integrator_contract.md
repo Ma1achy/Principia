@@ -401,6 +401,8 @@ physics-reviewed and confirmed at the M3 gate (R-160). Settled already:
   round-off; and the clock-only control stays in. This follows the report of 13 Nov 2026 under RQ-812's recommendation,
   "TASK-M3-76's experience says that check should state its round-off floor before it runs", with R-1008 as its
   analogue; R-1008's rider is the owner's for TASK-M3-76 only, and this is not the owner's words.
+  *13 Nov 2026 (TASK-M3-77):* the definition is written in § "Heggie: the equations, the time transformations, the maps
+  and the step control (transcribed)" below, its step 8.
 
 *13 Nov 2026 (TASK-M3-08 split, applied per R-369):* Heggie's equations, time transformations and step control are
 transcribed in § "Heggie: the equations, the time transformations, the maps and the step control (transcribed)" below
@@ -758,16 +760,25 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
    is the reference driver's, registered once at `t = 0`. *Was (corrected 13 Nov 2026 by code review 5895563626 C1 of
    PR #522):* "How the occupant seam carries this state across `ADVANCE` calls is RQ-808 (TASK-M3-75)".
 2. **The interval.** `dt_left = Δ_sync` (R-565), and the interval clock `t` is set to `0` at each interval's start
-   (`driver.rs:327-329`); the landing tolerance is `dt_left·LAND_EPS_REL` with the clamp on and `0` with it off
-   (`driver.rs:328`).
+   (`driver.rs:327-329`). There is no landing tolerance (R-1007; step 8). *Was (13 Nov 2026, until TASK-M3-77, the
+   reference's landing; physics review 5895439304 of #522):* "(`driver.rs:327-329`); the landing tolerance is
+   `dt_left·LAND_EPS_REL` with the clamp on and `0` with it off (`driver.rs:328`)."
 3. **The entry size.** `dτ_entry = η·dt_left/(dt/dτ)` at the interval's entry; an entry `dt/dτ` that is not positive or
    not finite ends the march not finite (`driver.rs:331-336`).
 4. **Each step's guards** (`driver.rs:338-352`): the explicit finiteness test of the whole state, "`is_finite`
-   explicitly: `NaN >= x` is false"; the landing exit `t ≥ dt_left − tol`; the step budget (here Part 6's, R-604).
+   explicitly: `NaN >= x` is false"; the landing exit `t ≥ dt_left`, with no tolerance (step 8); the step budget (here
+   Part 6's, R-604: the running total of steps since `t = 0` against `max(N_min, step_budget_rate·t_elapsed)`). *Was
+   (until TASK-M3-77):* "the landing exit `t ≥ dt_left − tol`; the step budget (here Part 6's, R-604)."
 5. **Each step's size** (`driver.rs:354-372`): the floor signal (Part 6, the Heggie bullet); `d = max(dt/dτ, TINY)`;
    `dτ = min(η·dt_left/d, dτ_entry)`, an entry-cap hit counted when `η·dt_left/d > dτ_entry` (Part 6); the predictive
    limit, `dτ = lim` where `lim < dτ`; then the landing clamp, `dτ = min(dτ, max(dt_left − t, 0)/d)`, with the same `d`
-   the sizing used ("recomputing it here would let the clamp and the step disagree").
+   the sizing used ("recomputing it here would let the clamp and the step disagree"). `dt/dτ` here is computed by the
+   same expression as the rate by which the equations of motion advance `t`, bitwise: under Eq. 22,
+   `R₀R₁R₂·(1/S^{3/2})`, the rates' `S^{−3/2}` factor applied to Eq. 20's rate (*13 Nov 2026, TASK-M3-77, applied per
+   R-369 on qa's note on #522: `R₀R₁R₂/S^{3/2}` differed from the rate in the last bit; no result changed but the last
+   bit*). The clamp sizes the step that closes an interval left short by step 8's landing.
+   *Was (until TASK-M3-77):* "the landing clamp, `dτ = min(dτ, max(dt_left − t, 0)/d)`, with the same `d` the sizing
+   used (\"recomputing it here would let the clamp and the step disagree\")."
 6. **The predictive limit** (`driver.rs:230-252`): `lim = f·d_min/(v_max·dt/dτ)`, `d_min = min |qᵢ|` and
    `v_max = max |q̇ᵢ|` over the three pairs, from the relative velocities of Heggie's Eq. (7),
    `q̇ᵢ = pᵢ/μᵢ − pₖ/mⱼ − pⱼ/mₖ` (`driver.rs:217-228`; the momentum with the further cyclic index carries the reciprocal
@@ -777,10 +788,47 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
 7. **The step.** One step of the stepper on the equations of motion in force, from the saved state; under RK4 the
    classical `s + (h/6)(k₁ + 2k₂ + 2k₃ + k₄)` (`rk4.rs:26-54`), and under every stepper its form on a non-separable
    system (the pair rule below).
-8. **The landing secant** (`driver.rs:379-399`), as Aarseth–Zare's step 6 above: when the step just taken reaches the
-   boundary, `want = dt_left − t_before`, and up to 4 times `got = t − t_before`, stopping if `got` is not finite,
-   `got ≤ 0` or `|got − want| ≤ tol`, else `cur = cur·want/got` and the step retaken from the saved state, each retake a
-   counted step.
+8. **The landing** (*13 Nov 2026, TASK-M3-77; R-998's rule as R-1007 applies it, a definition, R-72;
+   physics-reviewed*), one landing rule with Aarseth–Zare's (R-998) and logH's (R-994), on Heggie's clock:
+   - **When it runs.** After a step from the saved state `(Q, P, t_before)` by step 5's `dτ`, the landing runs only
+     where the step ends the clock past the boundary, `t > dt_left`. A step that ends it on the boundary, `t = dt_left`,
+     is kept and lands; one that ends it short is kept and the march goes on.
+   - **The secant** (`driver.rs:379-399`, its stop without the tolerance). `want = dt_left − t_before`, `cur = dτ`; up
+     to `land_max_iters` (4) times: `got = t − t_before`; stop if `got` is not finite, `got ≤ 0`, or `t = dt_left`;
+     otherwise `cur = cur·want/got` and the step is retaken from the saved state at `cur`, each retake a counted step.
+   - **The bisection.** Where the secant's last retake still ends the clock past the boundary, its clock finite, a
+     bracket is set: `lo = 0`, the saved state, and `hi` that retake's step size. The step is retaken from the saved
+     state at `mid = lo + (hi − lo)/2`, up to 64 times, each a counted step: a retake that ends the clock at or short of
+     the boundary, its clock finite, becomes `lo`, with its state; one that ends it past, or whose clock is not finite
+     (NaN, or −∞ through a negative stage weight), becomes `hi`. It stops where a retake ends the clock on the
+     boundary, or where `mid` is `lo` or `hi` (the bracket is one step size wide). The state kept is `lo`'s, so the step
+     kept never ends the clock past the boundary.
+   - **The closing step.** A step kept short of the boundary, by `δ = dt_left − t`, is followed by the march's own
+     next step, clamped by step 5 to `δ/d`: a real step of the state with its clock, which ends the clock on the
+     boundary or, where it ends it past, lands by the same retakes. The intervals that needed one are counted, and so
+     is the most halvings one landing took.
+   - **The landing.** The interval lands when a kept step ends the clock at or past the boundary, `t ≥ dt_left`, with
+     no tolerance; since no kept step ends it past, that is `t = dt_left`, bitwise. The boundary's time is then
+     `k·Δ_sync` (step 10), and the state stored is the one whose own clock is the boundary: the clock is never set to
+     the boundary while the stored state's own clock differs from it.
+   - **Its limits (R-998's dated line, R-1007).** No constant other than the two integer caps, the secant's 4 retakes
+     and the bisection's 64 halvings, reaches a branch: every branch compares the clock with `dt_left`, a step size
+     with the bracket's ends, `got` with 0, or a count with its cap. 64 halvings exceed the significand's width at
+     either precision (53 bits at f64, 24 at f32), so the bisection reaches a bracket one step size wide before its
+     cap, and the cap is the same integer at both precisions (Part 2c rule 1). The step budget (step 4, R-604) bounds a
+     march that keeps no progress.
+   - **The settings that turn it off** (the clamp off; or the bisection's cap 0, which keeps the secant's last retake
+     wherever it ends) keep a step past the boundary and set the boundary's time over a state whose own clock is past
+     it: measurement settings for the clock-only control of REQ-INT-122's landing check, never the occupant's.
+   - **The check** (R-1007): Heggie × RK4's figure-eight closure and its convergence order across η in [0.02, 0.001],
+     its criterion, round-off floor and threshold written in the pull request before any run and approved by physics
+     before it runs, with the clock-only landing as its control.
+
+   *Was (until TASK-M3-77, the reference's landing; physics review 5895439304 of #522 had it replaced, not added
+   beside):* "**The landing secant** (`driver.rs:379-399`), as Aarseth–Zare's step 6 above: when the step just taken
+   reaches the boundary, `want = dt_left − t_before`, and up to 4 times `got = t − t_before`, stopping if `got` is not
+   finite, `got ≤ 0` or `|got − want| ≤ tol`, else `cur = cur·want/got` and the step retaken from the saved state, each
+   retake a counted step."
 9. **The records** (`driver.rs:401-420`): the physical step `t − t_before` folded into `dt_max` (the reference seeds it
    at `0`, `driver.rs:306`, which the kernel does not; Part 2c rule 4); a step that carries `t` past `2·dt_left` with the
    clamp on counted as an overshoot; the closest approach over the three pairs at every step.
@@ -791,10 +839,13 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
 Each kept step's Cartesian image (the return above) goes to the cadence (Part 2a, Cost 1); the reference driver's own
 collision, escape and closure sampling (`driver.rs:422-528`) is the wrapper's detectors here (Part 7), not the
 occupant's. `LAND_EPS_REL` is not part of this transcription: the reference keeps it per precision in branches
-(`driver.rs:328`, `:345`, `:385`, `:390`), which Part 2c rule 1 forbids. Steps 2, 4, 5 and 8 above transcribe the
-reference's landing; Heggie's own lands under R-998's rule (R-1007, RQ-812 (a): Part 2c's rule 1 note and the note under
-"The equations and the step control" above), and how its last step is sized or retaken is the definition TASK-M3-77,
-building this step control, writes here. *Was (13 Nov 2026, until R-1007):* "what replaces it is RQ-812, open; until it
+(`driver.rs:328`, `:345`, `:385`, `:390`), which Part 2c rule 1 forbids. Steps 2, 4, 5 and 8 above are Heggie's own
+landing under R-998's rule (R-1007, RQ-812 (a): Part 2c's rule 1 note and the note under "The equations and the step
+control" above), step 8 the definition of how its last step is sized or retaken (TASK-M3-77), each with the
+reference's tolerance-based clause it replaces kept as *Was*. *Was (13 Nov 2026, until TASK-M3-77):* "Steps 2, 4, 5
+and 8 above transcribe the reference's landing; Heggie's own lands under R-998's rule (R-1007, RQ-812 (a): Part 2c's
+rule 1 note and the note under \"The equations and the step control\" above), and how its last step is sized or
+retaken is the definition TASK-M3-77, building this step control, writes here." *Was (13 Nov 2026, until R-1007):* "what replaces it is RQ-812, open; until it
 is ruled the landing reads a caller-supplied setting, with no value in the kernel and no production configuration, its
 tests and gates at the reference's values (applied per R-369, as #502 did for Aarseth–Zare before RQ-795 was ruled)."
 
