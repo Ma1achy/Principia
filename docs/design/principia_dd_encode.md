@@ -308,9 +308,12 @@ Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)
 9. **Coincident-pair rejection:** `ρ → 0` inputs reject at step 2 with the correct reason, both precisions, same branch.
 10. **Collinear `β` (R-438, R-865):** encode collinear shapes with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2 on
     either side and at each Euler landmark: `±0` give `β = 0` (body 2 on the `+x` side) or `π̂` (on the `−x` side) by
-    §3.2's selects, never near `−π`; `+1e-13` a `β` just above 0 or just below `π̂`, `−1e-13` one just below `2π̂` or
-    just above `π̂`; each decodes back on its own side of the axis (`λ̃_y`'s sign kept; the masses, `ρ̃`, `p_ρ`, `p_λ`
-    within `ε_phys`), and `β` sets no `lookup_clamped`.
+    §3.2's selects, never near `−π`. At f64, `+1e-13` gives a `β` just above 0 or just below `π̂`, `−1e-13` one just
+    below `2π̂` or just above `π̂`, each decoding back on its own side of the axis (`λ̃_y`'s sign kept; the masses, `ρ̃`,
+    `p_ρ`, `p_λ` within `ε_phys`). At f32, where `ulp(π) ≈ 2.4e-7` dwarfs `1e-13`, the `±1e-13` inputs are collinear to
+    the precision: `β` lies within one ulp of `2π̂` of 0 or `π̂` by the distance on the circle, the decoded state within
+    `ε_phys`, the side not asserted (on the `−x` side the upper half selects `π̂` and the lower half's sum can round to
+    `π̂ − ulp`, §3.2). At both, `β` sets no `lookup_clamped`.
     - **The pole landmark** (physics review 5532062124 P2, applied per R-369). With `m₀ = m₁`, the landmark with body 2
       in the middle has body 2 exactly at the inner pair's centre of mass, so `λ̃ = 0` and `α = 0`: body 2 is on
       neither side. There, at `λ̃_y = ±0`, `β = 0` by R-437's select, never `atan2(0, 0)`. At `λ̃_y = +1e-13` with
