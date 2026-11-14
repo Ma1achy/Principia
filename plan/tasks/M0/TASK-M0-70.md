@@ -1,7 +1,7 @@
 # TASK-M0-70 — win-self-check's guard firing plants a HEAD, so the guard logs the planted hook's reason
 
 - **Milestone:** M0
-- **Closes:** REQ-TOOL-241
+- **Closes:** REQ-TOOL-243
 - **Depends on:** none
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa
@@ -36,12 +36,12 @@ re-proved nightly by win-self-check, R-860).
 ## Acceptance tests
 - `cargo test -p xtask --test ci_self_hosted git_guard_firing_plants` — the firing plants what the script reads;
   controls: the firing with no HEAD, a HEAD the script refuses, and a script whose reads the test can't find, each
-  fail (REQ-TOOL-241).
+  fail (REQ-TOOL-243).
 - `cargo test -p xtask --test ci_self_hosted` and `cargo test -p xtask --features controls --test ci_self_hosted` on
-  the Mac pass; `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass (REQ-TOOL-241).
+  the Mac pass; `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass (REQ-TOOL-243).
 - On the PC, win-self-check's `git_guard_script_refuses_what_is_planted` passes on the first run on `main` after
   merge, its control, the script with its lists off, still failing; the run id reported in the PR or a follow-up
-  comment, a measurement (R-711) (REQ-TOOL-241).
+  comment, a measurement (R-711) (REQ-TOOL-243).
 
 ## Notes
 - Entered 14 Nov 2026 (applied per R-369: CI tooling, a test-only fix, two-way).
