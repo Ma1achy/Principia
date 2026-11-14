@@ -848,8 +848,10 @@ check has to be reworded to measure the same accuracy on the new decoder, and re
       `2π − 1e-17` rounds to it. The old line was bitwise only because the clamp absorbed that residue. The two forms:
       **(a1)** `z_β` within a tolerance of 0 or `π̂` on the circle (`d`, `principia_dd_decoder.md` § 3.2), or on
       `|λ̃_y|`, the tolerance calibrated under REQ-VAL-121 by measurement with its criterion written first; **(a2)**
-      "bit for bit" kept, restricted to inputs whose `λ̃_y` is exactly `±0` (the untransformed family members), the
-      gauged members judged by (a1)'s tolerance. *Was (this option, its first wording):* "a collinear state's `z_β`
+      "bit for bit" kept, restricted to inputs whose `C(x)` has `λ̃_y` exactly `±0` (not the same set as the
+      untransformed family members: a member with `ρ` on `−x` is turned by the rounded `π`, and its `C(x)` keeps a
+      residue of about 1e-16), every other member judged by (a1)'s tolerance (physics review 5904074113 of PR #533,
+      P10). *Was (this option, its first wording):* "a collinear state's `z_β`
       exactly 0 (body 2 on the `+x` side) or `π̂` (on the `−x` side), bit for bit," and "`|sin π̂|`-small at f64" and
       the control "a collinear `z_β` off by one ulp".
     Measurable before any ruling: run `cargo xtask gate inspector-roundtrip` on TASK-M2-57's branch with the restated
