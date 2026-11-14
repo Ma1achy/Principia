@@ -16,6 +16,8 @@
 //! registered once at `t = 0`, TASK-M3-77's, its seam `ADVANCE` and logH TASK-M3-75's (R-992 to R-994). Under a regularisation the stepper is
 //! applied to the regularised equations of motion in its form on a non-separable system ([`form`]).
 //!
+//! [`heggie_joint`] is the FTLE shadow's joint step on Heggie × RK4, the default occupant (R-974, R-560; TASK-M3-74).
+//!
 //! [`pairs`] is Part 2b's pair table and the selection of a pair; [`dt_max`] is the per-trajectory largest-step
 //! diagnostic with its "no usable step" sentinel (Part 2c).
 
@@ -23,6 +25,7 @@ pub mod az;
 pub mod dt_max;
 pub mod form;
 pub mod heggie;
+pub mod heggie_joint;
 pub mod pairs;
 
 use core::marker::PhantomData;
