@@ -145,16 +145,104 @@ fn kdk<R: StepReal, F: Flow<R>>(flow: &F, q: &F::Q, p: &F::P, h: R) -> (F::Q, F:
 /// The classical fourth-order Runge–Kutta step on the whole state.
 #[inline]
 fn rk4<R: StepReal, F: Flow<R>>(flow: &F, q: &F::Q, p: &F::P, h: R) -> (F::Q, F::P) {
+    rk4_stages(flow, q, p, h).next
+}
+
+/// A state `(q, p)` of a flow.
+type Pair<F, R> = (<F as Flow<R>>::Q, <F as Flow<R>>::P);
+
+/// RK4's stages on a flow of positions `Q` and momenta `P` ([`rk4_stages`]).
+struct Rk4Stages<Q, P> {
+    /// The stage states `y₁ … y₄`.
+    y: [(Q, P); 4],
+    /// Their rates `k₁ … k₄`.
+    k: [(Q, P); 4],
+    /// The state one step on.
+    next: (Q, P),
+}
+
+/// The classical RK4 step's stages on the whole state: the stage states `y₁ = (q, p)`, `y₂ = y + (h/2)·k₁`,
+/// `y₃ = y + (h/2)·k₂` and `y₄ = y + h·k₃`, their rates `kᵢ`, and the state one step on,
+/// `y + (h/6)(k₁ + 2k₂ + 2k₃ + k₄)`. [`rk4`] is its last, so a joint step reading the stages ([`rk4_joint`]) leaves
+/// the sample exactly the step's.
+#[inline(always)]
+fn rk4_stages<R: StepReal, F: Flow<R>>(
+    flow: &F,
+    q: &F::Q,
+    p: &F::P,
+    h: R,
+) -> Rk4Stages<F::Q, F::P> {
     let one = R::one();
     let two = one + one;
     let half = h / two;
     let (k1q, k1p) = flow.rates(q, p);
-    let (k2q, k2p) = flow.rates(&F::q_add(q, half, &k1q), &F::p_add(p, half, &k1p));
-    let (k3q, k3p) = flow.rates(&F::q_add(q, half, &k2q), &F::p_add(p, half, &k2p));
-    let (k4q, k4p) = flow.rates(&F::q_add(q, h, &k3q), &F::p_add(p, h, &k3p));
+    let y2 = (F::q_add(q, half, &k1q), F::p_add(p, half, &k1p));
+    let (k2q, k2p) = flow.rates(&y2.0, &y2.1);
+    let y3 = (F::q_add(q, half, &k2q), F::p_add(p, half, &k2p));
+    let (k3q, k3p) = flow.rates(&y3.0, &y3.1);
+    let y4 = (F::q_add(q, h, &k3q), F::p_add(p, h, &k3p));
+    let (k4q, k4p) = flow.rates(&y4.0, &y4.1);
     let sixth = h / (two * (one + two));
-    (
+    let next = (
         F::q_add(q, sixth, &F::q_weighted(two, [&k1q, &k2q, &k3q, &k4q])),
         F::p_add(p, sixth, &F::p_weighted(two, [&k1p, &k2p, &k3p, &k4p])),
+    );
+    Rk4Stages {
+        y: [(*q, *p), y2, y3, y4],
+        k: [(k1q, k1p), (k2q, k2p), (k3q, k3p), (k4q, k4p)],
+        next,
+    }
+}
+
+/// RK4's joint step on a regularised flow (R-974; dd_integrator §3.8, "Heggie × RK4's joint step"): the sample
+/// `(q, p)` one step `h` on `flow`, [`Form::step`]'s under [`Form::Rk4`] bit for bit (the same `rk4_stages`), and
+/// the displacement `(dq, dp)` through the same stages and the same tableau, each stage's rate replaced by the
+/// difference `G(yᵢ + δyᵢ) − kᵢ`: `G` the rates of `shadow`, the flow the shadow follows, at the stage's state plus
+/// the stage's displacement, each sum formed plainly at the working precision (R-974's (a1), the form TASK-M3-72's
+/// measurement chose), less the sample's own stage rate `kᵢ`. Returns the sample's state, then the displacement's.
+#[inline]
+pub fn rk4_joint<R: StepReal, F: Flow<R>>(
+    flow: &F,
+    shadow: &F,
+    q: &F::Q,
+    p: &F::P,
+    dq: &F::Q,
+    dp: &F::P,
+    h: R,
+) -> (Pair<F, R>, Pair<F, R>) {
+    let Rk4Stages {
+        y: [y1, y2, y3, y4],
+        k: [k1, k2, k3, k4],
+        next,
+    } = rk4_stages(flow, q, p, h);
+    let one = R::one();
+    let two = one + one;
+    let half = h / two;
+    // `G(y + δy) − k`: `y + 1·δy` is `y + δy` and `g + (−1)·k` is `g − k`, each one rounding per component.
+    let diff = |y: &Pair<F, R>, eq: &F::Q, ep: &F::P, k: &Pair<F, R>| {
+        let (gq, gp) = shadow.rates(&F::q_add(&y.0, one, eq), &F::p_add(&y.1, one, ep));
+        (F::q_add(&gq, -one, &k.0), F::p_add(&gp, -one, &k.1))
+    };
+    let d1 = diff(&y1, dq, dp, &k1);
+    let d2 = diff(
+        &y2,
+        &F::q_add(dq, half, &d1.0),
+        &F::p_add(dp, half, &d1.1),
+        &k2,
+    );
+    let d3 = diff(
+        &y3,
+        &F::q_add(dq, half, &d2.0),
+        &F::p_add(dp, half, &d2.1),
+        &k3,
+    );
+    let d4 = diff(&y4, &F::q_add(dq, h, &d3.0), &F::p_add(dp, h, &d3.1), &k4);
+    let sixth = h / (two * (one + two));
+    (
+        next,
+        (
+            F::q_add(dq, sixth, &F::q_weighted(two, [&d1.0, &d2.0, &d3.0, &d4.0])),
+            F::p_add(dp, sixth, &F::p_weighted(two, [&d1.1, &d2.1, &d3.1, &d4.1])),
+        ),
     )
 }

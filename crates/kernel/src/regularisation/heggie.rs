@@ -436,6 +436,14 @@ impl<R: AzReal> HgSystem<R> {
     #[inline]
     pub fn image(&self, q: &HgQ<R>, p: &HgP<R>) -> State<R> {
         let (qv, pv) = self.phys(q, p);
+        self.cartesian(&qv, &pv)
+    }
+
+    /// The Cartesian state of the relative positions and momenta `(qv, pv)`, [`HgSystem::image`]'s second half, linear
+    /// in them: `rᵢ = (mⱼqₖ − mₖqⱼ)/M` and `mᵢvᵢ = pₖ − pⱼ`. The FTLE shadow's displacement reads it on the relative
+    /// displacements ([`super::heggie_joint::cartesian`]).
+    #[inline]
+    pub fn cartesian(&self, qv: &[V<R>; 3], pv: &[V<R>; 3]) -> State<R> {
         let [m0, m1, m2] = self.m;
         let inv = R::one() / self.total;
         let r = |mj: R, qk: V<R>, mk: R, qj: V<R>| scale(inv, sub(scale(mj, qk), scale(mk, qj)));

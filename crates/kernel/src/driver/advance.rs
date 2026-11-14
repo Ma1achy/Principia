@@ -24,8 +24,10 @@
 //! **The joint march** (R-974; [`Advance::advance_joint`]): the FTLE shadow's displacement form marches `(x, δ⃗)`
 //! together through the occupant's joint step ([`Stepper::joint_step`]), `x` bit-identical to the occupant's own
 //! `ADVANCE` and `δ⃗` through the same stages, with a [`JointCadence`] after each internal step. A stepper's is the
-//! blanket impl's; an occupant that owns its time mapping has none until its own is built (Heggie × RK4's is
-//! TASK-M3-74's): marching a displacement-form shadow beside it fails to build.
+//! blanket impl's; an occupant that owns its time mapping has none until its own is built: marching a
+//! displacement-form shadow beside it fails to build. Heggie × RK4's joint step is
+//! [`crate::regularisation::heggie_joint`] (TASK-M3-74); its joint march rides Heggie's seam `ADVANCE`, which is not
+//! yet built (TASK-M3-75).
 //!
 //! **Determinism** (REQ-INT-007, REQ-INT-023): the number and size of the steps are a function of the integer span, the
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.
@@ -254,7 +256,7 @@ pub trait Advance {
     /// The build failure of [`Advance::advance_joint`]'s default, read as its step count: evaluated only where an
     /// occupant with no joint step is asked for one, and it fails there (as [`Stepper::FORM`]'s default does).
     const NO_JOINT_STEP: u32 =
-        panic!("this occupant has no joint step (Advance::advance_joint; R-974): Heggie × RK4's is TASK-M3-74's");
+        panic!("this occupant has no joint march (Advance::advance_joint; R-974): Heggie × RK4's rides its seam ADVANCE");
 }
 
 /// How an `ADVANCE` call ended (integrator_contract Part 2a, Part 7): at its target; short of it, the run able to go
