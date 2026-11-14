@@ -134,7 +134,8 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   `gpu-kernel` job after `cargo xtask build-kernel` — the signed encode's `β` case (the sign and zero tests on `λ̃_x`
   and `λ̃_y`, built per R-547) equal bit for bit between CPU-f32 and the GPU on Metal and lavapipe over collinear states
   in random gauge whose rotated `λ̃_y` is a rounding residue of either sign, subnormal residues included; control: the
-  superseded unfused or flushed forms, emulated on the CPU, decide the case differently on at least one input
+  plain float `λ̃` (`Canonical::lambda_t_y`, the superseded form), evaluated on the CPU under an unfused or flush-to-zero
+  emulation, decides the case differently from the unflushed CPU on at least one input
   (REQ-DEC-002, REQ-COL-006; W11; physics review 5903954379 of PR #533, P4).
 - **The restated requirements' verifies (TASK-M2-107; qa review 5903950227 of PR #533, Q1).** Each runs as its
   requirement now states it, in the file named, the implementer's test files among them this task's to change:
