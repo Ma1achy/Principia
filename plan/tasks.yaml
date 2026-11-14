@@ -533,6 +533,14 @@
   requirements: [REQ-TOOL-240]  # applied per R-369 (14 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-70
+  milestone: M0
+  title: "win-self-check's guard firing plants a HEAD, so the guard logs the planted hook's reason"
+  depends_on: []
+  needs: []
+  requirements: [REQ-TOOL-241]  # applied per R-369 (14 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"
