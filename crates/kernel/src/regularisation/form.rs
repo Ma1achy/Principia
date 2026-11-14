@@ -195,7 +195,7 @@ fn rk4_stages<R: StepReal, F: Flow<R>>(
 }
 
 /// RK4's joint step on a regularised flow (R-974; dd_integrator §3.8, "Heggie × RK4's joint step"): the sample
-/// `(q, p)` one step `h` on `flow`, [`Form::step`]'s under [`Form::Rk4`] bit for bit (the same [`rk4_stages`]), and
+/// `(q, p)` one step `h` on `flow`, [`Form::step`]'s under [`Form::Rk4`] bit for bit (the same `rk4_stages`), and
 /// the displacement `(dq, dp)` through the same stages and the same tableau, each stage's rate replaced by the
 /// difference `G(yᵢ + δyᵢ) − kᵢ`: `G` the rates of `shadow`, the flow the shadow follows, at the stage's state plus
 /// the stage's displacement, each sum formed plainly at the working precision (R-974's (a1), the form TASK-M3-72's
