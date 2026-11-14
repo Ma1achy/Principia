@@ -117,6 +117,11 @@ pub mod export {
     mod generated;
 
     pub use generated::*;
+
+    /// The flag each output reads from the collision floor's record (integrator contract Part 7; R-973).
+    mod floor;
+
+    pub use floor::below_floor;
 }
 
 /// The quad's two records beside the scheduler (dd_generation_root §3.7; TASK-M5-01): `QuadReduction`, the per-quad

@@ -35,9 +35,9 @@
 //! [`QuadFrame`]: crate::synthetic::QuadFrame
 
 use kernel::payload::{
-    fgw_pack, pack_packed_b, pack_times, set_d_min, set_d_min_unset, set_detail, set_dmin_pair,
-    set_last_symbol, set_saturated, set_state, DminCounters, ICDescriptor, SimStateFTLE,
-    SD_DMIN_PAIR_SENTINEL, STATE_RUNNING,
+    fgw_pack, pack_packed_b, pack_times, set_coll_floor, set_d_min, set_d_min_unset, set_detail,
+    set_dmin_pair, set_last_symbol, set_saturated, set_state, DminCounters, ICDescriptor,
+    SimStateFTLE, SD_DMIN_PAIR_SENTINEL, STATE_RUNNING,
 };
 use ledger::gen::rust::offsets;
 use ledger::quad::RENDER_QUAD;
@@ -387,6 +387,8 @@ fn simstate_member(s: &SimStateFTLE, member: &str) -> Option<Vec<u8>> {
         "closure_min" => f32s([s.closure_min]),
         "closure_step" => s.closure_step.to_le_bytes().to_vec(),
         "_reserved" => s._reserved.to_le_bytes().to_vec(),
+        "coll_floor_bits" => le([s.coll_floor_bits]),
+        "_pad" => le(s._pad),
         _ => return None,
     })
 }
@@ -429,6 +431,8 @@ pub fn simstate_from_words(words: &[u32]) -> Result<SimStateFTLE, String> {
             "closure_min" => s.closure_min = f32_at(at),
             "closure_step" => s.closure_step = u16::from_le_bytes([bytes[at], bytes[at + 1]]),
             "_reserved" => s._reserved = u16::from_le_bytes([bytes[at], bytes[at + 1]]),
+            "coll_floor_bits" => s.coll_floor_bits = word_at(at),
+            "_pad" => s._pad = [word_at(at)],
             other => {
                 return Err(format!(
                     "`SimStateFTLE` has no reader for the ledger's `{other}`"
@@ -533,6 +537,12 @@ impl Sample<'_> {
 
     pub fn closure_step(&mut self, v: u16) -> &mut Self {
         self.s.closure_step = v;
+        self
+    }
+
+    /// `coll_floor`, the collision test's floor code, through `set_coll_floor` (payload §2; R-973).
+    pub fn coll_floor(&mut self, v: u32) -> &mut Self {
+        self.s.coll_floor_bits = set_coll_floor(self.s.coll_floor_bits, v);
         self
     }
 

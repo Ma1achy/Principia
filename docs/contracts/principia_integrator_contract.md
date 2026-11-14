@@ -243,7 +243,7 @@ prin-rs.**
 |---|---|---|
 | **step / deriv / Hamiltonians / `physics/`** | **PORTS AS-IS** | measured **0 `Vec`/`Box`/`dyn`/`std`** across both RK4s, both Hamiltonians and `physics/`. Already shader-shaped. Porting is transcription. |
 | **the driver layer** | **REWRITTEN to the rules below** | every blocker found is here, and every one is a *rule violation* rather than a bug |
-| **the dispatch shape** | **DESIGNED FRESH** | 72 KB per quad (512 × 144 B, D6; 76 KB at 152 B from TASK-M3-41 on, with R-603's and R-605's two u32s) fits no backend; see `principia_systems_architecture.md` §5.5 |
+| **the dispatch shape** | **DESIGNED FRESH** | 72 KB per quad (512 × 144 B, D6; 76 KB at 152 B from TASK-M3-41 on, with R-603's and R-605's two u32s; 13 Nov 2026, TASK-M3-71, R-973: 76 KB at the generated 152 B with the collision floor's 8 B, and 80 KB at 160 B from TASK-M3-41 on) fits no backend; see `principia_systems_architecture.md` §5.5 |
 
 **The good news is real and worth stating: no blocker is a physics problem.** No wrong equations, no
 bad numerics. It is all driver-layer plumbing — the cheapest kind of bad news, and what a spike is
@@ -1426,6 +1426,44 @@ Escape and collision are where the categorical outcome comes from — every outc
   - **Benchmarks pin it:** literature comparisons (Burrau especially — it *is* a close-encounter problem) assume a specific regularisation, so the ground-truth validation suite records the `r_coll` used (`principia_validation_ground_truth_note.md`).
   - **The collision test's floor (a definition; 11 Nov 2026, R-954, the owner's answer on RQ-782).** The test reads the substepper's squared separation, formed from each position cast to f32 (`principia_dd_integrator.md` § 3.3 and § 3.6; R-547), so it resolves a separation only to the f32 spacing of the positions at the pair's coordinates: about `6·10⁻⁸` for `|x|` in `[0.5, 1)` and `1.2·10⁻⁷` in `[1, 2)`, in the `I = 1` gauge (Part 5). **Below that spacing, `r_coll` means "collision at f32 coincidence":** a pair collides when its f32 positions coincide, which can be at a true separation larger than `r_coll`, and `d_min` is resolved only to that spacing. **The slider stays valid to 0,** as above. **The floor is recorded with the run,** beside `r_coll`, so an output says whether its `r_coll` lay below what the test resolves; what is recorded, and how it is computed from the run, is a definition TASK-M3-71 writes into this Part under physics review (R-72; REQ-EVT-035). The default `10⁻³` lies four decades above the floor. The test itself is unchanged: TASK-M3-09's threshold of at least `2⁻¹²⁶` for every `r_coll > 0` stands, so f32-coincident bodies always collide.
     *12 Nov 2026 (R-973, the owner's answer on RQ-792, option (a) in its cautious form):* the form of the record is ruled: a per-sample byte holding the floor's exponent, latched as the largest floor over every state at which the test was near firing (`d_quant(s) < r_coll + floor(s)`) and over the `d_min` state, each output's flag read as `r_coll < floor`. TASK-M3-71 writes the bit-level definition here, under physics review (REQ-EVT-035).
+    **The floor's record, defined (13 Nov 2026, TASK-M3-71; R-954, R-973; REQ-EVT-035, R-72).**
+    - *A pair's floor at a state.* At every state the collision test reads (the IC, and each projected state after a
+      `STEP`, until the test fires; `principia_dd_integrator.md` § 3.6), take pair `k`'s four coordinates as the test
+      does, each position cast to f32 (R-547), and `e`, the largest of their exponent fields read from the bits
+      (`⌊log₂|x|⌋` for a normal `x`). The pair's floor is `floor_k(s) = 2^c`, `c = clamp(e − 23, −40, 104)`: the f32
+      spacing at the pair's largest coordinate, raised to `2⁻⁴⁰`, below which the test's per-axis square is 0, so a
+      separation under it reads as coincidence (`kernel::driver::substep::square`), and capped at `2¹⁰⁴`, the spacing
+      at f32's largest finite exponent. So `2⁻²³` (`1.2·10⁻⁷`) for a largest `|x|` in `[1, 2)`, and `2⁻²⁴`
+      (`6·10⁻⁸`) in `[0.5, 1)`.
+    - *Near firing.* Pair `k` is near firing at `s` where the test fires on it, `d²_k < r_coll²` with the kernel's
+      threshold, or where `d²_k < t·t`, `t = r ⊕ floor_k(s)`: `d²_k` the test's own quantised squared separation, `r`
+      the kernel threshold's root, `√(r_coll²)` of the f32 `r_coll²` rounded once to f32 on the host (so `r_coll` is
+      the kernel's threshold, as R-973 reads it), `⊕` one f32 addition, and `t·t` formed as the test's squares are
+      (`IeeeBits::product`'s split form); where `t ≥ 2⁶⁴`, by its exponent field, the pair is near firing without the
+      product, which would overflow and which no finite `d²` reaches. It is `d_quant(s) < r_coll + floor(s)` in
+      squared form, with no `sqrt` in the branch (`principia_dd_integrator.md` § 3.3), each input formed by operations
+      every IEEE backend rounds alike and none subnormal (`r` is 0 or at least `2⁻⁶³`, `floor` at least `2⁻⁴⁰`;
+      R-547). The firing pairs are in it by the first clause, whatever `t`'s rounding. At `r_coll = 0` a pair is near
+      firing where `d²_k < floor_k²`.
+    - *The record.* Per sample, `coll_floor` holds the largest `c` over every pair near firing at every state the test
+      read, and over the `d_min` state: the state and pair the `d_min` latch holds when the sample is written
+      (`dmin_pair`; dd_simstate_payload § 2). It is stored as the code `c + 41`, 1 to 145, in bits 0–7 of the
+      `coll_floor_bits` u32; bits 8–31 are reserved and decode as zero. The code 0 is "not recorded": a failed
+      sample's (`sim_failed`, `decode_failed`; R-79, as `d_min` is unset, R-271), and any sample's before the test
+      first reads it. The placement and its recheck are dd_simstate_payload § 1 and § 2.
+    - *The flag, at read.* An output reads `r_coll < 2^(code − 41)`, the sim key's `r_coll` against the recorded
+      floor, exactly (a power of two, compared in f64): true where `r_coll` lay below what the test resolved at a state
+      where it was near firing or at the `d_min` state, so the outcome or `d_min` there is "collision at f32
+      coincidence" or resolved only to the floor. At `r_coll = 0` it is always true. A code of 0 reads no flag.
+    - *Parity.* The record is formed from comparisons and exponent fields of the f32-cast positions, so on identical
+      positions it is the same on every backend and precision; along a trajectory it follows the positions, Tier N/S
+      (parity contract), as `d_min` does, and CPU-f64 and GPU-f32 may differ.
+    - *A resume.* The detector does not resume yet: every march starts from the IC. A resume that reloads the byte as
+      both the near-firing maximum and the `d_min` state's floor gives at least the unbroken march's value, never
+      less; an exact resume needs the near-firing maximum kept apart from the byte.
+    *The placement, applied per R-369:* the record takes its own 8 B, not a share of TASK-M3-41's: TASK-M3-41's bits are
+    its own to define (REQ-PAY-110, REQ-PAY-111) and are not built, and one u32 of theirs alone would leave an implicit
+    4 B hole before `closure_min` at f64 (R-86).
 
 **Softening, `epsilon` (R-654).** Where `ε ≠ 0` the force law is Plummer's, `V = −Σ mᵢmⱼ/√(r² + ε²)` and `Fᵢ = −∂V/∂rᵢ`, a different force law at any `ε` (generation_root § "Open"), tagged and never pooled with `ε = 0`. `ε` is canonical, a fraction of the initial hyperradius `R` fixed at `t = 0`, never co-moving; like `r_coll` it is a **recorded parameter**, in every output header. The gauge (Part 5, `M = I = 1`) has `R₀ = √(I₀/M) = 1`, so the sim-key value is both the fraction and the length: it is read as given, and never recomputed from the state, whose `I` is 1 only to rounding. `E`, `E₀` and the drift meters of Part 1 read the softened `V`. Runs with `ε ≠ 0` are refused at dispatch until TASK-M9-39 lands. *2 Nov 2026 (R-670, closing RQ-656):* under `ε ≠ 0`, the collision test stays on geometric `r`, `min ‖rᵢ − rⱼ‖ < r_coll`; softening is offered on the unregularised occupants only, and a regularised occupant (Part 2b) refuses `ε ≠ 0` with a typed reason; the Chazy classifier's `E` is the softened `E_0`; `E_rel` and the ionisation gate's three pairwise relative energies take the softened potential, `d` read as `√(d² + ε²)` in the potential term only (identical at `ε = 0`; `tau`'s measured gap and `E_rel`'s to-re-measure note were not taken under softening); the decode's `V₀` is softened (`principia_dd_decoder.md` § 3.6); a view refuses `ε ≠ 0` with any `Some(E*)` (§ 3.7); and the substep law stays on the geometric `d²` and `r_min`. *Was:* "The collision test, the regularised occupants, the Chazy classifier, `E_rel` and the ionisation gate, the decode's `V₀`, `η_E`'s `U` and the substep law under `ε ≠ 0` are RQ-656."
 

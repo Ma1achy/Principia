@@ -330,13 +330,14 @@ fn precision_code(structs: &[Struct], rows: &[Precision]) -> String {
     out
 }
 
-/// The accessor prefix of each packed word (payload §6): `pa_`, `pb_` and `tm_`, and `sd_` for the unsigned fields of
-/// `packed_a`, which are the `sample_descriptor`'s; `fgw_` for the word buffer's `.w` (payload §3), whose accessors
-/// are [`fgw`]'s.
-pub const PREFIXES: [(&str, &str); 4] = [
+/// The accessor prefix of each packed word (payload §6): `pa_`, `pb_`, `tm_` and `cf_` (the collision floor's word,
+/// R-973), and `sd_` for the unsigned fields of `packed_a`, which are the `sample_descriptor`'s; `fgw_` for the word
+/// buffer's `.w` (payload §3), whose accessors are [`fgw`]'s.
+pub const PREFIXES: [(&str, &str); 5] = [
     ("packed_a", "pa"),
     ("packed_b", "pb"),
     ("times", "tm"),
+    ("coll_floor_bits", "cf"),
     ("fgw_w", "fgw"),
 ];
 

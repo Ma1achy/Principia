@@ -19,10 +19,10 @@ fn row(real: &str) -> PayloadLayout {
 }
 
 /// A `SimState` struct's size at a `Real` of `w` bytes, from dd_simstate_payload §1's member list: `reals` members
-/// of the `Real` (6 per vec2 group, one per f32 scalar), then 16 B of packed words and counter and 4 B of u16s, the
-/// whole rounded up to 8.
+/// of the `Real` (6 per vec2 group, one per f32 scalar), then 16 B of packed words and counter, 4 B of u16s and the
+/// collision floor's 8 B (R-973), the whole rounded up to 8.
 fn width(reals: usize, w: usize) -> usize {
-    (reals * w + 16 + 4).next_multiple_of(8)
+    (reals * w + 16 + 4 + 8).next_multiple_of(8)
 }
 
 /// `ICDescriptor`'s size at a `Real` of `w` bytes aligned to `a`, from dd_generation_root §3.6: twelve `Real`s, then
@@ -169,7 +169,7 @@ fn payload_real_generic() {
     // The f32 instantiation is payload §1's layout, and keeps the struct's name.
     assert_eq!(
         (size_of::<SimStateFTLE>(), size_of::<SimStateBase>()),
-        (144, 96)
+        (152, 104)
     );
     // dd_simstate_payload §1's f64 layout: members at their offsets, then 4 B of declared tail padding.
     let f64_offsets = [
@@ -181,7 +181,7 @@ fn payload_real_generic() {
     ];
     assert_eq!(
         f64_offsets,
-        [192, 240, 256, 264, 268],
+        [192, 240, 256, 264, 276],
         "the f64 SimStateFTLE offsets differ from payload §1"
     );
     // The DoubleF64 stub: a pair of f64s, 16 B aligned to 8, laid out by the width function alone.
@@ -199,7 +199,7 @@ fn payload_real_generic() {
         ],
         "the DoubleF64 row's sizes do not derive from its width"
     );
-    assert_eq!([dd.structs[0].1, dd.structs[1].1], [520, 328]);
+    assert_eq!([dd.structs[0].1, dd.structs[1].1], [528, 336]);
 }
 
 /// `ICDescriptor` as a function of the `Real` (R-313; dd_generation_root §3.6), run with `payload_real_generic` by the

@@ -148,6 +148,8 @@ pub fn pattern<R: PatternReal>(i: u32) -> SimStateFTLEOf<R> {
         closure_min: real_slot(i, 30),
         closure_step: closure_step(i) as u16,
         _reserved: 0,
+        coll_floor_bits: 0,
+        _pad: [0],
         _tail: Default::default(),
     }
 }

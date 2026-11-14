@@ -32,6 +32,16 @@
 //! the minimum keeps it. It is seeded from the IC's separations, never from an infinity (Part 2c rule 4), and it is a
 //! latched fact, never derived from the word (symbolic-dynamics contract, "What is already settled"). The payload
 //! holds `dmin_pair`'s sentinel, 3, until the latch is written into it ([`Detector::label`]).
+//!
+//! **The floor's record** (Part 7, "The floor's record, defined"; R-954, R-973; REQ-EVT-035). The test resolves a
+//! separation only to the f32 spacing at the pair's coordinates, so the detector records, per sample, the largest
+//! floor over every pair near firing at every state it tests and over the `d_min` state. A pair's floor at a state is
+//! [`floor_codes`]'s code, `c + 41` for the floor `2^c`, `c = clamp(e − 23, −40, 104)`, `e` the largest exponent field
+//! of the pair's four f32-cast coordinates. A pair is near firing ([`near_firing`]) where the test fires on it or where
+//! `d² < t·t`, `t = r ⊕ floor` with `r` the threshold's root ([`CollisionRadius::root`]): `d_quant < r_coll + floor`
+//! in squared form, no `sqrt` in the branch, every input normal (R-547). [`Detector::floor_code`] is the code the
+//! payload's `coll_floor` stores, the larger of the near-firing maximum and the code of the pair and state the latch
+//! holds.
 
 use crate::driver::substep::{pair_d2_quantised, Quantise};
 use crate::payload::{
@@ -39,6 +49,63 @@ use crate::payload::{
     DETAIL_COLLISION_PAIR_0, DETAIL_COLLISION_PAIR_1, DETAIL_COLLISION_PAIR_2, STATE_COLLISION,
 };
 use crate::real::IeeeBits;
+#[cfg(not(target_arch = "spirv"))]
+use spirv_std::num_traits::Float;
+
+/// The code of the least floor, `2⁻⁴⁰`: the floor `2^c` is stored as `c + 41`, so codes run from 1 (`2⁻⁴⁰`) to 145
+/// (`2¹⁰⁴`), and 0 is "not recorded" (payload §2, `coll_floor_bits`; integrator contract Part 7).
+pub const FLOOR_CODE_BIAS: i32 = 41;
+
+/// The least floor's exponent, `−40`: below `2⁻⁴⁰` the test's per-axis square is 0 (`crate::driver::substep::square`).
+pub const FLOOR_EXP_MIN: i32 = -40;
+
+/// The greatest floor's exponent, `104`: the f32 spacing at the largest finite exponent, 127.
+pub const FLOOR_EXP_MAX: i32 = 104;
+
+/// The floor code of a pair whose largest coordinate exponent field is `e` (the module's note): `clamp(e − 23, −40,
+/// 104) + 41`, from 1 to 145.
+#[inline]
+pub fn floor_code_of_exponent(e: i32) -> u32 {
+    ((e - 23).clamp(FLOOR_EXP_MIN, FLOOR_EXP_MAX) + FLOOR_CODE_BIAS) as u32
+}
+
+/// The floor `2^(code − 41)` of a code from 1 to 145, formed from its bits.
+#[inline]
+pub fn floor_of_code(code: u32) -> f32 {
+    f32::pow2(code as i32 - FLOOR_CODE_BIAS)
+}
+
+/// Each R-22 pair's floor code at the positions `r` (the module's note): each position cast to f32 as the test's `d²`
+/// casts it, the largest exponent field of the pair's four coordinates, read from the bits, through
+/// [`floor_code_of_exponent`]. Pair `k` is the side opposite body `k`.
+#[inline]
+pub fn floor_codes<R: Quantise>(r: &[[R; 2]; 3]) -> [u32; 3] {
+    let e = |b: usize| {
+        let (x, y) = (r[b][0].quantise().exponent(), r[b][1].quantise().exponent());
+        if x > y {
+            x
+        } else {
+            y
+        }
+    };
+    let (e0, e1, e2) = (e(0), e(1), e(2));
+    let max = |a: i32, b: i32| if a > b { a } else { b };
+    [
+        floor_code_of_exponent(max(e1, e2)),
+        floor_code_of_exponent(max(e2, e0)),
+        floor_code_of_exponent(max(e0, e1)),
+    ]
+}
+
+/// Whether a pair whose quantised `d²` is `d2` and whose floor code is `code` is near firing under `radius` (the
+/// module's note): the test fires on it, `d2 < r_coll²`, or `d2 < t·t` with `t = r ⊕ 2^(code − 41)`, `r` the
+/// threshold's root, `t·t` by [`IeeeBits::product`]; at `t ≥ 2⁶⁴`, read on its exponent field, near firing without the
+/// product, which would overflow.
+#[inline]
+pub fn near_firing(d2: f32, code: u32, radius: &CollisionRadius) -> bool {
+    let t = radius.root() + floor_of_code(code);
+    d2 < radius.squared() || t.exponent() >= 64 || d2 < t.product(t)
+}
 
 /// The three pairs' position-quantised squared separations, by R-22 pair id: `d2[k]` is pair `k`'s, the side opposite
 /// body `k`, `(1, 2), (2, 0), (0, 1)`. Formed once per state ([`Separations::of`]) and read by every consumer.
@@ -83,23 +150,46 @@ impl Separations {
     }
 }
 
-/// The sim key's collision threshold as the detector reads it: `r_coll²`, an f32 (the module's note).
+/// The sim key's collision threshold as the detector reads it: `r_coll²`, an f32 (the module's note), and its root,
+/// `√(r_coll²)` rounded once to f32, which the near-firing test of the floor's record reads ([`near_firing`]).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CollisionRadius {
     r_coll2: f32,
+    root: f32,
 }
 
 impl CollisionRadius {
     /// `r_coll = 0`, Part 7's "refuse to regularise": `r_coll² = 0`, which no `d²` is below, so no collision fires.
     #[inline]
     pub fn none() -> Self {
-        CollisionRadius { r_coll2: 0.0 }
+        CollisionRadius {
+            r_coll2: 0.0,
+            root: 0.0,
+        }
     }
 
-    /// The threshold whose `r_coll²` is the f32 `r_coll2`, as `SimUniforms` would carry it to the device.
-    #[inline]
+    /// The threshold whose `r_coll²` is the f32 `r_coll2`, as `SimUniforms` would carry it to the device, its root
+    /// formed on the host: `√r_coll2` in f64, correctly rounded, then rounded once to f32, which is the f32 square
+    /// root correctly rounded (53 ≥ 2·24 + 2 bits).
+    #[cfg(not(target_arch = "spirv"))]
     pub fn from_squared(r_coll2: f32) -> Self {
-        CollisionRadius { r_coll2 }
+        CollisionRadius {
+            r_coll2,
+            root: Float::sqrt(f64::from(r_coll2)) as f32,
+        }
+    }
+
+    /// The threshold of `r_coll2` and `root` as the host formed them ([`CollisionRadius::from_squared`]), the form
+    /// the device takes them in.
+    #[inline]
+    pub fn from_parts(r_coll2: f32, root: f32) -> Self {
+        CollisionRadius { r_coll2, root }
+    }
+
+    /// `√(r_coll²)` rounded to f32: 0 at `r_coll = 0`, else at least `2⁻⁶³`, the root of f32's least normal value.
+    #[inline]
+    pub fn root(&self) -> f32 {
+        self.root
     }
 
     /// `r_coll²`, the value each pair's `d²` is compared with.
@@ -114,13 +204,11 @@ impl CollisionRadius {
     /// (`engine::dispatch::validate`), so the threshold is finite and never subnormal.
     #[cfg(not(target_arch = "spirv"))]
     pub fn from_r_coll(r_coll: f64) -> Self {
-        CollisionRadius {
-            r_coll2: if r_coll > 0.0 {
-                ((r_coll * r_coll) as f32).max(f32::MIN_POSITIVE)
-            } else {
-                0.0
-            },
-        }
+        Self::from_squared(if r_coll > 0.0 {
+            ((r_coll * r_coll) as f32).max(f32::MIN_POSITIVE)
+        } else {
+            0.0
+        })
     }
 }
 
@@ -177,11 +265,17 @@ impl DminLatch {
     /// otherwise, a NaN `s` included.
     #[inline]
     pub fn update(&mut self, s: &Separations) {
-        let (d2, pair) = s.closest();
-        if d2 < self.d2 || self.d2.nan_bits() {
+        if self.replaced_by(s) {
+            let (d2, pair) = s.closest();
             self.d2 = d2;
             self.pair = pair;
         }
+    }
+
+    /// Whether [`DminLatch::update`] replaces the latch with `s`'s least: strictly below it, or the latched one NaN.
+    #[inline]
+    pub fn replaced_by(&self, s: &Separations) -> bool {
+        s.min() < self.d2 || self.d2.nan_bits()
     }
 
     /// The least quantised `d²` met so far: `d_min²`, the value the latch writer packs as `d_min = √`
@@ -199,13 +293,44 @@ impl DminLatch {
 }
 
 /// The run's detector state (the module's note): the threshold, the last state's separations, the latch and the
-/// collision verdict, which stays once fired.
+/// collision verdict, which stays once fired, and the floor's record: the largest floor code of a pair near firing,
+/// and the code of the pair and state the latch holds.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Detector {
     radius: CollisionRadius,
     last: Separations,
     latch: DminLatch,
     collision: Verdict,
+    near: u32,
+    latched: u32,
+}
+
+/// The largest floor code of the pairs of `s`, with codes `codes`, near firing under `radius`, and `near` where none
+/// is larger. Constant indices only (gpu_determinism_note rule 5).
+#[inline]
+fn near_max(near: u32, s: &Separations, codes: &[u32; 3], radius: &CollisionRadius) -> u32 {
+    let raise = |out: u32, d2: f32, code: u32| {
+        if code > out && near_firing(d2, code, radius) {
+            code
+        } else {
+            out
+        }
+    };
+    let out = raise(near, s.d2[0], codes[0]);
+    let out = raise(out, s.d2[1], codes[1]);
+    raise(out, s.d2[2], codes[2])
+}
+
+/// The floor code of the pair `pair` (an R-22 id, 0–2) of `codes`, by constant indices (gpu_determinism_note rule 5).
+#[inline]
+fn code_of(codes: &[u32; 3], pair: u32) -> u32 {
+    if pair == DETAIL_COLLISION_PAIR_0 {
+        codes[0]
+    } else if pair == DETAIL_COLLISION_PAIR_1 {
+        codes[1]
+    } else {
+        codes[2]
+    }
 }
 
 impl Detector {
@@ -215,11 +340,15 @@ impl Detector {
     #[inline]
     pub fn new<R: Quantise>(radius: CollisionRadius, r: &[[R; 2]; 3]) -> Self {
         let s = Separations::of(r);
+        let codes = floor_codes(r);
+        let latch = DminLatch::new(&s);
         Detector {
             radius,
             last: s,
-            latch: DminLatch::new(&s),
+            latch,
             collision: classify(&s, &radius),
+            near: near_max(0, &s, &codes, &radius),
+            latched: code_of(&codes, latch.pair()),
         }
     }
 
@@ -228,11 +357,40 @@ impl Detector {
     #[inline]
     pub fn observe<R: Quantise>(&mut self, r: &[[R; 2]; 3]) {
         let s = Separations::of(r);
+        let codes = floor_codes(r);
         self.last = s;
+        if self.latch.replaced_by(&s) {
+            self.latched = code_of(&codes, s.closest().1);
+        }
         self.latch.update(&s);
         if !self.collision.fired {
+            self.near = near_max(self.near, &s, &codes, &self.radius);
             self.collision = classify(&s, &self.radius);
         }
+    }
+
+    /// The floor's record (the module's note): the larger of the largest floor code of a pair near firing at a state
+    /// the test read and the code of the pair and state the latch holds, 1 to 145, the code the payload's
+    /// `coll_floor` stores.
+    #[inline]
+    pub fn floor_code(&self) -> u32 {
+        if self.near > self.latched {
+            self.near
+        } else {
+            self.latched
+        }
+    }
+
+    /// The largest floor code of a pair near firing at a state the test read, 0 where none was.
+    #[inline]
+    pub fn near_code(&self) -> u32 {
+        self.near
+    }
+
+    /// The floor code of the pair and state the `d_min` latch holds.
+    #[inline]
+    pub fn latched_code(&self) -> u32 {
+        self.latched
     }
 
     /// Whether a collision has fired, which sets the run's `done` flag.

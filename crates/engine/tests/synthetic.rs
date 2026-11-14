@@ -53,6 +53,8 @@ fn marked_simstate() -> SimStateFTLE {
         closure_min: 35.0,
         closure_step: 0x1234,
         _reserved: 0x5678,
+        coll_floor_bits: 0xe5e5_e5e5,
+        _pad: [0xf6f6_f6f6],
         ..SimStateFTLE::default()
     }
 }
@@ -77,6 +79,8 @@ fn simstate_marker(member: &str) -> u32 {
         "closure_min" => 35.0f32.to_bits(),
         "closure_step" => 0x1234,
         "_reserved" => 0x5678,
+        "coll_floor_bits" => 0xe5e5_e5e5,
+        "_pad" => 0xf6f6_f6f6,
         other => panic!("no marker for `{other}`"),
     }
 }

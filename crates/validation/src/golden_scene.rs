@@ -303,6 +303,7 @@ const NUDGES: &[(&str, u32)] = &[
     ("accumulators-drift_max_vs_final-lz", 2),
     ("generated-Lz_drift", 3),
     ("generated-closure_min", 1),
+    ("generated-coll_floor", 2),
     ("generated-energy_drift", 6),
     ("generated-r_sh", 1),
     ("generated-rho_angle", 2),
@@ -791,7 +792,8 @@ pub fn appended(symbols: &[u32]) -> ([u32; 4], Option<u32>) {
 /// sample `i`'s place in each order, on `θ̃` and on `S`; `nudge·(i mod 3)` steps on `t_end_step`, `nudge·(i mod 2)`
 /// more on `t_dmin_step`, `7919` times the first on `total_substeps`; the first amount over 8.2 on the drifts' shares.
 /// It moves every sample's masses, the unstepped sample 0's included: `0.0011·nudge·(1 + i mod 3)` of mass from the
-/// second body to the first and third. The states and words are unchanged, and the sample stepped 3 times stays short
+/// second body to the first and third, and every recorded `coll_floor` code `nudge·(1 + i mod 3)` codes up. The states
+/// and words are unchanged, and the sample stepped 3 times stays short
 /// of a completed renormalisation.
 pub fn showcase(set: &mut Synthetic, nudge: u32) {
     // Thirty orders of the eight samples, none affine in the index nor the reverse of another.
@@ -934,6 +936,12 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             .total_substeps(TOTAL_SUBSTEPS[k] + 7919 * t_nudge)
             .closure_min(10f32.powf(at(-4.0, 0.6, 19)))
             .closure_step([0, 7, 33, 120, 15, 2, 640, 300][k])
+            // The collision floor's codes (payload §2; R-973): 0, not recorded, on the two failed samples (4 and 5),
+            // and codes across the range, 1 to 145, on the others, each moved `nudge·(1 + i mod 3)` codes.
+            .coll_floor(match [18, 17, 1, 139, 0, 0, 19, 40][k] {
+                0 => 0,
+                c => c + nudge * (1 + i % 3),
+            })
             .state(STATES[k])
             .detail([0, 1, 2, 3, 0, 1, 2, 3][k])
             .saturated(i % 3 == 1)
@@ -1084,6 +1092,7 @@ impl Scene {
             "total_substeps" => (read.total_substeps as f32, true),
             "closure_min" => (read.closure_min, true),
             "closure_step" => (read.closure_step as f32, true),
+            "coll_floor" => (read.coll_floor as f32, true),
             "t_end_step" => (read.t_end_step as f32, true),
             "t_dmin_step" => (read.t_dmin_step as f32, true),
             "payload" => (kernel::payload::fgw_payload(read.word) as f32, true),

@@ -531,6 +531,11 @@ fn check_stored(set: &Synthetic, n: u32) {
                                 check_half(i, m.name, "bits 16–31", hi, false, failed, t_end_step);
                             }
                             "times" | "total_substeps" => {}
+                            // The collision floor's code, 0 to 145, its reserved bits zero (payload §2; R-973).
+                            "coll_floor_bits" => assert!(
+                                w <= 145,
+                                "sample {i}: `coll_floor_bits` {w:#x} is not a code with its reserved bits zero"
+                            ),
                             other => panic!("`{name}.{other}`: no rule for this u32 member"),
                         }
                         0

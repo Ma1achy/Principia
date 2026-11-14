@@ -8,7 +8,7 @@ use kernel::payload::{FreeGroupWord, ICDescriptor, SimStateBase, SimStateFTLE};
 use validation::negative_control;
 
 /// Payload §1's `SimStateFTLE` offsets; `SimStateBase` is the same less `r_sh` and `p_sh`, 48 B earlier from `S`.
-const FTLE: [(&str, usize); 17] = [
+const FTLE: [(&str, usize); 18] = [
     ("r", 0),
     ("p", 24),
     ("r_sh", 48),
@@ -26,6 +26,7 @@ const FTLE: [(&str, usize); 17] = [
     ("closure_min", 136),
     ("closure_step", 140),
     ("_reserved", 142),
+    ("coll_floor_bits", 144),
 ];
 
 fn ftle_offsets() -> Vec<(&'static str, usize)> {
@@ -49,7 +50,8 @@ fn ftle_offsets() -> Vec<(&'static str, usize)> {
         total_substeps,
         closure_min,
         closure_step,
-        _reserved
+        _reserved,
+        coll_floor_bits
     )
 }
 
@@ -72,7 +74,8 @@ fn base_offsets() -> Vec<(&'static str, usize)> {
         total_substeps,
         closure_min,
         closure_step,
-        _reserved
+        _reserved,
+        coll_floor_bits
     )
 }
 
@@ -110,14 +113,14 @@ fn check_size(name: &str, actual: (usize, usize), expected: (usize, usize)) {
 }
 
 #[test]
-fn payload_layout_sizes_are_144_96_and_8_aligned() {
+fn payload_layout_sizes_are_152_104_and_8_aligned() {
     let ftle = (size_of::<SimStateFTLE>(), align_of::<SimStateFTLE>());
     let base = (size_of::<SimStateBase>(), align_of::<SimStateBase>());
     println!(
         "recomputed widths: SimStateFTLE {ftle:?}, SimStateBase {base:?} (size_of, align_of) B"
     );
-    check_size("SimStateFTLE", ftle, (144, 8));
-    check_size("SimStateBase", base, (96, 8));
+    check_size("SimStateFTLE", ftle, (152, 8));
+    check_size("SimStateBase", base, (104, 8));
     let word = (size_of::<FreeGroupWord>(), align_of::<FreeGroupWord>());
     check_size("FreeGroupWord", word, (16, 16));
     let ic = (size_of::<ICDescriptor>(), align_of::<ICDescriptor>());
@@ -125,7 +128,7 @@ fn payload_layout_sizes_are_144_96_and_8_aligned() {
 }
 
 negative_control!(
-    payload_layout_sizes_are_144_96_and_8_aligned,
+    payload_layout_sizes_are_152_104_and_8_aligned,
     "136 B is the pre-closure width (D6), so the size check must fail on it",
     expected = "SimStateFTLE: (size_of, align_of)",
     check_size("SimStateFTLE", (size_of::<SimStateFTLE>(), 8), (136, 8))
@@ -145,35 +148,35 @@ fn check_memory(ftle: usize, base: usize) {
             "1080p E=3 FTLE-on",
             gb(ftle, 4, hd),
             gb(word, 4, hd),
-            "1.194",
+            "1.261",
             "0.133",
         ),
         (
             "1080p E=3 FTLE-off",
             gb(base, 4, hd),
             gb(word, 4, hd),
-            "0.796",
+            "0.863",
             "0.133",
         ),
         (
             "1080p E=1 FTLE-off",
             gb(base, 2, hd),
             gb(word, 2, hd),
-            "0.398",
+            "0.431",
             "0.066",
         ),
         (
             "4K E=3 FTLE-on",
             gb(ftle, 4, uhd),
             gb(word, 4, uhd),
-            "4.778",
+            "5.043",
             "0.531",
         ),
         (
             "4K E=1 FTLE-off",
             gb(base, 2, uhd),
             gb(word, 2, uhd),
-            "1.593",
+            "1.725",
             "0.265",
         ),
     ];
