@@ -29,10 +29,15 @@ From **navigation (Part 4)**: the lock on nonlinear charts prefers CPU forward r
 | Block | Forward (decoder dd §3) | Inverse (encode) | Closure check |
 |---|---|---|---|
 | **Mass** | `mₖ = e^{μₖ}/(1+e^{μ₁}+e^{μ₂})`, `μ₀ = 0`; `μₖ = μ_max·tanh(z)` | `μₖ = log(mₖ/m₀)`; `z = artanh(μₖ/μ_max)`, clamp `(1−ε_μ)μ_max` | `m₁/m₀ = e^{μ₁}` ⟹ log-ratio recovers `μ₁` exactly ✓ |
-| **Config** | `ρ̃ = cos α (1,0)`, `λ̃ = sin α (cos β, sin β)`; `α = (π/2)σ(z_α)`, `β = πσ(z_β)` | `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(|λ̃_y|, λ̃_x)` (R-438); `z = logit(s)` with the range maps inverted | `atan2(sin α, cos α) = α` on `(0, π/2)` ✓; `β ∈ [0,π]` because `β` reads `|λ̃_y|`, not by the mirror alone (R-438) ✓ |
+| **Config** | `ρ̃ = cos α (1,0)`, `λ̃ = sin α (cos β, sin β)`; `α = (π/2)σ(z_α)`, `β = z_β` (R-898) | `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β` the signed angle of `λ̃` onto `[0, 2π̂]` (§3.2); `z_α = logit(s_α)`, `z_β = β` | `atan2(sin α, cos α) = α` on `(0, π/2)` ✓; `atan2(sin β, cos β) = β` modulo `2π`, so `z_β` comes back on its lift's representative in `[0, 2π̂]` ✓ |
 | **Momentum** | `p₀ = −p_ρ − (m₀/M₀₁)p_λ`, `p₁ = p_ρ − (m₁/M₀₁)p_λ`, `p₂ = p_λ`; `qₖ = q_max(2σ(z)−1)` | `p_λ = p₂`; `p_ρ = p₁ + (m₁/M₀₁)p₂`; `s = ½(q/q_max + 1)`, `z = logit(s)`, clamp | substitute forward into inverse: `p₁ + (m₁/M₀₁)p₂ = p_ρ` identically ✓; `Σpᵢ = 0` consumed, not assumed |
 | **Invariant fibre** *(momentum stage of (L_z,E)/(L_z,K) charts)* | `v = L_z·Jr + a·w`, `a = √(2(K*−L_z²/2))` (I = 1) | chart coords = evaluate `L_z(x)`, `E(x)` directly; latent = **run the same construction**, then free-momentum-invert the constructed `p = m·v` | closure is *by construction* — one code path, so lookup and clicked pixel land on the same z |
 | **Curve (Burrau)** | `γ: ν ↦ (α, β, μ₁, μ₂)`; `θ(ν)` monotone | on-curve: `ν(θ) = sec θ − tan θ` from the canonical leg ratio; masses cross-check `μ₁ = log(b/c)`, `μ₂ = log(a/c)` | `sec θ − tan θ` inverts `θ(ν)` in closed form on `θ ∈ (0, π/2)` ✓ |
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* the Config row is the periodic `β`'s (R-898, R-919 Q1 (c); `principia_dd_decoder.md`
+§ 3.2). *Was:* "\| **Config** \| `ρ̃ = cos α (1,0)`, `λ̃ = sin α (cos β, sin β)`; `α = (π/2)σ(z_α)`, `β = πσ(z_β)` \| `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(\|λ̃_y\|, λ̃_x)` (R-438); `z = logit(s)` with the range maps inverted \| `atan2(sin α, cos α) = α` on `(0, π/2)` ✓; `β ∈ [0,π]` because `β` reads `\|λ̃_y\|`, not by the mirror alone (R-438) ✓ \|". The three paragraphs below on `β` read with § 3.2's signed
+encode: the pole select and the `−x` half-axis's `π̂` stand in it; `|λ̃_y|` and the clamp onto `[0, π̂]` of the upper half
+are the signed encode's for `λ̃_y ≥ 0` only, and `s_β` no longer exists (`z_β = β`, no clamp).
 
 *5 Nov 2026 (R-791, closing RQ-693 (b)):* at `ε ≠ 0` the Invariant fibre row's `E(x)` on $(L_z, E)$ is the Newtonian
 energy, `V` at `ε = 0`, as the decode's axis is (`principia_chart_reference.md` §2.1), so encode and decode agree on a
@@ -125,7 +130,7 @@ lies on the leg-swapped half (`ν < √2 − 1`).
 
 ### 3.2 Canonicalisation `C` — the exact ordered procedure
 
-*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
+*[mirror-step removal (R-865), applied 14 Nov 2026 with R-898's periodic `β` and R-919's one `β` link (TASK-M2-107; built by TASK-M2-57): `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to it, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
 
 Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is load-bearing.
 
@@ -140,8 +145,7 @@ Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is
 1b BOOST      p ← p − mᵢ·P_tot/M                       (boosts gauged)
 2  ROTATE     φ = atan2(ρ_y, ρ_x) ;  apply R(−φ) to every rᵢ AND every pᵢ ;  ρ̃ lands on +x
               ρ = 0 → reject (coincident inner pair)
-3  MIRROR     if λ̃_y < −δ_λ : apply diag(1,−1) to every rᵢ AND every pᵢ ; notice lookup_mirrored   (λ̃ = √μ_λ·λ)
-              |λ̃_y| ≤ δ_λ = 10⁻¹² : deterministic no-mirror (T1 depends on this tie-break; R-82)
+3  (none)     no mirror (R-865): λ̃_y keeps its sign ; the notices word's bit 1, lookup_mirrored, retired, never set
 4  INVERT     per §3.1, into the active chart where possible, else latent z (always possible)
 5  FIBRE      chart's own construction first ; smallest-latent-norm only where none exists
 6  VALIDATE   hypercube → chart feasibility → decode sanity ; project / clamp / reject ; surface flags
@@ -161,10 +165,34 @@ apart. `I_in = 0` then happens only when the bodies coincide, and that case keep
 `p = 0`, `lookup_clamped`, `φ = +0` (R-13, R-436, R-437). *Was:* step 0 ran, and noticed `lookup_rescaled`, on every
 input, its output at `I_in` rounded to 0 or `+∞` not defined.
 
-**After step 3, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`.** The deadband `|λ̃_y| ≤ δ_λ` is left unmirrored (R-82), so a state can
-leave `C` with `λ̃_y ∈ [−δ_λ, 0]`, `−0` included. §3.1's `β` reads `|λ̃_y|` for that reason (R-438).
+**No mirror step (R-865).** `C` leaves `λ̃_y` as the rotation gives it, either sign, `±0` included: a lower-half state
+leaves `C` with `λ̃_y < 0` and encodes to `β ∈ (π, 2π)`. The step's number is kept empty so steps 4 to 6 keep theirs
+(inverse_encode_contract Part 6). The notices word's bit 1, `lookup_mirrored`, is retired, never set, the other bits
+in place. `δ_λ` is read by nothing (`principia_dd_decoder.md` § 3.3).
 
-The order is normative (R-23): **1a** subtract CoM → **0** rescale → **1b** subtract boost → **2** rotate → **3** mirror. These steps commute with nothing; *CoM subtraction precedes the `I` computation* because `I` is CoM-frame-defined. The inverse-encode contract (Part 6) uses the same numbering.
+**The signed encode of `β`** (defined per R-72 by TASK-M2-107 for TASK-M2-57; REQ-DEC-056, REQ-ENC-007). Step 4's `β`
+is the angle of `λ̃` from `ρ̃` on the full circle, one representative in `[0, 2π̂]`, `π̂` the image of π
+(`principia_dd_decoder.md` § 3.2: rounded toward zero at f32, the nearest at f64; R-417) and `2π̂` its double, exact.
+Each case is chosen by a comparison with the constant 0, selecting a value already computed, with no branch (R-437,
+R-438):
+- `λ̃_x = 0` and `λ̃_y = 0` (the `α = 0` pole): 0 (R-437);
+- `λ̃_y` compares equal to 0, true for `+0` and `−0` alike, and `λ̃_x < 0` (the `−x` half-axis): `π̂` (R-438);
+- `λ̃_y < 0`: `atan2(λ̃_y, λ̃_x) + 2π̂`, in `(π̂, 2π̂]` to rounding, the lower half;
+- elsewhere (`λ̃_y ≥ 0`): `atan2(λ̃_y, λ̃_x)`, selected to `π̂` where it compares above `π̂` and to `+0` where it does
+  not compare above 0, so `−0` and the `+x` half-axis give `+0`.
+
+`z_β = β` (`periodic_beta`'s inverse, the identity; no clamp, no `s_β`). On the `+x` half-axis the encode's seam lies
+between `2π̂` (from below) and `0` (`principia_dd_decoder.md` § 3.2, "Its seam"); `2π̂` itself is reached where `atan2(λ̃_y, λ̃_x)` is negative by less than half an ulp of `2π̂`, and decodes to
+the state at `β = 0` to rounding. Within an ulp of the `−x`
+half-axis the lower half's sum can round just below `π̂`, the two orientations meeting there continuously.
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* *Was:* "`3  MIRROR     if λ̃_y < −δ_λ : apply diag(1,−1) to every rᵢ AND every pᵢ ; notice
+lookup_mirrored   (λ̃ = √μ_λ·λ)` / `|λ̃_y| ≤ δ_λ = 10⁻¹² : deterministic no-mirror (T1 depends on this tie-break;
+R-82)`" and "**After step 3, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`.** The deadband `|λ̃_y| ≤ δ_λ` is left unmirrored (R-82), so
+a state can leave `C` with `λ̃_y ∈ [−δ_λ, 0]`, `−0` included. §3.1's `β` reads `|λ̃_y|` for that reason (R-438)." and
+"→ **2** rotate → **3** mirror."
+
+The order is normative (R-23): **1a** subtract CoM → **0** rescale → **1b** subtract boost → **2** rotate. These steps commute with nothing; *CoM subtraction precedes the `I` computation* because `I` is CoM-frame-defined. The inverse-encode contract (Part 6) uses the same numbering.
 
 ### 3.3 The gauge group action, explicit (this is what T1 sweeps)
 
@@ -175,7 +203,11 @@ rᵢ' = s · R(θ) · Π · rᵢ + a
 pᵢ' = s^{−1/2} · R(θ) · Π · pᵢ + mᵢ · u
 ```
 
-**T1 asserts `E(g·x) = E(x)` for every such g off the mirror band** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep), which there turn, move, boost and rescale but do not mirror. On `|λ̃_y| ≤ δ_λ`, collinear states included, T1 holds for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z` (R-547, RQ-360; R-82 unchanged). *Was:* "**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep)." The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent.
+**T1 is an equivariance (R-865; REQ-ENC-003).** For `g` without `Π` (a translation, boost, rotation and scaling),
+`E(g·x) = E(x)`, deadband-straddling rotations included. The mirror acts on `z`: `E(Π·x)` is the mirrored `E(x)`,
+`z_β → 2π − z_β` (on `[0, 2π̂]`: `0 ↦ 0` and `π̂ ↦ π̂` on the collinear half-axes), the momentum controls of the
+components `Π` reflects, `p_ρ,y` and `p_λ,y`, negated (`z_q1`, `z_q3`, each link odd), `L_z` negated, every other
+control unchanged, each to float tolerance. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* *Was:* "**T1 asserts `E(g·x) = E(x)` for every such g off the mirror band** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep), which there turn, move, boost and rescale but do not mirror. On `|λ̃_y| ≤ δ_λ`, collinear states included, T1 holds for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z` (R-547, RQ-360; R-82 unchanged). *Was:* '**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep).' The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent." The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent.
 
 ### 3.4 Curve projection (off-curve input) — metric pinned
 

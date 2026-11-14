@@ -173,24 +173,70 @@ I  = ‖ρ̃‖² + ‖λ̃‖²
 
 ```
 ρ̃ = R̃ cos α · (1, 0)         λ̃ = R̃ sin α · (cos β, sin β)
-R̃ = 1  (scale gauge = I = 1)      β ∈ [0, π]  (mirror fixed by construction)
+R̃ = 1  (scale gauge = I = 1)      β ∈ S¹, read modulo 2π  (both orientations; no mirror)
 
-α = (π/2) · σ(z_α)          β = π · σ(z_β)
+α = (π/2) · σ(z_α)          β = z_β      (periodic_beta, the identity onto the angle)
 ```
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* the two lines above are the periodic `β` (R-898, R-919 Q1 (c)), defined below. *Was:* "`R̃ = 1  (scale
+gauge = I = 1)      β ∈ [0, π]  (mirror fixed by construction)`" and "`α = (π/2) · σ(z_α)          β = π · σ(z_β)`".
+
+**Latent `β`, a periodic angle** (defined per R-72 by TASK-M2-107 for TASK-M2-57, under physics review; REQ-DEC-056;
+R-865, R-898, R-919). The definitions the full-circle `β` rests on:
+
+- **The link and its inverse.** `β`'s one link is `periodic_beta`, the identity onto the angle: `β = z_β`, with `z_β`
+  any real number, read modulo `2π` by the decode's `cos β` and `sin β` and by nothing else. Its inverse is the
+  identity too, `z_β = β`, taking the encode's signed `β ∈ [0, 2π̂]` (`principia_dd_encode.md` § 3.2); its log-det is
+  0, it has no clamp, and its sampling note is "uniform on the circle: no edge to crowd". Its codomain is the circle
+  `S¹`, one period `[0, 2π)`, with no bounds (dd_generation_root § 3.9), so the latent space is `ℝ × S¹ × ℝ⁶`, not
+  `ℝ⁸` (R-898). `z_β` and `z_β + 2πk` decode to the same system to the rounding of `cos` and `sin` at the larger
+  argument, and bit for bit only where the arguments are the same value. `sigmoid_beta`, `tanh_beta` and
+  `softsign_beta`, the bounded links onto `β ∈ [0, π]` before it, are no block's link: their forward maps stay as
+  conversion sources only, on a codomain no slot takes (R-919; dd_generation_root § 3.9).
+- **Its seam.** The decode has none: `cos z_β` and `sin z_β` are continuous and periodic. The encode, which returns
+  one representative in `[0, 2π̂]`, has one: the `+x` half-axis of `λ̃`, `β = 0`, the collinear shapes with body 2 on
+  `ρ̃`'s side of the inner pair. A state crossing it from `λ̃_y < 0` to `λ̃_y ≥ 0` encodes from near `2π̂` to `0`. The
+  `−x` half-axis, `β = π`, is no seam: the encode is continuous across it, `π̂` on it (R-438's select, kept).
+- **A syzygy crossing on a latent chart.** A trajectory through a syzygy has `β(t)` crossing 0 or π continuously,
+  the two collinear orientations, and no mirror changes it. A trace on a latent chart places each sample's encoded
+  `z_β` on its lift nearest the previous sample's value (the unwrap: `z_β + 2πk` with `|z_β + 2πk − z_prev| ≤ π`, a
+  tie to the smaller `k`), its first sample on the lift nearest the chart's centre `z₀[1]`. So it is continuous
+  through a syzygy at `β = π`, where no wrap occurs, and at `β = 0`, where the unwrap carries it past 0 or `2π`
+  rather than jumping by `2π`. A reduced trace, read without the unwrap, jumps by `2π` at `β = 0`, and that jump is
+  the circle's identification, not the state's.
+- **Stored reduced or unreduced, and where a wrap enters (R-898).** A stored `z_β` is unreduced: a real coordinate on
+  the lift, never reduced to one period by anything that stores or edits it. The affine leaves (pan, zoom, the latent
+  tilts), the latent-line blend and the select act on the lift, linearly, with no wrap, and none is needed: the decode
+  reads `z_β` modulo `2π` through `cos` and `sin`, so a plane along `z_β` sweeps the circle as many times as it is
+  long. A wrap enters at one place only: where an encoded `z_β ∈ [0, 2π̂]` is placed on a latent chart or trace, the
+  lookup's chart point and the trace each take the lift nearest their reference (the chart's centre `z₀[1]`, or the
+  previous sample), as above.
+- **How a stored value converts (R-898, R-919 Q3 (a); R-921).** A `z_β` stored under a retired link `L` converts
+  once to `z_β′ = L(z_β)`, the `β` it decoded to, in `[0, π]`: one period, so stored reduced and unreduced alike. An
+  old saved chart converts from the `β` link it pins (R-516), else from `sigmoid_beta`, the default it was made under,
+  with a notice on load naming the assumption. Since `z_β′` is that `β`, a `β ∈ [0, π]` start converted at f64 decodes
+  to the old f64 state bit for bit (the same `cos β` and `sin β` operands); at f32 the converted value is the f64 `β`
+  rounded once, where the old f32 decode evaluated `L` at f32, so its last bits can differ, within REQ-ENC-024's
+  `ε_phys` (R-898's conversion test). A record made under a retired link recreates through that link itself (R-921):
+  `L`'s forward of `z_β` at the decode's precision, then the one decode, bitwise the old decode; nothing is converted
+  on recreation.
+- **The pole at `λ̃ = 0`.** At `α = 0`, `λ̃ = 0` and `β` is undefined at the point: every `z_β` decodes to the same
+  state there. The encode's value is 0, chosen by R-437's select on `λ̃_x = 0` and `λ̃_y = 0`, not `atan2(0, 0)`
+  (`principia_dd_encode.md` § 3.2), so `z_β = 0` at the pole on every backend.
 
 **`α_min = 0` (R-21).** The general link is $\alpha = \alpha_{\min} + \left(\tfrac{\pi}{2} - 2\alpha_{\min}\right)\sigma(z_\alpha)$.
 It is not a numerical guard: nothing divides by α, and a non-zero value would only excise a polar cap. The form above is
 its $\alpha_{\min} = 0$ case, the one in force. The paragraph below describes it.
 
-Both `α`-poles are **represented, not excised** — the old `α_min` cap is removed for full-sphere coverage. `α→0` puts body 2 at the inner-pair CoM (`‖λ̃‖→0`, azimuth `β` undefined *at the point*); `α→π/2` collapses the inner pair (`‖ρ̃‖→0` — a binary collision, `U→−∞`, and the rotation pin undefined). These are *coordinate/collision* degeneracies the pipeline already fences — the collision detector, the conditioning readout, and the saturation flags — not a range the chart carves out. In exact arithmetic finite `z` never reaches the poles (`(π/2)σ(z_α) ∈ (0, π/2)`); in floating point the range is closed, `α ∈ [0, π/2]` and `β ∈ [0, π]` (R-417). The lower poles, `α = 0` and `β = 0`, are reached where the link's output underflows, at f32 and f64 (σ where `exp(−z)` overflows, the tanh links where `tanh` rounds to −1, the softsign links where `x/(2 + |x|)` rounds to −1). The upper images stay inside the bounds: the f32 images of π/2 and π are generated rounded toward zero (dd_generation_root §3.9), and the f64 nearest values already lie below them, so no saturated control passes `π/2` or `π`. A config at a pole, reached at underflow or ingested there, is caught by those flags, and an angle at an exact pole has a defined value, 0, rather than a NaN: it is not obtained from `atan2(0, 0)`, which is the CPU's 0 but undefined in GLSL.std.450 `Atan2` and so in WGSL, but chosen branch-free by a select on the operands against 0, so that CPU and GPU agree (R-437; §3.3, §3.6 and the encode's inverses).
+Both `α`-poles are **represented, not excised** — the old `α_min` cap is removed for full-sphere coverage. `α→0` puts body 2 at the inner-pair CoM (`‖λ̃‖→0`, azimuth `β` undefined *at the point*); `α→π/2` collapses the inner pair (`‖ρ̃‖→0` — a binary collision, `U→−∞`, and the rotation pin undefined). These are *coordinate/collision* degeneracies the pipeline already fences — the collision detector, the conditioning readout, and the saturation flags — not a range the chart carves out. In exact arithmetic finite `z` never reaches the poles (`(π/2)σ(z_α) ∈ (0, π/2)`); in floating point the range is closed, `α ∈ [0, π/2]` (R-417); `β = z_β` has no range to close (R-898). The lower pole, `α = 0`, is reached where the link's output underflows, at f32 and f64 (σ where `exp(−z)` overflows, the tanh links where `tanh` rounds to −1, the softsign links where `x/(2 + |x|)` rounds to −1). The upper image stays inside the bound: the f32 image of π/2 is generated rounded toward zero (dd_generation_root §3.9), and the f64 nearest value already lies below it, so no saturated control passes `π/2`; the image of π, generated the same way, is the encode's `π̂`. *Was (14 Nov 2026, the periodic `β`, TASK-M2-107):* "in floating point the range is closed, `α ∈ [0, π/2]` and `β ∈ [0, π]` (R-417). The lower poles, `α = 0` and `β = 0`, are reached where the link's output underflows, … The upper images stay inside the bounds: the f32 images of π/2 and π are generated rounded toward zero (dd_generation_root §3.9), and the f64 nearest values already lie below them, so no saturated control passes `π/2` or `π`." A config at a pole, reached at underflow or ingested there, is caught by those flags, and an angle at an exact pole has a defined value, 0, rather than a NaN: it is not obtained from `atan2(0, 0)`, which is the CPU's 0 but undefined in GLSL.std.450 `Atan2` and so in WGSL, but chosen branch-free by a select on the operands against 0, so that CPU and GPU agree (R-437; §3.3, §3.6 and the encode's inverses).
 
 **Every `atan2` at a possible pole (R-437).** Where both operands of an `atan2` can be 0 together, the value there is
 defined, not left to `atan2`: the `atan2` term is 0, the CPU's `atan2(+0, +0)`, and the same 0 for every sign of the
 zeros, so that `−0` operands, whose `atan2(±0, −0) = ±π` on the CPU, give it too. The test is a comparison of each
 operand with the constant 0 (true for `+0` and `−0` alike), and the value a select between 0 and the `atan2` already
 computed, never a branch (the GPU determinism note's discipline). Its places: §3.3's rotation angle `φ` at `ρ = 0`
-(the `α = π/2` collision pole), so `R(−φ)` is the identity there; the encode's `β = atan2(|λ̃_y|, λ̃_x)` (R-438)
-at `λ̃ = 0` (the `α = 0` pole; `principia_dd_encode.md` §3.1, `principia_inverse_encode_contract.md` Part 3); the shape-sphere
+(the `α = π/2` collision pole), so `R(−φ)` is the identity there; the encode's `β` (`principia_dd_encode.md` § 3.2, the signed
+angle since TASK-M2-57; *was:* "`β = atan2(|λ̃_y|, λ̃_x)` (R-438)") at `λ̃ = 0` (the `α = 0` pole; `principia_dd_encode.md` §3.1, `principia_inverse_encode_contract.md` Part 3); the shape-sphere
 inverse's `atan2(q, p)` at `p = q = 0` (`principia_chart_reference.md` §3.2), so `ψ = φ_f` there; and §3.6's
 `rho_angle`, defined case by case. The encode's `α = atan2(‖λ̃‖, ‖ρ̃‖)` is not among them: after the scale gauge
 `‖ρ̃‖² + ‖λ̃‖² = I = 1`, so its operands are never both 0.
@@ -211,17 +257,23 @@ r₀  = r₀₁ − (m₁/M₀₁) ρ      r₁ = r₀₁ + (m₀/M₀₁) ρ
 
 ### 3.3 Canonicalise
 
-*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
+*[mirror-step removal (R-865), applied 14 Nov 2026 with R-898's periodic `β` and R-919's one `β` link (TASK-M2-107; built by TASK-M2-57): `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to it, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
 
 Only needed when the input did **not** come through the canonical frame (physical-frame charts, encode):
 
 ```
 rotate all rᵢ, pᵢ by R(−φ),  φ = atan2(ρ_y, ρ_x)
-mirror (full state: every rᵢ AND every pᵢ, y → −y)  iff λ̃_y < −δ_λ   (λ̃ = √μ_λ·λ, δ_λ = 10⁻¹²)
-   |λ̃_y| ≤ δ_λ → no mirror   (the one mirror test, in encode's frame — R-82)
 ```
 
-With the canonical-frame decode both are no-ops away from the seam — and **that no-op property is a test** (5.5).
+With the canonical-frame decode it is a no-op, on both halves of `β` and across the `λ̃_y = 0` seam as away from it —
+and **that no-op property is a test** (5.5). There is no mirror step (R-865): a state with `λ̃_y < 0` keeps it, the
+decode reaches it at `β ∈ (π, 2π)`, and the shape sphere decodes through this same `C` (§ 3.2, "Latent `β`, a periodic
+angle"). `δ_λ` stays a registry constant, read by nothing, so the entry hashes that cover it stand.
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* *Was:* "```rotate all rᵢ, pᵢ by R(−φ),  φ = atan2(ρ_y, ρ_x) / mirror (full state: every rᵢ AND every
+pᵢ, y → −y)  iff λ̃_y < −δ_λ   (λ̃ = √μ_λ·λ, δ_λ = 10⁻¹²) / |λ̃_y| ≤ δ_λ → no mirror   (the one mirror test, in
+encode's frame — R-82)```" and "With the canonical-frame decode both are no-ops away from the seam — and **that no-op
+property is a test** (5.5)."
 
 **`φ` at the pole (R-437).** At `ρ = 0`, the `α = π/2` collision pole, `φ` is 0, whatever the signs of the zeros, so
 the rotation is the identity there; it is chosen by a select on `ρ_x = 0` and `ρ_y = 0`, not obtained from

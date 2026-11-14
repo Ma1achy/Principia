@@ -792,3 +792,54 @@ and one of the fixes adds a `[boot]` section, which that ruling's text singles o
 - **Applied meanwhile:** nothing; `scripts/wsl/wsl.conf` and its tests are unchanged.
 - **Waits:** the proof-2 half of TASK-M0-63. Its proof-6 fixes (the stdin read, the byte-order mark, lavapipe in the
   hosted `wsl-parity` job, the failure line) and proof 3's evidence count touch no `wsl.conf` and need no ruling.
+
+## RQ-821: REQ-VAL-022's inspector-roundtrip gate once `C` has no mirror step: its equilateral check reads `|w − 1|` on `C(x)` "where C's mirror puts L⁻ at w = +1", and its collinear check reads `z_β` "at its clamp image with its lookup_clamped bit set", neither of which the built decoder gives *(conflict; a one-way door, it changes what a numerical gate claims; R-865, R-898, R-919, R-551, R-176; REQ-VAL-022, REQ-VAL-121; context: TASK-M2-57, TASK-M2-107, TASK-M2-50's gate)*
+
+*Queued 14 Nov 2026 by the TASK-M2-107 implementer, as R-865 requires ("The gate's restatement is proposed by the
+task under physics review and recorded by a ruling before it merges, never changed silently in the task's PR"). Each
+quote re-read on `main` at 38eacc2a1. Nothing is applied here; TASK-M2-57's merge waits on the ruling, and only that.*
+
+*In plain English: one of the decoder's accuracy checks, the inspector round trip, was written for a decoder that
+folds every mirror-image triangle onto one side. Two of its lines measure that fold: the anticlockwise equilateral
+triangle is expected at +1 on a dial where, without the fold, it now reads −1; and a straight-line triple is expected to
+be pinned at the edge of the old angle range and flagged, where it now sits exactly at 0 or π with nothing to flag. The
+check has to be reworded to measure the same accuracy on the new decoder, and rewording a gate is the owner's call.*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-VAL-022, its statement: "a collinear state's z_β must sit at its clamp image with its
+    lookup_clamped bit set, bit for bit, and no equilateral state's may set it; an equilateral state's |w − 1| (at equal
+    masses, where L± are the poles) and a collinear state's |w| must lie within REQ-VAL-121's calibrated bound (R-551)";
+    its verify: "every collinear state's z_β at its clamp image with lookup_clamped set and no equilateral state's set,
+    judged bit for bit; max |w − 1| and max |w|, read on the canonical state C(x) (where C's mirror puts L⁻ at w = +1),
+    within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴ on C(x)); D(E(x))'s |w| reported unjudged, the clamp
+    image, sin2α·sin(π·ε_z)".
+  - `decisions.md` § R-865: "REQ-VAL-022, a numerical gate read on `C(x)` "where C's mirror puts L⁻ at w = +1". The
+    gate's restatement is proposed by the task under physics review and recorded by a ruling before it merges, never
+    changed silently in the task's PR."
+  - `docs/design/principia_dd_encode.md` § 3.2, "The signed encode of `β`" (TASK-M2-107): `β` is 0 on the `+x`
+    half-axis and `π̂` on the `−x` half-axis by selects, and `z_β = β`, `periodic_beta`'s inverse, "no clamp, no
+    `s_β`".
+- **The conflict:** without the mirror step, `C(x)` keeps a state's orientation, so `L⁻` reads `w = −1` on `C(x)`, and
+  `max |w − 1|` over the equilateral family is about 2, not 2.2×10⁻¹⁶; and a collinear state's `z_β` is exactly 0 or
+  `π̂` with no clamp, so "at its clamp image with its lookup_clamped bit set" fails on every collinear state, and
+  "D(E(x))'s |w| … the clamp image, sin2α·sin(π·ε_z)" names an image that no longer exists. The gate's numbers stand;
+  what it reads changes.
+- **The question:** how does REQ-VAL-022's gate read on the decoder without its mirror step?
+- **Options seen:**
+  - **(a) The same accuracy, read without the fold (recommended).** "an equilateral state's `||w| − 1|` (at equal
+    masses, `L⁺` at `w = +1` and `L⁻` at `w = −1` on `C(x)`) and a collinear state's `|w|` within REQ-VAL-121's
+    calibrated bounds; a collinear state's `z_β` exactly 0 (body 2 on the `+x` side) or `π̂` (on the `−x` side), bit for
+    bit, its `lookup_clamped` bit not set by `β`, and no equilateral state's set; `D(E(x))`'s `|w|` reported unjudged,
+    `|sin π̂|`-small at f64". Controls (R-176): `L⁻` read against `+1`, a collinear `z_β` off by one ulp, and a clamp
+    on `β`, each fail. Measurable before any ruling: run `cargo xtask gate inspector-roundtrip` on TASK-M2-57's
+    branch with the restated checks; criterion, written now: the same bounds REQ-VAL-121 holds (2.2×10⁻¹⁶ and
+    6.8×10⁻¹⁴, measured on `C(x)`), unchanged.
+  - **(b) Keep `|w − 1|` by reading `Π·C(x)` where `C(x)` has `λ̃_y < 0`.** It restores the old number, but reapplies
+    in the gate the fold R-865 removed from the decoder: a reading-side half-flag of the kind R-898 rejects ("a hidden
+    half-flag is the special case this ruling removes").
+  - **(c) Retire the equilateral and collinear lines** and keep only the `‖z − E(D(z))‖` and CoM bounds. It drops a
+    check of the `w` reading the owner had measured.
+- **Recommended:** (a). It keeps every bound and family, measures the same accuracy on both orientations, and folds
+  nothing.
+- **Applied meanwhile:** nothing. REQ-VAL-022's statement and verify stand as written; its note names this entry.
+- **Waits:** TASK-M2-57's merge (R-865), and only that. TASK-M2-107 (the definitions and the docs) does not wait.

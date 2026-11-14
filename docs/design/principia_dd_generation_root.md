@@ -1078,13 +1078,19 @@ above stand.
 **The registry's entries** *(TASK-M2-01; the two rows marked R-72 are definitions, REQ-GEN-026)*. Each row of the table
 above is registered once for each block codomain it serves. The codomains are:
 - the mass simplex Δ², two controls onto three masses;
-- `α ∈ [α_min, π/2 − α_min]` and `β ∈ [0, π]` (dd_decoder §3.2), closed (R-417);
+- `α ∈ [α_min, π/2 − α_min]` (dd_decoder §3.2), closed (R-417);
+- `β`, the circle `S¹` (R-898), periodic with one period `[0, 2π)` and no bounds, whose one entry is `periodic_beta`
+  (dd_decoder §3.2, R-919 Q1 (c));
+- the retired `β`, `(0, π)`, bounded, which no block takes: `sigmoid_beta`, `tanh_beta` and `softsign_beta`, kept as
+  conversion sources only (R-919 Q3 (a); physics review 5834538186 of PR #465);
 - each free momentum `q ∈ [−q_max, q_max]` (dd_decoder §3.4), closed (R-417), whose cap is the table's symmetric row;
 - the two lines, which no block uses.
 
 An interval `(a, b)` has width `b − a` and half-width `c = (b − a)/2`; on the symmetric cap, `a = −c`. A link is
 selected per block control, only among the entries onto that control's codomain (REQ-GEN-013). The defaults are
-`softmax_tanh` (mass), `sigmoid_alpha` and `sigmoid_beta` (config), and `sigmoid_q` (each free momentum).
+`softmax_tanh` (mass), `sigmoid_alpha` and `periodic_beta` (config), and `sigmoid_q` (each free momentum). *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):*
+*Was:* "- `α ∈ [α_min, π/2 − α_min]` and `β ∈ [0, π]` (dd_decoder §3.2), closed (R-417);" and "`sigmoid_alpha` and
+`sigmoid_beta` (config)".
 
 **The closed range and the f32 images of π/2 and π (R-417).** In exact arithmetic a bounded link's forward never
 reaches its bounds; in floating point it does, by its own rounding, so each codomain above is closed. A saturated
@@ -1099,12 +1105,21 @@ No link clamps its output (validation ground-truth note: no endpoint clamping, n
 |---|---|---|---|---|---|
 | `softmax_tanh` | Δ² | `μₖ = μ_max·tanh zₖ`, `m = softmax(0, μ₁, μ₂)` | `zₖ = artanh(clamp(log(mₖ/m₀), ±(1−ε_μ)μ_max)/μ_max)` | `½ log 3 + Σᵢ log mᵢ + 2 log μ_max + log sech² z₁ + log sech² z₂` | under-samples simplex edges/corners |
 | `stick_breaking` (R-72) | Δ² | `s = ½(1 + (1−ε_μ) tanh z₁)`, `u = ½(1 + (1−ε_μ) tanh z₂)`, `m = (1−s, s(1−u), su)` | `s = m₁ + m₂`, `u = m₂/s`, each `v` of them to `artanh(clamp(2v−1, ±(1−ε_μ)²)/(1−ε_μ))` | `log(√3/4 · (1−ε_μ)² · s · sech² z₁ · sech² z₂)` | reaches the edges and corners that `softmax_tanh` stops short of; its area element is `4√3·m₀m₁m₂` (exactly so at `ε_μ = 0`), the plain softmax measure, so it over-samples every edge and corner, symmetrically in the bodies |
-| `sigmoid_alpha`, `sigmoid_beta`, `sigmoid_q` | α, β, q | `a + (b−a)·σ(x)` | `logit(clamp((y−a)/(b−a), ε, 1−ε))` | `log((b−a)·σ(x)·σ(−x))` | edge-heavy: crowds the bounds |
-| `tanh_alpha`, `tanh_beta`, `tanh_q` | α, β, q | `a + c·(1 + tanh x)` | `artanh(clamp((y−a)/c − 1, ±(1−ε)))` | `log(c·sech² x)` | the bounded-alt row's note (α, β); the symmetric row's (q) |
-| `softsign_alpha`, `softsign_beta`, `softsign_q` (R-72) | α, β, q | `a + c·(1 + u)`, `u = x/(2 + abs(x))` | `x = 2u/(1 − abs(u))`, `u = clamp((y−a)/c − 1, ±(1−ε))` | `log(2c) − 2 log(2 + abs(x))` | heavier-tailed than σ: it nears each bound as `1/abs(x)`, not as `e^(−abs(x))`, so relative to σ it under-samples the bounds' immediate neighbourhoods |
+| `sigmoid_alpha`, `sigmoid_beta`, `sigmoid_q` | α, retired β, q | `a + (b−a)·σ(x)` | `logit(clamp((y−a)/(b−a), ε, 1−ε))` | `log((b−a)·σ(x)·σ(−x))` | edge-heavy: crowds the bounds |
+| `tanh_alpha`, `tanh_beta`, `tanh_q` | α, retired β, q | `a + c·(1 + tanh x)` | `artanh(clamp((y−a)/c − 1, ±(1−ε)))` | `log(c·sech² x)` | the bounded-alt row's note (α, β); the symmetric row's (q) |
+| `softsign_alpha`, `softsign_beta`, `softsign_q` (R-72) | α, retired β, q | `a + c·(1 + u)`, `u = x/(2 + abs(x))` | `x = 2u/(1 − abs(u))`, `u = clamp((y−a)/c − 1, ±(1−ε))` | `log(2c) − 2 log(2 + abs(x))` | heavier-tailed than σ: it nears each bound as `1/abs(x)`, not as `e^(−abs(x))`, so relative to σ it under-samples the bounds' immediate neighbourhoods |
+| `periodic_beta` (R-72) | β (`S¹`) | `x` | `y` (no clamp) | 0 | uniform on the circle: the identity onto the angle, which has no edge to crowd |
 | `softplus` | (0, ∞) | `softplus x` | `inv_softplus y` | `log σ(x)` | linear for large `x`, so not heavy-tailed |
 | `exp` | (0, ∞) | `eˣ` | `log y` | `x` | exp is heavy-tailed |
 | `identity` | ℝ | `x` | `y` | 0 | neutral |
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* done: `periodic_beta`, the row above (`principia_dd_decoder.md` § 3.2), is `β`'s one link and its
+default; the `β` entries of the three bounded rows are onto the retired-`β` codomain `(0, π)`, which no block takes, so
+no selection names one, their entry bytes (the constraint spelling `bounded` and their trees) unchanged and so their
+entry hashes; the generator emits `periodic_beta`'s period's upper end `2π`'s f32 image as twice `fl↓(π)`, bits
+`0x40C9_0FDA`. *Was (the three rows' codomain column):* "α, β, q". What this changes in built code: REQ-VAL-024's
+link-variation product has 2 × 3 × 1 × 3 = 18 selections, not 54; REQ-GEN-014's two densities per block are not met on
+`β` (R-919, R-519).
 
 *R-919 (9 Nov 2026, RQ-754 Q1 (c) and Q3 (a)):* latent `β` takes one periodic link (R-898), which TASK-M2-57 defines;
 it rewrites the `β` rows above and `β`'s codomain in the list above to that link, each keeping its *Was*. `sigmoid_beta`,

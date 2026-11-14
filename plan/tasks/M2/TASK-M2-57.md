@@ -1,8 +1,8 @@
 # TASK-M2-57 — The decoder's mirror step removed, latent β over the full circle, under the owner's bitwise check (R-865) ⚑
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-055, REQ-DEC-056
-- **Depends on:** TASK-M2-40
+- **Closes:** REQ-DEC-055
+- **Depends on:** TASK-M2-40, TASK-M2-107
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -195,3 +195,9 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   with more pixels, never edited by hand; controls: a fixture state with one bit flipped fails the first arm, and a
   fixture holding only pixels where conversion is exact fails the second (R-921; REQ-TOOL-172)."
 - *11 Nov 2026 (the re-plan's § A.1 and § B.1 item 3, KEEP; the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4):* its edge to TASK-M2-65 is dropped so it lands before TASK-M2-61's baseline, as TASK-M2-93 does, and the baseline is frozen once (applied per R-369: task scoping). *Was (Depends on):* "TASK-M2-40, TASK-M2-65".
+- *14 Nov 2026 (applied per R-369: task scoping, the orchestrator):* split docs first. TASK-M2-107 writes REQ-DEC-056's
+  definitions, the marked sections' rewrites, dd_generation_root § 3.9 and the fifteen requirements, and files
+  REQ-VAL-022's restatement (RQ-821); this task builds the code to them, depends on TASK-M2-107, and keeps
+  REQ-DEC-055. Its merge also waits on RQ-821's ruling. The 32 qa files the removal breaks at compile are named
+  exceptions under R-237 and R-369 (a ruling, R-865 with R-916 and R-919, forces the change), edited in this task's qa
+  commit only (R-290). *Was (Closes):* "REQ-DEC-055, REQ-DEC-056". *Was (Depends on):* "TASK-M2-40".
