@@ -261,3 +261,6 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   to `β ∈ (π, 2π)` and decodes back to itself,".
 - *14 Nov 2026 (physics review 5904074113 of PR #533, P8; applied per R-369):* the roundtrip line's mirror rule reads as
   REQ-ENC-003's. *Was (acceptance):* "mirrored `z` (`β → 2π − β`, the momentum controls reflected, `L_z` negated)".
+- *14 Nov 2026 (physics review 5904074113 of PR #533, P9):* after this task merges, `lookup_mirrored` is never set, so
+  the IC record's `hemisphere` and `mirrored` (`principia_ic_save.md` § 3.1, REQ-TOOL-211) need a new definition; it is
+  owed by TASK-M8-84 as REQ-TOOL-236 (R-72), not by this task.
