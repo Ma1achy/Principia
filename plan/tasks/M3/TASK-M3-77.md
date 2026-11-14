@@ -1,7 +1,7 @@
 # TASK-M3-77 — Heggie's direct march, registered once at t = 0, and its step control
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-122
+- **Closes:** REQ-INT-123
 - **Depends on:** TASK-M3-08
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-GEN-008
 - **Reviewers:** code, qa, physics
@@ -16,7 +16,7 @@ Heggie's direct march is built to integrator contract Part 2b's step control: re
 across every sync boundary of R-565's grid, landing on each at `k·Δ_sync`, with every stepper through its form on Heggie's
 regularised system (R-561), the explicit finiteness exit and R-604's budget ending the march latched, and Part 6's floor
 signal and entry-cap hits counted, landing under R-998's rule as R-1007 applies it, its definition written in Part 2b;
-and dd test 3 is measured on Heggie × RK4 and Aarseth–Zare + RK4 (REQ-INT-122).
+and dd test 3 is measured on Heggie × RK4 and Aarseth–Zare + RK4 (REQ-INT-123).
 
 ## References
 - `docs/contracts/principia_integrator_contract.md` § "Heggie: the equations, the time transformations, the maps and the step control (transcribed)"
@@ -54,19 +54,23 @@ and dd test 3 is measured on Heggie × RK4 and Aarseth–Zare + RK4 (REQ-INT-122
 - `cargo test -p kernel heggie_pairs` — Heggie × every stepper (Euler, KDK, Yoshida-4, Yoshida-6, RK4) under Eq. 20 and
   Eq. 22 marches a fixture state across a sync boundary as a direct march, its state finite and its profile its form's;
   Heggie's time transformation defaults to Eq. 22, Eq. 20 selectable (R-161); controls: a march whose stepper takes no step
-  fails, and a default of Eq. 20 fails (REQ-INT-122; REQ-INT-006's Heggie part, which TASK-M3-75 closes with the seam's pairs).
+  fails, and a default of Eq. 20 fails (REQ-INT-123; REQ-INT-006's Heggie part, which TASK-M3-75 closes with the seam's pairs).
 - `cargo test -p kernel heggie_march` — the transcription's own checks: the Cartesian → regularised → Cartesian round trip
   at unequal masses, the regularised energy against the Cartesian energy at registration, `Γ* = (E_reg − h)·R₁R₂R₃`, the
   march registered once (its frozen `h` unchanged across boundaries), landing on each boundary at `k·Δ_sync`, the
   explicit finiteness exit and R-604's budget ending the march latched (`End::NonFinite`, `End::Exhausted`), the floor
-  signal on `dt/dτ < TINY`, `S < TINY` or `Rᵢ < TINY`, and the entry-cap hit on `c₀ > c₁`, each with its control (REQ-INT-122).
-- `cargo test -p kernel heggie_landing` — Heggie × RK4's figure-eight closure and its convergence order across η in
+  signal on `dt/dτ < TINY`, `S < TINY` or `Rᵢ < TINY`, and the entry-cap hit on `c₀ > c₁`, each with its control (REQ-INT-123).
+- `cargo test -p kernel heggie_landing` — Heggie × RK4 lands on each boundary with the state's own clock the boundary's,
+  bitwise, the time reported `k·Δ_sync` (R-1007, R-998); controls: a march that lands the clock alone, its state left
+  overshot, fails, and a stored state whose clock differs from the boundary it reports fails (REQ-INT-123). The
+  figure-eight convergence order is TASK-M3-79's, under RQ-823's criterion (R-1013, the owner's ruling, 14 Nov 2026;
+  physics review 5904361846 of #530). *Was:* "`cargo test -p kernel heggie_landing` — Heggie × RK4's figure-eight closure and its convergence order across η in
   [0.02, 0.001] under the landing above (R-1007; REQ-INT-084's Heggie part, which TASK-M3-75 closes): the criterion is
   written before any run and states its round-off floor beforehand, the order is fitted only over step sizes above that
   floor, and an order still short of 4 there, by a threshold the criterion states beforehand, is read as a landing
   defect, not round-off; physics approves the criterion before it runs (applied per R-369, physics review 5890410670 of
   #520, F1); controls: a march that lands the clock alone, its state left overshot, fails, and a stored state whose
-  clock differs from the boundary it reports fails (REQ-INT-122).
+  clock differs from the boundary it reports fails (REQ-INT-122)."
 - `cargo test -p kernel regularised_step_reversibility` — dd test 3 run on Heggie × RK4 (Eq. 20 and Eq. 22) and
   Aarseth–Zare + RK4 through each one's time-reversal map, the residual and its norm taken on the full extended state, at
   REQ-VAL-191's criterion: each residual and verdict printed; fails if one is missing or its profile's `step_reversible`
@@ -86,3 +90,14 @@ and dd test 3 is measured on Heggie × RK4 and Aarseth–Zare + RK4 (REQ-INT-122
 - *13 Nov 2026 (code review 5895563626 C2 of #522, applied per R-369, scope):* this task owes the R-604 budget helper
   for any regularised occupant (`over_allowance(steps, t, rate, n_min)` in `az.rs`, `over_budget` routed through it
   bit-identically), added with Heggie's march as its first caller; TASK-M3-08 dropped it.
+- *14 Nov 2026 (applied per R-369, task scoping, the orchestrator's call; physics review 5904361846 of #530):* the
+  convergence-order check, run once under its approved criterion on #530, read FAIL (round-off): no order read, the
+  clock-only control 2.209 (a landing defect, as it must). A second criterion is RQ-823's, a one-way question; the check
+  and its control move to TASK-M3-79, which closes REQ-INT-122 and REQ-INT-084's Heggie part. The test's code is on the
+  local branch `task/TASK-M3-79` at 58ee2abef (`crates/kernel/tests/heggie.rs`, `heggie_landing_order`).
+- *14 Nov 2026 (R-1013, the owner's ruling, verbatim: "TASK-M3-77 split: yes. TASK-M3-77 merges closing REQ-INT-123;
+  the order check moves to TASK-M3-79 closing REQ-INT-122. Condition: TASK-M3-79 must pass before the M3 gate."):* this
+  task closes REQ-INT-123, the build part of REQ-INT-122 (Heggie's step control and landing, verified by `heggie_pairs`,
+  `heggie_march`, `heggie_landing_state`, `heggie_landing_reported` and `regularised_step_reversibility`); TASK-M3-79
+  closes REQ-INT-122 and must pass before the M3 gate. *Was (Closes):* "REQ-INT-122". *Was (the requirement named in
+  the Goal's last line and in the `heggie_pairs`, `heggie_march` and `heggie_landing` acceptance lines):* "REQ-INT-122".
