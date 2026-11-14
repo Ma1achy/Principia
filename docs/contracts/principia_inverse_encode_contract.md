@@ -6,7 +6,7 @@
 
 ## Part 1 — What encode is: a quotient map onto a section
 
-*[mirror-step removal (R-865), applied 14 Nov 2026 with R-898's periodic `β` and R-919's one `β` link (TASK-M2-107; built by TASK-M2-57): `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to it, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
+*[mirror-step removal (R-865, R-898, R-919): rewritten 14 Nov 2026 by TASK-M2-107 to the decoder TASK-M2-57 builds, with R-898's periodic `β` and R-919's one `β` link; in force when TASK-M2-57 merges, having passed R-898's conversion test; until then each *Was* below describes the built decoder on `main`, and R-82, R-438 and R-544 stand. In the target, `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to that target, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
 
 The forward decode `D: z → (m, r, p)` lands on a **canonical section** of physical state space: CoM at origin, total momentum zero, `ρ̃` on +x, `I = 1`, `λ̃_y` of either sign (both orientations, R-865). Encode `E` is the composition
 
@@ -30,7 +30,7 @@ The mirror `Π = diag(1, −1)` is not in it: it acts on `z`, as T1 says.
 
 **The classic bug, called out once, inherited everywhere:** every rigid operation in `C` acts on the **full phase-space state — positions *and* momenta**. The rotation taking `ρ̃` to +x rotates every `p_i` identically. Rotating configuration only (the bug an agent will write) silently changes the physics, producing a state on the manifold that is *not* gauge-equivalent to the input. The same holds for the mirror wherever a test or a gauge sweep applies one: it reflects every `r_i` and every `p_i`, `L_z → −L_z`, prograde and retrograde exchanged; a configuration-only mirror flips the shape but not `L_z`.
 
-*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* Part 1 is rewritten to the decoder without its mirror step. *Was:* "The forward decode `D: z → (m, r, p)` lands on a **canonical section** of physical state space: CoM at origin, total momentum zero, `ρ̃` on +x, `λ̃_y ≥ 0`, `I = 1`. Encode `E` is the composition
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* Part 1 is rewritten to the decoder without its mirror step. *Was:* "The forward decode `D: z → (m, r, p)` lands on a **canonical section** of physical state space: CoM at origin, total momentum zero, `ρ̃` on +x, `λ̃_y ≥ 0`, `I = 1`. Encode `E` is the composition
 
 ```
 E  =  (block/chart inverses)  ∘  C
@@ -358,7 +358,7 @@ coordinates and checks each shown axis on its own (R-538 TF2.1; `principia_lines
    can't be represented, and layer 1's range check catches them with `lookup_clamped`.
 
 **Layer 1's space and bounds** (R-72; REQ-ENC-023; TASK-M2-19). *[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β`
-becomes a periodic angle, the controls' space `ℝ × S¹ × ℝ⁶`; applied 14 Nov 2026 (TASK-M2-107): `z_β` has no bound and no
+becomes a periodic angle, the controls' space `ℝ × S¹ × ℝ⁶`; rewritten 14 Nov 2026 by TASK-M2-107 to the target TASK-M2-57 builds, in force when it merges, the Was describing `main` until then: `z_β` has no bound and no
 clamp, `z_β = β` (`principia_dd_decoder.md` § 3.2), and what follows on `s_β` and its clamp reads for the retired links
 only. Was: "this stands as written until TASK-M2-57 merges."]* The controls `z ∈ ℝ⁸` are unbounded: each is a
 logit or an artanh, and every real `z` decodes. "$z_k \in [0,1]$" is read in the space each control's link maps it

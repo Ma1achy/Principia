@@ -1088,7 +1088,7 @@ above is registered once for each block codomain it serves. The codomains are:
 
 An interval `(a, b)` has width `b − a` and half-width `c = (b − a)/2`; on the symmetric cap, `a = −c`. A link is
 selected per block control, only among the entries onto that control's codomain (REQ-GEN-013). The defaults are
-`softmax_tanh` (mass), `sigmoid_alpha` and `periodic_beta` (config), and `sigmoid_q` (each free momentum). *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):*
+`softmax_tanh` (mass), `sigmoid_alpha` and `periodic_beta` (config), and `sigmoid_q` (each free momentum). *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:*
 *Was:* "- `α ∈ [α_min, π/2 − α_min]` and `β ∈ [0, π]` (dd_decoder §3.2), closed (R-417);" and "`sigmoid_alpha` and
 `sigmoid_beta` (config)".
 
@@ -1113,7 +1113,7 @@ No link clamps its output (validation ground-truth note: no endpoint clamping, n
 | `exp` | (0, ∞) | `eˣ` | `log y` | `x` | exp is heavy-tailed |
 | `identity` | ℝ | `x` | `y` | 0 | neutral |
 
-*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* done: `periodic_beta`, the row above (`principia_dd_decoder.md` § 3.2), is `β`'s one link and its
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* `periodic_beta`, the row above (`principia_dd_decoder.md` § 3.2), is `β`'s one link and its
 default; the `β` entries of the three bounded rows are onto the retired-`β` codomain `(0, π)`, which no block takes, so
 no selection names one, their entry bytes (the constraint spelling `bounded` and their trees) unchanged and so their
 entry hashes; the generator emits `periodic_beta`'s period's upper end `2π`'s f32 image as twice `fl↓(π)`, bits

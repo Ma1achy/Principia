@@ -56,7 +56,7 @@ construction, so the canonicaliser is a no-op away from the seam):
 β = z_β                                        (periodic_beta, R-898, R-919)
 ```
 
-*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* `β` is the periodic angle (`principia_dd_decoder.md` § 3.2). *Was:* "`λ̃ = R̃ sin α · (cos β, sin β)
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* `β` is the periodic angle (`principia_dd_decoder.md` § 3.2). *Was:* "`λ̃ = R̃ sin α · (cos β, sin β)
 β ∈ [0, π]   (mirror fixed)`" and "`β = π·σ(z_β)`".
 
 `α_min = 0` (R-21). It is not a numerical guard; a non-zero value would only excise a polar cap, and the poles are
@@ -96,7 +96,7 @@ p2 =  p_λ
 
 ### 0.4 Canonicalisation `C`
 
-*[mirror-step removal (R-865), applied 14 Nov 2026 with R-898's periodic `β` and R-919's one `β` link (TASK-M2-107; built by TASK-M2-57): `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to it, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
+*[mirror-step removal (R-865, R-898, R-919): rewritten 14 Nov 2026 by TASK-M2-107 to the decoder TASK-M2-57 builds, with R-898's periodic `β` and R-919's one `β` link; in force when TASK-M2-57 merges, having passed R-898's conversion test; until then each *Was* below describes the built decoder on `main`, and R-82, R-438 and R-544 stand. In the target, `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to that target, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
 
 With the canonical-frame decode it is a no-op, across the `λ̃_y = 0` seam as away from it. Implement anyway, for
 charts that bypass it:
@@ -105,7 +105,7 @@ charts that bypass it:
 φ = atan2(ρ_y, ρ_x)     rotate all rᵢ, pᵢ by R(−φ)
 ```
 
-There is no mirror step (R-865): `λ̃_y` keeps its sign. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107, built by TASK-M2-57):* *Was:* "With the canonical-frame decode both
+There is no mirror step (R-865): `λ̃_y` keeps its sign. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* *Was:* "With the canonical-frame decode both
 steps are no-ops away from the seam." and the two lines "`if λ̃_y < −δ_λ:          mirror (δ_λ = 1e−12; λ̃ = √μ_λ·λ)`"
 and "`|λ̃_y| ≤ δ_λ:            no mirror (deterministic tie-break — R-82)`".
 
@@ -158,7 +158,7 @@ z = ( z_α, z_β | z_q0, z_q1, z_q2, z_q3 | z_μ1, z_μ2 ) ∈ ℝ × S¹ × ℝ
 
 *[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β` becomes a periodic angle over the full circle, so the latent space
 is `ℝ × S¹ × ℝ⁶`, `z_β` on the circle, not `ℝ⁸`; every stored latent view, saved chart and golden is converted once.
-Applied 14 Nov 2026 (TASK-M2-107): the line above reads `∈ ℝ × S¹ × ℝ⁶`, `z_β` stored unreduced on the lift and read
+Rewritten 14 Nov 2026 by TASK-M2-107 to the target TASK-M2-57 builds, in force when it merges, the Was describing `main` until then: the line above reads `∈ ℝ × S¹ × ℝ⁶`, `z_β` stored unreduced on the lift and read
 modulo `2π` (`principia_dd_decoder.md` § 3.2); "8D" below counts dimensions, `z_β` one of them. Was: "`∈ ℝ⁸`" and
 "This section stands as written until TASK-M2-57 merges, which rewrites it."]*
 
@@ -521,7 +521,7 @@ all three exactly.
 
 ## 3. Shape-sphere chart `(θ, φ)`
 
-*[mirror-step removal (R-865), applied 14 Nov 2026 with R-898's periodic `β` and R-919's one `β` link (TASK-M2-107; built by TASK-M2-57): `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to it, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
+*[mirror-step removal (R-865, R-898, R-919): rewritten 14 Nov 2026 by TASK-M2-107 to the decoder TASK-M2-57 builds, with R-898's periodic `β` and R-919's one `β` link; in force when TASK-M2-57 merges, having passed R-898's conversion test; until then each *Was* below describes the built decoder on `main`, and R-82, R-438 and R-544 stand. In the target, `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to that target, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
 
 The quotient of configuration space by translation, rotation and scale. `Φ_S²(u,v) = (n(θ,φ),
 m_fixed, p_fixed)` — masses and momenta held, only the **shape** varies.
