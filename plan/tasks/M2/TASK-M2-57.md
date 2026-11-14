@@ -39,8 +39,12 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
 - **On the same baseline commit, before any link changes: the retired-link fixture (R-921; physics review 5836519618
   of PR #469, applied per R-369),** `fixtures/retired_beta_links/pre_m2_57.json`, written through today's decoder: for
   each of `sigmoid_beta`, `tanh_beta` and `softsign_beta` as the `β` link, the pixels' latent coordinates, the four
-  blocks' links and each pixel's decoded starting state as bits, with the commit and the command that wrote it recorded
-  in the file and its row in `fixtures/README.md`. Its pixels span `z_β`: for each link, 257 values, `z_β` the link's
+  blocks' links and each pixel's decoded starting state as f32 bits, the kernel's f32 decode, with the commit and the
+  command that wrote it recorded in the file and its row in `fixtures/README.md`. The precision is f32 because that is
+  where conversion can change the last bits: at f64 the converted `z_β` is the `β` the old decode computed, so the
+  converted decode is bitwise the old one (dd_decoder § 3.2, "How a stored value converts"; physics review 5903954379 of
+  PR #533), and an f64 fixture would leave the second arm of `retired_link_fixture` unexercisable by construction (qa
+  review 5903950227 of PR #533, Q4). Its pixels span `z_β`: for each link, 257 values, `z_β` the link's
   inverse of `β = π·k/258`, `k = 1 … 257`, at the fixture's other latent coordinates. Every bit in it comes from the
   baseline commit's decoder and none is edited by hand: it may be written again only by running the baseline commit's
   decoder, never through any later decoder, and only as the bounded extension the acceptance line gives.
@@ -83,7 +87,7 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   each (REQ-DEC-055).
 - On the same baseline commit: `fixtures/retired_beta_links/pre_m2_57.json` written through today's decoder, before
   any link changes, for `sigmoid_beta`, `tanh_beta` and `softsign_beta`: latent coordinates, the four blocks' links and
-  decoded starting states as bits, the writing commit and command recorded, every bit from the baseline commit's
+  decoded starting states as f32 bits, the writing commit and command recorded, every bit from the baseline commit's
   decoder and none edited by hand (R-921; REQ-TOOL-172's retired-link arm).
 - `cargo test -p kernel retired_link_fixture` — once the periodic link and the conversion exist: every fixture pixel
   decoded through its retained retired link equals the fixture's starting state bit for bit; and, for each of the three
@@ -216,3 +220,7 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   line):* "Review: the full-circle link and the signed encode in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2, written to the owner's answer to RQ-750 (R-898: `z_β` a periodic angle, each stored value converted once) and approved by the physics reviewer, with whether a converted `z_β` is stored reduced to one period or unreduced and where a wrap enters (R-72; REQ-DEC-056)." The 32 qa files the removal breaks at compile are named
   exceptions under R-237 and R-369 (a ruling, R-865 with R-916 and R-919, forces the change), edited in this task's qa
   commit only (R-290). *Was (Closes):* "REQ-DEC-055, REQ-DEC-056". *Was (Depends on):* "TASK-M2-40".
+- *14 Nov 2026 (qa review 5903950227 of PR #533, Q4; applied per R-369):* the retired-link fixture's decoded states
+  are f32 bits, where the conversion's last bits can differ; at f64 the conversion is exact. *Was (Deliverables):*
+  "blocks' links and each pixel's decoded starting state as bits, with the commit and the command that wrote it recorded
+  in the file and its row in `fixtures/README.md`." *Was (acceptance):* "decoded starting states as bits,".
