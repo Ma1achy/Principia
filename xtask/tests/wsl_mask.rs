@@ -596,14 +596,15 @@ fn first_word(s: &[Tok]) -> Option<&str> {
     }
 }
 
-/// Adds to `taint` each variable assigned from one in it, or looped over one in it (`foreach ($v in …)`); `$_` is
-/// left out, as `Check` taints it only where it is an address. Returns whether it grew.
-fn spread(code: &[Tok], taint: &mut BTreeSet<String>) -> bool {
+/// Adds to `taint` each variable assigned from one in it, or looped over one in it (`foreach ($v in …)`), and, where
+/// `item` (`code` is a script block run by a pipeline that carries an address, as `Check` reads it), from `$_`.
+/// `$_` itself isn't added, as `Check` holds it an address only in such a block. Returns whether it grew.
+fn spread(code: &[Tok], taint: &mut BTreeSet<String>, item: bool) -> bool {
     let mut grew = false;
     let touches = |rest: &[Tok], taint: &BTreeSet<String>| {
         let mut n = Vec::new();
         names(rest, &mut n);
-        n.iter().any(|v| v != "_" && taint.contains(v))
+        n.iter().any(|v| (item && v == "_") || taint.contains(v))
     };
     for s in statements(code) {
         if let [Tok {
@@ -635,12 +636,15 @@ fn spread(code: &[Tok], taint: &mut BTreeSet<String>) -> bool {
                 }
             }
         }
+        // A script block in a statement that carries an address runs with `$_` one, as in `Check`.
+        let carried = touches(s, taint);
         for t in s {
             match &t.node {
-                Node::Group(_, body) => grew |= spread(body, taint),
+                Node::Group('{', body) => grew |= spread(body, taint, item || carried),
+                Node::Group(_, body) => grew |= spread(body, taint, item),
                 Node::Str(_, subs) => {
                     for sub in subs {
-                        grew |= spread(sub, taint);
+                        grew |= spread(sub, taint, item);
                     }
                 }
                 _ => {}
@@ -828,7 +832,7 @@ fn printed_outside_report(arm: &str) -> Vec<String> {
         })
         .expect("the arm's body");
     let mut taint: BTreeSet<String> = ADDRESS_VARS.iter().map(|v| v.to_lowercase()).collect();
-    while spread(body, &mut taint) {}
+    while spread(body, &mut taint, false) {}
     let mut check = Check {
         taint: &taint,
         lines: arm.lines().collect(),
@@ -932,9 +936,9 @@ fn with_line(line: &str) -> String {
 }
 
 /// The forms the code review's probes found missed, first by a deny-list, then by the allow-list's first cut (the call
-/// and dot-source operators and methods), each printing an address (made up here, in the variables proof 3 sets): each
-/// must be refused, and is a control below as well.
-const PROBE_PRINTS: [&str; 31] = [
+/// and dot-source operators, methods and a copy of `$_`), each printing an address (made up here, in the variables
+/// proof 3 sets): each must be refused, and is a control below as well.
+const PROBE_PRINTS: [&str; 32] = [
     "Write-Host @hostSwitch",
     "'gateway: {0}' -f $gateway",
     "\"gateway: {0}\" -f $gateway",
@@ -966,6 +970,7 @@ const PROBE_PRINTS: [&str; 31] = [
     "$x = @($hostSwitch | ForEach-Object { & Write-Host $_ })",
     "Report 3 $false (& Write-Host $gateway)",
     "if (& Write-Host $gateway) { }",
+    "$x = $hostSwitch | ForEach-Object { $h2 = $_; Write-Host $h2 }",
 ];
 
 fn check_probes(script: &str, forms: &[&str]) {
@@ -1643,6 +1648,18 @@ mod allow_call_in_a_header {
         "& Write-Host in an if's header, added to proof 3",
         expected = "proofs pass $gateway to a command run by &, which isn't known not to print: if (& Write-Host $gateway) { }",
         check_routes(&with_line("if (& Write-Host $gateway) { }"))
+    );
+}
+
+mod allow_item_copy {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a copy of $_ printed in a value's script block, added to proof 3",
+        expected = "proofs pass $h2 to write-host, which isn't known not to print: $x = $hostSwitch | ForEach-Object { $h2 = $_; Write-Host $h2 }",
+        check_routes(&with_line(
+            "$x = $hostSwitch | ForEach-Object { $h2 = $_; Write-Host $h2 }"
+        ))
     );
 }
 
