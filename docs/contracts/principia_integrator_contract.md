@@ -870,10 +870,15 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
      the boundary while the stored state's own clock differs from it.
    - **Its limits (R-998's dated line, R-1007).** No constant other than the two integer caps, the secant's 4 retakes
      and the bisection's 64 halvings, reaches a branch: every branch compares the clock with `dt_left`, a step size
-     with the bracket's ends, `got` with 0, or a count with its cap. 64 halvings exceed the significand's width at
-     either precision (53 bits at f64, 24 at f32), so the bisection reaches a bracket one step size wide before its
-     cap, and the cap is the same integer at both precisions (Part 2c rule 1). The step budget (step 4, R-604) bounds a
-     march that keeps no progress.
+     with the bracket's ends, `got` with 0, or a count with its cap. The bracket starts at `lo = 0`, so reaching one
+     step size wide around the landing step `h*` takes about `log₂(hi/h*)` halvings and then the significand's width
+     (53 bits at f64, 24 at f32): the 64-halving cap can come first where `h*` lies far below the secant's last step
+     (by about 2¹¹ at f64, 2⁴⁰ at f32). The step kept is then still the bracket's short end, never past the boundary,
+     and the closing step ends the interval. The cap is the same integer at both precisions (Part 2c rule 1). The step
+     budget (step 4, R-604) bounds a march that keeps no progress. *14 Nov 2026 (code review 5902988833 of #530, C3,
+     applied per R-369: the text made to match the code, no result changed):* *Was:* "64 halvings exceed the
+     significand's width at either precision (53 bits at f64, 24 at f32), so the bisection reaches a bracket one step
+     size wide before its cap, and the cap is the same integer at both precisions (Part 2c rule 1)."
    - **The setting that turns it off** is the bisection's cap 0, with the clamp on or off and with the secant's retakes
      or without them: the secant's last retake is kept wherever it ends, so a step past the boundary is kept and the
      boundary's time set over a state whose own clock is past it. The clamp off alone does not turn it off: a step that
