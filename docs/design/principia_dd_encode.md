@@ -179,7 +179,11 @@ in place. `δ_λ` is read by nothing (`principia_dd_decoder.md` § 3.3).
 is the angle of `λ̃` from `ρ̃` on the full circle, one representative in `[0, 2π̂]`, `π̂` the image of π
 (`principia_dd_decoder.md` § 3.2: rounded toward zero at f32, the nearest at f64; R-417) and `2π̂` its double, exact.
 Each case is chosen by a comparison with the constant 0, selecting a value already computed, with no branch (R-437,
-R-438):
+R-438). The comparisons read a `λ̃_x` and `λ̃_y` built per R-547, from operations every IEEE backend rounds alike and
+with no intermediate that can be subnormal, as the mirror decision's operands were (TASK-M2-07's `IeeeBits::product`
+the pattern; REQ-DEC-002), so CPU and GPU take the same case (W11). A collinear state's rotated `λ̃_y` is a rounding
+residue whose sign could otherwise turn on fma contraction or flush-to-zero, and the select's two ends there, 0 and
+`2π̂`, are one point of `S¹` but two values (physics review 5903954379 of PR #533, P4):
 - `λ̃_x = 0` and `λ̃_y = 0` (the `α = 0` pole): 0 (R-437);
 - `λ̃_y` compares equal to 0, true for `+0` and `−0` alike, and `λ̃_x < 0` (the `−x` half-axis): `π̂` (R-438);
 - `λ̃_y < 0`: `atan2(λ̃_y, λ̃_x) + 2π̂`, in `(π̂, 2π̂]` to rounding, the lower half;

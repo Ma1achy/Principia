@@ -124,6 +124,12 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
 - `cargo test -p kernel --test roundtrip` — with the assertions the ruling changes: T1 as the equivariance `E(Π·x)` = the
   mirrored `z` (`β → 2π − β`, the momentum controls reflected, `L_z` negated) in place of `E(Π·x) = E(x)`, and
   `t3_half_mirror` removed under REQ-ENC-005's change (REQ-DEC-055).
+- `cargo test -p engine --test canon_gpu canonicaliser_seam_sweep` and `cargo test -p engine --test encode_gpu`, in the
+  `gpu-kernel` job after `cargo xtask build-kernel` — the signed encode's `β` case (the sign and zero tests on `λ̃_x`
+  and `λ̃_y`, built per R-547) equal bit for bit between CPU-f32 and the GPU on Metal and lavapipe over collinear states
+  in random gauge whose rotated `λ̃_y` is a rounding residue of either sign, subnormal residues included; control: the
+  superseded unfused or flushed forms, emulated on the CPU, decide the case differently on at least one input
+  (REQ-DEC-002, REQ-COL-006; W11; physics review 5903954379 of PR #533, P4).
 - Any preset, saved chart or golden (other than a preset or golden redefined under R-919) whose converted value doesn't decode to the same system within REQ-ENC-024's `ε_phys` on the decoded state, or
   whose outcome classes change, stops the task: the list goes to the owner (REQ-DEC-055).
 - Review: for every saved oblique latent chart whose `q₁[1]` or `q₂[1]` is nonzero, the PR states which form it
