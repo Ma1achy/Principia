@@ -438,6 +438,55 @@ as follows:
   displacement returns to those variables (a KS-type map is invertible only up to gauge), is stated by TASK-M3-74 for
   Heggie × RK4, under physics review; until it is, no regularised occupant has a displacement form. Under a stepper,
   which does not own its time mapping, `δt` is 0 throughout: the sample and its shadow share the wrapper's grid.
+  *14 Nov 2026 (TASK-M3-74):* stated for Heggie × RK4 in the next block.
+
+**Heggie × RK4's joint step and its displacement (14 Nov 2026, TASK-M3-74's definition, R-72; REQ-VAL-355; R-974,
+R-560).** The default occupant marches Heggie's variables `y = (Q₀, P₀, Q₁, P₁, Q₂, P₂, t)` in `τ` under `Γ*` with the
+energy `h` frozen at its registration (integrator contract Part 2b, § "Heggie: the equations, the time transformations,
+the maps and the step control (transcribed)"). Its shadow is held in those variables, and the blocks above act on it
+as follows. `F_h(y)` is the rates in `τ` under the time transformation in force, `g(y) = dt/dτ` their `t` component,
+and `J` the Jacobian, at the sample's `y`, of the return to the Cartesian state (Part 2b, § "Back to the Cartesian
+state" and § "Regularisation and its return").
+
+- **The displacement.** `δy = (δQᵢ, δPᵢ, δt)`, with `δh`, the shadow's frozen energy less the sample's: the shadow is
+  `y + δy` marched under `Γ*` at the energy `h + δh`. Heggie freezes each trajectory's energy at its registration, and
+  a shadow marched at the sample's `h` would follow `Γ*` off its own energy surface, where `Γ*`'s flow is not the
+  physical one.
+- **Start.** `δy₀` is the registration's tangent at the sample's registered state applied to the Cartesian offset
+  `δx₀ = ‖δ₀‖·u` above: `δqᵢ = δrⱼ − δrₖ`, `δpᵢ = (δ(mv)ⱼ − δ(mv)ₖ)/3`, `δQᵢ = L(Qᵢ)ᵀδqᵢ/(2Rᵢ)` (the inverse of
+  `δqᵢ = 2L(Qᵢ)δQᵢ`, by `L(Q)ᵀL(Q) = |Q|²I`), `δPᵢ = 2(L(δQᵢ)ᵀpᵢ + L(Qᵢ)ᵀδpᵢ)`, `Rᵢ` floored at `TINY` where it
+  divides, as the return floors it; `δt = 0`; `δh = E(y₀ + δy₀) − E(y₀)`, `E` Heggie's Eq. 6 read from the regularised
+  variables (integrator contract Part 1, R-566), formed plainly as (a1) forms its difference. The registration takes
+  the state in the centre-of-mass frame, so `J·δy₀` is `δx₀` less its centre-of-mass parts: the first interval starts
+  at the projected offset, as a stepper's shadow does after its first projection.
+- **The joint step.** The sample takes RK4's step on Heggie's system, bit for bit. `δy` takes the same stages and
+  tableau, each stage's rate replaced by `δkᵢ = F_{h+δh}(yᵢ + δyᵢ) − kᵢ`, `yᵢ` the sample's stage state, `kᵢ` its rate
+  and `δyᵢ` the stage's displacement (`δy`, `δy + (Δτ/2)·δk₁`, `δy + (Δτ/2)·δk₂`, `δy + Δτ·δk₃`), `yᵢ + δyᵢ` and
+  `h + δh` formed at the working precision: (a1), the form TASK-M3-72's measurement chose. Heggie's `Qᵢ` regularise the
+  pair separations and the state holds no absolute position, so the difference is formed from the pair separations, never
+  from an absolute `x'`, as R-974 asks. The `t` component of `δkᵢ` is `g(yᵢ + δyᵢ) − g(yᵢ)`, `δt`'s rate above. `δh` is
+  carried unchanged. A landing retake (Part 2b, the step control) retakes the joint step from the saved `(y, δy)`.
+- **The Cartesian displacement** the estimator reads is `δx = J·δy`: `δqᵢ = 2L(Qᵢ)δQᵢ`; `δpᵢ = (δWᵢ − 2pᵢ·δR̃ᵢ)/(2R̃ᵢ)`,
+  `δWᵢ = L(δQᵢ)Pᵢ + L(Qᵢ)δPᵢ`, `R̃ᵢ = max(Rᵢ, TINY)` and `δR̃ᵢ` the floor's own derivative, `2Qᵢ·δQᵢ` where `Rᵢ` is not
+  below `TINY` and 0 where it is; then `δrᵢ = (mⱼδqₖ − mₖδqⱼ)/M` and `δ(mv)ᵢ = δpₖ − δpⱼ`. `J` is linear and read at the
+  sample's state alone, so no absolute shadow state is formed.
+- **Resynchronisation, in Heggie's variables.** `δy ← δy − F_h(y)·(δt/g(y))`, then `δt ← 0` exactly; `δh` is
+  unchanged. To first order it moves the shadow along its own flow by the fictitious time `−δt/g` that takes its clock
+  to the sample's. Since `J·F_h(y) = g(y)·f(x)` on the sample's energy surface, `J` carries it to the Cartesian rule
+  above, `δx ← δx − f(x)·δt`, and it drops the same second-order terms. It runs where that rule runs: at each
+  renormalisation, at each write of the stored shadow, which stores `x + J·δy`, and on a copy for a read.
+- **Renormalisation, in Heggie's variables.** After the resynchronisation, `δ = ‖J·δy‖` over the twelve components
+  above; `S += ln(δ/δ₀)`; every component of `δy` is multiplied by `δ₀/δ`, one rounding each; then
+  `δh ← E(y + δy) − E(y)`, formed as at the start, because the rescaled shadow is a new neighbour, frozen at its own
+  energy as a registration freezes it. `J` being linear, the rescaled displacement's Cartesian image is
+  `(δ₀/δ)·J·δy`, of norm `δ₀` up to rounding. **The rescaled displacement never leaves Heggie's variables:** no inverse
+  map is taken, so no root of the Levi-Civita map is chosen and no gauge arises. In the plane each `qᵢ = L(Qᵢ)Qᵢ` is
+  invertible up to the sign of `Qᵢ` only, which a displacement does not see.
+- **What `J` does not read.** The twelve regularised components carry the centre-of-mass frame's eight degrees of
+  freedom, and `J` sends four directions to 0: `δqᵢ = mᵢc` (off `Σqᵢ = 0`) and `δpᵢ = c′` (one shift of the three
+  relative momenta). Eq. 6, and so `Γ*`, is unchanged by that shift, so the shift is a symmetry of the flow and adds
+  nothing to `J·δy` as it is carried. `Σqᵢ` is that symmetry's first integral, so `Σδqᵢ` stays where the start leaves
+  it, 0 up to rounding. The rescale scales both directions with the rest.
 
 ---
 
