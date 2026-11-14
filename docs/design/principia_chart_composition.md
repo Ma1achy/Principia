@@ -1288,11 +1288,18 @@ its own. *Was:* "The horizon in M9 is a replication question, flagged in RQ-714.
 
 ### 8.7 Where it lands
 
-Before TASK-M4-06's golden, once RQ-714 rules (it is ruled: R-845, R-851, R-871). TASK-M4-34 builds the pair and its entry. **No existing task gains a dependency on this design while it
-is Proposed** (applied per R-369): TASK-M4-06's golden (REQ-RENDER-082) needs RQ-714's domain, so its edge to TASK-M4-34 is named in TASK-M2-58's
-Deliverables, to apply when RQ-714 rules, and it would then hold 230 tasks until TASK-M4-34 merges (§ 15). The plane targets of § 8.5 then reach
-TASK-M4-34 through TASK-M4-06 and need no edge of their own; the samples need none. It is not "built ahead of" a target (R-594 item 5): its first
-customer would be M4's own golden.
+**As ruled (carried 14 Nov 2026).** RQ-714 is ruled (R-845, R-851, R-871). Region D on the CPU is TASK-M2-68's, and
+TASK-M4-34 builds the pair's GPU entry and region D's own GPU reference, the golden that reads region D (REQ-RENDER-123,
+R-914). TASK-M4-06 gains no edge to TASK-M4-34: R-914 dropped it, never applied, and TASK-M4-34 depends on TASK-M4-06
+instead. The plane targets of § 8.5 reach TASK-M4-06 through TASK-M4-17 and gain no edge to TASK-M4-34 (§ 15); the
+samples need none. It is
+not "built ahead of" a target (R-594 item 5): its first customer is TASK-M4-34's own golden. *Was:* "Before TASK-M4-06's
+golden, once RQ-714 rules (it is ruled: R-845, R-851, R-871). TASK-M4-34 builds the pair and its entry. **No existing
+task gains a dependency on this design while it is Proposed** (applied per R-369): TASK-M4-06's golden (REQ-RENDER-082)
+needs RQ-714's domain, so its edge to TASK-M4-34 is named in TASK-M2-58's Deliverables, to apply when RQ-714 rules, and
+it would then hold 230 tasks until TASK-M4-34 merges (§ 15). The plane targets of § 8.5 then reach TASK-M4-34 through
+TASK-M4-06 and need no edge of their own; the samples need none. It is not "built ahead of" a target (R-594 item 5): its
+first customer would be M4's own golden."
 
 *Ruled 9 Nov 2026 (R-914, RQ-752 (a)):* the edge is dropped and never applied. With it, TASK-M4-06 would have waited on
 TASK-M4-34, which R-873 releases in stage 3, after stage 2, while stage 2 waits, through TASK-M8-124 (now TASK-M2-61),
