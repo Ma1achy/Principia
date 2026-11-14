@@ -1237,7 +1237,8 @@ Anosova row, region D's pair, is lowered by TASK-M4-34 (R-914, REQ-CHART-165). T
 **The owner's filter order overtakes this for the presets (RQ-736):** "region D presets render the full disc, with the filter on by default for the paper-frame presets only." So the preset is (b) with the filter of § 10.4, and D is its output; the decode must reach `η < 0` and `ξ < 0` signed. What "the full disc" is, and so the preset's axes, is a choice on RQ-736's list, not made here: the lens `(|ξ| + ½)² + η² ≤ 1` of D's four images with the box's corners masked, the box `ξ ∈ [−½, ½]`, `η ∈ [−√3/2, √3/2]` drawn whole, or any window holding the lens with all three swaps declared, which filters to exactly D (§ 10.4). What TASK-M4-34's preset does before TASK-M8-120 exists is on that list too. *[mirror-step removal, ruled 8 Nov 2026, conditional (R-865): § 6.6]*
 
 **Ruled 8 Nov 2026 (R-871, R-878):** (b), with "the full disc" read as the third reading above, "any window holding the
-lens with all three swaps declared, which filters to exactly D": no mask is built, in M4 or later, and R-554's exception
+lens with all three swaps declared, which filters to exactly D", the mirror declared with them (R-871: "the mirror and all
+three swaps declared"): no mask is built, in M4 or later, and R-554's exception
 is not extended. The filter is on by default for the paper-frame presets only (R-855), and its check is the owner's: at
 equal masses and rest, the filtered area is 0.307, D's own (TASK-M8-120). Until TASK-M8-120 lands, TASK-M4-34's preset
 renders that window with D as a contour, and TASK-M4-06's golden reads `in_region_d` (RQ-738 conflict 8's reading held).
@@ -1590,7 +1591,7 @@ in-plane rotation.
 
 | Chart | Declares | Partners | The filter gives |
 |---|---|---|---|
-| Region D's preset, equal masses, exact rest | all three swaps, the window R-871 rules (*was* "the mirror and the 1↔2 swap, or all three swaps, as RQ-736 rules the window") | present | on the lens, D; on the box with one swap, the box's quadrant `ξ, η ≥ 0`, not D (`(0.5, 0.8)`: outside D, no image in the lens); with all three swaps, exactly D. Stated "mirror pairs shown once: eta >= 0" and the swaps' |
+| Region D's preset, equal masses, exact rest | the mirror and all three swaps, the window R-871 rules (*was*, 14 Nov 2026, Codex's finding on PR #528, "all three swaps, the window R-871 rules"; *was* "the mirror and the 1↔2 swap, or all three swaps, as RQ-736 rules the window") | present | on the lens, D; on the box with one swap, the box's quadrant `ξ, η ≥ 0`, not D (`(0.5, 0.8)`: outside D, no image in the lens); with the mirror and all three swaps, exactly D (R-871) (*was* "with all three swaps, exactly D"). Stated "mirror pairs shown once: eta >= 0" and the swaps' |
 | The same, eq. 3 near-rest | the mirror only: eq. 3 has `ẋ ≠ 0`, and the 1↔2 image needs a turn by `π`, which reverses every `ẋ`, so no swap's image is on the chart | the mirror's | `η ≥ 0`; `ξ < 0` stays (§ 8.8) |
 | Anosova's half-disc, `R = 10`, at (3, 3, 1) | the mirror only, although the 1↔2 swap is exact at rest there: the paper keeps both signs of `ξ′`, and declaring the swap would give a quarter | the mirror's | `η ≥ 0` of the full disc |
 | Li & Liao's unequal sets, at rest | the mirror only | the mirror's | `η ≥ 0`; D a contour (§ 8.8) |
