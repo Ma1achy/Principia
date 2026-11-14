@@ -1081,7 +1081,7 @@ above is registered once for each block codomain it serves. The codomains are:
 - `α ∈ [α_min, π/2 − α_min]` (dd_decoder §3.2), closed (R-417);
 - `β`, the circle `S¹` (R-898), periodic with one period `[0, 2π)` and no bounds, whose one entry is `periodic_beta`
   (dd_decoder §3.2, R-919 Q1 (c));
-- the retired `β`, `(0, π)`, bounded, which no block takes: `sigmoid_beta`, `tanh_beta` and `softsign_beta`, kept as
+- the retired `β`, `[0, π]`, closed (R-417), which no block takes: `sigmoid_beta`, `tanh_beta` and `softsign_beta`, kept as
   conversion sources only (R-919 Q3 (a); physics review 5834538186 of PR #465);
 - each free momentum `q ∈ [−q_max, q_max]` (dd_decoder §3.4), closed (R-417), whose cap is the table's symmetric row;
 - the two lines, which no block uses.
@@ -1114,7 +1114,7 @@ No link clamps its output (validation ground-truth note: no endpoint clamping, n
 | `identity` | ℝ | `x` | `y` | 0 | neutral |
 
 *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* `periodic_beta`, the row above (`principia_dd_decoder.md` § 3.2), is `β`'s one link and its
-default; the `β` entries of the three bounded rows are onto the retired-`β` codomain `(0, π)`, which no block takes, so
+default; the `β` entries of the three bounded rows are onto the retired-`β` codomain `[0, π]`, closed (R-417), which no block takes, so
 no selection names one, their entry bytes (the constraint spelling `bounded` and their trees) unchanged and so their
 entry hashes; the generator emits `periodic_beta`'s period's upper end `2π`'s f32 image as twice `fl↓(π)`, bits
 `0x40C9_0FDA`. *Was (the three rows' codomain column):* "α, β, q". What this changes in built code: REQ-VAL-024's
