@@ -121,14 +121,19 @@ can say the state is the fold's twin, at `θ′ = π/2 − θ` with bodies 1 and
 end, so it is no chart point (§3.4, "Past the span"), and the projection over the chart's span finds the chart's edge
 nearest it; only a twin within `tol` of that edge, which can happen only next to the isosceles triangle where the two
 labellings meet, is projected there, as any point within `tol` of the chart is. On a full-range `ν` chart
-(`DoubleCover`, R-27) the twin is the mirror image of the chart point at `ν′ = (1 − ν)/(1 + ν)`: with no mirror step
-(R-865), `C` keeps its orientation, so it is not that chart point, falls back to latent `z`, flagged `past_fold`, and
-the lookup reports it as such. R-27's and R-104's `DoubleCover` label still holds for the unoriented triangle.
+(`DoubleCover`, R-27), where `past_fold` is decided by `a² > b²` alone, the orientation decides the landing: an input
+past the fold on the embed's hemisphere (§3.4's signed `w`) is the chart point at its own `ν(θ) = ν′ = (1 − ν)/(1 + ν)`
+and lands there; one on the other hemisphere is the leg-swapped twin, the mirror image of the chart point at `ν′`
+(exchanging bodies 1 and 2 flips the signed area), and with no mirror step (R-865) `C` keeps its orientation, so it
+falls back to latent `z`, flagged `past_fold`, as every off-hemisphere state does on a curve chart (§3.4). R-27's and
+R-104's `DoubleCover` label still holds for the unoriented triangle.
 `past_fold` is computed on every curve chart and reaches the lookup in the curve encode (the composition, above), so
 the lookup reports it in each case: on a folded chart where the twin falls back to latent `z`, that the state is the
 fold shape's leg-swapped twin at `θ′ = π/2 − θ`, bodies 1 and 2 exchanged, not relabelled; on a folded chart where the
-twin is projected to the edge, the same, beside the chart point; on a full-range chart, where it too falls back to
-latent `z`, that the state is the mirror image of the chart point at `ν′`, on the leg-swapped half (`ν < √2 − 1`).
+twin is projected to the edge, the same, beside the chart point; on a full-range chart, reading `past_fold` with the
+landing, since the flag alone does not say which: where it lands, that the state lies on the leg-swapped half
+(`ν < √2 − 1`), and where it falls back to latent `z`, that it is the mirror image of the chart point at `ν′`, on that
+half (physics review 5904074113 of PR #533, P7).
 *14 Nov 2026 (R-865, R-24, R-27; TASK-M2-107; the physics consult on TASK-M2-57's code, carried into PR #533's fix round), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:* "On a full-range `ν` chart (`DoubleCover`, R-27) the twin is its own chart point, at
 `ν′ = (1 − ν)/(1 + ν)`, and lands there." and "on a full-range chart, where it lands, that the state lies on the
 leg-swapped half (`ν < √2 − 1`)."
