@@ -2108,7 +2108,8 @@ the previous stage's, placed so: (1) TASK-M8-124; (2) TASK-M8-117, the based mor
 sliding anchor, which R-849 gives it in place of § 17.8's `anchor not in B` (RQ-744 (D), filed before R-849 merged, is
 moot); stage 2's test that the centre's IC is constant applies where the anchor stays in B, and on a sliding path, where
 the centre follows the anchor (R-849), it checks R-849's slide instead: the stored words at `s = 0`, B's nearest point
-at `s = 1`, continuous between, with no label and no jump; (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101,
+at `s = 1`, continuous between, with no label and no jump (read since with R-935's "not nearest" and "the followed
+system ends here" labels and R-950's removal of the time-axis jump, § 17.8); (3) TASK-M4-33, TASK-M4-34, TASK-M8-100, TASK-M8-101,
 TASK-M8-109, TASK-M8-110, TASK-M8-111 and TASK-M8-119; (4) TASK-M8-108; (5) TASK-M8-113 to TASK-M8-116 and
 TASK-M8-120. TASK-M8-124 is the 26th of this section's tasks behind TASK-M4-37, and with R-847's TASK-M8-122 and
 TASK-M8-123 (R-863 names neither) 28 tasks wait on it. What the order leaves open, the tasks that fit no stage or
@@ -2477,8 +2478,13 @@ select is what gives the bits.
 **The anchor may not be in B (P2).** A region D preset, a rest chart or a Burrau chart holds no anchor with other masses or
 momenta, and encode may clamp or reject a qualitatively different start (inverse_encode_contract). Then the stored word would
 put at B's centre a state B can't produce. **The outcome, ruled (R-849, R-935, R-950):** the anchor slides to its nearest
-point in B, the definition of "nearest" REQ-CHART-146's under physics review, and the centre follows it, with no label and
-no jump. *Was:* "**The outcome:** label `anchor not in B`, the morph runs unbased, with no bitwise claim and
+point in B, the definition of "nearest" REQ-CHART-146's under physics review, and the centre follows it, with no jump, on
+every pair of charts (R-950). Continuity wins at a cut locus (R-935, RQ-759 (a)): the anchor follows the local minimiser,
+labelled "not nearest" while another point is nearer, and does not jump; where the followed minimiser ends, the path stops
+at the last frame where it exists, labelled "the followed system ends here", going on being the user's choice, which
+re-pins. *Was (corrected to R-935 on 14 Nov 2026, Codex's finding on PR #528):* "the anchor slides to its
+nearest point in B, the definition of "nearest" REQ-CHART-146's under physics review, and the centre follows it, with no
+label and no jump." *Was:* "**The outcome:** label `anchor not in B`, the morph runs unbased, with no bitwise claim and
 `path_lock_centre` not applying." **The end rule and the anchor rule meet at one pixel:** `s = 1` must be B, and B's own centre differs from the words
 by `ε_phys`. They agree only if a locked B, as a view, carries the words too: a chart-mode switch under a lock then records
 them. That's a change to the lock's state (`SimConfig`'s lock group gains an IC, outside the sim key, or R-92 needs amending, since
@@ -2792,7 +2798,7 @@ physics review"). `blend_entry_counted` is moot (§ 17.12; R-926 item 5).
 | `path_zoom_bitwise` | sim key, quad addresses and image equal the direct zoom | a triple in the key |
 | `path_lock_bitwise` | a path with equal ends leaves every word, `−0` included; `kernel_chart` unchanged | blending equal ends |
 | `path_save_view_bitwise` | a saved chart, tilted and untilted, reopens to one digest through a path | none blended: saved chart's `R` dropped |
-| `path_lock_centre` | a probe at `(½, ½)` reads one set of words on every frame, ends included, affine and nonlinear, `δ = 0` and `δ ≠ 0`; snap-back bit for bit; the area factor at the centre stays within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B, the slide of R-849 as R-935 reads it, with no label and no jump, read at the pin (R-897), REQ-CHART-115 (*was* "`anchor not in B` labelled, unbased") | the select removed; offsets blended linearly; a labelled jump where the anchor can't exist in B |
+| `path_lock_centre` | a probe at `(½, ½)` reads one set of words on every frame, ends included, affine and nonlinear, `δ = 0` and `δ ≠ 0`; snap-back bit for bit; the area factor at the centre stays within 0.5 of the ends' on swapped and orthogonal planes; where the anchor can't exist in B, the slide of R-849 as R-935 reads it, read at the pin (R-897), with no jump on any pair of charts (R-950), the local minimiser followed through a cut locus labelled "not nearest" while another point is nearer, and the path stopped at the last frame where the followed minimiser exists, labelled "the followed system ends here" (R-935, RQ-759 (a)), REQ-CHART-115 (*was* "the slide of R-849 as R-935 reads it, with no label and no jump, read at the pin (R-897)", corrected to R-935 on 14 Nov 2026; *was* "`anchor not in B` labelled, unbased") | the select removed; offsets blended linearly; a labelled jump where the anchor can't exist in B |
 | `path_lower_half_stays` | two views wholly in the open lower hemisphere, whose ends differ at the chart layer so the arm function returns `Path::Line`, which the test asserts first: `n₂ < 0` at every pixel of every frame, ends included, on the signed state; on the other arms it asserts only what's proved, signed, no mirror taken; R-544, the owner's rider to RQ-736 | `canon::canonicalise` for the signed form, which mirrors; a literal `z` blend, which reaches `n₂ ≥ 0` only |
 | `path_keyframe_bitwise` | a segment easing `z₀`, zoom, basis and slice together equals Part 3's frames bit for bit | one field through `Line` |
 | `path_small_step` | gauge-invariant `‖ΔIC‖ ≤ L·ds` away from declared seams, `L` from the arm, with a declared band at `n = (−1, 0, 0)`, where the canonical frame turns (`\|dr/ds\|` 17 to 577, gauge; P8); fixtures: a rest end, the feasibility boundary, a seed flip, planes `δ = 10⁻¹⁰` apart (§ 17.7); a step at a seam is declared | a frame with an undeclared seam; `arccos` for `atan2` on the near-plane fixture |
