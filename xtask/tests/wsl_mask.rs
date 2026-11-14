@@ -300,7 +300,7 @@ enum Node {
     /// A bare word: a command, a keyword, a parameter, an operator or a number.
     Word(String),
     /// A type literal: `[Console]`, `[string]`.
-    Type(String),
+    Type,
     /// `(…)`, `@(…)` or `$(…)` as `(`; `{…}` or `@{…}` as `{`; an index, `[…]`, as `[`.
     Group(char, Vec<Tok>),
     /// `=`, `+=`, `-=`.
@@ -496,7 +496,7 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                     {
                         end += 3;
                     }
-                    push!(Node::Type(text.to_lowercase()));
+                    push!(Node::Type);
                     *i = end;
                 } else {
                     *i += 1;
