@@ -18,9 +18,9 @@
 //!   configuration target and a mass target, on both invariant energy charts, `(L_z, K)` and `(L_z, E)` (R-508 V1), each
 //!   as itself and as its warped `Mapped` form.
 //!
-//! Negative controls (R-176), each must fail: the rotation turned the wrong way; the classification read at the window
-//! point, the types acting before the tilt; the reference decode not sliced to the pixel's hidden value; and a draw that
-//! blanks the continuing `t > 1` side.
+//! Negative controls (R-176), each must fail: the rotation turned the wrong way, at the named tilts and over the sweep;
+//! the classification read at the window point, the types acting before the tilt; the reference decode not sliced to the
+//! pixel's hidden value; and a draw that blanks the continuing `t > 1` side.
 
 use kernel::chart::invariant::Invariant;
 use kernel::chart::tilt::Tiltable;
@@ -294,6 +294,12 @@ mod reversed {
         "the rotation turned the wrong way places pixels off the view's own placement, so it must fail",
         expected = "not the contract's Tip as sheet",
         run(&NAMED, 65, Fault::Reversed)
+    );
+    negative_control!(
+        qa_tip_sheet_every_tilt,
+        "over the sweep, the rotation turned the wrong way places pixels off the view's own placement, so it must fail",
+        expected = "not the contract's Tip as sheet",
+        run(&sweep(), 17, Fault::Reversed)
     );
 }
 
