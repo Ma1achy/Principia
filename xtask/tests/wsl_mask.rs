@@ -7,8 +7,9 @@
 //! Off Windows there is no PowerShell, so, as `wsl.rs` does, these read the script: the first runs `Hide-Tailnet`'s
 //! two patterns, with its two replacements, as the script holds them, on made-up addresses; the second checks that
 //! each proof's line, the echo of what wsl.exe prints and the failure messages print through it, that no proof prints
-//! an address any other way (an allow-list of statements, read by a small reader of the proofs' PowerShell), and that
-//! nothing a proof decides on is masked. `scripts/wsl/inside.sh` prints addresses
+//! an address any other way (a small reader of the proofs' PowerShell, default-deny: it accepts only the statements,
+//! commands, methods and variables it recognises, `printed_outside_report`), and that nothing a proof decides on is
+//! masked. `scripts/wsl/inside.sh` prints addresses
 //! only to wsl.ps1, which reads them raw for the proofs and masks its echo of them. Each test has its negative
 //! controls (R-176).
 
@@ -268,6 +269,9 @@ fn arm<'a>(script: &'a str, verb: &str) -> &'a str {
 
 // ---- A reader of the proofs' PowerShell -----------------------------------------------------------------------------
 
+// The reader is default-deny: it accepts only what it recognises, and each list below is what it recognises. A command,
+// a method, a statement shape or a variable not on them is refused, with or without an address in sight.
+
 /// The commands a proof may hand an address to, inside a value (an assignment's right side, a decision, a collection):
 /// each returns what it computes and prints nothing of its arguments. `Invoke-Ci` echoes what wsl.exe prints through
 /// `Hide-Tailnet` (Invoke-Wsl); `Test-Tcp` only connects.
@@ -278,15 +282,120 @@ const SAFE_COMMANDS: [&str; 5] = [
     "test-tcp",
     "invoke-ci",
 ];
+/// The other commands the proofs run, never with an address: each prints nothing (Invoke-Wsl echoes through
+/// `Hide-Tailnet`), and returns what it computes or nothing. `Start-Process` only as `SENTINEL`; `New-Item` and
+/// `Set-Content` write, so only what is clean.
+const KNOWN_COMMANDS: [&str; 24] = [
+    "invoke-wsl",
+    "start-wsl",
+    "get-netipaddress",
+    "get-process",
+    "get-ciminstance",
+    "get-distros",
+    "initialize-clone",
+    "get-runnerprocesses",
+    "new-object",
+    "start-process",
+    "start-sleep",
+    "stop-process",
+    "stop-distro",
+    "get-content",
+    "join-path",
+    "test-path",
+    "get-sha256",
+    "get-livemanifest",
+    "get-textsha256",
+    "get-tail",
+    "new-item",
+    "set-content",
+    "out-null",
+    "exit",
+];
+/// The masking path: each prints what it is given through `Hide-Tailnet` (`check_routes` holds Report and Fail to it).
+const MASKING: [&str; 3] = ["report", "hide-tailnet", "fail"];
+/// The commands that write what they are given to a file: their statement must be clean.
+const WRITERS: [&str; 2] = ["set-content", "new-item"];
+/// The commands that output nothing: a pipeline that ends in one prints nothing.
+const SILENT: [&str; 5] = [
+    "out-null",
+    "start-sleep",
+    "stop-process",
+    "stop-distro",
+    "exit",
+];
+/// The commands whose output holds an address only if what they are given does: a clean statement runs only these.
+const CLEAN_COMMANDS: [&str; 7] = [
+    "where-object",
+    "select-object",
+    "foreach-object",
+    "join-path",
+    "set-content",
+    "new-item",
+    "out-null",
+];
 /// The methods a proof may hand an address to, as `<type>::<method>` for a static one (`.<method>` for an instance's):
 /// each returns what it computes and prints nothing of its arguments. Proof 3 counts the connections relayed with
 /// `[Math]::Max`.
 const SAFE_METHODS: [&str; 1] = ["math::max"];
+/// The other methods the proofs call, never with an address: none prints. `.tcplistener` is `New-Object`'s
+/// constructor call.
+const KNOWN_METHODS: [&str; 13] = [
+    "math::max",
+    "io.file::readallbytes",
+    ".tostring",
+    ".trim",
+    ".close",
+    ".kill",
+    ".start",
+    ".stop",
+    ".wait",
+    ".waitforexit",
+    ".readlineasync",
+    ".readtoend",
+    ".tcplistener",
+];
+/// The methods that return nothing (a bool at most): called on its own, one prints no address.
+const VOID_METHODS: [&str; 4] = [".close", ".kill", ".start", ".stop"];
 /// The keywords that open a control statement: its `(…)` is a header, a decision; its `{…}` blocks run as the
 /// statement's own context.
-const CONTROL: [&str; 11] = [
-    "if", "elseif", "else", "foreach", "for", "while", "do", "try", "catch", "finally", "switch",
+const CONTROL: [&str; 12] = [
+    "if", "elseif", "else", "foreach", "for", "while", "do", "until", "try", "catch", "finally",
+    "switch",
 ];
+/// `$_` and `$PSItem`: what the enclosing statement hands its blocks (a pipeline's item, a switch's value, a caught
+/// error), so an address wherever a statement around them carries one.
+const ITEM_VARS: [&str; 2] = ["_", "psitem"];
+/// The automatic variables that keep what a statement left in them past it, or hold what a caller passed: `$Matches`
+/// after a match, `$foreach` and `$switch` (the enumerators), `$Error`, `$args`, `$input`, `$this`, …. Always addresses.
+const AUTO_VARS: [&str; 12] = [
+    "matches",
+    "foreach",
+    "switch",
+    "input",
+    "args",
+    "this",
+    "error",
+    "stacktrace",
+    "psboundparameters",
+    "event",
+    "eventargs",
+    "sender",
+];
+/// The common parameters that bind a variable to what a command handled: each alias, and the shortest prefix
+/// PowerShell resolves to the name (`-OutVariable`, `-PipelineVariable`, `-ErrorVariable`, `-WarningVariable`,
+/// `-InformationVariable`). Each variable they name is an address.
+const VAR_PARAMS: [(&str, &str); 5] = [
+    ("-ov", "-outv"),
+    ("-pv", "-pi"),
+    ("-ev", "-errorv"),
+    ("-wv", "-warningv"),
+    ("-iv", "-informationv"),
+];
+/// The variables set outside the proofs that hold no address: Report's lines, masked; the record's folder; the commit.
+const OUTER_CLEAN: [&str; 3] = ["results", "record", "github_sha"];
+/// The one Windows program the proofs start, proof 4's sentinel, read whole: a hidden PowerShell that only sleeps, its
+/// arguments constants. Any other `Start-Process` runs a program this reader can't read, and is refused.
+const SENTINEL: &str = "$winSentinel = Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile', '-NonInteractive', '-Command', 'Start-Sleep -Seconds 600' -WindowStyle Hidden -PassThru";
 
 /// One piece of PowerShell, with the line (of the text read) it starts on.
 #[derive(Debug)]
@@ -614,55 +723,187 @@ fn first_word(s: &[Tok]) -> Option<&str> {
     }
 }
 
-/// Adds to `taint` each variable assigned from one in it, or looped over one in it (`foreach ($v in …)`), and, where
-/// `item` (`code` is a script block run by a pipeline that carries an address, as `Check` reads it), from `$_`.
-/// `$_` itself isn't added, as `Check` holds it an address only in such a block. Returns whether it grew.
-fn spread(code: &[Tok], taint: &mut BTreeSet<String>, item: bool) -> bool {
-    let mut grew = false;
-    let touches = |rest: &[Tok], taint: &BTreeSet<String>| {
-        let mut n = Vec::new();
-        names(rest, &mut n);
-        n.iter().any(|v| (item && v == "_") || taint.contains(v))
+/// Each pipeline element of `s`, without the line ends before it (a pipeline continued on the next line).
+fn elements(s: &[Tok]) -> impl Iterator<Item = &[Tok]> {
+    s.split(|t| matches!(t.node, Node::Pipe)).map(|e| {
+        let start = e
+            .iter()
+            .position(|t| !matches!(t.node, Node::End))
+            .unwrap_or(e.len());
+        &e[start..]
+    })
+}
+
+/// Whether `w`, heading a pipeline element, names a command: not a parameter or an operator, nor a number.
+fn is_command(w: &str) -> bool {
+    !w.starts_with('-') && !w.chars().all(|c| c.is_ascii_digit() || c == '.')
+}
+
+/// Whether `s` is a call of `Hide-Tailnet` with nothing piped on: what it outputs is masked.
+fn masked_call(s: &[Tok]) -> bool {
+    first_word(s) == Some("hide-tailnet") && !s.iter().any(|t| matches!(t.node, Node::Pipe))
+}
+
+/// Whether `args`, a method's arguments, is `(Hide-Tailnet …)` alone: masked text.
+fn masked_text(args: &[Tok]) -> bool {
+    let outer = statements(args);
+    let [[Tok {
+        node: Node::Group('(', inner),
+        ..
+    }]] = outer.as_slice()
+    else {
+        return false;
     };
+    matches!(statements(inner).as_slice(), [m] if masked_call(m))
+}
+
+/// Every variable `code` names outside what `Hide-Tailnet` masks, nested code and strings included, in order.
+fn exposed_names(code: &[Tok], out: &mut Vec<String>) {
     for s in statements(code) {
-        if let [Tok {
-            node: Node::Var(v), ..
-        }, Tok {
-            node: Node::Assign, ..
-        }, rest @ ..] = s
-        {
-            if touches(rest, taint) {
-                grew |= taint.insert(v.clone());
+        if masked_call(s) {
+            continue;
+        }
+        for t in s {
+            match &t.node {
+                Node::Var(v) => out.push(v.clone()),
+                Node::Str(vars, subs) => {
+                    out.extend(vars.iter().cloned());
+                    for sub in subs {
+                        exposed_names(sub, out);
+                    }
+                }
+                Node::Group(_, body) => exposed_names(body, out),
+                _ => {}
             }
         }
-        if first_word(s) == Some("foreach") {
-            if let Some(Tok {
-                node: Node::Group('(', head),
+    }
+}
+
+/// The variables each common parameter of `VAR_PARAMS` in `s` binds: the bare words after it, up to anything else.
+/// None where the name isn't a bare word.
+fn parameter_targets(s: &[Tok]) -> Vec<Vec<String>> {
+    let mut out = Vec::new();
+    for (k, t) in s.iter().enumerate() {
+        let Node::Word(w) = &t.node else { continue };
+        if !VAR_PARAMS
+            .iter()
+            .any(|(alias, prefix)| w == alias || w.starts_with(prefix))
+        {
+            continue;
+        }
+        let mut names = Vec::new();
+        for t in &s[k + 1..] {
+            match &t.node {
+                Node::Punct(':' | '+') => {}
+                Node::Word(n) if !n.starts_with('-') => names.push(n.clone()),
+                _ => break,
+            }
+        }
+        out.push(names);
+    }
+    out
+}
+
+/// How a statement binds a variable.
+enum Bound<'a> {
+    /// `$v = …`, chained or not, `+=` and `-=` too: what it is assigned.
+    Assigned(&'a [Tok]),
+    /// `foreach ($v in …)`, wherever the `foreach` stands: what it loops over.
+    Looped(&'a [Tok]),
+    /// Named by a common parameter (`VAR_PARAMS`).
+    Named,
+}
+
+/// The variables `s` binds itself, not in its nested code.
+fn binds(s: &[Tok]) -> Vec<(String, Bound<'_>)> {
+    let mut out = Vec::new();
+    let mut rest = s;
+    while let [Tok {
+        node: Node::Var(v), ..
+    }, Tok {
+        node: Node::Assign, ..
+    }, tail @ ..] = rest
+    {
+        out.push((v.clone(), Bound::Assigned(tail)));
+        rest = tail;
+    }
+    for pair in s.windows(2) {
+        if let [Tok {
+            node: Node::Word(k),
+            ..
+        }, Tok {
+            node: Node::Group('(', head),
+            ..
+        }] = pair
+        {
+            if let [Tok {
+                node: Node::Var(v), ..
+            }, Tok {
+                node: Node::Word(w),
                 ..
-            }) = s.get(1)
+            }, from @ ..] = head.as_slice()
             {
-                if let [Tok {
-                    node: Node::Var(v), ..
-                }, Tok {
-                    node: Node::Word(w),
-                    ..
-                }, rest @ ..] = head.as_slice()
-                {
-                    if w == "in" && touches(rest, taint) {
-                        grew |= taint.insert(v.clone());
-                    }
+                if k == "foreach" && w == "in" {
+                    out.push((v.clone(), Bound::Looped(from)));
                 }
             }
         }
-        // A script block in a statement that carries an address runs with `$_` one, as in `Check`.
-        let carried = touches(s, taint);
+    }
+    out.extend(
+        parameter_targets(s)
+            .into_iter()
+            .flatten()
+            .map(|v| (v, Bound::Named)),
+    );
+    out
+}
+
+/// Every binding in `code`, nested code included.
+fn all_binds<'a>(code: &'a [Tok], out: &mut Vec<(String, Bound<'a>)>) {
+    for s in statements(code) {
+        out.extend(binds(s));
         for t in s {
             match &t.node {
-                Node::Group('{', body) => grew |= spread(body, taint, item || carried),
-                Node::Group(_, body) => grew |= spread(body, taint, item),
+                Node::Group(_, body) => all_binds(body, out),
                 Node::Str(_, subs) => {
                     for sub in subs {
-                        grew |= spread(sub, taint, item);
+                        all_binds(sub, out);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+/// Adds to `taint` each variable bound from an address: assigned or looped from an expression that names one, or named
+/// by a common parameter (always). Where `item`, a statement around `code` names an address, so `$_` and `$PSItem` are
+/// addresses; the code nested in a statement that names one runs so too. Returns whether it grew.
+fn spread(code: &[Tok], taint: &mut BTreeSet<String>, item: bool) -> bool {
+    let mut grew = false;
+    let touches = |t: &[Tok], taint: &BTreeSet<String>| {
+        let mut n = Vec::new();
+        names(t, &mut n);
+        n.iter()
+            .any(|v| taint.contains(v) || (item && ITEM_VARS.contains(&v.as_str())))
+    };
+    for s in statements(code) {
+        for (v, bound) in binds(s) {
+            let from_address = match bound {
+                Bound::Assigned(from) | Bound::Looped(from) => touches(from, taint),
+                Bound::Named => true,
+            };
+            if from_address {
+                grew |= taint.insert(v);
+            }
+        }
+        let scope = item || touches(s, taint);
+        for t in s {
+            match &t.node {
+                Node::Group(_, body) => grew |= spread(body, taint, scope),
+                Node::Str(_, subs) => {
+                    for sub in subs {
+                        grew |= spread(sub, taint, scope);
                     }
                 }
                 _ => {}
@@ -672,24 +913,89 @@ fn spread(code: &[Tok], taint: &mut BTreeSet<String>, item: bool) -> bool {
     grew
 }
 
-/// The allow-list. Every statement of the proofs that names an address variable is one of: an assignment (whose right
-/// side is a value), a `Report` call, a `Hide-Tailnet` call, or a control statement (`if`, `foreach`, `while`, …),
-/// whose `(…)` header is a decision; anything else prints, and fails. Inside a value (an assignment's right side, a
-/// header, a collection, a subexpression, a script block a value's pipeline runs) a statement is a value too, and may
-/// hand an address only to `SAFE_COMMANDS`, never to a command run by `&` or `.`, and to a method only of
-/// `SAFE_METHODS`; there `$_` is an address where the pipeline carries one.
+/// Whether what `code` gives holds no address: it names only `clean` variables (and, in a script block, the item it is
+/// handed, clean where all before it in the pipeline is), runs only `CLEAN_COMMANDS`, and holds no type, here-string or
+/// redirection. What `Hide-Tailnet` outputs is clean whatever it is given.
+fn is_clean(code: &[Tok], clean: &BTreeSet<String>, in_block: bool) -> bool {
+    let var = |v: &String| clean.contains(v) || (in_block && ITEM_VARS.contains(&v.as_str()));
+    statements(code).into_iter().all(|s| {
+        masked_call(s)
+            || elements(s).all(|e| {
+                let runs_clean = match e.first().map(|t| &t.node) {
+                    Some(Node::Word(w)) => !is_command(w) || CLEAN_COMMANDS.contains(&w.as_str()),
+                    Some(Node::Punct('&' | '.')) => false,
+                    _ => true,
+                };
+                runs_clean
+                    && e.iter().all(|t| match &t.node {
+                        Node::Var(v) => var(v),
+                        Node::Str(vars, subs) => {
+                            vars.iter().all(var)
+                                && subs.iter().all(|b| is_clean(b, clean, in_block))
+                        }
+                        Node::Group(open, body) => is_clean(body, clean, in_block || *open == '{'),
+                        Node::Type(_) | Node::HereString | Node::Punct('>') => false,
+                        _ => true,
+                    })
+            })
+    })
+}
+
+/// Whether `s` outputs nothing: its last pipeline element is one of `SILENT`.
+fn silent(s: &[Tok]) -> bool {
+    elements(s)
+        .last()
+        .and_then(first_word)
+        .is_some_and(|w| SILENT.contains(&w))
+}
+
+/// Whether `s` ends in a call of one of `VOID_METHODS`, or in a write of `Hide-Tailnet`'s text alone
+/// (`….WriteLine((Hide-Tailnet …))`, the masking path): either way it outputs nothing.
+fn void_call(s: &[Tok]) -> bool {
+    let [.., Tok {
+        node: Node::Punct('.'),
+        ..
+    }, Tok {
+        node: Node::Word(m),
+        ..
+    }, Tok {
+        node: Node::Group('(', args),
+        ..
+    }] = s
+    else {
+        return false;
+    };
+    VOID_METHODS.contains(&format!(".{m}").as_str()) || (m == "writeline" && masked_text(args))
+}
+
+/// The reader's check of the proofs, default-deny (`printed_outside_report` gives the rule): each statement is read as
+/// one it recognises, or refused, into `found`. `value`: the statement's output is captured, not printed. `item`: a
+/// statement around it names an address, so `$_` and `$PSItem` are addresses. `guarded`: it runs in the proofs' `try`,
+/// whose catch prints an error masked.
 struct Check<'a> {
     taint: &'a BTreeSet<String>,
+    clean: &'a BTreeSet<String>,
     lines: Vec<&'a str>,
     found: Vec<String>,
 }
 
 impl Check<'_> {
+    fn is_address(&self, v: &str, item: bool) -> bool {
+        self.taint.contains(v) || (item && ITEM_VARS.contains(&v))
+    }
+
+    /// The first address `s` names, nested code and strings included.
     fn tainted(&self, s: &[Tok], item: bool) -> Option<String> {
         let mut n = Vec::new();
         names(s, &mut n);
-        n.into_iter()
-            .find(|v| self.taint.contains(v) || (item && v == "_"))
+        n.into_iter().find(|v| self.is_address(v, item))
+    }
+
+    /// The first address `s` names outside what `Hide-Tailnet` masks.
+    fn exposed(&self, s: &[Tok], item: bool) -> Option<String> {
+        let mut n = Vec::new();
+        exposed_names(s, &mut n);
+        n.into_iter().find(|v| self.is_address(v, item))
     }
 
     /// `v` as the script spells it, where it is one of `ADDRESS_VARS`.
@@ -707,20 +1013,25 @@ impl Check<'_> {
             .map_or(String::new(), |l| l.trim().to_string())
     }
 
-    fn block(&mut self, code: &[Tok], value: bool, item: bool) {
+    fn refuse(&mut self, s: &[Tok], what: &str) {
+        let line = self.line(s);
+        self.found.push(format!("proofs {what}: {line}"));
+    }
+
+    fn block(&mut self, code: &[Tok], value: bool, item: bool, guarded: bool) {
         for s in statements(code) {
-            self.statement(s, value, item);
+            self.statement(s, value, item, guarded);
         }
     }
 
-    /// The code nested in `s`, each piece a value.
-    fn nested(&mut self, s: &[Tok], item: bool) {
+    /// The code nested in `s`, its groups and its strings' subexpressions, each piece a value.
+    fn nested(&mut self, s: &[Tok], item: bool, guarded: bool) {
         for t in s {
             match &t.node {
-                Node::Group('(' | '{', body) => self.block(body, true, item),
+                Node::Group(_, body) => self.block(body, true, item, guarded),
                 Node::Str(_, subs) => {
                     for sub in subs {
-                        self.block(sub, true, item);
+                        self.block(sub, true, item, guarded);
                     }
                 }
                 _ => {}
@@ -728,115 +1039,225 @@ impl Check<'_> {
         }
     }
 
-    /// Refuses each method `s` calls, `[T]::M(…)` or `$o.M(…)`, with an address among its arguments, unless it is
-    /// one of `SAFE_METHODS`.
+    /// Each method `s` calls, `[T]::M(…)`, `$o.M(…)` or `$o.M{…}`: with an address among its arguments, refused unless
+    /// one of `SAFE_METHODS`; without, unless one of `KNOWN_METHODS`. A `.WriteLine` of `(Hide-Tailnet …)` alone is the
+    /// masking path.
     fn methods(&mut self, s: &[Tok], item: bool) {
         for k in 1..s.len().saturating_sub(1) {
-            let (Node::Punct(sep @ ('.' | ':')), Node::Word(m), Node::Group('(', args)) =
-                (&s[k - 1].node, &s[k].node, &s[k + 1].node)
+            let (
+                Node::Punct(sep @ ('.' | ':')),
+                Node::Word(m),
+                Node::Group(open @ ('(' | '{'), args),
+            ) = (&s[k - 1].node, &s[k].node, &s[k + 1].node)
             else {
-                continue;
-            };
-            let Some(v) = self.tainted(args, item) else {
                 continue;
             };
             let method = match (sep, k.checked_sub(3).map(|t| &s[t].node)) {
                 (':', Some(Node::Type(t))) => format!("{t}::{m}"),
                 _ => format!(".{m}"),
             };
-            if !SAFE_METHODS.contains(&method.as_str()) {
-                let (v, line) = (Self::display(&v), self.line(s));
-                self.found.push(format!(
-                    "proofs pass ${v} to the method {method}, which isn't known not to print: {line}"
-                ));
+            if *open == '(' && method == ".writeline" && masked_text(args) {
+                continue;
+            }
+            if let Some(v) = self.exposed(args, item) {
+                if !SAFE_METHODS.contains(&method.as_str()) {
+                    let v = Self::display(&v);
+                    self.refuse(
+                        s,
+                        &format!(
+                            "pass ${v} to the method {method}, which isn't known not to print"
+                        ),
+                    );
+                }
+            } else if !KNOWN_METHODS.contains(&method.as_str()) {
+                self.refuse(
+                    s,
+                    &format!(
+                        "call the method {method}, which this reader doesn't know prints nothing"
+                    ),
+                );
             }
         }
     }
 
-    fn statement(&mut self, s: &[Tok], value: bool, item: bool) {
+    fn statement(&mut self, s: &[Tok], value: bool, item: bool, guarded: bool) {
+        // An assignment, chained or not: its right side is a value.
         if let [Tok {
             node: Node::Var(_), ..
         }, Tok {
             node: Node::Assign, ..
         }, rest @ ..] = s
         {
-            self.statement(rest, true, item);
-            return;
+            return self.statement(rest, true, item, guarded);
         }
+        // In a value, a hashtable's entry, `Key = …`.
+        if let (
+            true,
+            [Tok {
+                node: Node::Word(_),
+                ..
+            }, Tok {
+                node: Node::Assign, ..
+            }, rest @ ..],
+        ) = (value, s)
+        {
+            return self.statement(rest, true, item, guarded);
+        }
+        let scope = item || self.tainted(s, item).is_some();
         match first_word(s) {
-            Some("report" | "hide-tailnet") => {
-                self.methods(s, item);
-                self.nested(&s[1..], item);
-                return;
-            }
-            Some(w) if CONTROL.contains(&w) => {
-                for t in s {
-                    match &t.node {
-                        Node::Group('(', head) => self.block(head, true, item),
-                        Node::Group('{', body) => self.block(body, value, item),
-                        _ => {}
-                    }
+            Some(w) if MASKING.contains(&w) => {
+                if s.iter()
+                    .any(|t| matches!(t.node, Node::Pipe | Node::Punct('>')))
+                {
+                    return self.refuse(
+                        s,
+                        &format!(
+                            "pipe or redirect what {w} prints, which this reader doesn't follow"
+                        ),
+                    );
                 }
-                return;
+                self.methods(s, scope);
+                return self.nested(&s[1..], scope, guarded);
             }
+            Some(w) if CONTROL.contains(&w) => return self.control(s, value, scope, guarded),
             _ => {}
         }
+        if let (false, Some(v)) = (guarded, self.exposed(s, scope)) {
+            let v = Self::display(&v);
+            return self.refuse(
+                s,
+                &format!(
+                    "handle ${v} outside the proofs' try, where an error naming it prints unmasked"
+                ),
+            );
+        }
         if !value {
-            if let Some(v) = self.tainted(s, item) {
-                let (v, line) = (Self::display(&v), self.line(s));
-                self.found.push(format!(
-                    "proofs print ${v} outside Report, unmasked: {line}"
-                ));
-                return;
+            if let Some(v) = self.exposed(s, scope) {
+                let v = Self::display(&v);
+                return self.refuse(s, &format!("print ${v} outside Report, unmasked"));
             }
-            self.nested(s, item);
-            return;
-        }
-        // A value: its pipeline may hand an address only to the safe commands.
-        let carried = self.tainted(s, item);
-        if let Some(v) = &carried {
-            for element in s.split(|t| matches!(t.node, Node::Pipe)) {
-                match element.first().map(|t| &t.node) {
-                    Some(Node::Word(w)) => {
-                        let command = !w.starts_with('-')
-                            && !w.chars().all(|c| c.is_ascii_digit() || c == '.');
-                        if command && !SAFE_COMMANDS.contains(&w.as_str()) {
-                            let (v, line) = (Self::display(v), self.line(s));
-                            self.found.push(format!(
-                                "proofs pass ${v} to {w}, which isn't known not to print: {line}"
-                            ));
-                        }
-                    }
-                    // The call and dot-source operators run a command this reader doesn't name.
-                    Some(Node::Punct(op @ ('&' | '.'))) => {
-                        let (v, line) = (Self::display(v), self.line(s));
-                        self.found.push(format!(
-                            "proofs pass ${v} to a command run by {op}, which isn't known not to print: {line}"
-                        ));
-                    }
-                    _ => {}
-                }
+            if !(silent(s) || void_call(s) || is_clean(s, self.clean, false)) {
+                return self.refuse(
+                    s,
+                    "print what this outputs, which this reader doesn't know holds no address",
+                );
             }
         }
-        self.methods(s, item);
+        self.value(s, scope, guarded);
+    }
+
+    /// A control statement: its `(…)` headers are values, and its `{…}` blocks run where it runs. A `try` with a catch
+    /// of every error guards its body. Anything but keywords, flags (`-regex`), a catch's types, headers and blocks is
+    /// refused.
+    fn control(&mut self, s: &[Tok], value: bool, item: bool, guarded: bool) {
+        let keyword = first_word(s).unwrap_or_default();
+        let catches = s.windows(2).any(|p| {
+            matches!(p, [Tok { node: Node::Word(c), .. }, Tok { node: Node::Group('{', _), .. }] if c == "catch")
+        });
+        let mut body_guarded = guarded || (keyword == "try" && catches);
         for t in s {
             match &t.node {
-                Node::Group('{', body) => self.block(body, true, item || carried.is_some()),
-                Node::Group('(', body) => self.block(body, true, item),
-                Node::Str(_, subs) => {
-                    for sub in subs {
-                        self.block(sub, true, item);
-                    }
+                Node::Word(w) if CONTROL.contains(&w.as_str()) || w.starts_with('-') => {}
+                Node::Type(_) => {}
+                Node::Group('(', head) => self.block(head, true, item, guarded),
+                Node::Group('{', body) => {
+                    self.block(body, value, item, body_guarded);
+                    body_guarded = guarded;
                 }
-                _ => {}
+                _ => {
+                    return self.refuse(
+                        s,
+                        &format!("hold a {keyword} statement this reader doesn't read whole"),
+                    )
+                }
             }
         }
     }
+
+    /// A value: the pipeline `s`, its output captured. It hands an address only to `SAFE_COMMANDS` and `SAFE_METHODS`,
+    /// runs only those and `KNOWN_COMMANDS`, calls only `KNOWN_METHODS`, writes only what is clean, and redirects
+    /// nothing; the code nested in it is a value too.
+    fn value(&mut self, s: &[Tok], item: bool, guarded: bool) {
+        if s.iter().any(|t| matches!(t.node, Node::Punct('>'))) {
+            return self.refuse(
+                s,
+                "redirect output to a file or stream this reader doesn't follow",
+            );
+        }
+        if parameter_targets(s).iter().any(Vec::is_empty) {
+            return self.refuse(
+                s,
+                "name a variable to a common parameter in a form this reader can't read",
+            );
+        }
+        let mut fed: Option<String> = None;
+        for e in elements(s) {
+            let carried = self.exposed(e, item).or(fed);
+            match e.first().map(|t| &t.node) {
+                Some(Node::Word(w)) if is_command(w) => {
+                    if let Some(v) = &carried {
+                        if !SAFE_COMMANDS.contains(&w.as_str()) {
+                            let v = Self::display(v);
+                            return self.refuse(
+                                s,
+                                &format!("pass ${v} to {w}, which isn't known not to print"),
+                            );
+                        }
+                    } else if !(SAFE_COMMANDS.contains(&w.as_str())
+                        || KNOWN_COMMANDS.contains(&w.as_str()))
+                    {
+                        return self.refuse(
+                            s,
+                            &format!("run {w}, which this reader doesn't know prints nothing"),
+                        );
+                    } else if w == "start-process" && self.line(s) != SENTINEL {
+                        return self.refuse(s, "start a Windows program this reader can't read");
+                    } else if WRITERS.contains(&w.as_str()) && !is_clean(s, self.clean, false) {
+                        return self.refuse(
+                            s,
+                            &format!(
+                                "write with {w} what this reader doesn't know holds no address"
+                            ),
+                        );
+                    }
+                }
+                Some(Node::Punct(op @ ('&' | '.'))) => {
+                    let what = match &carried {
+                        Some(v) => format!(
+                            "pass ${} to a command run by {op}, which isn't known not to print",
+                            Self::display(v)
+                        ),
+                        None => format!("run a command by {op}, which this reader can't name"),
+                    };
+                    return self.refuse(s, &what);
+                }
+                _ => {}
+            }
+            fed = carried;
+        }
+        self.methods(s, item);
+        self.nested(s, item, guarded);
+    }
 }
 
-/// What the allow-list refuses in `arm`, each with its line: an address printed other than through `Report` or
-/// `Hide-Tailnet`, or handed to a command not known not to print. The address variables are `ADDRESS_VARS` and every
-/// variable assigned or looped from one, to a fixed point; `$_` is one in a script block whose pipeline carries one.
+/// What the reader refuses in `arm`, each with its line. The proofs are read default-deny:
+///
+/// - **Addresses.** `ADDRESS_VARS`; the automatic variables that outlive the statement that set them (`AUTO_VARS`:
+///   `$Matches`, `$foreach`, `$switch`, `$Error`, `$args`, …); each variable a common parameter binds (`-OutVariable`,
+///   `-PipelineVariable`, …); and each variable assigned (chained too) or looped from an expression that names one, to a
+///   fixed point. `$_` and `$PSItem` are addresses wherever a statement around them names one: the pipeline, `switch`,
+///   `catch` or method that sets them.
+/// - **Output.** A statement whose output prints is an assignment; a control statement; a masking call (`Report`,
+///   `Hide-Tailnet`, `Fail`) with nothing piped on or redirected; a pipeline that ends in a command that outputs
+///   nothing; a call of a method that returns nothing, or a `.WriteLine` of `(Hide-Tailnet …)` alone; or clean. Clean
+///   names only variables proved clean (bound only from clean expressions, or `OUTER_CLEAN`) and runs only commands
+///   that pass on what they are given. An address in it, unmasked, is refused first.
+/// - **Everywhere.** A command runs only if listed: with an address, `SAFE_COMMANDS`; without, those or
+///   `KNOWN_COMMANDS`. A method likewise (`SAFE_METHODS`, `KNOWN_METHODS`). No call or dot-source operator, no
+///   redirection, no here-string, no `Start-Process` but `SENTINEL`; a writer writes only what is clean; a control
+///   statement holds only keywords, flags, a catch's types, headers and blocks.
+/// - **Errors.** Outside the proofs' `try`, whose catch prints an error masked, nothing names an address unmasked, so
+///   an error can't print one.
 fn printed_outside_report(arm: &str) -> Vec<String> {
     let chars: Vec<char> = arm.chars().collect();
     let (mut i, mut line) = (0, 0);
@@ -849,10 +1270,35 @@ fn printed_outside_report(arm: &str) -> Vec<String> {
             _ => None,
         })
         .expect("the arm's body");
-    let mut taint: BTreeSet<String> = ADDRESS_VARS.iter().map(|v| v.to_lowercase()).collect();
+    let mut taint: BTreeSet<String> = ADDRESS_VARS
+        .iter()
+        .chain(AUTO_VARS.iter())
+        .map(|v| v.to_lowercase())
+        .collect();
     while spread(body, &mut taint, false) {}
+    // The clean variables: those bound only from clean expressions, to a fixed point.
+    let mut binds = Vec::new();
+    all_binds(body, &mut binds);
+    let mut clean: BTreeSet<String> = OUTER_CLEAN
+        .iter()
+        .map(|v| (*v).to_string())
+        .chain(binds.iter().map(|(v, _)| v.clone()))
+        .filter(|v| !taint.contains(v))
+        .collect();
+    loop {
+        let before = clean.len();
+        for (v, bound) in &binds {
+            if !matches!(bound, Bound::Assigned(from) if is_clean(from, &clean, false)) {
+                clean.remove(v);
+            }
+        }
+        if clean.len() == before {
+            break;
+        }
+    }
     let mut check = Check {
         taint: &taint,
+        clean: &clean,
         lines: arm.lines().collect(),
         found: Vec::new(),
     };
@@ -866,7 +1312,7 @@ fn printed_outside_report(arm: &str) -> Vec<String> {
             "proofs hold a here-string, which this reader doesn't read: {line}"
         ));
     }
-    check.block(body, false, false);
+    check.block(body, false, false, false);
     check.found
 }
 
@@ -979,10 +1425,33 @@ fn with_line(line: &str) -> String {
     )
 }
 
+/// wsl.ps1 with `line` added after the proofs' `try`, before the summary: outside what its catch guards.
+#[cfg(feature = "controls")]
+fn after_proofs(line: &str) -> String {
+    edited(
+        &read(PS),
+        "        ''\n        $results\n",
+        &format!("        {line}\n        ''\n        $results\n"),
+    )
+}
+
+/// wsl.ps1 with `line` added to the proofs' catch, before its masked print of the error.
+#[cfg(feature = "controls")]
+fn in_catch(line: &str) -> String {
+    edited(
+        &read(PS),
+        "            [Console]::Out.WriteLine((Hide-Tailnet \"::error::wsl.ps1 proofs: stopped",
+        &format!(
+            "            {line}\n            [Console]::Out.WriteLine((Hide-Tailnet \"::error::wsl.ps1 proofs: stopped"
+        ),
+    )
+}
+
 /// The forms the code review's probes found missed, first by a deny-list, then by the allow-list's first cut (the
-/// call and dot-source operators, methods, a copy of `$_` and a here-string), each printing an address (made up here,
-/// in the variables proof 3 sets): each must be refused, and is a control below as well.
-const PROBE_PRINTS: [&str; 34] = [
+/// call and dot-source operators, methods, a copy of `$_` and a here-string), then by its second (the automatic
+/// variables, an assigned loop, a block in a method's parentheses, a redirection in a value), each printing an address
+/// (made up here, in the variables proof 3 sets): each must be refused, and is a control below as well.
+const PROBE_PRINTS: [&str; 41] = [
     "Write-Host @hostSwitch",
     "'gateway: {0}' -f $gateway",
     "\"gateway: {0}\" -f $gateway",
@@ -1017,6 +1486,13 @@ const PROBE_PRINTS: [&str; 34] = [
     "$x = $hostSwitch | ForEach-Object { $h2 = $_; Write-Host $h2 }",
     "$doc = @'\nthe host's\n'@\nWrite-Host $gateway\n$y = 'x'",
     "@\"\nthe gateway: $gateway\n\"@",
+    "$x = $hostSwitch | ForEach-Object { Write-Host $PSItem }",
+    "switch ($gateway) { default { Write-Host $_ } }",
+    "if ($gateway -match '.+') { Write-Host $Matches[0] }",
+    "$null = $lan | Select-Object -OutVariable ov; Write-Host $ov",
+    "$x = foreach ($g in $lan) { Write-Host $g }",
+    "$x = $lan.ForEach({ Write-Host $_ })",
+    "$x = $gateway >> $env:GITHUB_STEP_SUMMARY",
 ];
 
 fn check_probes(script: &str, forms: &[&str]) {
@@ -1808,6 +2284,266 @@ mod allow_here_string_double {
         "a double-quoted here-string naming the gateway, added to proof 3",
         expected = "proofs hold a here-string, which this reader doesn't read: @\"",
         check_routes(&with_line("@\"\nthe gateway: $gateway\n\"@"))
+    );
+}
+
+mod allow_psitem {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$PSItem, the pipeline's item by its other name, printed in a value's block, added to proof 3",
+        expected = "proofs pass $psitem to write-host, which isn't known not to print: $x = $hostSwitch | ForEach-Object { Write-Host $PSItem }",
+        check_routes(&with_line("$x = $hostSwitch | ForEach-Object { Write-Host $PSItem }"))
+    );
+}
+
+mod allow_switch_item {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$_ printed in a switch over the gateway, added to proof 3",
+        expected = "proofs print $_ outside Report, unmasked: switch ($gateway) { default { Write-Host $_ } }",
+        check_routes(&with_line("switch ($gateway) { default { Write-Host $_ } }"))
+    );
+}
+
+mod allow_matches {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$Matches printed after a match on the gateway, added to proof 3",
+        expected = "proofs print $matches outside Report, unmasked: if ($gateway -match '.+') { Write-Host $Matches[0] }",
+        check_routes(&with_line("if ($gateway -match '.+') { Write-Host $Matches[0] }"))
+    );
+}
+
+mod allow_out_variable {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an -OutVariable of the LAN addresses printed, added to proof 3",
+        expected = "proofs print $ov outside Report, unmasked: $null = $lan | Select-Object -OutVariable ov; Write-Host $ov",
+        check_routes(&with_line("$null = $lan | Select-Object -OutVariable ov; Write-Host $ov"))
+    );
+}
+
+mod allow_assigned_foreach {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an assigned foreach's loop variable printed, added to proof 3",
+        expected = "proofs pass $g to write-host, which isn't known not to print: $x = foreach ($g in $lan) { Write-Host $g }",
+        check_routes(&with_line("$x = foreach ($g in $lan) { Write-Host $g }"))
+    );
+}
+
+mod allow_method_block {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a block in .ForEach's parentheses printing $_, added to proof 3",
+        expected = "proofs pass $_ to the method .foreach, which isn't known not to print: $x = $lan.ForEach({ Write-Host $_ })",
+        check_routes(&with_line("$x = $lan.ForEach({ Write-Host $_ })"))
+    );
+}
+
+mod allow_redirect_in_a_value {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the gateway redirected to the job summary in an assignment, added to proof 3",
+        expected = "proofs redirect output to a file or stream this reader doesn't follow: $x = $gateway >> $env:GITHUB_STEP_SUMMARY",
+        check_routes(&with_line("$x = $gateway >> $env:GITHUB_STEP_SUMMARY"))
+    );
+}
+
+mod deny_unknown_command {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Write-Host of the gateway fetched by name, no address variable named, added to proof 3",
+        expected = "proofs run write-host, which this reader doesn't know prints nothing: $null = Write-Host (Get-Variable gateway -ValueOnly)",
+        check_routes(&with_line("$null = Write-Host (Get-Variable gateway -ValueOnly)"))
+    );
+}
+
+mod deny_unknown_method {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the host's addresses appended to the job summary by a method, added to proof 3",
+        expected = "proofs call the method io.file::appendalltext, which this reader doesn't know prints nothing: $null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, (Get-NetIPAddress))",
+        check_routes(&with_line("$null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, (Get-NetIPAddress))"))
+    );
+}
+
+mod deny_unclean_output {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the host's addresses printed straight from Get-NetIPAddress, added to proof 3",
+        expected = "proofs print what this outputs, which this reader doesn't know holds no address: Get-NetIPAddress",
+        check_routes(&with_line("Get-NetIPAddress"))
+    );
+}
+
+mod deny_listener_output {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the listener's output, which names who connected, printed bare, added to proof 3",
+        expected = "proofs print what this outputs, which this reader doesn't know holds no address: $listener.StandardOutput.ReadToEnd()",
+        check_routes(&with_line("$listener.StandardOutput.ReadToEnd()"))
+    );
+}
+
+mod deny_static_output {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a static method's addresses printed bare, added to proof 3",
+        expected = "proofs print what this outputs, which this reader doesn't know holds no address: [Net.Dns]::GetHostAddresses($env:COMPUTERNAME)",
+        check_routes(&with_line("[Net.Dns]::GetHostAddresses($env:COMPUTERNAME)"))
+    );
+}
+
+mod deny_clean_reassigned {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the summary's count reassigned from Get-NetIPAddress, added to proof 3",
+        expected = "proofs print what this outputs, which this reader doesn't know holds no address: if ($results.Count -ne 6 -or $failed)",
+        check_routes(&with_line("$failed = Get-NetIPAddress"))
+    );
+}
+
+mod deny_clean_looped {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the summary's count bound by a loop, added to proof 3",
+        expected = "proofs print what this outputs, which this reader doesn't know holds no address: if ($results.Count -ne 6 -or $failed)",
+        check_routes(&with_line("foreach ($failed in @(Get-NetIPAddress)) { }"))
+    );
+}
+
+mod deny_start_process {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a Windows program other than the sentinel started, added to proof 3",
+        expected = "proofs start a Windows program this reader can't read: $p = Start-Process cmd '/c ipconfig' -NoNewWindow -PassThru",
+        check_routes(&with_line("$p = Start-Process cmd '/c ipconfig' -NoNewWindow -PassThru"))
+    );
+}
+
+mod deny_unclean_write {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the host's addresses written to the job summary by Set-Content, added to proof 3",
+        expected = "proofs write with set-content what this reader doesn't know holds no address: $null = Set-Content $env:GITHUB_STEP_SUMMARY (Get-NetIPAddress)",
+        check_routes(&with_line("$null = Set-Content $env:GITHUB_STEP_SUMMARY (Get-NetIPAddress)"))
+    );
+}
+
+mod deny_report_piped {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Report's line piped on, added to proof 3",
+        expected = "proofs pipe or redirect what report prints, which this reader doesn't follow: Report 3 $false 'x' | Out-Host",
+        check_routes(&with_line("Report 3 $false 'x' | Out-Host"))
+    );
+}
+
+mod deny_control_extra {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a switch over a file, a variable in the statement itself, added to proof 3",
+        expected = "proofs hold a switch statement this reader doesn't read whole: switch -file $env:GITHUB_STEP_SUMMARY { default { } }",
+        check_routes(&with_line("switch -file $env:GITHUB_STEP_SUMMARY { default { } }"))
+    );
+}
+
+mod deny_unreadable_variable {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an -OutVariable named by a string, added to proof 3",
+        expected = "proofs name a variable to a common parameter in a form this reader can't read: $null = $lan | Select-Object -OutVariable 'ov'",
+        check_routes(&with_line("$null = $lan | Select-Object -OutVariable 'ov'"))
+    );
+}
+
+mod deny_variable_alias {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an -ov, -OutVariable's alias, printed, added to proof 3",
+        expected = "proofs print $ov outside Report, unmasked: $null = $lan | Select-Object -ov:ov; Write-Host $ov",
+        check_routes(&with_line("$null = $lan | Select-Object -ov:ov; Write-Host $ov"))
+    );
+}
+
+mod deny_masked_piped {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Hide-Tailnet's output piped on to a block that outputs the gateway, added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: (Hide-Tailnet 'x' | ForEach-Object { $gateway })",
+        check_routes(&with_line("(Hide-Tailnet 'x' | ForEach-Object { $gateway })"))
+    );
+}
+
+mod deny_chained {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the second variable of a chained assignment printed, added to proof 3",
+        expected = "proofs print $b outside Report, unmasked: $a = $b = $gateway; $b",
+        check_routes(&with_line("$a = $b = $gateway; $b"))
+    );
+}
+
+mod deny_call_block {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a script block run by &, no address in sight, added to proof 3",
+        expected = "proofs run a command by &, which this reader can't name: $x = 1 | & { Get-NetIPAddress }",
+        check_routes(&with_line("$x = 1 | & { Get-NetIPAddress }"))
+    );
+}
+
+mod deny_outside_try {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the gateway handed to a command after the proofs' try, where its error would print raw",
+        expected = "proofs handle $gateway outside the proofs' try, where an error naming it prints unmasked: $null = Get-Process -Name $gateway",
+        check_routes(&after_proofs("$null = Get-Process -Name $gateway"))
+    );
+}
+
+mod deny_caught_raw {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a catch printing its error raw, after the proofs' try",
+        expected = "proofs print what this outputs, which this reader doesn't know holds no address: try { $null = Get-Process -Name 'x' } catch { $_ }",
+        check_routes(&after_proofs("try { $null = Get-Process -Name 'x' } catch { $_ }"))
+    );
+}
+
+mod deny_error_copy {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the proofs' catch copying its error, which may name an address, to print it",
+        expected = "proofs handle $_ outside the proofs' try, where an error naming it prints unmasked: $e = $_; $e",
+        check_routes(&in_catch("$e = $_; $e"))
     );
 }
 
