@@ -39018,9 +39018,11 @@ Changes no requirement statement; REQ-INT-119 names the ruling. The parse printe
 ## R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*
 *14 Nov 2026 · the owner's reply to the report of 14 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-814 moved),
 `docs/archive/review_queue/M0.md` (RQ-814 with its ruling), the forward and "Still in force" lines of R-976,
-REQ-INT-076 (reqio: its statement, milestone and note), TASK-M3-14, TASK-M3-72 and TASK-M3-73 (the lines naming the M3
-gate, each with its *Was*, and a dated note), TASK-M4-13 (a dated note and References), `plan/MILESTONES.md` (REQ-INT-076
-moves from M3's gate to M4's) and `plan/rule_groups.yaml`; changes REQ-INT-076*
+REQ-INT-076 (reqio: its statement, milestone and note), REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356 (reqio: the gate
+their notice waits on, M3 to M4, each with its *Was* in a dated note), TASK-M3-14, TASK-M3-72 and TASK-M3-73 (the lines
+naming the M3 gate, each with its *Was*, and a dated note), TASK-M4-13 (a dated note and References),
+`plan/MILESTONES.md` (REQ-INT-076 moves from M3's gate to M4's) and `plan/rule_groups.yaml`; changes REQ-INT-076,
+REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356*
 
 The owner's words (14 Nov 2026), verbatim:
 
@@ -39040,7 +39042,7 @@ values are for, by confirming neither at M3. So:
   the re-run's two picks applies;
 - until then (‖δ₀‖, `n_renorm`, dd test 10's tolerance) = (3e-3, 300, 0.2) stay in force, provisional, and stated as
   unsupported on close-encounter chaotic orbits wherever the FTLE is shown (R-976; REQ-GUI-437 to REQ-GUI-442 and
-  REQ-VAL-356, unchanged), and the eight-orbit report keeps stating each form's pick beside them;
+  REQ-VAL-356, whose notice now falls silent at the M4 gate's confirmation, its wording and values unchanged), and the eight-orbit report keeps stating each form's pick beside them;
 - the M3 gate passes with REQ-INT-076 provisional. TASK-M3-14 still closes it, its proposal and evidence already
   merged; only the gate that confirms it moves (applied per R-369: a mechanical consequence of the ruling, the closing
   task unchanged).
@@ -39050,7 +39052,8 @@ values are for, by confirming neither at M3. So:
 
 R-1009 is in the "values" group of `plan/rule_groups.yaml`.
 
-Changes REQ-INT-076 (statement, milestone and note). The parse printed R-1009 for this answer.
+Changes REQ-INT-076 (statement, milestone and note), and REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356 (statement: the gate
+their notice waits on). The parse printed R-1009 for this answer.
 
 ## R-1010 — RQ-815, proof 2's two holes to Windows: option (a); the WSL distro's `wsl.conf` may gain `[gpu] enabled=false` and a `[boot] command=` that removes the `WSLInterop` registration, with no `systemd=` and no sudo; the image test's exact text and its `[boot]` ban follow the new file, its ban on `systemd=` kept; the manifest is re-pinned and the distro re-registered with `replace: true` *(closes RQ-815; amends R-915)*
 *14 Nov 2026 · the owner's reply to the report of 14 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-815 moved),
@@ -39129,11 +39132,12 @@ Changes no requirement statement; REQ-CHART-096 names the ruling. The parse prin
 ## R-1012 — RQ-817, which browser charts are "not live": option (a), with (b)'s measurement reported beside it; every browser chart runs as natively under R-926, a coarse cover in motion and the exact view at rest, with no route label, and the share of charts whose wasm CPU evaluation of a coarse cover fits one frame at 60 Hz, on TASK-M8-96's thread count and against a frame budget written before the run, is measured and reported, labelling nothing *(closes RQ-817; refines R-889)*
 *14 Nov 2026 · the owner's reply to the report of 14 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-817 moved),
 `docs/archive/review_queue/M0.md` (RQ-817 with its ruling), the forward and "Still in force" lines of R-889,
-`docs/design/principia_chart_composition.md` § "7.5 The browser build: what it gets" (a dated paragraph, with its *Was*),
-the carry's status paragraph, § 14's RQ-735 row and the gate's open-items line (each a dated line), REQ-CHART-155
-(reqio: its statement, verify and note), TASK-M8-102 (its Goal's browser clause, its REQ-CHART-155 line and the
-measurement's line, each with its *Was*, Depends on and References), `plan/tasks.yaml` and `plan/rule_groups.yaml`;
-changes REQ-CHART-155*
+`docs/design/principia_chart_composition.md` § "7.5 The browser build: what it gets" (a dated paragraph, its RQ-817
+sentence kept as *Was*), § "6.2 Labels: reduced capability, never a refusal" (the route labels' browser sentence, with
+its *Was*), the carry's status paragraph, § 14's RQ-735 row and the gate's open-items line (each a dated line),
+REQ-CHART-155 (reqio: its statement, verify and note), TASK-M8-102 (its REQ-CHART-155 line, with its *Was*; a new
+measurement line; Depends on, with its *Was*; References; and a dated note on the Goal's "labelled and not live", the
+Goal itself unchanged), `plan/tasks.yaml` and `plan/rule_groups.yaml`; changes REQ-CHART-155*
 
 The owner's words (14 Nov 2026), verbatim:
 
