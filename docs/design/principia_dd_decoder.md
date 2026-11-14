@@ -197,6 +197,14 @@ R-865, R-898, R-919). The definitions the full-circle `β` rests on:
   one representative in `[0, 2π̂]`, has one: the `+x` half-axis of `λ̃`, `β = 0`, the collinear shapes with body 2 on
   `ρ̃`'s side of the inner pair. A state crossing it from `λ̃_y < 0` to `λ̃_y ≥ 0` encodes from near `2π̂` to `0`. The
   `−x` half-axis, `β = π`, is no seam: the encode is continuous across it, `π̂` on it (R-438's select, kept).
+- **The distance between two `z_β` (R-898).** `z_β` is an angle, so two values of it, encoded or stored, are compared
+  by their distance on the circle, never on the line: `d(a, b) = |a − b − 2π·round((a − b)/2π)|`, in `[0, π]`,
+  evaluated at f64 (a tie at `π` is `π` either way). `d(0, 2π̂)` is `2π − 2π̂`, a rounding of `2π`, so the two ends of
+  the encode's seam are one point to that rounding. Every check that compares a `z_β` to a tolerance (T1's
+  equivariance and T2's round trip, inverse_encode_contract Part 1; the block inverses' recovery; a CPU/GPU agreement
+  on the encode) reads `d`, and a "`z_β` to tolerance" there means `d` within it. A latent `z` with `z_β` drawn off
+  `[0, 2π̂]` (a ball around the origin takes `z_β < 0`) returns from `E(D(z))` on its representative, `2π` away on the
+  line and `d`-close on the circle.
 - **A syzygy crossing on a latent chart.** A trajectory through a syzygy has `β(t)` crossing 0 or π continuously,
   the two collinear orientations, and no mirror changes it. A trace on a latent chart places each sample's encoded
   `z_β` on its lift nearest the previous sample's value (the unwrap: `z_β + 2πk` with `|z_β + 2πk − z_prev| ≤ π`, a

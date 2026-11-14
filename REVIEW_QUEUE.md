@@ -823,9 +823,14 @@ check has to be reworded to measure the same accuracy on the new decoder, and re
   `max |w − 1|` over the equilateral family is about 2, not 2.2×10⁻¹⁶; and a collinear state's `z_β` is exactly 0 or
   `π̂` with no clamp, so "at its clamp image with its lookup_clamped bit set" fails on every collinear state, and
   "D(E(x))'s |w| … the clamp image, sin2α·sin(π·ε_z)" names an image that no longer exists. The gate's numbers stand;
-  what it reads changes.
+  what it reads changes. Its first line fails too (physics review 5903954379 of PR #533, P1): "max ‖z − E(D(z))‖ ≤
+  1.2×10⁻¹³ over … the ball ‖z‖ < 4" draws `z_β` in `(−4, 4)`, and for every draw with `z_β < 0`, about half, `E`
+  returns `z_β + 2π̂`, so the line fails by about `2π`. "The gate's numbers stand; what it reads changes" covers this
+  line as well.
 - **The question:** how does REQ-VAL-022's gate read on the decoder without its mirror step?
-- **Options seen:**
+- **Options seen:** in each, the first line's `‖z − E(D(z))‖` reads `z_β`'s difference as its distance on the circle,
+  `d(a, b) = |a − b − 2π·round((a − b)/2π)|` (`principia_dd_decoder.md` § 3.2, settled by R-898 for the property tests),
+  the bound unchanged; reading it on the line instead fails on every draw with `z_β < 0`.
   - **(a) The same accuracy, read without the fold (recommended).** "an equilateral state's `||w| − 1|` (at equal
     masses, `L⁺` at `w = +1` and `L⁻` at `w = −1` on `C(x)`) and a collinear state's `|w|` within REQ-VAL-121's
     calibrated bounds; a collinear state's `z_β` exactly 0 (body 2 on the `+x` side) or `π̂` (on the `−x` side), bit for

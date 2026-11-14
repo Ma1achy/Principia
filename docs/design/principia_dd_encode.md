@@ -204,8 +204,11 @@ pᵢ' = s^{−1/2} · R(θ) · Π · pᵢ + mᵢ · u
 ```
 
 **T1 is an equivariance (R-865; REQ-ENC-003).** For `g` without `Π` (a translation, boost, rotation and scaling),
-`E(g·x) = E(x)`, deadband-straddling rotations included. The mirror acts on `z`: `E(Π·x)` is the mirrored `E(x)`,
-`z_β → 2π − z_β` (on `[0, 2π̂]`: `0 ↦ 0` and `π̂ ↦ π̂` on the collinear half-axes), the momentum controls of the
+`E(g·x) = E(x)`, deadband-straddling rotations included, `z_β` compared by its distance on the circle
+(`principia_dd_decoder.md` § 3.2, "The distance between two `z_β`"): a state on the `+x` half-axis turned by `g` can
+leave `C` with `λ̃_y` a rounding residue of either sign, and encode to `0` or to `2π̂`, one point. The mirror acts on `z`:
+`E(Π·x)` is the mirrored `E(x)`, `z_β → 2π̂ − z_β`, compared by the same distance (`π̂ ↦ π̂` exactly; `0 ↦ 2π̂`, the
+same point as `0` on the circle), the momentum controls of the
 components `Π` reflects, `p_ρ,y` and `p_λ,y`, negated (`z_q1`, `z_q3`, each link odd), `L_z` negated, every other
 control unchanged, each to float tolerance. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* *Was:* "**T1 asserts `E(g·x) = E(x)` for every such g off the mirror band** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep), which there turn, move, boost and rescale but do not mirror. On `|λ̃_y| ≤ δ_λ`, collinear states included, T1 holds for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z` (R-547, RQ-360; R-82 unchanged). *Was:* '**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the tie-break sweep).' The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent." The scaling law on momenta (`s^{−1/2}`) is the similarity symmetry; using `s^{+1/2}` or forgetting `Π` on `p` are the two errors this explicit form exists to prevent.
 
