@@ -1121,14 +1121,15 @@ Python cross-check's anchor.
 - **Axis-aligned latent slice with `q1 = ê_α, q2 = ê_β`** equals a direct `(α,β)` sweep
   (defined per R-72, REQ-CHART-050). The **direct `(α,β)` sweep** about the slice centre `z0` maps pixel `(u, v)` to `α
   = α-link(z0_α + (2u − 1))` and `β = β-link(z0_β + (2v − 1))`, through the selection's α and β links (§0.2's `α = α_min
-  + (π/2 − 2α_min)·σ(z_α)` and `β = π·σ(z_β)` under the defaults), and builds the IC from `(α, β)` by §0.2: `ρ̃ = cos
+  + (π/2 − 2α_min)·σ(z_α)` and `β = z_β`, `periodic_beta`, `β`'s one link, R-898, R-919; *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *was:* "and `β =
+  π·σ(z_β)` under the defaults"), and builds the IC from `(α, β)` by §0.2: `ρ̃ = cos
   α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)`, unweighted and reconstructed with the masses of `z0`'s mass block (§0.1), and
   the momenta of `z0`'s momentum block (§0.3). The comparison is per pixel (REQ-CHART-030), so the sweep is the one
   whose `(u, v) → (α, β)` map is the slice's own; a sweep linear in angle has the same `(α, β)` set at other pixels and
   is not it. The equality asserted: at each pixel, inside `[0,1]²` and past it, at f64 and at f32 and under every
   registered link, the slice's decode `D(z(u, v))` and the direct sweep give bitwise-equal `α`, `β` and `(m, r, p)`
   (`==`, so `+0 = −0`): the slice's `z(u, v)` is `z0` with `z_α = z0_α + (2u − 1)` and `z_β = z0_β + (2v − 1)`, exactly,
-  up to the sign of a zero.
+  up to the sign of a zero. "Every registered link" is every `α` link, with `periodic_beta` the one `β` link (R-919).
 - **`BodyPlane` bitwise unchanged**, and the Python cross-check green
 
 ### 5.3 What to report per chart

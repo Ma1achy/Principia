@@ -369,8 +369,9 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   in the reconstruction or 0. `rho_mag = 1` there, so the ratio is never `0/0`.
 - **`rho_angle` is the signed angle from `ρ` to `λ`**, in radians on `(−π, π]`: a full-turn angle, for the cyclic view's
   period of 2π (render_gui_spec §10.1; REQ-TOOL-161). The mass weights are positive scalars, so `ρ̃` and `λ̃` give the
-  same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0` on the decode's output; after the encode's
-  canonicalisation `λ̃_y ≥ −δ_λ`, R-82's deadband, which is why the encode's `β` reads `|λ̃_y|`, R-438) it is `β ∈ [0, π]`. Its value is defined case by case,
+  same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y` of either sign, `C` having no mirror step, R-865) it is
+  `β` on the upper half and `β − 2π̂` on the lower, to rounding, `β` the encode's signed angle in `[0, 2π̂]`
+  (`principia_dd_encode.md` §3.2): `rho_angle ∈ (−π̂, π̂]` is `β` read on the other representative. Its value is defined case by case,
   not left to `atan2` (measured by TASK-M2-03), with `π̂` §3.2's image of π (rounded toward zero at f32, the nearest
   value at f64; R-417), so that the range is `(−π̂, π̂]` at each precision. **Its operands are `Φ`'s (R-628):** `ρ̃` and
   `λ̃` are the configuration block's own (§3.2's, or a chart's `Φ` output, before unweighting), not the Jacobi vectors
@@ -378,8 +379,11 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   the reconstruction and `C`'s re-centring, whose size and sign each backend rounds its own way; an angle read from it
   is conditioned as residue/`‖λ̃‖` and differs between backends (measured on PR #303 out to `‖λ̃‖ ≈ 3·10⁻⁵` at f32).
   Read from `Φ`'s vectors its error against f64 is at most `1.6·10⁻⁷` rad at f32, and at the pole the operands are `±0`,
-  so the case below gives 0 on every backend. Where `C`'s step 3 mirrors, the sign is negated; no decode mirrors (the
-  shape sphere's `C` does not take step 3, R-544; every other chart's configuration is canonical by construction). An
+  so the case below gives 0 on every backend. No `C` mirrors (R-865), so its sign is the state's own. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:*
+  "In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0` on the decode's output; after the encode's canonicalisation
+  `λ̃_y ≥ −δ_λ`, R-82's deadband, which is why the encode's `β` reads `|λ̃_y|`, R-438) it is `β ∈ [0, π]`." and "Where
+  `C`'s step 3 mirrors, the sign is negated; no decode mirrors (the shape sphere's `C` does not take step 3, R-544;
+  every other chart's configuration is canonical by construction)." An
   `(m, r, p)` given with no configuration block (the descriptor-alone entries, which serve tests) reads `ρ` and `λ` from
   its positions, as above. The cases:
   - **Antiparallel** (`ρ × λ = 0`, `ρ · λ < 0`): `π̂`, whatever the sign of a zero `ρ × λ`. Collinear bodies whose `y`

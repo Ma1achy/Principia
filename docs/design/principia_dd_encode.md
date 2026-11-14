@@ -121,12 +121,17 @@ can say the state is the fold's twin, at `θ′ = π/2 − θ` with bodies 1 and
 end, so it is no chart point (§3.4, "Past the span"), and the projection over the chart's span finds the chart's edge
 nearest it; only a twin within `tol` of that edge, which can happen only next to the isosceles triangle where the two
 labellings meet, is projected there, as any point within `tol` of the chart is. On a full-range `ν` chart
-(`DoubleCover`, R-27) the twin is its own chart point, at `ν′ = (1 − ν)/(1 + ν)`, and lands there.
+(`DoubleCover`, R-27) the twin is the mirror image of the chart point at `ν′ = (1 − ν)/(1 + ν)`: with no mirror step
+(R-865), `C` keeps its orientation, so it is not that chart point, falls back to latent `z`, flagged `past_fold`, and
+the lookup reports it as such. R-27's and R-104's `DoubleCover` label still holds for the unoriented triangle.
 `past_fold` is computed on every curve chart and reaches the lookup in the curve encode (the composition, above), so
 the lookup reports it in each case: on a folded chart where the twin falls back to latent `z`, that the state is the
 fold shape's leg-swapped twin at `θ′ = π/2 − θ`, bodies 1 and 2 exchanged, not relabelled; on a folded chart where the
-twin is projected to the edge, the same, beside the chart point; on a full-range chart, where it lands, that the state
-lies on the leg-swapped half (`ν < √2 − 1`).
+twin is projected to the edge, the same, beside the chart point; on a full-range chart, where it too falls back to
+latent `z`, that the state is the mirror image of the chart point at `ν′`, on the leg-swapped half (`ν < √2 − 1`).
+*14 Nov 2026 (R-865, R-24, R-27; TASK-M2-107; the physics consult on TASK-M2-57's code, carried into PR #533's fix round), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:* "On a full-range `ν` chart (`DoubleCover`, R-27) the twin is its own chart point, at
+`ν′ = (1 − ν)/(1 + ν)`, and lands there." and "on a full-range chart, where it lands, that the state lies on the
+leg-swapped half (`ν < √2 − 1`)."
 
 ### 3.2 Canonicalisation `C` — the exact ordered procedure
 
@@ -226,9 +231,11 @@ Generic input is not on the Burrau embed. Projection:
 `kernel::encode::curve` beside the curve embeds; every consumer calls its `nearest` (R-542), never a second
 implementation.
 - **The points.** `n(α, β)` is `C(x)`'s shape point, the shape map of its mass-weighted Jacobi vectors
-  (`principia_chart_reference.md` §3.1), its `w` read as `|w|` as `β` reads `|λ̃_y|` (R-438), so it lies on the upper
-  hemisphere where the embed's points do; `n(α_γ(ν), β_γ(ν))` is the embed's `γ(ν)` through the same weighting and
-  map, and `m_γ(ν)` its masses.
+  (`principia_chart_reference.md` §3.1), its `w` signed: `C` keeps `λ̃_y`'s sign (R-865), so the chordal distance is
+  on the full sphere (R-24), and a lower-half state lies on the lower hemisphere while the embed's points lie on the
+  upper. `|w|` would identify a state with its mirror image, a lower-half state reading `d = 0`, falsely on the curve.
+  `n(α_γ(ν), β_γ(ν))` is the embed's `γ(ν)` through the same weighting and map, and `m_γ(ν)` its masses. *14 Nov 2026 (R-865, R-24; TASK-M2-107; the physics consult on TASK-M2-57's code, carried into PR #533's fix round), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:*
+  "its `w` read as `|w|` as `β` reads `|λ̃_y|` (R-438), so it lies on the upper hemisphere where the embed's points do;".
 - **Past the span** (defined per R-72, applied per R-369). The search runs over the chart's own `ν` span, the `ν` its
   decode gives at its curve axis's two ends, not over the family's `(0, 1)`. The curve axis (`ν`, or `θ` on the
   acute-angle charts) of every Burrau chart is bounded (`principia_chart_reference.md` §5.4; `K` continues past
@@ -280,36 +287,58 @@ implementation.
 
 Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)` construction ↔ its known ν and mass point).
 
-1. **T2, per chart:** interior z samples → `D → E`, assert physical residual ≤ `ε_phys` (on the shape sphere chart against `C` of the decoded state, inverse-encode Part 1's T2, R-544); clamp-adjacent samples assert `lookup_clamped`, not a tight residual.
-2. **T1 gauge sweep:** random `g` per §3.3 (including deadband-straddling rotations) → `E(g·x) = E(x)` bit-comparably after float tolerance; the mirror tie produces the identical output twice.
-3. **T3 with the half-mirror catch:** random-gauge x → `E → D` → equals `C(x)`: shapes match, masses match, `E` matches after the recorded rescale, `|L_z|` matches **with sign consistent with `lookup_mirrored`** — a config-only mirror fails exactly this check.
+1. **T2, per chart:** interior z samples → `D → E`, assert physical residual ≤ `ε_phys` (decoded states are canonical on every chart, the shape sphere's included, R-865); clamp-adjacent samples assert `lookup_clamped`, not a tight residual; `z_β` has no clamp.
+2. **T1 gauge sweep and mirror equivariance:** random `g` per §3.3 without `Π` (including deadband-straddling rotations, `λ̃_y` within `±δ_λ`, `±0` included) → `E(g·x) = E(x)` after float tolerance, `z_β` by its distance on the circle (`principia_dd_decoder.md` § 3.2); with `Π`, `E(Π·x)` the mirrored `E(x)` (§3.3); control: an encode with the mirror step left in fails the equivariance.
+3. **T3, parity kept:** random-gauge x → `E → D` → equals `C(x)`: shapes match, masses match, `E` matches after the recorded rescale, and `L_z(D(E(g·x))) = det(Π_g)·L_z(x)` — a test-side mirror reflecting only the `rᵢ` fails exactly this check; a lower-half state decodes back to its own half.
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was (tests 1 to 3):*
+
+> 1. **T2, per chart:** interior z samples → `D → E`, assert physical residual ≤ `ε_phys` (on the shape sphere chart against `C` of the decoded state, inverse-encode Part 1's T2, R-544); clamp-adjacent samples assert `lookup_clamped`, not a tight residual.
+> 2. **T1 gauge sweep:** random `g` per §3.3 (including deadband-straddling rotations) → `E(g·x) = E(x)` bit-comparably after float tolerance; the mirror tie produces the identical output twice.
+> 3. **T3 with the half-mirror catch:** random-gauge x → `E → D` → equals `C(x)`: shapes match, masses match, `E` matches after the recorded rescale, `|L_z|` matches **with sign consistent with `lookup_mirrored`** — a config-only mirror fails exactly this check.
+
 4. **Scale step:** feed the Burrau state at 2× scale → `lookup_rescaled` with `λ = 1/2`... precisely `I_in = 4·I_canon` ⇒ recorded `λ = 1/2`, `E_canon = 2·E_in`, timing conversion factor `I_in^{3/4}` — assert the whole table row.
 5. **Burrau closure:** physical `(3,4,5)` → encode → masses `(5,4,3)/12`, right angle recovered, `ν` matches `ν(θ) = sec θ − tan θ`; decode back → same triangle to `ε_phys`.
 6. **Infeasible invariant entry:** `(L_z, E)` with `K* < L_z²/2` → projected/clamped/rejected per the validation ladder, flagged, never silent, never NaN.
 7. **Curve projection consistency:** exact on-curve input — argmin and closed form agree on `ν` to tolerance; off-curve input — `d(ν*)` reported, latent fallback taken beyond tolerance, and `E ∘` fallback still satisfies T2. The distance is §3.4's metric (R-24).
 8. **Conditioning formulation:** a near-clamp input where the z-residual is ~10⁵× the physical residual — asserting that the *physical* tolerance passes while a naive z-tolerance would fail (the test that keeps future contributors honest about §3.5).
 9. **Coincident-pair rejection:** `ρ → 0` inputs reject at step 2 with the correct reason, both precisions, same branch.
-10. **Collinear `β` in the deadband (R-438):** encode collinear shapes with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2
-    on either side and at each Euler landmark, requiring `β = π` (body 2 on the `−x` side) or 0 (on the `+x` side) as
-    appropriate, never near `−π`, and a round trip within the deadband.
+10. **Collinear `β` (R-438, R-865):** encode collinear shapes with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2 on
+    either side and at each Euler landmark: `±0` give `β = 0` (body 2 on the `+x` side) or `π̂` (on the `−x` side) by
+    §3.2's selects, never near `−π`; `+1e-13` a `β` just above 0 or just below `π̂`, `−1e-13` one just below `2π̂` or
+    just above `π̂`; each decodes back on its own side of the axis (`λ̃_y`'s sign kept; the masses, `ρ̃`, `p_ρ`, `p_λ`
+    within `ε_phys`), and `β` sets no `lookup_clamped`.
     - **The pole landmark** (physics review 5532062124 P2, applied per R-369). With `m₀ = m₁`, the landmark with body 2
       in the middle has body 2 exactly at the inner pair's centre of mass, so `λ̃ = 0` and `α = 0`: body 2 is on
-      neither side. There, at `λ̃_y = ±0`, `β = 0` by R-437's select (R-438 condition (1)), never `atan2(0, 0)`. At
-      `λ̃_y = ±1e-13` with `λ̃_x = 0`, the ruling's formula gives `β = π/2` (`π̂/2` as computed), and the test asserts
-      that value. The side rule applies to the landmarks with `λ̃_x ≠ 0`. The test's masses are chosen so that no other
-      landmark sits on the pole, and the pole case is tested on its own.
-    - **The `−x` half-axis** (P1): at `λ̃_y = ±0` with `λ̃_x < 0`, `β = π̂` by §3.1's select, on CPU-f64 and GPU-f32 alike.
-    - **What the round trip compares** (P3; R-72, applied per R-369; R-438, "Contradiction flagged, applied"). An
-      exactly collinear input clamps `s_β` to `ε_z` or `1 − ε_z`, so the decode returns `|λ̃_y| ≈ π·ε_z·‖λ̃‖`, about
-      10⁶ × `δ_λ`: a deadband `λ̃_y` cannot come back (inverse-encode Part 7: the chart cannot cleanly reach an exactly
-      degenerate configuration). So, at each landmark off the pole, compared in mass-weighted Jacobi coordinates (the
-      masses, `ρ̃`, `λ̃`, `p_ρ`, `p_λ`; physics review 5532166783 P1): the four `λ̃_y` inputs encode to the same `z`;
-      `decode(encode(x))` keeps the input's side, with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖`, plus the input's own `|λ̃_y|` and rounding;
-      `|Δλ̃_x| ≤ ‖λ̃‖(1 − cos(π·ε_z))` plus rounding, since the clamp moves `β` by `π·ε_z` and so moves `λ̃_x` too, which
-      `ε_phys`, calibrated over interior `z`, does not cover; the remaining components (the masses, `ρ̃`, `p_ρ`, `p_λ`)
-      are within `ε_phys`; `lookup_clamped` is set. At the pole landmark the test asserts `β` and
-      `lookup_clamped`; its round trip is REQ-DEC-014's exact-pole ingest (no NaN, deterministic,
-      `lookup_clamped` set).
+      neither side. There, at `λ̃_y = ±0`, `β = 0` by R-437's select, never `atan2(0, 0)`. At `λ̃_y = +1e-13` with
+      `λ̃_x = 0`, `β = π̂/2` as computed, and at `−1e-13` the lower half's `3π̂/2` as computed. The side rule applies to
+      the landmarks with `λ̃_x ≠ 0`; the test's masses are chosen so that no other landmark sits on the pole.
+    - **The `−x` half-axis** (P1): at `λ̃_y = ±0` with `λ̃_x < 0`, `β = π̂` by §3.2's select, on CPU-f64 and GPU-f32 alike.
+    - **No deadband round trip.** With no clamp on `z_β` (R-898), an exactly collinear input comes back exactly
+      collinear, to rounding: the round trip within the deadband, and its clamp bounds, go with the mirror's deadband.
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was (test 10):*
+
+> 10. **Collinear `β` in the deadband (R-438):** encode collinear shapes with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2
+>     on either side and at each Euler landmark, requiring `β = π` (body 2 on the `−x` side) or 0 (on the `+x` side) as
+>     appropriate, never near `−π`, and a round trip within the deadband.
+>     - **The pole landmark** (physics review 5532062124 P2, applied per R-369). With `m₀ = m₁`, the landmark with body 2
+>       in the middle has body 2 exactly at the inner pair's centre of mass, so `λ̃ = 0` and `α = 0`: body 2 is on
+>       neither side. There, at `λ̃_y = ±0`, `β = 0` by R-437's select (R-438 condition (1)), never `atan2(0, 0)`. At
+>       `λ̃_y = ±1e-13` with `λ̃_x = 0`, the ruling's formula gives `β = π/2` (`π̂/2` as computed), and the test asserts
+>       that value. The side rule applies to the landmarks with `λ̃_x ≠ 0`. The test's masses are chosen so that no other
+>       landmark sits on the pole, and the pole case is tested on its own.
+>     - **The `−x` half-axis** (P1): at `λ̃_y = ±0` with `λ̃_x < 0`, `β = π̂` by §3.1's select, on CPU-f64 and GPU-f32 alike.
+>     - **What the round trip compares** (P3; R-72, applied per R-369; R-438, "Contradiction flagged, applied"). An
+>       exactly collinear input clamps `s_β` to `ε_z` or `1 − ε_z`, so the decode returns `|λ̃_y| ≈ π·ε_z·‖λ̃‖`, about
+>       10⁶ × `δ_λ`: a deadband `λ̃_y` cannot come back (inverse-encode Part 7: the chart cannot cleanly reach an exactly
+>       degenerate configuration). So, at each landmark off the pole, compared in mass-weighted Jacobi coordinates (the
+>       masses, `ρ̃`, `λ̃`, `p_ρ`, `p_λ`; physics review 5532166783 P1): the four `λ̃_y` inputs encode to the same `z`;
+>       `decode(encode(x))` keeps the input's side, with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖`, plus the input's own `|λ̃_y|` and rounding;
+>       `|Δλ̃_x| ≤ ‖λ̃‖(1 − cos(π·ε_z))` plus rounding, since the clamp moves `β` by `π·ε_z` and so moves `λ̃_x` too, which
+>       `ε_phys`, calibrated over interior `z`, does not cover; the remaining components (the masses, `ρ̃`, `p_ρ`, `p_λ`)
+>       are within `ε_phys`; `lookup_clamped` is set. At the pole landmark the test asserts `β` and
+>       `lookup_clamped`; its round trip is REQ-DEC-014's exact-pole ingest (no NaN, deterministic,
+>       `lookup_clamped` set).
 
 ---
 
