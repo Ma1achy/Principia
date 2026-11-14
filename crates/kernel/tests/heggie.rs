@@ -467,6 +467,8 @@ fn check_floor(signal: impl Fn(&HgSystem<f64>, &HgQ<f64>, &HgP<f64>) -> bool) {
                 true,
             ),
             ("R₀ below TINY alone", [0.5 * edge, 16.0, 16.0], true),
+            ("R₁ below TINY alone", [16.0, 0.5 * edge, 16.0], true),
+            ("R₂ below TINY alone", [16.0, 16.0, 0.5 * edge], true),
             ("R₀ at TINY, dt/dτ above", [edge, 16.0, 16.0], false),
             ("every value above", [0.5, 1.0, 1.0], false),
         ];
@@ -524,6 +526,12 @@ fn check_step_size() {
         hg::predictive(&s, &q, &p, 1.0),
         (2.0, true),
         "the limit at f = 1"
+    );
+    let (s4, q4, p4) = at_r([2.0, 2.0, 2.0], HeggieTime::Eq20, 1e-300);
+    assert_eq!(
+        hg::predictive(&s4, &q4, &p4, 1.0),
+        (0.25, true),
+        "the limit at d_min = 4, v_max = 1/4, dt/dτ = 64"
     );
     assert!(!hg::predictive(&s, &q, &p, 0.0).1, "the limit on at f = 0");
     assert!(!hg::predictive(&s, &q, &p, -1.0).1, "the limit on at f < 0");
@@ -1162,7 +1170,7 @@ fn measure_az<R: P>(name: &'static str) -> Measured {
         .map(Into::into)
         .to_vec()
     };
-    let (s64, q64, p64) = az::register(&triple::<f64>(), 1e-300, 1e-300);
+    let (s64, q64, p64) = az::register(&triple::<f64>(), 1e-300);
     let tau0 = az_pairs(&s64, &q64)
         .iter()
         .map(|&(d, m)| (d * d * d / m).sqrt())
@@ -1184,11 +1192,7 @@ fn measure_az<R: P>(name: &'static str) -> Measured {
         .copied()
         .fold(f64::INFINITY, f64::min);
     let dt = q1.t;
-    let (s, q, p) = az::register(
-        &triple::<R>(),
-        R::at_width(1e-37, 1e-300),
-        R::at_width(0.0, 1e-300),
-    );
+    let (s, q, p) = az::register(&triple::<R>(), R::at_width(1e-37, 1e-300));
     let h: R = v(h64);
     let (a, b) = <Rk4 as AzStepper>::regularised_step(&s, &q, &p, h);
     let (a, b) = az_reversed(&a, &b);
