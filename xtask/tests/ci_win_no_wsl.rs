@@ -10,14 +10,19 @@
 //!   read, with the nextest profile its step names, and each test file it can reach is found: a `--test` target, a
 //!   profile's `binary_id(=…)` list, every test file holding a name filter's text (a superset of the tests the filter
 //!   selects), or every test of a package that it runs whole; and the modules each of those files includes. Those
-//!   files, and every library source of the workspace, which any test binary may link, must hold no
-//!   `Command::new` of `bash`, `wsl` or System32's copy of either, unless the file is left out on Windows by an inner
-//!   `#![cfg(unix)]` or `#![cfg(not(windows))]` with its reason in the comment above it. A command the check can't read
-//!   fails it, so a new kind of step can't pass by being skipped.
+//!   files, and every library source of the workspace, which any test binary may link, must hold no `Command::new`
+//!   of `bash`, `wsl` or System32's copy of either, in any string literal form (plain, raw, raw with hashes), unless
+//!   the file is left out on Windows by an unindented inner `#![cfg(unix)]` or `#![cfg(not(windows))]` among the
+//!   comments and inner attributes that open it, before any item, with its reason in the comment on the line above;
+//!   a `cfg` inside a module leaves out that module, not the file. A module included by `#[path]` is resolved through
+//!   `.` and `..`, whatever other attributes stand beside it, and one that can't be found fails the check. A command
+//!   the check can't read fails it, so a new kind of step can't pass by being skipped.
 //!
 //! It starts no process: it reads files only, so that it holds wherever it runs. Its negative controls (R-176) put
-//! back a whole-workspace run on the runner, plant a bare `bash` in a reached test and in a library source, lift a
-//! file's Windows exclusion or its reason, and give the check a command it can't read.
+//! back a whole-workspace run on the runner; plant a bare `bash` in a reached test, in a module it includes (by a
+//! `#[path]` through `..`, under another attribute, or on the `mod` line), in a library source, or as a raw string;
+//! give a `#[path]` module that isn't there; put a file's Windows exclusion inside a module, after an item, or with no
+//! reason; and give the check a command it can't read.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
@@ -425,20 +430,42 @@ fn code(text: &str) -> String {
         .join("\n")
 }
 
-/// Each program a file starts with `Command::new("…")` that reaches WSL on the PC.
+/// The value of the string literal `rest` starts with, plain, raw or raw with hashes; `None` if it starts with none.
+fn literal(rest: &str) -> Option<String> {
+    if let Some(raw) = rest.strip_prefix('r') {
+        let hashes = raw.len() - raw.trim_start_matches('#').len();
+        let body = raw[hashes..].strip_prefix('"')?;
+        let close = format!("\"{}", "#".repeat(hashes));
+        return Some(body.split(close.as_str()).next()?.to_owned());
+    }
+    let body = rest.strip_prefix('"')?;
+    let mut value = String::new();
+    let mut chars = body.chars();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => return Some(value),
+            '\\' => value.push(chars.next()?),
+            c => value.push(c),
+        }
+    }
+    None
+}
+
+/// Each program a file starts with `Command::new` and a string literal that reaches WSL on the PC, written as a plain
+/// literal would spell it.
 fn wsl_spawns(text: &str) -> Vec<String> {
     let code = code(text);
     let mut out = Vec::new();
     for (i, _) in code.match_indices("Command::new(") {
         let rest = code[i + "Command::new(".len()..].trim_start();
-        let Some(literal) = rest.strip_prefix('"').and_then(|r| r.split('"').next()) else {
+        let Some(value) = literal(rest) else {
             continue;
         };
-        let lower = literal.to_lowercase();
+        let lower = value.to_lowercase();
         let base = lower.rsplit(['/', '\\']).next().unwrap_or(&lower);
         let bare = !lower.contains(['/', '\\']);
         if WSL_PROGRAMS.contains(&base) && (bare || lower.contains("system32")) {
-            out.push(literal.to_owned());
+            out.push(value.replace('\\', "\\\\"));
         }
     }
     out
@@ -803,6 +830,44 @@ mod cfg_after_an_item {
                 "crates/engine/tests/canon_gpu.rs",
                 "",
                 "fn _bash() { let _ = std::process::Command::new(\"bash\"); }\n// Needs a Unix shell.\n#![cfg(unix)]\n"
+            )
+        )
+    );
+}
+
+mod raw_string {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "System32's wsl.exe as a raw string in a GPU target.",
+        expected =
+            "crates/engine/tests/canon_gpu.rs starts \"C:\\\\Windows\\\\System32\\\\wsl.exe\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                r##"fn _wsl() { let _ = std::process::Command::new(r"C:\Windows\System32\wsl.exe"); }
+"##
+            )
+        )
+    );
+}
+
+mod raw_string_with_hashes {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A bare bash as a raw string with hashes in a GPU target.",
+        expected = "crates/engine/tests/canon_gpu.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "fn _bash() { let _ = std::process::Command::new(r#\"bash\"#); }\n"
             )
         )
     );
