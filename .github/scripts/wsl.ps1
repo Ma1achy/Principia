@@ -66,10 +66,22 @@ try { [Console]::InputEncoding = $NoBom } catch {
     if ($field) { $field.SetValue($null, $NoBom) }
 }
 
+# The PC's tailnet addresses, which identify the host and are never printed: Tailscale's IPv4 range 100.64.0.0/10 (CGNAT)
+# and its IPv6 prefix fd7a:115c:a1e0::/48. Everything this script prints that can hold a host address goes through
+# Hide-Tailnet: each proof's line (Report, and so the summary at the end and wsl-proofs.txt), what wsl.exe prints
+# (Invoke-Wsl's echo) and the failure messages (Fail). Only the printed text is masked; every proof decides on the real
+# addresses. Loopback and WSL's switch's private ranges print as they are: the proofs' evidence rests on them, and they
+# identify nothing. `xtask/tests/wsl_mask.rs` runs these two patterns, with these replacements, on made-up addresses.
+$TailnetV4 = '\b100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}\b'
+$TailnetV6 = '(?i)\bfd7a:115c:a1e0(:[0-9a-f]{0,4})*'
+function Hide-Tailnet([string]$Text) {
+    ($Text -creplace $TailnetV4, '100.x.x.x') -creplace $TailnetV6, 'fd7a:115c:a1e0::x'
+}
+
 # Written to the console, as Invoke-Wsl writes: a line left on the output stream is lost with the exit when the caller is
 # collecting that output, as `$pinned = Get-Pinned` is.
 function Fail($message) {
-    [Console]::Out.WriteLine("::error::wsl.ps1: $message")
+    [Console]::Out.WriteLine((Hide-Tailnet "::error::wsl.ps1: $message"))
     exit 125
 }
 
@@ -111,13 +123,13 @@ function Invoke-Wsl([string[]]$Arguments, [byte[]]$Stdin = $null, [string]$OutFi
         try { $p.StandardOutput.BaseStream.CopyTo($file) } finally { $file.Dispose() }
     } else {
         while ($null -ne ($line = $p.StandardOutput.ReadLine())) {
-            [Console]::Out.WriteLine($line)
+            [Console]::Out.WriteLine((Hide-Tailnet $line))
             $lines.Add($line)
         }
     }
     $p.WaitForExit()
     $e = $err.Result
-    if ($e) { [Console]::Out.WriteLine($e.TrimEnd()) }
+    if ($e) { [Console]::Out.WriteLine((Hide-Tailnet $e.TrimEnd())) }
     [pscustomobject]@{ Code = $p.ExitCode; Lines = $lines.ToArray(); Err = "$e" }
 }
 
@@ -283,8 +295,9 @@ function Test-Tcp([string]$HostName, [int]$Port) {
 }
 
 $results = New-Object System.Collections.Generic.List[string]
+# A proof's line, masked (Hide-Tailnet) before it is printed or kept: the summary and wsl-proofs.txt are these lines.
 function Report([int]$Proof, [bool]$Passed, [string]$Evidence) {
-    $line = "proof ${Proof}: $(if ($Passed) { 'PASS' } else { 'FAIL' }): $Evidence"
+    $line = Hide-Tailnet "proof ${Proof}: $(if ($Passed) { 'PASS' } else { 'FAIL' }): $Evidence"
     $line
     $script:results.Add($line)
 }
@@ -394,7 +407,7 @@ switch ($verb) {
             Report 1 $ok "Windows user $winUser, session $session (0: no interactive session), booted $($os.LastBootUpTime.ToString('o')), console user '$console'; inside: $inCi as -u ci, $inDefault by default"
 
             $cloned = Initialize-Clone
-            if ($cloned) { "the clone failed: $cloned" } else { "cloned inside at $env:GITHUB_SHA, verified" }
+            if ($cloned) { Hide-Tailnet "the clone failed: $cloned" } else { "cloned inside at $env:GITHUB_SHA, verified" }
 
             # Proof 2: no drive and no Windows program reachable from inside.
             if ($cloned) { Report 2 $false "no clone: $cloned" } else {
