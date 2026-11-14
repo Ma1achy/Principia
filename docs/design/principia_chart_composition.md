@@ -1748,7 +1748,7 @@ is re-read against it. The customers need four, and the re-measure below allows 
 | 1 | region D's third-body pair (§ 8), which the angle and side-ratio axes share (V5) |
 | 2 | the virial pair (§ 9) |
 | 3 | R-669's `SuvakovPlane`, if RQ-712 leaves it baked as one chart. It is ruled as its own chart, so its entry is in the module whatever the cap says, and counting it here is the cautious reading; R-834 keeps `SuvakovPlane` as R-669 ruled it |
-| 4 | one spare, for the first pair a replication target wants live; `stage_blend` takes it if live paths are adopted (§ 17.12) |
+| 4 | one spare, for the first pair a replication target wants live; `stage_blend` takes no slot, no blend entry being baked under R-926 items 5 and 6 (below; § 17.12) (*was* "`stage_blend` takes it if live paths are adopted (§ 17.12)") |
 
 **Ruled (R-837): 4 baked entries beyond the gallery, created lazily, decode-only.** Everything past it is `CPU
 batch: not baked`, a label and never a refusal (§ 6); that label is now the fragment route's, `table` (R-935, RQ-765;
@@ -2127,8 +2127,9 @@ rebuilds three gallery charts, and waits on TASK-M8-120 alone of the design's ta
 - Whether a composed chart's linearised deep-zoom decode needs its own derivative: `J_D` on a baked pair follows the shared
   path at M6; a CPU batch view has no deep zoom until a task gives it one.
 - § 3.1: Hill's threshold owes its attribution; `D₁₂` rests on one figure, and the sense of TS-2's rotation isn't printed (§ 20). § 3.1's identities aren't round trips: `prim_round_trip`, with its mutation control, is owed by TASK-M2-74, and a closed row doesn't ship without it (§ 12).
-- Chart paths: § 17's whole-frame time, integration included, a built `stage_blend`, and any nonlinear-end alignment:
-  not measured. A faster CPU-only live path is a goal with no task. The linearised decoder's tangent planes wait on M6.
+- Chart paths: § 17's whole-frame time, integration included, and any nonlinear-end alignment: not measured. No
+  `stage_blend` is built: under R-926 items 5 and 6 no blend entry is baked (§ 11, § 17.12). *Was:* "§ 17's whole-frame
+  time, integration included, a built `stage_blend`, and any nonlinear-end alignment: not measured." A faster CPU-only live path is a goal with no task. The linearised decoder's tangent planes wait on M6.
 - RQ-701, RQ-700 and RQ-682 are closed: R-893 (RQ-701, R-818's form and R-833's cap, built by TASK-M8-48), R-817
   (RQ-700, the floor under the rise) and R-816 (RQ-682, kind 3) (§ 9). Two items this gate found are open: RQ-816 (§ 3,
   § 12) and RQ-817 (§ 7.5). *Was:* "RQ-701, RQ-700 and RQ-682 stand open in the queue; this document assumes nothing of
