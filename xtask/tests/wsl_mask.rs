@@ -1593,6 +1593,86 @@ mod allow_host_ui {
     );
 }
 
+mod allow_pipe_set_content {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$lan | Set-Content x.txt added to proof 3",
+        expected = "proofs print $lan outside Report, unmasked: $lan | Set-Content x.txt",
+        check_routes(&with_line("$lan | Set-Content x.txt"))
+    );
+}
+
+mod allow_format_table {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$lan | Format-Table added to proof 3",
+        expected = "proofs print $lan outside Report, unmasked: $lan | Format-Table",
+        check_routes(&with_line("$lan | Format-Table"))
+    );
+}
+
+mod allow_to_string {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$gateway.ToString() added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: $gateway.ToString()",
+        check_routes(&with_line("$gateway.ToString()"))
+    );
+}
+
+mod allow_unary_join {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "-join $lan added to proof 3",
+        expected = "proofs print $lan outside Report, unmasked: -join $lan",
+        check_routes(&with_line("-join $lan"))
+    );
+}
+
+mod allow_case {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$Gateway, another case, added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: $Gateway",
+        check_routes(&with_line("$Gateway"))
+    );
+}
+
+mod allow_object_parameter {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Write-Host -Object $lan added to proof 3",
+        expected = "proofs print $lan outside Report, unmasked: Write-Host -Object $lan",
+        check_routes(&with_line("Write-Host -Object $lan"))
+    );
+}
+
+mod allow_binary_join {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$lan -join ', ' added to proof 3",
+        expected = "proofs print $lan outside Report, unmasked: $lan -join ', '",
+        check_routes(&with_line("$lan -join ', '"))
+    );
+}
+
+mod allow_if_body {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "if ($gateway) { $gateway } added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: if ($gateway) { $gateway }",
+        check_routes(&with_line("if ($gateway) { $gateway }"))
+    );
+}
+
 mod allow_call_operator {
     use super::*;
     negative_control!(
