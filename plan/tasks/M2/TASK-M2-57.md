@@ -137,6 +137,19 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   plain float `λ̃` (`Canonical::lambda_t_y`, the superseded form), evaluated on the CPU under an unfused or flush-to-zero
   emulation, decides the case differently from the unflushed CPU on at least one input
   (REQ-DEC-002, REQ-COL-006; W11; physics review 5903954379 of PR #533, P4).
+- `cargo test -p kernel --test ingest kappa_on_beta_seam` — `κ` at a state on the `+x` half-axis of `λ̃` (`λ̃_y = 0`,
+  `λ̃_x > 0`, off the `α`-pole) is finite and agrees with `κ` at the nearby off-seam states either side of the axis
+  (`λ̃_y` of each sign), the relative tolerance stated in the test before it runs and approved in physics review
+  (R-649): `kernel::encode::ingest::weighted_encode_jacobian` takes `z_β`'s component of the central difference, and of
+  the mass columns' three-point stencil, by the signed difference on the circle `δ` (dd_decoder § 3.2, "The distance
+  between two `z_β`"; inverse_encode_contract Part 4, "How it is evaluated"); control: the same Jacobian with `z_β`
+  subtracted on the line fails, its `κ` of order `π/hₖ` (R-898; REQ-DEC-055; the physics reviewer's ruling on Codex
+  thread 4573289687 of PR #533).
+- `cargo test -p engine --test lookup latent_plane_lift` — on the oblique latent plane with centre `z_β = z_q0 = 0` and
+  `q₁ = 4e_β + 4e_q0`, the state whose encode is the plane's point at `u = 1` (`z_β = z_q0 = 4`) lands on the chart at
+  `u = 1`, its lift taken by least plane residual (dd_decoder § 3.2, "Stored reduced or unreduced"); control: the lift
+  nearest the centre, `z_β = 4 − 2π`, leaves the plane and fails (R-898; REQ-DEC-055; the physics reviewer's ruling on
+  Codex thread 4573289690 of PR #533).
 - **The restated requirements' verifies (TASK-M2-107; qa review 5903950227 of PR #533, Q1).** Each runs as its
   requirement now states it, in the file named, the implementer's test files among them this task's to change:
   - `cargo test -p kernel --test canon` — REQ-DEC-002 (a lower-half state keeps `λ̃_y < 0` through canonicalise; the
