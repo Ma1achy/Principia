@@ -792,3 +792,98 @@ and one of the fixes adds a `[boot]` section, which that ruling's text singles o
 - **Applied meanwhile:** nothing; `scripts/wsl/wsl.conf` and its tests are unchanged.
 - **Waits:** the proof-2 half of TASK-M0-63. Its proof-6 fixes (the stdin read, the byte-order mark, lavapipe in the
   hosted `wsl-parity` job, the failure line) and proof 3's evidence count touch no `wsl.conf` and need no ruling.
+
+
+## RQ-816: The registry's guard on binary-plus-single and fixed-`k` rows, and a combination's class `none`, after R-847 reversed R-669 and R-849 gave a typed combination a general numerical solve: REQ-CHART-096 and design § 12's `excluded_primitives` still require both *(conflict; R-847, R-849, R-669, R-916; REQ-CHART-096; context: TASK-M2-58, TASK-M2-66, TASK-M2-73, TASK-M2-78, TASK-M2-79)*
+
+*Queued 14 Nov 2026 by the TASK-M2-58 implementer while carrying the rulings into the chart composition design; each
+quote re-read on `main` at b58756589. Nothing is chosen here.*
+
+*In plain English: the chart registry has a built-in check that refuses any axis made from a binary's phase,
+eccentricity, impact parameter or fixed `k`, because an old ruling said no such chart would be built. The owner later
+reversed that ruling, so those axes are now wanted. The same requirement also says a mix of two quantities with no
+registered way back is refused, where a later ruling gives such a mix a numerical solve. The requirement and the test
+still say the old thing.*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-CHART-096, statement: "a combination must be classed closed or numerical only by a
+    registered inverse of that class, a numerical one naming what it solves for and its branch rule, and none
+    otherwise, whatever its parts' classes; … and no row with an inverse may name a binary phase, eccentricity, impact
+    parameter or fixed k, forward-only overlay rows being free to (R-669)."
+  - The same requirement's verify: "a row with an inverse naming a binary phase fails, a forward-only overlay row naming
+    one passes; a combination of closed parts with no registered inverse, as exp(K) + K, reports none and refuses as an
+    axis with NoJointInverse".
+  - `docs/design/principia_chart_composition.md` § "12. Tests that can fail", row `excluded_primitives`: "no row with
+    an inverse names a binary phase, eccentricity, impact parameter or fixed `k` (R-669)".
+  - `decisions.md` § R-847: "R-669 is reversed: fixed-`k` and binary-plus-single (scattering) become charts and builder
+    axes, built when their turn comes".
+  - `decisions.md` § R-849, the owner's words: "A typed combination with no registered inverse gets a general numerical
+    solve on the CPU … Overlay-only is not the answer."
+- **The conflict:** the guard exists to enforce R-669, which R-847 reversed: TASK-M2-78 and TASK-M2-79 build rows with
+  inverses that name fixed `k`, a binary phase and an impact parameter, which the guard fails. And R-849 puts a typed
+  combination with no registered inverse on a general numerical solve, where the requirement classes it `none` and
+  refuses it with `NoJointInverse`. REQ-CHART-096's note already says "the statement and verify above stand as written
+  until TASK-M2-66 rewrites them under the ruling, and where they differ from it the ruling binds", but neither ruling
+  says what the guard becomes or what a combination's class is.
+- **The question:** what do REQ-CHART-096's guard and its combination class read now?
+- **Options seen:**
+  - **(a) Drop the guard; a combination with no registered inverse is classed numerical by R-849's general solve.**
+    `excluded_primitives` is retired, its control with it; `NoJointInverse` stays only where an axis's own class is
+    `none`; REQ-CHART-145's convergence and tagged failures cover the general solve.
+  - **(b) Keep a narrower guard:** such rows only on the fixed-`k` and scattering charts' registries (TASK-M2-78,
+    TASK-M2-79), refused elsewhere, the combination class as in (a).
+  - **(c) Keep `none` for combinations, and R-849's solve as a separate opt-in route,** the requirement naming both.
+- **Recommended:** (a). It is what the two rulings' words do, with nothing added: R-847 builds the rows, and R-849
+  answers "Overlay-only is not the answer" for combinations. If the orchestrator reads it as a mechanical consequence
+  of the rulings (a two-way door under R-369), it may decide (a) and close this entry with that record. Measurable
+  check, written first: TASK-M2-66's suite passes with a fixed-`k` row and a binary-phase row registered with inverses,
+  and `exp(K) + K` reports the numerical class.
+- **Applied meanwhile:** nothing chosen. The design's § 3, § 6.1, § 12 and § 17.5 name this entry where they meet it;
+  REQ-CHART-096 is unchanged.
+- **Waits:** TASK-M2-66's rewrite of REQ-CHART-096, and TASK-M2-73, TASK-M2-78 and TASK-M2-79 where they register rows.
+
+
+## RQ-817: The browser build's "labelled and not live" (R-889, REQ-CHART-155) after R-926 fills every view from the CPU's f64 evaluation and R-925 refuses no chart a fragment route: which browser charts, if any, are "not live" *(conflict; a one-way door, it reads the owner's words; R-889, R-926, R-925, R-985, R-571; REQ-CHART-155; context: TASK-M2-58, TASK-M8-102, TASK-M8-96)*
+
+*Queued 14 Nov 2026 by the TASK-M2-58 implementer while carrying the rulings into the chart composition design; each
+quote re-read on `main` at b58756589. Nothing is chosen here.*
+
+*In plain English: when the owner ruled the browser version, charts that needed the CPU ran as a separate, slower
+route marked "not live". Since then the owner made every chart run through the CPU, live or not. So in the browser it is
+no longer clear which charts are "not live" and carry that mark, or whether any do.*
+
+- **File, section:**
+  - `decisions.md` § R-889, the owner's words: "RQ-735: (b)", and its decision: "numerical axes, closed forms past the
+    cap or unbaked, and morphs with a CPU-only end run as CPU batch in the engine's worker, the same Rust compiled to
+    WebAssembly, labelled and not live, as natively."
+  - `plan/requirements.yaml` REQ-CHART-155, statement: "must run as CPU batch in the engine's worker, … labelled and not
+    live (R-889, RQ-735 (b); R-571)"; its verify's control: "a CPU batch view not labelled fails"; its note: "the chart
+    re-plan's § A.2 marks this CHANGE: every chart is CPU-evaluated in the browser too. … the statement and verify above
+    stand as written until TASK-M8-102 rewrites them under the ruling".
+  - `decisions.md` § R-926, *What it supersedes*: "every view, live or not, is filled from the CPU's f64 evaluation
+    narrowed to the integrator's records, so a CPU-batch view is no longer a separate, labelled route that a gesture
+    never reaches."
+  - `decisions.md` § R-985, F17 (on final-condition charts only): "carries no label of its own as a route ("not live",
+    "CPU batch" or the like)".
+  - `docs/design/principia_chart_composition.md` § "7.5 The browser build: what it gets".
+- **The conflict:** natively, R-926 removes the CPU-batch route and its label: every chart takes the coarse cover in
+  motion and is exact at rest. R-889's "as natively" now points at that, but its own words, "labelled and not live",
+  describe the old route, and the browser's CPU has a thread count TASK-M8-96 has not measured, so whether a browser
+  chart can keep up in motion is unknown. Reading "labelled and not live" away, as R-985 did for final-condition charts
+  natively, would reinterpret the owner's words for the browser.
+- **The question:** in the browser, does every chart run as natively under R-926 (coarse cover in motion, exact at
+  rest, no route label), or does some class of chart stay "not live", labelled?
+- **Options seen:**
+  - **(a) As natively:** R-889's "as natively" governs, so every browser chart runs as R-926 has it, with no route label;
+    a chart the browser can't keep up with in motion shows the coarse cover longer, as natively.
+  - **(b) A measured "not live" class:** after TASK-M8-96's thread-count measurement, a chart whose CPU evaluation per
+    frame in wasm exceeds a frame budget, written before the run, is labelled "not live" in the browser only.
+  - **(c) R-889 as written:** numerical axes, unbaked closed forms and morphs with a CPU-only end stay "labelled and not
+    live" in the browser, the categories read against R-925's fragment routes.
+- **Recommended:** (a), with (b)'s measurement reported beside it. It keeps R-571's "the whole native app" and R-889's
+  "as natively", and R-926 already has a view degrade gracefully in motion. Measurable alternative, criterion written
+  before running: on TASK-M8-96's thread count, the share of § 3.1's charts whose wasm CPU evaluation of a coarse cover
+  fits one frame at 60 Hz.
+- **Applied meanwhile:** nothing chosen. Design § 7.5 records R-889 as ruled and names this entry; REQ-CHART-155 is
+  unchanged.
+- **Waits:** TASK-M8-102's rewrite of REQ-CHART-155 (its browser route). No M2 task waits.
