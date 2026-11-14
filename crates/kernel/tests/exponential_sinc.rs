@@ -1,6 +1,6 @@
 //! The shape sphere's exponential sinc, `kernel::Real::sinc` (R-696, RQ-687's option (b); REQ-DEC-053, REQ-DEC-054): at
 //! f32 it never reads the backend's `sin` near 0, and at f64 its bits do not move.
-//! - `exponential_sinc_f64_is_sin_over_r`: at f64 it is `sin(r)/r`, bit for bit, on fuzzed `r`; an ungated form moves a
+//! - `exponential_sinc_f64_is_sin_over_r`: at f64 it is `sin(r)/r`, the pinned libm's `sin` (R-991), bit for bit, on fuzzed `r`; an ungated form moves a
 //!   bit, its control.
 //! - `exponential_sinc_f64_map_bits`: `exponential` at f64 is the line's old form, bit for bit, on fuzzed frames and at
 //!   `r = 0`.
@@ -188,7 +188,7 @@ fn check_f64(form: fn(f64, f64) -> f64) {
         if r == 0.0 {
             continue;
         }
-        let (got, old) = (form(r, r * r), r.sin() / r);
+        let (got, old) = (form(r, r * r), libm::sin(r) / r);
         assert_eq!(
             got.to_bits(),
             old.to_bits(),
@@ -233,13 +233,14 @@ fn frame(a: f64, b: f64, c: f64) -> [[f64; 3]; 3] {
     FRAME.map(turn)
 }
 
-/// `exponential`'s line at f64 before R-696, its offset and radius as the map forms them.
+/// `exponential`'s line at f64 before R-696, its offset and radius as the map forms them, its `sin` and `cos` the pinned
+/// libm's (R-991).
 fn old_map(n0: [f64; 3], e1: [f64; 3], e2: [f64; 3], s: f64, u: f64, v: f64) -> [f64; 3] {
     let (a, b) = ((u + u - 1.0) * s, (v + v - 1.0) * s);
     let d = [0, 1, 2].map(|i| a * e1[i] + b * e2[i]);
     let r = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-    let c = r.cos();
-    let k = if r == 0.0 { 1.0 } else { r.sin() / r };
+    let c = libm::cos(r);
+    let k = if r == 0.0 { 1.0 } else { libm::sin(r) / r };
     [0, 1, 2].map(|i| c * n0[i] + k * d[i])
 }
 

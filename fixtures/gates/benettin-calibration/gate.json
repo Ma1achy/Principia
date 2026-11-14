@@ -10,6 +10,7 @@
     "lagrange_f64.json",
     "control_f32_rounding.json",
     "eight_orbits.json",
+    "eight_orbits_displacement.json",
     "control_eight_orbits_incomplete.json"
   ],
   "threshold": { "value": 0.2, "requirement": "REQ-INT-076", "status": "provisional", "ruling": "R-71" },

@@ -16,8 +16,9 @@
 //! - `qa_m308_rates_fd`: the rates under Eq. 20 and Eq. 22 against a central difference, step `1e-6`, within `1e-8`, of
 //!   the Hamiltonian transcribed here from Part 2b (`Γ*`, `Γ** = Γ*·S^{−3/2}`), and `dt/dτ = −∂/∂h`; controls: a momentum
 //!   rate's sign flipped, and Eq. 22's rates read against `Γ*` (the control term dropped).
-//! - `qa_m308_dt_dtau_floors`: `dt/dτ` under each transformation, unfloored itself, `S` floored at `TINY`, and the
-//!   return and energy finite at `Rᵢ = 0`, `|qᵢ| = 0`; controls: Eq. 20's `dt/dτ` read for Eq. 22's, `TINY = 0`.
+//! - `qa_m308_dt_dtau`: `dt/dτ` under each transformation, unfloored itself, and `S` floored at `TINY`; control: Eq. 20's
+//!   `dt/dτ` read for Eq. 22's.
+//! - `qa_m308_floors`: the return and energy finite at `Rᵢ = 0`, `|qᵢ| = 0`; control: `TINY = 0`.
 //! - `qa_m308_reversal`: the time-reversal map is an involution, keeps `Q`, negates `P` and `t`, and reverses the
 //!   equations (`Q̇` odd in `P`, `Ṗ` and `ṫ` even), its image the ordinary time reversal; control: a map negating `Q`.
 //! - `qa_m308_flow_sums`: the flow's sums on known values, the clock included; and `rates` equals `(q_rate, p_rate)`;
@@ -427,7 +428,8 @@ fn check_rates(time: HeggieTime, how: Fd) {
             a[n] += FD_STEP;
             b[n] -= FD_STEP;
             let d = post * (ham(&a, h) - ham(&b, h)) / (2.0 * FD_STEP);
-            // n % 4 ∈ {0, 1}: a Q component, whose rate is ∂H/∂P at n + 2; {2, 3}: a P component, rate −∂H/∂Q at n − 2.
+            // n % 4 ∈ {0, 1}: a Q component, whose −∂H/∂Q is the P rate at n + 2; {2, 3}: a P component, whose ∂H/∂P is
+            // the Q rate at n − 2.
             let (rate_index, want) = if n % 4 < 2 {
                 let sign = if how == Fd::SignFlipped { 1.0 } else { -1.0 };
                 (n, sign * d)
@@ -816,20 +818,19 @@ impl<R> Cadence<R> for Quiet {
     }
 }
 
-/// Aarseth–Zare's step control at f64 at test values: the reference's `TINY` (R-953) and landing tolerance (RQ-795's
-/// meanwhile), a budget that does not bind.
+/// Aarseth–Zare's step control at f64 at test values: the reference's `TINY` (R-953) and the landing bisection's 64
+/// halvings (Part 2b, step 6), a budget that does not bind.
 fn az_params() -> AzParams<f64> {
     AzParams {
         eta: 0.1,
         delta_sync: 0.1,
         tiny: 1e-300,
         predictive_f: 0.02,
-        r3_floor: 1e-300,
-        land_eps_rel: 1e-14,
         step_budget_rate: 1e7,
         n_min: 1_000_000,
         clamp: true,
         secant_tries: 4,
+        bisect_tries: 64,
     }
 }
 
@@ -873,7 +874,7 @@ fn check_az(read: AzRead) {
         } else {
             s0
         };
-        let (sys, _, _) = az::register(&first, p.tiny, p.r3_floor);
+        let (sys, _, _) = az::register(&first, p.tiny);
         assert_eq!(
             out.registered.to_bits(),
             sys.e.to_bits(),

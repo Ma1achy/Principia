@@ -146,6 +146,12 @@ stages, the force difference formed from pair separations, never from an absolut
 and RK4, and for the default regularised occupant (Part 2b, R-560). Whether that difference is formed plainly in f32
 (a1) or cancellation-free (a2) is chosen by a measurement whose criterion TASK-M3-72 writes before any run (R-649);
 TASK-M3-72 builds it and defines the shadow's projection, energy and collision test from `x + δ⃗`, under physics review.
+*13 Nov 2026 (TASK-M3-72, applied per R-369):* every stepper's `STEP` gains its joint step, `joint_step(s, δ⃗, dt,
+geom) → (s', geom', δ⃗')`, `s'` and `geom'` the `STEP`'s bit for bit, `δ⃗'` through the same stages with the force
+difference of dd_integrator §3.8, (a1) or (a2) as the step's type parameter: KDK, Yoshida-4, Yoshida-6 and RK4, as
+R-974 names them, and Euler, the debug occupant, so that the slot's every stepper has one. The default regularised
+occupant's, Heggie × RK4's, is TASK-M3-74's (re-scoped 13 Nov 2026, applied per R-369: Heggie × RK4 needs
+TASK-M3-08); the line above, R-974's list, is unchanged.
 
 **The two reversibility flags (R-500).** `step_reversible` says the occupant's `STEP` is time-symmetric at a fixed
 step: one `STEP(dt)`, momentum negation, `STEP(dt)`, negation returns the state to rounding level, with no wrapper
@@ -662,8 +668,59 @@ sized or retaken so that its state is the state at the boundary; the clock is ne
 state stays where an overshooting step left it, so step 7's "`t += dt_left`" on a landing holds only for a state that
 landed with it. How the secant stops without a tolerance is a definition (R-72) the building task (TASK-M3-76) writes
 here, physics-reviewed; it is checked by the figure-eight closure's convergence order, not only its closure value
-(REQ-INT-119). Until it is written, the lines above stand as the reference's transcription, its `LAND_EPS_REL` not the
-rule.
+(REQ-INT-119). It is written below (TASK-M3-76); the lines of steps 6 and 7 above stay as the reference's
+transcription, its `LAND_EPS_REL` not the rule. *Was:* "Until it is written, the lines above stand as the reference's
+transcription, its `LAND_EPS_REL` not the rule."
+
+*13 Nov 2026 (TASK-M3-76; R-998, a definition, R-72; physics review 5886800427 of #516, F1, which set out the stop):*
+**the landing with no tolerance.** It replaces steps 6 and 7's landing test, the secant's stop and the clock's landing
+rule; the rest of steps 1 to 8 stands.
+
+- **When it runs.** After a step from the saved state `(q, p)` at the interval clock `t_before`, by step 3's `h`, the
+  landing runs only where the step ends the clock past the boundary, `t_s > dt_left`. A step that ends it on the
+  boundary, `t_s = dt_left`, is kept and lands; one that ends it short is kept and the march goes on.
+- **The secant.** `want = dt_left − t_before`, `cur = h`; up to `land_max_iters` (4) times: `got = t_s − t_before`;
+  stop if `got` is not finite, `got ≤ 0`, or `t_s = dt_left`; otherwise `cur = cur·want/got` and the step is retaken
+  from the saved state at `cur`, each retake a counted step.
+- **The bisection.** Where the secant's last retake still ends the clock past the boundary, its clock finite, a bracket
+  is set: `lo = 0`, the saved state, and `hi` that retake's step size. The step is retaken at `mid = lo + (hi − lo)/2`, up to 64 times, each a counted step: a retake that ends the clock at or short
+  of the boundary, its clock finite, becomes `lo`, with its state, and one that ends it past, or whose clock is not
+  finite, becomes `hi`; it stops where a retake ends the clock on the boundary, or where `mid` is `lo` or `hi` (the
+  bracket is one step size wide). The state kept is `lo`'s. So the step kept never ends the clock past the boundary.
+  *13 Nov 2026 (physics review 5893039643 of #519, F1):* a clock of −∞ is not finite and becomes `hi`: a stepper with a
+  negative stage weight in the slot (Yoshida-4 and Yoshida-6's drift weight `w₀`) can reach it where `A·B` overflows,
+  and kept as `lo` it would break the bracket's property. *Was:* "a retake that ends the clock at or short of the
+  boundary becomes `lo`, with its state, and one that ends it past, or whose clock is not a number, becomes `hi`".
+- **The closing step.** A step kept short of the boundary, by `δ = dt_left − t_s`, is followed by the march's own next
+  step, clamped by step 3 to `δ/ab`: a real step of the state with its clock, which ends the clock on the boundary or,
+  where it ends it past, lands by the same retakes. The intervals that needed it are counted, and so is the most
+  halvings one landing took; `cargo xtask gate az-final-step` reports both.
+- **The landing.** The interval lands when a kept step ends the clock at or past the boundary, `t_s ≥ dt_left`, with no
+  tolerance; since no kept step ends it past, that is `t_s = dt_left`, bitwise. The clock is then set to the boundary,
+  `t += dt_left` (step 7), and the state stored is the one whose own clock is the boundary: the clock is never set to
+  the boundary while the stored state's own clock differs from it.
+- **Its limits (R-998's dated line).** No constant other than the two integer caps, the secant's 4 retakes and the
+  bisection's 64 halvings (rule 3), reaches a branch: every branch compares the clock with `dt_left`, a step size with
+  the bracket's ends, `got` with 0, or a count with its cap. 64 halvings exceed the significand's width at either
+  precision (53 bits at f64, 24 at f32), so the bisection reaches a bracket one step size wide before its cap; the cap
+  is the same integer at both precisions (rule 1). The step budget (Part 6, R-604) bounds a march that keeps no
+  progress.
+- **The setting that turns it off** is the bisection's cap 0, with the clamp on or off and with the secant's retakes
+  or without them: the secant's last retake is kept wherever it ends, so a step past the boundary is kept and the clock
+  set alone. The clamp off alone does not turn it off: a step that ends the clock past the boundary still takes the
+  retakes, and the bisection's `lo` is kept. The clamp off with both caps 0 is REQ-INT-049's run without the landing
+  fix. These are measurement settings for REQ-INT-049's and REQ-INT-119's controls, never the occupant's. *13 Nov 2026
+  (code review 5893012877 of #519, C2, applied per R-369: the text made to match the code, no result changed):*
+  *Was:* "(the clamp off; the secant's and the bisection's caps both 0)". *13 Nov 2026 (Codex review of #519,
+  PRRT_kwDOUpUQ5c63Ly_T, applied per R-369: the text made to match the code, no result changed):* *Was:* "**The
+  settings that turn it off** (the clamp off; or the bisection's cap 0, which turns it off alone, with the secant's
+  retakes or without them: the secant's last retake is kept wherever it ends) keep a step past the boundary and set
+  the clock alone: they are measurement settings for REQ-INT-049's and REQ-INT-119's controls, never the occupant's."
+
+*Was (the steps' lines this replaces, kept above as the transcription):* step 6's "When the step just taken reaches the
+boundary (`t_s ≥ dt_left − dt_left·LAND_EPS_REL`)" and "stop if `got` is not finite, `got ≤ 0`, or
+`|got − want| ≤ dt_left·LAND_EPS_REL`"; step 7's "The march ends when `t_s ≥ dt_left − dt_left·LAND_EPS_REL`" and "On a
+landing the clock is set to the boundary exactly, `t += dt_left`".
 
 *13 Nov 2026 (R-1000, RQ-806 (iii)):* a march that ends at step 7's finiteness test writes `sim_failed` by cause:
 detail 2 where the step size `h` was not finite (an entry size that is not finite, a derived quantity), otherwise 0 or 1
@@ -1085,6 +1142,15 @@ longer a separation at equal physical time; the finite-difference estimator, ‖
 How the joint step keeps the sample and its shadow at the same physical time under such an occupant is a definition
 (R-72) TASK-M3-72 writes under physics review, its options including: carry `δt` as a component of the displacement
 and resynchronise it at each renormalisation, or step the shadow's `τ` so that it lands on the sample's `t`.
+*13 Nov 2026 (TASK-M3-72's definition, R-72; dd_integrator §3.8):* the seam gains the joint march,
+`ADVANCE_JOINT(state, δ⃗, t_now, t_target, params) → (state', δ⃗')`, with a joint per-substep cadence passed in as
+Cost 1 has it (it projects `x` and `δ⃗` and watches `x + δ⃗`): `state'` is `ADVANCE`'s, bit for bit, under the same
+per-substep work. A stepper's is its `N_sub` joint steps. An occupant that owns its time mapping carries `δt` in the
+displacement, advanced by the same `Δτ`, and resynchronises it to first order at each renormalisation and at each
+write of the stored shadow, a read of the finalised FTLE resynchronising a copy, so that at every renormalisation the
+shadow's elapsed physical time equals the sample's (§3.8 gives it in full); Heggie × RK4's, with how the rescaled
+displacement returns to its own variables, is TASK-M3-74's. An occupant with no joint march has no
+displacement-form shadow: marching one beside it fails to build.
 
 **Cost 2 — the wrapper can no longer verify `N_sub`.** It must trust the occupant's reported
 `total_substeps`. That number is not cosmetic: measured across 68,685 leaves it is **bimodal with a

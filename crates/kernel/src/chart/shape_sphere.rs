@@ -64,8 +64,8 @@
 //!
 //! **The f32 sinc** (R-696, RQ-687's option (b); REQ-DEC-053, REQ-DEC-054). WGSL bounds `sin` by an absolute error only,
 //! so near 0, where `sin r` is that small, a backend may return 0. `exponential`'s `sin r/r` is gated as
-//! [`crate::arctan`] gates `atan2`, by [`Real::sinc`]: at f64, the CPU's alone, `sin(r)/r`, unchanged bit for bit; at
-//! f32, [`sinc_f32`], below the cut `r² < SINC_CUT2_F32` the series `1 − r²/3! + r⁴/5! − r⁶/7!` in `r²` alone, and
+//! [`crate::arctan`] gates `atan2`, by [`Real::sinc`]: at f64, the CPU's alone, `sin(r)/r`, the pinned libm's `sin`
+//! (R-991); at f32, [`sinc_f32`], below the cut `r² < SINC_CUT2_F32` the series `1 − r²/3! + r⁴/5! − r⁶/7!` in `r²` alone, and
 //! `sin(r)/r` from there up. The form has a cut because one with none would be the kernel's own `sin` at every `r`,
 //! RQ-687's option (a), deferred to M4 (R-696). `cos(r)` stays the backend's. `r²` is the `‖d‖²` of `d`'s `fma` chain
 //! (`square`). That select chooses between two forms of one continuous value and writes no tag, so it need not agree
@@ -159,14 +159,14 @@ pub struct ShapeSphere<P> {
 /// The spherical map at `(s, t)`, with `pi` the float type's π: `θ = 2π·s`, `φ = π·(1 − t)`,
 /// `n = (sin φ cos θ, sin φ sin θ, cos φ)` (chart_reference §3.3, R-14).
 #[inline]
-pub fn spherical<F: Float>(s: F, t: F, pi: F) -> [F; 3] {
+pub fn spherical<F: Float + Real>(s: F, t: F, pi: F) -> [F; 3] {
     let theta = (pi + pi) * s;
     let phi = pi * (F::one() - t);
-    let sin_phi = Float::sin(phi);
+    let sin_phi = Real::sine(phi);
     [
-        sin_phi * Float::cos(theta),
-        sin_phi * Float::sin(theta),
-        Float::cos(phi),
+        sin_phi * Real::cosine(theta),
+        sin_phi * Real::sine(theta),
+        Real::cosine(phi),
     ]
 }
 
@@ -184,7 +184,7 @@ pub fn exponential<F: Float + Real>(
 ) -> [F; 3] {
     let d = offset(e1, e2, scale, u, v);
     let r = radius(d);
-    let c = Float::cos(r);
+    let c = Real::cosine(r);
     let k = select(r == F::zero(), F::one(), Real::sinc(r, square(d)));
     [
         c * n0[0] + k * d[0],
@@ -197,7 +197,7 @@ pub fn exponential<F: Float + Real>(
 /// `sin(r)`, computed either way, as a select's operands are, and read only from the cut up (R-696).
 #[inline]
 pub fn sinc_f32(r: f32, square: f32) -> f32 {
-    sinc_of(Float::sin(r), r, square)
+    sinc_of(Real::sine(r), r, square)
 }
 
 /// `sin r/r` at f32 from `sin_r`, the backend's `sin(r)`: the series `1 − r²/3! + r⁴/5! − r⁶/7!` in `square`, `r²`, where
@@ -285,9 +285,9 @@ pub fn inverse<R: Real + Float>(n: [R; 3], inertia: R, phase: R) -> Inverse<R> {
     let psi = phase + beta;
     let (root_a, root_b) = (Float::sqrt(a), Float::sqrt(b));
     Inverse {
-        rho_t: [root_a * Float::cos(phase), root_a * Float::sin(phase)],
-        lambda_t: [root_b * Float::cos(psi), root_b * Float::sin(psi)],
-        alpha: Float::atan2(root_b, root_a),
+        rho_t: [root_a * Real::cosine(phase), root_a * Real::sine(phase)],
+        lambda_t: [root_b * Real::cosine(psi), root_b * Real::sine(psi)],
+        alpha: Real::arctangent2(root_b, root_a),
         beta,
     }
 }
@@ -667,8 +667,8 @@ pub fn hammer_inverse(x: f64, y: f64) -> Option<[f64; 2]> {
     }
     let root2 = core::f64::consts::SQRT_2;
     let z = Float::sqrt(1.0 - q / 2.0);
-    let lambda = 2.0 * Float::atan2(z * 2.0 * root2 * h, 2.0 * (1.0 - q));
-    let lat = Float::asin((z * root2 * k).clamp(-1.0, 1.0));
+    let lambda = 2.0 * Real::arctangent2(z * 2.0 * root2 * h, 2.0 * (1.0 - q));
+    let lat = Real::arcsine((z * root2 * k).clamp(-1.0, 1.0));
     Some([(lambda + PI64) / (2.0 * PI64), lat / PI64 + 0.5])
 }
 
@@ -678,10 +678,10 @@ pub fn hammer_inverse(x: f64, y: f64) -> Option<[f64; 2]> {
 pub fn hammer_forward(s: f64, t: f64) -> [f64; 2] {
     let half = PI64 * s - PI64 / 2.0;
     let lat = PI64 * (t - 0.5);
-    let d = Float::sqrt(1.0 + Float::cos(lat) * Float::cos(half));
+    let d = Float::sqrt(1.0 + Real::cosine(lat) * Real::cosine(half));
     [
-        (Float::cos(lat) * Float::sin(half) / d + 1.0) / 2.0,
-        (Float::sin(lat) / d + 1.0) / 2.0,
+        (Real::cosine(lat) * Real::sine(half) / d + 1.0) / 2.0,
+        (Real::sine(lat) / d + 1.0) / 2.0,
     ]
 }
 

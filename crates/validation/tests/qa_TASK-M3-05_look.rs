@@ -89,30 +89,24 @@ fn check_non_finite(colour: impl Fn(Look, [u32; 2]) -> Rgb) {
     assert!(failures.is_empty(), "not invalid:\n{}", failures.join("\n"));
 }
 
-/// The look as it would be with no non-finite guard: the ramp, the suspect styling over it.
+/// The look as it would be with no non-finite guard: the ramp, the suspect styling over it. The look's `x` is the drift
+/// as read, its neutral band already applied there (R-928, R-929).
 #[cfg(feature = "controls")]
 fn unguarded(look: Look, [px, py]: [u32; 2]) -> Rgb {
     let Look::Drift {
         x,
-        reference,
         lin_r,
         eps,
         energy,
         lz,
+        ..
     } = look
     else {
         panic!("the control takes a drift look, not {look:?}");
     };
     let frag = [f64::from(px) + 0.5, f64::from(py) + 0.5];
     present::dbg_suspect(
-        present::dbg_drift(
-            present::dbg_drift_shown(x, present::DRIFT_SYMLOG, reference),
-            present::DRIFT_SYMLOG,
-            false,
-            lin_r,
-            eps,
-            frag,
-        ),
+        present::dbg_drift(x, present::DRIFT_SYMLOG, false, lin_r, eps, frag),
         x,
         energy,
         lz,

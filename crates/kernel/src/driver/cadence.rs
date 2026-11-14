@@ -129,14 +129,25 @@ impl<R: IeeeBits + Quantise> WrapperCadence<R> {
     }
 }
 
-impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
+impl<R: WrapperReal> WrapperCadence<R> {
+    /// The cadence's work after a `STEP` past the projection, on a state already projected: the call counted, the
+    /// invariant accumulation ([`WrapperCadence::monitor`]) and terminal detection, which sets `done` on a collision.
+    /// [`Cadence::after_step`] is the projection then this; the FTLE shadow's displacement form projects its own
+    /// state and calls this on it (R-974; `super::benettin`).
     #[inline]
-    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+    pub fn watch(&mut self, state: &State<R>, geom: &Geom<R>) {
         self.invocations += 1;
-        self.project(state, geom);
         self.monitor(state, geom);
         self.detector.observe(&state.r);
         self.done = self.detector.fired();
+    }
+}
+
+impl<R: WrapperReal> Cadence<R> for WrapperCadence<R> {
+    #[inline]
+    fn after_step(&mut self, state: &mut State<R>, geom: &mut Geom<R>) {
+        self.project(state, geom);
+        self.watch(state, geom);
     }
 
     #[inline]

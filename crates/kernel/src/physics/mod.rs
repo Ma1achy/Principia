@@ -8,13 +8,15 @@
 //! invariant monitoring": "The energy evaluation reuses the pairwise distances from the force computation"):
 //! [`PairGeom::new`] is the only code that forms a separation, `d²`, `‖·‖` or `‖·‖³`. [`force::force`],
 //! [`energy::potential`] and [`PairGeom::r_min`] take the `PairGeom` and no positions, so none of them can form a
-//! second one.
+//! second one. The FTLE shadow's force difference ([`difference`]; R-974) reads the sample's `PairGeom` and forms the
+//! norms of the *displaced* separations `dₖ + eₖ`, the shadow's, never a second set for the sample's positions.
 //!
 //! **Rules held here** (Part 2c, "Rules the new kernel must hold by construction"): the code is bounded by `Real`
 //! alone, which carries no precision-dependent constant (rule 1); its one comparison, [`PairGeom::closest`]'s, is on
 //! `d²` (rule 2); there is no loop (rule 3); its one min-fold is seeded from pair 0, not from an infinity
 //! (rule 4).
 
+pub mod difference;
 pub mod energy;
 pub mod force;
 pub mod pairs;

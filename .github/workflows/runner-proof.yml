@@ -2,8 +2,12 @@
 # PC's own `03-sandbox-proof.ps1` runs again as `gh-runner`, through the service, an hour after the PC's 04:00 update
 # task. It prints counts only, the detail staying on the PC, and its exit code is the failure count. The result is a
 # measurement, never a required check (R-649, R-711): the PC is sometimes off, and nothing on `main` waits for it. No
-# job here is gathered, retried or read by any gate, and a red one is not main red; `xtask/tests/ci_self_hosted.rs`
-# fails if that ever stops holding, or if a rule below is broken.
+# job here is gathered or read by any gate, and a red one is not main red. A job here that stops on a runner-level fault
+# is re-run once, automatically, by the hosted job `win-retry` (`win-retry.yml`, R-988), the one reader of this
+# workflow, which logs every such stop and every hang; nothing else retries it. Its limit is R-988's, 1.5 times its
+# slowest completed run on the PC, rounded up to a whole minute (`.github/win-times.md`); at it, the job is a hang, ended
+# and logged, never re-run. `xtask/tests/ci_self_hosted.rs` fails if that ever stops holding, or if a rule below is
+# broken.
 #
 # The rules are `win-gpu.yml`'s, the conditions for having this runner at all on a public repository (R-711 items 1 and
 # 5, the owner's job rules of 5 Nov 2026). Never add a `pull_request` or `pull_request_target` trigger. The job carries
@@ -41,7 +45,7 @@ jobs:
   runner-proof:
     if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy'
     runs-on: [self-hosted, windows, nvidia]
-    timeout-minutes: 30
+    timeout-minutes: 2
     concurrency:
       group: runner-proof
       cancel-in-progress: false

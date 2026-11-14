@@ -1,0 +1,478 @@
+[
+ {
+  "id": 130531059475,
+  "name": "win-vulkan",
+  "status": "completed",
+  "conclusion": "failure",
+  "runner_name": "malachys-pc-rtx2080s",
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": [
+   {
+    "number": 1,
+    "name": "Set up job",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 2,
+    "name": "Set up runner",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 3,
+    "name": "Self-check, first step",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 4,
+    "name": "Guard the kept checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 5,
+    "name": "Toolchain on PATH",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 6,
+    "name": "Clean checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 7,
+    "name": "Record the commit, driver and toolchain",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 8,
+    "name": "cargo xtask build-kernel",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 9,
+    "name": "The harness runs on the RTX 2080 SUPER",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 10,
+    "name": "cargo nextest run -p validation -p xtask -p engine",
+    "status": "completed",
+    "conclusion": "failure"
+   },
+   {
+    "number": 11,
+    "name": "cargo test -p validation -p xtask -p engine --doc",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 12,
+    "name": "cargo nextest run -p validation --features controls gpu_harness",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 13,
+    "name": "cargo nextest run -p validation --features controls compute_fast_math",
+    "status": "completed",
+    "conclusion": "failure"
+   },
+   {
+    "number": 14,
+    "name": "cargo nextest run -p engine --features controls compute_entry",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 15,
+    "name": "cargo nextest run -p engine --features controls decode_",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 16,
+    "name": "cargo nextest run -p engine --features controls invariant_",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 17,
+    "name": "cargo nextest run -p engine --features controls qa_m206_",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 18,
+    "name": "cargo nextest run -p engine --features controls canonicaliser_",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 19,
+    "name": "cargo nextest run -p engine --features controls encode_",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 20,
+    "name": "cargo xtask gate decode-agreement",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 21,
+    "name": "cargo nextest run -p validation --features controls codegen_selftest",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 22,
+    "name": "cargo xtask golden --all",
+    "status": "completed",
+    "conclusion": "failure"
+   },
+   {
+    "number": 23,
+    "name": "cargo nextest run -p xtask --features controls golden_halfway",
+    "status": "completed",
+    "conclusion": "failure"
+   },
+   {
+    "number": 24,
+    "name": "Label the result in the summary",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 25,
+    "name": "Keep the full output",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 49,
+    "name": "Post Clean checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 50,
+    "name": "Complete runner",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 51,
+    "name": "Complete job",
+    "status": "completed",
+    "conclusion": "success"
+   }
+  ]
+ },
+ {
+  "id": 130531059678,
+  "name": "win-self-check",
+  "status": "completed",
+  "conclusion": "failure",
+  "runner_name": "malachys-pc-rtx2080s",
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": [
+   {
+    "number": 1,
+    "name": "Set up job",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 2,
+    "name": "Set up runner",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 3,
+    "name": "Self-check, first step",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 4,
+    "name": "Guard the kept checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 5,
+    "name": "Toolchain on PATH",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 6,
+    "name": "Clean checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 7,
+    "name": "Record the commit, driver and toolchain",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 8,
+    "name": "No CRLF and no token left in the checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 9,
+    "name": "The guard on this workflow",
+    "status": "completed",
+    "conclusion": "failure"
+   },
+   {
+    "number": 10,
+    "name": "Label the result in the summary",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 11,
+    "name": "Keep the full output",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 21,
+    "name": "Post Clean checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 22,
+    "name": "Complete runner",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 23,
+    "name": "Complete job",
+    "status": "completed",
+    "conclusion": "success"
+   }
+  ]
+ },
+ {
+  "id": 130531059795,
+  "name": "win-tests",
+  "status": "completed",
+  "conclusion": "cancelled",
+  "runner_name": "malachys-pc-rtx2080s",
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": [
+   {
+    "number": 1,
+    "name": "Set up job",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 2,
+    "name": "Set up runner",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 3,
+    "name": "Self-check, first step",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 4,
+    "name": "Guard the kept checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 5,
+    "name": "Toolchain on PATH",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 6,
+    "name": "Clean checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 7,
+    "name": "Record the commit, driver and toolchain",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 8,
+    "name": "cargo build --workspace --all-targets",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 9,
+    "name": "cargo nextest run --workspace",
+    "status": "completed",
+    "conclusion": "cancelled"
+   },
+   {
+    "number": 10,
+    "name": "cargo nextest run -p validation --test qa_TASK-M0-24",
+    "status": "completed",
+    "conclusion": "skipped"
+   },
+   {
+    "number": 11,
+    "name": "cargo nextest run -p xtask --test qa_TASK-M0-06_list",
+    "status": "completed",
+    "conclusion": "skipped"
+   },
+   {
+    "number": 12,
+    "name": "cargo test --workspace --doc",
+    "status": "completed",
+    "conclusion": "skipped"
+   },
+   {
+    "number": 13,
+    "name": "cargo xtask deps",
+    "status": "completed",
+    "conclusion": "skipped"
+   },
+   {
+    "number": 14,
+    "name": "Label the result in the summary",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 15,
+    "name": "Keep the full output",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 29,
+    "name": "Post Clean checkout",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 30,
+    "name": "Complete runner",
+    "status": "completed",
+    "conclusion": "success"
+   },
+   {
+    "number": 31,
+    "name": "Complete job",
+    "status": "completed",
+    "conclusion": "success"
+   }
+  ]
+ },
+ {
+  "id": 130531060897,
+  "name": "win-contain",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130531061672,
+  "name": "wsl-proofs",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130531061862,
+  "name": "wsl-cpu",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130531063907,
+  "name": "wsl-register",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "self-hosted",
+   "windows",
+   "nvidia"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130531130725,
+  "name": "wsl-parity",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "ubuntu-24.04"
+  ],
+  "steps": []
+ },
+ {
+  "id": 130531131135,
+  "name": "wsl-image",
+  "status": "completed",
+  "conclusion": "skipped",
+  "runner_name": null,
+  "labels": [
+   "ubuntu-24.04"
+  ],
+  "steps": []
+ }
+]

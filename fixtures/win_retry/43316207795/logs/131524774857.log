@@ -1,0 +1,43 @@
+﻿2026-11-12T22:26:01.5244226Z Current runner version: '2.338.2'
+2026-11-12T22:26:01.5250433Z Runner name: 'malachys-pc-rtx2080s'
+2026-11-12T22:26:03.2675130Z ##[group]Run 'E:\runner-tools\checks\job-started.js'
+2026-11-12T22:26:41.5455919Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
+2026-11-12T22:26:51.2254106Z ##[group]Run $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
+2026-11-12T22:26:59.1325537Z ##[group]Run Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
+2026-11-12T22:26:59.3731920Z ##[group]Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+2026-11-12T22:27:54.4547688Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
+2026-11-12T22:28:02.3184057Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run build-kernel cargo xtask build-kernel
+2026-11-12T22:29:25.2271369Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run adapter cargo nextest run -p validation --features controls --no-capture --no-fail-fast --retries 0 -E 'test(=gpu::tests::gpu_harness_identity_round_trip)'
+2026-11-12T22:30:46.1104004Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run gpu-kernel cargo nextest run -p validation -p xtask -p engine --no-fail-fast --retries 0
+2026-11-12T22:42:27.5971677Z         FAIL [   0.071s] ( 81/114) xtask::build_kernel build_kernel_builds_the_backend_locked
+2026-11-12T22:42:27.5972831Z         FAIL [  94.466s] (110/114) xtask::build_kernel build_kernel_runs_in_ci
+2026-11-12T22:42:27.6005722Z error: test run failed
+2026-11-12T22:42:27.6490853Z ##[error]Process completed with exit code 100.
+2026-11-12T22:42:27.6880105Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run gpu-kernel-doc cargo test -p validation -p xtask -p engine --doc
+2026-11-12T22:42:30.0117335Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run gpu_harness cargo nextest run -p validation --features controls gpu_harness --no-capture --no-fail-fast --retries 0
+2026-11-12T22:42:43.0589401Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run compute_fast_math cargo nextest run -p validation --features controls compute_fast_math --no-capture --no-fail-fast --retries 0
+2026-11-12T22:42:53.1553735Z         FAIL [   0.392s] (20/22) validation::qa_TASK-M0-44 qa_compute_fast_math_off_halfway_exact::negative_control
+2026-11-12T22:42:53.1555085Z         FAIL [   0.356s] (21/22) validation::qa_TASK-M0-44 qa_compute_fast_math_switch_per_backend
+2026-11-12T22:42:53.1579283Z error: test run failed
+2026-11-12T22:42:53.2087061Z ##[error]Process completed with exit code 100.
+2026-11-12T22:42:53.2245888Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run compute_entry cargo nextest run -p engine --features controls compute_entry --no-capture --no-fail-fast --retries 0
+2026-11-12T22:43:50.6987171Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run decode cargo nextest run -p engine --features controls decode_ --no-capture --no-fail-fast --retries 0
+2026-11-12T22:58:04.9796372Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run invariant cargo nextest run -p engine --features controls invariant_ --no-capture --no-fail-fast --retries 0
+2026-11-12T22:58:50.2020970Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run qa_m206 cargo nextest run -p engine --features controls qa_m206_ --no-capture --no-fail-fast --retries 0
+2026-11-12T23:02:05.8156510Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run canonicaliser cargo nextest run -p engine --features controls canonicaliser_ --no-capture --no-fail-fast --retries 0
+2026-11-12T23:10:40.8920269Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run encode cargo nextest run -p engine --features controls encode_ --no-capture --no-fail-fast --retries 0
+2026-11-12T23:12:44.2958244Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run decode-agreement cargo xtask gate decode-agreement
+2026-11-12T23:29:25.6741647Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run codegen_selftest cargo nextest run -p validation --features controls codegen_selftest --no-capture --no-fail-fast --retries 0
+2026-11-12T23:30:42.5910995Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden cargo xtask golden --all
+2026-11-12T23:31:30.3625262Z gpu backend: vulkan (from PRIN_GPU_BACKEND)
+2026-11-12T23:31:30.3743075Z xtask golden: shape-sphere-projection/equirectangular: pass on vulkan against the case's one reference, across backends (max step 0, 0 of 8192 pixels differ; tolerance REQ-VAL-138: max step 0; output quantised in the shader, half to even (R-287); render RGB sha256 fe004eae1a5c8c5106fcda4a14811aa0c699f01a65c6e1d58adf310e4e700893) -> E:\runner-tools\target\golden\shape-sphere-projection/equirectangular
+2026-11-12T23:31:30.3995852Z xtask: golden suite(s) failed: quantise
+2026-11-12T23:31:30.4619801Z ##[error]Process completed with exit code 1.
+2026-11-12T23:31:30.4747470Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run golden_halfway cargo nextest run -p xtask --features controls golden_halfway --no-capture --no-fail-fast --retries 0
+2026-11-12T23:33:42.7017238Z         FAIL [   0.390s] (5/8) xtask::golden_quantise golden_halfway_quantised_matches_backend_reference
+2026-11-12T23:33:42.7018285Z         FAIL [   0.411s] (6/8) xtask::golden_quantise golden_halfway_quantised_matches_backend_reference::negative_control
+2026-11-12T23:33:42.7047445Z error: test run failed
+2026-11-12T23:33:42.7492879Z ##[error]Process completed with exit code 100.
+2026-11-12T23:33:42.7651436Z ##[group]Run powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
+2026-11-12T23:33:46.4492947Z ##[group]Run actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+2026-11-12T23:33:51.2524422Z ##[group]Run 'E:\runner-tools\checks\job-completed.js'

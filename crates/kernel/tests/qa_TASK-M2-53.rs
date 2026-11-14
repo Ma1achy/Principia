@@ -268,8 +268,9 @@ fn line_f64(n0: [f64; 3], e1: [f64; 3], e2: [f64; 3], s: f64, u: f64, v: f64) ->
     let (a, b) = ((u + u - 1.0) * s, (v + v - 1.0) * s);
     let d = [0, 1, 2].map(|i| a * e1[i] + b * e2[i]);
     let r = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-    let c = r.cos();
-    let k = if r == 0.0 { 1.0 } else { r.sin() / r };
+    // the pinned libm's `cos` and `sin`, the f64 path's since R-991 (REQ-CHART-212)
+    let c = libm::cos(r);
+    let k = if r == 0.0 { 1.0 } else { libm::sin(r) / r };
     [0, 1, 2].map(|i| c * n0[i] + k * d[i])
 }
 
@@ -280,14 +281,14 @@ fn ungated_f64(n0: [f64; 3], e1: [f64; 3], e2: [f64; 3], s: f64, u: f64, v: f64)
     let d = [0, 1, 2].map(|i| a * e1[i] + b * e2[i]);
     let z = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
     let r = z.sqrt();
-    let c = r.cos();
+    let c = libm::cos(r);
     let [c1, c2, c3] = SINC_SERIES_F32.map(f64::from);
     let k = if r == 0.0 {
         1.0
     } else if z < f64::from(SINC_CUT2_F32) {
         1.0 + z * (c1 + z * (c2 + z * c3))
     } else {
-        r.sin() / r
+        libm::sin(r) / r
     };
     [0, 1, 2].map(|i| c * n0[i] + k * d[i])
 }

@@ -8,9 +8,9 @@
 // `[−LIN_R, LIN_R]`, and 2 `log`, which shows `|drift|`, the magnitude, at `dbg_log`'s place, unsigned; `symlog` and
 // `lin` on the `diverging(c−, c0, c+)` ramp, or viridis under the palette swap, `PALETTE` 1, and `log` on viridis
 // always; a non-finite reference or drift hatched, tested on its bits first (R-436); under `symlog` a drift within the
-// neutral band of `E_0` is drawn as 0 (`dbg_drift_shown`, R-652). Over it the suspect styling of the drift suspect
-// predicates read from the stored latches: rows for `SUSPECT_ENERGY`, columns for `SUSPECT_LZ`. `LIN_R`'s default is
-// the constants register's (REQ-TOOL-150).
+// neutral band, the rounding's own scale `15·2⁻²³·(K + |V|)`, is drawn as 0 (`dbg_drift_shown`, R-652, R-928). Over it
+// the suspect styling of the drift suspect predicates read from the stored latches: rows for `SUSPECT_ENERGY`, columns
+// for `SUSPECT_LZ`. `LIN_R`'s default is the constants register's (REQ-TOOL-150).
 // @uniform COMPACTION: u32 = 0 [0, 2]
 // @uniform PALETTE: u32 = 0 [0, 1]
 // @uniform LIN_R: f32 = 0.0625
@@ -19,7 +19,8 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     if (dbg_drift_non_finite(ctx.sample.E_0)) { return debug_invalid(ctx.frag_xy); }
     let x = ctx.sample.energy_drift;
     if (dbg_drift_non_finite(x)) { return debug_invalid(ctx.frag_xy); }
-    let shown = dbg_drift_shown(x, uniforms.COMPACTION, ctx.sample.E_0);
+    let band = dbg_drift_band_energy(ctx.sample.r, ctx.sample.p, vec3<f32>(ctx.ic.m0, ctx.ic.m1, ctx.ic.m2));
+    let shown = dbg_drift_shown(x, uniforms.COMPACTION, band);
     let rgb = dbg_drift(shown, uniforms.COMPACTION, uniforms.PALETTE == 1u, uniforms.LIN_R, uniforms.EPS_E, ctx.frag_xy);
     let energy = suspect_energy(ctx.sample.dE_max, ctx.sample.E_0, uniforms.EPS_E);
     let lz = suspect_lz(ctx.sample.dLz_max);

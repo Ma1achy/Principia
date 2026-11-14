@@ -9,11 +9,17 @@ compared test by test (`scripts/wsl/inside.sh parity` runs it on both sides).
   parity.py compare <one> <other>             two summaries; prints each side's wall time, exit and count, and every
                                               test whose outcome differs or that one side lacks. Exits 0 only if both
                                               ran the same tests with the same outcome each, at least one, and the
-                                              same exit.
+                                              same exit. `-` for <one> reads stdin, the stream already open: as
+                                              `wsl.exe -u ci` runs it, reopening /dev/stdin is refused (EACCES, run
+                                              43418528499).
+
+Every input may start with a UTF-8 byte-order mark, which Windows PowerShell's stdin writer can put in front of what
+`wsl.ps1` sends; it is dropped.
 
 Wall times are reported, never compared: the PC and the hosted runner are different machines.
 """
 
+import io
 import json
 import sys
 
@@ -37,22 +43,34 @@ def summarize(wall, code, lines):
     return "\n".join(out) + "\n"
 
 
+def stdin():
+    """The open stdin as text, a leading byte-order mark dropped."""
+    return io.TextIOWrapper(sys.stdin.buffer, encoding="utf-8-sig")
+
+
 def read(path):
+    if path == "-":
+        return parse(stdin())
+    with open(path, encoding="utf-8-sig") as f:
+        return parse(f)
+
+
+def parse(f):
     header, tests = {}, {}
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.rstrip("\r\n")
-            if line.startswith("# "):
-                words = line[2:].split()
-                header = dict(zip(words[::2], words[1::2]))
-            elif line:
-                name, result, _ = line.split("\t")
-                tests[name] = result
+    for line in f:
+        line = line.rstrip("\r\n")
+        if line.startswith("# "):
+            words = line[2:].split()
+            header = dict(zip(words[::2], words[1::2]))
+        elif line:
+            name, result, _ = line.split("\t")
+            tests[name] = result
     return header, tests
 
 
 def compare(one, other):
     (h1, t1), (h2, t2) = read(one), read(other)
+    one = "stdin" if one == "-" else one
     lines = [
         f"parity: {one}: wall {h1.get('wall', '?')} s, exit {h1.get('exit', '?')}, {len(t1)} tests",
         f"parity: {other}: wall {h2.get('wall', '?')} s, exit {h2.get('exit', '?')}, {len(t2)} tests",
@@ -71,7 +89,7 @@ def compare(one, other):
 
 def main(argv):
     if len(argv) == 4 and argv[1] == "summarize":
-        sys.stdout.write(summarize(argv[2], argv[3], sys.stdin))
+        sys.stdout.write(summarize(argv[2], argv[3], stdin()))
         return 0
     if len(argv) == 4 and argv[1] == "compare":
         text, code = compare(argv[2], argv[3])

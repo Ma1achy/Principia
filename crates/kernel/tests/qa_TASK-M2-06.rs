@@ -475,12 +475,12 @@ fn saturates32() -> f32 {
     f32::from_bits(hi)
 }
 
-/// The least f64 `x > 1` with `tanh(x) = 1` exactly.
+/// The least f64 `x > 1` with `tanh(x) = 1` exactly, `tanh` the CPU's own at f64, the pinned libm's (R-991).
 fn saturates64() -> f64 {
     let (mut lo, mut hi) = (1.0f64.to_bits(), 100.0f64.to_bits());
     while hi - lo > 1 {
         let mid = lo + (hi - lo) / 2;
-        if f64::from_bits(mid).tanh() == 1.0 {
+        if libm::tanh(f64::from_bits(mid)) == 1.0 {
             hi = mid;
         } else {
             lo = mid;
@@ -501,8 +501,8 @@ fn check_window(t32: f32, t64: f64) {
     );
     assert_eq!(t32.tanh(), 1.0);
     assert_eq!((-t32).tanh(), -1.0);
-    assert_eq!(t64.tanh(), 1.0);
-    assert_eq!((-t64).tanh(), -1.0);
+    assert_eq!(libm::tanh(t64), 1.0);
+    assert_eq!(libm::tanh(-t64), -1.0);
     assert!(
         t64 < 43.671_875,
         "tanh_sat = {t64} is not below 43.671875, Metal's failure"

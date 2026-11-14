@@ -1420,7 +1420,7 @@ impl RestChart for Gate<MassSimplex<f64>> {
 }
 
 impl LzChart for Gate<Burrau<f64>> {
-    fn kinetic_at<F: Float + From<f64>>(&self, v: F) -> F {
+    fn kinetic_at<F: Float + kernel::Real + From<f64>>(&self, v: F) -> F {
         self.0.kinetic_at(v)
     }
 

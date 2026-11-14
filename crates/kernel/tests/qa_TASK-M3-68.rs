@@ -26,8 +26,10 @@
 //!   Cartesian `Stepper` (the Mikkola–Tanikawa leapfrog's place), with its own row.
 //!
 //! - Added in fix round 2 (PR #502): Part 2b's landing with the clamp off (`qa_m368_clamp_off_reads_no_tolerance`):
-//!   the run without the landing fix lands only at `dt_left`, the reference driver's `land_tol` being 0 there, so the
-//!   landing tolerance is not read and two tolerances give the same bits (physics review 5873527379, point 2); and
+//!   the run without the landing fix lands only at `dt_left` (physics review 5873527379, point 2): every kept clock
+//!   before the landing is short of `dt_left` and the landing's is at or past it, the time read the boundary. Changed
+//!   by TASK-M3-76 (R-998: no landing tolerance exists to vary): *was* "the reference driver's `land_tol` being 0 there,
+//!   so the landing tolerance is not read and two tolerances give the same bits"; and
 //!   `Count::whole` (`qa_m368_whole_is_clamped`), which forms the boundary index, against a model written from
 //!   gpu_determinism_note § "The discipline", rule 3: clamped into range in the float type before the cast, so a NaN
 //!   and a negative give `0`, a value at or above `2³²` gives `u32::MAX`, and one in range its truncation, swept over
@@ -66,20 +68,20 @@ impl<R> Cadence<R> for Quiet {
 }
 
 /// Step-control values for these tests at f64 (test inputs, not the calibrations): `η`, `Δ_sync = 1/8`, the
-/// reference's `TINY` (`1e-300`, R-953), R-160's `f = 0.02`, the `|R₃|` floor `1e-300`, a landing tolerance `1e-14`,
-/// and a budget that does not bind.
+/// reference's `TINY` (`1e-300`, R-953), R-160's `f = 0.02`, a budget that does not bind, and the landing's retakes
+/// (the secant's 4, the bisection's 64, Part 2b). The `|R₃|` floor is `TINY` (R-999) and the landing takes no tolerance
+/// (R-998). *Was:* "the `|R₃|` floor `1e-300`, a landing tolerance `1e-14`".
 fn params64(eta: f64) -> AzParams<f64> {
     AzParams {
         eta,
         delta_sync: 0.125,
         tiny: 1e-300,
         predictive_f: 0.02,
-        r3_floor: 1e-300,
-        land_eps_rel: 1e-14,
         step_budget_rate: 1e9,
         n_min: u32::MAX / 2,
         clamp: true,
         secant_tries: 4,
+        bisect_tries: 64,
     }
 }
 
@@ -379,7 +381,7 @@ fn check_registration(back: Back) {
             [[0.0, 0.1], [0.02, -0.03], [1.5, -2.0]],
         ),
     ] {
-        let (sys, q, p) = register(&s, 1e-300, 1e-300);
+        let (sys, q, p) = register(&s, 1e-300);
         let a = sys.a;
         assert_eq!(a, reference_body(&s.r), "registered about another body");
         let (b, c) = others(a);
@@ -450,7 +452,7 @@ negative_control!(
 /// of order one, so `1e-6` relative separates them). `g` is `Γ` with the system's masses, body and energy.
 fn check_rates(g: fn(&AzSystem<f64>, V2, V2, V2, V2) -> f64) {
     let base = generic();
-    let (sys, q0, p0) = register(&base, 1e-300, 1e-300);
+    let (sys, q0, p0) = register(&base, 1e-300);
     // Away from registration too: perturbed `(u, p)` with the same system.
     for (du, dp) in [(0.0, 0.0), (0.03, -0.02), (-0.05, 0.07)] {
         let q = AzQ {
@@ -529,7 +531,7 @@ type Limit = fn(&State<f64>, u32) -> (V2, V2);
 /// REQ-INT-049 and Part 2b steps 2–4, from the formulas, on a registered state at unequal masses.
 fn check_step_control(limit: Limit) {
     let s = generic();
-    let (sys, q, p) = register(&s, 1e-300, 1e-300);
+    let (sys, q, p) = register(&s, 1e-300);
     let (aa, bb) = AzSystem::ab(&q);
     let ab = aa * bb;
     let dt = 0.125;
@@ -645,12 +647,11 @@ fn params32() -> AzParams<f32> {
         delta_sync: 0.125,
         tiny: 1e-37,
         predictive_f: 0.02,
-        r3_floor: 1e-37,
-        land_eps_rel: 1e-5,
         step_budget_rate: 1e6,
         n_min: 10_000,
         clamp: true,
         secant_tries: 4,
+        bisect_tries: 64,
     }
 }
 
@@ -667,7 +668,7 @@ fn degenerate32() -> State<f32> {
 /// REQ-INT-105's finiteness arm: the march ends at the explicit test, no non-finite state carried past it.
 fn check_degenerate<X: Watch<f32>>(mut watch: X) {
     let s = degenerate32();
-    let (_, q, _) = register(&s, 1e-37, 1e-37);
+    let (_, q, _) = register(&s, 1e-37);
     let (aa, bb) = AzSystem::ab(&q);
     assert!(
         aa < 1e-37 && bb < 1e-37,
@@ -716,7 +717,7 @@ fn qa_m368_doubly_degenerate() {
     // Degenerate only mid-interval: a finite entry size; the per-step rule skips the non-finite c₀ and the step is
     // finite, a counted cap hit (Part 2b, step 3; driver.rs:640).
     let s = degenerate32();
-    let (sys, q, p) = register(&s, 1e-37, 1e-37);
+    let (sys, q, p) = register(&s, 1e-37);
     let entry = 1e-3_f32;
     let sz = step_size(&sys, &q, &p, entry, &params32());
     assert!(
@@ -959,12 +960,11 @@ impl AzConfig for Cfg {
             delta_sync: R::at_width(0.125, 0.125),
             tiny: R::at_width(1e-37, 1e-300),
             predictive_f: R::at_width(0.02, 0.02),
-            r3_floor: R::at_width(1e-37, 1e-300),
-            land_eps_rel: R::at_width(1e-5, 1e-14),
             step_budget_rate: R::at_width(1e7, 1e7),
             n_min: 1_000_000,
             clamp: true,
             secant_tries: 4,
+            bisect_tries: 64,
         }
     }
 }
@@ -1090,53 +1090,64 @@ negative_control!(
 
 // ── qa_m368_clamp_off_reads_no_tolerance ─────────────────────────────────────────────────────────────────────────
 
-/// One interval of the march at `η = 0.01` from the generic state, the clamp as given, the landing tolerance `eps`.
-type Landing = fn(bool, f64) -> AzAdvanced<f64>;
+/// One interval of the march at `η = 0.01` from the generic state, the clamp as given: the result and every clock the
+/// march kept (read by its watch).
+type Landing = fn(bool) -> (AzAdvanced<f64>, Vec<f64>);
 
-fn one_interval(clamp: bool, eps: f64) -> AzAdvanced<f64> {
+/// The occupant's own finiteness test, recording each kept state's interval clock.
+#[derive(Default)]
+struct Clocks(Vec<f64>);
+
+impl Watch<f64> for Clocks {
+    fn finite(&mut self, q: &AzQ<f64>, p: &AzP<f64>) -> bool {
+        let ok = ExplicitTest.finite(q, p);
+        if ok {
+            self.0.push(q.t);
+        }
+        ok
+    }
+}
+
+fn one_interval(clamp: bool) -> (AzAdvanced<f64>, Vec<f64>) {
     let mut p = params64(0.01);
     p.clamp = clamp;
-    p.land_eps_rel = eps;
-    march::<Rk4, f64, Quiet, ExplicitTest>(
+    let mut clocks = Clocks::default();
+    let out = march::<Rk4, f64, Quiet, Clocks>(
         &generic(),
         0,
         1,
         AzCount::new(),
         &p,
         &mut Quiet,
-        &mut ExplicitTest,
-    )
+        &mut clocks,
+    );
+    (out, clocks.0)
 }
 
-/// Part 2b's run without the landing fix lands only at `dt_left` (the reference driver's `land_tol` is 0 unless the
-/// clamp is on): with the clamp off, a landing tolerance of `1e-14` and one of `0.3` give the same march, bit for bit,
-/// ending on the boundary at exactly `Δ_sync`.
+/// Part 2b's run without the landing fix lands only at `dt_left`, with no tolerance (R-998): every clock the march kept
+/// before its last is short of `dt_left = 1/8`, its last is at or past it, and the march ends on the boundary at
+/// exactly `Δ_sync`. *Was (TASK-M3-68):* a landing tolerance of `1e-14` and one of `0.3` give the same march, bit for
+/// bit; R-998 removed the tolerance, so there is none to vary.
 fn check_clamp_off(run: Landing) {
-    let small = run(false, 1e-14);
-    let large = run(false, 0.3);
+    let (out, clocks) = run(false);
     assert_eq!(
-        small.count.end,
+        out.count.end,
         End::Marching,
         "the run without the fix does not land"
     );
     assert_eq!(
-        (small.boundary, small.t),
+        (out.boundary, out.t),
         (1, 0.125),
         "the run without the fix ends off the boundary"
     );
-    let bits = |a: &AzAdvanced<f64>| {
-        (
-            a.t.to_bits(),
-            a.boundary,
-            a.count.steps,
-            a.state.r.map(|x| x.map(f64::to_bits)),
-            a.state.p.map(|x| x.map(f64::to_bits)),
-        )
-    };
-    assert_eq!(
-        bits(&small),
-        bits(&large),
-        "with the clamp off the landing tolerance was read"
+    let (last, before) = clocks.split_last().expect("the march kept a state");
+    assert!(
+        *last >= 0.125,
+        "the run without the fix landed short of the boundary: its landing clock {last:e}"
+    );
+    assert!(
+        before.iter().all(|&t| t < 0.125),
+        "the run without the fix kept a clock at or past the boundary before its landing: {before:?}"
     );
 }
 
@@ -1146,15 +1157,30 @@ fn qa_m368_clamp_off_reads_no_tolerance() {
 }
 
 #[cfg(feature = "controls")]
-/// The control: a march that reads the tolerance while "off" (the clamp left on, where the tolerance is read).
-fn reads_tolerance(_clamp: bool, eps: f64) -> AzAdvanced<f64> {
-    one_interval(true, eps)
+/// The control: a landing that reads a tolerance of `0.3`, as a march to `0.7·Δ_sync` whose time is then set to the
+/// boundary.
+fn reads_tolerance(clamp: bool) -> (AzAdvanced<f64>, Vec<f64>) {
+    let mut p = params64(0.01);
+    p.clamp = clamp;
+    p.delta_sync = 0.125 * 0.7;
+    let mut clocks = Clocks::default();
+    let mut out = march::<Rk4, f64, Quiet, Clocks>(
+        &generic(),
+        0,
+        1,
+        AzCount::new(),
+        &p,
+        &mut Quiet,
+        &mut clocks,
+    );
+    out.t = 0.125;
+    (out, clocks.0)
 }
 
 negative_control!(
     qa_m368_clamp_off_reads_no_tolerance,
-    "the landing tolerance read with the clamp off",
-    expected = "with the clamp off the landing tolerance was read",
+    "a landing that reads a tolerance with the clamp off",
+    expected = "the run without the fix landed short of the boundary",
     check_clamp_off(reads_tolerance)
 );
 

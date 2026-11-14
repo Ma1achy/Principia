@@ -130,7 +130,9 @@ impl<R> Cadence<R> for DoneAfter {
 }
 
 /// Aarseth–Zare test values (test inputs, not the calibrations): `η = 0.01`, `Δ_sync = 1/8` (exact in binary), the
-/// reference's `TINY` (R-953), R-160's `f = 0.02`, a budget that does not bind, the clamp and the secant on.
+/// reference's `TINY` (R-953), R-160's `f = 0.02`, a budget that does not bind, the clamp and the landing's retakes on
+/// (the secant's 4, the bisection's 64, Part 2b). Changed by TASK-M3-76: the `|R₃|` floor is `TINY` (R-999), and the
+/// landing takes no tolerance (R-998); *was* `r3_floor` `0` / `1e-300` and `land_eps_rel` `1e-5` / `1e-14`.
 struct Grid;
 
 impl AzConfig for Grid {
@@ -140,12 +142,11 @@ impl AzConfig for Grid {
             delta_sync: R::at_width(0.125, 0.125),
             tiny: R::at_width(1e-37, 1e-300),
             predictive_f: R::at_width(0.02, 0.02),
-            r3_floor: R::at_width(0.0, 1e-300),
-            land_eps_rel: R::at_width(1e-5, 1e-14),
             step_budget_rate: R::at_width(1e7, 1e7),
             n_min: 1_000_000,
             clamp: true,
             secant_tries: 4,
+            bisect_tries: 64,
         }
     }
 }

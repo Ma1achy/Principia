@@ -54,6 +54,17 @@ $ImageFiles = @('rootfs.tar.gz', 'rootfs.sha256', 'rootfs.bytes', 'manifest.txt'
 $RecipeFiles = @('scripts/wsl/build-image.sh', 'scripts/wsl/manifest.sh', 'scripts/wsl/wsl.conf', 'scripts/wsl/manifest.sha256', 'rust-toolchain.toml')
 # wsl.exe's own messages in UTF-8, not UTF-16.
 $env:WSL_UTF8 = '1'
+# What goes to wsl.exe's stdin, in UTF-8 with no byte-order mark. Windows PowerShell's .NET writes a started process's
+# stdin through a writer in Console.InputEncoding, and writes that encoding's preamble as the process starts, before a
+# byte of ours: every stdin began EF BB BF (run 43418528499: `sh: 1: #!/bin/sh: not found`, the mark before the `#`).
+# So the encoding is set to one with no preamble; with no console to set it on the setter fails, and the value it keeps
+# is set in its place. A newer .NET takes it per process, as StandardInputEncoding. Invoke-Wsl refuses to send anything
+# while a preamble remains.
+$NoBom = New-Object System.Text.UTF8Encoding $false
+try { [Console]::InputEncoding = $NoBom } catch {
+    $field = [Console].GetField('_inputEncoding', [Reflection.BindingFlags]'NonPublic, Static')
+    if ($field) { $field.SetValue($null, $NoBom) }
+}
 
 # Written to the console, as Invoke-Wsl writes: a line left on the output stream is lost with the exit when the caller is
 # collecting that output, as `$pinned = Get-Pinned` is.
@@ -79,12 +90,17 @@ function Start-Wsl([string[]]$Arguments) {
     $psi.RedirectStandardError = $true
     $psi.StandardOutputEncoding = [Text.Encoding]::UTF8
     $psi.StandardErrorEncoding = [Text.Encoding]::UTF8
+    if ($psi.PSObject.Properties['StandardInputEncoding']) { $psi.StandardInputEncoding = $NoBom }
     [System.Diagnostics.Process]::Start($psi)
 }
 
 # `wsl.exe <arguments>`: its stdout shown line by line as it comes (or, with -OutFile, written there as bytes), its
-# stderr after; -Stdin's bytes on its stdin. Returns the exit status and the stdout lines.
+# stderr after; -Stdin's bytes on its stdin, with nothing before them. Returns the exit status, the stdout lines and the
+# stderr.
 function Invoke-Wsl([string[]]$Arguments, [byte[]]$Stdin = $null, [string]$OutFile = $null) {
+    if ($Stdin -and [Console]::InputEncoding.GetPreamble().Length -ne 0) {
+        Fail "stdin's encoding, $([Console]::InputEncoding.WebName), would put a byte-order mark before what is sent"
+    }
     $p = Start-Wsl $Arguments
     $err = $p.StandardError.ReadToEndAsync()
     if ($Stdin) { $p.StandardInput.BaseStream.Write($Stdin, 0, $Stdin.Length) }
@@ -102,7 +118,14 @@ function Invoke-Wsl([string[]]$Arguments, [byte[]]$Stdin = $null, [string]$OutFi
     $p.WaitForExit()
     $e = $err.Result
     if ($e) { [Console]::Out.WriteLine($e.TrimEnd()) }
-    [pscustomobject]@{ Code = $p.ExitCode; Lines = $lines.ToArray() }
+    [pscustomobject]@{ Code = $p.ExitCode; Lines = $lines.ToArray(); Err = "$e" }
+}
+
+# The last $Count non-blank lines a failed Invoke-Wsl wrote, stdout's then stderr's (a traceback is stderr's), joined
+# for a proof's one line.
+function Get-Tail($Result, [int]$Count = 6) {
+    $all = @(@($Result.Lines) + @("$($Result.Err)" -split "`r?`n") | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+    ($all | Select-Object -Last $Count) -join ' | '
 }
 
 # As ci, in the distro, from /.
@@ -395,7 +418,11 @@ switch ($verb) {
                 if (-not $listener.HasExited) { $listener.Kill() }
                 # Its output after `listening`, once that line was read; if it never came, the proof fails on $up.
                 $rest = if ($ready.IsCompleted) { $listener.StandardOutput.ReadToEnd() } else { '' }
-                $accepted = @($rest -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -like 'accepted *' -and $_ -ne 'accepted 127.0.0.1' })
+                $accepts = @($rest -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -like 'accepted *' })
+                $accepted = @($accepts | Where-Object { $_ -ne 'accepted 127.0.0.1' })
+                # From 127.0.0.1: the connection from inside, if it was made, and any that WSL's localhost forwarding
+                # relayed from Windows, which arrive from 127.0.0.1 too: those beyond the one from inside got in.
+                $relayed = [Math]::Max(0, @($accepts | Where-Object { $_ -eq 'accepted 127.0.0.1' }).Count - $(if ($selfIn) { 1 } else { 0 }))
 
                 $lan = @(Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
                         $_.IPAddress -notlike '127.*' -and $_.IPAddress -notlike '169.254.*' -and
@@ -418,8 +445,8 @@ switch ($verb) {
                     $viaSwitch = @(foreach ($ip in $hostSwitch) {
                             foreach ($p in @($outPort, 445)) { if ((Invoke-Ci @('bash', $Inside, 'connect', $ip, "$p")).Code -eq 0) { "${ip}:$p" } } })
                 } finally { $server.Stop() }
-                $ok = $up -and $selfIn -and $address -and -not $inbound -and -not $accepted -and $reachable.Count -gt 0 -and -not $outbound -and $gatewayListens -and -not $viaSwitch
-                Report 3 $ok "listener inside on ${address}:$port up: $up, reached from inside: $selfIn; reached from Windows at: '$($inbound -join ', ')', accepted from outside: '$($accepted -join ', ')'; the host's LAN addresses '$($lan -join ', ')', listening on: '$($reachable -join ', ')', reached from inside: '$($outbound -join ', ')'; the gateway inside '$gateway', the host listening there on ${outPort}: $gatewayListens, on 445: $smbListens; the switch's host addresses '$($hostSwitch -join ', ')', reached from inside on $outPort or 445: '$($viaSwitch -join ', ')'"
+                $ok = $up -and $selfIn -and $address -and -not $inbound -and -not $accepted -and $relayed -eq 0 -and $reachable.Count -gt 0 -and -not $outbound -and $gatewayListens -and -not $viaSwitch
+                Report 3 $ok "listener inside on ${address}:$port up: $up, reached from inside: $selfIn; reached from Windows at: '$($inbound -join ', ')', accepted from outside: '$($accepted -join ', ')', relayed through localhost: $relayed; the host's LAN addresses '$($lan -join ', ')', listening on: '$($reachable -join ', ')', reached from inside: '$($outbound -join ', ')'; the gateway inside '$gateway', the host listening there on ${outPort}: $gatewayListens, on 445: $smbListens; the switch's host addresses '$($hostSwitch -join ', ')', reached from inside on $outPort or 445: '$($viaSwitch -join ', ')'"
             }
 
             # Proof 4: contain.sh check, unprivileged, with its real `kill -9 -1`; a ci process outside its namespace
@@ -462,7 +489,10 @@ switch ($verb) {
                 } else {
                     $compare = [pscustomobject]@{ Code = 1; Lines = @("parity: the hosted runner's results are missing: '$env:WSL_HOSTED_PARITY'") }
                 }
-                Report 6 ($parity.Code -eq 0 -and $compare.Code -eq 0) "at $commit, cargo nextest run -p kernel --profile ci: $(($compare.Lines | Where-Object { $_ -like 'parity:*' }) -join ' / ')"
+                $evidence = "at $commit, cargo nextest run -p kernel --profile ci: $(($compare.Lines | Where-Object { $_ -like 'parity:*' }) -join ' / ')"
+                if ($parity.Code -ne 0) { $evidence += "; inside.sh parity exited $($parity.Code), ending: $(Get-Tail $parity)" }
+                if ($compare.Code -ne 0) { $evidence += "; inside.sh compare exited $($compare.Code), ending: $(Get-Tail $compare)" }
+                Report 6 ($parity.Code -eq 0 -and $compare.Code -eq 0) $evidence
             }
         } finally {
             Stop-Distro

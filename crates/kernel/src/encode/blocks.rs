@@ -250,8 +250,8 @@ impl SimplexClamp for SoftmaxTanh {
     #[inline]
     fn clamps_at<R: LinkReal>(m: [R; 3], p: &LinkParams<R>) -> u32 {
         let cap = (R::one() - R::EPS_MU) * p.mu_max;
-        let mu1 = Float::ln(m[1] / m[0]);
-        let mu2 = Float::ln(m[2] / m[0]);
+        let mu1 = Real::logarithm(m[1] / m[0]);
+        let mu2 = Real::logarithm(m[2] / m[0]);
         select(outside(mu1, cap), 1, 0) | select(outside(mu2, cap), 2, 0)
     }
 }
