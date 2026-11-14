@@ -794,7 +794,7 @@ and one of the fixes adds a `[boot]` section, which that ruling's text singles o
   hosted `wsl-parity` job, the failure line) and proof 3's evidence count touch no `wsl.conf` and need no ruling.
 
 
-## RQ-816: The registry's guard on binary-plus-single and fixed-`k` rows, and a combination's class `none`, after R-847 reversed R-669 and R-849 gave a typed combination a general numerical solve: REQ-CHART-096 and design § 12's `excluded_primitives` still require both *(conflict; R-847, R-849, R-669, R-916; REQ-CHART-096; context: TASK-M2-58, TASK-M2-66, TASK-M2-73, TASK-M2-78, TASK-M2-79)*
+## RQ-816: The registry's guard on binary-plus-single and fixed-`k` rows, and a combination's class `none`, after R-847 reversed R-669 and R-849 gave a typed combination a general numerical solve: REQ-CHART-096 and design § 12's `excluded_primitives` still require both *(conflict; two-way: a mechanical consequence of R-847 and R-849; R-847, R-849, R-669, R-916; REQ-CHART-096; context: TASK-M2-58, TASK-M2-66, TASK-M2-73, TASK-M2-78, TASK-M2-79)*
 
 *Queued 14 Nov 2026 by the TASK-M2-58 implementer while carrying the rulings into the chart composition design; each
 quote re-read on `main` at b58756589. Nothing is chosen here.*
@@ -841,6 +841,15 @@ still say the old thing.*
 - **Applied meanwhile:** nothing chosen. The design's § 3, § 6.1, § 12 and § 17.5 name this entry where they meet it;
   REQ-CHART-096 is unchanged.
 - **Waits:** TASK-M2-66's rewrite of REQ-CHART-096, and TASK-M2-73, TASK-M2-78 and TASK-M2-79 where they register rows.
+- **14 Nov 2026:** decided (a), applied per R-369 (physics review 5902556608 of #528); listed for the owner's veto; the
+  change to REQ-CHART-096 and the `excluded_primitives` test is a follow-up task. Physics found (a) the only option the
+  rulings' words allow: R-847 reverses R-669, the guard's only reason, which rules out (b); R-849's "Overlay-only is not
+  the answer" rules out (c). Its three points, which the follow-up carries: (i) the general numerical solve is
+  distinguishable from a registered numerical inverse, stating the coordinates it solves for, its branch rule, its seams
+  and its convergence per pixel (REQ-CHART-145); (ii) the `SizeOnly`, `NoWarpWritten`, `AxisAndHold` and `SameQuantity`
+  refusals still apply to a typed combination; (iii) a registered `none` row typed as an expression takes the general
+  solve, so `NoJointInverse` stays only for a registered `none` row picked as an axis. The entry stays open until the
+  follow-up closes it; REQ-CHART-096 and the code are unchanged here.
 
 
 ## RQ-817: The browser build's "labelled and not live" (R-889, REQ-CHART-155) after R-926 fills every view from the CPU's f64 evaluation and R-925 refuses no chart a fragment route: which browser charts, if any, are "not live" *(conflict; a one-way door, it reads the owner's words; R-889, R-926, R-925, R-985, R-571; REQ-CHART-155; context: TASK-M2-58, TASK-M8-102, TASK-M8-96)*
