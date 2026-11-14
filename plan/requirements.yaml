@@ -344,7 +344,7 @@
     section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
   verify:
     method: property test
-    detail: "T3: random-gauge x, parity included, → E → D equals C(x) with L_z's sign kept; a config-only rotation, and a config-only mirror of the input, must each fail this check; T3's inputs include ρ = 0 with ±0 components, where φ is R-437's defined 0 on both precisions"
+    detail: "T3: random x and random g, Π included or not, → E → D: D(E(g·x)) = C(g·x), and L_z(D(E(g·x))) = det(Π_g)·L_z(x), each expectation formed from x and g, never from the mutated input; controls: a config-only rotation in C, and a test-side g whose mirror reflects the rᵢ only, not the pᵢ, must each fail that comparison; T3's inputs include ρ = 0 with ±0 components, where φ is R-437's defined 0 on both precisions"
   rulings:
   - R-437
   - R-865
@@ -1408,7 +1408,7 @@
     section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
   verify:
     method: property test
-    detail: "encode test 3: random scale, orientation, offset and parity; a config-only mirror of the input fails the L_z check; a lower-half state (λ̃_y < 0) decodes back to its own half, L_z's sign kept; t3_half_mirror removed"
+    detail: "encode test 3: random x and random g (scale, orientation, offset and parity): D(E(g·x)) = C(g·x) and L_z(D(E(g·x))) = det(Π_g)·L_z(x), the expectation formed from x and g; control: a test-side g whose mirror reflects the rᵢ only fails that L_z check; a lower-half state (λ̃_y < 0) decodes back to its own half, L_z's sign kept; t3_half_mirror removed"
   rulings:
   - R-544
   - R-865
