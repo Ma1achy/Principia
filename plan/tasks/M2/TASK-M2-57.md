@@ -45,20 +45,27 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   baseline commit's decoder and none is edited by hand: it may be written again only by running the baseline commit's
   decoder, never through any later decoder, and only as the bounded extension the acceptance line gives.
   REQ-TOOL-172's retired-link arm (TASK-M7-45) reads it.
-- The full-circle link and the signed encode, defined in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 (R-72;
-  REQ-DEC-056), under physics review: the link and its inverse, its seam, how a syzygy crossing reads on a latent chart,
-  why a `β ∈ [0, π]` start keeps its bits, and the pole value at `λ̃ = 0`.
+- Built to the full-circle link and the signed encode TASK-M2-107 defines in dd_decoder § 3.2 and § 3.3 and dd_encode
+  § 3.2 (REQ-DEC-056, closed there); this PR corrects them only where the built code differs, under physics review,
+  each correction keeping its *Was*. *Was (14 Nov 2026, moved to TASK-M2-107):* "The full-circle link and the signed
+  encode, defined in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 (R-72; REQ-DEC-056), under physics review: the link
+  and its inverse, its seam, how a syzygy crossing reads on a latent chart, why a `β ∈ [0, π]` start keeps its bits,
+  and the pole value at `λ̃ = 0`."
 - The decoder without its mirror step, in `crates/kernel` (its shared CPU/GPU source, the generated WGSL regenerated
   from it), the encode to `β ∈ (π, 2π)` for a lower-half state, and the shape sphere through the one decode path.
-- The sections marked "[mirror-step removal, ruled 8 Nov 2026 (R-865 …)]" rewritten to the built decoder, each keeping
-  its old text as a "Was": canonical_spec § 3, chart_decoder_contract Part 2 and Part 5, inverse_encode_contract Part 1,
-  chart_reference § 0.4 and § 3, dd_decoder § 3.3, dd_encode § 3.2, and principia_lines.md § 8's `z_β` row; and
-  chart_composition's markers (§ 6.6's list) read with it.
+- The sections marked "[mirror-step removal …]" are rewritten by TASK-M2-107 to the decoder this task builds, in force
+  when it merges; this PR corrects them only where the built code differs, each correction keeping its *Was*.
+  *Was (14 Nov 2026, moved to TASK-M2-107):* "The sections marked "[mirror-step removal, ruled 8 Nov 2026 (R-865 …)]"
+  rewritten to the built decoder, each keeping its old text as a "Was": canonical_spec § 3, chart_decoder_contract
+  Part 2 and Part 5, inverse_encode_contract Part 1, chart_reference § 0.4 and § 3, dd_decoder § 3.3, dd_encode § 3.2,
+  and principia_lines.md § 8's `z_β` row; and chart_composition's markers (§ 6.6's list) read with it."
 - In the PR: every stored `z`, IC save file or test that relied on the old mirrored encode, and the effect on default
   windows of twice the area in `β` (the proposal's items 4 and 5).
 - **One periodic `β` link (R-919, RQ-754 Q1 (c)):** the full-circle link is the `β` block's only link. dd_generation_root
+  § 3.9's `β` rows and codomain, and REQ-GEN-013's `β` codomain and default, are rewritten to it by TASK-M2-107; the
+  registry in `crates/ledger` is built to match. *Was (14 Nov 2026, moved to TASK-M2-107):* "dd_generation_root
   § 3.9's `sigmoid_beta`, `tanh_beta` and `softsign_beta` rows and its `β ∈ [0, π]` codomain, and REQ-GEN-013's `β`
-  codomain and default, rewritten to it, each keeping its *Was*; the registry in `crates/ledger` to match. The three
+  codomain and default, rewritten to it, each keeping its *Was*; the registry in `crates/ledger` to match." The three
   bounded maps are not deleted: they stay as conversion sources only, their forward maps kept for Q3 (a)'s conversion
   and the `latent_conversion` control "a value converted by the wrong link fails", not selectable on any block and not
   counted as `β` links (physics review 5834538186 of PR #465). The PR lists
@@ -119,10 +126,6 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   `t3_half_mirror` removed under REQ-ENC-005's change (REQ-DEC-055).
 - Any preset, saved chart or golden (other than a preset or golden redefined under R-919) whose converted value doesn't decode to the same system within REQ-ENC-024's `ε_phys` on the decoded state, or
   whose outcome classes change, stops the task: the list goes to the owner (REQ-DEC-055).
-- Review: the full-circle link and the signed encode in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2, written to the
-  owner's answer to RQ-750 (R-898: `z_β` a periodic angle, each stored value converted once) and approved by the physics
-  reviewer, with whether a converted `z_β` is stored reduced to one period or unreduced and where a wrap enters (R-72;
-  REQ-DEC-056).
 - Review: for every saved oblique latent chart whose `q₁[1]` or `q₂[1]` is nonzero, the PR states which form it
   takes, the curved chart under the old link read through the new inverse or a planar approximation, and why: under the
   new `β` link such a plane becomes a curved surface, so a planar approximation is kept only where it passes the
@@ -133,8 +136,11 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   optional "mirror pairs counted once" statistic, which this task doesn't build).
 - **Waits on RQ-750** (`rq: RQ-750` on REQ-DEC-055 and REQ-DEC-056): physics review 5817348709 of PR #449, P1. Not
   dispatched until it is ruled.
-- **Requirements that change when this merges (R-865; physics review 5817348709, P2).** Each carries a note now; this
-  task rewrites their statements to the built decoder, each keeping a "Was": REQ-ENC-003 (T1, to the equivariance
+- **Requirements that change when this merges (R-865; physics review 5817348709, P2).** TASK-M2-107 restated
+  them to the decoder this task builds, each keeping a "Was", binding from this task's merge; this task builds the code
+  that meets them and runs their verifies (the acceptance lines above), correcting a statement only where the built code
+  differs, under physics review. *Was (14 Nov 2026, moved to TASK-M2-107):* "Each carries a note now; this task rewrites
+  their statements to the built decoder, each keeping a "Was"": REQ-ENC-003 (T1, to the equivariance
   above), REQ-ENC-005, REQ-ENC-014, REQ-ENC-007, REQ-ENC-002, REQ-ENC-015, REQ-DEC-002, REQ-DEC-016, REQ-DEC-017,
   REQ-DEC-018, REQ-ENC-034, REQ-CHART-002, REQ-CHART-020 and REQ-COL-006. **REQ-VAL-022** is a numerical gate read on
   `C(x)` "where C's mirror puts L⁻ at w = +1": its restatement is proposed here under physics review and recorded by a
@@ -198,6 +204,9 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
 - *14 Nov 2026 (applied per R-369: task scoping, the orchestrator):* split docs first. TASK-M2-107 writes REQ-DEC-056's
   definitions, the marked sections' rewrites, dd_generation_root § 3.9 and the fifteen requirements, and files
   REQ-VAL-022's restatement (RQ-821); this task builds the code to them, depends on TASK-M2-107, and keeps
-  REQ-DEC-055. Its merge also waits on RQ-821's ruling. The 32 qa files the removal breaks at compile are named
+  REQ-DEC-055. Its merge also waits on RQ-821's ruling. Code review 5903950686 of PR #533, F2: the Deliverables
+  and Notes items that moved are pointed to TASK-M2-107, each keeping its *Was*, and the acceptance line "Review: the
+  full-circle link and the signed encode …" is dropped, REQ-DEC-056 being TASK-M2-107's. *Was (that acceptance
+  line):* "Review: the full-circle link and the signed encode in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2, written to the owner's answer to RQ-750 (R-898: `z_β` a periodic angle, each stored value converted once) and approved by the physics reviewer, with whether a converted `z_β` is stored reduced to one period or unreduced and where a wrap enters (R-72; REQ-DEC-056)." The 32 qa files the removal breaks at compile are named
   exceptions under R-237 and R-369 (a ruling, R-865 with R-916 and R-919, forces the change), edited in this task's qa
   commit only (R-290). *Was (Closes):* "REQ-DEC-055, REQ-DEC-056". *Was (Depends on):* "TASK-M2-40".
