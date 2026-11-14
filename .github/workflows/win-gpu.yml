@@ -1,13 +1,21 @@
 # Measurements on the owner's Windows PC, `malachys-pc-rtx2080s`, RTX 2080 SUPER (R-711 item 1, which amends R-186 and
-# R-656 for this one runner): the Vulkan GPU suites, nightly and on `main`; the Windows build and tests, nightly; and
-# a nightly self-check, the only daily re-proof of the setup, since `schedule` fires only from `main`; and, dispatched by
-# hand alone, the proof of Windows containment (`win-contain`, below). Every result
+# R-656 for this one runner): the Vulkan GPU suites, nightly and on `main`; a nightly self-check, the only daily
+# re-proof of the setup, since `schedule` fires only from `main`; and, dispatched by hand alone, the proof of Windows
+# containment (`win-contain`, below). Every result
 # here is a measurement, never a required check (R-649): the PC is sometimes off, and nothing on `main` waits for it.
 # No job here is gathered or read by any gate, and a red one is not main red. A job here that stops on a runner-level
 # fault is re-run once, automatically, by the hosted job `win-retry` (`win-retry.yml`, R-988), the one reader of this
 # workflow, which logs every such stop and every hang; nothing else retries a job here. `xtask/tests/ci_self_hosted.rs`
 # fails if that ever stops holding, or if a rule below is broken. DX12 waits for its opt-in (R-711 item 2). No
 # benchmarks or soak run here, and no mutants outside the WSL2 distro's `wsl-cpu` (below), which is off.
+#
+# The PC runs the GPU suites only (the owner, 14 Nov 2026: "The PC runs the GPU suites only. Tests that fail there for
+# lack of Unix tools ... are excluded on Windows with a stated reason (they run on hosted Linux already), not fixed";
+# TASK-M0-71). The nightly Windows build and CPU tests, `win-tests`, are gone: they ran xtask's tests that start a bare
+# `bash`, which on this runner's account resolves to C:\Windows\System32\bash.exe, WSL's launcher, and so ran inside
+# the default distro and wrote to it (run 43593938536). No test a job here runs may start a bare `bash` or `wsl`:
+# `xtask/tests/ci_win_no_wsl.rs` reads every cargo command of the jobs on the runner and fails if a test it can reach
+# does, unless that test's file is excluded on Windows with its reason.
 #
 # The repository is public and this runner is a real PC, so these are the conditions for having it at all (R-711 items
 # 1 and 5, the owner's job rules of 5 Nov 2026). Never add a `pull_request` or `pull_request_target` trigger: only push
@@ -29,7 +37,7 @@
 #
 # Concurrency: a group per job, each holding only that job's runs. The runner is one machine and takes one job at a time,
 # so the GPU is never shared whatever the groups; they bound the queue, and being per job, a push can't displace a
-# nightly's `win-tests` or `win-self-check`, which pushes never run. `win-vulkan`, the 85-minute run, cancels in
+# nightly's `win-self-check`, which pushes never run. `win-vulkan`, the 85-minute run, cancels in
 # progress (R-986, the owner's ruling of 12 Nov 2026: "merges to main, nightly and dispatch only, with a newer run
 # cancelling an older one; never branch pushes"): a newer run of it, from a merge, the schedule or a dispatch, cancels an
 # older one still running, on `main` too, so the PC always works on the newest commit. Every other job keeps
@@ -130,7 +138,6 @@ on:
         options:
           - all
           - win-vulkan
-          - win-tests
           - win-self-check
           - win-contain
           - wsl-register
@@ -310,97 +317,6 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: win-vulkan-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/win-measure
-          retention-days: 90
-
-  # `nightly.yml`'s CPU suites on Windows: the `ci` profile, and the two the `ci-workspace` profile adds there. Some of
-  # these tests need bash or PyYAML, which this PC's account isn't known to have, so a failure here is read by its cause.
-  win-tests:
-    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-tests')
-    runs-on: [self-hosted, windows, nvidia]
-    timeout-minutes: 147
-    concurrency:
-      group: win-tests
-      cancel-in-progress: false
-    steps:
-      - name: Self-check, first step
-        run: |
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File E:\runner-tools\checks\self-check.ps1
-          exit $LASTEXITCODE
-      - name: Guard the kept checkout
-        run: |
-          $guard = Join-Path $env:RUNNER_TEMP 'git_guard.ps1'
-          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-          try { Invoke-WebRequest -UseBasicParsing -OutFile $guard -Uri "https://raw.githubusercontent.com/$env:GITHUB_REPOSITORY/$env:GITHUB_SHA/.github/scripts/git_guard.ps1" } catch { "could not fetch the guard: $_"; exit 1 }
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $guard
-          exit $LASTEXITCODE
-      - name: Toolchain on PATH
-        run: |
-          Add-Content -LiteralPath $env:GITHUB_PATH -Value 'E:\runner-tools\cargo\bin'
-          exit 0
-      - name: Clean checkout
-        id: checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 1
-          clean: true
-      - name: Record the commit, driver and toolchain
-        run: |
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 start
-          exit $LASTEXITCODE
-      - name: cargo build --workspace --all-targets
-        id: build
-        timeout-minutes: 82
-        run: |
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run build cargo build --workspace --all-targets --keep-going
-          exit $LASTEXITCODE
-      - name: cargo nextest run --workspace
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        env:
-          NEXTEST_PROFILE: ci
-        timeout-minutes: 44
-        run: |
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run workspace cargo nextest run --workspace --no-fail-fast --retries 0
-          exit $LASTEXITCODE
-      - name: cargo nextest run -p validation --test qa_TASK-M0-24
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        env:
-          NEXTEST_PROFILE: ci-workspace
-        timeout-minutes: 39
-        run: |
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run qa_TASK-M0-24 cargo nextest run -p validation --test qa_TASK-M0-24 --no-fail-fast --retries 0
-          exit $LASTEXITCODE
-      - name: cargo nextest run -p xtask --test qa_TASK-M0-06_list
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        env:
-          NEXTEST_PROFILE: ci-workspace
-        timeout-minutes: 21
-        run: |
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run qa_TASK-M0-06_list cargo nextest run -p xtask --test qa_TASK-M0-06_list --no-fail-fast --retries 0
-          exit $LASTEXITCODE
-      - name: cargo test --workspace --doc
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        timeout-minutes: 1
-        run: |
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run doc cargo test --workspace --doc
-          exit $LASTEXITCODE
-      - name: cargo xtask deps
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        timeout-minutes: 3
-        run: |
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 run deps cargo xtask deps
-          exit $LASTEXITCODE
-      - name: Label the result in the summary
-        if: ${{ always() && steps.checkout.outcome == 'success' }}
-        run: |
-          powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File .github\scripts\win_measure.ps1 finish
-          exit $LASTEXITCODE
-      - name: Keep the full output
-        if: ${{ always() && steps.checkout.outcome == 'success' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: win-tests-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/win-measure
           retention-days: 90
 

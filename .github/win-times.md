@@ -46,13 +46,6 @@ Read on 13 Nov 2026 from `gh api repos/Ma1achy/Principia/actions/runs/<run>/atte
 | win-gpu.yml | win-vulkan | cargo nextest run -p validation --features controls codegen_selftest | run 43316207795, job 131524774857, 77 s; run 43288884452, job 131429514850, 73 s; run 43243728779, job 131270707151, 76 s; run 43230901521, job 131225617401, 75 s; run 43224843606, job 131205264773, 77 s | 77 | 2 |
 | win-gpu.yml | win-vulkan | cargo xtask golden --all | run 43316207795, job 131524774857, 48 s; run 43288884452, job 131429514850, 50 s; run 43243728779, job 131270707151, 46 s; run 43230901521, job 131225617401, 46 s; run 43224843606, job 131205264773, 47 s | 50 | 2 |
 | win-gpu.yml | win-vulkan | cargo nextest run -p xtask --features controls golden_halfway | run 43316207795, job 131524774857, 132 s; run 43288884452, job 131429514850, 115 s; run 43243728779, job 131270707151, 119 s; run 43230901521, job 131225617401, 580 s; run 43224843606, job 131205264773, 116 s | 580 | 15 |
-| win-gpu.yml | win-tests | (job) | run 43230901521, job 131225616994, 5863 s; run 42825370464, job 129861170030, 5600 s; run 42630146970, job 129204041715, 4129 s | 5863 | 147 |
-| win-gpu.yml | win-tests | cargo build --workspace --all-targets | run 43230901521, job 131225616994, 3274 s; run 43023140554, job 130531059795, 751 s; run 42825370464, job 129861170030, 3036 s; run 42630146970, job 129204041715, 599 s | 3274 | 82 |
-| win-gpu.yml | win-tests | cargo nextest run --workspace | run 43230901521, job 131225616994, 1724 s; run 42825370464, job 129861170030, 1457 s; run 42630146970, job 129204041715, 1659 s | 1724 | 44 |
-| win-gpu.yml | win-tests | cargo nextest run -p validation --test qa_TASK-M0-24 | run 43230901521, job 131225616994, 6 s; run 42825370464, job 129861170030, 7 s; run 42630146970, job 129204041715, 1555 s | 1555 | 39 |
-| win-gpu.yml | win-tests | cargo nextest run -p xtask --test qa_TASK-M0-06_list | run 43230901521, job 131225616994, 573 s; run 42825370464, job 129861170030, 811 s; run 42630146970, job 129204041715, 126 s | 811 | 21 |
-| win-gpu.yml | win-tests | cargo test --workspace --doc | run 43230901521, job 131225616994, 5 s; run 42825370464, job 129861170030, 3 s; run 42630146970, job 129204041715, 5 s | 5 | 1 |
-| win-gpu.yml | win-tests | cargo xtask deps | run 43230901521, job 131225616994, 109 s; run 42825370464, job 129861170030, 99 s; run 42630146970, job 129204041715, 69 s | 109 | 3 |
 | win-gpu.yml | win-self-check | (job) | run 43230901521, job 131225617629, 393 s; run 43023140554, job 130531059678, 448 s; run 42825370464, job 129861170106, 355 s; run 42630146970, job 129204041981, 332 s; run 42520229425, job 128851914552, 649 s | 649 | 17 |
 | win-gpu.yml | win-self-check | The guard on this workflow | run 43230901521, job 131225617629, 177 s; run 43023140554, job 130531059678, 166 s; run 42825370464, job 129861170106, 157 s; run 42630146970, job 129204041981, 148 s; run 42520229425, job 128851914552, 173 s | 177 | 5 |
 | win-gpu.yml | win-contain | (job) | none | — | 30 |
@@ -80,3 +73,7 @@ that of the failure, not of the work, and the limit could cut the step once it p
 `golden --all` and `golden_halfway` of `win-vulkan`. Each ran its tests and failed on their output, so its time is
 the work's; the criterion takes them as they are. They are named here so that a cut of one is read as the limit's, not
 the step's, and is put to the owner rather than met by a limit changed after the result (R-649).
+
+`win-tests`, the nightly Windows build and CPU tests, left `win-gpu.yml` on 14 Nov 2026: the PC runs the GPU suites
+only (the owner's words of that day; TASK-M0-71). Its seven rows went with it, since the table names nothing the
+workflows don't have; as read on 13 Nov 2026 they stand in this file at commit f03c7dcd8.
