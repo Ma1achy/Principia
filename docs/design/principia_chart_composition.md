@@ -177,7 +177,8 @@ settles were queued. RQ-816 (the registry's guard on binary-plus-single and fixe
 after R-847 and R-849) is decided (a), a mechanical consequence of the two rulings (applied per R-369 on physics review
 5902556608 of PR #528; listed for the owner's veto): the guard goes, a typed combination takes R-849's general solve, and
 TASK-M2-66 carries it (§ 3, § 12). RQ-817 (the browser's "labelled and not live" after R-926; § 7.5) stays open, nothing
-chosen meanwhile. *Was:* "Two questions the carry met that no ruling settles are queued, nothing chosen meanwhile:
+chosen meanwhile. *14 Nov 2026, later:* the owner closed RQ-816 by R-1011, the decision standing, and ruled RQ-817 (a),
+with (b)'s measurement reported beside it, by R-1012 (§ 7.5). *Was:* "Two questions the carry met that no ruling settles are queued, nothing chosen meanwhile:
 RQ-816 (the registry's guard on binary-plus-single and fixed-`k` rows, and a combination's `none`, after R-847 and R-849;
 § 3, § 12) and RQ-817 (the browser's "labelled and not live" after R-926; § 7.5)." (D) and (F) are confirmed by physics review 5852979675 of PR #482 (physics review 5902556608 of PR
 #528), so they are carried unconditionally, still listed for the owner's veto. *Was:* "(D) and (F) stay conditional, as
@@ -940,7 +941,9 @@ and sent to the integrator as records, and the fragment takes a chart's closed-f
 never a refusal (R-925 item 1). So `live` and `CPU batch: not baked` give way to the fragment route, `closed form` or
 `table` (R-935, RQ-765 (a): REQ-CHART-098's label becomes the fragment route), and `CPU batch: numerical` is the chart's
 decode route (R-849 read with R-922), its branch rule and seam shown and its convergence reported per pixel
-(REQ-CHART-145). In the browser R-889's labels stand, as § 7.5 says. *Was:* the three rows above, as written.
+(REQ-CHART-145). In the browser the labels are the native ones, with no "not live" or "CPU batch" label of their own
+(R-1012, RQ-817 (a); § 7.5). *Was (14 Nov 2026):* "In the browser R-889's labels stand, as § 7.5 says." *Was:* the three
+rows above, as written.
 
 **R-506 W1 unchanged.** A chart with any linear axis logs no decoder-bug warning; a chart whose physical axes are all warped
 does. A chart with a mask or a seam logs none on the pixels the mask or seam explains.
@@ -1142,8 +1145,20 @@ unbaked, and morphs with a CPU-only end run as CPU batch in the engine's worker,
 labelled and not live, as natively. TASK-M8-102 builds the wasm target and its tests (REQ-CHART-155); the thread count is
 TASK-M8-96's measurement, and the wasm-against-native bitwise question is measured and reported, as above. How "labelled
 and not live" reads after R-926, which fills every view from the CPU's f64 evaluation (§ 7), and R-925, under which no
-chart is refused a fragment route, is RQ-817: which browser charts are "not live" is not chosen here.
+chart is refused a fragment route, was RQ-817, ruled (a) by R-1012, below. *Was (14 Nov 2026):* "is RQ-817: which
+browser charts are "not live" is not chosen here."
 *Was:* "**Recommended: (b).** … It's the owner's call. Nothing is built for either until it's ruled."
+
+**Ruled (a), with (b)'s measurement reported beside it, R-1012 (14 Nov 2026; RQ-817).** In the browser every chart runs as
+natively under R-926 (§ 7): filled from the CPU's f64 evaluation in the engine's worker, the same Rust compiled to
+WebAssembly, a coarse cover in motion and the exact view at rest, with no route label of its own ("not live", "CPU
+batch" or the like); a chart the browser can't keep up with in motion shows the coarse cover longer, as natively. R-889's
+"labelled and not live" reads "as natively" for the browser, and the table above, RQ-735's options, is the record of
+that question: its (b) column's "CPU batch" and "not live" are now the native CPU evaluation, with no label. Beside it
+the owner's rider asks for (b)'s measurement, which labels nothing: on TASK-M8-96's measured thread count, against a
+frame budget written and committed before the run (R-649), the share of § 3.1's charts whose wasm CPU evaluation of a
+coarse cover fits one frame at 60 Hz, per browser, each chart's time beside the budget, reported. TASK-M8-102 makes it,
+in the browsers on the human's Mac (R-186), and closes REQ-CHART-155.
 
 ---
 
@@ -2014,7 +2029,7 @@ here."
 | RQ-731 | REQ-VAL-326's pointer to the 2015 paper | correct it to the 2008 paper | R-891: the 2008 paper; `Q = 2k` |
 | RQ-733 | A user-typed combination with no registered inverse: an overlay only, or a general solve | registered inverses only; an overlay otherwise | R-849: a general numerical solve on the CPU, its branch rule recorded, seams marked |
 | RQ-734 | Final-condition charts (the model's Theorem 11): whether to build; the occupant; the gauge; the mirror half; line 243's rejection | build later, as a CPU batch chart: the default occupant, the round-trip miss measured and masked per pixel, an exactly reversible integrator the option; the start kept signed, the mirror half never folded; keep `I = 1` and label it; narrow the rejection to event reads | R-879: built after the M8 charts, TASK-M8-128; the rejection narrowed to trajectory functionals and event reads |
-| RQ-735 | The browser build: closed-form GPU charts only, or a WASM CPU route for numerical axes and CPU-only morphs | the WASM CPU route, reasoned from R-571; nothing measured | R-889 (b): REQ-CHART-155, TASK-M8-102; what "not live" reads after R-926 is RQ-817 |
+| RQ-735 | The browser build: closed-form GPU charts only, or a WASM CPU route for numerical axes and CPU-only morphs | the WASM CPU route, reasoned from R-571; nothing measured | R-889 (b): REQ-CHART-155, TASK-M8-102; what "not live" reads after R-926 is RQ-817, ruled (a) by R-1012: no browser chart is labelled, (b)'s measurement reported beside it |
 | RQ-736 | The chart-space model against the corpus | ruled by the owner on 7 Nov: the corpus and § 17 stand, and the model is corrected to match; its open questions ruled the same day; the symmetry filter (§ 10.4) gives the papers' domains; closes in the rulings PR, with a correction list and the filter's conflicts | R-853, R-854, R-855; the filter's conflicts R-878 |
 
 **New extension types: none proposed.** Polar's `ϕ` and `r` declare existing types, under R-407 clause 3's physics review.
@@ -2163,7 +2178,9 @@ rebuilds three gallery charts, and waits on TASK-M8-120 alone of the design's ta
   time, integration included, a built `stage_blend`, and any nonlinear-end alignment: not measured." A faster CPU-only live path is a goal with no task. The linearised decoder's tangent planes wait on M6.
 - RQ-701, RQ-700 and RQ-682 are closed: R-893 (RQ-701, R-818's form and R-833's cap, built by TASK-M8-48), R-817
   (RQ-700, the floor under the rise) and R-816 (RQ-682, kind 3) (§ 9). Of the two items this gate found, RQ-816 is decided (a)
-  (applied per R-369; listed for the owner's veto; § 12, TASK-M2-66) and RQ-817 is open (§ 7.5). *Was (14 Nov 2026):*
+  (applied per R-369; listed for the owner's veto; § 12, TASK-M2-66) and RQ-817 is open (§ 7.5). *14 Nov 2026, later:*
+RQ-816 is closed by R-1011, the decision standing, and RQ-817 is ruled (a), with (b)'s measurement beside it, by R-1012
+(§ 7.5). *Was (14 Nov 2026):*
   "Two items this gate found are open: RQ-816 (§ 3, § 12) and RQ-817 (§ 7.5)." *Was:* "RQ-701, RQ-700 and RQ-682 stand open in the queue; this document assumes nothing of
   them but where it says so."
 

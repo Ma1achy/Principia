@@ -33851,6 +33851,8 @@ presets (TASK-M8-112) read it for their home values.
 R-888 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-889 — The browser build gets a WASM CPU route too: numerical axes, unbaked closed forms and CPU-only morphs run as CPU batch in the engine's worker, labelled and not live *(closes RQ-735)*
+*Refined by R-1012 (14 Nov 2026; RQ-817 (a), with (b)'s measurement reported beside it: in the browser every chart runs as natively under R-926, with no route label and no "not live" class; the share of charts whose wasm CPU evaluation of a coarse cover fits one frame at 60 Hz is measured and reported, labelling nothing).*
+*Still in force: all of it but "labelled and not live", which for the browser now reads "as natively" under R-926 (R-1012): the WASM CPU route in the engine's worker, the same Rust compiled to WebAssembly, TASK-M8-96's thread count and the wasm-against-native bitwise measurement stand.*
 *8 Nov 2026 · the owner's reply to the report of 8 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-735 moved),
 `docs/archive/review_queue/M0.md`, `docs/design/principia_chart_composition.md` (status), REQ-CHART-155 (reqio, new),
 TASK-M8-102, `plan/tasks.yaml` and `plan/rule_groups.yaml`; adds REQ-CHART-155*
@@ -35067,6 +35069,8 @@ Changes REQ-RENDER-082 (statement, verify, rq, rulings, source, note), REQ-CHART
 and REQ-CHART-100 (rulings, source, note); adds REQ-RENDER-123 and REQ-CHART-165.
 
 ## R-915 — Inside WSL, `contain.sh check` proves an unprivileged mode: user and PID namespaces with no sudo and the real `kill -9 -1`, passing only if a ci process outside the namespace and the runner agent and gh-runner's other Windows processes survive; WSL keeps no sudo, no systemd and the owner's exact `wsl.conf`; the mode is selected explicitly, never a fallback, and fails, never skips, without user namespaces; other machines keep the strict mode; proof 4 reworded *(closes RQ-753; amends R-912)*
+*Amended by R-1010 (14 Nov 2026; RQ-815 (a): `wsl.conf` may gain `[gpu] enabled=false` and a `[boot] command=` that removes the `WSLInterop` registration, with no `systemd=` and no sudo, the image test following the new file and keeping its ban on `systemd=`).*
+*Still in force: all of it but "wsl.conf exactly as I gave it", which now reads exactly as the owner gave it with R-1010's two additions and nothing else; no sudo, no systemd, no `[boot] systemd=true` and no sudoers entry, the unprivileged mode, its explicit selection and proof 4 stand unchanged.*
 *9 Nov 2026 · the owner's ruling of that day on RQ-753; applied in `REVIEW_QUEUE.md` (RQ-753 filed and moved),
 `docs/archive/review_queue/M0.md`, R-912's forward line, REQ-VAL-181 (reqio) and `plan/rule_groups.yaml`; built by PR
 #460 (the WSL2 containment image and its dispatch-only jobs); changes REQ-VAL-181*
@@ -37815,6 +37819,8 @@ R-975 is in the "physics" group of `plan/rule_groups.yaml`.
 Changes REQ-CHART-189 and REQ-CHART-211. The parse printed R-975 for this answer.
 
 ## R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*
+*Amended by R-1009 (14 Nov 2026; RQ-814 (d): neither form's values are confirmed at the M3 gate; REQ-INT-076's confirmation moves to the M4 gate, beside REQ-PAY-085, the provisional (3e-3, 300, 0.2) staying in force and stated as unsupported until then).*
+*Still in force: all of it but "the M3 gate confirms": (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown, the re-run (TASK-M3-72) and `min_regions` ≥ 6 proposed; the M4 gate, not the M3 gate, confirms REQ-INT-076's values, beside REQ-PAY-085 (R-1009).*
 *12 Nov 2026 · the owner's reply to the report of 12 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-794 moved),
 `docs/archive/review_queue/M0.md` (RQ-794 with its ruling), REQ-INT-076 (reqio, its note), REQ-GUI-437 to REQ-GUI-442
 and REQ-VAL-356 (reqio, new), TASK-M3-73 (new), TASK-M3-72, TASK-M3-14, TASK-M4-13, TASK-M8-11, TASK-M8-22,
@@ -39008,3 +39014,192 @@ on TASK-M3-76's second criterion the order is read as the rider says.
 R-1008 is in the "physics" group of `plan/rule_groups.yaml`.
 
 Changes no requirement statement; REQ-INT-119 names the ruling. The parse printed R-1008 for this answer.
+
+## R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*
+*14 Nov 2026 · the owner's reply to the report of 14 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-814 moved),
+`docs/archive/review_queue/M0.md` (RQ-814 with its ruling), the forward and "Still in force" lines of R-976,
+REQ-INT-076 (reqio: its statement, milestone and note), REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356 (reqio: the gate
+their notice waits on, M3 to M4, each with its *Was* in a dated note), TASK-M3-14, TASK-M3-72 and TASK-M3-73 (the lines
+naming the M3 gate, each with its *Was*, and a dated note), TASK-M4-13 (a dated note and References),
+`plan/MILESTONES.md` (REQ-INT-076 moves from M3's gate to M4's) and `plan/rule_groups.yaml`; changes REQ-INT-076,
+REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356*
+
+The owner's words (14 Nov 2026), verbatim:
+
+> RQ-814: (d).
+
+*What it decides:* RQ-814's option (d), "**Neither at M3.** REQ-INT-076's confirmation moves to the M4 gate, beside
+REQ-PAY-085, the provisional values staying in force and stated as unsupported until then. Consequence: amends
+REQ-INT-076's milestone and R-976's "the M3 gate confirms", and the M3 gate passes with REQ-INT-076 provisional."
+
+Read by the orchestrator: (d) settles the entry whole, since it answers its one question, which form the M3 gate's
+values are for, by confirming neither at M3. So:
+
+- neither form's values is confirmed at the M3 gate: not the absolute form's pick (3e-3, 1, 3), resting on 39 of 42
+  non-finite candidates, nor the displacement form's (1e-4, 1, 0.2) with `min_regions` ≥ 6;
+- REQ-INT-076 (the FTLE shadow's calibration) is confirmed by the human at the M4 gate, beside REQ-PAY-085 (the switch
+  from the absolute to the displacement form), whose measurement, TASK-M4-13's, says which form ships and so which of
+  the re-run's two picks applies;
+- until then (‖δ₀‖, `n_renorm`, dd test 10's tolerance) = (3e-3, 300, 0.2) stay in force, provisional, and stated as
+  unsupported on close-encounter chaotic orbits wherever the FTLE is shown (R-976; REQ-GUI-437 to REQ-GUI-442 and
+  REQ-VAL-356, whose notice now falls silent at the M4 gate's confirmation, its wording and values unchanged), and the eight-orbit report keeps stating each form's pick beside them;
+- the M3 gate passes with REQ-INT-076 provisional. TASK-M3-14 still closes it, its proposal and evidence already
+  merged; only the gate that confirms it moves (applied per R-369: a mechanical consequence of the ruling, the closing
+  task unchanged).
+
+*What it amends:* **R-976**, whose "the M3 gate confirms no final value until the re-run" now reads: the re-run is made
+(TASK-M3-72), and the M4 gate, not the M3 gate, confirms REQ-INT-076's values, beside REQ-PAY-085.
+
+R-1009 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-076 (statement, milestone and note), and REQ-GUI-437 to REQ-GUI-442 and REQ-VAL-356 (statement: the gate
+their notice waits on). The parse printed R-1009 for this answer.
+
+## R-1010 — RQ-815, proof 2's two holes to Windows: option (a); the WSL distro's `wsl.conf` may gain `[gpu] enabled=false` and a `[boot] command=` that removes the `WSLInterop` registration, with no `systemd=` and no sudo; the image test's exact text and its `[boot]` ban follow the new file, its ban on `systemd=` kept; the manifest is re-pinned and the distro re-registered with `replace: true` *(closes RQ-815; amends R-915)*
+*14 Nov 2026 · the owner's reply to the report of 14 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-815 moved),
+`docs/archive/review_queue/M0.md` (RQ-815 with its ruling), the forward and "Still in force" lines of R-915,
+`plan/OPERATIONS.md` § "The Windows runner's work" (the distro's `/etc/wsl.conf`, with its *Was*), REQ-TOOL-242 (reqio,
+new), REQ-TOOL-234 (reqio, a dated note), TASK-M0-69 (new), TASK-M0-63 (a dated note), `plan/tasks.yaml`,
+`plan/MILESTONES.md` and `plan/rule_groups.yaml`; adds REQ-TOOL-242*
+
+The owner's words (14 Nov 2026), verbatim:
+
+> RQ-815: (a).
+
+*What it decides:* RQ-815's option (a), "**Amend R-915's "exactly":** allow both additions (no `systemd=`, no sudo),
+the image test's exact text and its `[boot]` ban updated to the new file and a ban on `systemd=` kept; the manifest
+re-pinned and the distro re-registered with `replace: true`." So:
+
+- `scripts/wsl/wsl.conf`, the distro's `/etc/wsl.conf`, may gain exactly two things beyond the file the owner gave:
+  `[gpu] enabled=false`, which closes WSL's GPU share (`/usr/lib/wsl/drivers`, the driver store on C:, 9p-mounted by
+  default), and a `[boot] command=` that removes the `WSLInterop` registration WSL2 makes at every start whatever
+  `[interop] enabled` says, which WSL runs as root at the distro's start, without systemd;
+- nothing else changes in it: no `systemd=`, no sudo and no sudoers entry, the owner's other lines as they gave them;
+- the image test (`xtask/tests/wsl.rs`) holds the file to its new exact text, its ban on `[boot]` follows the new file,
+  and a ban on `systemd=` is kept;
+- the manifest's pin (`scripts/wsl/manifest.sha256`) is re-pinned to the new image, and the distro re-registered with
+  `replace: true`.
+
+*The entry's measurement,* its criterion written before any run (R-649): proof 2 of `wsl-proofs`, after a
+`replace: true` registration, passes every line of `inside.sh`'s `isolation()` unchanged, with `/usr/lib/wsl/drivers`
+unmounted and `WSLInterop` absent. Its outcome is reported as it is, and nothing in `isolation()` is loosened to pass it.
+
+*Applied per R-369 (task scoping):* the build is a new task, TASK-M0-69 (proof 2's two `wsl.conf` lines, their tests,
+the re-pin and the re-registration), closing REQ-TOOL-242, new. REQ-VAL-181 (the mutants' memory cap and the WSL
+containment it waits on) and REQ-TOOL-234 (the proofs' scripts, built by TASK-M0-63) don't state proof 2's file, so
+neither fits; REQ-TOOL-242 is numbered past 241, which TASK-M0-68's branch holds (reqio's next id on `main` renumbered
+by hand, as REQ-TOOL-240 was).
+
+*What it amends:* **R-915**, whose "wsl.conf exactly as I gave it" now reads: exactly as the owner gave it, with the
+two additions above and nothing else. Its "no sudo, no systemd" and "Don't add [boot] systemd=true or any sudoers entry,
+not even a narrow one" stand unchanged: the `[boot]` section allowed holds the one command and no `systemd=`.
+
+R-1010 is in the "ci" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-242. The parse printed R-1010 for this answer.
+
+## R-1011 — RQ-816, the chart registry's old guard: closed, the report's D-9 confirmed; the guard on binary-plus-single and fixed-`k` rows goes, and a typed combination with no registered inverse takes R-849's general numerical solve, as TASK-M2-66 builds it with points (i) to (iii) *(closes RQ-816)*
+*14 Nov 2026 · the owner's reply to the report of 14 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-816 moved),
+`docs/archive/review_queue/M0.md` (RQ-816 with its ruling), `docs/design/principia_chart_composition.md` (the carry's
+status paragraph and the gate's open-items line, each a dated line), REQ-CHART-096 (reqio, a dated note), TASK-M2-66 (a
+dated note and References) and `plan/rule_groups.yaml`; changes no requirement statement*
+
+The owner's words (14 Nov 2026), verbatim:
+
+> RQ-816: close.
+
+*What it decides:* RQ-816 closes with what the report put to the owner to close: option (a), decided by the
+orchestrator per R-369 as a mechanical consequence of R-847 and R-849 (the report's D-9, on physics review 5902556608 of
+PR #528), which stands. The registry's guard against rows with an inverse naming a binary phase, eccentricity, impact
+parameter or fixed `k` is dropped (R-847 reversed R-669, its only reason); a typed combination with no registered inverse
+is classed numerical by R-849's general solve, not `none`; `excluded_primitives` becomes `combination_class` (design
+§ 12). TASK-M2-66 (the registry's rewrite) builds it and closes REQ-CHART-096, with physics's three points as the entry
+records them:
+
+- (i) the general numerical solve is distinguishable from a registered numerical inverse, stating the coordinates it
+  solves for, its branch rule, its seams and its convergence per pixel (REQ-CHART-145);
+- (ii) the `SizeOnly`, `NoWarpWritten`, `AxisAndHold` and `SameQuantity` refusals still apply to a typed combination;
+- (iii) a registered `none` row typed as an expression takes the general solve, so `NoJointInverse` stays only for a
+  registered `none` row picked as an axis.
+
+TASK-M2-73 builds the general solve itself. Nothing changes in what TASK-M2-66 builds; the entry no longer waits for it
+to merge.
+
+R-1011 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement statement; REQ-CHART-096 names the ruling. The parse printed R-1011 for this answer.
+
+## R-1012 — RQ-817, which browser charts are "not live": option (a), with (b)'s measurement reported beside it; every browser chart runs as natively under R-926, a coarse cover in motion and the exact view at rest, with no route label, and the share of charts whose wasm CPU evaluation of a coarse cover fits one frame at 60 Hz, on TASK-M8-96's thread count and against a frame budget written before the run, is measured and reported, labelling nothing *(closes RQ-817; refines R-889)*
+*14 Nov 2026 · the owner's reply to the report of 14 Nov 2026; applied in `REVIEW_QUEUE.md` (RQ-817 moved),
+`docs/archive/review_queue/M0.md` (RQ-817 with its ruling), the forward and "Still in force" lines of R-889,
+`docs/design/principia_chart_composition.md` § "7.5 The browser build: what it gets" (a dated paragraph, its RQ-817
+sentence kept as *Was*), § "6.2 Labels: reduced capability, never a refusal" (the route labels' browser sentence, with
+its *Was*), the carry's status paragraph, § 14's RQ-735 row and the gate's open-items line (each a dated line),
+REQ-CHART-155 (reqio: its statement, verify and note), TASK-M8-102 (its REQ-CHART-155 line, with its *Was*; a new
+measurement line; Depends on, with its *Was*; References; and a dated note on the Goal's "labelled and not live", the
+Goal itself unchanged), `plan/tasks.yaml` and `plan/rule_groups.yaml`; changes REQ-CHART-155*
+
+The owner's words (14 Nov 2026), verbatim:
+
+> RQ-817: (a), with (b)'s measurement reported beside it.
+
+*What it decides:* RQ-817's option (a), "**As natively:** R-889's "as natively" governs, so every browser chart runs as
+R-926 has it, with no route label; a chart the browser can't keep up with in motion shows the coarse cover longer, as
+natively", with the owner's rider, which binds as the option does.
+
+Read by the orchestrator: (a) decides what the browser does, and the rider adds a measurement, not a route: (b)'s
+"after TASK-M8-96's thread-count measurement, a chart whose CPU evaluation per frame in wasm exceeds a frame budget,
+written before the run" is made and reported beside (a), and labels nothing, since (b)'s label is what (a) excludes. So:
+
+- **What the browser does:** every chart in the browser build is filled from the CPU's f64 evaluation in the engine's
+  worker, the same Rust compiled to WebAssembly, a coarse cover in motion and the exact view at rest, as natively under
+  R-926, with no route label ("not live", "CPU batch" or the like); a chart the browser can't keep up with in motion
+  shows the coarse cover longer.
+- **The measurement, reported beside it:** on TASK-M8-96's measured thread count, a frame budget written and committed
+  before the run (R-649), the share of design § 3.1's charts whose wasm CPU evaluation of a coarse cover fits one frame
+  at 60 Hz, per browser, each chart's time beside the budget. It is a measurement, never a gate, and it labels nothing.
+  It runs in the browsers on the human's Mac (R-186).
+- *Applied per R-369 (task scoping):* TASK-M8-102 owns it, since it builds the browser's chart route and closes
+  REQ-CHART-155; TASK-M8-96 builds no chart route and changes no code, and its thread count is this measurement's input,
+  so TASK-M8-96 joins TASK-M8-102's Depends on.
+
+*What it refines:* **R-889**, whose "labelled and not live, as natively" now reads, for the browser, "as natively"
+under R-926: no route label and no "not live" class.
+
+R-1012 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-CHART-155 (statement, verify and note). The parse printed R-1012 for this answer.
+
+## R-1013 — TASK-M3-77 is split: it merges closing REQ-INT-123, Heggie's step control and landing, and the convergence-order check moves to TASK-M3-79, which closes REQ-INT-122 and must pass before the M3 gate *(the owner's prose ruling of 14 Nov 2026, outside the reply template; the order check's criterion question stays open)*
+*14 Nov 2026 · the owner's reply to the report of 14 Nov 2026, its last line, which the parser refused as not a
+`RQ-n:` line and which is ported by hand as a prose ruling; applied in REQ-INT-122 (reqio, a dated note) and
+`plan/rule_groups.yaml`; the split itself (REQ-INT-123, TASK-M3-79, TASK-M3-77's file and `plan/tasks.yaml`) is made on
+PR #530's branch; changes no requirement statement*
+
+The owner's words (14 Nov 2026), verbatim:
+
+> TASK-M3-77 split: yes. TASK-M3-77 merges closing REQ-INT-123; the order check moves to TASK-M3-79 closing REQ-INT-122. Condition: TASK-M3-79 must pass before the M3 gate.
+
+*What it decides:* the yes the report's Blockers asked for, outside the template, on TASK-M3-77 (Heggie's direct march
+and its step control, PR #530), whose convergence-order check fails its approved criterion at a round-off floor, a new
+criterion being the owner's call:
+
+- **TASK-M3-77 merges closing REQ-INT-123**, a new requirement: Heggie's step control and landing, built and checked,
+  without the order check;
+- **the order check moves to TASK-M3-79**, a new task, which closes REQ-INT-122 (Heggie's march under its step control,
+  its convergence order across η in [0.02, 0.001] under R-1007's landing) once the check passes;
+- **the owner's condition:** TASK-M3-79 must pass before the M3 gate. The M3 gate does not pass while TASK-M3-79 is
+  unmerged or its check fails.
+
+The order check's criterion, which physics review 5904361846 of PR #530 found to be the owner's call, is a separate
+question, queued on PR #530's branch; this ruling doesn't answer it, and it stays open. The split unblocks TASK-M3-78
+(Heggie's next part) and TASK-M3-75 (logH and its hookup) once TASK-M3-77 merges.
+
+*Applied per R-369 (record):* the split's plan edits, REQ-INT-123, TASK-M3-79 and TASK-M3-77's re-scoping, are made on
+PR #530's branch, which carries the task; this record names the ruling in REQ-INT-122 only, so the two PRs don't edit
+one task twice. The question's queue entry is named by its id once PR #530 puts it on `main`.
+
+R-1013 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes no requirement statement; REQ-INT-122 names the ruling. No parse id: the orchestrator reserved R-1013 for this
+line.

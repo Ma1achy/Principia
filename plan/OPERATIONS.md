@@ -1143,9 +1143,12 @@ limit changed after the result (R-649). `win-retry` acts from the first run afte
     image is built from `scripts/wsl/build-image.sh` on a hosted runner, in the same run (another run's artifact
     downloads only with a token, which no job on the PC holds), and registered as gh-runner under
     `E:\wsl\principia-wsl\`, never C:, only if its manifest matches the hash pinned in `scripts/wsl/manifest.sha256`.
-    Inside: one ordinary user, `ci`, no sudo, no sudoers entry, no systemd, and `/etc/wsl.conf` exactly as the owner
-    gave it, automount and interop off (the owner's ruling of 9 Nov 2026 on RQ-751's follow-up: "Don't add [boot]
-    systemd=true or any sudoers entry, not even a narrow one"). `scripts/contain.sh` runs there in its unprivileged mode,
+    Inside: one ordinary user, `ci`, no sudo, no sudoers entry, no systemd, and `/etc/wsl.conf` as the owner gave it,
+    automount and interop off, with R-1010's two additions and nothing else (RQ-815 (a), 14 Nov 2026): `[gpu]
+    enabled=false`, closing WSL's GPU share of the driver store on C:, and a `[boot] command=` removing the
+    `WSLInterop` registration, with no `systemd=` (the owner's ruling of 9 Nov 2026 on RQ-751's follow-up: "Don't add
+    [boot] systemd=true or any sudoers entry, not even a narrow one"); TASK-M0-69 builds them. *Was:* "`/etc/wsl.conf`
+    exactly as the owner gave it, automount and interop off". `scripts/contain.sh` runs there in its unprivileged mode,
     `PRIN_CONTAIN=unprivileged`, user and PID namespaces with no sudo, selected by name only; every other machine keeps
     the strict mode, `PRIN_CONTAIN=required`, unchanged; where user namespaces can't be had the mode fails, never skips.
     `wsl-proofs` runs the six proofs, each reported: (1) non-interactive as gh-runner, never the owner, again after a
