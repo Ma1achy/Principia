@@ -3,6 +3,8 @@
 # commit (/home/ci/work/principia). Windows can't look inside, and inside can't reach Windows (interop is off), so each
 # verb prints its evidence and exits 0 only if what it proves held; the Windows side reads the status and the output.
 # The parity verb also runs on GitHub's hosted Linux runner, unchanged, for proof 6's other side.
+# The addresses address, gateway and listen print are wsl.ps1's to read, raw, for proof 3's decision; wsl.ps1 masks the
+# tailnet's in everything it prints (Hide-Tailnet), so nothing here masks them.
 #
 #   inside.sh identity               who runs here: `whoami`, `id`, the kernel and the release (proof 1)
 #   inside.sh isolation              no drive and no Windows program reachable from here (proof 2)
