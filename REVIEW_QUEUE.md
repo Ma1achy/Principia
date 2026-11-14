@@ -831,14 +831,30 @@ check has to be reworded to measure the same accuracy on the new decoder, and re
 - **Options seen:** in each, the first line's `‖z − E(D(z))‖` reads `z_β`'s difference as its distance on the circle,
   `d(a, b) = |a − b − 2π·round((a − b)/2π)|` (`principia_dd_decoder.md` § 3.2, settled by R-898 for the property tests),
   the bound unchanged; reading it on the line instead fails on every draw with `z_β < 0`.
-  - **(a) The same accuracy, read without the fold (recommended).** "an equilateral state's `||w| − 1|` (at equal
-    masses, `L⁺` at `w = +1` and `L⁻` at `w = −1` on `C(x)`) and a collinear state's `|w|` within REQ-VAL-121's
-    calibrated bounds; a collinear state's `z_β` exactly 0 (body 2 on the `+x` side) or `π̂` (on the `−x` side), bit for
-    bit, its `lookup_clamped` bit not set by `β`, and no equilateral state's set; `D(E(x))`'s `|w|` reported unjudged,
-    `|sin π̂|`-small at f64". Controls (R-176): `L⁻` read against `+1`, a collinear `z_β` off by one ulp, and a clamp
-    on `β`, each fail. Measurable before any ruling: run `cargo xtask gate inspector-roundtrip` on TASK-M2-57's
-    branch with the restated checks; criterion, written now: the same bounds REQ-VAL-121 holds (2.2×10⁻¹⁶ and
-    6.8×10⁻¹⁴, measured on `C(x)`), unchanged.
+  - **(a) The same accuracy, read without the fold (recommended).** "an equilateral state's `|w − w_in|` on `C(x)`, `w_in`
+    the input's own orientation (+1 for an `L⁺` input, −1 for an `L⁻` input, at equal masses, where `L±` are the
+    poles), and a collinear state's `|w|` within REQ-VAL-121's calibrated bounds; a collinear state's `z_β` at 0 (body 2
+    on the `+x` side) or `π̂` (on the `−x` side), [the collinear form, one of the two below], its `lookup_clamped` bit
+    not set by `β`, and no equilateral state's set; `D(E(x))`'s `|w|` reported unjudged". Controls (R-176): `L⁻` read
+    against `+1`, a decoder that still mirrors (an `L⁻` input at `w = +1`), a collinear `z_β` off by more than the
+    collinear form allows, and a clamp on `β`, each fail. Two corrections from the physics review of PR #533 (review
+    5903954379, P2), carried into (a); the ruling chooses between the collinear forms:
+    - **The equilateral line keeps the sign.** `||w| − 1|`, the first wording here, cannot fail on a parity error: a
+      decoder that still mirrored `L⁻` to `w = +1` passes it. Reading `w` on `C(x)` against the input's own orientation
+      does fail it. *Was (this option, its first wording):* "an equilateral state's `||w| − 1|` (at equal masses, `L⁺`
+      at `w = +1` and `L⁻` at `w = −1` on `C(x)`)".
+    - **The collinear line cannot be bitwise on the gate's own families.** They go through random gauge elements ("any
+      turn"), so `C(x)`'s `λ̃_y` is a rounding residue, not `±0`, and the encode gives about 1e-17, or `2π̂` where
+      `2π − 1e-17` rounds to it. The old line was bitwise only because the clamp absorbed that residue. The two forms:
+      **(a1)** `z_β` within a tolerance of 0 or `π̂` on the circle (`d`, `principia_dd_decoder.md` § 3.2), or on
+      `|λ̃_y|`, the tolerance calibrated under REQ-VAL-121 by measurement with its criterion written first; **(a2)**
+      "bit for bit" kept, restricted to inputs whose `λ̃_y` is exactly `±0` (the untransformed family members), the
+      gauged members judged by (a1)'s tolerance. *Was (this option, its first wording):* "a collinear state's `z_β`
+      exactly 0 (body 2 on the `+x` side) or `π̂` (on the `−x` side), bit for bit," and "`|sin π̂|`-small at f64" and
+      the control "a collinear `z_β` off by one ulp".
+    Measurable before any ruling: run `cargo xtask gate inspector-roundtrip` on TASK-M2-57's branch with the restated
+    checks; criterion, written now: the same bounds REQ-VAL-121 holds (2.2×10⁻¹⁶ and 6.8×10⁻¹⁴, measured on `C(x)`),
+    unchanged, and for (a1) the collinear residue's measured maximum reported against the tolerance set before the run.
   - **(b) Keep `|w − 1|` by reading `Π·C(x)` where `C(x)` has `λ̃_y < 0`.** It restores the old number, but reapplies
     in the gate the fold R-865 removed from the decoder: a reading-side half-flag of the kind R-898 rejects ("a hidden
     half-flag is the special case this ruling removes").
