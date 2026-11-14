@@ -69,7 +69,7 @@ try { [Console]::InputEncoding = $NoBom } catch {
 # The PC's tailnet addresses, which identify the host and are never printed: Tailscale's IPv4 range 100.64.0.0/10 (CGNAT)
 # and its IPv6 prefix fd7a:115c:a1e0::/48. Everything this script prints that can hold a host address goes through
 # Hide-Tailnet: each proof's line (Report, and so the summary at the end and wsl-proofs.txt), what wsl.exe prints
-# (Invoke-Wsl's echo) and the failure messages (Fail). Only the printed text is masked; every proof decides on the real
+# (Invoke-Wsl's echo), the failure messages (Fail) and the error of a proof that threw. Only the printed text is masked; every proof decides on the real
 # addresses. Loopback and WSL's switch's private ranges print as they are: the proofs' evidence rests on them, and they
 # identify nothing. `xtask/tests/wsl_mask.rs` runs these two patterns, with these replacements, on made-up addresses.
 $TailnetV4 = '\b100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}\b'
@@ -507,6 +507,10 @@ switch ($verb) {
                 if ($compare.Code -ne 0) { $evidence += "; inside.sh compare exited $($compare.Code), ending: $(Get-Tail $compare)" }
                 Report 6 ($parity.Code -eq 0 -and $compare.Code -eq 0) $evidence
             }
+        } catch {
+            # A proof that threw: its error, which may name an address, masked; the summary below then fails on the
+            # proofs not reported.
+            [Console]::Out.WriteLine((Hide-Tailnet "::error::wsl.ps1 proofs: stopped before every proof was reported: $_"))
         } finally {
             Stop-Distro
             New-Item -ItemType Directory -Force -Path $Record | Out-Null

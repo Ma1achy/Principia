@@ -415,8 +415,8 @@ fn check_routes(script: &str) {
     }
     assert_eq!(
         script.matches("WriteLine((Hide-Tailnet ").count(),
-        3,
-        "wsl.ps1 writes to the console unmasked: Fail's line or Invoke-Wsl's echo"
+        4,
+        "wsl.ps1 writes to the console unmasked: Fail's line, Invoke-Wsl's echo or a thrown proof's error"
     );
     // Each proof's line is Report's.
     let proofs = arm(script, "proofs");
@@ -791,6 +791,34 @@ mod clone_raw_in_routes {
             &read(PS),
             "if ($cloned) { Hide-Tailnet \"the clone failed: $cloned\" }",
             "if ($cloned) { \"the clone failed: $cloned\" }"
+        ))
+    );
+}
+
+mod thrown_raw {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a proof's thrown error printed unmasked",
+        expected = "wsl.ps1 writes to the console unmasked: [Console]::Out.WriteLine(\"::error::wsl.ps1 proofs: stopped",
+        check_routes(&edited(
+            &read(PS),
+            "[Console]::Out.WriteLine((Hide-Tailnet \"::error::wsl.ps1 proofs: stopped before every proof was reported: $_\"))",
+            "[Console]::Out.WriteLine(\"::error::wsl.ps1 proofs: stopped before every proof was reported: $_\")"
+        ))
+    );
+}
+
+mod thrown_uncaught {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the proofs' catch gone, a thrown error left to PowerShell to print",
+        expected = "wsl.ps1 writes to the console unmasked: Fail's line, Invoke-Wsl's echo or a thrown proof's error",
+        check_routes(&edited(
+            &read(PS),
+            "        } catch {\n            # A proof that threw: its error, which may name an address, masked; the summary below then fails on the\n            # proofs not reported.\n            [Console]::Out.WriteLine((Hide-Tailnet \"::error::wsl.ps1 proofs: stopped before every proof was reported: $_\"))\n",
+            ""
         ))
     );
 }
