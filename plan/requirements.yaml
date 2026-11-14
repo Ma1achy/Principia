@@ -1136,6 +1136,7 @@
   - R-72
   - R-865
   - R-898
+  - R-919
   milestone: M2
   note: "Added by R-865 (8 Nov 2026). Closed by TASK-M2-57. Waits on RQ-750: which link (migrate the stored z, another coordinate for the lower half, or a periodic z_β) is the owner's choice; this definition is written to their answer, never chosen by the task. R-898 (8 Nov 2026): RQ-750 ruled (a) + (c), not (b). *Was (statement, the clause):* \"which replaces `β = π·σ(z_β)` with `β ∈ [0, π]` (R-865),\" and \"how a `β ∈ [0, π]` start keeps its bits,\"; *was (verify, the clause):* \"why a β in [0, π] start keeps its bits,\". TASK-M2-107 (14 Nov 2026; R-865, R-898, R-919): the definitions are the target TASK-M2-57 builds, in force when it merges, written into dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 by TASK-M2-107, the docs half of TASK-M2-57's split (applied per R-369); closed by TASK-M2-107 on the physics reviewer's approval."
 - id: REQ-DEC-057
