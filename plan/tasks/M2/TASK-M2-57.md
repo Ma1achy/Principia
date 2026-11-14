@@ -154,7 +154,7 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
     encode's signed `β` against the CPU's on both halves within REQ-DEC-043's factor on the circle, `π̂` on the `−x`
     half-axis with `±0` operands, the pole's 0).
   - `cargo test -p kernel --test roundtrip` — REQ-ENC-005 and REQ-DEC-016 (T3: `D(E(g·x)) = C(g·x)` and
-    `L_z(D(E(g·x))) = det(Π_g)·L_z(x)`; controls: a configuration-only rotation in `C`, and a test-side mirror
+    `L_z(D(E(g·x))) = det(Π_g)·L_z(C(x))` (`C(x)` at `I = 1` in the CoM frame, so the rescale's `L_canon = L_in/I_in^{1/4}` and the CoM's orbital term are taken out); controls: a configuration-only rotation in `C`, and a test-side mirror
     reflecting the `rᵢ` only, each fail), with the line above.
   - `cargo test -p kernel --test encode_by_kind encode_shape_sphere_signed` — REQ-ENC-034 with its three controls.
   - `cargo test -p kernel --test shape_sphere` — REQ-CHART-020 (the canonical form, `Φ` then the one `C`, on both
