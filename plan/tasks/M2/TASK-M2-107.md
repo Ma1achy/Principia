@@ -59,3 +59,10 @@ and files REQ-VAL-022's restatement for a ruling. TASK-M2-57 depends on it and b
   and physics, with qa because `plan/check_plan.py` requires code and qa on every task. REQ-DEC-056 moves here;
   TASK-M2-57 keeps REQ-DEC-055 and depends on this task.
 - The docs describe the decoder TASK-M2-57 builds; until it merges, `main`'s code is the decoder with its mirror step.
+- *14 Nov 2026 (fix round of PR #533: code review 5903950686, qa review 5903950227, physics review 5903954379, and the
+  physics consult on TASK-M2-57's code the orchestrator relayed):* the rewrites are worded as the target TASK-M2-57
+  builds, in force when it merges, the *Was* describing `main` until then; the stale passages the physics review listed
+  (inverse_encode_contract Parts 3, 4, 6 to 8; dd_encode § 3.1's full-range twin, § 3.4's signed `w` and § 5's tests;
+  dd_decoder § 3.6; chart_reference § 9) are rewritten with their *Was*; dd_decoder § 3.2 defines the distance on the
+  circle; TASK-M2-57's acceptance names each restated verify; RQ-821 gains the circle distance and physics's two
+  corrections, and RQ-822 is carried in from TASK-M2-57's branch, narrowed to its item 1. Added, nothing removed.
