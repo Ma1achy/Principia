@@ -4021,6 +4021,8 @@
   source:
   - file: docs/design/principia_chart_composition.md
     section: 3. The primitive registry
+  - file: decisions.md
+    section: "R-1011 — RQ-816, the chart registry's old guard: closed, the report's D-9 confirmed; the guard on binary-plus-single and fixed-`k` rows goes, and a typed combination with no registered inverse takes R-849's general numerical solve, as TASK-M2-66 builds it with points (i) to (iii) *(closes RQ-816)*"
   verify:
     method: unit test
     detail: "cargo test -p engine -- size_only_refused combination_class: I, R and ℓ refused by name; every registered row sampled on decodes, one constant there and not declared size-only failing; control: a row constant on decodes declared free fails; a row with an inverse naming a binary phase, and one naming fixed k, register; a combination of closed parts with no registered inverse, as exp(K) + K, reports the general numerical solve, with the coordinates it solves for, its branch rule, its seams and its convergence per pixel, and one with a registered closed or numerical inverse reports that class; a registered none row typed as an expression takes the general solve, and the same row picked as an axis refuses with NoJointInverse; a typed combination meeting SizeOnly, NoWarpWritten, AxisAndHold or SameQuantity is refused by that name; controls: the first reported closed fails, a binary-phase row refused fails, the general solve reported as a registered numerical inverse fails, a size-only typed combination accepted fails"
@@ -4033,8 +4035,9 @@
   - R-916
   - R-926
   - R-942
+  - R-1011
   milestone: M2
-  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66; the stale rq fields (RQ-716, RQ-722, RQ-733, each ruled) cleared. *11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE, and the addendum's § A.2 with it: the inverse class routes the fragment, not the integrator; a slope tier is added (R-926 item 9); each row declares, per edge, the kinds allowed and a default (R-942, under RQ-775 (a)). Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M2-66 rewrites them under the ruling, and where they differ from it the ruling binds. *14 Nov 2026 (RQ-816 (a), decided per R-369 as a mechanical consequence of R-847 and R-849 on physics review 5902556608 of PR #528, listed for the owner's veto; TASK-M2-58's round 2):* the guard against binary-phase, eccentricity, impact-parameter and fixed-k rows goes (R-847 reverses R-669, its only reason), and a combination with no registered inverse takes R-849's general solve, with physics's three points: (i) the solve distinguishable from a registered numerical inverse, (ii) the four refusals still applied to a typed combination, (iii) NoJointInverse only for a registered none row picked as an axis. TASK-M2-66 carries it. *Was (statement):* \"Every primitive must be one row of one CPU-side registry declaring its forward formula, its inverse class (closed, numerical or none), its axis kind, its natural extension type, whether it is angle-like, and its scale behaviour; a combination must be classed closed or numerical only by a registered inverse of that class, a numerical one naming what it solves for and its branch rule, and none otherwise, whatever its parts' classes; a size-only primitive must be refused as an axis by name; and no row with an inverse may name a binary phase, eccentricity, impact parameter or fixed k, forward-only overlay rows being free to (R-669).\" *Was (verify):* \"cargo test -p engine -- size_only_refused excluded_primitives: I, R and ℓ refused by name; every registered row sampled on decodes, one constant there and not declared size-only failing; control: a row constant on decodes declared free fails; a row with an inverse naming a binary phase fails, a forward-only overlay row naming one passes; a combination of closed parts with no registered inverse, as exp(K) + K, reports none and refuses as an axis with NoJointInverse, and one with a registered closed or numerical inverse reports that class; control: the first reported closed fails\""
+  note: "R-916 (9 Nov 2026): moved from M4 to M2, closed by TASK-M2-66; the stale rq fields (RQ-716, RQ-722, RQ-733, each ruled) cleared. *11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE, and the addendum's § A.2 with it: the inverse class routes the fragment, not the integrator; a slope tier is added (R-926 item 9); each row declares, per edge, the kinds allowed and a default (R-942, under RQ-775 (a)). Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M2-66 rewrites them under the ruling, and where they differ from it the ruling binds. *14 Nov 2026 (RQ-816 (a), decided per R-369 as a mechanical consequence of R-847 and R-849 on physics review 5902556608 of PR #528, listed for the owner's veto; TASK-M2-58's round 2):* the guard against binary-phase, eccentricity, impact-parameter and fixed-k rows goes (R-847 reverses R-669, its only reason), and a combination with no registered inverse takes R-849's general solve, with physics's three points: (i) the solve distinguishable from a registered numerical inverse, (ii) the four refusals still applied to a typed combination, (iii) NoJointInverse only for a registered none row picked as an axis. TASK-M2-66 carries it. *Was (statement):* \"Every primitive must be one row of one CPU-side registry declaring its forward formula, its inverse class (closed, numerical or none), its axis kind, its natural extension type, whether it is angle-like, and its scale behaviour; a combination must be classed closed or numerical only by a registered inverse of that class, a numerical one naming what it solves for and its branch rule, and none otherwise, whatever its parts' classes; a size-only primitive must be refused as an axis by name; and no row with an inverse may name a binary phase, eccentricity, impact parameter or fixed k, forward-only overlay rows being free to (R-669).\" *Was (verify):* \"cargo test -p engine -- size_only_refused excluded_primitives: I, R and ℓ refused by name; every registered row sampled on decodes, one constant there and not declared size-only failing; control: a row constant on decodes declared free fails; a row with an inverse naming a binary phase fails, a forward-only overlay row naming one passes; a combination of closed parts with no registered inverse, as exp(K) + K, reports none and refuses as an axis with NoJointInverse, and one with a registered closed or numerical inverse reports that class; control: the first reported closed fails\" *14 Nov 2026, later (R-1011):* the owner closed RQ-816; option (a), the report's D-9, stands, and TASK-M2-66 builds it as above. Nothing above changes."
 - id: REQ-CHART-097
   area: CHART
   statement: "Any axis must pair with any other of any kind, and the validator must refuse only genuine contradictions (an axis and a constraint on one quantity, two axes fixing one quantity, a pair with no joint inverse, a size-only axis, and, if RQ-722 so rules, a hold on a chart declared at rest), each a named Refusal variant the Domain preview shows."
@@ -5089,7 +5092,7 @@
   note: Added by R-879 (8 Nov 2026). Closed by TASK-M8-128.
 - id: REQ-CHART-155
   area: CHART
-  statement: "In the browser build, numerical axes, closed forms past the cap or unbaked, and morphs with a CPU-only end must run as CPU batch in the engine's worker, the same Rust compiled to WebAssembly, labelled and not live (R-889, RQ-735 (b); R-571); whether a wasm f64 solve matches the native one bit for bit is measured and reported."
+  statement: "In the browser build, every chart must run as natively under R-926: filled from the CPU's f64 evaluation in the engine's worker, the same Rust compiled to WebAssembly, a coarse cover in motion and the exact view at rest, with no route label of its own (\"not live\", \"CPU batch\" or the like), a chart the browser can't keep up with in motion showing the coarse cover longer (R-889 as R-1012 reads it, RQ-817 (a); R-571, R-926); whether a wasm f64 solve matches the native one bit for bit is measured and reported; and, beside it, on TASK-M8-96's measured thread count and against a frame budget written and committed before the run, the share of design § 3.1's charts whose wasm CPU evaluation of a coarse cover fits one frame at 60 Hz is measured per browser and reported, labelling nothing (R-1012, R-649)."
   source:
   - file: decisions.md
     section: "R-889 — The browser build gets a WASM CPU route too: numerical axes, unbaked closed forms and CPU-only morphs run as CPU batch in the engine's worker, labelled and not live *(closes RQ-735)*"
@@ -5097,16 +5100,20 @@
     section: "7.5 The browser build: what it gets"
   - file: decisions.md
     section: "R-991 — RQ-799, the maths library: option (a), pin, enforced; every f64 transcendental reachable from the CPU chart evaluator goes through the pinned pure-software libm, `sqrt` excepted, a test failing on any stray call with a planted call as its control, so records are identical on every machine; fixtures that change are a recorded conversion *(closes RQ-799)*"
+  - file: decisions.md
+    section: "R-1012 — RQ-817, which browser charts are \"not live\": option (a), with (b)'s measurement reported beside it; every browser chart runs as natively under R-926, a coarse cover in motion and the exact view at rest, with no route label, and the share of charts whose wasm CPU evaluation of a coarse cover fits one frame at 60 Hz, on TASK-M8-96's thread count and against a frame budget written before the run, is measured and reported, labelling nothing *(closes RQ-817; refines R-889)*"
   verify:
     method: unit test
-    detail: "the CPU batch route builds for wasm32 and its tests run under the wasm target in CI; a numerical chart's solve run native and wasm on one fixture, compared bit for bit, the result reported in the PR; controls: a numerical chart refused in the browser fails, a CPU batch view not labelled fails"
+    detail: "the chart route builds for wasm32 and its tests run under the wasm target in CI; a numerical chart's solve run native and wasm on one fixture, compared bit for bit, the result reported in the PR; controls: a numerical chart refused in the browser fails, a browser view carrying a route label of its own (\"not live\", \"CPU batch\" or the like) fails; and the measurement (perf reviewer; Chrome stable and Safari on the human's Mac, R-186): the frame budget committed before the run, then, per browser, each § 3.1 chart's wasm CPU evaluation time for a coarse cover beside the budget and the share that fits one frame at 60 Hz, with the thread count TASK-M8-96 measured; controls: a budget committed after the run, or a chart labelled by the result, fails the review"
   rulings:
   - R-571
+  - R-649
   - R-889
   - R-926
   - R-991
+  - R-1012
   milestone: M8
-  note: "Added by R-889 (8 Nov 2026). Closed by TASK-M8-102. *11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE: every chart is CPU-evaluated in the browser too. Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M8-102 rewrites them under the ruling, and where they differ from it the ruling binds. *13 Nov 2026 (R-991, RQ-799 (a)):* every transcendental the CPU chart evaluator reaches goes through the pinned libm (REQ-CHART-212, TASK-M2-106), so the bits this requirement compares are the same on every machine."
+  note: "Added by R-889 (8 Nov 2026). Closed by TASK-M8-102. *11 Nov 2026:* the chart re-plan's § A.2 marks this CHANGE: every chart is CPU-evaluated in the browser too. Entered as the table has it (the addition § F.5): the statement and verify above stand as written until TASK-M8-102 rewrites them under the ruling, and where they differ from it the ruling binds. *13 Nov 2026 (R-991, RQ-799 (a)):* every transcendental the CPU chart evaluator reaches goes through the pinned libm (REQ-CHART-212, TASK-M2-106), so the bits this requirement compares are the same on every machine. *14 Nov 2026 (R-1012, RQ-817 (a), with (b)'s measurement reported beside it):* the statement and verify are rewritten under the ruling: every browser chart runs as natively under R-926, with no route label of its own, and the measurement is reported beside it, labelling nothing; TASK-M8-102 still closes it, and TASK-M8-96, whose thread count the measurement reads, joins its Depends on (applied per R-369: task scoping). *Was (statement):* \"In the browser build, numerical axes, closed forms past the cap or unbaked, and morphs with a CPU-only end must run as CPU batch in the engine's worker, the same Rust compiled to WebAssembly, labelled and not live (R-889, RQ-735 (b); R-571); whether a wasm f64 solve matches the native one bit for bit is measured and reported.\" *Was (verify):* \"the CPU batch route builds for wasm32 and its tests run under the wasm target in CI; a numerical chart's solve run native and wasm on one fixture, compared bit for bit, the result reported in the PR; controls: a numerical chart refused in the browser fails, a CPU batch view not labelled fails\"."
 - id: REQ-CHART-156
   area: CHART
   statement: "Right after stage 1 and before stage 2, the chart-path leaves must collapse to one per operation: one pan, one zoom, one tilt per R-474 map (each in its X = Y and X ≠ Y forms), one slice, one lock, each cut kind once; a pair measuring bitwise-equal under D2's criterion merged with no bit change; routes differing only in rounding resolved to one canonical formula, the bit change deliberate and documented, with a conversion test (each changed case its difference in z (or n̂) within the ulp count derived from the two formulas, and its decoded state within REQ-ENC-024's ε_phys on the cases whose n̂ lies farther than a stated δ from each of the three binary-collision landmarks, with ulp/δ ≤ ε_phys (R-544's mirror-test precision rule), δ and the excluded set stated; a rounding difference inside it not brought back as a real one); a difference that isn't rounding not merged but brought back; the merged GUI routes (keys, panel, compass step, compass drag) thin input adapters feeding the same leaf (R-919, F1 (a)), the same-frame slips D19 and D23 REQ-GUI-431's; the dispatch classes in crates/gui/src/dispatch.rs, the GUI's app layer, and the path in chart_space (R-894)."
@@ -7777,7 +7784,7 @@
 - id: REQ-INT-076
   area: INT
   kind: calibration
-  statement: "The Benettin shadow's initial separation ‖δ₀‖ and the renormalisation interval n_renorm must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md."
+  statement: "The Benettin shadow's initial separation ‖δ₀‖ and the renormalisation interval n_renorm must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M4 gate, beside REQ-PAY-085's switch of the shadow's form, and recorded in decisions.md."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: 3.8 Co-computations (tier-gated, ride the forward pass)
@@ -7787,14 +7794,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: numerical gate
     detail: "the proposal shows dd test 10 (halving δ₀ and doubling n_renorm leaves λ_T unchanged) at the proposed values at f32 and f64; recorded in decisions.md"
   rulings:
   - R-71
   - R-976
-  milestone: M3
-  note: "12 Nov 2026 (R-976, RQ-794 (c)): (‖δ₀‖, n_renorm, dd test 10's tolerance) = (3e-3, 300, 0.2) stay provisional, stated as unsupported on close-encounter chaotic orbits (REQ-GUI-437); the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until that re-run. Applied per R-369 (task scoping): TASK-M3-14 keeps the provisional proposal and its eight-orbit evidence and closes this requirement; the re-run is TASK-M3-72's, after the displacement form (R-974) and R-972's (d) + (a) are built. `rq: RQ-794` removed."
+  - R-1009
+  milestone: M4
+  note: "12 Nov 2026 (R-976, RQ-794 (c)): (‖δ₀‖, n_renorm, dd test 10's tolerance) = (3e-3, 300, 0.2) stay provisional, stated as unsupported on close-encounter chaotic orbits (REQ-GUI-437); the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until that re-run. Applied per R-369 (task scoping): TASK-M3-14 keeps the provisional proposal and its eight-orbit evidence and closes this requirement; the re-run is TASK-M3-72's, after the displacement form (R-974) and R-972's (d) + (a) are built. `rq: RQ-794` removed. *14 Nov 2026 (R-1009, RQ-814 (d)):* neither form's values are confirmed at the M3 gate: the confirmation moves to the M4 gate, beside REQ-PAY-085 (which form ships, TASK-M4-13's measurement), and (3e-3, 300, 0.2) stay in force, provisional and stated as unsupported on close-encounter chaotic orbits, until then; the M3 gate passes with this requirement provisional. TASK-M3-14 still closes it, its proposal and evidence merged (applied per R-369: a mechanical consequence of the ruling, the closing task unchanged). *Was (statement):* \"The Benettin shadow's initial separation ‖δ₀‖ and the renormalisation interval n_renorm must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md.\" *Was (milestone):* M3."
 - id: REQ-INT-077
   area: INT
   kind: definition
@@ -7974,8 +7984,9 @@
   - R-994
   - R-998
   - R-1007
+  - R-1013
   milestone: M3
-  note: "Transcribed from docs/reference/prin-rs (reference, not authority, R-159); the TTL verdict (built, validated, loses on accuracy) is recorded as a prior finding (R-162). *13 Nov 2026 (R-993, RQ-809 (a); R-994, RQ-810 (a)):* logH's own time modes are the reference's drift–kick–drift leapfrog, W at the midpoint velocity in TTL mode, selected as logH × KDK, and logH × RK4 classical RK4 on (r, v, t, W); logH's landing is tested after the step under R-998's rule, no tolerance, the state landing with the clock; the reference's predicted landing with 1 − 1e-12 is not transcribed. *13 Nov 2026 (RQ-812; physics review 5886173032 of #515, F4; code review 5886176062, C2):* Heggie's landing waits on RQ-812: its reference lands with the per-precision LAND_EPS_REL in branches (heggie/driver.rs:328, :345, :385, :390), which Part 2c rule 1 forbids, and R-998 and R-994 name Aarseth–Zare and logH only. *13 Nov 2026 (R-1007, RQ-812 (a)):* one landing rule for all three methods: Heggie lands under R-998's rule, as Aarseth–Zare and logH do; the reference's LAND_EPS_REL is not transcribed; the caller-supplied allowance Heggie is built with meanwhile (the report's D-3) is replaced by TASK-M3-08's step-control part, which takes the convergence-order check (applied per R-369: task scoping; the check sits here because TASK-M3-08's split, not yet on main, places its requirements). *Was (statement, the clause):* \"their time transformations and their step control, and\" *Was (verify):* \"Part 2b gives the equations, time transformations and step control for Heggie, logH and TTL and the predictive step limit, each cited to its paper and to the prin-rs file it was transcribed from; the physics reviewer approved; the human confirmed it at the M3 gate\" *13 Nov 2026 (physics review 5890410670 of #520, F1; applied per R-369, the criterion is designed before any run):* the convergence-order criterion states its round-off floor before it runs, fits the order only above it, reads an order still short of 4 there, by a threshold stated beforehand, as a landing defect, not round-off, and keeps the clock-only control; following the report of 13 Nov 2026 under RQ-812's recommendation (\"TASK-M3-76's experience says that check should state its round-off floor before it runs\"), with R-1008 as the analogue; not the owner's words, whose rider binds TASK-M3-76 only. *Was (verify, the clause):* \"written in the PR before any run and physics-reviewed (R-649), with the control that a landing setting the clock alone while the state stays overshot shows its order fall and fails;\""
+  note: "Transcribed from docs/reference/prin-rs (reference, not authority, R-159); the TTL verdict (built, validated, loses on accuracy) is recorded as a prior finding (R-162). *13 Nov 2026 (R-993, RQ-809 (a); R-994, RQ-810 (a)):* logH's own time modes are the reference's drift–kick–drift leapfrog, W at the midpoint velocity in TTL mode, selected as logH × KDK, and logH × RK4 classical RK4 on (r, v, t, W); logH's landing is tested after the step under R-998's rule, no tolerance, the state landing with the clock; the reference's predicted landing with 1 − 1e-12 is not transcribed. *13 Nov 2026 (RQ-812; physics review 5886173032 of #515, F4; code review 5886176062, C2):* Heggie's landing waits on RQ-812: its reference lands with the per-precision LAND_EPS_REL in branches (heggie/driver.rs:328, :345, :385, :390), which Part 2c rule 1 forbids, and R-998 and R-994 name Aarseth–Zare and logH only. *13 Nov 2026 (R-1007, RQ-812 (a)):* one landing rule for all three methods: Heggie lands under R-998's rule, as Aarseth–Zare and logH do; the reference's LAND_EPS_REL is not transcribed; the caller-supplied allowance Heggie is built with meanwhile (the report's D-3) is replaced by TASK-M3-08's step-control part, which takes the convergence-order check (applied per R-369: task scoping; the check sits here because TASK-M3-08's split, not yet on main, places its requirements). *Was (statement, the clause):* \"their time transformations and their step control, and\" *Was (verify):* \"Part 2b gives the equations, time transformations and step control for Heggie, logH and TTL and the predictive step limit, each cited to its paper and to the prin-rs file it was transcribed from; the physics reviewer approved; the human confirmed it at the M3 gate\" *13 Nov 2026 (physics review 5890410670 of #520, F1; applied per R-369, the criterion is designed before any run):* the convergence-order criterion states its round-off floor before it runs, fits the order only above it, reads an order still short of 4 there, by a threshold stated beforehand, as a landing defect, not round-off, and keeps the clock-only control; following the report of 13 Nov 2026 under RQ-812's recommendation (\"TASK-M3-76's experience says that check should state its round-off floor before it runs\"), with R-1008 as the analogue; not the owner's words, whose rider binds TASK-M3-76 only. *Was (verify, the clause):* \"written in the PR before any run and physics-reviewed (R-649), with the control that a landing setting the clock alone while the state stays overshot shows its order fall and fails;\" *14 Nov 2026 (applied per R-369, task scoping):* the Heggie part's convergence-order check is TASK-M3-79's, under RQ-823's criterion (it moved from TASK-M3-77); TASK-M3-75 closes REQ-INT-084 once that and logH's part are in. *14 Nov 2026 (R-1013, the owner's ruling):* the move of the Heggie part's convergence-order check to TASK-M3-79 is ruled (\"the order check moves to TASK-M3-79 closing REQ-INT-122. Condition: TASK-M3-79 must pass before the M3 gate.\"); TASK-M3-75 closes this requirement only once TASK-M3-79 has passed."
 - id: REQ-INT-085
   area: INT
   kind: calibration
@@ -8744,6 +8755,8 @@
     section: "Heggie: the equations, the time transformations, the maps and the step control (transcribed)"
   - file: decisions.md
     section: "R-604 — A regularised copy's step budget is checked every step: its running total against `max(N_min, rate · t_elapsed)`; `N_min` protects early close encounters and is an M3 calibration *(closes RQ-527; settles R-564's accounting)*"
+  - file: decisions.md
+    section: "R-1013 — TASK-M3-77 is split: it merges closing REQ-INT-123, Heggie's step control and landing, and the convergence-order check moves to TASK-M3-79, which closes REQ-INT-122 and must pass before the M3 gate *(the owner's prose ruling of 14 Nov 2026, outside the reply template; the order check's criterion question stays open)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel --test heggie: heggie_pairs (every stepper under Eq. 20 and Eq. 22 lands on a boundary; the default Eq. 22), heggie_march (registered once, the landing, the finiteness exit, the budget, the floor signal, the step size, the secant), heggie_landing (Heggie × RK4's figure-eight closure and convergence order across η in [0.02, 0.001] under R-1007's landing, its criterion and round-off floor stated before it runs) and regularised_step_reversibility, each with its negative control"
@@ -8755,8 +8768,28 @@
   - R-604
   - R-998
   - R-1007
+  - R-1013
   milestone: M3
-  note: "Added 13 Nov 2026 by the TASK-M3-08 split (applied per R-369, task scoping): TASK-M3-77 builds and closes it; REQ-INT-006 and REQ-VAL-190, whose Heggie and Aarseth–Zare arms it builds, are closed by TASK-M3-75. *13 Nov 2026 (R-1007, RQ-812 (a); applied per R-369, a mechanical consequence of the ruling and the split):* the landing follows R-998's rule; *was:* \"the landing tolerance a caller-supplied setting until RQ-812 is ruled\". REQ-INT-084's convergence-order check, which R-1007 gives the task building Heggie's step control, runs in TASK-M3-77; TASK-M3-75 closes REQ-INT-084 once logH's part is in."
+  note: "Added 13 Nov 2026 by the TASK-M3-08 split (applied per R-369, task scoping): TASK-M3-77 builds and closes it; REQ-INT-006 and REQ-VAL-190, whose Heggie and Aarseth–Zare arms it builds, are closed by TASK-M3-75. *13 Nov 2026 (R-1007, RQ-812 (a); applied per R-369, a mechanical consequence of the ruling and the split):* the landing follows R-998's rule; *was:* \"the landing tolerance a caller-supplied setting until RQ-812 is ruled\". REQ-INT-084's convergence-order check, which R-1007 gives the task building Heggie's step control, runs in TASK-M3-77; TASK-M3-75 closes REQ-INT-084 once logH's part is in. *14 Nov 2026 (applied per R-369, task scoping; physics review 5904361846 of #530):* TASK-M3-79 closes it, not TASK-M3-77: the convergence-order check, run once on #530 under its approved criterion, read FAIL (round-off), no order read, the clock-only control 2.209; its second criterion is RQ-823's. TASK-M3-77 builds the march, the landing and the rest of the verify; TASK-M3-79 adds heggie_landing's order check and closes it. *Was:* \"TASK-M3-77 builds and closes it\". *14 Nov 2026 (R-1013, the owner's ruling, verbatim: \"TASK-M3-77 split: yes. TASK-M3-77 merges closing REQ-INT-123; the order check moves to TASK-M3-79 closing REQ-INT-122. Condition: TASK-M3-79 must pass before the M3 gate.\"):* the split above is the owner's ruling, not only the orchestrator's call; TASK-M3-79 closes this requirement, and it must pass before the M3 gate. *14 Nov 2026 (R-1013, the owner's prose ruling on TASK-M3-77's split):* TASK-M3-77 merges closing REQ-INT-123 (Heggie's step control and landing); the convergence-order check (heggie_landing's order across η in [0.02, 0.001] under R-1007's landing) moves with this requirement to TASK-M3-79, which closes it once the check passes, and the owner's condition holds: TASK-M3-79 must pass before the M3 gate. The split's plan edits (this requirement's closing task, REQ-INT-123 and TASK-M3-79) are made on PR #530's branch; the check's criterion question stays open."
+- id: REQ-INT-123
+  area: INT
+  statement: "Heggie's step control and landing must be built to integrator contract Part 2b (Heggie's steps 2 to 10): the per-step interval rule, the predictive limit on Eq. 7's relative velocities, the landing clamp sized by the rate the step advances t at, the explicit finiteness exit and R-604's step budget (R-604's helper over_allowance) ending the march latched, Part 6's floor signal and entry-cap hits counted, and step 8's landing with no tolerance (R-998's rule as R-1007 applies it): the secant stopping on the boundary, the bisection keeping its short end, the closing step, the stored state's own clock the boundary's bitwise, no constant but the integer caps in a branch."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Heggie: the equations, the time transformations, the maps and the step control (transcribed)"
+  verify:
+    detail: "cargo test -p kernel --test heggie: heggie_pairs, heggie_march (the landing on a scripted clock, the overshoot, the rate of t, the budget helper, the step size, the floor signal, the finiteness exit, the budget), heggie_landing_state and heggie_landing_reported (Heggie × RK4 lands on boundaries 1 to 8 with the state's own clock the boundary's, bitwise) and regularised_step_reversibility, each with its negative control"
+    method: unit test
+  rulings:
+  - R-160
+  - R-561
+  - R-565
+  - R-604
+  - R-998
+  - R-1007
+  - R-1013
+  milestone: M3
+  note: "Added 14 Nov 2026 by the TASK-M3-77 split (applied per R-369, task scoping; physics review 5904361846 of #530): TASK-M3-77 builds and closes it, the build part of REQ-INT-122, which TASK-M3-79 closes once the convergence-order check passes under RQ-823's criterion (physics: REQ-INT-122 does not close until then). *14 Nov 2026 (R-1013, the owner's ruling):* \"TASK-M3-77 merges closing REQ-INT-123\"; the split is ruled, and TASK-M3-79, closing REQ-INT-122, must pass before the M3 gate."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -28625,84 +28658,102 @@
   note: "R-962 (11 Nov 2026, RQ-788 (a)): the map is as TASK-M7-12 built it; TASK-M7-75 drops the \"provisional pending RQ-788\" wording and renames the test from stain_fanout_margin_provisional_map_is_the_grey_ramp."
 - id: REQ-GUI-437
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the horizon map and its legend must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), the horizon map and its legend must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
   - file: docs/design/principia_dd_integrator.md
     section: 3.8 Co-computations (tier-gated, ride the forward pass)
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p render ftle_provisional_stated: the horizon map's view and its legend carry the provisional statement from REQ-GUI-438's source; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M4
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping): closed by TASK-M4-13, the first task that puts the FTLE in a view and a legend; later views of the FTLE read the same statement. The test's name is given here (naming). *12 Nov 2026, later (code review 5875707244 of PR #503, F4; applied per R-369: task scoping):* split per surface, so each task that builds a surface showing the FTLE closes its own arm: this one keeps the horizon map and its legend (TASK-M4-13); REQ-GUI-438 the existing field views and the one source (a new task, TASK-M3-73), REQ-GUI-439 the generated legend (TASK-M8-22), REQ-GUI-440 the Trajectory panel's summary (TASK-M8-11), REQ-GUI-441 the click inspector's trust line (TASK-M8-76), REQ-GUI-442 an export's block (TASK-M8-80), REQ-VAL-356 TASK-M9-41's FTLE maps. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, every place the FTLE is shown (each view of `ftle`, the horizon map and its legend, the Trajectory panel's summary, and an export's header) must state that the shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits (R-976, RQ-794 (c)).\" *Was (verify):* \"cargo test -p render ftle_provisional_stated: every view the registry offers that reads `ftle`, the horizon map's legend and the export header carry the provisional statement, read from one source; controls: a view of `ftle` without it, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail\""
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping): closed by TASK-M4-13, the first task that puts the FTLE in a view and a legend; later views of the FTLE read the same statement. The test's name is given here (naming). *12 Nov 2026, later (code review 5875707244 of PR #503, F4; applied per R-369: task scoping):* split per surface, so each task that builds a surface showing the FTLE closes its own arm: this one keeps the horizon map and its legend (TASK-M4-13); REQ-GUI-438 the existing field views and the one source (a new task, TASK-M3-73), REQ-GUI-439 the generated legend (TASK-M8-22), REQ-GUI-440 the Trajectory panel's summary (TASK-M8-11), REQ-GUI-441 the click inspector's trust line (TASK-M8-76), REQ-GUI-442 an export's block (TASK-M8-80), REQ-VAL-356 TASK-M9-41's FTLE maps. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, every place the FTLE is shown (each view of `ftle`, the horizon map and its legend, the Trajectory panel's summary, and an export's header) must state that the shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits (R-976, RQ-794 (c)).\" *Was (verify):* \"cargo test -p render ftle_provisional_stated: every view the registry offers that reads `ftle`, the horizon map's legend and the export header carry the provisional statement, read from one source; controls: a view of `ftle` without it, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail\" *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the horizon map and its legend must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-438
   area: GUI
-  statement: "There must be one source for the statement that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, which every surface showing the FTLE reads and which falls silent once REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run; until then every field view of `ftle` already built (TASK-M1-12's finalised `ftle` and running `S/t` views, and every catalogue view that reads `ftle`) must state it (R-976, RQ-794 (c))."
+  statement: "There must be one source for the statement that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, which every surface showing the FTLE reads and which falls silent once REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009); until then every field view of `ftle` already built (TASK-M1-12's finalised `ftle` and running `S/t` views, and every catalogue view that reads `ftle`) must state it (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p render ftle_views_state_provisional: every catalogue view that reads `ftle` carries the statement, from the one source; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M3
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M3-73. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M3-73. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"There must be one source for the statement that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, which every surface showing the FTLE reads and which falls silent once REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run; until then every field view of `ftle` already built (TASK-M1-12's finalised `ftle` and running `S/t` views, and every catalogue view that reads `ftle`) must state it (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-439
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the generated legend of a stain that reads `ftle` (a preset such as n̂ × FTLE among them) must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), the generated legend of a stain that reads `ftle` (a preset such as n̂ × FTLE among them) must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p render legend_ftle_provisional: the legend of a stain reading `ftle` carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M8
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-22. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-22. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the generated legend of a stain that reads `ftle` (a preset such as n̂ × FTLE among them) must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-440
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the Trajectory panel's summary line where it shows the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), the Trajectory panel's summary line where it shows the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p gui trajectory_summary_ftle_provisional: the summary's FTLE carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M8
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-11. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-11. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the Trajectory panel's summary line where it shows the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-441
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the click inspector's trust line where it reads the FTLE estimate must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), the click inspector's trust line where it reads the FTLE estimate must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p gui trust_line_ftle_provisional: the trust line's FTLE-based reading carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M8
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-76. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-76. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the click inspector's trust line where it reads the FTLE estimate must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-442
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, an export's block, where the export carries the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), an export's block, where the export carries the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p render export_block_ftle_provisional: an export of a stain reading `ftle` carries the statement in its export block; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M8
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-80. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-80. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, an export's block, where the export carries the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -32811,8 +32862,9 @@
   rulings:
   - R-912
   - R-915
+  - R-1010
   milestone: M0
-  note: "Added 13 Nov 2026 by TASK-M0-63 (applied per R-369: CI tooling within the runner rules, the owner's 12 Nov goal for the Windows runner, item 3), from run 43418528499, the first to reach wsl-proofs. Proof 2's two fixes, which change scripts/wsl/wsl.conf, wait on RQ-815 (R-915's \"wsl.conf exactly as I gave it\")."
+  note: "Added 13 Nov 2026 by TASK-M0-63 (applied per R-369: CI tooling within the runner rules, the owner's 12 Nov goal for the Windows runner, item 3), from run 43418528499, the first to reach wsl-proofs. Proof 2's two fixes, which change scripts/wsl/wsl.conf, wait on RQ-815 (R-915's \"wsl.conf exactly as I gave it\"). *14 Nov 2026 (R-1010, RQ-815 (a)):* proof 2's two lines are allowed; TASK-M0-69 builds them, closing REQ-TOOL-242. Nothing here changes."
 - id: REQ-TOOL-235
   area: TOOL
   statement: "win-self-check's re-proof of the kept-checkout guard must plant a whole allowed config as actions/checkout leaves it, the three sparse-checkout keys in .git/config.worktree and the other keys in .git/config, so the guard passes its own list and still refuses every planted case, the guard script unchanged (R-711, R-860)."
@@ -32861,6 +32913,43 @@
   - R-912
   milestone: M0
   note: "Added 14 Nov 2026 by TASK-M0-67 (applied per R-369: CI tooling within the runner rules, two-way; the owner's goal of 12 Nov 2026 for the Windows runner). The PC's side reported proof 3's line printing the host's tailnet address in a public Actions log. Numbered 240: 238 is TASK-M0-66's, open at the same time; 240 leaves room."
+- id: REQ-TOOL-242
+  area: TOOL
+  statement: "The WSL distro's `/etc/wsl.conf`, `scripts/wsl/wsl.conf`, must be the owner's file with exactly R-1010's two additions and nothing else: `[gpu] enabled=false`, closing WSL's GPU share of the driver store on C: (`/usr/lib/wsl/drivers`), and a `[boot] command=` that removes the `WSLInterop` registration WSL2 makes at every start, with no `systemd=`, no sudo and no sudoers entry (R-912, R-915, R-1010); the image test holds the file to that exact text, its ban on `[boot]` following the new file and its ban on `systemd=` kept; the manifest's pin is re-pinned to the image built from it, and the distro re-registered with `replace: true`; and proof 2 of `wsl-proofs` is then run and reported against RQ-815's criterion, written before any run: every line of `inside.sh`'s `isolation()` passes unchanged, with `/usr/lib/wsl/drivers` unmounted and `WSLInterop` absent (R-649)."
+  source:
+  - file: decisions.md
+    section: "R-912 — Windows containment, RQ-751: option (b) now, the Job Object proof passing with its two process-visibility gaps accepted and the job-queue mutants staying on GitHub's runners; option (c), CPU tests and mutants in a WSL2 distro under `contain.sh`, built in parallel and never blocking, replaces (b) only once each of its five requirements is proven, the job-queue mutants then free to move to Windows; GPU tests stay native *(closes RQ-751; amends R-905)*"
+  - file: decisions.md
+    section: "R-915 — Inside WSL, `contain.sh check` proves an unprivileged mode: user and PID namespaces with no sudo and the real `kill -9 -1`, passing only if a ci process outside the namespace and the runner agent and gh-runner's other Windows processes survive; WSL keeps no sudo, no systemd and the owner's exact `wsl.conf`; the mode is selected explicitly, never a fallback, and fails, never skips, without user namespaces; other machines keep the strict mode; proof 4 reworded *(closes RQ-753; amends R-912)*"
+  - file: decisions.md
+    section: "R-1010 — RQ-815, proof 2's two holes to Windows: option (a); the WSL distro's `wsl.conf` may gain `[gpu] enabled=false` and a `[boot] command=` that removes the `WSLInterop` registration, with no `systemd=` and no sudo; the image test's exact text and its `[boot]` ban follow the new file, its ban on `systemd=` kept; the manifest is re-pinned and the distro re-registered with `replace: true` *(closes RQ-815; amends R-915)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test wsl: scripts/wsl/wsl.conf equals the owner's text with the two additions, byte for byte; build-image.sh writes no systemd= and no sudo entry, and installs the file unchanged; the manifest's pin is the hosted wsl-image build's of the new recipe; each with its negative controls under --features controls: a wsl.conf with `systemd=` anywhere, a `[boot]` section with another command or a second line, either addition missing, and any other line changed, each fail; and, after merge, a wsl-register dispatch with replace: true, then a wsl-proofs dispatch on the PC whose proof 2 line is reported against the criterion, every isolation() check unchanged, their run ids in the PR or its follow-up comment (a measurement, R-711: its outcome reported as it is, nothing in isolation() loosened to pass it)"
+  rulings:
+  - R-649
+  - R-711
+  - R-912
+  - R-915
+  - R-1010
+  milestone: M0
+  note: "Added 14 Nov 2026 by R-1010 (RQ-815 (a)); closed by TASK-M0-69. Numbered 242: reqio's next id on main, 241, is held by TASK-M0-68's branch, so it is renumbered by hand, as REQ-TOOL-240 was."
+- id: REQ-TOOL-243
+  area: TOOL
+  statement: "win-self-check's firing of the kept-checkout guard must plant a .git holding every file the guard script reads in every .git by name, as a clean checkout holds it (.git/config and a HEAD the script accepts), and one planted hook, so the guard's logged reason is the hook's, \"active hook\", and not \"can't read the checkout\"; the firing's assertion on the log prints the log and the script's output when it fails; the guard script unchanged, no assertion of the test removed or weakened (R-711, R-860)."
+  source:
+  - file: decisions.md
+    section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
+  - file: decisions.md
+    section: "R-860 — R-859's list of what the Windows runner may run is not exhaustive: the nightly `win-tests` job and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, never required checks *(closes RQ-742; refines R-859)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_self_hosted: git_guard_firing_plants_what_the_script_reads, each file git_guard.ps1 reads by Join-Path $git.FullName '<name>' planted in the firing's .git and its HEAD matching the script's own HEAD pattern; controls: the firing with no .git/HEAD, as it was, fails; a HEAD the script refuses fails; a script whose reads the test can't find fails; on the PC, win-self-check's git_guard_script_refuses_what_is_planted passes on the first run on main after merge, its run id reported (a measurement, R-711), and its control, the script with its lists off, still fails"
+  rulings:
+  - R-711
+  - R-860
+  milestone: M0
+  note: "Added 14 Nov 2026 (applied per R-369: CI tooling, a test-only fix, the owner's Windows goal of 14 Nov 2026). Closed by TASK-M0-70. Numbered REQ-TOOL-243: 236 to 238 and 240 are other tasks' on open branches or main, 241 is TASK-M0-68's and 242 TASK-M0-69's (the rulings PR #534), open at the same time. After TASK-M0-64 (REQ-TOOL-235) merged, win-self-check run 43572471690 failed at the firing's log check: the firing's .git held no HEAD, which the guard has read in every .git since 5d242dd09 (5 Nov 2026), so the guard refused as \"can't read the checkout\" and the planted hook's reason was never logged."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -41951,17 +42040,20 @@
   note: "12 Nov 2026 (R-974, physics review 5875695467 of PR #503, F1): a recorded consequence of R-974. The test's name is given here (naming). Re-scoped 13 Nov 2026, applied per R-369 (task scoping): Heggie × RK4 needs TASK-M3-08, so the joint step on it and this verify move to TASK-M3-74, which closes this requirement; the definition stays TASK-M3-72's, written into §3.8 for any occupant that owns its time mapping. *Was:* \"a recorded consequence of R-974, closed by TASK-M3-72.\""
 - id: REQ-VAL-356
   area: VAL
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, TASK-M9-41's per-point FTLE maps and their report must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), TASK-M9-41's per-point FTLE maps and their report must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: review checklist
     detail: "Review (physics): the report and each map's caption carry the statement where REQ-INT-076's values are still unconfirmed; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M9
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M9-41. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M9-41. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, TASK-M9-41's per-point FTLE maps and their report must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-VAL-357
   area: VAL
   kind: calibration

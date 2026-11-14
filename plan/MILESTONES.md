@@ -99,13 +99,13 @@ requirement, the logH falsification check of the re-registration mechanism.
   files, and every pitfall regression requirement that can be checked without physics.
 
 <!-- gate:M0 -->
-**Exit gate — 136 requirements** (and every earlier gate still green):
+**Exit gate — 138 requirements** (and every earlier gate still green):
 
 - PAY (22): REQ-PAY-001…005, REQ-PAY-007…020, REQ-PAY-087, REQ-PAY-091…092
 - GEN (13): REQ-GEN-001…008, REQ-GEN-024, REQ-GEN-028…029, REQ-GEN-031…032
 - SCHED (1): REQ-SCHED-001
 - RENDER (3): REQ-RENDER-001…002, REQ-RENDER-083
-- TOOL (33): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223…226, REQ-TOOL-228…235, REQ-TOOL-240
+- TOOL (35): REQ-TOOL-001…008, REQ-TOOL-119…121, REQ-TOOL-134, REQ-TOOL-136, REQ-TOOL-138…139, REQ-TOOL-141, REQ-TOOL-144…145, REQ-TOOL-147…148, REQ-TOOL-223…226, REQ-TOOL-228…235, REQ-TOOL-240, REQ-TOOL-242…243
 - VAL (38): REQ-VAL-001…009, REQ-VAL-138, REQ-VAL-147…167, REQ-VAL-169, REQ-VAL-175…176, REQ-VAL-178…181
 - SYS (26): REQ-SYS-001…008, REQ-SYS-063…079, REQ-SYS-097
 <!-- /gate:M0 -->
@@ -361,7 +361,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 
 - ENC (1): REQ-ENC-033
 - CHART (6): REQ-CHART-059, REQ-CHART-072, REQ-CHART-085…086, REQ-CHART-132, REQ-CHART-177
-- INT (91): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110, REQ-INT-114, REQ-INT-117…122
+- INT (91): REQ-INT-004…032, REQ-INT-034…056, REQ-INT-073…074, REQ-INT-077…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095, REQ-INT-097…106, REQ-INT-108…110, REQ-INT-114, REQ-INT-117…123
 - EVT (27): REQ-EVT-001…020, REQ-EVT-023…026, REQ-EVT-032…033, REQ-EVT-035
 - PAY (34): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098, REQ-PAY-110…114
 - GEN (1): REQ-GEN-016
@@ -392,10 +392,10 @@ render_contract "→ flat compute"; deep_zoom §3 layer 0: "defines the three co
   dispatch waits for M2's gate (R-917), as does TASK-M4-06 and the 217 tasks R-914 released.
 
 <!-- gate:M4 -->
-**Exit gate — 119 requirements** (and every earlier gate still green):
+**Exit gate — 120 requirements** (and every earlier gate still green):
 
 - CHART (6): REQ-CHART-037, REQ-CHART-052, REQ-CHART-074, REQ-CHART-100, REQ-CHART-152, REQ-CHART-165
-- INT (18): REQ-INT-057…069, REQ-INT-071, REQ-INT-083, REQ-INT-112…113, REQ-INT-116
+- INT (19): REQ-INT-057…069, REQ-INT-071, REQ-INT-076, REQ-INT-083, REQ-INT-112…113, REQ-INT-116
 - EVT (1): REQ-EVT-021
 - PAY (2): REQ-PAY-074, REQ-PAY-085
 - SCHED (12): REQ-SCHED-004…013, REQ-SCHED-084, REQ-SCHED-097
