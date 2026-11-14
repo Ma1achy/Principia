@@ -106,8 +106,9 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   as passing. Controls: a fixture state with one bit flipped fails the first arm; a fixture holding only pixels where
   conversion is exact, for a link not so listed, fails the second; and a listed link with a pixel where conversion
   changes a bit fails the second (R-921; REQ-TOOL-172).
-- `cargo test -p kernel mirror_step_removed` — a lower-half state encodes to `β ∈ (π, 2π)` and decodes back to itself,
-  not its mirror image; a latent-chart trace through a syzygy at `β = 0` and at `β = π` continuous; controls: the mirror
+- `cargo test -p kernel mirror_step_removed` — a lower-half state off the collinear axes (`|λ̃_y|` well above rounding,
+  as near the `−x` half-axis the encode can give just below `π̂`, dd_encode § 3.2) encodes to `β ∈ (π, 2π)` and decodes
+  back to itself, not its mirror image; a latent-chart trace through a syzygy at `β = 0` and at `β = π` continuous; controls: the mirror
   step left in fails, a σ-type link that jumps at `β = 0` fails (REQ-DEC-055).
 - `cargo test -p kernel latent_conversion` — every converted `z` decodes to the same system as its old `z`
   within REQ-ENC-024's `ε_phys` on the decoded state; a saved file of the old version converted on load, one of an unknown kind refused by `Saved::from_words`;
@@ -224,3 +225,6 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   are f32 bits, where the conversion's last bits can differ; at f64 the conversion is exact. *Was (Deliverables):*
   "blocks' links and each pixel's decoded starting state as bits, with the commit and the command that wrote it recorded
   in the file and its row in `fixtures/README.md`." *Was (acceptance):* "decoded starting states as bits,".
+- *14 Nov 2026 (qa review 5903950227 of PR #533, m3; applied per R-369):* `mirror_step_removed`'s lower-half state is
+  off the collinear axes. *Was (acceptance):* "- `cargo test -p kernel mirror_step_removed` — a lower-half state encodes
+  to `β ∈ (π, 2π)` and decodes back to itself,".
