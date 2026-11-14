@@ -788,12 +788,20 @@ fn predictive<R: AzReal>(system: &AzSystem<R>, q: &AzQ<R>, p: &AzP<R>, f: R, ab:
     f * d_min / (p_max * ab)
 }
 
-/// Whether the running total `steps` exceeds the budget `max(N_min, rate·t)` at physical time `t` (R-604). An allowance
-/// that is not a number, read on its bits, spends the budget too, so that the march stays bounded (Part 2c rule 3).
+/// R-604's budget for any regularised occupant: whether the running total `steps` exceeds `max(n_min, rate·t)` at
+/// physical time `t`. An allowance that is not a number, read on its bits, spends the budget too, so that the march
+/// stays bounded (Part 2c rule 3).
+#[inline]
+pub fn over_allowance<R: AzReal>(steps: u32, t: R, rate: R, n_min: u32) -> bool {
+    let allowance = floored(rate * t, R::count(n_min));
+    R::count(steps) > allowance || allowance.nan_bits()
+}
+
+/// Whether the running total `steps` exceeds Aarseth–Zare's budget `max(N_min, rate·t)` at physical time `t` (R-604):
+/// [`over_allowance`] at its values.
 #[inline]
 pub fn over_budget<R: AzReal>(steps: u32, t: R, params: &AzParams<R>) -> bool {
-    let allowance = floored(params.step_budget_rate * t, R::count(params.n_min));
-    R::count(steps) > allowance || allowance.nan_bits()
+    over_allowance(steps, t, params.step_budget_rate, params.n_min)
 }
 
 /// One step's size and the signals its rule counts (Part 2b, steps 3 and 4; Part 6).
