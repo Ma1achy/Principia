@@ -28616,84 +28616,102 @@
   note: "R-962 (11 Nov 2026, RQ-788 (a)): the map is as TASK-M7-12 built it; TASK-M7-75 drops the \"provisional pending RQ-788\" wording and renames the test from stain_fanout_margin_provisional_map_is_the_grey_ramp."
 - id: REQ-GUI-437
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the horizon map and its legend must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), the horizon map and its legend must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
   - file: docs/design/principia_dd_integrator.md
     section: 3.8 Co-computations (tier-gated, ride the forward pass)
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p render ftle_provisional_stated: the horizon map's view and its legend carry the provisional statement from REQ-GUI-438's source; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M4
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping): closed by TASK-M4-13, the first task that puts the FTLE in a view and a legend; later views of the FTLE read the same statement. The test's name is given here (naming). *12 Nov 2026, later (code review 5875707244 of PR #503, F4; applied per R-369: task scoping):* split per surface, so each task that builds a surface showing the FTLE closes its own arm: this one keeps the horizon map and its legend (TASK-M4-13); REQ-GUI-438 the existing field views and the one source (a new task, TASK-M3-73), REQ-GUI-439 the generated legend (TASK-M8-22), REQ-GUI-440 the Trajectory panel's summary (TASK-M8-11), REQ-GUI-441 the click inspector's trust line (TASK-M8-76), REQ-GUI-442 an export's block (TASK-M8-80), REQ-VAL-356 TASK-M9-41's FTLE maps. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, every place the FTLE is shown (each view of `ftle`, the horizon map and its legend, the Trajectory panel's summary, and an export's header) must state that the shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits (R-976, RQ-794 (c)).\" *Was (verify):* \"cargo test -p render ftle_provisional_stated: every view the registry offers that reads `ftle`, the horizon map's legend and the export header carry the provisional statement, read from one source; controls: a view of `ftle` without it, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail\""
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping): closed by TASK-M4-13, the first task that puts the FTLE in a view and a legend; later views of the FTLE read the same statement. The test's name is given here (naming). *12 Nov 2026, later (code review 5875707244 of PR #503, F4; applied per R-369: task scoping):* split per surface, so each task that builds a surface showing the FTLE closes its own arm: this one keeps the horizon map and its legend (TASK-M4-13); REQ-GUI-438 the existing field views and the one source (a new task, TASK-M3-73), REQ-GUI-439 the generated legend (TASK-M8-22), REQ-GUI-440 the Trajectory panel's summary (TASK-M8-11), REQ-GUI-441 the click inspector's trust line (TASK-M8-76), REQ-GUI-442 an export's block (TASK-M8-80), REQ-VAL-356 TASK-M9-41's FTLE maps. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, every place the FTLE is shown (each view of `ftle`, the horizon map and its legend, the Trajectory panel's summary, and an export's header) must state that the shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits (R-976, RQ-794 (c)).\" *Was (verify):* \"cargo test -p render ftle_provisional_stated: every view the registry offers that reads `ftle`, the horizon map's legend and the export header carry the provisional statement, read from one source; controls: a view of `ftle` without it, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail\" *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the horizon map and its legend must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-438
   area: GUI
-  statement: "There must be one source for the statement that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, which every surface showing the FTLE reads and which falls silent once REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run; until then every field view of `ftle` already built (TASK-M1-12's finalised `ftle` and running `S/t` views, and every catalogue view that reads `ftle`) must state it (R-976, RQ-794 (c))."
+  statement: "There must be one source for the statement that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, which every surface showing the FTLE reads and which falls silent once REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009); until then every field view of `ftle` already built (TASK-M1-12's finalised `ftle` and running `S/t` views, and every catalogue view that reads `ftle`) must state it (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p render ftle_views_state_provisional: every catalogue view that reads `ftle` carries the statement, from the one source; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M3
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M3-73. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M3-73. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"There must be one source for the statement that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, which every surface showing the FTLE reads and which falls silent once REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run; until then every field view of `ftle` already built (TASK-M1-12's finalised `ftle` and running `S/t` views, and every catalogue view that reads `ftle`) must state it (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-439
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the generated legend of a stain that reads `ftle` (a preset such as n̂ × FTLE among them) must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), the generated legend of a stain that reads `ftle` (a preset such as n̂ × FTLE among them) must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p render legend_ftle_provisional: the legend of a stain reading `ftle` carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M8
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-22. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-22. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the generated legend of a stain that reads `ftle` (a preset such as n̂ × FTLE among them) must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-440
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the Trajectory panel's summary line where it shows the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), the Trajectory panel's summary line where it shows the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p gui trajectory_summary_ftle_provisional: the summary's FTLE carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M8
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-11. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-11. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the Trajectory panel's summary line where it shows the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-441
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the click inspector's trust line where it reads the FTLE estimate must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), the click inspector's trust line where it reads the FTLE estimate must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p gui trust_line_ftle_provisional: the trust line's FTLE-based reading carries the statement; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M8
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-76. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-76. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, the click inspector's trust line where it reads the FTLE estimate must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-GUI-442
   area: GUI
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, an export's block, where the export carries the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), an export's block, where the export carries the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: unit test
     detail: "cargo test -p render export_block_ftle_provisional: an export of a stain reading `ftle` carries the statement in its export block; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M8
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-80. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M8-80. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, an export's block, where the export carries the FTLE must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -41944,17 +41962,20 @@
   note: "12 Nov 2026 (R-974, physics review 5875695467 of PR #503, F1): a recorded consequence of R-974. The test's name is given here (naming). Re-scoped 13 Nov 2026, applied per R-369 (task scoping): Heggie × RK4 needs TASK-M3-08, so the joint step on it and this verify move to TASK-M3-74, which closes this requirement; the definition stays TASK-M3-72's, written into §3.8 for any occupant that owns its time mapping. *Was:* \"a recorded consequence of R-974, closed by TASK-M3-72.\""
 - id: REQ-VAL-356
   area: VAL
-  statement: "Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, TASK-M9-41's per-point FTLE maps and their report must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
+  statement: "Until REQ-INT-076's values are confirmed at the M4 gate after R-976's re-run, beside REQ-PAY-085 (R-1009), TASK-M9-41's per-point FTLE maps and their report must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c))."
   source:
   - file: decisions.md
     section: "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+  - file: decisions.md
+    section: "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
   verify:
     method: review checklist
     detail: "Review (physics): the report and each map's caption carry the statement where REQ-INT-076's values are still unconfirmed; controls: the surface without the statement, and the statement still shown once REQ-INT-076's confirmed values are recorded, each fail"
   rulings:
   - R-976
+  - R-1009
   milestone: M9
-  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M9-41. The test's name is given here (naming)."
+  note: "12 Nov 2026 (R-976, RQ-794 (c)); applied per R-369 (task scoping, code review 5875707244 of PR #503, F4): REQ-GUI-437 split per surface, this one closed by TASK-M9-41. The test's name is given here (naming). *14 Nov 2026 (R-1009, RQ-814 (d)):* REQ-INT-076 is confirmed at the M4 gate, beside REQ-PAY-085, not at the M3 gate, so this notice stays on until then; its wording and values are unchanged. *Was (statement):* \"Until REQ-INT-076's values are confirmed at the M3 gate after R-976's re-run, TASK-M9-41's per-point FTLE maps and their report must state that the FTLE shadow's calibration (‖δ₀‖ 3e-3, n_renorm 300, dd test 10's tolerance 0.2) is provisional and unsupported on close-encounter chaotic orbits, read from REQ-GUI-438's one source (R-976, RQ-794 (c)).\""
 - id: REQ-VAL-357
   area: VAL
   kind: calibration

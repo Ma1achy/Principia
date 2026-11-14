@@ -80,8 +80,8 @@ it (R-974).
 
 ## R-976's re-run (13 Nov 2026, `cargo xtask gate benettin-calibration`; R-649, R-71)
 The pre-registered eight-orbit calibration, its grid, meter, selection and tolerance rules unchanged, run in both
-shadow forms. A measurement: what the owner confirms at the M3 gate is a calibration value (R-71), not this task's
-choice.
+shadow forms. A measurement: what the owner confirms at the M4 gate, beside REQ-PAY-085 (R-1009), is a calibration
+value (R-71), not this task's choice. *Was:* "what the owner confirms at the M3 gate is a calibration value (R-71)".
 
 - **In force, provisional (R-976):** ‖δ₀‖ = 3e-3, `n_renorm` = 300, tolerance 0.2, unchanged by this task. The re-run
   measures them at worst change 0.4699 in the displacement form (a1), with a bias of +8.32 at f32 and +8.17 at f64 on
