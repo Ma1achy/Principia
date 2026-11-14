@@ -227,7 +227,10 @@ R-865, R-898, R-919). The definitions the full-circle `β` rests on:
   rounded once, where the old f32 decode evaluated `L` at f32, so its last bits can differ, within REQ-ENC-024's
   `ε_phys` (R-898's conversion test). A record made under a retired link recreates through that link itself (R-921):
   `L`'s forward of `z_β` at the decode's precision, then the one decode, bitwise the old decode; nothing is converted
-  on recreation.
+  on recreation. The conversion applies to a point's `z_β` only: `z₀[1]`, a stored latent view's centre, an IC's
+  `z_β`. A plane's basis components along `z_β`, `q₁[1]` and `q₂[1]`, are directions, and `L` of a direction means
+  nothing (under `sigmoid_beta`, `L(0) = π/2`): they are not converted, and a plane with either nonzero is redefined
+  in the new coordinates (R-919 Q2 (b); physics review 5903954379 of PR #533, P5).
 - **The pole at `λ̃ = 0`.** At `α = 0`, `λ̃ = 0` and `β` is undefined at the point: every `z_β` decodes to the same
   state there. The encode's value is 0, chosen by R-437's select on `λ̃_x = 0` and `λ̃_y = 0`, not `atan2(0, 0)`
   (`principia_dd_encode.md` § 3.2), so `z_β = 0` at the pole on every backend.
