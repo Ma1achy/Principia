@@ -519,7 +519,7 @@ switch ($verb) {
         ''
         $results
         $failed = @($results | Where-Object { $_ -notlike 'proof *: PASS:*' }).Count
-        if ($results.Count -ne 6 -or $failed) { "wsl.ps1 proofs: $failed of 6 failed"; exit 1 }
+        if ($results.Count -ne 6 -or $failed) { "wsl.ps1 proofs: $failed of 6 failed, $(6 - $results.Count) never reported"; exit 1 }
         'wsl.ps1 proofs: all six passed'
         exit 0
     }

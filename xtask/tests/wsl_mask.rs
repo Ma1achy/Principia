@@ -1489,3 +1489,33 @@ mod allow_host_ui {
         check_routes(&with_line("$host.UI.WriteLine($gateway)"))
     );
 }
+
+// ---- The summary after a throw ---------------------------------------------------------------------------------------
+
+/// After a proof throws, fewer than six lines are reported, all of which may have passed: the summary's failure line
+/// says how many were never reported, so it doesn't read "0 of 6 failed" while the job exits 1.
+fn check_summary(script: &str) {
+    let proofs = arm(script, "proofs");
+    assert!(
+        proofs.contains(
+            "if ($results.Count -ne 6 -or $failed) { \"wsl.ps1 proofs: $failed of 6 failed, $(6 - $results.Count) never reported\"; exit 1 }"
+        ),
+        "the proofs' summary doesn't say how many proofs were never reported"
+    );
+}
+
+#[test]
+fn wsl_proofs_summary_counts_the_unreported() {
+    check_summary(&read(PS));
+}
+
+negative_control!(
+    wsl_proofs_summary_counts_the_unreported,
+    "the summary as it was",
+    expected = "the proofs' summary doesn't say how many proofs were never reported",
+    check_summary(&edited(
+        &read(PS),
+        "$failed of 6 failed, $(6 - $results.Count) never reported",
+        "$failed of 6 failed"
+    ))
+);
