@@ -547,8 +547,10 @@ enum Node {
     Type(String),
     /// `(…)`, `@(…)` or `$(…)` as `(`; `{…}` or `@{…}` as `{`; an index, `[…]`, as `[`.
     Group(char, Vec<Tok>),
-    /// `=`, `+=`, `-=`.
+    /// `=` and every compound assignment: `+=`, `-=`, `*=`, `/=`, `%=`, `??=`.
     Assign,
+    /// `++` or `--`, prefix or postfix.
+    Step,
     Pipe,
     /// A statement's end: a newline or `;`.
     End,
@@ -801,8 +803,18 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                 push!(Node::Assign);
                 *i += 1;
             }
-            '+' | '-' if next == Some('=') => {
+            // Every compound assignment, `+= -= *= /= %=` and `??=`, is an assignment, read as `=` is.
+            '+' | '-' | '*' | '/' | '%' if next == Some('=') => {
                 push!(Node::Assign);
+                *i += 2;
+            }
+            '?' if next == Some('?') && c.get(*i + 2) == Some(&'=') => {
+                push!(Node::Assign);
+                *i += 3;
+            }
+            // `++` and `--`, not a `--name` word.
+            '+' | '-' if next == Some(ch) && !c.get(*i + 2).copied().is_some_and(is_name_char) => {
+                push!(Node::Step);
                 *i += 2;
             }
             _ if is_name_char(ch) || (ch == '-' && next.is_some_and(is_name_char)) => {
@@ -1058,6 +1070,16 @@ fn member_assignment(s: &[Tok]) -> Option<(&String, usize)> {
             .iter()
             .any(|t| matches!(t.node, Node::Punct(',') | Node::Pipe)))
     .then_some((v, reach + 1))
+}
+
+/// Whether the `++` or `--` at `s[k]` steps a plain variable: `$n++` or `++$n`, nothing joined to the variable's other
+/// side (`$h[$k]++`, `$h.n++` and `++$h[$k]` write into `$h`).
+fn steps_a_variable(s: &[Tok], k: usize) -> bool {
+    let var = |j: usize| matches!(s.get(j).map(|t| &t.node), Some(Node::Var(_)));
+    let joined = |a: usize, b: usize| s[a].end == s[b].start;
+    let postfix = k > 0 && var(k - 1) && (k < 2 || !joined(k - 2, k - 1));
+    let prefix = var(k + 1) && (k + 2 >= s.len() || !joined(k + 1, k + 2));
+    postfix || prefix
 }
 
 /// The variables `s` binds itself, not in its nested code.
@@ -1410,6 +1432,13 @@ impl Check<'_> {
             self.nested(&s[1..at], item, guarded);
             return self.statement(&s[at + 1..], true, item, guarded);
         }
+        // `++` and `--` write to their operand: only a plain variable, which keeps what it held, a number.
+        if (0..s.len()).any(|k| matches!(s[k].node, Node::Step) && !steps_a_variable(s, k)) {
+            return self.refuse(
+                s,
+                "increment or decrement a member or element, which this reader doesn't follow",
+            );
+        }
         // Any other assignment (two targets, a target in parentheses, a cast) binds what `binds` can't follow.
         if s.iter().any(|t| matches!(t.node, Node::Assign)) {
             return self.refuse(
@@ -1579,7 +1608,9 @@ impl Check<'_> {
 ///   binding in the proofs (an assignment, chained or not; an assignment to its member or element, a computed name
 ///   or key counted; a loop; a common parameter; a method that may change it) is an assignment from a clean
 ///   expression, to a fixed point. Any other statement holding an assignment (two targets, a target in parentheses, a
-///   cast) is refused, as `binds` can't follow it. `$_` and `$PSItem` are addresses wherever a statement
+///   cast) is refused, as `binds` can't follow it. The operators that write: `=` and every compound one (`+= -= *= /=
+///   %= ??=`) are read alike; `++` and `--` only on a plain variable; every redirection (`> >> 2> 2>> *> 3>`, …) is
+///   refused. `$_` and `$PSItem` are addresses wherever a statement
 ///   around them names one: the pipeline, `switch`, `catch` or method that sets them. (`ADDRESS_VARS`, `AUTO_VARS` and
 ///   the variables bound from them are never clean; they name what the messages say.)
 /// - **Output.** A statement whose output prints is an assignment; a control statement; a masking call (`Report`,
@@ -1809,9 +1840,10 @@ fn in_catch(line: &str) -> String {
 /// variables, an assigned loop, a block in a method's parentheses, a redirection in a value), then by the default-deny
 /// reader's first cut (a listed command's parameters, a value read from a source, ambient state) and its second (a
 /// splat, a member's or an element's assignment) and its third (a member named by a computed name, an assignment it
-/// can't follow), each printing or publishing an address (made up here): each must be refused, and is a control below
+/// can't follow), then by the operator audit (`++`/`--` on a member or element, every compound assignment, every
+/// redirection), each printing or publishing an address (made up here): each must be refused, and is a control below
 /// as well.
-const PROBE_PRINTS: [&str; 62] = [
+const PROBE_PRINTS: [&str; 74] = [
     "Write-Host @hostSwitch",
     "'gateway: {0}' -f $gateway",
     "\"gateway: {0}\" -f $gateway",
@@ -1899,6 +1931,36 @@ $null = $lan | ForEach-Object { $info.lan, $y = $_, 1 }
     "$info = @{}
 $null = $lan | ForEach-Object { ($info).lan = $_ }
 \"lan: $($info.lan)\"",
+    "$counts = @{}
+$null = $hostSwitch | ForEach-Object { $counts[$_]++ }
+$counts.Keys -join ', '",
+    "$counts = @{}
+$null = $hostSwitch | ForEach-Object { $counts.$_++ }
+$counts.Keys -join ', '",
+    "$counts = @{}
+$null = $hostSwitch | ForEach-Object { ++$counts[$_] }
+$counts.Keys -join ', '",
+    "$counts = @{}
+$null = $hostSwitch | ForEach-Object { $counts[$_]-- }
+$counts.Keys -join ', '",
+    "$counts = @{}
+$null = ($counts[$gateway]++)
+$counts.Keys -join ', '",
+    "$counts = @{}
+foreach ($h in $hostSwitch) { $counts[$h]++ }
+$counts.Keys -join ', '",
+    "$counts = @{}
+$null = $hostSwitch | ForEach-Object { $counts[$_] *= 1 }
+$counts.Keys -join ', '",
+    "$x = 0
+$x *= $gateway
+\"x: $x\"",
+    "$x = 0
+$x ??= $gateway
+\"x: $x\"",
+    "$x = $gateway 2>> x.txt",
+    "$x = $gateway *> x.txt",
+    "$x = $gateway 3> x.txt",
 ];
 
 fn check_probes(script: &str, forms: &[&str]) {
@@ -1931,6 +1993,16 @@ fn check_probes(script: &str, forms: &[&str]) {
     assert!(
         printed_outside_report(arm(&member, "proofs")).is_empty(),
         "the allow-list refuses a constant member"
+    );
+    // Nor does a plain variable counted with `++` or `--`: it keeps what it held, a number.
+    let count = script.replacen(
+        anchor,
+        &format!("                $n = 0\n                $n++\n                --$n\n                \"n: $n\"\n{anchor}"),
+        1,
+    );
+    assert!(
+        printed_outside_report(arm(&count, "proofs")).is_empty(),
+        "the allow-list refuses a counter"
     );
 }
 
@@ -3497,6 +3569,150 @@ mod deny_cast_target {
         expected = "proofs assign in a form this reader doesn't follow, so can't tell what it binds: $x = $lan | ForEach-Object { [string]$c = $_ }",
         check_routes(&with_line("$x = $lan | ForEach-Object { [string]$c = $_ }
 \"c: $c\""))
+    );
+}
+
+mod deny_step_element {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an element counted with ++ by $_ in a loop, its keys then printed, added to proof 3",
+        expected = "proofs increment or decrement a member or element, which this reader doesn't follow: $null = $hostSwitch | ForEach-Object { $counts[$_]++ }",
+        check_routes(&with_line("$counts = @{}
+$null = $hostSwitch | ForEach-Object { $counts[$_]++ }
+$counts.Keys -join ', '"))
+    );
+}
+
+mod deny_step_member {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a member named by $_ counted with ++, added to proof 3",
+        expected = "proofs increment or decrement a member or element, which this reader doesn't follow: $null = $hostSwitch | ForEach-Object { $counts.$_++ }",
+        check_routes(&with_line("$counts = @{}
+$null = $hostSwitch | ForEach-Object { $counts.$_++ }
+$counts.Keys -join ', '"))
+    );
+}
+
+mod deny_step_prefix {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an element counted with a prefix ++, added to proof 3",
+        expected = "proofs increment or decrement a member or element, which this reader doesn't follow: $null = $hostSwitch | ForEach-Object { ++$counts[$_] }",
+        check_routes(&with_line("$counts = @{}
+$null = $hostSwitch | ForEach-Object { ++$counts[$_] }
+$counts.Keys -join ', '"))
+    );
+}
+
+mod deny_step_down {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an element counted down with --, added to proof 3",
+        expected = "proofs increment or decrement a member or element, which this reader doesn't follow: $null = $hostSwitch | ForEach-Object { $counts[$_]-- }",
+        check_routes(&with_line("$counts = @{}
+$null = $hostSwitch | ForEach-Object { $counts[$_]-- }
+$counts.Keys -join ', '"))
+    );
+}
+
+mod deny_step_in_group {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an element keyed by the gateway counted with ++ in a group, added to proof 3",
+        expected = "proofs increment or decrement a member or element, which this reader doesn't follow: $null = ($counts[$gateway]++)",
+        check_routes(&with_line("$counts = @{}
+$null = ($counts[$gateway]++)
+$counts.Keys -join ', '"))
+    );
+}
+
+mod deny_step_in_loop {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an element counted with ++ in a foreach, added to proof 3",
+        expected = "proofs increment or decrement a member or element, which this reader doesn't follow: foreach ($h in $hostSwitch) { $counts[$h]++ }",
+        check_routes(&with_line("$counts = @{}
+foreach ($h in $hostSwitch) { $counts[$h]++ }
+$counts.Keys -join ', '"))
+    );
+}
+
+mod deny_compound_element {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an element keyed by $_ written with *=, added to proof 3",
+        expected = "proofs print $counts outside Report, unmasked: $counts.Keys -join ', '",
+        check_routes(&with_line(
+            "$counts = @{}
+$null = $hostSwitch | ForEach-Object { $counts[$_] *= 1 }
+$counts.Keys -join ', '"
+        ))
+    );
+}
+
+mod deny_compound_multiply {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a variable written with *= from the gateway, added to proof 3",
+        expected = "proofs print $x outside Report, unmasked: \"x: $x\"",
+        check_routes(&with_line(
+            "$x = 0
+$x *= $gateway
+\"x: $x\""
+        ))
+    );
+}
+
+mod deny_compound_null {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a variable written with ??= from the gateway, added to proof 3",
+        expected = "proofs print $x outside Report, unmasked: \"x: $x\"",
+        check_routes(&with_line(
+            "$x = 0
+$x ??= $gateway
+\"x: $x\""
+        ))
+    );
+}
+
+mod deny_redirect_error_append {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the error stream appended to a file, added to proof 3",
+        expected = "proofs redirect output to a file or stream this reader doesn't follow: $x = $gateway 2>> x.txt",
+        check_routes(&with_line("$x = $gateway 2>> x.txt"))
+    );
+}
+
+mod deny_redirect_all {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "every stream redirected to a file, added to proof 3",
+        expected = "proofs redirect output to a file or stream this reader doesn't follow: $x = $gateway *> x.txt",
+        check_routes(&with_line("$x = $gateway *> x.txt"))
+    );
+}
+
+mod deny_redirect_numbered {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a numbered stream redirected to a file, added to proof 3",
+        expected = "proofs redirect output to a file or stream this reader doesn't follow: $x = $gateway 3> x.txt",
+        check_routes(&with_line("$x = $gateway 3> x.txt"))
     );
 }
 
