@@ -390,7 +390,8 @@ fn doubled(s: &HgSystem<f64>, q: &HgQ<f64>, p: &HgP<f64>, d: &HgDisplacement<f64
 /// `j(δy)` against the central difference `(image(y + εδy) − image(y − εδy))/2ε`, `ε = 1e-6`, within `1e-7` relative
 /// (the difference's truncation `O(ε²)` and rounding `O(1e-16/ε)`), with `TINY` below every `Rᵢ` and above every
 /// `Rᵢ`, the floor then constant; at `TINY` exactly the least `Rᵢ`, where the floor is the identity, `J` is the unfloored
-/// one's, bit for bit. Then `j` after [`start`] is the Cartesian offset less its centre-of-mass parts within `1e-13`.
+/// one's, bit for bit. Then `j` after [`start`] is the Cartesian offset less its centre-of-mass parts within `1e-13`,
+/// and the start's `δt` is 0 and its `δh` the shadow's energy less the sample's, bit for bit.
 fn check_tangent(j: Map) {
     let mut seed = 7;
     for s in states() {
@@ -456,11 +457,20 @@ fn check_tangent(j: Map) {
             r: dx.r.map(|v| [v[0] - com[0], v[1] - com[1]]),
             p: dx.p.map(|v| [v[0] - mean[0], v[1] - mean[1]]),
         };
-        let back = j(&system, &q, &p, &start(&system, &q, &p, &dx));
+        let d0 = start(&system, &q, &p, &dx);
+        let back = j(&system, &q, &p, &d0);
         let err = rel(&flat(&back), &flat(&want));
         assert!(
             err < 1e-13,
             "J·start(δx) is not δx in the centre-of-mass frame: {err:.3e}"
+        );
+        let dh = system.energy(
+            &HgSystem::q_add(&q, 1.0, &d0.q),
+            &HgSystem::p_add(&p, 1.0, &d0.p),
+        ) - system.energy(&q, &p);
+        assert!(
+            d0.q.t == 0.0 && d0.h == dh && dh != 0.0,
+            "the start's δt is not 0 or its δh not the shadow's energy offset"
         );
     }
 }
