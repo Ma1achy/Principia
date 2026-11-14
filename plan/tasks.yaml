@@ -517,6 +517,14 @@
   requirements: [REQ-TOOL-234]  # R-912, R-915; run 43418528499 (13 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-67
+  milestone: M0
+  title: "The WSL proofs print no tailnet address: one masking function in wsl.ps1 for every Report line, echo and failure"
+  depends_on: [TASK-M0-63]
+  needs: []
+  requirements: [REQ-TOOL-240]  # applied per R-369 (14 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"

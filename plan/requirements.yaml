@@ -32782,6 +32782,22 @@
   - R-915
   milestone: M0
   note: "Added 13 Nov 2026 by TASK-M0-63 (applied per R-369: CI tooling within the runner rules, the owner's 12 Nov goal for the Windows runner, item 3), from run 43418528499, the first to reach wsl-proofs. Proof 2's two fixes, which change scripts/wsl/wsl.conf, wait on RQ-815 (R-915's \"wsl.conf exactly as I gave it\")."
+- id: REQ-TOOL-240
+  area: TOOL
+  statement: "Every line the WSL proofs' scripts on R-711's runner print to a job's log, summary or artifact must print any IPv4 address in the tailnet range 100.64.0.0/10 as `100.x.x.x` and any IPv6 address in fd7a:115c:a1e0::/48 as `fd7a:115c:a1e0::x`, through one masking function in `.github/scripts/wsl.ps1`: each proof's Report line, wsl.ps1's echo of what wsl.exe prints, and its failure messages; loopback and WSL's switch's private ranges print as they are; what each proof decides is unchanged, decided on the real addresses (R-711, R-912)."
+  source:
+  - file: decisions.md
+    section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
+  - file: decisions.md
+    section: "R-912 — Windows containment, RQ-751: option (b) now, the Job Object proof passing with its two process-visibility gaps accepted and the job-queue mutants staying on GitHub's runners; option (c), CPU tests and mutants in a WSL2 distro under `contain.sh`, built in parallel and never blocking, replaces (b) only once each of its five requirements is proven, the job-queue mutants then free to move to Windows; GPU tests stay native *(closes RQ-751; amends R-905)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test wsl_mask: wsl.ps1's masking patterns, run on made-up tailnet, LAN, loopback, WSL-switch and IPv6 inputs, mask exactly the tailnet ones; Report, the echo in Invoke-Wsl and Fail each print through the masking function, and every Report call's evidence reaches the output only through it; controls under --features controls: a pattern that misses the range's edges or masks a LAN or loopback address, and a Report or echo printing unmasked, each fail; and a wsl-proofs dispatch after merge whose proof 3 line shows no tailnet address, its run id reported"
+  rulings:
+  - R-711
+  - R-912
+  milestone: M0
+  note: "Added 14 Nov 2026 by TASK-M0-67 (applied per R-369: CI tooling within the runner rules, two-way; the owner's goal of 12 Nov 2026 for the Windows runner). The PC's side reported proof 3's line printing the host's tailnet address in a public Actions log. Numbered 240: 238 is TASK-M0-66's, open at the same time; 240 leaves room."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
