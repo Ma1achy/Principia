@@ -1226,14 +1226,25 @@ fn built() -> Vec<(&'static str, bool)> {
     ]
 }
 
+/// Every built occupant in `profiles` is in the measurement set.
+fn check_complete(measured: &[Measured], profiles: &[(&'static str, bool)]) {
+    for &(name, _) in profiles {
+        assert!(
+            measured.iter().any(|m| m.name == name),
+            "{name} is missing from the measurement"
+        );
+    }
+}
+
 /// Every built occupant is measured, inside the criterion's domain, and its profile's `step_reversible` is its
 /// verdict; a verdict other than R-500's listed one (Aarseth–Zare + RK4 false) is printed for the review queue.
 fn check_measured(measured: &[Measured], profiles: &[(&'static str, bool)], edge: f64) {
+    check_complete(measured, profiles);
     for &(name, flag) in profiles {
         let m = measured
             .iter()
             .find(|m| m.name == name)
-            .unwrap_or_else(|| panic!("{name} is missing from the measurement"));
+            .expect("checked complete");
         assert!(
             edge <= m.ratio && m.ratio <= STEP_REVERSAL_EDGE_MAX.number(),
             "{name}: dt/τ {:.3e} is outside the criterion's domain",
@@ -1319,7 +1330,7 @@ fn regularised_step_reversibility() {
 }
 
 negative_control!(
-    regularised_step_reversibility_flag,
+    regularised_step_reversibility,
     "a profile with Heggie × RK4 (Eq. 22)'s step_reversible flipped",
     expected = "its profile's step_reversible differs from its measured verdict",
     {
@@ -1329,13 +1340,20 @@ negative_control!(
     }
 );
 
+/// Every built regularised occupant is in the measurement set, at each precision (REQ-VAL-190).
+#[test]
+fn regularised_step_reversibility_complete() {
+    check_complete(&measure_all::<f64>(), &built());
+    check_complete(&measure_all::<f32>(), &built());
+}
+
 negative_control!(
-    regularised_step_reversibility_missing,
+    regularised_step_reversibility_complete,
     "a measurement set with Aarseth–Zare + RK4 left out",
     expected = "is missing from the measurement",
     {
         let mut m = measure_all::<f64>();
         m.pop();
-        check_measured(&m, &built(), f64::edge())
+        check_complete(&m, &built())
     }
 );
