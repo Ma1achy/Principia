@@ -6,9 +6,31 @@
 
 ## Part 1 — What encode is: a quotient map onto a section
 
-*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
+*[mirror-step removal (R-865, R-898, R-919): rewritten 14 Nov 2026 by TASK-M2-107 to the decoder TASK-M2-57 builds, with R-898's periodic `β` and R-919's one `β` link; in force when TASK-M2-57 merges, having passed R-898's conversion test; until then each *Was* below describes the built decoder on `main`, and R-82, R-438 and R-544 stand. In the target, `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to that target, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
 
-The forward decode `D: z → (m, r, p)` lands on a **canonical section** of physical state space: CoM at origin, total momentum zero, `ρ̃` on +x, `λ̃_y ≥ 0`, `I = 1`. Encode `E` is the composition
+The forward decode `D: z → (m, r, p)` lands on a **canonical section** of physical state space: CoM at origin, total momentum zero, `ρ̃` on +x, `I = 1`, `λ̃_y` of either sign (both orientations, R-865). Encode `E` is the composition
+
+```
+E  =  (block/chart inverses)  ∘  C
+```
+
+where `C` is **canonicalisation**: the quotient map from an arbitrary physical state onto that section. It has no mirror step (R-865): a lower-half state keeps `λ̃_y < 0`, and Part 3's `β` is the signed angle, `β ∈ (π, 2π)` there (`principia_dd_encode.md` § 3.2). The gauge group being quotiented:
+
+```
+G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ scale
+```
+
+The mirror `Π = diag(1, −1)` is not in it: it acts on `z`, as T1 says.
+
+**The three theorems (the contract):**
+
+- **T1 (well-defined, and equivariant under the mirror).** `E(g·x) = E(x)` for all `g ∈ G`: encode is constant on gauge orbits. This *requires* deterministic tie-breaking at the poles (`ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13; `λ̃ = 0` gives `β = 0`, R-437). The mirror maps `z` to the mirrored `z`: `E(Π·x)` is `E(x)` with `z_β → 2π̂ − z_β` (`π̂` fixed, and `0` sent to `2π̂`, the same point on the circle), the momentum controls `Π` reflects negated and so `L_z` negated, every other control unchanged, to float tolerance, `z_β` in both clauses compared by its distance on the circle (`principia_dd_encode.md` § 3.3; `principia_dd_decoder.md` § 3.2, "The distance between two `z_β`").
+- **T2 (right inverse).** `E(D(z)) = z` up to float, for all `z` in the hypercube interior away from clamps, `z_β` compared by its distance on the circle, `E` returning it on its representative in `[0, 2π̂]` (`principia_dd_decoder.md` § 3.2). Decoded states are already canonical, on every chart, the shape sphere's included, so this exercises only the block inverses and their numerics. Residual bounded by the conditioning `κ(z)` (Part 4).
+- **T3 (left inverse modulo gauge).** `D(E(x)) = C(x)` — you get back the **canonical representative of x's orbit, never x itself** (unless x was already canonical). Position, orientation and scale of the input are deliberately discarded, never its parity; the physics is preserved up to the corresponding transformation of the trajectory.
+
+**The classic bug, called out once, inherited everywhere:** every rigid operation in `C` acts on the **full phase-space state — positions *and* momenta**. The rotation taking `ρ̃` to +x rotates every `p_i` identically. Rotating configuration only (the bug an agent will write) silently changes the physics, producing a state on the manifold that is *not* gauge-equivalent to the input. The same holds for the mirror wherever a test or a gauge sweep applies one: it reflects every `r_i` and every `p_i`, `L_z → −L_z`, prograde and retrograde exchanged; a configuration-only mirror flips the shape but not `L_z`.
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* Part 1 is rewritten to the decoder without its mirror step. *Was:* "The forward decode `D: z → (m, r, p)` lands on a **canonical section** of physical state space: CoM at origin, total momentum zero, `ρ̃` on +x, `λ̃_y ≥ 0`, `I = 1`. Encode `E` is the composition
 
 ```
 E  =  (block/chart inverses)  ∘  C
@@ -23,10 +45,10 @@ G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ s
 **The three theorems (the contract):**
 
 - **T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no mirror, R-82; `ρ̃ = 0` is excluded — exactly coincident bodies can't be represented, and the lookup range check catches them with `lookup_clamped`, R-13). T1 holds for every `g` off the mirror band. On `|λ̃_y| ≤ δ_λ`, collinear states included, it holds for translations, boosts, rotations and scalings, and `x` and `Π·x` encode as two distinct `z`, the mirror's two sides both kept; R-82 is unchanged (R-547, RQ-360).
-- **T2 (right inverse).** `E(D(z)) = z` up to float, for all `z` in the hypercube interior away from clamps. Decoded states are already canonical, so this exercises only the block inverses and their numerics, except on the shape sphere chart (R-544): there a lower-hemisphere pixel decodes to its own system, off `C`'s section (`λ̃_y < −δ_λ`), so `D(E(x))` is `C(x)`, the mirror image `Π·x` to rounding, and T2 on that chart compares `D(E(x))` against `C(x)`, as T3 does (applied per R-369, a mechanical consequence of R-544; TASK-M2-43's pre-flight). *Was:* "Decoded states are already canonical, so this exercises only the block inverses and their numerics." Residual bounded by the conditioning `κ(z)` (Part 4).
+- **T2 (right inverse).** `E(D(z)) = z` up to float, for all `z` in the hypercube interior away from clamps. Decoded states are already canonical, so this exercises only the block inverses and their numerics, except on the shape sphere chart (R-544): there a lower-hemisphere pixel decodes to its own system, off `C`'s section (`λ̃_y < −δ_λ`), so `D(E(x))` is `C(x)`, the mirror image `Π·x` to rounding, and T2 on that chart compares `D(E(x))` against `C(x)`, as T3 does (applied per R-369, a mechanical consequence of R-544; TASK-M2-43's pre-flight). *Was:* 'Decoded states are already canonical, so this exercises only the block inverses and their numerics.' Residual bounded by the conditioning `κ(z)` (Part 4).
 - **T3 (left inverse modulo gauge).** `D(E(x)) = C(x)` — you get back the **canonical representative of x's orbit, never x itself** (unless x was already canonical). Position, orientation, scale, and possibly parity of the input are deliberately discarded; the physics is preserved up to the corresponding transformation of the trajectory.
 
-**The classic bug, called out once, inherited everywhere:** every rigid operation in `C` acts on the **full phase-space state — positions *and* momenta**. The rotation taking `ρ̃` to +x rotates every `p_i` identically; the mirror reflects every `p_i` through the x-axis. Mirroring configuration only (the bug an agent will write) silently changes the physics: it flips the shape but not `L_z`, producing a state on the manifold that is *not* gauge-equivalent to the input. Under the correct full-state mirror, `L_z → −L_z` and prograde/retrograde flip — that is parity acting on the whole system, dynamically consistent (the trajectory is the mirror of the original). Encode surfaces a **`lookup_mirrored`** notice when it fires, because the user's entered `L_z` sign has changed frame.
+**The classic bug, called out once, inherited everywhere:** every rigid operation in `C` acts on the **full phase-space state — positions *and* momenta**. The rotation taking `ρ̃` to +x rotates every `p_i` identically; the mirror reflects every `p_i` through the x-axis. Mirroring configuration only (the bug an agent will write) silently changes the physics: it flips the shape but not `L_z`, producing a state on the manifold that is *not* gauge-equivalent to the input. Under the correct full-state mirror, `L_z → −L_z` and prograde/retrograde flip — that is parity acting on the whole system, dynamically consistent (the trajectory is the mirror of the original). Encode surfaces a **`lookup_mirrored`** notice when it fires, because the user's entered `L_z` sign has changed frame."
 
 ---
 
@@ -64,35 +86,66 @@ All three are exact closed forms on the canonical section. Quoted with the forwa
 ```
 clamp `|μ_k| ≤ (1−ε_μ)μ_max`, `ε_μ = 10⁻⁶`. Burrau shortcut at shape ν: `μ₁ = log(b/c)`, `μ₂ = log(a/c)`.
 
-**Configuration** (forward: `α = (π/2)·σ(z_α)`, `β = π·σ(z_β)`): from physical positions, translate to CoM,
-form $\boldsymbol\rho = \mathbf r_1 - \mathbf r_0$ and $\boldsymbol\lambda = \mathbf r_2 - (m_0\mathbf r_0 + m_1\mathbf r_1)/M_{01}$, mass-weight,
+**Configuration** (forward: `α = (π/2)·σ(z_α)`, `β = z_β`, `periodic_beta`, R-898, R-919): from physical positions,
+translate to CoM, form $\boldsymbol\rho = \mathbf r_1 - \mathbf r_0$ and $\boldsymbol\lambda = \mathbf r_2 - (m_0\mathbf r_0 + m_1\mathbf r_1)/M_{01}$, mass-weight,
 canonicalise, then
 
 ```
-α = atan2(‖λ̃‖, ‖ρ̃‖),   β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π]
-s_α = 2α/π,   s_β = β/π,   z = logit(s)
+α = atan2(‖λ̃‖, ‖ρ̃‖),   β = the signed angle of λ̃ onto [0, 2π̂]   (principia_dd_encode.md §3.2)
+s_α = 2α/π,   z_α = logit(s_α),   z_β = β   (periodic_beta's inverse: no clamp, no s_β)
 ```
 
 At `λ̃ = 0`, the `α = 0` pole, `β` is 0, whatever the signs of the zeros, chosen by a select on `λ̃_x = 0` and
 `λ̃_y = 0`, not obtained from `atan2(0, 0)`, which GLSL.std.450 and WGSL leave undefined; `α`'s operands are never both
 0, since `‖ρ̃‖² + ‖λ̃‖² = I = 1` (R-437; `principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole").
 
-`β` reads `|λ̃_y|`, the mirror's quotient, for `β` only (R-438): `β ∈ [0, π]` holds because it does, not by the mirror
-alone, since the mirror's deadband leaves `λ̃_y ∈ [−δ_λ, 0]` unmirrored (R-82, unchanged). `|λ̃_y|` is read by `abs`,
-never by `max`, whose `max(−0, +0)` can return `−0` (`principia_dd_encode.md` §3.1).
+`β` reads `λ̃_y` with its sign: `C` has no mirror step (R-865), so a lower-half state, `λ̃_y < 0`, gives
+`β = atan2(λ̃_y, λ̃_x) + 2π̂`, in `(π̂, 2π̂]` to rounding, and an upper-half state `atan2(λ̃_y, λ̃_x)` selected into
+`[+0, π̂]` (`principia_dd_encode.md` §3.2, "The signed encode of `β`"). No `abs` is taken.
 
 On the `−x` half-axis, where `λ̃_y` compares equal to 0 (true for `±0`) and `λ̃_x < 0`, `β` is `π̂`, R-417's image of π,
-chosen by a select, not taken from `atan2` (R-438; physics review 5532062124 P1, applied per R-369). `abs` pins the
-zero's sign only as far as `atan2`'s operand: WGSL may ignore the sign of a zero, as may Vulkan without
-`SignedZeroInfNanPreserve` and Metal's fast-math, so the generated encode's `atan2(+0, x < 0)` can return `−π`, which
-`s_β` would clamp to the `β = 0` end. With the pole's select above, `β` is 0 at `λ̃ = 0`, `π̂` on the `−x` half-axis and
-`atan2(|λ̃_y|, λ̃_x)` elsewhere, each case chosen by a comparison with 0, as `rho_angle`'s antiparallel case is
-(`principia_dd_decoder.md` §3.6); CPU and GPU agree there, `±0` operands included (`principia_dd_encode.md` §3.1).
+chosen by a select, not taken from `atan2` (R-438; physics review 5532062124 P1, applied per R-369). WGSL may ignore
+the sign of a zero, as may Vulkan without `SignedZeroInfNanPreserve` and Metal's fast-math, so the generated encode's
+`atan2(±0, x < 0)` can return `−π` or `π`. With the pole's select above, `β` is 0 at `λ̃ = 0`, `π̂` on the `−x`
+half-axis and the signed cases elsewhere, each case chosen by a comparison with 0, as `rho_angle`'s antiparallel case
+is (`principia_dd_decoder.md` §3.6); CPU and GPU agree there, `±0` operands included (`principia_dd_encode.md` §3.2).
 
 `s_α = 2α/π` is the $\alpha_{\min} = 0$ case of the general inverse
 $s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. $\alpha_{\min} = 0$
 (R-21). `μ_max = 5` and `q_max = 2` are settled (R-10), as the defaults of two tunable link parameters since R-481; the inverses and the clamps read the active value.
-`s` clamped into `[ε_z, 1−ε_z]`, `ε_z = 10⁻⁶`.
+`s_α` clamped into `[ε_z, 1−ε_z]`, `ε_z = 10⁻⁶`; `z_β` has no clamp.
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* the Configuration inverse is the periodic `β`'s and the signed encode's. *Was:*
+
+> **Configuration** (forward: `α = (π/2)·σ(z_α)`, `β = π·σ(z_β)`): from physical positions, translate to CoM,
+> form $\boldsymbol\rho = \mathbf r_1 - \mathbf r_0$ and $\boldsymbol\lambda = \mathbf r_2 - (m_0\mathbf r_0 + m_1\mathbf r_1)/M_{01}$, mass-weight,
+> canonicalise, then
+> 
+> ```
+> α = atan2(‖λ̃‖, ‖ρ̃‖),   β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π]
+> s_α = 2α/π,   s_β = β/π,   z = logit(s)
+> ```
+> 
+> At `λ̃ = 0`, the `α = 0` pole, `β` is 0, whatever the signs of the zeros, chosen by a select on `λ̃_x = 0` and
+> `λ̃_y = 0`, not obtained from `atan2(0, 0)`, which GLSL.std.450 and WGSL leave undefined; `α`'s operands are never both
+> 0, since `‖ρ̃‖² + ‖λ̃‖² = I = 1` (R-437; `principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole").
+> 
+> `β` reads `|λ̃_y|`, the mirror's quotient, for `β` only (R-438): `β ∈ [0, π]` holds because it does, not by the mirror
+> alone, since the mirror's deadband leaves `λ̃_y ∈ [−δ_λ, 0]` unmirrored (R-82, unchanged). `|λ̃_y|` is read by `abs`,
+> never by `max`, whose `max(−0, +0)` can return `−0` (`principia_dd_encode.md` §3.1).
+> 
+> On the `−x` half-axis, where `λ̃_y` compares equal to 0 (true for `±0`) and `λ̃_x < 0`, `β` is `π̂`, R-417's image of π,
+> chosen by a select, not taken from `atan2` (R-438; physics review 5532062124 P1, applied per R-369). `abs` pins the
+> zero's sign only as far as `atan2`'s operand: WGSL may ignore the sign of a zero, as may Vulkan without
+> `SignedZeroInfNanPreserve` and Metal's fast-math, so the generated encode's `atan2(+0, x < 0)` can return `−π`, which
+> `s_β` would clamp to the `β = 0` end. With the pole's select above, `β` is 0 at `λ̃ = 0`, `π̂` on the `−x` half-axis and
+> `atan2(|λ̃_y|, λ̃_x)` elsewhere, each case chosen by a comparison with 0, as `rho_angle`'s antiparallel case is
+> (`principia_dd_decoder.md` §3.6); CPU and GPU agree there, `±0` operands included (`principia_dd_encode.md` §3.1).
+> 
+> `s_α = 2α/π` is the $\alpha_{\min} = 0$ case of the general inverse
+> $s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. $\alpha_{\min} = 0$
+> (R-21). `μ_max = 5` and `q_max = 2` are settled (R-10), as the defaults of two tunable link parameters since R-481; the inverses and the clamps read the active value.
+> `s` clamped into `[ε_z, 1−ε_z]`, `ε_z = 10⁻⁶`.
 
 **Free momentum** (forward: `q_k = q_max·(2σ(z)−1)`): invert Jacobi, `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p_λ`, then
 
@@ -135,8 +188,8 @@ R_x = max(1, maxⱼ ‖rⱼ‖)        P_x = max(1, maxⱼ ‖pⱼ‖)
   hemisphere; they are kept with R-544 beside them, not re-measured (R-544, "Results measured under one hemisphere";
   applied per R-369).
 - **Interior and clamp-adjacent** (applied per R-369, TASK-M2-16). Each control is read off the state by Part 3's own
-  formulas. A sample is interior when every control is clear of its clamp by a factor of two: `s_α`, `s_β` and `s_q`
-  in `[2ε, 1 − 2ε]` (their clamp `[ε, 1 − ε]`) and `|μₖ| ≤ (1 − 2ε_μ)·μ_max` (its clamp `(1 − ε_μ)·μ_max`); T2 holds
+  formulas. A sample is interior when every control is clear of its clamp by a factor of two: `s_α` and `s_q` (`z_β`
+  has no clamp, R-898; *was:* "`s_α`, `s_β` and `s_q`", the built decoder's until TASK-M2-57 merges) in `[2ε, 1 − 2ε]` (their clamp `[ε, 1 − ε]`) and `|μₖ| ≤ (1 − 2ε_μ)·μ_max` (its clamp `(1 − ε_μ)·μ_max`); T2 holds
   it to `ε_phys`. A control past its clamp by the same factor, `s` within `ε/2` of 0 or 1 or `|μₖ| ≥ (1 − ε_μ/2)·μ_max`,
   is clamp-adjacent and must set its `lookup_clamped` bit; a control clear of its clamp must leave its bit unset.
 
@@ -182,14 +235,23 @@ differentiable at `x`.
   by the central difference `(E(x + hₖeₖ) − E(x − hₖeₖ))/(2hₖ)`, `hₖ = ε_R^{1/3}·max(1, |xₖ|)`, divided by `W`'s entry
   at `x` for component `k`, and `σ_max` by one-sided Jacobi rotations on the transpose's eight columns, so no Gram
   matrix is formed. Where `E` is not differentiable at `x` (a clamp or an `α`-pole within `hₖ`), the difference gives a
-  large finite value for `+∞`.
+  large finite value for `+∞`. The `z_β` component of that difference is `δ(E(x + hₖeₖ)[β], E(x − hₖeₖ)[β])/(2hₖ)`, `δ`
+  the signed difference on the circle (`principia_dd_decoder.md` § 3.2, "The distance between two `z_β`"), so a state on
+  the encode's seam, `β = 0` off the pole, gets the finite local derivative, not one of order `π/hₖ`; the `α`-pole stays
+  `+∞`. *14 Nov 2026 (R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread 4573289687 of PR #533), the
+  target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:* no such
+  sentence (an addition): `z_β`'s component was subtracted on the line, as every other's.
 - **The mass columns** (applied per R-369, TASK-M2-20; physics review of PR #294). Moving `mₖ` alone takes the state
   off the simplex, `Σmᵢ = 1 ± hₖ`: the one use of encode outside its precondition `Σmᵢ = 1` (canon.rs, encode). Those
   columns differentiate encode's own formulas off the simplex, the total read as given, not renormalised: `C`'s
   centre of mass and total momentum with `M` taken as 1, and the mass block's inverse on the masses as they stand. A
   mass within one step of zero, `mₖ ≤ hₖ`, takes the three-point forward difference
   `(4E(x + hₖeₖ) − 3E(x) − E(x + 2hₖeₖ))/(2hₖ)` instead, so no mass reaches zero or below, where the mass guard's
-  substitution would put a kink in the difference.
+  substitution would put a kink in the difference. Before combining, the stencil unwraps each `z_β` relative to
+  `E(x)`'s: `E(x + jhₖeₖ)[β]` is read as `E(x)[β] + δ(E(x + jhₖeₖ)[β], E(x)[β])` for `j = 1, 2` (`δ` as above). *14 Nov
+  2026 (R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread 4573289687 of PR #533), the target TASK-M2-57
+  builds, in force when it merges; until then the Was describes the built decoder:* *Was:* no such sentence (an
+  addition): the stencil combined `z_β`'s components on the line, as every other's.
 
 ---
 
@@ -197,7 +259,7 @@ differentiable at `x`.
 
 **Kind 1 — raw latent.** Read the component. Exact, unconditional.
 
-**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions. **The shape sphere chart's point is the state's signed `n̂`** (R-544): its lookup reads the shape from `C(x)` with step 3's mirror undone where `lookup_mirrored` is set, so `x` and its mirror `Π·x` land at `(θ, φ)` and `(θ, π − φ)`, two pixels, two systems. T1 stands for `z` and for every other chart; only the shape sphere's chart point keeps the mirror's sign.
+**Kind 2 — derived-in-block.** Block inverse (Part 3) **plus the same residual convention as the forward axis**. The convention is part of the axis's identity: encoding "m₀ = 0.4" under the hold-`m₁:m₂` convention and under the hold-`m₁=m₂` convention give different z, and the round trip only closes if encode uses the axis's own convention. One convention, declared once, used both directions. **The shape sphere chart's point is the state's signed `n̂`** (R-544): its lookup reads the signed `n̂` from `C(x)`, which has no mirror step (R-865), so `x` and its mirror `Π·x` land at `(θ, φ)` and `(θ, π − φ)`, two pixels, two systems. T1 stands for `z` and for every other chart; only the shape sphere's chart point keeps the mirror's sign. *14 Nov 2026 (R-865, R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread 4572866103 of PR #533), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:* "its lookup reads the shape from `C(x)` with step 3's mirror undone where `lookup_mirrored` is set, so `x` and its mirror `Π·x` land at `(θ, φ)` and `(θ, π − φ)`, two pixels, two systems."
 
 **Kind 3 — invariant.** Two directions, sharply different:
 
@@ -277,17 +339,17 @@ non-Burrau chart to no point of physical meaning.
 **The canonical inverse policy.** The original five steps were: translate to CoM; canonicalise; invert into the
 current chart or else latent z; among several valid inverses take the smallest latent norm; surface any clamping.
 Completed, with two additions (step 0; step 5's resolution) and the full-state rule made explicit. The order is
-normative (R-23): **1a → 0 → 1b → 2 → 3**, then 4–6. CoM subtraction precedes the `I` computation, because `I` is
+normative (R-23): **1a → 0 → 1b → 2**, then 4–6, step 3 left empty (R-865; *was:* "**1a → 0 → 1b → 2 → 3**, then 4–6"). CoM subtraction precedes the `I` computation, because `I` is
 CoM-frame-defined.
 
 - **1a. Subtract the CoM** — positions to the CoM frame, so `I_in` is defined.
 - **0. Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`; notice `lookup_rescaled`. Skipped where `|I_in − 1| ≤ τ_I` (`λ = 1`, `r` and `p` unchanged, no notice); elsewhere in two steps, first by a power of two (exact), then by the remainder, so `I_in` neither underflows nor overflows for any finite state with the bodies apart; `I_in = 0`, the bodies coinciding, keeps the select: divisor 1, `λ = 1`, `p = 0`, `lookup_clamped`, `φ = +0` (R-547, RQ-295, RQ-296).
 - **1b. Subtract the boost** — the momentum frame (`p_i ← p_i − m_i P_tot/M`; total momentum zero).
 - **2. Rotate `ρ̃ → +x`** — the same rotation applied to **all positions and all momenta**. `ρ̃ = 0` (exactly coincident inner pair) can't be represented → `lookup_clamped` (R-13).
-- **3. Mirror iff `λ̃_y < −δ_λ`** (`λ̃ = √μ_λ·λ`, `δ_λ = 10⁻¹²`) — reflect the **full state** (every `r_i` and every `p_i`) through the x-axis. Tie `|λ̃_y| ≤ δ_λ` → no mirror, deterministic (R-82); T1 depends on it. Notice `lookup_mirrored` (the user's `L_z` sign has flipped frame).
+- **3. (none)** — no mirror step (R-865): `λ̃_y` keeps its sign, a lower-half state encoding to `β ∈ (π, 2π)`; the notices word's bit 1, `lookup_mirrored`, is retired, never set. The number is kept so steps 4 to 6 keep theirs. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:* "**3. Mirror iff `λ̃_y < −δ_λ`** (`λ̃ = √μ_λ·λ`, `δ_λ = 10⁻¹²`) — reflect the **full state** (every `r_i` and every `p_i`) through the x-axis. Tie `|λ̃_y| ≤ δ_λ` → no mirror, deterministic (R-82); T1 depends on it. Notice `lookup_mirrored` (the user's `L_z` sign has flipped frame)."
 - **4. Invert into the active chart** where possible (Part 5, by axis kind), otherwise into latent z (always possible via Part 3).
 - **5. Fibre choice**: the chart's own forward construction is the canonical representative (encode reuses decode); smallest-latent-norm only as the documented fallback where no construction exists.
-- **6. Validate** — the three layers below, in order, with project / clamp / reject and every flag surfaced (`lookup_clamped`, `lookup_rescaled`, `lookup_mirrored`).
+- **6. Validate** — the three layers below, in order, with project / clamp / reject and every flag surfaced (`lookup_clamped`, `lookup_rescaled`; R-865; *was:* "(`lookup_clamped`, `lookup_rescaled`, `lookup_mirrored`)").
 
 **Where possible, at step 4** (R-72, applied per R-369; REQ-ENC-008). The active chart represents `x` when the
 chart point `c(x)`, read off `C(x)` axis by axis (Part 5), decodes back to it: `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`,
@@ -301,14 +363,12 @@ On a curve chart (Part 5, kind 4) `c(x)`'s curve coordinate is kind 4's at REQ-E
 tolerance is the lookup's to pass, as `‖·‖_phys` and `ε_phys` are. At a tolerance of 0 such a chart places essentially
 no state, rounding alone putting `d > 0` on its own curve, so every state would land in latent `z`.
 
-**On the shape sphere chart** (R-544; physics review 5603309678 of PR #273, P1, applied per R-369) the decode runs `C`
-with step 3 not taken, so its states lie on that chart's own section, `λ̃_y` keeping its sign. The comparison there is
-against `C(x)` with step 3's mirror undone on the **full state**, every `r_i` and every `p_i` (`Π·C(x)` where
-`lookup_mirrored` is set, `C(x)` otherwise), and `c(x)` is the signed `n̂` (Part 5, kind 2). So a lower-hemisphere `x`
-whose masses and unmirrored body-frame momenta are the slice's lands on the chart at its signed point and decodes back
-to itself, `L_z`'s sign kept; its mirror `Π·x` lands at `(θ, π − φ)` only when the slice holds `Π·x`'s momenta, and
-otherwise goes to latent `z`. Comparing against the mirrored `C(x)` would send every lower-hemisphere state to latent
-`z`. Every other chart compares against `C(x)` as above.
+**On the shape sphere chart** (R-544; physics review 5603309678 of PR #273, P1, applied per R-369) the decode runs the
+one `C`, which has no mirror step (R-865), so its states keep `λ̃_y`'s sign, and the comparison is against `C(x)`, as
+on every chart; `c(x)` is the signed `n̂` (Part 5, kind 2). So a lower-hemisphere `x` whose masses and body-frame
+momenta are the slice's lands on the chart at its signed point and decodes back to itself, `L_z`'s sign kept; its
+mirror `Π·x` lands at `(θ, π − φ)` only when the slice holds `Π·x`'s momenta, and otherwise goes to latent `z`.
+Comparing against a mirrored `C(x)` would send every lower-hemisphere state to latent `z`. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:* "the decode runs `C` with step 3 not taken, so its states lie on that chart's own section, `λ̃_y` keeping its sign. The comparison there is against `C(x)` with step 3's mirror undone on the **full state**, every `r_i` and every `p_i` (`Π·C(x)` where `lookup_mirrored` is set, `C(x)` otherwise), and `c(x)` is the signed `n̂` (Part 5, kind 2). So a lower-hemisphere `x` whose masses and unmirrored body-frame momenta are the slice's lands on the chart at its signed point and decodes back to itself, `L_z`'s sign kept; its mirror `Π·x` lands at `(θ, π − φ)` only when the slice holds `Π·x`'s momenta, and otherwise goes to latent `z`. Comparing against the mirrored `C(x)` would send every lower-hemisphere state to latent `z`. Every other chart compares against `C(x)` as above."
 
 ### Chart-aware validation
 
@@ -336,7 +396,9 @@ coordinates and checks each shown axis on its own (R-538 TF2.1; `principia_lines
    can't be represented, and layer 1's range check catches them with `lookup_clamped`.
 
 **Layer 1's space and bounds** (R-72; REQ-ENC-023; TASK-M2-19). *[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β`
-becomes a periodic angle, the controls' space `ℝ × S¹ × ℝ⁶`; this stands as written until TASK-M2-57 merges.]* The controls `z ∈ ℝ⁸` are unbounded: each is a
+becomes a periodic angle, the controls' space `ℝ × S¹ × ℝ⁶`; rewritten 14 Nov 2026 by TASK-M2-107 to the target TASK-M2-57 builds, in force when it merges, the Was describing `main` until then: `z_β` has no bound and no
+clamp, `z_β = β` (`principia_dd_decoder.md` § 3.2), and what follows on `s_β` and its clamp reads for the retired links
+only. Was: "this stands as written until TASK-M2-57 merges."]* The controls `z ∈ ℝ⁸` are unbounded: each is a
 logit or an artanh, and every real `z` decodes. "$z_k \in [0,1]$" is read in the space each control's link maps it
 into before its affine scale, Part 3's clamp space: `s_α = 2α/π`, `s_β = β/π` and `s_qk = ½(q_k/q_max + 1)`, each
 `σ(z_k)` under the default links, and for the masses `μ_k/μ_max = tanh(z_μk)`. The bounds are the clamps', not the
@@ -397,18 +459,16 @@ are the masses `mᵢ`, `α`, `β` and the Jacobi momenta `q = (q₀, q₁, q₂,
 - `K = (q₀² + q₁²)/2μ_ρ + (q₂² + q₃²)/2μ_λ`;
 - `U = −(m₀m₁/a + m₀m₂/r₀₂ + m₁m₂/r₁₂)`, `r₀₂ = ‖λ + (m₁/M₀₁)ρ‖` and `r₁₂ = ‖λ − (m₀/M₀₁)ρ‖`.
 
-A clamp moves its control's parameter to the clamp's image, Part 3's clamp space: `α' = (π/2)·s_α'` and
-`β' = π·s_β'` with `s' ∈ {ε_z, 1 − ε_z}`, `qₖ' = ±q_max(1 − 2ε_q)` with the sign of `qₖ`, and the masses decoded from
+A clamp moves its control's parameter to the clamp's image, Part 3's clamp space: `α' = (π/2)·s_α'` with
+`s' ∈ {ε_z, 1 − ε_z}` (`β` has none: `periodic_beta` has no clamp, R-898; *was:* "`α' = (π/2)·s_α'` and
+`β' = π·s_β'` with `s' ∈ {ε_z, 1 − ε_z}`", the built decoder's until TASK-M2-57 merges), `qₖ' = ±q_max(1 − 2ε_q)` with the sign of `qₖ`, and the masses decoded from
 `|μₖ'/μ_max| = 1 − ε_μ`. Every other parameter is kept. The move of each constant, `Δ = after − before`, by control:
 
 - **`α`**: `ΔL_z = A(a'/a − 1) + B(b'/b − 1)`. From `L_z = 0` (`B = −A`), `ΔL_z = A·sin(α − α')/(sin α·cos α)`:
   nonzero iff `A ≠ 0`, its sign `sign(A)·sign(α − α')`. `K` is kept, so `ΔE = ΔU =
   Σ_{i<j} mᵢmⱼ(rᵢⱼ' − rᵢⱼ)/(rᵢⱼrᵢⱼ')`, its sign that sum's.
-- **`β`**: with `Δβ = β' − β` and `ê = (cos β̄, sin β̄)`, `β̄ = (β + β')/2`,
-  `ΔL_z = −2b·sin(Δβ/2)·(p_λ·ê)`: nonzero iff `b ≠ 0` and `p_λ·ê ≠ 0`, its sign `−sign(Δβ)·sign(p_λ·ê)`. At a
-  collinear configuration with `p_λ` along it, `|ΔL_z| ≈ π·ε_z·b·|p_λ|`, as small as `p_λ` is. `K` and `a` are kept,
-  and `ΔE = ΔU = 2ab·(m₀m₁m₂/M₀₁)·(cos β' − cos β)·[1/(r₀₂r₀₂'(r₀₂ + r₀₂')) − 1/(r₁₂r₁₂'(r₁₂ + r₁₂'))]`, its sign
-  that product's.
+- **`β`**: no move. `periodic_beta` has no clamp (R-898), so no clamp moves `β`, and a collinear configuration
+  clamps nothing. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was (the bullet, the built decoder's `β` clamp):* "**`β`**: with `Δβ = β' − β` and `ê = (cos β̄, sin β̄)`, `β̄ = (β + β')/2`, `ΔL_z = −2b·sin(Δβ/2)·(p_λ·ê)`: nonzero iff `b ≠ 0` and `p_λ·ê ≠ 0`, its sign `−sign(Δβ)·sign(p_λ·ê)`. At a collinear configuration with `p_λ` along it, `|ΔL_z| ≈ π·ε_z·b·|p_λ|`, as small as `p_λ` is. `K` and `a` are kept, and `ΔE = ΔU = 2ab·(m₀m₁m₂/M₀₁)·(cos β' − cos β)·[1/(r₀₂r₀₂'(r₀₂ + r₀₂')) − 1/(r₁₂r₁₂'(r₁₂ + r₁₂'))]`, its sign that product's."
 - **`qₖ`**: `ΔL_z = 0` for `q₀`, `a·Δq` for `q₁`, `−b·sin β·Δq` for `q₂` and `b·cos β·Δq` for `q₃`, `Δq = qₖ' − qₖ`;
   so `q₀` never moves `L_z`, and `q₁`, `q₂` and `q₃` move it iff their coefficient is nonzero, its sign that of
   `−sign(qₖ)` times the coefficient. `U` is kept, and `ΔE = ΔK = Δq·(qₖ + qₖ')/2μ`, `μ = μ_ρ` for `q₀, q₁` and `μ_λ`
@@ -528,7 +588,7 @@ region (for example above the parabola in $(L_z, E)$).
 **Everything valid is representable, so a bad round-trip is a located bug — never "out of manifold."** The 8D reduced manifold is the complete space of planar three-body ICs modulo the quotiented symmetries; there is no *physically valid* planar IC outside it. So a foreign IC that fails to round-trip has a bug in one of: **canonicalisation** (the gauge-fix `C`, Parts 1–2 — the most dangerous, because a frame/convention mismatch can round-trip fine yet fail the *forward-behaviour* check, pointing at the wrong subsystem — the gauge-mismatch trap), **convention translation** (a paper's Jacobi weighting / body order / scale normalisation misidentified → encodes to a valid-but-wrong `z`), or **conditioning** (near boundaries/symmetric configs). Ingesting foreign ICs therefore **independently tests `C` itself** — the canonicalisation, otherwise only checked by self-consistency, is exercised on external points.
 
 **Three outputs encode must expose for ingestion** (beyond the `z` it already returns):
-1. **The canonicalisation must accept foreign frames** — run `C` (Parts 1–2: CoM, orientation, mirror tie-break, scale `λ`) on an *arbitrary* input, not just decode output. Already specified; now load-bearing for external ICs.
+1. **The canonicalisation must accept foreign frames** — run `C` (Parts 1–2: CoM, orientation, scale `λ`; no mirror step, R-865; *was:* "CoM, orientation, mirror tie-break, scale `λ`") on an *arbitrary* input, not just decode output. Already specified; now load-bearing for external ICs.
 2. **A physical-space round-trip residual** `‖D(z) − C(x)‖_phys` (Part 4 — asserted in physical units, never z) as the **bug signal**: small ⇒ faithfully ingested; large ⇒ a located defect in `C`/convention/conditioning.
 3. **A conditioning number** `κ(z)` at the point (Part 4) — distinguishing "hard but representable" (ill-conditioned, often link-fixable — see below) from "fundamental." An implementer building encode for the round-trip property *alone* would expose neither (2) nor (3); the validation suite requires both.
 
@@ -545,10 +605,10 @@ region (for example above the parabola in $(L_z, E)$).
 **Generated tests, per chart** (same discipline as the layout-table catalogue):
 
 - **T2 test:** sample z in the interior → `D` → `E` → assert **in physical space**: `‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys` (Part 4's rule; on the shape sphere chart against `C(D(z))`, Part 1's T2, R-544). Clamp-adjacent samples are asserted with the clamp flag expected, not with a tight residual.
-- **T3 test:** random physical x (random scale, orientation, offset, parity) → `E` → `D` → assert the result equals `C(x)`: shape angles match, `|L_z|` matches with sign consistent with the mirror flag, `E` matches after the recorded rescale, masses match. This is the test that catches a half-applied rigid transform — the Part 1 bug — because a config-only mirror preserves shape but breaks the `L_z` consistency check.
-- **T1 test:** `E(g·x) = E(x)` over random `g ∈ G` — the gauge-invariance sweep. Cheap, brutal, and the only test that exercises the tie-breaks.
+- **T3 test:** random physical x (random scale, orientation, offset, parity) → `E` → `D` → assert the result equals `C(x)`: shape angles match, `L_z` matches with its sign, `E` matches after the recorded rescale, masses match; with `g` the gauge element applied, `L_z(D(E(g·x))) = det(Π_g)·L_z(C(x))` (`C(x)` at `I = 1` in the CoM frame, so the rescale's `L_canon = L_in/I_in^{1/4}` and the CoM's orbital term are taken out). This is the test that catches a half-applied rigid transform — the Part 1 bug: a test-side mirror reflecting only the `rᵢ` gives a state whose `L_z` fails that comparison. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:* "assert the result equals `C(x)`: shape angles match, `|L_z|` matches with sign consistent with the mirror flag, `E` matches after the recorded rescale, masses match. This is the test that catches a half-applied rigid transform — the Part 1 bug — because a config-only mirror preserves shape but breaks the `L_z` consistency check."
+- **T1 test:** `E(g·x) = E(x)` over random `g ∈ G`, and `E(Π·x)` the mirrored `E(x)`, `z_β` compared by its distance on the circle (Part 1's T1) — the gauge-invariance and mirror-equivariance sweep (R-865; *was:* "`E(g·x) = E(x)` over random `g ∈ G` — the gauge-invariance sweep."). Cheap, brutal, and the only test that exercises the tie-breaks.
 
-**New debug view: `ROUNDTRIP`** — a fragment preset, recomputed fragment-side from `ctx.chart.z`, not a kernel mode (`principia_colour_composition.md` §6; R-75). Per pixel: `z → D → E → D → physical residual`, log-scaled. One glance certifies the block inverses, the numerics, and (on invariant charts) the encode-reuses-decode rule across the whole visible chart — the encode-side sibling of the invariant-chart-gradient view. Legitimate bright regions: clamp boundaries, feasibility edges, the mirror tie — *tagged expected*, not bugs.
+**New debug view: `ROUNDTRIP`** — a fragment preset, recomputed fragment-side from `ctx.chart.z`, not a kernel mode (`principia_colour_composition.md` §6; R-75). Per pixel: `z → D → E → D → physical residual`, log-scaled. One glance certifies the block inverses, the numerics, and (on invariant charts) the encode-reuses-decode rule across the whole visible chart — the encode-side sibling of the invariant-chart-gradient view. Legitimate bright regions: clamp boundaries, feasibility edges — *tagged expected*, not bugs. There is no mirror tie: `C` has no mirror step (R-865), and `E∘D` closes across the `β = 0` seam, `z_β` compared on the circle (`principia_dd_decoder.md` § 3.2). *14 Nov 2026 (R-865, R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread 4572866103 of PR #533), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:* "Legitimate bright regions: clamp boundaries, feasibility edges, the mirror tie — *tagged expected*, not bugs."
 
 ---
 

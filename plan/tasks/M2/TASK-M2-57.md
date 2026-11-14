@@ -1,8 +1,8 @@
 # TASK-M2-57 — The decoder's mirror step removed, latent β over the full circle, under the owner's bitwise check (R-865) ⚑
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-055, REQ-DEC-056
-- **Depends on:** TASK-M2-40
+- **Closes:** REQ-DEC-055
+- **Depends on:** TASK-M2-40, TASK-M2-107
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
@@ -39,26 +39,37 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
 - **On the same baseline commit, before any link changes: the retired-link fixture (R-921; physics review 5836519618
   of PR #469, applied per R-369),** `fixtures/retired_beta_links/pre_m2_57.json`, written through today's decoder: for
   each of `sigmoid_beta`, `tanh_beta` and `softsign_beta` as the `β` link, the pixels' latent coordinates, the four
-  blocks' links and each pixel's decoded starting state as bits, with the commit and the command that wrote it recorded
-  in the file and its row in `fixtures/README.md`. Its pixels span `z_β`: for each link, 257 values, `z_β` the link's
+  blocks' links and each pixel's decoded starting state as f32 bits, the kernel's f32 decode, with the commit and the
+  command that wrote it recorded in the file and its row in `fixtures/README.md`. The precision is f32 because that is
+  where conversion can change the last bits: at f64 the converted `z_β` is the `β` the old decode computed, so the
+  converted decode is bitwise the old one (dd_decoder § 3.2, "How a stored value converts"; physics review 5903954379 of
+  PR #533), and an f64 fixture would leave the second arm of `retired_link_fixture` unexercisable by construction (qa
+  review 5903950227 of PR #533, Q4). Its pixels span `z_β`: for each link, 257 values, `z_β` the link's
   inverse of `β = π·k/258`, `k = 1 … 257`, at the fixture's other latent coordinates. Every bit in it comes from the
   baseline commit's decoder and none is edited by hand: it may be written again only by running the baseline commit's
   decoder, never through any later decoder, and only as the bounded extension the acceptance line gives.
   REQ-TOOL-172's retired-link arm (TASK-M7-45) reads it.
-- The full-circle link and the signed encode, defined in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 (R-72;
-  REQ-DEC-056), under physics review: the link and its inverse, its seam, how a syzygy crossing reads on a latent chart,
-  why a `β ∈ [0, π]` start keeps its bits, and the pole value at `λ̃ = 0`.
+- Built to the full-circle link and the signed encode TASK-M2-107 defines in dd_decoder § 3.2 and § 3.3 and dd_encode
+  § 3.2 (REQ-DEC-056, closed there); this PR corrects them only where the built code differs, under physics review,
+  each correction keeping its *Was*. *Was (14 Nov 2026, moved to TASK-M2-107):* "The full-circle link and the signed
+  encode, defined in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2 (R-72; REQ-DEC-056), under physics review: the link
+  and its inverse, its seam, how a syzygy crossing reads on a latent chart, why a `β ∈ [0, π]` start keeps its bits,
+  and the pole value at `λ̃ = 0`."
 - The decoder without its mirror step, in `crates/kernel` (its shared CPU/GPU source, the generated WGSL regenerated
   from it), the encode to `β ∈ (π, 2π)` for a lower-half state, and the shape sphere through the one decode path.
-- The sections marked "[mirror-step removal, ruled 8 Nov 2026 (R-865 …)]" rewritten to the built decoder, each keeping
-  its old text as a "Was": canonical_spec § 3, chart_decoder_contract Part 2 and Part 5, inverse_encode_contract Part 1,
-  chart_reference § 0.4 and § 3, dd_decoder § 3.3, dd_encode § 3.2, and principia_lines.md § 8's `z_β` row; and
-  chart_composition's markers (§ 6.6's list) read with it.
+- The sections marked "[mirror-step removal …]" are rewritten by TASK-M2-107 to the decoder this task builds, in force
+  when it merges; this PR corrects them only where the built code differs, each correction keeping its *Was*.
+  *Was (14 Nov 2026, moved to TASK-M2-107):* "The sections marked "[mirror-step removal, ruled 8 Nov 2026 (R-865 …)]"
+  rewritten to the built decoder, each keeping its old text as a "Was": canonical_spec § 3, chart_decoder_contract
+  Part 2 and Part 5, inverse_encode_contract Part 1, chart_reference § 0.4 and § 3, dd_decoder § 3.3, dd_encode § 3.2,
+  and principia_lines.md § 8's `z_β` row; and chart_composition's markers (§ 6.6's list) read with it."
 - In the PR: every stored `z`, IC save file or test that relied on the old mirrored encode, and the effect on default
   windows of twice the area in `β` (the proposal's items 4 and 5).
 - **One periodic `β` link (R-919, RQ-754 Q1 (c)):** the full-circle link is the `β` block's only link. dd_generation_root
+  § 3.9's `β` rows and codomain, and REQ-GEN-013's `β` codomain and default, are rewritten to it by TASK-M2-107; the
+  registry in `crates/ledger` is built to match. *Was (14 Nov 2026, moved to TASK-M2-107):* "dd_generation_root
   § 3.9's `sigmoid_beta`, `tanh_beta` and `softsign_beta` rows and its `β ∈ [0, π]` codomain, and REQ-GEN-013's `β`
-  codomain and default, rewritten to it, each keeping its *Was*; the registry in `crates/ledger` to match. The three
+  codomain and default, rewritten to it, each keeping its *Was*; the registry in `crates/ledger` to match." The three
   bounded maps are not deleted: they stay as conversion sources only, their forward maps kept for Q3 (a)'s conversion
   and the `latent_conversion` control "a value converted by the wrong link fails", not selectable on any block and not
   counted as `β` links (physics review 5834538186 of PR #465). The PR lists
@@ -76,7 +87,7 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   each (REQ-DEC-055).
 - On the same baseline commit: `fixtures/retired_beta_links/pre_m2_57.json` written through today's decoder, before
   any link changes, for `sigmoid_beta`, `tanh_beta` and `softsign_beta`: latent coordinates, the four blocks' links and
-  decoded starting states as bits, the writing commit and command recorded, every bit from the baseline commit's
+  decoded starting states as f32 bits, the writing commit and command recorded, every bit from the baseline commit's
   decoder and none edited by hand (R-921; REQ-TOOL-172's retired-link arm).
 - `cargo test -p kernel retired_link_fixture` — once the periodic link and the conversion exist: every fixture pixel
   decoded through its retained retired link equals the fixture's starting state bit for bit; and, for each of the three
@@ -95,8 +106,9 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   as passing. Controls: a fixture state with one bit flipped fails the first arm; a fixture holding only pixels where
   conversion is exact, for a link not so listed, fails the second; and a listed link with a pixel where conversion
   changes a bit fails the second (R-921; REQ-TOOL-172).
-- `cargo test -p kernel mirror_step_removed` — a lower-half state encodes to `β ∈ (π, 2π)` and decodes back to itself,
-  not its mirror image; a latent-chart trace through a syzygy at `β = 0` and at `β = π` continuous; controls: the mirror
+- `cargo test -p kernel mirror_step_removed` — a lower-half state off the collinear axes (`|λ̃_y|` well above rounding,
+  as near the `−x` half-axis the encode can give just below `π̂`, dd_encode § 3.2) encodes to `β ∈ (π, 2π)` and decodes
+  back to itself, not its mirror image; a latent-chart trace through a syzygy at `β = 0` and at `β = π` continuous; controls: the mirror
   step left in fails, a σ-type link that jumps at `β = 0` fails (REQ-DEC-055).
 - `cargo test -p kernel latent_conversion` — every converted `z` decodes to the same system as its old `z`
   within REQ-ENC-024's `ε_phys` on the decoded state; a saved file of the old version converted on load, one of an unknown kind refused by `Saved::from_words`;
@@ -115,14 +127,61 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   a golden whose plane runs along `z_β` (the latent decode golden's `q₁[1]`, `q₂[1]`) redefined in the new coordinates,
   exempt, its regenerated hash recorded with why (R-898; R-919; REQ-DEC-055).
 - `cargo test -p kernel --test roundtrip` — with the assertions the ruling changes: T1 as the equivariance `E(Π·x)` = the
-  mirrored `z` (`β → 2π − β`, the momentum controls reflected, `L_z` negated) in place of `E(Π·x) = E(x)`, and
+  mirrored `z` (`z_β → 2π̂ − z_β` compared by its distance on the circle, `d`, dd_decoder § 3.2, as REQ-ENC-003 states
+  it; the momentum controls reflected, `L_z` negated) in place of `E(Π·x) = E(x)`, and
   `t3_half_mirror` removed under REQ-ENC-005's change (REQ-DEC-055).
+- `cargo test -p engine --test canon_gpu canonicaliser_seam_sweep` and `cargo test -p engine --test encode_gpu`, in the
+  `gpu-kernel` job after `cargo xtask build-kernel` — the signed encode's `β` case (the sign and zero tests on `λ̃_x`
+  and `λ̃_y`, built per R-547) equal bit for bit between CPU-f32 and the GPU on Metal and lavapipe over collinear states
+  in random gauge whose rotated `λ̃_y` is a rounding residue of either sign, subnormal residues included; control: the
+  plain float `λ̃` (`Canonical::lambda_t_y`, the superseded form), evaluated on the CPU under an unfused or flush-to-zero
+  emulation, decides the case differently from the unflushed CPU on at least one input
+  (REQ-DEC-002, REQ-COL-006; W11; physics review 5903954379 of PR #533, P4).
+- `cargo test -p kernel --test ingest kappa_on_beta_seam` — `κ` at a state on the `+x` half-axis of `λ̃` (`λ̃_y = 0`,
+  `λ̃_x > 0`, off the `α`-pole) is finite and agrees with `κ` at the nearby off-seam states either side of the axis
+  (`λ̃_y` of each sign), the relative tolerance stated in the test before it runs and approved in physics review
+  (R-649): `kernel::encode::ingest::weighted_encode_jacobian` takes `z_β`'s component of the central difference, and of
+  the mass columns' three-point stencil, by the signed difference on the circle `δ` (dd_decoder § 3.2, "The distance
+  between two `z_β`"; inverse_encode_contract Part 4, "How it is evaluated"); control: the same Jacobian with `z_β`
+  subtracted on the line fails, its `κ` of order `π/hₖ` (R-898; REQ-DEC-055; the physics reviewer's ruling on Codex
+  thread 4573289687 of PR #533).
+- `cargo test -p engine --test lookup latent_plane_lift` — on the oblique latent plane with centre `z_β = z_q0 = 0` and
+  `q₁ = 4e_β + 4e_q0`, the state whose encode is the plane's point at `u = 1` (`z_β = z_q0 = 4`) lands on the chart at
+  `u = 1`, its lift taken by least plane residual (dd_decoder § 3.2, "Stored reduced or unreduced"); control: the lift
+  nearest the centre, `z_β = 4 − 2π`, leaves the plane and fails (R-898; REQ-DEC-055; the physics reviewer's ruling on
+  Codex thread 4573289690 of PR #533).
+- **The restated requirements' verifies (TASK-M2-107; qa review 5903950227 of PR #533, Q1).** Each runs as its
+  requirement now states it, in the file named, the implementer's test files among them this task's to change:
+  - `cargo test -p kernel --test canon` — REQ-DEC-002 (a lower-half state keeps `λ̃_y < 0` through canonicalise; the
+    section's three conditions and idempotence); REQ-DEC-017 (`λ̃_y` at `±δ_λ`, `±0` and straddling keeps its sign,
+    the same output twice; the source check that nothing in `C` or the encode reads `δ_λ`; controls: `C` with the
+    mirror step left in fails, a `C` reading `δ_λ` fails the source check); REQ-DEC-018 (`canonical_noop` with `z_β`
+    over the full circle).
+  - `cargo test -p engine --test canon_gpu`, in the `gpu-kernel` job — REQ-DEC-002 and REQ-DEC-017
+    (`canonicaliser_seam_sweep` without the mirror fork, the line above); REQ-ENC-015
+    (`canonicaliser_canonicalise_order` with a lower-half input; control: the mirror step left in fails it).
+  - `cargo test -p kernel --test encode_core` — REQ-ENC-007 (`encode_block_inverses` with `z_β` on both halves, read
+    on the circle; `encode_collinear_beta`'s f64 sides, f32 expectation and pole landmark; `β` sets no
+    `lookup_clamped`); REQ-ENC-003 (`encode_t1_gauge` as the equivariance, at its built bound, `z_β` on the circle;
+    control: an encode with the mirror step left in fails); REQ-ENC-014 (`encode_notices`: a lower-half state raises
+    none, bit 1 set on no input).
+  - `cargo test -p engine --test encode_gpu`, in the `gpu-kernel` job — REQ-COL-006 and REQ-ENC-007 (the generated
+    encode's signed `β` against the CPU's on both halves within REQ-DEC-043's factor on the circle, `π̂` on the `−x`
+    half-axis with `±0` operands, the pole's 0).
+  - `cargo test -p kernel --test roundtrip` — REQ-ENC-005 and REQ-DEC-016 (T3: `D(E(g·x)) = C(g·x)` and
+    `L_z(D(E(g·x))) = det(Π_g)·L_z(C(x))` (`C(x)` at `I = 1` in the CoM frame, so the rescale's `L_canon = L_in/I_in^{1/4}` and the CoM's orbital term are taken out); controls: a configuration-only rotation in `C`, and a test-side mirror
+    reflecting the `rᵢ` only, each fail), with the line above.
+  - `cargo test -p kernel --test encode_by_kind encode_shape_sphere_signed` — REQ-ENC-034 with its three controls.
+  - `cargo test -p kernel --test shape_sphere` — REQ-CHART-020 (the canonical form, `Φ` then the one `C`, on both
+    hemispheres, a lower-hemisphere point keeping `n₂ < 0`).
+  - `cargo test -p ledger --test link_registry` — REQ-GEN-013 (`periodic_beta` is `β`'s default and resolves by
+    name; no selection can name `sigmoid_beta`, `tanh_beta` or `softsign_beta`; control: a selection naming one is
+    refused).
+  - `cargo test -p render --test decode_preset` — REQ-COL-006's fragment arms.
+  - Review: REQ-ENC-002 (every listed consumer calls the one encode entry point) and REQ-CHART-002 (unchanged, its
+    shape sphere through the one path).
 - Any preset, saved chart or golden (other than a preset or golden redefined under R-919) whose converted value doesn't decode to the same system within REQ-ENC-024's `ε_phys` on the decoded state, or
   whose outcome classes change, stops the task: the list goes to the owner (REQ-DEC-055).
-- Review: the full-circle link and the signed encode in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2, written to the
-  owner's answer to RQ-750 (R-898: `z_β` a periodic angle, each stored value converted once) and approved by the physics
-  reviewer, with whether a converted `z_β` is stored reduced to one period or unreduced and where a wrap enters (R-72;
-  REQ-DEC-056).
 - Review: for every saved oblique latent chart whose `q₁[1]` or `q₂[1]` is nonzero, the PR states which form it
   takes, the curved chart under the old link read through the new inverse or a planar approximation, and why: under the
   new `β` link such a plane becomes a curved surface, so a planar approximation is kept only where it passes the
@@ -133,8 +192,11 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   optional "mirror pairs counted once" statistic, which this task doesn't build).
 - **Waits on RQ-750** (`rq: RQ-750` on REQ-DEC-055 and REQ-DEC-056): physics review 5817348709 of PR #449, P1. Not
   dispatched until it is ruled.
-- **Requirements that change when this merges (R-865; physics review 5817348709, P2).** Each carries a note now; this
-  task rewrites their statements to the built decoder, each keeping a "Was": REQ-ENC-003 (T1, to the equivariance
+- **Requirements that change when this merges (R-865; physics review 5817348709, P2).** TASK-M2-107 restated
+  them to the decoder this task builds, each keeping a "Was", binding from this task's merge; this task builds the code
+  that meets them and runs their verifies (the acceptance lines above), correcting a statement only where the built code
+  differs, under physics review. *Was (14 Nov 2026, moved to TASK-M2-107):* "Each carries a note now; this task rewrites
+  their statements to the built decoder, each keeping a "Was"": REQ-ENC-003 (T1, to the equivariance
   above), REQ-ENC-005, REQ-ENC-014, REQ-ENC-007, REQ-ENC-002, REQ-ENC-015, REQ-DEC-002, REQ-DEC-016, REQ-DEC-017,
   REQ-DEC-018, REQ-ENC-034, REQ-CHART-002, REQ-CHART-020 and REQ-COL-006. **REQ-VAL-022** is a numerical gate read on
   `C(x)` "where C's mirror puts L⁻ at w = +1": its restatement is proposed here under physics review and recorded by a
@@ -195,3 +257,24 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   with more pixels, never edited by hand; controls: a fixture state with one bit flipped fails the first arm, and a
   fixture holding only pixels where conversion is exact fails the second (R-921; REQ-TOOL-172)."
 - *11 Nov 2026 (the re-plan's § A.1 and § B.1 item 3, KEEP; the re-plan's addition (`plan/charts/m2-chart-replan-addition.md`) § F.4):* its edge to TASK-M2-65 is dropped so it lands before TASK-M2-61's baseline, as TASK-M2-93 does, and the baseline is frozen once (applied per R-369: task scoping). *Was (Depends on):* "TASK-M2-40, TASK-M2-65".
+- *14 Nov 2026 (applied per R-369: task scoping, the orchestrator):* split docs first. TASK-M2-107 writes REQ-DEC-056's
+  definitions, the marked sections' rewrites, dd_generation_root § 3.9 and the fifteen requirements, and files
+  REQ-VAL-022's restatement (RQ-821); this task builds the code to them, depends on TASK-M2-107, and keeps
+  REQ-DEC-055. Its merge also waits on RQ-821's ruling. Code review 5903950686 of PR #533, F2: the Deliverables
+  and Notes items that moved are pointed to TASK-M2-107, each keeping its *Was*, and the acceptance line "Review: the
+  full-circle link and the signed encode …" is dropped, REQ-DEC-056 being TASK-M2-107's. *Was (that acceptance
+  line):* "Review: the full-circle link and the signed encode in dd_decoder § 3.2 and § 3.3 and dd_encode § 3.2, written to the owner's answer to RQ-750 (R-898: `z_β` a periodic angle, each stored value converted once) and approved by the physics reviewer, with whether a converted `z_β` is stored reduced to one period or unreduced and where a wrap enters (R-72; REQ-DEC-056)." The 32 qa files the removal breaks at compile are named
+  exceptions under R-237 and R-369 (a ruling, R-865 with R-916 and R-919, forces the change), edited in this task's qa
+  commit only (R-290). *Was (Closes):* "REQ-DEC-055, REQ-DEC-056". *Was (Depends on):* "TASK-M2-40".
+- *14 Nov 2026 (qa review 5903950227 of PR #533, Q4; applied per R-369):* the retired-link fixture's decoded states
+  are f32 bits, where the conversion's last bits can differ; at f64 the conversion is exact. *Was (Deliverables):*
+  "blocks' links and each pixel's decoded starting state as bits, with the commit and the command that wrote it recorded
+  in the file and its row in `fixtures/README.md`." *Was (acceptance):* "decoded starting states as bits,".
+- *14 Nov 2026 (qa review 5903950227 of PR #533, m3; applied per R-369):* `mirror_step_removed`'s lower-half state is
+  off the collinear axes. *Was (acceptance):* "- `cargo test -p kernel mirror_step_removed` — a lower-half state encodes
+  to `β ∈ (π, 2π)` and decodes back to itself,".
+- *14 Nov 2026 (physics review 5904074113 of PR #533, P8; applied per R-369):* the roundtrip line's mirror rule reads as
+  REQ-ENC-003's. *Was (acceptance):* "mirrored `z` (`β → 2π − β`, the momentum controls reflected, `L_z` negated)".
+- *14 Nov 2026 (physics review 5904074113 of PR #533, P9):* after this task merges, `lookup_mirrored` is never set, so
+  the IC record's `hemisphere` and `mirrored` (`principia_ic_save.md` § 3.1, REQ-TOOL-211) need a new definition; it is
+  owed by TASK-M8-84 as REQ-TOOL-236 (R-72), not by this task.

@@ -746,3 +746,165 @@ means writing a new rule after seeing a result, which is the owner's call.*
   yes. TASK-M3-77 merges closing REQ-INT-123; the order check moves to TASK-M3-79 closing REQ-INT-122. Condition:
   TASK-M3-79 must pass before the M3 gate."). R-1013 rules the split only; this question, the criterion, stays open.
 - **Waits:** TASK-M3-79 only.
+
+## RQ-821: REQ-VAL-022's inspector-roundtrip gate once `C` has no mirror step: its equilateral check reads `|w − 1|` on `C(x)` "where C's mirror puts L⁻ at w = +1", and its collinear check reads `z_β` "at its clamp image with its lookup_clamped bit set", neither of which the built decoder gives *(conflict; a one-way door, it changes what a numerical gate claims; R-865, R-898, R-919, R-551, R-176; REQ-VAL-022, REQ-VAL-121; context: TASK-M2-57, TASK-M2-107, TASK-M2-50's gate)*
+
+*Queued 14 Nov 2026 by the TASK-M2-107 implementer, as R-865 requires ("The gate's restatement is proposed by the
+task under physics review and recorded by a ruling before it merges, never changed silently in the task's PR"). Each
+quote re-read on `main` at 38eacc2a1. Nothing is applied here; TASK-M2-57's merge waits on the ruling, and only that.*
+
+*In plain English: one of the decoder's accuracy checks, the inspector round trip, was written for a decoder that
+folds every mirror-image triangle onto one side. Two of its lines measure that fold: the anticlockwise equilateral
+triangle is expected at +1 on a dial where, without the fold, it now reads −1; and a straight-line triple is expected to
+be pinned at the edge of the old angle range and flagged, where it now sits exactly at 0 or π with nothing to flag. The
+check has to be reworded to measure the same accuracy on the new decoder, and rewording a gate is the owner's call.*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-VAL-022, its statement: "a collinear state's z_β must sit at its clamp image with its
+    lookup_clamped bit set, bit for bit, and no equilateral state's may set it; an equilateral state's |w − 1| (at equal
+    masses, where L± are the poles) and a collinear state's |w| must lie within REQ-VAL-121's calibrated bound (R-551)";
+    its verify: "every collinear state's z_β at its clamp image with lookup_clamped set and no equilateral state's set,
+    judged bit for bit; max |w − 1| and max |w|, read on the canonical state C(x) (where C's mirror puts L⁻ at w = +1),
+    within REQ-VAL-121's bounds (measured 2.2×10⁻¹⁶ and 6.8×10⁻¹⁴ on C(x)); D(E(x))'s |w| reported unjudged, the clamp
+    image, sin2α·sin(π·ε_z)".
+  - `decisions.md` § R-865: "REQ-VAL-022, a numerical gate read on `C(x)` "where C's mirror puts L⁻ at w = +1". The
+    gate's restatement is proposed by the task under physics review and recorded by a ruling before it merges, never
+    changed silently in the task's PR."
+  - `docs/design/principia_dd_encode.md` § 3.2, "The signed encode of `β`" (TASK-M2-107): `β` is 0 on the `+x`
+    half-axis and `π̂` on the `−x` half-axis by selects, and `z_β = β`, `periodic_beta`'s inverse, "no clamp, no
+    `s_β`".
+- **The conflict:** without the mirror step, `C(x)` keeps a state's orientation, so `L⁻` reads `w = −1` on `C(x)`, and
+  `max |w − 1|` over the equilateral family is about 2, not 2.2×10⁻¹⁶; and a collinear state's `z_β` is exactly 0 or
+  `π̂` with no clamp, so "at its clamp image with its lookup_clamped bit set" fails on every collinear state, and
+  "D(E(x))'s |w| … the clamp image, sin2α·sin(π·ε_z)" names an image that no longer exists. The gate's numbers stand;
+  what it reads changes. Its first line fails too (physics review 5903954379 of PR #533, P1): "max ‖z − E(D(z))‖ ≤
+  1.2×10⁻¹³ over … the ball ‖z‖ < 4" draws `z_β` in `(−4, 4)`, and for every draw with `z_β < 0`, about half, `E`
+  returns `z_β + 2π̂`, so the line fails by about `2π`. "The gate's numbers stand; what it reads changes" covers this
+  line as well.
+- **The question:** how does REQ-VAL-022's gate read on the decoder without its mirror step?
+- **Options seen:** in each, the first line's `‖z − E(D(z))‖` reads `z_β`'s difference as its distance on the circle,
+  `d(a, b) = |a − b − 2π·round((a − b)/2π)|` (`principia_dd_decoder.md` § 3.2, settled by R-898 for the property tests),
+  the bound unchanged; reading it on the line instead fails on every draw with `z_β < 0`.
+  - **(a) The same accuracy, read without the fold (recommended).** "an equilateral state's `|w − w_in|` on `C(x)`, `w_in`
+    the input's own orientation (+1 for an `L⁺` input, −1 for an `L⁻` input, at equal masses, where `L±` are the
+    poles), and a collinear state's `|w|` within REQ-VAL-121's calibrated bounds; a collinear state's `z_β` at 0 (body 2
+    on the `+x` side) or `π̂` (on the `−x` side), [the collinear form, one of the two below], its `lookup_clamped` bit
+    not set by `β`, and no equilateral state's set; `D(E(x))`'s `|w|` reported unjudged". Controls (R-176): `L⁻` read
+    against `+1`, a decoder that still mirrors (an `L⁻` input at `w = +1`), a collinear `z_β` off by more than the
+    collinear form allows, and a clamp on `β`, each fail. Two corrections from the physics review of PR #533 (review
+    5903954379, P2), carried into (a); the ruling chooses between the collinear forms:
+    - **The equilateral line keeps the sign.** `||w| − 1|`, the first wording here, cannot fail on a parity error: a
+      decoder that still mirrored `L⁻` to `w = +1` passes it. Reading `w` on `C(x)` against the input's own orientation
+      does fail it. *Was (this option, its first wording):* "an equilateral state's `||w| − 1|` (at equal masses, `L⁺`
+      at `w = +1` and `L⁻` at `w = −1` on `C(x)`)".
+    - **The collinear line cannot be bitwise on the gate's own families.** They go through random gauge elements ("any
+      turn"), so `C(x)`'s `λ̃_y` is a rounding residue, not `±0`, and the encode gives about 1e-17, or `2π̂` where
+      `2π − 1e-17` rounds to it. The old line was bitwise only because the clamp absorbed that residue. The two forms:
+      **(a1)** `z_β` within a tolerance of 0 or `π̂` on the circle (`d`, `principia_dd_decoder.md` § 3.2), or on
+      `|λ̃_y|`, the tolerance calibrated under REQ-VAL-121 by measurement with its criterion written first; **(a2)**
+      "bit for bit" kept, restricted to inputs whose `C(x)` has `λ̃_y` exactly `±0` (not the same set as the
+      untransformed family members: a member with `ρ` on `−x` is turned by the rounded `π`, and its `C(x)` keeps a
+      residue of about 1e-16), every other member judged by (a1)'s tolerance (physics review 5904074113 of PR #533,
+      P10). *Was (this option, its first wording):* "a collinear state's `z_β`
+      exactly 0 (body 2 on the `+x` side) or `π̂` (on the `−x` side), bit for bit," and "`|sin π̂|`-small at f64" and
+      the control "a collinear `z_β` off by one ulp".
+    Measurable before any ruling: run `cargo xtask gate inspector-roundtrip` on TASK-M2-57's branch with the restated
+    checks; criterion, written now: the same bounds REQ-VAL-121 holds (2.2×10⁻¹⁶ and 6.8×10⁻¹⁴, measured on `C(x)`),
+    unchanged, and for (a1) the collinear residue's measured maximum reported against the tolerance set before the run.
+  - **(b) Keep `|w − 1|` by reading `Π·C(x)` where `C(x)` has `λ̃_y < 0`.** It restores the old number, but reapplies
+    in the gate the fold R-865 removed from the decoder: a reading-side half-flag of the kind R-898 rejects ("a hidden
+    half-flag is the special case this ruling removes").
+  - **(c) Retire the equilateral and collinear lines** and keep only the `‖z − E(D(z))‖` and CoM bounds. It drops a
+    check of the `w` reading the owner had measured.
+- **Recommended:** (a). It keeps every bound and family, measures the same accuracy on both orientations, and folds
+  nothing.
+- **Applied meanwhile:** nothing. REQ-VAL-022's statement and verify stand as written; its note names this entry.
+- **Waits:** TASK-M2-57's merge (R-865), and only that. TASK-M2-107 (the definitions and the docs) does not wait.
+
+## RQ-822: what the periodic `β` (no clamp) and the decoder without its mirror step leave of R-13's coincident-pair `lookup_clamped`, REQ-VAL-193's fed-arm control and REQ-VAL-021/022's `‖z − z′‖` *(conflict; a one-way door, each changes what a ruling, a gate or its control claims; R-13, R-865, R-898, R-919, R-551, R-176; REQ-ENC-019, REQ-VAL-021, REQ-VAL-022, REQ-VAL-193, REQ-ENC-036, REQ-ENC-038; context: TASK-M2-57, RQ-821)*
+
+*Queued 14 Nov 2026 by the TASK-M2-57 implementer, from the test runs of its branch (job 6060 and before). Nothing
+applied to a statement; what the branch does meanwhile is said under each item. TASK-M2-57's merge already waits on
+RQ-821.*
+
+*Carried 14 Nov 2026 into PR #533 (TASK-M2-107's fix round) from TASK-M2-57's unpushed branch (049e4ecc1), verbatim
+down to item 4; the physics reading follows it. **Narrowed: open on item 1 only.** Items 2, 3 and 4 are closed below,
+each with its reason.*
+
+*In plain English: three checks were written for a `β` that stopped at 0 and π and was clamped there. With `β` now a
+full-circle angle, (1) two bodies sitting exactly on top of each other are no longer flagged as "clamped" unless the
+pair is the inner one; (2) one gate's built-in self-test, which proves the Randomise draws can't loosen a bound, no
+longer fails, because those draws now round-trip more accurately than the bound; and (3) the round-trip distance has
+to measure `z_β` around the circle, or a state at 2π − 0.1 reads as far from one at −0.1. Each changes what a ruling or
+gate says, so each is the owner's.*
+
+1. **R-13 / REQ-ENC-019, coincident bodies.**
+   - `decisions.md` § R-13: "Exactly coincident bodies can't be represented, and the lookup ladder's range check
+     catches them with `lookup_clamped`." REQ-ENC-019's verify: "exactly coincident → lookup_clamped".
+   - Bodies 0 and 2 (or 1 and 2) coincident put body 2 on the `ρ` line, `β` exactly `π̂` or 0: under `sigmoid_beta` that
+     was `β`'s clamp, so `lookup_clamped`; under `periodic_beta` (no clamp, dd_encode § 3.2, R-898) the state is
+     representable and locks unclamped (engine `lookup_coincident_clamped`: "bodies 0 and 2 coincident are not
+     clamped"). The inner pair (`ρ = 0`) and all three (`I_in = 0`) still give `lookup_clamped`.
+   - **Options:** (a) R-13 and REQ-ENC-019 read for the inner pair and all three only; a coincident outer pair is a
+     representable `t = 0` collision state, as bodies within `r_coll` already are (recommended: nothing in the decoder
+     forbids it now). (b) Keep the notice: a coincidence test in lookup sets `lookup_clamped` for any coincident pair,
+     a new branch R-13 itself declined ("no coincident-bodies rejection branch").
+   - **Meanwhile:** the test stands as written and fails on the outer pairs.
+2. **REQ-VAL-193's control, the Randomise arm fed into REQ-VAL-021's verdict.**
+   - REQ-VAL-193's verify: "control: an arm whose maximum is fed into REQ-VAL-021's verdict fails"; the gate's line
+     "(R-176: it must fail)"; `fixtures/gates/inspector-handles/randomise_fed.json`, expected fail.
+   - Measured on the branch: the arm's maximum is 7.161×10⁻¹⁵ over both seeds (3.140×10⁻¹⁵ in the ball), below
+     REQ-VAL-021's 1.6×10⁻¹⁴, so the fed arm passes and the control cannot fire (`inspector_randomise_fed`,
+     `inspector_randomise_report`, `inspector_fixtures`). It exceeded the bound before (the old `z_β = logit(β/π)` is
+     steep near `β = 0, π`; `z_β = β` is not).
+   - **Options:** (a) the control feeds the arm into a verdict at a bound below the arm's measured maximum, stated in
+     the control's own line, the gate's bound untouched (recommended). (b) a leaky encode in the fed arm. (c) retire
+     the control, the arm now within REQ-VAL-021's bound. Nothing is tuned meanwhile (R-649).
+3. **`‖z − z′‖` with a periodic `z_β` (REQ-VAL-021, REQ-VAL-022; with RQ-821).**
+   - `E` gives `z_β ∈ [0, 2π)`; a draw in the ball `‖z‖ < 4` has `z_β ∈ (−4, 4)`, so `z_β` and `E(D(z))_β` differ by
+     2π for every draw with `z_β < 0` (`inspector_round_trip`: "a round trip of 6.283185307179586e0").
+   - **Applied in the branch, pending this ruling and RQ-821:** `validation::inspector::z_gap` takes `z_β`'s difference
+     on the circle (the nearest of `z_β + 2πk`), and `inside` reads the ball through it; every bound unchanged. R-898
+     makes `z` and `z + 2π·e_β` one point, so this is the gate's distance on the latent space, but it is a gate's
+     statement and so the owner's.
+4. **For the record (two-way, a correction): REQ-ENC-036 and REQ-ENC-038's texts lean on `β`'s clamp.**
+   inverse_encode_contract § "The class a clamp moves" keeps a `β` bullet and § "The zero class in floating point"
+   names "`β`'s clamp at a collinear configuration"; `periodic_beta` has none. The branch's tests moved to the `z_q1`
+   case (the zero band's 64 orientations) and the collinear rows now clamp nothing. The control
+   `lookup_validation_ladder_clamp_rule` ("the decoded value read through a band wider than the rounding") relied on
+   `β`'s move `∝ |p_λ|` being below the wide band; no other row's move is, so it no longer fires: a row with a move
+   that small is a physics call for TASK-M2-57's physics review.
+
+**The physics reading** (physics review 5903954379 of PR #533, and the physics consult on TASK-M2-57's code, relayed by
+the orchestrator on 14 Nov 2026; folded in by TASK-M2-107's fix round):
+- **Item 1 stays open**, recommendation (a) unchanged, with three corrections to the text above:
+  - option (b) is misdescribed: R-13 declined a coincident-bodies *rejection* branch ("no coincident-bodies rejection
+    branch", REQ-ENC-019's statement), not a notice; a coincidence test that sets `lookup_clamped` rejects nothing, so
+    R-13 does not rule it out;
+  - the asymmetry: the inner pair (`ρ = 0`) still clamps, through `α`'s clamp and step 2, and the outer pair does not,
+    so whether a coincidence raises the notice depends on how the bodies are labelled;
+  - the decoded lock is not exactly coincident: a coincident outer pair decodes to a `t = 0` collision within `r_coll`,
+    which R-13 calls "a real outcome", so (a)'s reading is a state the collision detector already fences, not a
+    representability hole.
+- **Item 2 is closed, not open.** The control's settled form needs no ruling and tunes nothing: the fed arm is fed into
+  REQ-VAL-021's verdict as the control says, and the check catches it by the verdict's population at its recorded seed
+  (the verdict counts draws that are not its own arm's), or by an injected over-bound draw in the fed arm. Either fires
+  whatever the Randomise arm's own maximum is, so the control can fail again with every bound unchanged (R-176, R-649).
+  Options (a) to (c) above are not needed.
+- **Item 3 is closed, settled by R-898.** `z` and `z + 2π·e_β` are one point, so `z_β`'s difference is its distance on
+  the circle, `d(a, b) = |a − b − 2π·round((a − b)/2π)|`, now defined in `principia_dd_decoder.md` § 3.2 (physics
+  review 5903954379, P1). REQ-VAL-021's `‖Δz‖` reads it, its bound unchanged; REQ-VAL-022's first line reads it too,
+  and its restatement is RQ-821's, whose options now carry it.
+- **Item 4 is closed, a record correction.** inverse_encode_contract § "The class a clamp moves" keeps its `β` bullet
+  and `β′ = π·s_β′` clause as a *Was* noting R-898 (rewritten in PR #533); § "The zero class in floating point"
+  names `β`'s clamp only inside a *Was*. REQ-ENC-038's note records that its `β`-clamp arms have no case once
+  TASK-M2-57 merges. Which row replaces the `lookup_validation_ladder_clamp_rule` control's small move is a physics
+  call for TASK-M2-57's review, as item 4 says, not the owner's.
+- **File, section:** `decisions.md` § R-13 (quoted under item 1); `plan/requirements.yaml` REQ-ENC-019 (statement "Lookup
+  must have no coincident-bodies rejection branch: … exactly coincident bodies are caught by the range check as
+  lookup_clamped"; verify "exactly coincident → lookup_clamped"), REQ-VAL-193's verify (quoted under item 2),
+  REQ-VAL-021's verify ("max ‖Δz‖ ≤ 1.6×10⁻¹⁴"); `docs/contracts/principia_inverse_encode_contract.md` § "The class a
+  clamp moves" and § "The zero class in floating point".
+- **Applied meanwhile:** nothing to R-13 or REQ-ENC-019; TASK-M2-57's branch keeps the outer-pair test failing as
+  written (item 1). Items 2 to 4's closures are applied in TASK-M2-57's branch and PR #533's docs as above.
+- **Waits:** TASK-M2-57's merge, on item 1 only, with RQ-821.

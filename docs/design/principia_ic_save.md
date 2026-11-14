@@ -50,6 +50,10 @@ question 4, (a)). A non-finite value is refused at entry, in the constructor and
 on the reflected state; `0` otherwise, on the seam. So `mirrored ⇔ hemisphere = −1` holds by construction (applied
 per R-369, fix round 4 of PR #287, physics review 5638148080, P1). *Was:* "`hemisphere` is the sign of `λ̃_y` past `δ_λ`, `+1`, `−1`, or `0` on the seam;
 `mirrored` is the lookup's `lookup_mirrored` (R-544)."
+*[14 Nov 2026 (R-865, R-898; TASK-M2-107; physics review 5904074113 of PR #533, P9): from TASK-M2-57's merge `C` has no
+mirror step and `lookup_mirrored` is never set, so `hemisphere` and `mirrored` as defined above would record `0` and
+false for every lower-half IC. Their definition on that decoder is owed by TASK-M8-84, which builds the record (R-72;
+REQ-TOOL-236), under physics review; this paragraph stands as written until then, and no record is built before it.]*
 
 **−0 at entry** (applied per R-369, fix round 5 of PR #287, physics review 5638172877, P5). The one function that turns −0 into +0 runs at entry, in the
 constructor and on paste and open, as well as on write, so the in-memory `as_built`, `E(as_built)` and

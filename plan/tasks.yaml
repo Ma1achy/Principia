@@ -1136,9 +1136,9 @@
 - id: TASK-M2-57
   milestone: M2
   title: "The decoder's mirror step removed, latent β over the full circle, under the owner's bitwise check (R-865) ⚑"
-  depends_on: [TASK-M2-40]  # R-916 (stage 3), applied with R-919
+  depends_on: [TASK-M2-40, TASK-M2-107]  # R-916 (stage 3), applied with R-919; TASK-M2-107, the docs half of the split (applied per R-369, 14 Nov 2026)
   needs: []
-  requirements: [REQ-DEC-055, REQ-DEC-056]
+  requirements: [REQ-DEC-055]  # REQ-DEC-056 moved to TASK-M2-107 (applied per R-369, 14 Nov 2026)
   reviewers: [code, qa, physics]  # ⚑ physics review required: it changes the decoder
   pitfalls: []
 - id: TASK-M2-58
@@ -1532,6 +1532,14 @@
   needs: []
   requirements: [REQ-CHART-212]
   reviewers: [code, qa, physics, perf]
+  pitfalls: []
+- id: TASK-M2-107
+  milestone: M2
+  title: "The periodic β and the decoder without its mirror step, in the docs and the plan: REQ-DEC-056's definitions, the marked sections rewritten, one β link, fifteen requirements (R-865, R-898, R-919)"
+  depends_on: []  # split from TASK-M2-57, docs first (applied per R-369, 14 Nov 2026)
+  needs: []
+  requirements: [REQ-DEC-056]
+  reviewers: [code, qa, physics]  # docs and plan only; qa because check_plan requires it on every task
   pitfalls: []
 - id: TASK-M3-01
   milestone: M3
@@ -4150,7 +4158,7 @@
   title: "Saving an IC: the `principia.ic/1` record, copy, paste, Save IC… and Open IC…, the twin on reopening, marks in `Lines`, and the trajectory CSV with its bodies labelled 1-based (R-586, R-587)"
   depends_on: [TASK-M8-17, TASK-M8-83, TASK-M8-67, TASK-M8-58, TASK-M8-53]
   needs: [REQ-GUI-188]
-  requirements: [REQ-TOOL-211, REQ-GUI-393, REQ-GUI-394, REQ-RENDER-119, REQ-GUI-395, REQ-TOOL-212, REQ-TOOL-213, REQ-GUI-396, REQ-TOOL-215]
+  requirements: [REQ-TOOL-211, REQ-GUI-393, REQ-GUI-394, REQ-RENDER-119, REQ-GUI-395, REQ-TOOL-212, REQ-TOOL-213, REQ-GUI-396, REQ-TOOL-215, REQ-TOOL-236]
   reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M8-85

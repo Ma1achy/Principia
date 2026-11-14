@@ -50,11 +50,14 @@ construction, so the canonicaliser is a no-op away from the seam):
 
 ```
 ρ̃ = R̃ cos α · (1, 0)                        R̃ = 1        (scale gauge)
-λ̃ = R̃ sin α · (cos β, sin β)                β ∈ [0, π]   (mirror fixed)
+λ̃ = R̃ sin α · (cos β, sin β)                β ∈ S¹, read modulo 2π   (both orientations)
 
 α = α_min + (π/2 − 2α_min)·σ(z_α)            σ = logistic sigmoid
-β = π·σ(z_β)
+β = z_β                                        (periodic_beta, R-898, R-919)
 ```
+
+*14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* `β` is the periodic angle (`principia_dd_decoder.md` § 3.2). *Was:* "`λ̃ = R̃ sin α · (cos β, sin β)
+β ∈ [0, π]   (mirror fixed)`" and "`β = π·σ(z_β)`".
 
 `α_min = 0` (R-21). It is not a numerical guard; a non-zero value would only excise a polar cap, and the poles are
 fenced by the collision detector, the conditioning readout and the saturation flags. **Note the orientation, which is easy to get
@@ -93,24 +96,27 @@ p2 =  p_λ
 
 ### 0.4 Canonicalisation `C`
 
-*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
+*[mirror-step removal (R-865, R-898, R-919): rewritten 14 Nov 2026 by TASK-M2-107 to the decoder TASK-M2-57 builds, with R-898's periodic `β` and R-919's one `β` link; in force when TASK-M2-57 merges, having passed R-898's conversion test; until then each *Was* below describes the built decoder on `main`, and R-82, R-438 and R-544 stand. In the target, `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to that target, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
 
-With the canonical-frame decode both steps are no-ops away from the seam. Implement anyway, for
+With the canonical-frame decode it is a no-op, across the `λ̃_y = 0` seam as away from it. Implement anyway, for
 charts that bypass it:
 
 ```
 φ = atan2(ρ_y, ρ_x)     rotate all rᵢ, pᵢ by R(−φ)
-if λ̃_y < −δ_λ:          mirror (δ_λ = 1e−12; λ̃ = √μ_λ·λ)
-|λ̃_y| ≤ δ_λ:            no mirror (deterministic tie-break — R-82)
 ```
+
+There is no mirror step (R-865): `λ̃_y` keeps its sign. *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107), the target TASK-M2-57 builds, in force when it merges under R-898's conversion test; until then the Was describes the built decoder on `main`, and R-82, R-438 and R-544 stand:* *Was:* "With the canonical-frame decode both
+steps are no-ops away from the seam." and the two lines "`if λ̃_y < −δ_λ:          mirror (δ_λ = 1e−12; λ̃ = √μ_λ·λ)`"
+and "`|λ̃_y| ≤ δ_λ:            no mirror (deterministic tie-break — R-82)`".
 
 **`φ` at the pole (R-437).** At `ρ = 0` (the collision of bodies 0 and 1) `φ` is 0, whatever the signs of the zeros,
 so the rotation is the identity there: a select on `ρ_x = 0` and `ρ_y = 0`, not `atan2(0, 0)`, which GLSL.std.450 and
 WGSL leave undefined (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole").
 
-**After the mirror test, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0` (R-438).** The deadband is left unmirrored (R-82), so the
-encode's `β = atan2(|λ̃_y|, λ̃_x)` reads `|λ̃_y|`, and `β ∈ [0, π]` holds because it does, not by the mirror alone
-(`principia_dd_encode.md` §3.1).
+**`λ̃_y` of either sign.** The encode's `β` is the signed angle of `λ̃` onto `[0, 2π̂]`, `β ∈ (π, 2π)` for a
+lower-half state (`principia_dd_encode.md` §3.2). *Was:* "**After the mirror test, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`
+(R-438).** The deadband is left unmirrored (R-82), so the encode's `β = atan2(|λ̃_y|, λ̃_x)` reads `|λ̃_y|`, and
+`β ∈ [0, π]` holds because it does, not by the mirror alone (`principia_dd_encode.md` §3.1)."
 
 ### 0.5 Scale gauge
 
@@ -146,13 +152,15 @@ decode, never a refusal (`principia_dd_decoder.md` §3.7). *2 Nov 2026 (R-670):*
 ## 1. The 8D latent chart — the reference coordinate system
 
 ```
-z = ( z_α, z_β | z_q0, z_q1, z_q2, z_q3 | z_μ1, z_μ2 ) ∈ ℝ⁸
+z = ( z_α, z_β | z_q0, z_q1, z_q2, z_q3 | z_μ1, z_μ2 ) ∈ ℝ × S¹ × ℝ⁶
       config       momentum                 mass
 ```
 
 *[RQ-750 (a) + (c), ruled 8 Nov 2026 (R-898): `z_β` becomes a periodic angle over the full circle, so the latent space
 is `ℝ × S¹ × ℝ⁶`, `z_β` on the circle, not `ℝ⁸`; every stored latent view, saved chart and golden is converted once.
-This section stands as written until TASK-M2-57 merges, which rewrites it.]*
+Rewritten 14 Nov 2026 by TASK-M2-107 to the target TASK-M2-57 builds, in force when it merges, the Was describing `main` until then: the line above reads `∈ ℝ × S¹ × ℝ⁶`, `z_β` stored unreduced on the lift and read
+modulo `2π` (`principia_dd_decoder.md` § 3.2); "8D" below counts dimensions, `z_β` one of them. Was: "`∈ ℝ⁸`" and
+"This section stands as written until TASK-M2-57 merges, which rewrites it."]*
 
 **No latent coordinate is spent on gauge.** Rotation and scale are fixed by the canonical-frame
 decode, which is why the chart is 8D and not 10D.
@@ -513,7 +521,7 @@ all three exactly.
 
 ## 3. Shape-sphere chart `(θ, φ)`
 
-*[mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]"]*
+*[mirror-step removal (R-865, R-898, R-919): rewritten 14 Nov 2026 by TASK-M2-107 to the decoder TASK-M2-57 builds, with R-898's periodic `β` and R-919's one `β` link; in force when TASK-M2-57 merges, having passed R-898's conversion test; until then each *Was* below describes the built decoder on `main`, and R-82, R-438 and R-544 stand. In the target, `C` has no mirror step, latent `β` is a periodic angle, `β = z_β` read modulo 2π, a lower-half state encodes to `β ∈ (π, 2π)`, and every chart, the shape sphere included, decodes by one path. This section is rewritten to that target, each changed passage keeping its *Was*; the definitions are `principia_dd_decoder.md` § 3.2 (REQ-DEC-056). Was (this marker): "mirror-step removal, ruled 8 Nov 2026 (R-865, on RQ-739): the decoder's mirror step is removed and latent `β` runs over the full circle, conditional on the owner's bitwise check (every preset, saved chart and golden with `β ∈ [0, π]` reproducing unchanged), which meets the link `β = π·σ(z_β)`: RQ-750, on which the task waits. This section changes when TASK-M2-57 lands, and stands as written until then. Was: "[mirror-step proposal, 7 Nov 2026 (R-854; RQ-739): the owner's proposal to remove the decoder's mirror step, latent `β` over the full circle, would touch this section. A proposal, not applied; nothing here changes until it is ruled.]""]*
 
 The quotient of configuration space by translation, rotation and scale. `Φ_S²(u,v) = (n(θ,φ),
 m_fixed, p_fixed)` — masses and momenta held, only the **shape** varies.
@@ -526,8 +534,8 @@ half-plane (R-544; R-538 J9's frame rule: the full shape sphere is read unmirror
 it in the gauge of the configuration it builds, the inverse of the gauge the decode removes, decided on that
 configuration (§0.4, §0.5): `(p_ρ, p_λ)` turned by `R(φ)` with `C`'s `φ = atan2(ρ_y, ρ_x)` (0 at `ρ = 0`, R-437), and
 scaled by `I^{−1/4}`, the particle momenta then rebuilt by §0.3's map. So `p_fixed` is taken after the fibre-phase
-rotation, which the decode then undoes. The decode runs the shared `C` with its mirror step not taken (R-544):
-`C(Φ(u, v))` so taken has masses `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and its shape is the
+rotation, which the decode then undoes. The decode runs the shared `C`, which has no mirror step (R-865; *was:* "with its
+mirror step not taken (R-544): `C(Φ(u, v))` so taken has"), the one decode path of every chart: `C(Φ(u, v))` has masses `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and its shape is the
 pixel's own signed `n̂`. A point and its mirror `(θ, π − φ)` decode to two systems: mirror images of each other
 exactly where `p_fixed` is its own mirror image (`p_ρ,y = p_λ,y = 0`, released from rest included), and otherwise
 different systems (R-544 items 2 and 5). `I` and the fibre phase `φ_f` (§3.2) are chart parameters and pure gauge:
@@ -1113,14 +1121,15 @@ Python cross-check's anchor.
 - **Axis-aligned latent slice with `q1 = ê_α, q2 = ê_β`** equals a direct `(α,β)` sweep
   (defined per R-72, REQ-CHART-050). The **direct `(α,β)` sweep** about the slice centre `z0` maps pixel `(u, v)` to `α
   = α-link(z0_α + (2u − 1))` and `β = β-link(z0_β + (2v − 1))`, through the selection's α and β links (§0.2's `α = α_min
-  + (π/2 − 2α_min)·σ(z_α)` and `β = π·σ(z_β)` under the defaults), and builds the IC from `(α, β)` by §0.2: `ρ̃ = cos
+  + (π/2 − 2α_min)·σ(z_α)` and `β = z_β`, `periodic_beta`, `β`'s one link, R-898, R-919; *14 Nov 2026 (R-865, R-898, R-919; TASK-M2-107; physics review 5903954379 of PR #533, P3), the target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *was:* "and `β =
+  π·σ(z_β)` under the defaults"), and builds the IC from `(α, β)` by §0.2: `ρ̃ = cos
   α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)`, unweighted and reconstructed with the masses of `z0`'s mass block (§0.1), and
   the momenta of `z0`'s momentum block (§0.3). The comparison is per pixel (REQ-CHART-030), so the sweep is the one
   whose `(u, v) → (α, β)` map is the slice's own; a sweep linear in angle has the same `(α, β)` set at other pixels and
   is not it. The equality asserted: at each pixel, inside `[0,1]²` and past it, at f64 and at f32 and under every
   registered link, the slice's decode `D(z(u, v))` and the direct sweep give bitwise-equal `α`, `β` and `(m, r, p)`
   (`==`, so `+0 = −0`): the slice's `z(u, v)` is `z0` with `z_α = z0_α + (2u − 1)` and `z_β = z0_β + (2v − 1)`, exactly,
-  up to the sign of a zero.
+  up to the sign of a zero. "Every registered link" is every `α` link, with `periodic_beta` the one `β` link (R-919).
 - **`BodyPlane` bitwise unchanged**, and the Python cross-check green
 
 ### 5.3 What to report per chart
