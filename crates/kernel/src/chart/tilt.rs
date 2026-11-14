@@ -57,6 +57,14 @@
 //! point ([`TiltSpec::strip`], [`Strip`]; R-655, ruling RQ-631 (a)). Elsewhere the view is affine along that axis, and
 //! the shape sphere's pixel there is a system of its own ([`Tilted::pixel`]).
 //!
+//! **Past the edge inside the window** (R-512, ruling RQ-402, F1 and F2). Under Tip as sheet with one target and both
+//! angles set the rotation can take a window pixel's own `(a, b)` out of the chart's square. That pixel is past the
+//! chart's edge, exactly as past the window: [`Tilted`]'s [`Chart::validate`] runs the chart's check on `(a, b)`, so
+//! past a bounded edge (a warped `L_z`'s `s` on either side, the warp's `t < 0`) it is refused, not a system, and draws
+//! blank (R-470), and past the energy warp's continuing `t > 1` side (R-508 V2) it is that side's system, decoded at
+//! `(a, b)` with its hidden offset. The window is not scaled and Tip as sheet is not withheld (F2). The chart
+//! addendum's N14 brings R-932's declared kinds to these edges; until then they draw as written here.
+//!
 //! **The rank-losing corner** (R-554, ruling RQ-471 (a); R-474 R7). Under Lean each axis with one target at
 //! `|τ₁| = |τ₂| = 90°`, decided exactly on the stored angles, the window maps onto one line of systems: the chart
 //! reports `ray-degenerate`, applies no fold, weights every pixel's area 0, and every share is undefined ([`share`]).

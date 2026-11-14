@@ -517,6 +517,30 @@
   requirements: [REQ-TOOL-234]  # R-912, R-915; run 43418528499 (13 Nov 2026)
   reviewers: [code, qa]
   pitfalls: []
+- id: TASK-M0-64
+  milestone: M0
+  title: "win-self-check's guard test plants a clean checkout's config as the checkout leaves it, the sparse keys in config.worktree"
+  depends_on: []
+  needs: []
+  requirements: [REQ-TOOL-235]  # applied per R-369 (13 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-67
+  milestone: M0
+  title: "The WSL proofs print no tailnet address: one masking function in wsl.ps1 for every Report line, echo and failure"
+  depends_on: [TASK-M0-63]
+  needs: []
+  requirements: [REQ-TOOL-240]  # applied per R-369 (14 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M0-69
+  milestone: M0
+  title: "Proof 2's two `wsl.conf` lines (R-1010): `[gpu] enabled=false` and a `[boot] command=` removing the `WSLInterop` registration, the image test, the re-pin and the re-registration"
+  depends_on: [TASK-M0-63]
+  needs: []
+  requirements: [REQ-TOOL-242]  # R-1010 (14 Nov 2026)
+  reviewers: [code, qa]
+  pitfalls: []
 - id: TASK-M1-01
   milestone: M1
   title: "The read-side SimState: derived accessors and validity predicates"
@@ -4221,7 +4245,7 @@
 - id: TASK-M8-102
   milestone: M8
   title: "CPU batch: numerical inverses, their branch rule and seam"
-  depends_on: [TASK-M2-73, TASK-M4-06, TASK-M6-03, TASK-M4-34]  # R-916
+  depends_on: [TASK-M2-73, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-96]  # R-916; R-1012 (14 Nov 2026): TASK-M8-96
   needs: []
   requirements: [REQ-CHART-129, REQ-CHART-130, REQ-CHART-155]  # R-916
   reviewers: [code, qa, physics, perf]

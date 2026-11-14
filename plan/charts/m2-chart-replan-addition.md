@@ -1,5 +1,7 @@
 # M2 chart re-plan, addition: morph frames and the new chart edges against traces, contours, placement and saving
 
+**Superseded, 14 Nov 2026 (TASK-M2-58; the owner's chart re-plan corrections of 11 Nov 2026, item 3; applied per R-369: record).** The composition design's body, `docs/design/principia_chart_composition.md`, now carries the rulings this plan proposed or asked, and it is the one current design: read it, not this. This document stays as the record of how the plan was reached; its status line below is kept as written.
+
 **Status: proposed, 11 Nov 2026.** This document plans; it builds nothing and dispatches nothing. It is the third of the
 chart plans in `plan/charts/`, after the re-plan (`plan/charts/m2-chart-system-replan.md`, merged from PR #473) and its
 addendum (`plan/charts/m2-chart-addendum-extensions-axes.md`, merged from PR #476). It does two things. It plans the

@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-129, REQ-CHART-130, REQ-CHART-155
-- **Depends on:** TASK-M2-73, TASK-M4-06, TASK-M6-03, TASK-M4-34
+- **Depends on:** TASK-M2-73, TASK-M4-06, TASK-M6-03, TASK-M4-34, TASK-M8-96
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
@@ -22,6 +22,8 @@ The third lowering: an unbaked or numerical pair fills the integrator's IC buffe
 - `docs/design/principia_dd_generation_root.md` § "3.7 `QuadReduction` — completed ledger"
 - `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy"
 - `decisions.md` § "R-889 — The browser build gets a WASM CPU route too: numerical axes, unbaked closed forms and CPU-only morphs run as CPU batch in the engine's worker, labelled and not live *(closes RQ-735)*"
+- `decisions.md` § "R-1012 — RQ-817, which browser charts are "not live": option (a), with (b)'s measurement reported beside it; every browser chart runs as natively under R-926, a coarse cover in motion and the exact view at rest, with no route label, and the share of charts whose wasm CPU evaluation of a coarse cover fits one frame at 60 Hz, on TASK-M8-96's thread count and against a frame budget written before the run, is measured and reported, labelling nothing *(closes RQ-817; refines R-889)*"
+- `docs/design/principia_chart_composition.md` § "7.5 The browser build: what it gets"
 
 ## Deliverables
 - `crates/engine/src/chart_batch.rs`.
@@ -31,7 +33,8 @@ The third lowering: an unbaked or numerical pair fills the integrator's IC buffe
 ## Acceptance tests
 - `cargo test -p engine seam_jitter_flagged` — copies at the sampling note's offsets in `(u, v)`; a footprint across a numerical seam, a closed-form CPU batch row's two-root branch or mask, polar's branch line or a baked chart's mask, flagged, all `E + 1` copies kept, spread and `error_ratio` labelled `seam-contaminated`; controls: a copy dropped at the seam, the flag read from a neighbour (REQ-CHART-129).
 - `cargo test -p engine seam_refinement_masked` — a flagged footprint leaves `n_unresolved`, a mask-blanked copy included; a quad with any flagged footprint and none unresolved takes `Seam`, a mixed quad included, `n_seam` counted, no priority from `coherence`; a non-finite copy still fires; an unflagged neighbour still splits; today's registry bitwise; controls: the mask removed, the mask on an unflagged footprint, `Keep` for `Seam`, `Seam` only when every footprint is flagged (REQ-CHART-130).
-- The CPU batch route built for `wasm32` and its tests run under the wasm target in CI; a numerical chart's solve run native and wasm on one fixture, compared bit for bit, the result reported in the PR; controls: a numerical chart refused in the browser fails, a CPU batch view not labelled fails (REQ-CHART-155).
+- The chart route built for `wasm32` and its tests run under the wasm target in CI; a numerical chart's solve run native and wasm on one fixture, compared bit for bit, the result reported in the PR; controls: a numerical chart refused in the browser fails, a browser view carrying a route label of its own ("not live", "CPU batch" or the like) fails (REQ-CHART-155). *Was (14 Nov 2026, before R-1012):* "The CPU batch route built for `wasm32` and its tests run under the wasm target in CI; a numerical chart's solve run native and wasm on one fixture, compared bit for bit, the result reported in the PR; controls: a numerical chart refused in the browser fails, a CPU batch view not labelled fails (REQ-CHART-155)."
+- Benchmark (perf reviewer), in Chrome stable and Safari on the human's Mac (R-186), R-1012's measurement: a frame budget for one frame at 60 Hz, written and committed before the run (R-649); then, on the thread count TASK-M8-96 measured, per browser, each of design § 3.1's charts' wasm CPU evaluation time for a coarse cover, beside the budget, and the share of them that fits it, reported in the PR. A measurement, never a gate: it labels no chart; controls: a budget committed after the run, a figure without its browser, version, thread count or cover size, or a chart labelled by the result, each fail the review (REQ-CHART-155). The PR says this line waits for the run on the human's Mac.
 
 ## Notes
 - **Build order (R-863):** no stage of the owner's order names it, so no stage edge is made; where it goes is RQ-744 (C).
@@ -44,3 +47,4 @@ The third lowering: an unbaked or numerical pair fills the integrator's IC buffe
 - *9 Nov 2026 (R-916):* split: the numerical inverse's rule, branch and seam and the general numerical solve (REQ-CHART-107, REQ-CHART-145) are TASK-M2-73's, `crates/engine/src/chart_batch.rs`'s solver among them; this task keeps the seam's jitter and refinement, the payload's slots and the browser build. *Was (Acceptance):* the `numerical_branch_seam` and `general_numerical_solve` lines, now at TASK-M2-73.
 - *11 Nov 2026 (the re-plan's § A.1, CHANGE; entered by the re-plan's addition, `plan/charts/m2-chart-replan-addition.md` § F.4):* CPU evaluation is every view's route (R-839 superseded by R-926); its branch rule and seam masking stay, as part of the evaluator. The lines above stand as written until this task's file is rewritten under those rulings; where they differ, the rulings bind.
 - *12 Nov 2026 (the chart audit's F9):* the Goal is its *Was*: under R-926 every view is filled from the CPU's f64 evaluation (R-839 superseded); what stays is the branch rule, the seam and the browser build, as the 11 Nov note says. *Was:* "The third lowering: an unbaked or numerical pair fills the integrator's IC buffer from f64 on the CPU, labelled and not live."
+- *14 Nov 2026 (R-1012, RQ-817 (a), with (b)'s measurement reported beside it):* in the browser every chart runs as natively under R-926, a coarse cover in motion and the exact view at rest, with no route label of its own; the Goal's "labelled and not live", already a *Was* by the 12 Nov note, no longer holds in the browser either. This task makes the measurement R-1012 reports beside it (applied per R-369: task scoping; it builds the browser's chart route and closes REQ-CHART-155, where TASK-M8-96 builds no route and changes no code), and TASK-M8-96, whose thread count the measurement reads, joins Depends on. *Was:* "Depends on: TASK-M2-73, TASK-M4-06, TASK-M6-03, TASK-M4-34".
