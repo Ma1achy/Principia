@@ -312,6 +312,8 @@ enum Node {
     Pipe,
     /// A statement's end: a newline or `;`.
     End,
+    /// A here-string, `@'…'@` or `@"…"@`: read through to its terminator, its text unread, and refused.
+    HereString,
     /// Anything else: `.`, `:`, `,`, `+`, `>`, `&`.
     Punct(char),
 }
@@ -422,6 +424,22 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                     }
                 }
                 push!(Node::Str(Vec::new(), Vec::new()));
+            }
+            '@' if matches!(next, Some('\'' | '"')) => {
+                // A here-string ends at a line that starts with its quote and `@`.
+                let quote = next;
+                *i += 2;
+                while *i < c.len() {
+                    if c[*i] == '\n' {
+                        *line += 1;
+                        if c.get(*i + 1).copied() == quote && c.get(*i + 2) == Some(&'@') {
+                            *i += 3;
+                            break;
+                        }
+                    }
+                    *i += 1;
+                }
+                push!(Node::HereString);
             }
             '@' | '$' if next == Some('(') => {
                 *i += 2;
@@ -838,8 +856,34 @@ fn printed_outside_report(arm: &str) -> Vec<String> {
         lines: arm.lines().collect(),
         found: Vec::new(),
     };
+    // A here-string's text isn't read, so any print inside it, or after a terminator this reader misreads, would go
+    // unseen: the proofs hold none.
+    let mut here = Vec::new();
+    here_strings(body, &mut here);
+    for at in here {
+        let line = check.lines.get(at).map_or("", |l| l.trim());
+        check.found.push(format!(
+            "proofs hold a here-string, which this reader doesn't read: {line}"
+        ));
+    }
     check.block(body, false, false);
     check.found
+}
+
+/// The line of each here-string in `code`, nested code and strings included.
+fn here_strings(code: &[Tok], out: &mut Vec<usize>) {
+    for t in code {
+        match &t.node {
+            Node::HereString => out.push(t.line),
+            Node::Group(_, body) => here_strings(body, out),
+            Node::Str(_, subs) => {
+                for s in subs {
+                    here_strings(s, out);
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 fn check_routes(script: &str) {
@@ -935,10 +979,10 @@ fn with_line(line: &str) -> String {
     )
 }
 
-/// The forms the code review's probes found missed, first by a deny-list, then by the allow-list's first cut (the call
-/// and dot-source operators, methods and a copy of `$_`), each printing an address (made up here, in the variables
-/// proof 3 sets): each must be refused, and is a control below as well.
-const PROBE_PRINTS: [&str; 32] = [
+/// The forms the code review's probes found missed, first by a deny-list, then by the allow-list's first cut (the
+/// call and dot-source operators, methods, a copy of `$_` and a here-string), each printing an address (made up here,
+/// in the variables proof 3 sets): each must be refused, and is a control below as well.
+const PROBE_PRINTS: [&str; 34] = [
     "Write-Host @hostSwitch",
     "'gateway: {0}' -f $gateway",
     "\"gateway: {0}\" -f $gateway",
@@ -971,6 +1015,8 @@ const PROBE_PRINTS: [&str; 32] = [
     "Report 3 $false (& Write-Host $gateway)",
     "if (& Write-Host $gateway) { }",
     "$x = $hostSwitch | ForEach-Object { $h2 = $_; Write-Host $h2 }",
+    "$doc = @'\nthe host's\n'@\nWrite-Host $gateway\n$y = 'x'",
+    "@\"\nthe gateway: $gateway\n\"@",
 ];
 
 fn check_probes(script: &str, forms: &[&str]) {
@@ -1660,6 +1706,28 @@ mod allow_item_copy {
         check_routes(&with_line(
             "$x = $hostSwitch | ForEach-Object { $h2 = $_; Write-Host $h2 }"
         ))
+    );
+}
+
+mod allow_here_string_single {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a single-quoted here-string with an apostrophe, a print after it, added to proof 3",
+        expected = "proofs hold a here-string, which this reader doesn't read: $doc = @'",
+        check_routes(&with_line(
+            "$doc = @'\nthe host's\n'@\nWrite-Host $gateway\n$y = 'x'"
+        ))
+    );
+}
+
+mod allow_here_string_double {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a double-quoted here-string naming the gateway, added to proof 3",
+        expected = "proofs hold a here-string, which this reader doesn't read: @\"",
+        check_routes(&with_line("@\"\nthe gateway: $gateway\n\"@"))
     );
 }
 
