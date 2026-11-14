@@ -14,6 +14,7 @@
 
 use kernel::chart::Float;
 use kernel::Real;
+use std::hint::black_box;
 use validation::negative_control;
 
 /// A one-argument method and its pinned libm function.
@@ -566,7 +567,10 @@ negative_control!(
     }
 );
 
-/// Checks `m`, the f32 methods, against `num_traits::Float`'s on the f64 table's inputs, narrowed.
+/// Checks `m`, the f32 methods, against `num_traits::Float`'s on the f64 table's inputs, narrowed. Every input goes
+/// through `black_box`, so both sides call the run-time function: in release LLVM folds a platform call on constants
+/// at compile time, from the host's f64 function rounded to f32, not the platform's f32 one (`Float::atan2(3, −4)`
+/// folded to `0x401fe0bb` while Linux's `atan2f` gives `0x401fe0bc`), so a folded oracle is not `Float`'s.
 fn check_f32(m: &Methods<f32>) {
     for ((name, method), (_, rows)) in m.unary.iter().zip(UNARY) {
         for x in rows
@@ -574,6 +578,7 @@ fn check_f32(m: &Methods<f32>) {
             .map(|&(x, _)| f64::from_bits(x) as f32)
             .chain([1e-10, -3e-8])
         {
+            let x = black_box(x);
             let (got, want) = (method(x), float_unary(name)(x));
             assert!(
                 got.to_bits() == want.to_bits() || (got.is_nan() && want.is_nan()),
@@ -583,6 +588,7 @@ fn check_f32(m: &Methods<f32>) {
     }
     let pairs = [(0.5f32, 2.0f32), (3.0, -4.0), (10.0, 3.0)];
     for (a, b) in pairs {
+        let (a, b) = (black_box(a), black_box(b));
         assert_eq!(
             m.binary[1].1(a, b).to_bits(),
             Float::atan2(a, b).to_bits(),
