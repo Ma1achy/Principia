@@ -4,6 +4,12 @@
 //! address in fd7a:115c:a1e0::/48 as `fd7a:115c:a1e0::x`; loopback and WSL's switch's private ranges print as they are,
 //! and every proof decides on the real addresses.
 //!
+//! **Threat model.** The guard catches an address reaching the Actions log, the job summary or an uploaded file (the
+//! `win-measure` record) through an honest edit to wsl.ps1, which is itself code-reviewed: a print, a write, an error
+//! or a changed setting that lets one of those through unmasked. It doesn't try to defeat deliberate disguise of an
+//! address, such as splitting it into characters (`($gateway -split '') -join ' '`) or encoding it before it is printed
+//! through `Report`: `Hide-Tailnet` masks the address's text, and the review of wsl.ps1 is what stops a disguise.
+//!
 //! Off Windows there is no PowerShell, so, as `wsl.rs` does, these read the script: the first runs `Hide-Tailnet`'s
 //! two patterns, with its two replacements, as the script holds them, on made-up addresses; the second checks that
 //! each proof's line, the echo of what wsl.exe prints and the failure messages print through it, that no proof prints
@@ -272,44 +278,108 @@ fn arm<'a>(script: &'a str, verb: &str) -> &'a str {
 // The reader is default-deny: it accepts only what it recognises, and each list below is what it recognises. A command,
 // a method, a statement shape or a variable not on them is refused, with or without an address in sight.
 
-/// The commands a proof may hand an address to, inside a value (an assignment's right side, a decision, a collection):
-/// each returns what it computes and prints nothing of its arguments. `Invoke-Ci` echoes what wsl.exe prints through
-/// `Hide-Tailnet` (Invoke-Wsl); `Test-Tcp` only connects.
-const SAFE_COMMANDS: [&str; 5] = [
-    "where-object",
-    "foreach-object",
-    "select-object",
-    "test-tcp",
-    "invoke-ci",
-];
-/// The other commands the proofs run, never with an address: each prints nothing (Invoke-Wsl echoes through
-/// `Hide-Tailnet`), and returns what it computes or nothing. `Start-Process` only as `SENTINEL`; `New-Item` and
-/// `Set-Content` write, so only what is clean.
-const KNOWN_COMMANDS: [&str; 24] = [
-    "invoke-wsl",
-    "start-wsl",
-    "get-netipaddress",
-    "get-process",
-    "get-ciminstance",
-    "get-distros",
-    "initialize-clone",
-    "get-runnerprocesses",
-    "new-object",
-    "start-process",
-    "start-sleep",
-    "stop-process",
-    "stop-distro",
-    "get-content",
-    "join-path",
-    "test-path",
-    "get-sha256",
-    "get-livemanifest",
-    "get-textsha256",
-    "get-tail",
-    "new-item",
-    "set-content",
-    "out-null",
-    "exit",
+/// A command the proofs may run, and how: the parameters it may take, with a value or as a switch, and how many
+/// positional arguments (script blocks only, where `blocks`). Any other parameter, common ones (`-ErrorAction`,
+/// `-OutVariable`, …) included, or a further argument, is refused. `safe`: it may take an address (any value not proved
+/// clean); it prints nothing of what it is given and writes it nowhere, and an error it raises, terminating under the
+/// script's `$ErrorActionPreference = 'Stop'`, reaches the proofs' catch, which masks it.
+struct Command {
+    name: &'static str,
+    safe: bool,
+    values: &'static [&'static str],
+    switches: &'static [&'static str],
+    positionals: usize,
+    blocks: bool,
+}
+
+const fn command(name: &'static str, safe: bool, positionals: usize) -> Command {
+    Command {
+        name,
+        safe,
+        values: &[],
+        switches: &[],
+        positionals,
+        blocks: false,
+    }
+}
+
+/// The commands the proofs run, each as the shipped proofs use it. The safe ones: the pipeline's filters (a script
+/// block only, or `Select-Object`'s counts); `Test-Tcp`, which only connects; `Invoke-Ci` with at most its command and
+/// its stdin, never its third argument, `-OutFile`, which would write wsl.exe's output raw to a file; `Stop-Process`
+/// by id; the hash and tail of what a command printed, which only return; `Out-Null`. The rest take only what is
+/// clean: `Invoke-Wsl` and `Start-Wsl` are handed only the distro's constants, `Start-Process` only as `SENTINEL`,
+/// and `New-Item` and `Set-Content` write only what is clean.
+const COMMANDS: [Command; 29] = [
+    Command {
+        blocks: true,
+        ..command("where-object", true, 1)
+    },
+    Command {
+        blocks: true,
+        ..command("foreach-object", true, 1)
+    },
+    Command {
+        values: &["-last", "-first"],
+        switches: &["-unique"],
+        ..command("select-object", true, 0)
+    },
+    command("test-tcp", true, 2),
+    command("invoke-ci", true, 2),
+    Command {
+        values: &["-id"],
+        switches: &["-force"],
+        ..command("stop-process", true, 0)
+    },
+    command("get-textsha256", true, 1),
+    command("get-tail", true, 1),
+    command("out-null", true, 0),
+    command("invoke-wsl", false, 1),
+    command("start-wsl", false, 1),
+    Command {
+        values: &["-addressfamily"],
+        ..command("get-netipaddress", false, 0)
+    },
+    Command {
+        values: &["-id"],
+        ..command("get-process", false, 0)
+    },
+    command("get-ciminstance", false, 1),
+    command("get-distros", false, 0),
+    command("initialize-clone", false, 0),
+    command("get-runnerprocesses", false, 0),
+    command("new-object", false, 1),
+    Command {
+        values: &["-filepath", "-argumentlist", "-windowstyle"],
+        switches: &["-passthru"],
+        ..command("start-process", false, 0)
+    },
+    Command {
+        values: &["-seconds"],
+        ..command("start-sleep", false, 0)
+    },
+    command("stop-distro", false, 0),
+    Command {
+        values: &["-literalpath"],
+        switches: &["-raw"],
+        ..command("get-content", false, 0)
+    },
+    command("join-path", false, 2),
+    Command {
+        values: &["-literalpath"],
+        ..command("test-path", false, 0)
+    },
+    command("get-sha256", false, 1),
+    command("get-livemanifest", false, 0),
+    Command {
+        values: &["-itemtype", "-path"],
+        switches: &["-force"],
+        ..command("new-item", false, 0)
+    },
+    Command {
+        values: &["-literalpath"],
+        ..command("set-content", false, 0)
+    },
+    command("exit", false, 1),
 ];
 /// The masking path: each prints what it is given through `Hide-Tailnet` (`check_routes` holds Report and Fail to it).
 const MASKING: [&str; 3] = ["report", "hide-tailnet", "fail"];
@@ -391,10 +461,65 @@ const VAR_PARAMS: [(&str, &str); 5] = [
     ("-wv", "-warningv"),
     ("-iv", "-informationv"),
 ];
-/// The variables set outside the proofs that hold no address: Report's lines, masked; the record's folder; the commit.
-const OUTER_CLEAN: [&str; 3] = ["results", "record", "github_sha"];
-/// The one Windows program the proofs start, proof 4's sentinel, read whole: a hidden PowerShell that only sleeps, its
-/// arguments constants. Any other `Start-Process` runs a program this reader can't read, and is refused.
+/// The variables set outside the proofs that hold no address: Report's lines, masked; the record's folder; the
+/// distro's constants (`$Distro`, `$User`, `$Inside`, wsl.ps1's head); this process's id; `$null`, `$true`, `$false`;
+/// and what the workflow passes in its environment, a commit and two paths. A binding in the proofs makes any of them
+/// unclean, and the proofs may assign none of the `$env:` ones (`ambient`).
+const OUTER_CLEAN: [&str; 13] = [
+    "results",
+    "record",
+    "distro",
+    "user",
+    "inside",
+    "pid",
+    "null",
+    "true",
+    "false",
+    "env:github_sha",
+    "env:wsl_image",
+    "env:wsl_hosted_parity",
+    "env:wsl_parity_commit",
+];
+/// PowerShell's own variables that change how other lines run, or what they read, besides `AUTO_VARS`, `ITEM_VARS`,
+/// every `…preference` and every scoped name (`env:`, `script:`, `global:`): the proofs may assign none of them.
+const AMBIENT_VARS: [&str; 30] = [
+    "psdefaultparametervalues",
+    "psboundparameters",
+    "pscmdlet",
+    "pscommandpath",
+    "psculture",
+    "psuiculture",
+    "psdebugcontext",
+    "psedition",
+    "pshome",
+    "psscriptroot",
+    "pssenderinfo",
+    "psversiontable",
+    "psstyle",
+    "psemailserver",
+    "pssessionoption",
+    "pssessionapplicationname",
+    "pssessionconfigurationname",
+    "psnativecommandargumentpassing",
+    "host",
+    "pid",
+    "pwd",
+    "home",
+    "executioncontext",
+    "myinvocation",
+    "lastexitcode",
+    "true",
+    "false",
+    "ofs",
+    "formatenumerationlimit",
+    "outputencoding",
+];
+/// The one Windows program the proofs start, proof 4's sentinel, its line compared whole. It is safe by its text: a
+/// hidden PowerShell whose one command, a constant, only sleeps, given every argument as a constant. Nothing else can
+/// reach it: the proofs may assign none of the state that would change what it runs or where its output goes
+/// (`$PSDefaultParameterValues`, which could add a redirection; `$env:`, which its child inherits, `$env:PSModulePath`
+/// among it; the preference variables), as `ambient` refuses. Any other `Start-Process` runs a program this reader
+/// can't read, and is refused.
 const SENTINEL: &str = "$winSentinel = Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile', '-NonInteractive', '-Command', 'Start-Sleep -Seconds 600' -WindowStyle Hidden -PassThru";
 
 /// One piece of PowerShell, with the line (of the text read) it starts on.
@@ -402,11 +527,14 @@ const SENTINEL: &str = "$winSentinel = Start-Process -FilePath 'powershell.exe' 
 struct Tok {
     node: Node,
     line: usize,
+    /// Where it starts and ends in the text read, in characters: two tokens with nothing between them are one argument.
+    start: usize,
+    end: usize,
 }
 
 #[derive(Debug)]
 enum Node {
-    /// `$name`, `${name}` or `@name` (splatted): the name in lowercase, without a scope (`script:`, `env:`).
+    /// `$name`, `${name}` or `@name` (splatted): the name in lowercase, with its scope (`script:`, `env:`), if any.
     Var(String),
     /// A string: the variables a double-quoted one interpolates, and the code of its `$(…)` subexpressions.
     Str(Vec<String>, Vec<Vec<Tok>>),
@@ -427,8 +555,9 @@ enum Node {
     Punct(char),
 }
 
+/// A variable's name in lowercase, its scope kept (`env:path`, `script:x`): a scoped name is another variable here.
 fn var_name(raw: &str) -> String {
-    raw.rsplit(':').next().unwrap_or(raw).to_lowercase()
+    raw.to_lowercase()
 }
 
 fn is_name_char(c: char) -> bool {
@@ -442,11 +571,14 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
         let ch = c[*i];
         let at = *line;
         let next = c.get(*i + 1).copied();
+        let (from, pushed) = (*i, out.len());
         macro_rules! push {
             ($node:expr) => {
                 out.push(Tok {
                     node: $node,
                     line: at,
+                    start: 0,
+                    end: 0,
                 })
             };
         }
@@ -514,6 +646,8 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                 out.push(Tok {
                     node: Node::Str(vars, subs),
                     line: at,
+                    start: 0,
+                    end: 0,
                 });
             }
             '\'' => {
@@ -556,6 +690,8 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                 out.push(Tok {
                     node: Node::Group('(', body),
                     line: at,
+                    start: 0,
+                    end: 0,
                 });
             }
             '@' if next == Some('{') => {
@@ -564,6 +700,8 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                 out.push(Tok {
                     node: Node::Group('{', body),
                     line: at,
+                    start: 0,
+                    end: 0,
                 });
             }
             '$' if next == Some('{') => {
@@ -598,6 +736,8 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                 out.push(Tok {
                     node: Node::Group(ch, body),
                     line: at,
+                    start: 0,
+                    end: 0,
                 });
             }
             '[' => {
@@ -635,6 +775,8 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                     out.push(Tok {
                         node: Node::Group('[', body),
                         line: at,
+                        start: 0,
+                        end: 0,
                     });
                 }
             }
@@ -671,6 +813,10 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                 push!(Node::Punct(ch));
                 *i += 1;
             }
+        }
+        for t in &mut out[pushed..] {
+            t.start = from;
+            t.end = *i;
         }
     }
     out
@@ -737,6 +883,79 @@ fn elements(s: &[Tok]) -> impl Iterator<Item = &[Tok]> {
 /// Whether `w`, heading a pipeline element, names a command: not a parameter or an operator, nor a number.
 fn is_command(w: &str) -> bool {
     !w.starts_with('-') && !w.chars().all(|c| c.is_ascii_digit() || c == '.')
+}
+
+/// Whether `w` is a parameter: `-name`, not a negative number.
+fn is_parameter(w: &str) -> bool {
+    w.strip_prefix('-').is_some_and(is_command)
+}
+
+/// The arguments of a command, `e` without its name: each a run of tokens with nothing between them, or joined by
+/// commas (an array).
+fn arguments(e: &[Tok]) -> Vec<&[Tok]> {
+    let mut out = Vec::new();
+    let mut from = 0;
+    for k in 1..e.len() {
+        let joined = e[k - 1].end == e[k].start
+            || matches!(e[k - 1].node, Node::Punct(','))
+            || matches!(e[k].node, Node::Punct(','));
+        if !joined {
+            out.push(&e[from..k]);
+            from = k;
+        }
+    }
+    if from < e.len() {
+        out.push(&e[from..]);
+    }
+    out
+}
+
+/// What of `args` the command `c` doesn't take: a parameter it doesn't list, a positional argument past its count, or
+/// one not a script block where it takes only those.
+fn unlisted_argument(c: &Command, args: &[&[Tok]]) -> Option<String> {
+    let mut positionals = 0;
+    let mut k = 0;
+    while k < args.len() {
+        let a = args[k];
+        match &a[0].node {
+            Node::Word(p) if is_parameter(p) => {
+                if c.values.contains(&p.as_str()) {
+                    k += usize::from(a.len() == 1);
+                } else if !c.switches.contains(&p.as_str()) {
+                    return Some(format!("the parameter {p}"));
+                }
+            }
+            _ => {
+                positionals += 1;
+                if positionals > c.positionals {
+                    return Some(format!("more than {} positional arguments", c.positionals));
+                }
+                if c.blocks
+                    && !matches!(
+                        a,
+                        [Tok {
+                            node: Node::Group('{', _),
+                            ..
+                        }]
+                    )
+                {
+                    return Some("an argument other than a script block".to_string());
+                }
+            }
+        }
+        k += 1;
+    }
+    None
+}
+
+/// Whether assigning `v` changes how other lines run, or what they read: an automatic or preference variable, one of
+/// `AMBIENT_VARS`, or a scoped name (`$env:…`, `$script:…`, `$global:…`).
+fn ambient(v: &str) -> bool {
+    v.contains(':')
+        || v.ends_with("preference")
+        || [&AMBIENT_VARS[..], &AUTO_VARS[..], &ITEM_VARS[..]]
+            .iter()
+            .any(|l| l.contains(&v))
 }
 
 /// Whether `s` is a call of `Hide-Tailnet` with nothing piped on: what it outputs is masked.
@@ -824,7 +1043,10 @@ fn binds(s: &[Tok]) -> Vec<(String, Bound<'_>)> {
         node: Node::Assign, ..
     }, tail @ ..] = rest
     {
-        out.push((v.clone(), Bound::Assigned(tail)));
+        // `$null = …` discards what it is given: `$null` stays `$null`.
+        if v != "null" {
+            out.push((v.clone(), Bound::Assigned(tail)));
+        }
         rest = tail;
     }
     for pair in s.windows(2) {
@@ -855,6 +1077,32 @@ fn binds(s: &[Tok]) -> Vec<(String, Bound<'_>)> {
             .flatten()
             .map(|v| (v, Bound::Named)),
     );
+    // A method that may change what its receiver holds (`$results.Add(…)`, `.Insert`, anything not one of
+    // `KNOWN_METHODS`, which only read or stop): it assigns the variable the call starts from, from its arguments.
+    for (k, t) in s.iter().enumerate() {
+        let (Node::Word(m), Some(Node::Group('(', args))) =
+            (&t.node, s.get(k + 1).map(|n| &n.node))
+        else {
+            continue;
+        };
+        if k == 0 || KNOWN_METHODS.contains(&format!(".{m}").as_str()) {
+            continue;
+        }
+        let chain = s[..k]
+            .iter()
+            .rev()
+            .take_while(|p| matches!(p.node, Node::Punct('.') | Node::Word(_) | Node::Var(_)))
+            .last();
+        if let (
+            Some(Node::Punct('.')),
+            Some(Tok {
+                node: Node::Var(v), ..
+            }),
+        ) = (s.get(k - 1).map(|p| &p.node), chain)
+        {
+            out.push((v.clone(), Bound::Assigned(args)));
+        }
+    }
     out
 }
 
@@ -973,15 +1221,19 @@ fn void_call(s: &[Tok]) -> bool {
 /// statement around it names an address, so `$_` and `$PSItem` are addresses. `guarded`: it runs in the proofs' `try`,
 /// whose catch prints an error masked.
 struct Check<'a> {
-    taint: &'a BTreeSet<String>,
     clean: &'a BTreeSet<String>,
     lines: Vec<&'a str>,
     found: Vec<String>,
 }
 
 impl Check<'_> {
+    /// Whether `v` is an address: `$_` and `$PSItem` where `item`; any other variable unless proved clean.
     fn is_address(&self, v: &str, item: bool) -> bool {
-        self.taint.contains(v) || (item && ITEM_VARS.contains(&v))
+        if ITEM_VARS.contains(&v) {
+            item
+        } else {
+            !self.clean.contains(v)
+        }
     }
 
     /// The first address `s` names, nested code and strings included.
@@ -1081,13 +1333,20 @@ impl Check<'_> {
     }
 
     fn statement(&mut self, s: &[Tok], value: bool, item: bool, guarded: bool) {
-        // An assignment, chained or not: its right side is a value.
+        // An assignment, chained or not: its right side is a value. Not of a variable that changes how other lines
+        // run.
         if let [Tok {
-            node: Node::Var(_), ..
+            node: Node::Var(v), ..
         }, Tok {
             node: Node::Assign, ..
         }, rest @ ..] = s
         {
+            if ambient(v) {
+                return self.refuse(
+                    s,
+                    &format!("assign ${v}, which changes how other lines run or what they read"),
+                );
+            }
             return self.statement(rest, true, item, guarded);
         }
         // In a value, a hashtable's entry, `Key = …`.
@@ -1131,12 +1390,13 @@ impl Check<'_> {
                 ),
             );
         }
-        if !value {
+        // Output: nothing, or proved clean. What outputs nothing is checked as a value.
+        if !(value || silent(s) || void_call(s)) {
             if let Some(v) = self.exposed(s, scope) {
                 let v = Self::display(&v);
                 return self.refuse(s, &format!("print ${v} outside Report, unmasked"));
             }
-            if !(silent(s) || void_call(s) || is_clean(s, self.clean, false)) {
+            if !is_clean(s, self.clean, false) {
                 return self.refuse(
                     s,
                     "print what this outputs, which this reader doesn't know holds no address",
@@ -1174,9 +1434,9 @@ impl Check<'_> {
         }
     }
 
-    /// A value: the pipeline `s`, its output captured. It hands an address only to `SAFE_COMMANDS` and `SAFE_METHODS`,
-    /// runs only those and `KNOWN_COMMANDS`, calls only `KNOWN_METHODS`, writes only what is clean, and redirects
-    /// nothing; the code nested in it is a value too.
+    /// A value: the pipeline `s`, its output captured. It runs only `COMMANDS`, each with only its own parameters and
+    /// arguments, and hands an address only to the safe ones and to `SAFE_METHODS`; it calls only `KNOWN_METHODS`,
+    /// writes only what is clean, and redirects nothing; the code nested in it is a value too.
     fn value(&mut self, s: &[Tok], item: bool, guarded: bool) {
         if s.iter().any(|t| matches!(t.node, Node::Punct('>'))) {
             return self.refuse(
@@ -1195,24 +1455,32 @@ impl Check<'_> {
             let carried = self.exposed(e, item).or(fed);
             match e.first().map(|t| &t.node) {
                 Some(Node::Word(w)) if is_command(w) => {
-                    if let Some(v) = &carried {
-                        if !SAFE_COMMANDS.contains(&w.as_str()) {
-                            let v = Self::display(v);
-                            return self.refuse(
-                                s,
-                                &format!("pass ${v} to {w}, which isn't known not to print"),
-                            );
-                        }
-                    } else if !(SAFE_COMMANDS.contains(&w.as_str())
-                        || KNOWN_COMMANDS.contains(&w.as_str()))
-                    {
+                    let c = COMMANDS.iter().find(|c| c.name == w);
+                    if let Some(v) = carried.as_ref().filter(|_| !c.is_some_and(|c| c.safe)) {
+                        let v = Self::display(v);
+                        return self.refuse(
+                            s,
+                            &format!("pass ${v} to {w}, which isn't known not to print"),
+                        );
+                    }
+                    let Some(c) = c else {
                         return self.refuse(
                             s,
                             &format!("run {w}, which this reader doesn't know prints nothing"),
                         );
-                    } else if w == "start-process" && self.line(s) != SENTINEL {
+                    };
+                    if let Some(what) = unlisted_argument(c, &arguments(&e[1..])) {
+                        return self.refuse(
+                            s,
+                            &format!(
+                                "give {w} {what}, which this reader doesn't know prints nothing"
+                            ),
+                        );
+                    }
+                    if w == "start-process" && self.line(s) != SENTINEL {
                         return self.refuse(s, "start a Windows program this reader can't read");
-                    } else if WRITERS.contains(&w.as_str()) && !is_clean(s, self.clean, false) {
+                    }
+                    if WRITERS.contains(&w.as_str()) && !is_clean(s, self.clean, false) {
                         return self.refuse(
                             s,
                             &format!(
@@ -1242,22 +1510,26 @@ impl Check<'_> {
 
 /// What the reader refuses in `arm`, each with its line. The proofs are read default-deny:
 ///
-/// - **Addresses.** `ADDRESS_VARS`; the automatic variables that outlive the statement that set them (`AUTO_VARS`:
-///   `$Matches`, `$foreach`, `$switch`, `$Error`, `$args`, …); each variable a common parameter binds (`-OutVariable`,
-///   `-PipelineVariable`, …); and each variable assigned (chained too) or looped from an expression that names one, to a
-///   fixed point. `$_` and `$PSItem` are addresses wherever a statement around them names one: the pipeline, `switch`,
-///   `catch` or method that sets them.
+/// - **Addresses.** Every variable not proved clean is an address. Clean: `OUTER_CLEAN`, and a variable whose every
+///   binding in the proofs (an assignment, chained or not; a loop; a common parameter; a method that may change it) is
+///   an assignment from a clean expression, to a fixed point. `$_` and `$PSItem` are addresses wherever a statement
+///   around them names one: the pipeline, `switch`, `catch` or method that sets them. (`ADDRESS_VARS`, `AUTO_VARS` and
+///   the variables bound from them are never clean; they name what the messages say.)
 /// - **Output.** A statement whose output prints is an assignment; a control statement; a masking call (`Report`,
 ///   `Hide-Tailnet`, `Fail`) with nothing piped on or redirected; a pipeline that ends in a command that outputs
-///   nothing; a call of a method that returns nothing, or a `.WriteLine` of `(Hide-Tailnet …)` alone; or clean. Clean
-///   names only variables proved clean (bound only from clean expressions, or `OUTER_CLEAN`) and runs only commands
-///   that pass on what they are given. An address in it, unmasked, is refused first.
-/// - **Everywhere.** A command runs only if listed: with an address, `SAFE_COMMANDS`; without, those or
-///   `KNOWN_COMMANDS`. A method likewise (`SAFE_METHODS`, `KNOWN_METHODS`). No call or dot-source operator, no
-///   redirection, no here-string, no `Start-Process` but `SENTINEL`; a writer writes only what is clean; a control
-///   statement holds only keywords, flags, a catch's types, headers and blocks.
-/// - **Errors.** Outside the proofs' `try`, whose catch prints an error masked, nothing names an address unmasked, so
-///   an error can't print one.
+///   nothing, or a call of a method that returns nothing (or a `.WriteLine` of `(Hide-Tailnet …)` alone), each then
+///   checked as a value; or clean: it names only clean variables and runs only commands that pass on what they are
+///   given. An address in it, unmasked, is refused first.
+/// - **Everywhere.** A command runs only if it is one of `COMMANDS`, with only its own parameters and arguments (no
+///   common parameter: no `-ErrorAction`, `-OutVariable`, `-MemberName`, …); it takes an address only if safe. A
+///   method likewise (`SAFE_METHODS`, `KNOWN_METHODS`). No call or dot-source operator, no redirection, no here-string,
+///   no `Start-Process` but `SENTINEL`; a writer writes only what is clean; a control statement holds only keywords,
+///   flags, a catch's types, headers and blocks; no assignment of a variable that changes how other lines run or what
+///   they read (`ambient`: preference and automatic variables, `$PSDefaultParameterValues`, `$env:` and every scoped
+///   name).
+/// - **Errors.** Inside the proofs' `try`, every error terminates (`$ErrorActionPreference = 'Stop'`, which the proofs
+///   may not change, and no `-ErrorAction`), and its catch prints it masked. Outside it nothing names an address
+///   unmasked, so an error can't print one.
 fn printed_outside_report(arm: &str) -> Vec<String> {
     let chars: Vec<char> = arm.chars().collect();
     let (mut i, mut line) = (0, 0);
@@ -1297,7 +1569,6 @@ fn printed_outside_report(arm: &str) -> Vec<String> {
         }
     }
     let mut check = Check {
-        taint: &taint,
         clean: &clean,
         lines: arm.lines().collect(),
         found: Vec::new(),
@@ -1435,6 +1706,16 @@ fn after_proofs(line: &str) -> String {
     )
 }
 
+/// wsl.ps1 with `line` added before the proofs' `try`.
+#[cfg(feature = "controls")]
+fn before_proofs(line: &str) -> String {
+    edited(
+        &read(PS),
+        "        $winUser = [Environment]::UserName\n",
+        &format!("        {line}\n        $winUser = [Environment]::UserName\n"),
+    )
+}
+
 /// wsl.ps1 with `line` added to the proofs' catch, before its masked print of the error.
 #[cfg(feature = "controls")]
 fn in_catch(line: &str) -> String {
@@ -1449,9 +1730,10 @@ fn in_catch(line: &str) -> String {
 
 /// The forms the code review's probes found missed, first by a deny-list, then by the allow-list's first cut (the
 /// call and dot-source operators, methods, a copy of `$_` and a here-string), then by its second (the automatic
-/// variables, an assigned loop, a block in a method's parentheses, a redirection in a value), each printing an address
-/// (made up here, in the variables proof 3 sets): each must be refused, and is a control below as well.
-const PROBE_PRINTS: [&str; 41] = [
+/// variables, an assigned loop, a block in a method's parentheses, a redirection in a value), then by the default-deny
+/// reader's first cut (a listed command's parameters, a value read from a source, ambient state), each printing or
+/// publishing an address (made up here): each must be refused, and is a control below as well.
+const PROBE_PRINTS: [&str; 50] = [
     "Write-Host @hostSwitch",
     "'gateway: {0}' -f $gateway",
     "\"gateway: {0}\" -f $gateway",
@@ -1493,6 +1775,21 @@ const PROBE_PRINTS: [&str; 41] = [
     "$x = foreach ($g in $lan) { Write-Host $g }",
     "$x = $lan.ForEach({ Write-Host $_ })",
     "$x = $gateway >> $env:GITHUB_STEP_SUMMARY",
+    "$h = $host
+$u = $h.UI
+$null = $u | ForEach-Object -MemberName WriteLine -ArgumentList $gateway",
+    "$null = ForEach-Object -InputObject $results -MemberName Add -ArgumentList \"$lan\"",
+    "$x = $gateway | Select-Object -ExpandProperty \"$lan\" -ErrorAction Continue",
+    "$ErrorActionPreference = 'Continue'
+$x = $lan | Select-Object -ExpandProperty $gateway",
+    "$x = Invoke-Ci (@('echo') + $lan) $null (Join-Path $Record 'lan.txt')",
+    "$x = Invoke-Ci (@('echo') + $lan) $null $env:GITHUB_STEP_SUMMARY",
+    "$ips = (Get-NetIPAddress -AddressFamily IPv4).IPAddress
+$p = Get-Process -Name $ips -ErrorAction Continue",
+    "$PSDefaultParameterValues = @{ 'Start-Process:RedirectStandardOutput' = $env:GITHUB_STEP_SUMMARY }",
+    "$env:PSModulePath = 'C:\\x'
+$null = New-Item -ItemType Directory -Force -Path 'C:\\x\\m'
+Set-Content -LiteralPath 'C:\\x\\m\\m.psm1' -Value 'function Start-Sleep { (Get-NetIPAddress).IPAddress }'",
 ];
 
 fn check_probes(script: &str, forms: &[&str]) {
@@ -2184,10 +2481,8 @@ mod allow_static_method {
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
         "the gateway appended to the job summary by [IO.File]::AppendAllText, added to proof 3",
-        expected = "proofs pass $gateway to the method io.file::appendalltext, which isn't known not to print: $null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $gateway)",
-        check_routes(&with_line(
-            "$null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $gateway)"
-        ))
+        expected = "proofs pass $env:github_step_summary to the method io.file::appendalltext, which isn't known not to print: $null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $gateway)",
+        check_routes(&with_line("$null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $gateway)"))
     );
 }
 
@@ -2322,7 +2617,7 @@ mod allow_out_variable {
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
         "an -OutVariable of the LAN addresses printed, added to proof 3",
-        expected = "proofs print $ov outside Report, unmasked: $null = $lan | Select-Object -OutVariable ov; Write-Host $ov",
+        expected = "proofs give select-object the parameter -outvariable, which this reader doesn't know prints nothing: $null = $lan | Select-Object -OutVariable ov; Write-Host $ov",
         check_routes(&with_line("$null = $lan | Select-Object -OutVariable ov; Write-Host $ov"))
     );
 }
@@ -2371,9 +2666,9 @@ mod deny_unknown_method {
     use super::*;
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
-        "the host's addresses appended to the job summary by a method, added to proof 3",
-        expected = "proofs call the method io.file::appendalltext, which this reader doesn't know prints nothing: $null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, (Get-NetIPAddress))",
-        check_routes(&with_line("$null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, (Get-NetIPAddress))"))
+        "a method not on the list, with constant arguments, added to proof 3",
+        expected = "proofs call the method io.file::appendalltext, which this reader doesn't know prints nothing: $null = [IO.File]::AppendAllText('x.txt', 'x')",
+        check_routes(&with_line("$null = [IO.File]::AppendAllText('x.txt', 'x')"))
     );
 }
 
@@ -2392,7 +2687,8 @@ mod deny_listener_output {
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
         "the listener's output, which names who connected, printed bare, added to proof 3",
-        expected = "proofs print what this outputs, which this reader doesn't know holds no address: $listener.StandardOutput.ReadToEnd()",
+        expected =
+            "proofs print $listener outside Report, unmasked: $listener.StandardOutput.ReadToEnd()",
         check_routes(&with_line("$listener.StandardOutput.ReadToEnd()"))
     );
 }
@@ -2402,8 +2698,8 @@ mod deny_static_output {
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
         "a static method's addresses printed bare, added to proof 3",
-        expected = "proofs print what this outputs, which this reader doesn't know holds no address: [Net.Dns]::GetHostAddresses($env:COMPUTERNAME)",
-        check_routes(&with_line("[Net.Dns]::GetHostAddresses($env:COMPUTERNAME)"))
+        expected = "proofs print what this outputs, which this reader doesn't know holds no address: [Net.Dns]::GetHostAddresses('localhost')",
+        check_routes(&with_line("[Net.Dns]::GetHostAddresses('localhost')"))
     );
 }
 
@@ -2412,7 +2708,7 @@ mod deny_clean_reassigned {
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
         "the summary's count reassigned from Get-NetIPAddress, added to proof 3",
-        expected = "proofs print what this outputs, which this reader doesn't know holds no address: if ($results.Count -ne 6 -or $failed)",
+        expected = "proofs handle $failed outside the proofs' try, where an error naming it prints unmasked: if ($results.Count -ne 6 -or $failed)",
         check_routes(&with_line("$failed = Get-NetIPAddress"))
     );
 }
@@ -2422,7 +2718,7 @@ mod deny_clean_looped {
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
         "the summary's count bound by a loop, added to proof 3",
-        expected = "proofs print what this outputs, which this reader doesn't know holds no address: if ($results.Count -ne 6 -or $failed)",
+        expected = "proofs handle $failed outside the proofs' try, where an error naming it prints unmasked: if ($results.Count -ne 6 -or $failed)",
         check_routes(&with_line("foreach ($failed in @(Get-NetIPAddress)) { }"))
     );
 }
@@ -2431,9 +2727,9 @@ mod deny_start_process {
     use super::*;
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
-        "a Windows program other than the sentinel started, added to proof 3",
-        expected = "proofs start a Windows program this reader can't read: $p = Start-Process cmd '/c ipconfig' -NoNewWindow -PassThru",
-        check_routes(&with_line("$p = Start-Process cmd '/c ipconfig' -NoNewWindow -PassThru"))
+        "a Windows program other than the sentinel started, its parameters the sentinel's, added to proof 3",
+        expected = "proofs start a Windows program this reader can't read: $p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', 'ipconfig' -WindowStyle Hidden -PassThru",
+        check_routes(&with_line("$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', 'ipconfig' -WindowStyle Hidden -PassThru"))
     );
 }
 
@@ -2441,9 +2737,9 @@ mod deny_unclean_write {
     use super::*;
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
-        "the host's addresses written to the job summary by Set-Content, added to proof 3",
-        expected = "proofs write with set-content what this reader doesn't know holds no address: $null = Set-Content $env:GITHUB_STEP_SUMMARY (Get-NetIPAddress)",
-        check_routes(&with_line("$null = Set-Content $env:GITHUB_STEP_SUMMARY (Get-NetIPAddress)"))
+        "the host's addresses written to a file by Set-Content, added to proof 3",
+        expected = "proofs write with set-content what this reader doesn't know holds no address: $null = Get-NetIPAddress | Set-Content -LiteralPath 'x.txt'",
+        check_routes(&with_line("$null = Get-NetIPAddress | Set-Content -LiteralPath 'x.txt'"))
     );
 }
 
@@ -2482,7 +2778,7 @@ mod deny_variable_alias {
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
         "an -ov, -OutVariable's alias, printed, added to proof 3",
-        expected = "proofs print $ov outside Report, unmasked: $null = $lan | Select-Object -ov:ov; Write-Host $ov",
+        expected = "proofs give select-object the parameter -ov, which this reader doesn't know prints nothing: $null = $lan | Select-Object -ov:ov; Write-Host $ov",
         check_routes(&with_line("$null = $lan | Select-Object -ov:ov; Write-Host $ov"))
     );
 }
@@ -2532,8 +2828,8 @@ mod deny_caught_raw {
     negative_control!(
         wsl_proofs_print_addresses_only_through_the_mask,
         "a catch printing its error raw, after the proofs' try",
-        expected = "proofs print what this outputs, which this reader doesn't know holds no address: try { $null = Get-Process -Name 'x' } catch { $_ }",
-        check_routes(&after_proofs("try { $null = Get-Process -Name 'x' } catch { $_ }"))
+        expected = "proofs print what this outputs, which this reader doesn't know holds no address: try { $null = Get-Process -Id 0 } catch { $_ }",
+        check_routes(&after_proofs("try { $null = Get-Process -Id 0 } catch { $_ }"))
     );
 }
 
@@ -2544,6 +2840,154 @@ mod deny_error_copy {
         "the proofs' catch copying its error, which may name an address, to print it",
         expected = "proofs handle $_ outside the proofs' try, where an error naming it prints unmasked: $e = $_; $e",
         check_routes(&in_catch("$e = $_; $e"))
+    );
+}
+
+mod deny_member_name {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the host's UI written to through ForEach-Object -MemberName, added to proof 3",
+        expected = "proofs give foreach-object the parameter -membername, which this reader doesn't know prints nothing: $null = $u | ForEach-Object -MemberName WriteLine -ArgumentList $gateway",
+        check_routes(&with_line("$h = $host
+$u = $h.UI
+$null = $u | ForEach-Object -MemberName WriteLine -ArgumentList $gateway"))
+    );
+}
+
+mod deny_results_added {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "an unmasked line added to Report's lines through ForEach-Object, added to proof 3",
+        expected = "proofs give foreach-object the parameter -inputobject, which this reader doesn't know prints nothing: $null = ForEach-Object -InputObject $results -MemberName Add -ArgumentList \"$lan\"",
+        check_routes(&with_line("$null = ForEach-Object -InputObject $results -MemberName Add -ArgumentList \"$lan\""))
+    );
+}
+
+mod deny_expand_property {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a non-terminating error naming the LAN addresses, added to proof 3",
+        expected = "proofs give select-object the parameter -expandproperty, which this reader doesn't know prints nothing: $x = $gateway | Select-Object -ExpandProperty \"$lan\" -ErrorAction Continue",
+        check_routes(&with_line("$x = $gateway | Select-Object -ExpandProperty \"$lan\" -ErrorAction Continue"))
+    );
+}
+
+mod deny_error_action {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "-ErrorAction Continue, which leaves an error to print unmasked, added to proof 3",
+        expected = "proofs give get-process the parameter -erroraction, which this reader doesn't know prints nothing: $p = Get-Process -Id $PID -ErrorAction Continue",
+        check_routes(&with_line("$p = Get-Process -Id $PID -ErrorAction Continue"))
+    );
+}
+
+mod deny_error_preference {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$ErrorActionPreference set to Continue, added to proof 3",
+        expected = "proofs assign $erroractionpreference, which changes how other lines run or what they read: $ErrorActionPreference = 'Continue'",
+        check_routes(&with_line("$ErrorActionPreference = 'Continue'
+$x = $lan | Select-Object -ExpandProperty $gateway"))
+    );
+}
+
+mod deny_out_file {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Invoke-Ci's -OutFile, its third argument, writing the LAN addresses raw to the record, added to proof 3",
+        expected = "proofs give invoke-ci more than 2 positional arguments, which this reader doesn't know prints nothing: $x = Invoke-Ci (@('echo') + $lan) $null (Join-Path $Record 'lan.txt')",
+        check_routes(&with_line("$x = Invoke-Ci (@('echo') + $lan) $null (Join-Path $Record 'lan.txt')"))
+    );
+}
+
+mod deny_out_file_summary {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Invoke-Ci's -OutFile writing the LAN addresses raw to the job summary, added to proof 3",
+        expected = "proofs give invoke-ci more than 2 positional arguments, which this reader doesn't know prints nothing: $x = Invoke-Ci (@('echo') + $lan) $null $env:GITHUB_STEP_SUMMARY",
+        check_routes(&with_line("$x = Invoke-Ci (@('echo') + $lan) $null $env:GITHUB_STEP_SUMMARY"))
+    );
+}
+
+mod deny_source_in_try {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "addresses read from Get-NetIPAddress handed to Get-Process, added to proof 3",
+        expected = "proofs pass $ips to get-process, which isn't known not to print: $p = Get-Process -Name $ips -ErrorAction Continue",
+        check_routes(&with_line("$ips = (Get-NetIPAddress -AddressFamily IPv4).IPAddress
+$p = Get-Process -Name $ips -ErrorAction Continue"))
+    );
+}
+
+mod deny_default_parameters {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$PSDefaultParameterValues giving Start-Process a redirection, added to proof 3",
+        expected = "proofs assign $psdefaultparametervalues, which changes how other lines run or what they read: $PSDefaultParameterValues = @{",
+        check_routes(&with_line("$PSDefaultParameterValues = @{ 'Start-Process:RedirectStandardOutput' = $env:GITHUB_STEP_SUMMARY }"))
+    );
+}
+
+mod deny_environment {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$env:PSModulePath pointed at a module the proofs write, added to proof 3",
+        expected = "proofs assign $env:psmodulepath, which changes how other lines run or what they read: $env:PSModulePath = 'C:\\x'",
+        check_routes(&with_line("$env:PSModulePath = 'C:\\x'
+$null = New-Item -ItemType Directory -Force -Path 'C:\\x\\m'
+Set-Content -LiteralPath 'C:\\x\\m\\m.psm1' -Value 'function Start-Sleep { (Get-NetIPAddress).IPAddress }'"))
+    );
+}
+
+mod deny_assign_automatic {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$args, an automatic variable, assigned, added to proof 3",
+        expected = "proofs assign $args, which changes how other lines run or what they read: $args = @('x')",
+        check_routes(&with_line("$args = @('x')"))
+    );
+}
+
+mod deny_where_simplified {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Where-Object's comparison form, not a script block, added to proof 3",
+        expected = "proofs give where-object an argument other than a script block, which this reader doesn't know prints nothing: $x = $lan | Where-Object Length -gt 0",
+        check_routes(&with_line("$x = $lan | Where-Object Length -gt 0"))
+    );
+}
+
+mod deny_source_after_try {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "addresses read from Get-NetIPAddress cast after the proofs' try, where the cast's error prints raw",
+        expected = "proofs handle $ips outside the proofs' try, where an error naming it prints unmasked: $n = [int]\"$ips\"",
+        check_routes(&after_proofs("$ips = (Get-NetIPAddress -AddressFamily IPv4).IPAddress
+$n = [int]\"$ips\""))
+    );
+}
+
+mod deny_source_before_try {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "addresses read from Get-NetIPAddress cast before the proofs' try",
+        expected = "proofs handle $ips outside the proofs' try, where an error naming it prints unmasked: $n = [int]\"$ips\"",
+        check_routes(&before_proofs("$ips = (Get-NetIPAddress -AddressFamily IPv4).IPAddress
+$n = [int]\"$ips\""))
     );
 }
 
