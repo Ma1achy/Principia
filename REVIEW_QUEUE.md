@@ -792,3 +792,68 @@ and one of the fixes adds a `[boot]` section, which that ruling's text singles o
 - **Applied meanwhile:** nothing; `scripts/wsl/wsl.conf` and its tests are unchanged.
 - **Waits:** the proof-2 half of TASK-M0-63. Its proof-6 fixes (the stdin read, the byte-order mark, lavapipe in the
   hosted `wsl-parity` job, the failure line) and proof 3's evidence count touch no `wsl.conf` and need no ruling.
+
+## RQ-823: The criterion for Heggie's landing-order check (R-1007): the approved ladder read FAIL (round-off), so R-1007's convergence-order check has not been made, and a second criterion is written before its one run *(a one-way door: a criterion written after a result, R-649, as R-1008 was for TASK-M3-76; R-1007, R-998, R-1008, R-649, R-650; REQ-INT-122, REQ-INT-084; context: TASK-M3-77, PR #530; TASK-M3-79)*
+
+*Queued 14 Nov 2026 by the TASK-M3-77 implementer on the orchestrator's split (applied per R-369, task scoping), from
+physics review 5904361846 of #530. Nothing is chosen here.*
+
+*In plain English: Heggie's landing (how the last step of each sync interval lands exactly on the boundary) had to be
+checked by how fast its figure-eight error shrinks as the step shrinks. The run used step sizes so small that the error
+had already hit the floor set by computer rounding, so no rate could be read. The test that can show a broken landing
+does show one (its control), but the real landing's rate was never measured. Running it again with different settings
+means writing a new rule after seeing a result, which is the owner's call.*
+
+- **File, section:**
+  - `decisions.md` § R-1007: "Heggie's occupant lands under R-998's rule … checked by the figure-eight closure's
+    convergence order"; *the entry's measurement*: "Heggie × RK4's figure-eight closure and its convergence order across
+    η in [0.02, 0.001], the order expected for RK4 and its margin stated before the run (R-649), with the clock-only
+    landing as its control".
+  - `docs/contracts/principia_integrator_contract.md` § "The equations and the step control (R-160, R-161)", the
+    13 Nov R-1007 line: "the criterion states its round-off floor before it runs; the order is fitted only over step
+    sizes above that floor".
+  - `plan/requirements.yaml` REQ-INT-122, verify: "heggie_landing (Heggie × RK4's figure-eight closure and convergence
+    order across η in [0.02, 0.001] under R-1007's landing, its criterion and round-off floor stated before it runs)".
+- **The criterion as approved and run** (written before any run, approved by physics on 9b45d3565 of #530): Heggie ×
+  RK4 on the figure-eight, Eq. 22, one period on 32 sync intervals of `T/32`, the occupant's landing; the ladder
+  η ∈ {0.02, 0.014, 0.01, 0.007, 0.005, 0.0035, 0.0025, 0.0017, 0.0012, 0.001} against a reference at η = 1e-4;
+  `F = max(1e-12, |ref − ref(η = 1.25e-4)|)`; rungs fitted only above `10·F`, at least 3, else "the ladder has reached
+  the floor and no order is read (FAIL, round-off)"; PASS within 0.5 of 4; below 3.0 a landing defect; [3.0, 3.5) or
+  above 4.5 unexplained; the clock-only control (the clamp on, both retake caps 0) must read as a landing defect.
+- **The run** (job 5918, once, nothing tuned after; log `/Volumes/X10 Pro/Principia/orch/jobq/logs/005918.log`):
+  measured floor 8.882e-13, `F = 1e-12`, fitted above 1e-11. The landing: η = 0.02 at 4.022e-11 (fitted), the other
+  nine rungs 1.203e-12 to 8.112e-12; 1 of 3 rungs fitted: **FAIL (round-off), no order read**. Every rung landed on
+  boundary 32, the predictive limit bound none, the closure 5.025e-8 at every rung. The clock-only control: every rung
+  fitted, 1.514e-5 down to 1.105e-8, **order 2.209, a landing defect**, as it must.
+- **Physics' verdict** (review 5904361846, quoted): "It is a genuine FAIL of the measurement: no order was read, so
+  R-1007's 'checked by the figure-eight closure's convergence order' is not done, and the acceptance line
+  `heggie_landing` is not met. It is **not** a finding of a landing defect." "The ladder was the flaw, and I approved
+  it." "Any new ladder, sync interval or fit rule chosen now is a new criterion written after seeing a result. Under
+  R-649, and as R-1008 did for TASK-M3-76's failed check, that is one-way". Its informal reading, not a verdict: the
+  plateau rungs rise slightly as η falls, the shape of accumulated rounding (about N·ε ≈ 3.5e-12); a landing residual
+  of order `h²` is at most 1.2e-12 at η = 0.01; the clock-only control puts 3.9e-6 there.
+- **The question:** what criterion does R-1007's convergence-order check for Heggie run under?
+- **Options** (physics'; each new criterion written and physics-approved before its one run, each keeping the floor
+  rule, the bands 3.0, 3.5 and 4.5, and the clock-only control unchanged):
+  - **(A) The same η ladder [0.02, 0.001], the fixture on `T/8` instead of `T/32`, the predictive limit set not to
+    bind** (a stated measurement setting, as the budget's). The interval 4× longer raises RK4's truncation about
+    4⁴ = 256×, about 1e-8 at η = 0.02, giving about six fitted rungs (0.02 to 0.0035), a design estimate, not a promise.
+    At `T/8` the limit would bind above η ≈ 0.008 and flatten the order, hence its setting. It departs from the `T/32`
+    interval of REQ-INT-049's closure gate, whose closure stays on `T/32`; 8 landings a period instead of 32.
+  - **(B) `T/32` kept, the ladder moved above the requirement's range, about η ∈ [0.2, 0.02],** the predictive limit
+    set not to bind (it would above η ≈ 0.032). It keeps 32 landings a period and the gate's fixture, but leaves the
+    task's and R-1007's stated range, and its largest steps (about 0.04) are further from RK4's asymptotic regime.
+  - **(C) Accept this run as Heggie's check:** the FAIL (round-off), the control's 2.209 and the bitwise landing tests
+    (`heggie_landing_state` and its control) satisfy R-1007 for Heggie. It amends what R-1007's check means and rests
+    on the informal reading above.
+- **Recommended:** (A) (physics). It keeps the requirement's η range and every rule of the criterion, and changes only
+  the fixture's interval and the predictive limit's setting, which is what lifts the truncation above the floor: the
+  R-1008 pattern, this check standing as reported and a second criterion written before any run. (C) is not
+  recommended. Measurable alternative: (B), on the same rules.
+- **Applied meanwhile:** the order check is split out of TASK-M3-77 into TASK-M3-79 (applied per R-369, task scoping,
+  the orchestrator's call); `heggie_landing_order` and its control are not on `main`; REQ-INT-122 and REQ-INT-084's
+  Heggie part close with TASK-M3-79, not TASK-M3-77. The landing's definition (Part 2b, Heggie's step 8) and its
+  bitwise tests merge with TASK-M3-77. *14 Nov 2026:* the owner ruled the split (R-1013, verbatim: "TASK-M3-77 split:
+  yes. TASK-M3-77 merges closing REQ-INT-123; the order check moves to TASK-M3-79 closing REQ-INT-122. Condition:
+  TASK-M3-79 must pass before the M3 gate."). R-1013 rules the split only; this question, the criterion, stays open.
+- **Waits:** TASK-M3-79 only.

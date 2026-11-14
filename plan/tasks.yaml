@@ -1922,7 +1922,7 @@
   title: "Heggie's direct march, registered once at t = 0, and its step control"
   depends_on: [TASK-M3-08]  # split from TASK-M3-08, 13 Nov 2026 (R-369, task scoping)
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-122]
+  requirements: [REQ-INT-123]  # R-1013, 14 Nov 2026: REQ-INT-122 to TASK-M3-79 with the convergence-order check; was [REQ-INT-122]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-78
@@ -1933,6 +1933,14 @@
   requirements: [REQ-VAL-045, REQ-VAL-357]  # from TASK-M3-08, 13 Nov 2026 (R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
+- id: TASK-M3-79
+  milestone: M3
+  title: "Heggie's landing-order check: the figure-eight convergence order under RQ-823's criterion"
+  depends_on: [TASK-M3-77]  # split from TASK-M3-77, 14 Nov 2026 (R-1013); waits on RQ-823; must pass before the M3 gate
+  needs: [REQ-DEC-005, REQ-GEN-008]
+  requirements: [REQ-INT-122]  # from TASK-M3-77, 14 Nov 2026 (R-1013)
+  reviewers: [code, physics, qa]
+  pitfalls: [PIT-4]
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
