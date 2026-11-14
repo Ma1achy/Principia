@@ -278,6 +278,10 @@ const SAFE_COMMANDS: [&str; 5] = [
     "test-tcp",
     "invoke-ci",
 ];
+/// The methods a proof may hand an address to, as `<type>::<method>` for a static one (`.<method>` for an instance's):
+/// each returns what it computes and prints nothing of its arguments. Proof 3 counts the connections relayed with
+/// `[Math]::Max`.
+const SAFE_METHODS: [&str; 1] = ["math::max"];
 /// The keywords that open a control statement: its `(…)` is a header, a decision; its `{…}` blocks run as the
 /// statement's own context.
 const CONTROL: [&str; 11] = [
@@ -299,8 +303,8 @@ enum Node {
     Str(Vec<String>, Vec<Vec<Tok>>),
     /// A bare word: a command, a keyword, a parameter, an operator or a number.
     Word(String),
-    /// A type literal: `[Console]`, `[string]`.
-    Type,
+    /// A type literal, `[Console]` or `[string]`: its name in lowercase.
+    Type(String),
     /// `(…)`, `@(…)` or `$(…)` as `(`; `{…}` or `@{…}` as `{`; an index, `[…]`, as `[`.
     Group(char, Vec<Tok>),
     /// `=`, `+=`, `-=`.
@@ -308,8 +312,8 @@ enum Node {
     Pipe,
     /// A statement's end: a newline or `;`.
     End,
-    /// Anything else: `.`, `:`, `,`, `+`, `>`.
-    Punct,
+    /// Anything else: `.`, `:`, `,`, `+`, `>`, `&`.
+    Punct(char),
 }
 
 fn var_name(raw: &str) -> String {
@@ -457,7 +461,7 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                         &c[from..from + len].iter().collect::<String>(),
                     )));
                 } else {
-                    push!(Node::Punct);
+                    push!(Node::Punct(ch));
                 }
                 *i = from + len;
             }
@@ -496,7 +500,7 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                     {
                         end += 3;
                     }
-                    push!(Node::Type);
+                    push!(Node::Type(text.to_lowercase()));
                     *i = end;
                 } else {
                     *i += 1;
@@ -512,7 +516,7 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                 if close == Some(ch) {
                     return out;
                 }
-                push!(Node::Punct);
+                push!(Node::Punct(ch));
             }
             '|' => {
                 push!(Node::Pipe);
@@ -537,7 +541,7 @@ fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> 
                 ));
             }
             _ => {
-                push!(Node::Punct);
+                push!(Node::Punct(ch));
                 *i += 1;
             }
         }
@@ -650,7 +654,8 @@ fn spread(code: &[Tok], taint: &mut BTreeSet<String>) -> bool {
 /// side is a value), a `Report` call, a `Hide-Tailnet` call, or a control statement (`if`, `foreach`, `while`, …),
 /// whose `(…)` header is a decision; anything else prints, and fails. Inside a value (an assignment's right side, a
 /// header, a collection, a subexpression, a script block a value's pipeline runs) a statement is a value too, and may
-/// hand an address only to `SAFE_COMMANDS`; there `$_` is an address where the pipeline carries one.
+/// hand an address only to `SAFE_COMMANDS`, never to a command run by `&` or `.`, and to a method only of
+/// `SAFE_METHODS`; there `$_` is an address where the pipeline carries one.
 struct Check<'a> {
     taint: &'a BTreeSet<String>,
     lines: Vec<&'a str>,
@@ -701,6 +706,31 @@ impl Check<'_> {
         }
     }
 
+    /// Refuses each method `s` calls, `[T]::M(…)` or `$o.M(…)`, with an address among its arguments, unless it is
+    /// one of `SAFE_METHODS`.
+    fn methods(&mut self, s: &[Tok], item: bool) {
+        for k in 1..s.len().saturating_sub(1) {
+            let (Node::Punct(sep @ ('.' | ':')), Node::Word(m), Node::Group('(', args)) =
+                (&s[k - 1].node, &s[k].node, &s[k + 1].node)
+            else {
+                continue;
+            };
+            let Some(v) = self.tainted(args, item) else {
+                continue;
+            };
+            let method = match (sep, k.checked_sub(3).map(|t| &s[t].node)) {
+                (':', Some(Node::Type(t))) => format!("{t}::{m}"),
+                _ => format!(".{m}"),
+            };
+            if !SAFE_METHODS.contains(&method.as_str()) {
+                let (v, line) = (Self::display(&v), self.line(s));
+                self.found.push(format!(
+                    "proofs pass ${v} to the method {method}, which isn't known not to print: {line}"
+                ));
+            }
+        }
+    }
+
     fn statement(&mut self, s: &[Tok], value: bool, item: bool) {
         if let [Tok {
             node: Node::Var(_), ..
@@ -713,6 +743,7 @@ impl Check<'_> {
         }
         match first_word(s) {
             Some("report" | "hide-tailnet") => {
+                self.methods(s, item);
                 self.nested(&s[1..], item);
                 return;
             }
@@ -743,18 +774,29 @@ impl Check<'_> {
         let carried = self.tainted(s, item);
         if let Some(v) = &carried {
             for element in s.split(|t| matches!(t.node, Node::Pipe)) {
-                if let Some(w) = first_word(element) {
-                    let command =
-                        !w.starts_with('-') && !w.chars().all(|c| c.is_ascii_digit() || c == '.');
-                    if command && !SAFE_COMMANDS.contains(&w) {
+                match element.first().map(|t| &t.node) {
+                    Some(Node::Word(w)) => {
+                        let command = !w.starts_with('-')
+                            && !w.chars().all(|c| c.is_ascii_digit() || c == '.');
+                        if command && !SAFE_COMMANDS.contains(&w.as_str()) {
+                            let (v, line) = (Self::display(v), self.line(s));
+                            self.found.push(format!(
+                                "proofs pass ${v} to {w}, which isn't known not to print: {line}"
+                            ));
+                        }
+                    }
+                    // The call and dot-source operators run a command this reader doesn't name.
+                    Some(Node::Punct(op @ ('&' | '.'))) => {
                         let (v, line) = (Self::display(v), self.line(s));
                         self.found.push(format!(
-                            "proofs pass ${v} to {w}, which isn't known not to print: {line}"
+                            "proofs pass ${v} to a command run by {op}, which isn't known not to print: {line}"
                         ));
                     }
+                    _ => {}
                 }
             }
         }
+        self.methods(s, item);
         for t in s {
             match &t.node {
                 Node::Group('{', body) => self.block(body, true, item || carried.is_some()),
@@ -889,9 +931,10 @@ fn with_line(line: &str) -> String {
     )
 }
 
-/// The forms the code review's probe found missed by a deny-list, each printing an address (made up here, in the
-/// variables proof 3 sets): each must be refused, and is a control below as well.
-const PROBE_PRINTS: [&str; 22] = [
+/// The forms the code review's probes found missed, first by a deny-list, then by the allow-list's first cut (the call
+/// and dot-source operators and methods), each printing an address (made up here, in the variables proof 3 sets): each
+/// must be refused, and is a control below as well.
+const PROBE_PRINTS: [&str; 31] = [
     "Write-Host @hostSwitch",
     "'gateway: {0}' -f $gateway",
     "\"gateway: {0}\" -f $gateway",
@@ -914,6 +957,15 @@ const PROBE_PRINTS: [&str; 22] = [
     "foreach ($g in @($gateway)) { $g }",
     "$seen = @($hostSwitch | ForEach-Object { Write-Host $_ })",
     "if ($gateway) { $gateway }",
+    "$null = & Write-Host $gateway",
+    "$null = . Write-Host $gateway",
+    "$r = & curl.exe -s $gateway",
+    "$null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $gateway)",
+    "$h = $Host; $null = $h.UI.WriteLine($gateway)",
+    "$null = $lan | & Out-Host",
+    "$x = @($hostSwitch | ForEach-Object { & Write-Host $_ })",
+    "Report 3 $false (& Write-Host $gateway)",
+    "if (& Write-Host $gateway) { }",
 ];
 
 fn check_probes(script: &str, forms: &[&str]) {
@@ -1487,6 +1539,110 @@ mod allow_host_ui {
         "$host.UI.WriteLine($gateway) added to proof 3",
         expected = "wsl.ps1 writes to the console unmasked: $host.UI.WriteLine($gateway)",
         check_routes(&with_line("$host.UI.WriteLine($gateway)"))
+    );
+}
+
+mod allow_call_operator {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$null = & Write-Host $gateway added to proof 3",
+        expected = "proofs pass $gateway to a command run by &, which isn't known not to print: $null = & Write-Host $gateway",
+        check_routes(&with_line("$null = & Write-Host $gateway"))
+    );
+}
+
+mod allow_dot_source {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$null = . Write-Host $gateway added to proof 3",
+        expected = "proofs pass $gateway to a command run by ., which isn't known not to print: $null = . Write-Host $gateway",
+        check_routes(&with_line("$null = . Write-Host $gateway"))
+    );
+}
+
+mod allow_native_call {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$r = & curl.exe -s $gateway added to proof 3",
+        expected = "proofs pass $gateway to a command run by &, which isn't known not to print: $r = & curl.exe -s $gateway",
+        check_routes(&with_line("$r = & curl.exe -s $gateway"))
+    );
+}
+
+mod allow_static_method {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the gateway appended to the job summary by [IO.File]::AppendAllText, added to proof 3",
+        expected = "proofs pass $gateway to the method io.file::appendalltext, which isn't known not to print: $null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $gateway)",
+        check_routes(&with_line(
+            "$null = [IO.File]::AppendAllText($env:GITHUB_STEP_SUMMARY, $gateway)"
+        ))
+    );
+}
+
+mod allow_instance_method {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the host's UI reached through a copy of $Host, added to proof 3",
+        expected = "proofs pass $gateway to the method .writeline, which isn't known not to print: $h = $Host; $null = $h.UI.WriteLine($gateway)",
+        check_routes(&with_line("$h = $Host; $null = $h.UI.WriteLine($gateway)"))
+    );
+}
+
+mod allow_max_of_another_type {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a Max that isn't [Math]'s, added to proof 3",
+        expected = "proofs pass $gateway to the method .max, which isn't known not to print: $m = $w.Max($gateway)",
+        check_routes(&with_line("$m = $w.Max($gateway)"))
+    );
+}
+
+mod allow_call_in_a_pipeline {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$null = $lan | & Out-Host added to proof 3",
+        expected = "proofs pass $lan to a command run by &, which isn't known not to print: $null = $lan | & Out-Host",
+        check_routes(&with_line("$null = $lan | & Out-Host"))
+    );
+}
+
+mod allow_call_in_a_block {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "& Write-Host $_ in a value's script block, added to proof 3",
+        expected = "proofs pass $_ to a command run by &, which isn't known not to print: $x = @($hostSwitch | ForEach-Object { & Write-Host $_ })",
+        check_routes(&with_line(
+            "$x = @($hostSwitch | ForEach-Object { & Write-Host $_ })"
+        ))
+    );
+}
+
+mod allow_call_in_report {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "& Write-Host in Report's arguments, added to proof 3",
+        expected = "proofs pass $gateway to a command run by &, which isn't known not to print: Report 3 $false (& Write-Host $gateway)",
+        check_routes(&with_line("Report 3 $false (& Write-Host $gateway)"))
+    );
+}
+
+mod allow_call_in_a_header {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "& Write-Host in an if's header, added to proof 3",
+        expected = "proofs pass $gateway to a command run by &, which isn't known not to print: if (& Write-Host $gateway) { }",
+        check_routes(&with_line("if (& Write-Host $gateway) { }"))
     );
 }
 
