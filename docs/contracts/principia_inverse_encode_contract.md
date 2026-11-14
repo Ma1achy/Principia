@@ -235,14 +235,23 @@ differentiable at `x`.
   by the central difference `(E(x + hₖeₖ) − E(x − hₖeₖ))/(2hₖ)`, `hₖ = ε_R^{1/3}·max(1, |xₖ|)`, divided by `W`'s entry
   at `x` for component `k`, and `σ_max` by one-sided Jacobi rotations on the transpose's eight columns, so no Gram
   matrix is formed. Where `E` is not differentiable at `x` (a clamp or an `α`-pole within `hₖ`), the difference gives a
-  large finite value for `+∞`.
+  large finite value for `+∞`. The `z_β` component of that difference is `δ(E(x + hₖeₖ)[β], E(x − hₖeₖ)[β])/(2hₖ)`, `δ`
+  the signed difference on the circle (`principia_dd_decoder.md` § 3.2, "The distance between two `z_β`"), so a state on
+  the encode's seam, `β = 0` off the pole, gets the finite local derivative, not one of order `π/hₖ`; the `α`-pole stays
+  `+∞`. *14 Nov 2026 (R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread 4573289687 of PR #533), the
+  target TASK-M2-57 builds, in force when it merges; until then the Was describes the built decoder:* *Was:* no such
+  sentence (an addition): `z_β`'s component was subtracted on the line, as every other's.
 - **The mass columns** (applied per R-369, TASK-M2-20; physics review of PR #294). Moving `mₖ` alone takes the state
   off the simplex, `Σmᵢ = 1 ± hₖ`: the one use of encode outside its precondition `Σmᵢ = 1` (canon.rs, encode). Those
   columns differentiate encode's own formulas off the simplex, the total read as given, not renormalised: `C`'s
   centre of mass and total momentum with `M` taken as 1, and the mass block's inverse on the masses as they stand. A
   mass within one step of zero, `mₖ ≤ hₖ`, takes the three-point forward difference
   `(4E(x + hₖeₖ) − 3E(x) − E(x + 2hₖeₖ))/(2hₖ)` instead, so no mass reaches zero or below, where the mass guard's
-  substitution would put a kink in the difference.
+  substitution would put a kink in the difference. Before combining, the stencil unwraps each `z_β` relative to
+  `E(x)`'s: `E(x + jhₖeₖ)[β]` is read as `E(x)[β] + δ(E(x + jhₖeₖ)[β], E(x)[β])` for `j = 1, 2` (`δ` as above). *14 Nov
+  2026 (R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread 4573289687 of PR #533), the target TASK-M2-57
+  builds, in force when it merges; until then the Was describes the built decoder:* *Was:* no such sentence (an
+  addition): the stencil combined `z_β`'s components on the line, as every other's.
 
 ---
 

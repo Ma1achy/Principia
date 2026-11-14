@@ -197,14 +197,21 @@ R-865, R-898, R-919). The definitions the full-circle `β` rests on:
   one representative in `[0, 2π̂]`, has one: the `+x` half-axis of `λ̃`, `β = 0`, the collinear shapes with body 2 on
   `ρ̃`'s side of the inner pair. A state crossing it from `λ̃_y < 0` to `λ̃_y ≥ 0` encodes from near `2π̂` to `0`. The
   `−x` half-axis, `β = π`, is no seam: the encode is continuous across it, `π̂` on it (R-438's select, kept).
-- **The distance between two `z_β` (R-898).** `z_β` is an angle, so two values of it, encoded or stored, are compared
-  by their distance on the circle, never on the line: `d(a, b) = |a − b − 2π·round((a − b)/2π)|`, in `[0, π]`,
-  evaluated at f64 (a tie at `π` is `π` either way). `d(0, 2π̂)` is `2π − 2π̂`, a rounding of `2π`, so the two ends of
-  the encode's seam are one point to that rounding. Every check that compares a `z_β` to a tolerance (T1's
-  equivariance and T2's round trip, inverse_encode_contract Part 1; the block inverses' recovery; a CPU/GPU agreement
-  on the encode) reads `d`, and a "`z_β` to tolerance" there means `d` within it. A latent `z` with `z_β` drawn off
+- **The distance between two `z_β` (R-898).** `z_β` is an angle, so two values of it, encoded or stored, are compared by
+  their distance on the circle, never on the line. The signed difference is `δ(a, b) = a − b − 2π·round((a − b)/2π)`, in
+  `[−π, π]`, and the distance is `d(a, b) = |δ(a, b)|`, in `[0, π]`, both evaluated at f64 (a tie at `π` is `π` either
+  way in `d`). Every finite difference of `z_β` reads `δ`, never `a − b` on the line: the conditioning `κ`'s central
+  difference and the mass columns' three-point stencil (inverse_encode_contract Part 4, "How it is evaluated" and "The
+  mass columns"), so a state on the encode's seam, `β = 0` off the pole, has a finite `z_β` derivative, not one of order
+  `π/h`; the `α`-pole stays `κ = +∞`, `β` being undefined there. `d(0, 2π̂)` is `2π − 2π̂`, a rounding of `2π`, so the
+  two ends of the encode's seam are one point to that rounding. Every check that compares a `z_β` to a tolerance (T1's
+  equivariance and T2's round trip, inverse_encode_contract Part 1; the block inverses' recovery; a CPU/GPU agreement on
+  the encode) reads `d`, and a "`z_β` to tolerance" there means `d` within it. A latent `z` with `z_β` drawn off
   `[0, 2π̂]` (a ball around the origin takes `z_β < 0`) returns from `E(D(z))` on its representative, `2π` away on the
-  line and `d`-close on the circle.
+  line and `d`-close on the circle. *14 Nov 2026 (R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread
+  4573289687 of PR #533), a definition under R-72, the target TASK-M2-57 builds, in force when it merges:* *Was:* "`z_β`
+  is an angle, so two values of it, encoded or stored, are compared by their distance on the circle, never on the line:
+  `d(a, b) = |a − b − 2π·round((a − b)/2π)|`, in `[0, π]`, evaluated at f64 (a tie at `π` is `π` either way)."
 - **A syzygy crossing on a latent chart.** A trajectory through a syzygy has `β(t)` crossing 0 or π continuously,
   the two collinear orientations, and no mirror changes it. A trace on a latent chart places each sample's encoded
   `z_β` on its lift nearest the previous sample's value (the unwrap: `z_β + 2πk` with `|z_β + 2πk − z_prev| ≤ π`, a
