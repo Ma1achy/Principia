@@ -173,9 +173,13 @@ words (§ 17.5; R-943); a blend's repeats (§ 17.5).
 when; the body now reads as they rule. Each section a ruling changes carries it in place, its old words kept as *Was*,
 and § 14's table gives each door its ruling. RQ-729's edges were applied by R-916 in `plan/tasks.yaml` (TASK-M9-20, -22
 and -28 depend on TASK-M2-77), and TASK-M4-06's edge was never applied (R-914). Two questions the carry met that no ruling
-settles are queued, nothing chosen meanwhile: RQ-816 (the registry's guard on binary-plus-single and fixed-`k` rows, and
-a combination's `none`, after R-847 and R-849; § 3, § 12) and RQ-817 (the browser's "labelled and not live" after
-R-926; § 7.5). (D) and (F) are confirmed by physics review 5852979675 of PR #482 (physics review 5902556608 of PR
+settles were queued. RQ-816 (the registry's guard on binary-plus-single and fixed-`k` rows, and a combination's `none`,
+after R-847 and R-849) is decided (a), a mechanical consequence of the two rulings (applied per R-369 on physics review
+5902556608 of PR #528; listed for the owner's veto): the guard goes, a typed combination takes R-849's general solve, and
+TASK-M2-66 carries it (§ 3, § 12). RQ-817 (the browser's "labelled and not live" after R-926; § 7.5) stays open, nothing
+chosen meanwhile. *Was:* "Two questions the carry met that no ruling settles are queued, nothing chosen meanwhile:
+RQ-816 (the registry's guard on binary-plus-single and fixed-`k` rows, and a combination's `none`, after R-847 and R-849;
+§ 3, § 12) and RQ-817 (the browser's "labelled and not live" after R-926; § 7.5)." (D) and (F) are confirmed by physics review 5852979675 of PR #482 (physics review 5902556608 of PR
 #528), so they are carried unconditionally, still listed for the owner's veto. *Was:* "(D) and (F) stay conditional, as
 the status line says, until physics review confirms them."
 
@@ -349,8 +353,11 @@ has closed parts and no closed inverse, and `K + L_z` doesn't say which part mov
 closed inverse, `numerical` only with a registered numerical one, naming what it solves for and its branch rule (§ 7.3).
 Otherwise, typed by a user, it gets a general numerical solve on the CPU (R-849, RQ-733 (b)): it records the branch
 rule it uses where several solutions exist, marks seams where that rule flips, reports convergence per pixel and tags
-every failure, never dropping it (REQ-CHART-145); overlay-only is not the answer. How the registry's class and § 6.1's
-`NoJointInverse` read after this is RQ-816. *Was:* "and otherwise `none`: a forward-only overlay, and as an axis
+every failure, never dropping it (REQ-CHART-145); overlay-only is not the answer. The registry's class and § 6.1's
+`NoJointInverse` read so too: a combination with no registered inverse is classed by the general solve, and
+`NoJointInverse` is raised only for a registered `none` row picked as an axis (RQ-816 (a), applied per R-369; listed for the owner's veto; § 12's
+`combination_class`). *Was (14 Nov 2026):* "How the registry's class and § 6.1's `NoJointInverse` read after this is
+RQ-816." *Was:* "and otherwise `none`: a forward-only overlay, and as an axis
 `NoJointInverse` (RQ-733)." Its `angle-like` is true if any part is.
 Its scale is computed, not declared. On the GPU no expression is ever interpreted (lowering Part 1): a combination reaches
 the GPU only as a registered, baked row. Otherwise, with a registered inverse, it runs as CPU batch, where an interpreter may
@@ -371,8 +378,10 @@ targets that use them, TS-2, TR-1, MK-1 and SL-1, score in M9 once the charts ex
 the pericentre phase, the pull-in distance with a stated tidal error, fixed `k`'s rotation sense) are filled at build
 under physics review (R-72), never guessed. Inner and outer orbital elements are axes at a labelled pair, plus overlays
 (R-847, RQ-723 (b)). So a row with an inverse may now name a binary phase, an eccentricity, an impact parameter or a
-fixed-`k` prescription. A plane a user builds is the user's chart and is never scored (R-846, RQ-718). What becomes of
-the guard that refused such rows, `excluded_primitives` (§ 12) and REQ-CHART-096, is RQ-816. *Was:* "**What is not an
+fixed-`k` prescription. A plane a user builds is the user's chart and is never scored (R-846, RQ-718). The guard that
+refused such rows, `excluded_primitives` and REQ-CHART-096's clause, is retired (RQ-816 (a), applied per R-369; listed for the owner's veto; § 12's
+`combination_class`, TASK-M2-66). *Was (14 Nov 2026):* "What becomes of the guard that refused such rows,
+`excluded_primitives` (§ 12) and REQ-CHART-096, is RQ-816." *Was:* "**What is not an
 axis in the registry, and why (R-669).** R-669: "no binary-plus-single chart is built", and TS-2 reads "not scored: no
 fixed-k velocity chart". So no row with an inverse names a binary phase, an eccentricity or an impact parameter, and
 none is a fixed-`k` prescription; forward-only overlay rows may (§ 3.1). A builder option can't quietly reverse a
@@ -881,7 +890,7 @@ Each is a variant of `chart_authoring::validate::Refusal`, in code, with a named
 |---|---|---|
 | `AxisAndHold { axis, quantity }` | an axis and a constraint on one quantity | `L_z` axis + hold `L_z`; `E`, `K`, `KE` or `Q` axis + hold `E` (generalises R-25) |
 | `SameQuantity { a, b }` | two axes are rank 1 | `(K, KE)`; `(E, K)`, `(E, Q)` or `(K, Q)` at a frozen configuration; `(α, ‖λ‖/‖ρ‖)`; `(m_b/m_a, m_a/m_b)`; § 5.5 rows 17 to 20 as they refuse |
-| `NoJointInverse { a, b }` | the pair has no inverse | either axis's class is `none`; a typed combination with no registered inverse no longer reaches it, taking R-849's general numerical solve (§ 3), and what else does is RQ-816 |
+| `NoJointInverse { a, b }` | the pair has no inverse | either axis's class is `none`; a typed combination with no registered inverse no longer reaches it, taking R-849's general numerical solve (§ 3), a registered `none` row typed as an expression included; it is raised only for a registered `none` row picked as an axis (RQ-816 (a), applied per R-369; listed for the owner's veto; § 12). *Was (14 Nov 2026):* "and what else does is RQ-816" |
 | `SizeOnly { axis }` | it would be constant | `I`, `R` |
 | ~~`HoldAgainstConvention { hold, convention }`~~ | **retired, a label (R-841, RQ-722 (b)):** a rest chart under hold `L*` is a well-defined family, each pixel `(L*/I)·Jr`, so it carries the label `not at rest` (§ 6.2) and is not refused, keeping the order's closed list of refusals. *Was:* "**not settled: RQ-722.** A rest chart under hold `L*` is a well-defined family, each pixel `(L*/I)·Jr`, and reachable anyway through the latent chart at `z_q = 0`, so this is no contradiction in the states; it is the chart's identity" | hold `L_z` on a chart declared at rest, by a declared flag: the mass simplex, the Euclid plane, `Φ_strip,δm`, region D's exact-rest arm: labelled, not refused |
 | `View`, existing | R-25, R-670 | a `forbids_energy_normalisation` chart + any `E*`; `ε ≠ 0` + any `E*` |
@@ -1543,7 +1552,7 @@ maths and TASK-M8-120 the display, the defaults and the toggle (R-916). *Was:* "
 - **Later, not built here:** a "skip computing duplicates" export setting for speed, off by default and labelled. No task owes it.
 
 *11 Nov 2026, the filter on a mid-morph frame (R-944; applied per R-369, listed for the owner's veto; confirmed by
-physics review 5852979675, below; *was* "and conditional on physics review").* R-899's Q8 (a) had the filter off on a mid-morph frame, with a label; R-944 makes that a gap to close.
+physics review 5852979675, below, where it was conditional on physics review).* R-899's Q8 (a) had the filter off on a mid-morph frame, with a label; R-944 makes that a gap to close.
 The mechanism: the frame declares the symmetries either end declares; a pixel's partner is `place(g·D(φ(u)), frame)` (§
 10.6), and the correctness rule above then decides each pixel, unchanged, so a declared symmetry that the blend breaks
 blanks nothing ("no duplicates in this chart"). The canonical representative of a pair on a blend is a definition owed
@@ -1864,7 +1873,7 @@ Each with a control (R-176), named here and owned by a task.
 | `symmetry_filter_toggle` | the toggle on the chart's panel and in the export dialog; its no-partners state; one click to the full disc with no new run | the toggle left live with no partners | TASK-M8-120 |
 | `symmetry_filter_statement` | the legend and sidecar state the canonical choice; a paper-frame preset opens with it on, any other chart with it off | the statement dropped; the default on for every chart | TASK-M8-120; its region-D area check TASK-M2-84 (REQ-CHART-176) (R-916; *was* TASK-M8-120) |
 | `baked_cap` | baked pairs in `stage::decode` at or under the ledger's constant | one entry over | TASK-M4-33 |
-| `excluded_primitives` | no row with an inverse names a binary phase, eccentricity, impact parameter or fixed `k` (R-669); R-847 reverses R-669, so what this guard becomes is RQ-816, nothing chosen here | one added | TASK-M2-66 (R-916; *was* TASK-M4-33) |
+| `combination_class` (RQ-816 (a), applied per R-369; listed for the owner's veto, physics review 5902556608; *was* `excluded_primitives`) | a row with an inverse naming a binary phase, eccentricity, impact parameter or fixed `k` registers (R-847 reverses R-669, the guard's only reason); a typed combination with no registered inverse, a registered `none` row typed as an expression included, takes R-849's general numerical solve, which (i) is distinguishable from a registered numerical inverse, stating the coordinates it solves for, its branch rule, its seams and its convergence per pixel (REQ-CHART-145); (ii) the `SizeOnly`, `NoWarpWritten`, `AxisAndHold` and `SameQuantity` refusals still apply to it; (iii) `NoJointInverse` is raised only for a registered `none` row picked as an axis (REQ-CHART-096). *Was:* "no row with an inverse names a binary phase, eccentricity, impact parameter or fixed `k` (R-669); R-847 reverses R-669, so what this guard becomes is RQ-816, nothing chosen here" | a binary-phase row refused; the general solve reported as a registered numerical inverse; a size-only typed combination accepted (*was* "one added") | TASK-M2-66 (R-916; *was* TASK-M4-33) |
 | `region_d_native` | § 8.8's table: read-back within tolerance **and** the paper's three separations in the paper's own frame against the decoded state, eq. 4's energy on AA rows | `d` dropped on both sides; bodies 0, 1 swapped at unequal masses; `η` mirrored | TASK-M2-75 |
 | `preset_paper_coords` | § 20's table: the same oracle per frame; offsets below the working float at f64 only, neighbours distinct | the same three; a sub-resolution row at f32 | TASK-M2-77 |
 | `prim_round_trip` | each closed row of §§ 3.1 and 3.2, `forward(inverse(x)) = x` on the axis, f64 and f32, in eps, measured worsts here, the row's task setting the tolerance and its margin: focal flat, 1 eps on `(Z, σ)` at f64, 0.5 to 1 eps at f32, down to `η` near 10⁻⁴; polar about the COM, as its row's forward is, `6 eps·r_max/r_min`, measured 135 eps at `\|det\|` from 10⁻¹ and 8,644 from 10⁻⁵ at f64, about 5.3 eps·`r_max/r_min`. A separate clause, `inverse(forward(x)) = x`, takes the row's scaling, also measured: `0.35 eps/η` for § 3.2's focal row, `0.5 eps·r̂/\|det\|` for § 3.1's polar row, 0.31 at Dirichlet masses and 0.41 at masses log-uniform to 10⁻³, 300,000 draws each. Saari's split sums and is orthogonal; `K_shape = I\|ṅ\|²/8`; `I₁I₂ = n_w²/4`; `h`'s step keeps `L_z`; the aliases equal; Tanikawa–Mikkola's mass-weighted `L_com = 0` at random masses after `C`, from an independent `Σ m r × v`; each case also reads back the row's `Holds` | a named mutation per row that fires there; `R` from the centroid, −0.0025 at § 3.2's point; an unweighted sum | TASK-M2-74, TASK-M2-76 |
@@ -2149,8 +2158,9 @@ rebuilds three gallery charts, and waits on TASK-M8-120 alone of the design's ta
   `stage_blend` is built: under R-926 items 5 and 6 no blend entry is baked (§ 11, § 17.12). *Was:* "§ 17's whole-frame
   time, integration included, a built `stage_blend`, and any nonlinear-end alignment: not measured." A faster CPU-only live path is a goal with no task. The linearised decoder's tangent planes wait on M6.
 - RQ-701, RQ-700 and RQ-682 are closed: R-893 (RQ-701, R-818's form and R-833's cap, built by TASK-M8-48), R-817
-  (RQ-700, the floor under the rise) and R-816 (RQ-682, kind 3) (§ 9). Two items this gate found are open: RQ-816 (§ 3,
-  § 12) and RQ-817 (§ 7.5). *Was:* "RQ-701, RQ-700 and RQ-682 stand open in the queue; this document assumes nothing of
+  (RQ-700, the floor under the rise) and R-816 (RQ-682, kind 3) (§ 9). Of the two items this gate found, RQ-816 is decided (a)
+  (applied per R-369; listed for the owner's veto; § 12, TASK-M2-66) and RQ-817 is open (§ 7.5). *Was (14 Nov 2026):*
+  "Two items this gate found are open: RQ-816 (§ 3, § 12) and RQ-817 (§ 7.5)." *Was:* "RQ-701, RQ-700 and RQ-682 stand open in the queue; this document assumes nothing of
   them but where it says so."
 
 ---
@@ -2394,7 +2404,8 @@ above.
 
 **R-669, reversed by R-847.** A frame is never a target's chart and never scored (replication rule 6, R-649). With R-669
 reversed there is no refused chart for a morph to reach: each end has to be built, and a plane a user builds is the
-user's chart, never scored (R-846). What `excluded_primitives` becomes is RQ-816. *Was:* "**R-669.** … A morph doesn't
+user's chart, never scored (R-846). `excluded_primitives` is retired (RQ-816 (a), applied per R-369; listed for the owner's veto; § 12's `combination_class`). *Was (14 Nov 2026):* "What
+`excluded_primitives` becomes is RQ-816." *Was:* "**R-669.** … A morph doesn't
 make a refused chart reachable as a chart: each end has to be built, and `excluded_primitives` still holds. It can pass
 close to a refused plane, with the same answer as RQ-718: it is a user's picture, and the row stays "not scored"."
 
