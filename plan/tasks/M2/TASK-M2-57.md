@@ -135,6 +135,36 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   in random gauge whose rotated `λ̃_y` is a rounding residue of either sign, subnormal residues included; control: the
   superseded unfused or flushed forms, emulated on the CPU, decide the case differently on at least one input
   (REQ-DEC-002, REQ-COL-006; W11; physics review 5903954379 of PR #533, P4).
+- **The restated requirements' verifies (TASK-M2-107; qa review 5903950227 of PR #533, Q1).** Each runs as its
+  requirement now states it, in the file named, the implementer's test files among them this task's to change:
+  - `cargo test -p kernel --test canon` — REQ-DEC-002 (a lower-half state keeps `λ̃_y < 0` through canonicalise; the
+    section's three conditions and idempotence); REQ-DEC-017 (`λ̃_y` at `±δ_λ`, `±0` and straddling keeps its sign,
+    the same output twice; the source check that nothing in `C` or the encode reads `δ_λ`; controls: `C` with the
+    mirror step left in fails, a `C` reading `δ_λ` fails the source check); REQ-DEC-018 (`canonical_noop` with `z_β`
+    over the full circle).
+  - `cargo test -p engine --test canon_gpu`, in the `gpu-kernel` job — REQ-DEC-002 and REQ-DEC-017
+    (`canonicaliser_seam_sweep` without the mirror fork, the line above); REQ-ENC-015
+    (`canonicaliser_canonicalise_order` with a lower-half input; control: the mirror step left in fails it).
+  - `cargo test -p kernel --test encode_core` — REQ-ENC-007 (`encode_block_inverses` with `z_β` on both halves, read
+    on the circle; `encode_collinear_beta`'s f64 sides, f32 expectation and pole landmark; `β` sets no
+    `lookup_clamped`); REQ-ENC-003 (`encode_t1_gauge` as the equivariance, at its built bound, `z_β` on the circle;
+    control: an encode with the mirror step left in fails); REQ-ENC-014 (`encode_notices`: a lower-half state raises
+    none, bit 1 set on no input).
+  - `cargo test -p engine --test encode_gpu`, in the `gpu-kernel` job — REQ-COL-006 and REQ-ENC-007 (the generated
+    encode's signed `β` against the CPU's on both halves within REQ-DEC-043's factor on the circle, `π̂` on the `−x`
+    half-axis with `±0` operands, the pole's 0).
+  - `cargo test -p kernel --test roundtrip` — REQ-ENC-005 and REQ-DEC-016 (T3: `D(E(g·x)) = C(g·x)` and
+    `L_z(D(E(g·x))) = det(Π_g)·L_z(x)`; controls: a configuration-only rotation in `C`, and a test-side mirror
+    reflecting the `rᵢ` only, each fail), with the line above.
+  - `cargo test -p kernel --test encode_by_kind encode_shape_sphere_signed` — REQ-ENC-034 with its three controls.
+  - `cargo test -p kernel --test shape_sphere` — REQ-CHART-020 (the canonical form, `Φ` then the one `C`, on both
+    hemispheres, a lower-hemisphere point keeping `n₂ < 0`).
+  - `cargo test -p ledger --test link_registry` — REQ-GEN-013 (`periodic_beta` is `β`'s default and resolves by
+    name; no selection can name `sigmoid_beta`, `tanh_beta` or `softsign_beta`; control: a selection naming one is
+    refused).
+  - `cargo test -p render --test decode_preset` — REQ-COL-006's fragment arms.
+  - Review: REQ-ENC-002 (every listed consumer calls the one encode entry point) and REQ-CHART-002 (unchanged, its
+    shape sphere through the one path).
 - Any preset, saved chart or golden (other than a preset or golden redefined under R-919) whose converted value doesn't decode to the same system within REQ-ENC-024's `ε_phys` on the decoded state, or
   whose outcome classes change, stops the task: the list goes to the owner (REQ-DEC-055).
 - Review: for every saved oblique latent chart whose `q₁[1]` or `q₂[1]` is nonzero, the PR states which form it
