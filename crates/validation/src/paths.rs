@@ -1,5 +1,5 @@
 //! Paths as a test writes them into another file or compares them with a tool's output, alike on every platform
-//! (REQ-TOOL-236). On Windows `canonicalize` gives a verbatim path (`\\?\E:\…`), whose `\` a TOML basic string or a
+//! (REQ-TOOL-237). On Windows `canonicalize` gives a verbatim path (`\\?\E:\…`), whose `\` a TOML basic string or a
 //! JSON string reads as an escape and which no `/` joined after it extends, and tools write a path with `\` where a
 //! test writes `/`.
 
