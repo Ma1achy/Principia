@@ -1,6 +1,7 @@
 //! The kernel's `atan2` at each `Real`, [`crate::Real::arctan2`] (RQ-628, decided by the orchestrator per R-369,
-//! option (a); REQ-ENC-024, R-297, R-116): at f64, the CPU's alone, libm's `atan2`, unchanged bit for bit; at f32, the
-//! GPU's precision, [`atan2_f32`], the kernel's own, in integer arithmetic.
+//! option (a); REQ-ENC-024, R-297, R-116): at f64, the CPU's alone, the pinned libm's `atan2` (`libm = "=0.2.16"`,
+//! `force-soft-floats`; R-991), so every machine gives the same bits; at f32, the GPU's precision, [`atan2_f32`], the
+//! kernel's own, in integer arithmetic.
 //!
 //! **Why the kernel has its own.** The fragment's ROUNDTRIP preset runs the encode as the backend compiles it (R-297),
 //! and WGSL bounds `atan2` only to 4096 ULP: lavapipe's, Mesa's lowering, is off by about `2·10⁻⁵` relative to

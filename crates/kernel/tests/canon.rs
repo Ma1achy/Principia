@@ -2004,7 +2004,7 @@ fn check_angle<R: Precision>(angle: Angle<R>) {
     let f = |v: R| -> f64 { v.into() };
     let bits = |v: R| f(v).to_bits();
     for y in [3.0, 1.0, -1.0, 1e-3, -1e-20] {
-        let want = cast::<R>(y).atan2(R::zero());
+        let want = cast::<R>(y).arctangent2(R::zero());
         for x in [-0.0, 0.0] {
             let phi = angle([cast::<R>(x), cast::<R>(y)]);
             assert!(
@@ -2028,7 +2028,7 @@ fn check_angle<R: Precision>(angle: Angle<R>) {
     let mut rng = SplitMix::new(11);
     for _ in 0..4096 {
         let rho = [rng.uniform(-4.0, 4.0), rng.uniform(-4.0, 4.0)].map(|v| cast::<R>(v.into()));
-        let (phi, want) = (angle(rho), rho[1].atan2(rho[0]));
+        let (phi, want) = (angle(rho), rho[1].arctangent2(rho[0]));
         assert!(
             bits(phi) == bits(want),
             "{}: φ = {:e} at ρ = {:?}, not atan2's {:e}",

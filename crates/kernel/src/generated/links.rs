@@ -191,7 +191,7 @@ pub trait Link<const C: usize, const P: usize> {
 pub fn tanh_sat<R: LinkReal>(x: R) -> R {
     let t = super::constants::tanh_sat::<R>();
     let lo = if x < -t { -t } else { x };
-    let y = Float::tanh(if lo > t { t } else { lo });
+    let y = Real::hyperbolic_tangent(if lo > t { t } else { lo });
     let one = R::one();
     let hi = if y > one { one } else { y };
     if hi < -one {
@@ -204,25 +204,25 @@ pub fn tanh_sat<R: LinkReal>(x: R) -> R {
 /// `σ(x) = 1/(1 + e⁻ˣ)`.
 #[inline]
 fn sigmoid<R: LinkReal>(x: R) -> R {
-    R::one() / (R::one() + Float::exp(-x))
+    R::one() / (R::one() + Real::exponential(-x))
 }
 
 /// `logit(s) = log(s/(1 − s))`, σ's inverse.
 #[inline]
 fn logit<R: LinkReal>(s: R) -> R {
-    Float::ln(s / (R::one() - s))
+    Real::logarithm(s / (R::one() - s))
 }
 
 /// `softplus(x) = log(1 + eˣ)`, as `max(x, 0) + log(1 + e^(−|x|))`, which does not overflow.
 #[inline]
 fn softplus<R: LinkReal>(x: R) -> R {
-    Float::max(x, R::zero()) + Float::ln_1p(Float::exp(-Float::abs(x)))
+    Float::max(x, R::zero()) + Real::ln_one_plus(Real::exponential(-Float::abs(x)))
 }
 
 /// `inv_softplus(y) = log(eʸ − 1)`, as `y + log(1 − e⁻ʸ)`, which does not overflow.
 #[inline]
 fn inv_softplus<R: LinkReal>(y: R) -> R {
-    y + Float::ln(-Float::exp_m1(-y))
+    y + Real::logarithm(-Real::exp_minus_one(-y))
 }
 
 /// `softmax_tanh`, onto `mass` (simplex). Sampling: under-samples simplex edges/corners.
@@ -241,10 +241,10 @@ impl Link<2, 3> for SoftmaxTanh {
     fn forward_at<R: LinkReal>(v: [R; 2], p: &LinkParams<R>) -> [R; 3] {
         let t0 = tanh_sat(v[0]);
         let t1 = p.mu_max * t0;
-        let t2 = Float::exp(t1);
+        let t2 = Real::exponential(t1);
         let t3 = tanh_sat(v[1]);
         let t4 = p.mu_max * t3;
-        let t5 = Float::exp(t4);
+        let t5 = Real::exponential(t4);
         let t6 = R::LIT_0 + t2 + t5;
         let t7 = R::LIT_0 / t6;
         let t8 = t2 / t6;
@@ -260,18 +260,18 @@ impl Link<2, 3> for SoftmaxTanh {
     #[inline]
     fn inverse_at<R: LinkReal>(v: [R; 3], p: &LinkParams<R>) -> [R; 2] {
         let t0 = v[1] / v[0];
-        let t1 = Float::ln(t0);
+        let t1 = Real::logarithm(t0);
         let t2 = R::LIT_0 - R::EPS_MU;
         let t3 = t2 * p.mu_max;
         let t4 = -t3;
         let t5 = Float::min(Float::max(t1, t4), t3);
         let t6 = t5 / p.mu_max;
-        let t7 = Float::atanh(t6);
+        let t7 = Real::arctanh(t6);
         let t8 = v[2] / v[0];
-        let t9 = Float::ln(t8);
+        let t9 = Real::logarithm(t8);
         let t10 = Float::min(Float::max(t9, t4), t3);
         let t11 = t10 / p.mu_max;
-        let t12 = Float::atanh(t11);
+        let t12 = Real::arctanh(t11);
         [t7, t12]
     }
 
@@ -282,24 +282,24 @@ impl Link<2, 3> for SoftmaxTanh {
 
     #[inline]
     fn log_det_at<R: LinkReal>(v: [R; 2], p: &LinkParams<R>) -> R {
-        let t0 = Float::ln(R::LIT_2);
+        let t0 = Real::logarithm(R::LIT_2);
         let t1 = R::LIT_1 * t0;
         let t2 = tanh_sat(v[0]);
         let t3 = p.mu_max * t2;
-        let t4 = Float::exp(t3);
+        let t4 = Real::exponential(t3);
         let t5 = tanh_sat(v[1]);
         let t6 = p.mu_max * t5;
-        let t7 = Float::exp(t6);
+        let t7 = Real::exponential(t6);
         let t8 = R::LIT_0 + t4 + t7;
         let t9 = R::LIT_0 / t8;
-        let t10 = Float::ln(t9);
+        let t10 = Real::logarithm(t9);
         let t11 = t4 / t8;
-        let t12 = Float::ln(t11);
+        let t12 = Real::logarithm(t11);
         let t13 = t7 / t8;
-        let t14 = Float::ln(t13);
-        let t15 = Float::ln(p.mu_max);
+        let t14 = Real::logarithm(t13);
+        let t15 = Real::logarithm(p.mu_max);
         let t16 = R::LIT_3 * t15;
-        let t17 = Float::ln(R::LIT_3);
+        let t17 = Real::logarithm(R::LIT_3);
         let t18 = -v[0];
         let t19 = Float::min(Float::max(v[0], t18), R::LIT_4);
         let t20 = t17 - t19;
@@ -383,7 +383,7 @@ impl Link<2, 3> for StickBreaking {
         let t14 = R::EPS_MU / t7;
         let t15 = t7 / R::EPS_MU;
         let t16 = Float::min(Float::max(t13, t14), t15);
-        let t17 = Float::ln(t16);
+        let t17 = Real::logarithm(t16);
         let t18 = R::LIT_1 * t17;
         let t19 = R::LIT_3 * v[2];
         let t20 = v[2] + v[1];
@@ -397,7 +397,7 @@ impl Link<2, 3> for StickBreaking {
         let t28 = Float::min(Float::max(t27, t23), t24);
         let t29 = t25 / t28;
         let t30 = Float::min(Float::max(t29, t14), t15);
-        let t31 = Float::ln(t30);
+        let t31 = Real::logarithm(t30);
         let t32 = R::LIT_1 * t31;
         [t18, t32]
     }
@@ -409,20 +409,20 @@ impl Link<2, 3> for StickBreaking {
 
     #[inline]
     fn log_det_at<R: LinkReal>(v: [R; 2], _p: &LinkParams<R>) -> R {
-        let t0 = Float::ln(R::LIT_2);
+        let t0 = Real::logarithm(R::LIT_2);
         let t1 = R::LIT_1 * t0;
-        let t2 = Float::ln(R::LIT_5);
+        let t2 = Real::logarithm(R::LIT_5);
         let t3 = -t2;
         let t4 = R::LIT_0 - R::EPS_MU;
-        let t5 = Float::ln(t4);
+        let t5 = Real::logarithm(t4);
         let t6 = R::LIT_3 * t5;
         let t7 = R::LIT_3 * v[0];
         let t8 = sigmoid(t7);
         let t9 = tanh_sat(v[0]);
         let t10 = R::LIT_1 * R::EPS_MU * t9;
         let t11 = t8 - t10;
-        let t12 = Float::ln(t11);
-        let t13 = Float::ln(R::LIT_3);
+        let t12 = Real::logarithm(t11);
+        let t13 = Real::logarithm(R::LIT_3);
         let t14 = -v[0];
         let t15 = Float::min(Float::max(v[0], t14), R::LIT_4);
         let t16 = t13 - t15;
@@ -491,7 +491,7 @@ impl Link<1, 1> for SigmoidAlpha {
     fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         let t0 = R::LIT_3 * R::ALPHA_MIN;
         let t1 = R::LIT_6 - t0;
-        let t2 = Float::ln(t1);
+        let t2 = Real::logarithm(t1);
         let t3 = -v[0];
         let t4 = softplus(t3);
         let t5 = -t4;
@@ -542,7 +542,7 @@ impl Link<1, 1> for SigmoidBeta {
 
     #[inline]
     fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
-        let t0 = Float::ln(R::LIT_7);
+        let t0 = Real::logarithm(R::LIT_7);
         let t1 = -v[0];
         let t2 = softplus(t1);
         let t3 = -t2;
@@ -594,7 +594,7 @@ impl Link<1, 1> for TanhAlpha {
         let t6 = R::LIT_0 - R::EPS_Z;
         let t7 = -t6;
         let t8 = Float::min(Float::max(t5, t7), t6);
-        let t9 = Float::atanh(t8);
+        let t9 = Real::arctanh(t8);
         [t9]
     }
 
@@ -608,8 +608,8 @@ impl Link<1, 1> for TanhAlpha {
         let t0 = R::LIT_3 * R::ALPHA_MIN;
         let t1 = R::LIT_6 - t0;
         let t2 = R::LIT_1 * t1;
-        let t3 = Float::ln(t2);
-        let t4 = Float::ln(R::LIT_3);
+        let t3 = Real::logarithm(t2);
+        let t4 = Real::logarithm(R::LIT_3);
         let t5 = -v[0];
         let t6 = Float::min(Float::max(v[0], t5), R::LIT_4);
         let t7 = t4 - t6;
@@ -655,7 +655,7 @@ impl Link<1, 1> for TanhBeta {
         let t2 = R::LIT_0 - R::EPS_Z;
         let t3 = -t2;
         let t4 = Float::min(Float::max(t1, t3), t2);
-        let t5 = Float::atanh(t4);
+        let t5 = Real::arctanh(t4);
         [t5]
     }
 
@@ -666,8 +666,8 @@ impl Link<1, 1> for TanhBeta {
 
     #[inline]
     fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
-        let t0 = Float::ln(R::LIT_6);
-        let t1 = Float::ln(R::LIT_3);
+        let t0 = Real::logarithm(R::LIT_6);
+        let t1 = Real::logarithm(R::LIT_3);
         let t2 = -v[0];
         let t3 = Float::min(Float::max(v[0], t2), R::LIT_4);
         let t4 = t1 - t3;
@@ -746,11 +746,11 @@ impl Link<1, 1> for SoftsignAlpha {
         let t1 = R::LIT_6 - t0;
         let t2 = R::LIT_1 * t1;
         let t3 = R::LIT_3 * t2;
-        let t4 = Float::ln(t3);
+        let t4 = Real::logarithm(t3);
         let t5 = -v[0];
         let t6 = Float::min(Float::max(v[0], t5), R::LIT_4);
         let t7 = R::LIT_3 + t6;
-        let t8 = Float::ln(t7);
+        let t8 = Real::logarithm(t7);
         let t9 = R::LIT_3 * t8;
         t4 - t9
     }
@@ -811,11 +811,11 @@ impl Link<1, 1> for SoftsignBeta {
     #[inline]
     fn log_det_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> R {
         let t0 = R::LIT_3 * R::LIT_6;
-        let t1 = Float::ln(t0);
+        let t1 = Real::logarithm(t0);
         let t2 = -v[0];
         let t3 = Float::min(Float::max(v[0], t2), R::LIT_4);
         let t4 = R::LIT_3 + t3;
-        let t5 = Float::ln(t4);
+        let t5 = Real::logarithm(t4);
         let t6 = R::LIT_3 * t5;
         t1 - t6
     }
@@ -866,7 +866,7 @@ impl Link<1, 1> for SigmoidQ {
     #[inline]
     fn log_det_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> R {
         let t0 = R::LIT_3 * p.q_max;
-        let t1 = Float::ln(t0);
+        let t1 = Real::logarithm(t0);
         let t2 = -v[0];
         let t3 = softplus(t2);
         let t4 = -t3;
@@ -907,7 +907,7 @@ impl Link<1, 1> for TanhQ {
         let t1 = R::LIT_0 - R::EPS_Q;
         let t2 = -t1;
         let t3 = Float::min(Float::max(t0, t2), t1);
-        let t4 = Float::atanh(t3);
+        let t4 = Real::arctanh(t3);
         [t4]
     }
 
@@ -918,8 +918,8 @@ impl Link<1, 1> for TanhQ {
 
     #[inline]
     fn log_det_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> R {
-        let t0 = Float::ln(p.q_max);
-        let t1 = Float::ln(R::LIT_3);
+        let t0 = Real::logarithm(p.q_max);
+        let t1 = Real::logarithm(R::LIT_3);
         let t2 = -v[0];
         let t3 = Float::min(Float::max(v[0], t2), R::LIT_4);
         let t4 = t1 - t3;
@@ -985,11 +985,11 @@ impl Link<1, 1> for SoftsignQ {
     #[inline]
     fn log_det_at<R: LinkReal>(v: [R; 1], p: &LinkParams<R>) -> R {
         let t0 = R::LIT_3 * p.q_max;
-        let t1 = Float::ln(t0);
+        let t1 = Real::logarithm(t0);
         let t2 = -v[0];
         let t3 = Float::min(Float::max(v[0], t2), R::LIT_4);
         let t4 = R::LIT_3 + t3;
-        let t5 = Float::ln(t4);
+        let t5 = Real::logarithm(t4);
         let t6 = R::LIT_3 * t5;
         t1 - t6
     }
@@ -1052,7 +1052,7 @@ impl Link<1, 1> for Exp {
 
     #[inline]
     fn forward_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
-        let t0 = Float::exp(v[0]);
+        let t0 = Real::exponential(v[0]);
         [t0]
     }
 
@@ -1063,7 +1063,7 @@ impl Link<1, 1> for Exp {
 
     #[inline]
     fn inverse_at<R: LinkReal>(v: [R; 1], _p: &LinkParams<R>) -> [R; 1] {
-        let t0 = Float::ln(v[0]);
+        let t0 = Real::logarithm(v[0]);
         [t0]
     }
 

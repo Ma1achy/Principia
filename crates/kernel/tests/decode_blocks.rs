@@ -837,11 +837,11 @@ negative_control!(
 /// `stick_breaking`'s forward in the generated op order (`kernel::generated::links`), stopped before its last
 /// multiply: `(m₀, t₇, t₁₃)`, with `m₁ = t₇·t₁₃`.
 fn stick_parts<R: P>(z: [R; 2]) -> (R, R, R) {
-    let sigmoid = |x: R| R::one() / (R::one() + (-x).exp());
+    let sigmoid = |x: R| R::one() / (R::one() + (-x).exponential());
     let t0 = R::LIT_3 * z[0];
-    let t4 = R::LIT_1 * R::EPS_MU * z[0].tanh();
+    let t4 = R::LIT_1 * R::EPS_MU * z[0].hyperbolic_tangent();
     let t8 = R::LIT_3 * z[1];
-    let t12 = R::LIT_1 * R::EPS_MU * z[1].tanh();
+    let t12 = R::LIT_1 * R::EPS_MU * z[1].hyperbolic_tangent();
     (sigmoid(-t0) + t4, sigmoid(t0) - t4, sigmoid(-t8) + t12)
 }
 

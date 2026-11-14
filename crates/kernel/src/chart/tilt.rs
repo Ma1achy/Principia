@@ -75,6 +75,7 @@ use super::{Chart, ChartDecode, ChartOut, Constraint, SystemImage, ValidationRes
 use crate::decode::{self, Decoded};
 use crate::generated::links::{Defaults, LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
+use crate::Real;
 
 /// `|τ|` at the dead zone of Lean each axis, in degrees: the register's `tilt_right_angle` (R-474 R8).
 const RIGHT_ANGLE: f64 = crate::generated::constants::TILT_RIGHT_ANGLE;
@@ -161,8 +162,8 @@ impl TiltSpec {
     ///
     /// With one target `d_Y` is unused, and `R·e_Y` is `e_Y`.
     pub fn inputs(&self) -> Option<[[f64; 4]; 2]> {
-        let (s1, c1) = Float::sin_cos(Float::to_radians(self.tau1));
-        let (s2, c2) = Float::sin_cos(Float::to_radians(self.tau2));
+        let (s1, c1) = Real::sine_cosine(Float::to_radians(self.tau1));
+        let (s2, c2) = Real::sine_cosine(Float::to_radians(self.tau2));
         let e_y = [0.0, 0.0, 0.0, 1.0];
         if self.two_targets() {
             Some([[-s1, 0.0, c1, 0.0], [0.0, -s2, 0.0, c2]])
@@ -170,7 +171,7 @@ impl TiltSpec {
             if self.map == TiltMap::Sheet {
                 let [r1, r2] = self.columns();
                 let total = Float::sqrt(self.tau1 * self.tau1 + self.tau2 * self.tau2);
-                let cm = Float::cos(Float::to_radians(total));
+                let cm = Real::cosine(Float::to_radians(total));
                 Some([[-r1[2], -r2[2], cm, 0.0], e_y])
             } else if self.rank_loss() {
                 None
@@ -236,7 +237,7 @@ impl TiltSpec {
         } else if self.map == TiltMap::Sheet {
             Some(Strip::new([t2, -t1], sheet_half(t1, t2)))
         } else {
-            lean_ratio(t1, t2).map(|[p, q]| Strip::new([q, -p], Float::hypot(q, p)))
+            lean_ratio(t1, t2).map(|[p, q]| Strip::new([q, -p], Real::hypotenuse(q, p)))
         }
     }
 
@@ -285,13 +286,13 @@ impl Strip {
     /// length below the normal doubles would round on the subnormal grid and leave `dir` off unit length, so `along` is
     /// first scaled by `2⁵²`, exactly, onto normal doubles; any other `along` is divided as it stands, bit for bit.
     fn new(along: [f64; 2], half: f64) -> Self {
-        let scale = if Float::hypot(along[0], along[1]) < f64::MIN_POSITIVE {
+        let scale = if Real::hypotenuse(along[0], along[1]) < f64::MIN_POSITIVE {
             1.0 / f64::EPSILON
         } else {
             1.0
         };
         let (x, y) = (along[0] * scale, along[1] * scale);
-        let len = Float::hypot(x, y);
+        let len = Real::hypotenuse(x, y);
         Strip {
             dir: [x / len, y / len],
             half,
@@ -339,7 +340,7 @@ fn sheet_half(tau1: f64, tau2: f64) -> f64 {
     let e = Ord::min(e1, e2 + 1);
     let k = (o2 / g) as f64 * Float::powi(2.0, e2 + 1 - e);
     let j2 = (o1 / g) as f64 * Float::powi(2.0, e1 + 1 - e);
-    Float::hypot(k, j2) / 2.0
+    Real::hypotenuse(k, j2) / 2.0
 }
 
 /// Whether `x ≡ y` (mod 180°), decided exactly: the remainders `p = x % 180` and `q = y % 180` are exact, and they
@@ -401,8 +402,8 @@ fn lean_ratio(tau1: f64, tau2: f64) -> Option<[f64; 2]> {
 
 /// Lean each axis's columns at the angles in degrees, with one target or two.
 fn lean(tau1: f64, tau2: f64, two: bool) -> [[f64; 4]; 2] {
-    let (s1, c1) = Float::sin_cos(Float::to_radians(tau1));
-    let (s2, c2) = Float::sin_cos(Float::to_radians(tau2));
+    let (s1, c1) = Real::sine_cosine(Float::to_radians(tau1));
+    let (s2, c2) = Real::sine_cosine(Float::to_radians(tau2));
     if two {
         [[c1, 0.0, s1, 0.0], [0.0, c2, 0.0, s2]]
     } else {
@@ -421,7 +422,7 @@ fn tip_as_sheet(tau1: f64, tau2: f64) -> [[f64; 4]; 2] {
         (tau1, tau2)
     };
     let (m, ka, kb) = sheet_axis(t1, t2);
-    let (sm, cm) = Float::sin_cos(Float::to_radians(m));
+    let (sm, cm) = Real::sine_cosine(Float::to_radians(m));
     let w = 1.0 - cm;
     [
         [cm + ka * ka * w, ka * kb * w, -kb * sm, 0.0],
@@ -435,7 +436,7 @@ fn tip_as_sheet(tau1: f64, tau2: f64) -> [[f64; 4]; 2] {
 fn sheet_axis(t1: f64, t2: f64) -> (f64, f64, f64) {
     let sum = t1 * t1 + t2 * t2;
     let m = if sum < f64::MIN_POSITIVE {
-        Float::hypot(t1, t2)
+        Real::hypotenuse(t1, t2)
     } else {
         Float::sqrt(sum)
     };
@@ -536,7 +537,7 @@ pub fn latent_basis(frame: &LatentFrame, spec: &TiltSpec) -> Option<([f64; 8], [
     };
     let [c1, c2] = spec.columns();
     let (u1, u2) = (place(c1), place(c2));
-    let (sg, cg) = Float::sin_cos(frame.gamma);
+    let (sg, cg) = Real::sine_cosine(frame.gamma);
     let s = frame.scale;
     let mut q1 = [0.0; 8];
     let mut q2 = [0.0; 8];

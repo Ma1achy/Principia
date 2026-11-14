@@ -32,6 +32,7 @@ use crate::decode::{self, Ic, Latent};
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::PayloadReal;
 use crate::real::IeeeBits;
+use crate::Real;
 
 /// A vector over the 15 physical components `D` produces: `m₀, m₁, m₂`, then `r₀, r₁, r₂` and `p₀, p₁, p₂`, each
 /// `(x, y)`; a column of `W·J_D`.
@@ -91,7 +92,7 @@ pub fn state<R: Copy>(c: &Phys<R>) -> Ic<R> {
 fn extent<R: LinkReal>(v: &[[R; 2]; 3]) -> R {
     let mut e = R::one();
     for w in v {
-        e = Float::max(e, Float::hypot(w[0], w[1]));
+        e = Float::max(e, Real::hypotenuse(w[0], w[1]));
     }
     e
 }
@@ -113,7 +114,7 @@ where
     R: LinkReal + PayloadReal,
 {
     let w = weights(&decode::decode::<S, R>(z).ic);
-    let step = Float::cbrt(<R as Float>::epsilon());
+    let step = Real::cube_root(<R as Float>::epsilon());
     let mut cols = [[R::zero(); 15]; 8];
     for (k, col) in cols.iter_mut().enumerate() {
         let h = step * Float::max(R::one(), Float::abs(z.z[k]));
@@ -149,7 +150,7 @@ where
 {
     let w = weights(x);
     let c = components(x);
-    let step = Float::cbrt(<R as Float>::epsilon());
+    let step = Real::cube_root(<R as Float>::epsilon());
     let mut cols = [[R::zero(); 15]; 8];
     for (k, (ck, wk)) in c.iter().zip(&w).enumerate() {
         let h = step * Float::max(R::one(), Float::abs(*ck));
@@ -253,8 +254,8 @@ pub fn singular_values<R: LinkReal>(mut cols: [Phys<R>; 8]) -> [R; 8] {
                 }
                 rotated = true;
                 let zeta = (b - a) / (g + g);
-                let t = Float::signum(zeta) / (Float::abs(zeta) + Float::hypot(R::one(), zeta));
-                let c = R::one() / Float::hypot(R::one(), t);
+                let t = Float::signum(zeta) / (Float::abs(zeta) + Real::hypotenuse(R::one(), zeta));
+                let c = R::one() / Real::hypotenuse(R::one(), t);
                 let s = c * t;
                 let (left, right) = cols.split_at_mut(q);
                 for (u, v) in left[p].iter_mut().zip(right[0].iter_mut()) {

@@ -200,7 +200,7 @@ fn check_operator(op32: fn(f32) -> f32, op64: fn(f64) -> f64) {
             .exp()
             .min(f64::MAX);
         for x in [x, -x] {
-            let (got, want) = (op64(x), x.tanh());
+            let (got, want) = (op64(x), libm::tanh(x));
             assert_eq!(
                 got.to_bits(),
                 want.to_bits(),

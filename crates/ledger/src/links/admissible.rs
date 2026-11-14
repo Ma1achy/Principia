@@ -63,6 +63,8 @@ pub trait Fl:
     fn min(self, o: Self) -> Self;
 }
 
+/// At f64 each transcendental is the pinned libm's, as the kernel's f64 path is (R-991; `kernel::real`), so a tree
+/// evaluated here is the kernel's generated code's value, bit for bit.
 impl Fl for f64 {
     const NAME: &'static str = "f64";
     const EPS: f64 = f64::EPSILON;
@@ -76,25 +78,25 @@ impl Fl for f64 {
         self
     }
     fn exp(self) -> Self {
-        f64::exp(self)
+        libm::exp(self)
     }
     fn ln(self) -> Self {
-        f64::ln(self)
+        libm::log(self)
     }
     fn ln_1p(self) -> Self {
-        f64::ln_1p(self)
+        libm::log1p(self)
     }
     fn exp_m1(self) -> Self {
-        f64::exp_m1(self)
+        libm::expm1(self)
     }
     fn tanh(self) -> Self {
-        f64::tanh(self)
+        libm::tanh(self)
     }
     fn atanh(self) -> Self {
-        f64::atanh(self)
+        libm::atanh(self)
     }
     fn cosh(self) -> Self {
-        f64::cosh(self)
+        libm::cosh(self)
     }
     fn abs(self) -> Self {
         f64::abs(self)

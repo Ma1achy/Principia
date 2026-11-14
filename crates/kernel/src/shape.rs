@@ -197,7 +197,7 @@ pub fn in_disc<R: Real + Float>(d: DiscInput<R>, r_pole: R) -> bool {
 /// The equatorial longitude of `n`, `atan2(n_v, n_u)` (dd_integrator §3.7), in [−π, π].
 #[inline]
 pub fn longitude<R: Real + Float>(n: [R; 3]) -> R {
-    Float::atan2(n[1], n[0])
+    Real::arctangent2(n[1], n[0])
 }
 
 /// Whether the shape point `n` lies inside the pole disc: [`in_disc`] on [`point_disc_input`].

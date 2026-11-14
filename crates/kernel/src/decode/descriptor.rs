@@ -45,6 +45,7 @@ use crate::decode::Ic;
 use crate::generated::links::LinkReal;
 use crate::payload::{ICDescriptorOf, PayloadReal};
 use crate::real::IeeeBits;
+use crate::Real;
 
 /// `a − b`.
 #[inline]
@@ -159,7 +160,7 @@ pub fn angle<R: LinkReal>(cross: R, dot: R) -> R {
     let zero = R::zero();
     let pi = pi_image::<R>();
     let along = select(dot_zero(dot), zero, dot);
-    let off_axis = Float::min(Float::atan2(cross, along), pi);
+    let off_axis = Float::min(Real::arctangent2(cross, along), pi);
     let off_axis = select(off_axis <= -pi, pi, off_axis);
     let on_axis = select(dot_negative(dot), pi, zero);
     select(cross_zero(cross), on_axis, off_axis)

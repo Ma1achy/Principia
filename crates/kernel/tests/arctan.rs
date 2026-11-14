@@ -30,7 +30,6 @@ use kernel::arctan::atan2_f32;
 use kernel::stage::encode::arctangent;
 use kernel::Real;
 use spirv_std::glam::UVec3;
-use spirv_std::num_traits::Float;
 use validation::arctan::{plane, Accuracy, RoundTrip, HALF_PI_BELOW_BITS, ONE_BITS};
 use validation::negative_control;
 
@@ -292,7 +291,7 @@ fn check_f64(atan2: fn(f64, f64) -> f64) {
         ]
     });
     for [y, x] in widened.chain(drawn) {
-        let (got, want) = (atan2(y, x), Float::atan2(y, x));
+        let (got, want) = (atan2(y, x), libm::atan2(y, x));
         assert!(
             got.to_bits() == want.to_bits() || (got.is_nan() && want.is_nan()),
             "f64 atan2({y:e}, {x:e}) = {got:e}, not libm's {want:e}"

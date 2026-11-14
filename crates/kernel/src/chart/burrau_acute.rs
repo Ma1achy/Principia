@@ -66,16 +66,17 @@ use crate::decode::momentum::Momentum;
 use crate::decode::{self, descriptor, Blocks, Decoded, Ic};
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
+use crate::Real;
 
 /// `ν(θ) = sec θ − tan θ`, evaluated as `cos θ/(1 + sin θ)` (the module's note).
 #[inline]
-pub fn nu_of<R: Float>(theta: R) -> R {
-    Float::cos(theta) / (R::one() + Float::sin(theta))
+pub fn nu_of<R: Float + Real>(theta: R) -> R {
+    Real::cosine(theta) / (R::one() + Real::sine(theta))
 }
 
 /// `θ(ν) = arctan((1 − ν²)/(2ν))`, the inverse of [`nu_of`] on `(0, π/4]` (§4.3; [`burrau::acute_angle`]).
 #[inline]
-pub fn theta_of<R: Float>(nu: R) -> R {
+pub fn theta_of<R: Float + Real>(nu: R) -> R {
     burrau::acute_angle(nu)
 }
 
@@ -169,13 +170,13 @@ impl<P: Copy> BurrauThetaK<P> {
 
     /// `ν(θ(u))`.
     #[inline]
-    pub fn nu<F: Float + From<P>>(&self, u: F) -> F {
+    pub fn nu<F: Float + Real + From<P>>(&self, u: F) -> F {
         nu_of(self.theta(u))
     }
 
     /// `K(v) = K_max·v^γ_K`.
     #[inline]
-    pub fn kinetic<F: Float + From<P>>(&self, v: F) -> F {
+    pub fn kinetic<F: Float + Real + From<P>>(&self, v: F) -> F {
         let wide = <F as From<P>>::from;
         invariant::kinetic(wide(self.k_max), wide(self.gamma_k), v)
     }
@@ -344,7 +345,7 @@ impl<P: Copy> BurrauThetaLz<P> {
 
     /// `ν(θ(u))`.
     #[inline]
-    pub fn nu<F: Float + From<P>>(&self, u: F) -> F {
+    pub fn nu<F: Float + Real + From<P>>(&self, u: F) -> F {
         nu_of(self.theta(u))
     }
 
@@ -599,7 +600,7 @@ impl<P: Copy> BurrauThetaDeltaM<P> {
 
     /// `ν(θ(u))`.
     #[inline]
-    pub fn nu<F: Float + From<P>>(&self, u: F) -> F {
+    pub fn nu<F: Float + Real + From<P>>(&self, u: F) -> F {
         nu_of(self.theta(u))
     }
 
@@ -618,7 +619,7 @@ impl<P: Copy> BurrauThetaDeltaM<P> {
 
     /// The masses at `(u, v)`: [`BurrauThetaDeltaM::blend`] of the embed's at `ν(θ(u))`.
     #[inline]
-    pub fn masses<F: Float + From<P>>(&self, u: F, v: F) -> [F; 3] {
+    pub fn masses<F: Float + Real + From<P>>(&self, u: F, v: F) -> [F; 3] {
         self.blend(embed(self.nu(u)).m, v)
     }
 

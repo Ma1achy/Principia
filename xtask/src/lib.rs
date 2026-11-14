@@ -14,6 +14,7 @@ pub mod gate_report;
 pub mod golden;
 #[cfg(unix)]
 pub mod jobq;
+pub mod libm_pin;
 pub mod lint_compute;
 pub mod lint_constants;
 pub mod lint_no_alloc;

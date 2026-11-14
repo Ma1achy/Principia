@@ -28,6 +28,7 @@ use spirv_std::num_traits::Float;
 
 use crate::decode::mass::Masses;
 use crate::generated::links::{Link, LinkReal, Selection};
+use crate::Real;
 
 /// The configuration block's output.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -59,10 +60,10 @@ pub fn angles<S: Selection, R: LinkReal>(z_cfg: [R; 2]) -> (R, R) {
 /// The canonical-frame decode at `R̃ = 1`: `ρ̃ = cos α·(1, 0)` and `λ̃ = sin α·(cos β, sin β)`.
 #[inline]
 pub fn hyperspherical<R: LinkReal>(alpha: R, beta: R) -> ([R; 2], [R; 2]) {
-    let sin_alpha = Float::sin(alpha);
+    let sin_alpha = Real::sine(alpha);
     (
-        [Float::cos(alpha), R::zero()],
-        [sin_alpha * Float::cos(beta), sin_alpha * Float::sin(beta)],
+        [Real::cosine(alpha), R::zero()],
+        [sin_alpha * Real::cosine(beta), sin_alpha * Real::sine(beta)],
     )
 }
 
@@ -112,8 +113,8 @@ pub fn from_jacobi<R: LinkReal>(masses: &Masses<R>, rho: [R; 2], lambda: [R; 2])
     let rho_t = [rho_w[0] / ell, rho_w[1] / ell];
     let lambda_t = [lambda_w[0] / ell, lambda_w[1] / ell];
     let norm = |v: [R; 2]| Float::sqrt(v[0] * v[0] + v[1] * v[1]);
-    let alpha = Float::atan2(norm(lambda_t), norm(rho_t));
-    let beta = Float::atan2(lambda_t[1], lambda_t[0]);
+    let alpha = Real::arctangent2(norm(lambda_t), norm(rho_t));
+    let beta = Real::arctangent2(lambda_t[1], lambda_t[0]);
     let (rho, lambda, r) = reconstruct(masses, rho_t, lambda_t);
     Config {
         alpha,

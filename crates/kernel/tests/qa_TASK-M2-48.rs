@@ -24,7 +24,7 @@ use kernel::decode::mass::{self, Masses};
 use kernel::generated::links::{
     tanh_sat, Link, LinkReal, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
 };
-use kernel::real::IeeeBits;
+use kernel::real::{IeeeBits, Real};
 use proptest::prelude::*;
 use validation::{negative_control, prop};
 
@@ -264,7 +264,7 @@ const LINES: u32 = 20_000;
 /// `stick_breaking`'s forward, from `kernel::generated::links`' op order, up to its last multiply: `(m₀, t₇, t₁₃)`,
 /// `m₁ = t₇·t₁₃`. Checked against the link at every point it is used.
 fn last_step<R: Fp>(z: [R; 2]) -> (R, R, R) {
-    let sigmoid = |x: R| R::one() / (R::one() + (-x).exp());
+    let sigmoid = |x: R| R::one() / (R::one() + Real::exponential(-x));
     let t0 = R::LIT_3 * z[0];
     let t4 = R::LIT_1 * R::EPS_MU * tanh_sat(z[0]);
     let t8 = R::LIT_3 * z[1];
