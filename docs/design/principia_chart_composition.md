@@ -682,12 +682,17 @@ Polar and log are general options, so they apply to any pair, and a polar view o
 Each is a definition under physics review, closed by TASK-M2-72 (R-72). Neither is a new chart type: each is
 `ExpMap<Target>`, the shape sphere's being `ExpMap<Shape>`, its bits unchanged.
 
-The momentum sphere's frame is built from R-82's seed, which flips with the configuration. With the configuration frozen
-across the chart, the frame is constant. Tilted into a configuration direction it can flip, and that is a seam (§ 5.5).
-*R-934 (RQ-764 (a), 10 Nov 2026):* the deterministic momentum construction's seed is the expansion `w = r/√I` on every
-chart that uses the construction, and R-82's rule is kept as a named option with its seam declared. Whether this frame's
+The momentum sphere's frame is seeded by R-934's `w = r/√I` (RQ-764 (a), 10 Nov 2026: "the seed of the deterministic
+momentum construction is the uniform expansion `w = r/√I` on every chart that uses the construction", everywhere). Since
+`Σ mᵢ rᵢ = 0` and `⟨r, Jr⟩_m = 0`, `w` is a unit vector on the momentum sphere for every `I > 0`, continuous in `r`, so a
+tilt into a configuration direction moves the frame continuously and opens no seam. R-82's largest-norm rule is the named
+legacy option, its seam declared: only under it does the frame flip with the configuration, a seam (§ 5.5). The rest of
+the frame, the two basis vectors on the sphere completing `w`, which R-934 does not give, is TASK-M2-72's definition under
+physics review (R-72). *Was:* "The momentum sphere's frame is built from R-82's seed, which flips with the configuration.
+With the configuration frozen across the chart, the frame is constant. Tilted into a configuration direction it can
+flip, and that is a seam (§ 5.5)." *Was (14 Nov 2026, withdrawn on physics review 5902556608, P2):* "Whether this frame's
 seed is that construction's, so that the seam goes, is the frame's definition, TASK-M2-72's under physics review (R-72);
-nothing is read into it here.
+nothing is read into it here."
 
 ### 5.3 Constraints: hold `E`, and new: hold `L_z`
 
