@@ -32895,6 +32895,22 @@
   - R-1010
   milestone: M0
   note: "Added 14 Nov 2026 by R-1010 (RQ-815 (a)); closed by TASK-M0-69. Numbered 242: reqio's next id on main, 241, is held by TASK-M0-68's branch, so it is renumbered by hand, as REQ-TOOL-240 was."
+- id: REQ-TOOL-243
+  area: TOOL
+  statement: "win-self-check's firing of the kept-checkout guard must plant a .git holding every file the guard script reads in every .git by name, as a clean checkout holds it (.git/config and a HEAD the script accepts), and one planted hook, so the guard's logged reason is the hook's, \"active hook\", and not \"can't read the checkout\"; the firing's assertion on the log prints the log and the script's output when it fails; the guard script unchanged, no assertion of the test removed or weakened (R-711, R-860)."
+  source:
+  - file: decisions.md
+    section: "R-711 — One measurement-only self-hosted runner, `malachys-pc-rtx2080s`, on the owner's PC, with no pull-request trigger on any self-hosted job; DX12 may run on it as a measurement; PC benchmarks stay apart from the Mac's performance gates; a recorded run on it can serve Paper 2's non-Metal parity evidence; its jobs have their own workflow; the signing rules *(closes RQ-695; amends R-174, R-186 and R-656)*"
+  - file: decisions.md
+    section: "R-860 — R-859's list of what the Windows runner may run is not exhaustive: the nightly `win-tests` job and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, never required checks *(closes RQ-742; refines R-859)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p xtask --test ci_self_hosted: git_guard_firing_plants_what_the_script_reads, each file git_guard.ps1 reads by Join-Path $git.FullName '<name>' planted in the firing's .git and its HEAD matching the script's own HEAD pattern; controls: the firing with no .git/HEAD, as it was, fails; a HEAD the script refuses fails; a script whose reads the test can't find fails; on the PC, win-self-check's git_guard_script_refuses_what_is_planted passes on the first run on main after merge, its run id reported (a measurement, R-711), and its control, the script with its lists off, still fails"
+  rulings:
+  - R-711
+  - R-860
+  milestone: M0
+  note: "Added 14 Nov 2026 (applied per R-369: CI tooling, a test-only fix, the owner's Windows goal of 14 Nov 2026). Closed by TASK-M0-70. Numbered REQ-TOOL-243: 236 to 238 and 240 are other tasks' on open branches or main, 241 is TASK-M0-68's and 242 TASK-M0-69's (the rulings PR #534), open at the same time. After TASK-M0-64 (REQ-TOOL-235) merged, win-self-check run 43572471690 failed at the firing's log check: the firing's .git held no HEAD, which the guard has read in every .git since 5d242dd09 (5 Nov 2026), so the guard refused as \"can't read the checkout\" and the planted hook's reason was never logged."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

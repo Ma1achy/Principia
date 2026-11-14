@@ -4927,13 +4927,98 @@ mod fsck_refuses_all {
     );
 }
 
+/// A clean checkout's `.git/config`, as the guard's controls plant it.
+const CLEAN: &str = "[core]\n\trepositoryformatversion = 0\n\tfilemode = false\n\tbare = false\n\tlogallrefupdates = true\n\tsymlinks = false\n\tignorecase = true\n[remote \"origin\"]\n\turl = https://github.com/Ma1achy/Principia\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n[gc]\n\tauto = 0\n";
+
+/// The `.git` of [`check_script_refuses`]'s firing: what the script reads in every `.git`, as a clean checkout holds it,
+/// and one planted hook, so that the hook is all it finds and the reason it logs is the hook's. A file it reads and can't
+/// would refuse in its place, as "can't read the checkout", the hook's reason lost.
+const FIRING: [(&str, &str); 3] = [
+    (".git/config", CLEAN),
+    (".git/HEAD", "ref: refs/heads/main\n"),
+    (".git/hooks/pre-commit", "x"),
+];
+
+/// Each file the script reads in every `.git`, by name, from `Join-Path $git.FullName '<name>'`, is planted in `firing`,
+/// the HEAD the script accepts.
+fn check_firing(script: &str, firing: &[(&str, &str)]) {
+    let reads: Vec<&str> = regex::Regex::new(r"Join-Path \$git\.FullName '([^']+)'")
+        .expect("a pattern")
+        .captures_iter(script)
+        .map(|found| found.get(1).expect("a name").as_str())
+        .collect();
+    assert!(
+        !reads.is_empty(),
+        "git_guard: the script reads no file by name"
+    );
+    for name in reads {
+        let path = format!(".git/{name}");
+        assert!(
+            firing.iter().any(|(at, _)| *at == path),
+            "git_guard: the firing plants no {path}, which the script reads in every .git"
+        );
+    }
+    let pattern = script
+        .split_once("$head -cnotmatch '")
+        .and_then(|(_, rest)| rest.split_once('\''))
+        .expect("the script's HEAD pattern")
+        .0;
+    let head = firing
+        .iter()
+        .find(|(at, _)| *at == ".git/HEAD")
+        .map_or("", |(_, text)| *text);
+    assert!(
+        regex::Regex::new(pattern)
+            .expect("the pattern")
+            .is_match(head),
+        "git_guard: the firing's HEAD is one the script refuses"
+    );
+}
+
+#[test]
+fn git_guard_firing_plants_what_the_script_reads() {
+    check_firing(&read(GIT_GUARD), &FIRING);
+}
+
+negative_control!(
+    git_guard_firing_plants_what_the_script_reads,
+    "the firing with no HEAD, as it was",
+    expected = "git_guard: the firing plants no .git/HEAD, which the script reads in every .git",
+    check_firing(&read(GIT_GUARD), &[FIRING[0], FIRING[2]])
+);
+
+mod firing_head_refused {
+    use super::*;
+    negative_control!(
+        git_guard_firing_plants_what_the_script_reads,
+        "a HEAD the script refuses",
+        expected = "git_guard: the firing's HEAD is one the script refuses",
+        check_firing(
+            &read(GIT_GUARD),
+            &[FIRING[0], (".git/HEAD", "x\n"), FIRING[2]]
+        )
+    );
+}
+
+mod firing_reads_unseen {
+    use super::*;
+    negative_control!(
+        git_guard_firing_plants_what_the_script_reads,
+        "a script whose reads the test can't find",
+        expected = "git_guard: the script reads no file by name",
+        check_firing(
+            &read(GIT_GUARD).replace("Join-Path $git.FullName", "Join-Path $git.Name"),
+            &FIRING
+        )
+    );
+}
+
 /// `script` run on each case as the job's step would run it, with `powershell`, which only Windows has. A key of
 /// [`PLANTED`] in a `.git/config` of its own, and each other thing the owner listed, is refused; a clean kept checkout and
 /// a first run pass.
 // Compiled everywhere so a mistake here shows on the Mac, not first on the PC; called only under `cfg(windows)`.
 #[cfg_attr(not(windows), allow(dead_code))]
 fn check_script_refuses(script: &Path) {
-    const CLEAN: &str = "[core]\n\trepositoryformatversion = 0\n\tfilemode = false\n\tbare = false\n\tlogallrefupdates = true\n\tsymlinks = false\n\tignorecase = true\n[remote \"origin\"]\n\turl = https://github.com/Ma1achy/Principia\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n[gc]\n\tauto = 0\n";
     let base = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
         "ci_self_hosted_guard_{}_{}",
         std::process::id(),
@@ -5248,9 +5333,11 @@ fn check_script_refuses(script: &Path) {
     refuses("an overwritten blob", "fsck", &overwritten);
     // A firing, as the job's step runs it, standing in the folder as the runner does, with a log of this test's own.
     let dir = base.join("firing");
-    std::fs::create_dir_all(dir.join(".git/hooks")).expect("a folder");
-    std::fs::write(dir.join(".git/config"), CLEAN).expect("a file");
-    std::fs::write(dir.join(".git/hooks/pre-commit"), "x").expect("a file");
+    for (name, text) in FIRING {
+        let path = dir.join(name);
+        std::fs::create_dir_all(path.parent().expect("a parent")).expect("a folder");
+        std::fs::write(path, text).expect("a file");
+    }
     std::fs::write(dir.join("kept.txt"), "x").expect("a file");
     // A planted name that a shell would run, and a junction whose target must stay.
     let marker = base.join("ran.txt");
@@ -5311,7 +5398,8 @@ fn check_script_refuses(script: &Path) {
     let line = std::fs::read_to_string(&log).expect("the refusal log");
     assert!(
         line.contains("active hook"),
-        "git_guard: the firing logged no reason"
+        "git_guard: the firing logged no reason: the log held {line:?}, the script said {:?}",
+        String::from_utf8_lossy(&out.stdout)
     );
     // Passing, as the job does: the index is emptied, and if it can't be, the job refuses.
     let kept = plant("kept", true, &[(".git/config", CLEAN)]);
