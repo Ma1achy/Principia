@@ -644,8 +644,9 @@ pub struct HgParams<R> {
     pub step_budget_rate: R,
     /// The step budget's floor `N_min` (R-604; REQ-INT-108, a calibration).
     pub n_min: u32,
-    /// Whether the landing clamp is on (Part 2b, Heggie's step 5; the default). Off only to measure a landing that
-    /// R-998 forbids (the clock-only control).
+    /// Whether the landing clamp is on (Part 2b, Heggie's step 5; the default). Off it sizes no step to the boundary,
+    /// but does not turn the landing off: a step that ends the clock past the boundary still takes the retakes (only
+    /// `bisect_tries = 0` turns the landing off). Off only for a measurement, never the occupant's.
     pub clamp: bool,
     /// The landing secant's most retakes (Part 2b, Heggie's step 8: `land_max_iters`, 4); `0` turns it off.
     pub secant_tries: u32,

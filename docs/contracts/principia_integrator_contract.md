@@ -874,9 +874,16 @@ or `R₀R₁R₂/S^{3/2}` with `S` floored at `TINY`, unfloored itself (`driver.
      either precision (53 bits at f64, 24 at f32), so the bisection reaches a bracket one step size wide before its
      cap, and the cap is the same integer at both precisions (Part 2c rule 1). The step budget (step 4, R-604) bounds a
      march that keeps no progress.
-   - **The settings that turn it off** (the clamp off; or the bisection's cap 0, which keeps the secant's last retake
-     wherever it ends) keep a step past the boundary and set the boundary's time over a state whose own clock is past
-     it: measurement settings for the clock-only control of REQ-INT-122's landing check, never the occupant's.
+   - **The setting that turns it off** is the bisection's cap 0, with the clamp on or off and with the secant's retakes
+     or without them: the secant's last retake is kept wherever it ends, so a step past the boundary is kept and the
+     boundary's time set over a state whose own clock is past it. The clamp off alone does not turn it off: a step that
+     ends the clock past the boundary still takes the retakes, and the bisection's `lo` is kept. The clock-only control
+     of REQ-INT-122's landing check is the clamp on with both caps 0. These are measurement settings, never the
+     occupant's. *14 Nov 2026 (physics review 5902945413 of #530, F1, applied per R-369: the text made to match the
+     code, as Aarseth–Zare's was on #519; no result changed):* *Was:* "**The settings that turn it off** (the clamp
+     off; or the bisection's cap 0, which keeps the secant's last retake wherever it ends) keep a step past the
+     boundary and set the boundary's time over a state whose own clock is past it: measurement settings for the
+     clock-only control of REQ-INT-122's landing check, never the occupant's."
    - **The check** (R-1007): Heggie × RK4's figure-eight closure and its convergence order across η in [0.02, 0.001],
      its criterion, round-off floor and threshold written in the pull request before any run and approved by physics
      before it runs, with the clock-only landing as its control.
