@@ -1,5 +1,5 @@
 //! `validation::paths` on Windows' forms, fed as text so that any platform shows them (REQ-TOOL-237): a verbatim
-//! path loses its prefix and no other path changes; an escaped path, spliced into a JSON string, reads back as the
+//! drive or UNC path loses its prefix and no other path changes; an escaped path, spliced into a JSON string, reads back as the
 //! plain path; Windows output's `\` reads as `/`. (Its TOML reading is checked in xtask's `tests/paths.rs`, beside a
 //! TOML parser.) Each test registers a negative control (R-176).
 
@@ -47,6 +47,37 @@ negative_control!(
     "the verbatim prefix kept",
     expected = r#"the plain form of "\\\\?\\E:\\actions-runner"#,
     check_plain(Path::to_path_buf, &PLAIN)
+);
+
+/// Verbatim paths at the edge of a drive and what `plain` must make of each: a bare drive, `\\?\E:`, loses its
+/// prefix; a volume path, a device path, a drive with no `\` after it, a digit for a letter and a two-letter name keep
+/// theirs, since without it each would read as relative.
+const VERBATIM_EDGE: [(&str, &str); 7] = [
+    (r"\\?\Volume{0}\a", r"\\?\Volume{0}\a"),
+    (r"\\?\E:", r"E:"),
+    (
+        r"\\?\GLOBALROOT\Device\HarddiskVolume1\a",
+        r"\\?\GLOBALROOT\Device\HarddiskVolume1\a",
+    ),
+    (r"\\?\E:a", r"\\?\E:a"),
+    (r"\\?\1:\a", r"\\?\1:\a"),
+    (r"\\?\EF:\a", r"\\?\EF:\a"),
+    (r"\\?\E", r"\\?\E"),
+];
+
+#[test]
+fn paths_plain_keeps_other_verbatim_forms() {
+    check_plain(plain, &VERBATIM_EDGE);
+}
+
+negative_control!(
+    paths_plain_keeps_other_verbatim_forms,
+    "the verbatim prefix dropped from every path",
+    expected = r#"the plain form of "\\\\?\\Volume{0}\\a""#,
+    check_plain(
+        |p| PathBuf::from(p.to_str().unwrap().trim_start_matches(r"\\?\")),
+        &VERBATIM_EDGE
+    )
 );
 
 /// Paths with each character a JSON or TOML string escapes: Windows' `\`, verbatim and plain, and a `"`.
