@@ -80,6 +80,7 @@ use crate::generated::links::{LinkReal, Selection};
 use crate::payload::PayloadReal;
 use crate::real::IeeeBits;
 use crate::shape::shape_vec;
+use crate::Real;
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
@@ -194,15 +195,15 @@ pub fn closed_form<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> ClosedForm<R> {
     let d = |p: [R; 2], q: [R; 2]| [p[0] - q[0], p[1] - q[1]];
     let (a2, b2, c2) = (length2(d(r1, r0)), length2(d(r2, r0)), length2(d(r2, r1)));
     let (a, b, c) = (Float::sqrt(a2), Float::sqrt(b2), Float::sqrt(c2));
-    let theta = Float::atan2(a, b);
+    let theta = Real::arctangent2(a, b);
     let [m0, m1, m2] = ic.m;
     ClosedForm {
         sides: [a, b, c],
         theta,
         nu: nu_of(theta),
         coupling: [
-            Float::ln(m1 / m0) - Float::ln(b / c),
-            Float::ln(m2 / m0) - Float::ln(a / c),
+            Real::logarithm(m1 / m0) - Real::logarithm(b / c),
+            Real::logarithm(m2 / m0) - Real::logarithm(a / c),
         ],
         past_fold: a2 > b2,
     }

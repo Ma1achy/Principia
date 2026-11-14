@@ -45,6 +45,7 @@ use kernel::generated::links::{
     SoftsignQ, TanhQ,
 };
 use kernel::payload::PayloadReal;
+use kernel::Real;
 use std::io::Write;
 use validation::negative_control;
 
@@ -76,7 +77,7 @@ type Mx = Mixed<Alpha, PRhoX, f64>;
 
 /// `(sin, cos)` of `deg` degrees through the kernel's own float trait, as the tilt computes them.
 fn sc(deg: f64) -> (f64, f64) {
-    Float::sin_cos(Float::to_radians(deg))
+    Real::sine_cosine(Float::to_radians(deg))
 }
 
 /// The decode's bits, as the Debug form of every float.
@@ -1413,8 +1414,11 @@ negative_control!(
 
 /// The strip `[dir, half]` of the generator `w` along `along`, as the kernel forms it.
 fn strip_of(along: [f64; 2], w: [f64; 2]) -> ([f64; 2], f64) {
-    let len = along[0].hypot(along[1]);
-    ([along[0] / len, along[1] / len], w[0].hypot(w[1]) / 2.0)
+    let len = along[0].hypotenuse(along[1]);
+    (
+        [along[0] / len, along[1] / len],
+        w[0].hypotenuse(w[1]) / 2.0,
+    )
 }
 
 /// A lattice arm: the stored tilt and its strip's `(along, w)`, or none.
@@ -4959,7 +4963,7 @@ impl Chart for Allowing {
 }
 
 impl LzChart for Allowing {
-    fn kinetic_at<F: Float + From<f64>>(&self, v: F) -> F {
+    fn kinetic_at<F: Float + kernel::Real + From<f64>>(&self, v: F) -> F {
         self.0.kinetic_at(v)
     }
 

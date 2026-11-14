@@ -65,6 +65,7 @@ use crate::decode::{self, mass, Decoded, Latent};
 use crate::generated::constants::ChartConstants;
 use crate::generated::links::{Link, LinkParams, LinkReal, Selection};
 use crate::payload::PayloadReal;
+use crate::Real;
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
@@ -733,10 +734,10 @@ impl<A: Coordinate, S: Selection, P: Copy> MixedMassRatio<A, S, P> {
 
     /// The ratio at `t`: warped `q₀·(q₁/q₀)^t`, linear `q₀ + (q₁ − q₀)·t`.
     #[inline]
-    pub fn ratio_at<R: Float + From<P>>(&self, t: R) -> R {
+    pub fn ratio_at<R: Float + Real + From<P>>(&self, t: R) -> R {
         let w = <R as From<P>>::from;
         let (q0, q1) = (w(self.ratio[0]), w(self.ratio[1]));
-        let geometric = q0 * Float::powf(q1 / q0, t);
+        let geometric = q0 * Real::power(q1 / q0, t);
         select(
             self.mapping == Mapping::Linear,
             lerp([q0, q1], t),
@@ -919,15 +920,15 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
     /// that needs a search that does not read rounding.
     fn seed(&self, p: &LinkParams<f64>) -> Option<f64> {
         let eps = 0.5 * <f64 as ChartConstants>::EPS_MU;
-        let mut lo = self.ratio[0].max(f64::MIN_POSITIVE).ln();
-        let mut hi = self.ratio[1].ln();
+        let mut lo = self.ratio[0].max(f64::MIN_POSITIVE).logarithm();
+        let mut hi = self.ratio[1].logarithm();
         loop {
             let third = (hi - lo) / 3.0;
             let (near, far) = (lo + third, hi - third);
             if !(lo < near && far < hi) {
                 return None;
             }
-            let (below, above) = (near.exp(), far.exp());
+            let (below, above) = (near.exponential(), far.exponential());
             let miss_below = self.miss_narrowed(below, p);
             let miss_above = self.miss_narrowed(above, p);
             if miss_below <= eps {
@@ -959,14 +960,14 @@ impl<A: Coordinate, S: Selection> MixedMassRatio<A, S, f64> {
         if upper != (toward > from) {
             return None;
         }
-        let (mut ok, mut bad) = (from.ln(), toward.max(f64::MIN_POSITIVE).ln());
+        let (mut ok, mut bad) = (from.logarithm(), toward.max(f64::MIN_POSITIVE).logarithm());
         let mut last = from;
         loop {
             let mid = 0.5 * (ok + bad);
             if mid == ok || mid == bad {
                 return Some(last);
             }
-            let q = mid.exp();
+            let q = mid.exponential();
             if self.miss_narrowed(q, p) <= eps {
                 ok = mid;
                 last = q;

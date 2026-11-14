@@ -108,6 +108,17 @@ Commands:
                                   `extern crate alloc`, in the kernel's physics and driver layers
                                   (crates/kernel/src/{physics,driver}), naming file, line and token
                                   (integrator_contract Part 2c rule 5; REQ-PERF-002)
+  measure libm-pin [--wasm] [--against <run>...]
+                                  the libm-pin measurement (R-991, REQ-CHART-212): the harness xtask/libm_pin/ decodes
+                                  the first slice's three charts over their grids in f64 on this machine, on the pinned
+                                  path, the std path (kernel's measure-std-maths) and the control (measure-perturb-sin),
+                                  each run written under <target>/measure/libm-pin/; --wasm runs the pinned and std
+                                  paths built for wasm32-unknown-unknown under node too; --against compares another
+                                  machine's run with this one's of the same arm. Prints the records differing at f64
+                                  and after narrowing, per chart and zoom, and the outcome: PASS, INCOMPLETE,
+                                  UNEXPLAINED or void
+  measure libm-pin --write <file> [--std]
+                                  write this machine's pinned run (or std run) to <file>, for --against elsewhere
   mutants-check <mutants.out>... [--equivalent <file>]
                                   the per-PR mutation gate (R-196, R-202): list each mutant that survived the
                                   `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
@@ -200,6 +211,7 @@ fn main() -> ExitCode {
         ["lint", "wgsl"] => xtask::lint_wgsl::run(&workspace_manifest()),
         ["lint", "compute-pipelines"] => xtask::lint_compute::run(&workspace_manifest()),
         ["lint", "no-alloc"] => xtask::lint_no_alloc::run(&workspace_manifest()),
+        ["measure", "libm-pin", rest @ ..] => measure_libm_pin(rest),
         ["mutants-check", outs @ .., "--equivalent", list]
             if !outs.is_empty() && !outs.contains(&"--equivalent") =>
         {
@@ -340,6 +352,190 @@ fn gate_report(args: &[&str]) -> Result<(), String> {
         given.get("--test-list").map(Path::new),
         &xtask::gate_report::Gh::new("gh"),
     )
+}
+
+/// The libm-pin harness's arms on this machine: each one's name, which names its run's file and its own target directory,
+/// and the harness features it is built with.
+const LIBM_PIN_ARMS: [(&str, &str); 3] = [
+    ("pinned", ""),
+    ("std", "std-maths"),
+    ("control", "perturb-sin"),
+];
+
+/// The directory the libm-pin harness builds and writes under: `$CARGO_TARGET_DIR`, or the workspace's `target/`.
+fn libm_pin_base() -> PathBuf {
+    std::env::var_os("CARGO_TARGET_DIR")
+        .map_or_else(|| workspace_root().join("target"), PathBuf::from)
+}
+
+/// The cargo that runs xtask, as `deps` takes it.
+fn libm_pin_cargo() -> String {
+    std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
+}
+
+/// Runs a cargo or node command, `what` naming it in an error.
+fn libm_pin_spawn(command: &mut std::process::Command, what: &str) -> Result<(), String> {
+    let status = command
+        .status()
+        .map_err(|e| format!("measure libm-pin: cannot run {what}: {e}"))?;
+    status
+        .success()
+        .then_some(())
+        .ok_or_else(|| format!("measure libm-pin: {what} failed ({status})"))
+}
+
+/// The harness built with `features` and run natively, its run written to `file`.
+fn libm_pin_native(name: &str, features: &str, file: &Path) -> Result<(), String> {
+    let mut command = std::process::Command::new(libm_pin_cargo());
+    command
+        .args(["run", "--release", "--quiet", "--manifest-path"])
+        .arg(workspace_root().join("xtask/libm_pin/Cargo.toml"))
+        .arg("--target-dir")
+        .arg(libm_pin_base().join("libm-pin").join(name));
+    if !features.is_empty() {
+        command.args(["--features", features]);
+    }
+    libm_pin_spawn(
+        command.args(["--", "write"]).arg(file),
+        &format!("the {name} arm"),
+    )
+}
+
+/// The harness built for wasm32-unknown-unknown with `features` and run under node (`xtask/libm_pin/run.mjs`), its run,
+/// the arm `name`, written to `file`.
+fn libm_pin_wasm(name: &str, features: &str, file: &Path) -> Result<(), String> {
+    let target = libm_pin_base()
+        .join("libm-pin")
+        .join(format!("wasm-{name}"));
+    let mut build = std::process::Command::new(libm_pin_cargo());
+    build
+        .args([
+            "build",
+            "--release",
+            "--quiet",
+            "--lib",
+            "--target",
+            "wasm32-unknown-unknown",
+            "--manifest-path",
+        ])
+        .arg(workspace_root().join("xtask/libm_pin/Cargo.toml"))
+        .arg("--target-dir")
+        .arg(&target);
+    if !features.is_empty() {
+        build.args(["--features", features]);
+    }
+    libm_pin_spawn(&mut build, &format!("the wasm {name} build"))?;
+    let wasm = target.join("wasm32-unknown-unknown/release/libm_pin.wasm");
+    let mut node = std::process::Command::new("node");
+    node.arg(workspace_root().join("xtask/libm_pin/run.mjs"))
+        .arg(&wasm)
+        .arg(file)
+        .arg(name);
+    libm_pin_spawn(&mut node, &format!("the wasm {name} arm under node"))
+}
+
+/// Reads a run's file.
+fn libm_pin_read(file: &Path) -> Result<xtask::libm_pin::Run, String> {
+    let bytes = std::fs::read(file)
+        .map_err(|e| format!("measure libm-pin: cannot read {}: {e}", file.display()))?;
+    xtask::libm_pin::parse(&bytes)
+}
+
+/// `cargo xtask measure libm-pin`, its flags `rest` (the usage's two forms).
+fn measure_libm_pin(rest: &[&str]) -> Result<(), String> {
+    use xtask::libm_pin::{compare, outcome, table, Outcome};
+    match rest {
+        ["--write", file] => return libm_pin_native("pinned", "", Path::new(file)),
+        ["--write", file, "--std"] => return libm_pin_native("std", "std-maths", Path::new(file)),
+        _ => {}
+    }
+    let (mut wasm, mut against) = (false, Vec::new());
+    let mut words = rest.iter();
+    while let Some(word) = words.next() {
+        match *word {
+            "--wasm" => wasm = true,
+            "--against" => against.push(PathBuf::from(
+                words.next().ok_or("measure libm-pin: --against <run>")?,
+            )),
+            other => return Err(format!("measure libm-pin: unrecognised argument `{other}`")),
+        }
+    }
+    let out = libm_pin_base().join("measure/libm-pin");
+    std::fs::create_dir_all(&out)
+        .map_err(|e| format!("measure libm-pin: {}: {e}", out.display()))?;
+    let mut runs = Vec::new();
+    for (name, features) in LIBM_PIN_ARMS {
+        let file = out.join(format!("{name}.bin"));
+        libm_pin_native(name, features, &file)?;
+        runs.push(libm_pin_read(&file)?);
+    }
+    if wasm {
+        for (name, features) in &LIBM_PIN_ARMS[..2] {
+            let file = out.join(format!("wasm-{name}.bin"));
+            libm_pin_wasm(name, features, &file)?;
+            against.push(file);
+        }
+    }
+    let [pinned, std_path, control] =
+        <[_; 3]>::try_from(runs).map_err(|_| "measure libm-pin: three arms")?;
+    let here = &pinned.header.host;
+    let mut report = table(
+        &format!("std against pinned, {here}"),
+        &compare(&pinned, &std_path)?,
+    );
+    let control_counts = compare(&pinned, &control)?;
+    report += &table(
+        &format!("control (sin one ulp up) against pinned, {here}"),
+        &control_counts,
+    );
+    let mut pinned_elsewhere = Vec::new();
+    for file in &against {
+        let other = libm_pin_read(file)?;
+        let base = match other.header.arm.as_str() {
+            "pinned" => &pinned,
+            "std" => &std_path,
+            arm => {
+                return Err(format!(
+                    "measure libm-pin: {} is a `{arm}` run",
+                    file.display()
+                ))
+            }
+        };
+        let counts = compare(base, &other)?;
+        report += &table(
+            &format!("{} {} against {here}", other.header.arm, other.header.host),
+            &counts,
+        );
+        if other.header.arm == "pinned" {
+            pinned_elsewhere.push((other.header.host.clone(), counts));
+        }
+    }
+    print!("{report}");
+    let ran: Vec<&str> = pinned_elsewhere
+        .iter()
+        .map(|(host, _)| host.as_str())
+        .collect();
+    match outcome(&control_counts, &pinned_elsewhere) {
+        Outcome::Pass => {
+            println!("libm-pin: PASS ({})", ran.join(", "));
+            Ok(())
+        }
+        Outcome::Incomplete(missing) => {
+            println!(
+                "libm-pin: INCOMPLETE, pinned arms not run: {}; 0 records differ on the arms that ran: {}",
+                missing.join(", "),
+                if ran.is_empty() { "none".to_owned() } else { ran.join(", ") }
+            );
+            Ok(())
+        }
+        Outcome::Unexplained(hosts) => Err(format!(
+            "libm-pin: UNEXPLAINED, pinned records differ on {}",
+            hosts.join(", ")
+        )),
+        Outcome::Void => {
+            Err("libm-pin: void, the control's one-ulp sin changed no record at f64".to_owned())
+        }
+    }
 }
 
 /// This workspace's root directory.

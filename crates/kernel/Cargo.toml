@@ -40,3 +40,8 @@ num-rational = "0.4"
 # Under `controls`, each `negative_control!` in kernel's tests compiles as a test (R-176).
 [features]
 controls = []
+# The libm-pin measurement's two arms (R-991, REQ-CHART-212; `cargo xtask measure libm-pin`), off in every other build:
+# the f64 path on `num_traits::Float`, the platform's maths library, as before the pin, and the control, the pinned
+# `sin` moved one ulp up (`src/real.rs`'s note).
+measure-std-maths = []
+measure-perturb-sin = []

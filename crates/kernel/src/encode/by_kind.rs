@@ -659,7 +659,7 @@ pub fn warp_inverse<R: WarpReal>(k_max: R, gamma_k: R, inv: &Invariants<R>) -> (
     let l = select(rest, R::one(), l_max(inv.k));
     let ratio = select(rest, R::zero(), inv.lz / l);
     let s = (ratio + R::one()) * half;
-    let t = Float::powf(inv.k / k_max, R::one() / gamma_k);
+    let t = Real::power(inv.k / k_max, R::one() / gamma_k);
     (s, t)
 }
 

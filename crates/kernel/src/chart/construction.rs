@@ -76,6 +76,7 @@ use crate::decode::momentum::{self, Momentum};
 use crate::decode::{self, Blocks, Decoded, Ic, Latent};
 use crate::generated::links::{LinkParams, LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
+use crate::Real;
 
 use core::marker::PhantomData;
 
@@ -578,7 +579,7 @@ impl<C, P: Copy> HeldLz<C, P> {
 /// A chart whose momenta are §2.2's construction at a held `L_z` and a `K` its vertical axis reads.
 pub trait LzChart: Chart + Copy {
     /// The warp's line `K_max·v^γ_K`.
-    fn kinetic_at<F: Float + From<Self::Param>>(&self, v: F) -> F;
+    fn kinetic_at<F: Float + Real + From<Self::Param>>(&self, v: F) -> F;
 
     /// `K_max`, the top of the linear option's range.
     fn k_max_at<F: Float + From<Self::Param>>(&self) -> F;
@@ -600,7 +601,7 @@ where
     f64: From<P>,
 {
     #[inline]
-    fn kinetic_at<F: Float + From<P>>(&self, v: F) -> F {
+    fn kinetic_at<F: Float + Real + From<P>>(&self, v: F) -> F {
         self.kinetic(v)
     }
 
@@ -635,7 +636,7 @@ where
     f64: From<P>,
 {
     #[inline]
-    fn kinetic_at<F: Float + From<P>>(&self, v: F) -> F {
+    fn kinetic_at<F: Float + Real + From<P>>(&self, v: F) -> F {
         self.kinetic(v)
     }
 
@@ -940,10 +941,10 @@ where
 {
     /// `t₀ = (K₀/K_max)^(1/γ_K)`, a `K₀` below 0 taken at 0: a centre `validate` refuses, its decode still finite.
     #[inline]
-    fn t0<R: Float + From<P>>(&self) -> R {
+    fn t0<R: Float + Real + From<P>>(&self) -> R {
         let wide = <R as From<P>>::from;
         let k0 = Float::max(self.chart.kinetic::<R>(), R::zero());
-        Float::powf(k0 / wide(self.k_max), wide(self.gamma_k).recip())
+        Real::power(k0 / wide(self.k_max), wide(self.gamma_k).recip())
     }
 
     /// The pixel's own `K` at the offset `d`: `K₀` itself at `d = 0`, else `K_max·t^γ_K` at `t = t₀ + d`, clamped at

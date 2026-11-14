@@ -225,7 +225,7 @@ fn check_formula<R: Q>(warp: Warp<R>) {
                 t.f(),
                 R::LABEL
             );
-            assert_eq!(got.k, km * t.powf(gk), "K(t) is not K_max·t^γ_K {ctx}");
+            assert_eq!(got.k, km * t.power(gk), "K(t) is not K_max·t^γ_K {ctx}");
             let root = (got.k + got.k).sqrt();
             assert!(
                 got.l_max <= root && R::ulps(got.l_max, root) <= 4,
