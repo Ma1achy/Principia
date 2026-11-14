@@ -35,9 +35,10 @@ use yaml_rust2::{Yaml, YamlLoader};
 
 /// The measurement workflow and its jobs, so that the checks can't pass by finding nothing.
 const WORKFLOW: &str = "win-gpu.yml";
-const JOBS: [&str; 3] = ["win-vulkan", "win-tests", "win-self-check"];
-/// The jobs that run nightly only.
-const NIGHTLY_ONLY: [&str; 2] = ["win-tests", "win-self-check"];
+const JOBS: [&str; 2] = ["win-vulkan", "win-self-check"];
+/// The jobs that run nightly only. The nightly Windows build and CPU tests, `win-tests`, left the PC on 14 Nov 2026: it
+/// runs the GPU suites only (the owner's words; TASK-M0-71).
+const NIGHTLY_ONLY: [&str; 1] = ["win-self-check"];
 const NOT_ON_PUSH: &str = "github.event_name != 'push'";
 /// The one job whose newer run cancels an older one in progress, on `main` too: the 85-minute run (R-986). Every other
 /// job on the runner lets a running measurement finish.
@@ -736,11 +737,11 @@ fn self_hosted_jobs_are_never_required_or_gathered() {
 negative_control!(
     self_hosted_jobs_are_never_required_or_gathered,
     "a job in the workflow that needs a self-hosted one",
-    expected = "win-gpu.yml/gather gathers the self-hosted job win-tests",
+    expected = "win-gpu.yml/gather gathers the self-hosted job win-self-check",
     check_not_gathered(
         &measured(
             "jobs:\n",
-            "jobs:\n  gather:\n    runs-on: ubuntu-24.04\n    needs: [win-tests]\n    steps: []\n"
+            "jobs:\n  gather:\n    runs-on: ubuntu-24.04\n    needs: [win-self-check]\n    steps: []\n"
         ),
         &consumers(),
         &read(SETUP)
@@ -852,9 +853,12 @@ mod required_name {
     negative_control!(
         self_hosted_jobs_are_never_required_or_gathered,
         "a self-hosted job named for a required check",
-        expected = "win-gpu.yml/win-tests reports as the required check gpu-lavapipe",
+        expected = "win-gpu.yml/win-self-check reports as the required check gpu-lavapipe",
         check_not_gathered(
-            &measured("  win-tests:\n", "  win-tests:\n    name: gpu-lavapipe\n"),
+            &measured(
+                "  win-self-check:\n",
+                "  win-self-check:\n    name: gpu-lavapipe\n"
+            ),
             &consumers(),
             &read(SETUP)
         )
@@ -870,14 +874,14 @@ mod required_id {
         check_not_gathered(
             &[(
                 WORKFLOW.to_owned(),
-                measured("  win-tests:\n", "  mutants-check:\n")
+                measured("  win-self-check:\n", "  mutants-check:\n")
                     .into_iter()
                     .find(|(n, _)| n == WORKFLOW)
                     .expect("the workflow")
                     .1
                     .replace(
                         "jobs:\n",
-                        "jobs:\n  win-tests:\n    runs-on: [self-hosted]\n"
+                        "jobs:\n  win-self-check:\n    runs-on: [self-hosted]\n"
                     )
             )],
             &consumers(),
@@ -1049,10 +1053,10 @@ mod job_widens {
     negative_control!(
         self_hosted_jobs_hold_no_credential,
         "a job widening the workflow's permissions",
-        expected = "win-gpu.yml/win-tests isn't `contents: read` alone",
+        expected = "win-gpu.yml/win-self-check isn't `contents: read` alone",
         check_no_credential(&measured(
-            "  win-tests:\n",
-            "  win-tests:\n    permissions: write-all\n"
+            "  win-self-check:\n",
+            "  win-self-check:\n    permissions: write-all\n"
         ))
     );
 }
@@ -1152,7 +1156,7 @@ mod no_condition {
         "no condition at all",
         expected = "lacks the repository and actor guard",
         check_guard(&measured(
-            "    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-tests')\n",
+            "    if: github.repository == 'Ma1achy/Principia' && github.actor == 'Ma1achy' && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-self-check')\n",
             ""
         ))
     );
@@ -1506,9 +1510,9 @@ mod shared_group {
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
         "two jobs in one group, where a run's jobs displace each other",
-        expected = "win-gpu.yml/win-tests has no concurrency group of its own",
+        expected = "win-gpu.yml/win-self-check has no concurrency group of its own",
         check_shape(&measured(
-            "      group: win-tests\n",
+            "      group: win-self-check\n",
             "      group: win-vulkan\n"
         ))
     );
@@ -1548,10 +1552,10 @@ mod another_cancels {
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
         "a nightly job cancelling a running measurement",
-        expected = "win-gpu.yml/win-tests cancels a running measurement",
+        expected = "win-gpu.yml/win-self-check cancels a running measurement",
         check_shape(&measured(
-            "      group: win-tests\n      cancel-in-progress: false\n",
-            "      group: win-tests\n      cancel-in-progress: true\n"
+            "      group: win-self-check\n      cancel-in-progress: false\n",
+            "      group: win-self-check\n      cancel-in-progress: true\n"
         ))
     );
 }
@@ -1859,10 +1863,10 @@ mod tests_on_push {
     use super::*;
     negative_control!(
         self_hosted_jobs_have_the_shape_the_runner_needs,
-        "the Windows tests on every push",
-        expected = "win-gpu.yml/win-tests runs on the wrong events",
+        "the nightly self-check on every push",
+        expected = "win-gpu.yml/win-self-check runs on the wrong events",
         check_shape(&measured(
-            " && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-tests')",
+            " && github.event_name != 'push' && (inputs.only == '' || inputs.only == 'all' || inputs.only == 'win-self-check')",
             ""
         ))
     );
@@ -2042,9 +2046,9 @@ mod limit_below {
     negative_control!(
         self_hosted_jobs_have_time_limits,
         "a job's limit below 1.5 times its measured time",
-        expected = "win-gpu.yml/win-tests's limit is Some(146) min, not the table's Some(147)",
+        expected = "win-gpu.yml/win-self-check's limit is Some(16) min, not the table's Some(17)",
         check_limits(
-            &measured("    timeout-minutes: 147\n", "    timeout-minutes: 146\n"),
+            &measured("    timeout-minutes: 17\n", "    timeout-minutes: 16\n"),
             &read(TIMES)
         )
     );
@@ -2081,12 +2085,12 @@ mod job_not_in_table {
     negative_control!(
         self_hosted_jobs_have_time_limits,
         "a job missing from the table",
-        expected = "win-gpu.yml/win-tests isn't in the table of measured times",
+        expected = "win-gpu.yml/win-self-check isn't in the table of measured times",
         check_limits(
             &workflows(),
             &read(TIMES).replacen(
-                "| win-gpu.yml | win-tests | (job) |",
-                "| win-gpu.yml | win-tests-gone | (job) |",
+                "| win-gpu.yml | win-self-check | (job) |",
+                "| win-gpu.yml | win-self-check-gone | (job) |",
                 1
             )
         )
@@ -2111,10 +2115,10 @@ mod table_not_the_slowest {
     negative_control!(
         self_hosted_jobs_have_time_limits,
         "a measured time that isn't the slowest of its runs",
-        expected = "win-gpu.yml/win-tests/(job)'s measured time isn't the slowest of its runs",
+        expected = "win-gpu.yml/win-self-check/(job)'s measured time isn't the slowest of its runs",
         check_limits(
             &workflows(),
-            &read(TIMES).replacen("| 5863 | 147 |", "| 5600 | 147 |", 1)
+            &read(TIMES).replacen("| 649 | 17 |", "| 448 | 17 |", 1)
         )
     );
 }

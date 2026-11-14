@@ -1088,6 +1088,18 @@ every test that passes on the hosted Linux run of that commit passes on all thre
 differ the tier does not move and the owner is told which tests differed. The RTX's GPU tests wait on § "Windows GPU
 results (R-719)"'s sorting of the four failing steps.
 
+*14 Nov 2026 (the owner's words, verbatim, items 1 and 5):* "1. The PC runs the GPU suites only. Tests that fail
+there for lack of Unix tools (most of the 382) are excluded on Windows with a stated reason (they run on hosted Linux
+already), not fixed. Fix only failures that could mean a wrong result on Windows. ... 5. Windows work gets one agent
+slot at a time". So `win-gpu.yml`'s nightly `win-tests`, the Windows build and CPU tests, left the PC (TASK-M0-71,
+REQ-TOOL-244): its xtask tests started a bare `bash`, which on the runner's account is
+C:\Windows\System32\bash.exe, WSL's launcher, and so ran in the default distro and changed it (run 43593938536,
+three copies appended to `ci`'s `~/.cargo/config.toml` in `principia-wsl`). No test a job on the runner runs may start
+a bare `bash` or `wsl`, or System32's copy of either: `xtask/tests/ci_win_no_wsl.rs` reads every cargo command of
+those jobs and fails if a test it reaches does, unless the test's file is left out on Windows by an inner `cfg` with
+its reason above it. A job on the runner meant to reach WSL does it through `.github/scripts/wsl.ps1` and the named
+distro, never a bare `bash`.
+
 *12 Nov 2026 (R-986, the owner's ruling):* the 85-minute run, `win-gpu.yml`'s `win-vulkan`, runs on merges to `main`,
 nightly and by dispatch only, never on a branch push, and a newer run of it cancels an older one, on `main` too
 (`cancel-in-progress: true` on that job alone; every other job on the runner keeps `false`). A run cancelled so is no
@@ -1162,9 +1174,10 @@ limit changed after the result (R-649). `win-retry` acts from the first run afte
     runners. **WSL contains accidents, not attacks:** it keeps a mutant's `kill(-1)`, its runaway memory and its stray
     processes inside the distro's VM, and it is not a security boundary, since any native gh-runner process can run
     `wsl -u root`, and root inside can mount C:. What stops malicious code reaching the PC is the signed-commit gate.
-  TASK-M0-55 builds the measurements on `main`. The list is not exhaustive (R-860): `win-gpu.yml`'s nightly
-  `win-tests` and the Windows arms of the path-cover and time-column benchmarks stay as named measurements, the
-  benchmarks' the separate Windows series.
+  TASK-M0-55 builds the measurements on `main`. The list is not exhaustive (R-860): the Windows arms of the path-cover
+  and time-column benchmarks stay as named measurements, the benchmarks' the separate Windows series. `win-gpu.yml`'s
+  nightly `win-tests` is gone (the owner's words of 14 Nov 2026, below; TASK-M0-71). *Was:* "`win-gpu.yml`'s nightly
+  `win-tests` and the Windows arms of the path-cover and time-column benchmarks stay as named measurements".
 - **Required or heavy CI work stays on hosted runners.** Moving mutants, or the GPU suites as gating checks, to the PC
   is not approved. It returns as a one-way question through `/rulings-report`, with the comparison's numbers and the
   fallback design (hosted runners take over if the PC hasn't answered in time). Until then nothing on `main` waits for
