@@ -370,7 +370,7 @@
     section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: property test
-    detail: "states with λ̃_y at −δ_λ, at +δ_λ, at ±0 and straddling both: C leaves λ̃_y's sign as rotated; the same output twice and on CPU-f64 and GPU-f32 builds; control: C with the mirror step left in fails"
+    detail: "states with λ̃_y at −δ_λ, at +δ_λ, at ±0 and straddling both: C leaves λ̃_y's sign as rotated; the same output twice and on CPU-f64 and GPU-f32 builds; control: C with the mirror step left in fails; a source check over the shared kernel source: no function of C or the encode reads δ_λ, whose one remaining use is the registry's entry hashes; control: a C reading δ_λ fails the check"
   rulings:
   - R-82
   - R-547
