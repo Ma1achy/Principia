@@ -20,9 +20,9 @@ const PS: &str = ".github/scripts/wsl.ps1";
 /// What `Hide-Tailnet` prints in place of an address in each range.
 const V4_MASK: &str = "100.x.x.x";
 const V6_MASK: &str = "fd7a:115c:a1e0::x";
-/// The variables that hold an address in the proofs, proof 3's: each prints only through `Report`, or is collected
-/// into another.
-const ADDRESS_VARS: [&str; 13] = [
+/// The variables that hold an address in the proofs, proof 3's, and `$cloned`, the clone's failure, text from outside
+/// that names a URL: each prints only through `Report` or `Hide-Tailnet`, or is collected into another.
+const ADDRESS_VARS: [&str; 14] = [
     "address",
     "inbound",
     "target",
@@ -36,6 +36,7 @@ const ADDRESS_VARS: [&str; 13] = [
     "outbound",
     "viaSwitch",
     "ip",
+    "cloned",
 ];
 /// Those proof 3's line shows.
 const PROOF_3_SHOWS: [&str; 9] = [
@@ -724,6 +725,72 @@ mod decides_masked {
             &read(PS),
             "                $gateway = ((Invoke-Ci",
             "                $lan = @($lan | ForEach-Object { Hide-Tailnet $_ })\n                $gateway = ((Invoke-Ci"
+        ))
+    );
+}
+
+// ---- The clone's failure --------------------------------------------------------------------------------------------
+
+/// The line the proofs print when the clone inside fails carries text from outside, so it prints through
+/// `Hide-Tailnet`; the proofs that then fail say so through `Report`.
+fn check_clone_line(script: &str) {
+    let proofs = arm(script, "proofs");
+    let line = proofs
+        .lines()
+        .map(str::trim)
+        .find(|l| l.starts_with("if ($cloned) {") && l.contains("the clone failed"))
+        .expect("the clone's failure line");
+    assert!(
+        line.starts_with("if ($cloned) { Hide-Tailnet \"the clone failed: $cloned\" }"),
+        "the clone's failure prints unmasked: {line}"
+    );
+    if let Some((v, line)) = printed_outside_report(proofs).first() {
+        panic!("proofs print ${v} outside Report, unmasked: {line}");
+    }
+}
+
+#[test]
+fn wsl_clone_failure_prints_through_the_mask() {
+    check_clone_line(&read(PS));
+}
+
+negative_control!(
+    wsl_clone_failure_prints_through_the_mask,
+    "Hide-Tailnet taken off the clone's failure line",
+    expected =
+        "the clone's failure prints unmasked: if ($cloned) { \"the clone failed: $cloned\" }",
+    check_clone_line(&edited(
+        &read(PS),
+        "if ($cloned) { Hide-Tailnet \"the clone failed: $cloned\" }",
+        "if ($cloned) { \"the clone failed: $cloned\" }"
+    ))
+);
+
+mod clone_by_other_means {
+    use super::*;
+    negative_control!(
+        wsl_clone_failure_prints_through_the_mask,
+        "the clone's failure also printed bare",
+        expected = "proofs print $cloned outside Report, unmasked: Write-Output $cloned",
+        check_clone_line(&edited(
+            &read(PS),
+            "            # Proof 2: no drive",
+            "            Write-Output $cloned\n            # Proof 2: no drive"
+        ))
+    );
+}
+
+mod clone_raw_in_routes {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Hide-Tailnet taken off the clone's failure line",
+        expected =
+            "proofs print $cloned outside Report, unmasked: if ($cloned) { \"the clone failed",
+        check_routes(&edited(
+            &read(PS),
+            "if ($cloned) { Hide-Tailnet \"the clone failed: $cloned\" }",
+            "if ($cloned) { \"the clone failed: $cloned\" }"
         ))
     );
 }
