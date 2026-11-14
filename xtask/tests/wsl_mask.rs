@@ -7,10 +7,12 @@
 //! Off Windows there is no PowerShell, so, as `wsl.rs` does, these read the script: the first runs `Hide-Tailnet`'s
 //! two patterns, with its two replacements, as the script holds them, on made-up addresses; the second checks that
 //! each proof's line, the echo of what wsl.exe prints and the failure messages print through it, that no proof prints
-//! an address any other way, and that nothing a proof decides on is masked. `scripts/wsl/inside.sh` prints addresses
+//! an address any other way (an allow-list of statements, read by a small reader of the proofs' PowerShell), and that
+//! nothing a proof decides on is masked. `scripts/wsl/inside.sh` prints addresses
 //! only to wsl.ps1, which reads them raw for the proofs and masks its echo of them. Each test has its negative
 //! controls (R-176).
 
+use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
 use regex::{NoExpand, Regex};
@@ -21,7 +23,8 @@ const PS: &str = ".github/scripts/wsl.ps1";
 const V4_MASK: &str = "100.x.x.x";
 const V6_MASK: &str = "fd7a:115c:a1e0::x";
 /// The variables that hold an address in the proofs, proof 3's, and `$cloned`, the clone's failure, text from outside
-/// that names a URL: each prints only through `Report` or `Hide-Tailnet`, or is collected into another.
+/// that names a URL: each prints only through `Report` or `Hide-Tailnet`. Any variable assigned or looped from one of
+/// them is one too (`spread`), so a copy is held to the same allow-list.
 const ADDRESS_VARS: [&str; 14] = [
     "address",
     "inbound",
@@ -263,130 +266,534 @@ fn arm<'a>(script: &'a str, verb: &str) -> &'a str {
     &rest[..end]
 }
 
-/// The cmdlets and host calls that print what they are given.
-const PRINTERS: [&str; 14] = [
-    "write-host",
-    "write-output",
-    "write-information",
-    "write-warning",
-    "write-error",
-    "write-verbose",
-    "write-debug",
-    "out-host",
-    "out-default",
-    "out-string",
-    "out-file",
-    "tee-object",
-    "add-content",
-    "$host.ui",
+// ---- A reader of the proofs' PowerShell -----------------------------------------------------------------------------
+
+/// The commands a proof may hand an address to, inside a value (an assignment's right side, a decision, a collection):
+/// each returns what it computes and prints nothing of its arguments. `Invoke-Ci` echoes what wsl.exe prints through
+/// `Hide-Tailnet` (Invoke-Wsl); `Test-Tcp` only connects.
+const SAFE_COMMANDS: [&str; 5] = [
+    "where-object",
+    "foreach-object",
+    "select-object",
+    "test-tcp",
+    "invoke-ci",
+];
+/// The keywords that open a control statement: its `(…)` is a header, a decision; its `{…}` blocks run as the
+/// statement's own context.
+const CONTROL: [&str; 11] = [
+    "if", "elseif", "else", "foreach", "for", "while", "do", "try", "catch", "finally", "switch",
 ];
 
-/// Each address variable `arm` prints other than through `Report` or `Hide-Tailnet`, with its line, in three ways:
-/// interpolated in a double-quoted string that is neither `Report`'s argument nor `Hide-Tailnet`'s; left bare at the
-/// start of a statement that isn't an assignment (`$gateway`, `$hostSwitch | …`, `{ $ip }`), which PowerShell prints;
-/// or on a line with a cmdlet that prints (`Write-Host $gateway`, `Write-Output $lan`). Inside a collection
-/// (`$x = @(…)`) a string or a bare variable is a value, not a print. Strings are read one line at a time, as the
-/// script writes them; single-quoted ones are skipped, and brackets in either kind don't count.
-fn printed_outside_report(arm: &str) -> Vec<(String, String)> {
-    let var = Regex::new(&format!(r"(?i)\$\{{?({})\b", ADDRESS_VARS.join("|"))).expect("compiles");
-    let name = |s: &str| {
-        ADDRESS_VARS
-            .iter()
-            .find(|v| v.eq_ignore_ascii_case(s))
-            .map(|v| (*v).to_string())
-    };
-    // One entry per open bracket: whether it is inside a collection.
-    let mut stack: Vec<bool> = Vec::new();
-    let mut found = Vec::new();
-    for line in arm.lines() {
-        if line.trim_start().starts_with('#') {
-            continue;
+/// One piece of PowerShell, with the line (of the text read) it starts on.
+#[derive(Debug)]
+struct Tok {
+    node: Node,
+    line: usize,
+}
+
+#[derive(Debug)]
+enum Node {
+    /// `$name`, `${name}` or `@name` (splatted): the name in lowercase, without a scope (`script:`, `env:`).
+    Var(String),
+    /// A string: the variables a double-quoted one interpolates, and the code of its `$(…)` subexpressions.
+    Str(Vec<String>, Vec<Vec<Tok>>),
+    /// A bare word: a command, a keyword, a parameter, an operator or a number.
+    Word(String),
+    /// A type literal: `[Console]`, `[string]`.
+    Type(String),
+    /// `(…)`, `@(…)` or `$(…)` as `(`; `{…}` or `@{…}` as `{`; an index, `[…]`, as `[`.
+    Group(char, Vec<Tok>),
+    /// `=`, `+=`, `-=`.
+    Assign,
+    Pipe,
+    /// A statement's end: a newline or `;`.
+    End,
+    /// Anything else: `.`, `:`, `,`, `+`, `>`.
+    Punct,
+}
+
+fn var_name(raw: &str) -> String {
+    raw.rsplit(':').next().unwrap_or(raw).to_lowercase()
+}
+
+fn is_name_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
+/// Reads `c` from `*i` until `close` (consumed) or the end, counting lines in `*line`.
+fn read_ps(c: &[char], i: &mut usize, line: &mut usize, close: Option<char>) -> Vec<Tok> {
+    let mut out: Vec<Tok> = Vec::new();
+    while *i < c.len() {
+        let ch = c[*i];
+        let at = *line;
+        let next = c.get(*i + 1).copied();
+        macro_rules! push {
+            ($node:expr) => {
+                out.push(Tok {
+                    node: $node,
+                    line: at,
+                })
+            };
         }
-        let shown = line.trim().to_string();
-        let chars: Vec<char> = line.chars().collect();
-        let mut code = String::new();
-        // The address variables the line names, in code or in a string.
-        let mut named = Vec::new();
-        let mut i = 0;
-        while i < chars.len() {
-            let c = chars[i];
-            let collected = stack.last().copied().unwrap_or(false);
-            match c {
-                '"' => {
-                    let close = chars[i + 1..]
-                        .iter()
-                        .position(|&c| c == '"')
-                        .map_or(chars.len(), |e| i + 1 + e);
-                    let text: String = chars[i + 1..close].iter().collect();
-                    let through =
-                        code.contains("Report ") || code.trim_end().ends_with("Hide-Tailnet");
-                    for m in var.captures_iter(&text) {
-                        let v = name(&m[1]).expect("an address variable");
-                        if !collected && !through {
-                            found.push((v.clone(), shown.clone()));
-                        }
-                        named.push(v);
-                    }
-                    code.push_str("\"\"");
-                    i = close + 1;
-                    continue;
-                }
-                '\'' => {
-                    let close = chars[i + 1..]
-                        .iter()
-                        .position(|&c| c == '\'')
-                        .map_or(chars.len(), |e| i + 1 + e);
-                    code.push_str("''");
-                    i = close + 1;
-                    continue;
-                }
-                '$' => {
-                    let braced = chars.get(i + 1) == Some(&'{');
-                    let from = if braced { i + 2 } else { i + 1 };
-                    let len = chars[from..]
-                        .iter()
-                        .position(|c| !(c.is_alphanumeric() || *c == '_'))
-                        .unwrap_or(chars.len() - from);
-                    let ident: String = chars[from..from + len].iter().collect();
-                    let after = (from + len + usize::from(braced)).min(chars.len());
-                    if let Some(v) = name(&ident) {
-                        let before = code.trim_end();
-                        let starts =
-                            before.is_empty() || before.ends_with('{') || before.ends_with(';');
-                        let rest: String = chars[after..].iter().collect::<String>();
-                        let rest = rest.trim_start();
-                        let assigned = rest.starts_with('=')
-                            || rest.starts_with("+=")
-                            || rest.starts_with("-=");
-                        if starts && !assigned && !collected {
-                            found.push((v.clone(), shown.clone()));
-                        }
-                        named.push(v);
-                    }
-                    code.extend(&chars[i..after]);
-                    i = after;
-                    continue;
-                }
-                '(' | '{' | '[' => {
-                    let opens_collection = c == '(' && code.trim_end().ends_with("= @");
-                    stack.push(collected || opens_collection);
-                }
-                ')' | '}' | ']' => {
-                    stack.pop();
-                }
-                _ => {}
+        match ch {
+            '\n' => {
+                push!(Node::End);
+                *line += 1;
+                *i += 1;
             }
-            code.push(c);
-            i += 1;
-        }
-        let lower = code.to_lowercase();
-        if PRINTERS.iter().any(|p| lower.contains(p)) {
-            for v in named {
-                found.push((v, shown.clone()));
+            ';' => {
+                push!(Node::End);
+                *i += 1;
+            }
+            ' ' | '\t' | '\r' => *i += 1,
+            '`' => *i += 2,
+            '#' => {
+                while *i < c.len() && c[*i] != '\n' {
+                    *i += 1;
+                }
+            }
+            '"' => {
+                *i += 1;
+                let (mut vars, mut subs) = (Vec::new(), Vec::new());
+                while *i < c.len() {
+                    match c[*i] {
+                        '`' => *i += 2,
+                        '"' if c.get(*i + 1) == Some(&'"') => *i += 2,
+                        '"' => {
+                            *i += 1;
+                            break;
+                        }
+                        '$' if c.get(*i + 1) == Some(&'(') => {
+                            *i += 2;
+                            subs.push(read_ps(c, i, line, Some(')')));
+                        }
+                        '$' if c.get(*i + 1) == Some(&'{') => {
+                            let from = *i + 2;
+                            let len = c[from..]
+                                .iter()
+                                .position(|&x| x == '}')
+                                .unwrap_or(c.len() - from);
+                            vars.push(var_name(&c[from..from + len].iter().collect::<String>()));
+                            *i = from + len + 1;
+                        }
+                        '$' => {
+                            let from = *i + 1;
+                            let len = c[from..]
+                                .iter()
+                                .position(|&x| !(is_name_char(x) || x == ':'))
+                                .unwrap_or(c.len() - from);
+                            if len > 0 {
+                                vars.push(var_name(
+                                    &c[from..from + len].iter().collect::<String>(),
+                                ));
+                            }
+                            *i = from + len.max(1);
+                        }
+                        '\n' => {
+                            *line += 1;
+                            *i += 1;
+                        }
+                        _ => *i += 1,
+                    }
+                }
+                out.push(Tok {
+                    node: Node::Str(vars, subs),
+                    line: at,
+                });
+            }
+            '\'' => {
+                *i += 1;
+                while *i < c.len() {
+                    match c[*i] {
+                        '\'' if c.get(*i + 1) == Some(&'\'') => *i += 2,
+                        '\'' => {
+                            *i += 1;
+                            break;
+                        }
+                        '\n' => {
+                            *line += 1;
+                            *i += 1;
+                        }
+                        _ => *i += 1,
+                    }
+                }
+                push!(Node::Str(Vec::new(), Vec::new()));
+            }
+            '@' | '$' if next == Some('(') => {
+                *i += 2;
+                let body = read_ps(c, i, line, Some(')'));
+                out.push(Tok {
+                    node: Node::Group('(', body),
+                    line: at,
+                });
+            }
+            '@' if next == Some('{') => {
+                *i += 2;
+                let body = read_ps(c, i, line, Some('}'));
+                out.push(Tok {
+                    node: Node::Group('{', body),
+                    line: at,
+                });
+            }
+            '$' if next == Some('{') => {
+                let from = *i + 2;
+                let len = c[from..]
+                    .iter()
+                    .position(|&x| x == '}')
+                    .unwrap_or(c.len() - from);
+                push!(Node::Var(var_name(
+                    &c[from..from + len].iter().collect::<String>(),
+                )));
+                *i = (from + len + 1).min(c.len());
+            }
+            '$' | '@' => {
+                let from = *i + 1;
+                let len = c[from..]
+                    .iter()
+                    .position(|&x| !(is_name_char(x) || (ch == '$' && x == ':')))
+                    .unwrap_or(c.len() - from);
+                if len > 0 {
+                    push!(Node::Var(var_name(
+                        &c[from..from + len].iter().collect::<String>(),
+                    )));
+                } else {
+                    push!(Node::Punct);
+                }
+                *i = from + len;
+            }
+            '(' | '{' => {
+                *i += 1;
+                let body = read_ps(c, i, line, Some(if ch == '(' { ')' } else { '}' }));
+                out.push(Tok {
+                    node: Node::Group(ch, body),
+                    line: at,
+                });
+            }
+            '[' => {
+                let from = *i + 1;
+                let len = c[from..]
+                    .iter()
+                    .position(|&x| x == ']')
+                    .unwrap_or(c.len() - from);
+                let text: String = c[from..from + len].iter().collect();
+                let after_value = matches!(
+                    out.last(),
+                    Some(Tok {
+                        node: Node::Var(_) | Node::Group(..) | Node::Str(..),
+                        ..
+                    })
+                ) && *i > 0
+                    && c[*i - 1] != ' ';
+                if !after_value
+                    && !text.is_empty()
+                    && text.chars().all(|x| is_name_char(x) || x == '.')
+                {
+                    // `[string[]]`: the inner `[]` is part of the type.
+                    let mut end = from + len + 1;
+                    while c.get(end) == Some(&'[')
+                        && c.get(end + 1) == Some(&']')
+                        && c.get(end + 2) == Some(&']')
+                    {
+                        end += 3;
+                    }
+                    push!(Node::Type(text.to_lowercase()));
+                    *i = end;
+                } else {
+                    *i += 1;
+                    let body = read_ps(c, i, line, Some(']'));
+                    out.push(Tok {
+                        node: Node::Group('[', body),
+                        line: at,
+                    });
+                }
+            }
+            ')' | '}' | ']' => {
+                *i += 1;
+                if close == Some(ch) {
+                    return out;
+                }
+                push!(Node::Punct);
+            }
+            '|' => {
+                push!(Node::Pipe);
+                *i += 1;
+            }
+            '=' => {
+                push!(Node::Assign);
+                *i += 1;
+            }
+            '+' | '-' if next == Some('=') => {
+                push!(Node::Assign);
+                *i += 2;
+            }
+            _ if is_name_char(ch) || (ch == '-' && next.is_some_and(is_name_char)) => {
+                let from = *i;
+                *i += 1;
+                while *i < c.len() && (is_name_char(c[*i]) || c[*i] == '-') {
+                    *i += 1;
+                }
+                push!(Node::Word(
+                    c[from..*i].iter().collect::<String>().to_lowercase(),
+                ));
+            }
+            _ => {
+                push!(Node::Punct);
+                *i += 1;
             }
         }
     }
-    found
+    out
+}
+
+/// The statements of `code`: split at each end that doesn't follow a `|`.
+fn statements(code: &[Tok]) -> Vec<&[Tok]> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    for (k, t) in code.iter().enumerate() {
+        if matches!(t.node, Node::End) {
+            let continued = code[start..k]
+                .last()
+                .is_some_and(|p| matches!(p.node, Node::Pipe));
+            if !continued {
+                if k > start {
+                    out.push(&code[start..k]);
+                }
+                start = k + 1;
+            }
+        }
+    }
+    if code.len() > start {
+        out.push(&code[start..]);
+    }
+    out
+}
+
+/// Every variable `code` names, nested code and strings included, in order.
+fn names(code: &[Tok], out: &mut Vec<String>) {
+    for t in code {
+        match &t.node {
+            Node::Var(v) => out.push(v.clone()),
+            Node::Str(vars, subs) => {
+                out.extend(vars.iter().cloned());
+                for s in subs {
+                    names(s, out);
+                }
+            }
+            Node::Group(_, body) => names(body, out),
+            _ => {}
+        }
+    }
+}
+
+fn first_word(s: &[Tok]) -> Option<&str> {
+    match s.first().map(|t| &t.node) {
+        Some(Node::Word(w)) => Some(w),
+        _ => None,
+    }
+}
+
+/// Adds to `taint` each variable assigned from one in it, or looped over one in it (`foreach ($v in …)`); `$_` is
+/// left out, as `Check` taints it only where it is an address. Returns whether it grew.
+fn spread(code: &[Tok], taint: &mut BTreeSet<String>) -> bool {
+    let mut grew = false;
+    let touches = |rest: &[Tok], taint: &BTreeSet<String>| {
+        let mut n = Vec::new();
+        names(rest, &mut n);
+        n.iter().any(|v| v != "_" && taint.contains(v))
+    };
+    for s in statements(code) {
+        if let [Tok {
+            node: Node::Var(v), ..
+        }, Tok {
+            node: Node::Assign, ..
+        }, rest @ ..] = s
+        {
+            if touches(rest, taint) {
+                grew |= taint.insert(v.clone());
+            }
+        }
+        if first_word(s) == Some("foreach") {
+            if let Some(Tok {
+                node: Node::Group('(', head),
+                ..
+            }) = s.get(1)
+            {
+                if let [Tok {
+                    node: Node::Var(v), ..
+                }, Tok {
+                    node: Node::Word(w),
+                    ..
+                }, rest @ ..] = head.as_slice()
+                {
+                    if w == "in" && touches(rest, taint) {
+                        grew |= taint.insert(v.clone());
+                    }
+                }
+            }
+        }
+        for t in s {
+            match &t.node {
+                Node::Group(_, body) => grew |= spread(body, taint),
+                Node::Str(_, subs) => {
+                    for sub in subs {
+                        grew |= spread(sub, taint);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+    grew
+}
+
+/// The allow-list. Every statement of the proofs that names an address variable is one of: an assignment (whose right
+/// side is a value), a `Report` call, a `Hide-Tailnet` call, or a control statement (`if`, `foreach`, `while`, …),
+/// whose `(…)` header is a decision; anything else prints, and fails. Inside a value (an assignment's right side, a
+/// header, a collection, a subexpression, a script block a value's pipeline runs) a statement is a value too, and may
+/// hand an address only to `SAFE_COMMANDS`; there `$_` is an address where the pipeline carries one.
+struct Check<'a> {
+    taint: &'a BTreeSet<String>,
+    lines: Vec<&'a str>,
+    found: Vec<String>,
+}
+
+impl Check<'_> {
+    fn tainted(&self, s: &[Tok], item: bool) -> Option<String> {
+        let mut n = Vec::new();
+        names(s, &mut n);
+        n.into_iter()
+            .find(|v| self.taint.contains(v) || (item && v == "_"))
+    }
+
+    /// `v` as the script spells it, where it is one of `ADDRESS_VARS`.
+    fn display(v: &str) -> String {
+        ADDRESS_VARS
+            .iter()
+            .find(|a| a.eq_ignore_ascii_case(v))
+            .map_or_else(|| v.to_string(), |a| (*a).to_string())
+    }
+
+    fn line(&self, s: &[Tok]) -> String {
+        let at = s.first().map_or(0, |t| t.line);
+        self.lines
+            .get(at)
+            .map_or(String::new(), |l| l.trim().to_string())
+    }
+
+    fn block(&mut self, code: &[Tok], value: bool, item: bool) {
+        for s in statements(code) {
+            self.statement(s, value, item);
+        }
+    }
+
+    /// The code nested in `s`, each piece a value.
+    fn nested(&mut self, s: &[Tok], item: bool) {
+        for t in s {
+            match &t.node {
+                Node::Group('(' | '{', body) => self.block(body, true, item),
+                Node::Str(_, subs) => {
+                    for sub in subs {
+                        self.block(sub, true, item);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn statement(&mut self, s: &[Tok], value: bool, item: bool) {
+        if let [Tok {
+            node: Node::Var(_), ..
+        }, Tok {
+            node: Node::Assign, ..
+        }, rest @ ..] = s
+        {
+            self.statement(rest, true, item);
+            return;
+        }
+        match first_word(s) {
+            Some("report" | "hide-tailnet") => {
+                self.nested(&s[1..], item);
+                return;
+            }
+            Some(w) if CONTROL.contains(&w) => {
+                for t in s {
+                    match &t.node {
+                        Node::Group('(', head) => self.block(head, true, item),
+                        Node::Group('{', body) => self.block(body, value, item),
+                        _ => {}
+                    }
+                }
+                return;
+            }
+            _ => {}
+        }
+        if !value {
+            if let Some(v) = self.tainted(s, item) {
+                let (v, line) = (Self::display(&v), self.line(s));
+                self.found.push(format!(
+                    "proofs print ${v} outside Report, unmasked: {line}"
+                ));
+                return;
+            }
+            self.nested(s, item);
+            return;
+        }
+        // A value: its pipeline may hand an address only to the safe commands.
+        let carried = self.tainted(s, item);
+        if let Some(v) = &carried {
+            for element in s.split(|t| matches!(t.node, Node::Pipe)) {
+                if let Some(w) = first_word(element) {
+                    let command =
+                        !w.starts_with('-') && !w.chars().all(|c| c.is_ascii_digit() || c == '.');
+                    if command && !SAFE_COMMANDS.contains(&w) {
+                        let (v, line) = (Self::display(v), self.line(s));
+                        self.found.push(format!(
+                            "proofs pass ${v} to {w}, which isn't known not to print: {line}"
+                        ));
+                    }
+                }
+            }
+        }
+        for t in s {
+            match &t.node {
+                Node::Group('{', body) => self.block(body, true, item || carried.is_some()),
+                Node::Group('(', body) => self.block(body, true, item),
+                Node::Str(_, subs) => {
+                    for sub in subs {
+                        self.block(sub, true, item);
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+}
+
+/// What the allow-list refuses in `arm`, each with its line: an address printed other than through `Report` or
+/// `Hide-Tailnet`, or handed to a command not known not to print. The address variables are `ADDRESS_VARS` and every
+/// variable assigned or looped from one, to a fixed point; `$_` is one in a script block whose pipeline carries one.
+fn printed_outside_report(arm: &str) -> Vec<String> {
+    let chars: Vec<char> = arm.chars().collect();
+    let (mut i, mut line) = (0, 0);
+    let code = read_ps(&chars, &mut i, &mut line, None);
+    // The arm is `'proofs' { … }`: its body.
+    let body = code
+        .iter()
+        .find_map(|t| match &t.node {
+            Node::Group('{', body) => Some(body),
+            _ => None,
+        })
+        .expect("the arm's body");
+    let mut taint: BTreeSet<String> = ADDRESS_VARS.iter().map(|v| v.to_lowercase()).collect();
+    while spread(body, &mut taint) {}
+    let mut check = Check {
+        taint: &taint,
+        lines: arm.lines().collect(),
+        found: Vec::new(),
+    };
+    check.block(body, false, false);
+    check.found
 }
 
 fn check_routes(script: &str) {
@@ -403,15 +810,26 @@ fn check_routes(script: &str) {
     );
     // What the script writes to the console itself: Fail's message and Invoke-Wsl's echo of wsl.exe's output. Any
     // write to the console, `[Console]::Write`, `::Out.Write` or `::Error.WriteLine` alike, is Hide-Tailnet's.
-    let console = Regex::new(r"(?i)\[Console\]::(Out\.|Error\.)?Write(Line)?\(").expect("compiles");
+    // `[Console]` or `[System.Console]`: only its stdin encoding, set and read, or a write of Hide-Tailnet's text; and
+    // never the host's own UI.
+    let console = Regex::new(r"(?i)\[(System\.)?Console\]::").expect("compiles");
+    let masked_write =
+        Regex::new(r"^(?i)(Out\.|Error\.)?Write(Line)?\(\(Hide-Tailnet ").expect("compiles");
+    let host_ui = Regex::new(r"(?i)\$host\.ui\b").expect("compiles");
     for line in script.lines() {
         for m in console.find_iter(line) {
+            let after = &line[m.end()..];
             assert!(
-                line[m.end()..].starts_with("(Hide-Tailnet "),
+                after.starts_with("InputEncoding") || masked_write.is_match(after),
                 "wsl.ps1 writes to the console unmasked: {}",
                 line.trim()
             );
         }
+        assert!(
+            !host_ui.is_match(line),
+            "wsl.ps1 writes to the console unmasked: {}",
+            line.trim()
+        );
     }
     assert_eq!(
         script.matches("WriteLine((Hide-Tailnet ").count(),
@@ -442,8 +860,8 @@ fn check_routes(script: &str) {
         );
     }
     // No other print of an address.
-    if let Some((v, line)) = printed_outside_report(proofs).first() {
-        panic!("proofs print ${v} outside Report, unmasked: {line}");
+    if let Some(found) = printed_outside_report(proofs).first() {
+        panic!("{found}");
     }
     // What is masked is only printed: Hide-Tailnet's result is assigned only to Report's line.
     for line in script.lines().map(str::trim) {
@@ -459,6 +877,94 @@ fn check_routes(script: &str) {
             "Hide-Tailnet's result feeds something other than a print: {line}"
         );
     }
+}
+
+/// wsl.ps1 with `line` added to proof 3, just after `$gateway` is set: the place a print of an address would go.
+#[cfg(feature = "controls")]
+fn with_line(line: &str) -> String {
+    edited(
+        &read(PS),
+        "                if ($gateway -notmatch",
+        &format!("                {line}\n                if ($gateway -notmatch"),
+    )
+}
+
+/// The forms the code review's probe found missed by a deny-list, each printing an address (made up here, in the
+/// variables proof 3 sets): each must be refused, and is a control below as well.
+const PROBE_PRINTS: [&str; 22] = [
+    "Write-Host @hostSwitch",
+    "'gateway: {0}' -f $gateway",
+    "\"gateway: {0}\" -f $gateway",
+    "($gateway)",
+    "[string]$gateway",
+    "echo $gateway",
+    "write $gateway",
+    "oh $gateway",
+    "$lan | Set-Content x.txt",
+    "Set-Content x.txt $gateway",
+    "$gateway > x.txt",
+    "Write-Progress -Activity $gateway",
+    "$lan | Format-Table",
+    "$gateway.ToString()",
+    "-join $lan",
+    "$Gateway",
+    "Write-Host -Object $lan",
+    "$lan -join ', '",
+    "$x = $gateway; $x",
+    "foreach ($g in @($gateway)) { $g }",
+    "$seen = @($hostSwitch | ForEach-Object { Write-Host $_ })",
+    "if ($gateway) { $gateway }",
+];
+
+fn check_probes(script: &str, forms: &[&str]) {
+    let anchor = "                if ($gateway -notmatch";
+    assert!(script.contains(anchor), "proof 3's gateway check moved");
+    for form in forms {
+        let edited = script.replacen(anchor, &format!("                {form}\n{anchor}"), 1);
+        assert!(
+            !printed_outside_report(arm(&edited, "proofs")).is_empty(),
+            "the allow-list misses {form}"
+        );
+    }
+    // A copy that is never printed prints nothing.
+    let copy = script.replacen(
+        anchor,
+        &format!("                $gw = \"$gateway\"\n{anchor}"),
+        1,
+    );
+    assert!(
+        printed_outside_report(arm(&copy, "proofs")).is_empty(),
+        "the allow-list refuses an assignment"
+    );
+}
+
+#[test]
+fn wsl_proofs_refuse_the_probes_forms() {
+    check_probes(&read(PS), &PROBE_PRINTS);
+}
+
+negative_control!(
+    wsl_proofs_refuse_the_probes_forms,
+    "a form that prints nothing counted as a print",
+    expected = "the allow-list misses $gw = $gateway",
+    check_probes(&read(PS), &["$gw = $gateway"])
+);
+
+mod probes_anchor {
+    use super::*;
+    negative_control!(
+        wsl_proofs_refuse_the_probes_forms,
+        "the anchor's line gone",
+        expected = "proof 3's gateway check moved",
+        check_probes(
+            &edited(
+                &read(PS),
+                "                if ($gateway -notmatch",
+                "                if ($gw -notmatch"
+            ),
+            &PROBE_PRINTS
+        )
+    );
 }
 
 #[test]
@@ -744,8 +1250,8 @@ fn check_clone_line(script: &str) {
         line.starts_with("if ($cloned) { Hide-Tailnet \"the clone failed: $cloned\" }"),
         "the clone's failure prints unmasked: {line}"
     );
-    if let Some((v, line)) = printed_outside_report(proofs).first() {
-        panic!("proofs print ${v} outside Report, unmasked: {line}");
+    if let Some(found) = printed_outside_report(proofs).first() {
+        panic!("{found}");
     }
 }
 
@@ -820,5 +1326,166 @@ mod thrown_uncaught {
             "        } catch {\n            # A proof that threw: its error, which may name an address, masked; the summary below then fails on the\n            # proofs not reported.\n            [Console]::Out.WriteLine((Hide-Tailnet \"::error::wsl.ps1 proofs: stopped before every proof was reported: $_\"))\n",
             ""
         ))
+    );
+}
+
+mod allow_format_single {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "'gateway: {0}' -f $gateway added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: 'gateway: {0}' -f $gateway",
+        check_routes(&with_line("'gateway: {0}' -f $gateway"))
+    );
+}
+
+mod allow_format_double {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "the double-quoted format of $gateway added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: \"gateway: {0}\" -f $gateway",
+        check_routes(&with_line("\"gateway: {0}\" -f $gateway"))
+    );
+}
+
+mod allow_splat {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Write-Host @hostSwitch added to proof 3",
+        expected = "proofs print $hostSwitch outside Report, unmasked: Write-Host @hostSwitch",
+        check_routes(&with_line("Write-Host @hostSwitch"))
+    );
+}
+
+mod allow_parenthesised {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "($gateway) added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: ($gateway)",
+        check_routes(&with_line("($gateway)"))
+    );
+}
+
+mod allow_cast {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "[string]$gateway added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: [string]$gateway",
+        check_routes(&with_line("[string]$gateway"))
+    );
+}
+
+mod allow_echo {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "echo $gateway added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: echo $gateway",
+        check_routes(&with_line("echo $gateway"))
+    );
+}
+
+mod allow_write_alias {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "write $gateway added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: write $gateway",
+        check_routes(&with_line("write $gateway"))
+    );
+}
+
+mod allow_oh_alias {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "oh $gateway added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: oh $gateway",
+        check_routes(&with_line("oh $gateway"))
+    );
+}
+
+mod allow_write_progress {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Write-Progress -Activity $gateway added to proof 3",
+        expected =
+            "proofs print $gateway outside Report, unmasked: Write-Progress -Activity $gateway",
+        check_routes(&with_line("Write-Progress -Activity $gateway"))
+    );
+}
+
+mod allow_set_content {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "Set-Content x.txt $gateway added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: Set-Content x.txt $gateway",
+        check_routes(&with_line("Set-Content x.txt $gateway"))
+    );
+}
+
+mod allow_redirect {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$gateway > x.txt added to proof 3",
+        expected = "proofs print $gateway outside Report, unmasked: $gateway > x.txt",
+        check_routes(&with_line("$gateway > x.txt"))
+    );
+}
+
+mod allow_copy {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$x = $gateway; $x added to proof 3",
+        expected = "proofs print $x outside Report, unmasked: $x = $gateway; $x",
+        check_routes(&with_line("$x = $gateway; $x"))
+    );
+}
+
+mod allow_loop_copy {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "foreach ($g in @($gateway)) { $g } added to proof 3",
+        expected = "proofs print $g outside Report, unmasked: foreach ($g in @($gateway)) { $g }",
+        check_routes(&with_line("foreach ($g in @($gateway)) { $g }"))
+    );
+}
+
+mod allow_in_a_value {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$seen = @($hostSwitch | ForEach-Object { Write-Host $_ }) added to proof 3",
+        expected = "proofs pass $_ to write-host, which isn't known not to print: $seen = @($hostSwitch | ForEach-Object { Write-Host $_ })",
+        check_routes(&with_line("$seen = @($hostSwitch | ForEach-Object { Write-Host $_ })"))
+    );
+}
+
+mod allow_system_console {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "[System.Console]::WriteLine($gateway) added to proof 3",
+        expected = "wsl.ps1 writes to the console unmasked: [System.Console]::WriteLine($gateway)",
+        check_routes(&with_line("[System.Console]::WriteLine($gateway)"))
+    );
+}
+
+mod allow_host_ui {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "$host.UI.WriteLine($gateway) added to proof 3",
+        expected = "wsl.ps1 writes to the console unmasked: $host.UI.WriteLine($gateway)",
+        check_routes(&with_line("$host.UI.WriteLine($gateway)"))
     );
 }
