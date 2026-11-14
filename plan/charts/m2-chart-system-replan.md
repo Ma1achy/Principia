@@ -1,5 +1,23 @@
 # M2 chart system: the re-plan around the owner's decisions of 10 Nov 2026
 
+**Superseded, 14 Nov 2026 (TASK-M2-58; the owner's chart re-plan corrections of 11 Nov 2026, item 3; applied per R-369: record).** The composition design's body, `docs/design/principia_chart_composition.md`, now carries the rulings this plan proposed or asked, and it is the one current design: read it, not this. This document stays as the record of how the plan was reached; its status line below is kept as written.
+
+*The closing check, 14 Nov 2026 (TASK-M2-58; the chart audit's F10 and F20, applied per R-369: record).* Before this
+plan was marked superseded, every open item of B.7 and every contradiction of § D was checked for a task home or a
+recorded disposal in `plan/tasks.yaml`, the rulings or this plan. None is left without one.
+
+- **B.7:** O1, TASK-M2-86, TASK-M2-89 and TASK-M2-92; O2, TASK-M2-88 (R-935, RQ-758); O3, disposed of in B.7 (R-474's
+  maps, built by TASK-M2-36); O4, TASK-M2-90, TASK-M2-92 and TASK-M2-99; O5 and O6, TASK-M2-90 (R-936, RQ-760); O7,
+  TASK-M2-86; O8, M-S on TASK-M6-07; O9, TASK-M2-92; O10, TASK-M2-93 (R-934); O11, TASK-M2-89; O12, disposed of in B.7,
+  a negative result recorded.
+- **§ D:** 1 and 2, TASK-M2-87 (the record contract); 3, the kernel stands, no task; 4, TASK-M2-91 (R-935, RQ-761); 5,
+  O1's homes (TASK-M2-86); 6, O9's (TASK-M2-92); 7, built (TASK-M2-36); 8, R-935 (RQ-759) and TASK-M2-65; 9,
+  REQ-CHART-113, TASK-M2-61; 10, R-925 and TASK-M7-74; 11, O8's (TASK-M6-07); 12, TASK-M2-90 (the blend encodes each
+  end); 13, R-935 (RQ-762); 14, R-926 and R-935 (RQ-761), TASK-M2-91; 15 and 16, R-926 and R-936, TASK-M2-90; 17,
+  TASK-M2-64 (today's "morph" a tilt, R-925 item 4); 18 and 19, R-925; 20, R-936 (iv-a); 21, R-935 (RQ-758); 22,
+  decided per R-369 in § D itself; 23, R-935 (RQ-766); 24, R-934, TASK-M2-93; 25, TASK-M2-61 and TASK-M2-64; 26, not
+  copied (R-926); 27, compatible, noted.
+
 **Status: proposed, 10 Nov 2026.** This document plans; it builds nothing and dispatches nothing. It answers the owner's
 re-plan task of 10 Nov (R-926), on the owner's decisions R-925 and R-926. `plan/tasks.yaml` and the task files are
 **not** edited here: the task list in § B is proposed, and `tasks.yaml` follows once the one-way items of § E are

@@ -1,5 +1,7 @@
 # M2 chart re-plan, addendum: chart extensions and computed axes
 
+**Superseded, 14 Nov 2026 (TASK-M2-58; the owner's chart re-plan corrections of 11 Nov 2026, item 3; applied per R-369: record).** The composition design's body, `docs/design/principia_chart_composition.md`, now carries the rulings this plan proposed or asked, and it is the one current design: read it, not this. This document stays as the record of how the plan was reached; its status line below is kept as written.
+
 **Status: proposed, 10 Nov 2026.** This document plans; it builds nothing and dispatches nothing. It adds to the M2
 chart re-plan (`plan/charts/m2-chart-system-replan.md`, merged from PR #473; "the re-plan" below), from the owner's two
 directions of 10 Nov 2026 afternoon, which are **directions, not rulings**: nothing in force changes until the owner
