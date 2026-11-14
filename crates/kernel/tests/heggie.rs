@@ -17,9 +17,8 @@
 //!   the retakes off, a step past the boundary kept).
 //! - `heggie_landing_state`, `heggie_landing_reported`: Heggie × RK4 lands on each boundary with the state's own clock
 //!   the boundary's, bitwise, the time reported `k·Δ_sync` (controls: the clock-only landing, its state left overshot;
-//!   a stored state whose clock differs from the boundary it reports). The convergence order across η (R-1007) runs
-//!   under its criterion, written before it ran and approved by physics (`heggie_landing_order`; control: the
-//!   clock-only landing, which must read as a landing defect).
+//!   a stored state whose clock differs from the boundary it reports). The convergence order across η (R-1007) is
+//!   TASK-M3-79's, under RQ-823's criterion.
 //! - `regularised_step_reversibility`: dd_integrator §5's test 3 on Heggie × RK4 (Eq. 20 and Eq. 22) and Aarseth–Zare +
 //!   RK4, each through its time-reversal map, on its full state, at REQ-VAL-191's criterion inside its domain: each
 //!   residual and verdict printed, each verdict against the pair's profile; at the same `dt`, Cartesian RK4 and
@@ -43,7 +42,6 @@ use kernel::regularisation::heggie::{
     HgStepper, HgSystem, HgWatch, DEFAULT_TIME,
 };
 use kernel::regularisation::pairs::HeggieTime;
-use validation::az::{self as vaz, Diagnosis, FloorCriterion};
 use validation::{
     negative_control, STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_EDGE_MAX,
     STEP_REVERSAL_TOL,
@@ -979,124 +977,6 @@ negative_control!(
         out.p = p;
         out.state = out.system.image(&q, &p);
     })
-);
-
-// ── heggie_landing: the convergence order (R-1007) ───────────────────────────────────────────────────────────────
-
-/// The convergence ladder (the criterion written before any run and approved by physics review 5902945413 of #530):
-/// the requirement's whole range [0.02, 0.001], none run before.
-const LADDER: [f64; 10] = [
-    0.02, 0.014, 0.01, 0.007, 0.005, 0.0035, 0.0025, 0.0017, 0.0012, 0.001,
-];
-
-/// The reference run's `η`.
-const REFERENCE_ETA: f64 = 1e-4;
-
-/// The sync intervals over one period.
-const INTERVALS: u32 = 32;
-
-/// RK4's order and the margin a pass lies within.
-const ORDER: (f64, f64) = (4.0, 0.5);
-
-/// The round-off floor and its fit (the criterion): `F = max(1e-12, |ref − ref(η = 1.25e-4)|)`, a rung fitted only
-/// where its error exceeds `10·F`, at least 3 rungs, and an order below 3.0 a landing defect.
-fn criterion() -> FloorCriterion {
-    FloorCriterion {
-        stated: 1e-12,
-        second_eta: 1.25e-4,
-        factor: 10.0,
-        min_rungs: 3,
-        defect_below: 3.0,
-    }
-}
-
-/// Heggie × RK4 on the figure-eight over one period on `INTERVALS` sync intervals of `T/INTERVALS` at `eta`, Eq. 22,
-/// R-160's `f = 0.02`, `TINY = 1e-300`, a budget that does not bind, the clamp on, and the retakes on (4 and 64) or
-/// off (the clock-only landing).
-fn eight(eta: f64, retakes: bool) -> HgAdvanced<f64> {
-    let o = vaz::orbit().expect("the figure-eight fixture");
-    let s0 = vaz::figure_eight::<f64>(&o);
-    let p = HgParams {
-        eta,
-        delta_sync: o.period / f64::from(INTERVALS),
-        tiny: 1e-300,
-        predictive_f: 0.02,
-        step_budget_rate: 0.0,
-        n_min: u32::MAX,
-        clamp: true,
-        secant_tries: if retakes { 4 } else { 0 },
-        bisect_tries: if retakes { 64 } else { 0 },
-        time: DEFAULT_TIME,
-    };
-    march::<Rk4, f64, Quiet, ExplicitTest>(&s0, INTERVALS, &p, &mut Quiet, &mut ExplicitTest)
-}
-
-/// The convergence order of Heggie × RK4's figure-eight across [`LADDER`], the landing's retakes on or off, fitted
-/// above the round-off floor and diagnosed by the criterion; every rung printed. Passes only on an order within
-/// [`ORDER`]'s margin.
-fn check_order(retakes: bool) {
-    let what = if retakes {
-        "the landing"
-    } else {
-        "the clock-only landing"
-    };
-    let o = vaz::orbit().expect("the figure-eight fixture");
-    let s0 = vaz::positions(&vaz::figure_eight::<f64>(&o));
-    let fc = criterion();
-    let reference = eight(REFERENCE_ETA, true);
-    let second = eight(fc.second_eta, true);
-    let end = vaz::positions(&reference.state);
-    let measured = vaz::distance(&end, &vaz::positions(&second.state));
-    println!(
-        "heggie_landing_order ({what}): reference η {REFERENCE_ETA}: boundary {}, {:?}, {} steps; second η {}: \
-         boundary {}; measured floor {measured:.3e}, F = {:.3e}, fitted above {:.3e}",
-        reference.boundary,
-        reference.count.end,
-        reference.count.steps,
-        fc.second_eta,
-        second.boundary,
-        measured.max(fc.stated),
-        fc.factor * measured.max(fc.stated)
-    );
-    let mut rungs = Vec::new();
-    for eta in LADDER {
-        let r = eight(eta, retakes);
-        let e = vaz::distance(&vaz::positions(&r.state), &end);
-        rungs.push((eta, e));
-        println!(
-            "heggie_landing_order ({what}): η {eta}: error {e:.3e}{}, boundary {} {:?}, {} steps ({} kept), {} \
-             closings, most halvings {}, predictive binds {}, closure {:.3e}",
-            if e > fc.factor * measured.max(fc.stated) { " (fitted)" } else { "" },
-            r.boundary,
-            r.count.end,
-            r.count.steps,
-            r.count.accepted,
-            r.count.closings,
-            r.count.most_bisections,
-            r.count.predictive_bound,
-            vaz::distance(&vaz::positions(&r.state), &s0)
-        );
-    }
-    let d = vaz::diagnose_floor(&rungs, measured, &fc, ORDER.0, ORDER.1);
-    let line = vaz::diagnosis_line(d, &fc, ORDER.0, ORDER.1);
-    println!("heggie_landing_order ({what}): {line}");
-    assert!(
-        matches!(d, Diagnosis::Within { .. }),
-        "heggie_landing_order ({what}): {line}"
-    );
-}
-
-#[test]
-fn heggie_landing_order() {
-    check_order(true);
-}
-
-negative_control!(
-    heggie_landing_order,
-    "the clock-only landing (R-1007's control): the clamped step's state kept where it overshoots, the clock set to \
-     the boundary over it, whose order must fall and read as a landing defect",
-    expected = "a landing defect",
-    check_order(false)
 );
 
 // ── regularised_step_reversibility ─────────────────────────────────────────────────────────────────────────────
