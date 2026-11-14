@@ -82,6 +82,16 @@ fn queue_with_text(text: &str, lines: &[String]) -> String {
     text.trim_end().to_owned() + "\n" + &lines.join("\n") + "\n"
 }
 
+/// A long line naming no id, set between the real queue's tail and a two-sided case's lines, so that whatever the real
+/// queue ends with (a short line naming an id, say) never reads as part of either version.
+const SEPARATOR: &str =
+    "- **Note:** the long note of the base runs on and on, until it comes to the end of the long base line here.";
+
+/// `text` with `SEPARATOR` and then `lines` appended to its last entry.
+fn queue_with_separated(text: &str, lines: &[String]) -> String {
+    queue_with_text(text, &[&[SEPARATOR.to_owned()][..], lines].concat())
+}
+
 /// A copy of the real queue whose last entry ends with `lines`, as a union merge or one branch leaves them.
 fn queue_ending(name: &str, lines: &[String]) -> PathBuf {
     let dir = copy(name);
@@ -101,20 +111,20 @@ fn paragraph(runs: &str, middle: &str) -> Vec<String> {
     ]
 }
 
-/// The real queue, its last entry ending with `paragraph("1", "R-699")` on `main`; branch `a` rewrites it to
-/// `paragraph("2", ours)` and branch `b` to `paragraph("3", theirs)`, every line changed on both sides, so the union
-/// keeps all three lines of each, one version after the other: the first's last line (N = 12) meets the second's
-/// first (N = 6), siblings.
+/// The real queue, its last entry ending with `SEPARATOR` and `paragraph("1", "R-699")` on `main`; branch `a` rewrites
+/// the paragraph to `paragraph("2", ours)` and branch `b` to `paragraph("3", theirs)`, every line changed on both
+/// sides, so the union keeps all three lines of each, one version after the other: the first's last line (N = 12)
+/// meets the second's first (N = 6), siblings.
 fn paragraph_edited_on_two_sides(name: &str, ours: &str, theirs: &str) -> PathBuf {
     let dir = copy(name);
     let write = |runs: &str, middle: &str| {
         let text = fs::read_to_string(dir.join("REVIEW_QUEUE.md")).expect("queue read");
         let base = text
-            .split("\n- at N = 6 the run holds in ")
+            .split(&format!("\n{SEPARATOR}"))
             .next()
             .expect("split")
             .to_owned();
-        let edited = queue_with_text(&base, &paragraph(runs, middle));
+        let edited = queue_with_separated(&base, &paragraph(runs, middle));
         fs::write(dir.join("REVIEW_QUEUE.md"), edited).expect("queue written");
     };
     git(&dir, &["init", "-q", "-b", "main"]);
@@ -267,14 +277,18 @@ fn wrapped_item(n: u32, tail: &str) -> Vec<String> {
     ]
 }
 
-/// The real queue, its last entry ending with `wrapped_item(6, "as it was")` on `main`; branch `a` rewrites both lines
-/// to `wrapped_item(8, ours)` and branch `b` to `wrapped_item(10, theirs)`, so the union keeps both versions whole.
+/// The real queue, its last entry ending with `SEPARATOR` and `wrapped_item(6, "as it was")` on `main`; branch `a`
+/// rewrites both item lines to `wrapped_item(8, ours)` and branch `b` to `wrapped_item(10, theirs)`, so the union keeps
+/// both versions whole.
 fn item_edited_on_two_sides(name: &str, ours: &str, theirs: &str) -> PathBuf {
     let dir = copy(name);
     let real = fs::read_to_string(dir.join("REVIEW_QUEUE.md")).expect("queue read");
     let write = |lines: Vec<String>| {
-        fs::write(dir.join("REVIEW_QUEUE.md"), queue_with_text(&real, &lines))
-            .expect("queue written");
+        fs::write(
+            dir.join("REVIEW_QUEUE.md"),
+            queue_with_separated(&real, &lines),
+        )
+        .expect("queue written");
     };
     git(&dir, &["init", "-q", "-b", "main"]);
     write(wrapped_item(6, "as it was"));
