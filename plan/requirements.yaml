@@ -1356,7 +1356,7 @@
     section: "R-547 — Decode and encode numerics: the swap test is the conjugacy; step 0 is skipped within a calibrated `τ_I` and rescales in two steps; a branch input that must agree across backends is built only from operations every IEEE backend rounds alike, with no subnormal intermediate; the native build runs without MIR GVN and CI runs it at the release profile; T1 holds off the mirror band; REQ-SYS-015 is split *(closes RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360 and RQ-365; corrects R-34)*"
   verify:
     method: property test
-    detail: "encode test 2: random g per §3.3 without Π, deadband-straddling rotations included (λ̃_y within ±δ_λ, ±0 included): outputs equal after float tolerance, z_β by d (a +x half-axis state may encode to 0 or 2π̂, one point); with Π, on random states of both halves and on collinear states with body 2 on either side: E(Π·x) equals E(x) mirrored as stated, after float tolerance, z_β by d; control: an encode with the mirror step left in fails the equivariance"
+    detail: "encode test 2: random g per §3.3 without Π, deadband-straddling rotations included (λ̃_y within ±δ_λ, ±0 included): outputs equal after float tolerance, z_β by d (a +x half-axis state may encode to 0 or 2π̂, one point); with Π, on random states of both halves and on collinear states with body 2 on either side: E(Π·x) equals E(x) mirrored as stated, after float tolerance, z_β by d; control: an encode with the mirror step left in fails the equivariance; \"float tolerance\" is the bound encode_t1_gauge holds as built (TASK-M2-15): each control's |Δz|/(1 + |z|) within 128·ε_R·κ(g), κ(g) = 1 + ‖a‖/s + ‖u‖·√s, z_β's |Δz| its distance on the circle"
   rulings:
   - R-82
   - R-547
