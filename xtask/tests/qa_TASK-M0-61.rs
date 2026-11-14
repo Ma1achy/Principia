@@ -167,12 +167,12 @@ mod qa_other_job_cancels {
     negative_control!(
         qa_win_vulkan_alone_cancels_an_older_run,
         "another job on the runner that cancels must fail",
-        expected = "qa: win-tests on the runner does not keep cancel-in-progress false",
+        expected = "qa: win-self-check on the runner does not keep cancel-in-progress false",
         check_cancels(
             &edited(
                 &read(WIN_GPU),
-                "      group: win-tests\n      cancel-in-progress: false\n",
-                "      group: win-tests\n      cancel-in-progress: true\n"
+                "      group: win-self-check\n      cancel-in-progress: false\n",
+                "      group: win-self-check\n      cancel-in-progress: true\n"
             ),
             &read(RUNNER_PROOF)
         )
@@ -1139,9 +1139,9 @@ mod qa_limit_controls {
         negative_control!(
             qa_every_limit_is_one_and_a_half_times_its_measured_time,
             "a table limit that is not 1.5 times its measured time must fail",
-            expected = "qa: win-tests Some(\"cargo xtask deps\")'s limit is not the ceiling of 1.5 times 109 s",
+            expected = "qa: win-vulkan Some(\"cargo xtask build-kernel\")'s limit is not the ceiling of 1.5 times 90 s",
             check_limits(
-                &edited(&read(TIMES), "| 109 | 3 |", "| 109 | 4 |"),
+                &edited(&read(TIMES), "| 90 | 3 |", "| 90 | 4 |"),
                 &runner_files()
             )
         );
