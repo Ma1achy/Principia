@@ -1033,31 +1033,31 @@ fn parameter_targets(s: &[Tok]) -> Vec<Vec<String>> {
 enum Bound<'a> {
     /// `$v = …`, chained or not, `+=` and `-=` too: what it is assigned.
     Assigned(&'a [Tok]),
+    /// `$v.m = …`, `$v[k] = …` (`member_assignment`): the path to the member or element, its key, and what it is
+    /// assigned.
+    Member(&'a [Tok], &'a [Tok]),
     /// `foreach ($v in …)`, wherever the `foreach` stands: what it loops over.
     Looped(&'a [Tok]),
     /// Named by a common parameter (`VAR_PARAMS`).
     Named,
 }
 
-/// The variable whose member or element `s` assigns, `$v.m = …`, `$v[k] = …` or `$v ??= …`, chains of them too: what
-/// it holds changes, by the key as well as by the value.
-fn member_assignment(s: &[Tok]) -> Option<&String> {
+/// The variable whose member or element `s` assigns, and where its `=` is: `$v.m = …`, `$v[k] = …`, `$v ??= …`, a
+/// computed name (`$v.$k`, `$v."$k"`, `$v.($k)`) and chains of them. What `$v` holds changes, by the key as well as by
+/// the value. Any path up to the `=` but a second target (`,`) or a pipe: `$v` must head it.
+fn member_assignment(s: &[Tok]) -> Option<(&String, usize)> {
     let [Tok {
         node: Node::Var(v), ..
     }, path @ ..] = s
     else {
         return None;
     };
-    let reach = path
-        .iter()
-        .take_while(|t| {
-            matches!(
-                t.node,
-                Node::Punct('.' | '?') | Node::Word(_) | Node::Group('[', _)
-            )
-        })
-        .count();
-    (reach > 0 && matches!(path.get(reach).map(|t| &t.node), Some(Node::Assign))).then_some(v)
+    let reach = path.iter().position(|t| matches!(t.node, Node::Assign))?;
+    (reach > 0
+        && !path[..reach]
+            .iter()
+            .any(|t| matches!(t.node, Node::Punct(',') | Node::Pipe)))
+    .then_some((v, reach + 1))
 }
 
 /// The variables `s` binds itself, not in its nested code.
@@ -1076,8 +1076,8 @@ fn binds(s: &[Tok]) -> Vec<(String, Bound<'_>)> {
         }
         rest = tail;
     }
-    if let Some(v) = member_assignment(rest) {
-        out.push((v.clone(), Bound::Assigned(&rest[1..])));
+    if let Some((v, at)) = member_assignment(rest) {
+        out.push((v.clone(), Bound::Member(&rest[1..at], &rest[at + 1..])));
     }
     for pair in s.windows(2) {
         if let [Tok {
@@ -1169,6 +1169,7 @@ fn spread(code: &[Tok], taint: &mut BTreeSet<String>, item: bool) -> bool {
         for (v, bound) in binds(s) {
             let from_address = match bound {
                 Bound::Assigned(from) | Bound::Looped(from) => touches(from, taint),
+                Bound::Member(path, from) => touches(path, taint) || touches(from, taint),
                 Bound::Named => true,
             };
             if from_address {
@@ -1195,7 +1196,6 @@ fn spread(code: &[Tok], taint: &mut BTreeSet<String>, item: bool) -> bool {
 /// handed, clean where all before it in the pipeline is), runs only `CLEAN_COMMANDS`, and holds no type, here-string or
 /// redirection. What `Hide-Tailnet` outputs is clean whatever it is given.
 fn is_clean(code: &[Tok], clean: &BTreeSet<String>, in_block: bool) -> bool {
-    let var = |v: &String| clean.contains(v) || (in_block && ITEM_VARS.contains(&v.as_str()));
     statements(code).into_iter().all(|s| {
         masked_call(s)
             || elements(s).all(|e| {
@@ -1204,21 +1204,24 @@ fn is_clean(code: &[Tok], clean: &BTreeSet<String>, in_block: bool) -> bool {
                     Some(Node::Punct('&' | '.')) => false,
                     _ => true,
                 };
-                runs_clean
-                    && e.iter().all(|t| match &t.node {
-                        Node::Var(v) => var(v),
-                        Node::Str(vars, subs) => {
-                            vars.iter().all(var)
-                                && subs.iter().all(|b| is_clean(b, clean, in_block))
-                        }
-                        Node::Group(open, body) => is_clean(body, clean, in_block || *open == '{'),
-                        Node::Type(_) | Node::HereString | Node::Splat(_) | Node::Punct('>') => {
-                            false
-                        }
-                        _ => true,
-                    })
+                runs_clean && e.iter().all(|t| clean_token(t, clean, in_block))
             })
     })
+}
+
+/// Whether the token `t` names only clean variables and holds only clean code: no type, here-string, splat or
+/// redirection.
+fn clean_token(t: &Tok, clean: &BTreeSet<String>, in_block: bool) -> bool {
+    let var = |v: &String| clean.contains(v) || (in_block && ITEM_VARS.contains(&v.as_str()));
+    match &t.node {
+        Node::Var(v) => var(v),
+        Node::Str(vars, subs) => {
+            vars.iter().all(var) && subs.iter().all(|b| is_clean(b, clean, in_block))
+        }
+        Node::Group(open, body) => is_clean(body, clean, in_block || *open == '{'),
+        Node::Type(_) | Node::HereString | Node::Splat(_) | Node::Punct('>') => false,
+        _ => true,
+    }
 }
 
 /// Whether `s` outputs nothing: its last pipeline element is one of `SILENT`.
@@ -1394,10 +1397,24 @@ impl Check<'_> {
         {
             return self.statement(rest, true, item, guarded);
         }
-        if let Some(v) = member_assignment(s).filter(|v| ambient(v)) {
+        // An assignment to a member or element: its path (a computed name, an index) and its right side are values.
+        if let Some((v, at)) = member_assignment(s) {
+            if ambient(v) {
+                return self.refuse(
+                    s,
+                    &format!(
+                        "assign into ${v}, which changes how other lines run or what they read"
+                    ),
+                );
+            }
+            self.nested(&s[1..at], item, guarded);
+            return self.statement(&s[at + 1..], true, item, guarded);
+        }
+        // Any other assignment (two targets, a target in parentheses, a cast) binds what `binds` can't follow.
+        if s.iter().any(|t| matches!(t.node, Node::Assign)) {
             return self.refuse(
                 s,
-                &format!("assign into ${v}, which changes how other lines run or what they read"),
+                "assign in a form this reader doesn't follow, so can't tell what it binds",
             );
         }
         let scope = item || self.tainted(s, item).is_some();
@@ -1559,9 +1576,10 @@ impl Check<'_> {
 /// What the reader refuses in `arm`, each with its line. The proofs are read default-deny:
 ///
 /// - **Addresses.** Every variable not proved clean is an address. Clean: `OUTER_CLEAN`, and a variable whose every
-///   binding in the proofs (an assignment, chained or not; an assignment to its member or element, its key counted;
-///   a loop; a common parameter; a method that may change it) is
-///   an assignment from a clean expression, to a fixed point. `$_` and `$PSItem` are addresses wherever a statement
+///   binding in the proofs (an assignment, chained or not; an assignment to its member or element, a computed name
+///   or key counted; a loop; a common parameter; a method that may change it) is an assignment from a clean
+///   expression, to a fixed point. Any other statement holding an assignment (two targets, a target in parentheses, a
+///   cast) is refused, as `binds` can't follow it. `$_` and `$PSItem` are addresses wherever a statement
 ///   around them names one: the pipeline, `switch`, `catch` or method that sets them. (`ADDRESS_VARS`, `AUTO_VARS` and
 ///   the variables bound from them are never clean; they name what the messages say.)
 /// - **Output.** A statement whose output prints is an assignment; a control statement; a masking call (`Report`,
@@ -1610,7 +1628,15 @@ fn printed_outside_report(arm: &str) -> Vec<String> {
     loop {
         let before = clean.len();
         for (v, bound) in &binds {
-            if !matches!(bound, Bound::Assigned(from) if is_clean(from, &clean, false)) {
+            let from_clean = match bound {
+                Bound::Assigned(from) => is_clean(from, &clean, false),
+                Bound::Member(path, from) => {
+                    path.iter().all(|t| clean_token(t, &clean, false))
+                        && is_clean(from, &clean, false)
+                }
+                Bound::Looped(_) | Bound::Named => false,
+            };
+            if !from_clean {
                 clean.remove(v);
             }
         }
@@ -1782,9 +1808,10 @@ fn in_catch(line: &str) -> String {
 /// call and dot-source operators, methods, a copy of `$_` and a here-string), then by its second (the automatic
 /// variables, an assigned loop, a block in a method's parentheses, a redirection in a value), then by the default-deny
 /// reader's first cut (a listed command's parameters, a value read from a source, ambient state) and its second (a
-/// splat, a member's or an element's assignment), each printing or publishing an address (made up here): each must be
-/// refused, and is a control below as well.
-const PROBE_PRINTS: [&str; 56] = [
+/// splat, a member's or an element's assignment) and its third (a member named by a computed name, an assignment it
+/// can't follow), each printing or publishing an address (made up here): each must be refused, and is a control below
+/// as well.
+const PROBE_PRINTS: [&str; 62] = [
     "Write-Host @hostSwitch",
     "'gateway: {0}' -f $gateway",
     "\"gateway: {0}\" -f $gateway",
@@ -1854,6 +1881,24 @@ $null = $lan | ForEach-Object { $info.lan = $_ }
     "$seen = @{}
 $null = $hostSwitch | ForEach-Object { $seen[$_] = 1 }
 $seen.Keys -join ', '",
+    "$info = @{}
+$null = $hostSwitch | ForEach-Object { $info.$_ = 1 }
+$info.Keys -join ', '",
+    "$info = @{}
+$null = $hostSwitch | ForEach-Object { $info.\"$_\" = 1 }
+$info.Keys -join ', '",
+    "$info = @{}
+$null = $hostSwitch | ForEach-Object { $info.($_) = 1 }
+$info.Keys -join ', '",
+    "$info = @{}
+$null = ($info.($gateway) = 1)
+$info.Keys -join ', '",
+    "$info = @{}
+$null = $lan | ForEach-Object { $info.lan, $y = $_, 1 }
+\"lan: $($info.lan)\"",
+    "$info = @{}
+$null = $lan | ForEach-Object { ($info).lan = $_ }
+\"lan: $($info.lan)\"",
 ];
 
 fn check_probes(script: &str, forms: &[&str]) {
@@ -1875,6 +1920,17 @@ fn check_probes(script: &str, forms: &[&str]) {
     assert!(
         printed_outside_report(arm(&copy, "proofs")).is_empty(),
         "the allow-list refuses an assignment"
+    );
+    // Nor does a constant set as a member and printed: a member's assignment binds its variable from its path and value,
+    // here clean.
+    let member = script.replacen(
+        anchor,
+        &format!("                $i = @{{}}\n                $i.n = 1\n                \"n: $($i.n)\"\n{anchor}"),
+        1,
+    );
+    assert!(
+        printed_outside_report(arm(&member, "proofs")).is_empty(),
+        "the allow-list refuses a constant member"
     );
 }
 
@@ -3352,6 +3408,95 @@ mod deny_ambient_member {
         "an entry put into $PSDefaultParameterValues, added to proof 3",
         expected = "proofs assign into $psdefaultparametervalues, which changes how other lines run or what they read: $PSDefaultParameterValues['Start-Process:RedirectStandardOutput'] = 'x.txt'",
         check_routes(&with_line("$PSDefaultParameterValues['Start-Process:RedirectStandardOutput'] = 'x.txt'"))
+    );
+}
+
+mod deny_member_named_by_item {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a hashtable's member named by $_ in a loop, its keys then printed, added to proof 3",
+        expected = "proofs print $info outside Report, unmasked: $info.Keys -join ', '",
+        check_routes(&with_line(
+            "$info = @{}
+$null = $hostSwitch | ForEach-Object { $info.$_ = 1 }
+$info.Keys -join ', '"
+        ))
+    );
+}
+
+mod deny_member_named_by_string {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a hashtable's member named by a string of $_, its keys then printed, added to proof 3",
+        expected = "proofs print $info outside Report, unmasked: $info.Keys -join ', '",
+        check_routes(&with_line(
+            "$info = @{}
+$null = $hostSwitch | ForEach-Object { $info.\"$_\" = 1 }
+$info.Keys -join ', '"
+        ))
+    );
+}
+
+mod deny_member_named_by_group {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a hashtable's member named by ($_), its keys then printed, added to proof 3",
+        expected = "proofs print $info outside Report, unmasked: $info.Keys -join ', '",
+        check_routes(&with_line(
+            "$info = @{}
+$null = $hostSwitch | ForEach-Object { $info.($_) = 1 }
+$info.Keys -join ', '"
+        ))
+    );
+}
+
+mod deny_member_named_in_group {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a hashtable's member named by the gateway, in a group, its keys then printed, added to proof 3",
+        expected = "proofs print $info outside Report, unmasked: $info.Keys -join ', '",
+        check_routes(&with_line("$info = @{}
+$null = ($info.($gateway) = 1)
+$info.Keys -join ', '"))
+    );
+}
+
+mod deny_two_targets {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a member and a variable assigned together, added to proof 3",
+        expected = "proofs assign in a form this reader doesn't follow, so can't tell what it binds: $null = $lan | ForEach-Object { $info.lan, $y = $_, 1 }",
+        check_routes(&with_line("$info = @{}
+$null = $lan | ForEach-Object { $info.lan, $y = $_, 1 }
+\"lan: $($info.lan)\""))
+    );
+}
+
+mod deny_target_in_parentheses {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a member of a parenthesised variable assigned, added to proof 3",
+        expected = "proofs assign in a form this reader doesn't follow, so can't tell what it binds: $null = $lan | ForEach-Object { ($info).lan = $_ }",
+        check_routes(&with_line("$info = @{}
+$null = $lan | ForEach-Object { ($info).lan = $_ }
+\"lan: $($info.lan)\""))
+    );
+}
+
+mod deny_cast_target {
+    use super::*;
+    negative_control!(
+        wsl_proofs_print_addresses_only_through_the_mask,
+        "a cast assignment, added to proof 3",
+        expected = "proofs assign in a form this reader doesn't follow, so can't tell what it binds: $x = $lan | ForEach-Object { [string]$c = $_ }",
+        check_routes(&with_line("$x = $lan | ForEach-Object { [string]$c = $_ }
+\"c: $c\""))
     );
 }
 
