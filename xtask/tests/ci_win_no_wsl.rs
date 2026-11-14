@@ -188,25 +188,107 @@ fn modules(path: &str, text: &str, tree: &Tree) -> Vec<String> {
     let lines: Vec<&str> = text.lines().map(str::trim).collect();
     let mut out = Vec::new();
     for (i, line) in lines.iter().enumerate() {
-        let line = line.strip_prefix("pub ").unwrap_or(line);
-        let Some(name) = line.strip_prefix("mod ").and_then(|l| l.strip_suffix(';')) else {
+        // The attributes written on the `mod` line itself, then the item's, on the lines above it.
+        let (mut attrs, item) = split_attributes(line);
+        let item = strip_visibility(item);
+        let Some(name) = item
+            .strip_prefix("mod ")
+            .and_then(|l| l.strip_suffix(';'))
+            .map(str::trim)
+        else {
             continue;
         };
-        let explicit = i
-            .checked_sub(1)
-            .and_then(|p| lines[p].strip_prefix("#[path = \""))
-            .and_then(|p| p.strip_suffix("\"]"));
-        let candidates = match explicit {
-            Some(p) => vec![format!("{dir}/{p}")],
-            None => vec![format!("{base}/{name}.rs"), format!("{base}/{name}/mod.rs")],
-        };
-        out.extend(
-            candidates
-                .into_iter()
-                .find(|c| tree.files.contains_key(c.as_str())),
-        );
+        for above in lines[..i].iter().rev() {
+            if above.starts_with("#[") {
+                attrs.extend(split_attributes(above).0);
+            } else if !above.starts_with("//") {
+                break;
+            }
+        }
+        let explicit = attrs.iter().find_map(|a| {
+            let squeezed: String = a.chars().filter(|c| !c.is_whitespace()).collect();
+            squeezed
+                .strip_prefix("#[path=\"")
+                .and_then(|p| p.strip_suffix("\"]"))
+                .map(str::to_owned)
+        });
+        match explicit {
+            Some(p) => {
+                let found = normalise(&format!("{dir}/{p}"));
+                assert!(
+                    tree.files.contains_key(found.as_str()),
+                    "ci_win_no_wsl: {path}'s `#[path = \"{p}\"] mod {name};` is {found}, which isn't there"
+                );
+                out.push(found);
+            }
+            None => out.extend(
+                [format!("{base}/{name}.rs"), format!("{base}/{name}/mod.rs")]
+                    .into_iter()
+                    .find(|c| tree.files.contains_key(c.as_str())),
+            ),
+        }
     }
     out
+}
+
+/// A line's leading outer attributes, `#[…]` each, and the rest of it.
+fn split_attributes(line: &str) -> (Vec<String>, &str) {
+    let mut attrs = Vec::new();
+    let mut rest = line.trim_start();
+    while rest.starts_with("#[") {
+        let mut depth = 0usize;
+        let mut end = None;
+        for (i, c) in rest.char_indices() {
+            match c {
+                '[' => depth += 1,
+                ']' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = Some(i);
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+        let Some(end) = end else {
+            // An attribute running on past the line: the line holds nothing else.
+            attrs.push(rest.to_owned());
+            return (attrs, "");
+        };
+        attrs.push(rest[..=end].to_owned());
+        rest = rest[end + 1..].trim_start();
+    }
+    (attrs, rest)
+}
+
+/// An item with its `pub`, `pub(crate)` or `pub(in …)` taken off.
+fn strip_visibility(item: &str) -> &str {
+    let Some(rest) = item.strip_prefix("pub") else {
+        return item;
+    };
+    let rest = rest.trim_start();
+    let rest = match rest.strip_prefix('(') {
+        Some(inner) => inner.split_once(')').map_or(rest, |(_, r)| r),
+        None if item.starts_with("pub ") => rest,
+        None => return item,
+    };
+    rest.trim_start()
+}
+
+/// A `/`-separated path with its `.` and `..` resolved.
+fn normalise(path: &str) -> String {
+    let mut parts: Vec<&str> = Vec::new();
+    for part in path.split(['/', '\\']) {
+        match part {
+            "" | "." => {}
+            ".." => {
+                parts.pop();
+            }
+            p => parts.push(p),
+        }
+    }
+    parts.join("/")
 }
 
 /// Each test target file of `dir`: `tests/<name>.rs` and `tests/<name>/main.rs`.
@@ -596,6 +678,79 @@ mod in_library_code {
                 "",
                 "fn _bash() { let _ = std::process::Command::new(\"bash\"); }\n"
             )
+        )
+    );
+}
+
+/// A tree with `canon_gpu.rs` including `planted_helper.rs` by the `mod` text given, and the helper starting bash.
+#[cfg(feature = "controls")]
+fn with_helper(include: &str) -> Tree {
+    let mut tree = planted("crates/engine/tests/canon_gpu.rs", "", include);
+    tree.files.insert(
+        "crates/engine/tests/planted_helper.rs".to_owned(),
+        "pub fn run() { let _ = std::process::Command::new(\"bash\"); }\n".to_owned(),
+    );
+    tree
+}
+
+mod path_with_dot_dot {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A module included by a `#[path]` through `..` and `.`, starting bash.",
+        expected = "crates/engine/tests/planted_helper.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &with_helper("#[path = \"../tests/./planted_helper.rs\"]\nmod helper;\n")
+        )
+    );
+}
+
+mod path_not_found {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A `#[path]` module the check can't find fails loudly, not skipped.",
+        expected = "isn't there",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "#[path = \"../nowhere/helper.rs\"]\nmod helper;\n"
+            )
+        )
+    );
+}
+
+mod path_under_another_attribute {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A `#[path]` with another attribute between it and its `mod`, the module starting bash.",
+        expected = "crates/engine/tests/planted_helper.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &with_helper(
+                "#[path = \"planted_helper.rs\"]\n#[allow(dead_code)]\n// a note\npub(crate) mod helper;\n"
+            )
+        )
+    );
+}
+
+mod path_on_the_mod_line {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A `#[path]` on the `mod` line itself, the module starting bash.",
+        expected = "crates/engine/tests/planted_helper.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &with_helper("#[allow(unused)] #[path = \"planted_helper.rs\"] mod helper;\n")
         )
     );
 }
