@@ -1923,7 +1923,7 @@ fn check_fail(script: &str) {
         body,
         [
             "function Fail($message) {",
-            "[Console]::Out.WriteLine(\"::error::wsl.ps1: $message\")",
+            "[Console]::Out.WriteLine((Hide-Tailnet \"::error::wsl.ps1: $message\"))",
             "exit 125",
             "}"
         ],
@@ -1948,7 +1948,7 @@ negative_control!(
     expected = "Fail's line can be lost to a caller collecting output",
     check_fail(&edited(
         &read(PS),
-        "    [Console]::Out.WriteLine(\"::error::wsl.ps1: $message\")\n",
+        "    [Console]::Out.WriteLine((Hide-Tailnet \"::error::wsl.ps1: $message\"))\n",
         "    \"::error::wsl.ps1: $message\"\n"
     ))
 );
