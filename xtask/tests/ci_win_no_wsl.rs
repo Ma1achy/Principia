@@ -444,16 +444,33 @@ fn wsl_spawns(text: &str) -> Vec<String> {
     out
 }
 
-/// Whether a file is left out on Windows by an inner `cfg`, its reason in the comment on the line above.
+/// Whether the file is left out on Windows: an unindented inner `cfg` in the run of comments and inner attributes
+/// that opens the file, before any item, with its reason in the comment on the line above. A `cfg` inside a module
+/// leaves out that module, not the file.
 fn excluded_on_windows(text: &str) -> bool {
-    let lines: Vec<&str> = text.lines().map(str::trim).collect();
-    lines.iter().enumerate().any(|(i, line)| {
+    let mut previous: Option<&str> = None;
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            previous = None;
+            continue;
+        }
+        if line.starts_with("//") {
+            previous = Some(line);
+            continue;
+        }
+        if !line.starts_with("#![") {
+            return false;
+        }
         let squeezed: String = line.chars().filter(|c| !c.is_whitespace()).collect();
-        NOT_ON_WINDOWS.contains(&squeezed.as_str())
-            && i.checked_sub(1).is_some_and(|p| {
-                lines[p].starts_with("//") && lines[p].trim_start_matches('/').trim().len() > 1
-            })
-    })
+        if NOT_ON_WINDOWS.contains(&squeezed.as_str())
+            && previous.is_some_and(|p| p.trim_start_matches('/').trim().len() > 1)
+        {
+            return true;
+        }
+        previous = None;
+    }
+    false
 }
 
 /// The runner's jobs' cargo commands, each with its nextest profile and a name for failures.
@@ -751,6 +768,42 @@ mod path_on_the_mod_line {
             &read(WORKFLOW),
             &read(NEXTEST),
             &with_helper("#[allow(unused)] #[path = \"planted_helper.rs\"] mod helper;\n")
+        )
+    );
+}
+
+mod nested_module_cfg {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "An inner cfg(unix) with its reason inside a nested module, while the file itself starts bash.",
+        expected = "crates/engine/tests/canon_gpu.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "fn _bash() { let _ = std::process::Command::new(\"bash\"); }\nmod unix_only {\n    // Needs a Unix shell; hosted Linux runs it.\n    #![cfg(unix)]\n}\n"
+            )
+        )
+    );
+}
+
+mod cfg_after_an_item {
+    use super::*;
+    negative_control!(
+        win_runner_tests_start_no_bare_bash_or_wsl,
+        "A cfg(unix) with its reason, unindented but after the file's first item.",
+        expected = "crates/engine/tests/canon_gpu.rs starts \"bash\"",
+        check(
+            &read(WORKFLOW),
+            &read(NEXTEST),
+            &planted(
+                "crates/engine/tests/canon_gpu.rs",
+                "",
+                "fn _bash() { let _ = std::process::Command::new(\"bash\"); }\n// Needs a Unix shell.\n#![cfg(unix)]\n"
+            )
         )
     );
 }
