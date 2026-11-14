@@ -2,10 +2,12 @@
 
 **Status: Ruled, 14 Nov 2026 (TASK-M2-58, the gate).** Every door of § 14, RQ-712 to RQ-731 with RQ-733 to RQ-736, is
 ruled, and the rulings are carried into the body below, each replaced line kept as its *Was*: the design is built from,
-through § 15's tasks. Two decisions the orchestrator took per R-369 stay conditional on physics review, and the body says
-so where they sit: (D), marks to the lock's tolerance and the symmetry filter on a mid-morph frame (§ 10.4, § 10.5), and
-(F), a tagged end that carries a state blending as one (§ 17.11, V21). Where this document meets a ruling, the ruling
-wins. *Was:* "**Status: Proposed, 6 Nov 2026, on the owner's orders of that day. Not a ruling. Nothing here is
+through § 15's tasks. Two decisions the orchestrator took per R-369, listed for the owner's veto, are confirmed by
+physics review 5852979675 of PR #482 and carried unconditionally: (D), marks to the lock's tolerance and the symmetry
+filter on a mid-morph frame (§ 10.4, § 10.5), the filter's canonical representative REQ-CHART-209's definition, owed
+where TASK-M2-84 builds it; and (F), a tagged end that carries a state blending as one, tag by tag (§ 17.11, V21). Where
+this document meets a ruling, the ruling wins. *Was (this line, 14 Nov 2026):* "Two decisions the orchestrator took per
+R-369 stay conditional on physics review, and the body says so where they sit". *Was:* "**Status: Proposed, 6 Nov 2026, on the owner's orders of that day. Not a ruling. Nothing here is
 implemented until the rulings report is answered.** No code is written by it. Its one-way doors are not decided here:
 each is marked **door**, and waits on the rulings item named beside it (RQ-712 to RQ-731). RQ-733 sits in § 14 but
 outside the gate, TASK-M2-58: it holds only its option (b). RQ-734 and RQ-735 sit there too, and hold no task of § 15.
@@ -154,10 +156,10 @@ verbatim, under their heading "THE FOUR YOU DECIDE":
 That is a go-ahead to decide them, not a ruling on any of them. Applied per R-369: (C), a Chart or Latent contour
 variable on a mid-morph frame has one value per end chart and is drawn once per end at that end's share
 (`principia_lines.md` § 4.1); (D), on a mid-morph frame marks are found to the lock's tolerance and the symmetry filter
-is on (§ 10.4, § 10.5), conditional on physics review and not settled until it confirms; (E), a change of the hovered
+is on (§ 10.4, § 10.5), confirmed by physics review 5852979675 of PR #482 (carried 14 Nov 2026, physics review 5902556608 of PR #528); *was* "conditional on physics review and not settled until it confirms"; (E), a change of the hovered
 system caused by a playing morph does not restart the trace (`principia_lines.md` § 8); (F), an end pixel that is tagged
 and carries a state blends as a state, only an end pixel with no state staying blank mid-path (§ 17.11, V21),
-conditional on physics review, tag by tag, and not settled until it confirms; the unlocked pivot of a saved frame's
+tag by tag, confirmed by physics review 5852979675 of PR #482 (carried 14 Nov 2026, physics review 5902556608 of PR #528); *was* "conditional on physics review, tag by tag, and not settled until it confirms"; the unlocked pivot of a saved frame's
 tilt, each end about its own centre (§ 17.5). Applied per R-369 as mechanical consequences of the rulings named at each,
 and listed for veto with them: the hold's blank does not open mid-path under the state blend (§ 17.11; R-926 item 3,
 R-943; *was:* "no blank opens mid-path under the state blend", which the physics review of PR #482 found incomplete:
@@ -173,7 +175,9 @@ and § 14's table gives each door its ruling. RQ-729's edges were applied by R-9
 and -28 depend on TASK-M2-77), and TASK-M4-06's edge was never applied (R-914). Two questions the carry met that no ruling
 settles are queued, nothing chosen meanwhile: RQ-816 (the registry's guard on binary-plus-single and fixed-`k` rows, and
 a combination's `none`, after R-847 and R-849; § 3, § 12) and RQ-817 (the browser's "labelled and not live" after
-R-926; § 7.5). (D) and (F) stay conditional, as the status line says, until physics review confirms them.
+R-926; § 7.5). (D) and (F) are confirmed by physics review 5852979675 of PR #482 (physics review 5902556608 of PR
+#528), so they are carried unconditionally, still listed for the owner's veto. *Was:* "(D) and (F) stay conditional, as
+the status line says, until physics review confirms them."
 
 **The order, in a line.** Charts are built from primitives and combinations of primitives, each axis independent and
 customisable, composing with what exists and adding no chart type. Any axis may be paired with any other. The only
@@ -1533,15 +1537,17 @@ maths and TASK-M8-120 the display, the defaults and the toggle (R-916). *Was:* "
 - **Default.** Off, except on the paper-frame presets: region D's and § 20's presets render the full disc with the filter on. That gives region D's quarter disc, the Anosova half-disc and the half shape sphere at rest, so the papers' figures are reproducible with the full disc still computed underneath.
 - **Later, not built here:** a "skip computing duplicates" export setting for speed, off by default and labelled. No task owes it.
 
-*11 Nov 2026, the filter on a mid-morph frame (R-944; applied per R-369, listed for the owner's veto, and conditional on
-physics review).* R-899's Q8 (a) had the filter off on a mid-morph frame, with a label; R-944 makes that a gap to close.
+*11 Nov 2026, the filter on a mid-morph frame (R-944; applied per R-369, listed for the owner's veto; confirmed by
+physics review 5852979675, below; *was* "and conditional on physics review").* R-899's Q8 (a) had the filter off on a mid-morph frame, with a label; R-944 makes that a gap to close.
 The mechanism: the frame declares the symmetries either end declares; a pixel's partner is `place(g·D(φ(u)), frame)` (§
 10.6), and the correctness rule above then decides each pixel, unchanged, so a declared symmetry that the blend breaks
 blanks nothing ("no duplicates in this chart"). The canonical representative of a pair on a blend is a definition owed
 (R-72), since `η ≥ 0` is an end's coordinate and not the frame's: proposed, the partner whose pixel comes first in the
 frame's row-major order, a pure function of the pixel, for the physics reviewer to approve where TASK-M2-84 builds it.
-Until physics review confirms the mechanism and that definition, the filter on a mid-morph frame is not recorded as
-settled.
+Physics review 5852979675 confirms the mechanism (below), so the filter on a mid-morph frame is settled; it is built
+with REQ-CHART-209's definition of the canonical representative, which TASK-M2-84 writes under physics review (R-72), a
+definition owed, not a condition. *Was:* "Until physics review confirms the mechanism and that definition, the filter on a
+mid-morph frame is not recorded as settled."
 
 *11 Nov 2026, the physics review of PR #482 (review 5852979675, its confirmation 2).* The mechanism is approved: the
 partner as `place(g·D(φ(u)), frame)` with the correctness rule above unchanged, so nothing is blanked unless its partner
@@ -1616,8 +1622,8 @@ nearest chart point, the off-slice distance and the near-match, as engine functi
   placement function, its nearest-point route. So on a mid-morph frame a mark is found as on any chart with no inverse,
   with its off-slice distance, the route's residual. R-899's Q8 (a), "to pixel resolution" on a mid-morph frame, was a
   limitation with a label, which R-944 makes a gap to close; that the marks then meet the lock's tolerance mid-morph,
-  with § 10.4's filter on, is applied per R-369, listed for the owner's veto, and conditional on physics review, not
-  settled until it confirms.
+  with § 10.4's filter on, is applied per R-369, listed for the owner's veto, and confirmed by physics review 5852979675 of PR #482 (carried 14 Nov 2026, physics review 5902556608 of PR #528). *Was:* "and
+  conditional on physics review, not settled until it confirms."
 
 ---
 
@@ -1935,7 +1941,7 @@ Each states its criterion, written first, then the result. Any may be vetoed; ea
 | V18 | Live target: 4 ms for one coarse cover's chart side | written before measuring | 4 ms; missed on the stand-in, about 15 ms | § 17.12 |
 | V19 | Re-centre once per end and segment, not per frame, unless the anchor moves | a pure function, so a repeat gives the same bits | once | § 17.8 |
 | ~~V20~~ | ~~A saved mid frame reopens as a record, with no tilt or slice~~ | ~~it has no hidden coordinate; labelled~~ | retired 11 Nov 2026 (R-944): a saved frame tilts and slices, the edit going to both end charts | § 17.5 |
-| V21 | A pixel blank or tagged at either end is blank mid-path | no invented state (R-470), no undeclared seam (P3) | as such. *11 Nov 2026:* only an end pixel with no state stays blank, a tagged end that carries a state blending as one (applied per R-369, listed for veto, conditional on physics review; until it confirms, as such) | § 17.11 |
+| V21 | A pixel blank or tagged at either end is blank mid-path | no invented state (R-470), no undeclared seam (P3) | as such. *11 Nov 2026:* only an end pixel with no state stays blank, a tagged end that carries a state blending as one (applied per R-369, listed for veto, confirmed tag by tag by physics review 5852979675): a no-state end (code 0), or an end tagged `INVARIANT_INFEASIBLE` on the arm with no finite `2K*`, `NO_QUALIFYING_SEED` or `M01_TINY`, stays blank; `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE` and `INVARIANT_INFEASIBLE` on the arm `K* < L_z²/(2I)` blend, under § 17.11's conditions (i) and (ii). *Was:* "conditional on physics review; until it confirms, as such" | § 17.11 |
 | V22 | The dilation axis is signed `h`, not `K_dil` | an axis has to invert | `h` | `K_dil` loses the sign, § 3.1 |
 | V23 | Aliases are one row, not two: body 2, `γ_ρ`, `K_rot`, `K_dil`, elongation; the midpoint angle at `m₀ = m₁` only; Hill's distance at a frozen mass | one quantity, one row; `pair_table_complete` agrees | aliased | § 3.1, identities to 10⁻¹³ |
 | V24 | Every § 3.1 and § 3.2 row is CPU batch | the cap's slots are taken | CPU batch | § 11 |
@@ -2339,7 +2345,7 @@ exception. What the section said before is kept as *Was*, after the list.
    and P4, reported and not gates (R-951).
 6. **Marks and the symmetry filter: closed** (R-947; § 10.4, § 10.5). Marks are found by § 10.6's placement, as on any
    chart with no inverse. That they meet the lock's tolerance mid-morph, and that the filter is on, is applied per
-   R-369, listed for veto, and conditional on physics review.
+   R-369, listed for veto, and confirmed by physics review 5852979675 of PR #482 (carried 14 Nov 2026, physics review 5902556608 of PR #528). *Was:* "and conditional on physics review."
 7. **Tilt and slice on a live path** (R-902, 8 Nov 2026): a tilt or slice made mid-morph goes to both endpoint charts of
    the morph, each in its own hidden coordinates and R-474 map, about the pinned state, and the morph continues from its
    parameter between the tilted ends. No hidden coordinate is invented for the blend.
@@ -2760,7 +2766,8 @@ and slice frames plain views, the record bitwise, and a blend frame, which has n
 
 *11 Nov 2026 (R-944, R-947):* "a blend frame, which has no inverse, read to pixel resolution (R-899 Q8)" is a gap to
 close: a blend frame is read through § 10.6's placement (the lock's tolerance as the marks' standard mid-morph is
-applied per R-369 and conditional on physics review, § 10.5). `blend_entry_counted` is moot (§ 17.12; R-926 item 5).
+applied per R-369, listed for veto, and confirmed by physics review 5852979675, § 10.5; *was* "and conditional on
+physics review"). `blend_entry_counted` is moot (§ 17.12; R-926 item 5).
 
 | Test | Asserts | Control |
 |---|---|---|
@@ -2776,7 +2783,7 @@ applied per R-369 and conditional on physics review, § 10.5). `blend_entry_coun
 | `path_record_round_trip` | `(A, B, path, s)` round-trips bitwise and re-renders one image at one lowering; absent, old bytes | `s` written at f32 |
 | `path_gram_flags` | sphere to plane flags a degenerate frame; a linear pair-map blend flags folds; the bend doesn't; a vortex flags on the upper arm | the flag removed |
 | `path_retime` | speed spread at most 1.25 on the saturated fixture; `g` pinned at both ends | the table off |
-| `path_blank_ends` | a pixel blank or tagged at either end is blank for `0 < s < 1`, tagged, never dropped. *11 Nov 2026:* a tagged end that carries a state blends, continuous by `path_small_step`; a no-state end stays blank (applied per R-369, conditional on physics review, § 17.11; until it confirms, as written) | substituting the other end |
+| `path_blank_ends` | a pixel blank or tagged at either end is blank for `0 < s < 1`, tagged, never dropped. *11 Nov 2026:* a tagged end that carries a state blends, continuous by `path_small_step`; a no-state end stays blank (applied per R-369, listed for veto, confirmed tag by tag by physics review 5852979675, § 17.11): a no-state end (code 0), or an end tagged `INVARIANT_INFEASIBLE` on the arm with no finite `2K*`, `NO_QUALIFYING_SEED` or `M01_TINY`, blank for `0 < s < 1`, tagged, never dropped; `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE` and `INVARIANT_INFEASIBLE` on the arm `K* < L_z²/(2I)` blend, the state the end chart draws (condition (i)), the feasibility-boundary seam declared and drawn (condition (ii); REQ-CHART-114). *Was:* "conditional on physics review, § 17.11; until it confirms, as written" | substituting the other end |
 | `path_hold_table` | each row of § 17.11's table | the step before the blend |
 | `path_links_cut`; *11 Nov 2026 (R-949):* `path_links_morph` | across a changed link id the ends are exact and `path_small_step` holds. *Was:* "a changed link id is a cut, live and export" | a frame that interpolates the link function itself. *Was:* "a morph across it" |
 | `blend_entry_counted` | `stage_blend` is the only morph entry; the cap test unchanged. *11 Nov 2026:* moot, no blend has a GPU entry (R-926 item 5) | a baked `(A, B)` entry |
