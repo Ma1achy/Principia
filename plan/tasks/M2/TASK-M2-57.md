@@ -127,7 +127,8 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
   a golden whose plane runs along `z_β` (the latent decode golden's `q₁[1]`, `q₂[1]`) redefined in the new coordinates,
   exempt, its regenerated hash recorded with why (R-898; R-919; REQ-DEC-055).
 - `cargo test -p kernel --test roundtrip` — with the assertions the ruling changes: T1 as the equivariance `E(Π·x)` = the
-  mirrored `z` (`β → 2π − β`, the momentum controls reflected, `L_z` negated) in place of `E(Π·x) = E(x)`, and
+  mirrored `z` (`z_β → 2π̂ − z_β` compared by its distance on the circle, `d`, dd_decoder § 3.2, as REQ-ENC-003 states
+  it; the momentum controls reflected, `L_z` negated) in place of `E(Π·x) = E(x)`, and
   `t3_half_mirror` removed under REQ-ENC-005's change (REQ-DEC-055).
 - `cargo test -p engine --test canon_gpu canonicaliser_seam_sweep` and `cargo test -p engine --test encode_gpu`, in the
   `gpu-kernel` job after `cargo xtask build-kernel` — the signed encode's `β` case (the sign and zero tests on `λ̃_x`
@@ -258,3 +259,5 @@ coordinates, and an unpinned old saved chart converted from `sigmoid_beta` with 
 - *14 Nov 2026 (qa review 5903950227 of PR #533, m3; applied per R-369):* `mirror_step_removed`'s lower-half state is
   off the collinear axes. *Was (acceptance):* "- `cargo test -p kernel mirror_step_removed` — a lower-half state encodes
   to `β ∈ (π, 2π)` and decodes back to itself,".
+- *14 Nov 2026 (physics review 5904074113 of PR #533, P8; applied per R-369):* the roundtrip line's mirror rule reads as
+  REQ-ENC-003's. *Was (acceptance):* "mirrored `z` (`β → 2π − β`, the momentum controls reflected, `L_z` negated)".
