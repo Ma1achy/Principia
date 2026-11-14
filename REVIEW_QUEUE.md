@@ -850,6 +850,10 @@ still say the old thing.*
   refusals still apply to a typed combination; (iii) a registered `none` row typed as an expression takes the general
   solve, so `NoJointInverse` stays only for a registered `none` row picked as an axis. The entry stays open until the
   follow-up closes it; REQ-CHART-096 and the code are unchanged here.
+- **14 Nov 2026, later (code re-check 5902669922 of #528):** the follow-up is TASK-M2-66, which closes REQ-CHART-096
+  and builds its test: its task file carries (a) with points (i) to (iii), and REQ-CHART-096 is amended to (a) by this
+  PR through reqio, its old statement and verify kept as *Was* in its note; the test is renamed `combination_class`
+  (design § 12). TASK-M2-73 builds the general solve itself. The entry stays open until TASK-M2-66 merges.
 
 
 ## RQ-817: The browser build's "labelled and not live" (R-889, REQ-CHART-155) after R-926 fills every view from the CPU's f64 evaluation and R-925 refuses no chart a fragment route: which browser charts, if any, are "not live" *(conflict; a one-way door, it reads the owner's words; R-889, R-926, R-925, R-985, R-571; REQ-CHART-155; context: TASK-M2-58, TASK-M8-102, TASK-M8-96)*
