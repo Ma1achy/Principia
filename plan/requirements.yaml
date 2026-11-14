@@ -1619,7 +1619,7 @@
     section: R-82 — One mirror test, one seed rule *(closes RQ-33)*
   verify:
     method: unit test
-    detail: "feed an off-CoM, boosted, scaled, rotated state; assert I is computed after CoM subtraction and the result equals the canonical representative on both backends"
+    detail: "feed an off-CoM, boosted, scaled, rotated state, one of each half (a lower-half state keeps λ̃_y < 0 through the sequence); assert I is computed after CoM subtraction and the result equals the canonical representative on both backends; control: the sequence with the mirror step left in fails on the lower-half input"
   rulings:
   - R-23
   - R-82
