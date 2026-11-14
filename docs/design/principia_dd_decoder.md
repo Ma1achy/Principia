@@ -212,20 +212,31 @@ R-865, R-898, R-919). The definitions the full-circle `β` rests on:
   4573289687 of PR #533), a definition under R-72, the target TASK-M2-57 builds, in force when it merges:* *Was:* "`z_β`
   is an angle, so two values of it, encoded or stored, are compared by their distance on the circle, never on the line:
   `d(a, b) = |a − b − 2π·round((a − b)/2π)|`, in `[0, π]`, evaluated at f64 (a tie at `π` is `π` either way)."
-- **A syzygy crossing on a latent chart.** A trajectory through a syzygy has `β(t)` crossing 0 or π continuously,
-  the two collinear orientations, and no mirror changes it. A trace on a latent chart places each sample's encoded
-  `z_β` on its lift nearest the previous sample's value (the unwrap: `z_β + 2πk` with `|z_β + 2πk − z_prev| ≤ π`, a
-  tie to the smaller `k`), its first sample on the lift nearest the chart's centre `z₀[1]`. So it is continuous
-  through a syzygy at `β = π`, where no wrap occurs, and at `β = 0`, where the unwrap carries it past 0 or `2π`
-  rather than jumping by `2π`. A reduced trace, read without the unwrap, jumps by `2π` at `β = 0`, and that jump is
-  the circle's identification, not the state's.
+- **A syzygy crossing on a latent chart.** A trajectory through a syzygy has `β(t)` crossing 0 or π continuously, the
+  two collinear orientations, and no mirror changes it. A trace on a latent chart places each sample's encoded `z_β` on
+  its lift nearest the previous sample's value (the unwrap: `z_β + 2πk` with `|z_β + 2πk − z_prev| ≤ π`, a tie to the
+  smaller `k`), its first sample on the lift the lookup's chart point takes (the rule under "Stored reduced or
+  unreduced" below). So it is continuous through a syzygy at `β = π`, where no wrap occurs, and at `β = 0`, where the
+  unwrap carries it past 0 or `2π` rather than jumping by `2π`. A reduced trace, read without the unwrap, jumps by `2π`
+  at `β = 0`, and that jump is the circle's identification, not the state's. *14 Nov 2026 (R-898; TASK-M2-107; the
+  physics reviewer's ruling on Codex thread 4573289690 of PR #533), a definition under R-72, the target TASK-M2-57
+  builds, in force when it merges:* *Was:* "its first sample on the lift nearest the chart's centre `z₀[1]`."
 - **Stored reduced or unreduced, and where a wrap enters (R-898).** A stored `z_β` is unreduced: a real coordinate on
   the lift, never reduced to one period by anything that stores or edits it. The affine leaves (pan, zoom, the latent
   tilts), the latent-line blend and the select act on the lift, linearly, with no wrap, and none is needed: the decode
-  reads `z_β` modulo `2π` through `cos` and `sin`, so a plane along `z_β` sweeps the circle as many times as it is
-  long. A wrap enters at one place only: where an encoded `z_β ∈ [0, 2π̂]` is placed on a latent chart or trace, the
-  lookup's chart point and the trace each take the lift nearest their reference (the chart's centre `z₀[1]`, or the
-  previous sample), as above.
+  reads `z_β` modulo `2π` through `cos` and `sin`, so a plane along `z_β` sweeps the circle as many times as it is long.
+  A wrap enters at one place only: where an encoded `z_β ∈ [0, 2π̂]` is placed on a latent chart or trace. The lookup's
+  chart point on a latent plane `z₀ + u·q₁ + v·q₂` takes the `k` for which `E(x) + 2πk·e_β` is nearest the plane by
+  least plane residual: the residual of `E(x) + 2πk·e_β − z₀` after its least-squares fit by `u·q₁ + v·q₂`. A tie in
+  residual goes to the `k` whose `(u, v)` is nearest the centre, `(0, 0)`, then to the smaller `k`; ties occur only
+  where `2π·e_β` lies in the plane's span (on the latent `z_α × z_β` chart, every lift lies on the plane). So a state
+  with an exact point on an oblique plane lands on it: on a plane through `z_β = z_q0 = 0` with `q₁ = 4e_β + 4e_q0`, the
+  state at `u = 1` takes `k = 0` and lands at `u = 1`, where the lift nearest the centre, `4 − 2π`, is off the plane. A
+  trace's first sample takes its `k` by the same rule; each later sample keeps the unwrap against the previous sample,
+  as above. *14 Nov 2026 (R-898; TASK-M2-107; the physics reviewer's ruling on Codex thread 4573289690 of PR #533), a
+  definition under R-72, the target TASK-M2-57 builds, in force when it merges:* *Was:* "A wrap enters at one place
+  only: where an encoded `z_β ∈ [0, 2π̂]` is placed on a latent chart or trace, the lookup's chart point and the trace
+  each take the lift nearest their reference (the chart's centre `z₀[1]`, or the previous sample), as above."
 - **How a stored value converts (R-898, R-919 Q3 (a); R-921).** A `z_β` stored under a retired link `L` converts
   once to `z_β′ = L(z_β)`, the `β` it decoded to, in `[0, π]`: one period, so stored reduced and unreduced alike. An
   old saved chart converts from the `β` link it pins (R-516), else from `sigmoid_beta`, the default it was made under,
