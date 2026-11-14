@@ -25,6 +25,7 @@ The f32 Benettin shadow's displacement form, as R-974 (RQ-793 (a)) rules it: a j
 - `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
 - `decisions.md` § "R-974 — RQ-793, the displacement form of the FTLE shadow: option (a), a joint step on the occupant interface; whether the force difference is formed plainly in f32 (a1) or cancellation-free (a2) is chosen by a measurement whose criterion TASK-M3-72 writes before any run, physics-reviewed *(closes RQ-793)*"
 - `decisions.md` § "R-976 — RQ-794, what REQ-INT-076 proposes for the FTLE shadow's ‖δ₀‖ and `n_renorm`: option (c), (3e-3, 300, 0.2) stay provisional and stated as unsupported on close-encounter chaotic orbits wherever the FTLE is shown; the pre-registered eight-orbit calibration is re-run unchanged, then `min_regions` ≥ 6 proposed; the M3 gate confirms no final value until the re-run *(closes RQ-794)*"
+- `decisions.md` § "R-1009 — RQ-814, which shadow form the M3 gate's values of REQ-INT-076 are for: option (d), neither at M3; the confirmation of the FTLE shadow's ‖δ₀‖ and `n_renorm` moves to the M4 gate, beside REQ-PAY-085's switch, and the provisional (3e-3, 300, 0.2) stay in force, stated as unsupported, until then *(closes RQ-814; amends R-976)*"
 - `decisions.md` § "R-972 — RQ-791, the FTLE when only its shadow reaches a terminal or goes non-finite: (d) + (a); the shadow's detectors monitor only and the shadow marches on through what would be its terminal, and once the shadow's `S` is non-finite `ftle_valid` is false, `ftle` reads NaN and every aggregate drops the sample *(closes RQ-791)*"
 
 ## Deliverables
@@ -39,7 +40,7 @@ The f32 Benettin shadow's displacement form, as R-974 (RQ-793 (a)) rules it: a j
 - `cargo xtask gate shadow-form` — FTLE error vs the known exponent for both shadow forms on the periodic-orbit set; the switch to displacement is made only if accuracy meaningfully improves, the result recorded (REQ-VAL-038). The measurement is the one RQ-793 names, its criterion written before the run (R-649): the signed gap `λ_T(f32) − λ_T(f64)` on the shadow-form set at ‖δ₀‖ = 1e-5, judged by its magnitude, against the absolute form's +0.023, +0.055, −0.014 and +0.204; whether Burrau at f32 stays finite at ‖δ₀‖ ≤ 1e-5; and a control that fails when the displacement form is bit-identical to the absolute form on every orbit.
 - § 3.8 states the displacement form as R-974 rules it; physics reviewer approved (REQ-VAL-038).
 - The (a1)/(a2) measurement, by the criterion this file states before any run (R-649), its numbers and the form it chooses recorded; physics reviewer approved (REQ-VAL-038, R-974).
-- `cargo xtask gate benettin-calibration` — R-976's re-run: the pre-registered eight-orbit calibration, its grid, meter, selection and tolerance rules unchanged, run after this form and R-972's (d) + (a) are built, proposing `min_regions` ≥ 6 with its evidence; the human confirms REQ-INT-076's values at the M3 gate (REQ-INT-076, closed by TASK-M3-14).
+- `cargo xtask gate benettin-calibration` — R-976's re-run: the pre-registered eight-orbit calibration, its grid, meter, selection and tolerance rules unchanged, run after this form and R-972's (d) + (a) are built, proposing `min_regions` ≥ 6 with its evidence; the human confirms REQ-INT-076's values at the M4 gate, beside REQ-PAY-085 (R-1009) (REQ-INT-076, closed by TASK-M3-14). *Was:* "the human confirms REQ-INT-076's values at the M3 gate".
 - Review (physics): § 3.8 states how the joint step keeps the sample and its shadow at the same physical time under any occupant that owns its time mapping (REQ-VAL-355's definition; TASK-M3-74 closes REQ-VAL-355).
 
 ## The (a1)/(a2) criterion (R-974; written 13 Nov 2026, before any run, R-649)
@@ -94,7 +95,8 @@ choice.
   (3e-4, 1), and the absolute form's only without (9, 40, 41), to (1e-3, 1000): each pick rests on all 6 regions,
   one of them deciding it.
 - **Which form the M3-gate values are for** depends on REQ-PAY-085's switch, an M4 calibration (TASK-M4-13): RQ-814,
-  for the owner. Nothing in this task waits on it.
+  for the owner. Nothing in this task waits on it. *14 Nov 2026:* ruled by R-1009 (RQ-814 (d)): neither at M3; REQ-INT-076
+  is confirmed at the M4 gate, beside REQ-PAY-085.
 
 ## Notes
 - New (12 Nov 2026), applied per R-369 (task re-scoping, physics's recommendation in review 5866988394 of PR #493, § (4)): REQ-VAL-038 and its `shadow-form` acceptance arm moved here from TASK-M3-14, whose other deliverables do not depend on the form. The arm is TASK-M3-14's, unchanged, with the measurement and control RQ-793 names added.
@@ -117,3 +119,4 @@ choice.
   renormalisation of a joint-step run, the shadow's elapsed physical time equals the sample's as the definition states;
   control: a joint step that advances the shadow by the sample's `Δτ` alone, its elapsed `t` drifting from the sample's,
   fails (REQ-VAL-355)."
+- *14 Nov 2026 (R-1009, RQ-814 (d)):* neither of the re-run's two picks is confirmed at the M3 gate: REQ-INT-076 moves to M4 and is confirmed at the M4 gate, beside REQ-PAY-085 (TASK-M4-13), whose measurement says which form ships and so which pick applies; (3e-3, 300, 0.2) stay in force, provisional and stated as unsupported, until then. The 12 Nov note's "until the M3 gate confirms the re-run's" is its record.
