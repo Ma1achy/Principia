@@ -36,7 +36,7 @@ use kernel::physics::PairGeom;
 use kernel::regularisation::az::{self, AzReal, AzStepper};
 use kernel::regularisation::form::{Flow, Form};
 use kernel::regularisation::heggie::{self, Heggie, HgConfig, HgParams, HgRegistered, HgStepper};
-use kernel::regularisation::logh::{self, LhP, LhQ, LhRegistered, LhStepper, LhSystem};
+use kernel::regularisation::logh::{self, LhP, LhQ, LhRegistered, LhStepper, LhSystem, Slot};
 use kernel::regularisation::pairs::{Choice, HeggieTime, LogHMode};
 use kernel::regularisation::Composed;
 use validation::negative_control;
@@ -310,12 +310,12 @@ fn check_whole_state(last: f64) {
     for (name, _, LhRegistered { system, q, p }) in logh_systems() {
         same(
             &format!("{name} × RK4"),
-            &<Rk4 as LhStepper>::regularised_step(&system, &q, &p, H),
+            &<Slot<Rk4> as LhStepper>::regularised_step(&system, &q, &p, H),
             &written_rk4(&system, &q, &p, H, last * H),
         );
         same(
             &format!("{name} × Euler"),
-            &<Euler as LhStepper>::regularised_step(&system, &q, &p, H),
+            &<Slot<Euler> as LhStepper>::regularised_step(&system, &q, &p, H),
             &written_euler(&system, &q, &p, H),
         );
     }
@@ -424,11 +424,13 @@ fn check_logh(which: LogHUnderTest) {
     for (name, _, LhRegistered { system, q, p }) in logh_systems() {
         same(
             &format!("{name} × KDK"),
-            &<Kdk as LhStepper>::regularised_step(&system, &q, &p, H),
+            &<Slot<Kdk> as LhStepper>::regularised_step(&system, &q, &p, H),
             &written_logh(&system, &q, &p, H, &[1.0]),
         );
         let yoshida4 = match which {
-            LogHUnderTest::Kernel => <Yoshida4 as LhStepper>::regularised_step(&system, &q, &p, H),
+            LogHUnderTest::Kernel => {
+                <Slot<Yoshida4> as LhStepper>::regularised_step(&system, &q, &p, H)
+            }
             #[cfg(feature = "controls")]
             LogHUnderTest::GenericYoshida4 => Form::Yoshida4.step(&system, &q, &p, H),
         };
@@ -439,7 +441,7 @@ fn check_logh(which: LogHUnderTest) {
         );
         same(
             &format!("{name} × Yoshida-6"),
-            &<Yoshida6 as LhStepper>::regularised_step(&system, &q, &p, H),
+            &<Slot<Yoshida6> as LhStepper>::regularised_step(&system, &q, &p, H),
             &written_logh(&system, &q, &p, H, &weights(Form::Yoshida6)),
         );
     }
@@ -501,6 +503,9 @@ fn profiles<G: Fn() -> CapabilityProfile>(of: [G; 5]) -> [CapabilityProfile; 5] 
     of.map(|f| f())
 }
 
+/// logH's pairs are read through the seam's slot ([`Slot`]), the stepper the composed occupant marches with, so a slot
+/// that handed one stepper another's step or profile fails here and in the step comparisons above.
+///
 /// Checks each pair's profile against the contract's: under Aarseth–Zare and Heggie the explicit compositions, none
 /// symplectic or reversible, KDK and the Yoshidas first order at 3, 9 and 21 evaluations, RK4 fourth at 4, Euler
 /// first at 1; under logH, the leapfrog's and its compositions' (orders 2, 4, 6 at 1, 3, 7 evaluations,
@@ -561,11 +566,11 @@ fn check_profiles(heggie_kdk: CapabilityProfile) {
             row(4, 4, no),
         ];
         let got = [
-            logh::profile::<Euler>(mode),
-            logh::profile::<Kdk>(mode),
-            logh::profile::<Yoshida4>(mode),
-            logh::profile::<Yoshida6>(mode),
-            logh::profile::<Rk4>(mode),
+            logh::profile::<Slot<Euler>>(mode),
+            logh::profile::<Slot<Kdk>>(mode),
+            logh::profile::<Slot<Yoshida4>>(mode),
+            logh::profile::<Slot<Yoshida6>>(mode),
+            logh::profile::<Slot<Rk4>>(mode),
         ];
         assert_eq!(got, want, "logH's pairs in {mode:?}");
     }

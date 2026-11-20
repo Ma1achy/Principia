@@ -144,7 +144,7 @@ pub const HEGGIE_YOSHIDA_WARNING: &str =
 /// The warning of Aarseth–Zare × KDK, × Yoshida-4 and × Yoshida-6.
 pub const AARSETH_ZARE_LEAPFROG_WARNING: &str =
     "Aarseth–Zare's Hamiltonian is not separable, so a leapfrog or Yoshida step is first order here and can diverge \
-     (figure-eight, reference body held: order about 1, diverged within the first orbit).";
+     (figure-eight, reference body held: order about 1, the energy error past 1e-2 within a quarter of an orbit).";
 
 /// The warning of Aarseth–Zare × RK4: what the fixed-step measurement found, and what it did not measure.
 pub const AARSETH_ZARE_RK4_WARNING: &str =

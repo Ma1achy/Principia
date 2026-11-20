@@ -89,8 +89,8 @@ const HEGGIE_YOSHIDA: &str = "Heggie's Hamiltonian is not separable, so a Yoshid
 
 /// The warning Part 2b's note 6 gives Aarseth–Zare × KDK, × Yoshida-4 and × Yoshida-6.
 const AZ_LEAPFROG: &str = "Aarseth–Zare's Hamiltonian is not separable, so a leapfrog or Yoshida step is first order \
-                           here and can diverge (figure-eight, reference body held: order about 1, diverged within \
-                           the first orbit).";
+                           here and can diverge (figure-eight, reference body held: order about 1, the energy error \
+                           past 1e-2 within a quarter of an orbit).";
 
 /// The warning Part 2b's note 1 gives Aarseth–Zare × RK4.
 const AZ_RK4: &str = "With its reference body held and its step fixed, Aarseth–Zare × RK4 loses the figure-eight at \

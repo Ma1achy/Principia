@@ -1329,7 +1329,8 @@ fn composed_profiles() -> Profiles {
     ]
 }
 
-/// logH is selectable in each time mode with each stepper it defines a pair with, KDK and RK4: the pair is selected
+/// logH is selectable in each time mode; read here with KDK and RK4 (`pair_definitions` reads all five steppers'
+/// steps and profiles through the seam's slot): the pair is selected
 /// with no refusal, measured good in the table and carrying no warning, and owns its time mapping; its occupant type
 /// reports the pair's profile (the leapfrog's: order 2, one force evaluation, step-reversible, symplectic in the logH
 /// mode alone and run-reversible in the TTL mode alone; RK4's form's on a regularised system) and runs a call through

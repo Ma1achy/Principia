@@ -1302,7 +1302,8 @@ that ladder does not resolve an order (logH × Yoshida-6 and Aarseth–Zare × R
 reference's), the one-orbit order is read. Every pair's order so read is within 0.5 of its profile's
 (`pair_definitions_order`): 1.00 for Euler and for KDK, Yoshida-4 and Yoshida-6 under Aarseth–Zare and Heggie, so
 the explicit compositions are first order on a non-separable system, as their profiles say; 2.00, 4.00 and 5.93 for
-logH's leapfrog and its two compositions; 3.99 to 4.39 for RK4. The short ladder enters no verdict.
+logH's leapfrog and its two compositions; 4.00 and 4.01 for RK4, and 4.13, over one orbit, for Aarseth–Zare × RK4.
+The short ladder enters no verdict.
 
 1. Aarseth–Zare × RK4, **measured bad by the criterion, on a fixture that is not how the occupant runs.** With the
    reference body its rule picks at `t = 0` held for the whole run and the step fixed at `τ_end/128`, RK4 is fourth
@@ -1357,7 +1358,7 @@ logH's leapfrog and its two compositions; 3.99 to 4.39 for RK4. The short ladder
    first order (1.00 on the short ladder; 0.95, 1.52 and 1.57 over one orbit), the energy error past `1e-2` at orbit
    0.21, 0.12 and 0.12 and not finite by 100. Its warning reads: "Aarseth–Zare's Hamiltonian is not separable, so a
    leapfrog or Yoshida step is first order here and can diverge (figure-eight, reference body held: order about 1,
-   diverged within the first orbit)."
+   the energy error past 1e-2 within a quarter of an orbit)."
 7. Euler, under every regularisation and time transformation: first order (1.00 on the short ladder), the energy
    error past `1e-2` at orbit 0.19 (Aarseth–Zare), 0.09 (Heggie, both) and 0.02 (logH, both), not finite by 100 under
    Aarseth–Zare and Heggie and of order 1 to `1e3` under logH. Euler is the debug stepper, kept for its drift (Part
