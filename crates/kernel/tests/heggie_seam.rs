@@ -1075,7 +1075,7 @@ type Pack = fn(&mut Carried<f64>, &HgQ<f64>, &HgP<f64>, f64, u32);
 /// The buffer's element as payload §1 states it: 72 bytes aligned to 4 at f32, 128 aligned to 8 at f64; every field 0
 /// before a registration; and Heggie's numbers in the order `Q₀, Q₁, Q₂, P₀, P₁, P₂, h, t`, read back as written.
 fn check_layout(pack: Pack) {
-    use core::mem::{align_of, size_of};
+    use core::mem::{align_of, offset_of, size_of};
     let sizes = (
         size_of::<Carried<f32>>(),
         align_of::<Carried<f32>>(),
@@ -1086,6 +1086,29 @@ fn check_layout(pack: Pack) {
         "regularised_state_carried_layout: (size, align) at f32 and f64 {sizes:?} (criterion (72, 4, 128, 8))"
     );
     assert_eq!(sizes, (72, 4, 128, 8), "the element's widths");
+    let offsets = |x: usize, steps: usize, count: usize, registered: usize, reserved: usize| {
+        [x, steps, count, registered, reserved]
+    };
+    assert_eq!(
+        (
+            offsets(
+                offset_of!(Carried<f32>, x),
+                offset_of!(Carried<f32>, steps),
+                offset_of!(Carried<f32>, re_registrations),
+                offset_of!(Carried<f32>, registered),
+                offset_of!(Carried<f32>, reserved),
+            ),
+            offsets(
+                offset_of!(Carried<f64>, x),
+                offset_of!(Carried<f64>, steps),
+                offset_of!(Carried<f64>, re_registrations),
+                offset_of!(Carried<f64>, registered),
+                offset_of!(Carried<f64>, reserved),
+            ),
+        ),
+        ([0, 56, 60, 64, 68], [0, 112, 116, 120, 124]),
+        "the fields' offsets are payload §1's table"
+    );
     let fresh = Carried::<f64>::unregistered();
     assert_eq!(
         (
