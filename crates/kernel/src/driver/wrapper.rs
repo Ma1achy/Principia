@@ -78,7 +78,7 @@
 //! caller's: one that keeps state across macro-steps (the monitor's latches, the detector's) is the caller's to resume.
 //!
 //! **The carried regularised state** ([`Carried`]; Part 2a): the wrapper passes the trajectory's buffer into every
-//! `ADVANCE` call ([`Advance::advance_carrying`]), so an occupant that registers once, Heggie, registers at `t = 0` and
+//! `ADVANCE` call ([`Advance::advance_carrying`]), so an occupant that registers once, Heggie or logH, registers at `t = 0` and
 //! marches on from its own state at every later call. A run from its IC starts the buffer unregistered. Like the
 //! cadence, the buffer is the caller's to resume: [`integrate_carrying`] hands it back beside the `SimState`, and
 //! [`integrate_resumed_carrying`] takes it up again with the stored `SimState`, bitwise the uncut march. A resume with

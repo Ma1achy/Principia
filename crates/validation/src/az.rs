@@ -38,6 +38,7 @@ use kernel::regularisation::az::{
     End, ExplicitTest, Watch,
 };
 use kernel::regularisation::dt_max::DtMaxReport;
+use kernel::regularisation::pairs::LogHMode;
 
 use crate::gate::report::{GateReport, RegionCount, Regions, Verdict};
 use crate::gate::{Gate, GateConfig, MeasurementConfig, MeasurementControl, MeasurementGate};
@@ -1282,6 +1283,7 @@ pub fn propose_floor() -> Result<String, String> {
         decades(least_f64.b, 1e-300)
     );
     out.push_str(&crate::heggie::propose_floor_heggie());
+    out.push_str(&crate::logh::propose_floor_logh());
     Ok(out)
 }
 
@@ -1315,7 +1317,8 @@ pub struct FloorControl {
     /// `"above"`: a `TINY` ten times the passage's least pre-floor `A·B`'s smaller factor (Heggie's: its least
     /// pre-floor `dt/dτ`); `"reference"`: the reference's.
     pub tiny: String,
-    /// The occupant: `"heggie"` for Heggie × RK4 under Eq. 22 (TASK-M3-78); Aarseth–Zare + RK4 where absent.
+    /// The occupant: `"heggie"` for Heggie × RK4 under Eq. 22, `"logh"` and `"logh-ttl"` for logH's leapfrog in its
+    /// logH and TTL time modes (their least pre-floor drift denominator); Aarseth–Zare + RK4 where absent.
     #[serde(default)]
     pub occupant: Option<String>,
 }
@@ -1346,10 +1349,28 @@ impl MeasurementGate for SeparationFloorGate {
                     markdown,
                 });
             }
+            Some(logh @ ("logh" | "logh-ttl")) => {
+                let mode = if logh == "logh" {
+                    LogHMode::LogH
+                } else {
+                    LogHMode::Ttl
+                };
+                let (markdown, floors) = crate::logh::floor_control_logh(
+                    name,
+                    &control.description,
+                    &control.tiny,
+                    mode,
+                )?;
+                return Ok(MeasurementControl {
+                    description: control.description,
+                    verdict: if floors { Verdict::Pass } else { Verdict::Fail },
+                    markdown,
+                });
+            }
             Some(other) => {
                 return Err(format!(
-                    "{name}: no occupant `{other}` (heggie, or none for Aarseth–Zare)"
-                ))
+                "{name}: no occupant `{other}` (heggie, logh, logh-ttl, or none for Aarseth–Zare)"
+            ))
             }
         }
         let passage = radial();

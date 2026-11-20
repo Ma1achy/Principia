@@ -31,7 +31,7 @@
 //!   largest over the states, a non-finite one kept (NaN wherever any component's is) and failing the gate, never
 //!   dropped from the reduction (REQ-VAL-080); a step not finite and positive is refused. Its control flips one
 //!   derivative's sign. `--propose` gives REQ-VAL-171's step and
-//!   tolerance.
+//!   tolerance. logH's arms, in each of its time modes, are [`crate::logh`]'s.
 //! - **`separation-floor`**'s Heggie arm ([`propose_floor_heggie`], [`floor_control_heggie`]; REQ-INT-105): Heggie's
 //!   pre-floor `dt/dτ`, `S` and `Rᵢ` under Eq. 20 and Eq. 22 over the floor's fixtures, with the floored steps.
 //!
@@ -53,7 +53,7 @@ use kernel::regularisation::form::Flow;
 use kernel::regularisation::heggie::{
     self as hg, HgP, HgParams, HgQ, HgSystem, HgWatch, DEFAULT_TIME,
 };
-use kernel::regularisation::pairs::HeggieTime;
+use kernel::regularisation::pairs::{HeggieTime, LogHMode};
 
 use crate::az::{
     at, conditions, energy, radial, reference_tiny, show, FloorFixture, Landing, Width,
@@ -936,14 +936,30 @@ pub enum FdOccupant {
     HeggieEq22,
     /// Aarseth–Zare: `Γ`.
     AarsethZare,
+    /// logH in its logH time mode: `Λ = ln(K + B) − ln U` ([`crate::logh`]).
+    LogH,
+    /// logH in its TTL time mode, which has no Hamiltonian of `(r, p)` alone: the physical `K − U` under its two
+    /// denominators, with `W`'s rate ([`crate::logh`]).
+    LogHTtl,
 }
 
 impl FdOccupant {
     /// Every occupant, in the order the proposal prints them.
-    pub const ALL: [FdOccupant; 3] = [
+    pub const ALL: [FdOccupant; 5] = [
         FdOccupant::HeggieEq20,
         FdOccupant::HeggieEq22,
         FdOccupant::AarsethZare,
+        FdOccupant::LogH,
+        FdOccupant::LogHTtl,
+    ];
+
+    /// The input's names, in [`Self::ALL`]'s order.
+    pub const NAMES: [&'static str; 5] = [
+        "heggie-eq20",
+        "heggie-eq22",
+        "aarseth-zare",
+        "logh",
+        "logh-ttl",
     ];
 
     /// The input's name for it.
@@ -952,6 +968,8 @@ impl FdOccupant {
             "heggie-eq20" => Some(FdOccupant::HeggieEq20),
             "heggie-eq22" => Some(FdOccupant::HeggieEq22),
             "aarseth-zare" => Some(FdOccupant::AarsethZare),
+            "logh" => Some(FdOccupant::LogH),
+            "logh-ttl" => Some(FdOccupant::LogHTtl),
             _ => None,
         }
     }
@@ -964,7 +982,8 @@ pub fn uniform(rng: &mut SplitMix, lo: f64, hi: f64) -> f64 {
 }
 
 /// A regularised state as a flat vector, its positions first, then its momenta, then the frozen energy: Heggie's
-/// `(Q₀, Q₁, Q₂, P₀, P₁, P₂, h)`, Aarseth–Zare's `(u₁, u₂, p₁, p₂, E)`.
+/// `(Q₀, Q₁, Q₂, P₀, P₁, P₂, h)`, Aarseth–Zare's `(u₁, u₂, p₁, p₂, E)`, logH's `(r₀, r₁, r₂, p₀, p₁, p₂, E)` with
+/// `E = −B`; in logH's TTL mode the last is the carried `W`.
 pub type Flat = Vec<f64>;
 
 /// The Hamiltonian at a flat state.
@@ -1068,16 +1087,23 @@ pub fn az_gamma(system: &AzSystem<f64>, q: &AzQ<f64>, p: &AzP<f64>) -> f64 {
         - system.e * a * b
 }
 
+/// The finite differences at a flat state and a relative step, in the analytic rates' order: the position rates, the
+/// momentum rates, then `dt/dτ`.
+pub type Differenced = Box<dyn Fn(&[f64], f64) -> Vec<f64>>;
+
 /// A draw: the occupant's masses, its flat state, its Hamiltonian and its analytic rates.
 pub struct Draw {
     pub x: Flat,
     pub hamiltonian: Hamiltonian,
     pub rates: Rates,
+    /// The finite differences the rates are read against, for an occupant whose rates are not one Hamiltonian's
+    /// canonical equations (logH's TTL mode); `None` reads them from [`Draw::hamiltonian`].
+    pub differenced: Option<Differenced>,
 }
 
 /// One random state of `occupant` from `rng`: masses on `[0.3, 3]`, regularised positions on `[−1.2, 1.2]`, momenta on
 /// `[−1, 1]` and the frozen energy on `[−3, 1]`; for Aarseth–Zare, `|R₃|` at least `0.1` (`R₁`, `R₂` by the kernel's
-/// Levi-Civita map, [`kaz::lc`]), redrawn otherwise.
+/// Levi-Civita map, [`kaz::lc`]), redrawn otherwise; logH's in each time mode is [`crate::logh::draw_logh`]'s.
 pub fn draw(occupant: FdOccupant, rng: &mut SplitMix) -> Draw {
     let masses = [
         uniform(rng, 0.3, 3.0),
@@ -1109,8 +1135,11 @@ pub fn draw(occupant: FdOccupant, rng: &mut SplitMix) -> Draw {
                         dq.t,
                     )
                 }),
+                differenced: None,
             }
         }
+        FdOccupant::LogH => crate::logh::draw_logh(LogHMode::LogH, masses, rng),
+        FdOccupant::LogHTtl => crate::logh::draw_logh(LogHMode::Ttl, masses, rng),
         FdOccupant::AarsethZare => {
             let mut x: Flat;
             loop {
@@ -1138,6 +1167,7 @@ pub fn draw(occupant: FdOccupant, rng: &mut SplitMix) -> Draw {
                         dq.t,
                     )
                 }),
+                differenced: None,
             }
         }
     }
@@ -1175,11 +1205,17 @@ pub fn discrepancy_at(d: &Draw, step: f64, flip: bool) -> f64 {
     let mut analytic = dq.clone();
     analytic.extend(dp.iter().copied());
     analytic.push(dt);
-    let mut fd: Vec<f64> = (0..n)
-        .map(|c| central(&*d.hamiltonian, &d.x, n + c, step))
-        .collect();
-    fd.extend((0..n).map(|c| -central(&*d.hamiltonian, &d.x, c, step)));
-    fd.push(-central(&*d.hamiltonian, &d.x, 2 * n, step));
+    let fd = match &d.differenced {
+        Some(differenced) => differenced(&d.x, step),
+        None => {
+            let mut fd: Vec<f64> = (0..n)
+                .map(|c| central(&*d.hamiltonian, &d.x, n + c, step))
+                .collect();
+            fd.extend((0..n).map(|c| -central(&*d.hamiltonian, &d.x, c, step)));
+            fd.push(-central(&*d.hamiltonian, &d.x, 2 * n, step));
+            fd
+        }
+    };
     let scale = analytic.iter().fold(0.0f64, |a, x| max_or_nan(a, x.abs()));
     let worst = analytic
         .iter()
@@ -1201,7 +1237,7 @@ pub fn discrepancy(occupant: FdOccupant, step: f64, samples: u32, seed: u64, fli
 #[serde(deny_unknown_fields)]
 pub struct FdInput {
     pub description: String,
-    /// `"heggie-eq20"`, `"heggie-eq22"` or `"aarseth-zare"`.
+    /// `"heggie-eq20"`, `"heggie-eq22"`, `"aarseth-zare"`, `"logh"` or `"logh-ttl"` ([`FdOccupant::NAMES`]).
     pub occupant: String,
     /// The relative finite-difference step (REQ-VAL-171, proposed).
     pub step: f64,
@@ -1229,8 +1265,9 @@ impl Gate for HamiltonianFdGate {
     ) -> Result<GateReport, String> {
         let input = FdInput::deserialize(fixture).map_err(|e| format!("refused: {name}: {e}"))?;
         let occupant = FdOccupant::parse(&input.occupant).ok_or(format!(
-            "refused: {name}: no occupant `{}` (heggie-eq20, heggie-eq22 or aarseth-zare)",
-            input.occupant
+            "refused: {name}: no occupant `{}` ({})",
+            input.occupant,
+            FdOccupant::NAMES.join(", ")
         ))?;
         if input.samples == 0 {
             return Err(format!("refused: {name}: no samples"));
@@ -1331,7 +1368,7 @@ pub fn decide_fd(table: &[(f64, f64)]) -> Result<(f64, f64), Vec<f64>> {
     Ok((best.0, round_up_one(FD_MARGIN * best.1)))
 }
 
-/// REQ-VAL-171's proposal for Heggie and Aarseth–Zare: the largest discrepancy per occupant over `ladder`, `samples`
+/// REQ-VAL-171's proposal for Heggie, Aarseth–Zare and logH: the largest discrepancy per occupant over `ladder`, `samples`
 /// states each from `seed`, the decision ([`decide_fd`]), and the sign-flipped control at the proposed step; no
 /// proposal where a row's discrepancy is not finite, the steps named.
 pub fn propose_fd(ladder: &[f64], samples: u32, seed: u64) -> String {
@@ -1341,15 +1378,15 @@ pub fn propose_fd(ladder: &[f64], samples: u32, seed: u64) -> String {
         "# REQ-VAL-171: the Hamiltonian check's step and tolerance, proposed (hamiltonian-fd --propose)\n"
     );
     say!(out,
-        "Heggie (Eq. 20, Eq. 22) and Aarseth–Zare (TASK-M3-78; logH is TASK-M3-75's): {samples} random states each, the \
-         largest |analytic − central difference| over the rates divided by the largest analytic rate, at each relative \
-         step δ·max(|x|, 1).\n"
+        "Heggie (Eq. 20, Eq. 22), Aarseth–Zare and logH (its logH and TTL time modes): {samples} random states each, \
+         the largest |analytic − central difference| over the rates divided by the largest analytic rate, at each \
+         relative step δ·max(|x|, 1).\n"
     );
     say!(
         out,
-        "| step | Heggie Eq. 20 | Heggie Eq. 22 | Aarseth–Zare | largest |"
+        "| step | Heggie Eq. 20 | Heggie Eq. 22 | Aarseth–Zare | logH | logH-TTL | largest |"
     );
-    say!(out, "|---|---|---|---|---|");
+    say!(out, "|---|---|---|---|---|---|---|");
     let mut table = Vec::new();
     for &step in ladder {
         let d: Vec<f64> = FdOccupant::ALL
@@ -1359,10 +1396,12 @@ pub fn propose_fd(ladder: &[f64], samples: u32, seed: u64) -> String {
         let largest = d.iter().copied().fold(0.0f64, max_or_nan);
         say!(
             out,
-            "| {step:e} | {:.3e} | {:.3e} | {:.3e} | {largest:.3e} |",
+            "| {step:e} | {:.3e} | {:.3e} | {:.3e} | {:.3e} | {:.3e} | {largest:.3e} |",
             d[0],
             d[1],
-            d[2]
+            d[2],
+            d[3],
+            d[4]
         );
         table.push((step, largest));
     }

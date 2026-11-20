@@ -610,9 +610,9 @@ fn check_fd(flip: bool) {
         );
         assert_eq!(at(1e-6, true), Ok(Verdict::Fail), "{name}: flipped");
     }
-    assert_eq!(FdOccupant::parse("logh"), None);
+    assert_eq!(FdOccupant::parse("nothing"), None);
     for (input, reads) in [
-        (fd_input("logh", false, 8), "no occupant `logh`"),
+        (fd_input("nothing", false, 8), "no occupant `nothing`"),
         (fd_input("heggie-eq20", false, 0), "no samples"),
     ] {
         let e = HamiltonianFdGate
@@ -965,6 +965,10 @@ negative_control!(
 /// the draw's first three values.
 fn check_draws(swap: bool) {
     for occupant in FdOccupant::ALL {
+        // logH's draws, on their own ranges, are `logh_fd_draws`' (`tests/logh_gates.rs`).
+        if matches!(occupant, FdOccupant::LogH | FdOccupant::LogHTtl) {
+            continue;
+        }
         let mut rng = SplitMix::new(11);
         let (n, ranges): (usize, [(f64, f64); 3]) = match occupant {
             FdOccupant::AarsethZare => (4, [(-1.2, 1.2), (-1.0, 1.0), (-3.0, 1.0)]),
@@ -990,6 +994,7 @@ fn check_draws(swap: bool) {
                     let r3 = at.system.r3(&at.q);
                     assert!(r3 >= 0.1, "{occupant:?}: |R₃| = {r3}");
                 }
+                FdOccupant::LogH | FdOccupant::LogHTtl => unreachable!("skipped above"),
                 FdOccupant::HeggieEq20 | FdOccupant::HeggieEq22 => {
                     let eq20 = (occupant == FdOccupant::HeggieEq20) != swap;
                     let time = if eq20 {
@@ -1035,7 +1040,7 @@ fn check_propose(args: &[&str]) {
     );
     let out = propose_fd(&[1e-5, 1e-6], 4, 7);
     for part in [
-        "| step | Heggie Eq. 20 | Heggie Eq. 22 | Aarseth–Zare | largest |",
+        "| step | Heggie Eq. 20 | Heggie Eq. 22 | Aarseth–Zare | logH | logH-TTL | largest |",
         "| 1e-5 |",
         "| 1e-6 |",
         "The control, one momentum rate's sign flipped",

@@ -21,6 +21,8 @@
 //!   under R-1021's criterion, written before it ran and approved by physics, on `T/8` sync intervals with the
 //!   predictive step limit set not to bind (`heggie_landing_order`; control: the clock-only landing under the same
 //!   interval and setting, which must still read as a landing defect).
+//! - `regularised_step_reversibility_logh`, `…_logh_complete`: the same test's logH arms, each time mode with its own
+//!   leapfrog and with RK4, through logH's map, with a flipped-flag and a left-out control of their own.
 //! - `regularised_step_reversibility`: dd_integrator §5's test 3 on Heggie × RK4 (Eq. 20 and Eq. 22) and Aarseth–Zare +
 //!   RK4, each through its time-reversal map, on its full state, at REQ-VAL-191's criterion inside its domain: each
 //!   residual and verdict printed, each verdict against the pair's profile; at the same `dt`, Cartesian RK4 and
@@ -43,7 +45,8 @@ use kernel::regularisation::heggie::{
     self as hg, march, register, reversed, step_size, HgAdvanced, HgP, HgParams, HgQ, HgRegistered,
     HgStepper, HgSystem, HgWatch, DEFAULT_TIME,
 };
-use kernel::regularisation::pairs::HeggieTime;
+use kernel::regularisation::logh::{self as lh, LhP, LhQ, LhRegistered, LhStepper};
+use kernel::regularisation::pairs::{HeggieTime, LogHMode};
 use validation::az::{self as vaz, Diagnosis, FloorCriterion};
 use validation::{
     negative_control, STEP_REVERSAL_EDGE_F32, STEP_REVERSAL_EDGE_F64, STEP_REVERSAL_EDGE_MAX,
@@ -1335,8 +1338,94 @@ fn measure_az<R: P>(name: &'static str) -> Measured {
     }
 }
 
-/// The built regularised occupants and their profiles' `step_reversible`.
+/// Test 3 on logH × `S` in `mode` at `R`, from [`triple`], through logH's map `(r, p, t, W) → (r, −p, −t, W)`
+/// ([`lh::reversed`]): `STEP(h)`, `Θ`, `STEP(h)`, `Θ`, the residual on the full state `(r, t, p, W)`. `h` is found at
+/// f64 so that the step's `dt/τ` reads [`target`], `τ = √(d³/(mᵢ + mⱼ))` the shortest two-body time over the pairs at
+/// the step's two ends, and the same `h` is taken at `R`.
+fn measure_logh<R: P, S: LhStepper>(name: &'static str, mode: LogHMode) -> Measured {
+    let flat = |q: &LhQ<R>, p: &LhP<R>| -> Vec<f64> {
+        q.r.iter()
+            .flatten()
+            .chain(std::iter::once(&q.t))
+            .chain(p.p.iter().flatten())
+            .chain(std::iter::once(&p.w))
+            .map(|&x| x.into())
+            .collect()
+    };
+    let LhRegistered {
+        system: s64,
+        q: q64,
+        p: p64,
+    } = lh::register(&triple::<f64>(), 1e-300, mode);
+    let tau = |q: &LhQ<f64>| -> f64 {
+        [(1, 2), (2, 0), (0, 1)]
+            .iter()
+            .map(|&(i, j)| {
+                let d = (q.r[i][0] - q.r[j][0]).hypot(q.r[i][1] - q.r[j][1]);
+                (d * d * d / (s64.m[i] + s64.m[j])).sqrt()
+            })
+            .fold(f64::INFINITY, f64::min)
+    };
+    let once = |h: f64| -> (f64, f64) {
+        let (q1, _) = S::regularised_step(&s64, &q64, &p64, h);
+        (q1.t, tau(&q64).min(tau(&q1)))
+    };
+    let mut h64 = target::<R>() * tau(&q64) / s64.dt_ds(&p64);
+    for _ in 0..8 {
+        let (dt, tau) = once(h64);
+        h64 *= target::<R>() * tau / dt;
+    }
+    let (dt, tau) = once(h64);
+    let LhRegistered { system: s, q, p } =
+        lh::register(&triple::<R>(), R::at_width(1e-37, 1e-300), mode);
+    let h: R = v(h64);
+    let (a, b) = S::regularised_step(&s, &q, &p, h);
+    let (a, b) = lh::reversed(&a, &b);
+    let (a, b) = S::regularised_step(&s, &a, &b, h);
+    let (a, b) = lh::reversed(&a, &b);
+    let residual = rel(&flat(&a, &b), &flat(&q, &p)) / R::EPS;
+    Measured {
+        name,
+        ratio: dt / tau,
+        dt,
+        residual,
+        verdict: residual <= STEP_REVERSAL_TOL.number(),
+    }
+}
+
+/// logH's built pairs, each time mode with logH's own leapfrog (× KDK) and with RK4, and their profiles'
+/// `step_reversible`.
+fn built_logh() -> Vec<(&'static str, bool)> {
+    vec![
+        (
+            "logH × KDK",
+            lh::profile::<Kdk>(LogHMode::LogH).step_reversible,
+        ),
+        (
+            "logH-TTL × KDK",
+            lh::profile::<Kdk>(LogHMode::Ttl).step_reversible,
+        ),
+        (
+            "logH × RK4",
+            lh::profile::<Rk4>(LogHMode::LogH).step_reversible,
+        ),
+        (
+            "logH-TTL × RK4",
+            lh::profile::<Rk4>(LogHMode::Ttl).step_reversible,
+        ),
+    ]
+}
+
+/// The built regularised occupants and their profiles' `step_reversible`: Heggie's and Aarseth–Zare's, then logH's
+/// ([`built_logh`]).
 fn built() -> Vec<(&'static str, bool)> {
+    let mut all = built_other();
+    all.extend(built_logh());
+    all
+}
+
+/// Heggie × RK4 under each time transformation, and Aarseth–Zare + RK4.
+fn built_other() -> Vec<(&'static str, bool)> {
     vec![
         (
             "Heggie × RK4 (Eq. 20)",
@@ -1364,7 +1453,8 @@ fn check_complete(measured: &[Measured], profiles: &[(&'static str, bool)]) {
 }
 
 /// Every built occupant is measured, inside the criterion's domain, and its profile's `step_reversible` is its
-/// verdict; a verdict other than R-500's listed one (Aarseth–Zare + RK4 false) is printed for the review queue.
+/// verdict; a verdict other than the listed ones (Aarseth–Zare + RK4 false, logH's TTL leapfrog true) is printed for
+/// the review queue.
 fn check_measured(measured: &[Measured], profiles: &[(&'static str, bool)], edge: f64) {
     check_complete(measured, profiles);
     for &(name, flag) in profiles {
@@ -1383,6 +1473,9 @@ fn check_measured(measured: &[Measured], profiles: &[(&'static str, bool)], edge
         );
         if name == "Aarseth–Zare + RK4" && m.verdict {
             println!("REVIEW QUEUE: Aarseth–Zare + RK4 measured step-reversible, against R-500's listed false");
+        }
+        if name == "logH-TTL × KDK" && !m.verdict {
+            println!("REVIEW QUEUE: logH's TTL leapfrog measured not step-reversible, against the listed true");
         }
     }
 }
@@ -1421,6 +1514,10 @@ fn measure_all<R: P>() -> Vec<Measured> {
         measure_heggie::<R>("Heggie × RK4 (Eq. 20)", HeggieTime::Eq20),
         measure_heggie::<R>("Heggie × RK4 (Eq. 22)", HeggieTime::Eq22),
         measure_az::<R>("Aarseth–Zare + RK4"),
+        measure_logh::<R, Kdk>("logH × KDK", LogHMode::LogH),
+        measure_logh::<R, Kdk>("logH-TTL × KDK", LogHMode::Ttl),
+        measure_logh::<R, Rk4>("logH × RK4", LogHMode::LogH),
+        measure_logh::<R, Rk4>("logH-TTL × RK4", LogHMode::Ttl),
     ];
     let tol = STEP_REVERSAL_TOL.number();
     for x in &m {
@@ -1480,7 +1577,45 @@ negative_control!(
     expected = "is missing from the measurement",
     {
         let mut m = measure_all::<f64>();
-        m.pop();
+        m.retain(|x| x.name != "Aarseth–Zare + RK4");
         check_complete(&m, &built())
+    }
+);
+
+/// logH's arms of the two tests above, with controls of their own: each time mode's leapfrog and RK4 is measured, and
+/// its profile's `step_reversible` is its verdict. The criterion, the register's, written before the run: inside the
+/// domain, a residual of at most `STEP_REVERSAL_TOL` (16) `ε` on the full state reads reversible; the leapfrog is
+/// expected reversible in each mode and RK4 not.
+#[test]
+fn regularised_step_reversibility_logh() {
+    check_measured(&measure_all::<f64>(), &built_logh(), f64::edge());
+    check_measured(&measure_all::<f32>(), &built_logh(), f32::edge());
+}
+
+negative_control!(
+    regularised_step_reversibility_logh,
+    "a profile with logH's TTL leapfrog's step_reversible flipped",
+    expected = "its profile's step_reversible differs from its measured verdict",
+    {
+        let mut profiles = built_logh();
+        profiles[1].1 = !profiles[1].1;
+        check_measured(&measure_all::<f64>(), &profiles, f64::edge())
+    }
+);
+
+#[test]
+fn regularised_step_reversibility_logh_complete() {
+    check_complete(&measure_all::<f64>(), &built_logh());
+    check_complete(&measure_all::<f32>(), &built_logh());
+}
+
+negative_control!(
+    regularised_step_reversibility_logh_complete,
+    "a measurement set with logH's TTL leapfrog left out",
+    expected = "is missing from the measurement",
+    {
+        let mut m = measure_all::<f64>();
+        m.retain(|x| x.name != "logH-TTL × KDK");
+        check_complete(&m, &built_logh())
     }
 );

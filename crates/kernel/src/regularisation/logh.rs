@@ -32,6 +32,13 @@
 //! signal (the drift denominator below `TINY`, or either denominator not positive) and the entry-cap hit are counted,
 //! non-terminal.
 //!
+//! **Through the occupant seam** ([`LogH`], its [`Regularisation`] impl) the march is the same one, cut into `ADVANCE`
+//! calls. logH has no chart, so its positions and momenta are the Cartesian `(r, p)` the seam already passes; what is
+//! its own, `B`, `W`, the interval clock and the running step total, crosses from call to call in the trajectory's
+//! carried buffer ([`Carried`]; [`carried_state`]). A call registers only where the buffer holds no registration, at
+//! `t = 0` in a run from its IC, and marches on from where the last call stood ([`march_on`]); a registration at a
+//! later boundary re-freezes `B` and resets `W`, a re-registration, and is counted.
+//!
 //! **The energy** ([`LhSystem::energy`]) is the Cartesian `K − U` of the state, there being no other; `K + B − U` is
 //! its change since registration ([`LhSystem::residual`]). **The time-reversal map** ([`reversed`]):
 //! `(r, p, t, W) → (r, −p, −t, W)`, `B` held.
@@ -39,17 +46,21 @@
 //! No precision-dependent constant is in a branch here: `TINY` is the one excepted floor, and the landing's only other
 //! constants are its two integer caps. The step control's values are read from [`LhParams`], never from a literal.
 
+use core::marker::PhantomData;
+
 use super::az::{
-    add, dot, finite, floored, least, norm, over_allowance, scale, sub, two, AzReal, End,
-    ExplicitTest, V,
+    add, boundary_at_or_before, dot, finite, floored, least, norm, over_allowance, reached, scale,
+    sub, two, AzReal, End, ExplicitTest, V,
 };
 use super::dt_max::DtMax;
 use super::form::{Flow, Form};
 use super::pairs::LogHMode;
-use crate::driver::advance::Cadence;
+use super::{Kind, Regularisation};
+use crate::driver::advance::{AdvanceParams, AdvanceReal, Advanced, Cadence, Reached};
+use crate::driver::carried::Carried;
 use crate::occupant::kdk::Kdk;
 use crate::occupant::rk4::Rk4;
-use crate::occupant::{CapabilityProfile, Geom, State};
+use crate::occupant::{CapabilityProfile, Geom, State, Stepper};
 use crate::physics::energy::{kinetic, potential};
 use crate::physics::force::force;
 use crate::physics::PairGeom;
@@ -441,7 +452,7 @@ pub fn leapfrog<R: AzReal>(system: &LhSystem<R>, q: &LhQ<R>, p: &LhP<R>, h: R) -
 ///
 /// The plan is unclear here; chose to fill the slot for KDK and RK4 only, because the contract defines those two pairs
 /// (logH × KDK is logH's own leapfrog, logH × RK4 classical RK4 on `(r, p, t, W)`) and leaves logH × Euler and the
-/// Yoshidas to be written; a stepper without an impl fails to build under logH.
+/// Yoshidas to be written; a stepper without an impl fails to build under logH, through the seam too ([`Slot`]).
 pub trait LhStepper {
     /// The profile of the pair this stepper forms with logH in the time mode `mode`.
     fn pair_profile(mode: LogHMode) -> CapabilityProfile;
@@ -924,6 +935,20 @@ fn interval<S: LhStepper, R: AzReal, C: Cadence<R>, X: LhWatch<R>>(
     }
 }
 
+/// Where a march stands between two of its intervals: the state with its interval clock and `W`, the sync boundary it
+/// stands on, and the trajectory's counts so far.
+#[derive(Clone, Copy, Debug)]
+pub struct LhStanding<R> {
+    /// The positions and the interval clock.
+    pub q: LhQ<R>,
+    /// The momenta and `W`.
+    pub p: LhP<R>,
+    /// The sync boundary the state stands on, `k`.
+    pub boundary: u32,
+    /// The trajectory's counts, its running step total among them.
+    pub count: LhCount<R>,
+}
+
 /// logH's direct march over the sync grid, registered once: the Cartesian `state` at `t = 0`, registered under
 /// `params.mode` and marched to boundary `k_target`, the physical time `k_target·Δ_sync`, with the stepper `S` and the
 /// watch `watch`, each boundary a sampling cadence that touches neither the state, `B` nor `W`. On a landing the time
@@ -941,14 +966,37 @@ pub fn march<S: LhStepper, R: AzReal, C: Cadence<R>, X: LhWatch<R>>(
         q: q0,
         p: p0,
     } = register(state, params.tiny, params.mode);
+    let from = LhStanding {
+        q: q0,
+        p: p0,
+        boundary: 0,
+        count: LhCount::new(),
+    };
+    march_on::<S, R, C, X>(&system, state, from, k_target, params, cadence, watch)
+}
+
+/// [`march`] from where it stands, with no registration: `system` the one registered at `t = 0`, `state` the Cartesian
+/// state at the boundary `from` stands on (returned as it is where no interval is marched), and `from` the state, `W`
+/// and counts the march has carried to there. [`march`] is this from its own registration at boundary 0, and a march
+/// cut at any of its landings and taken up again here is the uncut march, step for step.
+#[inline]
+pub fn march_on<S: LhStepper, R: AzReal, C: Cadence<R>, X: LhWatch<R>>(
+    system: &LhSystem<R>,
+    state: &State<R>,
+    from: LhStanding<R>,
+    k_target: u32,
+    params: &LhParams<R>,
+    cadence: &mut C,
+    watch: &mut X,
+) -> LhAdvanced<R> {
     let mut s = *state;
-    let (mut q, mut p) = (q0, p0);
-    let mut k = 0;
-    let mut count = LhCount::new();
+    let (mut q, mut p) = (from.q, from.p);
+    let mut k = from.boundary;
+    let mut count = from.count;
     let mut t_s = R::default();
     while k < k_target && count.end == End::Marching {
         q.t = R::default();
-        let out = interval::<S, R, C, X>(&system, (q, p), k, params, &mut count, cadence, watch);
+        let out = interval::<S, R, C, X>(system, (q, p), k, params, &mut count, cadence, watch);
         q = out.q;
         p = out.p;
         s = system.image(&q, &p);
@@ -964,8 +1012,212 @@ pub fn march<S: LhStepper, R: AzReal, C: Cadence<R>, X: LhWatch<R>>(
         boundary: k,
         t: R::count(k) * params.delta_sync + t_s,
         count,
-        system,
+        system: *system,
         q,
         p,
+    }
+}
+
+// ── The occupant seam ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// Where logH's values come from: the occupant's configuration, a type, so that the composed occupant stays a type
+/// (Part 2b). Its values are calibrations, the time mode among them ([`LhParams::mode`]).
+pub trait LhConfig {
+    /// The step control's values at `R`.
+    fn params<R: AzReal>() -> LhParams<R>;
+}
+
+/// logH with the values of `C`, in the time mode `C` names.
+#[derive(Clone, Copy, Debug)]
+pub struct LogH<C>(PhantomData<C>);
+
+/// The stepper `S` in logH's slot through the seam, by its form ([`Stepper::FORM`]): KDK is logH's own leapfrog and
+/// RK4 the classical step, the two pairs [`LhStepper`] defines. Euler, Yoshida-4 and Yoshida-6 under logH are not
+/// defined, and composing one with logH fails to build where the pair is reached, as a stepper with no form does
+/// under any regularisation.
+#[derive(Clone, Copy, Debug)]
+pub struct Slot<S>(PhantomData<S>);
+
+impl<S: Stepper> Slot<S> {
+    /// Whether the pair is logH × RK4; logH × KDK otherwise. Evaluated only where a pair is reached.
+    const RK4: bool = match S::FORM {
+        Form::Kdk => false,
+        Form::Rk4 => true,
+        Form::Euler | Form::Yoshida4 | Form::Yoshida6 => panic!(
+            "logH × Euler, × Yoshida-4 and × Yoshida-6 are not defined (integrator_contract Part 2b, logH's steps)"
+        ),
+    };
+}
+
+impl<S: Stepper> LhStepper for Slot<S> {
+    #[inline]
+    fn pair_profile(mode: LogHMode) -> CapabilityProfile {
+        if Self::RK4 {
+            <Rk4 as LhStepper>::pair_profile(mode)
+        } else {
+            <Kdk as LhStepper>::pair_profile(mode)
+        }
+    }
+
+    #[inline]
+    fn regularised_step<R: AzReal>(
+        system: &LhSystem<R>,
+        q: &LhQ<R>,
+        p: &LhP<R>,
+        h: R,
+    ) -> (LhQ<R>, LhP<R>) {
+        if Self::RK4 {
+            <Rk4 as LhStepper>::regularised_step(system, q, p, h)
+        } else {
+            <Kdk as LhStepper>::regularised_step(system, q, p, h)
+        }
+    }
+}
+
+/// logH's own numbers in a trajectory's carried buffer: `(B, W, t)`, the first three of the fourteen floats in that
+/// order, the rest 0. Its positions and momenta are not there: they are the Cartesian `(r, p)`.
+#[inline]
+pub fn carried_state<R: AzReal>(carried: &Carried<R>) -> (R, R, R) {
+    (carried.x[0], carried.x[1], carried.x[2])
+}
+
+/// Writes logH's `B`, `W`, interval clock `t` and running step total into `carried`, registered ([`carried_state`]'s
+/// order). The re-registration count is left as it stood.
+#[inline]
+pub fn carry<R: AzReal>(carried: &mut Carried<R>, b: R, w: R, t: R, steps: u32) {
+    carried.x = [R::default(); 14];
+    carried.x[0] = b;
+    carried.x[1] = w;
+    carried.x[2] = t;
+    carried.steps = steps;
+    carried.registered = 1;
+}
+
+/// logH's seam `ADVANCE` (Part 2a): `t_now` and `t_target` on the macro-step grid, physical time `index·dt_macro`,
+/// mapped to the sync grid, the latest boundary at or before each ([`boundary_at_or_before`]).
+///
+/// Where `carried` holds no registration, `state` is registered into it: `B = U − K` frozen and `W = Ω(r)`. That is the
+/// march's one registration when it happens at boundary 0, and a re-registration, counted in
+/// [`Carried::re_registrations`], at any later boundary. The march then goes on under the carried `B`, from the carried
+/// `W` with the carried step total ([`march_on`]), and what it reached is written back.
+///
+/// The plan is unclear here (it lists `B`, `W` in the TTL mode and the clock as logH's carried state, and says nothing
+/// of `(r, p)`); chose to read the positions and momenta from `state` at every call and to carry `B`, `W` and the
+/// clock, because logH has no chart: its `(r, p)` are the Cartesian state the seam passes, bit for bit, so reading
+/// them rebuilds nothing, and a second copy in the buffer could only disagree with the first. `W` is carried in the
+/// logH mode too, where nothing reads it, so that the buffer is the direct march's state whole in either mode.
+///
+/// The interval clock is carried as the march left it and, as Heggie's, is not read: a call that can be marched on
+/// ends on a sync boundary and the next interval restarts its clock at 0. The running step total is carried because
+/// the budget reads the total since `t = 0`.
+///
+/// **Only a call that ended on a boundary can be marched on**, as under Heggie ([`super::heggie`]): a march that ended
+/// between boundaries leaves a mid-interval state, which a further call would take as standing on `k_now`. Such a
+/// march is never marched on: the wrapper stops at a failed or terminal run, and a spent budget stays spent, the
+/// carried total being checked before any further step.
+#[inline]
+fn advance_seam<C: LhConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
+    state: &State<R>,
+    t_now: u32,
+    t_target: u32,
+    params: &AdvanceParams<R>,
+    cadence: &mut Cd,
+    carried: &mut Carried<R>,
+) -> (Advanced<R>, Reached) {
+    let values = C::params::<R>();
+    let k_now = boundary_at_or_before(R::count(t_now) * params.dt_macro, values.delta_sync);
+    let k_target = boundary_at_or_before(R::count(t_target) * params.dt_macro, values.delta_sync);
+    if carried.registered == 0 {
+        let fresh = register(state, values.tiny, values.mode);
+        carry(carried, fresh.system.b, fresh.p.w, fresh.q.t, carried.steps);
+        if k_now > 0 {
+            carried.re_registrations += 1;
+        }
+    }
+    let (b, w, t) = carried_state(carried);
+    let system = LhSystem::new(state.m, b, values.tiny, values.mode);
+    let from = LhStanding {
+        q: LhQ { r: state.r, t },
+        p: LhP { p: state.p, w },
+        boundary: k_now,
+        count: LhCount {
+            steps: carried.steps,
+            ..LhCount::new()
+        },
+    };
+    let out = march_on::<Slot<S>, R, Cd, ExplicitTest>(
+        &system,
+        state,
+        from,
+        k_target,
+        &values,
+        cadence,
+        &mut ExplicitTest,
+    );
+    carry(carried, b, out.p.w, out.q.t, out.count.steps);
+    (
+        Advanced {
+            state: out.state,
+            geom: out.geom,
+            substeps: out.count.accepted,
+        },
+        reached(out.count.end, out.boundary, k_target),
+    )
+}
+
+impl<C: LhConfig> Regularisation for LogH<C> {
+    const KIND: Kind = Kind::LogH;
+
+    /// The pair's profile in `C`'s time mode ([`LhStepper::pair_profile`]). The mode is read from `C`'s values at
+    /// f32; it is the same at every width.
+    #[inline]
+    fn profile<S: Stepper>() -> CapabilityProfile {
+        Slot::<S>::pair_profile(C::params::<f32>().mode)
+    }
+
+    /// The seam's `ADVANCE` with nothing carried: the call registers `state` and marches from it. It is the march
+    /// registered once only as a run's first marching call; a caller that calls again carries the state
+    /// ([`Regularisation::advance_carrying`]).
+    #[inline]
+    fn advance<S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
+        state: &State<R>,
+        _geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut Cd,
+    ) -> Advanced<R> {
+        let mut none = Carried::unregistered();
+        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, &mut none).0
+    }
+
+    /// [`Regularisation::advance`], nothing carried, with how the march ended ([`reached`]).
+    #[inline]
+    fn advance_reaching<S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
+        state: &State<R>,
+        _geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut Cd,
+    ) -> (Advanced<R>, Reached) {
+        let mut none = Carried::unregistered();
+        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, &mut none)
+    }
+
+    /// The seam's `ADVANCE` with the trajectory's carried state, and how the march ended: a landing on the boundary at
+    /// or before `t_target` is the target reached, whatever the steps it took, and a march ended non-finite or by its
+    /// budget ends the run, latched where it stopped ([`reached`]).
+    #[inline]
+    fn advance_carrying<S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
+        state: &State<R>,
+        _geom: &Geom<R>,
+        t_now: u32,
+        t_target: u32,
+        params: &AdvanceParams<R>,
+        cadence: &mut Cd,
+        carried: &mut Carried<R>,
+    ) -> (Advanced<R>, Reached) {
+        advance_seam::<C, S, R, Cd>(state, t_now, t_target, params, cadence, carried)
     }
 }
