@@ -20,8 +20,8 @@
 //! and narrowed once to f32; the march (Heggie × RK4 at f32) uses the four operations, a fused multiply-add and a
 //! square root, each correctly rounded under IEEE 754, and no transcendental; each sample is computed alone, so the
 //! thread count cannot change it; and the image is a table lookup of the outcome. The golden is generated on Linux
-//! x86-64, where CI also runs. On macOS arm64 the same frame at horizon 5 was measured to match exactly; this one, at
-//! horizon 3, is not yet run there. If it ever fails on one platform only, that is a finding about the kernel's
+//! x86-64, where CI also runs. On macOS arm64 it was measured to match exactly, as it does between debug and release
+//! builds; Windows is unmeasured. If it ever fails on one platform only, that is a finding about the kernel's
 //! determinism: report it, do not loosen this.
 //!
 //! **On a failure** the test says how many pixels differ and where the first is, and writes the frame it computed to
@@ -237,7 +237,31 @@ fn the_frame_is_the_golden_frame() {
 
 negative_control!(
     the_frame_is_the_golden_frame,
-    "the same view at half the horizon, before the collisions between t = 1.5 and t = 3",
-    expected = "the frame is not the golden frame",
-    check_golden(&frame(HORIZON / 2.0), "control")
+    "two frames that must not pass: the view at half the horizon, a physics change, and the golden's own frame with \
+     its rows reversed, which keeps the histogram and so can only be caught by the image",
+    expected = "its histogram is the stored one",
+    {
+        let short = frame(HORIZON / 2.0);
+        let passed = std::panic::catch_unwind(|| check_golden(&short, "control_half_horizon"));
+        assert!(
+            passed.is_err(),
+            "the frame at half the horizon passed for the golden frame"
+        );
+        check_golden(&rows_reversed(&frame(HORIZON)), "control_rows_reversed")
+    }
 );
+
+/// `field` with its rows in the opposite order, top for bottom.
+#[cfg(feature = "controls")]
+fn rows_reversed(field: &Field) -> Field {
+    Field {
+        size: field.size,
+        outcomes: field
+            .outcomes
+            .chunks(field.size[0])
+            .rev()
+            .flatten()
+            .copied()
+            .collect(),
+    }
+}
