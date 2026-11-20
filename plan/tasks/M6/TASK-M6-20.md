@@ -9,7 +9,7 @@
 - **Size:** ~380 lines
 
 ## Goal
-The refinement reports the corpus requires: per chart the leaf count, `alpha` distribution and tree shape (leaf counts compared within a chart only); stop-reason breakdowns weighted by the subtree each stop forecloses, never a bare leaf count; the binding axis (converged / budget-bound / cap-bound) per frame, with a cap-bound image saying so; `dp/u` beside `tol/u` in every refinement benchmark; and the anisotropic-split cost count.
+The refinement reports the corpus requires: per chart the leaf count, `alpha` distribution and tree shape (leaf counts compared within a chart only); stop-reason breakdowns weighted by the subtree each stop forecloses, never a bare leaf count; the binding axis (converged / budget-bound / cap-bound) per frame, with a cap-bound image saying so; `dp/u` beside `tol/u` in every refinement benchmark; the anisotropic-split cost count; and the horizon mark: a quad whose playhead exceeds its own `t_max` is marked as past its horizon, an annotation of refinement that never gates it (`principia_dd_predictability_horizon.md` §4.2: "a quad whose playhead exceeds its own `t_max` is marked as past its horizon. `t_max` annotates refinement; it doesn't gate it").
 
 ## References
 - `docs/design/principia_chart_reference.md` § "5.3 What to report per chart"
@@ -24,9 +24,10 @@ The refinement reports the corpus requires: per chart the leaf count, `alpha` di
 - `docs/design/principia_dd_refinement_policy.md` § "5. WHERE THE SAVING GENERALISES — and where it does not"
 - `docs/read_first/principia_01_pitfalls.md` § "6. READ `dp/u` BEFORE `tol/u`"
 - `docs/read_first/principia_00_philosophy.md` § "8.1 An 8D BVH over the manifold, instead of a per-slice quadtree"
+- `docs/design/principia_dd_predictability_horizon.md` § "4.2 The horizon is a field, not a constant"
 
 ## Deliverables
-- `crates/engine/src/telemetry/refine_report.rs`: the per-chart report, foreclosed-weight stop breakdown, binding axis in the frame record.
+- `crates/engine/src/telemetry/refine_report.rs`: the per-chart report, foreclosed-weight stop breakdown, binding axis in the frame record, and the past-its-horizon mark per quad.
 - `xtask` bench report template carrying `dp/u` next to `tol/u`.
 - `cargo xtask gate anisotropic-splits` on the standard charts.
 

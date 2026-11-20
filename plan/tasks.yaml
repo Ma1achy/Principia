@@ -1874,6 +1874,12 @@
   depends_on:
   - TASK-M8-26
   - TASK-M8-27
+- id: TASK-C8-02
+  milestone: C8
+  title: 'Profiler › Run benchmark…: the dialog, the run, the results sheet and Apply suggested tier'
+  depends_on:
+  - TASK-M8-28
+  - TASK-C8-01
 - id: TASK-M8-29
   milestone: C8
   title: 'Failing gracefully: no-GPU fallback, device loss, and every degradation shown and logged'
@@ -1954,6 +1960,11 @@
   depends_on:
   - TASK-M8-26
   - TASK-M8-38
+- id: TASK-C8-01
+  milestone: C8
+  title: 'Benchmark scenarios as data, one runner, and `prin bench run/show/report/compare`'
+  depends_on:
+  - TASK-M8-39
 - id: TASK-M8-40
   milestone: C8
   title: 'Browser gates: Tier-N on real browsers, and the Playwright fragment goldens'
@@ -2497,6 +2508,11 @@
   - TASK-M3-34
   - TASK-M8-16
   - TASK-M8-48
+- id: TASK-C9-01
+  milestone: C9
+  title: 'The closure field as a stability reading: well width and `alpha`, and Szebehely–Peters located on it'
+  depends_on:
+  - TASK-M4-15
 # The PC's own work (plan/PLAN.md § "The PC", plan/MACHINES.md): machine: pc, never dispatched from the Mac, not a checkpoint, so the
 # progress grid leaves it out.
 - id: TASK-M0-58
