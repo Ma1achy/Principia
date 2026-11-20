@@ -26,8 +26,12 @@
 //! `ADVANCE` and `δ⃗` through the same stages, with a [`JointCadence`] after each internal step. A stepper's is the
 //! blanket impl's; an occupant that owns its time mapping has none until its own is built: marching a
 //! displacement-form shadow beside it fails to build. Heggie × RK4's joint step is
-//! [`crate::regularisation::heggie_joint`] (TASK-M3-74); its joint march rides Heggie's seam `ADVANCE`, which is not
-//! yet built (TASK-M3-75).
+//! [`crate::regularisation::heggie_joint`] (TASK-M3-74); its joint march, which rides Heggie's seam `ADVANCE`
+//! ([`crate::regularisation::heggie::Heggie`]), is not yet built.
+//!
+//! **The carried state** ([`Advance::advance_carrying`]; Part 2a): the wrapper's call passes the trajectory's carried
+//! buffer ([`Carried`]) in and out beside `(m, r, p)`, so an occupant that registers once marches on from its own
+//! state at every call. A stepper carries nothing.
 //!
 //! **Determinism** (REQ-INT-007, REQ-INT-023): the number and size of the steps are a function of the integer span, the
 //! wrapper's `N_sub` and the sim key's `dt_macro` only; nothing reads a clock.

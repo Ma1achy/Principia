@@ -1184,9 +1184,13 @@ pub fn carry<R: AzReal>(carried: &mut Carried<R>, q: &HgQ<R>, p: &HgP<R>, h: R, 
 /// what it reached is written back. `(r, p)` of `state` are read only by a registration: the regularised state is
 /// never rebuilt from them. `substeps` is the steps the cadence followed in this call.
 ///
-/// The interval clock is carried as the march left it. At a landing it is the boundary's `Δ_sync`, and the next
-/// interval restarts it at 0, so between calls it holds nothing the march reads; it is kept so that the buffer is the
-/// march's whole state wherever a call ends, a march ended between boundaries included.
+/// The interval clock is carried as the march left it. The plan is unclear here (it asks for the clock to be carried
+/// so that a re-boot reproduces the live march); chose to carry it and to leave the march as it is, because a call ends
+/// on a sync boundary, where the clock is `Δ_sync` exactly, and the next interval restarts it at 0, so no interval
+/// reads the clock it is handed and making one read it would change the direct march. It is kept so that the buffer
+/// is the march's whole state wherever a call ends, a march ended between boundaries included. The running step
+/// total is carried for the same equality: the budget reads the total since `t = 0` (R-604), so a call that started
+/// its own would run on where the direct march has spent its budget.
 #[inline]
 fn advance_seam<C: HgConfig, S: Stepper, R: AdvanceReal, Cd: Cadence<R>>(
     state: &State<R>,

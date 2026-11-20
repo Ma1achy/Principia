@@ -17,7 +17,7 @@ The payload is **two physical buffers, one logical entity**, split by *when the 
 
 **Indexing & lifecycle.** `word_buffer[i]` is the word for the sample whose state is `simstate_buffer[i]` — same `(quad, sample, copy)`→index map, per-copy. The two buffers are **one logical payload** `f(IC, sim key, t)`: they allocate, evict, recompute, and resume together, and share the cache compatibility signature (caching contract). A `SimState` at index `i` and a word at index `i` must always describe the same trajectory at the same playhead — never desynchronise.
 
-*13 Nov 2026 (R-992, RQ-808 (a)):* the payload gains a regularised occupant's carried state: under Heggie, its `Qᵢ`, `Pᵢ` and `h`; under logH, its `B` and, in TTL mode, `W`; each registered once at `t = 0` and carried across the integrator's `ADVANCE` calls, so live march, catch-up and re-boot reach the same state bitwise and neither occupant re-registers (integrator contract Part 2a). It is part of the one logical payload `f(IC, sim key, t)` and allocates, evicts, recomputes and resumes with it. A schema change: its layout, widths and place (in `SimState` or a buffer beside it), with the memory figures of § 7 recomputed, are a definition the task that builds it writes in § 1, physics- and perf-reviewed (REQ-PAY-114). *Corrected 13 Nov 2026 (physics review 5886173032 of #515, F5):* Heggie's carried state includes its own clock, as option (a) reads ("13 numbers and the clock"), so that re-boot reproduces live march bitwise.
+**The carried buffer.** A third buffer sits beside the two, at the same index: the carried regularised state of the trajectory's occupant (§1, "The carried regularised state"). Under Heggie it holds `Qᵢ`, `Pᵢ`, `h`, the interval clock and the running step total, registered once at `t = 0` and carried across the integrator's `ADVANCE` calls, so live march, catch-up and re-boot reach the same state bitwise and the occupant never re-registers (integrator contract Part 2a). It is part of the one logical payload `f(IC, sim key, t)` and allocates, evicts, recomputes and resumes with it. It is a buffer of its own, not fields of `SimState`, so `SimState`'s layout, its ledger rows and the schema version are unchanged, and it is allocated only under an occupant that uses it.
 
 ---
 
@@ -313,6 +313,18 @@ and **336 B** (332 used) as generated until then, with the collision floor's 8 B
 *was* "**528 B** from TASK-M3-41 on (524 used, …) and `SimStateBase` **336 B** (332 used, …)" before it; *was* 520 B,
 516 used, and 328 B, 324 used, before R-603's and R-605's two u32s; perf review 5661999637 of PR #293, P1). A new instantiation
 would be one more row, as philosophy §7.1 says, and the generator would not fork.
+
+**The carried regularised state** (`kernel::driver::carried::Carried`; integrator contract Part 2a). One element per trajectory, in a buffer beside `SimState` at the trajectory's own index, as the word buffer is. `repr(C)`, no padding:
+
+| Offset (f32 / f64) | Field | Type | Meaning |
+|---|---|---|---|
+| 0 / 0 | `x` | 14 × `Real` | the occupant's own numbers; under Heggie `Q₀, Q₁, Q₂` (6), `P₀, P₁, P₂` (6), `h`, the interval clock `t` |
+| 56 / 112 | `steps` | u32 | the running total of the occupant's steps since `t = 0`, which its step budget reads |
+| 60 / 116 | `re_registrations` | u32 | registrations made at a sync boundary after `t = 0` (integrator contract § "The profile gains a field") |
+| 64 / 120 | `registered` | u32 | 1 once an occupant has registered into `x`, 0 before |
+| 68 / 124 | `reserved` | u32 | 0 |
+
+**72 B** at f32, aligned to 4; **128 B** at f64, aligned to 8. The floats' meaning is the occupant's that wrote them: the layout is the slot's, so logH's `B` and `W` take two of the fourteen without a new layout. The wrapper starts it all zero for a run from its IC, passes it into every `ADVANCE` call, and hands it back with the `SimState`; a resume reads both. Under a stepper alone nothing reads or writes it and it need not be allocated; under Aarseth–Zare only the count is written. It is CPU-side today: no GPU pass binds it yet, and binding it is a new buffer, not a change to `SimState`.
 
 **`ICDescriptor` follows `Real` too (R-313).** The payload is `SimState` + `ICDescriptor`; the descriptor's float fields have the width of `Real`, and R-86's 64 B is its f32 instantiation (generation-root §3.6). Its f64 and DoubleF64 layouts are part of REQ-PAY-087's definition.
 
@@ -801,6 +813,8 @@ fn set_last_symbol(packed_a: u32, sym: u32) -> u32 {
 > **The collision floor's 8 B (13 Nov 2026, TASK-M3-71, R-973).** The record's own 8 B (§1) make the generated widths
 > 152 / 104 B, the widths the table below is at, so its figures hold as generated now. From TASK-M3-41 on the widths are
 > 160 / 112 B: hot 1.327 / 0.929 / 0.464 / 5.308 / 1.858 GB, totals 1.460 / 1.062 / 0.531 / 5.839 / 2.123 GB.
+
+**The carried buffer adds 72 B per sample at f32** under a regularised occupant that carries its state (§1), `×(E+1)` like the word buffer, and nothing under a stepper alone. On the table's rows that is 0.597 GB at 1080p E=3, 0.299 GB at 1080p E=1, 2.389 GB at 4K E=3 and 1.194 GB at 4K E=1, on top of each row's total (72 B × (E+1) × pixels; decimal GB). The rows below are without it. A Benettin shadow marched beside a regularised sample would need an element of its own; its joint march is not built, so that is not counted.
 
 Per-sample: hot `SimState` **152 B (FTLE-on) / 104 B (FTLE-off)** effective as generated, with the collision floor's 8 B, **160 B / 112 B** from TASK-M3-41 on (R-603, R-605; *was* "**144 B (FTLE-on) / 96 B (FTLE-off)** effective as generated until TASK-M3-41, **152 B / 104 B** from TASK-M3-41 on", before the collision floor's 8 B); the table below is at 152 / 104 B + word buffer **16 B** (when symbolic features active; separable — also `×(E+1)`, no shadow, appended in place). Scales as `bytes × (E+1) × live_pixels`. Exact figures (decimal GB, 1920×1080 / 3840×2160):
 

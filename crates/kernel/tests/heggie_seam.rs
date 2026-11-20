@@ -20,6 +20,8 @@
 //! - `regularised_state_carried_budget`: the running step total crosses the calls, so a budget that the direct march
 //!   spends in a later interval is spent by the seam's march at the same step, the state bitwise. Control: a seam that
 //!   starts its step total afresh at each call.
+//! - `regularised_state_carried_layout`: the buffer's element is 72 bytes at f32 and 128 at f64, all zero before a
+//!   registration, with Heggie's `Q`, `P`, `h` and clock in payload §1's order. Control: `h` and the clock swapped.
 //! - `regularised_re_registrations_visible`: the count a consumer reads from the buffer: 0 for Heggie through the
 //!   wrapper, one per boundary marched on from after `t = 0` for Aarseth–Zare, and 1 for a Heggie call handed no
 //!   carried state after `t = 0`. Control: a seam that does not pass the buffer on.
@@ -52,7 +54,7 @@ use kernel::payload::{
 use kernel::regularisation::az::{AarsethZare, AzConfig, AzParams, AzReal, End, ExplicitTest};
 use kernel::regularisation::form::Form;
 use kernel::regularisation::heggie::{
-    self as hg, carried_state, Heggie, HgAdvanced, HgConfig, HgParams, DEFAULT_TIME,
+    self as hg, carried_state, Heggie, HgAdvanced, HgConfig, HgP, HgParams, HgQ, DEFAULT_TIME,
 };
 use kernel::regularisation::pairs::{
     Choice, DefaultOccupant, HeggieTime, Pair, PairTable, Status, STEPPERS,
@@ -541,7 +543,7 @@ fn seamed<R: P>(call: SeamCall<R>, dt_macro: f64, n: u32) -> Seamed<R> {
 }
 
 /// The bits of Heggie's `(Q, P, h)` and clock, in the buffer's order.
-fn regularised_bits<R: P>(q: &hg::HgQ<R>, p: &hg::HgP<R>, h: R) -> Vec<u64> {
+fn regularised_bits<R: P>(q: &HgQ<R>, p: &HgP<R>, h: R) -> Vec<u64> {
     q.q.iter()
         .chain(p.p.iter())
         .flatten()
@@ -1041,6 +1043,77 @@ negative_control!(
     "a landing with its retakes off, which keeps a clock past the boundary",
     expected = "the landed clock is the boundary's at every call's end",
     check_clock::<f64>(clocks::<OvershotRk4, f64>(), clocks::<OvershotRk4, f64>())
+);
+
+// ── regularised_state_carried_layout ───────────────────────────────────────────────────────────────────────────
+
+/// Heggie's write into the buffer, as the seam makes it.
+type Pack = fn(&mut Carried<f64>, &HgQ<f64>, &HgP<f64>, f64, u32);
+
+/// The buffer's element as payload §1 states it: 72 bytes aligned to 4 at f32, 128 aligned to 8 at f64; every field 0
+/// before a registration; and Heggie's numbers in the order `Q₀, Q₁, Q₂, P₀, P₁, P₂, h, t`, read back as written.
+fn check_layout(pack: Pack) {
+    use core::mem::{align_of, size_of};
+    let sizes = (
+        size_of::<Carried<f32>>(),
+        align_of::<Carried<f32>>(),
+        size_of::<Carried<f64>>(),
+        align_of::<Carried<f64>>(),
+    );
+    println!(
+        "regularised_state_carried_layout: (size, align) at f32 and f64 {sizes:?} (criterion (72, 4, 128, 8))"
+    );
+    assert_eq!(sizes, (72, 4, 128, 8), "the element's widths");
+    let fresh = Carried::<f64>::unregistered();
+    assert_eq!(
+        (
+            fresh.x,
+            fresh.steps,
+            fresh.re_registrations,
+            fresh.registered,
+            fresh.reserved
+        ),
+        ([0.0; 14], 0, 0, 0, 0),
+        "an unregistered buffer is all zero"
+    );
+    let q = HgQ {
+        q: [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]],
+        t: 14.0,
+    };
+    let p = HgP {
+        p: [[7.0, 8.0], [9.0, 10.0], [11.0, 12.0]],
+    };
+    let mut carried = Carried::unregistered();
+    pack(&mut carried, &q, &p, 13.0, 99);
+    assert_eq!(
+        carried.x,
+        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0],
+        "Heggie's numbers in the buffer's order: Q, P, then h, then the clock"
+    );
+    assert_eq!(
+        (carried.steps, carried.registered, carried.re_registrations),
+        (99, 1, 0),
+        "the step total and the registration are written, the count left"
+    );
+    assert_eq!(
+        carried_state(&carried),
+        (q, p, 13.0),
+        "read back as written"
+    );
+}
+
+#[test]
+fn regularised_state_carried_layout() {
+    check_layout(hg::carry::<f64>);
+}
+
+negative_control!(
+    regularised_state_carried_layout,
+    "a write with h and the clock swapped",
+    expected = "Heggie's numbers in the buffer's order",
+    check_layout(|carried, q, p, h, steps| {
+        hg::carry(carried, &HgQ { q: q.q, t: h }, p, q.t, steps)
+    })
 );
 
 // ── regularised_re_registrations_visible ───────────────────────────────────────────────────────────────────────

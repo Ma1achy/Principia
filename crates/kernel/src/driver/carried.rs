@@ -20,7 +20,11 @@
 //!
 //! **The re-registration count** ([`Carried::re_registrations`]; integrator_contract § "The profile gains a field"):
 //! the registrations the trajectory's occupant made at a sync boundary after `t = 0`. It is 0 for an occupant that
-//! registers once and whose state is carried, and one per boundary marched on from for Aarseth–Zare.
+//! registers once and whose state is carried, and one per boundary marched on from for Aarseth–Zare. The plan is
+//! unclear here (a profile field, a per-trajectory count or both, and whether the registration at `t = 0` counts);
+//! chose a per-trajectory count here, because the profile is one static row per pair and cannot hold a number that
+//! differs between trajectories, and chose not to count the registration at `t = 0`, because every regularised
+//! occupant makes that one, and what sets the methods apart is each later pass of a marched state through the chart.
 
 /// One trajectory's carried regularised state (the module's note). `repr(C)`: its fields in this order with no
 /// padding, 72 bytes at f32 and 128 at f64.

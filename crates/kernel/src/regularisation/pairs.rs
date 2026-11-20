@@ -194,8 +194,9 @@ pub struct Pair {
 }
 
 /// The default occupant as the kernel runs it: RK4 under Heggie with the values of `C`, [`Pair::DEFAULT`]'s type
-/// where `C`'s time transformation is Eq. 22. Heggie's step-control values are calibrations with no register entry yet,
-/// so the type stays open in them.
+/// where `C`'s time transformation is Eq. 22. The plan is unclear here (a "default occupant config" with no values
+/// to give it); chose to leave the type open in its configuration, because Heggie's step-control values are
+/// calibrations with no register entry yet, and a number written here would be one the register does not hold.
 pub type DefaultOccupant<C> = Composed<Rk4, Heggie<C>>;
 
 impl Pair {
