@@ -227,12 +227,15 @@ pub fn fit(errors: &[f64; 5], floor: f64) -> (usize, Option<f64>) {
     (kept, order)
 }
 
+/// One step `h` of the stepper selected, from `(q, p)`.
+type StepOf<'a, Q, P> = dyn Fn(Selection, &Q, &P, f64) -> (Q, P) + 'a;
+
 /// A regularised system as the measurement reads it: its registered state, one step of each stepper, its regularised
 /// energy, its clock, its state as a flat list, and each pair's composed profile.
 struct System<'a, Q, P> {
     q: Q,
     p: P,
-    step: &'a dyn Fn(Selection, &Q, &P, f64) -> (Q, P),
+    step: &'a StepOf<'a, Q, P>,
     energy: &'a dyn Fn(&Q, &P) -> f64,
     clock: &'a dyn Fn(&Q) -> f64,
     flat: &'a dyn Fn(&Q, &P) -> Vec<f64>,
@@ -483,6 +486,8 @@ pub struct AzArm {
     pub what: String,
     /// The largest `|E − E₀|/|E₀|`; NaN once any step's energy is not a number.
     pub energy_max: f64,
+    /// `|E − E₀|/|E₀|` at the end of orbit 10 (fictitious time `10·τ_end`).
+    pub at_orbit_10: f64,
     /// The orbit (fictitious time over `τ_end`) at which the energy error first was not below the bound.
     pub broke_at: Option<f64>,
     /// The physical time reached.
@@ -490,8 +495,9 @@ pub struct AzArm {
 }
 
 /// Aarseth–Zare × RK4's other arms on the figure-eight over `100·τ_end`, `tau_end` the Aarseth–Zare row's (the
-/// module's note): the reference body held at `τ_end/256` and `τ_end/512`, and at `τ_end/128` with the reference
-/// body re-chosen by Aarseth–Zare's rule after every step (the state re-registered, which also re-freezes `E`; the
+/// module's note): the cell's own run again (the reference body held, `τ_end/128`), the reference body held at
+/// `τ_end/256` and `τ_end/512`, and at `τ_end/128` with the reference body re-chosen by Aarseth–Zare's rule after
+/// every step (the state re-registered, which also re-freezes `E`; the
 /// physical time is summed across the registrations). They decide no cell.
 pub fn az_arms(tau_end: f64) -> Result<Vec<AzArm>, String> {
     let (s0, _) = fixture()?;
@@ -501,6 +507,7 @@ pub fn az_arms(tau_end: f64) -> Result<Vec<AzArm>, String> {
         let e0 = system.energy(&q, &p);
         let h = tau_end / divisions;
         let (mut energy_max, mut broke_at, mut t) = (0.0f64, None, 0.0f64);
+        let mut at_orbit_10 = f64::NAN;
         for k in 0..(ORBITS * divisions) as usize {
             let before = q.t;
             (q, p) = <Rk4 as AzStepper>::regularised_step(&system, &q, &p, h);
@@ -513,6 +520,9 @@ pub fn az_arms(tau_end: f64) -> Result<Vec<AzArm>, String> {
             };
             if broke_at.is_none() && verdict_of(None, e).is_bad() {
                 broke_at = Some((k + 1) as f64 / divisions);
+            }
+            if (k + 1) as f64 == 10.0 * divisions {
+                at_orbit_10 = e;
             }
             if rechosen {
                 (system, q, p) = az::register(&system.image(&q, &p), tiny);
@@ -528,11 +538,17 @@ pub fn az_arms(tau_end: f64) -> Result<Vec<AzArm>, String> {
                 }
             ),
             energy_max,
+            at_orbit_10,
             broke_at,
             t_reached: t,
         }
     };
-    Ok(vec![arm(256.0, false), arm(512.0, false), arm(128.0, true)])
+    Ok(vec![
+        arm(ENERGY_DIVISIONS, false),
+        arm(256.0, false),
+        arm(512.0, false),
+        arm(ENERGY_DIVISIONS, true),
+    ])
 }
 
 /// The regularised rows, in the table's order: every row but `none`.
@@ -753,11 +769,7 @@ pub fn check(table: &Shown, rows: &[Row], contract: &str) -> Vec<String> {
             }
         }
     }
-    if !table
-        .note_4
-        .as_deref()
-        .is_some_and(|w| !w.trim().is_empty())
-    {
+    if table.note_4.as_deref().is_none_or(|w| w.trim().is_empty()) {
         findings.push(
             "note 4's warning, Heggie × the generalised leapfrog (the design's measurement), is not in the table"
                 .to_owned(),
@@ -869,16 +881,18 @@ pub fn report(rows: &[Row]) -> String {
         }
         if row.choice == Choice::AarsethZare {
             out.push_str(
-                "\nAarseth–Zare × RK4's other arms, over 100·τ_end; they decide no cell:\n\n| arm | max \\|ΔE/E₀\\| | \
-                 first not below the bound (orbit) | t reached |\n|---|---|---|---|\n",
+                "\nAarseth–Zare × RK4's arms, over 100·τ_end: the cell's own run, then three that decide no cell:\n\n| \
+                 arm | max \\|ΔE/E₀\\| | at orbit 10 | first not below the bound (orbit) | t reached \
+                 |\n|---|---|---|---|---|\n",
             );
             match az_arms(row.tau_end) {
                 Ok(arms) => {
                     for arm in arms {
                         out.push_str(&format!(
-                            "| {} | {:.3e} | {} | {} |\n",
+                            "| {} | {:.3e} | {:.3e} | {} | {} |\n",
                             arm.what,
                             arm.energy_max,
+                            arm.at_orbit_10,
                             arm.broke_at
                                 .map_or("never".to_owned(), |o| format!("{o:.2}")),
                             time(arm.t_reached)

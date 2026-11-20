@@ -1330,7 +1330,7 @@ fn composed_profiles() -> Profiles {
 }
 
 /// logH is selectable in each time mode with each stepper it defines a pair with, KDK and RK4: the pair is selected
-/// with no refusal, not measured in the table and carrying no warning, and owns its time mapping; its occupant type
+/// with no refusal, measured good in the table and carrying no warning, and owns its time mapping; its occupant type
 /// reports the pair's profile (the leapfrog's: order 2, one force evaluation, step-reversible, symplectic in the logH
 /// mode alone and run-reversible in the TTL mode alone; RK4's form's on a regularised system) and runs a call through
 /// the seam; and the two modes are two marches.
@@ -1340,7 +1340,7 @@ fn check_selectable(profiles: Profiles) {
         for (stepper, profile) in [Occupant::Kdk, Occupant::Rk4].into_iter().zip(row) {
             let pair = Pair::select(Selection::Production(stepper), Choice::LogH(mode));
             assert_eq!(pair.regularisation, Choice::LogH(mode));
-            assert_eq!(pair.status(&table), Status::NotMeasured);
+            assert_eq!(pair.status(&table), Status::MeasuredGood);
             assert_eq!(pair.warning(&table), None);
             assert!(pair.owns_time_mapping());
             let want = match stepper {

@@ -5,6 +5,10 @@
 //!   a selection that blocks the measured-bad pairs (REQ-INT-017's arm here; R-561).
 //! - `regularisation_compose_warnings`: every cell of the shipped table is Part 2b's, transcribed here; a measured-bad
 //!   pair carries the contract's warning and every other pair none; its control is a measured-bad pair with no warning.
+//! - `regularisation_compose_note_4`: the table carries note 4's warning, and every cell an evidence line. Control: a
+//!   table without note 4.
+//! - `regularisation_compose_time_transformation`: on a synthetic table whose Eq. 20 and Eq. 22 cells differ, the
+//!   warning follows the time transformation selected. Control: a lookup keyed on the pair alone.
 //! - `regularisation_compose_cells`: the table holds one cell per stepper × regularisation × time transformation: a
 //!   distinct status written to each of the 30 is read back from it; its control leaves one cell unwritten.
 //! - `regularisation_compose_none_runs`: each of the five steppers composed with `none` runs, and its `ADVANCE` is the
@@ -67,16 +71,52 @@ const ROWS: [Choice; 6] = [
 /// Part 2b's table, row by row: `-` not measured, `G` measured good, `B` measured bad.
 const PART_2B: [[char; 5]; 6] = [
     ['-', '-', '-', '-', '-'],
-    ['-', '-', '-', '-', 'G'],
-    ['-', 'B', '-', '-', 'G'],
-    ['-', 'B', '-', '-', 'G'],
-    ['-', '-', '-', '-', '-'],
-    ['-', '-', '-', '-', '-'],
+    ['B', 'B', 'B', 'B', 'B'],
+    ['B', 'B', 'B', 'B', 'G'],
+    ['B', 'B', 'B', 'B', 'G'],
+    ['B', 'G', 'G', 'G', 'G'],
+    ['B', 'G', 'G', 'G', 'G'],
 ];
 
 /// The warning Part 2b's note 2 gives Heggie × KDK.
 const WARNING: &str = "Heggie's Hamiltonian is not separable, so a leapfrog step is first order here and can diverge \
                        (figure-eight: order about 1, diverged within 100 orbits).";
+
+/// The warning Part 2b's note 5 gives Heggie × Yoshida-4 and × Yoshida-6.
+const HEGGIE_YOSHIDA: &str = "Heggie's Hamiltonian is not separable, so a Yoshida step, a sequence of leapfrog steps, \
+                              is first order here and can diverge (figure-eight: order about 1, the energy error \
+                              past 1e-2 within a tenth of an orbit).";
+
+/// The warning Part 2b's note 6 gives Aarseth–Zare × KDK, × Yoshida-4 and × Yoshida-6.
+const AZ_LEAPFROG: &str = "Aarseth–Zare's Hamiltonian is not separable, so a leapfrog or Yoshida step is first order \
+                           here and can diverge (figure-eight, reference body held: order about 1, diverged within \
+                           the first orbit).";
+
+/// The warning Part 2b's note 1 gives Aarseth–Zare × RK4.
+const AZ_RK4: &str = "With its reference body held and its step fixed, Aarseth–Zare × RK4 loses the figure-eight at \
+                      128 steps an orbit (fourth order; the energy error past 1e-2 at orbit 14, not finite by 100). \
+                      It holds 100 orbits at 512 steps an orbit, and at 128 with the reference body re-chosen after \
+                      every step; the occupant re-chooses it at every sync boundary and controls its step, which this \
+                      did not measure.";
+
+/// The warning Part 2b's note 7 gives Euler under every regularisation.
+const EULER_BAD: &str = "Explicit Euler is first order and its energy error grows without bound (figure-eight, fixed \
+                         fictitious step: order about 1, the energy error past 1e-2 within a fifth of an orbit).";
+
+/// The warning Part 2b gives the measured-bad cell at `(row, column)`.
+fn part_2b_warning(row: usize, column: usize) -> &'static str {
+    match (row, column) {
+        (_, 0) => EULER_BAD,
+        (1, 4) => AZ_RK4,
+        (1, _) => AZ_LEAPFROG,
+        (_, 1) => WARNING,
+        _ => HEGGIE_YOSHIDA,
+    }
+}
+
+/// The warning Part 2b's note 4 gives Heggie × the generalised leapfrog.
+const NOTE_4: &str =
+    "does not keep Heggie's Eq. (9); the energy breaks once its residual reaches ~2e-2";
 
 /// Every pair: `(row, column, regularisation, stepper)`.
 fn pairs() -> impl Iterator<Item = (usize, usize, Choice, Selection)> {
@@ -159,7 +199,11 @@ fn check_warnings(table: &PairTable) {
                     warning.is_some_and(|w| !w.is_empty()),
                     "{s:?} × {c:?} is measured bad but carries no warning"
                 );
-                assert_eq!(warning, Some(WARNING), "the warning is Part 2b's");
+                assert_eq!(
+                    warning,
+                    Some(part_2b_warning(i, j)),
+                    "the warning is Part 2b's"
+                );
             }
             mark => {
                 let want = if mark == 'G' {
@@ -180,6 +224,13 @@ fn check_warnings(table: &PairTable) {
 #[test]
 fn regularisation_compose_warnings() {
     assert_eq!(HEGGIE_KDK_WARNING, WARNING, "the shipped warning");
+    let bad = PART_2B.iter().flatten().filter(|&&m| m == 'B').count();
+    let good = PART_2B.iter().flatten().filter(|&&m| m == 'G').count();
+    assert_eq!(
+        (bad, good),
+        (15, 10),
+        "the 25 regularised cells are each measured"
+    );
     check_warnings(&PairTable::part_2b());
 }
 
@@ -192,6 +243,83 @@ negative_control!(
         ROWS[3],
         Status::MeasuredBad { warning: "" }
     ))
+);
+
+// ── Note 4, and the warning under the time transformation in force ─────────────────────────────────────────────
+
+/// Checks that `table` carries note 4's warning, Heggie × the generalised leapfrog measured bad: a pair of a stepper
+/// that is not built, kept as the design's measurement.
+fn check_note_4(table: &PairTable) {
+    assert_eq!(
+        table.generalised_leapfrog(),
+        Status::MeasuredBad { warning: NOTE_4 },
+        "note 4's warning is not in the table"
+    );
+}
+
+#[test]
+fn regularisation_compose_note_4() {
+    check_note_4(&PairTable::part_2b());
+    assert_eq!(
+        PairTable::not_measured().generalised_leapfrog(),
+        Status::NotMeasured
+    );
+    // Every cell states what was measured, or why nothing was.
+    let table = PairTable::part_2b();
+    for (_, _, c, s) in pairs() {
+        assert!(
+            !table.evidence(s, c).is_empty(),
+            "{s:?} × {c:?} has no evidence line"
+        );
+    }
+}
+
+negative_control!(
+    regularisation_compose_note_4,
+    "a table without note 4",
+    expected = "note 4's warning is not in the table",
+    check_note_4(&PairTable::part_2b().with_generalised_leapfrog(Status::NotMeasured))
+);
+
+/// Checks, on a synthetic table whose Heggie Eq. 20 and Eq. 22 cells differ for one pair (and logH's two modes for
+/// another), that the warning `lookup` shows follows the time transformation selected: Eq. 20, then Eq. 22.
+fn check_follows(lookup: impl Fn(&PairTable, Selection, Choice) -> Option<&'static str>) {
+    let (kdk, rk4) = (COLUMNS[1], COLUMNS[4]);
+    let table = PairTable::not_measured()
+        .with(kdk, ROWS[2], Status::MeasuredBad { warning: "Eq. 20" })
+        .with(kdk, ROWS[3], Status::MeasuredGood)
+        .with(rk4, ROWS[4], Status::MeasuredGood)
+        .with(rk4, ROWS[5], Status::MeasuredBad { warning: "TTL" });
+    for (stepper, choice, want) in [
+        (kdk, ROWS[2], Some("Eq. 20")),
+        (kdk, ROWS[3], None),
+        (rk4, ROWS[4], None),
+        (rk4, ROWS[5], Some("TTL")),
+    ] {
+        assert_eq!(
+            lookup(&table, stepper, choice),
+            want,
+            "the warning of {stepper:?} × {choice:?} does not follow the time transformation selected"
+        );
+    }
+}
+
+#[test]
+fn regularisation_compose_time_transformation() {
+    check_follows(|table, s, c| Pair::select(s, c).warning(table));
+}
+
+negative_control!(
+    regularisation_compose_time_transformation,
+    "a lookup keyed on the pair alone: the regularisation's first row, whatever the time transformation",
+    expected = "does not follow the time transformation selected",
+    check_follows(|table, s, c| {
+        let first = ROWS
+            .into_iter()
+            .find(|r| r.kind() == c.kind())
+            .expect("every kind has a row");
+        Pair::select(s, first).warning(table)
+    })
 );
 
 /// A distinct warning per cell.
