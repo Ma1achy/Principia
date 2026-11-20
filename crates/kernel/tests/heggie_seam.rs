@@ -270,9 +270,6 @@ fn direct<R: P>(k: u32, params: &HgParams<R>) -> (HgAdvanced<R>, u32) {
 
 // ── The seam's end, through the wrapper ────────────────────────────────────────────────────────────────────────
 
-/// The wrapper's run of `ic` under `uniforms` by the occupant under test.
-type WrapperRun<R> = fn(&Ic<R>, &WrapperUniforms<R>, &mut Counting) -> SimStateBaseOf<R>;
-
 /// The wrapper's run by `A`.
 fn run_by<A: Advance, R: WrapperReal>(
     ic: &Ic<R>,
@@ -280,6 +277,17 @@ fn run_by<A: Advance, R: WrapperReal>(
     cadence: &mut Counting,
 ) -> SimStateBaseOf<R> {
     integrate_with::<A, R, Counting>(ic, uniforms, cadence)
+}
+
+/// How `A`'s seam call over the first sync interval of `s` ended, as `advance_reaching` reports it with nothing
+/// carried: the macro-step from 1 to 2 at `dt_macro = 1/16`.
+fn reaching<A: Advance, R: P>(s: &State<R>) -> Reached {
+    let params = AdvanceParams {
+        dt_macro: R::of(1.0 / 16.0),
+        n_sub: 4,
+    };
+    let geom = Geom::new(&s.m, &s.r);
+    A::advance_reaching(s, &geom, 1, 2, &params, &mut Counting::default()).1
 }
 
 /// The occupant `A` read by the stepper's rule alone, its end dropped: a macro-step completed when the steps taken are
@@ -314,9 +322,10 @@ fn coincident<R: P>() -> State<R> {
 /// its entry, not finite. The run is `sim_failed`, latched at the macro-step it ended in, which is not completed
 /// (`t_end_step = 1`), its state the direct march's latched finite one, its detail 2 (a non-finite derived quantity on
 /// a finite state, payload §2).
-fn check_non_finite_fails<R: P>(run: WrapperRun<R>) {
+fn check_non_finite_fails<A: Advance, R: P>() {
     let s = coincident::<R>();
-    let out = run(&ic_of(&s), &key(1.0 / 16.0, 8, 4), &mut Counting::default());
+    let out = run_by::<A, R>(&ic_of(&s), &key(1.0 / 16.0, 8, 4), &mut Counting::default());
+    let reported = reaching::<A, R>(&s);
     let latched = hg::march::<Rk4, R, Counting, ExplicitTest>(
         &s,
         1,
@@ -365,19 +374,24 @@ fn check_non_finite_fails<R: P>(run: WrapperRun<R>) {
         bits(&latched.state),
         "the state is the march's latched finite one"
     );
+    assert_eq!(
+        reported,
+        Reached::NonFinite,
+        "the seam reports the march's end through advance_reaching"
+    );
 }
 
 #[test]
 fn heggie_seam_non_finite_fails() {
-    check_non_finite_fails(run_by::<HgRk4, f64>);
-    check_non_finite_fails(run_by::<HgRk4, f32>);
+    check_non_finite_fails::<HgRk4, f64>();
+    check_non_finite_fails::<HgRk4, f32>();
 }
 
 negative_control!(
     heggie_seam_non_finite_fails,
     "a seam that drops the march's end, the run never failed",
     expected = "a march ended non-finite fails the run",
-    check_non_finite_fails(run_by::<Dropping<HgRk4>, f64>)
+    check_non_finite_fails::<Dropping<HgRk4>, f64>()
 );
 
 /// Heggie × RK4 on a budget of 4 steps.
@@ -387,10 +401,11 @@ type SpentRk4 = DefaultOccupant<Spent>;
 /// macro-step takes no step and is completed, the second's march spends its budget, and the copy is never run on
 /// (R-604): the run stops there, `running` as it stood, at `t_end_step = 1`, with the state and steps of the direct
 /// march on that budget.
-fn check_exhausted_stops<R: P>(run: WrapperRun<R>) {
+fn check_exhausted_stops<A: Advance, R: P>() {
     let s = burrau::<R>();
     let mut cadence = Counting::default();
-    let out = run(&ic_of(&s), &key(1.0 / 16.0, 8, 4), &mut cadence);
+    let out = run_by::<A, R>(&ic_of(&s), &key(1.0 / 16.0, 8, 4), &mut cadence);
+    let reported = reaching::<A, R>(&s);
     let (once, _) = direct::<R>(8, &Spent::params());
     assert_eq!(
         (once.count.end, once.boundary),
@@ -432,19 +447,24 @@ fn check_exhausted_stops<R: P>(run: WrapperRun<R>) {
         bits(&once.state),
         "the state the march latched"
     );
+    assert_eq!(
+        reported,
+        Reached::Exhausted,
+        "the seam reports the spent budget through advance_reaching"
+    );
 }
 
 #[test]
 fn heggie_seam_exhausted_stops() {
-    check_exhausted_stops(run_by::<SpentRk4, f64>);
-    check_exhausted_stops(run_by::<SpentRk4, f32>);
+    check_exhausted_stops::<SpentRk4, f64>();
+    check_exhausted_stops::<SpentRk4, f32>();
 }
 
 negative_control!(
     heggie_seam_exhausted_stops,
     "a seam that drops the spent budget, the copy run on",
     expected = "a spent copy stops as it stood",
-    check_exhausted_stops(run_by::<Dropping<SpentRk4>, f64>)
+    check_exhausted_stops::<Dropping<SpentRk4>, f64>()
 );
 
 // ── regularised_state_carried: the seam against one direct march ───────────────────────────────────────────────
